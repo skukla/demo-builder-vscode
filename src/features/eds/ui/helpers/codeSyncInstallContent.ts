@@ -3,7 +3,8 @@
  *
  * Two places walk a user through the same GitHub screens:
  *
- *  - {@link CodeSyncStatusView} — the wizard's Code Sync sub-step, at configure time.
+ *  - (until 2026-09-25) the wizard's Code Sync sub-step, since removed: before setup the
+ *    App question has no answer for a new repository, so setup is the one place it is asked.
  *  - {@link GitHubAppInstallDialog} — the mid-run recovery panel, shown when the
  *    setup pipeline (`storefrontSetupPhaseHelpers`, `storefrontSetupPhase3`) or
  *    project creation stops because the app is missing.

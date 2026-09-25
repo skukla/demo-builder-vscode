@@ -99,9 +99,7 @@ describe('RepoSelectionInline — creating a repository', () => {
                 <RepoSelectionInline
                     state={state}
                     updateState={updateState}
-                    phase="repository"
                     onRepoValidChange={jest.fn()}
-                    onCodeSyncValidChange={jest.fn()}
                 />
             </Provider>
         );
@@ -136,9 +134,7 @@ describe('RepoSelectionInline — creating a repository', () => {
                 <RepoSelectionInline
                     state={state}
                     updateState={update}
-                    phase="repository"
                     onRepoValidChange={jest.fn()}
-                    onCodeSyncValidChange={jest.fn()}
                 />
             );
         };
@@ -495,59 +491,6 @@ describe('RepoSelectionInline — creating a repository', () => {
             await settle();
 
             expect(nameField()).not.toBeDisabled();
-        });
-    });
-
-    describe('after creation, the Code Sync check', () => {
-        it('is armed and runs against the repository just created', async () => {
-            mockRequest.mockImplementation(async (type: string) => {
-                if (type === 'create-github-repo') return { success: true, data: CREATED };
-                return { success: true, isInstalled: true };
-            });
-            await renderStateful(stateWith({ repoName: 'my-store' }));
-
-            fireEvent.click(createButton());
-            await settle();
-
-            await waitFor(() => {
-                expect(mockRequest).toHaveBeenCalledWith('check-github-app', {
-                    owner: 'testuser',
-                    repo: 'my-store',
-                    lenient: true,
-                    skipTrigger: true,
-                });
-            });
-        });
-
-        it('runs on returning to a step whose repository already exists', async () => {
-            mockRequest.mockResolvedValue({ success: true, isInstalled: true });
-
-            await renderInline(stateWith({ repoName: 'my-store', createdRepo: CREATED }));
-
-            await waitFor(() => {
-                expect(mockRequest).toHaveBeenCalledWith('check-github-app', {
-                    owner: 'testuser',
-                    repo: 'my-store',
-                    lenient: true,
-                    skipTrigger: true,
-                });
-            });
-        });
-
-        it('is not run for a created repo missing an owner', async () => {
-            mockRequest.mockResolvedValue({ success: true, isInstalled: true });
-
-            await renderInline(
-                stateWith({
-                    repoName: 'my-store',
-                    createdRepo: { ...CREATED, owner: '' },
-                })
-            );
-            await settle();
-
-            expect(
-                mockRequest.mock.calls.some((c) => c[0] === 'check-github-app')
-            ).toBe(false);
         });
     });
 

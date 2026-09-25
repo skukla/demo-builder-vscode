@@ -1,19 +1,17 @@
 /**
  * RepoSelectionInline
  *
- * The GitHub repository choose/create + AEM-Code-Sync-install body, re-homed from
- * the former GitHubRepoSelectionStep's TwoColumnLayout into a single column for the
- * StorefrontStep group. It owns the same selection wiring (useSelectionStep, cached
- * repos, new-repo creation, GitHub-App-install gate), but the Storefront area now
- * splits it across TWO sub-steps via the `phase` prop:
- *   - `repository` — the repo pick/create UI
- *   - `code-sync`  — the AEM Code Sync GitHub-App install UI
+ * The GitHub repository choose/create body of the Storefront area's Repository sub-step:
+ * the cached repository list, new-repo creation (which lands in the list, selected), the
+ * reset-to-template choice and the default-branch notice. One verdict flows OUT —
+ * `onRepoValidChange` (repo chosen/created) — and gates the sub-step.
  *
- * ALL hooks/state/effects run regardless of `phase` (so both validities stay live
- * across the sub-step switch); only the RENDERED body changes. Two independent
- * verdicts flow OUT — `onRepoValidChange` (repo chosen/created) and
- * `onCodeSyncValidChange` (the app gate; existing repos pass) — so the Storefront
- * sections can gate each sub-step separately.
+ * It no longer asks about AEM Code Sync (removed 2026-09-25). Adobe's status endpoint
+ * reports on a SITE, which nothing before setup creates, and GitHub's installation list
+ * refuses a user token — so before setup the question has no answer for a new repository,
+ * and a step that said "checked later" beside an Install button promised a re-check it
+ * could not deliver. Setup asks at the two moments it can be answered and shows the
+ * install dialog there (storefrontSetupPhaseHelpers, storefrontSetupPhase3).
  *
  * @module features/eds/ui/steps/RepoSelectionInline
  */
@@ -23,23 +21,17 @@ import Add from '@spectrum-icons/workflow/Add';
 import React, { useEffect, useCallback, useState } from 'react';
 import { edsConfigStringDefaults, type WizardEdsConfig } from '../helpers/edsConfigDefaults';
 import {
-    CodeSyncStatusView,
     NewRepoForm,
     ResetToTemplateOption,
-    computeCodeSyncValid,
     DefaultBranchNotice,
     computeRepoValid,
     type RepoReadinessState,
-    pollGitHubAppInstallation,
-    probeRepoCodeSync,
-    shouldShowAppStatus,
-    type GitHubAppStatus,
     type RepoCreationState,
     isJustCreatedSelection,
 } from './repoSelectionInline.helpers';
 import { SelectionStepContent } from '@/core/ui/components/selection/SelectionStepContent';
 import { useSelectionStep } from '@/core/ui/hooks/useSelectionStep';
-import { vscode, webviewClient } from '@/core/ui/utils/vscode-api';
+import { webviewClient } from '@/core/ui/utils/vscode-api';
 import {
     isValidRepositoryName,
     getRepositoryNameError,
@@ -50,20 +42,13 @@ import type { BaseStepProps } from '@/types/wizard';
 import '../styles/eds-steps.css';
 
 
-/** Which part of the repo/code-sync flow to render (validities stay live for both). */
-export type RepoSelectionPhase = 'repository' | 'code-sync';
-
 /** Props: state-driven like the parent step, but validity flows OUT to the parent. */
 /** Constant per call site — see PROJECT_SEARCH_FIELDS in AdobeProjectPicker. */
 const REPO_SEARCH_FIELDS: ReadonlyArray<keyof GitHubRepoItem> = ['name', 'fullName', 'description'];
 
 export interface RepoSelectionInlineProps extends Pick<BaseStepProps, 'state' | 'updateState'> {
-    /** Which sub-step body to render: the repo pick/create UI or the Code Sync UI. */
-    phase: RepoSelectionPhase;
-    /** Reports whether the repository choice is valid (WITHOUT the app gate). */
+    /** Reports whether the repository choice is valid. */
     onRepoValidChange: (valid: boolean) => void;
-    /** Reports whether the AEM Code Sync app gate is satisfied (existing repos pass). */
-    onCodeSyncValidChange: (valid: boolean) => void;
 }
 
 
@@ -97,12 +82,6 @@ function readRepoSelection(edsConfig: WizardEdsConfig): {
     };
 }
 
-/** Split `owner/repo`, or undefined when either half is missing. */
-function parseRepoFullName(fullName?: string): { owner: string; name: string } | undefined {
-    const [owner, name] = (fullName ?? '').split('/');
-    return owner && name ? { owner, name } : undefined;
-}
-
 /** True when an existing repo is selected against a loaded, non-empty repo list. */
 function isValidExistingRepoSelection(
     repoMode: string,
@@ -116,15 +95,13 @@ function isValidExistingRepoSelection(
 /**
  * RepoSelectionInline Component.
  *
- * @param props - state/updateState, the phase to render, plus the two validity channels
- * @returns The single-column repo choose/create OR code-sync body (per `phase`)
+ * @param props - state/updateState plus the validity channel
+ * @returns The single-column repo choose/create body
  */
 export function RepoSelectionInline({
     state,
     updateState,
-    phase,
     onRepoValidChange,
-    onCodeSyncValidChange,
 }: RepoSelectionInlineProps): React.ReactElement {
     const edsConfig = state.edsConfig;
     const { repoMode, selectedRepo, resetToTemplate, githubUser, repoName, hasCreatedRepo } =
@@ -135,17 +112,6 @@ export function RepoSelectionInline({
         isCreating: false,
         isCreated: hasCreatedRepo,
     });
-    const [githubAppStatus, setGitHubAppStatus] = useState<GitHubAppStatus>({
-        isChecking: false,
-        isInstalled: null,
-    });
-    const [isRechecking, setIsRechecking] = useState(false);
-    // Empty, not a generic line. The view falls back to "Verifying owner/repo..."
-    // and lets CODE_SYNC_CHECK_STAGES speak once the wait outlives a glance; a
-    // non-empty default here outranks both and pinned one static line over a
-    // check that can run for three minutes. Set by the retry loop when it has
-    // something specific to say ("attempt 2 of 5"), which still wins.
-    const [recheckMessage, setRecheckMessage] = useState('');
 
     const {
         items: repos,
@@ -212,7 +178,6 @@ export function RepoSelectionInline({
 
     const resetLocalState = useCallback(() => {
         setRepoCreationState({ isCreating: false, isCreated: false });
-        setGitHubAppStatus({ isChecking: false, isInstalled: null });
     }, []);
 
     const handleCreateNew = useCallback(() => {
@@ -338,21 +303,6 @@ export function RepoSelectionInline({
                 },
             });
             setRepoCreationState({ isCreating: false, isCreated: true });
-
-            // NOT ASKED YET — and say exactly that, nothing more.
-            //
-            // This used to assert `{isInstalled: false}` with no `codeStatus`, which
-            // `resolveCodeSyncView` reads as "Adobe was asked and did not answer": a
-            // claim about a request that never happened. It also silently disabled
-            // the recovery below — the "re-check when returning with an already
-            // created repo" effect fires only on `isInstalled === null`, so the
-            // fabricated `false` was what kept it from ever running.
-            //
-            // `null` is the honest value AND the one that arms that effect. Do not
-            // start a second check here: one poller is enough, and two produced the
-            // interleaved duplicate checks seen on 2026-08-17, each triggering its
-            // own Helix code sync.
-            setGitHubAppStatus({ isChecking: false, isInstalled: null });
         } catch (err) {
             console.error('[GitHub Repo] Creation failed:', err);
             setRepoCreationState({
@@ -362,39 +312,6 @@ export function RepoSelectionInline({
             });
         }
     }, [repoName, edsConfig, state.githubReposCache, state.demo, updateState]);
-
-    const handleCheckAgain = useCallback(async () => {
-        // Both repo modes. This gate used to require a freshly CREATED repo, so
-        // the only re-check affordance was inert for an existing one — which,
-        // with the install flow also gated on `new`, left a selected repo whose
-        // app was missing blocked with nothing to press.
-        const target = edsConfig?.createdRepo
-            ? { owner: edsConfig.createdRepo.owner, name: edsConfig.createdRepo.name }
-            : parseRepoFullName(selectedRepo?.fullName);
-        if (!target) return;
-
-        setIsRechecking(true);
-        // Clear, so a stale "attempt 2 of 5" from the previous run does not
-        // outrank this run's elapsed-wait copy.
-        setRecheckMessage('');
-        setGitHubAppStatus({ isChecking: true, isInstalled: null });
-
-        const { status } = await pollGitHubAppInstallation(
-            target.owner,
-            target.name,
-            setRecheckMessage,
-        );
-
-        setGitHubAppStatus(status);
-        setIsRechecking(false);
-    }, [edsConfig?.createdRepo, selectedRepo?.fullName]);
-
-    const handleOpenInstallPage = useCallback(() => {
-        if (githubAppStatus.installUrl) {
-            vscode.postMessage('openExternal', { url: githubAppStatus.installUrl });
-        }
-    }, [githubAppStatus.installUrl]);
-
 
     // Validate pre-selected repo exists in loaded repos (for import flow).
     useEffect(() => {
@@ -410,53 +327,7 @@ export function RepoSelectionInline({
         }
     }, [hasLoadedOnce, repos, selectedRepo, repoMode, updateEdsConfig]);
 
-    // Reset GitHub App status when repo mode changes.
-    useEffect(() => {
-        setGitHubAppStatus({ isChecking: false, isInstalled: null });
-    }, [repoMode, selectedRepo]);
-
     const [readiness, setReadiness] = useState<RepoReadinessState | undefined>(undefined);
-
-    // Helix has a SITE only for a repo with storefront content. Without one,
-    // `admin.hlx.page/status` answers `404 no such site` whatever AEM Code Sync
-    // is doing — so the App question is unanswerable here, not merely
-    // unanswered, and asking it produces an install prompt aimed at people who
-    // already have it installed. `empty` counts too: nothing to register either.
-    // `undetermined` does NOT — we failed to read the repo, which says nothing
-    // about whether it is a storefront, so the check still gets its turn.
-    const siteNotPossibleYet =
-        readiness?.kind === 'not-a-storefront' || readiness?.kind === 'empty';
-
-    // Check Code Sync as soon as an EXISTING repo is picked, not mid-pipeline.
-    //
-    // The mid-pipeline gate sits after fstab, block collection, smart-404 and
-    // quick-edit have written to the repo, so a user missing the App learned about
-    // it only once their repository had been modified. `skipTrigger` keeps this
-    // fast: a repo Helix has never indexed 404s, and the default path answers that
-    // by triggering a code sync and polling for up to three minutes — fine there,
-    // unusable behind a Continue button.
-    useEffect(() => {
-        if (repoMode !== 'existing' || !selectedRepo) return;
-        // Wait for readiness, then skip entirely when the repo cannot have a
-        // site yet. Probing anyway costs a round trip to be told nothing, and
-        // -- on the "Check Again" path -- fires a code-sync trigger against the
-        // user's repo that we measured accomplishes nothing in this state.
-        if (readiness === undefined || siteNotPossibleYet) return;
-        const [owner, name] = (selectedRepo.fullName ?? '').split('/');
-        if (!owner || !name) return;
-        void probeRepoCodeSync(owner, name, setGitHubAppStatus);
-    }, [repoMode, selectedRepo, readiness, siteNotPossibleYet]);
-
-    // Check the App for a created repo — both on returning to the step and right
-    // after creation, which leaves `isInstalled: null` precisely to arm this.
-    useEffect(() => {
-        if (repoMode === 'new' && edsConfig?.createdRepo && githubAppStatus.isInstalled === null) {
-            const { owner, name } = edsConfig.createdRepo;
-            if (owner && name) {
-                void probeRepoCodeSync(owner, name, setGitHubAppStatus);
-            }
-        }
-    }, [repoMode, edsConfig?.createdRepo, githubAppStatus.isInstalled]);
 
     // Classify the selected repo so the reset control can ask only when there
     // is something to lose. Undefined while in flight — the gate treats that as
@@ -482,10 +353,8 @@ export function RepoSelectionInline({
                 //
                 // Fall back to `undetermined` rather than leaving it undefined: a
                 // successful response with no `readiness` field would otherwise be
-                // indistinguishable from a request still in flight, and the Code
-                // Sync probe waits on exactly that distinction. Undefined has to
-                // mean "still asking" or the probe never fires at all. Matches what
-                // the catch below already does for a failed request.
+                // indistinguishable from a request still in flight, and the reset
+                // control reads that distinction. Matches the catch below.
                 if (!cancelled) setReadiness(result?.readiness ?? { kind: 'undetermined' });
             })
             .catch(() => {
@@ -496,8 +365,7 @@ export function RepoSelectionInline({
         };
     }, [repoMode, selectedRepo]);
 
-    // Report the repository-choice verdict (WITHOUT the app gate) — runs for both
-    // phases so the `repository` sub-step gate stays live while showing `code-sync`.
+    // Report the repository-choice verdict.
     useEffect(() => {
         onRepoValidChange(
             computeRepoValid(
@@ -519,20 +387,7 @@ export function RepoSelectionInline({
         onRepoValidChange,
     ]);
 
-    // Report the Code-Sync app-gate verdict — runs for both phases so the
-    // `code-sync` sub-step gate stays live while showing `repository`.
-    useEffect(() => {
-        onCodeSyncValidChange(
-            computeCodeSyncValid(repoMode, githubAppStatus, selectedRepo),
-        );
-    }, [repoMode, githubAppStatus, selectedRepo, onCodeSyncValidChange]);
-
     const templateAvailable = !!(edsConfig?.templateOwner && edsConfig?.templateRepo);
-    const showAppStatus = shouldShowAppStatus(
-        repoMode,
-        repoCreationState.isCreated,
-        !!selectedRepo,
-    );
 
     // One predicate, read by the notice AND by the reset control it silences —
     // so they can never disagree about whether this repo is usable.
@@ -545,106 +400,79 @@ export function RepoSelectionInline({
     // reset. No banner — the selected row is the confirmation (owner, 2026-09-25).
     const justCreatedSelected = isJustCreatedSelection(edsConfig?.createdRepo, selectedRepo);
 
-    // --- `repository` phase: pick/create the repo (no app-install UI) ---------
-    if (phase === 'repository') {
-        return (
-            <div className="w-full relative repo-selection-inline">
-                {repoMode === 'new' && (
-                    <NewRepoForm
-                        repoName={repoName}
-                        githubUser={githubUser}
-                        repoNameError={repoNameError}
-                        repoCreationState={repoCreationState}
-                        templateAvailable={templateAvailable}
-                        onRepoNameChange={handleRepoNameChange}
-                        onRepoNameBlur={handleRepoNameBlur}
-                        onUseExisting={handleUseExisting}
-                        onCreateRepository={handleCreateRepository}
-                    />
-                )}
-
-                {repoMode === 'existing' && (
-                    <>
-                        <DefaultBranchNotice selectedRepo={selectedRepo} />
-                        {/* Always rendered (disabled until a repo is selected) so selecting one
-                            never reflows the search + list below. */}
-                        <ResetToTemplateOption
-                            resetToTemplate={resetToTemplate}
-                            onResetToTemplateChange={handleResetToTemplateChange}
-                            disabled={!selectedRepo || justCreatedSelected}
-                            readiness={readiness}
-                            unusable={wrongDefaultBranch}
-                            templateName={state.demo?.name}
-                        />
-                        <SelectionStepContent
-                            headerAction={
-                                <Button variant="accent" onPress={handleCreateNew}>
-                                    <Add size="S" />
-                                    <Text>New</Text>
-                                </Button>
-                            }
-                            items={repos}
-                            filteredItems={filteredRepos}
-                            showLoading={showLoading}
-                            isLoading={isLoading}
-                            isRefreshing={isRefreshing}
-                            hasLoadedOnce={hasLoadedOnce}
-                            error={error}
-                            searchQuery={searchQuery}
-                            onSearchChange={setSearchQuery}
-                            onLoad={loadRepos}
-                            onRefresh={refresh}
-                            selectedId={selectedRepo?.id}
-                            onSelect={selectItem}
-                            labels={{
-                                loadingMessage: 'Loading your repositories',
-                                loadingSubMessage: 'Fetching repositories with write access',
-                                errorTitle: 'Error Loading Repositories',
-                                emptyTitle: 'No Repositories Found',
-                                emptyMessage:
-                                    'No repositories found with write access. Create a new repository to get started.',
-                                searchPlaceholder: 'Type to filter repositories',
-                                itemNoun: 'repository',
-                                itemNounPlural: 'repositories',
-                                ariaLabel: 'GitHub Repositories',
-                            }}
-                            renderDescription={(item) => (
-                                <Text slot="description">
-                                    {item.isPrivate && (
-                                        <span className="repo-private-badge">Private</span>
-                                    )}
-                                    {item.description || (
-                                        <span className="repo-no-description">No description</span>
-                                    )}
-                                </Text>
-                            )}
-                        />
-                    </>
-                )}
-            </div>
-        );
-    }
-
-    // --- `code-sync` phase: AEM Code Sync app install -------------------------
-    // Present for BOTH repo modes since 2026-08-06 (see storefrontSectionOrder). The
-    // existing-repo gate used to be deferred to StorefrontSetup, after the pipeline
-    // had written to the repo; it now runs at selection.
-
     return (
-        // `flex-1 flex-column` claims the pane's full height from `.step-view-anim`,
-        // which is what lets CodeSyncStatusView centre in it rather than sit at the top.
-        <div className="w-full relative flex-1 flex-column">
-            {showAppStatus && (
-                <CodeSyncStatusView
-                    siteNotPossibleYet={siteNotPossibleYet}
-                    createdRepo={edsConfig?.createdRepo}
-                    selectedRepoFullName={selectedRepo?.fullName}
-                    status={githubAppStatus}
-                    isRechecking={isRechecking}
-                    recheckMessage={recheckMessage}
-                    onCheckAgain={handleCheckAgain}
-                    onOpenInstallPage={handleOpenInstallPage}
+        <div className="w-full relative repo-selection-inline">
+            {repoMode === 'new' && (
+                <NewRepoForm
+                    repoName={repoName}
+                    githubUser={githubUser}
+                    repoNameError={repoNameError}
+                    repoCreationState={repoCreationState}
+                    templateAvailable={templateAvailable}
+                    onRepoNameChange={handleRepoNameChange}
+                    onRepoNameBlur={handleRepoNameBlur}
+                    onUseExisting={handleUseExisting}
+                    onCreateRepository={handleCreateRepository}
                 />
+            )}
+
+            {repoMode === 'existing' && (
+                <>
+                    <DefaultBranchNotice selectedRepo={selectedRepo} />
+                    {/* Always rendered (disabled until a repo is selected) so selecting one
+                        never reflows the search + list below. */}
+                    <ResetToTemplateOption
+                        resetToTemplate={resetToTemplate}
+                        onResetToTemplateChange={handleResetToTemplateChange}
+                        disabled={!selectedRepo || justCreatedSelected}
+                        readiness={readiness}
+                        unusable={wrongDefaultBranch}
+                        templateName={state.demo?.name}
+                    />
+                    <SelectionStepContent
+                        headerAction={
+                            <Button variant="accent" onPress={handleCreateNew}>
+                                <Add size="S" />
+                                <Text>New</Text>
+                            </Button>
+                        }
+                        items={repos}
+                        filteredItems={filteredRepos}
+                        showLoading={showLoading}
+                        isLoading={isLoading}
+                        isRefreshing={isRefreshing}
+                        hasLoadedOnce={hasLoadedOnce}
+                        error={error}
+                        searchQuery={searchQuery}
+                        onSearchChange={setSearchQuery}
+                        onLoad={loadRepos}
+                        onRefresh={refresh}
+                        selectedId={selectedRepo?.id}
+                        onSelect={selectItem}
+                        labels={{
+                            loadingMessage: 'Loading your repositories',
+                            loadingSubMessage: 'Fetching repositories with write access',
+                            errorTitle: 'Error Loading Repositories',
+                            emptyTitle: 'No Repositories Found',
+                            emptyMessage:
+                                'No repositories found with write access. Create a new repository to get started.',
+                            searchPlaceholder: 'Type to filter repositories',
+                            itemNoun: 'repository',
+                            itemNounPlural: 'repositories',
+                            ariaLabel: 'GitHub Repositories',
+                        }}
+                        renderDescription={(item) => (
+                            <Text slot="description">
+                                {item.isPrivate && (
+                                    <span className="repo-private-badge">Private</span>
+                                )}
+                                {item.description || (
+                                    <span className="repo-no-description">No description</span>
+                                )}
+                            </Text>
+                        )}
+                    />
+                </>
             )}
         </div>
     );

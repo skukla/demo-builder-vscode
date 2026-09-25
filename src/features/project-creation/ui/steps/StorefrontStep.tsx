@@ -6,14 +6,12 @@
  * view below (four sub-steps):
  *   1. `accounts`        — connect GitHub + DA.live ({@link GitHubServiceCard} +
  *                          {@link DaLiveServiceCard}; gate: both connected).
- *   2. `repository`      — pick/create the repo ({@link RepoSelectionInline}, repository phase).
- *   3. `code-sync`       — install the AEM Code Sync app ({@link RepoSelectionInline}, code-sync phase).
+ *   2. `repository`      — pick/create the repo ({@link RepoSelectionInline}).
  *   4. `block-libraries` — the optional EDS block-library picker
  *                          ({@link BlockLibrariesStepContent}); never gates Continue.
  *
- * `repository` and `code-sync` render the SAME {@link RepoSelectionInline} element
- * instance (same JSX position, so React keeps it mounted) — only its `phase` prop
- * changes — so its local repo-creation / app-check state survives the switch.
+ * Each sub-step renders its own body; the Code Sync sub-step was removed 2026-09-25
+ * (setup asks the App question where it can be answered).
  *
  * The footer Continue/Back walks these sub-steps (WizardContainer), driven by the
  * shared {@link areaSubSteps} provider; the active one is `state.activeStorefrontStep`.
@@ -192,11 +190,8 @@ export function StorefrontStep({
     const driver = requireAreaSubSteps('storefront');
     const subSteps = driver.subSteps(state);
     const activeStep = driver.active(state) as StorefrontSectionId;
-    // Crossfade key: groups repository + code-sync so the SAME RepoSelectionInline
-    // instance stays mounted across those two (its repo-creation / app-check state
-    // must survive); accounts + block-libraries each remount → fade.
-    const viewKey =
-        activeStep === 'repository' || activeStep === 'code-sync' ? 'repo' : activeStep;
+    // Crossfade key: each sub-step remounts its body → fade.
+    const viewKey = activeStep;
 
     // Accounts sub-step: GitHub + DA.live are independent, parallel sign-ins, so
     // they share ONE sub-step (two cards) rather than two — gate is both connected.
@@ -247,10 +242,7 @@ export function StorefrontStep({
     ) : null;
 
     return (
-        // `viewKey` remounts (crossfades) on sub-step change, but groups repository +
-        // code-sync under one key so the trailing RepoSelectionInline arm — which covers
-        // BOTH at the SAME JSX position — keeps its element instance (and repo-creation /
-        // app-check state) across the phase flip.
+        // `viewKey` remounts (crossfades) the body on every sub-step change.
         <StepAreaShell
             areaLabel="Storefront"
             viewKey={viewKey}
@@ -268,11 +260,9 @@ export function StorefrontStep({
                 blockLibraries
             ) : (
                 <RepoSelectionInline
-                    phase={activeStep}
                     state={state}
                     updateState={updateState}
                     onRepoValidChange={v => updateState({ storefrontRepoValid: v })}
-                    onCodeSyncValidChange={v => updateState({ storefrontCodeSyncValid: v })}
                 />
             )}
         </StepAreaShell>

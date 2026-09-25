@@ -25,12 +25,11 @@ describe('areaSubSteps registry', () => {
 describe('storefront driver', () => {
     const driver = areaSubSteps('storefront')!;
 
-    it('lists the sub-steps for an existing repo (Code Sync included), active = first open', () => {
+    it('lists the three sub-steps, active = first open', () => {
         const s = state({});
         expect(driver.subSteps(s).map((x) => x.id)).toEqual([
             'accounts',
             'repository',
-            'code-sync',
             'block-libraries',
         ]);
         expect(driver.active(s)).toBe('accounts'); // repository is locked
@@ -38,12 +37,11 @@ describe('storefront driver', () => {
         expect(driver.prev(s)).toBeNull();
     });
 
-    it('includes the Code Sync sub-step for a NEW repo as well', () => {
+    it('lists the same three sub-steps for a NEW repo (no Code Sync stop since 2026-09-25)', () => {
         const s = state({ edsConfig: { repoMode: 'new' } } as Partial<WizardState>);
         expect(driver.subSteps(s).map((x) => x.id)).toEqual([
             'accounts',
             'repository',
-            'code-sync',
             'block-libraries',
         ]);
     });
@@ -60,8 +58,6 @@ describe('storefront driver', () => {
         expect(driver.isComplete(CONFIGURED_STOREFRONT, 'accounts')).toBe(true);
         expect(driver.isComplete(state({}), 'repository')).toBe(false);
         expect(driver.isComplete(CONFIGURED_STOREFRONT, 'repository')).toBe(true);
-        expect(driver.isComplete(state({}), 'code-sync')).toBe(false);
-        expect(driver.isComplete(CONFIGURED_STOREFRONT, 'code-sync')).toBe(true);
         expect(driver.isComplete(state({}), 'block-libraries')).toBe(true);
     });
 

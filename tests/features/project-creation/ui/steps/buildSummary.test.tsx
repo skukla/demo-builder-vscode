@@ -194,7 +194,7 @@ describe('storefrontSummaryGroup', () => {
         expect(storefrontSummaryGroup(state({})).rows[0].label).not.toBe('Demo');
     });
 
-    it('heads "Storefront" and mirrors the sub-steps (existing repo → no Code Sync)', () => {
+    it('heads "Storefront" and mirrors the three sub-steps', () => {
         const group = storefrontSummaryGroup(state({}));
         expect(group.heading).toBe('Storefront');
         expect(group.rows.map((r) => r.label)).toEqual([
@@ -204,17 +204,6 @@ describe('storefrontSummaryGroup', () => {
         ]);
     });
 
-    it('includes the Code Sync row only for a NEW repo', () => {
-        const group = storefrontSummaryGroup(
-            state({ edsConfig: { repoMode: 'new' } } as Partial<WizardState>)
-        );
-        expect(group.rows.map((r) => r.label)).toEqual([
-            'Accounts',
-            'Repository',
-            'Code Sync',
-            'Block Libraries',
-        ]);
-    });
 
     it('marks Accounts done only when BOTH GitHub and DA.live are connected', () => {
         const githubOnly = storefrontSummaryGroup(
@@ -235,20 +224,17 @@ describe('storefrontSummaryGroup', () => {
         expect(accounts?.value).toBe('Connected');
     });
 
-    it('shows Repository + Code Sync values from their persisted validity', () => {
+    it('shows the Repository value from its persisted validity', () => {
         const group = storefrontSummaryGroup(
             state({
                 storefrontRepoValid: true,
-                storefrontCodeSyncValid: true,
                 edsConfig: { repoName: 'my-repo', repoMode: 'new' },
             } as Partial<WizardState>)
         );
         const repo = group.rows.find((r) => r.label === 'Repository');
         expect(repo?.value).toBe('my-repo');
         expect(repo?.done).toBe(true);
-        const codeSync = group.rows.find((r) => r.label === 'Code Sync');
-        expect(codeSync?.value).toBe('Verified');
-        expect(codeSync?.done).toBe(true);
+        expect(group.rows.map((r) => r.label)).not.toContain('Code Sync');
     });
 
     it('needs the persisted repo VALIDITY, not just a repo name', () => {
@@ -261,15 +247,6 @@ describe('storefrontSummaryGroup', () => {
         expect(repository?.value).toBeUndefined();
     });
 
-    it('leaves Code Sync undone on a new repo until it is verified', () => {
-        const group = storefrontSummaryGroup(
-            state({ edsConfig: { repoMode: 'new', repoName: 'my-storefront' } })
-        );
-
-        const codeSync = group.rows.find((r) => r.label === 'Code Sync');
-        expect(codeSync?.done).toBe(false);
-        expect(codeSync?.value).toBeUndefined();
-    });
 
     it('survives a validated repo whose EDS config has not been written yet', () => {
         // storefrontRepoValid is a top-level flag; it can be true before edsConfig

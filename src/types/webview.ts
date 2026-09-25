@@ -55,7 +55,7 @@ export type CommerceSectionId =
  * `WizardState.activeStorefrontStep` can reference it; the pure section logic
  * lives in `ui/steps/storefrontSections.ts`.
  */
-export type StorefrontSectionId = 'accounts' | 'repository' | 'code-sync' | 'block-libraries';
+export type StorefrontSectionId = 'accounts' | 'repository' | 'block-libraries';
 
 /**
  * Wizard state as borrowed-component HOSTS supply it: the same store, every
@@ -128,7 +128,6 @@ export interface WizardState {
     commerceStoreViewChosen?: boolean; // Persisted verdict: the Business Structure store-view selection was made — drives the Catalog tab's gate/status
     commerceStoreLoading?: boolean; // Transient: store discovery is fetching the structure — blocks the Business Structure Continue gate while true
     storefrontRepoValid?: boolean; // Storefront repo selection reported valid (RepoSelectionInline repository phase)
-    storefrontCodeSyncValid?: boolean; // Storefront AEM Code Sync app install reported valid (RepoSelectionInline code-sync phase)
     activeBuildArea?: BuildAreaId; // Area currently focused within the build-your-project step
     /**
      * Which datapack this project should be seeded with, if any.

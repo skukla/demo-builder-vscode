@@ -1,15 +1,15 @@
 /**
- * StorefrontStep Tests (v6 — vertical step list + 4 dedicated views)
+ * StorefrontStep Tests (vertical step list + 3 dedicated views)
  *
  * The Storefront step renders a {@link VerticalStepList} nav + the active sub-step's
- * dedicated view across 4 sub-steps: `accounts` → GitHubServiceCard + DaLiveServiceCard,
- * `repository`/`code-sync` → RepoSelectionInline (same element instance, only the `phase`
- * prop changes), `block-libraries` → BlockLibrariesStepContent.
+ * dedicated view across 3 sub-steps: `accounts` → GitHubServiceCard + DaLiveServiceCard,
+ * `repository` → RepoSelectionInline, `block-libraries` → BlockLibrariesStepContent. The
+ * Code Sync sub-step was removed 2026-09-25.
  *
  * The Continue gate uses isStorefrontConfigured(state) — github + dalive authenticated
- * in edsConfig AND storefrontRepoValid true AND storefrontCodeSyncValid true. Block-
- * library selection does NOT affect the gate. RepoSelectionInline reports validity via
- * onRepoValidChange / onCodeSyncValidChange, persisted to state via updateState.
+ * in edsConfig AND storefrontRepoValid true. Block-library selection does NOT affect the
+ * gate. RepoSelectionInline reports validity via onRepoValidChange, persisted to state via
+ * updateState.
  *
  * The auth hooks, RepoSelectionInline, and the service cards are mocked to lightweight
  * stubs so the tests assert the STEP's wiring (nav, view routing, gate, persistence)
@@ -99,14 +99,12 @@ jest.mock('@/features/eds/ui/components/GitHubServiceCard', () => ({
     ),
 }));
 
-// RepoSelectionInline — stub exposing the phase + buttons to flip both validities.
+// RepoSelectionInline — stub exposing buttons to flip the repo validity.
 jest.mock('@/features/eds/ui/steps/RepoSelectionInline', () => ({
     RepoSelectionInline: (props: {
-        phase: string;
         onRepoValidChange: (valid: boolean) => void;
-        onCodeSyncValidChange: (valid: boolean) => void;
     }) => (
-        <div data-testid="repo-selection-inline" data-phase={props.phase}>
+        <div data-testid="repo-selection-inline">
             <button
                 type="button"
                 data-testid="repo-valid"
@@ -120,13 +118,6 @@ jest.mock('@/features/eds/ui/steps/RepoSelectionInline', () => ({
                 onClick={() => props.onRepoValidChange(false)}
             >
                 repo invalid
-            </button>
-            <button
-                type="button"
-                data-testid="codesync-valid"
-                onClick={() => props.onCodeSyncValidChange(true)}
-            >
-                code-sync valid
             </button>
         </div>
     ),
@@ -267,19 +258,16 @@ beforeEach(() => {
 
 describe('StorefrontStep', () => {
     describe('nav + view routing', () => {
-        it('renders the sub-steps in the nav — Code Sync included for an existing repo', () => {
+        it('renders the three sub-steps in the nav for an existing repo', () => {
             setup(); // baseState uses repoMode: 'existing'
-            // Code Sync included since 2026-08-06: the existing-repo check moved to
-            // selection, and the area gate always required it — hiding the step only
-            // hid the reason the area would not complete.
-            for (const id of ['accounts', 'repository', 'code-sync', 'block-libraries']) {
+            for (const id of ['accounts', 'repository', 'block-libraries']) {
                 expect(document.querySelector(`[data-step="${id}"]`)).toBeInTheDocument();
             }
         });
 
-        it('includes the Code Sync sub-step in the nav for a new repo', () => {
+        it('renders the same three sub-steps in the nav for a new repo', () => {
             setup({ edsConfig: { repoMode: 'new' } as WizardState['edsConfig'] });
-            for (const id of ['accounts', 'repository', 'code-sync', 'block-libraries']) {
+            for (const id of ['accounts', 'repository', 'block-libraries']) {
                 expect(document.querySelector(`[data-step="${id}"]`)).toBeInTheDocument();
             }
         });
@@ -292,23 +280,11 @@ describe('StorefrontStep', () => {
             expect(screen.queryByTestId('repo-selection-inline')).not.toBeInTheDocument();
         });
 
-        it('shows RepoSelectionInline with the repository phase on the repository sub-step', () => {
+        it('shows RepoSelectionInline on the repository sub-step', () => {
             setup({ activeStorefrontStep: 'repository', edsConfig: authedEdsConfig() });
-            const inline = screen.getByTestId('repo-selection-inline');
-            expect(inline).toBeInTheDocument();
-            expect(inline).toHaveAttribute('data-phase', 'repository');
+            expect(screen.getByTestId('repo-selection-inline')).toBeInTheDocument();
         });
 
-        it('shows RepoSelectionInline with the code-sync phase on the code-sync sub-step', () => {
-            setup({
-                activeStorefrontStep: 'code-sync',
-                edsConfig: authedEdsConfig(),
-                storefrontRepoValid: true,
-            });
-            const inline = screen.getByTestId('repo-selection-inline');
-            expect(inline).toBeInTheDocument();
-            expect(inline).toHaveAttribute('data-phase', 'code-sync');
-        });
 
         it('persists storefrontRepoValid via updateState when the repo reports valid', () => {
             const { updateState } = setup({
@@ -321,17 +297,6 @@ describe('StorefrontStep', () => {
             expect(updateState).toHaveBeenCalledWith({ storefrontRepoValid: true });
         });
 
-        it('persists storefrontCodeSyncValid via updateState when code-sync reports valid', () => {
-            const { updateState } = setup({
-                activeStorefrontStep: 'code-sync',
-                edsConfig: authedEdsConfig(),
-                storefrontRepoValid: true,
-            });
-            act(() => {
-                fireEvent.click(screen.getByTestId('codesync-valid'));
-            });
-            expect(updateState).toHaveBeenCalledWith({ storefrontCodeSyncValid: true });
-        });
 
         it('switches the active sub-step when a reached nav step is clicked', () => {
             // both authed → accounts is `done` (reachable), repository is `current`.
@@ -384,19 +349,11 @@ describe('StorefrontStep', () => {
             expect(setCanProceed).toHaveBeenLastCalledWith(false);
         });
 
-        it('should be false when repo valid but code-sync not yet valid', () => {
-            const { setCanProceed } = setup({
-                edsConfig: authedEdsConfig(),
-                storefrontRepoValid: true,
-            });
-            expect(setCanProceed).toHaveBeenLastCalledWith(false);
-        });
 
-        it('should be true when github+dalive authed AND repo+code-sync valid', () => {
+        it('should be true when github+dalive authed AND the repo valid', () => {
             const { setCanProceed } = setup({
                 edsConfig: authedEdsConfig(),
                 storefrontRepoValid: true,
-                storefrontCodeSyncValid: true,
             });
             expect(setCanProceed).toHaveBeenLastCalledWith(true);
         });
@@ -408,7 +365,6 @@ describe('StorefrontStep', () => {
                     daLiveAuth: { isAuthenticated: false },
                 },
                 storefrontRepoValid: true,
-                storefrontCodeSyncValid: true,
             });
             expect(setCanProceed).toHaveBeenLastCalledWith(false);
         });
@@ -418,7 +374,6 @@ describe('StorefrontStep', () => {
             const { setCanProceed } = setup({
                 edsConfig: authedEdsConfig(),
                 storefrontRepoValid: true,
-                storefrontCodeSyncValid: true,
                 selectedBlockLibraries: [],
             });
             expect(setCanProceed).toHaveBeenLastCalledWith(true);
