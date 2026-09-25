@@ -68,6 +68,26 @@ The ERP is a temporary demo system filled from Commerce. That stays, but it is s
    status is a real, standard feature, left until a demo asks. Echo suppression moving into the
    integration comes last.
 
+## Decided: the ERP's name is fixed at creation (owner, 2026-09-25)
+
+Renaming a pair after creation would have to move a label through five places (the ERP's
+screen, both tiles, the Commerce Admin menu, the Adobe workspace title) while every internal
+id (Commerce app id, menu id, provider key, order prefix) stays on the first name. Rejected as
+too complicated. Neutral ids everywhere was also rejected: it undoes the readable Commerce app
+ids chosen on 2026-09-22, and installed pairs could not change theirs anyway.
+
+So a pair's name is fixed when it is added; a different name means remove and add again, which
+is cheap because the ERP is refilled at reset. Part of step 1:
+
+- the ERP's Settings loses its name field, and `displayNameEdited` (the rule protecting an
+  on-screen rename from a redeploy) is deleted with it;
+- the name typed at add time is read-only afterwards wherever the integration's settings show
+  it (check whether the tile's settings can edit `ERP_DISPLAY_NAME` today; close it if so);
+- the add flow says so beside the name field: "The name can't be changed later. To use a
+  different name, remove the ERP and add it again.";
+- the order-number prefix is worked out once at install and saved as the Mapping tab's
+  `structure_order_prefix`, instead of being recalculated from the name on every order.
+
 ## Decided: no polling between the two systems (owner, 2026-09-25)
 
 "There shouldn't really be polling actions between the two systems." The minute-by-minute
