@@ -186,9 +186,20 @@ export const handleInvokeRuntimeAction: MessageHandler<InvokeRuntimeActionPayloa
     if ('error' in opened) return opened.error;
     const webUrl = webUrlOf(opened.project, payload?.componentId, action);
     if (!webUrl) {
-        return inNamespace(context, opened, payload?.componentId, (deps, env) =>
-            invokeRuntimeAction(deps, env, action, params ?? {}),
-        );
+        return inNamespace(context, opened, payload?.componentId, async (deps, env) => {
+            const run = await invokeRuntimeAction(deps, env, action, params ?? {});
+            // Measured 2026-09-25: Runtime keeps the lines of a failed run, of a timer-driven run
+            // and of a web call sent with X-OW-EXTRA-LOGGING, but not of a successful run started
+            // directly through the CLI, blocking or not. Say so rather than answer an empty list.
+            const linesDropped = run.success === true && run.logs.length === 0;
+            return {
+                mode: 'cli',
+                ...run,
+                ...(linesDropped
+                    ? { note: 'The run succeeded; Runtime keeps no log lines for a successful direct invoke (a failed one keeps them). The result above is the whole record.' }
+                    : {}),
+            };
+        });
     }
     const auth = await resolveAppManagementAuth(opened.project, ServiceLocator.getAuthenticationService());
     if (!auth) {

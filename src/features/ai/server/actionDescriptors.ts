@@ -394,7 +394,9 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             'when Commerce or a timer cannot be made to fire it, and to read what a SUCCESSFUL run ' +
             'did — which list_runtime_activations never records. A web action (a cart webhook, an ' +
             "ERP route) is called through its URL with the user's Adobe token and its recorded run " +
-            'is read; any other action is invoked blocking. The action may write to Commerce or the ' +
+            'is read, log lines included; any other action (an event handler, a job) is invoked ' +
+            'blocking and answers its result — Runtime keeps no log lines for a successful direct ' +
+            'invoke, only for a failed one. The action may write to Commerce or the ' +
             'ERP, so this requires confirm:true. Takes componentId (optional), action ' +
             '(<package>/<action>) and payload (a JSON object).',
         map: dashboardHandlers,

@@ -244,7 +244,7 @@ describe('handleInvokeRuntimeAction', () => {
 
         const result = await handleInvokeRuntimeAction(context, { componentId: 'erp-integration', action: 'webhook/item-prices', payload });
 
-        expect(result).toEqual({ success: true, data: { namespace: 'ns-stage', ...INVOKED } });
+        expect(result).toEqual({ success: true, data: { namespace: 'ns-stage', mode: 'cli', ...INVOKED } });
         expect(withOrgContext).toHaveBeenCalledWith(
             { orgId: 'org-1', projectId: 'proj-1', workspaceId: 'ws-erp' },
             expect.any(Function),
@@ -322,9 +322,15 @@ describe('handleInvokeRuntimeAction', () => {
         expect(mockInvokeWebAction).not.toHaveBeenCalled();
     });
 
-    it('runs with an empty payload when none is given', async () => {
-        await handleInvokeRuntimeAction(contextWith(createMockProject()), { action: 'erp/refresh-job' });
+    it('runs with an empty payload when none is given, and says so when a successful direct run kept no lines', async () => {
+        mockInvokeRuntimeAction.mockResolvedValue({ ...INVOKED, logs: [] });
+        const result = await handleInvokeRuntimeAction(contextWith(createMockProject()), { action: 'erp/refresh-job' });
         expect(mockInvokeRuntimeAction.mock.calls[0].slice(2)).toEqual(['erp/refresh-job', {}]);
+        expect(result).toMatchObject({ success: true, data: { mode: 'cli', note: expect.stringContaining('keeps no log lines') } });
+
+        mockInvokeRuntimeAction.mockResolvedValue({ ...INVOKED, success: false, logs: [] });
+        const failed = await handleInvokeRuntimeAction(contextWith(createMockProject()), { action: 'erp/refresh-job' });
+        expect((failed as { data: Record<string, unknown> }).data.note).toBeUndefined();
     });
 
     it('refuses a missing or malformed action and a payload that is not an object, before any call', async () => {
