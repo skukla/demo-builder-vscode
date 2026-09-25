@@ -263,3 +263,12 @@ only if a target customer's ERP offers a standard acknowledgement (section 5).
   customer id; F2's "custom field" claim is inferred from the absence of one in the pages the
   earlier audits read.
 - The cost figures in section 2 are estimates from reading the code, not from doing the work.
+
+## 9. Decided (owner, 2026-09-25)
+
+The ERP stays a temporary system filled from Commerce, but filling is separated from running.
+Demo Builder does the copy at reset (it holds the credential, the Commerce client and the
+reset); the ERP and the integration contain no Commerce-copying code; once filled, everything
+behaves as if the ERP were the source. Mappings live by kind: record pairs as integration data,
+business structure as Mapping-tab settings, vocabulary as code. This replaces section 7's order;
+the work is backlog item AB-26y.
