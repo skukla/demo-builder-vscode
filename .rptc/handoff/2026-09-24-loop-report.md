@@ -721,6 +721,19 @@ develop merged into this branch, then this list, then the cut from develop.
   demo setup guide carries the optional Admin step. **Your decision:** whether the Bodea demo
   wants that custom "Confirmed in ERP" status (a two-minute Admin step, then the setting), or
   the note alone.
+- **The order mapping checked against Adobe's documentation (your instruction, 2026-09-25).**
+  Adobe's REST tutorials (developer.adobe.com, "Create an invoice" and "Create a shipment")
+  and the Experience League order pages, against what the integration sends:
+  ship → `POST order/{id}/ship` with `items[{order_item_id, qty}]`, `notify`, and the
+  inventory source in `arguments.extension_attributes.source_code` — matches, and a full
+  shipment plus invoice completed the order live; invoice → `POST order/{id}/invoice` with
+  `capture: true` ("tells Commerce that payment has been received"), which moved the order
+  to Processing and then Complete as the tutorial says — matches; cancel → `orders/{id}/cancel`
+  on a pending order — matches (Commerce refuses it once shipped or invoiced, and the ERP
+  only offers reject while an order is held, so the two agree); hold and release →
+  `orders/{id}/hold` and `/unhold`, allowed on pending and processing orders — matches.
+  The one mismatch was the confirmation (fixed above). Not read: any page stating the hold
+  and cancel state rules explicitly; those two rest on Commerce's measured behaviour.
 - **Still owed from the owner's request** ("bidirectionally integrated" and "when an ERP is
   deleted, the resetting of the records in commerce works"): an order placed on the storefront
   as a Kukla Studios user (Commerce→ERP), ERP-side changes read back in Commerce (price via
