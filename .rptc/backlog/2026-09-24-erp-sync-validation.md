@@ -31,7 +31,7 @@ Run through the Demo Builder agent tools against the demo instance (Bodea) and t
 | Flow | Direction | Live status |
 |---|---|---|
 | Product save (name, price) → ERP product | Commerce → ERP | ✓ 2026-09-25 03:xx UTC, after the priority-subscription fix |
-| Product delete → ERP | Commerce → ERP | ○ |
+| Product delete → ERP | Commerce → ERP | ✓ 2026-09-25 14:22 (a throwaway product created in Commerce reached the ERP within 75 s; deleted in Commerce, the ERP answered 404 within 75 s) |
 | Stock item save → ERP warehouse | Commerce → ERP | ✓ 2026-09-25 14:01 (source item accesspoint@default 61 in Commerce, ERP warehouse 61 within 90 s) |
 | Companies, credit, status (minute refresh) → ERP partners | Commerce → ERP | ✓ 2026-09-24 |
 | Order placed → ERP sales order, number written back | Commerce → ERP | ✓ 2026-09-25 12:24 (orders 3000000007, 3000000008), after three fixes (✗ `_isNew`, ✗ company, ✗ timeout) |
