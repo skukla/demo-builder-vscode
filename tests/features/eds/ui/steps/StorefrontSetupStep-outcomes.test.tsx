@@ -31,7 +31,6 @@ const GITHUB_APP_PAYLOAD = {
     repo: 'test-repo',
     installUrl: 'https://github.com/apps/aem-code-sync/installations/new',
     message: 'AEM Code Sync is not installed on this repository.',
-    siteUnregistered: true,
 };
 
 describe('StorefrontSetupStep — completion', () => {
@@ -169,7 +168,6 @@ describe('StorefrontSetupStep — GitHub App installation required', () => {
             'data-message',
             'AEM Code Sync is not installed on this repository.',
         );
-        expect(dialog).toHaveAttribute('data-site-unregistered', 'true');
         expect(screen.queryByTestId('loading')).not.toBeInTheDocument();
     });
 

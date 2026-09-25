@@ -211,7 +211,6 @@ async function confirmCodeSync(
                 installUrl,
                 // isTeamOrg used to ride along here; nothing webview-side ever
                 // read it (deleted by the 2026-08-21 channel inventory).
-                siteUnregistered: false,
                 message,
             },
             { signal, phase: 'site-config', progress: 48 },

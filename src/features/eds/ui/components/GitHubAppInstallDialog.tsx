@@ -30,17 +30,6 @@ interface GitHubAppInstallDialogProps {
     installUrl: string;
     /** Error message from code sync failure */
     message: string;
-    /**
-     * Helix has no SITE for this repo (outer HTTP 404), as opposed to knowing
-     * the site and reporting no code sync for it (`code.status: 404`).
-     *
-     * `/status` reports on the site, so this says NOTHING about whether the App
-     * is installed — and an install cannot resolve it. Measured on
-     * skukla/kukla-bodea 2026-08-20: GitHub listed the repo under the AEM Code
-     * Sync installation and the endpoint 404'd anyway. Drives a different title,
-     * body and action order below.
-     */
-    siteUnregistered?: boolean;
     /** Called when app installation is detected */
     onInstallDetected: () => void;
 }
@@ -49,7 +38,6 @@ export function GitHubAppInstallDialog({
     owner,
     repo,
     installUrl,
-    siteUnregistered = false,
     onInstallDetected,
 }: GitHubAppInstallDialogProps) {
     const [isChecking, setIsChecking] = useState(false);
@@ -94,51 +82,6 @@ export function GitHubAppInstallDialog({
                     subMessage={`Verifying ${owner}/${repo}`}
                 />
             </CenteredFeedbackContainer>
-        );
-    }
-
-    // Helix has no site for this repo. An install flow cannot fix that, so it is
-    // not what this screen leads with -- Check Again is the action, and Install
-    // App stays only as a secondary "if you have not already".
-    if (siteUnregistered) {
-        return (
-            <StatusDisplay
-                variant="info"
-                title="Waiting for Adobe to register your repository"
-                height="auto"
-                actions={[
-                    {
-                        label: CODE_SYNC_RECHECK_ACTION,
-                        icon: <Refresh />,
-                        variant: 'accent',
-                        onPress: handleCheckInstallation,
-                    },
-                    {
-                        label: CODE_SYNC_INSTALL_ACTION,
-                        icon: <LinkOut />,
-                        variant: 'secondary',
-                        onPress: handleOpenInstallPage,
-                    },
-                ]}
-            >
-                <Text UNSAFE_className="text-sm text-gray-600 text-center">
-                    {`Adobe does not have a site for ${owner}/${repo} yet. This usually ` +
-                        'settles within a minute or two of the repository being set up.'}
-                </Text>
-                {hasError && (
-                    <Text
-                        UNSAFE_className="text-sm text-orange-700 text-center"
-                        marginTop="size-200"
-                    >
-                        {/* Deliberately NOT "the App is missing". We cannot see the App
-                            from here, and saying so is what sent someone through eleven
-                            reinstalls. If it never settles, AEM Code Sync not being
-                            installed is ONE possible cause, offered as such. */}
-                        ⚠️ Still not registered. If this persists, check that AEM Code
-                        Sync has access to this repository.
-                    </Text>
-                )}
-            </StatusDisplay>
         );
     }
 

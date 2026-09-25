@@ -639,6 +639,4 @@ export interface StorefrontGitHubAppRequiredPayload {
     repo: string;
     installUrl: string;
     message: string;
-    /** Helix has no site for this repo — see GitHubAppInstallDialog. */
-    siteUnregistered?: boolean;
 }

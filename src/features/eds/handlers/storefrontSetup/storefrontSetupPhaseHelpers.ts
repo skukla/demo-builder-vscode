@@ -132,7 +132,6 @@ export async function checkGitHubAppForExistingRepo(
                 owner: repoInfo.repoOwner,
                 repo: repoInfo.repoName,
                 installUrl,
-                siteUnregistered,
                 message: 'The AEM Code Sync GitHub App must be installed to continue.',
             },
             { signal: options.signal, phase: 'storefront-code', progress: 28 },

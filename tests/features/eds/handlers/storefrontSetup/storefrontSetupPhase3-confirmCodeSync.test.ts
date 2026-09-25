@@ -445,10 +445,7 @@ describe('the App-required payload', () => {
         mockResolve.mockResolvedValue({ kind: 'not-installed', codeStatus: 404 });
     });
 
-    it('names the repo and the install URL, and does not claim the site is unregistered', async () => {
-        // siteUnregistered says the SITE is missing. Here Helix has the site and
-        // reports code.status 404, so claiming otherwise would send the webview
-        // down the wrong recovery path.
+    it('names the repo and the install URL', async () => {
         const context = makeContext();
 
         await run(context, makeServices());
@@ -457,7 +454,6 @@ describe('the App-required payload', () => {
             owner: 'skukla',
             repo: 'kukla-bodea',
             installUrl: 'https://github.com/apps/aem-code-sync',
-            siteUnregistered: false,
             message: expect.any(String),
         });
     });

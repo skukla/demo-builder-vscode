@@ -121,18 +121,6 @@ describe('checkGitHubAppForExistingRepo', () => {
             expect(result).toBeNull();
         });
 
-        it('says the App is missing only when Helix KNOWS the site', async () => {
-            // `code.status: 404` is the measurement: Helix has the site and
-            // reports no code sync for it. Only this one earns the claim.
-            const context = makeContext();
-            const services = makeServices({ isInstalled: false, codeStatus: 404 });
-
-            await checkGitHubAppForExistingRepo(context, services, REPO_INFO);
-
-            expect(sentPayload(context, 'storefront-setup-github-app-required')).toMatchObject({
-                siteUnregistered: false,
-            });
-        });
     });
 
     describe('Helix has no SITE for the repo (the outer 404)', () => {
@@ -273,9 +261,6 @@ describe('checkGitHubAppForExistingRepo', () => {
             );
             const result = await checkGitHubAppForExistingRepo(context, services, REPO_INFO);
             expect(sentMessageTypes(context)).toContain('storefront-setup-github-app-required');
-            expect(sentPayload(context, 'storefront-setup-github-app-required')).toMatchObject({
-                siteUnregistered: false,
-            });
             expect(result).toBeNull();
         });
 

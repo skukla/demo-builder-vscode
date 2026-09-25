@@ -51,7 +51,7 @@ jest.mock('@/core/ui/components/layout/CenteredFeedbackContainer', () => ({
 jest.mock('@/core/ui/components/layout/SingleColumnLayout', () => ({
     SingleColumnLayout: ({ children }: any) => <div>{children}</div>,
 }));
-// Same reason: the step forwards five fields of the github-app-required payload
+// Same reason: the step forwards four fields of the github-app-required payload
 // into this dialog and wires its `onInstallDetected` callback. The stub exposes
 // the forwarded values and offers a button that fires the callback.
 jest.mock('@/features/eds/ui/components/GitHubAppInstallDialog', () => ({
@@ -60,7 +60,6 @@ jest.mock('@/features/eds/ui/components/GitHubAppInstallDialog', () => ({
         repo,
         installUrl,
         message,
-        siteUnregistered,
         onInstallDetected,
     }: any) => (
         <div
@@ -69,7 +68,6 @@ jest.mock('@/features/eds/ui/components/GitHubAppInstallDialog', () => ({
             data-repo={repo ?? ''}
             data-install-url={installUrl ?? ''}
             data-message={message ?? ''}
-            data-site-unregistered={String(siteUnregistered)}
         >
             <button onClick={onInstallDetected}>Simulate install detected</button>
         </div>

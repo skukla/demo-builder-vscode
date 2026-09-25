@@ -563,7 +563,6 @@ export function StorefrontSetupStep({
                                 repo={setupState.githubAppData.repo}
                                 installUrl={setupState.githubAppData.installUrl}
                                 message={setupState.githubAppData.message}
-                                siteUnregistered={setupState.githubAppData.siteUnregistered}
                                 onInstallDetected={handleInstallDetected}
                             />
                         </CenteredFeedbackContainer>
