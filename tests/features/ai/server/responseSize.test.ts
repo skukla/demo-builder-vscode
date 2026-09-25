@@ -437,6 +437,11 @@ describe('rows with no output safety net are classified', () => {
         // fixed shapes, and never a secret's value.
         'get_integration_settings',
         'set_integration_settings',
+        // The demo setup checklist (AB-26x): each returns `{items}`, one row per step the
+        // catalog entry declares, with fixed fields.
+        'get_setup_checklist',
+        'set_setup_step',
+        'check_setup_steps',
     ];
 
     it('the set matches exactly — a new row must be classified before it ships', async () => {
@@ -563,6 +568,11 @@ describe('the ceiling table tracks the tool surface', () => {
         // the entry, not by the project or the instance.
         'get_integration_settings',
         'set_integration_settings',
+        // One row per setup step the catalog entry declares (two for the ERP integration),
+        // bounded by the entry, not by the project or the instance.
+        'get_setup_checklist',
+        'set_setup_step',
+        'check_setup_steps',
     ]);
 
     it('records a ceiling for every DESCRIPTOR tool that is not deliberately exempt', () => {

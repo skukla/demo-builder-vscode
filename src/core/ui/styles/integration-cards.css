@@ -247,6 +247,15 @@
     color: var(--spectrum-global-color-gray-600);
 }
 
+/* One demo setup step in the flyout (AB-26x): title and state, why, where, what the last
+   check found, then its links, stacked; steps separated like the panel's rows. */
+.integration-setup-step {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-top: 8px;
+}
+
 /* One API per line — a comma-joined run of long Adobe API names is unreadable
    in a 352px column. */
 .integration-panel-api {

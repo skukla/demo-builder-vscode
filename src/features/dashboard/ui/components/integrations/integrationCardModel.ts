@@ -42,6 +42,7 @@ import type {
     LinkedCard,
 } from '@/core/ui/components/integrations/integrationCardModel.types';
 import { getStatusDisplay, severityToDot } from '@/core/ui/utils/statusVocabulary';
+import { setupChecklistOf } from '@/features/app-builder/services/setupChecklist';
 import {
     getAppBuilderComponentCatalog,
     getAppBuilderComponentEntry,
@@ -425,7 +426,14 @@ export function deriveIntegrationCard(
         menuActions: buildMenuActions(face.status, primaryUrl, installation, Boolean(entry.updateAvailable)),
         canRename: entry.kind === 'integration' && !facet.isCatalog,
         ...(systems.length > 0 ? { linked: { label: 'Uses' as const, cards: systems } } : {}),
+        ...withSetupChecklist(entry),
     });
+}
+
+/** The demo setup checklist, when the entry declares one (`setupChecklist.ts`). */
+function withSetupChecklist(entry: IdentifiedAppBuilderComponent): Pick<IntegrationCardModel, 'setupChecklist'> {
+    const setupChecklist = setupChecklistOf(entry.id, entry);
+    return setupChecklist ? { setupChecklist } : {};
 }
 
 /**

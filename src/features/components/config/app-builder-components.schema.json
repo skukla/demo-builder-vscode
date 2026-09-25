@@ -161,6 +161,22 @@
           "minLength": 1,
           "description": "Appended to the name nameFromEnvVar supplies: the ERP integration reads '<ERP name> Integration'. Requires nameFromEnvVar; an empty input falls back to the entry's name."
         },
+        "setupSteps": {
+          "type": "array",
+          "description": "What an SC prepares in Commerce by hand for this component's demo, shown as a checklist on its tile. Demo setup; the integration carries none.",
+          "items": {
+            "type": "object",
+            "required": ["id", "title", "why", "where"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+              "title": { "type": "string", "minLength": 1 },
+              "why": { "type": "string", "minLength": 1 },
+              "where": { "type": "string", "minLength": 1 },
+              "check": { "type": "string", "enum": ["companies-have-own-catalogs"] }
+            }
+          }
+        },
         "screen": {
           "type": "object",
           "required": [

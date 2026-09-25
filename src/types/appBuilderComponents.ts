@@ -63,7 +63,6 @@ export interface ComponentSettings {
     connected: ComponentConnectedSetting[];
 }
 
-/** A pre-built appBuilderComponent catalog entry. */
 /** One of a component's own web actions, called by POST with no body. */
 export interface WebActionCall {
     /** The web action, e.g. "admin". */
@@ -72,6 +71,37 @@ export interface WebActionCall {
     path: string;
 }
 
+/** How Demo Builder can tell a setup step is done, when it can (`setupChecks.ts`). */
+export type SetupCheck = 'companies-have-own-catalogs';
+
+/** One thing an SC prepares by hand for a demo (see `setupSteps`). */
+export interface SetupStep {
+    /** Stable key the project records the step's state under. */
+    id: string;
+    /** What to do, as an instruction. */
+    title: string;
+    /** Why it matters, in one sentence. */
+    why: string;
+    /** Where in Commerce Admin it is done, as the menu path. */
+    where: string;
+    /** A check Demo Builder can run; absent = the SC marks it done. */
+    check?: SetupCheck;
+}
+
+/** One demo setup step as the flyout shows it (AB-26x). */
+export interface SetupChecklistItem {
+    id: string;
+    title: string;
+    why: string;
+    where: string;
+    state: 'open' | 'done' | 'dismissed';
+    /** What the last check found, when one ran. */
+    note?: string;
+    /** Demo Builder can check this one itself. */
+    checkable: boolean;
+}
+
+/** A pre-built appBuilderComponent catalog entry. */
 export interface AppBuilderComponentCatalogEntry {
     id: string;
     name: string;
@@ -155,6 +185,12 @@ export interface AppBuilderComponentCatalogEntry {
      * input is empty the row falls back to `name`, suffix and all.
      */
     nameSuffix?: string;
+    /**
+     * What an SC prepares in Commerce by hand for this component's demo, shown as a
+     * checklist on its tile (AB-26x, owner 2026-09-25). Demo setup, not integration
+     * code: the integration itself carries no setup steps.
+     */
+    setupSteps?: SetupStep[];
     /**
      * A screen this component serves from one of its own web actions, opened by
      * a link that carries a key Demo Builder generates (the ERP; see

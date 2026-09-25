@@ -14,6 +14,7 @@
 
 import type { StatusDotVariant } from '@/core/ui/components/ui/StatusDot';
 import type { DisplayStatus } from '@/core/ui/utils/statusVocabulary';
+import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 
 /**
  * Card status vocabulary — an alias for the shared {@link DisplayStatus}, not a
@@ -58,6 +59,8 @@ export interface IntegrationCardModel {
     settingsSummary?: string;
     /** Why the last removal stopped, when it did; the card offers Remove anyway. */
     removalStopped?: string;
+    /** The demo setup steps its catalog entry declares, with where the SC is on each. */
+    setupChecklist?: SetupChecklistItem[];
     isMesh: boolean;
     name: string;
     kindLabel: string;

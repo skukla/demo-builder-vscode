@@ -98,6 +98,13 @@ const CATALOG: Row[] = [
         args: ['id'],
     },
     {
+        tool: 'get_setup_checklist',
+        map: dashboardHandlers,
+        type: 'getSetupChecklist',
+        needsAuth: false,
+        args: ['id'],
+    },
+    {
         tool: 'list_console_apis',
         map: dashboardHandlers,
         type: 'listConsoleApis',

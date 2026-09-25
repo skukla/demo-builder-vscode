@@ -231,6 +231,38 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         },
     },
     {
+        tool: 'set_setup_step',
+        needsAuth: false,
+        readOnly: false,
+        description:
+            "Mark one step of an integration's demo setup checklist (from get_setup_checklist) " +
+            'done or dismissed, or open it again. Changes only the checklist in Demo Builder, not ' +
+            'Commerce: the step itself is done by hand in Commerce Admin. Mark a step done only ' +
+            'when the user says they did it.',
+        map: dashboardHandlers,
+        type: 'setSetupStep',
+        inputSchema: {
+            id: z.string().describe('The integration id (from get_project)'),
+            stepId: z.string().describe('The step id (from get_setup_checklist)'),
+            state: z.enum(['done', 'dismissed', 'open']).describe('What the step becomes'),
+        },
+    },
+    {
+        tool: 'check_setup_steps',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            "Run the checks Demo Builder can do itself on an integration's demo setup checklist " +
+            '(reads Commerce, e.g. whether each company has a customer group of its own), and ' +
+            'save what each found: a passing check marks its step done, a failing one opens it ' +
+            'again with the reason. Steps without a check are left as they are.',
+        map: dashboardHandlers,
+        type: 'checkSetupSteps',
+        inputSchema: {
+            id: z.string().describe('The integration id (from get_project)'),
+        },
+    },
+    {
         tool: 'redeploy_integration',
         needsAuth: ['adobe'],
         readOnly: false,

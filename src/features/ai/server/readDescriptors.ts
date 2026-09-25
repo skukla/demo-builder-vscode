@@ -382,6 +382,21 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         },
     },
     {
+        tool: 'get_setup_checklist',
+        needsAuth: false,
+        readOnly: true,
+        description:
+            "Read an integration's demo setup checklist: what the SC prepares by hand in Commerce " +
+            'Admin for its demo (e.g. the "Confirmed in ERP" order status, a shared catalog per ' +
+            'priced company), where, why, and whether each is done, dismissed or still to do. As ' +
+            'saved: runs no check (check_setup_steps does). Only integrations that declare steps have one.',
+        map: dashboardHandlers,
+        type: 'getSetupChecklist',
+        inputSchema: {
+            id: z.string().describe('The integration id (from get_project)'),
+        },
+    },
+    {
         tool: 'list_console_apis',
         needsAuth: ['adobe'],
         readOnly: true,

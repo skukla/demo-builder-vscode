@@ -662,6 +662,13 @@
           "type": "string",
           "description": "Display name for the integration (durable home for the user-facing name)."
         },
+        "setupSteps": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/SetupStepRecord"
+          },
+          "description": "Where the SC is with each of the catalog entry's `setupSteps` (AB-26x), by step id. Absent = open. Removed with the component."
+        },
         "catalogId": {
           "type": "string",
           "description": "The catalog entry this component was made from, when its id is not that entry's id: a second copy of a kind the project already holds (`demo-erp-2`). ABSENT means the id IS the catalog id — every component before this, and the first of each kind. Read through `catalogEntryFor`."
@@ -835,6 +842,28 @@
         "system"
       ],
       "description": "An App Builder component's kind: a mesh artifact, an App Builder integration, or a SYSTEM — a stand-in for an external system an integration talks to (the demo ERP). A system is a plain App Builder app with no Commerce install; it never gets a card of its own and comes and goes with the integration it is bound to (`AppBuilderComponentCatalogEntry.boundTo`; decision 13, 2026-09-14)."
+    },
+    "SetupStepRecord": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "done",
+            "dismissed"
+          ],
+          "description": "Absent = still to do."
+        },
+        "note": {
+          "type": "string",
+          "description": "What the last automatic check found, in words (e.g. which companies share a group)."
+        },
+        "checkedAt": {
+          "type": "string",
+          "description": "When that check ran (ISO)."
+        }
+      },
+      "description": "One setup step's saved state: marked done or dismissed, and what its last check said."
     },
     "AddedDemo": {
       "type": "object",

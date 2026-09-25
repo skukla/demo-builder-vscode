@@ -257,7 +257,10 @@ describe('dashboardHandlers', () => {
             // (66 → 67, 2026-09-25): invokeRuntimeAction — replay a Runtime action with a payload.
             // (62 → 66, 2026-09-24): the ERP's own API for agents (its screens' reads and
             // actions without the screen), and what RAN in a Runtime namespace.
-            expect(types).toHaveLength(67);
+            //
+            // getSetupChecklist + setSetupStep + checkSetupSteps (67 → 70, AB-26x,
+            // 2026-09-25): an integration's demo setup checklist on its flyout.
+            expect(types).toHaveLength(70);
         });
 
         it('should have handlers as functions', () => {

@@ -36,6 +36,9 @@ const NEEDS_AUTH: Record<string, AuthProvider[] | false> = {
     rename_integration: false,
     // Stores the change, then redeploys through the guarded deploy path.
     set_integration_settings: ['adobe'],
+    // The demo setup checklist (AB-26x): marking a step is saved state only; checking reads Commerce.
+    set_setup_step: false,
+    check_setup_steps: ['adobe'],
     set_console_apis: ['adobe'],
     set_project_destination: ['adobe'],
     deploy_integration: ['adobe'],
@@ -72,6 +75,8 @@ const INPUT_KEYS: Record<string, string[]> = {
     rename_integration: ['id', 'name'],
     // No `secrets`: a secret must never be a tool argument (AB-21).
     set_integration_settings: ['id', 'values'],
+    set_setup_step: ['id', 'state', 'stepId'],
+    check_setup_steps: ['id'],
     set_console_apis: ['apis', 'componentId'],
     set_project_destination: ['project', 'workspace'],
     deploy_integration: ['id', 'refreshCli'],

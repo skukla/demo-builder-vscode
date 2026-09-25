@@ -30,6 +30,7 @@ import React from 'react';
 import type { CardAction, IntegrationCardModel } from './integrationCardModel';
 import { LinkedSection } from './LinkedSection';
 import { PanelRow } from './PanelRow';
+import { SetupChecklistSection } from './SetupChecklistSection';
 import { InlineRenameField } from '@/core/ui/components/forms/InlineRenameField';
 import { CommerceScopeList } from '@/core/ui/components/integrations/CommerceScopeList';
 import { IntegrationActionsMenu } from '@/core/ui/components/integrations/IntegrationActionsMenu';
@@ -184,6 +185,7 @@ function PanelContent({
                         </Link>
                     </PanelRow>
                 )}
+                <SetupChecklistSection model={model} onOpenAdmin={() => onAction(model, 'open-admin')} />
                 {/* ONE row, not the former Kind + Source pair. They printed the same
                     fact in two registers — worst on the blank starter, where
                     "Custom · blank starter" sat directly above "Blank starter — build

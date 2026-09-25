@@ -263,6 +263,16 @@ export interface Project {
  */
 export type AppBuilderComponentKind = 'mesh' | 'integration' | 'system';
 
+/** One setup step's saved state: marked done or dismissed, and what its last check said. */
+export interface SetupStepRecord {
+    /** Absent = still to do. */
+    state?: 'done' | 'dismissed';
+    /** What the last automatic check found, in words (e.g. which companies share a group). */
+    note?: string;
+    /** When that check ran (ISO). */
+    checkedAt?: string;
+}
+
 /**
  * Keyed appBuilderComponent state (Model B). One concept replaces the singular
  * `meshState` + `appState`. The mesh's endpoint + staleness fields and an
@@ -291,6 +301,11 @@ export interface AppBuilderComponentState {
     commerceAppId?: string;
     /** Display name for the integration (durable home for the user-facing name). */
     name?: string;
+    /**
+     * Where the SC is with each of the catalog entry's `setupSteps` (AB-26x), by step id.
+     * Absent = open. Removed with the component.
+     */
+    setupSteps?: Record<string, SetupStepRecord>;
     /**
      * The catalog entry this component was made from, when its id is not that entry's
      * id: a second copy of a kind the project already holds (`demo-erp-2`). ABSENT

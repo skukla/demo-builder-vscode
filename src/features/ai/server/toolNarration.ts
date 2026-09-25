@@ -168,6 +168,9 @@ export const TOOL_NARRATION: Record<string, string> = {
     rename_integration: 'Renaming the integration',
     get_integration_settings: 'Reading integration settings',
     set_integration_settings: 'Saving the integration settings',
+    get_setup_checklist: 'Reading the demo setup checklist',
+    set_setup_step: 'Marking a demo setup step',
+    check_setup_steps: 'Checking demo setup in Commerce',
 
     // ── I/O Events lifecycle (AB-6) ─────────────────────────────────────
     install_integration: 'Installing the app into Commerce',

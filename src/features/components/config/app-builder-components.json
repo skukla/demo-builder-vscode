@@ -83,6 +83,21 @@
       "name": "ERP Integration",
       "nameFromEnvVar": "ERP_DISPLAY_NAME",
       "nameSuffix": " Integration",
+      "setupSteps": [
+        {
+          "id": "confirmed-status",
+          "title": "Create the \"Confirmed in ERP\" order status",
+          "why": "Without it, an order the ERP confirmed looks the same as one it never saw in the Orders grid.",
+          "where": "Stores > Settings > Order Status: create erp_confirmed, assign it to Pending (not as default), then pick it for \"Order status when the ERP confirms\" on the integration's Mapping tab."
+        },
+        {
+          "id": "company-catalogs",
+          "title": "Give each company that gets its own prices a shared catalog of its own",
+          "why": "At the cart Commerce tells the integration only the buyer's customer group, so companies sharing a group get the same prices.",
+          "where": "Catalog > Shared Catalogs > Add Shared Catalog, then Assign Companies.",
+          "check": "companies-have-own-catalogs"
+        }
+      ],
       "description": "Adobe Commerce and an ERP, on the Commerce integration starter kit: orders get an ERP number, price, stock and order-status changes in the ERP land in Commerce, contract prices apply in the cart, and a screen inside the Commerce Admin shows it all. Comes with its own ERP.",
       "kind": "integration",
       "layout": "extension",

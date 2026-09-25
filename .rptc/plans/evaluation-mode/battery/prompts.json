@@ -1123,5 +1123,29 @@
       "list_runtime_packages"
     ],
     "why": "Added with the tool (2026-09-21): a removal reported done while fifteen packages kept running in Stage, and no tool could show it. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "setup-checklist-read",
+    "prompt": "What do I still need to set up in Commerce for the ERP integration demo?",
+    "expect": [
+      "get_setup_checklist"
+    ],
+    "why": "Added with the tool (2026-09-25, AB-26x): the SC's demo setup steps in Commerce Admin, as a checklist Demo Builder keeps. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "setup-checklist-mark",
+    "prompt": "I created the Confirmed in ERP order status; tick it off the ERP integration's setup list.",
+    "expect": [
+      "set_setup_step"
+    ],
+    "why": "Added with the tool (2026-09-25, AB-26x): the SC's demo setup steps in Commerce Admin, as a checklist Demo Builder keeps. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "setup-checklist-check",
+    "prompt": "Check whether each company already has its own shared catalog for the ERP demo.",
+    "expect": [
+      "check_setup_steps"
+    ],
+    "why": "Added with the tool (2026-09-25, AB-26x): the SC's demo setup steps in Commerce Admin, as a checklist Demo Builder keeps. A MISS is a discoverability finding about the tool, not a bad prompt."
   }
 ]

@@ -54,7 +54,8 @@ const EXPECTED: Record<string, number> = {
     // 43 -> 44 the same day: write_commerce_rest signs with the same credential.
     // 44 -> 46 the same day: list_runtime_activations and read_runtime_activation read a
     // Runtime namespace through the Console credential, like list_runtime_packages.
-    adobe: 47,
+    // 47 -> 48 on 2026-09-25: check_setup_steps reads Commerce with the workspace credential.
+    adobe: 48,
     dalive: 21,
     // 10 -> 12 on 2026-09-12: forget_added_demo and change_demo_source (step 06
     // of the shareable-demo program) both read and write GitHub; 12 -> 14 the
@@ -71,7 +72,8 @@ const EXPECTED: Record<string, number> = {
     // no sign-in the way get_erp_status does — the handler resolves the IMS
     // identity itself and answers a typed AUTH_REQUIRED when there is none.
     // 52 -> 54 on 2026-09-24: run_erp_rest and write_erp_rest declare like get_erp_status.
-    none: 54,
+    // 54 -> 56 on 2026-09-25: get_setup_checklist and set_setup_step touch saved state only.
+    none: 56,
 };
 
 /**
@@ -85,7 +87,7 @@ const EXPECTED: Record<string, number> = {
  * files. That counts text, not declarations, and was roughly double. The CONTROL below
  * caught it — which is the argument for having one.)
  */
-const EXPECTED_TOOLS = 138;
+const EXPECTED_TOOLS = 141; // 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x).
 
 interface Declaration {
     name: string;
