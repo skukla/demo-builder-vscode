@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: high
-status: backlog
+status: built
 ---
 
 # Setup resumes when the install dialog detects AEM Code Sync, instead of demanding a Retry
@@ -68,3 +68,7 @@ honest message on the bound; `partialState` unchanged across the wait. Live: a r
 without the App, installed while the dialog is up, finishes setup in the same run with the
 green "AEM Code Sync verified" line and no Retry. The first measurement to take before building:
 what `createRepoFromSource` does today when the name already exists.
+
+## Shipped so far
+
+- 2026-09-25  fix(eds): setup waits for AEM Code Sync inside the run and resumes where it paused (`b920b2936`)

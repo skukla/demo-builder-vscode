@@ -254,7 +254,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-17` | feature | [A storefront can live in an organization's repository, not only the SC's own](2026-09-16-storefront-in-an-org-repository.md) | — | high | backlog |
 | `EDS-18` | fix | [A created GitHub repository becomes the selected repository, and the Code Sync notice centres](2026-09-25-eds-created-repo-becomes-the-selection.md) | — | high | active |
 | `EDS-19` | fix | [The Code Sync sub-step leaves the Storefront area; setup is the one place the App is asked about](2026-09-25-eds-code-sync-substep-removed.md) | — | high | built |
-| `EDS-20` | fix | [Setup resumes when the install dialog detects AEM Code Sync, instead of demanding a Retry](2026-09-25-eds-setup-resumes-after-code-sync-install.md) | — | high | backlog |
+| `EDS-20` | fix | [Setup resumes when the install dialog detects AEM Code Sync, instead of demanding a Retry](2026-09-25-eds-setup-resumes-after-code-sync-install.md) | — | high | built |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | backlog |
 
 ### app-builder  (13)
