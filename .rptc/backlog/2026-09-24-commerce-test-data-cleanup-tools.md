@@ -94,3 +94,4 @@ So the shape is TWO generic tools over the whole REST surface, not per-entity to
 - 2026-09-24  fix(ai): Commerce REST writes get the long timeout; a company POST outran the normal one (`02577755a`)
 - 2026-09-24  test(ai): the REST tool suites use the canonical HandlerContext fake and typed fixtures (`0f988f1a1`)
 - 2026-09-24  fix(ai): the Commerce REST client follows Adobe's Cloud Service server-to-server guide (`d57e0483b`)
+- 2026-09-24  fix(ai): Commerce REST reads wait as long as writes; the sandbox aborted plain GETs at 30s three times (`c4474bc22`)

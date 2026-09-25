@@ -58,3 +58,5 @@ routing integration) · AB-26r (credit memo) · AB-26s (the payment leg) · AB-2
 - 2026-09-24  feat(ai): lookup_erp_record and follow_erp_order read Commerce companies and orders through the ERP integration (`d6ac0c337`)
 - 2026-09-24  refactor(ai): the two ERP reads take the get_ prefix the read-only name rule recognises (`18c2fe6ea`)
 - 2026-09-24  feat(ai): the ERP's own API and Runtime activations reach the agent surface (run_erp_rest, write_erp_rest, list_runtime_activations, read_runtime_activation) (`bf72a0cdb`)
+- 2026-09-25  docs(report): the order round trip proven live, and the three defects it exposed (`c0ccaaba7`)
+- 2026-09-24  fix(ai): the activation tools say what Runtime does not record, and the first conclusion drawn from them is retracted (`855518419`)
