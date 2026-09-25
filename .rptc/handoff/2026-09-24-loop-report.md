@@ -762,6 +762,16 @@ develop merged into this branch, then this list, then the cut from develop.
   payload keys and partner hints. Also seen: the instance's registrations say `required: true`
   where the source says `false` (an older install; the library now applies changed fields on
   install, so the redeploy should correct it).
+- **PROVEN LIVE (2026-09-25, 13:52 UTC): cart pricing from the ERP.** Once the demo company had
+  its own customer group and an ERP contract price, a cart for its admin priced at the contract
+  price (40 instead of 53), and the webhook run is recorded in Runtime (2.6 s). Getting there
+  taught two things now in the ledger: App Management upgrades an installed app's registrations
+  only when the app's version changes (three redeploys carried code but not the new webhook
+  settings until 0.7.0), and Commerce strips the `plugin.magento.` prefix from webhook names, so
+  a suspected naming mismatch was not one. Left as a note: Commerce still reports the webhooks
+  as `required: true` although the source says false; the library treats the field as
+  updatable, so the upgrade should have changed it. Harmless today (the action always answers
+  200) but worth a look before a demo where the ERP is deliberately taken offline.
 - **Still owed from the owner's request** ("bidirectionally integrated" and "when an ERP is
   deleted, the resetting of the records in commerce works"): an order placed on the storefront
   as a Kukla Studios user (Commerce→ERP), ERP-side changes read back in Commerce (price via

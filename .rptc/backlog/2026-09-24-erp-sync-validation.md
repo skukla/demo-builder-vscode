@@ -35,7 +35,7 @@ Run through the Demo Builder agent tools against the demo instance (Bodea) and t
 | Stock item save → ERP warehouse | Commerce → ERP | ○ |
 | Companies, credit, status (minute refresh) → ERP partners | Commerce → ERP | ✓ 2026-09-24 |
 | Order placed → ERP sales order, number written back | Commerce → ERP | ✓ 2026-09-25 12:24 (orders 3000000007, 3000000008), after three fixes (✗ `_isNew`, ✗ company, ✗ timeout) |
-| Cart pricing webhooks (contract price, discount ceiling) | Commerce → ERP → cart | ✗ in progress 2026-09-25 13:28: group 18 + contract price 40 set up, cart still priced 53; ERP and action proven right in isolation; registrations now record every run to see Commerce's payload |
+| Cart pricing webhooks (contract price, discount ceiling) | Commerce → ERP → cart | ✓ 2026-09-25 13:52: with the company in its own customer group and an ERP contract price of 40, the cart priced at 40 (item-prices ran in 2.6–2.8 s, recorded). The 13:28 miss was most likely Commerce's old 5 s limit on a cold start (no run recorded then); registrations now wait 10 s and record every run. Discount ceiling: fires (recorded), not yet exercised with a discount |
 | Cancel / hold made in Commerce Admin → ERP | Commerce → ERP | ○ |
 | Shipment made in Commerce Admin → ERP | Commerce → ERP | ○ (the echo of an ERP-made shipment was matched, not doubled: ✓ 12:31) |
 | Invoice made in Commerce Admin → ERP | Commerce → ERP | ○ (the echo of an ERP-made invoice did not carry the Commerce invoice id back; nothing doubled) |
