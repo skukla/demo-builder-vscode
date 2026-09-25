@@ -741,6 +741,27 @@ develop merged into this branch, then this list, then the cut from develop.
   integration (`docs/live-validation-learnings.md`, each row naming its pinning test, with a
   test that fails when a cited test disappears), a section in this extension's
   `docs/systems/erp-integration.md`, and five reference memories for future sessions.
+- **PROVEN LIVE (2026-09-25, 13:05–13:17 UTC): the credit-hold round trip.** The demo company's
+  limit was lowered to 50 in the ERP (Commerce's company credit followed in 45 s); an order for
+  114 was held in the ERP and put On Hold in Commerce within 30 s, with the reason as a note;
+  releasing it in the ERP took the Commerce order off hold in 18 s; restoring the limit to
+  150,000 reached Commerce on I/O Events' second redelivery after two 30 s Commerce timeouts,
+  which proves the retry path works end to end.
+- **IN PROGRESS (2026-09-25, 13:20–): cart pricing through the totals-collector webhooks.** The
+  demo company now has its own customer group (18 "Kukla Studios", the setup guide's
+  requirement; Commerce moved the admin into it on its own and the ERP mirror picked it up
+  within the minute), and an ERP contract price of 40 on accessmesh. A cart for that customer
+  still priced at 53. Checked and ruled out: the registration (both webhooks are on the
+  instance; the `plugin.magento.` prefix Adobe's docs show is stripped by Commerce on storage,
+  per the App Management library's own comment, so our names are equivalent), the ERP (asked
+  directly for group 18 it quotes 40), and the action itself (invoked directly with the
+  documented payload it answered a price update of 40 in 3.8 s). What is left is what Commerce
+  actually sends, and Runtime keeps no record of a webhook run that succeeded. The
+  registrations now carry the extra-logging header so every run is recorded, Commerce waits
+  10 s instead of 5 (the 3.8 s warm run sat close to the old limit), and each no-op logs the
+  payload keys and partner hints. Also seen: the instance's registrations say `required: true`
+  where the source says `false` (an older install; the library now applies changed fields on
+  install, so the redeploy should correct it).
 - **Still owed from the owner's request** ("bidirectionally integrated" and "when an ERP is
   deleted, the resetting of the records in commerce works"): an order placed on the storefront
   as a Kukla Studios user (Commerce→ERP), ERP-side changes read back in Commerce (price via

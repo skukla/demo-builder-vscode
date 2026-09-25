@@ -35,16 +35,16 @@ Run through the Demo Builder agent tools against the demo instance (Bodea) and t
 | Stock item save → ERP warehouse | Commerce → ERP | ○ |
 | Companies, credit, status (minute refresh) → ERP partners | Commerce → ERP | ✓ 2026-09-24 |
 | Order placed → ERP sales order, number written back | Commerce → ERP | ✓ 2026-09-25 12:24 (orders 3000000007, 3000000008), after three fixes (✗ `_isNew`, ✗ company, ✗ timeout) |
-| Cart pricing webhooks (contract price, discount ceiling) | Commerce → ERP → cart | ○ (a REST cart fires them too; needs a contract price for the demo company) |
+| Cart pricing webhooks (contract price, discount ceiling) | Commerce → ERP → cart | ✗ in progress 2026-09-25 13:28: group 18 + contract price 40 set up, cart still priced 53; ERP and action proven right in isolation; registrations now record every run to see Commerce's payload |
 | Cancel / hold made in Commerce Admin → ERP | Commerce → ERP | ○ |
 | Shipment made in Commerce Admin → ERP | Commerce → ERP | ○ (the echo of an ERP-made shipment was matched, not doubled: ✓ 12:31) |
 | Invoice made in Commerce Admin → ERP | Commerce → ERP | ○ (the echo of an ERP-made invoice did not carry the Commerce invoice id back; nothing doubled) |
 | Price / name change → Commerce product | ERP → Commerce | ○ |
 | Stock change → Commerce source item | ERP → Commerce | ○ |
-| Credit limit → company credit | ERP → Commerce | ✓ 2026-09-24 (after the currency_code fix) |
+| Credit limit → company credit | ERP → Commerce | ✓ 2026-09-24; ✓ again 2026-09-25 13:05 and 13:17 (the restore landed on I/O Events' redelivery after two 30 s Commerce timeouts, which proves the retry path) |
 | Block / unblock → company status | ERP → Commerce | ✓ 2026-09-24 |
 | Confirmation → note (+ optional custom status) | ERP → Commerce | ✓ 2026-09-25 12:50, after ✗ (Processing is not a status a comment can set) |
-| Credit hold → order On Hold; release → unhold | ERP → Commerce | ○ as a real over-limit hold (the only hold seen was a wrong-company one whose delivery timed out) |
+| Credit hold → order On Hold; release → unhold | ERP → Commerce | ✓ 2026-09-25 13:10 (limit 50, order 114 held in the ERP and On Hold in Commerce in 30 s; released and unheld in 18 s, with both notes) |
 | Credit reject → order cancelled | ERP → Commerce | ✓ 2026-09-25 12:21 |
 | Shipment → Commerce shipment (source) | ERP → Commerce | ✓ 2026-09-25 12:31 |
 | Invoice → Commerce invoice (capture) | ERP → Commerce | ✓ 2026-09-25 12:36 (order complete) |
