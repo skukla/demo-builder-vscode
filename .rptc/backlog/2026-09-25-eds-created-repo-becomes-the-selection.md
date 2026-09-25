@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: high
-status: backlog
+status: active
 ---
 
 # A created GitHub repository becomes the selected repository, and the Code Sync notice centres
@@ -54,3 +54,7 @@ behaviours, one component (`RepoSelectionInline`), reported as "bad experience":
 Unit: after create, the cache holds the repository first and it is selected; the probe effect
 runs for it; the picker's repository verdict is true without a Browse. Visual: a wizard
 screenshot of the Code Sync notice centred, confirmed by the owner. Gate green.
+
+## Shipped so far
+
+- 2026-09-25  fix(eds): a created repository becomes the selected one, in the list, first (`4a498333c`)
