@@ -5904,7 +5904,7 @@
             "anchors": [
                 "const failures = [];"
             ],
-            "line": 408,
+            "line": 379,
             "mutants": 1,
             "category": "other",
             "reason": "The mutant seeds the failures list with one junk string, which flips the aggregate to 'cleanup had errors'. Its return value is read at exactly one place — 'if (cleanupResult.success)' — whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -5917,7 +5917,7 @@
             "anchors": [
                 "if (!result.github.success && !result.github.skipped) {"
             ],
-            "line": 409,
+            "line": 380,
             "mutants": 6,
             "category": "branch",
             "reason": "Every variant of this guard — forced true, forced false, && to ||, either negation dropped, and the body emptied — changes only whether a 'GitHub: ...' string joins the failure list. The GitHub deletion itself already happened inside CleanupService; this line classifies its report. Its return value is read at exactly one place — 'if (cleanupResult.success)' — whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -5930,7 +5930,7 @@
             "anchors": [
                 "if (!result.daLive.success && !result.daLive.skipped) {"
             ],
-            "line": 412,
+            "line": 383,
             "mutants": 6,
             "category": "branch",
             "reason": "The DA.live twin of the GitHub guard above, with the same shape and the same fate: it appends a 'DA.live: ...' string to the failure list after the deletion has already been attempted. Its return value is read at exactly one place — 'if (cleanupResult.success)' — whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -5943,7 +5943,7 @@
             "anchors": [
                 "if (failures.length > 0) {"
             ],
-            "line": 416,
+            "line": 387,
             "mutants": 5,
             "category": "branch",
             "reason": "This is the point where the failure list becomes a success flag, so it is the closest thing here to a decision — but the flag has one reader and that reader picks a log line. Forcing it either way, or comparing with >= or <=, changes 'Cleanup completed successfully' into 'Cleanup completed with errors' or the reverse. Its return value is read at exactly one place — 'if (cleanupResult.success)' — whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -5956,7 +5956,7 @@
             "anchors": [
                 "return { success: false, error: failures.join('; ') };"
             ],
-            "line": 417,
+            "line": 388,
             "mutants": 2,
             "category": "other",
             "reason": "Emptying this object literal, or flipping its false to true, changes the shape and the verdict of the cleanup report. The value returned here is read at exactly one place — 'if (cleanupResult.success)' — whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way.",
@@ -5969,7 +5969,7 @@
             "anchors": [
                 "return { success: true };"
             ],
-            "line": 420,
+            "line": 391,
             "mutants": 2,
             "category": "other",
             "reason": "The all-clear answer from the cleanup helper. Emptying the literal or flipping its true to false turns a clean cleanup into a reported failure. The value returned here is read at exactly one place — 'if (cleanupResult.success)' — whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way.",
@@ -5982,7 +5982,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 421,
+            "line": 392,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this catch body makes the helper return undefined instead of a failure verdict. The caller then throws a TypeError reading .success on undefined, which its own catch swallows into a different log line — so the handler still resolves { success: true } and no resource is treated differently. The value returned here is read at exactly one place — 'if (cleanupResult.success)' — whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way.",
@@ -5995,7 +5995,7 @@
             "anchors": [
                 "return { success: false, error: (error as Error).message };"
             ],
-            "line": 422,
+            "line": 393,
             "mutants": 2,
             "category": "other",
             "reason": "The failure verdict for an exception thrown anywhere in the helper — including the fail-fast when there is no authenticated session. Emptying the literal or flipping its false to true changes only that verdict. The value returned here is read at exactly one place — 'if (cleanupResult.success)' — whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. The fail-fast ITSELF is tested: with no authManager, no CleanupService is constructed and cleanupEdsResources is never called.",
@@ -7788,7 +7788,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 50,
+            "line": 52,
             "mutants": 1,
             "category": "block",
             "reason": "This catch exists to swallow a failed CDN preview so the phase continues; its body is one logger.warn naming the error. Emptying the block still swallows it — control still leaves the try and still sends the 'Code synchronized' progress message and everything after it. 'carries on when the CDN preview fails' drives a rejecting previewCode through this exact path and pins that the phase completes; what an empty catch loses is the message, not a decision.",
@@ -7801,7 +7801,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 85,
+            "line": 87,
             "mutants": 1,
             "category": "block",
             "reason": "The else arm of the user-email check contains only a logger.warn saying no email was available. Emptying it leaves the phase doing exactly the same thing: no permissions call, straight on to registerConfigurationService. That the permissions call is genuinely skipped, and that the phase still completes, is pinned by 'skips permissions when no email is known anywhere' and 'skips permissions when the GitHub record carries no user', both of which assert the collaborator was not called.",

@@ -30,7 +30,6 @@ import {
 } from '../edsHelpers';
 import { rehydratePackageDerivedConfig } from './storefrontSetupConfigRehydration';
 import { executeStorefrontSetupPhases } from './storefrontSetupPhases';
-import type { StorefrontSetupResult } from './storefrontSetupTypes';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { hasMeshInDependencies } from '@/core/constants';
 import { ServiceLocator } from '@/core/di/serviceLocator';
@@ -166,26 +165,6 @@ export async function handleCancelStorefrontSetup(
  * @param payload - Start payload with project and EDS config
  * @returns Success with setup results
  */
-/** What the caller should do with a finished setup run. */
-export type SetupOutcome = 'complete' | 'awaiting-github-app' | 'error';
-
-/**
- * Classify a setup result.
- *
- * Three outcomes, not two. Collapsing "stopped so the user can install the App"
- * into "failed" is what replaced the install dialog with the failure screen: the
- * dialog message is sent first, then the error message overwrote it a moment
- * later, and the resume handler could never fire.
- *
- * Decided by the flag, never by the error text — that wording changed twice in
- * one release, and matching on it would have broken silently each time.
- */
-export function classifySetupResult(result: StorefrontSetupResult): SetupOutcome {
-    if (result.success) return 'complete';
-    if (result.awaitingGitHubApp) return 'awaiting-github-app';
-    return 'error';
-}
-
 /**
  * The card's headline. PDP caveats mean product pages will not load at all;
  * an added demo's dry-check caveats mean some things may not work on this
@@ -308,19 +287,11 @@ export async function handleStartStorefrontSetup(
             },
         );
 
-        const outcome = classifySetupResult(result);
-
-        // Awaiting installation: the install dialog is already up and the resume
-        // handler takes over from here. Emitting an error tears the dialog down
-        // and leaves the user with nothing to act on.
-        if (outcome === 'awaiting-github-app') {
-            context.logger.info(
-                '[Storefront Setup] Paused — waiting for AEM Code Sync installation',
-            );
-            return { success: false, error: result.error };
-        }
-
-        if (outcome === 'complete') {
+        // Two outcomes. There used to be a third, "awaiting the GitHub App", when
+        // a missing App ENDED the run at the install dialog; since EDS-20
+        // (2026-09-25) the run pauses inside the phase and resumes on its own, so
+        // a result is either the finished storefront or a failure to report.
+        if (result.success) {
             // "Complete" has to mean it. A storefront whose BYOM overlay never
             // registered is built, published and browsable — and cannot serve a
             // single product detail page. Reported as plain success (2026-07-28)

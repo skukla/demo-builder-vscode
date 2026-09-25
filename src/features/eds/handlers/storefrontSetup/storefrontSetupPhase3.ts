@@ -14,9 +14,10 @@ import {
 import { registerConfigurationService } from '../configServiceRegistration';
 import { configureDaLivePermissions } from '../edsHelpers';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
+import { pauseForGitHubApp } from './storefrontSetupPhaseHelpers';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
 import type { HandlerContext } from '@/types/handlers';
-import type { StorefrontGitHubAppRequiredPayload, StorefrontSetupProgressPayload } from '@/types/webviewPayloads';
+import type { StorefrontSetupProgressPayload } from '@/types/webviewPayloads';
 
 /**
  * Execute Phase 3: Code sync verification and CDN publishing
@@ -26,6 +27,7 @@ export async function executePhaseCodeSync(
     edsConfig: StorefrontSetupStartPayload['edsConfig'],
     services: SetupServices,
     repoInfo: RepoInfo,
+    signal?: AbortSignal,
 ): Promise<StorefrontSetupResult | null> {
     const logger = context.logger;
     const { helixService, daLiveAuthService, daLiveTokenProvider } = services;
@@ -90,7 +92,7 @@ export async function executePhaseCodeSync(
 
     // NOW the App can be verified, and this is the only place in the whole flow
     // where that is true. See `confirmCodeSync`.
-    const codeSyncVerdict = await confirmCodeSync(context, services, repoInfo, edsConfig);
+    const codeSyncVerdict = await confirmCodeSync(context, services, repoInfo, edsConfig, signal);
     if (codeSyncVerdict) return codeSyncVerdict;
 
     await context.sendMessage('storefront-setup-progress', {
@@ -138,6 +140,7 @@ async function confirmCodeSync(
     services: SetupServices,
     repoInfo: RepoInfo,
     edsConfig: StorefrontSetupStartPayload['edsConfig'],
+    signal?: AbortSignal,
 ): Promise<StorefrontSetupResult | null> {
     const logger = context.logger;
     const { githubAppService } = services;
@@ -170,7 +173,7 @@ async function confirmCodeSync(
     }
 
     // Helix knows the site and reports no code sync for it. The one measurement
-    // that has always meant what it says, and the only one that earns a halt.
+    // that has always meant what it says, and the only one that earns a pause.
     if (outcome.kind === 'not-installed' && outcome.codeStatus === 404) {
         const installUrl = githubAppService.getInstallUrl(repoInfo.repoOwner, repoInfo.repoName);
 
@@ -196,21 +199,23 @@ async function confirmCodeSync(
                 `${repoInfo.repoOwner}/${repoInfo.repoName} — Helix has the site and reports ` +
                 `code.status 404 (isTeamOrg=${isTeamOrg}). Install URL: ${installUrl}`,
         );
-        await context.sendMessage('storefront-setup-github-app-required', {
-            owner: repoInfo.repoOwner,
-            repo: repoInfo.repoName,
-            installUrl,
-            // isTeamOrg used to ride along here; nothing webview-side ever
-            // read it (deleted by the 2026-08-21 channel inventory).
-            siteUnregistered: false,
-            message,
-        } satisfies StorefrontGitHubAppRequiredPayload);
-        return {
-            success: false,
-            error: 'GitHub App installation required',
-            awaitingGitHubApp: true,
-            ...repoInfo,
-        };
+        // Pause here, not halt: the run waits for the App and picks up at the
+        // next line, so nothing above is repeated (EDS-20, 2026-09-25).
+        return pauseForGitHubApp(
+            context,
+            services,
+            repoInfo,
+            {
+                owner: repoInfo.repoOwner,
+                repo: repoInfo.repoName,
+                installUrl,
+                // isTeamOrg used to ride along here; nothing webview-side ever
+                // read it (deleted by the 2026-08-21 channel inventory).
+                siteUnregistered: false,
+                message,
+            },
+            { signal, phase: 'site-config', progress: 48 },
+        );
     }
 
     logger.warn(

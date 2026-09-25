@@ -191,6 +191,9 @@ function isActivePhase(phase: StorefrontSetupPhase): boolean {
         // list, so closing the wizard there skipped the cancel and orphaned the
         // created repo/content silently (decided with the user 2026-08-22).
         'auth-recovery',
+        // Same reasoning, since EDS-20 (2026-09-25): the install dialog is shown by
+        // a run that is still going and waiting for the App, not by one that ended.
+        'github-app',
     ].includes(phase);
 }
 
@@ -391,19 +394,21 @@ export function StorefrontSetupStep({
     ]);
 
     /**
-     * Handle GitHub App installation detected
+     * The dialog's own check saw the App.
+     *
+     * The run is still going: it has been polling for the App since it showed
+     * the dialog (`pauseForGitHubApp`) and resumes on its own within one poll.
+     * This only takes the dialog down ahead of that, so it does not sit over a
+     * run that has already moved on; the run's next progress push replaces the
+     * line. Until EDS-20 (2026-09-25) the run had ENDED at the dialog and this
+     * landed on an error screen asking for Retry, which re-ran everything.
      */
     const handleInstallDetected = useCallback(() => {
-        // Setup cannot continue from where it stopped — there is no resume, and
-        // this used to advance the wizard to 'code-sync' before discovering that,
-        // so the user watched it appear to continue and was then told to start
-        // over. Land on the state that is true, where Retry re-runs setup for real.
         setSetupState((prev) => ({
             ...prev,
-            phase: 'error',
-            error:
-                'AEM Code Sync is now installed. Setup stopped before it could use it — ' +
-                'select Retry to run it again.',
+            phase: 'code-sync',
+            message: 'AEM Code Sync installed — setup is continuing',
+            subMessage: undefined,
             githubAppData: undefined,
         }));
     }, []);
@@ -528,14 +533,17 @@ export function StorefrontSetupStep({
         } satisfies StorefrontSetupStartPayload);
     }, []);
 
-    const isActive = isActivePhase(setupState.phase);
+    // The install dialog is the run's own screen while it waits for the App: the
+    // run is active (closing the wizard must still cancel it), but the progress
+    // line would only sit behind the dialog saying the same thing.
+    const showsProgress = isActivePhase(setupState.phase) && setupState.phase !== 'github-app';
 
     return (
         <div className="flex-column h-full w-full">
             <div className="flex-1 flex w-full">
                 <SingleColumnLayout>
                     {/* Active state - loading indicator with progress */}
-                    {isActive && (
+                    {showsProgress && (
                         <CenteredFeedbackContainer>
                             <LoadingDisplay
                                 size="L"

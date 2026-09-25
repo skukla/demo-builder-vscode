@@ -63,6 +63,9 @@ function makeServices(): SetupServices {
         },
         githubAppService: {
             getInstallUrl: jest.fn().mockReturnValue('https://github.com/apps/aem-code-sync'),
+            // The pause's own poll, once the gate has found the App missing: the
+            // App appears on the first look, so the run continues.
+            isAppInstalled: jest.fn().mockResolvedValue({ isInstalled: true, codeStatus: 200 }),
         },
     } as unknown as SetupServices;
 }
@@ -131,21 +134,20 @@ describe('a repo being RESET cannot answer until it has been reset', () => {
         );
     });
 
-    it('still halts, and still surfaces the install dialog, when the App is genuinely missing', async () => {
+    it('pauses at the install dialog when the App is genuinely missing, then continues', async () => {
         mockResolve.mockResolvedValue({ kind: 'not-installed', codeStatus: 404 });
-
-        const result = await runPhase1(makeServices());
-
-        expect(result).toMatchObject({ success: false, awaitingGitHubApp: true });
+        const services = makeServices();
+        const result = await runPhase1(services);
+        expect(services.githubAppService.isAppInstalled).toHaveBeenCalled();
+        expect(result).toBeNull();
     });
 
     it('halts with the real reason, not the install dialog, when Helix declines to answer', async () => {
         mockResolve.mockResolvedValue({ kind: 'undetermined', httpStatus: 401 });
-
-        const result = await runPhase1(makeServices());
-
+        const services = makeServices();
+        const result = await runPhase1(services);
         expect(result?.success).toBe(false);
-        expect(result?.awaitingGitHubApp).toBeUndefined();
+        expect(services.githubAppService.isAppInstalled).not.toHaveBeenCalled();
     });
 });
 
@@ -169,15 +171,15 @@ describe('a repo the user chose to PRESERVE is gated before any write', () => {
         );
     });
 
-    it('writes nothing when the App is missing — Phase 2 would land in a preserved repo', async () => {
+    it('writes nothing while the App is missing — Phase 2 would land in a preserved repo', async () => {
         mockResolve.mockResolvedValue({ kind: 'not-installed', codeStatus: 404 });
         const services = makeServices();
-
         const result = await runPhase1(services, NO_RESET);
-
         expect(services.templateSync.resetRepository).not.toHaveBeenCalled();
         expect(mockPin).not.toHaveBeenCalled();
-        expect(result).toMatchObject({ success: false, awaitingGitHubApp: true });
+        // The gate paused for the App and the run went on once it appeared.
+        expect(services.githubAppService.isAppInstalled).toHaveBeenCalled();
+        expect(result).toBeNull();
     });
 
     it('writes nothing when Helix declines to answer', async () => {
