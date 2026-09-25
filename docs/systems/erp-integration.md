@@ -188,6 +188,37 @@ Add a contract price for a company; that company's cart prices from it. Block a 
 the Commerce company is blocked. Reset; the block is undone and the ERP is mirrored again.
 Remove the integration; both apps are gone and Commerce is clean.
 
+## What live testing taught (2026-09-24 and 25)
+
+The pair was run against a real Commerce as a Cloud Service instance through this extension's
+agent tools only. The lessons, each with the test that pins it and the document a person reads,
+live in the integration's own ledger: commerce-erp-integration, docs/live-validation-learnings.md.
+A test there fails when a cited test disappears from its suite. The short list, for a reader
+of this document:
+
+- Commerce on the sandbox dispatches only priority event subscriptions; every event the pair
+  subscribes is priority. When events "do not arrive", read the registration's debug tracing
+  in the Developer Console, not the Event Browser.
+- Runtime does not record a successful blocking activation unless the request asks for it, so
+  a missing row in list_runtime_activations is "no failure recorded", never "did not run".
+- An order placed through the REST cart arrives with Commerce's new-order flag false; the
+  handler decides by whether the ERP already has the order.
+- A customer group cannot name a company (every company sits in General unless a shared
+  catalog assigns a group); the order carries the buyer's company id, and the demo setup guide
+  requires one group per demo company.
+- The Commerce client library's request timeout defaults to ten seconds; the pair waits thirty.
+- An order-status comment sets only a status of the order's current state, and Pending leaves
+  only by invoice or shipment, so "confirmed in the ERP" is a note plus an optional custom
+  status the SC assigns to Pending. The setting that promised Processing was replaced.
+- Ship, invoice, cancel, hold and release match Adobe's REST tutorials; a full shipment plus
+  an invoice completes the order.
+
+Proven live in both directions: product save, order placement with write-back, credit limit
+and block, confirmation note, credit rejection (cancels the order), shipment, invoice, and
+Commerce's own shipment event matched on the ERP order. Not yet: a storefront order, a real
+over-limit credit hold round trip, remove_integration reverting the ledgered writes, and a
+fresh add's first sync.
+
 ## Not in the first cut
 
 Individual shoppers as ERP contacts (that is a CRM), a Commerce event for companies (the

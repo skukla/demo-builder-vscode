@@ -734,6 +734,13 @@ develop merged into this branch, then this list, then the cut from develop.
   `orders/{id}/hold` and `/unhold`, allowed on pending and processing orders — matches.
   The one mismatch was the confirmation (fixed above). Not read: any page stating the hold
   and cancel state rules explicitly; those two rest on Commerce's measured behaviour.
+- **PROVEN LIVE (2026-09-25, 12:50 UTC): the corrected confirmation.** A fourth order
+  (3000000008 → ERP 0000001002, Kukla Studios, approved) was confirmed in the ERP and the note
+  "Order confirmed in the ERP (ERP sales order 0000001002)" was on the pending Commerce order
+  33 seconds later, with no failed run. The learnings from both days are now a ledger in the
+  integration (`docs/live-validation-learnings.md`, each row naming its pinning test, with a
+  test that fails when a cited test disappears), a section in this extension's
+  `docs/systems/erp-integration.md`, and five reference memories for future sessions.
 - **Still owed from the owner's request** ("bidirectionally integrated" and "when an ERP is
   deleted, the resetting of the records in commerce works"): an order placed on the storefront
   as a Kukla Studios user (Commerce→ERP), ERP-side changes read back in Commerce (price via
