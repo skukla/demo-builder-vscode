@@ -80,3 +80,7 @@ should also offer "cancel and notify the customer".
 Every shipped setting: declared in the three places, defaulted to today's behaviour, tested at
 the sender with the argument asserted, shown on its Mapping card, and (if it needs Admin
 preparation) in the setup guide.
+
+## Shipped so far
+
+- 2026-09-25  Owner 2026-09-25: row 5 (invoice capture) is in scope as one setting, 'Capture payment in Commerce: when the ERP invoices (default) / when the ERP ships'. Capture at ERP confirmation dropped: no ERP or connector found does it (.rptc/research/erp-order-to-cash-capture). Checkout capture is Commerce's own payment setting; the integration must record an already-invoiced order's ERP invoice as a comment, not fail (untested). Offline/on-account methods always invoice without a real capture.
