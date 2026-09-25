@@ -165,15 +165,42 @@ describe('saying so when it passes', () => {
     });
 });
 
-describe('the one failure that earns a halt', () => {
-    it('halts on an inner code.status 404 — Helix HAS the site and reports no sync', async () => {
+describe('the one measurement that earns a pause', () => {
+    it('pauses on an inner code.status 404 — Helix HAS the site and reports no sync — then continues', async () => {
         mockResolve.mockResolvedValue({ kind: 'not-installed', codeStatus: 404 });
         const context = makeContext();
-
-        const result = await run(context, makeServices());
-
-        expect(result).toMatchObject({ success: false, awaitingGitHubApp: true });
+        const services = makeServices();
+        const result = await run(context, services);
         expect(sentTypes(context)).toContain('storefront-setup-github-app-required');
+        // The pause polled the App itself and found it, so the phase finished.
+        expect(services.githubAppService.isAppInstalled).toHaveBeenCalled();
+        expect(result).toBeNull();
+        expect(messages(context)).toMatch(/resuming setup/i);
+        expect(messages(context)).toMatch(/Site configuration complete/i);
+    });
+
+    it('ends the run when it is cancelled while waiting for the App', async () => {
+        mockResolve.mockResolvedValue({ kind: 'not-installed', codeStatus: 404 });
+        const services = makeServices();
+        const controller = new AbortController();
+        (services.githubAppService.isAppInstalled as jest.Mock).mockImplementation(async () => {
+            controller.abort();
+            return { isInstalled: false, codeStatus: 404 };
+        });
+        await expect(
+            executePhaseCodeSync(makeContext(), EDS_CONFIG, services, REPO, controller.signal),
+        ).rejects.toThrow('Operation cancelled');
+    });
+
+    it('fails honestly when the App never appears within the wait', async () => {
+        mockResolve.mockResolvedValue({ kind: 'not-installed', codeStatus: 404 });
+        const services = makeServices();
+        (services.githubAppService.isAppInstalled as jest.Mock).mockResolvedValue({
+            isInstalled: false,
+            codeStatus: 404,
+        });
+        const result = await run(makeContext(), services);
+        expect(result).toMatchObject({ success: false, error: expect.stringMatching(/Waited 30 minutes/) });
     });
 
     it('does NOT halt when the check merely failed', async () => {
@@ -418,10 +445,7 @@ describe('the App-required payload', () => {
         mockResolve.mockResolvedValue({ kind: 'not-installed', codeStatus: 404 });
     });
 
-    it('names the repo and the install URL, and does not claim the site is unregistered', async () => {
-        // siteUnregistered says the SITE is missing. Here Helix has the site and
-        // reports code.status 404, so claiming otherwise would send the webview
-        // down the wrong recovery path.
+    it('names the repo and the install URL', async () => {
         const context = makeContext();
 
         await run(context, makeServices());
@@ -430,7 +454,6 @@ describe('the App-required payload', () => {
             owner: 'skukla',
             repo: 'kukla-bodea',
             installUrl: 'https://github.com/apps/aem-code-sync',
-            siteUnregistered: false,
             message: expect.any(String),
         });
     });
@@ -445,7 +468,7 @@ describe('the App-required payload', () => {
 
         const result = await run(context, makeServices(), config);
 
-        expect(result).toMatchObject({ awaitingGitHubApp: true });
+        expect(result).toBeNull();
         expect(appRequiredPayload(context).message).not.toMatch(/admin rights/i);
     });
 
@@ -458,7 +481,7 @@ describe('the App-required payload', () => {
 
         const result = await run(context, makeServices(), config);
 
-        expect(result).toMatchObject({ awaitingGitHubApp: true });
+        expect(result).toBeNull();
         expect(appRequiredPayload(context).message).not.toMatch(/admin rights/i);
     });
 });

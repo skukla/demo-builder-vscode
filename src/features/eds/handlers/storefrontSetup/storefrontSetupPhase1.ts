@@ -80,6 +80,7 @@ export async function executePhaseGitHubRepo(
             edsConfig,
             services,
             repoInfo,
+            signal,
             templateOwner,
             templateRepo,
             patchReport,
@@ -221,6 +222,7 @@ async function executePhaseExistingRepo(
     edsConfig: StorefrontSetupStartPayload['edsConfig'],
     services: SetupServices,
     repoInfo: RepoInfo,
+    signal: AbortSignal,
     templateOwner: string,
     templateRepo: string,
     patchReport?: PatchReport,
@@ -275,7 +277,9 @@ async function executePhaseExistingRepo(
     // check both works and still does its original job — stopping Phase 2 from
     // writing into a repo they asked to preserve. It stays here for them.
     if (!edsConfig.resetToTemplate) {
-        const appGateResult = await checkGitHubAppForExistingRepo(context, services, repoInfo);
+        const appGateResult = await checkGitHubAppForExistingRepo(context, services, repoInfo, {
+            signal,
+        });
         if (appGateResult) return appGateResult;
     }
 
@@ -321,6 +325,7 @@ async function executePhaseExistingRepo(
         // a missing App.
         const appGateResult = await checkGitHubAppForExistingRepo(context, services, repoInfo, {
             afterReset: true,
+            signal,
         });
         if (appGateResult) return appGateResult;
     }

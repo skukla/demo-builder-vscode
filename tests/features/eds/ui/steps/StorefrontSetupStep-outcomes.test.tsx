@@ -6,8 +6,8 @@
  * those decisions have been wrong in shipped builds: a storefront that could
  * not serve a single product page wore the same green checkmark as a healthy
  * one (the completion payload's `warnings` were sent for months and rendered
- * nowhere), and "install detected" used to advance the wizard as though setup
- * could resume when it cannot.
+ * nowhere), and "install detected" used to land on an error asking for Retry,
+ * re-running a setup that (since EDS-20) is still running and resumes by itself.
  */
 
 import {
@@ -31,7 +31,6 @@ const GITHUB_APP_PAYLOAD = {
     repo: 'test-repo',
     installUrl: 'https://github.com/apps/aem-code-sync/installations/new',
     message: 'AEM Code Sync is not installed on this repository.',
-    siteUnregistered: true,
 };
 
 describe('StorefrontSetupStep — completion', () => {
@@ -169,7 +168,6 @@ describe('StorefrontSetupStep — GitHub App installation required', () => {
             'data-message',
             'AEM Code Sync is not installed on this repository.',
         );
-        expect(dialog).toHaveAttribute('data-site-unregistered', 'true');
         expect(screen.queryByTestId('loading')).not.toBeInTheDocument();
     });
 
@@ -183,19 +181,16 @@ describe('StorefrontSetupStep — GitHub App installation required', () => {
         expect(screen.getByTestId('loading')).toBeInTheDocument();
     });
 
-    it('lands on a truthful stopped state when the install is detected', () => {
+    it('takes the dialog down and shows setup continuing when the install is detected', () => {
+        // The run is still going (it polls for the App itself), so this is a
+        // loading line, not an error and not a Retry.
         renderStep();
         pushGitHubAppRequired(GITHUB_APP_PAYLOAD);
-
         fireEvent.click(screen.getByText('Simulate install detected'));
-
-        expect(screen.getByText('Storefront Setup Failed')).toBeInTheDocument();
-        expect(
-            screen.getByText(
-                'AEM Code Sync is now installed. Setup stopped before it could use it — ' +
-                    'select Retry to run it again.',
-            ),
-        ).toBeInTheDocument();
         expect(screen.queryByTestId('github-app-dialog')).not.toBeInTheDocument();
+        expect(screen.getByTestId('loading')).toHaveTextContent(
+            'AEM Code Sync installed — setup is continuing',
+        );
+        expect(screen.queryByText('Storefront Setup Failed')).not.toBeInTheDocument();
     });
 });

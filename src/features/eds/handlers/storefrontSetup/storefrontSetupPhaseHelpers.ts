@@ -13,8 +13,10 @@ import {
     buildUndeterminedAppCheckError,
     formatAdminDiagnostics,
     resolveAppInstallation,
+    waitForAppInstallation,
 } from '../../services/appInstallationResolver';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { HandlerContext } from '@/types/handlers';
 import type { StorefrontGitHubAppRequiredPayload, StorefrontSetupProgressPayload } from '@/types/webviewPayloads';
 
@@ -27,12 +29,13 @@ import type { StorefrontGitHubAppRequiredPayload, StorefrontSetupProgressPayload
  * @param options - `afterReset` when the repo was JUST rewritten from the template,
  *   which changes what a `404 no such site` means. See the call site in
  *   `storefrontSetupPhase1.executePhaseExistingRepo` for why the check moved.
+ *   `signal` is the run's cancel signal, honoured while the run waits for the App.
  */
 export async function checkGitHubAppForExistingRepo(
     context: HandlerContext,
     services: SetupServices,
     repoInfo: RepoInfo,
-    options: { afterReset?: boolean } = {},
+    options: { afterReset?: boolean; signal?: AbortSignal } = {},
 ): Promise<StorefrontSetupResult | null> {
     const logger = context.logger;
     const { githubAppService } = services;
@@ -121,20 +124,18 @@ export async function checkGitHubAppForExistingRepo(
             return null;
         }
 
-        await context.sendMessage('storefront-setup-github-app-required', {
-            owner: repoInfo.repoOwner,
-            repo: repoInfo.repoName,
-            installUrl,
-            siteUnregistered,
-            message: 'The AEM Code Sync GitHub App must be installed to continue.',
-        } satisfies StorefrontGitHubAppRequiredPayload);
-
-        return {
-            success: false,
-            error: 'GitHub App installation required',
-            awaitingGitHubApp: true,
-            ...repoInfo,
-        };
+        return pauseForGitHubApp(
+            context,
+            services,
+            repoInfo,
+            {
+                owner: repoInfo.repoOwner,
+                repo: repoInfo.repoName,
+                installUrl,
+                message: 'The AEM Code Sync GitHub App must be installed to continue.',
+            },
+            { signal: options.signal, phase: 'storefront-code', progress: 28 },
+        );
     }
 
     // Says only what was checked. This used to read "AEM Code Sync verified",
@@ -148,5 +149,69 @@ export async function checkGitHubAppForExistingRepo(
         `[Storefront Setup] AEM Code Sync app installed on ${repoInfo.repoOwner}/${repoInfo.repoName} ` +
             `(${formatAdminDiagnostics(outcome)})`,
     );
+    return null;
+}
+
+/** Where the run paused, so the resume line lands on the same progress row. */
+export interface GitHubAppPauseOptions {
+    /** The run's cancel signal. A Cancel during the wait ends the run like any other phase. */
+    signal?: AbortSignal;
+    /** The progress phase the pause interrupts; the resume line reuses it. */
+    phase: StorefrontSetupProgressPayload['phase'];
+    /** The progress value the pause interrupts; the resume line reuses it. */
+    progress: number;
+}
+
+/**
+ * Show the install dialog and WAIT for the App, inside the run.
+ *
+ * Until 2026-09-25 (EDS-20) this was a halt: the dialog went up, the run returned
+ * a result flagged as awaiting the App, and when the dialog's own check saw the
+ * App the only way on was Retry — a second run from phase 1 that re-created or
+ * re-reset the repository, re-registered the site, and lost the cancel cleanup's
+ * record that a repository had been created. The DA.live session already had the
+ * right shape (`withDaLiveAuthRetry`): pause where you are, wait for the person,
+ * resume from the same line. The App gets the same.
+ *
+ * Both gates call this — phase 1 for an existing repository that already has a
+ * site, phase 3 for a new or reset one right after the site is registered — so
+ * they cannot drift on what "waiting" means.
+ *
+ * @returns null when the App appeared and the caller continues; a failed result
+ *   when the wait ran out. Throws the run's cancel error when the run is cancelled.
+ */
+export async function pauseForGitHubApp(
+    context: HandlerContext,
+    services: SetupServices,
+    repoInfo: RepoInfo,
+    payload: StorefrontGitHubAppRequiredPayload,
+    options: GitHubAppPauseOptions,
+): Promise<StorefrontSetupResult | null> {
+    const repo = `${repoInfo.repoOwner}/${repoInfo.repoName}`;
+    await context.sendMessage('storefront-setup-github-app-required', payload);
+    const verdict = await waitForAppInstallation(
+        services.githubAppService,
+        repoInfo,
+        context.logger,
+        { signal: options.signal },
+    );
+    if (verdict === 'aborted') throw new Error('Operation cancelled');
+    if (verdict === 'timed-out') {
+        const minutes = Math.round(TIMEOUTS.EDS_CODE_SYNC_INSTALL_WAIT / (60 * 1000));
+        return {
+            success: false,
+            error:
+                `Waited ${minutes} minutes for the AEM Code Sync GitHub App on ${repo} and did ` +
+                'not see it installed. Install the App, then select Retry.',
+            ...repoInfo,
+        };
+    }
+    context.logger.info(`[Storefront Setup] AEM Code Sync installed on ${repo} — resuming setup`);
+    await context.sendMessage('storefront-setup-progress', {
+        phase: options.phase,
+        message: 'AEM Code Sync verified — resuming setup',
+        subMessage: repo,
+        progress: options.progress,
+    } satisfies StorefrontSetupProgressPayload);
     return null;
 }

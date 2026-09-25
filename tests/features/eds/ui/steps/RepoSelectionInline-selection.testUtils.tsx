@@ -94,18 +94,12 @@ export function stateWith(
     return state;
 }
 
-export type Phase = 'repository' | 'code-sync';
-
 /** The three render styles the specs need, plus readers over the recorded calls. */
 export interface SelectionHarness {
     updateState: jest.Mock;
     onRepoValidChange: jest.Mock;
-    onCodeSyncValidChange: jest.Mock;
-    renderInline: (state: WizardState, phase?: Phase) => Promise<void>;
-    renderWithRerender: (
-        state: WizardState,
-        phase?: Phase
-    ) => Promise<(next: WizardState) => Promise<void>>;
+    renderInline: (state: WizardState) => Promise<void>;
+    renderWithRerender: (state: WizardState) => Promise<(next: WizardState) => Promise<void>>;
     renderStateful: (initial: WizardState) => Promise<void>;
     lastEdsConfig: () => Record<string, unknown>;
     lastConfigPatch: () => Record<string, unknown>;
@@ -128,22 +122,19 @@ export function resetSelectionMocks(): void {
 export function createHarness(): SelectionHarness {
     const updateState = jest.fn();
     const onRepoValidChange = jest.fn();
-    const onCodeSyncValidChange = jest.fn();
 
-    const ui = (state: WizardState, phase: Phase): React.ReactElement => (
+    const ui = (state: WizardState): React.ReactElement => (
         <Provider theme={defaultTheme} colorScheme="light">
             <RepoSelectionInline
                 state={state}
                 updateState={updateState}
-                phase={phase}
                 onRepoValidChange={onRepoValidChange}
-                onCodeSyncValidChange={onCodeSyncValidChange}
             />
         </Provider>
     );
 
-    const renderInline = async (state: WizardState, phase: Phase = 'repository') => {
-        render(ui(state, phase));
+    const renderInline = async (state: WizardState) => {
+        render(ui(state));
         await settle();
     };
 
@@ -152,11 +143,11 @@ export function createHarness(): SelectionHarness {
      * the wizard drives this component. Several effects only prove they watch
      * the right things when the state MOVES; a single render cannot show it.
      */
-    const renderWithRerender = async (state: WizardState, phase: Phase = 'repository') => {
-        const { rerender } = render(ui(state, phase));
+    const renderWithRerender = async (state: WizardState) => {
+        const { rerender } = render(ui(state));
         await settle();
         return async (next: WizardState) => {
-            rerender(ui(next, phase));
+            rerender(ui(next));
             await settle();
         };
     };
@@ -186,9 +177,7 @@ export function createHarness(): SelectionHarness {
                 <RepoSelectionInline
                     state={state}
                     updateState={update}
-                    phase="repository"
                     onRepoValidChange={onRepoValidChange}
-                    onCodeSyncValidChange={onCodeSyncValidChange}
                 />
             );
         };
@@ -203,7 +192,6 @@ export function createHarness(): SelectionHarness {
     return {
         updateState,
         onRepoValidChange,
-        onCodeSyncValidChange,
         renderInline,
         renderWithRerender,
         renderStateful,

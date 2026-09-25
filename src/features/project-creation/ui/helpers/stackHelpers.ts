@@ -30,7 +30,6 @@ export function buildStackChangeStateReset(): Partial<WizardState> {
         commerceConnectValid: false,
         commerceStoreViewChosen: false,
         storefrontRepoValid: false,
-        storefrontCodeSyncValid: false,
     };
 }
 

@@ -226,7 +226,7 @@ each item's own file; what has already landed against an item is in its
 | `AI-8` | question | [Audit our context files against what the research actually says](2026-08-29-context-file-audit-against-evidence.md) | — | high | backlog |
 | `AI-9` | question | [Should an agent's project delete also clean up the cloud, as a person's does?](2026-09-19-agent-project-delete-leaves-cloud.md) | — | med | active |
 
-### eds  (25)
+### eds  (28)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -254,6 +254,9 @@ each item's own file; what has already landed against an item is in its
 | `EDS-15` | fix | ["Cleanup DA.live sites" builds its DA.live calls on the Adobe token DA.live refuses](2026-09-13-dalive-cleanup-command-token.md) | — | low | shipped |
 | `EDS-16` | fix | [The "no admin role" remedy sent people to a page that cannot grant anything](2026-09-14-site-access-remedy-dead-link.md) | — | high | shipped |
 | `EDS-17` | feature | [A storefront can live in an organization's repository, not only the SC's own](2026-09-16-storefront-in-an-org-repository.md) | — | high | backlog |
+| `EDS-18` | fix | [A created GitHub repository becomes the selected repository, and the Code Sync notice centres](2026-09-25-eds-created-repo-becomes-the-selection.md) | — | high | active |
+| `EDS-19` | fix | [The Code Sync sub-step leaves the Storefront area; setup is the one place the App is asked about](2026-09-25-eds-code-sync-substep-removed.md) | — | high | built |
+| `EDS-20` | fix | [Setup resumes when the install dialog detects AEM Code Sync, instead of demanding a Retry](2026-09-25-eds-setup-resumes-after-code-sync-install.md) | — | high | built |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | backlog |
 
 ### app-builder  (58)
@@ -554,7 +557,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — backlog
 
-*154 item(s) sit outside the A–G chain.*
+*157 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

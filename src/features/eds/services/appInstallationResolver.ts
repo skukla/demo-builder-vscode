@@ -15,6 +15,7 @@
 import type { RepoInfo } from '../handlers/storefrontSetup/storefrontSetupTypes';
 import type { GitHubAppService } from './github/githubAppService';
 import { sleep } from '@/core/utils/sleep';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
 /**
@@ -176,6 +177,83 @@ export async function resolveAppInstallation(
         httpStatus: check.httpStatus,
         helixError: check.helixError,
     };
+}
+
+/** Options for {@link waitForAppInstallation}. */
+export interface WaitForAppInstallationOptions {
+    /**
+     * The run's cancel signal. Read before every poll, so a Cancel lands within
+     * one poll interval rather than at the end of the wait.
+     */
+    signal?: AbortSignal;
+    /** Milliseconds between polls. Defaults to `TIMEOUTS.EDS_CODE_SYNC_POLL`. */
+    pollMs?: number;
+    /** The longest wait before giving up. Defaults to `TIMEOUTS.EDS_CODE_SYNC_INSTALL_WAIT`. */
+    maxWaitMs?: number;
+}
+
+/** How a wait for the App ended. */
+export type AppInstallationWaitVerdict = 'installed' | 'timed-out' | 'aborted';
+
+/**
+ * Wait for AEM Code Sync to appear on a repo whose App was just found missing.
+ *
+ * The counterpart to {@link resolveAppInstallation}: that one asks once and
+ * classifies; this one asks again every `pollMs` until the answer is "installed",
+ * the caller cancels, or `maxWaitMs` is spent. It is what lets a setup run pause
+ * at the install dialog and continue from the same line instead of ending there
+ * (EDS-20, 2026-09-25).
+ *
+ * Strict mode on purpose. After an install the App syncs the repo and Helix
+ * reports `code.status` 400 (initializing) then 200 — both count as installed.
+ * A 401 or a network blip does not, because the run is about to build on the
+ * answer; the dialog's own lenient check is for reassuring a person, not for
+ * deciding whether to write.
+ *
+ * Attempts are counted, not clocked, so a suite that mocks `sleep` can drive the
+ * timeout without a real clock.
+ *
+ * @param githubAppService - Service performing the Helix status check
+ * @param repoInfo - Repo being waited on
+ * @param logger - Logger for the per-poll breadcrumb
+ * @param options - See {@link WaitForAppInstallationOptions}
+ * @returns How the wait ended
+ */
+export async function waitForAppInstallation(
+    githubAppService: Pick<GitHubAppService, 'isAppInstalled'>,
+    repoInfo: RepoInfo,
+    logger: Logger,
+    options: WaitForAppInstallationOptions = {},
+): Promise<AppInstallationWaitVerdict> {
+    const {
+        signal,
+        pollMs = TIMEOUTS.EDS_CODE_SYNC_POLL,
+        maxWaitMs = TIMEOUTS.EDS_CODE_SYNC_INSTALL_WAIT,
+    } = options;
+    const { repoOwner, repoName } = repoInfo;
+    const attempts = Math.max(1, Math.ceil(maxWaitMs / pollMs));
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+        if (signal?.aborted) return 'aborted';
+        await sleep(pollMs);
+        if (signal?.aborted) return 'aborted';
+        const check = await githubAppService.isAppInstalled(repoOwner, repoName);
+        if (check.isInstalled) {
+            logger.info(
+                `[Storefront Setup] AEM Code Sync detected on ${repoOwner}/${repoName} ` +
+                    `after ${attempt} check(s) (${formatAdminDiagnostics(check)})`,
+            );
+            return 'installed';
+        }
+        logger.debug(
+            `[Storefront Setup] Still waiting for AEM Code Sync on ${repoOwner}/${repoName} ` +
+                `(${attempt}/${attempts}, ${formatAdminDiagnostics(check)})`,
+        );
+    }
+    logger.warn(
+        `[Storefront Setup] Gave up waiting for AEM Code Sync on ${repoOwner}/${repoName} ` +
+            `after ${attempts} checks`,
+    );
+    return 'timed-out';
 }
 
 /**

@@ -188,7 +188,8 @@ async function runConfigCodeSyncPhases(
                 signal,
                 options,
             );
-            const phase3Result = await executePhaseCodeSync(context, edsConfig, services, repoInfo);
+            const phase3Result =
+                await executePhaseCodeSync(context, edsConfig, services, repoInfo, signal);
             if (phase3Result) {
                 return {
                     blockCollectionIds: phase2Result.blockCollectionIds,

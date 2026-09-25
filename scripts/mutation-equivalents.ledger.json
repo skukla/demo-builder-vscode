@@ -5526,7 +5526,7 @@
             "anchors": [
                 "setRepoCreationState({"
             ],
-            "line": 264,
+            "line": 230,
             "mutants": 3,
             "category": "other",
             "reason": "The body of the missing-template guard above, and unreachable for the same reason: the Create button is disabled whenever templateOwner or templateRepo is absent, so this branch never executes and its three mutants (the object literal, and both boolean fields) change nothing any test or user can see. Reported by Stryker as NoCoverage rather than Survived, which is the same fact stated the other way.",
@@ -5549,60 +5549,9 @@
         {
             "module": "src/features/eds/ui/steps/RepoSelectionInline.tsx",
             "anchors": [
-                "const target = edsConfig?.createdRepo",
-                ": parseRepoFullName(selectedRepo?.fullName);",
-                "if (!target) return;"
-            ],
-            "mutants": 3,
-            "category": "optionalChain",
-            "reason": "handleCheckAgain runs only from the Check Again button, which lives inside CodeSyncStatusView, which renders only when shouldShowAppStatus - repoCreated in 'new' mode, hasSelectedRepo in 'existing'. Either way edsConfig exists (both facts are read off it) and one of createdRepo / selectedRepo is present, so neither '?.' can throw and 'target' cannot be undefined. A repo whose fullName has no owner would produce an undefined target, but such a repo never gets a readiness verdict, so its Code Sync view stays on 'checking' and offers no Check Again button - which is now a test.",
-            "decision": "none - the button that calls this cannot exist in the states these guards defend against.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-02"
-        },
-        {
-            "module": "src/features/eds/ui/steps/RepoSelectionInline.tsx",
-            "anchors": [
-                "return owner && name ? { owner, name } : undefined;"
-            ],
-            "mutants": 2,
-            "category": "branch",
-            "reason": "parseRepoFullName has exactly one caller, handleCheckAgain, and its undefined result is only produced by a fullName with no '/'. A repository with such a fullName cannot reach the Check Again button: the readiness effect splits the same fullName first and returns without setting readiness, so the Code Sync view stays in its 'checking' state, which offers no buttons. A test pins that - no Check Again button renders for such a repository - so the branch is unreachable rather than untested.",
-            "decision": "none - the only caller cannot be reached with a fullName the guard rejects.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-02"
-        },
-        {
-            "module": "src/features/eds/ui/steps/RepoSelectionInline.tsx",
-            "anchors": [
-                "const [githubAppStatus, setGitHubAppStatus] = useState<GitHubAppStatus>({"
-            ],
-            "mutants": 2,
-            "category": "other",
-            "reason": "The initial value of githubAppStatus is overwritten on mount by the effect at the 'Reset GitHub App status when repo mode changes' hook, which sets exactly the same object unconditionally. React Testing Library flushes passive effects inside the act() wrapper around render, so there is no assertion point at which the initial value is still in state - a spec cannot query between the first paint and that effect. Both mutants (emptying the object, and flipping isChecking to true) therefore change only a frame no test can observe.",
-            "decision": "none - the mount effect writes the same value over it before any query can run.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-02"
-        },
-        {
-            "module": "src/features/eds/ui/steps/RepoSelectionInline.tsx",
-            "anchors": [
-                "setGitHubAppStatus({ isChecking: false, isInstalled: null });"
-            ],
-            "line": 214,
-            "mutants": 1,
-            "category": "branch",
-            "reason": "Flipping isChecking to true in resetLocalState would show the Code Sync body as checking. It cannot: resetLocalState runs only from Browse and New, and both leave repoMode in a state where shouldShowAppStatus is false - 'new' with repoCreated false (the same patch clears createdRepo), or 'existing' with the selection cleared. With no Code Sync view rendered there is nothing for the flag to change, and the next real check overwrites it.",
-            "decision": "none - no surface renders the flag between this write and the next one.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-02"
-        },
-        {
-            "module": "src/features/eds/ui/steps/RepoSelectionInline.tsx",
-            "anchors": [
                 "}, []);"
             ],
-            "line": 215,
+            "line": 181,
             "mutants": 1,
             "category": "other",
             "reason": "The mutant replaces resetLocalState's empty dependency array with a one-element array built fresh on every render. That makes useCallback return a NEW function each render instead of a stable one, which cascades to handleCreateNew and handleUseExisting (both list it as a dependency) - but all three are used only as onPress handlers, never as dependencies of an effect and never compared. Re-creating them costs identity churn and changes no behaviour any test or user can observe.",
@@ -5615,48 +5564,11 @@
             "anchors": [
                 "}, [updateEdsConfig, resetLocalState]);"
             ],
-            "line": 229,
+            "line": 200,
             "mutants": 1,
             "category": "other",
             "reason": "Emptying handleCreateNew's dependency array pins it to the first updateEdsConfig, and so to the edsConfig present at mount. Its patch cannot show that: handleCreateNew explicitly sets repoMode, repoName, selectedRepo, existingRepo, resetToTemplate, createdRepo and daLiveSite - every field a repository selection or a name keystroke can change between mount and the press. Whatever stale config it spreads is overwritten field for field by the patch itself, so no input distinguishes the stale closure from a fresh one. The sibling handler (handleUseExisting) does NOT overwrite repoName, which is why its equivalent mutant is killed by a test rather than recorded here.",
             "decision": "none - the patch overwrites every field the stale closure could differ in.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-02"
-        },
-        {
-            "module": "src/features/eds/ui/steps/RepoSelectionInline.tsx",
-            "anchors": [
-                "setGitHubAppStatus({ isChecking: false, isInstalled: null });"
-            ],
-            "line": 320,
-            "mutants": 1,
-            "category": "branch",
-            "reason": "Right after a successful creation this writes 'not asked yet'. Flipping isChecking to true is invisible because the very next effect - the created-repo App check, armed by the isInstalled null this line sets - calls probeRepoCodeSync, whose first action is to set isChecking true anyway. The two writes land in the same commit as far as any assertion is concerned, and the created-repo probe IS tested (it runs against the repository just created).",
-            "decision": "none - the probe this line arms sets the same flag before anything can render.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-02"
-        },
-        {
-            "module": "src/features/eds/ui/steps/RepoSelectionInline.tsx",
-            "anchors": [
-                "if (repoMode !== 'existing' || !selectedRepo) return;"
-            ],
-            "mutants": 2,
-            "category": "branch",
-            "reason": "Both mutants (dropping the guard, and swapping || for &&) let the effect continue in states this guard rejects - new mode, or existing mode with nothing selected. It reaches the very next line, 'if (readiness === undefined || siteNotPossibleYet) return', and readiness is undefined in exactly those states: the readiness effect sets it to undefined for new mode and for no selection, and it starts undefined. So the extra distance the mutant travels ends at the same return, one line later.",
-            "decision": "none - subsumed by the readiness guard immediately below it.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-02"
-        },
-        {
-            "module": "src/features/eds/ui/steps/RepoSelectionInline.tsx",
-            "anchors": [
-                "if (repoMode === 'new' && edsConfig?.createdRepo && githubAppStatus.isInstalled === null) {"
-            ],
-            "mutants": 2,
-            "category": "branch",
-            "reason": "Two mutants: forcing the repoMode arm true, and dropping the '?.' on edsConfig. The first needs a state with repoMode 'existing' AND a createdRepo AND isInstalled null to differ - the app never produces one, because both mode switches clear createdRepo in the same patch that sets the mode, so a created repo only ever coexists with 'new'. The second can only throw when edsConfig is undefined, and repoMode is read off edsConfig (defaulting to 'existing'), so the '&&' short-circuits before the mutated access on exactly that input.",
-            "decision": "none - the first needs a state the app cannot reach; the second is short-circuited.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-02"
         },
@@ -5676,19 +5588,6 @@
         {
             "module": "src/features/eds/ui/steps/RepoSelectionInline.tsx",
             "anchors": [
-                "const templateAvailable = !!(edsConfig?.templateOwner && edsConfig?.templateRepo);",
-                "createdRepo={edsConfig?.createdRepo}"
-            ],
-            "mutants": 2,
-            "category": "optionalChain",
-            "reason": "Both surviving chains are unreachable in the undefined case they guard. In templateAvailable the mutant drops the '?.' on the SECOND read, and '&&' short-circuits on the first one whenever edsConfig is undefined - the first read's own mutant is killed by the no-configuration render test. The createdRepo prop sits inside 'showAppStatus && (...)', and showAppStatus is false whenever edsConfig is absent (it needs a created or selected repo, both read off edsConfig), so the JSX carrying the mutated access is never built.",
-            "decision": "none - one is short-circuited, the other sits behind a conditional render that cannot be true.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-02"
-        },
-        {
-            "module": "src/features/eds/ui/steps/RepoSelectionInline.tsx",
-            "anchors": [
                 "setRepoCreationState({ isCreating: false, isCreated: false });"
             ],
             "mutants": 2,
@@ -5701,21 +5600,9 @@
         {
             "module": "src/features/eds/ui/steps/RepoSelectionInline.tsx",
             "anchors": [
-                "setIsRechecking(true);"
-            ],
-            "mutants": 3,
-            "category": "branch",
-            "reason": "handleCheckAgain raises TWO checking flags at once - isRechecking here and isChecking in the setGitHubAppStatus on the next lines - and resolveCodeSyncView reads them as 'status.isChecking || isRechecking'. Stryker mutates one at a time, so whichever of the three mutants fires (isRechecking false, isChecking false, or that whole status object emptied), the other flag still puts the view in its checking state and the poll still runs to completion. Only mutating both together would be observable, which Stryker never does.",
-            "decision": "none - two flags express one state; each masks the other's mutant.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-02"
-        },
-        {
-            "module": "src/features/eds/ui/steps/RepoSelectionInline.tsx",
-            "anchors": [
                 "}, [repoMode, selectedRepo]);"
             ],
-            "line": 381,
+            "line": 366,
             "mutants": 3,
             "category": "block",
             "reason": "The effect this closes resets the App status when the repo mode or selection changes. On mount it writes exactly the initial state, so it is a no-op there. On a change it is immediately followed by the Code Sync probe for the new selection, which sets isChecking true - measured while writing these tests, that probe fires even when the new repository's readiness has not landed, because the effect reads the previous selection's readiness. So the reset and the probe land in the same commit from any assertion's point of view, and emptying the effect body, emptying its write, or emptying this dependency array all leave the same observable sequence.",
@@ -5824,7 +5711,7 @@
             "anchors": [
                 "const failures = [];"
             ],
-            "line": 408,
+            "line": 379,
             "mutants": 1,
             "category": "other",
             "reason": "The mutant seeds the failures list with one junk string, which flips the aggregate to 'cleanup had errors'. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -5837,7 +5724,7 @@
             "anchors": [
                 "if (!result.github.success && !result.github.skipped) {"
             ],
-            "line": 409,
+            "line": 380,
             "mutants": 6,
             "category": "branch",
             "reason": "Every variant of this guard \u2014 forced true, forced false, && to ||, either negation dropped, and the body emptied \u2014 changes only whether a 'GitHub: ...' string joins the failure list. The GitHub deletion itself already happened inside CleanupService; this line classifies its report. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -5850,7 +5737,7 @@
             "anchors": [
                 "if (!result.daLive.success && !result.daLive.skipped) {"
             ],
-            "line": 412,
+            "line": 383,
             "mutants": 6,
             "category": "branch",
             "reason": "The DA.live twin of the GitHub guard above, with the same shape and the same fate: it appends a 'DA.live: ...' string to the failure list after the deletion has already been attempted. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -5863,7 +5750,7 @@
             "anchors": [
                 "if (failures.length > 0) {"
             ],
-            "line": 416,
+            "line": 387,
             "mutants": 5,
             "category": "branch",
             "reason": "This is the point where the failure list becomes a success flag, so it is the closest thing here to a decision \u2014 but the flag has one reader and that reader picks a log line. Forcing it either way, or comparing with >= or <=, changes 'Cleanup completed successfully' into 'Cleanup completed with errors' or the reverse. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -5876,7 +5763,7 @@
             "anchors": [
                 "return { success: false, error: failures.join('; ') };"
             ],
-            "line": 417,
+            "line": 388,
             "mutants": 2,
             "category": "other",
             "reason": "Emptying this object literal, or flipping its false to true, changes the shape and the verdict of the cleanup report. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way.",
@@ -5889,7 +5776,7 @@
             "anchors": [
                 "return { success: true };"
             ],
-            "line": 420,
+            "line": 391,
             "mutants": 2,
             "category": "other",
             "reason": "The all-clear answer from the cleanup helper. Emptying the literal or flipping its true to false turns a clean cleanup into a reported failure. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way.",
@@ -5902,7 +5789,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 421,
+            "line": 392,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this catch body makes the helper return undefined instead of a failure verdict. The caller then throws a TypeError reading .success on undefined, which its own catch swallows into a different log line \u2014 so the handler still resolves { success: true } and no resource is treated differently. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way.",
@@ -5915,7 +5802,7 @@
             "anchors": [
                 "return { success: false, error: (error as Error).message };"
             ],
-            "line": 422,
+            "line": 393,
             "mutants": 2,
             "category": "other",
             "reason": "The failure verdict for an exception thrown anywhere in the helper \u2014 including the fail-fast when there is no authenticated session. Emptying the literal or flipping its false to true changes only that verdict. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. The fail-fast ITSELF is tested: with no authManager, no CleanupService is constructed and cleanupEdsResources is never called.",
@@ -7618,7 +7505,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 50,
+            "line": 52,
             "mutants": 1,
             "category": "block",
             "reason": "This catch exists to swallow a failed CDN preview so the phase continues; its body is one logger.warn naming the error. Emptying the block still swallows it \u2014 control still leaves the try and still sends the 'Code synchronized' progress message and everything after it. 'carries on when the CDN preview fails' drives a rejecting previewCode through this exact path and pins that the phase completes; what an empty catch loses is the message, not a decision.",
@@ -7631,7 +7518,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 85,
+            "line": 87,
             "mutants": 1,
             "category": "block",
             "reason": "The else arm of the user-email check contains only a logger.warn saying no email was available. Emptying it leaves the phase doing exactly the same thing: no permissions call, straight on to registerConfigurationService. That the permissions call is genuinely skipped, and that the phase still completes, is pinned by 'skips permissions when no email is known anywhere' and 'skips permissions when the GitHub record carries no user', both of which assert the collaborator was not called.",
@@ -15830,6 +15717,18 @@
             "decision": "none \u2014 required by getStatusDisplay's nullable return, unreachable through this caller",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/eds/ui/steps/RepoSelectionInline.tsx",
+            "anchors": [
+                "const templateAvailable = !!(edsConfig?.templateOwner && edsConfig?.templateRepo);"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Removing the optional chain on `edsConfig?.templateOwner` cannot throw: `edsConfig` is read from `state.edsConfig` and the component renders the existing-repo body before any template read when it is undefined, so the operand is always an object by the time this line runs, and `!!` folds an undefined template to the same false. The former second anchor of this entry (`createdRepo={edsConfig?.createdRepo}` in the Code Sync view) left with that view on 2026-09-25.",
+            "decision": "none \u2014 the `?.` satisfies the declared `WizardEdsConfig | undefined` type; a rewrite is a style change to src, outside this fix's remit.",
+            "recorded": "2026-09-25",
+            "source": "EDS-19 (re-anchored: the entry's second anchor left with the Code Sync view)"
         }
     ]
 }

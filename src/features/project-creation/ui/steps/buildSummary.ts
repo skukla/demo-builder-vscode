@@ -62,8 +62,8 @@ export function commerceSummaryGroup(state: WizardState): SummaryGroup {
 
 /**
  * The Storefront group: mirrors the Storefront sub-steps the way the Commerce group
- * mirrors its sub-steps — Accounts (both services connected), Repository, Code Sync,
- * and Block Libraries. Each row shows ✓ + value once that sub-step's PERSISTED state
+ * mirrors its sub-steps — Accounts (both services connected), Repository and Block
+ * Libraries. Each row shows ✓ + value once that sub-step's PERSISTED state
  * is satisfied (Storefront has no commit-gating, so no Continue-press is required).
  * The chosen frontend isn't a sub-step — it lives in the architecture line above.
  */
@@ -72,7 +72,6 @@ export function storefrontSummaryGroup(state: WizardState): SummaryGroup {
     const accountsDone =
         Boolean(eds?.githubAuth?.isAuthenticated) && Boolean(eds?.daLiveAuth?.isAuthenticated);
     const repoDone = state.storefrontRepoValid === true;
-    const codeSyncDone = state.storefrontCodeSyncValid === true;
     const libCount =
         (state.selectedBlockLibraries?.length ?? 0) + (state.customBlockLibraries?.length ?? 0);
 
@@ -90,15 +89,6 @@ export function storefrontSummaryGroup(state: WizardState): SummaryGroup {
             done: repoDone && Boolean(eds?.repoName),
         },
     ];
-    // Code Sync only applies to a NEW repo (mirrors storefrontSectionOrder); an existing
-    // repo has no Code Sync sub-step, so omit the row.
-    if (eds?.repoMode === 'new') {
-        rows.push({
-            label: STOREFRONT_SECTION_TITLES['code-sync'],
-            value: codeSyncDone ? 'Verified' : undefined,
-            done: codeSyncDone,
-        });
-    }
     rows.push({
         label: STOREFRONT_SECTION_TITLES['block-libraries'],
         value: libCount > 0 ? `${libCount} selected` : undefined,

@@ -300,6 +300,11 @@ export const TIMEOUTS = {
     /** EDS code sync poll interval (5 seconds) */
     EDS_CODE_SYNC_POLL: 5000,
 
+    /** How long a setup run waits for the AEM Code Sync GitHub App once it has shown the
+     * install dialog (30 minutes). The run polls at EDS_CODE_SYNC_POLL and resumes where it
+     * paused (EDS-20, 2026-09-25); this is the point at which it stops waiting and says so. */
+    EDS_CODE_SYNC_INSTALL_WAIT: 30 * 60 * 1000,
+
     /** Delay before retrying Configuration Service registration on new repos (30 seconds).
      * Used as the base delay; retryRegistrationAfterDelay multiplies it to 30/45/60s for backoff.
      * AEM Code Sync GitHub App admin role typically propagates within 30–90 seconds.

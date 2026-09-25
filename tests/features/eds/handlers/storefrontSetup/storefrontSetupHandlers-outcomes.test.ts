@@ -1,7 +1,7 @@
 /**
  * Storefront Setup Handlers — what `handleStartStorefrontSetup` decides.
  *
- * The three outcomes (complete / awaiting-github-app / error), the guards that
+ * The two outcomes (complete / error), the guards that
  * run before the phases, what the phases are actually handed, and the one thing
  * that must happen on every path out: the abort controller is dropped from
  * shared state, or the next cancel aborts a run that already finished.
@@ -45,7 +45,6 @@ jest.mock('@/features/eds/services/toolManager');
 // =============================================================================
 
 import {
-    classifySetupResult,
     handleStartStorefrontSetup,
     type StorefrontSetupStartPayload,
 } from '@/features/eds/handlers/storefrontSetup/storefrontSetupHandlers';
@@ -123,32 +122,6 @@ beforeEach(() => {
 // =============================================================================
 // Tests
 // =============================================================================
-
-describe('classifySetupResult', () => {
-    // Decided by the flag, never by the error text — that wording changed twice
-    // in one release and matching on it would have broken silently each time.
-    it('calls a successful run complete', () => {
-        expect(classifySetupResult({ success: true })).toBe('complete');
-    });
-
-    it('calls a run waiting on the GitHub App awaiting-github-app, not an error', () => {
-        expect(
-            classifySetupResult({
-                success: false,
-                awaitingGitHubApp: true,
-                error: 'AEM Code Sync is not installed',
-            })
-        ).toBe('awaiting-github-app');
-    });
-
-    it('calls anything else an error', () => {
-        expect(classifySetupResult({ success: false, error: 'boom' })).toBe('error');
-    });
-
-    it('prefers success over the awaiting flag if both are somehow set', () => {
-        expect(classifySetupResult({ success: true, awaitingGitHubApp: true })).toBe('complete');
-    });
-});
 
 describe('handleStartStorefrontSetup — required parameters', () => {
     it('refuses a payload with no project name', async () => {
@@ -290,25 +263,7 @@ describe('handleStartStorefrontSetup — what the phases are handed', () => {
     });
 });
 
-describe('handleStartStorefrontSetup — the three outcomes', () => {
-    it('pauses without an error when the GitHub App still has to be installed', async () => {
-        // The install dialog is already up and the resume path takes over.
-        // Emitting an error here tears the dialog down and leaves the SC with
-        // nothing to act on — the bug that made this a third outcome.
-        mockExecutePhases.mockResolvedValue({
-            success: false,
-            awaitingGitHubApp: true,
-            error: 'AEM Code Sync is not installed',
-        });
-        const context = createContext();
-
-        const result = await handleStartStorefrontSetup(context, payload());
-
-        expect(result).toEqual({ success: false, error: 'AEM Code Sync is not installed' });
-        expect(messagePayload(context, 'storefront-setup-error')).toBeUndefined();
-        expect(messagePayload(context, 'storefront-setup-complete')).toBeUndefined();
-    });
-
+describe('handleStartStorefrontSetup — the two outcomes', () => {
     it('reports a failed run with the phase error', async () => {
         mockExecutePhases.mockResolvedValue({ success: false, error: 'fstab.yaml never synced' });
         const context = createContext();
@@ -404,19 +359,6 @@ describe('handleStartStorefrontSetup — the abort controller never outlives the
 
     it('is dropped after a failed run', async () => {
         mockExecutePhases.mockRejectedValue(new Error('boom'));
-        const context = createContext();
-
-        await handleStartStorefrontSetup(context, payload());
-
-        expect(context.sharedState.storefrontSetupAbortController).toBeUndefined();
-    });
-
-    it('is dropped when the run pauses for the GitHub App', async () => {
-        mockExecutePhases.mockResolvedValue({
-            success: false,
-            awaitingGitHubApp: true,
-            error: 'AEM Code Sync is not installed',
-        });
         const context = createContext();
 
         await handleStartStorefrontSetup(context, payload());

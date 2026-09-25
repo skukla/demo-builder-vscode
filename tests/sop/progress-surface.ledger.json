@@ -31,7 +31,7 @@
         "src/core/vscode/operationPrompt.ts:113": "Gates: sign in (or answer another question the work needs) before an agent's call can go on. Modal like the agent's consent dialogs, so a question an agent asks is never a corner notification (owner, 2026-09-21).",
         "src/features/eds/commands/cleanupDaLiveSites.ts:166": "Gates: delete these DA.live sites? Named in the detail, and the content does not come back.",
         "src/features/eds/commands/manageGitHubRepos.ts:166": "Gates: delete these GitHub repositories? Named in the detail, and they do not come back.",
-        "src/features/eds/handlers/storefrontSetup/storefrontSetupHandlers.ts:96": "Gates: cancel setup, knowing the GitHub repo and DA.live content created so far will be deleted? The cost of stopping is not obvious without asking.",
+        "src/features/eds/handlers/storefrontSetup/storefrontSetupHandlers.ts:95": "Gates: cancel setup, knowing the GitHub repo and DA.live content created so far will be deleted? The cost of stopping is not obvious without asking.",
         "src/features/lifecycle/services/projectResetService.ts:400": "Gates: delete the components and reinstall them from scratch? Configuration and integrations survive, the rest does not.",
         "src/features/updates/commands/templateConflictPrompt.ts:47": "Gates: which side wins where an update and the SC's own edits touched the same file? The update cannot proceed until someone chooses.",
         "src/commands/manageSiteAccess.ts:324": "Gates: remove this person as a configuration admin? Takes away someone else's access.",
