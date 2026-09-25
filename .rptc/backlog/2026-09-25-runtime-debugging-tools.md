@@ -4,7 +4,7 @@ kind: feature
 area: ai
 needs: []
 value: high
-status: backlog
+status: active
 ---
 
 # Runtime debugging from the agent surface — the three gaps the ERP validation measured
@@ -47,3 +47,7 @@ only), the registration debug tracing (Console only). Those stay with the owner.
 Each new tool or option: descriptor row, narration, alert copy where gated, count pins moved,
 `docs/systems/mcp-tools.md` regenerated, and one live probe against Bodea's namespace that
 shows the recorded run of an invoked action.
+
+## Shipped so far
+
+- 2026-09-25  feat(ai): invoke_runtime_action, a sharper activation list, compact and redacted Runtime reads (`38c9eedf3`)

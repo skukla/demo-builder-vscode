@@ -69,3 +69,4 @@ routing integration) · AB-26r (credit memo) · AB-26s (the payment leg) · AB-2
 - 2026-09-25  docs(report): one numbered decisions list for everything recommended during the live validation (`59dc1f8be`)
 - 2026-09-25  docs(report): Commerce Admin shipment and invoice reach the ERP; D12 resolved (`12785ca5c`)
 - 2026-09-25  docs(report): D14 — the ERP refresh job overlaps itself on a slow Commerce (`332f1788c`)
+- 2026-09-25  docs(report): D15 — ERP product events can apply out of order under redelivery (`79c818b99`)
