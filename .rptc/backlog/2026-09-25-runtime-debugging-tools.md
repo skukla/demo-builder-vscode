@@ -53,6 +53,7 @@ shows the recorded run of an invoked action.
 - 2026-09-25  feat(ai): invoke_runtime_action, a sharper activation list, compact and redacted Runtime reads (`38c9eedf3`)
 - 2026-09-25  docs(report): the Runtime debugging tools shipped and proven live; AB-31 built (`b415af03c`)
 - 2026-09-25  fix(ai): read_runtime_activation takes an action's lines from activation logs (`45e815a43`)
+- 2026-09-25  fix(ai): a successful direct invoke says its log lines were not kept (`9633e6729`)
 
 ## Built (2026-09-25, same day)
 
@@ -75,3 +76,8 @@ suites), and proven live against Bodea's namespace through the running dev host:
   Runtime; `activation logs` does. Both measured on a successful and a failed run.
 - Also in this slice, per the owner: the Commerce REST tools bound an unpaged search to 20 rows
   and say so, and steer agents to `fields=`.
+- The CLI path proven live too (15:23 UTC): `order-commerce/created` replayed with an event-shaped
+  payload answered "the save that wrote the ERP number back" in 420 ms. Its log lines were not
+  kept, and the rule was then measured four ways: Runtime keeps lines for a failed run, a
+  timer-driven run and an extra-logged web call, not for a successful direct invoke (blocking
+  or not). The CLI path labels itself `mode: cli` and says so when the lines are gone.
