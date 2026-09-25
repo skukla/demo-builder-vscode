@@ -638,6 +638,20 @@ develop merged into this branch, then this list, then the cut from develop.
   may have applied a PUT the handler gave up on; the 160000 event (ERP journal: delivered,
   no error) left no failure row, yet Commerce did not change. Re-check when the sandbox is
   healthy before concluding anything.
+- **FOUND AND FIXED (2026-09-25, ~03:00 UTC): why Commerce → ERP events never arrived.**
+  Adobe's registration debug tracing showed the Commerce Provider product registration had
+  received only its challenge probe since install, after an API price change, an Admin
+  rename, a linked provider id, a synchronization and a successful test event. Adobe's own
+  docs: normal events go out through the `event_data_batch_send` cron, priority events
+  through a message-queue consumer within a second; the test event is a `connection_testing`
+  probe that proves credentials only. Marking the product subscription `priority: true` on
+  the instance (PUT eventing/eventSubscribe/<name>) made the next save reach the ERP in five
+  seconds, name and price both. Internal support threads record the same symptom on other
+  Cloud Service sandboxes — the event cron "missed its scheduled run" — with the same advice.
+  Fixed permanently in `commerce-erp-integration` (every Commerce event subscribed as
+  priority) and applied to all six subscriptions on Bodea. So the event-driven Commerce → ERP
+  path is now proven live for product save; orders, shipments, invoices and stock follow the
+  same subscriptions. The polling fallback considered earlier is not needed.
 - **Still owed from the owner's request** ("bidirectionally integrated" and "when an ERP is
   deleted, the resetting of the records in commerce works"): an order placed on the storefront
   as a Kukla Studios user (Commerce→ERP), ERP-side changes read back in Commerce (price via
