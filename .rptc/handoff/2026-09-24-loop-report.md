@@ -7,6 +7,27 @@ runs; the "Your decisions" section at the end is what to read first.
 
 ---
 
+## Decisions (2026-09-25) — answer by number; the recommendation is first
+
+Every recommendation made during the live validation, in one list. The backlog item named
+carries the detail. Answering "D3 yes" or "D1 rows 1, 2 and 4" is enough; I record each
+answer on the item and `backlog.mjs next` orders what follows.
+
+| # | Decision | Options (recommended first) | Detail |
+|---|---|---|---|
+| D1 | Which business-user settings to add to the ERP integration | Ship rows 1, 2, 3 and 4 of the design (note visibility, customer emails, what a credit rejection does, hold in Commerce); defer 5 (invoice capture) and 6 (write-back switches) until a demo asks | AB-26w |
+| D2 | Provider ID: run the reversible experiment on Bodea (blank the Admin field, save, change a product, watch the registration tracing, paste it back) | Yes, with you watching; if events still flow, the field is cron-only and the extension's check becomes "advisory"; if they stop, the extension writes the id after install | AB-26x |
+| D3 | The "Confirmed in ERP" custom order status on Bodea | Create it (two minutes in Admin: Stores → Order Status, code `erp_confirmed`, assign to Pending, not default) and set "Order status when the ERP confirms" — it is what makes the confirmation visible in the Orders grid | AB-26x, setup guide |
+| D4 | Build the manual-step surfaces: a check on the integration tile, a Setup card on the Admin page's Mapping tab, the list in the AI bundle skill | Yes, as the next extension slice after the matrix closes | AB-26x |
+| D5 | Push the extension worktree's unpushed commits on `feature/erp-integration` (tools, docs, report, backlog) | Yes; nothing else is on that branch | — |
+| D6 | The webhooks' `required: true` on the instance (source says `false`) | Investigate on the next remove + add (a fresh install writes the source value); if it persists, ask Adobe | ledger |
+| D7 | `get_erp_order_trace` answers nothing when the Commerce read times out | Add the ERP fallback (find the order by its Commerce number) — small, in both repos | AB-26e |
+| D8 | The integration's history records nothing for a run that fails after the ERP call (the Admin page showed no "sent") | Record the outcome before the write-back, update it after — small | AB-26e |
+| D9 | Run the destructive half of the matrix now: reset, then remove_integration, then a fresh add (wipes ERP data, ledger, test orders' ERP numbers) | Yes, now, before the demo data is curated; it is the reversibility proof the demo depends on | AB-26e |
+| D10 | Test data left on Bodea: customer group 18, contract price 40 on accessmesh, list price 55, stock 77 and 61, four test orders (two cancelled) | Keep the group and the contract price (they are the demo setup); let the reset restore prices and stock; leave the orders (Commerce cannot delete them) | AB-29 |
+| D11 | Tell Adobe: the sandbox's normal event cron does not run; the installer configures eventing without the provider id its own page marks required | Yes, in public wording only, through your channel | AB-26x |
+| D12 | The Commerce-side invoice on order 3000000009 has not reached the ERP (the Commerce-side shipment did) | Being checked now; if it is a defect it becomes a fix, not a decision | AB-26e |
+
 ## The short version
 
 The ERP got the three things the plan put first: a pricing engine that behaves like an
