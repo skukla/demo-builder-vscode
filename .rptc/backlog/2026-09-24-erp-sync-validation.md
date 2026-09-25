@@ -39,7 +39,7 @@ Run through the Demo Builder agent tools against the demo instance (Bodea) and t
 | Cancel / hold made in Commerce Admin → ERP | Commerce → ERP | ✓ 2026-09-25 14:05 (cancel of 3000000008 → ERP 0000001002 cancelled "Cancelled in Commerce"); ✓ 14:07–14:09 (hold and unhold of 3000000009 → ERP 0000001003 held "Put on hold in Commerce", then released) |
 | Shipment made in Commerce Admin → ERP | Commerce → ERP | ✓ 2026-09-25 14:12 (order/9/ship from the default source → ERP order shipped, shipment recorded with the Commerce shipment id) |
 | Invoice made in Commerce Admin → ERP | Commerce → ERP | ✓ 2026-09-25 14:17 (order/9/invoice → ERP order invoiced, on I/O Events' first retry after one failed run) |
-| Price / name change → Commerce product | ERP → Commerce | ✓ 2026-09-25 13:56 (list price 55 in the ERP, Commerce product price 55 within 65 s; name not exercised) |
+| Price / name change → Commerce product | ERP → Commerce | ✓ 2026-09-25 13:56 (list price 55 → Commerce 55 within 65 s); ✓ 14:25 (name "Access Point Pro" → Commerce within 75 s; the restore to "Access Point" followed on retry) |
 | Stock change → Commerce source item | ERP → Commerce | ✓ 2026-09-25 13:59 (warehouse default 77 in the ERP, Commerce source item 77 within 75 s) |
 | Credit limit → company credit | ERP → Commerce | ✓ 2026-09-24; ✓ again 2026-09-25 13:05 and 13:17 (the restore landed on I/O Events' redelivery after two 30 s Commerce timeouts, which proves the retry path) |
 | Block / unblock → company status | ERP → Commerce | ✓ 2026-09-24 |
