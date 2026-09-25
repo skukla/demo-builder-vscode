@@ -64,3 +64,4 @@ routing integration) · AB-26r (credit memo) · AB-26s (the payment leg) · AB-2
 - 2026-09-25  docs(report): ERP-to-Commerce ship and invoice proven; the confirm mapping corrected against Adobe docs (`a11d79a49`)
 - 2026-09-25  docs(report): the order mapping checked against Adobe REST tutorials and order pages (`95aaef752`)
 - 2026-09-25  docs(erp): what live testing taught, pinned in the integration ledger and summarised here (`0ac3718af`)
+- 2026-09-25  docs(report): credit-hold round trip proven; cart pricing webhook investigation recorded (`b25ece7c1`)
