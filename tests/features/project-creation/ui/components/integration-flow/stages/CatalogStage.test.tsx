@@ -12,7 +12,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
-import { CatalogStage } from '@/features/project-creation/ui/components/integration-flow/stages/CatalogStage';
+import { CatalogStage, NAME_IS_FIXED } from '@/features/project-creation/ui/components/integration-flow/stages/CatalogStage';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 
 function entry(id: string, name: string, description?: string): AppBuilderComponentCatalogEntry {
@@ -62,6 +62,17 @@ function sixEntries(): AppBuilderComponentCatalogEntry[] {
 }
 
 describe('CatalogStage', () => {
+    // A pre-built pair's name is fixed at creation (owner, 2026-09-25): said before it is committed.
+    it('says under the name that it cannot be changed later, once something is picked', () => {
+        renderStage({ selectedId: 'acme-a' });
+        expect(screen.getByText(NAME_IS_FIXED)).toBeInTheDocument();
+    });
+
+    it('says nothing about the name before a pick', () => {
+        renderStage();
+        expect(screen.queryByText(NAME_IS_FIXED)).not.toBeInTheDocument();
+    });
+
     it('renders a tile per catalog entry', () => {
         renderStage();
         expect(screen.getByRole('button', { name: /Widget A/ })).toBeInTheDocument();

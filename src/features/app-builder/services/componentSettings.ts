@@ -35,7 +35,25 @@ export interface ComponentSettingsChange {
     secrets: Record<string, string>;
 }
 
-/** The settings a person sets on this entry (text, then secret), minus those its integration owns. */
+/**
+ * The setting a pair is named from (the ERP's name): its own `nameFromEnvVar`, or that of
+ * the system bound to it. Fixed when the pair is added (owner, 2026-09-25): a rename
+ * would have to move a label through five places while every id stays on the first name,
+ * so a different name means removing the pair and adding it again.
+ */
+function pairNameSetting(
+    entry: AppBuilderComponentCatalogEntry,
+    catalog: AppBuilderComponentCatalogEntry[],
+): string | undefined {
+    if (entry.nameFromEnvVar) return entry.nameFromEnvVar;
+    const kind = entry.catalogId ?? entry.id;
+    return catalog.find((candidate) => candidate.kind === 'system' && candidate.boundTo === kind)?.nameFromEnvVar;
+}
+
+/**
+ * The settings a person sets on this entry (text, then secret), minus those its
+ * integration owns and the name the pair was added with.
+ */
 export function editableSettingsOf(
     entry: AppBuilderComponentCatalogEntry,
     catalog: AppBuilderComponentCatalogEntry[],
@@ -43,7 +61,10 @@ export function editableSettingsOf(
     const { userText, userSecret } = classifyEnvSchema(entry.envSchema ?? []);
     const partner = entry.boundTo ? catalog.find((candidate) => candidate.id === entry.boundTo) : undefined;
     const ownedByPartner = new Set((partner?.envSchema ?? []).map((envVar) => envVar.name));
-    return [...userText, ...userSecret].filter((envVar) => !ownedByPartner.has(envVar.name));
+    const fixedName = pairNameSetting(entry, catalog);
+    return [...userText, ...userSecret].filter(
+        (envVar) => !ownedByPartner.has(envVar.name) && envVar.name !== fixedName,
+    );
 }
 
 /** Whether the entry has anything to set: the Settings item and row appear only then. */
@@ -132,7 +153,11 @@ export function validateSettingsChange(
     const editable = new Map(editableSettingsOf(entry, catalog).map((envVar) => [envVar.name, envVar]));
     const pairs = [...entriesOfType(change.values, 'text'), ...entriesOfType(change.secrets, 'secret')];
     if (pairs.length === 0) return 'Nothing to save.';
+    const fixedName = pairNameSetting(entry, catalog);
     for (const [name, value, type] of pairs) {
+        if (name === fixedName) {
+            return 'The name is fixed when the pair is added. To use a different name, remove it and add it again.';
+        }
         const refusal = refusalFor(editable.get(name), name, value, type);
         if (refusal) return refusal;
     }

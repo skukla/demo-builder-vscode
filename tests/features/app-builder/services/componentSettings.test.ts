@@ -20,6 +20,8 @@ const SYSTEM: AppBuilderComponentCatalogEntry = {
     description: 'the ERP',
     kind: 'system',
     boundTo: 'erp-integration',
+    // As the real catalog has it: the pair is named from this setting.
+    nameFromEnvVar: 'ERP_DISPLAY_NAME',
     providesEnvVars: ['ERP_BASE_URL'],
     envSchema: [{ name: 'ERP_DISPLAY_NAME', type: 'text', label: 'ERP name', default: 'Acme ERP' }],
     source: { owner: 'skukla', repo: 'demo-erp', branch: 'main' },
@@ -53,7 +55,7 @@ const CATALOG = [SYSTEM, INTEGRATION, SHELL];
 describe('editableSettingsOf / hasSettings', () => {
     it('lists text then secret settings, never provided or derived ones', () => {
         expect(editableSettingsOf(INTEGRATION, CATALOG).map((v) => v.name))
-            .toEqual(['ERP_DISPLAY_NAME', 'ERP_REGION', 'ERP_API_KEY']);
+            .toEqual(['ERP_REGION', 'ERP_API_KEY']);
         expect(hasSettings(INTEGRATION, CATALOG)).toBe(true);
     });
 
@@ -83,8 +85,8 @@ describe('buildComponentSettings', () => {
         });
 
         expect(buildComponentSettings(INTEGRATION, CATALOG, project, { ERP_API_KEY: true })).toEqual({
+            // The ERP's name is not among them: it is fixed when the pair is added.
             fields: [
-                { name: 'ERP_DISPLAY_NAME', label: 'ERP name', type: 'text', required: false, value: 'Nordwind' },
                 { name: 'ERP_REGION', label: 'Region', type: 'text', required: true, value: '' },
                 { name: 'ERP_API_KEY', label: 'API key', type: 'secret', required: true, isSet: true },
             ],
@@ -110,14 +112,23 @@ describe('buildComponentSettings', () => {
 });
 
 describe('validateSettingsChange', () => {
-    const valid = { values: { ERP_DISPLAY_NAME: 'Nordwind' }, secrets: {} };
+    const valid = { values: { ERP_REGION: 'eu' }, secrets: {} };
 
     it('accepts a change to settings the entry lets a person set', () => {
         expect(validateSettingsChange(INTEGRATION, CATALOG, valid)).toBeUndefined();
         expect(validateSettingsChange(INTEGRATION, CATALOG, {
-            values: { ERP_DISPLAY_NAME: '' },
+            values: { ERP_REGION: 'us' },
             secrets: { ERP_API_KEY: 'fake-test-pw-not-a-secret' },
         })).toBeUndefined();
+    });
+
+    // Fixed at creation (owner, 2026-09-25): a rename would move a label through five places
+    // while every id stays on the first name.
+    it("refuses a change to the name the pair was added with, and says how to get another", () => {
+        expect(validateSettingsChange(INTEGRATION, CATALOG, {
+            values: { ERP_DISPLAY_NAME: 'Nordwind' },
+            secrets: {},
+        })).toBe('The name is fixed when the pair is added. To use a different name, remove it and add it again.');
     });
 
     it.each([
@@ -139,8 +150,9 @@ describe('validateSettingsChange', () => {
         expect(validateSettingsChange(INTEGRATION, CATALOG, long)).toContain('longer than');
     });
 
-    it("refuses the ERP's name on the ERP itself: it is set on the integration", () => {
-        expect(validateSettingsChange(SYSTEM, CATALOG, valid)).toContain('is not a text setting');
+    it("refuses the ERP's name on the ERP itself too", () => {
+        expect(validateSettingsChange(SYSTEM, CATALOG, { values: { ERP_DISPLAY_NAME: 'x' }, secrets: {} }))
+            .toContain('The name is fixed');
     });
 });
 

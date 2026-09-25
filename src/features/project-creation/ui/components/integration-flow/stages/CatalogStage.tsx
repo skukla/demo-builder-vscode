@@ -21,6 +21,10 @@ import { OptionalNameField } from '../OptionalNameField';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 
+/** Said under the name before a pre-built integration is added. */
+export const NAME_IS_FIXED =
+    "The name can't be changed later. To use a different name, remove it and add it again.";
+
 /** Show the catalog filter only once the gallery is big enough to warrant it. */
 const CATALOG_SEARCH_THRESHOLD = 5;
 
@@ -109,6 +113,10 @@ export function CatalogStage({
                 defaultLabel={selectedEntry?.name ?? ''}
                 onLabelChange={onLabelChange}
                 disabledHint={selectedEntry ? undefined : 'Pick an integration first'}
+                // A pre-built integration cannot be renamed once added (the rename handler
+                // refuses catalog entries), and a pair's name is fixed at creation
+                // (owner, 2026-09-25): say so before the name is committed, not after.
+                description={NAME_IS_FIXED}
             />
         </div>
     );

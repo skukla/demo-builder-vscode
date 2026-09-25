@@ -31,6 +31,8 @@ export interface OptionalNameFieldProps {
      * 2026-09-21). The text is the placeholder while disabled.
      */
     disabledHint?: string;
+    /** A line under the field, e.g. that a pre-built pair's name cannot change later. */
+    description?: string;
 }
 
 /**
@@ -44,6 +46,7 @@ export function OptionalNameField({
     defaultLabel,
     onLabelChange,
     disabledHint,
+    description,
 }: OptionalNameFieldProps): React.ReactElement {
     return (
         <TextField
@@ -52,6 +55,7 @@ export function OptionalNameField({
             placeholder={disabledHint ?? defaultLabel}
             onChange={onLabelChange}
             isDisabled={Boolean(disabledHint)}
+            description={disabledHint ? undefined : description}
             width="100%"
         />
     );
