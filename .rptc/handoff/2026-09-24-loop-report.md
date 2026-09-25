@@ -652,6 +652,42 @@ develop merged into this branch, then this list, then the cut from develop.
   priority) and applied to all six subscriptions on Bodea. So the event-driven Commerce → ERP
   path is now proven live for product save; orders, shipments, invoices and stock follow the
   same subscriptions. The polling fallback considered earlier is not needed.
+- **FOUND AND FIXED (2026-09-25, morning): the first order reached the integration and was
+  thrown away.** With events flowing, an order placed through the Commerce REST cart for the
+  Kukla Studios admin arrived at the order handler within seconds (Console tracing: delivered,
+  answer 200). The ERP never got it, because the handler skipped any order Commerce did not
+  flag as new, and an order placed through the REST cart is saved more than once while it is
+  placed, so the event that fires carries `_isNew: false`. The handler now sends every order
+  the ERP does not already have (no ERP number on the event or on the Commerce record); the
+  ERP's create is idempotent on the Commerce order id, so a repeat save cannot double-create.
+  Committed to `commerce-erp-integration` as 3822120 and redeployed to Bodea. The handler's
+  history does not record skipped events, which is why the Admin page showed nothing; that gap
+  stands.
+- **PROVEN LIVE, THEN THREE MORE DEFECTS FIXED (2026-09-25, late morning): the order round
+  trip.** With the handler fix deployed, a second order placed through the REST cart for the
+  Kukla Studios admin (Commerce order 3000000006, $114) reached the ERP in four seconds and
+  became sales order 0000001000, and the ERP's number came back onto the Commerce order
+  within twenty-five seconds. Reading what the ERP did with it exposed three defects, all
+  fixed, tested and pushed (integration `ca948a1`, ERP `c686061`):
+  1. *The ERP booked the order to the wrong company.* The order named only the customer
+     group, and three demo companies share group 1 (Commerce puts every company in General
+     unless a shared catalog gives it a group of its own). The ERP took the first match and
+     held the order against that company's zero credit limit. Now the integration reads the
+     buyer's company off the customer record and sends it, and the ERP treats a group two
+     partners share as naming neither. The demo setup guide gains the requirement: one
+     customer group per demo company, or cart-time pricing (which only sees the group) falls
+     back to the walk-in customer.
+  2. *Every Commerce call gave up after ten seconds*, the HTTP library's default. The
+     write-back of the ERP number timed out and landed anyway, so the run was logged as
+     failed and delivered again, and the ERP's credit-hold notice failed on its read of the
+     order four times running. All Commerce clients now wait thirty seconds.
+  3. *The write-back's own save event answered 400 "no order number" on every order*:
+     Commerce raises the save event again for that write, with only the saved fields in it.
+     It is now skipped as ours.
+  Also learned: the integration's history records nothing for a run that fails after the
+  ERP call, so the Admin page showed only the failed hold, not the send. The trace tool
+  answers nothing at all when the Commerce read times out; it should fall back to the ERP's
+  own record (not done; noted).
 - **Still owed from the owner's request** ("bidirectionally integrated" and "when an ERP is
   deleted, the resetting of the records in commerce works"): an order placed on the storefront
   as a Kukla Studios user (Commerce→ERP), ERP-side changes read back in Commerce (price via
