@@ -28,6 +28,7 @@ answer on the item and `backlog.mjs next` orders what follows.
 | D11 | Tell Adobe: the sandbox's normal event cron does not run; the installer configures eventing without the provider id its own page marks required | Yes, in public wording only, through your channel | AB-26x |
 | D12 | (resolved) The Commerce-side invoice reached the ERP on I/O Events' first retry, four minutes after a first run failed; no decision needed | — | AB-26e |
 | D13 | Runtime debugging tools: build `invoke_runtime_action`, add failures-only / since / no-timers to the activation list, verify the missing log lines on successful runs | Yes, as an extension slice; the missing pieces cost an hour today | AB-31 |
+| D14 | The ERP's minute refresh job (companies, credit, stock from Commerce) runs 30–120 s on this sandbox and 13 of the last 50 runs died at its 120 s limit; a new run starts every minute whether or not the last one finished, so two or three overlap and hammer the same slow Commerce — a likely share of today's 503s | Fix now in the integration: skip a run while the previous one is still going (a lock in State with a TTL), and run every two minutes; both small | AB-26e |
 
 ## The short version
 
