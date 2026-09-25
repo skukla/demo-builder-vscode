@@ -72,3 +72,4 @@ what `createRepoFromSource` does today when the name already exists.
 ## Shipped so far
 
 - 2026-09-25  fix(eds): setup waits for AEM Code Sync inside the run and resumes where it paused (`b920b2936`)
+- 2026-09-25  refactor(eds): the install dialog's "site not registered" screen was unreachable; delete it (`058e89e4b`)
