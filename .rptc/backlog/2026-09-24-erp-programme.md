@@ -65,3 +65,4 @@ routing integration) · AB-26r (credit memo) · AB-26s (the payment leg) · AB-2
 - 2026-09-25  docs(report): the order mapping checked against Adobe REST tutorials and order pages (`95aaef752`)
 - 2026-09-25  docs(erp): what live testing taught, pinned in the integration ledger and summarised here (`0ac3718af`)
 - 2026-09-25  docs(report): credit-hold round trip proven; cart pricing webhook investigation recorded (`b25ece7c1`)
+- 2026-09-25  docs(report): cart pricing proven live; the version gate and the prefix lesson recorded (`21ca91058`)
