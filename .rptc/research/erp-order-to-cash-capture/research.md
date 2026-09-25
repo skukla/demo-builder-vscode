@@ -83,3 +83,9 @@ the connector settings are the researcher's reading, not re-verified.
 - Whether SAP Commerce Cloud captures at checkout or after fulfilment by default.
 - Any Adobe statement recommending that the ERP trigger the invoice.
 - Whether i95Dev's Business Central connector or Commerce 365 offer an invoice-timing setting.
+
+## Decided (owner, 2026-09-25)
+
+Point 5 is superseded: invoice capture is a mapping, not a setting. The ERP decides when it
+bills; an ERP invoice creates the Commerce invoice with capture; shown read-only on the Mapping
+tab's Order card. Recorded on AB-26w.
