@@ -68,8 +68,10 @@ The ERP is a temporary demo system filled from Commerce. That stays, but it is s
    status is a real, standard feature, left until a demo asks. Echo suppression moving into the
    integration comes last.
 
-## Open
+## Decided: no polling between the two systems (owner, 2026-09-25)
 
-- The minute-by-minute refresh (Commerce stock, credit and companies into the ERP) is filling
-  logic running constantly. Reducing it to part of the reset copy would make D14 unnecessary and
-  drop the "edit stock in Commerce, see it in the ERP" story. Owner's call.
+"There shouldn't really be polling actions between the two systems." The minute-by-minute
+refresh (Commerce stock, credit and companies into the ERP) is filling logic and becomes part of
+the reset copy; its timer is removed. D14 (the overlap fix) is dropped with it, and the
+"edit stock in Commerce, see it in the ERP" story goes. While running, changes cross only as
+events.
