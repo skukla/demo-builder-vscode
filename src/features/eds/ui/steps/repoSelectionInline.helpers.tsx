@@ -240,6 +240,22 @@ export async function probeRepoCodeSync(
 }
 
 /**
+ * Is the selected repository the one this step just created? The reset-to-template
+ * control stays quiet for it — a fresh copy of the template has nothing to reset.
+ * Module-level for the same reason as its neighbours: one more predicate inline
+ * pushed RepoSelectionInline past the complexity limit.
+ *
+ * @param createdRepo - what creation recorded, if anything
+ * @param selectedRepo - the list's current selection
+ */
+export function isJustCreatedSelection(
+    createdRepo: { fullName: string } | undefined,
+    selectedRepo: GitHubRepoItem | undefined,
+): boolean {
+    return Boolean(createdRepo && selectedRepo && createdRepo.fullName === selectedRepo.fullName);
+}
+
+/**
  * Should the "AEM Code Sync App" status row render?
  *
  * Both modes since 2026-08-06 — the existing-repo check moved to selection and feeds
@@ -504,7 +520,10 @@ export function CodeSyncStatusView({
                 <StatusDisplay
                     variant="info"
                     title="Code Sync is checked after setup"
-                    height="auto"
+                    // The same reserved height as the `verified` sibling, so the two land in
+                    // the same place. With `height="auto"` this short view sat visibly higher
+                    // than the green check that replaces it (owner, 2026-09-25); the tall
+                    // install view below keeps `auto`, because a reserve would clip it.
                     actions={[
                         {
                             label: CODE_SYNC_INSTALL_ACTION,

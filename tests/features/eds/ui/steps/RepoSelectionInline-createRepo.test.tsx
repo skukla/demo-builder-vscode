@@ -43,6 +43,17 @@ const CREATED = {
     fullName: 'testuser/my-store',
 };
 
+/** A repository already in the cached list, so ordering after a create is observable. */
+const OTHER = {
+    id: 'testuser/older-store',
+    name: 'older-store',
+    fullName: 'testuser/older-store',
+    description: null,
+    isPrivate: false,
+    htmlUrl: 'https://github.com/testuser/older-store',
+    defaultBranch: 'main',
+};
+
 const stateWith = (overrides?: Partial<EDSConfig>): WizardState =>
     ({
         currentStep: 'storefront-setup',
@@ -373,8 +384,11 @@ describe('RepoSelectionInline — creating a repository', () => {
             const creationPatch = updateState.mock.calls
                 .map((c) => c[0]?.edsConfig)
                 .find((cfg) => cfg?.createdRepo);
+            // The name GitHub actually gave the repository wins over the typed one
+            // (it may normalise), and the typed name is what was SENT — pinned above.
             expect(creationPatch).toMatchObject({
-                repoName: 'typed-name',
+                repoName: CREATED.name,
+                daLiveSite: CREATED.name,
                 createdRepo: CREATED,
             });
         });
@@ -552,17 +566,19 @@ describe('RepoSelectionInline — creating a repository', () => {
             });
         });
 
-        it('a later keystroke keeps what an earlier action recorded', async () => {
+        it('after creation, picking another repository records that pick and keeps the created repo on record', async () => {
             mockRequest.mockResolvedValue({ success: true, data: CREATED });
-            await renderStateful(stateWith({ repoName: 'my-store' }));
+            await renderStateful({ ...stateWith({ repoName: 'my-store' }), githubReposCache: [OTHER] });
 
             fireEvent.click(createButton());
             await settle();
-            fireEvent.change(nameField(), { target: { value: 'renamed' } });
+            fireEvent.click(await screen.findByText('older-store'));
             await settle();
 
             expect(lastConfigPatch()).toMatchObject({
-                repoName: 'renamed',
+                repoMode: 'existing',
+                repoName: 'older-store',
+                existingRepo: OTHER.fullName,
                 createdRepo: CREATED,
             });
         });
@@ -581,7 +597,7 @@ describe('RepoSelectionInline — creating a repository', () => {
             });
         });
 
-        it('Browse then New offers the Create button again (local state reset)', async () => {
+        it('New after creation offers the Create button again (local state reset)', async () => {
             mockRequest.mockResolvedValue({ success: true, data: CREATED });
             const state = stateWith({ repoName: 'my-store' });
             // A populated cache so Browse lands on the list, not its spinner.
@@ -597,10 +613,10 @@ describe('RepoSelectionInline — creating a repository', () => {
 
             fireEvent.click(createButton());
             await settle();
+            // Creation lands on the list with the new repository selected — no Browse
+            // needed any more — so New is the way back to the form.
             expect(screen.queryByRole('button', { name: /^create$/i })).not.toBeInTheDocument();
 
-            fireEvent.click(screen.getByRole('button', { name: /browse/i }));
-            await settle();
             fireEvent.click(screen.getByRole('button', { name: /^new$/i }));
             await settle();
 

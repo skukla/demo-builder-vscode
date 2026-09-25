@@ -35,6 +35,7 @@ import {
     shouldShowAppStatus,
     type GitHubAppStatus,
     type RepoCreationState,
+    isJustCreatedSelection,
 } from './repoSelectionInline.helpers';
 import { SelectionStepContent } from '@/core/ui/components/selection/SelectionStepContent';
 import { useSelectionStep } from '@/core/ui/hooks/useSelectionStep';
@@ -294,12 +295,46 @@ export function RepoSelectionInline({
                 throw new Error(result.error || 'Failed to create repository');
             }
 
-            updateEdsConfig({
-                createdRepo: {
-                    owner: result.data.owner,
-                    name: result.data.name,
-                    url: result.data.url,
-                    fullName: result.data.fullName,
+            // The new repository becomes the SELECTED repository, in the list, first.
+            //
+            // It used to stay in the create form's "created" state with `repoMode: 'new'`,
+            // and the list — cached in wizard state and fetched only when empty — never
+            // heard of it. Coming back to this step meant Browse, then Refresh, then a
+            // click, to arrive where creation had already put you (owner, 2026-09-25).
+            // Now the list shows it selected, and the Code Sync probe runs for it the way
+            // it runs for any selected repository.
+            const created: GitHubRepoItem = {
+                id: result.data.fullName,
+                name: result.data.name,
+                owner: result.data.owner,
+                fullName: result.data.fullName,
+                description: null,
+                isPrivate: false,
+                htmlUrl: result.data.url,
+                defaultBranch: 'main',
+                updatedAt: new Date().toISOString(),
+            };
+            updateState({
+                githubReposCache: [
+                    created,
+                    ...(state.githubReposCache ?? []).filter((repo) => repo.id !== created.id),
+                ],
+                edsConfig: {
+                    ...edsConfig,
+                    ...edsConfigStringDefaults(edsConfig),
+                    createdRepo: {
+                        owner: result.data.owner,
+                        name: result.data.name,
+                        url: result.data.url,
+                        fullName: result.data.fullName,
+                    },
+                    repoMode: 'existing',
+                    selectedRepo: created,
+                    existingRepo: created.fullName,
+                    repoName: created.name,
+                    // Names are locked together (see onSelect above).
+                    daLiveSite: created.name,
+                    resetToTemplate: false,
                 },
             });
             setRepoCreationState({ isCreating: false, isCreated: true });
@@ -326,7 +361,7 @@ export function RepoSelectionInline({
                 error: (err as Error).message,
             });
         }
-    }, [repoName, edsConfig?.templateOwner, edsConfig?.templateRepo, updateEdsConfig, state.demo]);
+    }, [repoName, edsConfig, state.githubReposCache, state.demo, updateState]);
 
     const handleCheckAgain = useCallback(async () => {
         // Both repo modes. This gate used to require a freshly CREATED repo, so
@@ -505,6 +540,11 @@ export function RepoSelectionInline({
         selectedRepo?.defaultBranch && selectedRepo.defaultBranch !== 'main',
     );
 
+    // The selected repository is the one this step just created: the reset-to-template
+    // control stays quiet for it, because a fresh copy of the template has nothing to
+    // reset. No banner — the selected row is the confirmation (owner, 2026-09-25).
+    const justCreatedSelected = isJustCreatedSelection(edsConfig?.createdRepo, selectedRepo);
+
     // --- `repository` phase: pick/create the repo (no app-install UI) ---------
     if (phase === 'repository') {
         return (
@@ -531,7 +571,7 @@ export function RepoSelectionInline({
                         <ResetToTemplateOption
                             resetToTemplate={resetToTemplate}
                             onResetToTemplateChange={handleResetToTemplateChange}
-                            disabled={!selectedRepo}
+                            disabled={!selectedRepo || justCreatedSelected}
                             readiness={readiness}
                             unusable={wrongDefaultBranch}
                             templateName={state.demo?.name}
