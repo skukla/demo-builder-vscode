@@ -214,11 +214,13 @@ export async function sendRest(
     fetchImpl: typeof fetch,
 ): Promise<string> {
     const controller = new AbortController();
-    // A read answers in seconds. A write can take Commerce far longer: creating a
-    // company on the sandbox ran past 30s while it tried to send welcome mail no
-    // server delivers (measured 2026-09-24, aborted twice at NORMAL), and an
-    // aborted write may still land server-side, so a retry risks a duplicate.
-    const timer = setTimeout(() => controller.abort(), method === 'GET' ? TIMEOUTS.NORMAL : TIMEOUTS.LONG);
+    // Commerce on the sandbox can take far longer than 30s to answer anything:
+    // a company POST ran past it while sending welcome mail no server delivers,
+    // and by evening plain GETs (eventing/supportedList, companyCredits) were
+    // aborted at NORMAL three times over (measured 2026-09-24). An aborted write
+    // may still land server-side, so a retry risks a duplicate; an aborted read
+    // is a wasted minute. Both wait LONG; the caller's probe sets its own ceiling.
+    const timer = setTimeout(() => controller.abort(), TIMEOUTS.LONG);
     let res: Response;
     try {
         res = await fetchImpl(`${target.base}/V1/${path}`, {
