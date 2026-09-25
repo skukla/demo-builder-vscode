@@ -4,7 +4,7 @@ kind: feature
 area: ai
 needs: []
 value: high
-status: active
+status: built
 ---
 
 # Runtime debugging from the agent surface — the three gaps the ERP validation measured
@@ -51,3 +51,25 @@ shows the recorded run of an invoked action.
 ## Shipped so far
 
 - 2026-09-25  feat(ai): invoke_runtime_action, a sharper activation list, compact and redacted Runtime reads (`38c9eedf3`)
+
+## Built (2026-09-25, same day)
+
+Shipped on `feature/erp-integration`, gated (scoped jest, both typecheckers, eslint, the SOP
+suites), and proven live against Bodea's namespace through the running dev host:
+
+- `invoke_runtime_action` — a web action (an Adobe-auth sequence) goes through its URL with the
+  user's token and the extra-logging header, then its recorded run is read; anything else is a
+  blocking CLI invoke. Live: `webhook/item-prices` answered its price update in 3 s with the
+  recorded activation id; a direct invoke of the same action had died in its validator.
+- `list_runtime_activations` — `skip`, `since`, `failedOnly`, timer firings hidden by default.
+  Live: failures since 13:00 in one call (which is how the refresh job's 120 s deaths surfaced).
+- `read_runtime_activation` — one `get` for the record plus `logs` for each action's lines,
+  sequences followed into their components, lines compacted (84–165 tokens per read today).
+- Every answer redacted: bearer tokens anywhere, secret-named fields at any depth, and never a
+  component's result — the validator's result is the request itself, and it leaked into one
+  probe answer before the redaction existed (the token was the CLI's console session, which
+  expires on its own; `aio logout && aio login` retires it early).
+- The gap-4 question is answered: `activation get` carries no log lines for an action on Adobe
+  Runtime; `activation logs` does. Both measured on a successful and a failed run.
+- Also in this slice, per the owner: the Commerce REST tools bound an unpaged search to 20 rows
+  and say so, and steer agents to `fields=`.

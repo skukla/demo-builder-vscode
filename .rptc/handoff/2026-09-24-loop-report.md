@@ -796,6 +796,17 @@ develop merged into this branch, then this list, then the cut from develop.
   as `required: true` although the source says false; the library treats the field as
   updatable, so the upgrade should have changed it. Harmless today (the action always answers
   200) but worth a look before a demo where the ERP is deliberately taken offline.
+- **SHIPPED (2026-09-25, 15:20 UTC): the Runtime debugging tools (AB-31, decision D13 done).**
+  `invoke_runtime_action` replays a deployed action with a payload — web actions through their
+  URL with your token (a direct invoke dies in the Adobe-auth validator), others blocking — and
+  answers the run's result and log; the activation list takes failures-only, a since-time,
+  paging, and hides the timer rows; the activation read is one call for the record plus the
+  lines, follows a sequence into its components, and comes back compacted (84–165 tokens per
+  read today). Every answer is redacted for bearer tokens and secret fields, after one probe
+  answered the validator's echo of your request headers, token included, before the redaction
+  existed. The Commerce REST tools bound unpaged searches to 20 rows and steer to `fields=`.
+  Live-proven against Bodea's namespace. Measured along the way: on Adobe Runtime an action's
+  log lines come only from `activation logs`; `activation get` carries none.
 - **Still owed from the owner's request** ("bidirectionally integrated" and "when an ERP is
   deleted, the resetting of the records in commerce works"): an order placed on the storefront
   as a Kukla Studios user (Commerce→ERP), ERP-side changes read back in Commerce (price via
