@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: high
-status: backlog
+status: active
 parent: AB-26
 ---
 
@@ -102,3 +102,5 @@ optional ones are labelled optional with what they add.
 - 2026-09-25  Owner 2026-09-25 (D4): manual steps live on the integration's Commerce Admin page, where they can be done and then dismissed. Each step: what to do and why, a link to the Admin page where it is done, a check that ticks it automatically when the integration can verify it (e.g. the 'Confirmed in ERP' status exists; how to read order statuses over REST is unverified) or 'Mark as done' when it cannot, and 'Dismiss' for a merchant who does not want it. Done/dismissed kept in the integration's own state; 'Show dismissed' brings them back (reversible). Real-merchant steps only (today: the custom order status; the provider id is automated by D2). Demo-only steps (a shared catalog per priced company) go on Demo Builder's ERP tile checklist, the setup guide and the AI bundle, not in the integration. Email step dropped: Commerce sends none until configured.
 - 2026-09-25  Owner 2026-09-25, superseding today's earlier D4 entry: the setup checklist and its checks live in Demo Builder, not the integration. The ERP pair's tile/detail panel shows each step (what, why, a button opening the Commerce Admin page, an automatic read-only check where possible, Mark as done, Dismiss); checks run when the dashboard opens and on 'Check again'; done/dismissed saved in the project, cleared by reset; an agent tool reads the same list. Steps today: the 'Confirmed in ERP' order status (check method unverified) and a shared catalog per priced company. The integration carries no setup code; its README gains an 'After you install' section for the order status, because a prospect handed the integration reads the code, not a demo screen.
 - 2026-09-25  D2 built (commerce-erp-integration 169a674, ad998df): a custom App Management installation step writes this app's Commerce provider id (from the installer's stored providers) with PUT V1/eventing/updateConfiguration; first copy only, cleared on its uninstall; version 0.8.0. Live proof waits on the Bodea session.
+- 2026-09-25  feat(integrations): a demo setup checklist on the ERP integration's flyout (`e9a87e742`)
+- 2026-09-25  Integration README gains 'After you install' (commerce-erp-integration 1e9c708): the order status and the shared catalog per priced company, for a developer handed the code.
