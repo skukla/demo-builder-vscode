@@ -27,6 +27,7 @@ answer on the item and `backlog.mjs next` orders what follows.
 | D10 | Test data left on Bodea: customer group 18, contract price 40 on accessmesh, list price 55, stock 77 and 61, four test orders (two cancelled) | Keep the group and the contract price (they are the demo setup); let the reset restore prices and stock; leave the orders (Commerce cannot delete them) | AB-29 |
 | D11 | Tell Adobe: the sandbox's normal event cron does not run; the installer configures eventing without the provider id its own page marks required | Yes, in public wording only, through your channel | AB-26x |
 | D12 | (resolved) The Commerce-side invoice reached the ERP on I/O Events' first retry, four minutes after a first run failed; no decision needed | — | AB-26e |
+| D13 | Runtime debugging tools: build `invoke_runtime_action`, add failures-only / since / no-timers to the activation list, verify the missing log lines on successful runs | Yes, as an extension slice; the missing pieces cost an hour today | AB-31 |
 
 ## The short version
 
