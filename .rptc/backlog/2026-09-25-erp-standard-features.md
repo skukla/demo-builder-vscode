@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: []
 value: high
-status: backlog
+status: active
 ---
 
 # The mock ERP knows nothing about Commerce: filling at reset, running as if the ERP were the source
@@ -95,3 +95,8 @@ refresh (Commerce stock, credit and companies into the ERP) is filling logic and
 the reset copy; its timer is removed. D14 (the overlap fix) is dropped with it, and the
 "edit stock in Commerce, see it in the ERP" story goes. While running, changes cross only as
 events.
+
+## Shipped so far
+
+- 2026-09-25  feat(integrations): an ERP pair's name is fixed when it is added (`b8219846e`)
+- 2026-09-25  Step 1, words (demo-erp be9879b): the ERP's screens stop naming Commerce; the monitor says Inbound/Outbound/Sent; Home's sync card gone. Fixed name (demo-erp 1554681, this repo b8219846e). Left in step 1: Sync records and Wipe move to Demo Builder with the demo copy.

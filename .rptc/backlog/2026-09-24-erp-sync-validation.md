@@ -22,6 +22,9 @@ Every matrix row has a journey; the baseline's failures match the matrix's gaps 
 
 ## Shipped so far
 - 2026-09-24  Unit half BUILT as the box journeys (AB-26c): every entity-matrix row has a journey in both directions with reset asserted where a write is ledgered. Live half (docs/sync-validation.md script + baseline run on the demo instance) waits for a credential
+- 2026-09-25  D15 built (commerce-erp-integration 536e3cd): product and stock events from the ERP write what the ERP holds now, read through its product API; a late or repeated event can no longer leave Commerce behind the ERP.
+- 2026-09-25  D7 built (commerce-erp-integration e4d1d9a, demo-erp fcb4ced): a Commerce read that times out no longer blanks 'Follow an order'; the ERP order is found by its customer reference (a standard ERP filter the ERP gained) and the headline says Commerce's part is missing.
+- 2026-09-25  D8 built (commerce-erp-integration a5cbb17, 0af7799): a send to the ERP is recorded as 'sending' with a staff note on the order before the ERP is called; a failed write-back is its own 'failed' outcome carrying the ERP number and retried; stuck sends offer Retry.
 
 ## The end-to-end matrix, live status (2026-09-25 — owner: "our goal is a complete end to end test of all data flows")
 
