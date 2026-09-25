@@ -698,6 +698,29 @@ develop merged into this branch, then this list, then the cut from develop.
   Left behind on purpose: I/O Events will keep retrying the stale credit-hold notice for the
   cancelled order 6 for up to a day; each retry fails harmlessly and shows as a failed
   activation.
+- **PROVEN LIVE (2026-09-25, 12:30–12:36 UTC): ERP → Commerce ship and invoice, and Commerce's
+  echo back.** Shipping order 0000001001 in the ERP put a shipment of 2 on Commerce order
+  3000000007 and moved it to Processing; invoicing it in the ERP invoiced the Commerce order
+  (114 paid) and completed it, with the note "Invoiced in the ERP". Commerce's own shipment
+  event came back to the ERP and was matched to the ERP's shipment, not shipped twice. Not
+  recorded: the ERP's invoice does not carry Commerce's invoice id back (a blank
+  `commerceInvoiceId`); nothing doubled, so it is a note, not a defect.
+- **FOUND AND FIXED, on your instruction to read Adobe's docs (2026-09-25): "confirmed in the
+  ERP" cannot mean Processing in Commerce.** Every ERP confirmation failed to reach Commerce:
+  the integration posted a comment setting status `processing` on a pending order, and
+  Commerce answered 400 "The status \"processing\" is not part of the order status history"
+  (measured, with a control: the same comment on an order already in Processing is accepted).
+  Adobe's Experience League pages "Order status" and "Order workflow and processing" say why:
+  states drive the workflow and statuses only communicate progress; an order leaves Pending
+  when it is invoiced or ships; a comment may set only a status of the order's current state,
+  and custom statuses "not set as default can be used only in the comments section". So the
+  setting "Mark orders Processing when the ERP confirms them" promised the impossible. It is
+  replaced (deleted, not kept and ignored) by "Order status when the ERP confirms": a status
+  code the SC creates in Admin and assigns to the Pending state, blank for a note only; a code
+  Commerce refuses still leaves the note and ends the delivery. Integration `422c8cb`. The
+  demo setup guide carries the optional Admin step. **Your decision:** whether the Bodea demo
+  wants that custom "Confirmed in ERP" status (a two-minute Admin step, then the setting), or
+  the note alone.
 - **Still owed from the owner's request** ("bidirectionally integrated" and "when an ERP is
   deleted, the resetting of the records in commerce works"): an order placed on the storefront
   as a Kukla Studios user (Commerce→ERP), ERP-side changes read back in Commerce (price via
