@@ -96,3 +96,7 @@ required step is written down where the SC works and checked by the software whe
 The research states, with sources, whether the provider id is set by any installer; every
 required manual step appears in the setup guide AND is detected by a check the SC sees; the
 optional ones are labelled optional with what they add.
+
+## Shipped so far
+
+- 2026-09-25  Owner 2026-09-25 (D4): manual steps live on the integration's Commerce Admin page, where they can be done and then dismissed. Each step: what to do and why, a link to the Admin page where it is done, a check that ticks it automatically when the integration can verify it (e.g. the 'Confirmed in ERP' status exists; how to read order statuses over REST is unverified) or 'Mark as done' when it cannot, and 'Dismiss' for a merchant who does not want it. Done/dismissed kept in the integration's own state; 'Show dismissed' brings them back (reversible). Real-merchant steps only (today: the custom order status; the provider id is automated by D2). Demo-only steps (a shared catalog per priced company) go on Demo Builder's ERP tile checklist, the setup guide and the AI bundle, not in the integration. Email step dropped: Commerce sends none until configured.
