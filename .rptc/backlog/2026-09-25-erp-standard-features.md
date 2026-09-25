@@ -100,3 +100,4 @@ events.
 
 - 2026-09-25  feat(integrations): an ERP pair's name is fixed when it is added (`b8219846e`)
 - 2026-09-25  Step 1, words (demo-erp be9879b): the ERP's screens stop naming Commerce; the monitor says Inbound/Outbound/Sent; Home's sync card gone. Fixed name (demo-erp 1554681, this repo b8219846e). Left in step 1: Sync records and Wipe move to Demo Builder with the demo copy.
+- 2026-09-25  Plan written for steps 1c to 5: .rptc/plans/erp-demo-filling/overview.md. Three owner questions: Wipe to Demo Builder; detach becomes Demo Builder's over the integration's write log; whether the Mapping tab can be pre-filled from outside the app.
