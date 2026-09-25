@@ -61,3 +61,4 @@ routing integration) · AB-26r (credit memo) · AB-26s (the payment leg) · AB-2
 - 2026-09-25  docs(report): the order round trip proven live, and the three defects it exposed (`c0ccaaba7`)
 - 2026-09-24  fix(ai): the activation tools say what Runtime does not record, and the first conclusion drawn from them is retracted (`855518419`)
 - 2026-09-25  docs(report): the order path proven live in both directions after the fixes (`dfac1339d`)
+- 2026-09-25  docs(report): ERP-to-Commerce ship and invoice proven; the confirm mapping corrected against Adobe docs (`a11d79a49`)
