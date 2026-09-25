@@ -51,6 +51,8 @@ shows the recorded run of an invoked action.
 ## Shipped so far
 
 - 2026-09-25  feat(ai): invoke_runtime_action, a sharper activation list, compact and redacted Runtime reads (`38c9eedf3`)
+- 2026-09-25  docs(report): the Runtime debugging tools shipped and proven live; AB-31 built (`b415af03c`)
+- 2026-09-25  fix(ai): read_runtime_activation takes an action's lines from activation logs (`45e815a43`)
 
 ## Built (2026-09-25, same day)
 
