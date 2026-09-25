@@ -17,6 +17,7 @@ import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import type { AppManagementAuth } from './appManagementClient';
+import { compactLogs, redactSecrets } from './runtimeLogText';
 import { commandFailure, runInNamespace, type RuntimeNamespaceDeps, type RuntimeNamespaceEnv } from './runtimeNamespace';
 import type { CommandResult } from '@/core/shell/types';
 import { parseJSON } from '@/types/typeGuards';
@@ -129,75 +130,6 @@ function shapeActivations(parsed: RawActivation[]): RuntimeActivationRow[] {
 /** An activation id is 32 hex characters; anything else never reaches the CLI. */
 export const ACTIVATION_ID = /^[0-9a-f]{32}$/u;
 
-/** The most log text one read answers; past it the lines are cut and the cut declared. */
-export const LOG_CHARS_MAX = 30_000;
-/** Runtime's own prefix on every line: its timestamp and the stream. */
-const RUNTIME_LINE = /^\d{4}-\d{2}-\d{2}T(\d{2}:\d{2}:\d{2}\.\d{3})Z\s+(stdout|stderr):\s*/u;
-/** AioLogger's prefix, repeated inside the line: its timestamp and `[name /namespace/package/action]`. */
-const LOGGER_PREFIX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z\s+\[[^\]]*\]\s*/u;
-/** Node's deprecation chatter, two lines per run, saying nothing about the run. */
-const NODE_NOISE = /DeprecationWarning|--trace-deprecation/u;
-
-/**
- * One Runtime log line as an agent needs it: the time of day once, the level and the
- * message — not the date twice, the stream and the action's full path on every line
- * (measured 2026-09-25: 190 characters of prefix on a 60-character message).
- */
-export function compactLogLine(line: string): string | undefined {
-    const trimmed = line.trimEnd();
-    if (!trimmed || trimmed.startsWith('=== activation logs') || NODE_NOISE.test(trimmed)) {
-        return undefined;
-    }
-    const runtime = RUNTIME_LINE.exec(trimmed);
-    if (!runtime) {
-        return trimmed;
-    }
-    const body = trimmed.slice(runtime[0].length).replace(LOGGER_PREFIX, '');
-    return `${runtime[1]} ${runtime[2] === 'stderr' ? 'stderr: ' : ''}${body}`;
-}
-
-/** A bearer token anywhere in text; the validator component echoes the request headers into its result. */
-const BEARER = /Bearer\s+[A-Za-z0-9._~+/=-]+/gu;
-/** Field names whose values are secrets, whatever they hold. */
-const SECRET_KEY = /^(authorization|x-api-key|client_secret|clientSecret|access_token|accessToken|AIO_RUNTIME_AUTH|password|secret)$/iu;
-
-/** The same text with any bearer token replaced; applied to every log line a tool answers. */
-export function redactText(text: string): string {
-    return text.replace(BEARER, 'Bearer [redacted]');
-}
-
-/**
- * The same value with secret-named fields and bearer tokens replaced, at any depth. Applied
- * to every result a tool answers: on 2026-09-25 the Adobe-auth validator's result carried
- * the caller's `__ow_headers.authorization`, and a tool answered it verbatim.
- */
-export function redactSecrets(value: unknown): unknown {
-    if (typeof value === 'string') return redactText(value);
-    if (Array.isArray(value)) return value.map(redactSecrets);
-    if (value && typeof value === 'object') {
-        return Object.fromEntries(
-            Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, SECRET_KEY.test(k) ? '[redacted]' : redactSecrets(v)]),
-        );
-    }
-    return value;
-}
-
-/** Compact every line and keep at most {@link LOG_CHARS_MAX} characters, declaring any cut. */
-export function compactLogs(raw: readonly string[]): string[] {
-    const lines = raw.map(compactLogLine).filter((l): l is string => l !== undefined).map(redactText);
-    const kept: string[] = [];
-    let chars = 0;
-    for (const line of lines) {
-        if (chars + line.length > LOG_CHARS_MAX) {
-            kept.push(`[cut: ${lines.length - kept.length} more line(s); narrow with a later since or a smaller limit]`);
-            break;
-        }
-        kept.push(line);
-        chars += line.length + 1;
-    }
-    return kept;
-}
-
 /** The record as `aio runtime activation get` prints it (shape read live 2026-09-25). */
 interface ActivationRecord {
     activationId: string;
@@ -240,11 +172,21 @@ async function getActivation(deps: RuntimeNamespaceDeps, env: RuntimeNamespaceEn
 }
 
 /**
- * One activation's result and log, by id, in one `aio runtime activation get`. An
- * Adobe-auth web action deploys as a SEQUENCE (validator, then the action): its record
- * carries the components' activation ids where an action's carries log lines (measured
- * 2026-09-25), so a sequence is followed into its components and each one's lines are
- * labelled with its action. The lines come back compacted (compactLogs).
+ * An action's log lines, raw. On Adobe Runtime the record `get` answers carries no lines for
+ * an action (`logs: []` on a successful and on a failed run alike, measured 2026-09-25); only
+ * `activation logs` has them. A missing or refused log is an empty list, not a failure.
+ */
+async function activationLogLines(deps: RuntimeNamespaceDeps, env: RuntimeNamespaceEnv, activationId: string): Promise<string[]> {
+    const answer = await runInNamespace(deps, `aio runtime activation logs ${activationId}`, env);
+    return answer.code === 0 ? answer.stdout.split('\n') : [];
+}
+
+/**
+ * One activation's result and log, by id: the record from `activation get`, the lines from
+ * `activation logs`. An Adobe-auth web action deploys as a SEQUENCE (validator, then the
+ * action) whose record lists its components' activation ids (measured 2026-09-25), so a
+ * sequence is followed into its components and each one's lines are labelled with its
+ * action. The lines come back compacted (compactLogs) and redacted.
  *
  * @throws When the record cannot be read
  */
@@ -274,20 +216,18 @@ async function recordLogs(deps: RuntimeNamespaceDeps, env: RuntimeNamespaceEnv, 
     const raw = Array.isArray(record.logs) ? record.logs.filter((l): l is string => typeof l === 'string') : [];
     const isSequence = annotation(record, 'kind') === 'sequence' || (raw.length > 0 && raw.every((l) => ACTIVATION_ID.test(l)));
     if (!isSequence) {
-        return compactLogs(raw);
+        return compactLogs(raw.length > 0 ? raw : await activationLogLines(deps, env, record.activationId));
     }
     const lines: string[] = [];
     for (const id of raw) {
         const component = await getActivation(deps, env, id);
         const path = annotation(component, 'path');
         const name = typeof path === 'string' ? path.split('/').slice(1).join('/') : id;
-        const componentLines = compactLogs(
-            Array.isArray(component.logs) ? component.logs.filter((l): l is string => typeof l === 'string') : [],
-        );
+        const componentLines = compactLogs(await activationLogLines(deps, env, id));
         // Never a component's result here: the Adobe-auth validator's result is the request
         // itself, headers and bearer included (leaked once, 2026-09-25). The sequence's own
-        // result is the answer; a component with no lines yet says so.
-        lines.push(`[${name}]`, ...(componentLines.length > 0 ? componentLines : ['(no log lines yet — Runtime attaches them up to a minute after a run; read again)']));
+        // result is the answer; a component with no lines says so.
+        lines.push(`[${name}]`, ...(componentLines.length > 0 ? componentLines : ['(no log lines)']));
     }
     return compactLogs(lines);
 }

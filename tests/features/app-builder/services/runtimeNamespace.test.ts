@@ -26,13 +26,12 @@ jest.mock('fs/promises', () => ({
 }));
 
 import {
-    compactLogLine,
-    compactLogs,
     invokeRuntimeAction,
     invokeWebAction,
     listRuntimeActivations,
     readRuntimeActivation,
 } from '@/features/app-builder/services/runtimeActivations';
+import { compactLogLine, compactLogs } from '@/features/app-builder/services/runtimeLogText';
 import {
     deleteRuntimeEntity,
     listRuntimeNames,
@@ -312,22 +311,27 @@ describe('readRuntimeActivation', () => {
     // Records as `aio runtime activation get` printed them live on 2026-09-25 (fields trimmed); the
     // CLI's update warning precedes the JSON.
     const WARNING = ' ›   Warning: @adobe/aio-cli update available from 11.1.2 to 11.1.4.\n';
+    // On Adobe Runtime the record's `logs` is EMPTY for an action; `activation logs` has the lines.
     const ACTION_RECORD = {
         activationId: '583ceebe8d6249edbceebe8d62f9edd7',
         annotations: [{ key: 'path', value: 'ns/erp/refresh-job' }, { key: 'kind', value: 'nodejs:24' }],
         duration: 20206,
-        logs: ['2026-09-24T21:43:03.598Z stdout: 2026-09-24T21:43:03.598Z [erp-refresh-job /ns/erp/refresh-job] error: partner refresh failed'],
+        logs: [],
         response: { result: { body: { delivered: 0 } }, status: 'application error', success: false },
     };
+    const ACTION_LOGS = '=== activation logs 583ceebe8d6249edbceebe8d62f9edd7\n2026-09-24T21:43:03.598Z stdout: 2026-09-24T21:43:03.598Z [erp-refresh-job /ns/erp/refresh-job] error: partner refresh failed\n';
 
-    it('reads the record in one get (past the CLI warning), answering the action, how it ended, the result and the compacted log', async () => {
+    it('reads the record with get (past the CLI warning) and the lines with logs, answering the action, how it ended, the result and the compacted log', async () => {
         const deps = makeDeps();
-        deps.commandManager.execute.mockResolvedValueOnce(createSuccessResult(WARNING + JSON.stringify(ACTION_RECORD)));
+        deps.commandManager.execute
+            .mockResolvedValueOnce(createSuccessResult(WARNING + JSON.stringify(ACTION_RECORD)))
+            .mockResolvedValueOnce(createSuccessResult(ACTION_LOGS));
 
         const read = await readRuntimeActivation(deps, ENV, '583ceebe8d6249edbceebe8d62f9edd7');
 
         expect(deps.commandManager.execute.mock.calls.map((c) => c[0])).toEqual([
             'aio runtime activation get 583ceebe8d6249edbceebe8d62f9edd7',
+            'aio runtime activation logs 583ceebe8d6249edbceebe8d62f9edd7',
         ]);
         expect(read).toEqual({
             activationId: '583ceebe8d6249edbceebe8d62f9edd7',
@@ -357,14 +361,16 @@ describe('readRuntimeActivation', () => {
         };
         const action = {
             activationId: '992c23d318454541ac23d31845d54143',
-            annotations: [{ key: 'path', value: 'ns/webhook/item-prices' }, { key: 'kind', value: 'nodejs:24' }],
-            logs: ['2026-09-25T14:59:50.100Z stdout: 2026-09-25T14:59:50.100Z [webhook-item-prices /ns/webhook/item-prices] info: item-prices: partner C21, 1 line(s) priced'],
+            annotations: [{ key: 'path', value: 'ns/webhook/__secured_item-prices' }, { key: 'kind', value: 'nodejs:24' }],
+            logs: [],
             response: { result: { body: [{ op: 'replace' }] }, status: 'success', success: true },
         };
         deps.commandManager.execute
             .mockResolvedValueOnce(createSuccessResult(JSON.stringify(sequence)))
             .mockResolvedValueOnce(createSuccessResult(JSON.stringify(validator)))
-            .mockResolvedValueOnce(createSuccessResult(JSON.stringify(action)));
+            .mockResolvedValueOnce(createSuccessResult('=== activation logs 4c4c97d219d44d908c97d219d49d9019\n'))
+            .mockResolvedValueOnce(createSuccessResult(JSON.stringify(action)))
+            .mockResolvedValueOnce(createSuccessResult('=== activation logs 992c23d318454541ac23d31845d54143\n2026-09-25T14:59:50.100Z stdout: 2026-09-25T14:59:50.100Z [webhook-item-prices /ns/webhook/__secured_item-prices] info: item-prices: partner C21, 1 line(s) priced\n'));
 
         const read = await readRuntimeActivation(deps, ENV, sequence.activationId);
 
@@ -372,9 +378,16 @@ describe('readRuntimeActivation', () => {
         expect(read.result).toEqual({ body: [{ op: 'replace' }], statusCode: 200 });
         expect(read.logs).toEqual([
             '[shared-validators-v1/headless-v2]',
-            '(no log lines yet — Runtime attaches them up to a minute after a run; read again)',
-            '[webhook/item-prices]',
+            '(no log lines)',
+            '[webhook/__secured_item-prices]',
             '14:59:50.100 info: item-prices: partner C21, 1 line(s) priced',
+        ]);
+        expect(deps.commandManager.execute.mock.calls.map((c) => String(c[0]))).toEqual([
+            `aio runtime activation get ${sequence.activationId}`,
+            'aio runtime activation get 4c4c97d219d44d908c97d219d49d9019',
+            'aio runtime activation logs 4c4c97d219d44d908c97d219d49d9019',
+            'aio runtime activation get 992c23d318454541ac23d31845d54143',
+            'aio runtime activation logs 992c23d318454541ac23d31845d54143',
         ]);
     });
 
@@ -390,12 +403,13 @@ describe('readRuntimeActivation', () => {
         const validator = {
             activationId: '4c4c97d219d44d908c97d219d49d9019',
             annotations: [{ key: 'path', value: 'ns/shared-validators-v1/headless-v2' }],
-            logs: ['2026-09-25T15:00:00.000Z stdout: header Authorization: Bearer abc.def seen'],
+            logs: [],
             response: { result: { __ow_headers: { authorization: 'Bearer abc.def' } }, status: 'success', success: true },
         };
         deps.commandManager.execute
             .mockResolvedValueOnce(createSuccessResult(JSON.stringify(sequence)))
-            .mockResolvedValueOnce(createSuccessResult(JSON.stringify(validator)));
+            .mockResolvedValueOnce(createSuccessResult(JSON.stringify(validator)))
+            .mockResolvedValueOnce(createSuccessResult('2026-09-25T15:00:00.000Z stdout: header Authorization: Bearer abc.def seen\n'));
 
         const read = await readRuntimeActivation(deps, ENV, sequence.activationId);
 
@@ -493,12 +507,13 @@ describe('invokeRuntimeAction', () => {
         const validator = {
             activationId: componentId,
             annotations: [{ key: 'path', value: 'ns/shared-validators-v1/headless-v2' }],
-            logs: ['2026-09-25T14:55:15.230Z stdout: 2026-09-25T14:55:15.230Z [headless-v2 /ns/shared-validators-v1/headless-v2] error: missing authorization header'],
+            logs: [],
             response: { result: { error: 'server error' }, status: 'application error', success: false },
         };
         deps.commandManager.execute
             .mockResolvedValueOnce(createSuccessResult(JSON.stringify(sequence)))
-            .mockResolvedValueOnce(createSuccessResult(JSON.stringify(validator)));
+            .mockResolvedValueOnce(createSuccessResult(JSON.stringify(validator)))
+            .mockResolvedValueOnce(createSuccessResult('2026-09-25T14:55:15.230Z stdout: 2026-09-25T14:55:15.230Z [headless-v2 /ns/shared-validators-v1/headless-v2] error: missing authorization header\n'));
 
         const answer = await invokeRuntimeAction(deps, ENV, 'webhook/item-prices');
 
