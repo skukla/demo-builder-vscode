@@ -38,6 +38,42 @@ needs to be documented and communicated to them." **Lane 3 (research + design), 
 3. Falsify on the instance: read `GET eventing/getEventProviders` and the configuration before
    and after a fresh add on a scratch instance or after `remove_integration` + add on Bodea.
 
+## Research findings (2026-09-25, sources named; the live falsification is still open)
+
+**Adobe says the field is required.** The "Configure Adobe Commerce" eventing page
+(developer.adobe.com/commerce/extensibility/events/configure-commerce/) lists *Adobe I/O Event
+Provider ID* as required, "must be populated before saving", alongside the workspace
+configuration and the instance id, and says the provider must be created first. The eventing
+REST reference (…/events/api/) shows `PUT eventing/updateConfiguration` accepting `provider_id`
+with the other five keys. The same page: "You must enable cron so that Commerce can send events",
+and the `event_data_batch_send` cron sends standard events (up to 59 s) while the
+`commerce.eventing.event.publish` consumer sends priority events within a second.
+
+**The installer does not set it.** App Management's library (`@adobe/aio-commerce-lib-app`
+2.0.0, `createCommerceEvents` → `configureCommerceEventing`) writes `enabled`, `environment_id`,
+`instance_id`, `merchant_id` and `workspace_configuration`, creates the Commerce event
+provider, and subscribes each event with its own `provider_id`. It never writes the general
+`provider_id`. So the blank field is a gap between the installer and Commerce's documented
+requirement, not a step this repo's onboarding skipped (the kit has no onboarding script; the
+installer is the onboarding). Demo Builder's install does not touch eventing configuration
+either (grep of `src/features/app-builder`, 2026-09-25).
+
+**What we measured does not settle whether it matters for us.** Filling the field and running
+Execute Synchronization and Send Test Event did not make events flow on 2026-09-24; marking the
+subscriptions priority did. Two readings fit: the general provider id feeds the cron path only
+(which does not run on the sandbox anyway), or it is needed and was simply not sufficient. The
+falsifying experiment is cheap and reversible and needs the owner's say-so because it can stop
+the demo's events: blank the field in Admin, save, change a product, watch the registration's
+debug tracing; then paste it back. Until then, treat the field as required (Adobe's word).
+
+**Recommendation.** Whatever the experiment says, the extension should stop depending on a
+paste: after install, read the provider the installer created (`GET eventing/eventProvider`)
+and write it with `PUT eventing/updateConfiguration` — the call the installer already makes,
+with the one key it omits — then run the synchronization. Keep the manual instruction as the
+fallback in the setup guide, and show the check on the tile and the Admin page (design below).
+Note for Adobe (public wording only): the App Management installer configures eventing without
+the general provider id that Commerce's own configuration page marks required.
+
 ## Design (to write once the research answers "required")
 
 The SC must learn about a manual step **before it bites**, in the surface they are already in:
