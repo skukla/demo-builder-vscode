@@ -22,3 +22,35 @@ Every matrix row has a journey; the baseline's failures match the matrix's gaps 
 
 ## Shipped so far
 - 2026-09-24  Unit half BUILT as the box journeys (AB-26c): every entity-matrix row has a journey in both directions with reset asserted where a write is ledgered. Live half (docs/sync-validation.md script + baseline run on the demo instance) waits for a credential
+
+## The end-to-end matrix, live status (2026-09-25 — owner: "our goal is a complete end to end test of all data flows")
+
+Run through the Demo Builder agent tools against the demo instance (Bodea) and the deployed pair.
+✓ proven live with the date; ✗ failed and fixed (see the ledger `commerce-erp-integration/docs/live-validation-learnings.md`); ○ not yet run live.
+
+| Flow | Direction | Live status |
+|---|---|---|
+| Product save (name, price) → ERP product | Commerce → ERP | ✓ 2026-09-25 03:xx UTC, after the priority-subscription fix |
+| Product delete → ERP | Commerce → ERP | ○ |
+| Stock item save → ERP warehouse | Commerce → ERP | ○ |
+| Companies, credit, status (minute refresh) → ERP partners | Commerce → ERP | ✓ 2026-09-24 |
+| Order placed → ERP sales order, number written back | Commerce → ERP | ✓ 2026-09-25 12:24 (orders 3000000007, 3000000008), after three fixes (✗ `_isNew`, ✗ company, ✗ timeout) |
+| Cart pricing webhooks (contract price, discount ceiling) | Commerce → ERP → cart | ○ (a REST cart fires them too; needs a contract price for the demo company) |
+| Cancel / hold made in Commerce Admin → ERP | Commerce → ERP | ○ |
+| Shipment made in Commerce Admin → ERP | Commerce → ERP | ○ (the echo of an ERP-made shipment was matched, not doubled: ✓ 12:31) |
+| Invoice made in Commerce Admin → ERP | Commerce → ERP | ○ (the echo of an ERP-made invoice did not carry the Commerce invoice id back; nothing doubled) |
+| Price / name change → Commerce product | ERP → Commerce | ○ |
+| Stock change → Commerce source item | ERP → Commerce | ○ |
+| Credit limit → company credit | ERP → Commerce | ✓ 2026-09-24 (after the currency_code fix) |
+| Block / unblock → company status | ERP → Commerce | ✓ 2026-09-24 |
+| Confirmation → note (+ optional custom status) | ERP → Commerce | ✓ 2026-09-25 12:50, after ✗ (Processing is not a status a comment can set) |
+| Credit hold → order On Hold; release → unhold | ERP → Commerce | ○ as a real over-limit hold (the only hold seen was a wrong-company one whose delivery timed out) |
+| Credit reject → order cancelled | ERP → Commerce | ✓ 2026-09-25 12:21 |
+| Shipment → Commerce shipment (source) | ERP → Commerce | ✓ 2026-09-25 12:31 |
+| Invoice → Commerce invoice (capture) | ERP → Commerce | ✓ 2026-09-25 12:36 (order complete) |
+| Reset → ledgered writes undone, ERP re-mirrored | both | ○ with real ledger entries |
+| Remove integration → Commerce clean (credit, status, ext_order_id, holds) | both | ○ |
+| Fresh add → install-time first sync | install | ○ |
+| Agent tools read both sides and the crossing | agent surface | ✓ 2026-09-25 (`get_erp_order_trace`, `run_commerce_rest`, `run_erp_rest`, activations) |
+
+Next runs, in order: credit-hold round trip (lower the demo company's limit in the ERP, order, hold, release, restore), cart pricing via a REST cart with a contract price, ERP price/stock → Commerce, Commerce Admin cancel/hold/ship/invoice → ERP, product delete, then reset and remove with the ledger populated, then a fresh add.

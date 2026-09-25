@@ -255,7 +255,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-17` | feature | [A storefront can live in an organization's repository, not only the SC's own](2026-09-16-storefront-in-an-org-repository.md) | — | high | backlog |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | backlog |
 
-### app-builder  (56)
+### app-builder  (58)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -312,6 +312,8 @@ each item's own file; what has already landed against an item is in its
 | `AB-26t` | feature | └ [The routing integration — one Commerce order split across ERP pairs](2026-09-24-erp-routing-integration.md) | AB-16, AB-26j | high | superseded |
 | `AB-26u` | feature | └ [The walk-through — what to look at in the ERP, what to look at in Commerce, and how each relates](2026-09-24-erp-walkthrough.md) | AB-26e, AB-26m, AB-26l | high | built |
 | `AB-26v` | feature | └ [Reconciling partial invoices against one Commerce order — a customization opportunity](2026-09-24-erp-partial-invoice-reconciliation.md) | — | med | backlog |
+| `AB-26w` | feature | └ [Business-user settings for the ERP pair — which behaviours a merchant chooses, and where](2026-09-25-erp-business-user-settings.md) | — | high | backlog |
+| `AB-26x` | feature | └ [Manual Commerce steps the pair depends on — are they required, and how does the SC learn?](2026-09-25-erp-manual-commerce-steps.md) | — | high | backlog |
 | `AB-29` | feature | [Commerce test data cleanup tools](2026-09-24-commerce-test-data-cleanup-tools.md) | — | med | active |
 | `AB-30` | feature | [The ERP integration's Commerce Admin page uses the Commerce back-office design system](2026-09-24-erp-admin-page-commerce-design-system.md) | — | med | backlog |
 | `PL-24` | feature | [Component updates cannot follow an environment-variable rename](2026-08-30-env-var-rename-migration.md) | — | med | backlog |
@@ -551,7 +553,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — backlog
 
-*151 item(s) sit outside the A–G chain.*
+*153 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 
