@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: high
-status: backlog
+status: active
 parent: AB-26
 ---
 
@@ -61,3 +61,8 @@ the catalog price (55) and is charged the contract price (40). That is the wrong
   which do not (quantity breaks map to tier prices at quantity > 1; percentage rules map to
   Percentage). Read demo-erp's rule model first.
 - Relation to [[AB-14]] (where an ERP price goes when the project also has ACO).
+
+## Shipped so far
+
+- 2026-09-26  feat(ai): run_commerce_query can ask Catalog Service as a customer group (`4686a23c2`)
+- 2026-09-26  docs(backlog): AB-26z, ERP contract prices live in each company's shared catalog (`3f190fd13`)

@@ -186,11 +186,12 @@ each item's own file; what has already landed against an item is in its
 
 <!-- BEGIN GENERATED registry -->
 
-### ai  (35)
+### ai  (36)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
 | `AB-31` | feature | [Runtime debugging from the agent surface — the three gaps the ERP validation measured](2026-09-25-runtime-debugging-tools.md) | — | high | built |
+| `AB-32` | fix | [read_runtime_activation cannot read the App Management installer's runs](2026-09-26-runtime-activation-read-fails-on-installer-runs.md) | — | med | backlog |
 | `AI-1` | epic | [Is the surface good enough for an agent to do the work?](epic-ai-surface-good-enough.md) | — | high | open |
 | `AI-1a` | question | └ [AI-surface coverage: do the MCP tools, skills and agents empower an agent to USE the extension?](2026-08-16-mcp-surface-for-sc-design-work.md) | AI-1c | high | active |
 | `AI-1b` | question | └ [104 tools, and agents reach 20 of them (measured 2026-08-25; 121 tools now)](2026-08-25-agents-barely-use-the-tool-surface.md) | AI-1c | high | open |
@@ -259,7 +260,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-20` | fix | [Setup resumes when the install dialog detects AEM Code Sync, instead of demanding a Retry](2026-09-25-eds-setup-resumes-after-code-sync-install.md) | — | high | built |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | backlog |
 
-### app-builder  (60)
+### app-builder  (62)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -319,9 +320,11 @@ each item's own file; what has already landed against an item is in its
 | `AB-26w` | feature | └ [Business-user settings for the ERP pair — which behaviours a merchant chooses, and where](2026-09-25-erp-business-user-settings.md) | — | high | backlog |
 | `AB-26x` | feature | └ [Manual Commerce steps the pair depends on — are they required, and how does the SC learn?](2026-09-25-erp-manual-commerce-steps.md) | — | high | active |
 | `AB-26y` | feature | └ [The mock ERP knows nothing about Commerce: filling at reset, running as if the ERP were the source](2026-09-25-erp-standard-features.md) | — | high | active |
-| `AB-26z` | feature | └ [ERP contract prices live in each company's shared catalog, not in a cart webhook](2026-09-26-erp-contract-prices-in-shared-catalogs.md) | — | high | backlog |
+| `AB-26z` | feature | └ [ERP contract prices live in each company's shared catalog, not in a cart webhook](2026-09-26-erp-contract-prices-in-shared-catalogs.md) | — | high | active |
 | `AB-29` | feature | [Commerce test data cleanup tools](2026-09-24-commerce-test-data-cleanup-tools.md) | — | med | active |
 | `AB-30` | feature | [The ERP integration's Commerce Admin page uses the Commerce back-office design system](2026-09-24-erp-admin-page-commerce-design-system.md) | — | med | backlog |
+| `AB-33` | fix | [Removing an integration reports Runtime packages left behind in a workspace it then deletes](2026-09-26-remove-integration-leaves-runtime-packages.md) | — | med | backlog |
+| `AB-34` | fix | [add_integration's answer names the catalog entry, not the name the SC gave](2026-09-26-add-integration-answer-names-catalog-entry.md) | — | low | backlog |
 | `PL-24` | feature | [Component updates cannot follow an environment-variable rename](2026-08-30-env-var-rename-migration.md) | — | med | backlog |
 
 ### data-installer  (3)
@@ -559,7 +562,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — backlog
 
-*159 item(s) sit outside the A–G chain.*
+*162 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 
