@@ -26,3 +26,7 @@ Two questions to settle, in order:
 
 Then either the delete order changes (retry the package deletes before deleting the
 workspace) or the warning says what is actually true.
+
+## Shipped so far
+
+- 2026-09-26  2356ed280: cause from the Debug Logs: three recursive package deletes answered 'package not empty (409)'. Rebuilt the same shapes (sequences over Adobe's validator) in a throwaway package: they deleted cleanly, cause not found. Recovery shipped: on 'not empty' the package is emptied one action at a time and deleted again. Still open, the owner's call: the remove deletes the workspace even when items remain, so the warning's advice cannot be followed.

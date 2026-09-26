@@ -4,7 +4,7 @@ kind: fix
 area: ai
 needs: []
 value: med
-status: backlog
+status: built
 ---
 
 # read_runtime_activation cannot read the App Management installer's runs
@@ -22,3 +22,7 @@ investigated: whether the tool targets the project's workspace instead of the in
 own (each add has its own workspace), or whether it fails on sequence activations only. Start
 by reading the Debug Logs line the refusal points at, then one live read of an installer run
 through the running dev host with `mcp-live-probe`.
+
+## Shipped so far
+
+- 2026-09-26  2356ed280: a sequence component Runtime did not keep (activation get 404) reads as 'not recorded' and the read goes on. Proven live: the installer run 3d2cecc4 that failed this morning now reads, answering its 409 already-current.
