@@ -84,6 +84,21 @@ same `demo-erp` code deployed again.
 | B7 | **Surfaces** | The integration card lists its ERPs; the Admin pages (history, order trace, Mapping) show which ERP; the setup checklist per target where it differs; agent tools take a target; AGENTS.md and the walk-through ([[AB-26u]]) gain the two-ERP section. | the nine moments of the routing research §10 are walkable |
 | B8 | **Harness and live proof** | The pair-in-a-box harness runs two in-process ERPs behind one integration; the routing verification block from [[AB-26t]] becomes B4's and B8's. | the journeys pass in the harness and live |
 
+## 5a. Phase C: circle back on readability (owner, 2026-09-26)
+
+After Phase B, a reassessment pass over what the SC and the audience look at, because by then
+every screen shows several ERPs and the two phases will have added to them piece by piece.
+
+| # | Work | Scope |
+|---|---|---|
+| C1 | **Reassess first**: walk every ERP screen and every integration screen along the demo path with two ERPs, and list what is hard to read, crowded or inconsistent, before changing anything | ERP: Home, Customers, Products, Pricing and contracts, Sales Orders, Shipments, Invoices, Settings, the journal. Integration: the Commerce Admin page (Mapping, Status and sync, history, order trace) and the Demo Builder integration card, flyout and checklist |
+| C2 | **ERP screens more readable**: type scale, density, labels, empty states, the second ERP's look distinct at a glance | `demo-erp`; the headless screen checks (T-2) re-accept fingerprints on purpose |
+| C3 | **Integration screens cleaned up**: the Mapping tab's layout and scrolling inside the Admin frame (found 2026-09-26: the frame could not be scrolled to the Order card in a short window), wording, which ERP each row belongs to | `commerce-erp-integration` Admin UI; the Demo Builder card and flyout (the webview visual baseline for those) |
+| C4 | **Walk-through re-checked** against the cleaned screens | [[AB-26u]] |
+
+Cosmetic changes found during Phases A and B are written into C1's list rather than done on the
+way, unless they block the work.
+
 ## 6. What every slice is checked against
 
 The programme overview §6a (tests, journeys, contracts, screens, mutation floor, scans) plus:
@@ -101,6 +116,7 @@ that creates something ships its removal (the cleanup rule).
 | A | A5 sync validation baseline | D7 and D8 built; journeys not yet written |
 | A | A6 website scope | research running |
 | B | B1 to B8 | not started |
+| C | C1 to C4, readability | after Phase B |
 
 ## 8. Decisions for the owner (recommendation first)
 
