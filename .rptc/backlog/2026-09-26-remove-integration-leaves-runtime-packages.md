@@ -4,7 +4,7 @@ kind: fix
 area: app-builder
 needs: []
 value: med
-status: backlog
+status: built
 ---
 
 # Removing an integration reports Runtime packages left behind in a workspace it then deletes
@@ -30,3 +30,4 @@ workspace) or the warning says what is actually true.
 ## Shipped so far
 
 - 2026-09-26  2356ed280: cause from the Debug Logs: three recursive package deletes answered 'package not empty (409)'. Rebuilt the same shapes (sequences over Adobe's validator) in a throwaway package: they deleted cleanly, cause not found. Recovery shipped: on 'not empty' the package is emptied one action at a time and deleted again. Still open, the owner's call: the remove deletes the workspace even when items remain, so the warning's advice cannot be followed.
+- 2026-09-26  fe7140023: owner's call, 2026-09-26: a complete cleanup, whatever it takes. Refused leftovers are retried after 10, 30 and 60 s; if any are still deployed, or the namespace cannot be checked, the removal stops and keeps the record, folder and workspace, and Remove again resumes at the undeploy (skipping the ERP clean-up that already ran). Remove anyway still finishes. Tested; not yet exercised live (needs a removal).

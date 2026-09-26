@@ -456,7 +456,12 @@ What an agent needs to know to act on the right one:
 
 `deploy_integration`, `redeploy_integration` and `remove_integration` find the
 workspace themselves. Removing an integration also deletes its workspace, once
-nothing else in the project uses it.
+nothing else in the project uses it and its Runtime namespace is clean. What Runtime
+refuses to delete is tried again after 10, 30 and 60 seconds; if anything is still
+deployed after that, or the namespace cannot be checked, the removal stops and keeps the
+record, the folder and the workspace. `remove_integration` answers
+`COMPONENT_REMOVAL_STOPPED` with what is left; calling it again resumes at the
+undeploy, and `force: true` finishes regardless.
 
 `set_project_destination` moves integrations by what it changes:
 
