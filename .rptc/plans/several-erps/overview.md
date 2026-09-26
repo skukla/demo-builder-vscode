@@ -114,7 +114,7 @@ that creates something ships its removal (the cleanup rule).
 | A | A3 filling by Demo Builder | steps 1a and 1e built; plan written; 3 owner questions |
 | A | A4 shared catalogs and contracts | filed with measurements; Kukla Studios' catalog set up by hand as the model |
 | A | A5 sync validation baseline | D7 and D8 built; journeys not yet written |
-| A | A6 website scope | cause found: the picker reads only the top of the scope tree; three more defects behind it; fix not started ([[AB-36]], `../../research/erp-admin-website-scope/research.md`) |
+| A | A6 website scope | built and deployed ([[AB-36]], integration a2a13a8); the live tree holds every website; owner questions from the research still open |
 | B | B1 to B8 | not started |
 | C | C1 to C4, readability | after Phase B |
 

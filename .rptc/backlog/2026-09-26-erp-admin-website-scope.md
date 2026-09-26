@@ -4,7 +4,7 @@ kind: fix
 area: app-builder
 needs: []
 value: high
-status: active
+status: built
 parent: AB-26
 ---
 
@@ -44,3 +44,7 @@ old list when Commerce cannot be read, and replace the invented test data with a
 from a real read. For several ERPs: an ERP does not own websites (one website sells several
 ERPs' products); only the sales organisation needs both an ERP and a website, and lib-config
 has no per-ERP dimension, which B3 decides. Owner questions are in the research file.
+
+## Shipped so far
+
+- 2026-09-26  commerce-erp-integration a2a13a8, deployed to Bodea: the picker walks lib-config's tree (websites and their store views; stores and Admin left out), a value's origin level is compared properly (website values stop reading Inherited), a commerce node with no websites counts as unread, Refresh websites reads Commerce again (erp/settings ?refresh=true), a failed read keeps the last list with a note. Tests and the preview use the tree lib-config builds from Bodea's real websites. Proven live: the refreshed tree from the deployed action holds the four websites and their store views, same shape as the tests. Not seen live: the picker's popup inside the Admin frame (it would not render in a screenshot).
