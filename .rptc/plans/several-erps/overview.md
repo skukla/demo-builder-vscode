@@ -49,7 +49,7 @@ on Northwind ERP before the next phase starts, because Phase B copies whatever t
 | A3 | **Demo Builder fills the ERP at reset**, and the integration stops copying and polling (steps 1 to 5 of `../erp-demo-filling/overview.md`) | [[AB-26y]] | each ERP needs filling; one path for N ERPs, not N copies of the mirror | "Load demo data" and reset fill the ERP from Demo Builder; the integration has no mirror, refresh job or timer |
 | A4 | **Contract prices in shared catalogs, with ERP contracts** (the last new ERP feature) | [[AB-26z]] | each ERP writes its companies' contract lines; the catalog write must be per ERP from the start | the storefront shows a company its contract price everywhere; the ERP shows the contract; the cart webhook for price is removed |
 | A5 | **Sync validation baseline**: every entity, both directions, as tests in the pair-in-a-box harness and as a live journey | [[AB-26e]] | becomes the regression check every Phase B slice runs | every entity-matrix row has a test and a journey step |
-| A6 | **Website scope in the Admin page**: why the Mapping tab lists no websites, and how per-website settings should work (research in `../../research/erp-admin-website-scope/`, then the fix) | new, under [[AB-26]] | per-website settings (sales organisation, which ERP serves a website) are the basis of routing | the Mapping tab lists every website; a setting saved for one website is read back for that website |
+| A6 | **Website scope in the Admin page**: why the Mapping tab lists no websites, and how per-website settings should work (research in `../../research/erp-admin-website-scope/`, then the fix) | [[AB-36]] | per-website settings (sales organisation, which ERP serves a website) are the basis of routing | the Mapping tab lists every website; a setting saved for one website is read back for that website |
 
 Owner questions A3 carries (recommendation first, from the filling plan): Wipe moves to Demo
 Builder; undoing the integration's Commerce writes becomes Demo Builder's, over the integration's
@@ -114,7 +114,7 @@ that creates something ships its removal (the cleanup rule).
 | A | A3 filling by Demo Builder | steps 1a and 1e built; plan written; 3 owner questions |
 | A | A4 shared catalogs and contracts | filed with measurements; Kukla Studios' catalog set up by hand as the model |
 | A | A5 sync validation baseline | D7 and D8 built; journeys not yet written |
-| A | A6 website scope | research running |
+| A | A6 website scope | cause found: the picker reads only the top of the scope tree; three more defects behind it; fix not started ([[AB-36]], `../../research/erp-admin-website-scope/research.md`) |
 | B | B1 to B8 | not started |
 | C | C1 to C4, readability | after Phase B |
 
