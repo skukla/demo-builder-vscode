@@ -73,3 +73,5 @@ routing integration) · AB-26r (credit memo) · AB-26s (the payment leg) · AB-2
 - 2026-09-26  fix(app-builder): the install waits for a new workspace credential instead of failing (`523156219`)
 - 2026-09-26  Order of work moved to .rptc/plans/several-erps/overview.md (owner, 2026-09-26): baseline first, freeze after contracts (r, s, v, w gated), then several ERPs (AB-16). New: AB-36, the Admin page's missing websites.
 - 2026-09-26  Phase C added to .rptc/plans/several-erps/overview.md (owner, 2026-09-26): after several ERPs, reassess and clean up the ERP screens (readability) and the integration screens (Admin page, Demo Builder card), cosmetic finds collected on the way into its list.
+- 2026-09-26  docs(plan): several ERPs records the credit model and the side-list page (`25ced77dc`)
+- 2026-09-26  docs(rptc): the ERP plan ends with a readability pass over both screens (`9b3773a9a`)

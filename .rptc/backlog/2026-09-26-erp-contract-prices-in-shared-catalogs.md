@@ -96,3 +96,4 @@ naming fields, so the screen uses the words an SC's prospect would recognise.
 - 2026-09-26  feat(ai): run_commerce_query can ask Catalog Service as a customer group (`4686a23c2`)
 - 2026-09-26  docs(backlog): AB-26z, ERP contract prices live in each company's shared catalog (`3f190fd13`)
 - 2026-09-26  Scope widened (owner, 2026-09-26): the ERP gets contracts, one agreement per buyer with a term, status and its price lines, and the integration writes an active contract's lines into the company's shared catalog. See 'The ERP holds contracts'.
+- 2026-09-26  docs(backlog): AB-26z gains ERP contracts, the agreement its catalog prices come from (`a98936bcb`)
