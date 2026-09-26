@@ -26,6 +26,7 @@ import {
     mockBuildDefaultRunnerDeps,
     mockDetectProjectOrgMismatch,
     mockEnsureAdobeIOAuth,
+    mockGetAppBuilderComponentCatalog,
     mockGetAppBuilderComponentEntry,
     mockSendAppBuilderComponentStatusUpdate,
     mockSendAppBuilderComponentsSnapshot,
@@ -544,5 +545,29 @@ describe('the no-project door on every handler', () => {
             error: 'No project found',
             code: ErrorCode.PROJECT_NOT_FOUND,
         });
+    });
+});
+
+describe('the add answer names what the SC named', () => {
+    // Measured 2026-09-26: an add of the ERP pair named "Northwind ERP" answered
+    // "ERP Integration", the catalog entry's name, while the tile, the workspace and the
+    // progress title all said Northwind ERP. An agent relayed the wrong name.
+    it('answers with the name the progress title used, built from the typed name', async () => {
+        const { mockContext } = setupMocks();
+        mockTestDeveloperPermissions(true);
+        mockGetAppBuilderComponentEntry.mockReturnValue({
+            ...ERP_ENTRY,
+            name: 'ERP Integration',
+            nameFromEnvVar: 'ERP_DISPLAY_NAME',
+            nameSuffix: ' Integration',
+        });
+        mockGetAppBuilderComponentCatalog.mockReturnValue([
+            { id: 'erp-db', kind: 'system', boundTo: 'erp-sync', nameFromEnvVar: 'ERP_DISPLAY_NAME' },
+        ]);
+
+        const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync', name: 'Northwind ERP' });
+
+        expect(result.added).toEqual({ id: 'erp-sync', name: 'Northwind ERP Integration', kind: 'integration' });
+        mockGetAppBuilderComponentCatalog.mockReturnValue([]);
     });
 });

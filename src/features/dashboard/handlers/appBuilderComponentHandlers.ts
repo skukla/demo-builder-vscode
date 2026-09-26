@@ -602,6 +602,7 @@ async function reportAddOutcome(
     context: HandlerContext,
     entry: AppBuilderComponentCatalogEntry,
     result: GuardableResult,
+    label: string,
 ): Promise<HandlerResponse> {
     if (result.blocked) {
         return { success: false, error: result.error };
@@ -620,7 +621,8 @@ async function reportAddOutcome(
     }
     return {
         ...answerWithWarnings({}, result.warnings ?? []),
-        added: { id: entry.id, name: entry.name ?? entry.id, kind: entry.kind },
+        // The name the progress title used, so an agent relays what the SC typed.
+        added: { id: entry.id, name: label, kind: entry.kind },
     };
 }
 
@@ -639,8 +641,9 @@ export const handleAddAppBuilderComponent: MessageHandler<
     const refusal = refuseAdd(project, entry);
     if (refusal) return refusal;
 
+    const label = addLabel(project, entry, payload?.name);
     const result = await runAdd(context, project, entry, payload ?? {});
-    return reportAddOutcome(context, entry, result);
+    return reportAddOutcome(context, entry, result, label);
 }, addedIdOf);
 
 /**
