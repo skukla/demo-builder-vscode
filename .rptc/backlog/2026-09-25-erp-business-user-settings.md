@@ -4,8 +4,9 @@ kind: feature
 area: app-builder
 needs: []
 value: high
-status: backlog
+status: gated
 parent: AB-26
+waiting-on: the several-ERPs build (owner froze ERP feature growth after contracts, 2026-09-26)
 ---
 
 # Business-user settings for the ERP pair — which behaviours a merchant chooses, and where
@@ -87,3 +88,4 @@ preparation) in the setup guide.
 - 2026-09-25  Owner 2026-09-25, superseding the earlier entry today: invoice capture is NOT a setting. The ERP decides when it bills (consultant configuration; ours bills after shipment); the integration follows: an ERP invoice creates the Commerce invoice with capture (bookkeeping only for on-account). Fixed in code, shown read-only on the Mapping tab's Order card, with Commerce's own charge timing beside it if readable (unverified). 'When the ERP ships' dropped: it would bill in Commerce before the ERP does, and collapses into the same thing once the ERP bills per shipment (AB-26v). Orders already invoiced at checkout: record the ERP invoice as a comment (to build and test).
 - 2026-09-25  Owner 2026-09-25, D1 closed: NO new settings. Test applied to each row: a setting only where two merchants would reasonably choose differently. Notes visibility: fixed rule, ERP notes are internal (never visible on the storefront; the buyer sees status, shipments and invoices through Commerce). Customer email: the integration always asks Commerce to notify, as an Admin user ticking 'Email a copy' would, and Commerce's own Sales Emails configuration decides (verify on the sandbox that disabled Sales Emails suppress an API notify before switching; demo setup guide turns them off). Credit rejection: fixed rule, an ERP rejection cancels the Commerce order (the 'wait' case is the hold staying in place). Credit hold: fixed rule. Invoice capture: mapping (earlier entry). Write-back switches: left out. Refused-change notification goes to Commerce Admin's notification inbox if an app may write to it (unverified), never an email service. Every fixed rule is stated on its Mapping card.
 - 2026-09-25  D1 applied (commerce-erp-integration 388f116): every ERP note on a Commerce order is staff-only (is_visible_on_front 0). The notify change waits on the sandbox check that disabled Sales Emails suppress an API notify.
+- 2026-09-26  Frozen (owner, 2026-09-26): ERP feature growth stops after contracts (AB-26z) until several ERPs land; every ERP will run the same baseline code. See .rptc/plans/several-erps/overview.md §4.

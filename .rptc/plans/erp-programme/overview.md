@@ -4,8 +4,12 @@ Written 2026-09-24 at the owner's request: every piece of ERP research and plann
 since 2026-09-14, synthesised into a single order of work. This is the document to read
 first; the others are its evidence and its detail, and it says which one to open for what.
 
-**Status: ACTIVE.** The table in §7 is the state of the programme and is updated with every
-commit set. Nothing in this overview repeats a specification that lives in a slice plan;
+**Status: ACTIVE, order of work moved (2026-09-26).** What is LEFT, and in what order, is now
+`../several-erps/overview.md`: finish the one-ERP baseline, freeze ERP feature growth after
+contracts, then one integration serving several ERPs. This overview stays the record of the
+rules (§2), the evidence (§3), the data model (§5, §5a) and what was built; its §6 and §7
+tables are history as of 2026-09-26. The table in §7 was the state of the programme and was
+updated with every commit set until then. Nothing in this overview repeats a specification that lives in a slice plan;
 it says what, why, in what order, and what has to be true before each step starts.
 
 ---
