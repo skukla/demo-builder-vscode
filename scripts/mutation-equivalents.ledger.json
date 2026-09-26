@@ -11986,7 +11986,7 @@
             "source": "PL-22 batch MUT-02"
         },
         {
-            "module": "src/features/app-builder/services/appManagementInstaller.ts",
+            "module": "src/features/app-builder/services/appManagementInstallFailures.ts",
             "anchors": [
                 "return RETRYABLE_INSTALL_PATTERNS.some((pattern) => pattern.test(text));"
             ],
@@ -11998,11 +11998,11 @@
             "source": "PL-22 batch MUT-02"
         },
         {
-            "module": "src/features/app-builder/services/appManagementInstaller.ts",
+            "module": "src/features/app-builder/services/appManagementInstallFailures.ts",
             "anchors": [
                 "return false;"
             ],
-            "line": 237,
+            "line": 36,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this catch changes nothing observable: control then falls to the pattern test with the `text` variable still unassigned, and RegExp.test(undefined) coerces to the string 'undefined', which matches no retryable pattern \u2014 so the function returns false either way, exactly as the early return does. The BooleanLiteral mutant on the same line IS killable and is killed by the circular-error test. Verified by planting the empty catch: all 58 tests pass.",

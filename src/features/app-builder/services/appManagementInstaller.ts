@@ -28,6 +28,11 @@
 
 import { buildAppData } from './appManagementAppData';
 import {
+    CREDENTIAL_ACTIVATION_WAITS_MS,
+    isCredentialNotReadyFailure,
+    isRetryableInstallFailure,
+} from './appManagementInstallFailures';
+import {
     AppManagementApiError,
     AppManagementClient,
     type AppManagementAuth,
@@ -207,37 +212,12 @@ async function pollInstallation(
 }
 
 /**
- * Failure signatures that mean "run the reconcile again", not "broken".
- *
- * The measured one: the installer creates its I/O Events registrations
- * concurrently and races itself on the Runtime binding package —
- * "HTTP 409 Conflict — Error 409 from upstream (…/runtime/namespaces/…/
- * packages?update=true)". Reconcile is idempotent desired-state, and retries
- * CONVERGE: measured live 2026-08-27, registrations climbed 6 → 8 → 19 → 23
- * across rounds and the fourth landed `succeeded` with every step green.
- */
-const RETRYABLE_INSTALL_PATTERNS: readonly RegExp[] = [/HTTP 409 Conflict/];
-
-/**
  * How many reconcile rounds to drive before handing back. The measured
  * convergence took 4 from a residue-laden state; a fresh install needs fewer.
  */
 const MAX_RECONCILE_ROUNDS = 5;
 
-/**
- * Does this landed-failed state carry a signature retrying can clear?
- * Exported for the uninstaller, whose runs hit the same self-race — the
- * uninstall deletes the registrations the install raced on creating.
- */
-export function isRetryableInstallFailure(state: InstallationState): boolean {
-    let text: string;
-    try {
-        text = JSON.stringify(state.error ?? '');
-    } catch {
-        return false;
-    }
-    return RETRYABLE_INSTALL_PATTERNS.some((pattern) => pattern.test(text));
-}
+type Settled = AppManagementInstallResult | 'retry' | 'credential-not-ready';
 
 /** Shape one reconcile answer (post-association) into the install result. */
 async function settleReconcile(
@@ -245,7 +225,7 @@ async function settleReconcile(
     client: InstallerClient,
     deps: AppManagementInstallDeps,
     budget: PollBudget,
-): Promise<AppManagementInstallResult | 'retry'> {
+): Promise<Settled> {
     if (reconciled.operation === 'upgrade') {
         return reconciled.accepted
             ? followUpgrade(client, deps.onProgress, deps.wait)
@@ -266,12 +246,68 @@ async function settleReconcile(
         if (isRetryableInstallFailure(finalState)) {
             return 'retry';
         }
+        if (isCredentialNotReadyFailure(finalState)) {
+            return 'credential-not-ready';
+        }
         return {
             status: 'failed',
             detail: `The app's installer reported a failure. ${APP_MANAGEMENT_HANDS_BACK}`,
         };
     }
     return installedOutcome(deps.appVersion);
+}
+
+/**
+ * Run the reconcile until it lands, retrying what retrying can clear.
+ *
+ * Reconcile is idempotent desired-state, so a retry repeats the SAME call. The installer
+ * conflict (the 409 self-race) is retried at once, up to {@link MAX_RECONCILE_ROUNDS}; a
+ * credential Adobe has not yet activated is retried after each pause in
+ * {@link CREDENTIAL_ACTIVATION_WAITS_MS}. The two are counted separately.
+ */
+async function driveReconcile(
+    client: InstallerClient,
+    appData: Exclude<ReturnType<typeof buildAppData>, { error: string }>,
+    target: Exclude<ReturnType<typeof deriveCommerceTarget>, { error: string }>,
+    deps: AppManagementInstallDeps,
+    fail: (detail: string) => AppManagementInstallResult,
+): Promise<AppManagementInstallResult> {
+    const budget = newPollBudget();
+    const wait = deps.wait ?? sleep;
+    let conflictRound = 1;
+    let credentialWaits = 0;
+    deps.onProgress?.('Installing into Commerce (App Management)');
+    for (;;) {
+        const reconciled = await client.reconcileInstallation({
+            appData,
+            ioEventsUrl: IO_EVENTS_URL,
+            ioEventsEnv: IO_EVENTS_ENV,
+            commerceBaseUrl: target.commerceBaseUrl,
+            commerceEnv: target.commerceEnv,
+        });
+        const settled = await settleReconcile(reconciled, client, deps, budget);
+        if (settled === 'retry') {
+            conflictRound++;
+            if (conflictRound > MAX_RECONCILE_ROUNDS) {
+                return fail('The install kept hitting a transient conflict.');
+            }
+            deps.onProgress?.(`Retrying the install (transient conflict, round ${conflictRound})`);
+        } else if (settled === 'credential-not-ready') {
+            const pause = CREDENTIAL_ACTIVATION_WAITS_MS[credentialWaits++];
+            if (pause === undefined) {
+                return fail(
+                    "Commerce could not sign in with the workspace's new credential yet; Adobe " +
+                        'can take several minutes to activate one. Press Install again in a few minutes.',
+                );
+            }
+            deps.onProgress?.(
+                `Waiting for Adobe to activate the new credential (next try in ${pause / 1000} seconds)`,
+            );
+            await wait(pause);
+        } else {
+            return settled;
+        }
+    }
 }
 
 /**
@@ -334,30 +370,8 @@ export async function installAppManagementApp(
             return await followUpgrade(client, deps.onProgress, deps.wait);
         }
 
-        // Reconcile is idempotent desired-state, and the app's installer races
-        // itself on registration creation (the 409 signature) — so a retryable
-        // failure re-runs the SAME reconcile until it converges or the rounds
-        // run out. Measured live: four rounds from a dirty state, all green.
-        const budget = newPollBudget();
-        for (let round = 1; round <= MAX_RECONCILE_ROUNDS; round++) {
-            deps.onProgress?.(
-                round === 1
-                    ? 'Installing into Commerce (App Management)'
-                    : `Retrying the install (transient conflict, round ${round})`,
-            );
-            const reconciled = await client.reconcileInstallation({
-                appData,
-                ioEventsUrl: IO_EVENTS_URL,
-                ioEventsEnv: IO_EVENTS_ENV,
-                commerceBaseUrl: target.commerceBaseUrl,
-                commerceEnv: target.commerceEnv,
-            });
-            const settled = await settleReconcile(reconciled, client, deps, budget);
-            if (settled !== 'retry') {
-                return settled;
-            }
-        }
-        return fail('The install kept hitting a transient conflict.');
+        // Which failures are retried, and how: see driveReconcile.
+        return await driveReconcile(client, appData, target, deps, fail);
     } catch (error) {
         if (isBenignNoOp(error)) {
             return settleNoOp(client, deps.appVersion, deps.since);

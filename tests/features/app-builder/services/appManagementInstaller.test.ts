@@ -279,6 +279,93 @@ describe('installAppManagementApp', () => {
         expect(client.reconcileInstallation).toHaveBeenCalledTimes(5);
     });
 
+    // Measured live 2026-09-26 on a fresh add: the install stopped here minutes after the
+    // new workspace credential was created, three immediate retries failed the same way, and
+    // the same install succeeded 20 minutes later. Verbatim from the installer's state.
+    const credentialNotReady = {
+        key: 'STEP_EXECUTION_FAILED',
+        message:
+            "Failed to create Adobe Commerce event subscription for 'observer.catalog_product_delete_commit_after': " +
+            'HTTP 400 Bad Request — The event subscription has been saved, but event metadata has not been created. ' +
+            'Check your configuration and synchronize the event metadata. Event metadata creation error: ' +
+            'Could not login to Adobe IMS.',
+        path: ['installation', 'eventing', 'commerce'],
+    };
+
+    it('waits for a new credential before retrying, then installs', async () => {
+        const wait = jest.fn().mockResolvedValue(undefined);
+        const onProgress = jest.fn();
+        const client = makeInstallerClient({
+            reconcileInstallation: jest
+                .fn()
+                .mockResolvedValue({ operation: 'install', message: 'queued', id: 'job-1' }),
+            getInstallationState: jest
+                .fn()
+                .mockResolvedValueOnce({ id: 'job-1', status: 'failed', error: credentialNotReady })
+                .mockResolvedValueOnce({ id: 'job-2', status: 'succeeded' }),
+        });
+        const result = await installAppManagementApp(
+            paasProject(), 'app',
+            DEPLOYED_URLS,
+            makeInstallerDeps(client, { wait, onProgress })
+        );
+
+        expect(result.status).toBe('installed');
+        expect(client.reconcileInstallation).toHaveBeenCalledTimes(2);
+        expect(wait).toHaveBeenCalledWith(30_000);
+        expect(onProgress.mock.calls.map((c) => c[0])).toContain(
+            'Waiting for Adobe to activate the new credential (next try in 30 seconds)',
+        );
+    });
+
+    it('waits longer each time, then hands back saying a later Install will work', async () => {
+        const wait = jest.fn().mockResolvedValue(undefined);
+        const client = makeInstallerClient({
+            reconcileInstallation: jest
+                .fn()
+                .mockResolvedValue({ operation: 'install', message: 'queued', id: 'j' }),
+            getInstallationState: jest
+                .fn()
+                .mockResolvedValue({ id: 'j', status: 'failed', error: credentialNotReady }),
+        });
+        const result = await installAppManagementApp(
+            paasProject(), 'app',
+            DEPLOYED_URLS,
+            makeInstallerDeps(client, { wait })
+        );
+
+        const pauses = wait.mock.calls.map((c) => c[0]).filter((ms) => ms >= 30_000);
+        expect(pauses).toEqual([30_000, 60_000, 120_000]);
+        expect(client.reconcileInstallation).toHaveBeenCalledTimes(4);
+        expect(result.status).toBe('failed');
+        expect(result.detail).toContain('new credential');
+        expect(result.detail).toContain('Install again');
+    });
+
+    it('never waits before retrying the installer conflict', async () => {
+        const wait = jest.fn().mockResolvedValue(undefined);
+        const client = makeInstallerClient({
+            reconcileInstallation: jest
+                .fn()
+                .mockResolvedValue({ operation: 'install', message: 'queued', id: 'j' }),
+            getInstallationState: jest
+                .fn()
+                .mockResolvedValueOnce({
+                    id: 'j',
+                    status: 'failed',
+                    error: { message: 'HTTP 409 Conflict — Error 409 from upstream' },
+                })
+                .mockResolvedValue({ id: 'j', status: 'succeeded' }),
+        });
+        await installAppManagementApp(
+            paasProject(), 'app',
+            DEPLOYED_URLS,
+            makeInstallerDeps(client, { wait })
+        );
+
+        expect(wait.mock.calls.map((c) => c[0]).filter((ms) => ms >= 30_000)).toStrictEqual([]);
+    });
+
     it('a 409 already-current reconcile is a SKIP, not a failure', async () => {
         const client = makeInstallerClient({
             reconcileInstallation: jest

@@ -15,8 +15,8 @@ import {
     APP_MANAGEMENT_HANDS_BACK,
     deriveCommerceTarget,
     installAppManagementApp,
-    isRetryableInstallFailure,
 } from '@/features/app-builder/services/appManagementInstaller';
+import { isRetryableInstallFailure } from '@/features/app-builder/services/appManagementInstallFailures';
 import { buildAppData } from '@/features/app-builder/services/appManagementAppData';
 import { AppManagementApiError } from '@/features/app-builder/services/appManagementClient';
 import type { InstallationState } from '@/features/app-builder/services/appManagementClient';

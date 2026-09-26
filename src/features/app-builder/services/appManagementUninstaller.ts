@@ -30,8 +30,8 @@ import {
     deriveCommerceTarget,
     IO_EVENTS_ENV,
     IO_EVENTS_URL,
-    isRetryableInstallFailure,
 } from './appManagementInstaller';
+import { isRetryableInstallFailure } from './appManagementInstallFailures';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Project } from '@/types/base';
