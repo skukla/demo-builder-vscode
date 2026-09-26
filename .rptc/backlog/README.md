@@ -321,7 +321,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-26x` | feature | └ [Manual Commerce steps the pair depends on — are they required, and how does the SC learn?](2026-09-25-erp-manual-commerce-steps.md) | — | high | active |
 | `AB-26y` | feature | └ [The mock ERP knows nothing about Commerce: filling at reset, running as if the ERP were the source](2026-09-25-erp-standard-features.md) | — | high | active |
 | `AB-26z` | feature | └ [ERP contract prices live in each company's shared catalog, not in a cart webhook](2026-09-26-erp-contract-prices-in-shared-catalogs.md) | — | high | active |
-| `AB-35` | fix | └ [The Commerce stock handler fails on a stock event with no product_id](2026-09-26-stock-event-without-product-id.md) | — | med | backlog |
+| `AB-35` | fix | └ [The Commerce stock handler fails on a stock event with no product_id](2026-09-26-stock-event-without-product-id.md) | — | med | built |
 | `AB-29` | feature | [Commerce test data cleanup tools](2026-09-24-commerce-test-data-cleanup-tools.md) | — | med | active |
 | `AB-30` | feature | [The ERP integration's Commerce Admin page uses the Commerce back-office design system](2026-09-24-erp-admin-page-commerce-design-system.md) | — | med | backlog |
 | `AB-33` | fix | [Removing an integration reports Runtime packages left behind in a workspace it then deletes](2026-09-26-remove-integration-leaves-runtime-packages.md) | — | med | backlog |
