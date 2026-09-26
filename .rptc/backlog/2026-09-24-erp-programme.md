@@ -75,3 +75,4 @@ routing integration) · AB-26r (credit memo) · AB-26s (the payment leg) · AB-2
 - 2026-09-26  Phase C added to .rptc/plans/several-erps/overview.md (owner, 2026-09-26): after several ERPs, reassess and clean up the ERP screens (readability) and the integration screens (Admin page, Demo Builder card), cosmetic finds collected on the way into its list.
 - 2026-09-26  docs(plan): several ERPs records the credit model and the side-list page (`25ced77dc`)
 - 2026-09-26  docs(rptc): the ERP plan ends with a readability pass over both screens (`9b3773a9a`)
+- 2026-09-26  docs(integrations): the ERP's Admin entry is under Apps (`ec2f7b110`)
