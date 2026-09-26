@@ -98,8 +98,16 @@ describe('setSetupStep', () => {
 });
 
 describe('checkSetupSteps', () => {
-    it('reads the companies through the signed client and marks the step done when each has its own group', async () => {
-        mockSendRest.mockResolvedValue(JSON.stringify({ items: [{ id: 1, company_name: 'Acme', customer_group_id: 4 }] }));
+    /** Commerce as the check reads it: companies on one path, shared catalogs on the other. */
+    const answerByPath = (companies: object[], catalogs: object[]) =>
+        mockSendRest.mockImplementation(async (_method: string, _target: unknown, path: string) =>
+            JSON.stringify({ items: path.startsWith('company/') ? companies : catalogs }));
+
+    it('reads the companies through the signed client and marks the step done when each has its own catalog', async () => {
+        answerByPath(
+            [{ id: 1, company_name: 'Acme', customer_group_id: 4 }],
+            [{ id: 7, name: 'Acme', customer_group_id: 4, type: 0 }],
+        );
         const { context, saved } = setup();
         await handleCheckSetupSteps(context, { id: 'erp-integration' });
         expect(mockSendRest).toHaveBeenCalledWith(
@@ -110,19 +118,20 @@ describe('checkSetupSteps', () => {
             expect.any(Function),
         );
         const step = saved()?.appBuilderComponents?.['erp-integration'].setupSteps?.['company-catalogs'];
-        expect(step).toMatchObject({ state: 'done', note: expect.stringMatching(/its own/) });
+        expect(step).toMatchObject({ state: 'done', note: expect.stringMatching(/1 with their own/) });
         expect(step?.checkedAt).toEqual(expect.any(String));
     });
 
-    it('opens a step again when the check finds companies sharing a group', async () => {
-        mockSendRest.mockResolvedValue(JSON.stringify({
-            items: [{ id: 1, company_name: 'Acme', customer_group_id: 1 }, { id: 2, company_name: 'Globex', customer_group_id: 1 }],
-        }));
+    it('opens a step again when the check finds a company in no shared catalog', async () => {
+        answerByPath(
+            [{ id: 1, company_name: 'Acme', customer_group_id: 1 }, { id: 2, company_name: 'Globex', customer_group_id: 18 }],
+            [{ id: 1, name: 'Default (General)', customer_group_id: 1, type: 1 }],
+        );
         const { context, saved } = setup({ 'company-catalogs': { state: 'done' } });
         await handleCheckSetupSteps(context, { id: 'erp-integration' });
         const step = saved()?.appBuilderComponents?.['erp-integration'].setupSteps?.['company-catalogs'];
         expect(step?.state).toBeUndefined();
-        expect(step?.note).toBe('Acme, Globex share customer group 1.');
+        expect(step?.note).toBe('Globex is in no shared catalog (customer group 18 has none).');
     });
 
     it('leaves the state alone when Adobe sign-in is missing, and says why', async () => {
