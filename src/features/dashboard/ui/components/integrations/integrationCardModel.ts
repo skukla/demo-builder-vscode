@@ -165,7 +165,7 @@ function buildMenuActions(
     // reachable on any installed card, not only on a refused upgrade.
     const repair: CardAction[] =
         status === 'deployed' && installation && !install.includes('reinstall') ? ['reinstall'] : [];
-    // Where an installed app is SEEN: its own entry under System in the Commerce
+    // Where an installed app is SEEN: its own entry under Apps in the Commerce
     // Admin. The drawer already links there; this is the same message from the menu,
     // so the SC need not open the card first (owner, 2026-09-22). It lands on the
     // Admin, not the app's page — that URL carries a per-session security key
