@@ -82,20 +82,25 @@ and is proven live with Northwind ERP and a second ERP on Bodea.
 | B1 | **Each integration sends only its own lines** | An order is sent to an ERP with only the lines for products that ERP owns (the ownership setting that exists: product attribute, sources or all); an order with none of its products is not its business. Status, shipments and invoices coming back touch only those lines. | a mixed order becomes one ERP order in each ERP, each holding only its lines |
 | B2 | **Each ERP's number in its own order field** | Every integration writes its ERP's order number to its own custom order attribute on the Commerce order (Q-num, validated live first); `ext_order_id` is no longer written by two apps. | a mixed order shows both ERP numbers on the Commerce order page |
 | B3 | **Prices from each ERP's contracts** | A4's shared-catalog writes, made by each integration for the SKUs its ERP owns, into the company's one catalog. The cart price webhook is already gone by then, which removes the webhook collision between two pairs. | a company buying from both ERPs sees both contracts' prices |
-| B4 | **Companies and credit across two ERPs** | Every company is filled into each ERP as that ERP's own customer. Commerce's one company credit limit is written by one integration only (decision in §8). Each ERP credit-checks and holds its own order. | a held part in one ERP leaves the other part flowing |
+| B4 | **Companies and credit across two ERPs** | Every company is filled into each ERP as that ERP's own customer. Each ERP keeps its own limit and holds its own part of an order. Each integration writes its ERP's limit, exposure and available credit into its own prefixed company custom attributes (`POST V1/company/setCustomAttributes`; whether a set replaces the whole set is checked live first). Commerce's company credit limit is the TOTAL across the ERPs, recomputed from those attributes by whichever integration last changed one. Each integration's Admin page has a Credit section that edits its ERP's limit, writing through to the ERP (research: `.rptc/research/erp-company-credit-options/`). | a held part in one ERP leaves the other part flowing; Commerce's limit equals the sum of both ERPs' limits |
 | B5 | **The second pair, live** | Add a second ERP from the tile on Bodea; both install; both Admin pages work; removal of either follows the cleanup rule and leaves the other untouched. | two pairs installed and removed cleanly, in either order |
 | B6 | **Surfaces** | Each card, Admin page, history and order trace names its ERP; the walk-through ([[AB-26u]]) gains the two-ERP section. | the two-ERP demo path is walkable |
 | B7 | **Harness** | The pair-in-a-box harness runs two pairs against one fake Commerce. | the mixed-order journeys pass in the harness and live |
 
 ## 5b. The integration's Admin page, simplified (owner, 2026-09-26)
 
-Settings and mapping are separate. Two tabs, plus history as today.
+Settings and mapping are separate. The owner judged one screen with tabs would not scale
+(2026-09-26), so the page is a header (the ERP, whether it is reachable) and a side list of
+sections, each with its own address: **Overview** (the mapping below), **Credit** (this ERP's
+limit, exposure and available credit per company, with an edit that writes to the ERP),
+**Activity** (what crossed and what failed, with Retry) and **Settings**. A clickable preview
+with stand-in data is in commerce-erp-integration at `preview/next.html` (`npm run preview`).
 
 - **Settings** is a short form in Commerce Admin's own style: the scope picker (Default Config
   and each website), then three groups (Orders, Prices, Products and organisation), each field a
   label, the value, one line of help, and Commerce's own "Use Default" checkbox for inheritance.
   One Save.
-- **Mapping** is read-only and fits on one screen: a header with the two systems, then one row
+- **Overview (the mapping)** is read-only and fits on one screen: a header with the two systems, then one row
   per connection (Companies, Products, Prices, Stock, Orders, Shipments and invoices, Credit,
   Warehouses) showing Commerce's record, a direction arrow, the ERP's record, what joins them,
   and a status badge with a count. A row opens to its fields and a look-up. Unbuilt connections
@@ -144,14 +149,13 @@ namespace is gone; keep for retry only when shared or unprovable), the second ER
 at most two ERPs, the filling questions (Wipe and the undo to Demo Builder, defaults left alone),
 website scope (per website, read on every open, name before code).
 
+Also answered 2026-09-26: Commerce's company credit limit is the total across the ERPs, and
+each ERP's own figures live in prefixed company custom attributes, edited from each
+integration's Credit section (B4).
+
 Still open:
 
-1. **Who writes Commerce's one company credit limit when two ERPs serve a company.**
-   Recommended: one integration writes it, set when it is added (the first pair on, a second
-   pair off), because real ERPs each keep their own account and credit for a customer and nobody
-   lets two systems share one limit. The alternative is that no ERP writes it and each ERP's
-   credit only holds its own orders.
-2. **The integration page design in §5b**, once seen as a preview.
+1. **The integration page design in §5b**, now that a preview exists.
 
 ## 9. How this plan stays true
 
