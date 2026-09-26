@@ -11,15 +11,18 @@ evidence and what is built; this document says what is left and in what order.
 
 | When | Decision |
 |---|---|
-| 2026-09-24 | **One integration, several ERPs.** The ERP integration serves one or more ERP targets; routing lives inside it and passes every order straight through when there is one target. The mock ERPs stay separate systems, each in its own workspace with its own screen and look (O8). Shaped as the customer would build it. |
+| 2026-09-24 | ~~**One integration, several ERPs.**~~ *Superseded 2026-09-26 by one integration per ERP (below).* The ERP integration serves one or more ERP targets; routing lives inside it and passes every order straight through when there is one target. The mock ERPs stay separate systems, each in its own workspace with its own screen and look (O8). Shaped as the customer would build it. |
 | 2026-09-24 | **Ownership by product attribute** (S1): an attribute in Commerce names the owning ERP; the story says a PIM would write it. Inventory sources stay the alternative. |
-| 2026-09-24 | **Only the routing consumer subscribes to Commerce's order event** (Q2). |
+| 2026-09-24 | ~~**Only the routing consumer subscribes to Commerce's order event** (Q2).~~ *Superseded 2026-09-26: no router; each integration takes only its own lines.* |
 | 2026-09-24 | **ERP order numbers in custom order attributes**, one per ERP (`erp_<name>_number`), symmetric; `ext_order_id` keeps the prefixed number of the ERP that took the order (Q-num, to validate live). |
 | 2026-09-26 | **Freeze ERP feature growth after contracts.** Contracts ([[AB-26z]]) are the last new ERP feature before several ERPs. |
 | 2026-09-26 | **Every ERP is a copy of the same baseline code**, so every ERP has the same feature set. There is one `demo-erp` codebase and one integration codebase; a second ERP is the same code deployed again with its own name, look and data. |
 | 2026-09-26 | **Finish first what several ERPs multiply**, such as filling at reset. |
 | 2026-09-26 | **Research how website scope works in the Admin page** (the Mapping tab's scope list shows no websites). |
 | 2026-09-26 | **Cleanup is complete or it keeps what names the leftovers** (removal retries, then stops and keeps the record, folder and workspace). See §8 for a correction on workspace deletion. |
+| 2026-09-26 | **One integration PER ERP, superseding the 2026-09-24 "one integration, several ERPs".** Each ERP comes with its own integration, its own Admin settings and its own Commerce app; every pair runs the same baseline code. Adding the ERP tile again adds the second pair (what AB-23 and AB-15 already built). No target list, no router: each integration sends only the order lines its ERP owns. At most two ERPs in a demo. |
+| 2026-09-26 | **Settings and mapping are separate** on the integration's Admin page, and the page is heavily simplified (design in §5b). |
+| 2026-09-26 | Scope: settings are per website; the website list is read on every page open (no Refresh button); a sales organisation shows its name before its code; Wipe and the undo of Commerce writes move to Demo Builder; Demo Builder leaves the Mapping defaults unless a demo needs otherwise. |
 
 ## 2. Where it stands (2026-09-26)
 
@@ -67,22 +70,38 @@ After A4, no new ERP feature is started until Phase B lands. These wait, status 
 
 A fix to something built is not growth and is not frozen.
 
-## 5. Phase B: one integration, several ERPs
+## 5. Phase B: one integration per ERP (rewritten 2026-09-26)
 
-Each slice is TDD in the repo that owns it, runs the A5 journeys, and is proven live with two
-ERPs on Bodea (Northwind ERP and a second one with its own name and look). The second ERP is the
-same `demo-erp` code deployed again.
+The first shape of this phase (one integration holding a list of ERPs, with a router) was
+dropped the same day in favour of what the owner asked for: each ERP with its own integration.
+The second pair is added from the ERP tile, as today. Each slice is TDD, runs the A5 journeys,
+and is proven live with Northwind ERP and a second ERP on Bodea.
 
 | # | Slice | What changes | Done when |
 |---|---|---|---|
-| B1 | **The target model and its migration** | The integration holds a list of ERP targets (address, name, order-number prefix, ownership value) in a config it owns, not N env vars. Extension side: one integration bound to several systems (`boundTo` becomes 1:N; `pairedInstanceId`, `findMissingProvider`, `linkBroughtSystem` read a list). A project on the baseline becomes target 1 with nothing asked of the SC (the stored-shapes table in [[AB-16]]). | a baseline project upgrades to one target and behaves identically; the pin tests say so |
-| B2 | **Add another ERP** | An action on the integration's card deploys another `demo-erp` in its own workspace and adds it as a target; the same as an agent tool. The numbered-copy path for the ERP pair (a second INTEGRATION, `DEMO_BUILDER_COPY_NUMBER` app ids) is deleted in the same change, not left beside it (R7). Removing a target is the reverse and follows the cleanup rule. | an SC adds and removes a second ERP from the card; the integration stays one App Management app |
-| B3 | **Per-target settings and website scope** | Which settings are per target (pricing, structure, prefix, ownership) and which stay integration-wide (order switches), per the stored-shapes table. Uses A6's answer for scope. The business-config schema is static, so targets are fixed slots; the slot count is an owner decision (§8). | the Mapping tab shows each ERP's settings, per website where they vary |
-| B4 | **Routing** | One consumer of the order event splits each order by owning ERP (product attribute), dispatches each part to its target, records each part's outcome, writes each ERP's number to its own custom order attribute. One target: every order passes through unchanged. Seams S1 to S4 from `../../research/multi-erp-order-routing/` carry over. | a mixed order becomes two ERP orders, each holding only its lines; one ERP down leaves one part waiting and re-sent |
-| B5 | **Inbound per target** | Each ERP's events carry its target; an ERP's product, stock and price changes touch only what it owns; company and credit rules per target (§8, question 4); the write log records which target wrote; reset, undo and removal per target. | a change in one ERP never touches the other's products; reset returns both to zero |
-| B6 | **Filling and pricing per target** | A3's filling fills each target with what it owns; A4's contract lines from each target go into the company's one shared catalog, by owned SKU. | a company buying from both ERPs sees both contracts' prices |
-| B7 | **Surfaces** | The integration card lists its ERPs; the Admin pages (history, order trace, Mapping) show which ERP; the setup checklist per target where it differs; agent tools take a target; AGENTS.md and the walk-through ([[AB-26u]]) gain the two-ERP section. | the nine moments of the routing research §10 are walkable |
-| B8 | **Harness and live proof** | The pair-in-a-box harness runs two in-process ERPs behind one integration; the routing verification block from [[AB-26t]] becomes B4's and B8's. | the journeys pass in the harness and live |
+| B1 | **Each integration sends only its own lines** | An order is sent to an ERP with only the lines for products that ERP owns (the ownership setting that exists: product attribute, sources or all); an order with none of its products is not its business. Status, shipments and invoices coming back touch only those lines. | a mixed order becomes one ERP order in each ERP, each holding only its lines |
+| B2 | **Each ERP's number in its own order field** | Every integration writes its ERP's order number to its own custom order attribute on the Commerce order (Q-num, validated live first); `ext_order_id` is no longer written by two apps. | a mixed order shows both ERP numbers on the Commerce order page |
+| B3 | **Prices from each ERP's contracts** | A4's shared-catalog writes, made by each integration for the SKUs its ERP owns, into the company's one catalog. The cart price webhook is already gone by then, which removes the webhook collision between two pairs. | a company buying from both ERPs sees both contracts' prices |
+| B4 | **Companies and credit across two ERPs** | Every company is filled into each ERP as that ERP's own customer. Commerce's one company credit limit is written by one integration only (decision in §8). Each ERP credit-checks and holds its own order. | a held part in one ERP leaves the other part flowing |
+| B5 | **The second pair, live** | Add a second ERP from the tile on Bodea; both install; both Admin pages work; removal of either follows the cleanup rule and leaves the other untouched. | two pairs installed and removed cleanly, in either order |
+| B6 | **Surfaces** | Each card, Admin page, history and order trace names its ERP; the walk-through ([[AB-26u]]) gains the two-ERP section. | the two-ERP demo path is walkable |
+| B7 | **Harness** | The pair-in-a-box harness runs two pairs against one fake Commerce. | the mixed-order journeys pass in the harness and live |
+
+## 5b. The integration's Admin page, simplified (owner, 2026-09-26)
+
+Settings and mapping are separate. Two tabs, plus history as today.
+
+- **Settings** is a short form in Commerce Admin's own style: the scope picker (Default Config
+  and each website), then three groups (Orders, Prices, Products and organisation), each field a
+  label, the value, one line of help, and Commerce's own "Use Default" checkbox for inheritance.
+  One Save.
+- **Mapping** is read-only and fits on one screen: a header with the two systems, then one row
+  per connection (Companies, Products, Prices, Stock, Orders, Shipments and invoices, Credit,
+  Warehouses) showing Commerce's record, a direction arrow, the ERP's record, what joins them,
+  and a status badge with a count. A row opens to its fields and a look-up. Unbuilt connections
+  are not shown.
+
+Built after Phase B's model is settled, as a preview first; replaces the card layout.
 
 ## 5a. Phase C: circle back on readability (owner, 2026-09-26)
 
@@ -115,25 +134,24 @@ that creates something ships its removal (the cleanup rule).
 | A | A4 shared catalogs and contracts | filed with measurements; Kukla Studios' catalog set up by hand as the model |
 | A | A5 sync validation baseline | D7 and D8 built; journeys not yet written |
 | A | A6 website scope | built and deployed ([[AB-36]], integration a2a13a8); the live tree holds every website; owner questions from the research still open |
-| B | B1 to B8 | not started |
+| B | B1 to B7 (one integration per ERP) | not started |
 | C | C1 to C4, readability | after Phase B |
 
 ## 8. Decisions for the owner (recommendation first)
 
-1. **Workspace deletion on an unclean removal** (correction, 2026-09-26). The AB-23 record
-   says deleting a workspace removes its Runtime namespace (measured 2026-09-20, an HTTP 200;
-   the namespace was not listed afterwards). If that holds, deleting a component's OWN workspace
-   is itself the complete cleanup. Recommended: when the workspace is the component's own and
-   nothing else uses it, delete it and then prove the namespace is gone; keep-for-retry only when
-   the workspace is shared or still in use. Today's build keeps it in every case.
-2. **How an SC adds the second ERP**: from the integration's card (recommended: it is a target of
-   that integration, not a new tile), or from the gallery tile.
-3. **How many targets** the static settings schema carries: three (recommended; a demo rarely
-   shows more than two, and each slot is a set of settings on the Mapping tab).
-4. **Companies across ERPs**: every ERP holds every company as its own customer (recommended,
-   as SAP extends a customer to each sales area it buys through), and Commerce's one company
-   credit belongs to the ERP the company is assigned to on the Mapping tab.
-5. The three A3 questions in §3.
+Answered 2026-09-26: workspace deletion (delete a component's own workspace, then prove the
+namespace is gone; keep for retry only when shared or unprovable), the second ERP from the tile,
+at most two ERPs, the filling questions (Wipe and the undo to Demo Builder, defaults left alone),
+website scope (per website, read on every open, name before code).
+
+Still open:
+
+1. **Who writes Commerce's one company credit limit when two ERPs serve a company.**
+   Recommended: one integration writes it, set when it is added (the first pair on, a second
+   pair off), because real ERPs each keep their own account and credit for a customer and nobody
+   lets two systems share one limit. The alternative is that no ERP writes it and each ERP's
+   credit only holds its own orders.
+2. **The integration page design in §5b**, once seen as a preview.
 
 ## 9. How this plan stays true
 
