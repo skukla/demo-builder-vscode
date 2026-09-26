@@ -16,19 +16,8 @@
  */
 
 import type { CommerceDetachResult } from './erpDetach';
-import { deriveOwPackage } from './owPackageName';
-import {
-    commandFailure,
-    deleteRuntimeEntity,
-    listRuntimeNames,
-    runInNamespace,
-    runtimeNamespaceEnv,
-    CLEANUP_ORDER,
-    leftoverLabel,
-    type DeclaredRuntime,
-    type RuntimeEntityKind,
-    type RuntimeNamespaceEnv,
-} from './runtimeNamespace';
+import { leftoverReason, verifyRuntimeTeardown, type RuntimeCleanupSummary } from './runtimeLeftoverCleanup';
+import { commandFailure, runInNamespace, runtimeNamespaceEnv, type DeclaredRuntime } from './runtimeNamespace';
 import type { SystemWipeResult } from './systemRecordsWipe';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
@@ -41,28 +30,13 @@ import { ErrorCode } from '@/types/errorCodes';
 import type { Logger } from '@/types/logger';
 import { toError } from '@/types/typeGuards';
 
-/**
- * What the post-undeploy verification found and did (AB-7). `aio app undeploy`
- * exits 0 while leaving deployed packages behind — measured live 2026-08-28:
- * a full remove "succeeded" in 5.4s with the whole app still serving, and a
- * kit removal left 12 packages. So removal VERIFIES: it lists the namespace
- * and deletes leftovers it can attribute to this integration by name.
- */
-export interface RuntimeCleanupSummary {
-    /** False when the namespace could not be listed — said, never silent. */
-    verified: boolean;
-    /** Leftover packages found after undeploy and deleted. */
-    deleted: string[];
-    /** Leftovers whose delete failed — these are STILL RUNNING. */
-    failed: string[];
-    note?: string;
-}
-
 /** What removal needs from the runner's dependencies. */
 export interface TeardownDeps {
     commandManager: CommandExecutor;
     logger: Logger;
     onProgress?: (message: string, subMessage?: string) => void;
+    /** How the leftover retries pause (runtimeLeftoverCleanup); a real sleep when absent, a no-op in tests. */
+    wait?: (ms: number) => Promise<void>;
     /**
      * Undo the ERP integration's writes onto Commerce (erpDetach) BEFORE its
      * uninstall and undeploy take the action away. Skipped for every component
@@ -215,6 +189,32 @@ export async function cleanUpBeforeUndeploy(target: TeardownTarget, deps: Teardo
 }
 
 /**
+ * After the undeploy: find and delete what the app left in Runtime, trying until every
+ * avenue is spent (runtimeLeftoverCleanup), and say whether the removal may finish. A
+ * leftover still deployed, or a namespace that could not be checked, stops it: the caller
+ * keeps the card, folder and workspace that name the app, so nothing is orphaned (owner,
+ * 2026-09-26: a complete cleanup, whatever it takes).
+ *
+ * @param target - the org context to run under
+ * @param id - the component id
+ * @param declared - what its config declared
+ * @param name - the component's name as the SC knows it
+ * @param deps - the command runner, logger, progress and pause
+ * @returns the summary, and the stopped result when the removal must not finish
+ */
+export async function checkRuntimeLeftovers(
+    target: OrgContextTarget,
+    id: string,
+    declared: DeclaredRuntime,
+    name: string,
+    deps: TeardownDeps,
+): Promise<{ cleanup: RuntimeCleanupSummary; stopped?: { success: false; error: string; code: ErrorCode } }> {
+    const cleanup = await verifyRuntimeTeardown(target, id, declared, deps);
+    const reason = leftoverReason(name, cleanup);
+    return reason ? { cleanup, stopped: { success: false, error: reason, code: ErrorCode.COMPONENT_REMOVAL_STOPPED } } : { cleanup };
+}
+
+/**
  * The words for a removal that stopped: nothing was undeployed, and why.
  *
  * @param unfinished - what did not finish
@@ -287,89 +287,6 @@ export async function teardownRemote(
     if (result.code !== 0) {
         throw new Error(commandFailure('aio app undeploy', result));
     }
-}
-
-/**
- * Names safe to interpolate into an `aio runtime` command. Declared names come
- * from config FILES; a name outside the Adobe id charset is never deleted (and
- * never quoted into a shell line).
- */
-const RUNTIME_ENTITY_NAME = /^[A-Za-z0-9@._-]+$/;
-
-/**
- * Verify the undeploy actually cleared the namespace, and delete what it left
- * (AB-7). Attribution is exact and conservative: only what the app itself names
- * is a candidate — its declared packages plus the derived isolation package, and
- * the triggers and rules its packages declare. Triggers and rules are checked
- * too because deleting a package does not delete them: on 2026-09-21 the ERP's
- * one-minute timer kept firing at a removed action. Anything else in the
- * namespace is not ours to touch. Best-effort like the rest of teardown, but
- * never SILENT: the summary lands on the result, and an unverifiable namespace
- * says so.
- *
- * @param target - the org context to run under
- * @param id - the component id
- * @param declared - what its config declared
- * @param deps - the command runner and logger
- * @returns what was found and done
- */
-export async function verifyRuntimeTeardown(
-    target: OrgContextTarget,
-    id: string,
-    declared: DeclaredRuntime,
-    deps: TeardownDeps,
-): Promise<RuntimeCleanupSummary> {
-    const safe = (names: string[]) => [...new Set(names)].filter((n) => RUNTIME_ENTITY_NAME.test(n));
-    const expected: Record<RuntimeEntityKind, string[]> = {
-        rule: safe(declared.rules),
-        trigger: safe(declared.triggers),
-        package: safe([...declared.packages, deriveOwPackage(id)]),
-    };
-    // The key is fetched once and used for every list and delete. A list that
-    // cannot answer THROWS (runtimeNamespace.ts), so it lands here as "not
-    // verified" — it used to parse the empty output of a failed list as "nothing
-    // deployed" and report the namespace clean.
-    const leftovers: Array<[RuntimeEntityKind, string]> = [];
-    let env: RuntimeNamespaceEnv;
-    try {
-        env = await withOrgContext(target, async () => {
-            const namespaceEnv = await runtimeNamespaceEnv(deps);
-            for (const kind of CLEANUP_ORDER.filter((k) => expected[k].length > 0)) {
-                const present = await listRuntimeNames(deps, kind, namespaceEnv);
-                leftovers.push(...expected[kind].filter((n) => present.includes(n)).map((n) => [kind, n] as [RuntimeEntityKind, string]));
-            }
-            return namespaceEnv;
-        });
-    } catch (error) {
-        return {
-            verified: false,
-            deleted: [],
-            failed: [],
-            note: `Could not list the Runtime namespace to verify the undeploy: ${toError(error).message}`,
-        };
-    }
-
-    const deleted: string[] = [];
-    const failed: string[] = [];
-    for (const [kind, name] of leftovers) {
-        try {
-            await withOrgContext(target, () => deleteRuntimeEntity(deps, kind, name, env));
-            deleted.push(leftoverLabel(kind, name));
-        } catch (error) {
-            deps.logger.warn(
-                `[AppBuilderComponent Runner] leftover ${kind} "${name}" delete failed: ${toError(error).message}`,
-            );
-            failed.push(leftoverLabel(kind, name));
-        }
-    }
-    if (leftovers.length > 0) {
-        const labels = leftovers.map(([kind, name]) => leftoverLabel(kind, name));
-        deps.logger.warn(
-            `[AppBuilderComponent Runner] undeploy left ${leftovers.length} item(s) running ` +
-                `(${labels.join(', ')}); deleted ${deleted.length}, failed ${failed.length}`,
-        );
-    }
-    return { verified: true, deleted, failed };
 }
 
 /**

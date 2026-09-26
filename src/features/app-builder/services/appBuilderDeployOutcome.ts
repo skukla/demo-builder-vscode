@@ -154,6 +154,7 @@ export function recordDeployOutcome(
     // A deploy makes a stopped removal's reason stale; the next removal finds
     // out afresh whether its clean-up can finish.
     delete project.appBuilderComponents[id].removalStopped;
+    delete project.appBuilderComponents[id].removalCleanedUp;
 
     // Mirror the deploy STATUS onto the component instance.
     //

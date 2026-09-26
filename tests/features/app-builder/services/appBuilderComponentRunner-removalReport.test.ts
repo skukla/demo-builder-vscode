@@ -144,7 +144,7 @@ describe("the ERP's records", () => {
         const deps = createDeps({ catalog: [SYSTEM, INTEGRATION], wipeSystemRecords });
         deps.commandManager.execute.mockImplementation(async (command: string) => {
             if (command === 'aio app undeploy') order.push('undeploy');
-            return createSuccessResult();
+            return createSuccessResult(command.includes(' list --json') ? '[]' : undefined);
         });
 
         await removeAppBuilderComponent(project, 'erp-integration', deps);
@@ -206,7 +206,7 @@ describe('the system removed after its integration', () => {
             if (command.startsWith('aio runtime package delete demo-erp')) {
                 throw new Error('forbidden');
             }
-            return createSuccessResult();
+            return createSuccessResult(command.includes(' list --json') ? '[]' : undefined);
         });
 
         const result = await removeAppBuilderComponent(pairedProject(), 'erp-integration', deps);

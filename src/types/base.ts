@@ -389,11 +389,18 @@ export interface AppBuilderComponentState {
     /** The integration this system belongs to (its `appBuilderComponents` id). */
     usedBy?: string;
     /**
-     * Why the last removal stopped before undeploying, in plain words: a clean-up
-     * only the deployed code can do did not finish. The card offers Remove anyway.
+     * Why the last removal stopped, in plain words: a clean-up only the deployed code
+     * can do did not finish (before the undeploy), or Runtime still held some of the
+     * app after every attempt to delete it (after). The card offers Remove anyway.
      * Gone with the record when a removal finishes.
      */
     removalStopped?: string;
+    /**
+     * Set when a removal stopped AFTER its clean-up and undeploy ran: the retry goes
+     * straight to the undeploy and the leftover check, because the ERP's own actions
+     * that the clean-up calls are gone. Cleared by a deploy, which brings them back.
+     */
+    removalCleanedUp?: boolean;
     // Mesh-kind runtime fields (ADR-011 D3 Step 06). These previously lived
     // only on the singular `meshState` (same values, so no new data exposure);
     // the keyed entry is their durable home so Step 07 can retire `meshState`.

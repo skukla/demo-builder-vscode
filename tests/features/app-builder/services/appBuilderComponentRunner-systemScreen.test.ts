@@ -6,6 +6,7 @@
  * functions are the real ones, over the shared SecretStorage fake.
  */
 
+import './appBuilderComponentRunner.runtimeMock';
 import { mockWithOrgContext } from './appBuilderComponentRunner.orgContextMock';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 

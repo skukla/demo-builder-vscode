@@ -134,7 +134,8 @@ describe('post-undeploy runtime verification', () => {
 
         const result = await removeAppBuilderComponent(integrationProject(), ID, deps);
 
-        expect(result.success).toBe(true);
+        // Unchecked is not clean: the removal stops and keeps what names the app.
+        expect(result).toMatchObject({ success: false, code: 'COMPONENT_REMOVAL_STOPPED' });
         // Nothing was found and nothing was deleted — the two lists are EMPTY,
         // not merely present. A summary that named packages it never touched
         // would read as a cleanup that happened.
@@ -144,6 +145,60 @@ describe('post-undeploy runtime verification', () => {
             failed: [],
         });
         expect(result.runtimeCleanup?.note).toContain('Could not list');
+    });
+
+    // 2026-09-26: three recursive deletes were refused and the same shapes later deleted
+    // cleanly. A refused leftover is looked for again after a pause and deleted again.
+    it('deletes a leftover Runtime refused once on the next attempt, and the removal finishes', async () => {
+        const owPackage = deriveOwPackage(ID);
+        const deps = createDeps();
+        let refusals = 0;
+        (deps.commandManager.execute as jest.Mock).mockImplementation(async (command: string) => {
+            if (command.includes('package list')) return { code: 0, stdout: JSON.stringify([{ name: owPackage }]), stderr: '' };
+            if (command.includes('package delete') && refusals++ === 0) throw new Error('package not empty');
+            return { code: 0, stdout: command.includes(' list --json') ? '[]' : '', stderr: '' };
+        });
+
+        const result = await removeAppBuilderComponent(integrationProject(), ID, deps);
+
+        expect(deps.wait).toHaveBeenCalledWith(10_000);
+        expect(result.success).toBe(true);
+        expect(result.runtimeCleanup).toEqual({ verified: true, deleted: [owPackage], failed: [] });
+    });
+
+    it('tries four times, longer each time, then keeps the card, folder and workspace', async () => {
+        const owPackage = deriveOwPackage(ID);
+        const deps = createDeps();
+        routeExecute(deps, {
+            'package list': { stdout: JSON.stringify([{ name: owPackage }]) },
+            'package delete': { reject: true },
+        });
+
+        const result = await removeAppBuilderComponent(integrationProject(), ID, deps);
+
+        expect((deps.wait as jest.Mock).mock.calls.map((c) => c[0])).toEqual([10_000, 30_000, 60_000]);
+        const deletes = (deps.commandManager.execute as jest.Mock).mock.calls.filter((c: unknown[]) =>
+            String(c[0]).startsWith(`aio runtime package delete ${owPackage}`),
+        );
+        expect(deletes).toHaveLength(4);
+        expect(result).toMatchObject({ success: false, code: 'COMPONENT_REMOVAL_STOPPED' });
+        expect(result.error).toMatch(/after 4 attempts/);
+        expect(deps.componentManager.removeComponent).not.toHaveBeenCalled();
+        expect(deps.deleteComponentWorkspace).not.toHaveBeenCalled();
+    });
+
+    it('a retry after that stop skips the clean-up that already ran, and Remove anyway finishes', async () => {
+        const project = integrationProject();
+        project.appBuilderComponents![ID] = { ...project.appBuilderComponents![ID], removalCleanedUp: true, removalStopped: 'kept' };
+        const detach = jest.fn();
+        const deps = createDeps({ detachFromCommerce: detach });
+        routeExecute(deps, { 'package list': { stdout: JSON.stringify([{ name: deriveOwPackage(ID) }]) }, 'package delete': { reject: true } });
+
+        const result = await removeAppBuilderComponent(project, ID, deps, { force: true });
+
+        expect(detach).not.toHaveBeenCalled();
+        expect(result.success).toBe(true);
+        expect(deps.componentManager.removeComponent).toHaveBeenCalled();
     });
 
     it('a failed leftover delete lands in failed[] — those packages are STILL RUNNING', async () => {

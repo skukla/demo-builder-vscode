@@ -9,6 +9,7 @@
  * mocked to record its target and run the callback (no global mutation).
  */
 
+import './appBuilderComponentRunner.runtimeMock';
 import { mockWithOrgContext } from './appBuilderComponentRunner.orgContextMock';
 import type { Project } from '@/types/base';
 

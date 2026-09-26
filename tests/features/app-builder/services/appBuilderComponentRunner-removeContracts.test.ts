@@ -12,6 +12,8 @@
 import { mockWithOrgContext } from './appBuilderComponentRunner.orgContextMock';
 import { TEST_RUNTIME_ENV } from './appBuilderComponentRunner.runtimeMock';
 import type { Project } from '@/types/base';
+import { createSuccessResult } from '../../../helpers/commandResultFake';
+import { ErrorCode } from '@/types/errorCodes';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 
 jest.setTimeout(5000);
@@ -168,9 +170,12 @@ describe('removeAppBuilderComponent — the teardown command', () => {
     // Reversibility: a teardown that cannot reach Adobe must still let the SC
     // clear the component locally and try again. The remote failure is
     // best-effort by design.
-    it('a failing remote teardown still clears the component locally', async () => {
+    it('a failing remote teardown still clears the component locally when nothing is left', async () => {
         const deps = createDeps();
-        deps.commandManager.execute.mockRejectedValue(new Error('namespace unreachable'));
+        deps.commandManager.execute.mockImplementation(async (command: string) => {
+            if (command.includes('app undeploy')) throw new Error('undeploy refused');
+            return createSuccessResult(command.includes(' list --json') ? '[]' : undefined);
+        });
 
         const result = await removeAppBuilderComponent(integrationProject(), APP_ID, deps);
 
@@ -182,6 +187,21 @@ describe('removeAppBuilderComponent — the teardown command', () => {
         );
         const saved = deps.saveProject.mock.calls.at(-1)?.[0] as Project;
         expect(saved.appBuilderComponents?.[APP_ID]).toBeUndefined();
+    });
+    // Owner, 2026-09-26: a complete cleanup, whatever it takes. A namespace that cannot be
+    // checked may still hold the app, so nothing that names it is let go.
+    it('keeps the card, folder and workspace when the namespace cannot be checked', async () => {
+        const deps = createDeps();
+        deps.commandManager.execute.mockRejectedValue(new Error('namespace unreachable'));
+
+        const result = await removeAppBuilderComponent(integrationProject(), APP_ID, deps);
+
+        expect(result).toMatchObject({ success: false, code: ErrorCode.COMPONENT_REMOVAL_STOPPED });
+        expect(result.error).toMatch(/could not be checked/);
+        expect(deps.componentManager.removeComponent).not.toHaveBeenCalled();
+        expect(deps.deleteComponentWorkspace).not.toHaveBeenCalled();
+        const saved = deps.saveProject.mock.calls.at(-1)?.[0] as Project;
+        expect(saved.appBuilderComponents?.[APP_ID]).toMatchObject({ removalCleanedUp: true });
     });
 });
 

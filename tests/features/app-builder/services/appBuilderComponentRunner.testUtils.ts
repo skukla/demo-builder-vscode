@@ -99,8 +99,13 @@ export function createComponentManager(): jest.Mocked<ComponentInstaller> {
 
 /** The canonical executor fake (ADR-016), with this suite's success default. */
 export function createCommandManager(): jest.Mocked<CommandExecutor> {
+    // A Runtime list answers an empty namespace: a removal now STOPS when its leftovers
+    // cannot be checked (owner, 2026-09-26), and an unparseable empty stdout is exactly
+    // that. Suites about leftovers route their own lists.
     return createMockCommandExecutor({
-        execute: jest.fn().mockResolvedValue(createSuccessResult()),
+        execute: jest.fn().mockImplementation(async (command: string) =>
+            createSuccessResult(/^aio runtime \w+ list .*--json/u.test(String(command)) ? '[]' : undefined),
+        ),
     });
 }
 
@@ -179,6 +184,8 @@ export function createDeps(
         // silently; suites assert WHICH workspace it was handed, because a pair shares
         // one and deleting it early takes the partner's namespace with it.
         deleteComponentWorkspace: jest.fn().mockResolvedValue(undefined),
+        // The leftover retries pause for real in production; never in a test.
+        wait: jest.fn().mockResolvedValue(undefined),
         // API subscriber (mocked).
         subscribeRequiredApis: jest.fn().mockResolvedValue(undefined),
         // Storefront republish (mocked; production wires republishStorefrontConfig).

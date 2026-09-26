@@ -304,7 +304,7 @@ describe('removing the pair', () => {
         });
         deps.commandManager.execute.mockImplementation(async (command: string) => {
             if (command === 'aio app undeploy') order.push('undeploy');
-            return createSuccessResult();
+            return createSuccessResult(command.includes(' list --json') ? '[]' : undefined);
         });
 
         const result = await removeAppBuilderComponent(project, 'erp-integration', deps);

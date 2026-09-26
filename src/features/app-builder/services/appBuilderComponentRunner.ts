@@ -34,11 +34,10 @@ import {
     cleanUpBeforeUndeploy,
     leftBehind,
     mergeCleanup,
+    checkRuntimeLeftovers,
     removalStopped,
     teardownRemote,
-    verifyRuntimeTeardown,
     type CleanupOutcome,
-    type RuntimeCleanupSummary,
     type TeardownDeps,
     type TeardownTarget,
 } from './appBuilderComponentTeardown';
@@ -67,6 +66,7 @@ import type { CommerceDetachResult } from './erpDetach';
 import type { SourceUpdateResult, UpdateCheckResult } from './integrationSourceUpdate';
 import { deriveOwPackage } from './owPackageName';
 import type { RecordSyncResult } from './recordSync';
+import type { RuntimeCleanupSummary } from './runtimeLeftoverCleanup';
 import type { DeclaredRuntime } from './runtimeNamespace';
 import type { AppDeploymentResult } from './types';
 import { isMeshComponentId } from '@/core/constants';
@@ -1316,7 +1316,7 @@ export async function removeAppBuilderComponent(
     // only the actions, residue measured live 2026-08-27), and the records of the
     // systems that go with it. A step that fails stops the removal here, with
     // nothing undeployed, unless the SC chose to remove anyway.
-    const cleanup = options.cleanedUp ? NOTHING_UNFINISHED : await cleanUpPair(project, id, state, systems, deps);
+    const cleanup = await cleanUpUnlessDone(project, id, state, systems, deps, options);
     if (cleanup.unfinished.length > 0 && !options.force) {
         const stopped = removalStopped(cleanup.unfinished);
         state.removalStopped = stopped.error;
@@ -1349,10 +1349,17 @@ export async function removeAppBuilderComponent(
     // Trust nothing: `aio app undeploy` exits 0 with packages still deployed
     // (AB-7, measured live). Meshes verify via their own status flow.
     if (state.kind !== 'mesh') deps.onProgress?.(OPERATION_STAGES.checkingLeftovers.label);
-    const runtimeCleanup =
+    const checked =
         state.kind !== 'mesh'
-            ? await verifyRuntimeTeardown(targetFor(project, deps, id), id, declared, deps)
+            ? await checkRuntimeLeftovers(targetFor(project, deps, id), id, declared, shownName, deps)
             : undefined;
+    const runtimeCleanup = checked?.cleanup;
+
+    // Leftovers Runtime would not delete, or a namespace that could not be checked: keep
+    // the card, the folder and the workspace, so nothing is orphaned and Remove again
+    // picks up from here (owner, 2026-09-26: a complete cleanup, whatever it takes).
+    const kept = await keepForRetry(project, state, checked, options, deps);
+    if (kept) return kept;
 
     // A missing instance (a folder removed by hand, a half-finished add) must not
     // stop the state cleanup below: the remote side is already gone (gap 4).
@@ -1412,6 +1419,41 @@ export interface RemoveOptions {
 }
 
 const NOTHING_UNFINISHED: CleanupOutcome = { unfinished: [] };
+
+/**
+ * The clean-up before the undeploy, unless it already ran: a system removed with its pair
+ * (`cleanedUp`), or a removal retried after it stopped on leftovers (`removalCleanedUp`),
+ * whose ERP actions the clean-up would call are gone.
+ */
+function cleanUpUnlessDone(
+    project: Project,
+    id: string,
+    state: AppBuilderComponentState,
+    systems: string[],
+    deps: AppBuilderComponentRunnerDeps,
+    options: RemoveOptions,
+): Promise<CleanupOutcome> {
+    if (options.cleanedUp || state.removalCleanedUp) return Promise.resolve(NOTHING_UNFINISHED);
+    return cleanUpPair(project, id, state, systems, deps);
+}
+
+/**
+ * Stop a removal whose leftovers are not all gone, keeping everything that names them, or
+ * answer undefined to let it finish. Remove anyway (`force`) finishes regardless.
+ */
+async function keepForRetry(
+    project: Project,
+    state: AppBuilderComponentState,
+    checked: Awaited<ReturnType<typeof checkRuntimeLeftovers>> | undefined,
+    options: RemoveOptions,
+    deps: AppBuilderComponentRunnerDeps,
+): Promise<RunnerResult | undefined> {
+    if (!checked?.stopped || options.force) return undefined;
+    state.removalStopped = checked.stopped.error;
+    state.removalCleanedUp = true;
+    await deps.saveProject(project);
+    return { ...checked.stopped, runtimeCleanup: checked.cleanup };
+}
 
 /** The catalog entry behind a record: the catalog's, else one read off the record. */
 function entryFor(

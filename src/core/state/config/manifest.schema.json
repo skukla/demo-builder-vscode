@@ -809,7 +809,11 @@
         },
         "removalStopped": {
           "type": "string",
-          "description": "Why the last removal stopped before undeploying, in plain words: a clean-up only the deployed code can do did not finish. The card offers Remove anyway. Gone with the record when a removal finishes."
+          "description": "Why the last removal stopped, in plain words: a clean-up only the deployed code can do did not finish (before the undeploy), or Runtime still held some of the app after every attempt to delete it (after). The card offers Remove anyway. Gone with the record when a removal finishes."
+        },
+        "removalCleanedUp": {
+          "type": "boolean",
+          "description": "Set when a removal stopped AFTER its clean-up and undeploy ran: the retry goes straight to the undeploy and the leftover check, because the ERP's own actions that the clean-up calls are gone. Cleared by a deploy, which brings them back."
         },
         "envVars": {
           "type": "object",
