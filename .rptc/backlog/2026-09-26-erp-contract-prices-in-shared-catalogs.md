@@ -55,14 +55,44 @@ the catalog price (55) and is charged the contract price (40). That is the wrong
    webhook subscribed `required: false` is stored and run as required, so a failing price hook
    breaks the cart outright.
 
+## The ERP holds contracts, not loose price lines (owner, 2026-09-26)
+
+The owner found it strange that the demo ERP has no contract-term management. Today it has a
+Customers screen (the buying organisations) and a Pricing screen of loose conditions
+(`lib/pricing.js`: contractPrice, contractDiscount, maxDiscount, each with optional validity
+dates and a minimum quantity), but nothing groups them into an agreement. A real ERP does, out of
+the box, so by the standing rule (the mock ERP models only what a real ERP has) it belongs here:
+
+- SAP S/4HANA (general knowledge, not yet checked against SAP documentation): the buyer is a
+  business partner in the customer role, extended per sales area; terms live in outline
+  agreements, quantity and value contracts with a number, validity, target quantity or value and
+  the orders released against them; prices are condition records by sales area with validity;
+  condition contract management covers rebates and customer terms.
+- Business Central (same caveat): customers, sales price lists with start and end dates, and
+  blanket sales orders in the contract role.
+
+What to build in demo-erp: a Contracts screen and record, one agreement per buyer with a number,
+a term (valid from and to), a status (draft, active, expired), and its price lines (the existing
+contractPrice and contractDiscount conditions, owned by the contract instead of floating free).
+The customer page lists its contracts. Pricing quotes read the active contract's lines.
+
+How it meets the shape above: an active contract's price lines are exactly what the integration
+writes into that company's shared catalog (step 2), and a contract that expires or is withdrawn
+removes its tier prices again. The ERP and Commerce then show the same agreement: the contract in
+the ERP, the shared catalog in Commerce. Check SAP's and Business Central's documentation before
+naming fields, so the screen uses the words an SC's prospect would recognise.
+
 ## Open
 
 - Which of the ERP's price rules map to a catalog price (per-company, per-product fixed) and
   which do not (quantity breaks map to tier prices at quantity > 1; percentage rules map to
   Percentage). Read demo-erp's rule model first.
+- Which of today's loose Pricing conditions stay loose (a store-wide maximum discount is not a
+  contract term) and which move under a contract.
 - Relation to [[AB-14]] (where an ERP price goes when the project also has ACO).
 
 ## Shipped so far
 
 - 2026-09-26  feat(ai): run_commerce_query can ask Catalog Service as a customer group (`4686a23c2`)
 - 2026-09-26  docs(backlog): AB-26z, ERP contract prices live in each company's shared catalog (`3f190fd13`)
+- 2026-09-26  Scope widened (owner, 2026-09-26): the ERP gets contracts, one agreement per buyer with a term, status and its price lines, and the integration writes an active contract's lines into the company's shared catalog. See 'The ERP holds contracts'.
