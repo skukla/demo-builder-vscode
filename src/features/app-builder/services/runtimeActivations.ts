@@ -211,6 +211,31 @@ export async function readRuntimeActivation(
     };
 }
 
+/**
+ * A sequence component Runtime did not keep. Measured 2026-09-26 on the App Management
+ * installer's sequence: the first component answered `activation get` with 404 while the
+ * second read fine, because Runtime keeps a successful blocking run only when it was sent
+ * with X-OW-EXTRA-LOGGING (Adobe Runtime, "Logging and monitoring").
+ */
+const NOT_RECORDED =
+    '(not recorded: Runtime keeps a successful blocking run only when it was sent with extra logging)';
+
+/** A component's record, or undefined when Runtime has none (404); any other failure throws. */
+async function getComponent(
+    deps: RuntimeNamespaceDeps,
+    env: RuntimeNamespaceEnv,
+    id: string,
+): Promise<ActivationRecord | undefined> {
+    try {
+        return await getActivation(deps, env, id);
+    } catch (error) {
+        if (/404 Not Found|does not exist/u.test(error instanceof Error ? error.message : String(error))) {
+            return undefined;
+        }
+        throw error;
+    }
+}
+
 /** An action's compacted lines, or a sequence's components' lines each under its action's name. */
 async function recordLogs(deps: RuntimeNamespaceDeps, env: RuntimeNamespaceEnv, record: ActivationRecord): Promise<string[]> {
     const raw = Array.isArray(record.logs) ? record.logs.filter((l): l is string => typeof l === 'string') : [];
@@ -220,7 +245,11 @@ async function recordLogs(deps: RuntimeNamespaceDeps, env: RuntimeNamespaceEnv, 
     }
     const lines: string[] = [];
     for (const id of raw) {
-        const component = await getActivation(deps, env, id);
+        const component = await getComponent(deps, env, id);
+        if (!component) {
+            lines.push(`[${id}]`, NOT_RECORDED);
+            continue;
+        }
         const path = annotation(component, 'path');
         const name = typeof path === 'string' ? path.split('/').slice(1).join('/') : id;
         const componentLines = compactLogs(await activationLogLines(deps, env, id));

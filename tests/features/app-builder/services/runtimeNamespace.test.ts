@@ -198,6 +198,45 @@ describe('deleteRuntimeEntity', () => {
         );
     });
 
+    // Measured 2026-09-26 removing the ERP pair: three recursive package deletes answered
+    // "package not empty (contains N entities) (409 Conflict)" while eight others succeeded.
+    // Rebuilt in a throwaway package, the same shapes (sequences over Adobe's validator)
+    // deleted cleanly, so the cause is not the shape. The delete recovers instead: it removes
+    // what is left one action at a time, then the package.
+    it('empties a package the recursive delete refused as not empty, then deletes it', async () => {
+        const deps = makeDeps();
+        deps.commandManager.execute
+            .mockResolvedValueOnce(createFailureResult(
+                ' ›   Error: failed to delete the package: package not empty (contains 2 entities) (409 Conflict)',
+            ))
+            .mockResolvedValueOnce(createSuccessResult(JSON.stringify([
+                { name: 'item-prices', namespace: 'ns/webhook' },
+                { name: '__secured_item-prices', namespace: 'ns/webhook' },
+            ])))
+            .mockResolvedValue(createSuccessResult());
+
+        await deleteRuntimeEntity(deps, 'package', 'webhook', ENV);
+
+        expect(deps.commandManager.execute.mock.calls.map((call) => call[0])).toEqual([
+            'aio runtime package delete webhook --recursive',
+            'aio runtime action list webhook --json',
+            'aio runtime action delete webhook/item-prices',
+            'aio runtime action delete webhook/__secured_item-prices',
+            'aio runtime package delete webhook --recursive',
+        ]);
+    });
+
+    it('still throws when the emptied package cannot be deleted', async () => {
+        const deps = makeDeps();
+        const notEmpty = createFailureResult(' ›   Error: package not empty (contains 1 entity) (409 Conflict)');
+        deps.commandManager.execute
+            .mockResolvedValueOnce(notEmpty)
+            .mockResolvedValueOnce(createSuccessResult('[]'))
+            .mockResolvedValueOnce(notEmpty);
+
+        await expect(deleteRuntimeEntity(deps, 'package', 'ingestion', ENV)).rejects.toThrow(/not empty/);
+    });
+
     // A rule or trigger is not a container: `--recursive` belongs to packages only.
     it('deletes a rule or a trigger by name, without --recursive', async () => {
         const deps = makeDeps();
@@ -342,6 +381,64 @@ describe('readRuntimeActivation', () => {
             result: { body: { delivered: 0 } },
             logs: ['21:43:03.598 error: partner refresh failed'],
         });
+    });
+
+    it('reads a sequence whose component Runtime never recorded, saying so instead of failing', async () => {
+        // Measured 2026-09-26 on the App Management installer's sequence: its first component
+        // answered `activation get` with 404 (the validator's successful blocking run is not
+        // kept), and that one 404 failed the whole read. The other component read fine.
+        const deps = makeDeps();
+        const sequence = {
+            activationId: '3d2cecc432404a4cacecc43240fa4c54',
+            annotations: [{ key: 'path', value: 'ns/app-management/installation' }, { key: 'kind', value: 'sequence' }],
+            logs: ['79b186c6ba5746fbb186c6ba5746fb95', 'af9fd45c4d4249e99fd45c4d4259e9a7'],
+            response: { result: { error: { statusCode: 409 } }, status: 'application error', success: false },
+        };
+        const action = {
+            activationId: 'af9fd45c4d4249e99fd45c4d4259e9a7',
+            annotations: [{ key: 'path', value: 'ns/app-management/__secured_installation' }, { key: 'kind', value: 'nodejs:24' }],
+            logs: [],
+            response: { result: { error: { statusCode: 409 } }, status: 'application error', success: false },
+        };
+        deps.commandManager.execute
+            .mockResolvedValueOnce(createSuccessResult(JSON.stringify(sequence)))
+            .mockResolvedValueOnce(createFailureResult(
+                ' ›   Error: failed to retrieve the activation: the requested resource does not exist. (404 Not Found)',
+            ))
+            .mockResolvedValueOnce(createSuccessResult(JSON.stringify(action)))
+            .mockResolvedValueOnce(createSuccessResult('=== activation logs af9fd45c4d4249e99fd45c4d4259e9a7\n'));
+
+        const read = await readRuntimeActivation(deps, ENV, sequence.activationId);
+
+        expect(read.action).toBe('app-management/installation');
+        expect(read.success).toBe(false);
+        expect(read.logs).toEqual([
+            '[79b186c6ba5746fbb186c6ba5746fb95]',
+            '(not recorded: Runtime keeps a successful blocking run only when it was sent with extra logging)',
+            '[app-management/__secured_installation]',
+            '(no log lines)',
+        ]);
+        expect(deps.commandManager.execute.mock.calls.map((c) => String(c[0]))).toEqual([
+            `aio runtime activation get ${sequence.activationId}`,
+            'aio runtime activation get 79b186c6ba5746fbb186c6ba5746fb95',
+            'aio runtime activation get af9fd45c4d4249e99fd45c4d4259e9a7',
+            'aio runtime activation logs af9fd45c4d4249e99fd45c4d4259e9a7',
+        ]);
+    });
+
+    it('still fails when a component cannot be read for any other reason', async () => {
+        const deps = makeDeps();
+        const sequence = {
+            activationId: '3d2cecc432404a4cacecc43240fa4c54',
+            annotations: [{ key: 'kind', value: 'sequence' }],
+            logs: ['79b186c6ba5746fbb186c6ba5746fb95'],
+            response: { result: {}, status: 'success', success: true },
+        };
+        deps.commandManager.execute
+            .mockResolvedValueOnce(createSuccessResult(JSON.stringify(sequence)))
+            .mockResolvedValueOnce(createFailureResult(' ›   Error: An AUTH key must be specified'));
+
+        await expect(readRuntimeActivation(deps, ENV, sequence.activationId)).rejects.toThrow(/AUTH key/);
     });
 
     it("follows a sequence (an Adobe-auth web action) into its components, labelling each one's lines with its action", async () => {

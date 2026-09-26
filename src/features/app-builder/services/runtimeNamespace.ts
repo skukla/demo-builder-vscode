@@ -148,8 +148,33 @@ export async function deleteRuntimeEntity(
     env: RuntimeNamespaceEnv,
 ): Promise<void> {
     const command = `aio runtime ${kind} delete ${name}${kind === 'package' ? ' --recursive' : ''}`;
-    const result = await runInNamespace(deps, command, env);
+    let result = await runInNamespace(deps, command, env);
+    if (kind === 'package' && result.code !== 0 && PACKAGE_NOT_EMPTY.test(commandFailure(command, result))) {
+        await deletePackageActions(deps, name, env);
+        result = await runInNamespace(deps, command, env);
+    }
     if (result.code !== 0) {
         throw new Error(commandFailure(command, result));
+    }
+}
+
+/**
+ * The refusal a recursive package delete sometimes answers. Measured 2026-09-26 removing the
+ * ERP pair: three of eleven packages answered "package not empty (contains N entities) (409
+ * Conflict)". The same shapes rebuilt in a throwaway package deleted cleanly, so the cause
+ * was not found; emptying the package one action at a time and asking again is the recovery.
+ */
+const PACKAGE_NOT_EMPTY = /package not empty/u;
+
+/** An action name Runtime allows; anything else never reaches the CLI. */
+const ACTION_NAME = /^[A-Za-z0-9_.-]+$/u;
+
+/** Delete every action still in one package, each on its own. A failed delete is left for the retry to report. */
+async function deletePackageActions(deps: RuntimeNamespaceDeps, pkg: string, env: RuntimeNamespaceEnv): Promise<void> {
+    const listed = await runInNamespace(deps, `aio runtime action list ${pkg} --json`, env);
+    const parsed = listed.code === 0 ? parseJSON<Array<{ name?: string }>>(listed.stdout.trim()) : undefined;
+    const names = Array.isArray(parsed) ? parsed.map((a) => a.name ?? '').filter((n) => ACTION_NAME.test(n)) : [];
+    for (const action of names) {
+        await runInNamespace(deps, `aio runtime action delete ${pkg}/${action}`, env);
     }
 }
