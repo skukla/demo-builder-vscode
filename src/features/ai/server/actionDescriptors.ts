@@ -364,6 +364,9 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             "undo and uninstall, the ERP's records); if one fails NOTHING is removed and the " +
             'error code is COMPONENT_REMOVAL_STOPPED, with the reasons. Retry, or pass force:true ' +
             'only after the user chose to remove anyway; data.warning then says what stays behind. ' +
+            'After the undeploy, Runtime leftovers are retried until gone; if any remain, or the ' +
+            'namespace cannot be checked, it also stops with COMPONENT_REMOVAL_STOPPED, keeping ' +
+            'the integration and its workspace, and a retry resumes at the undeploy. ' +
             'Confirm the id with the user first.',
         map: dashboardHandlers,
         type: 'removeAppBuilderComponent',
