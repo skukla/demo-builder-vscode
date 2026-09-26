@@ -33,6 +33,7 @@
  * @module features/ai/server/commerceQueryTool
  */
 
+import { createHash } from 'crypto';
 import { z } from 'zod';
 import { buildCommerceEndpoints } from './commerceEndpointsTool';
 import { asRawText, asText } from './mcpToolResult';
@@ -68,6 +69,51 @@ function isReadOnlyQuery(query: string): boolean {
 type EndpointKey = 'commerceGraphQl' | 'catalogService' | 'mesh';
 
 /**
+ * The `Magento-Customer-Group` value for a customer group: the SHA-1 of its numeric id.
+ *
+ * Adobe's productSearch reference calls the value "the customer group code", which does not
+ * work. Measured 2026-09-26 on an ACCS sandbox: a company's shared-catalog price (49 against
+ * a catalog 55) came back only for SHA-1("16"); the id `16`, the group's name and an empty
+ * header all returned 55.
+ */
+function customerGroupHeader(groupId: number): string {
+    return createHash('sha1').update(String(groupId)).digest('hex');
+}
+
+/**
+ * The headers for one request, or the refusal when a customer group is asked of an endpoint
+ * that does not read it.
+ *
+ * WHICH HEADERS, and why it is not "cs only for the catalogService endpoint": that was the
+ * first implementation and the live backend refused it (`productSearch` on bodea came back
+ * "Missing Magento-Website-Code Header"). ACCS serves Commerce Core AND Catalog Service from
+ * ONE endpoint, so an endpoint-driven rule can never send the `cs` headers there. The rule is
+ * about what the endpoint SERVES: send `cs` when the chosen endpoint is the Catalog Service
+ * one, or when the project has no separate one and this endpoint is therefore both. Sending
+ * them to a Core query is harmless; omitting them is a hard error or a silent empty result.
+ */
+function requestHeaders(
+    facts: ReturnType<typeof buildCommerceEndpoints>,
+    chosen: EndpointKey,
+    groupId: number | undefined,
+): Record<string, string> | string {
+    const hasSeparateCatalogService = Boolean(facts.endpoints.catalogService);
+    const needsCatalogHeaders = chosen === 'catalogService' || !hasSeparateCatalogService;
+    if (groupId !== undefined && !needsCatalogHeaders) {
+        return (
+            `Error: customerGroupId applies to Catalog Service queries only; \`${chosen}\` ` +
+            "takes the group from a signed-in customer, not a header. Use endpoint 'catalogService'."
+        );
+    }
+    return {
+        'Content-Type': 'application/json',
+        ...(facts.headers.all ?? {}),
+        ...(needsCatalogHeaders ? (facts.headers.cs ?? {}) : {}),
+        ...(groupId !== undefined ? { 'Magento-Customer-Group': customerGroupHeader(groupId) } : {}),
+    };
+}
+
+/**
  * Register `run_commerce_query`.
  *
  * @param server       McpServer (typed `any`; see registerProjectTools docstring).
@@ -99,6 +145,14 @@ export function registerCommerceQueryTool(
                     .optional()
                     .describe(
                         'Which endpoint to query. Defaults to the one the storefront itself uses, so results match the live site.',
+                    ),
+                customerGroupId: z
+                    .number()
+                    .int()
+                    .nonnegative()
+                    .optional()
+                    .describe(
+                        "Ask Catalog Service as this customer group (its numeric id, e.g. a company's shared-catalog group from GET company/{id}), so prices come back as that company sees them. Omit for the guest view.",
                     ),
             },
         },
@@ -164,30 +218,9 @@ export function registerCommerceQueryTool(
                 );
             }
 
-            // WHICH HEADERS, and why it is not "cs only for the catalogService
-            // endpoint".
-            //
-            // That was the first implementation and the live backend refused it:
-            // `productSearch` on bodea came back "Missing Magento-Website-Code
-            // Header" while every unit test passed. The reason is a shape no
-            // fixture showed — **ACCS serves Commerce Core AND Catalog Service from
-            // ONE endpoint**, so there is no separate `catalogService` to target and
-            // an endpoint-driven rule can never send the `cs` headers at all. PaaS
-            // has two endpoints; ACCS has one.
-            //
-            // So the rule is about what the endpoint SERVES, not what it is called:
-            // send `cs` when the chosen endpoint is the Catalog Service one, or when
-            // the project has no separate one and this endpoint is therefore both.
-            // Sending them to a Commerce Core query that does not need them is
-            // harmless; omitting them is a hard error on one path and a silent empty
-            // result on the other.
-            const hasSeparateCatalogService = Boolean(facts.endpoints.catalogService);
-            const needsCatalogHeaders = chosen === 'catalogService' || !hasSeparateCatalogService;
-            const headers: Record<string, string> = {
-                'Content-Type': 'application/json',
-                ...(facts.headers.all ?? {}),
-                ...(needsCatalogHeaders ? (facts.headers.cs ?? {}) : {}),
-            };
+            // Which headers: see requestHeaders.
+            const headers = requestHeaders(facts, chosen, args?.customerGroupId);
+            if (typeof headers === 'string') return asRawText(headers);
 
             const controller = new AbortController();
             const timer = setTimeout(() => controller.abort(), QUERY_TIMEOUT_MS);
