@@ -64,12 +64,12 @@ describe('deriveSystemCard', () => {
         expect(card.lastDeployed).toBeDefined();
     });
 
-    it('offers its screen, reset, redeploy and remove while both halves are deployed', () => {
+    it('offers its screen, load demo data, reset, redeploy and remove while both halves are deployed', () => {
         const card = deriveSystemCard(erp(), undefined, usedBy(), CATALOG);
-        expect(card.menuActions).toEqual(['open', 'reset-records', 'redeploy', 'remove']);
+        expect(card.menuActions).toEqual(['open', 'load-demo-data', 'reset-records', 'redeploy', 'remove']);
     });
 
-    it('offers no reset while its integration is not deployed', () => {
+    it('offers no load or reset while its integration is not deployed', () => {
         const card = deriveSystemCard(erp(), undefined, usedBy('error'), CATALOG);
         expect(card.menuActions).toEqual(['open', 'redeploy', 'remove']);
     });
@@ -80,6 +80,7 @@ describe('deriveSystemCard', () => {
         expect(card.statusLabel).toBe('Deploy failed');
         expect(card.message).toBe('database not provisioned');
         expect(card.menuActions).not.toContain('reset-records');
+        expect(card.menuActions).not.toContain('load-demo-data');
     });
 
     it('offers no verbs while either half is deploying', () => {

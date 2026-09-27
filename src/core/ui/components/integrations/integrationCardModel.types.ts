@@ -45,8 +45,9 @@ export type CardAction =
     | 'open'
     // An integration's deployed address, from the flyout's address row.
     | 'open-url'
-    // A system card's reset of its records (the ERP's; it runs through the
-    // integration that uses it).
+    // A system card's fill from Commerce, and its reset of its records (the ERP's;
+    // both run through the integration that uses it).
+    | 'load-demo-data'
     | 'reset-records'
     // After a removal stopped on a clean-up that did not finish: go ahead.
     | 'remove-anyway';

@@ -51,7 +51,8 @@ const MENU_ROWS: Partial<Record<CardAction, { label: string; icon: string }>> = 
     'manage-apis': { label: 'Manage APIs', icon: 'apiAccess' },
     remove: { label: 'Remove', icon: 'delete' },
     'remove-anyway': { label: 'Remove anyway', icon: 'delete' },
-    // A system card's own verb.
+    // A system card's own verbs.
+    'load-demo-data': { label: 'Load demo data', icon: 'loadData' },
     'reset-records': { label: 'Reset records', icon: 'reset' },
 };
 

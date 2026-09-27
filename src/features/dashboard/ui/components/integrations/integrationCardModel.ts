@@ -187,8 +187,8 @@ function buildMenuActions(
 }
 
 /**
- * A system card's kebab items: its screen, its reset (only while it and the
- * integration that runs the reset are both deployed), its redeploy, its removal
+ * A system card's kebab items: its screen, its fill from Commerce and its reset
+ * (only while it and the integration they run through are both deployed), its redeploy, its removal
  * (which takes its integration too). No Manage APIs: a system's APIs are part
  * of the project's set, not its own choice.
  */
@@ -204,7 +204,7 @@ function buildSystemMenuActions(
     return [
         ...(verb ? [verb] : []),
         ...(url ? (['open'] as CardAction[]) : []),
-        ...(resettable ? (['reset-records'] as CardAction[]) : []),
+        ...(resettable ? (['load-demo-data', 'reset-records'] as CardAction[]) : []),
         ...(status === 'deployed' ? (['redeploy'] as CardAction[]) : []),
         'remove',
     ];

@@ -4,9 +4,9 @@
  * - `getErpStatus` — the ERP's health as its integration sees it, plus the
  *   persisted rows of both halves of the pair. Read-only, headless-safe: no
  *   guards, no prompts; a missing sign-in is a typed AUTH_REQUIRED.
- * - `resetErpRecords` — the integration's own reset action: undo the ledgered
- *   Commerce writes, wipe the ERP, mirror Commerce as it stands (decisions 8
- *   and 11). Guards → progress → the call. Commerce orders keep nothing of the
+ * - `resetErpRecords` — undo the ledgered Commerce writes (the integration's
+ *   `erp/detach`), wipe the ERP (its `admin/wipe`), then fill it from Commerce
+ *   as it stands (`fillErpForProject`, AB-26y). Guards → progress → the calls. Commerce orders keep nothing of the
  *   ERP's after it; the ERP's order numbers continue where they were.
  * - `openErpScreen` — open the ERP's own screen in a private browser window,
  *   with the key it was deployed with (`systemScreen.ts`). The key is added
@@ -125,9 +125,9 @@ export const handleGetErpStatus: MessageHandler<{ id?: string }> = async (contex
 };
 
 /**
- * Handle 'resetErpRecords' — the integration's reset, under the guard chain and
- * wherever the SC is looking. Answers the action's report (what was reverted,
- * wiped and mirrored).
+ * Handle 'resetErpRecords' — undo, wipe and fill, under the guard chain and
+ * wherever the SC is looking. Answers what each step did (`undone`, `wiped`,
+ * `loaded`).
  *
  * Pressed on the integrations screen, so it belongs in that screen's progress
  * modal like every other card action; it was still opening a notification of its

@@ -87,6 +87,8 @@ export interface ComponentOperationControls extends OperationRunnerControls {
     started: (id: string, name: string, payload?: Record<string, unknown>) => void;
     /** Run the ERP reset the card's confirmation dialog just agreed to. */
     resetErp: (id: string, erpName: string) => void;
+    /** Fill the ERP from Commerce; `id` is the integration it runs through. */
+    loadErpData: (id: string, erpName: string) => void;
 }
 
 /** The integrations screen's operation controls. */
@@ -125,6 +127,21 @@ export function useComponentOperation(): ComponentOperationControls {
         [start],
     );
 
+    /** The ERP fill: through the integration's id, like the reset, with no confirm (it removes nothing). */
+    const loadErpData = useCallback(
+        (id: string, erpName: string): void => {
+            start({
+                id,
+                name: erpName,
+                message: 'loadErpDemoData',
+                title: `Loading demo data into ${erpName}`,
+                failureTitle: `Couldn't load demo data into ${erpName}`,
+                successTitle: `Demo data loaded into ${erpName}`,
+            });
+        },
+        [start],
+    );
+
     /**
      * Put the modal in front of an add the Add flow has already sent.
      *
@@ -155,7 +172,7 @@ export function useComponentOperation(): ComponentOperationControls {
     );
 
     return useMemo(
-        () => ({ ...runner, run, started, resetErp }),
-        [runner, run, started, resetErp],
+        () => ({ ...runner, run, started, resetErp, loadErpData }),
+        [runner, run, started, resetErp, loadErpData],
     );
 }

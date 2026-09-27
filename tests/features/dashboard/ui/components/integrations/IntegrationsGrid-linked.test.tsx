@@ -52,7 +52,7 @@ function systemCard(): IntegrationCardModel {
         dotVariant: 'success',
         url: 'https://ns.adobeio-static.net/index.html',
         urlLabel: 'Screen',
-        menuActions: ['open', 'reset-records', 'redeploy', 'remove'],
+        menuActions: ['open', 'load-demo-data', 'reset-records', 'redeploy', 'remove'],
         canRename: false,
         linked: { label: 'Used by', cards: [INTEGRATION_LINK] },
     };
@@ -107,6 +107,19 @@ describe('IntegrationsGrid — the system card verbs', () => {
 
         expect(getClient().postMessage).toHaveBeenCalledWith('redeployAppBuilderComponent', {
             id: 'demo-erp',
+            progress: 'modal',
+        });
+    });
+
+    it("Load demo data posts loadErpDemoData with the INTEGRATION's id, straight into the modal", async () => {
+        const { user, panel } = await openSystem();
+
+        await user.click(within(panel).getByRole('button', { name: /^load demo data$/i }));
+
+        // No confirm: it adds and updates records, and removes nothing.
+        expect(screen.queryByRole('dialog', { name: /reset erp records/i })).toBeNull();
+        expect(getClient().postMessage).toHaveBeenCalledWith('loadErpDemoData', {
+            id: 'erp-integration',
             progress: 'modal',
         });
     });

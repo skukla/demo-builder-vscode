@@ -16,6 +16,7 @@
 
 import Beaker from '@spectrum-icons/workflow/Beaker';
 import Copy from '@spectrum-icons/workflow/Copy';
+import DataAdd from '@spectrum-icons/workflow/DataAdd';
 import Delete from '@spectrum-icons/workflow/Delete';
 import Duplicate from '@spectrum-icons/workflow/Duplicate';
 import Edit from '@spectrum-icons/workflow/Edit';
@@ -59,6 +60,8 @@ const MENU_ICONS: Record<string, React.ReactElement> = {
     settings: <Settings size="S" />,
     /** Try something out without it taking effect — the workbench's whole job. */
     measure: <Beaker size="S" />,
+    /** Fill something with records from elsewhere (an ERP from Commerce). */
+    loadData: <DataAdd size="S" />,
 };
 
 /**

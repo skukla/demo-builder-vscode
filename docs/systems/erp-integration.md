@@ -66,9 +66,12 @@ status and the other's name behind a link icon; the ERP's card carries an **ERP*
 from the catalog's `systemType`, beside the name the SC gave it. Each flyout has a row
 (**Uses** on the integration, **Used by** on the ERP) whose name opens the other card.
 
-The ERP's kebab offers **Open** (its screen), **Reset records** (confirmed: it wipes the
+The ERP's kebab offers **Open** (its screen), **Load demo data** (fills the ERP from
+Commerce as it stands, with no confirm since it removes nothing; a value changed by hand
+in the ERP goes back to Commerce's), **Reset records** (confirmed: it wipes the
 ERP, fills it from Commerce again, and undoes the credit limits, blocks and ERP order numbers the
-ERP wrote into Commerce; offered only while both cards are deployed), **Redeploy** and
+ERP wrote into Commerce; this and Load demo data are offered only while both cards are
+deployed), **Redeploy** and
 **Remove**. The integration keeps its own verbs; its **Open Commerce Admin** opens the Admin
 UI SDK screen. Remove on either card names both. The screen's count names the kinds once a system is
 there ("1 integration · 1 system"). The dashboard's Integrations tile counts the ERP's card

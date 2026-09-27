@@ -34,6 +34,7 @@ import { FlaggedCardDialogs, needsReinstall, removalStopped } from './FlaggedCar
 import { type CardAction, type IntegrationCardModel } from './integrationCardModel';
 import { IntegrationDetailPanel } from './IntegrationDetailPanel';
 import { requestRename } from './requestRename';
+import { handleSystemAction } from './systemCardActions';
 import { useFlaggedCardDialog } from './useFlaggedCardDialog';
 import { useIntegrationSettings } from './useIntegrationSettings';
 import { IntegrationCard } from '@/core/ui/components/integrations/IntegrationCard';
@@ -73,32 +74,6 @@ export interface IntegrationsGridProps {
 }
 
 const NO_SETTINGS: Record<string, ComponentSettings> = {};
-
-/**
-/**
- * A system card's verbs that differ from an integration's: its screen and its
- * reset both go through the integration that uses it — the extension holds the
- * screen key and runs the reset. Everything else (redeploy, update, remove) is
- * the ordinary keyed path with the system's own id.
- *
- * @returns whether the action was handled here
- */
-function handleSystemAction(
-    model: IntegrationCardModel,
-    action: CardAction,
-    confirmReset: (pending: { id: string; erpName: string }) => void,
-): boolean {
-    const integrationId = model.linked?.cards[0]?.id;
-    if (action === 'open') {
-        if (integrationId) webviewClient.postMessage('openErpScreen', { id: integrationId });
-        return true;
-    }
-    if (action === 'reset-records') {
-        if (integrationId) confirmReset({ id: integrationId, erpName: model.name });
-        return true;
-    }
-    return false;
-}
 
 /** The dialog's second line: what the remove reaches beyond the card, if anything. */
 function removalConsequence(target: IntegrationCardModel | undefined): string | undefined {
@@ -176,7 +151,7 @@ export function IntegrationsGrid({
 
     const handleAction = useCallback(
         (model: IntegrationCardModel, action: CardAction): void => {
-            if (model.isSystem && handleSystemAction(model, action, setPendingReset)) {
+            if (model.isSystem && handleSystemAction(model, action, { confirmReset: setPendingReset, loadErpData: operations.loadErpData })) {
                 return;
             }
             // Open: the integration's Adobe workspace in the Developer Console
