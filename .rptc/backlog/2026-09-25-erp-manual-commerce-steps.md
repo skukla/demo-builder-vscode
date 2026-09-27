@@ -108,3 +108,4 @@ optional ones are labelled optional with what they add.
 - 2026-09-27  feat(dashboard): the demo setup checklist becomes a guide, one step at a time (`d8b44bf43`)
 - 2026-09-27  fix(dashboard): the setup guide's styles live with its feature, and it holds its height (`a1a5e53f6`)
 - 2026-09-27  feat(dashboard): setup left shows on the card, and an install offers the guide (`88c5a65eb`)
+- 2026-09-27  feat(setup): a second inventory source in the website's stock is a demo setup step (`221ef2f05`)
