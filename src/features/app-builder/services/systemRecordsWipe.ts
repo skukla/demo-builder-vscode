@@ -40,7 +40,9 @@ export function deriveActionCallUrl(
     deployedUrls: Record<string, string> | undefined,
 ): string | undefined {
     const actionUrl = Object.values(deployedUrls ?? {}).find((url) => url.endsWith(`/${call.action}`));
-    return actionUrl && `${actionUrl}/${call.path}`;
+    // A path that is only a query ("?background=true") goes straight onto the action.
+    const joiner = call.path.startsWith('?') ? '' : '/';
+    return actionUrl && `${actionUrl}${joiner}${call.path}`;
 }
 
 /**

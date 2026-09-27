@@ -1104,15 +1104,16 @@ async function syncAfterInstall(
     }
     deps.onProgress?.(OPERATION_STAGES.installingIntoCommerce.label, 'Starting the first sync');
     const result = await deps.syncRecords(project, entry, deployedUrls);
-    if (result.status === 'failed') {
-        deps.logger.warn(
-            `[AppBuilderComponent Runner] ${entry.id} installed but its first sync did not start: ${result.detail}`,
-        );
-        deps.onProgress?.(
-            OPERATION_STAGES.installingIntoCommerce.label,
-            `Sync did not start: ${result.detail ?? 'no reason given'}`,
-        );
+    if (result.status === 'started') {
+        return;
     }
+    // A declared sync that is skipped names an action this deploy does not have: a
+    // broken declaration, which once skipped every first sync without a word.
+    const detail = result.status === 'skipped'
+        ? `its action ${entry.sync.action} is not among the deployed actions`
+        : result.detail;
+    deps.logger.warn(`[AppBuilderComponent Runner] ${entry.id} installed but its first sync did not start: ${detail}`);
+    deps.onProgress?.(OPERATION_STAGES.installingIntoCommerce.label, `Sync did not start: ${detail ?? 'no reason given'}`);
 }
 
 /**

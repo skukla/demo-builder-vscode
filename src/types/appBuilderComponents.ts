@@ -65,9 +65,9 @@ export interface ComponentSettings {
 
 /** One of a component's own web actions, called by POST with no body. */
 export interface WebActionCall {
-    /** The web action, e.g. "admin". */
+    /** The web action, by the end of its URL: "admin", or "erp/mirror" for package and action. */
     action: string;
-    /** The path under it, e.g. "wipe" or "mirror?background=true". */
+    /** The path under it, e.g. "wipe", or only a query, e.g. "?background=true". */
     path: string;
 }
 

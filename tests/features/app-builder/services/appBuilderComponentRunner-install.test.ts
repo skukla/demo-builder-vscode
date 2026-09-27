@@ -310,11 +310,11 @@ describe('the first sync after the install (recordSync, 2026-09-24)', () => {
         ...KIT_ENTRY,
         id: 'erp-integration',
         name: 'ERP Integration',
-        sync: { action: 'erp', path: 'mirror?background=true' },
+        sync: { action: 'erp/mirror', path: '?background=true' },
     };
     const ERP_URLS = {
         ...KIT_URLS,
-        'runtime/erp/erp': 'https://ns.adobeioruntime.net/api/v1/web/erp/erp',
+        'runtime/erp/mirror': 'https://ns.adobeioruntime.net/api/v1/web/erp/mirror',
     };
 
     function erpDeps(overrides: Partial<Record<string, unknown>> = {}) {
@@ -375,5 +375,18 @@ describe('the first sync after the install (recordSync, 2026-09-24)', () => {
         expect(project.appBuilderComponents?.[ERP_ENTRY.id]?.installation).toMatchObject({ status: 'installed' });
         expect(onProgress).toHaveBeenCalledWith(expect.any(String), 'Starting the first sync');
         expect(onProgress).toHaveBeenCalledWith(expect.any(String), 'Sync did not start: 500: Commerce refused');
+    });
+
+    it('add: a declared sync whose action is not among the deployed ones says so, not nothing', async () => {
+        // The first sync was skipped this way on every add until 2026-09-27, in silence.
+        const onProgress = jest.fn();
+        const { deps } = erpDeps({ onProgress, syncRecords: jest.fn().mockResolvedValue({ status: 'skipped' }) });
+
+        await addAppBuilderComponent(createProject(), ERP_ENTRY, deps);
+
+        expect(onProgress).toHaveBeenCalledWith(
+            expect.any(String),
+            'Sync did not start: its action erp/mirror is not among the deployed actions',
+        );
     });
 });

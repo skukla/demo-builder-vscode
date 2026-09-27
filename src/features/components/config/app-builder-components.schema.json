@@ -230,13 +230,14 @@
           "properties": {
             "action": {
               "type": "string",
-              "pattern": "^[a-z][a-z0-9-]*$",
-              "description": "The web action, e.g. erp."
+              "pattern": "^[a-z][a-z0-9-]*(/[a-z][a-z0-9-]*)?$",
+              "description": "The web action, by the end of its URL: its package and name, e.g. erp/mirror."
             },
             "path": {
               "type": "string",
-              "pattern": "^[a-z][a-z0-9-]*(\\?[a-z]+=[a-z0-9]+)?$",
-              "description": "The path under it that starts the sync, with at most one query flag, e.g. mirror?background=true."
+              "minLength": 1,
+              "pattern": "^([a-z][a-z0-9-]*)?(\\?[a-z]+=[a-z0-9]+)?$",
+              "description": "The path under it that starts the sync, with at most one query flag, or only the flag, e.g. ?background=true."
             }
           }
         }

@@ -103,8 +103,8 @@
       "layout": "extension",
       "lifecycle": "app-management",
       "sync": {
-        "action": "erp",
-        "path": "mirror?background=true"
+        "action": "erp/mirror",
+        "path": "?background=true"
       },
       "nodeVersion": "24",
       "compatibleBackends": [

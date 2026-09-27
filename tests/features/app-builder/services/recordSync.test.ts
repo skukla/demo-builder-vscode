@@ -2,17 +2,25 @@
  * recordSync — once the ERP integration is installed, its `POST
  * erp/mirror?background=true` fills the ERP from Commerce. The route is the
  * integration's own (`skukla/commerce-erp-integration`,
- * `actions/erp/mirror/index.js`: `?background=true` answers 202 `{ started }`),
- * and the URL keys are what `aio app get-url` answers.
+ * `actions/erp/mirror/index.js`: `?background=true` answers 202 `{ started }`).
+ *
+ * The URL keys and values are copied from Bodea's `.demo-builder.json` after a real
+ * add (2026-09-27), with the namespace host shortened: `mirror` is an action of its
+ * own in the `erp` package. An earlier fixture invented a router action at
+ * `erp/erp`, which does not exist, so the real first sync was skipped on every add
+ * while this suite stayed green.
  */
 
 import { startRecordSync } from '@/features/app-builder/services/recordSync';
+import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 
 const URLS = {
     'runtime/erp/status': 'https://ns.adobeioruntime.net/api/v1/web/erp/status',
-    'runtime/erp/erp': 'https://ns.adobeioruntime.net/api/v1/web/erp/erp',
+    'runtime/erp/mirror': 'https://ns.adobeioruntime.net/api/v1/web/erp/mirror',
+    'runtime/erp/mirror-job': 'https://ns.adobeioruntime.net/api/v1/web/erp/mirror-job',
+    'runtime/erp/reset': 'https://ns.adobeioruntime.net/api/v1/web/erp/reset',
 };
-const SYNC = { sync: { action: 'erp', path: 'mirror?background=true' } };
+const SYNC = { sync: { action: 'erp/mirror', path: '?background=true' } };
 const AUTH = { accessToken: 'fake-test-pw-not-a-secret', imsOrgId: 'ABC@AdobeOrg' };
 
 function answering(status: number, body: unknown) {
@@ -35,7 +43,7 @@ describe('startRecordSync', () => {
 
         expect(result).toEqual({ status: 'started' });
         expect(fetchImpl).toHaveBeenCalledWith(
-            'https://ns.adobeioruntime.net/api/v1/web/erp/erp/mirror?background=true',
+            'https://ns.adobeioruntime.net/api/v1/web/erp/mirror?background=true',
             {
                 method: 'POST',
                 headers: {
@@ -45,6 +53,14 @@ describe('startRecordSync', () => {
                 },
             },
         );
+    });
+
+    it("the bundled ERP integration's declared sync resolves against its real deployed actions", async () => {
+        const fetchImpl = answering(202, { started: true });
+        const entry = getAppBuilderComponentEntry('erp-integration');
+
+        await expect(startRecordSync(entry ?? {}, URLS, deps(fetchImpl))).resolves.toEqual({ status: 'started' });
+        expect(fetchImpl.mock.calls[0]?.[0]).toBe('https://ns.adobeioruntime.net/api/v1/web/erp/mirror?background=true');
     });
 
     it('skips an entry that declares no sync, or whose action is not deployed, without signing in', async () => {
