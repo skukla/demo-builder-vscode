@@ -159,6 +159,45 @@ describe('handleRemoveAppBuilderComponent', () => {
         expect((result.data as { warning?: string }).warning).toBeUndefined();
     });
 
+    it('says leftovers go with the deleted workspace, not to check a namespace that is going', async () => {
+        const { mockContext } = setupMocks();
+        mockTestDeveloperPermissions(true);
+        mockRemoveAppBuilderComponent.mockResolvedValue({
+            success: true,
+            runtimeCleanup: { verified: true, deleted: [], failed: ['kit-b'], goneWithWorkspace: 'Northwind ERP' },
+            workspacesDeleted: ['Northwind ERP'],
+        });
+
+        const result = await handleRemoveAppBuilderComponent(mockContext, { id: 'erp-sync' });
+
+        expect(result.success).toBe(true);
+        const data = result.data as { warning?: string; workspaces?: string };
+        expect(data.warning).toBe(
+            'erp-sync was removed. 1 item(s) Runtime would not delete go with the Northwind ERP workspace, ' +
+                'which Adobe finishes deleting in about 10 minutes.',
+        );
+        expect(data.warning).not.toContain('list_runtime_packages');
+        expect(data.workspaces).toBe(
+            'Deleted the Northwind ERP workspace. Adobe finishes deleting its Runtime space in about 10 ' +
+                'minutes; Demo Builder checks, and says so if it does not.',
+        );
+    });
+
+    it('a clean removal that deleted a workspace says so without a warning', async () => {
+        const { mockContext } = setupMocks();
+        mockTestDeveloperPermissions(true);
+        mockRemoveAppBuilderComponent.mockResolvedValue({
+            success: true,
+            runtimeCleanup: { verified: true, deleted: [], failed: [] },
+            workspacesDeleted: ['Northwind ERP'],
+        });
+
+        const result = await handleRemoveAppBuilderComponent(mockContext, { id: 'erp-sync' });
+
+        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
+        expect((result.data as { workspaces?: string }).workspaces).toMatch(/^Deleted the Northwind ERP workspace\./);
+    });
+
     it("says so when the ERP integration's Commerce changes were not all undone", async () => {
         const { mockContext } = setupMocks();
         mockTestDeveloperPermissions(true);

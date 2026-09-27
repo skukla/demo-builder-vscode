@@ -303,10 +303,12 @@ export function mergeCleanup(
 ): RuntimeCleanupSummary | undefined {
     if (!own || !systems) return own ?? systems;
     const note = [own.note, systems.note].filter(Boolean).join(' ');
+    const goneWithWorkspace = own.goneWithWorkspace ?? systems.goneWithWorkspace;
     return {
         verified: own.verified && systems.verified,
         deleted: [...own.deleted, ...systems.deleted],
         failed: [...own.failed, ...systems.failed],
         ...(note ? { note } : {}),
+        ...(goneWithWorkspace ? { goneWithWorkspace } : {}),
     };
 }

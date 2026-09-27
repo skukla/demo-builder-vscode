@@ -55,7 +55,12 @@ import {
 } from './appConfigPackages';
 import type { AppManagementInstallOptions, AppManagementInstallResult } from './appManagementUpgrade';
 import { catalogEntryFor, entryFromState, pairedEntry } from './componentEntry';
-import { entriesSharingWorkspace } from './componentWorkspace';
+import {
+    entriesSharingWorkspace,
+    releaseWorkspaces,
+    workspaceTakesLeftovers,
+    type WorkspaceReleaseDeps,
+} from './componentWorkspace';
 import {
     displayNameInProject,
     ensureCommerceAppId,
@@ -122,6 +127,8 @@ export interface RunnerResult {
      * config.json (add and deploy).
      */
     warnings?: string[];
+    /** The Adobe workspaces a removal deleted, by the name a person reads (remove only). */
+    workspacesDeleted?: string[];
 }
 
 export type { RuntimeCleanupSummary };
@@ -367,6 +374,10 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
      * Runs inside the deploy's org context. Absent in tests that do not exercise it.
      */
     deleteUndeclaredActions?: (componentPaths: string[]) => Promise<UndeclaredActionCleanup>;
+    /** A workspace's Runtime key, read before a removal deletes it (`componentWorkspaceRelease.ts`). */
+    namespaceKeyOf?: WorkspaceReleaseDeps['namespaceKeyOf'];
+    /** Confirm, in the background, that a deleted workspace's Runtime namespace is gone. */
+    watchNamespaceRemoval?: WorkspaceReleaseDeps['watchNamespaceRemoval'];
     /** Every appBuilderComponent in the project's catalog (for the union subscribe). */
     catalog: AppBuilderComponentCatalogEntry[];
     /** Secret storage forwarded to the republish path. */
@@ -1342,9 +1353,7 @@ export async function removeAppBuilderComponent(
     // components held, and a workspace nothing names cannot be found or deleted.
     const heldWorkspaces = workspacesHeldBy(project, [id, ...systems]);
 
-    // The storefront config reads ONE provided var; a component providing only
-    // to other components (the ERP) earns no republish on its way out.
-    const provided = Boolean(state.providesEnvVars && STOREFRONT_PROVIDED_VAR in state.providesEnvVars);
+    const provided = providesStorefrontVar(state);
 
     // BEFORE the undeploy, while the code that does it still exists: the
     // integration's Commerce undo and uninstall (AB-4; `aio app undeploy` removes
@@ -1352,48 +1361,13 @@ export async function removeAppBuilderComponent(
     // systems that go with it. A step that fails stops the removal here, with
     // nothing undeployed, unless the SC chose to remove anyway.
     const cleanup = await cleanUpUnlessDone(project, id, state, systems, deps, options);
-    if (cleanup.unfinished.length > 0 && !options.force) {
-        const stopped = removalStopped(cleanup.unfinished);
-        state.removalStopped = stopped.error;
-        await deps.saveProject(project);
-        return stopped;
-    }
+    const stopped = await stopIfUnfinished(project, state, cleanup, options, deps);
+    if (stopped) return stopped;
 
-    // The declared package inventory is read BEFORE the undeploy and the local
-    // delete — afterwards the config files it attributes by are gone.
-    const componentPath = project.componentInstances?.[id]?.path;
-    let declared: DeclaredRuntime = { packages: [], triggers: [], rules: [] };
-    if (state.kind !== 'mesh' && componentPath) {
-        const [packages, timersAndRules] = await Promise.all([
-            listDeclaredPackageNames(componentPath).catch(() => []),
-            listDeclaredTriggersAndRules(componentPath).catch(() => ({ triggers: [], rules: [] })),
-        ]);
-        declared = { packages, ...timersAndRules };
-    }
-
-    const shownName = state.name ?? project.componentInstances?.[id]?.name ?? id;
-    deps.onProgress?.(OPERATION_STAGES.removing.label, `Undeploying ${shownName}`);
-    try {
-        await teardownRemote(targetFor(project, deps, id), componentPath, state.kind, deps);
-    } catch (error) {
-        deps.logger.warn(
-            `[AppBuilderComponent Runner] remote teardown warning: ${toError(error).message}`,
-        );
-    }
-
-    // Trust nothing: `aio app undeploy` exits 0 with packages still deployed
-    // (AB-7, measured live). Meshes verify via their own status flow.
-    if (state.kind !== 'mesh') deps.onProgress?.(OPERATION_STAGES.checkingLeftovers.label);
-    const checked =
-        state.kind !== 'mesh'
-            ? await checkRuntimeLeftovers(targetFor(project, deps, id), id, declared, shownName, deps)
-            : undefined;
+    const checked = await undeployAndCheck(project, id, state, deps);
     const runtimeCleanup = checked?.cleanup;
 
-    // Leftovers Runtime would not delete, or a namespace that could not be checked: keep
-    // the card, the folder and the workspace, so nothing is orphaned and Remove again
-    // picks up from here (owner, 2026-09-26: a complete cleanup, whatever it takes).
-    const kept = await keepForRetry(project, state, checked, options, deps);
+    const kept = await keepOrLetWorkspaceTake(project, id, [id, ...systems], checked, options, deps);
     if (kept) return kept;
 
     // A missing instance (a folder removed by hand, a half-finished add) must not
@@ -1411,38 +1385,112 @@ export async function removeAppBuilderComponent(
     // asked of the project as it now stands. A bound pair shares one, and removing a
     // pair goes through the integration and takes its systems with it — so the shared
     // workspace is released exactly once, when the last holder is gone.
-    for (const workspace of workspacesToRelease(heldWorkspaces, cleared)) {
-        deps.onProgress?.(OPERATION_STAGES.removingWorkspace.label);
-        const failure = await deps.deleteComponentWorkspace(cleared, workspace);
-        if (failure) {
-            deps.logger.warn(
-                `[AppBuilderComponent Runner] workspace ${workspace.name} was left behind: ` +
-                    failure.error,
-            );
-        }
+    const released = await releaseWorkspaces(cleared, workspacesToRelease(heldWorkspaces, cleared), {
+        ...deps,
+        progressLabel: OPERATION_STAGES.removingWorkspace.label,
+    });
+    await tidyAfterClear(project, cleared, removedEntry, provided, deps);
+
+    const after = await removeBoundSystemsAfter(cleared, project, id, systems, deps, options);
+    return {
+        ...removalResult(mergeCleanup(runtimeCleanup, after.runtimeCleanup), cleanup.commerceDetach, [
+            ...leftBehind(cleanup),
+            ...released.warnings,
+            ...after.warnings,
+        ]),
+        ...withDeleted([...released.deleted, ...after.workspacesDeleted]),
+    };
+}
+
+/**
+ * Undeploy a component and check what Runtime kept. The declared inventory is read BEFORE
+ * the undeploy and the local delete — afterwards the config files it attributes by are
+ * gone. Trust nothing: `aio app undeploy` exits 0 with packages still deployed (AB-7,
+ * measured live). Meshes verify through their own status flow, so they answer undefined.
+ */
+async function undeployAndCheck(
+    project: Project,
+    id: string,
+    state: AppBuilderComponentState,
+    deps: AppBuilderComponentRunnerDeps,
+): Promise<Awaited<ReturnType<typeof checkRuntimeLeftovers>> | undefined> {
+    const componentPath = project.componentInstances?.[id]?.path;
+    const app = state.kind !== 'mesh';
+    const declared = app && componentPath ? await readDeclaredRuntime(componentPath) : NO_DECLARED_RUNTIME;
+    const shownName = shownNameOf(project, id, state);
+    deps.onProgress?.(OPERATION_STAGES.removing.label, `Undeploying ${shownName}`);
+    try {
+        await teardownRemote(targetFor(project, deps, id), componentPath, state.kind, deps);
+    } catch (error) {
+        deps.logger.warn(`[AppBuilderComponent Runner] remote teardown warning: ${toError(error).message}`);
     }
-    // The screen key goes with the component: nothing reads it again, and a
-    // secret left in SecretStorage is one nobody owns.
+    if (!app) return undefined;
+    deps.onProgress?.(OPERATION_STAGES.checkingLeftovers.label);
+    return checkRuntimeLeftovers(targetFor(project, deps, id), id, declared, shownName, deps);
+}
+
+const NO_DECLARED_RUNTIME: DeclaredRuntime = { packages: [], triggers: [], rules: [] };
+
+/** The name a person reads for a component: its own, else its instance's, else its id. */
+function shownNameOf(project: Project, id: string, state: AppBuilderComponentState): string {
+    return state.name ?? project.componentInstances?.[id]?.name ?? id;
+}
+
+/**
+ * The storefront config reads ONE provided var; a component providing only to other
+ * components (the ERP) earns no republish on its way out.
+ */
+function providesStorefrontVar(state: AppBuilderComponentState): boolean {
+    return Boolean(state.providesEnvVars && STOREFRONT_PROVIDED_VAR in state.providesEnvVars);
+}
+
+/**
+ * A clean-up before the undeploy that did not finish stops the removal, with nothing
+ * undeployed, unless the SC chose to remove anyway; the reason is saved on the record.
+ */
+async function stopIfUnfinished(
+    project: Project,
+    state: AppBuilderComponentState,
+    cleanup: CleanupOutcome,
+    options: RemoveOptions,
+    deps: AppBuilderComponentRunnerDeps,
+): Promise<RunnerResult | undefined> {
+    if (cleanup.unfinished.length === 0 || options.force) return undefined;
+    const stopped = removalStopped(cleanup.unfinished);
+    state.removalStopped = stopped.error;
+    await deps.saveProject(project);
+    return stopped;
+}
+
+/** What an app declares in Runtime; an unreadable file declares nothing of its kind. */
+async function readDeclaredRuntime(componentPath: string): Promise<DeclaredRuntime> {
+    const [packages, timersAndRules] = await Promise.all([
+        listDeclaredPackageNames(componentPath).catch(() => []),
+        listDeclaredTriggersAndRules(componentPath).catch(() => ({ triggers: [], rules: [] })),
+    ]);
+    return { packages, ...timersAndRules };
+}
+
+/**
+ * After the records are cleared: the screen key goes with the component (nothing reads it
+ * again, and a secret left in SecretStorage is one nobody owns); the AI bundle drops what
+ * it no longer needs (remove the last App Builder component and its skills used to stay
+ * forever); and a component that provided the storefront's var earns a republish.
+ */
+async function tidyAfterClear(
+    project: Project,
+    cleared: Project,
+    removedEntry: AppBuilderComponentCatalogEntry | undefined,
+    provided: boolean,
+    deps: AppBuilderComponentRunnerDeps,
+): Promise<void> {
     if (removedEntry && deps.forgetScreenKey) {
         await deps.forgetScreenKey(project, removedEntry);
     }
-    // The inverse of the add, and it has always been broken the same way:
-    // remove the last App Builder component and its skills stayed forever.
     await refreshBundleQuietly(cleared, deps, 'remove');
-
     if (provided) {
-        await deps.republishStorefront({
-            project: cleared,
-            secrets: deps.secrets,
-            logger: deps.logger,
-        });
+        await deps.republishStorefront({ project: cleared, secrets: deps.secrets, logger: deps.logger });
     }
-
-    const after = await removeBoundSystemsAfter(cleared, project, id, systems, deps, options);
-    return removalResult(mergeCleanup(runtimeCleanup, after.runtimeCleanup), cleanup.commerceDetach, [
-        ...leftBehind(cleanup),
-        ...after.warnings,
-    ]);
 }
 
 /** How a removal treats a clean-up that did not finish. */
@@ -1470,6 +1518,29 @@ function cleanUpUnlessDone(
 ): Promise<CleanupOutcome> {
     if (options.cleanedUp || state.removalCleanedUp) return Promise.resolve(NOTHING_UNFINISHED);
     return cleanUpPair(project, id, state, systems, deps);
+}
+
+/**
+ * Leftovers Runtime would not delete, or a namespace that could not be checked: a workspace
+ * of the component's own takes them with it when the removal deletes it (owner, 2026-09-27),
+ * and the summary says which. Anywhere else the removal stops and keeps the card, the folder
+ * and the workspace, so nothing is orphaned and Remove again picks up there (2026-09-26).
+ */
+async function keepOrLetWorkspaceTake(
+    project: Project,
+    id: string,
+    removing: string[],
+    checked: Awaited<ReturnType<typeof checkRuntimeLeftovers>> | undefined,
+    options: RemoveOptions,
+    deps: AppBuilderComponentRunnerDeps,
+): Promise<RunnerResult | undefined> {
+    const state = project.appBuilderComponents?.[id];
+    const own = state && workspaceTakesLeftovers(project, id, removing) ? state.workspace : undefined;
+    if (!own || !checked?.stopped) {
+        return state ? keepForRetry(project, state, checked, options, deps) : undefined;
+    }
+    checked.cleanup.goneWithWorkspace = own.title ?? own.name;
+    return undefined;
 }
 
 /**
@@ -1595,6 +1666,11 @@ function withoutComponent(project: Project, id: string, state: AppBuilderCompone
     return cleared;
 }
 
+/** The deleted workspaces as a result field, only when there are any. */
+function withDeleted(names: string[]): Pick<RunnerResult, 'workspacesDeleted'> {
+    return names.length > 0 ? { workspacesDeleted: names } : {};
+}
+
 /** A finished removal's result, carrying only what it has to say. */
 function removalResult(
     runtimeCleanup: RuntimeCleanupSummary | undefined,
@@ -1625,8 +1701,9 @@ async function removeBoundSystemsAfter(
     systems: string[],
     deps: AppBuilderComponentRunnerDeps,
     options: RemoveOptions,
-): Promise<{ warnings: string[]; runtimeCleanup?: RuntimeCleanupSummary }> {
+): Promise<{ warnings: string[]; runtimeCleanup?: RuntimeCleanupSummary; workspacesDeleted: string[] }> {
     const warnings: string[] = [];
+    const workspacesDeleted: string[] = [];
     let runtimeCleanup: RuntimeCleanupSummary | undefined;
     for (const systemId of systems) {
         const name = cleared.appBuilderComponents?.[systemId]?.name ?? systemId;
@@ -1644,9 +1721,10 @@ async function removeBoundSystemsAfter(
             warnings.push(`${name} was not removed: ${result.error}. Remove it from its card.`);
         }
         warnings.push(...(result.warnings ?? []));
+        workspacesDeleted.push(...(result.workspacesDeleted ?? []));
         runtimeCleanup = mergeCleanup(runtimeCleanup, result.runtimeCleanup);
     }
     // The caller's reference follows the later removals too.
     caller.appBuilderComponents = cleared.appBuilderComponents;
-    return { warnings, runtimeCleanup };
+    return { warnings, runtimeCleanup, workspacesDeleted };
 }

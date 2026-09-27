@@ -53,6 +53,11 @@ export interface RuntimeCleanupSummary {
     /** Leftovers still deployed after every attempt to delete them — these are STILL RUNNING. */
     failed: string[];
     note?: string;
+    /**
+     * The workspace whose deletion takes what is in `failed` (or what could not be checked)
+     * with it, when the removal deleted a workspace of its own (`componentWorkspaceRelease.ts`).
+     */
+    goneWithWorkspace?: string;
 }
 
 /** What the check needs: the namespace runner, and optionally progress and the pause. */

@@ -29,9 +29,11 @@
  */
 
 import { catalogEntryFor, pairedEntry } from './componentEntry';
+import type { RuntimeNamespaceEnv } from './runtimeNamespace';
 import { pairedInstanceId } from '@/features/components/services/appBuilderComponentLinks';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState, Project } from '@/types/base';
+import type { Logger } from '@/types/logger';
 
 /**
  * What this needs from Adobe: make a workspace in the project's Console project.
@@ -251,4 +253,91 @@ async function record(
         [entry.id]: { ...(current ?? fresh), workspace },
     };
     await saveProject(project);
+}
+
+// ─── Releasing a removal's workspaces (owner, 2026-09-27) ───────────────────────────────
+//
+// A removal no longer stops on leftovers in a workspace of the component's own: deleting the
+// workspace takes them with it, about 11 minutes later (measured on Bodea, 2026-09-27; the
+// key read and watch that confirm it are in `componentWorkspaceRelease.ts`). It still stops
+// when the workspace is shared with something that stays, since that workspace is not deleted.
+
+/** A component's own workspace, as its record holds it. */
+type Workspace = NonNullable<AppBuilderComponentState['workspace']>;
+
+/**
+ * Whether deleting the workspace `id` deploys into will take its Runtime leftovers with it:
+ * it has a workspace of its own, and nothing outside `removing` (this removal's
+ * components) uses it. The project's own workspace is never deleted, so a component living
+ * there answers false.
+ */
+export function workspaceTakesLeftovers(project: Project, id: string, removing: string[]): boolean {
+    const own = project.appBuilderComponents?.[id]?.workspace?.id;
+    if (!own) return false;
+    return !Object.entries(project.appBuilderComponents ?? {}).some(
+        ([other, state]) => !removing.includes(other) && state.workspace?.id === own,
+    );
+}
+
+/** What releasing needs: the delete, and the key read and watch when wired. */
+export interface WorkspaceReleaseDeps {
+    deleteComponentWorkspace: (
+        project: Project,
+        workspace: Workspace
+    ) => Promise<{ error: string } | undefined>;
+    /** The workspace's Runtime key, read before it is deleted; undefined when it cannot be read. */
+    namespaceKeyOf?: (
+        project: Project,
+        workspace: Workspace
+    ) => Promise<RuntimeNamespaceEnv | undefined>;
+    /** Confirm, in the background, that a deleted workspace's namespace is gone. */
+    watchNamespaceRemoval?: (key: RuntimeNamespaceEnv, label: string) => void;
+    onProgress?: (message: string, subMessage?: string) => void;
+    progressLabel: string;
+    logger: Logger;
+}
+
+/** The workspaces deleted, by the name a person reads, and what could not be. */
+export interface WorkspaceRelease {
+    deleted: string[];
+    warnings: string[];
+}
+
+/** Delete each workspace; each deleted one's namespace is then watched until it is gone. */
+export async function releaseWorkspaces(
+    project: Project,
+    workspaces: Workspace[],
+    deps: WorkspaceReleaseDeps,
+): Promise<WorkspaceRelease> {
+    const release: WorkspaceRelease = { deleted: [], warnings: [] };
+    for (const workspace of workspaces) {
+        const label = workspace.title ?? workspace.name;
+        deps.onProgress?.(deps.progressLabel);
+
+        const key = await deps.namespaceKeyOf?.(project, workspace).catch(() => undefined);
+
+        const failure = await deps.deleteComponentWorkspace(project, workspace);
+        if (failure) {
+            deps.logger.warn(
+                `[AppBuilderComponent Runner] workspace ${workspace.name} was left behind: ` +
+                    failure.error,
+            );
+            release.warnings.push(
+                `The ${label} workspace could not be deleted, so anything still deployed ` +
+                    `in it keeps running: ` +
+                    `${failure.error}`,
+            );
+            continue;
+        }
+        release.deleted.push(label);
+        if (key && deps.watchNamespaceRemoval) {
+            deps.watchNamespaceRemoval(key, label);
+        } else {
+            deps.logger.warn(
+                `[AppBuilderComponent Runner] ${label}: its Runtime key could not be read, ` +
+                    'so its removal is not confirmed',
+            );
+        }
+    }
+    return release;
 }

@@ -34,6 +34,7 @@ import { uninstallAppManagementApp } from '@/features/app-builder/services/appMa
 import { readAppManifestVersion } from '@/features/app-builder/services/appManifestVersion';
 import { resolveSecretDeployEnv } from '@/features/app-builder/services/componentSettingSecrets';
 import { deployWorkspaceId, ensureComponentWorkspace } from '@/features/app-builder/services/componentWorkspace';
+import { buildWorkspaceReleaseDeps } from '@/features/app-builder/services/componentWorkspaceRelease';
 import { deployAppComponentIsolated } from '@/features/app-builder/services/deployAppIsolated';
 import { displayNameInProject } from '@/features/app-builder/services/deployInputs';
 import { subscriberTarget } from '@/features/app-builder/services/ensureMeshApiSubscribed';
@@ -165,10 +166,9 @@ export function buildDefaultRunnerDeps(
         catalog: ctx.catalog,
         secrets: ctx.secrets,
         deployMesh: deployMeshComponent,
-        // The staleness baseline the headless path gets from updateMeshState.
-        // Both helpers already swallow their own I/O errors (missing .env → {},
-        // unreadable source → null), so a capture failure degrades staleness
-        // detection rather than failing a deploy that already succeeded.
+        // The staleness baseline the headless path gets from updateMeshState. Both helpers
+        // swallow their own I/O errors (missing .env → {}, unreadable source → null), so a
+        // capture failure degrades staleness detection rather than failing a deployed deploy.
         captureMeshBaseline: async (componentPath) => ({
             envVars: await readMeshEnvVarsFromFile(componentPath),
             sourceHash: await calculateMeshSourceHash(componentPath),
@@ -268,6 +268,7 @@ export function buildDefaultRunnerDeps(
                 catalog: ctx.catalog,
             }),
         deleteUndeclaredActions: (componentPaths) => deleteUndeclaredActions(ctx, componentPaths),
+        ...buildWorkspaceReleaseDeps(ctx, (message) => void vscode.window.showWarningMessage(message)),
         deleteComponentWorkspace: async (project, workspace) => {
             const result = await ctx.authManager.deleteWorkspace(workspace.id, {
                 orgId: project.adobe?.organization,
@@ -294,11 +295,10 @@ export function buildDefaultRunnerDeps(
                 subscriberTarget(project, forComponent),
                 ctx.subscriberClient,
                 deriveAllowedDomain(project),
-                // Runtime-added APIs (add_console_apis) must ride every reconcile.
-                // Narrowed to THIS component when one component is being
-                // subscribed, because it may hold a workspace of its own and the
-                // project's union would entitle that credential to APIs belonging
-                // to integrations living elsewhere.
+                // Runtime-added APIs (add_console_apis) must ride every reconcile. Narrowed
+                // to THIS component when one is being subscribed: it may hold a workspace of
+                // its own, and the project's union would entitle that credential to APIs
+                // belonging to integrations living elsewhere.
                 resolveDesiredApis(project, forComponent),
                 undefined,
                 [],

@@ -728,6 +728,8 @@ export type GuardableResult = {
      * or an add's/deploy's storefront republish whose CDN publish did not land.
      */
     warnings?: string[];
+    /** Set by `removeAppBuilderComponent`: the Adobe workspaces it deleted. */
+    workspacesDeleted?: string[];
 };
 
 /**
@@ -1005,6 +1007,7 @@ async function reportRemoveOutcome(
         {
             ...(cleanup ? { runtimeCleanup: cleanup } : {}),
             ...(commerceDetach ? { commerceDetach } : {}),
+            ...workspaceNote(result.workspacesDeleted),
         },
         [
             runtimeWarning(displayName, cleanup),
@@ -1038,11 +1041,32 @@ export const handleRemoveAppBuilderComponent: MessageHandler<{
     (payload) => payload?.id,
 );
 
+/**
+ * What a removal says about the workspaces it deleted: Adobe deletes a workspace's Runtime
+ * space about 11 minutes after the workspace (measured 2026-09-27), and a background check
+ * confirms it.
+ */
+function workspaceNote(deleted: string[] | undefined): { workspaces?: string } {
+    if (!deleted || deleted.length === 0) return {};
+    return {
+        workspaces:
+            `Deleted the ${deleted.join(' and ')} workspace${deleted.length > 1 ? 's' : ''}. ` +
+            'Adobe finishes deleting its Runtime space in about 10 minutes; Demo Builder checks, and says so if it does not.',
+    };
+}
+
 /** The unfinished Runtime cleanup, said out loud (AB-7), or undefined. */
 function runtimeWarning(displayName: string, cleanup: RuntimeCleanupSummary | undefined): string | undefined {
     const stillRunning = cleanup?.failed ?? [];
     if (!cleanup || (stillRunning.length === 0 && cleanup.verified)) {
         return undefined;
+    }
+    if (cleanup.goneWithWorkspace) {
+        const what = stillRunning.length > 0 ? `${stillRunning.length} item(s) Runtime would not delete` : 'what could not be checked';
+        return (
+            `${displayName} was removed. ${what} go with the ${cleanup.goneWithWorkspace} workspace, ` +
+            'which Adobe finishes deleting in about 10 minutes.'
+        );
     }
     const detail =
         stillRunning.length > 0
