@@ -46,8 +46,6 @@ export interface CommerceCompanyRow {
     name: string;
     blocked: boolean;
     creditLimit: number | null;
-    customerGroupId?: number;
-    email: string | null;
     legalAddress: LegalAddress | null;
     legalName: string | null;
     resellerId: string | null;
@@ -96,21 +94,21 @@ export interface ErpProductRow {
     variantAttributes?: Array<{ label: string; value: string }>;
 }
 
-/** A business partner as the ERP imports it (`partners`); the id is `C<company id>`. */
+/**
+ * A business partner as the ERP imports it (`partners`); the id is `C<company id>`. It carries
+ * no Commerce id: the ERP holds none (contract version 3), and the integration's key map says
+ * which Commerce company each customer is.
+ */
 export interface ErpPartnerRow {
     id: string;
     name: string;
     blocked: boolean;
-    commerceCompanyId: string;
     creditLimit?: number;
-    customerGroupId?: string;
-    emailDomain?: string;
     legalAddress: LegalAddress | null;
     legalName: string | null;
     resellerId: string | null;
     salesOrgs: string[];
     vatTaxId: string | null;
-    website: { code: string; id: number } | null;
 }
 
 /** The structure block (`structure`): each website and the sales organisation that sells through it. */
@@ -249,10 +247,7 @@ export function partnersFrom(
         const site = c.websiteId === null ? undefined : siteById.get(c.websiteId);
         return {
             blocked: c.blocked,
-            commerceCompanyId: String(c.id),
             creditLimit: c.creditLimit ?? undefined,
-            customerGroupId: c.customerGroupId === undefined ? undefined : String(c.customerGroupId),
-            emailDomain: c.email?.includes('@') ? c.email.split('@')[1].toLowerCase() : undefined,
             id: `C${c.id}`,
             legalAddress: c.legalAddress,
             legalName: c.legalName,
@@ -260,7 +255,6 @@ export function partnersFrom(
             resellerId: c.resellerId,
             salesOrgs: site ? [salesOrgByWebsite.get(site.id) ?? DEFAULT_SALES_ORG] : [],
             vatTaxId: c.vatTaxId,
-            website: site ? { code: site.code, id: site.id } : null,
         };
     });
 }

@@ -144,7 +144,10 @@ export async function fillErp(deps: ErpFillDeps, projectName: string): Promise<E
         deps.onProgress?.(`Sent ${done} of ${products.length} products`);
     }
     // Last, so the map never names a customer the ERP does not hold yet.
-    const keyMap = partners.map((p): ErpKeyMapEntry => ({ kind: 'customer', commerce: p.commerceCompanyId, erp: p.id }));
+    // Paired from the companies: the rows the ERP takes carry no Commerce id.
+    const keyMap = read.companies.map(
+        (company, index): ErpKeyMapEntry => ({ kind: 'customer', commerce: String(company.id), erp: partners[index].id }),
+    );
     const kept = await deps.saveKeyMap(keyMap);
     if (!kept) deps.onProgress?.('The integration keeps no key map yet; update it to have one');
     const skipped = read.products.length - owned.length;

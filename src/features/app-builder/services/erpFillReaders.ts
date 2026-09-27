@@ -148,8 +148,6 @@ interface RawCompany {
     id: number;
     company_name: string;
     status?: number | string;
-    customer_group_id?: number;
-    company_email?: string;
     legal_name?: string;
     reseller_id?: string;
     vat_tax_id?: string;
@@ -194,8 +192,6 @@ async function companyRow(get: CommerceGet, c: RawCompany): Promise<CommerceComp
     return {
         blocked: Number(c.status) === COMPANY_BLOCKED,
         creditLimit: credit ? Number(credit.credit_limit ?? 0) : null,
-        customerGroupId: c.customer_group_id,
-        email: c.company_email ?? null,
         id: c.id,
         legalAddress: legalAddressOf(c),
         legalName: c.legal_name ?? null,

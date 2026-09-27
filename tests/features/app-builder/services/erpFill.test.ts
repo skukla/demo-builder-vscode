@@ -91,9 +91,11 @@ describe('fillErp', () => {
 
         const partners = d.sent[0].partners ?? [];
         expect(d.saveKeyMap).toHaveBeenCalledTimes(1);
+        // Paired from the companies themselves: the rows the ERP takes carry no Commerce id.
         expect(d.saveKeyMap).toHaveBeenCalledWith(
-            partners.map((p) => ({ kind: 'customer', commerce: p.commerceCompanyId, erp: p.id })),
+            partners.map((p) => ({ kind: 'customer', commerce: p.id.slice(1), erp: p.id })),
         );
+        expect(d.saveKeyMap.mock.calls[0][0]).toContainEqual({ kind: 'customer', commerce: '21', erp: 'C21' });
         const lastImport = Math.max(...d.importRecords.mock.invocationCallOrder);
         expect(d.saveKeyMap.mock.invocationCallOrder[0]).toBeGreaterThan(lastImport);
     });
@@ -112,15 +114,13 @@ describe('fillErp', () => {
         await fillErp(d, 'bodea');
         const partners = d.sent[0].partners ?? [];
         const example = partners.find((p) => p.id === 'C21');
-        expect(example).toMatchObject({
-            commerceCompanyId: '21',
-            creditLimit: 120_000,
-            customerGroupId: '19',
-            salesOrgs: ['US01'],
-            website: { code: 'bodea', id: 3 },
-        });
+        expect(example).toMatchObject({ creditLimit: 120_000, salesOrgs: ['US01'] });
+        // The ERP holds no Commerce id (contract version 3); the integration's key map pairs them.
+        for (const key of ['commerceCompanyId', 'customerGroupId', 'emailDomain', 'website']) {
+            expect(example).not.toHaveProperty(key);
+        }
         // Altura's admin is not among the captures, so its website is unknown.
-        expect(partners.find((p) => p.id === 'C18')).toMatchObject({ salesOrgs: [], website: null, creditLimit: undefined });
+        expect(partners.find((p) => p.id === 'C18')).toMatchObject({ salesOrgs: [], creditLimit: undefined });
     });
 
     it('names every website in the structure with the sales organisation its settings give, else 1000', async () => {

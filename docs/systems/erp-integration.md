@@ -129,7 +129,10 @@ then the ERP's `admin/wipe`, then the fill), and as `load_erp_demo_data`. Becaus
 the extension, it has no one-minute web-request limit. Last, it hands the integration its key map
 (`PUT erp/keymap`: which Commerce company is which ERP customer), the way a key map is loaded
 at a go-live; an integration deployed before it had `erp/keymap` is filled without one, and
-the progress says so. Measured on Bodea: 4 customers and
+the progress says so. The ERP itself holds no Commerce id (its contract version 3): the customers
+the fill sends carry no Commerce company id, customer group, email domain or website, and
+orders and cart prices name the customer only by the ERP number the integration finds in the
+key map. Measured on Bodea: 4 customers and
 182 products in 2m15s, the same records the integration's mirror produced.
 
 The integration's own copy (`erp/mirror`, its worker `erp/mirror-job`, and the **Sync
