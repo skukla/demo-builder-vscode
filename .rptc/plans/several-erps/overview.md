@@ -134,7 +134,7 @@ that creates something ships its removal (the cleanup rule).
 | Phase | Step | State |
 |---|---|---|
 | A | A1 live proofs | done 2026-09-27 on Bodea except a non-default source (waits on a second source, now a setup step); found and fixed the 64-bit document numbers (demo-erp 071ae6b, 6d2c504) and the skipped first sync (281f5275b) |
-| A | A2 API inventory, live half | every call proven live by A1; the responses are not yet captured as fixtures under `test/fixtures/commerce/` |
+| A | A2 API inventory, live half | done 2026-09-27: 15 live answers captured and run through the real readers; full ERP contract shapes dropped for the journeys' checkout check; event payloads not capturable from Runtime |
 | A | A3 filling by Demo Builder | steps 1a and 1e built; plan written; 3 owner questions |
 | A | A4 shared catalogs and contracts | filed with measurements; Kukla Studios' catalog set up by hand as the model |
 | A | A5 sync validation baseline | D7 and D8 built; journeys not yet written |
