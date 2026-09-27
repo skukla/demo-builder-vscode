@@ -52,6 +52,8 @@ jest.mock('@adobe/react-spectrum', () => ({
         gap: _g,
         alignItems: _a,
         justifyContent: _j,
+        // SteadyHeight's floor (the setup guide renders one): a Spectrum prop, not a DOM one.
+        minHeight: _mh,
         ...props
     }: any) => (
         <div className={UNSAFE_className} {...props}>

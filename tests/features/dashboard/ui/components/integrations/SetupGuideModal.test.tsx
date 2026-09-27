@@ -13,6 +13,7 @@ import '@testing-library/jest-dom';
 
 jest.mock('@adobe/react-spectrum', () => ({
     DialogContainer: ({ children }: any) => <div data-testid="dialog-container">{children}</div>,
+    Flex: ({ children }: any) => <div>{children}</div>,
     Heading: ({ children }: any) => <h3>{children}</h3>,
     Link: ({ children, onPress, isQuiet: _quiet, ...props }: any) => (
         <span role="link" tabIndex={0} onClick={onPress} {...props}>

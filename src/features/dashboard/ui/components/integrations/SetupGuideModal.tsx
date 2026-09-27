@@ -8,7 +8,7 @@
  * (owner, 2026-09-27: the full list in the flyout read badly).
  *
  * Built on the house `Modal` (inside the `DialogContainer` it expects, as the Settings modal
- * is) and `StatusDot`; the step's requests are the existing `useSetupChecklist`. The steps
+ * is), `SteadyHeight` (steps differ in length) and `StatusDot`; the step's requests are the existing `useSetupChecklist`. The steps
  * come from the card model, which the extension's snapshot push redraws after each change,
  * so the modal is handed the CURRENT model on every render rather than keeping a copy.
  *
@@ -19,6 +19,7 @@ import { DialogContainer, Heading, Link, Text } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useState } from 'react';
 import type { IntegrationCardModel } from './integrationCardModel';
 import { useSetupChecklist } from './useSetupChecklist';
+import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
@@ -110,17 +111,21 @@ function Guide({ model, onClose, onOpenAdmin }: SetupGuideModalProps & { model: 
                 { ...forward, variant: 'accent' },
             ]}
         >
-            {item && (
-                <GuideStep
+            {/* Steps differ in length; the dialog holds its tallest height rather than
+                jumping as the SC pages through them. */}
+            <SteadyHeight>
+                {item && (
+                    <GuideStep
                     item={item}
                     position={`Step ${index + 1} of ${items.length}`}
                     busy={actions.busy}
                     onSet={(state) => actions.setStep(item.id, state)}
                     onCheck={actions.check}
                     onOpenAdmin={onOpenAdmin}
-                />
-            )}
-            {actions.error && <span role="alert">{actions.error}</span>}
+                    />
+                )}
+                {actions.error && <span role="alert">{actions.error}</span>}
+            </SteadyHeight>
         </Modal>
     );
 }

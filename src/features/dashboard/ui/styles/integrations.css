@@ -81,4 +81,24 @@
     top: 8px;
     right: 8px;
 }
+
+/* The demo setup guide's step (SetupGuideModal): state, title, why, where, actions — each
+   its own paragraph, with room between them, since the SC reads one step at a time. */
+.setup-guide-step {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.setup-guide-where {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.setup-guide-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+}
 }
