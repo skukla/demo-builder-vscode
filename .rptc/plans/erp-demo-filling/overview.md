@@ -68,3 +68,53 @@ fixed name) are built: demo-erp be9879b, 1554681; this repo b8219846e.
 Also noted: without the minute refresh, a company created in Commerce during a demo reaches the
 ERP only if the integration subscribes to a company event; whether it does today is to check in
 step 2 (if not, it arrives at the next reset).
+
+## Progress (2026-09-27)
+
+Steps 1 to 3 are built on the loop branches, not deployed: Demo Builder fills the ERP at add,
+at Reset records and from Load demo data (this repo `bef6b4fff`, `6670494a9`); the integration's
+copy is gone (commerce-erp-integration `4eaf6ac`, contract `4649ef0`); the ERP's Sync records
+and sync record are gone (demo-erp `ef7727b`). Question 2 was answered by building it: reset is
+Demo Builder's (detach, then the ERP's wipe, then the fill). Questions 1 and 3 are still open.
+Still missing from step 1: the key map below.
+
+## Design: the key map (step 1's second half; step 5 depends on it)
+
+**Read 2026-09-27.** The pairing is implicit today. The ERP stores Commerce's ids on its own
+customer (`commerceCompanyId`, `customerGroupId`, `emailDomain`, demo-erp `lib/partners.js`),
+and `findPartner` matches an order by those, in that order. The integration sends
+`commerceCompanyId` on each order (`lib/order-sync.js` `erpOrderFrom`) and the group and email
+on a cart price request (`lib/webhook.js` `partnerHints`). The ERP's own credit and block events
+carry `companyId: current.commerceCompanyId`, so the ERP speaks Commerce's ids outward too.
+Products pair by SKU on both sides.
+
+**What it is.** A record the integration keeps: one row per paired record,
+`{ kind: 'customer', commerce: '12', erp: 'C000102' }`. Not a setting (nobody types it) and not
+ERP data (the ERP must not know Commerce's ids). It lives in the integration's App Builder
+database, beside the write ledger it already keeps, and is shown read-only on the Admin page.
+
+**Who writes it.**
+- Demo Builder, at the end of every fill: a new integration web action `erp/keymap`
+  (`PUT` replaces the whole map, `GET` reads it). This is a go-live key-map load, which is real
+  integration work, so it belongs in the hand-off code.
+- The integration itself, when the company event creates a customer the map lacks: it creates
+  the ERP customer and records the number the ERP answers.
+
+**Who reads it.** The order sender and the cart price webhook look up the ERP customer number
+and send only that. The ERP's credit and block events then carry the ERP number, and the
+integration maps it back to the Commerce company. After that, step 5 can drop Commerce's ids
+from the ERP customer.
+
+**Rejected.** Keeping the id derivable (`C` + company id) needs no map, but it is Commerce's id
+in disguise, and it breaks when the ERP numbers customers itself. Storing the map in the ERP is
+the ERP knowing Commerce, which the model rules out.
+
+**Products stay paired by SKU** (recommended): the SKU is the ERP's material number in this
+demo, as it often is at a real go-live, and a product map would add a table with nothing to
+say. Worth one line from the owner.
+
+**Order of work.** (a) the integration's map store, `erp/keymap` and its tests; (b) Demo
+Builder writes it after the fill, and the fill reads back the ERP's customer numbers from the
+import answer; (c) the order sender and price webhook send the ERP number; (d) the ERP's events
+carry its own number; (e) step 5 removes Commerce's ids from the ERP. Each is its own commit set;
+(c) and (d) change the contract, so they bump its version together.
