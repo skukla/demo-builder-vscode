@@ -11,16 +11,16 @@ evidence and what is built; this document says what is left and in what order.
 
 | When | Decision |
 |---|---|
-| 2026-09-24 | ~~**One integration, several ERPs.**~~ *Superseded 2026-09-26 by one integration per ERP (below).* The ERP integration serves one or more ERP targets; routing lives inside it and passes every order straight through when there is one target. The mock ERPs stay separate systems, each in its own workspace with its own screen and look (O8). Shaped as the customer would build it. |
+| 2026-09-24 | **One integration, several ERPs** (owner; restated 2026-09-27). The ERP integration serves one or more ERP targets; routing lives inside it and passes every order straight through when there is one target. The mock ERPs stay separate systems, each in its own workspace with its own screen and look (O8). Shaped as the customer would build it. |
 | 2026-09-24 | **Ownership by product attribute** (S1): an attribute in Commerce names the owning ERP; the story says a PIM would write it. Inventory sources stay the alternative. |
-| 2026-09-24 | ~~**Only the routing consumer subscribes to Commerce's order event** (Q2).~~ *Superseded 2026-09-26: no router; each integration takes only its own lines.* |
+| 2026-09-24 | **Only the routing consumer subscribes to Commerce's order event** (Q2). Owner: routing is "a consumer action that then routes to the specific ERP's runtime actions and events in the integration", and the customer would not use "a completely separate workspace/integration for the routing piece". |
 | 2026-09-24 | **ERP order numbers in custom order attributes**, one per ERP (`erp_<name>_number`), symmetric; `ext_order_id` keeps the prefixed number of the ERP that took the order (Q-num, to validate live). |
 | 2026-09-26 | **Freeze ERP feature growth after contracts.** Contracts ([[AB-26z]]) are the last new ERP feature before several ERPs. |
 | 2026-09-26 | **Every ERP is a copy of the same baseline code**, so every ERP has the same feature set. There is one `demo-erp` codebase and one integration codebase; a second ERP is the same code deployed again with its own name, look and data. |
 | 2026-09-26 | **Finish first what several ERPs multiply**, such as filling at reset. |
 | 2026-09-26 | **Research how website scope works in the Admin page** (the Mapping tab's scope list shows no websites). |
 | 2026-09-26 | **Cleanup is complete or it keeps what names the leftovers** (removal retries, then stops and keeps the record, folder and workspace). See §8 for a correction on workspace deletion. |
-| 2026-09-26 | **One integration PER ERP, superseding the 2026-09-24 "one integration, several ERPs".** Each ERP comes with its own integration, its own Admin settings and its own Commerce app; every pair runs the same baseline code. Adding the ERP tile again adds the second pair (what AB-23 and AB-15 already built). No target list, no router: each integration sends only the order lines its ERP owns. At most two ERPs in a demo. |
+| 2026-09-26 | ~~**One integration PER ERP**~~ **WITHDRAWN 2026-09-27: never the owner's decision.** It was the loop's recommendation after the owner wrote "each ERP would have its own separate integration" and "each integrated system should have its own admin settings"; the owner's reply agreed to other points and never confirmed it. The owner restated on 2026-09-27: "The intention was always to have a routing action as part of the single multi ERP integration." How "its own admin settings" fits one integration is an open question (§8). Phase B below still describes the withdrawn model and is to be rewritten. Withdrawn text: Each ERP comes with its own integration, its own Admin settings and its own Commerce app; every pair runs the same baseline code. Adding the ERP tile again adds the second pair (what AB-23 and AB-15 already built). No target list, no router: each integration sends only the order lines its ERP owns. At most two ERPs in a demo. |
 | 2026-09-26 | **Settings and mapping are separate** on the integration's Admin page, and the page is heavily simplified (design in §5b). |
 | 2026-09-26 | Scope: settings are per website; the website list is read on every page open (no Refresh button); a sales organisation shows its name before its code; Wipe and the undo of Commerce writes move to Demo Builder; Demo Builder leaves the Mapping defaults unless a demo needs otherwise. |
 
@@ -70,7 +70,7 @@ After A4, no new ERP feature is started until Phase B lands. These wait, status 
 
 A fix to something built is not growth and is not frozen.
 
-## 5. Phase B: one integration per ERP (rewritten 2026-09-26)
+## 5. Phase B: one integration per ERP (rewritten 2026-09-26) — WITHDRAWN, to be rewritten around the routing action
 
 The first shape of this phase (one integration holding a list of ERPs, with a router) was
 dropped the same day in favour of what the owner asked for: each ERP with its own integration.
@@ -154,6 +154,8 @@ each ERP's own figures live in prefixed company custom attributes, edited from e
 integration's Credit section (B4).
 
 Still open:
+
+0. **Per-ERP settings inside the one integration** (2026-09-27). Recommendation: each ERP stays its own system (workspace, screen, look, data); the one integration holds the routing action and a settings section per ERP on its one Admin page, with a picker between ERPs.
 
 1. **The integration page design in §5b**, now that a preview exists.
 
