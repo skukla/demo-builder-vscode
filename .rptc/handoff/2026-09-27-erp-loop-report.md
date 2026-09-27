@@ -52,3 +52,24 @@ decided on 2026-09-25, so I can build it next unless you say otherwise.
    - test the Move stock page by hand;
    - the queued "Update attributes" job on Bodea that never ran;
    - capture event payloads during the live run.
+
+## Later the same day: the key map
+
+The integration now keeps a table of which Commerce company is which ERP customer. It is not
+deployed yet.
+
+- **Who fills it.** Demo Builder loads it after every fill. An integration too old to have the
+  table is filled without it, and the progress message says so, so Bodea keeps working.
+- **Who reads it.**
+  - Orders send the ERP customer number from it. A test proves this: it fails when the table
+    is not used.
+  - The ERP's credit-limit and block events find the Commerce company through it.
+  - A company saved in Commerce updates its paired ERP customer, or adds a new pair.
+  - The Admin page's company lookup reads through it.
+- **Tests.** The integration's 441 tests and Demo Builder's full gate pass.
+
+**Waiting on you: the cart price check.** Commerce's cart payload names only the customer
+group, not the company. So the check still relies on the ERP matching the buyer by group and
+email. Sending the ERP number would need one extra Commerce read on every cart update, in a
+check that breaks the cart when it fails. My recommendation is to read it once per customer
+and store it. Until this is settled, the ERP has to keep the Commerce ids it holds.
