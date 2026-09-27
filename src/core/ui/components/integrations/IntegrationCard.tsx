@@ -41,6 +41,7 @@ import React, { useCallback } from 'react';
 import { IntegrationActionsMenu } from './IntegrationActionsMenu';
 import type { CardAction, IntegrationCardModel } from './integrationCardModel.types';
 import { IntegrationStatusLabel } from './IntegrationStatusLabel';
+import { SetupStatus, setupStatusText } from './SetupStatus';
 import { InlineRenameField } from '@/core/ui/components/forms/InlineRenameField';
 import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
 
@@ -106,7 +107,7 @@ export function IntegrationCard({
     // whole announcement — the subline is not read as a fallback. A host with no
     // status leaves `statusLabel` empty, and joining it anyway announced
     // "ERP Sync, ": a dangling comma naming half a thing.
-    const label = model.statusLabel ? `${model.name}, ${model.statusLabel}` : model.name;
+    const label = [model.name, model.statusLabel, setupStatusText(model)].filter(Boolean).join(', ');
 
     // Only a card that can OPEN something claims to be a control. Without
     // `onOpen` the div carries no role, no tab stop and no handlers, so nothing
@@ -162,6 +163,8 @@ export function IntegrationCard({
                     <LinkedLine model={model} />
                 </div>
             )}
+            {/* Demo setup left to do (AB-26x): its own quiet line, only while steps are open. */}
+            <SetupStatus model={model} />
         </div>
     );
 }

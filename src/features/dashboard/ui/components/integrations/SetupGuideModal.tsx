@@ -137,10 +137,13 @@ function Guide({ model, onClose, onOpenAdmin }: SetupGuideModalProps & { model: 
  * @returns the dialog
  */
 export function SetupGuideModal({ model, onClose, onOpenAdmin }: SetupGuideModalProps): React.ReactElement {
-    const open = model !== null && (model.setupChecklist?.length ?? 0) > 0;
+    // Nothing mounted while closed, not an empty DialogContainer: the screen hosts this
+    // beside its own dialogs, and a container with no child still occupies the dialog
+    // slot (the OperationProgressModal rule, 2026-09-19).
+    if (!model || (model.setupChecklist?.length ?? 0) === 0) return <></>;
     return (
         <DialogContainer onDismiss={onClose}>
-            {open && model && <Guide key={model.id} model={model} onClose={onClose} onOpenAdmin={onOpenAdmin} />}
+            <Guide key={model.id} model={model} onClose={onClose} onOpenAdmin={onOpenAdmin} />
         </DialogContainer>
     );
 }
@@ -165,5 +168,29 @@ export function useSetupGuide(cards: IntegrationCardModel[]): SetupGuideControls
     return {
         open: setCardId,
         modal: { model: cards.find((card) => card.id === cardId) ?? null, onClose: close, onOpenAdmin: openAdmin },
+    };
+}
+
+/**
+ * What the progress modal offers when an operation on a card with setup still open succeeds:
+ * the steps left, and a way straight into the guide (AB-26x). Undefined otherwise.
+ *
+ * @param cards - the screen's cards
+ * @param operationId - the operation the progress modal shows (a component id), if any
+ * @param openGuide - opens a card's guide
+ */
+export function setupNextStep(
+    cards: IntegrationCardModel[],
+    operationId: string | undefined,
+    openGuide: (cardId: string) => void,
+): { message: string; action: string; onPress: () => void } | undefined {
+    if (!operationId) return undefined;
+    const card = cards.find((candidate) => (candidate.componentId ?? candidate.id) === operationId);
+    const open = (card?.setupChecklist ?? []).filter((item) => item.state === 'open').length;
+    if (!card || open === 0) return undefined;
+    return {
+        message: `Next: ${open} setup step${open > 1 ? 's' : ''} in Commerce for the demo.`,
+        action: 'Start setup guide',
+        onPress: () => openGuide(card.id),
     };
 }

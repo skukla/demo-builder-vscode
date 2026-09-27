@@ -20,6 +20,7 @@ import React, { useCallback } from 'react';
 import { IntegrationActionsMenu } from './IntegrationActionsMenu';
 import type { IntegrationCardProps } from './IntegrationCard';
 import { IntegrationStatusLabel } from './IntegrationStatusLabel';
+import { SetupStatus, setupStatusText } from './SetupStatus';
 import { InlineRenameField } from '@/core/ui/components/forms/InlineRenameField';
 import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
 
@@ -36,7 +37,7 @@ export function IntegrationRow({
     const handleKeyDown = useActivateOnKey(handleClick);
 
     // The whole announcement, as on the card: no dangling comma when there is no status.
-    const label = model.statusLabel ? `${model.name}, ${model.statusLabel}` : model.name;
+    const label = [model.name, model.statusLabel, setupStatusText(model)].filter(Boolean).join(', ');
 
     // Only a row that can OPEN something claims to be a control (the card's rule).
     const pressProps = onOpen
@@ -68,6 +69,7 @@ export function IntegrationRow({
                 {/* The kebab contains its own clicks; always visible in a row,
                     where there is no hover surface to reveal it from. */}
                 <IntegrationActionsMenu model={model} onAction={onAction} />
+                <SetupStatus model={model} />
                 <IntegrationStatusLabel model={model} />
                 <ChevronRight size="S" UNSAFE_className="integration-row-chevron" />
             </div>

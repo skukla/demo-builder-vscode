@@ -34,7 +34,6 @@ import { FlaggedCardDialogs, needsReinstall, removalStopped } from './FlaggedCar
 import { type CardAction, type IntegrationCardModel } from './integrationCardModel';
 import { IntegrationDetailPanel } from './IntegrationDetailPanel';
 import { requestRename } from './requestRename';
-import { SetupGuideModal, useSetupGuide } from './SetupGuideModal';
 import { useFlaggedCardDialog } from './useFlaggedCardDialog';
 import { useIntegrationSettings } from './useIntegrationSettings';
 import { IntegrationCard } from '@/core/ui/components/integrations/IntegrationCard';
@@ -69,6 +68,8 @@ export interface IntegrationsGridProps {
      * flow starts operations too, and both must open the same progress modal.
      */
     operations: ComponentOperationControls;
+    /** Opens a card's setup guide (AB-26x); the screen holds it, for its progress modal too. */
+    onOpenGuide?: (cardId: string) => void;
 }
 
 const NO_SETTINGS: Record<string, ComponentSettings> = {};
@@ -128,6 +129,7 @@ export function IntegrationsGrid({
     destinationLabel,
     componentSettings = NO_SETTINGS,
     operations,
+    onOpenGuide,
 }: IntegrationsGridProps): React.ReactElement {
     const settings = useIntegrationSettings(derivedCards, componentSettings);
     const { cards, open: openSettings } = settings;
@@ -139,7 +141,6 @@ export function IntegrationsGrid({
     // used to hold the id alone and pass it as `componentName`, so the modal read
     // "Manage Adobe API access for erp-sync".
     const [manageApis, setManageApis] = useState<{ id: string; name: string } | null>(null);
-    const { open: openGuide, modal: guideModal } = useSetupGuide(cards);
     // The ERP reset awaiting confirmation: the INTEGRATION's id (the reset runs
     // through it) and the ERP's name (what the dialog says).
     const [pendingReset, setPendingReset] = useState<{ id: string; erpName: string } | null>(null);
@@ -214,7 +215,7 @@ export function IntegrationsGrid({
                 return;
             }
             if (action === 'setup-guide') {
-                openGuide(model.id);
+                onOpenGuide?.(model.id);
                 return;
             }
             if (action === 'manage-apis') {
@@ -231,7 +232,7 @@ export function IntegrationsGrid({
             }
             operations.run(model.id, model.name, action);
         },
-        [handleMeshAction, openGuide, openReinstall, openRemoveAnyway, openSettings, operations],
+        [handleMeshAction, onOpenGuide, openReinstall, openRemoveAnyway, openSettings, operations],
     );
 
     // A tile whose operation started here and is still running reopens its progress
@@ -332,7 +333,6 @@ export function IntegrationsGrid({
                 onSaved={settings.saved}
             />
 
-            <SetupGuideModal {...guideModal} />
 
             <ErpResetDialog
                 isOpen={pendingReset !== null}

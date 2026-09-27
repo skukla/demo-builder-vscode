@@ -39,7 +39,7 @@ jest.mock('@/core/ui/components/ui/Modal', () => ({
 
 // Below the mocks on purpose: jest.mock hoists above this file's imports.
 import type { IntegrationCardModel } from '@/features/dashboard/ui/components/integrations/integrationCardModel';
-import { SetupGuideModal } from '@/features/dashboard/ui/components/integrations/SetupGuideModal';
+import { SetupGuideModal, setupNextStep } from '@/features/dashboard/ui/components/integrations/SetupGuideModal';
 import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 
 const step = (overrides: Partial<SetupChecklistItem>): SetupChecklistItem => ({
@@ -158,5 +158,29 @@ describe('SetupGuideModal', () => {
             fireEvent.click(screen.getByText('Mark as done'));
         });
         expect(await screen.findByRole('alert')).toHaveTextContent('Adobe sign-in required.');
+    });
+});
+
+describe('setupNextStep', () => {
+    const cards = [
+        { id: 'erp-integration', componentId: 'erp-integration', setupChecklist: THREE },
+        { id: 'mesh', componentId: 'eds-accs-mesh' },
+    ] as IntegrationCardModel[];
+
+    it('offers the guide of the card the operation was for, counting the steps left', () => {
+        const openGuide = jest.fn();
+        const next = setupNextStep(cards, 'erp-integration', openGuide);
+
+        expect(next?.message).toBe('Next: 2 setup steps in Commerce for the demo.');
+        expect(next?.action).toBe('Start setup guide');
+        next?.onPress();
+        expect(openGuide).toHaveBeenCalledWith('erp-integration');
+    });
+
+    it('offers nothing for a card with no steps left, or no operation', () => {
+        expect(setupNextStep(cards, 'eds-accs-mesh', jest.fn())).toBeUndefined();
+        expect(setupNextStep(cards, undefined, jest.fn())).toBeUndefined();
+        const done = [{ ...cards[0], setupChecklist: THREE.map((item) => ({ ...item, state: 'done' as const })) }];
+        expect(setupNextStep(done, 'erp-integration', jest.fn())).toBeUndefined();
     });
 });

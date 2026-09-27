@@ -170,6 +170,11 @@ jest.mock('@/features/dashboard/ui/components/IntegrationSettingsModal', () => (
 // babel-plugin-jest-hoist lifts them above every import, so the component
 // module always loads against the mocks.
 import { IntegrationsGrid } from '@/features/dashboard/ui/components/integrations/IntegrationsGrid';
+import {
+    SetupGuideModal,
+    setupNextStep,
+    useSetupGuide,
+} from '@/features/dashboard/ui/components/integrations/SetupGuideModal';
 import { OperationProgressModal } from '@/core/ui/components/feedback/OperationProgressModal';
 import { useComponentOperation } from '@/features/dashboard/ui/hooks/useComponentOperation';
 import { MESH_OPERATION } from '@/features/dashboard/ui/integrationsSurface/IntegrationsScreen';
@@ -319,11 +324,15 @@ function GridWithOperations({
     // The screen's own mesh wiring, through the screen's own constant: the deploy
     // starts a real operation instead of a spy, so the grid's reopen has one to find.
     const onDeployMesh = meshToModal ? () => operations.start(MESH_OPERATION) : props.onDeployMesh;
+    // The screen's setup guide wiring (AB-26x): it holds the guide, the grid opens it, and
+    // the progress modal offers it when an operation ends with setup still to do.
+    const { open: openGuide, modal: guideModal } = useSetupGuide(cards);
     return (
         <>
             <IntegrationsGrid
                 cards={cards}
                 operations={operations}
+                onOpenGuide={openGuide}
                 {...props}
                 onDeployMesh={onDeployMesh}
             />
@@ -331,7 +340,9 @@ function GridWithOperations({
                 operation={operations.open}
                 onRetry={operations.retry}
                 onClose={operations.close}
+                next={setupNextStep(cards, operations.open?.id, openGuide)}
             />
+            <SetupGuideModal {...guideModal} />
         </>
     );
 }

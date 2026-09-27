@@ -57,6 +57,16 @@ export interface ProgressModalOperation {
     resume: boolean;
 }
 
+/** What to do next once the operation succeeds, offered on its success view. */
+export interface ProgressModalNextStep {
+    /** One sentence under the success title: "Next: 2 setup steps in Commerce for the demo." */
+    message: string;
+    /** The button that does it: "Start setup guide". */
+    action: string;
+    /** Runs after the modal closes. */
+    onPress: () => void;
+}
+
 export interface OperationProgressModalProps {
     /** The operation being run, or `null` when the modal is closed. */
     operation: ProgressModalOperation | null;
@@ -64,6 +74,11 @@ export interface OperationProgressModalProps {
     onRetry: () => void;
     /** Close the modal; a running operation carries on. */
     onClose: () => void;
+    /**
+     * A next step to offer when the operation succeeds. With one, the success view says
+     * what is left and waits for the SC instead of closing by itself.
+     */
+    next?: ProgressModalNextStep;
 }
 
 /**
@@ -95,6 +110,12 @@ function answerButtons(actions: string[], answer: (chosen: string) => void): Act
     }));
 }
 
+/** A success's next step, as its one button: the modal closes, then the step starts. */
+function nextStepButtons(next: ProgressModalNextStep | undefined, onClose: () => void): ActionButton[] {
+    if (!next) return [];
+    return [{ label: next.action, variant: 'accent', onPress: () => { onClose(); next.onPress(); } }];
+}
+
 /** What a failure offers: the detail it wrote to the logs, and another go. */
 function failureButtons(failed: boolean, onRetry: () => void): ActionButton[] {
     if (!failed) return [];
@@ -114,6 +135,8 @@ interface ProgressBodyProps {
     succeeded: boolean;
     failureTitle: string;
     successTitle: string;
+    /** The success view's second line: what is left to do, when there is a next step. */
+    successMessage?: string;
     progress?: OperationProgressPayload | null;
     elapsed?: string;
     /** Every keystroke in a question's fields, for the buttons to hand back. */
@@ -127,6 +150,7 @@ function ProgressBody({
     succeeded,
     failureTitle,
     successTitle,
+    successMessage,
     progress,
     elapsed,
     onTyped,
@@ -148,7 +172,7 @@ function ProgressBody({
         return <StatusDisplay variant="error" title={failureTitle} message={progress?.error} />;
     }
     if (succeeded) {
-        return <StatusDisplay variant="success" title={successTitle} />;
+        return <StatusDisplay variant="success" title={successTitle} message={successMessage} />;
     }
     // Size L, as every other progress display here: M left-aligns and shrinks
     // the text (ImportDatapackModal).
@@ -167,6 +191,7 @@ export function OperationProgressModal({
     operation,
     onRetry,
     onClose,
+    next,
 }: OperationProgressModalProps): React.ReactElement {
     const progress = useOperationProgress(
         operation?.id ?? null,
@@ -219,11 +244,13 @@ export function OperationProgressModal({
     // message that dismissed itself before anyone had read it, and was the ONLY
     // confirmation there was. This modal has been on screen for the whole run, and
     // the checkmark is its last beat.
+    // A next step waits for the SC: closing by itself would take the offer away unread.
+    const offering = succeeded ? next : undefined;
     useEffect(() => {
-        if (!succeeded) return undefined;
+        if (!succeeded || offering) return undefined;
         const timer = setTimeout(onClose, TIMEOUTS.UI.RESULT_GLANCE);
         return () => clearTimeout(timer);
-    }, [succeeded, onClose]);
+    }, [succeeded, offering, onClose]);
 
     const close = useCallback((): void => {
         if (prompt) {
@@ -253,7 +280,7 @@ export function OperationProgressModal({
                 actionButtons={
                     prompt
                         ? answerButtons(prompt.actions, answer)
-                        : failureButtons(failed, onRetry)
+                        : [...failureButtons(failed, onRetry), ...nextStepButtons(offering, onClose)]
                 }
             >
                 {/* One fixed height for every state, so the modal never resizes as
@@ -265,6 +292,7 @@ export function OperationProgressModal({
                         succeeded={succeeded}
                         failureTitle={operation.failureTitle}
                         successTitle={operation.successTitle}
+                        successMessage={offering?.message}
                         progress={progress}
                         elapsed={elapsed}
                         onTyped={onTyped}

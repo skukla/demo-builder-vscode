@@ -27,6 +27,7 @@ import {
     type IntegrationCardModel,
 } from '../components/integrations/integrationCardModel';
 import { IntegrationsGrid } from '../components/integrations/IntegrationsGrid';
+import { SetupGuideModal, setupNextStep, useSetupGuide } from '../components/integrations/SetupGuideModal';
 import { type ComponentOperation, useComponentOperation } from '../hooks/useComponentOperation';
 import { isMeshBusy, useDashboardStatus } from '../hooks/useDashboardStatus';
 import { useLiveAppBuilderComponents } from '../hooks/useLiveAppBuilderComponents';
@@ -218,6 +219,9 @@ export function IntegrationsScreen({
     ]);
 
     const visibleCards = useMemo(() => filterCards(cards, searchQuery), [cards, searchQuery]);
+    // The demo setup guide (AB-26x) lives here, not in the grid: the progress modal below
+    // opens it too, when an operation finishes with setup still to do.
+    const { open: openGuide, modal: guideModal } = useSetupGuide(cards);
     // Named rather than inlined: a 4-operand && chain in JSX trips the
     // complex-expression SOP scan (tests/sop/complex-expressions.test.ts).
     const searchFoundNothing =
@@ -396,6 +400,7 @@ export function IntegrationsScreen({
                         destinationLabel={destinationLabel}
                         componentSettings={componentSettings}
                         operations={operations}
+                        onOpenGuide={openGuide}
                     />
                 )}
 
@@ -443,7 +448,9 @@ export function IntegrationsScreen({
                     operation={operations.open}
                     onRetry={operations.retry}
                     onClose={operations.close}
+                    next={setupNextStep(cards, operations.open?.id, openGuide)}
                 />
+                <SetupGuideModal {...guideModal} />
             </FullScreenSurface>
         </PageLayout>
     );

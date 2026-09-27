@@ -5,6 +5,7 @@
 
 import { screen, within } from '@testing-library/react';
 import {
+    card,
     cardsFor,
     openPanel,
     renderCards,
@@ -41,7 +42,9 @@ describe('IntegrationsGrid setup guide', () => {
         const user = setupUser();
         renderWithSteps();
 
-        const panel = await openPanel(user, 'other-app', 'Deployed');
+        // The card says there is setup left, in its badge and in what a screen reader hears.
+        expect(within(card('other-app', 'Deployed, Setup: 1 to do')).getByText('Setup: 1 to do')).toBeInTheDocument();
+        const panel = await openPanel(user, 'other-app', 'Deployed, Setup: 1 to do');
         expect(within(panel).getByText('0 of 1 done')).toBeInTheDocument();
         await user.click(within(panel).getByRole('link', { name: 'Open setup guide' }));
 
