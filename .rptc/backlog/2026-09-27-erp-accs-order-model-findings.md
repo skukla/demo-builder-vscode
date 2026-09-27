@@ -51,3 +51,4 @@ changed, or rejected with the reason), and the two live tests (attribute write a
 PO invoicing at checkout) have results recorded.
 
 ## Shipped so far
+- 2026-09-27  docs(backlog): AB-37, four places the several-ERPs design and the Cloud Service docs disagree (`60440bb9f`)
