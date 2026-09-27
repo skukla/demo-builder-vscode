@@ -105,3 +105,4 @@ optional ones are labelled optional with what they add.
 - 2026-09-25  feat(integrations): a demo setup checklist on the ERP integration's flyout (`e9a87e742`)
 - 2026-09-25  Integration README gains 'After you install' (commerce-erp-integration 1e9c708): the order status and the shared catalog per priced company, for a developer handed the code.
 - 2026-09-26  fix(integrations): the shared-catalog setup check follows the public-catalog rule (`69b0db1c3`)
+- 2026-09-27  feat(dashboard): the demo setup checklist becomes a guide, one step at a time (`d8b44bf43`)
