@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: []
 value: high
-status: active
+status: built
 ---
 
 # Commerce API inventory and validation — every call the programme needs, proven to exist, captured as fixtures
