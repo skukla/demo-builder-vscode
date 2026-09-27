@@ -156,7 +156,9 @@ export function defaultShape(res: HandlerResponse): string {
     const keys = Object.keys(rest);
     const payload =
         keys.length === 1 && keys[0] === 'data' ? (rest as { data: unknown }).data : rest;
-    return JSON.stringify(payload);
+    // A success with nothing to say (`data: undefined`) stringifies to undefined, and the
+    // MCP SDK rejects a text item without text (redeploy_integration, 2026-09-27).
+    return JSON.stringify(payload) ?? 'Done.';
 }
 
 const confirmField = z

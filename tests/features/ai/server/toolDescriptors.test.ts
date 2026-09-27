@@ -55,6 +55,13 @@ describe('defaultShape', () => {
         expect(defaultShape(res)).toBe('{"data":{"a":1},"warning":"partial"}');
     });
 
+    it('answers text when a success carries no data at all', () => {
+        // JSON.stringify(undefined) is undefined, not a string: the MCP SDK rejected the
+        // result and redeploy_integration answered an RPC error after a deploy that had
+        // worked (measured live, 2026-09-27).
+        expect(defaultShape({ success: true, data: undefined } as HandlerResponse)).toBe('Done.');
+    });
+
     it('strips the success flag and keeps remaining fields', () => {
         const res = { success: true, status: 'ok', count: 2 } as unknown as HandlerResponse;
         expect(defaultShape(res)).toBe('{"status":"ok","count":2}');
