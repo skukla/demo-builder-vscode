@@ -48,11 +48,23 @@ export interface ErpImportBody {
     structure?: ErpStructure;
 }
 
+/** One row of the integration's key map (its `erp/keymap`): which Commerce record is which ERP record. */
+export interface ErpKeyMapEntry {
+    kind: 'customer';
+    commerce: string;
+    erp: string;
+}
+
 export interface ErpFillDeps {
     get: CommerceGet;
     settings: (websiteCodes: string[]) => Promise<ResolvedErpSettings>;
     /** The ERP's import; throws with the ERP's own words when it refuses. */
     importRecords: (body: ErpImportBody) => Promise<void>;
+    /**
+     * Hand the integration the key map, whole. `false` when the integration keeps none: one
+     * deployed before it had `erp/keymap`, which must still fill (it matches by Commerce ids).
+     */
+    saveKeyMap: (entries: ErpKeyMapEntry[]) => Promise<boolean>;
     onProgress?: (message: string) => void;
 }
 
@@ -63,6 +75,8 @@ export interface ErpFillResult {
     skipped: number;
     /** What this ERP owns, in words, when it does not own everything. */
     owns?: string;
+    /** Customers in the key map handed to the integration; absent when it keeps none. */
+    paired?: number;
 }
 
 /**
@@ -129,11 +143,16 @@ export async function fillErp(deps: ErpFillDeps, projectName: string): Promise<E
         done += batch.length;
         deps.onProgress?.(`Sent ${done} of ${products.length} products`);
     }
+    // Last, so the map never names a customer the ERP does not hold yet.
+    const keyMap = partners.map((p): ErpKeyMapEntry => ({ kind: 'customer', commerce: p.commerceCompanyId, erp: p.id }));
+    const kept = await deps.saveKeyMap(keyMap);
+    if (!kept) deps.onProgress?.('The integration keeps no key map yet; update it to have one');
     const skipped = read.products.length - owned.length;
     return {
         partners: partners.length,
         products: products.length,
         skipped,
         ...(skipped > 0 ? { owns: filter.describe } : {}),
+        ...(kept ? { paired: keyMap.length } : {}),
     };
 }

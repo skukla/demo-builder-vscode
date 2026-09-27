@@ -13,6 +13,7 @@ import {
 const URLS = {
     'runtime/erp/status': 'https://ns.adobeioruntime.net/api/v1/web/erp/status',
     'runtime/erp/detach': 'https://ns.adobeioruntime.net/api/v1/web/erp/detach',
+    'runtime/erp/keymap': 'https://ns.adobeioruntime.net/api/v1/web/erp/keymap',
     'runtime/erp/lookup': 'https://ns.adobeioruntime.net/api/v1/web/erp/lookup',
     'runtime/erp/history': 'https://ns.adobeioruntime.net/api/v1/web/erp/history',
 };
@@ -61,6 +62,21 @@ describe('ErpIntegrationClient', () => {
         expect(fetchImpl.mock.calls[0][0]).toBe(URLS['runtime/erp/detach']);
         expect((fetchImpl.mock.calls[0][1] as RequestInit).method).toBe('POST');
         expect(report).toEqual(body);
+    });
+
+    it('PUTs the whole key map as JSON, and knows a deployment without the action keeps none', async () => {
+        const fetchImpl = answering(200, { entries: 1 });
+        const entries = [{ kind: 'customer' as const, commerce: '12', erp: 'C12' }];
+
+        await new ErpIntegrationClient(URLS, AUTH, fetchImpl).replaceKeyMap(entries);
+
+        expect(fetchImpl.mock.calls[0][0]).toBe(URLS['runtime/erp/keymap']);
+        const init = fetchImpl.mock.calls[0][1] as RequestInit;
+        expect(init.method).toBe('PUT');
+        expect(JSON.parse(String(init.body))).toEqual({ entries });
+        expect(new ErpIntegrationClient(URLS, AUTH, fetchImpl).keepsKeyMap()).toBe(true);
+        const { ['runtime/erp/keymap']: _gone, ...older } = URLS;
+        expect(new ErpIntegrationClient(older, AUTH, fetchImpl).keepsKeyMap()).toBe(false);
     });
 
     it('GETs lookup with the one query the action takes, encoded, and answers the lookup', async () => {

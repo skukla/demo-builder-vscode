@@ -84,6 +84,11 @@ export async function fillErpForProject(
         get: commerceGet(target, fetchImpl),
         settings: (codes) => integrationClient.resolvedSettings(codes),
         importRecords: erpImport(erp.deployedUrls, auth, fetchImpl),
+        saveKeyMap: async (entries) => {
+            if (!integrationClient.keepsKeyMap()) return false;
+            await integrationClient.replaceKeyMap(entries);
+            return true;
+        },
         onProgress: deps.onProgress,
     };
     try {

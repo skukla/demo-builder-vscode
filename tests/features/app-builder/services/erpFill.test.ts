@@ -10,7 +10,13 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { fillErp, PRODUCT_BATCH, type ErpImportBody, type ResolvedErpSettings } from '@/features/app-builder/services/erpFill';
+import {
+    fillErp,
+    PRODUCT_BATCH,
+    type ErpImportBody,
+    type ErpKeyMapEntry,
+    type ResolvedErpSettings,
+} from '@/features/app-builder/services/erpFill';
 import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
 
 const FIXTURES = path.join(__dirname, '../../../fixtures/commerce-rest');
@@ -53,6 +59,7 @@ function deps(settings: ResolvedErpSettings = ALL) {
         importRecords: jest.fn(async (body: ErpImportBody) => {
             sent.push(body);
         }),
+        saveKeyMap: jest.fn(async (_entries: ErpKeyMapEntry[]) => true),
         onProgress: jest.fn(),
     };
 }
@@ -75,7 +82,29 @@ describe('fillErp', () => {
         });
         expect(d.sent.slice(1).every((body) => Object.keys(body).join() === 'products')).toBe(true);
         expect(d.sent[1].products?.length).toBeLessThanOrEqual(PRODUCT_BATCH);
+        expect(result).toStrictEqual({ partners: 4, products: 2, skipped: 0, paired: 4 });
+    });
+
+    it('hands the integration the key map once every import has landed: each company with the ERP customer made for it', async () => {
+        const d = deps();
+        await fillErp(d, 'bodea');
+
+        const partners = d.sent[0].partners ?? [];
+        expect(d.saveKeyMap).toHaveBeenCalledTimes(1);
+        expect(d.saveKeyMap).toHaveBeenCalledWith(
+            partners.map((p) => ({ kind: 'customer', commerce: p.commerceCompanyId, erp: p.id })),
+        );
+        const lastImport = Math.max(...d.importRecords.mock.invocationCallOrder);
+        expect(d.saveKeyMap.mock.invocationCallOrder[0]).toBeGreaterThan(lastImport);
+    });
+
+    it('fills anyway when the integration keeps no key map yet (one deployed before it had one), and says so', async () => {
+        const d = deps();
+        d.saveKeyMap.mockResolvedValueOnce(false);
+        const result = await fillErp(d, 'bodea');
+
         expect(result).toStrictEqual({ partners: 4, products: 2, skipped: 0 });
+        expect(d.onProgress).toHaveBeenCalledWith(expect.stringMatching(/keeps no key map/u));
     });
 
     it("books a company to its admin's website's sales organisation, and a company whose admin cannot be read to none", async () => {
@@ -112,7 +141,7 @@ describe('fillErp', () => {
         // Only accessmesh is stocked anywhere in the capture, and neither captured product is it.
         const d = deps({ default: { structure_owns: 'sources', structure_owns_sources: 'east' }, websites: {} });
         const result = await fillErp(d, 'bodea');
-        expect(result).toStrictEqual({ partners: 4, products: 0, skipped: 2, owns: 'products stocked in east' });
+        expect(result).toStrictEqual({ partners: 4, products: 0, skipped: 2, owns: 'products stocked in east', paired: 4 });
         // An empty catalogue still sends one products import: it stamps the ERP's last import.
         expect(d.sent[1]).toStrictEqual({ products: [] });
     });

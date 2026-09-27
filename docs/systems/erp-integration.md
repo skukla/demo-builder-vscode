@@ -126,7 +126,10 @@ sends the records to the ERP's `POST admin/import` in batches of 25 products
 (`erpFill.ts`, wired for a project by `erpFillForProject.ts`). It runs in three places, all
 the same call: after the add, inside **Reset records** (undo the ERP's writes in Commerce,
 then the ERP's `admin/wipe`, then the fill), and as `load_erp_demo_data`. Because it runs in
-the extension, it has no one-minute web-request limit. Measured on Bodea: 4 customers and
+the extension, it has no one-minute web-request limit. Last, it hands the integration its key map
+(`PUT erp/keymap`: which Commerce company is which ERP customer), the way a key map is loaded
+at a go-live; an integration deployed before it had `erp/keymap` is filled without one, and
+the progress says so. Measured on Bodea: 4 customers and
 182 products in 2m15s, the same records the integration's mirror produced.
 
 The integration's own copy (`erp/mirror`, its worker `erp/mirror-job`, and the **Sync

@@ -15,7 +15,7 @@
  */
 
 import type { AppManagementAuth } from './appManagementClient';
-import type { ResolvedErpSettings } from './erpFill';
+import type { ErpKeyMapEntry, ResolvedErpSettings } from './erpFill';
 
 /** What `erp/status` answers (the integration's `actions/erp/status`). */
 export interface ErpIntegrationStatus {
@@ -38,7 +38,7 @@ export interface ErpDetachReport {
     orders?: { cleared: number; failed: unknown[] };
 }
 
-export type ErpAction = 'status' | 'detach' | 'lookup' | 'history' | 'settings';
+export type ErpAction = 'status' | 'detach' | 'lookup' | 'history' | 'settings' | 'keymap';
 
 /**
  * What `erp/lookup` answers (the integration's `lib/lookup.js`, `productLookup` and
@@ -144,19 +144,34 @@ export class ErpIntegrationClient {
         return (await this.call('settings', 'GET', { websites: websiteCodes.join(',') })) as ResolvedErpSettings;
     }
 
+    /** Whether this deployment has the key map (`erp/keymap`); one deployed before it does not. */
+    keepsKeyMap(): boolean {
+        return deriveErpActionUrl(this.deployedUrls, 'keymap') !== undefined;
+    }
+
+    /** Replace the integration's key map, whole (`PUT erp/keymap`). */
+    async replaceKeyMap(entries: ErpKeyMapEntry[]): Promise<void> {
+        await this.call('keymap', 'PUT', undefined, { entries });
+    }
+
     /** One Commerce order's whole life across both systems and the integration. */
     async traceOrder(incrementId: string): Promise<ErpOrderTrace> {
         const answer = (await this.call('history', 'GET', { trace: incrementId })) as { trace: ErpOrderTrace };
         return answer.trace;
     }
 
-    private async call(action: ErpAction, method: 'GET' | 'POST', query?: Record<string, string>): Promise<unknown> {
+    private async call(
+        action: ErpAction,
+        method: 'GET' | 'POST' | 'PUT',
+        query?: Record<string, string>,
+        payload?: unknown,
+    ): Promise<unknown> {
         const base = deriveErpActionUrl(this.deployedUrls, action);
         if (!base) {
             throw new Error(`This integration deployed no erp/${action} action.`);
         }
         const url = query ? `${base}?${new URLSearchParams(query).toString()}` : base;
-        const answer = await callWithIms(url, method, this.auth, this.fetchImpl);
+        const answer = await callWithIms(url, method, this.auth, this.fetchImpl, payload);
         if (!answer.ok) {
             throw new ErpIntegrationApiError(action, answer.status, answer.detail);
         }
