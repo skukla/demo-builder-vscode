@@ -1,0 +1,89 @@
+{
+  "_captured": {
+    "from": "Bodea sandbox (Adobe Commerce as a Cloud Service)",
+    "on": "2026-09-27",
+    "request": "GET shipments?searchCriteria[filter_groups][0][filters][0][field]=order_id&searchCriteria[filter_groups][0][filters][0][value]=11",
+    "note": "Contact details, IPs, hostnames, the tenant id and the company name replaced; everything else as answered."
+  },
+  "body": {
+    "items": [
+      {
+        "billing_address_id": 21,
+        "created_at": "2026-09-27 12:42:06",
+        "customer_id": 44,
+        "entity_id": 3,
+        "increment_id": "3000000003",
+        "order_id": 11,
+        "packages": [],
+        "shipping_address_id": 20,
+        "store_id": 3,
+        "total_qty": 2,
+        "updated_at": "2026-09-27 12:42:06",
+        "items": [
+          {
+            "entity_id": 3,
+            "name": "Access Mesh",
+            "parent_id": 3,
+            "price": 40,
+            "product_id": 483,
+            "sku": "accessmesh",
+            "weight": 5,
+            "order_item_id": 11,
+            "qty": 2
+          }
+        ],
+        "tracks": [],
+        "comments": [],
+        "extension_attributes": {
+          "source_code": "default"
+        }
+      },
+      {
+        "billing_address_id": 21,
+        "created_at": "2026-09-27 12:44:30",
+        "customer_id": 44,
+        "entity_id": 4,
+        "increment_id": "3000000004",
+        "order_id": 11,
+        "packages": [],
+        "shipping_address_id": 20,
+        "store_id": 3,
+        "total_qty": 2,
+        "updated_at": "2026-09-27 12:44:30",
+        "items": [
+          {
+            "entity_id": 4,
+            "name": "Access Mesh",
+            "parent_id": 4,
+            "price": 40,
+            "product_id": 483,
+            "sku": "accessmesh",
+            "weight": 5,
+            "order_item_id": 11,
+            "qty": 2
+          }
+        ],
+        "tracks": [],
+        "comments": [],
+        "extension_attributes": {
+          "source_code": "default"
+        }
+      }
+    ],
+    "search_criteria": {
+      "filter_groups": [
+        {
+          "filters": [
+            {
+              "field": "order_id",
+              "value": "11",
+              "condition_type": "eq"
+            }
+          ]
+        }
+      ],
+      "page_size": 20
+    },
+    "total_count": 2
+  }
+}

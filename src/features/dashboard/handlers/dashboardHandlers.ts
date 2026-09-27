@@ -84,6 +84,7 @@ import {
     handleListConsoleApis,
     handleSetConsoleApis,
 } from '@/features/dashboard/handlers/consoleApiHandlers';
+import { handleLoadErpDemoData } from '@/features/dashboard/handlers/erpFillHandler';
 import {
     handleFollowErpOrder,
     handleGetErpStatus,
@@ -343,6 +344,8 @@ export const dashboardHandlers = defineHandlers({
     // integration sees it, and the reset that re-mirrors Commerce into it.
     getErpStatus: handleGetErpStatus,
     resetErpRecords: handleResetErpRecords,
+    // Demo Builder fills the ERP from Commerce (AB-26y step 1).
+    loadErpDemoData: handleLoadErpDemoData,
     openErpScreen: handleOpenErpScreen,
     // The Admin page's two reads, for agents (2026-09-24): one record as both
     // systems hold it, and one order's whole life across both.

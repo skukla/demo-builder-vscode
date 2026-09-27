@@ -1,5 +1,6 @@
 /**
  * The ERP integration's own actions, as Demo Builder calls them: `erp/status`, `erp/lookup`, `erp/history`,
+ * `erp/settings` (the settings in force, which the ERP fill sorts records by),
  * (what the integration sees of its ERP), `erp/reset` (undo the ledgered
  * Commerce writes, wipe the ERP, mirror Commerce again; decisions 8 and 11) and
  * `erp/detach` (the undo alone, run before the integration is removed).
@@ -14,6 +15,7 @@
  */
 
 import type { AppManagementAuth } from './appManagementClient';
+import type { ResolvedErpSettings } from './erpFill';
 
 /** What `erp/status` answers (the integration's `actions/erp/status`). */
 export interface ErpIntegrationStatus {
@@ -44,7 +46,7 @@ export interface ErpDetachReport {
     orders?: { cleared: number; failed: unknown[] };
 }
 
-export type ErpAction = 'status' | 'reset' | 'detach' | 'lookup' | 'history';
+export type ErpAction = 'status' | 'reset' | 'detach' | 'lookup' | 'history' | 'settings';
 
 /**
  * What `erp/lookup` answers (the integration's `lib/lookup.js`, `productLookup` and
@@ -145,6 +147,14 @@ export class ErpIntegrationClient {
     /** One product (by SKU) or one company (by Commerce id) as both systems hold it. */
     async lookup(query: { sku: string } | { company: string }): Promise<ErpLookup> {
         return (await this.call('lookup', 'GET', query)) as ErpLookup;
+    }
+
+    /**
+     * The settings in force, Default Config and each named website's, as an order reads
+     * them (`GET erp/settings?websites=`): what the ERP fill sorts records by.
+     */
+    async resolvedSettings(websiteCodes: string[]): Promise<ResolvedErpSettings> {
+        return (await this.call('settings', 'GET', { websites: websiteCodes.join(',') })) as ResolvedErpSettings;
     }
 
     /** One Commerce order's whole life across both systems and the integration. */

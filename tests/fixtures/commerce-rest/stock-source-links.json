@@ -1,0 +1,22 @@
+{
+  "_captured": {
+    "from": "Bodea sandbox (Adobe Commerce as a Cloud Service)",
+    "on": "2026-09-27",
+    "request": "GET inventory/stock-source-links?searchCriteria[pageSize]=200",
+    "note": "Contact details, IPs, hostnames, the tenant id and the company name replaced; everything else as answered."
+  },
+  "body": {
+    "items": [
+      {
+        "stock_id": 1,
+        "source_code": "default",
+        "priority": 1
+      }
+    ],
+    "search_criteria": {
+      "filter_groups": [],
+      "page_size": 200
+    },
+    "total_count": 1
+  }
+}

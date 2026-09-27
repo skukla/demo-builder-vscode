@@ -392,6 +392,9 @@ and published to a live site ungated while its exact inverse
 `remove_block_from_library` was gated. If you add a tool, decide against the rule
 above, not against this list.
 
+`load_erp_demo_data` (2026-09-27) is gated because it sets any ERP value changed by hand
+back to Commerce's; it removes nothing.
+
 `reset_erp_records` (2026-09-14) is gated for the same reason `reset_datapack` is: it wipes
 the ERP that comes with the ERP integration and undoes what that ERP wrote into Commerce
 companies. Its read, `get_erp_status`, is not. `open_erp_screen` (2026-09-16) is gated for

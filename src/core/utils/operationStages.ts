@@ -104,6 +104,11 @@ export const OPERATION_STAGES = {
         expectation: 'Usually a few seconds',
         detail: "For the mesh's Commerce connection",
     },
+    loadingErpDemoData: {
+        label: 'Loading demo data',
+        expectation: 'Usually a minute',
+        detail: "Copying Commerce's products and companies into the ERP",
+    },
     resettingErpRecords: {
         label: 'Resetting the records',
         expectation: 'Usually a minute or two',

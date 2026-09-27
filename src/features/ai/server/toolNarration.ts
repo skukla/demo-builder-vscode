@@ -191,6 +191,7 @@ export const TOOL_NARRATION: Record<string, string> = {
     get_erp_record: 'Comparing a record with the ERP',
     get_erp_order_trace: 'Following an order into the ERP',
     reset_erp_records: 'Resetting the ERP records',
+    load_erp_demo_data: 'Loading demo data into the ERP',
     open_erp_screen: "Opening the ERP's screen",
     get_agent_trace: 'Reading the agent activity',
 

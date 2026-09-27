@@ -1,0 +1,33 @@
+{
+  "_captured": {
+    "from": "Bodea sandbox (Adobe Commerce as a Cloud Service)",
+    "on": "2026-09-27",
+    "request": "GET inventory/source-items?searchCriteria[filter_groups][0][filters][0][field]=sku&searchCriteria[filter_groups][0][filters][0][value]=accessmesh",
+    "note": "Contact details, IPs, hostnames, the tenant id and the company name replaced; everything else as answered."
+  },
+  "body": {
+    "items": [
+      {
+        "sku": "accessmesh",
+        "source_code": "default",
+        "quantity": 994,
+        "status": 1
+      }
+    ],
+    "search_criteria": {
+      "filter_groups": [
+        {
+          "filters": [
+            {
+              "field": "sku",
+              "value": "accessmesh",
+              "condition_type": "eq"
+            }
+          ]
+        }
+      ],
+      "page_size": 20
+    },
+    "total_count": 1
+  }
+}

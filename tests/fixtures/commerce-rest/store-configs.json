@@ -1,0 +1,82 @@
+{
+  "_captured": {
+    "from": "Bodea sandbox (Adobe Commerce as a Cloud Service)",
+    "on": "2026-09-27",
+    "request": "GET store/storeConfigs",
+    "note": "Contact details, IPs, hostnames, the tenant id and the company name replaced; everything else as answered."
+  },
+  "body": [
+    {
+      "id": 3,
+      "code": "bodea_us",
+      "website_id": 3,
+      "locale": "en_US",
+      "base_currency_code": "USD",
+      "default_display_currency_code": "USD",
+      "timezone": "America/Los_Angeles",
+      "weight_unit": "lbs",
+      "base_url": "https://store.example.com/TENANTID/",
+      "base_link_url": "https://store.example.com/TENANTID/",
+      "base_static_url": "https://store.example.com/TENANTID/static/version1789589382/",
+      "base_media_url": "https://static.example.com/TENANTID/media/",
+      "secure_base_url": "https://store.example.com/TENANTID/",
+      "secure_base_link_url": "https://store.example.com/TENANTID/",
+      "secure_base_static_url": "https://store.example.com/TENANTID/static/version1789589382/",
+      "secure_base_media_url": "https://static.example.com/TENANTID/media/"
+    },
+    {
+      "id": 2,
+      "code": "citisignal_us",
+      "website_id": 2,
+      "locale": "en_US",
+      "base_currency_code": "USD",
+      "default_display_currency_code": "USD",
+      "timezone": "America/Los_Angeles",
+      "weight_unit": "lbs",
+      "base_url": "https://store.example.com/TENANTID/",
+      "base_link_url": "https://store.example.com/TENANTID/",
+      "base_static_url": "https://store.example.com/TENANTID/static/version1789589382/",
+      "base_media_url": "https://static.example.com/TENANTID/media/",
+      "secure_base_url": "https://store.example.com/TENANTID/",
+      "secure_base_link_url": "https://store.example.com/TENANTID/",
+      "secure_base_static_url": "https://store.example.com/TENANTID/static/version1789589382/",
+      "secure_base_media_url": "https://static.example.com/TENANTID/media/"
+    },
+    {
+      "id": 1,
+      "code": "default",
+      "website_id": 1,
+      "locale": "en_US",
+      "base_currency_code": "USD",
+      "default_display_currency_code": "USD",
+      "timezone": "America/Los_Angeles",
+      "weight_unit": "lbs",
+      "base_url": "https://store.example.com/TENANTID/",
+      "base_link_url": "https://store.example.com/TENANTID/",
+      "base_static_url": "https://store.example.com/TENANTID/static/version1789589382/",
+      "base_media_url": "https://static.example.com/TENANTID/media/",
+      "secure_base_url": "https://store.example.com/TENANTID/",
+      "secure_base_link_url": "https://store.example.com/TENANTID/",
+      "secure_base_static_url": "https://store.example.com/TENANTID/static/version1789589382/",
+      "secure_base_media_url": "https://static.example.com/TENANTID/media/"
+    },
+    {
+      "id": 4,
+      "code": "evo_us",
+      "website_id": 4,
+      "locale": "en_US",
+      "base_currency_code": "USD",
+      "default_display_currency_code": "USD",
+      "timezone": "America/Los_Angeles",
+      "weight_unit": "lbs",
+      "base_url": "https://store.example.com/TENANTID/",
+      "base_link_url": "https://store.example.com/TENANTID/",
+      "base_static_url": "https://store.example.com/TENANTID/static/version1789589382/",
+      "base_media_url": "https://static.example.com/TENANTID/media/",
+      "secure_base_url": "https://store.example.com/TENANTID/",
+      "secure_base_link_url": "https://store.example.com/TENANTID/",
+      "secure_base_static_url": "https://store.example.com/TENANTID/static/version1789589382/",
+      "secure_base_media_url": "https://static.example.com/TENANTID/media/"
+    }
+  ]
+}

@@ -57,7 +57,9 @@ const EXPECTED: Record<string, number> = {
     // 47 -> 48 on 2026-09-25: check_setup_steps reads Commerce with the workspace credential.
     // 48 -> 49 on 2026-09-27: delete_undeclared_runtime_code reads and deletes in a Runtime
     // namespace through the Console credential, like list_runtime_packages.
-    adobe: 49,
+    // 49 -> 50 on 2026-09-27: load_erp_demo_data reads Commerce with the workspace credential
+    // and calls the ERP and its integration as the signed-in user.
+    adobe: 50,
     dalive: 21,
     // 10 -> 12 on 2026-09-12: forget_added_demo and change_demo_source (step 06
     // of the shareable-demo program) both read and write GitHub; 12 -> 14 the
@@ -89,8 +91,9 @@ const EXPECTED: Record<string, number> = {
  * files. That counts text, not declarations, and was roughly double. The CONTROL below
  * caught it — which is the argument for having one.)
  */
-const EXPECTED_TOOLS = 142; // 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x).
+const EXPECTED_TOOLS = 143; // 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x).
 // 141 -> 142 on 2026-09-27: delete_undeclared_runtime_code.
+// 142 -> 143 on 2026-09-27: load_erp_demo_data.
 
 interface Declaration {
     name: string;

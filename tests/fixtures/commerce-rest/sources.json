@@ -1,0 +1,33 @@
+{
+  "_captured": {
+    "from": "Bodea sandbox (Adobe Commerce as a Cloud Service)",
+    "on": "2026-09-27",
+    "request": "GET inventory/sources?searchCriteria[pageSize]=50",
+    "note": "Contact details, IPs, hostnames, the tenant id and the company name replaced; everything else as answered."
+  },
+  "body": {
+    "items": [
+      {
+        "source_code": "default",
+        "name": "Default Source",
+        "enabled": true,
+        "description": "Default Source",
+        "latitude": 0,
+        "longitude": 0,
+        "country_id": "US",
+        "postcode": "00000",
+        "use_default_carrier_config": true,
+        "carrier_links": [],
+        "extension_attributes": {
+          "is_pickup_location_active": false,
+          "frontend_name": ""
+        }
+      }
+    ],
+    "search_criteria": {
+      "filter_groups": [],
+      "page_size": 50
+    },
+    "total_count": 1
+  }
+}

@@ -402,6 +402,23 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         },
     },
     {
+        tool: 'load_erp_demo_data',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            "Load demo data into the ERP that comes with the ERP integration: copy Commerce's " +
+            'products, B2B companies (with credit limits) and websites into it as they stand, sorted ' +
+            "by the integration's settings (each website's sales organisation, which products this ERP " +
+            'owns). Adds and updates; removes nothing, but a value changed by hand in the ERP is set ' +
+            'back to Commerce\'s. Use on a fresh or empty ERP. Confirm with the user first. Takes the integration id.',
+        map: dashboardHandlers,
+        type: 'loadErpDemoData',
+        confirm: true,
+        inputSchema: {
+            id: z.string().describe('The ERP integration id (from get_project)'),
+        },
+    },
+    {
         tool: 'reset_erp_records',
         needsAuth: ['adobe'],
         readOnly: false,

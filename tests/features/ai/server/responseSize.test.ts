@@ -331,6 +331,9 @@ describe('rows with no output safety net are classified', () => {
         // Category 2, read before listing: `handleDeleteUndeclaredRuntimeCode` returns
         // `{namespace, deleted, failed}`, or a named refusal.
         'delete_undeclared_runtime_code',
+        // Category 2, read before listing: `handleLoadErpDemoData` returns
+        // `{id, erp, loaded: {partners, products, skipped, owns?}}`, or a named refusal.
+        'load_erp_demo_data',
         // Category 2, read before listing: `handleListRuntimePackages` returns
         // `{data: {namespace, packages}}` or a named refusal (runtimePackageHandlers.ts).
         'list_runtime_packages',
@@ -502,6 +505,8 @@ describe('the ceiling table tracks the tool surface', () => {
         'redeploy_integration',
         'remove_integration',
         // `{namespace, deleted, failed}`: bounded by what one app left behind.
+        // `{id, erp, loaded}`: four counts and a sentence, whatever the catalogue's size.
+        'load_erp_demo_data',
         'delete_undeclared_runtime_code',
         'deploy_mesh',
         'delete_mesh',

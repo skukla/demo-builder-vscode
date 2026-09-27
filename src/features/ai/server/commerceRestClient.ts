@@ -222,19 +222,21 @@ function explainStatus(status: number, body: string): string {
     return `Error: Commerce REST answered HTTP ${status}. ${body.slice(0, 500)}`;
 }
 
+/** One signed call's whole answer, or why it never answered. */
+export type RestAnswer = { ok: boolean; status: number; text: string } | { failed: string };
+
 /**
- * Send one signed call and answer its body as text: an error line on a failure,
- * the body (cut and declared past the ceiling) on success.
+ * Send one signed call and answer its status and WHOLE body, uncut: for a caller that
+ * parses the answer (the ERP fill), where `sendRest`'s cut would break the JSON.
  */
-export async function sendRest(
+export async function requestRest(
     method: RestMethod,
     target: RestTarget,
     path: string,
     body: unknown,
     fetchImpl: typeof fetch,
-): Promise<string> {
+): Promise<RestAnswer> {
     const controller = new AbortController();
-    const bounded = method === 'GET' ? boundSearch(path) : { path };
     // Commerce on the sandbox can take far longer than 30s to answer anything:
     // a company POST ran past it while sending welcome mail no server delivers,
     // and by evening plain GETs (eventing/supportedList, companyCredits) were
@@ -242,9 +244,8 @@ export async function sendRest(
     // may still land server-side, so a retry risks a duplicate; an aborted read
     // is a wasted minute. Both wait LONG; the caller's probe sets its own ceiling.
     const timer = setTimeout(() => controller.abort(), TIMEOUTS.LONG);
-    let res: Response;
     try {
-        res = await fetchImpl(`${target.base}/V1/${bounded.path}`, {
+        const res = await fetchImpl(`${target.base}/V1/${path}`, {
             method,
             headers: {
                 Authorization: `Bearer ${target.token}`,
@@ -257,13 +258,30 @@ export async function sendRest(
             ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
             signal: controller.signal,
         });
+        return { ok: res.ok, status: res.status, text: await res.text() };
     } catch (error) {
-        return `Error: the request failed — ${error instanceof Error ? error.message : String(error)}`;
+        return { failed: error instanceof Error ? error.message : String(error) };
     } finally {
         clearTimeout(timer);
     }
-    const text = await res.text();
-    if (!res.ok) return explainStatus(res.status, text);
+}
+
+/**
+ * Send one signed call and answer its body as text: an error line on a failure,
+ * the body (cut and declared past the ceiling) on success.
+ */
+export async function sendRest(
+    method: RestMethod,
+    target: RestTarget,
+    path: string,
+    body: unknown,
+    fetchImpl: typeof fetch,
+): Promise<string> {
+    const bounded = method === 'GET' ? boundSearch(path) : { path };
+    const answer = await requestRest(method, target, bounded.path, body, fetchImpl);
+    if ('failed' in answer) return `Error: the request failed — ${answer.failed}`;
+    const { text } = answer;
+    if (!answer.ok) return explainStatus(answer.status, text);
     const prefix = bounded.note ? `${bounded.note}\n` : '';
     if (text.length > MAX_RESPONSE_CHARS) {
         return (
@@ -272,5 +290,5 @@ export async function sendRest(
             text.slice(0, MAX_RESPONSE_CHARS)
         );
     }
-    return `${prefix}${text || `{"ok":true,"status":${res.status}}`}`;
+    return `${prefix}${text || `{"ok":true,"status":${answer.status}}`}`;
 }

@@ -232,6 +232,13 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         // The deployment could be redeployed, but the local files are deleted.
         sessionGrant: false,
     },
+    load_erp_demo_data: {
+        action: 'Load demo data into the ERP',
+        consequence:
+            "Copies Commerce's products, companies and websites into the ERP; a value changed by hand in the ERP is set back to Commerce's.",
+        target: ['id'],
+        sessionGrant: false,
+    },
     reset_erp_records: {
         action: 'Reset the ERP records',
         consequence:

@@ -88,6 +88,8 @@ describe('ACTION_DESCRIPTORS', () => {
             'install_prerequisite',
             // Runs a deployed action with a payload; the action may write to Commerce or the ERP.
             'invoke_runtime_action',
+            // Sets ERP values changed by hand back to Commerce's (AB-26y step 1).
+            'load_erp_demo_data',
             // Opens a browser window — gated for the same surprise reason as open_url.
             'open_erp_screen',
             'refresh_block_library',

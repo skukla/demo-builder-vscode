@@ -1,0 +1,433 @@
+{
+  "_captured": {
+    "from": "Bodea sandbox (Adobe Commerce as a Cloud Service)",
+    "on": "2026-09-27",
+    "request": "GET products?searchCriteria[pageSize]=2&searchCriteria[currentPage]=1",
+    "note": "Contact details, IPs, hostnames, the tenant id and the company name replaced; everything else as answered."
+  },
+  "body": {
+    "items": [
+      {
+        "id": 1,
+        "sku": "essentials-plan",
+        "name": "Essentials Plan",
+        "attribute_set_id": 15,
+        "price": 35,
+        "status": 1,
+        "visibility": 4,
+        "type_id": "virtual",
+        "created_at": "2026-02-05 16:02:59",
+        "updated_at": "2026-02-05 16:02:59",
+        "extension_attributes": {
+          "website_ids": [2],
+          "category_links": [
+            {
+              "position": -1,
+              "category_id": "7"
+            }
+          ],
+          "stock_item": {
+            "item_id": 1,
+            "product_id": 1,
+            "stock_id": 1,
+            "qty": 0,
+            "is_in_stock": false,
+            "is_qty_decimal": false,
+            "show_default_notification_message": false,
+            "use_config_min_qty": true,
+            "min_qty": 0,
+            "use_config_min_sale_qty": 1,
+            "min_sale_qty": 1,
+            "use_config_max_sale_qty": true,
+            "max_sale_qty": 10000,
+            "use_config_backorders": true,
+            "backorders": 0,
+            "use_config_notify_stock_qty": true,
+            "notify_stock_qty": 1,
+            "use_config_qty_increments": true,
+            "qty_increments": 0,
+            "use_config_enable_qty_inc": true,
+            "enable_qty_increments": false,
+            "use_config_manage_stock": false,
+            "manage_stock": true,
+            "low_stock_date": "2026-02-05 16:03:00",
+            "is_decimal_divided": false,
+            "stock_status_changed_auto": 1
+          }
+        },
+        "product_links": [],
+        "options": [],
+        "media_gallery_entries": [
+          {
+            "id": 135,
+            "media_type": "asset-image",
+            "label": null,
+            "position": 0,
+            "disabled": false,
+            "types": [],
+            "file": "https://assets.example.com/adobe/assets/urn:aaid:aem:66f13288-2547-413c-ba48-bc1956d26143",
+            "extension_attributes": {
+              "asset_image": {
+                "media_type": "asset-image",
+                "media_url": "https://assets.example.com/adobe/assets/urn:aaid:aem:66f13288-2547-413c-ba48-bc1956d26143",
+                "asset_id": "urn:aaid:aem:66f13288-2547-413c-ba48-bc1956d26143"
+              }
+            }
+          },
+          {
+            "id": 199,
+            "media_type": "asset-image",
+            "label": null,
+            "position": 0,
+            "disabled": false,
+            "types": [
+              "asset_role_image",
+              "asset_role_small_image",
+              "asset_role_thumbnail",
+              "asset_role_swatch_image"
+            ],
+            "file": "https://assets.example.com/adobe/assets/urn:aaid:aem:7bc31c90-f675-43a7-847c-f341b4a2ee40",
+            "extension_attributes": {
+              "asset_image": {
+                "media_type": "asset-image",
+                "media_url": "https://assets.example.com/adobe/assets/urn:aaid:aem:7bc31c90-f675-43a7-847c-f341b4a2ee40",
+                "asset_id": "urn:aaid:aem:7bc31c90-f675-43a7-847c-f341b4a2ee40"
+              }
+            }
+          },
+          {
+            "id": 54,
+            "media_type": "asset-image",
+            "label": null,
+            "position": 0,
+            "disabled": false,
+            "types": [],
+            "file": "https://assets.example.com/adobe/assets/urn:aaid:aem:d36de72b-084f-46a2-909b-3a29f3f6cc88",
+            "extension_attributes": {
+              "asset_image": {
+                "media_type": "asset-image",
+                "media_url": "https://assets.example.com/adobe/assets/urn:aaid:aem:d36de72b-084f-46a2-909b-3a29f3f6cc88",
+                "asset_id": "urn:aaid:aem:d36de72b-084f-46a2-909b-3a29f3f6cc88"
+              }
+            }
+          }
+        ],
+        "tier_prices": [],
+        "custom_attributes": [
+          {
+            "attribute_code": "cs_unlimited_talk_text",
+            "value": "1"
+          },
+          {
+            "attribute_code": "cs_unlimited_data",
+            "value": "1"
+          },
+          {
+            "attribute_code": "cs_premium_data",
+            "value": "50"
+          },
+          {
+            "attribute_code": "cs_mobile_hotspot_data",
+            "value": "45"
+          },
+          {
+            "attribute_code": "cs_unlimited_video_streaming",
+            "value": "68"
+          },
+          {
+            "attribute_code": "cs_extended_range_fg",
+            "value": "1"
+          },
+          {
+            "attribute_code": "options_container",
+            "value": "container2"
+          },
+          {
+            "attribute_code": "cs_extended_capacity_fg",
+            "value": "1"
+          },
+          {
+            "attribute_code": "cs_plan_tier",
+            "value": "75"
+          },
+          {
+            "attribute_code": "cs_product_family",
+            "value": "64"
+          },
+          {
+            "attribute_code": "gift_message_available",
+            "value": "1"
+          },
+          {
+            "attribute_code": "url_key",
+            "value": "essentials-plan"
+          },
+          {
+            "attribute_code": "msrp_display_actual_price_type",
+            "value": "0"
+          },
+          {
+            "attribute_code": "required_options",
+            "value": "0"
+          },
+          {
+            "attribute_code": "has_options",
+            "value": "0"
+          },
+          {
+            "attribute_code": "meta_title",
+            "value": "Essentials Plan"
+          },
+          {
+            "attribute_code": "meta_keyword",
+            "value": "Essentials Plan"
+          },
+          {
+            "attribute_code": "meta_description",
+            "value": "Essentials Plan "
+          },
+          {
+            "attribute_code": "tax_class_id",
+            "value": "2"
+          },
+          {
+            "attribute_code": "category_ids",
+            "value": ["7"]
+          },
+          {
+            "attribute_code": "news_from_date",
+            "value": "2023-07-21 00:00:00"
+          },
+          {
+            "attribute_code": "short_description",
+            "value": "<p>CitiSignal Essentials plan.</p>"
+          },
+          {
+            "attribute_code": "asset_role_image",
+            "value": "https://assets.example.com/adobe/assets/urn:aaid:aem:7bc31c90-f675-43a7-847c-f341b4a2ee40"
+          },
+          {
+            "attribute_code": "asset_role_small_image",
+            "value": "https://assets.example.com/adobe/assets/urn:aaid:aem:7bc31c90-f675-43a7-847c-f341b4a2ee40"
+          },
+          {
+            "attribute_code": "asset_role_thumbnail",
+            "value": "https://assets.example.com/adobe/assets/urn:aaid:aem:7bc31c90-f675-43a7-847c-f341b4a2ee40"
+          },
+          {
+            "attribute_code": "asset_role_swatch_image",
+            "value": "https://assets.example.com/adobe/assets/urn:aaid:aem:7bc31c90-f675-43a7-847c-f341b4a2ee40"
+          },
+          {
+            "attribute_code": "is_returnable",
+            "value": "2"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "sku": "DigiWristQuantum",
+        "name": "DigiWrist Quantum",
+        "attribute_set_id": 16,
+        "price": 743.66,
+        "status": 1,
+        "visibility": 4,
+        "type_id": "simple",
+        "created_at": "2026-02-05 16:02:59",
+        "updated_at": "2026-02-05 16:02:59",
+        "weight": 2.34,
+        "extension_attributes": {
+          "website_ids": [2],
+          "category_links": [
+            {
+              "position": -1,
+              "category_id": "3"
+            },
+            {
+              "position": -1,
+              "category_id": "9"
+            }
+          ],
+          "stock_item": {
+            "item_id": 2,
+            "product_id": 2,
+            "stock_id": 1,
+            "qty": 10000,
+            "is_in_stock": true,
+            "is_qty_decimal": false,
+            "show_default_notification_message": false,
+            "use_config_min_qty": true,
+            "min_qty": 0,
+            "use_config_min_sale_qty": 1,
+            "min_sale_qty": 1,
+            "use_config_max_sale_qty": true,
+            "max_sale_qty": 10000,
+            "use_config_backorders": true,
+            "backorders": 0,
+            "use_config_notify_stock_qty": true,
+            "notify_stock_qty": 1,
+            "use_config_qty_increments": true,
+            "qty_increments": 0,
+            "use_config_enable_qty_inc": true,
+            "enable_qty_increments": false,
+            "use_config_manage_stock": false,
+            "manage_stock": true,
+            "low_stock_date": null,
+            "is_decimal_divided": false,
+            "stock_status_changed_auto": 0
+          }
+        },
+        "product_links": [],
+        "options": [],
+        "media_gallery_entries": [
+          {
+            "id": 119,
+            "media_type": "asset-image",
+            "label": null,
+            "position": 0,
+            "disabled": false,
+            "types": [],
+            "file": "https://assets.example.com/adobe/assets/urn:aaid:aem:37646867-180f-4077-9574-620676f4646f",
+            "extension_attributes": {
+              "asset_image": {
+                "media_type": "asset-image",
+                "media_url": "https://assets.example.com/adobe/assets/urn:aaid:aem:37646867-180f-4077-9574-620676f4646f",
+                "asset_id": "urn:aaid:aem:37646867-180f-4077-9574-620676f4646f"
+              }
+            }
+          },
+          {
+            "id": 203,
+            "media_type": "asset-image",
+            "label": null,
+            "position": 0,
+            "disabled": false,
+            "types": [
+              "asset_role_image",
+              "asset_role_small_image",
+              "asset_role_thumbnail",
+              "asset_role_swatch_image"
+            ],
+            "file": "https://assets.example.com/adobe/assets/urn:aaid:aem:42055254-99a4-449e-9384-5aad0fba1123",
+            "extension_attributes": {
+              "asset_image": {
+                "media_type": "asset-image",
+                "media_url": "https://assets.example.com/adobe/assets/urn:aaid:aem:42055254-99a4-449e-9384-5aad0fba1123",
+                "asset_id": "urn:aaid:aem:42055254-99a4-449e-9384-5aad0fba1123"
+              }
+            }
+          },
+          {
+            "id": 39,
+            "media_type": "asset-image",
+            "label": null,
+            "position": 0,
+            "disabled": false,
+            "types": [],
+            "file": "https://assets.example.com/adobe/assets/urn:aaid:aem:548d1b22-b771-419d-bac0-726aa9886841",
+            "extension_attributes": {
+              "asset_image": {
+                "media_type": "asset-image",
+                "media_url": "https://assets.example.com/adobe/assets/urn:aaid:aem:548d1b22-b771-419d-bac0-726aa9886841",
+                "asset_id": "urn:aaid:aem:548d1b22-b771-419d-bac0-726aa9886841"
+              }
+            }
+          }
+        ],
+        "tier_prices": [],
+        "custom_attributes": [
+          {
+            "attribute_code": "band_type",
+            "value": "14"
+          },
+          {
+            "attribute_code": "cs_manufacturer",
+            "value": "51"
+          },
+          {
+            "attribute_code": "cs_product_family",
+            "value": "66"
+          },
+          {
+            "attribute_code": "options_container",
+            "value": "container2"
+          },
+          {
+            "attribute_code": "gift_message_available",
+            "value": "1"
+          },
+          {
+            "attribute_code": "url_key",
+            "value": "pulsewear-max-5"
+          },
+          {
+            "attribute_code": "msrp_display_actual_price_type",
+            "value": "0"
+          },
+          {
+            "attribute_code": "required_options",
+            "value": "0"
+          },
+          {
+            "attribute_code": "has_options",
+            "value": "0"
+          },
+          {
+            "attribute_code": "gift_wrapping_available",
+            "value": "2"
+          },
+          {
+            "attribute_code": "tax_class_id",
+            "value": "2"
+          },
+          {
+            "attribute_code": "category_ids",
+            "value": ["3", "9"]
+          },
+          {
+            "attribute_code": "news_from_date",
+            "value": "2023-07-21 00:00:00"
+          },
+          {
+            "attribute_code": "short_description",
+            "value": "<p>Ships within 14 hours</p>"
+          },
+          {
+            "attribute_code": "description",
+            "value": "<p>FeaturesElevate Your Lifestyle with Digiwrist Quantum Innovation at Your Fingertips Introducing the Digiwrist Quantum – a smartwatch designed to seamlessly integrate technology and style into your everyday life. Whether you're tracking your fitness goals, staying connected on-the-go, or simply making a fashion statement, the Digiwrist Quantum is your ultimate companion. Key Features: Stunning Display: Experience sharp, clear visuals on a vibrant touchscreen display that’s easy to read and navigate. Fitness Tracker: Monitor your health and fitness with precision – track steps, heart rate, sleep patterns, and more with advanced sensors. Extended Battery Life: Enjoy uninterrupted use with a long-lasting battery that keeps up with your busy schedule. Smart Notifications: Stay in the loop with instant notifications for calls, messages, emails, and apps, right on your wrist. Sleek Design: Crafted with elegance and durability, the Digiwrist Quantum complements any outfit, making it the perfect accessory for any occasion. Why Choose Digiwrist Quantum? Intuitive Interface: The user-friendly interface makes it easy to access and customize features, ensuring a seamless experience. Versatile Functionality: From fitness tracking to smart notifications, the Digiwrist Quantum offers a wide range of features to enhance your daily life. Style Meets Substance: Combining cutting-edge technology with a sleek design, this smartwatch is both functional and fashionable. Digiwrist Quantum is more than just a watch; it’s a lifestyle upgrade. Embrace the future with a device that keeps you connected, motivated, and stylish. Get your Digiwrist Quantum today and transform the way you live!</p>"
+          },
+          {
+            "attribute_code": "country_of_manufacture",
+            "value": "CN"
+          },
+          {
+            "attribute_code": "asset_role_image",
+            "value": "https://assets.example.com/adobe/assets/urn:aaid:aem:42055254-99a4-449e-9384-5aad0fba1123"
+          },
+          {
+            "attribute_code": "asset_role_small_image",
+            "value": "https://assets.example.com/adobe/assets/urn:aaid:aem:42055254-99a4-449e-9384-5aad0fba1123"
+          },
+          {
+            "attribute_code": "asset_role_thumbnail",
+            "value": "https://assets.example.com/adobe/assets/urn:aaid:aem:42055254-99a4-449e-9384-5aad0fba1123"
+          },
+          {
+            "attribute_code": "asset_role_swatch_image",
+            "value": "https://assets.example.com/adobe/assets/urn:aaid:aem:42055254-99a4-449e-9384-5aad0fba1123"
+          },
+          {
+            "attribute_code": "is_returnable",
+            "value": "2"
+          }
+        ]
+      }
+    ],
+    "search_criteria": {
+      "filter_groups": [],
+      "page_size": 2,
+      "current_page": 1
+    },
+    "total_count": 186
+  }
+}

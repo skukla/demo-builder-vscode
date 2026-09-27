@@ -1125,6 +1125,14 @@
     "why": "Added with the tool (2026-09-21): a removal reported done while fifteen packages kept running in Stage, and no tool could show it. A MISS is a discoverability finding about the tool, not a bad prompt."
   },
   {
+    "id": "erp-load-demo-data",
+    "prompt": "The ERP that came with the ERP integration is empty. Fill it with the store's products and companies.",
+    "expect": [
+      "load_erp_demo_data"
+    ],
+    "why": "Added with the tool (2026-09-27): Demo Builder fills the ERP from Commerce now, not the integration. On Bodea the first fill after an add never ran, and the ERP sat with no products. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
     "id": "runtime-left-behind",
     "prompt": "The ERP integration's order column moved to a new action, but the old erp/order-grid action is still deployed. Clean up the code the integration no longer uses.",
     "expect": [

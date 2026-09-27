@@ -264,7 +264,10 @@ describe('dashboardHandlers', () => {
             // deleteUndeclaredRuntimeCode (70 → 71, 2026-09-27): the
             // delete_undeclared_runtime_code tool — actions an integration left behind in
             // its own packages, which `aio app deploy` never deletes.
-            expect(types).toHaveLength(71);
+            //
+            // loadErpDemoData (71 → 72, 2026-09-27): Demo Builder fills the ERP from
+            // Commerce, the copy the integration used to make (AB-26y step 1).
+            expect(types).toHaveLength(72);
         });
 
         it('should have handlers as functions', () => {

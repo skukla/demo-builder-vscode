@@ -1,0 +1,128 @@
+{
+  "_captured": {
+    "from": "Bodea sandbox (Adobe Commerce as a Cloud Service)",
+    "on": "2026-09-27",
+    "request": "GET company?searchCriteria[pageSize]=20&searchCriteria[currentPage]=1",
+    "note": "Contact details, IPs, hostnames, the tenant id and the company name replaced; everything else as answered."
+  },
+  "body": {
+    "items": [
+      {
+        "id": 18,
+        "status": 1,
+        "company_name": "Altura",
+        "legal_name": "Altura",
+        "company_email": "company@example.com",
+        "street": ["1 Demo Way"],
+        "city": "San Jose",
+        "country_id": "US",
+        "region_id": "12",
+        "postcode": "95110",
+        "telephone": "5550100",
+        "customer_group_id": 1,
+        "sales_representative_id": 1,
+        "reject_reason": null,
+        "rejected_at": null,
+        "super_user_id": 38,
+        "extension_attributes": {
+          "applicable_payment_method": 0,
+          "use_config_settings": 1,
+          "is_purchase_order_enabled": false,
+          "is_company_address_book_enabled": false,
+          "is_custom_shipping_address_allowed": false,
+          "quote_config": {
+            "is_quote_enabled": true
+          }
+        }
+      },
+      {
+        "id": 19,
+        "status": 1,
+        "company_name": "ServerSavvy Solutions",
+        "legal_name": "ServerSavvy Solutions",
+        "company_email": "company@example.com",
+        "street": ["1 Demo Way"],
+        "city": "Austin",
+        "country_id": "US",
+        "region_id": "57",
+        "postcode": "78702",
+        "telephone": "5550100",
+        "customer_group_id": 16,
+        "sales_representative_id": 1,
+        "reject_reason": null,
+        "rejected_at": null,
+        "super_user_id": 39,
+        "extension_attributes": {
+          "applicable_payment_method": 0,
+          "use_config_settings": 1,
+          "is_purchase_order_enabled": false,
+          "is_company_address_book_enabled": false,
+          "is_custom_shipping_address_allowed": false,
+          "quote_config": {
+            "is_quote_enabled": true
+          }
+        }
+      },
+      {
+        "id": 20,
+        "status": 1,
+        "company_name": "RackMaster",
+        "legal_name": "RackMaster",
+        "company_email": "company@example.com",
+        "street": ["1 Demo Way"],
+        "city": "New York",
+        "country_id": "US",
+        "region_id": "43",
+        "postcode": "10001",
+        "telephone": "5550100",
+        "customer_group_id": 1,
+        "sales_representative_id": 1,
+        "reject_reason": null,
+        "rejected_at": null,
+        "super_user_id": 41,
+        "extension_attributes": {
+          "applicable_payment_method": 0,
+          "use_config_settings": 1,
+          "is_purchase_order_enabled": false,
+          "is_company_address_book_enabled": false,
+          "is_custom_shipping_address_allowed": false,
+          "quote_config": {
+            "is_quote_enabled": true
+          }
+        }
+      },
+      {
+        "id": 21,
+        "status": 1,
+        "company_name": "Example Studios",
+        "legal_name": "Example Studios, LLC",
+        "company_email": "company@example.com",
+        "street": ["1 Demo Way"],
+        "city": "Springfield",
+        "country_id": "US",
+        "region_id": "44",
+        "postcode": "12345",
+        "telephone": "5550100",
+        "customer_group_id": 19,
+        "sales_representative_id": 1,
+        "reject_reason": null,
+        "rejected_at": null,
+        "super_user_id": 44,
+        "extension_attributes": {
+          "is_purchase_order_enabled": false,
+          "is_company_address_book_enabled": false,
+          "is_custom_shipping_address_allowed": false,
+          "quote_config": {
+            "is_quote_enabled": true
+          }
+        }
+      }
+    ],
+    "search_criteria": {
+      "filter_groups": [],
+      "page_size": 20,
+      "current_page": 1
+    },
+    "total_count": 4
+  }
+}

@@ -49,7 +49,7 @@ import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
 
 /** Everything both verbs need before they act, or the refusal that stops them. */
-interface ErpCall {
+export interface ErpCall {
     id: string;
     project: Project;
     integration: AppBuilderComponentState;
@@ -64,7 +64,7 @@ interface ErpCall {
  * sign-in is a typed AUTH_REQUIRED, never a dialog, so the agent surface can
  * serve both headless.
  */
-async function openErpCall(
+export async function openErpCall(
     context: HandlerContext,
     payload: { id?: string } | undefined,
     needsAuthFor: string,
@@ -95,7 +95,7 @@ function erpOf(project: Project, integrationId: string): string | undefined {
 }
 
 /** The ERP row as an agent or the flyout reads it: name, status, its screen's URL. */
-function shapeErpRow(erp: ErpCall['erp']) {
+export function shapeErpRow(erp: ErpCall['erp']) {
     if (!erp) return undefined;
     return { id: erp.id, name: erp.name ?? erp.id, status: erp.status, url: erp.url, lastDeployed: erp.lastDeployed };
 }
@@ -211,7 +211,7 @@ export const handleOpenErpScreen: MessageHandler<{ id?: string }> = async (conte
     return { success: true, data: { id, erp: systemEntry.id, screenUrl } };
 };
 
-function errorText(error: unknown): string {
+export function errorText(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
 }
 
