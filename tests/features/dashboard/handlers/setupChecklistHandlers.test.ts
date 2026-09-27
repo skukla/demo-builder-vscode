@@ -60,6 +60,7 @@ describe('getSetupChecklist', () => {
         expect((result.data as { items: { id: string }[] }).items.map((item) => item.id)).toEqual([
             'confirmed-status',
             'company-catalogs',
+            'second-source',
         ]);
         expect(mockSendRest).not.toHaveBeenCalled();
     });
@@ -145,8 +146,20 @@ describe('checkSetupSteps', () => {
         });
     });
 
-    it('skips a dismissed step', async () => {
+    it('skips a dismissed step, and still runs the others', async () => {
+        answerByPath([], []);
         const { context } = setup({ 'company-catalogs': { state: 'dismissed' } });
+        await handleCheckSetupSteps(context, { id: 'erp-integration' });
+        const paths = mockSendRest.mock.calls.map((call) => call[2]);
+        expect(paths.some((path) => String(path).startsWith('company/'))).toBe(false);
+        expect(paths).toContain('inventory/sources?searchCriteria[pageSize]=200');
+    });
+
+    it('checks nothing once every checkable step is dismissed', async () => {
+        const { context } = setup({
+            'company-catalogs': { state: 'dismissed' },
+            'second-source': { state: 'dismissed' },
+        });
         await handleCheckSetupSteps(context, { id: 'erp-integration' });
         expect(mockSendRest).not.toHaveBeenCalled();
     });

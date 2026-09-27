@@ -11,6 +11,7 @@ describe('setupChecklistOf', () => {
         expect(items?.map((item) => [item.id, item.state, item.checkable])).toEqual([
             ['confirmed-status', 'open', false],
             ['company-catalogs', 'open', true],
+            ['second-source', 'open', true],
         ]);
     });
 
@@ -21,12 +22,12 @@ describe('setupChecklistOf', () => {
                 'company-catalogs': { state: 'done', note: 'Each of the 2 companies has a customer group of its own.' },
             },
         });
-        expect(items?.map((item) => item.state)).toEqual(['dismissed', 'done']);
+        expect(items?.map((item) => item.state)).toEqual(['dismissed', 'done', 'open']);
         expect(items?.[1].note).toMatch(/customer group of its own/);
     });
 
     it('reads a second copy through the entry it was made from', () => {
-        expect(setupChecklistOf('erp-integration-2', { catalogId: 'erp-integration' })).toHaveLength(2);
+        expect(setupChecklistOf('erp-integration-2', { catalogId: 'erp-integration' })).toHaveLength(3);
     });
 
     it('is undefined for an entry that declares no steps', () => {

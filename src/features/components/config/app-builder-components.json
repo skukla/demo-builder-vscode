@@ -96,6 +96,13 @@
           "why": "At the cart Commerce tells the integration only the buyer's customer group, so companies sharing a group get the same prices.",
           "where": "Catalog > Shared Catalogs > Add Shared Catalog, then Assign Companies.",
           "check": "companies-have-own-catalogs"
+        },
+        {
+          "id": "second-source",
+          "title": "Add a second inventory source and put it in the website's stock",
+          "why": "The ERP keeps stock per warehouse, one for each Commerce source. With only the Default Source the demo cannot show stock split across warehouses, or a shipment from one of them.",
+          "where": "Stores > Inventory > Sources > Add New Source (for example East Warehouse); then Stores > Inventory > Stocks: add it to the stock your website sells from; then give products a quantity there in each product's Sources section.",
+          "check": "second-source-in-stock"
         }
       ],
       "description": "Adobe Commerce and an ERP, on the Commerce integration starter kit: orders get an ERP number, price, stock and order-status changes in the ERP land in Commerce, contract prices apply in the cart, and a screen inside the Commerce Admin shows it all. Comes with its own ERP.",

@@ -173,7 +173,7 @@
               "title": { "type": "string", "minLength": 1 },
               "why": { "type": "string", "minLength": 1 },
               "where": { "type": "string", "minLength": 1 },
-              "check": { "type": "string", "enum": ["companies-have-own-catalogs"] }
+              "check": { "type": "string", "enum": ["companies-have-own-catalogs", "second-source-in-stock"] }
             }
           }
         },
