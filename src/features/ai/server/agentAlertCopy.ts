@@ -242,7 +242,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     reset_erp_records: {
         action: 'Reset the ERP records',
         consequence:
-            'Wipes every record in the ERP and mirrors Commerce into it again; the credit limits and company blocks the ERP set in Commerce are undone.',
+            'Wipes every record in the ERP and fills it from Commerce again; the credit limits and company blocks the ERP set in Commerce are undone.',
         target: ['id'],
         sessionGrant: false,
     },

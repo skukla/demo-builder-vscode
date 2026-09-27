@@ -38,7 +38,7 @@ export function ErpResetDialog({ isOpen, erpName, onConfirm, onClose }: ErpReset
             onClose={onClose}
         >
             <Text>
-                Wipes every record in <strong>{erpName}</strong> and mirrors Commerce into it again,
+                Wipes every record in <strong>{erpName}</strong> and fills it from Commerce again,
                 as Commerce stands now.
             </Text>
             <Text>

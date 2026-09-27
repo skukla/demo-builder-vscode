@@ -10,8 +10,8 @@ Adobe's Commerce integration starter kit. The design record is
 
 - **An ERP that appears to be the master.** Products, business partners (Commerce
   companies), contract prices and sales orders, on the ERP's own React Spectrum screen.
-  Demo Builder opens it in a private browser window. Every record is transient: reset wipes them and mirrors
-  the Commerce instance again. Commerce is the master the SC prepares in; the ERP adapts.
+  Demo Builder opens it in a private browser window. Every record is transient: reset wipes them and Demo Builder
+  fills the ERP from the Commerce instance again. Commerce is the master the SC prepares in; the ERP adapts.
 - **Data flowing both ways.** An order placed on the storefront gets an ERP order number;
   marking it shipped, invoiced or cancelled in the ERP reaches the Commerce order. A price
   or stock change in the ERP lands on the Commerce product. A company's credit limit or
@@ -34,11 +34,10 @@ Adobe's Commerce integration starter kit. The design record is
 
 They are a **unit**. Adding the integration adds and deploys the ERP first, then the
 integration, into the project's one App Builder workspace. Once the integration is installed
-into Commerce, Demo Builder starts the ERP's first sync (the integration's
-`POST erp/mirror?background=true`, declared as `sync` in the catalog — the call the ERP's
-Sync records button makes), so the ERP holds Commerce's products, companies and inventory
-sources before anyone opens it; the ERP's own last-import time says when it landed. Until
-2026-09-24 nothing made that call and a fresh pair sat empty. Removing the integration first
+into Commerce, Demo Builder fills the ERP (the catalog's `fillsSystem: true` on the
+integration; see "Filling the ERP"), so the ERP holds Commerce's products, companies and
+inventory sources before anyone opens it. A fill that fails does not undo the add: the
+integration's card says the demo data did not load, and why. Removing the integration first
 calls its `erp/detach`, which undoes the company credit limits, company blocks and ERP order
 numbers it wrote into Commerce (Commerce keeps the order notes; it cannot delete them); then
 it uninstalls the integration from Commerce and deletes the ERP's records (the ERP's
@@ -68,7 +67,7 @@ from the catalog's `systemType`, beside the name the SC gave it. Each flyout has
 (**Uses** on the integration, **Used by** on the ERP) whose name opens the other card.
 
 The ERP's kebab offers **Open** (its screen), **Reset records** (confirmed: it wipes the
-ERP, mirrors Commerce again, and undoes the credit limits, blocks and ERP order numbers the
+ERP, fills it from Commerce again, and undoes the credit limits, blocks and ERP order numbers the
 ERP wrote into Commerce; offered only while both cards are deployed), **Redeploy** and
 **Remove**. The integration keeps its own verbs; its **Open Commerce Admin** opens the Admin
 UI SDK screen. Remove on either card names both. The screen's count names the kinds once a system is
@@ -117,13 +116,19 @@ The kebab keeps offering it until it has been done, and nowhere else.
 
 ## Filling the ERP
 
-**Sync records** copies Commerce's products and companies into the ERP. It is on the
-ERP's own Settings page (kept off the Dashboard a prospect sees) and on the integration's
-Commerce Admin page, beside Reset. Both call the integration's
-`erp/mirror?background=true`, which starts the non-web worker `erp/mirror-job` and answers
-202 at once, because a web request is cut off after one minute. The pages then watch the
-ERP's last-import time, which only a full import moves (the integration's every-minute
-partner refresh does not). **Reset ERP records** still mirrors inline after its wipe.
+Demo Builder fills the ERP itself (AB-26y, 2026-09-27): it reads the project's Commerce
+(websites, companies, customers, products, and each product's stock at every source), asks
+the integration for its resolved settings per website (`GET erp/settings?websites=`), and
+sends the records to the ERP's `POST admin/import` in batches of 25 products
+(`erpFill.ts`, wired for a project by `erpFillForProject.ts`). It runs in three places, all
+the same call: after the add, inside **Reset records** (undo the ERP's writes in Commerce,
+then the ERP's `admin/wipe`, then the fill), and as `load_erp_demo_data`. Because it runs in
+the extension, it has no one-minute web-request limit. Measured on Bodea: 4 customers and
+182 products in 2m15s, the same records the integration's mirror produced.
+
+The integration's own copy (`erp/mirror`, its worker `erp/mirror-job`, and the **Sync
+records** buttons on the ERP's Settings page and the Commerce Admin page) still exists and
+is removed next; after that, a change reaches the ERP only through Commerce's events.
 
 ## Why the ERP's screen is served by an action
 
@@ -188,7 +193,7 @@ Add the tile to a project on a Commerce instance; the ERP screen lists the insta
 products and companies. Place an order; it shows the ERP number. Ship it in the ERP; the
 Commerce order follows. Change a price and a stock figure in the ERP; the product follows.
 Add a contract price for a company; that company's cart prices from it. Block a company;
-the Commerce company is blocked. Reset; the block is undone and the ERP is mirrored again.
+the Commerce company is blocked. Reset; the block is undone and the ERP is filled again.
 Remove the integration; both apps are gone and Commerce is clean.
 
 ## What live testing taught (2026-09-24 and 25)

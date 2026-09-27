@@ -303,69 +303,71 @@ describe('install-after-deploy wiring', () => {
     });
 });
 
-describe('the first sync after the install (recordSync, 2026-09-24)', () => {
-    // The ERP integration: its install stands, so the ERP it serves is filled from
-    // Commerce without anyone pressing Sync records.
+describe('the ERP filled after the install (AB-26y)', () => {
+    // The ERP integration: its install stands, so Demo Builder fills the ERP it serves
+    // from Commerce (fillErpForProject), where the integration used to copy it itself.
     const ERP_ENTRY: AppBuilderComponentCatalogEntry = {
         ...KIT_ENTRY,
         id: 'erp-integration',
         name: 'ERP Integration',
-        sync: { action: 'erp/mirror', path: '?background=true' },
-    };
-    const ERP_URLS = {
-        ...KIT_URLS,
-        'runtime/erp/mirror': 'https://ns.adobeioruntime.net/api/v1/web/erp/mirror',
+        fillsSystem: true,
     };
 
     function erpDeps(overrides: Partial<Record<string, unknown>> = {}) {
-        const syncRecords =
-            (overrides.syncRecords as jest.Mock | undefined) ?? jest.fn().mockResolvedValue({ status: 'started' });
-        const { deps, installAppManagement } = kitDeps({
-            deployApp: jest.fn().mockResolvedValue({
-                success: true,
-                data: { url: 'https://app/api', deployedUrls: ERP_URLS },
-            }),
-            ...overrides,
-            syncRecords,
-        });
-        return { deps, installAppManagement, syncRecords };
+        const fillSystem =
+            (overrides.fillSystem as jest.Mock | undefined) ?? jest.fn().mockResolvedValue({ status: 'filled' });
+        const { deps, installAppManagement } = kitDeps({ ...overrides, fillSystem });
+        return { deps, installAppManagement, fillSystem };
     }
 
-    it('add: an INSTALLED entry with a declared sync starts it with its own deployed URLs (args pinned)', async () => {
-        const { deps, syncRecords } = erpDeps();
+    it('add: an INSTALLED entry that fills its system fills it for this project (args pinned)', async () => {
+        const { deps, fillSystem } = erpDeps();
         const project = createProject();
 
         const result = await addAppBuilderComponent(project, ERP_ENTRY, deps);
 
         expect(result.success).toBe(true);
-        expect(syncRecords).toHaveBeenCalledWith(project, ERP_ENTRY, ERP_URLS);
+        expect(fillSystem).toHaveBeenCalledWith(project, ERP_ENTRY, expect.any(Function));
     });
 
-    it('add: an install that FAILED or was skipped starts no sync', async () => {
+    it('add: an install that FAILED or was skipped fills nothing', async () => {
         for (const status of ['failed', 'skipped'] as const) {
-            const { deps, syncRecords } = erpDeps({
+            const { deps, fillSystem } = erpDeps({
                 installAppManagement: jest.fn().mockResolvedValue({ status, detail: 'reason' }),
             });
 
             await addAppBuilderComponent(createProject(), ERP_ENTRY, deps);
 
-            expect(syncRecords).not.toHaveBeenCalled();
+            expect(fillSystem).not.toHaveBeenCalled();
         }
     });
 
-    it('add: an entry without a declared sync never touches it, installed or not', async () => {
-        const { deps, syncRecords } = erpDeps();
+    it('add: an entry that fills no system never touches it, installed or not', async () => {
+        const { deps, fillSystem } = erpDeps();
 
         await addAppBuilderComponent(createProject(), KIT_ENTRY, deps);
 
-        expect(syncRecords).not.toHaveBeenCalled();
+        expect(fillSystem).not.toHaveBeenCalled();
     });
 
-    it('add: a sync that did not start keeps the deploy AND the install green, and says so', async () => {
+    it("add: the fill's steps show under the demo-data stage", async () => {
+        const onProgress = jest.fn();
+        const fillSystem = jest.fn(async (_project: unknown, _entry: unknown, onStep: (step: string) => void) => {
+            onStep('Sent 25 of 182 products');
+            return { status: 'filled' };
+        });
+        const { deps } = erpDeps({ onProgress, fillSystem });
+
+        await addAppBuilderComponent(createProject(), ERP_ENTRY, deps);
+
+        expect(onProgress).toHaveBeenCalledWith('Loading demo data', 'Sent 25 of 182 products');
+    });
+
+    it('add: a fill that stops keeps the deploy AND the install green, and says why', async () => {
         const onProgress = jest.fn();
         const { deps } = erpDeps({
             onProgress,
-            syncRecords: jest.fn().mockResolvedValue({ status: 'failed', detail: '500: Commerce refused' }),
+            fillSystem: jest.fn().mockResolvedValue({ status: 'failed', detail: 'Commerce answered 401 for products' }),
         });
         const project = createProject();
 
@@ -373,20 +375,6 @@ describe('the first sync after the install (recordSync, 2026-09-24)', () => {
 
         expect(result.success).toBe(true);
         expect(project.appBuilderComponents?.[ERP_ENTRY.id]?.installation).toMatchObject({ status: 'installed' });
-        expect(onProgress).toHaveBeenCalledWith(expect.any(String), 'Starting the first sync');
-        expect(onProgress).toHaveBeenCalledWith(expect.any(String), 'Sync did not start: 500: Commerce refused');
-    });
-
-    it('add: a declared sync whose action is not among the deployed ones says so, not nothing', async () => {
-        // The first sync was skipped this way on every add until 2026-09-27, in silence.
-        const onProgress = jest.fn();
-        const { deps } = erpDeps({ onProgress, syncRecords: jest.fn().mockResolvedValue({ status: 'skipped' }) });
-
-        await addAppBuilderComponent(createProject(), ERP_ENTRY, deps);
-
-        expect(onProgress).toHaveBeenCalledWith(
-            expect.any(String),
-            'Sync did not start: its action erp/mirror is not among the deployed actions',
-        );
+        expect(onProgress).toHaveBeenCalledWith('Loading demo data', 'Demo data did not load: Commerce answered 401 for products');
     });
 });

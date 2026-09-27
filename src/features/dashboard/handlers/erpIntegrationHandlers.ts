@@ -37,19 +37,21 @@ import {
     ErpIntegrationClient,
     callErpApi,
     deriveErpActionUrl,
-    type ErpResetReport,
+    type ErpDetachReport,
     type ImsCallMethod,
 } from '@/features/app-builder/services/erpIntegrationClient';
+import type { ErpFillResult } from '@/features/app-builder/services/erpFill';
 import { deriveScreenUrl, readScreenKey, screenLink } from '@/features/app-builder/services/systemScreen';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { systemsUsedBy } from '@/features/components/services/appBuilderComponentLinks';
 import { resolveAppManagementAuth } from '@/features/project-creation/services/appBuilderComponentRunnerDeps';
+import { fillErpForProject } from '@/features/project-creation/services/erpFillForProject';
 import type { AppBuilderComponentState, Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
 
 /** Everything both verbs need before they act, or the refusal that stops them. */
-export interface ErpCall {
+interface ErpCall {
     id: string;
     project: Project;
     integration: AppBuilderComponentState;
@@ -131,6 +133,41 @@ export const handleGetErpStatus: MessageHandler<{ id?: string }> = async (contex
  * modal like every other card action; it was still opening a notification of its
  * own (owner, 2026-09-20).
  */
+/** What a reset did: the integration's Commerce writes undone, the ERP wiped, the ERP filled again. */
+interface ErpResetReport {
+    undone: ErpDetachReport;
+    wiped: unknown;
+    loaded: ErpFillResult;
+}
+
+/**
+ * The reset's three steps, in order, none resumable part-way: the integration undoes what it
+ * wrote into Commerce (its `erp/detach`), the ERP deletes its records (its own `admin/wipe`),
+ * and Demo Builder fills it from Commerce again (`fillErpForProject`, AB-26y). Throws in the
+ * words of the step that stopped.
+ */
+async function resetErp(
+    context: HandlerContext,
+    call: ErpCall,
+    report: (stage: string, step?: string) => void,
+): Promise<ErpResetReport> {
+    const stage = OPERATION_STAGES.resettingErpRecords.label;
+    report(stage, "Undoing the ERP's writes in Commerce");
+    const undone = await new ErpIntegrationClient(call.integration.deployedUrls, call.auth).detach();
+    report(stage, 'Wiping the ERP');
+    const wipe = await callErpApi(call.erp?.deployedUrls, call.auth, 'POST', 'admin/wipe', undefined);
+    if ('refusal' in wipe) throw new Error(wipe.refusal);
+    if (!wipe.ok) throw new Error(`the ERP's wipe answered ${wipe.status}: ${wipe.detail}`);
+    if (!context.authManager) throw new Error('Adobe sign-in required.');
+    const filled = await fillErpForProject(call.project, call.id, {
+        authManager: context.authManager,
+        getAuth: async () => call.auth,
+        onProgress: (step) => report(OPERATION_STAGES.loadingErpDemoData.label, step),
+    });
+    if (filled.status === 'failed') throw new Error(`the ERP was wiped but not filled again: ${filled.detail}`);
+    return { undone, wiped: (wipe.body as { wiped?: unknown }).wiped, loaded: filled.result };
+}
+
 export const handleResetErpRecords: MessageHandler<{ id?: string; progress?: 'modal' }> =
     narrateOutcomeToModal(async (context, payload): Promise<HandlerResponse> => {
     const call = await openErpCall(context, payload, 'reset the ERP');
@@ -151,14 +188,8 @@ export const handleResetErpRecords: MessageHandler<{ id?: string; progress?: 'mo
         async (report): Promise<GuardableResult & { report?: ErpResetReport }> => {
             const refused = await guardOrBlock(context, call.project, (message) => report(message));
             if (refused) return refused;
-            // Three writes in one stage, because the SC cannot act between them and
-            // the reset is not resumable part-way.
-            report(
-                OPERATION_STAGES.resettingErpRecords.label,
-                "Undoing the ERP's writes, wiping it, mirroring Commerce again",
-            );
             try {
-                return { success: true, report: await new ErpIntegrationClient(call.integration.deployedUrls, call.auth).reset() };
+                return { success: true, report: await resetErp(context, call, report) };
             } catch (error) {
                 return { success: false, error: `The ERP reset did not finish: ${errorText(error)}` };
             }
@@ -211,7 +242,7 @@ export const handleOpenErpScreen: MessageHandler<{ id?: string }> = async (conte
     return { success: true, data: { id, erp: systemEntry.id, screenUrl } };
 };
 
-export function errorText(error: unknown): string {
+function errorText(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
 }
 

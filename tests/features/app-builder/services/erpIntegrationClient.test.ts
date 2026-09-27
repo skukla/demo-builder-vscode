@@ -1,5 +1,5 @@
 /**
- * erpIntegrationClient — the integration's erp/status, erp/reset, erp/lookup and erp/history, called with
+ * erpIntegrationClient — the integration's erp/status, erp/detach, erp/lookup and erp/history, called with
  * the signed-in IMS identity, addressed by the URLs the deploy answered.
  */
 
@@ -12,8 +12,7 @@ import {
 
 const URLS = {
     'runtime/erp/status': 'https://ns.adobeioruntime.net/api/v1/web/erp/status',
-    'runtime/erp/reset': 'https://ns.adobeioruntime.net/api/v1/web/erp/reset',
-    'runtime/erp/mirror': 'https://ns.adobeioruntime.net/api/v1/web/erp/mirror',
+    'runtime/erp/detach': 'https://ns.adobeioruntime.net/api/v1/web/erp/detach',
     'runtime/erp/lookup': 'https://ns.adobeioruntime.net/api/v1/web/erp/lookup',
     'runtime/erp/history': 'https://ns.adobeioruntime.net/api/v1/web/erp/history',
 };
@@ -30,9 +29,9 @@ function answering(status: number, body: unknown) {
 describe('deriveErpActionUrl', () => {
     it('finds the action by its path suffix and nothing else', () => {
         expect(deriveErpActionUrl(URLS, 'status')).toBe(URLS['runtime/erp/status']);
-        expect(deriveErpActionUrl(URLS, 'reset')).toBe(URLS['runtime/erp/reset']);
+        expect(deriveErpActionUrl(URLS, 'detach')).toBe(URLS['runtime/erp/detach']);
         expect(deriveErpActionUrl({ 'web/app': 'https://x/api/v1/web/app-management/installation' }, 'status')).toBeUndefined();
-        expect(deriveErpActionUrl(undefined, 'reset')).toBeUndefined();
+        expect(deriveErpActionUrl(undefined, 'detach')).toBeUndefined();
     });
 });
 
@@ -53,14 +52,15 @@ describe('ErpIntegrationClient', () => {
         expect(status.ledger.entries).toBe(2);
     });
 
-    it('POSTs reset and answers the report', async () => {
-        const fetchImpl = answering(200, { reverted: { reverted: 1, failed: [] }, mirrored: { counts: { products: 40, companies: 3 } } });
+    it('POSTs detach and answers the report', async () => {
+        const body = { reverted: { reverted: 1, failed: [] }, orders: { cleared: 2, failed: [] } };
+        const fetchImpl = answering(200, body);
 
-        const report = await new ErpIntegrationClient(URLS, AUTH, fetchImpl).reset();
+        const report = await new ErpIntegrationClient(URLS, AUTH, fetchImpl).detach();
 
-        expect(fetchImpl.mock.calls[0][0]).toBe(URLS['runtime/erp/reset']);
+        expect(fetchImpl.mock.calls[0][0]).toBe(URLS['runtime/erp/detach']);
         expect((fetchImpl.mock.calls[0][1] as RequestInit).method).toBe('POST');
-        expect(report.mirrored?.counts).toEqual({ products: 40, companies: 3 });
+        expect(report).toEqual(body);
     });
 
     it('GETs lookup with the one query the action takes, encoded, and answers the lookup', async () => {
@@ -93,10 +93,10 @@ describe('ErpIntegrationClient', () => {
     });
 
     it("a non-2xx answer throws with the action's own message", async () => {
-        const fetchImpl = answering(500, { error: 'ERP wipe answered 503: unavailable' });
+        const fetchImpl = answering(500, { error: 'Commerce answered 503: unavailable' });
 
-        await expect(new ErpIntegrationClient(URLS, AUTH, fetchImpl).reset()).rejects.toThrow(
-            new ErpIntegrationApiError('reset', 500, 'ERP wipe answered 503: unavailable'),
+        await expect(new ErpIntegrationClient(URLS, AUTH, fetchImpl).detach()).rejects.toThrow(
+            new ErpIntegrationApiError('detach', 500, 'Commerce answered 503: unavailable'),
         );
     });
 

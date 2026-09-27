@@ -16,7 +16,7 @@ jest.mock('@/features/project-creation/services/appBuilderComponentRunnerDeps', 
 }));
 
 const mockStatus = jest.fn();
-const mockReset = jest.fn();
+const mockDetach = jest.fn();
 const mockLookup = jest.fn();
 const mockTraceOrder = jest.fn();
 const mockCallErpApi = jest.fn();
@@ -29,10 +29,15 @@ jest.mock('@/features/app-builder/services/erpIntegrationClient', () => ({
             mockClientCtor(...args);
         }
         status = () => mockStatus();
-        reset = () => mockReset();
+        detach = () => mockDetach();
         lookup = (query: unknown) => mockLookup(query);
         traceOrder = (orderNumber: string) => mockTraceOrder(orderNumber);
     },
+}));
+
+const mockFillErpForProject = jest.fn();
+jest.mock('@/features/project-creation/services/erpFillForProject', () => ({
+    fillErpForProject: (...args: unknown[]) => mockFillErpForProject(...args),
 }));
 
 jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
@@ -127,7 +132,9 @@ beforeEach(() => {
     mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
     mockDetectProjectOrgMismatch.mockResolvedValue({ reachable: true });
     mockStatus.mockResolvedValue(LIVE);
-    mockReset.mockResolvedValue({ reverted: { reverted: 2, failed: [] }, mirrored: { counts: { products: 40, companies: 3 } } });
+    mockDetach.mockResolvedValue({ reverted: { reverted: 2, failed: [] }, orders: { cleared: 1, failed: [] } });
+    mockCallErpApi.mockResolvedValue({ ok: true, status: 200, body: { wiped: { products: 40 } }, detail: '' });
+    mockFillErpForProject.mockResolvedValue({ status: 'filled', erpId: 'demo-erp', result: { partners: 3, products: 40, skipped: 0 } });
 });
 
 describe('handleGetErpStatus', () => {
@@ -176,7 +183,7 @@ describe('handleGetErpStatus', () => {
 });
 
 describe('handleResetErpRecords', () => {
-    it('guards, runs the reset under a progress notification, and answers the report', async () => {
+    it('guards, then undoes, wipes and fills under one progress notification, and answers what each did', async () => {
         const { mockContext } = setupMocks(pairProject());
         allowDeveloperRole();
 
@@ -187,13 +194,20 @@ describe('handleResetErpRecords', () => {
             ([options]: [{ title: string }]) => options.title,
         );
         expect(titles).toEqual(['Resetting Nordwind records']);
-        expect(mockReset).toHaveBeenCalledTimes(1);
+        expect(mockDetach).toHaveBeenCalledTimes(1);
+        // The ERP's own wipe, at its own URLs, with the sign-in.
+        expect(mockCallErpApi).toHaveBeenCalledWith(ERP_URLS, expect.objectContaining({ imsOrgId: 'ABC@AdobeOrg' }), 'POST', 'admin/wipe', undefined);
+        expect(mockFillErpForProject).toHaveBeenCalledWith(expect.any(Object), 'erp-integration', expect.any(Object));
         expect(result).toEqual({
             success: true,
             data: {
                 id: 'erp-integration',
                 erp: { id: 'demo-erp', name: 'Nordwind', status: 'deployed', url: ERP.url, lastDeployed: ERP.lastDeployed },
-                report: { reverted: { reverted: 2, failed: [] }, mirrored: { counts: { products: 40, companies: 3 } } },
+                report: {
+                    undone: { reverted: { reverted: 2, failed: [] }, orders: { cleared: 1, failed: [] } },
+                    wiped: { products: 40 },
+                    loaded: { partners: 3, products: 40, skipped: 0 },
+                },
             },
         });
     });
@@ -202,7 +216,7 @@ describe('handleResetErpRecords', () => {
         const { mockContext } = setupMocks(pairProject({ status: 'error' }));
         const result = await handleResetErpRecords(mockContext, { id: 'erp-integration' });
         expect(result).toMatchObject({ success: false, code: ErrorCode.INVALID_OPERATION });
-        expect(mockReset).not.toHaveBeenCalled();
+        expect(mockDetach).not.toHaveBeenCalled();
     });
 
     it('a failed guard blocks before the reset runs', async () => {
@@ -210,15 +224,30 @@ describe('handleResetErpRecords', () => {
         mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: false, error: 'Sign in first' });
         const result = await handleResetErpRecords(mockContext, { id: 'erp-integration' });
         expect(result.success).toBe(false);
-        expect(mockReset).not.toHaveBeenCalled();
+        expect(mockDetach).not.toHaveBeenCalled();
     });
 
-    it("a reset the action refuses is answered as a failure with the action's words", async () => {
+    it("a wipe the ERP refuses stops the reset before the fill, in the ERP's words", async () => {
         const { mockContext } = setupMocks(pairProject());
         allowDeveloperRole();
-        mockReset.mockRejectedValue(new Error('ERP reset answered 500: ERP wipe answered 503'));
+        mockCallErpApi.mockResolvedValue({ ok: false, status: 503, body: {}, detail: 'database unavailable' });
         const result = await handleResetErpRecords(mockContext, { id: 'erp-integration' });
-        expect(result).toEqual({ success: false, error: 'The ERP reset did not finish: ERP reset answered 500: ERP wipe answered 503' });
+        expect(result).toEqual({
+            success: false,
+            error: "The ERP reset did not finish: the ERP's wipe answered 503: database unavailable",
+        });
+        expect(mockFillErpForProject).not.toHaveBeenCalled();
+    });
+
+    it('a fill that stops after the wipe says the ERP was wiped but not filled', async () => {
+        const { mockContext } = setupMocks(pairProject());
+        allowDeveloperRole();
+        mockFillErpForProject.mockResolvedValue({ status: 'failed', detail: 'Commerce answered 401 for products' });
+        const result = await handleResetErpRecords(mockContext, { id: 'erp-integration' });
+        expect(result).toEqual({
+            success: false,
+            error: 'The ERP reset did not finish: the ERP was wiped but not filled again: Commerce answered 401 for products',
+        });
     });
 
     it('needs an id, even with no payload at all', async () => {

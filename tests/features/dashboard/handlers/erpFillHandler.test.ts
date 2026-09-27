@@ -33,7 +33,7 @@ jest.mock('@/features/app-builder/services/erpFill', () => ({
 const mockResolveRestTarget = jest.fn();
 const mockRequestRest = jest.fn();
 jest.mock('@/features/ai/server/commerceRestClient', () => ({
-    resolveRestTarget: (...args: unknown[]) => mockResolveRestTarget(...args),
+    resolveRestTargetFor: (...args: unknown[]) => mockResolveRestTarget(...args),
     requestRest: (...args: unknown[]) => mockRequestRest(...args),
 }));
 
@@ -145,7 +145,7 @@ describe('handleLoadErpDemoData', () => {
         await handleLoadErpDemoData(mockContext, { id: 'erp-integration' });
 
         await handedDeps().importRecords({ products: [] });
-        expect(mockCallErpApi).toHaveBeenCalledWith(ERP_URLS, AUTH, 'POST', 'admin/import', { products: [] });
+        expect(mockCallErpApi).toHaveBeenCalledWith(ERP_URLS, AUTH, 'POST', 'admin/import', { products: [] }, expect.any(Function));
     });
 
     it("hands the fill an import that throws the ERP's own words when it refuses", async () => {
@@ -187,7 +187,7 @@ describe('handleLoadErpDemoData', () => {
         mockResolveRestTarget.mockResolvedValue({ refusal: 'Error: Adobe sign-in required.' });
         const { mockContext } = setup();
         const result = await handleLoadErpDemoData(mockContext, { id: 'erp-integration' });
-        expect(result).toStrictEqual({ success: false, error: 'Adobe sign-in required.' });
+        expect(result).toStrictEqual({ success: false, error: 'Loading demo data did not finish: Adobe sign-in required.' });
         expect(mockFillErp).not.toHaveBeenCalled();
     });
 

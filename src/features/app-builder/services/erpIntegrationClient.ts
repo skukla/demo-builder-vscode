@@ -1,9 +1,9 @@
 /**
- * The ERP integration's own actions, as Demo Builder calls them: `erp/status`, `erp/lookup`, `erp/history`,
- * `erp/settings` (the settings in force, which the ERP fill sorts records by),
- * (what the integration sees of its ERP), `erp/reset` (undo the ledgered
- * Commerce writes, wipe the ERP, mirror Commerce again; decisions 8 and 11) and
- * `erp/detach` (the undo alone, run before the integration is removed).
+ * The ERP integration's own actions, as Demo Builder calls them: `erp/status`, `erp/lookup` and
+ * `erp/history` (what the integration sees of its ERP), `erp/settings` (the settings in force,
+ * which the ERP fill sorts records by) and `erp/detach` (undo what the integration wrote into
+ * Commerce, run by a reset and before the integration is removed). The reset and the fill are
+ * Demo Builder's own since 2026-09-27 (AB-26y).
  *
  * All are web actions with `require-adobe-auth`, so they take the same
  * bearer token and org header the App Management client sends. The URLs come
@@ -32,21 +32,13 @@ export interface ErpIntegrationStatus {
 }
 
 /** What `erp/reset` answers: counts of what was undone, wiped and mirrored. */
-export interface ErpResetReport {
-    reverted?: { reverted: number; failed: unknown[] };
-    orders?: unknown;
-    wiped?: unknown;
-    mirrored?: { counts: { products: number; companies: number } };
-    error?: string;
-}
-
 /** What `erp/detach` answers: the company writes undone and the ERP order numbers cleared. */
 export interface ErpDetachReport {
     reverted?: { reverted: number; failed: unknown[] };
     orders?: { cleared: number; failed: unknown[] };
 }
 
-export type ErpAction = 'status' | 'reset' | 'detach' | 'lookup' | 'history' | 'settings';
+export type ErpAction = 'status' | 'detach' | 'lookup' | 'history' | 'settings';
 
 /**
  * What `erp/lookup` answers (the integration's `lib/lookup.js`, `productLookup` and
@@ -132,11 +124,6 @@ export class ErpIntegrationClient {
     /** The ERP's health as the integration sees it, the ledger size, the app's identity. */
     async status(): Promise<ErpIntegrationStatus> {
         return (await this.call('status', 'GET')) as ErpIntegrationStatus;
-    }
-
-    /** The whole reset; the action itself is idempotent and budgeted at five minutes. */
-    async reset(): Promise<ErpResetReport> {
-        return (await this.call('reset', 'POST')) as ErpResetReport;
     }
 
     /** Undo what the integration wrote onto Commerce, leaving the ERP as it is. */

@@ -65,9 +65,9 @@ export interface ComponentSettings {
 
 /** One of a component's own web actions, called by POST with no body. */
 export interface WebActionCall {
-    /** The web action, by the end of its URL: "admin", or "erp/mirror" for package and action. */
+    /** The web action, e.g. "admin". */
     action: string;
-    /** The path under it, e.g. "wipe", or only a query, e.g. "?background=true". */
+    /** The path under it, e.g. "wipe". */
     path: string;
 }
 
@@ -211,14 +211,12 @@ export interface AppBuilderComponentCatalogEntry {
      */
     wipe?: WebActionCall;
     /**
-     * The call that fills the system this integration serves from Commerce,
-     * made once the Commerce install SUCCEEDS on an add: the ERP integration's
-     * `POST erp/mirror?background=true`, the same call the ERP's Sync records
-     * button makes. Until 2026-09-24 nothing made it, and a fresh pair sat
-     * empty while the ERP's home screen and two READMEs said it was filled at
-     * install. A failure never fails the deploy; the line names the button.
+     * Demo Builder fills the system this integration serves from Commerce once the
+     * Commerce install SUCCEEDS on an add (`fillErpForProject`), and on "Load demo
+     * data". Filling is demo setup, so it is Demo Builder's, not the integration's
+     * (AB-26y, 2026-09-27). A failure never fails the deploy; the line says why.
      */
-    sync?: WebActionCall;
+    fillsSystem?: boolean;
     /** Pre-built source repo (owner/repo/branch). */
     source: AddonSource;
     /** Backend ids this appBuilderComponent fits (omitted/empty = any backend). */

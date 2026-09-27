@@ -44,7 +44,6 @@ import {
     fastForwardClone,
     type GitRunner,
 } from '@/features/app-builder/services/integrationSourceUpdate';
-import { startRecordSync } from '@/features/app-builder/services/recordSync';
 import { deleteUndeclaredActions } from '@/features/app-builder/services/runtimeUndeclaredActions';
 import { buildS2SDeployEnv } from '@/features/app-builder/services/s2sDeployEnv';
 import { wipeSystemRecords } from '@/features/app-builder/services/systemRecordsWipe';
@@ -60,6 +59,7 @@ import {
     readMeshEnvVarsFromFile,
 } from '@/features/mesh/services/stalenessDetector';
 import { regenerateComponentEnvFile } from '@/features/project-creation/helpers/envFileGenerator';
+import { fillErpForProject } from '@/features/project-creation/services/erpFillForProject';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';
 import type { ComponentRegistry } from '@/types/components';
@@ -205,9 +205,9 @@ export function buildDefaultRunnerDeps(
                 appVersion: options?.appVersion,
                 since: options?.since,
             }),
-        // The first sync from Commerce once the install stands (the ERP's Sync records call).
-        syncRecords: (project, entry, deployedUrls) =>
-            startRecordSync(entry, deployedUrls, { getAuth: authFor(project) }),
+        // Demo Builder fills the ERP from Commerce once the install stands (AB-26y).
+        fillSystem: (project, entry, onStep) =>
+            fillErpForProject(project, entry.id, { authManager: ctx.authManager, getAuth: authFor(project), onProgress: onStep }),
         readAppVersion: readAppManifestVersion,
         // Update: fast-forward the clone, then the same dependency install the
         // add path runs (ComponentManager, with the entry's Node version).

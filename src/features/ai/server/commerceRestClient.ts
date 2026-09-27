@@ -183,6 +183,19 @@ export async function resolveRestTarget(
 ): Promise<RestTarget | { refusal: string }> {
     const project = await ctx.stateManager.getCurrentProject();
     if (!project) return { refusal: 'Error: no current project. Use list_projects then set the current project.' };
+    return resolveRestTargetFor(project, ctx.authManager, storeViewArg, fetchImpl);
+}
+
+/**
+ * The same, for a project already in hand (the ERP fill runs inside an add, where the
+ * project is the one being changed, not necessarily the current one).
+ */
+export async function resolveRestTargetFor(
+    project: Project,
+    authManager: HandlerContext['authManager'],
+    storeViewArg: unknown,
+    fetchImpl: typeof fetch,
+): Promise<RestTarget | { refusal: string }> {
     const facts = buildCommerceEndpoints(project);
     if (facts.backend !== 'accs') {
         return {
@@ -193,15 +206,15 @@ export async function resolveRestTarget(
     }
     const base = facts.endpoints.commerceGraphQl && restBase(facts.endpoints.commerceGraphQl);
     if (!base) return { refusal: 'Error: this project has no ACCS Commerce endpoint configured.' };
-    const signedIn = await ctx.authManager?.isAuthenticated().catch(() => false);
-    if (!ctx.authManager || !signedIn) return { refusal: SIGN_IN_TEXT };
+    const signedIn = await authManager?.isAuthenticated().catch(() => false);
+    if (!authManager || !signedIn) return { refusal: SIGN_IN_TEXT };
     const { organization, projectId } = project.adobe ?? {};
     const workspaceId = restWorkspaceId(project);
     if (!organization || !projectId || !workspaceId) {
         return { refusal: 'Error: the project has no Adobe org, project and workspace to take a credential from.' };
     }
     try {
-        const credentials = await ctx.authManager.getS2SDeployCredentials(organization, projectId, workspaceId);
+        const credentials = await authManager.getS2SDeployCredentials(organization, projectId, workspaceId);
         const token = await mintToken(workspaceId, credentials, fetchImpl);
         const storeView = typeof storeViewArg === 'string' && storeViewArg ? storeViewArg : facts.headers.all?.Store;
         return { base, token, clientId: credentials.clientId, imsOrgCode: credentials.imsOrgCode, storeView };

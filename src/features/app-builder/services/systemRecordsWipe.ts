@@ -28,8 +28,7 @@ export interface SystemWipeDeps {
 }
 
 /**
- * A declared call's URL: the deployed URL of its action, plus its path. Shared
- * by the wipe (here) and the first sync (`recordSync.ts`).
+ * A declared call's URL: the deployed URL of its action, plus its path.
  *
  * @param call - the entry's declared call
  * @param deployedUrls - the component's per-action URL map
@@ -40,9 +39,7 @@ export function deriveActionCallUrl(
     deployedUrls: Record<string, string> | undefined,
 ): string | undefined {
     const actionUrl = Object.values(deployedUrls ?? {}).find((url) => url.endsWith(`/${call.action}`));
-    // A path that is only a query ("?background=true") goes straight onto the action.
-    const joiner = call.path.startsWith('?') ? '' : '/';
-    return actionUrl && `${actionUrl}${joiner}${call.path}`;
+    return actionUrl && `${actionUrl}/${call.path}`;
 }
 
 /**

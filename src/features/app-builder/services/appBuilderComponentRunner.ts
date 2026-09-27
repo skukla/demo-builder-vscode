@@ -70,7 +70,6 @@ import {
 import type { CommerceDetachResult } from './erpDetach';
 import type { SourceUpdateResult, UpdateCheckResult } from './integrationSourceUpdate';
 import { deriveOwPackage } from './owPackageName';
-import type { RecordSyncResult } from './recordSync';
 import type { RuntimeCleanupSummary } from './runtimeLeftoverCleanup';
 import type { DeclaredRuntime } from './runtimeNamespace';
 import type { UndeclaredActionCleanup } from './runtimeUndeclaredActions';
@@ -297,17 +296,16 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
         options?: AppManagementInstallOptions,
     ) => Promise<AppManagementInstallResult>;
     /**
-     * Start the first sync of the system an app-management entry serves, once
-     * its Commerce install stands (recordSync; the entry's `sync` call). The ERP's
-     * screens and both READMEs promised the ERP is filled at install, and until
-     * 2026-09-24 nothing did it. Never fails the deploy. Optional: deploy-only
-     * paths and bare tests never need it.
+     * Fill the system an app-management entry serves from Commerce, once its Commerce
+     * install stands (`fillErpForProject`; entries with `fillsSystem`). Filling is demo
+     * setup, so Demo Builder does it rather than the integration (AB-26y). Never fails
+     * the deploy. Optional: deploy-only paths and bare tests never need it.
      */
-    syncRecords?: (
+    fillSystem?: (
         project: Project,
         entry: AppBuilderComponentCatalogEntry,
-        deployedUrls: Record<string, string> | undefined,
-    ) => Promise<RecordSyncResult>;
+        onStep: (step: string) => void,
+    ) => Promise<{ status: 'filled' } | { status: 'failed'; detail: string }>;
     /** The version an app's manifest declares (appManifestVersion); optional for bare tests. */
     readAppVersion?: (componentPath: string) => Promise<string | undefined>;
     /** Fast-forward a clone to its branch (integrationSourceUpdate); update only. */
@@ -1071,7 +1069,7 @@ async function installIfAppManagement(
         await deps.saveProject(project);
     }
     if (result.status === 'installed') {
-        await syncAfterInstall(project, entry, state?.deployedUrls, deps);
+        await fillAfterInstall(project, entry, deps);
     }
     if (result.status === 'upgraded' && result.detail) {
         deps.onProgress?.(result.detail);
@@ -1088,32 +1086,26 @@ async function installIfAppManagement(
 }
 
 /**
- * The first sync from Commerce, once the install stands: the call the ERP's Sync
- * records button makes, made without the button. No-op for an entry that declares
- * no `sync`, and when the caller wired none. A failure never fails the deploy —
- * the pair is installed, merely empty — and the line says so.
+ * Fill the system the entry serves from Commerce, once the install stands. No-op for an
+ * entry that does not fill a system, and when the caller wired no fill. A failure never
+ * fails the deploy (the pair is installed, merely empty), and the line says why.
  */
-async function syncAfterInstall(
+async function fillAfterInstall(
     project: Project,
     entry: AppBuilderComponentCatalogEntry,
-    deployedUrls: Record<string, string> | undefined,
     deps: AppBuilderComponentRunnerDeps,
 ): Promise<void> {
-    if (!entry.sync || !deps.syncRecords) {
+    if (!entry.fillsSystem || !deps.fillSystem) {
         return;
     }
-    deps.onProgress?.(OPERATION_STAGES.installingIntoCommerce.label, 'Starting the first sync');
-    const result = await deps.syncRecords(project, entry, deployedUrls);
-    if (result.status === 'started') {
+    const stage = OPERATION_STAGES.loadingErpDemoData.label;
+    deps.onProgress?.(stage, 'Reading Commerce');
+    const outcome = await deps.fillSystem(project, entry, (step) => deps.onProgress?.(stage, step));
+    if (outcome.status === 'filled') {
         return;
     }
-    // A declared sync that is skipped names an action this deploy does not have: a
-    // broken declaration, which once skipped every first sync without a word.
-    const detail = result.status === 'skipped'
-        ? `its action ${entry.sync.action} is not among the deployed actions`
-        : result.detail;
-    deps.logger.warn(`[AppBuilderComponent Runner] ${entry.id} installed but its first sync did not start: ${detail}`);
-    deps.onProgress?.(OPERATION_STAGES.installingIntoCommerce.label, `Sync did not start: ${detail ?? 'no reason given'}`);
+    deps.logger.warn(`[AppBuilderComponent Runner] ${entry.id} installed but its system was not filled: ${outcome.detail}`);
+    deps.onProgress?.(stage, `Demo data did not load: ${outcome.detail}`);
 }
 
 /**

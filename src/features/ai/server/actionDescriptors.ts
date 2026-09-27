@@ -425,8 +425,8 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         description:
             "Reset the ERP that comes with the ERP integration: undo the credit limits and " +
             'company blocks it wrote into Commerce, clear the ERP order numbers from Commerce ' +
-            'orders, wipe every ERP record, then mirror the Commerce products and companies into it ' +
-            'again as they stand. Commerce is the master; the ERP is transitory. Confirm with the ' +
+            'orders, wipe every ERP record, then fill it again from the Commerce products, companies ' +
+            'and customers as they stand. Commerce is the master; the ERP is transitory. Confirm with the ' +
             'user first. Takes the integration id.',
         map: dashboardHandlers,
         type: 'resetErpRecords',
