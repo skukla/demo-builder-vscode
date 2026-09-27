@@ -105,3 +105,5 @@ events.
 - 2026-09-27  2026-09-27  Owner: during A3's live run, capture Commerce's own event payloads (shipment, invoice, order hold/cancel save, product delete) from the Developer Console's registration debug tracing, scrubbed, into commerce-erp-integration test/fixtures/commerce/events/, and point the handler tests at them (today they use hand-written payloads). Turn tracing on before the run's first order.
 - 2026-09-27  feat(erp): Demo Builder fills the ERP from Commerce (`706583816`)
 - 2026-09-27  2026-09-27  Step 1 LIVE on Bodea: load_erp_demo_data filled the ERP in 2m15s, 4 customers and 182 products; accessmesh, the customers' websites, sales organisations and credit limits identical to the integration's mirror. Open before step 2: the minute refresh is the only path for per-source stock and company changes (Commerce raises no event for either), so deleting it drops those.
+- 2026-09-27  feat(erp): Demo Builder fills the ERP after the add and inside Reset (`bef6b4fff`)
+- 2026-09-27  docs(backlog): AB-26y step 1 proven live on Bodea (`0b201347f`)
