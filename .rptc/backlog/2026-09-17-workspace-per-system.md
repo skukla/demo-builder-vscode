@@ -283,6 +283,12 @@ checked rather than taken on the word:
   3 seconds.** The workspace is gone from the project listing and its namespace is gone
   from `aio runtime namespace list`. **That also answers an open question in the research**:
   deleting a workspace removes its Runtime namespace, not just the workspace record.
+  **Corrected 2026-09-27: the namespace goes, but about 11 minutes LATER.** Re-measured with
+  the deleted namespace's OWN key: it kept working for 10 minutes after the delete, then
+  answered 401 "the supplied authentication is invalid". `aio runtime namespace list` lists
+  only the namespace of the key asking, so its absence under another key proved nothing,
+  which is the likely flaw in the check above. Code left in the namespace keeps running
+  until then.
 - **The Commerce profile is already built.** `profileForTenant` (`subscriptionList.ts`)
   picks the org profile whose name matches the project's configured Commerce tenant, and
   refuses only when nothing or several match. The research's citation
