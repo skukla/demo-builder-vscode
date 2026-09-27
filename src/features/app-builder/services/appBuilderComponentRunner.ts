@@ -68,6 +68,7 @@ import { deriveOwPackage } from './owPackageName';
 import type { RecordSyncResult } from './recordSync';
 import type { RuntimeCleanupSummary } from './runtimeLeftoverCleanup';
 import type { DeclaredRuntime } from './runtimeNamespace';
+import type { UndeclaredActionCleanup } from './runtimeUndeclaredActions';
 import type { AppDeploymentResult } from './types';
 import { isMeshComponentId } from '@/core/constants';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
@@ -360,6 +361,12 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
     republishStorefront: (
         input: RepublishInput,
     ) => Promise<{ success: boolean; error?: string; cdnError?: string }>;
+    /**
+     * After a deploy, delete the actions the apps at these paths no longer declare, in
+     * their own packages (`runtimeUndeclaredActions.ts`): `aio app deploy` never does.
+     * Runs inside the deploy's org context. Absent in tests that do not exercise it.
+     */
+    deleteUndeclaredActions?: (componentPaths: string[]) => Promise<UndeclaredActionCleanup>;
     /** Every appBuilderComponent in the project's catalog (for the union subscribe). */
     catalog: AppBuilderComponentCatalogEntry[];
     /** Secret storage forwarded to the republish path. */
@@ -556,9 +563,34 @@ async function republishIfProvided(
     return undefined;
 }
 
-/** A finished add or deploy, carrying the republish warning when there is one. */
-function withRepublishWarning(warning: string | undefined): RunnerResult {
-    return { success: true, ...(warning ? { warnings: [warning] } : {}) };
+/** A finished add or deploy, carrying the warnings it has (left-behind code, republish). */
+function withWarnings(...warnings: Array<string | undefined>): RunnerResult {
+    const said = warnings.filter((warning): warning is string => Boolean(warning));
+    return { success: true, ...(said.length > 0 ? { warnings: said } : {}) };
+}
+
+/**
+ * After an app deploy: delete what the deploy left behind — actions in the app's own
+ * packages it no longer declares — and answer a warning when some could not be deleted
+ * or the namespace could not be read. Every component deploying into the same workspace
+ * is passed, so a pair's two apps keep each other's actions safe.
+ */
+async function deleteLeftBehindActions(
+    project: Project,
+    entry: AppBuilderComponentCatalogEntry,
+    componentPath: string,
+    deps: AppBuilderComponentRunnerDeps,
+): Promise<string | undefined> {
+    if (!deps.deleteUndeclaredActions) return undefined;
+    deps.onProgress?.(OPERATION_STAGES.checkingLeftovers.label);
+    const sharing = entriesSharingWorkspace(deps.catalog, project, entry)
+        .map((other) => project.componentInstances?.[other.id]?.path)
+        .filter((other): other is string => Boolean(other) && other !== componentPath);
+    const cleanup = await deps.deleteUndeclaredActions([componentPath, ...sharing]);
+    if (cleanup.failed.length > 0) {
+        return `Code the app no longer uses is still deployed: ${cleanup.failed.join(', ')}.`;
+    }
+    return cleanup.note;
 }
 
 /** Build the persisted AppBuilderComponentState from a successful mesh deploy. */
@@ -655,7 +687,7 @@ async function dispatchDeploy(
     entry: AppBuilderComponentCatalogEntry,
     componentPath: string,
     deps: AppBuilderComponentRunnerDeps,
-): Promise<{ ok: true; outcome: DeployOutcome } | { ok: false; error: string }> {
+): Promise<{ ok: true; outcome: DeployOutcome; warning?: string } | { ok: false; error: string }> {
     if (entry.kind === 'mesh') {
         // The .env must exist before `aio api-mesh` reads it, and it is rewritten
         // on every deploy — a redeploy after a credential change in Configure must
@@ -751,9 +783,12 @@ async function dispatchDeploy(
             failureLogFile: project.path ? `${project.path}/logs/${entry.id}-deploy.log` : undefined,
         },
     );
-    return result.success
-        ? { ok: true, outcome: integrationOutcome(entry, result.data, resolveDisplayName(entry, inputs)) }
-        : { ok: false, error: result.error || 'App deployment failed.' };
+    if (!result.success) return { ok: false, error: result.error || 'App deployment failed.' };
+    return {
+        ok: true,
+        outcome: integrationOutcome(entry, result.data, resolveDisplayName(entry, inputs)),
+        warning: await deleteLeftBehindActions(project, entry, componentPath, deps),
+    };
 }
 
 /**
@@ -982,7 +1017,7 @@ async function runAdd(
         await persistOutcome(project, entry, deployed.outcome, deps);
         if (linkBroughtSystem(project, entry.id, deps.catalog)) await deps.saveProject(project);
         await installIfAppManagement(project, entry, deps, { componentPath: installed.path, since });
-        return withRepublishWarning(await republishIfProvided(project, deps));
+        return withWarnings(deployed.warning, await republishIfProvided(project, deps));
     } catch (error) {
         deps.logger.error('[AppBuilderComponent Runner] add failed', error as Error);
         return { success: false, error: readableFailure(toError(error).message, deps.logger) };
@@ -1143,7 +1178,7 @@ export async function deployAppBuilderComponent(
         recordDeployOutcome(project, entry.kind, id, deployed.outcome);
         await deps.saveProject(project);
         await installIfAppManagement(project, entry, deps, { componentPath, since });
-        return withRepublishWarning(await republishIfProvided(project, deps));
+        return withWarnings(deployed.warning, await republishIfProvided(project, deps));
     } catch (error) {
         deps.logger.error('[AppBuilderComponent Runner] deploy failed', error as Error);
         const reason = readableFailure(toError(error).message, deps.logger);

@@ -328,6 +328,9 @@ describe('rows with no output safety net are classified', () => {
         'set_console_apis',
         'set_project_destination',
         'add_console_apis',
+        // Category 2, read before listing: `handleDeleteUndeclaredRuntimeCode` returns
+        // `{namespace, deleted, failed}`, or a named refusal.
+        'delete_undeclared_runtime_code',
         // Category 2, read before listing: `handleListRuntimePackages` returns
         // `{data: {namespace, packages}}` or a named refusal (runtimePackageHandlers.ts).
         'list_runtime_packages',
@@ -498,6 +501,8 @@ describe('the ceiling table tracks the tool surface', () => {
         'deploy_integration',
         'redeploy_integration',
         'remove_integration',
+        // `{namespace, deleted, failed}`: bounded by what one app left behind.
+        'delete_undeclared_runtime_code',
         'deploy_mesh',
         'delete_mesh',
         'save_ai_prompt',

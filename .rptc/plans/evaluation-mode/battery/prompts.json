@@ -1125,6 +1125,14 @@
     "why": "Added with the tool (2026-09-21): a removal reported done while fifteen packages kept running in Stage, and no tool could show it. A MISS is a discoverability finding about the tool, not a bad prompt."
   },
   {
+    "id": "runtime-left-behind",
+    "prompt": "The ERP integration's order column moved to a new action, but the old erp/order-grid action is still deployed. Clean up the code the integration no longer uses.",
+    "expect": [
+      "delete_undeclared_runtime_code"
+    ],
+    "why": "Added with the tool (2026-09-27): aio app deploy never deletes an action the app stopped declaring, and the old order-grid action outlived its move until it was deleted by hand with downloaded credentials. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
     "id": "setup-checklist-read",
     "prompt": "What do I still need to set up in Commerce for the ERP integration demo?",
     "expect": [

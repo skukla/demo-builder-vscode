@@ -260,7 +260,11 @@ describe('dashboardHandlers', () => {
             //
             // getSetupChecklist + setSetupStep + checkSetupSteps (67 → 70, AB-26x,
             // 2026-09-25): an integration's demo setup checklist on its flyout.
-            expect(types).toHaveLength(70);
+            //
+            // deleteUndeclaredRuntimeCode (70 → 71, 2026-09-27): the
+            // delete_undeclared_runtime_code tool — actions an integration left behind in
+            // its own packages, which `aio app deploy` never deletes.
+            expect(types).toHaveLength(71);
         });
 
         it('should have handlers as functions', () => {

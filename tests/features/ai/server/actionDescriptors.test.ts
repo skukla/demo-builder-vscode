@@ -79,6 +79,8 @@ describe('ACTION_DESCRIPTORS', () => {
         expect(gated.sort()).toEqual([
             'delete_ai_prompt',
             'delete_mesh',
+            // Deletes deployed Runtime code; a redeploy of an older version is the only undo.
+            'delete_undeclared_runtime_code',
             // Not destructive, and gated anyway: it runs package managers (fnm,
             // npm, brew) on the user's machine and can take minutes. The rule
             // this row stretches is that a confirm gate is about SURPRISE as much

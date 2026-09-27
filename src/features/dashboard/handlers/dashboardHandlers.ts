@@ -102,7 +102,10 @@ import {
     handleListRuntimeActivations,
     handleReadRuntimeActivation,
 } from '@/features/dashboard/handlers/runtimeActivationHandlers';
-import { handleListRuntimePackages } from '@/features/dashboard/handlers/runtimePackageHandlers';
+import {
+    handleDeleteUndeclaredRuntimeCode,
+    handleListRuntimePackages,
+} from '@/features/dashboard/handlers/runtimePackageHandlers';
 import {
     handleCheckSetupSteps,
     handleGetSetupChecklist,
@@ -378,6 +381,8 @@ export const dashboardHandlers = defineHandlers({
 
     // What is deployed in the project's Runtime namespace (list_runtime_packages)
     listRuntimePackages: handleListRuntimePackages,
+    // Code an integration left behind in its own packages (delete_undeclared_runtime_code)
+    deleteUndeclaredRuntimeCode: handleDeleteUndeclaredRuntimeCode,
 
     // EDS storefront sync
     syncStorefront: handleSyncStorefront,

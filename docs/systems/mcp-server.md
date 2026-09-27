@@ -451,6 +451,7 @@ What an agent needs to know to act on the right one:
 |---|---|
 | Which workspace is this integration in? | `get_project` → `appBuilderComponents[id].workspace` (`id`, `name`, `title`); absent means the project's. The project's AGENTS.md lists them too |
 | What is deployed there? | `list_runtime_packages` with `componentId` |
+| Code it left behind (an action moved or renamed) | Every deploy deletes it. For older leftovers, or when a deploy warned it could not: `delete_undeclared_runtime_code` with `componentId` (confirm-gated) |
 | Give one integration an Adobe API | `add_console_apis` / `set_console_apis` with `componentId`. Without it the API goes on the project's workspace, which that integration never uses |
 | What APIs does it have? | `list_console_apis` with `componentId` |
 

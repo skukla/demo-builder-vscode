@@ -216,6 +216,14 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         // The uninstall removes what the app set up in Commerce.
         sessionGrant: false,
     },
+    delete_undeclared_runtime_code: {
+        action: 'Delete code an integration left behind',
+        consequence:
+            "Deletes the Runtime actions in the integration's own packages that its config no longer declares. Nothing it still uses is touched.",
+        target: ['componentId'],
+        // The code is gone for good, though a redeploy of an older version brings it back.
+        sessionGrant: false,
+    },
     remove_integration: {
         action: 'Remove an integration',
         consequence:

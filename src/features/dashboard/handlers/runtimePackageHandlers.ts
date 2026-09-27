@@ -7,8 +7,10 @@
  * with its key. This is that read, through the same code the removal now uses to
  * check itself (`runtimeNamespace.ts`), so the two cannot disagree.
  *
- * Read-only, and reached only by the `list_runtime_packages` agent tool. The
- * namespace key is fetched per call and never returned or logged.
+ * `list_runtime_packages` is read-only. `delete_undeclared_runtime_code` deletes, and
+ * only what an app no longer declares in its own packages — the same clean-up every
+ * deploy now ends with (`runtimeUndeclaredActions.ts`), for code left from before that.
+ * The namespace key is fetched per call and never returned or logged.
  *
  * @module features/dashboard/handlers/runtimePackageHandlers
  */
@@ -21,8 +23,13 @@ import {
     listRuntimePackages,
     runtimeNamespaceEnv,
 } from '@/features/app-builder/services/runtimeNamespace';
+import {
+    deleteUndeclaredActions,
+    type UndeclaredActionCleanup,
+} from '@/features/app-builder/services/runtimeUndeclaredActions';
+import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
-import type { MessageHandler } from '@/types/handlers';
+import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
 import { toError } from '@/types/typeGuards';
 
 /** What a person reads when the namespace cannot be listed. */
@@ -96,4 +103,65 @@ export const handleListRuntimePackages: MessageHandler<{ componentId?: string }>
         context.logger.warn(`[Runtime] Could not list the namespace: ${toError(error).message}`);
         return { success: false, error: LIST_FAILED };
     }
+};
+
+/**
+ * The folders of every app that deploys into the same workspace as `componentId`. A pair
+ * shares one, and each app's declarations keep the other's actions safe.
+ */
+function foldersSharingWorkspace(project: Project, componentId: string): string[] {
+    const workspace = deployWorkspaceId(project, componentId);
+    return Object.entries(project.appBuilderComponents ?? {})
+        .filter(([id, state]) => state.kind !== 'mesh' && deployWorkspaceId(project, id) === workspace)
+        .map(([id]) => project.componentInstances?.[id]?.path)
+        .filter((folder): folder is string => Boolean(folder));
+}
+
+/** The project and the integration a delete is for, or the refusal. */
+async function openForDelete(
+    context: HandlerContext,
+    componentId: string | undefined,
+): Promise<{ project: Project; componentId: string } | { refusal: HandlerResponse }> {
+    const project = await context.stateManager.getCurrentProject();
+    if (!project) {
+        return { refusal: { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND } };
+    }
+    if (!componentId || !project.appBuilderComponents?.[componentId]) {
+        return {
+            refusal: {
+                success: false,
+                error: `This project has no integration "${componentId ?? ''}".`,
+                code: ErrorCode.COMPONENT_NOT_FOUND,
+            },
+        };
+    }
+    const guardError = await runGuards(context, project);
+    if (guardError) {
+        return { refusal: { success: false, error: guardError.error, code: guardError.code } };
+    }
+    return { project, componentId };
+}
+
+/**
+ * Handle 'deleteUndeclaredRuntimeCode' — delete the actions an integration (and any app
+ * sharing its workspace) no longer declares in its own packages, and say what was deleted.
+ */
+export const handleDeleteUndeclaredRuntimeCode: MessageHandler<{ componentId?: string }> = async (
+    context,
+    payload,
+) => {
+    const opened = await openForDelete(context, payload?.componentId);
+    if ('refusal' in opened) return opened.refusal;
+    const { project, componentId } = opened;
+    const deps = { commandManager: ServiceLocator.getCommandExecutor(), logger: context.logger };
+    const target = {
+        ...buildOrgTargetFromProjectAdobe(project.adobe),
+        workspaceId: deployWorkspaceId(project, componentId),
+    };
+    const cleanup = await withOrgContext(
+        target,
+        (): Promise<UndeclaredActionCleanup> => deleteUndeclaredActions(deps, foldersSharingWorkspace(project, componentId)),
+    );
+    if (cleanup.note) return { success: false, error: cleanup.note };
+    return { success: true, data: cleanup };
 };

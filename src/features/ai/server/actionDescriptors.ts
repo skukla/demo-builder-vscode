@@ -380,6 +380,25 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         },
     },
     {
+        tool: 'delete_undeclared_runtime_code',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            "Delete the Runtime actions an integration left behind: deployed in its own " +
+            "packages but no longer in its config (an action moved or renamed; the Adobe CLI's " +
+            'deploy never deletes those). Every deploy now does this itself; use it for code left from ' +
+            "before, or when a deploy warned that some could not be deleted. Reads every app " +
+            "sharing the integration's workspace, never touches a package no app declares, and " +
+            'deletes nothing when the namespace cannot be read. Returns what it deleted and what ' +
+            'Runtime refused. Use list_runtime_packages to look first.',
+        map: dashboardHandlers,
+        type: 'deleteUndeclaredRuntimeCode',
+        confirm: true,
+        inputSchema: {
+            componentId: z.string().min(1).describe('The integration id (from get_project)'),
+        },
+    },
+    {
         tool: 'reset_erp_records',
         needsAuth: ['adobe'],
         readOnly: false,

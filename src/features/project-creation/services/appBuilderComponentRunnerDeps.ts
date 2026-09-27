@@ -44,6 +44,7 @@ import {
     type GitRunner,
 } from '@/features/app-builder/services/integrationSourceUpdate';
 import { startRecordSync } from '@/features/app-builder/services/recordSync';
+import { deleteUndeclaredActions } from '@/features/app-builder/services/runtimeUndeclaredActions';
 import { buildS2SDeployEnv } from '@/features/app-builder/services/s2sDeployEnv';
 import { wipeSystemRecords } from '@/features/app-builder/services/systemRecordsWipe';
 import { forgetScreenKey } from '@/features/app-builder/services/systemScreen';
@@ -266,17 +267,17 @@ export function buildDefaultRunnerDeps(
                 nameOf: (named) => displayNameInProject(project, named),
                 catalog: ctx.catalog,
             }),
+        deleteUndeclaredActions: (componentPaths) => deleteUndeclaredActions(ctx, componentPaths),
         deleteComponentWorkspace: async (project, workspace) => {
             const result = await ctx.authManager.deleteWorkspace(workspace.id, {
                 orgId: project.adobe?.organization,
                 projectId: project.adobe?.projectId,
             });
-            // Adobe's own words reach the log rather than a guess. The one refusal
-            // the AB-2 spike predicted here — a workspace still holding live event
-            // registrations answering 409 — has never actually been seen: three
-            // deletes on 2026-09-20 all answered 200 in about three seconds, none
-            // of them holding registrations. If it starts happening, the project
-            // teardown's registration sweep is the thing to reuse.
+            // Adobe's own words reach the log rather than a guess. The one refusal the AB-2
+            // spike predicted here — a workspace still holding live event registrations
+            // answering 409 — has never been seen: three deletes on 2026-09-20 answered 200
+            // in about three seconds, none holding registrations. If it starts happening,
+            // the project teardown's registration sweep is the thing to reuse.
             return 'error' in result ? { error: result.error } : undefined;
         },
         // The runner's dep contract is void — swallow the returned API list.

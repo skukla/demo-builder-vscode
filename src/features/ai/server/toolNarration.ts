@@ -163,6 +163,7 @@ export const TOOL_NARRATION: Record<string, string> = {
     add_integration: 'Adding the integration',
     deploy_integration: 'Deploying the integration',
     redeploy_integration: 'Redeploying the integration',
+    delete_undeclared_runtime_code: 'Deleting left-behind code',
     remove_integration: 'Removing the integration',
     // Display name only — "nothing redeploys".
     rename_integration: 'Renaming the integration',
