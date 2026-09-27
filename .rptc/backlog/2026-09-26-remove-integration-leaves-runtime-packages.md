@@ -34,3 +34,5 @@ workspace) or the warning says what is actually true.
 - 2026-09-26  docs(ai): remove_integration says it also stops when Runtime leftovers remain (`e2acbec59`)
 - 2026-09-26  feat(app-builder): deploys delete the Runtime code an app no longer declares (`030a7ed6f`)
 - 2026-09-26  test(dashboard): the runtimePackageHandlers suites share their setup (`7f5b729c1`)
+- 2026-09-27  feat(app-builder): a removal's own workspace takes its Runtime leftovers with it (`0bd170f23`)
+- 2026-09-27  docs(backlog): deleting a workspace removes its namespace ~11 minutes later (`29b9653f1`)
