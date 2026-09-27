@@ -7,20 +7,11 @@
  * not be read is a refusal, never a quiet success.
  */
 
+import { contextWith, mockCommandExecutor } from './runtimePackageHandlers.testUtils';
+
 const mockDeleteUndeclaredActions = jest.fn();
 jest.mock('@/features/app-builder/services/runtimeUndeclaredActions', () => ({
     deleteUndeclaredActions: (...args: unknown[]) => mockDeleteUndeclaredActions(...args),
-}));
-jest.mock('@/features/dashboard/handlers/appBuilderComponentHandlers', () => ({
-    runGuards: jest.fn().mockResolvedValue(undefined),
-}));
-jest.mock('@/core/shell/orgContextEnv', () => ({
-    buildOrgTargetFromProjectAdobe: jest.fn(() => ({ orgId: 'org-1', projectId: 'proj-1', workspaceId: 'ws-stage' })),
-    withOrgContext: jest.fn((_t: unknown, fn: () => Promise<unknown>) => fn()),
-}));
-const mockCommandExecutor = { execute: jest.fn() };
-jest.mock('@/core/di/serviceLocator', () => ({
-    ServiceLocator: { getCommandExecutor: jest.fn(() => mockCommandExecutor) },
 }));
 
 import { withOrgContext } from '@/core/shell/orgContextEnv';
@@ -28,18 +19,10 @@ import { runGuards } from '@/features/dashboard/handlers/appBuilderComponentHand
 import { handleDeleteUndeclaredRuntimeCode } from '@/features/dashboard/handlers/runtimePackageHandlers';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
-import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../helpers/projectFake';
-import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 const OWN = { id: 'ws-northwind', name: 'NorthwindERP', title: 'Northwind ERP' };
 const SOURCE = { owner: 'acme', repo: 'app', branch: 'main' };
-
-function contextWith(project: Project | undefined) {
-    const stateManager = createMockStateManager();
-    stateManager.getCurrentProject.mockResolvedValue(project);
-    return createMockHandlerContext({ stateManager });
-}
 
 /** A pair in its own workspace, and a mesh and another integration in the project's. */
 function projectWithPair(): Project {

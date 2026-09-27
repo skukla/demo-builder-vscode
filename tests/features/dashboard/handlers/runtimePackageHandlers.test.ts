@@ -6,26 +6,13 @@
  * and a namespace that cannot be listed is a refusal — never an empty list.
  */
 
+import { contextWith, mockCommandExecutor } from './runtimePackageHandlers.testUtils';
+
 const mockListRuntimePackages = jest.fn();
 const mockRuntimeNamespaceEnv = jest.fn();
 jest.mock('@/features/app-builder/services/runtimeNamespace', () => ({
     listRuntimePackages: (...args: unknown[]) => mockListRuntimePackages(...args),
     runtimeNamespaceEnv: (...args: unknown[]) => mockRuntimeNamespaceEnv(...args),
-}));
-jest.mock('@/features/dashboard/handlers/appBuilderComponentHandlers', () => ({
-    runGuards: jest.fn().mockResolvedValue(undefined),
-}));
-jest.mock('@/core/shell/orgContextEnv', () => ({
-    buildOrgTargetFromProjectAdobe: jest.fn(() => ({
-        orgId: 'org-1',
-        projectId: 'proj-1',
-        workspaceId: 'ws-stage',
-    })),
-    withOrgContext: jest.fn((_t: unknown, fn: () => Promise<unknown>) => fn()),
-}));
-const mockCommandExecutor = { execute: jest.fn() };
-jest.mock('@/core/di/serviceLocator', () => ({
-    ServiceLocator: { getCommandExecutor: jest.fn(() => mockCommandExecutor) },
 }));
 
 import { handleListRuntimePackages } from '@/features/dashboard/handlers/runtimePackageHandlers';
@@ -33,17 +20,9 @@ import { runGuards } from '@/features/dashboard/handlers/appBuilderComponentHand
 import { withOrgContext } from '@/core/shell/orgContextEnv';
 import { ErrorCode } from '@/types/errorCodes';
 import type { Project } from '@/types/base';
-import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../helpers/projectFake';
-import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 const ENV = { AIO_RUNTIME_NAMESPACE: 'ns-stage', AIO_RUNTIME_AUTH: 'fake-test-auth-not-a-secret' };
-
-function contextWith(project: Project | undefined) {
-    const stateManager = createMockStateManager();
-    stateManager.getCurrentProject.mockResolvedValue(project);
-    return createMockHandlerContext({ stateManager });
-}
 
 /** The canonical fake, which carries an Adobe org, project and workspace. */
 function adobeProject(): Project {
