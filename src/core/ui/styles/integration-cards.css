@@ -249,11 +249,24 @@
 
 /* One demo setup step in the flyout (AB-26x): title and state, why, where, what the last
    check found, then its links, stacked; steps separated like the panel's rows. */
-.integration-setup-step {
+/* The demo setup guide's step (SetupGuideModal): state, title, why, where, actions — each
+   its own paragraph, with room between them, since the SC reads one step at a time. */
+.setup-guide-step {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    padding-top: 8px;
+    gap: 12px;
+}
+
+.setup-guide-where {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.setup-guide-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
 }
 
 /* One API per line — a comma-joined run of long Adobe API names is unreadable

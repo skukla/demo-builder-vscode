@@ -36,6 +36,8 @@ export type CardAction =
     | 'manage-apis'
     // Opens the integration's Settings modal (AB-21); only on one that has settings.
     | 'settings'
+    // Opens the integration's demo setup guide (AB-26x); only on one that has setup steps.
+    | 'setup-guide'
     | 'remove'
     | 'sign-in'
     // An integration: its Adobe workspace in the Developer Console. A system: its

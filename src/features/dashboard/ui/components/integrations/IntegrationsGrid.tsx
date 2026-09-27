@@ -34,6 +34,7 @@ import { FlaggedCardDialogs, needsReinstall, removalStopped } from './FlaggedCar
 import { type CardAction, type IntegrationCardModel } from './integrationCardModel';
 import { IntegrationDetailPanel } from './IntegrationDetailPanel';
 import { requestRename } from './requestRename';
+import { SetupGuideModal, useSetupGuide } from './SetupGuideModal';
 import { useFlaggedCardDialog } from './useFlaggedCardDialog';
 import { useIntegrationSettings } from './useIntegrationSettings';
 import { IntegrationCard } from '@/core/ui/components/integrations/IntegrationCard';
@@ -138,6 +139,7 @@ export function IntegrationsGrid({
     // used to hold the id alone and pass it as `componentName`, so the modal read
     // "Manage Adobe API access for erp-sync".
     const [manageApis, setManageApis] = useState<{ id: string; name: string } | null>(null);
+    const { open: openGuide, modal: guideModal } = useSetupGuide(cards);
     // The ERP reset awaiting confirmation: the INTEGRATION's id (the reset runs
     // through it) and the ERP's name (what the dialog says).
     const [pendingReset, setPendingReset] = useState<{ id: string; erpName: string } | null>(null);
@@ -211,6 +213,10 @@ export function IntegrationsGrid({
                 openSettings(model);
                 return;
             }
+            if (action === 'setup-guide') {
+                openGuide(model.id);
+                return;
+            }
             if (action === 'manage-apis') {
                 setManageApis({ id: model.componentId ?? model.id, name: model.name });
                 return;
@@ -225,7 +231,7 @@ export function IntegrationsGrid({
             }
             operations.run(model.id, model.name, action);
         },
-        [handleMeshAction, openReinstall, openRemoveAnyway, openSettings, operations],
+        [handleMeshAction, openGuide, openReinstall, openRemoveAnyway, openSettings, operations],
     );
 
     // A tile whose operation started here and is still running reopens its progress
@@ -325,6 +331,8 @@ export function IntegrationsGrid({
                 onClose={settings.close}
                 onSaved={settings.saved}
             />
+
+            <SetupGuideModal {...guideModal} />
 
             <ErpResetDialog
                 isOpen={pendingReset !== null}

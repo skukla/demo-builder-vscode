@@ -185,7 +185,7 @@ function PanelContent({
                         </Link>
                     </PanelRow>
                 )}
-                <SetupChecklistSection model={model} onOpenAdmin={() => onAction(model, 'open-admin')} />
+                <SetupChecklistSection model={model} onOpenGuide={() => onAction(model, 'setup-guide')} />
                 {/* ONE row, not the former Kind + Source pair. They printed the same
                     fact in two registers — worst on the blank starter, where
                     "Custom · blank starter" sat directly above "Blank starter — build
