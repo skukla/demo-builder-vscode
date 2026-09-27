@@ -114,63 +114,83 @@ describe('companies-have-own-catalogs', () => {
 });
 
 /*
- * second-source-in-stock: the shapes are Bodea's, read 2026-09-27 — one Default Source linked
- * to Default Stock (stock 1), which every website sells from. A source that exists but is in
- * no stock sells nothing, so the link is what counts.
+ * erp-source-in-website-stock: the shapes are Bodea's, read 2026-09-27 before and after its
+ * setup. Before: one Default Source in Default Stock (stock 1), which every website sells from.
+ * After: Northwind Warehouse and East Warehouse in Bodea Stock (stock 2), which the bodea
+ * website sells from. Commerce refuses a custom source in Default Stock, so a stock of the
+ * website's own is what makes the ERP's warehouse sellable.
  */
-describe('second-source-in-stock', () => {
+describe('erp-source-in-website-stock', () => {
     const SOURCES_PATH = 'inventory/sources?searchCriteria[pageSize]=200';
     const LINKS_PATH = 'inventory/stock-source-links?searchCriteria[pageSize]=200';
+    const STOCKS_PATH = 'inventory/stocks?searchCriteria[pageSize]=200';
     const DEFAULT = { source_code: 'default', name: 'Default Source', enabled: true };
-    const EAST = { source_code: 'east', name: 'East Warehouse', enabled: true };
+    const NORTHWIND = { source_code: 'northwind', name: 'Northwind Warehouse', enabled: true };
     const DEFAULT_LINK = { stock_id: 1, source_code: 'default', priority: 1 };
+    const NORTHWIND_LINK = { stock_id: 2, source_code: 'northwind', priority: 1 };
+    const DEFAULT_STOCK = {
+        stock_id: 1,
+        name: 'Default Stock',
+        extension_attributes: { sales_channels: [{ type: 'website', code: 'base' }] },
+    };
+    const BODEA_STOCK = {
+        stock_id: 2,
+        name: 'Bodea Stock',
+        extension_attributes: { sales_channels: [{ type: 'website', code: 'bodea' }] },
+    };
 
-    function inventory(sources: object[], links: object[]) {
-        return jest.fn(async (path: string) =>
-            JSON.stringify({ items: path.startsWith('inventory/sources') ? sources : links }),
-        );
+    function inventory(sources: object[], links: object[], stocks: object[] = [DEFAULT_STOCK, BODEA_STOCK]) {
+        return jest.fn(async (path: string) => {
+            if (path.startsWith('inventory/sources')) return JSON.stringify({ items: sources });
+            if (path.startsWith('inventory/stock-source-links')) return JSON.stringify({ items: links });
+            return JSON.stringify({ items: stocks });
+        });
     }
-    const sourceCheck = (read: (path: string) => Promise<string>) => runSetupCheck('second-source-in-stock', read);
+    const sourceCheck = (read: (path: string) => Promise<string>) => runSetupCheck('erp-source-in-website-stock', read);
 
-    it('reads the sources and their stock links', async () => {
-        const read = inventory([DEFAULT, EAST], [DEFAULT_LINK]);
+    it('reads the sources, their stock links and the stocks', async () => {
+        const read = inventory([DEFAULT, NORTHWIND], [DEFAULT_LINK, NORTHWIND_LINK]);
         await sourceCheck(read);
         expect(read).toHaveBeenCalledWith(SOURCES_PATH);
         expect(read).toHaveBeenCalledWith(LINKS_PATH);
+        expect(read).toHaveBeenCalledWith(STOCKS_PATH);
     });
 
-    it('is not done with only the Default Source, as Bodea has', async () => {
+    it('is not done with only the Default Source, as Bodea had', async () => {
         expect(await sourceCheck(inventory([DEFAULT], [DEFAULT_LINK]))).toStrictEqual({
             done: false,
             note: 'Commerce has only the Default Source.',
         });
     });
 
-    it('is not done when the second source is in no stock, and names it', async () => {
-        expect(await sourceCheck(inventory([DEFAULT, EAST], [DEFAULT_LINK]))).toStrictEqual({
+    it('is not done when the ERP source is in no stock', async () => {
+        expect(await sourceCheck(inventory([DEFAULT, NORTHWIND], [DEFAULT_LINK]))).toStrictEqual({
             done: false,
-            note: 'East Warehouse is in no stock, so no website sells from it.',
+            note: 'Northwind Warehouse is in no stock, so no website sells from it.',
         });
     });
 
-    it('does not count a disabled source', async () => {
-        const disabled = { ...EAST, enabled: false };
-        const links = [DEFAULT_LINK, { stock_id: 1, source_code: 'east', priority: 2 }];
-        expect((await sourceCheck(inventory([DEFAULT, disabled], links))).done).toBe(false);
+    it('is not done when the ERP source is in a stock no website sells from', async () => {
+        const unsold = { ...BODEA_STOCK, extension_attributes: { sales_channels: [] } };
+        expect(
+            await sourceCheck(inventory([DEFAULT, NORTHWIND], [DEFAULT_LINK, NORTHWIND_LINK], [DEFAULT_STOCK, unsold])),
+        ).toStrictEqual({ done: false, note: 'Northwind Warehouse is in a stock no website sells from.' });
     });
 
-    it('is done when a second enabled source is linked to a stock', async () => {
-        const links = [DEFAULT_LINK, { stock_id: 1, source_code: 'east', priority: 2 }];
-        expect(await sourceCheck(inventory([DEFAULT, EAST], links))).toStrictEqual({
+    it('does not count a disabled source', async () => {
+        const disabled = { ...NORTHWIND, enabled: false };
+        expect((await sourceCheck(inventory([DEFAULT, disabled], [DEFAULT_LINK, NORTHWIND_LINK]))).done).toBe(false);
+    });
+
+    it('is done when the ERP source is in a stock a website sells from, as Bodea is now', async () => {
+        expect(await sourceCheck(inventory([DEFAULT, NORTHWIND], [DEFAULT_LINK, NORTHWIND_LINK]))).toStrictEqual({
             done: true,
-            note: 'East Warehouse is in a stock beside the Default Source.',
+            note: 'Northwind Warehouse is in Bodea Stock, which bodea sells from.',
         });
     });
 
     it('cannot tell when a read failed, and passes on why', async () => {
         const failing = jest.fn(async () => 'Error: Commerce REST answered HTTP 503. busy');
-        expect(await sourceCheck(failing)).toStrictEqual({
-            note: 'Could not check: Commerce REST answered HTTP 503. busy',
-        });
+        expect(await sourceCheck(failing)).toStrictEqual({ note: 'Could not check: Commerce REST answered HTTP 503. busy' });
     });
 });

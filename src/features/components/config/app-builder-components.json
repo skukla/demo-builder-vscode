@@ -99,10 +99,10 @@
         },
         {
           "id": "second-source",
-          "title": "Add a second inventory source and put it in the website's stock",
-          "why": "The ERP keeps stock per warehouse, one for each Commerce source. With only the Default Source the demo cannot show stock split across warehouses, or a shipment from one of them.",
-          "where": "Stores > Inventory > Sources > Add New Source (for example East Warehouse); then Stores > Inventory > Stocks: add it to the stock your website sells from; then give products a quantity there in each product's Sources section.",
-          "check": "second-source-in-stock"
+          "title": "Give the ERP a warehouse of its own, and a stock for the website that holds it",
+          "why": "The ERP keeps stock per warehouse, one for each Commerce source. Commerce's Default Stock can hold only the Default Source, so a website sells from the ERP's warehouse only through a stock of its own.",
+          "where": "Stores > Inventory > Sources > Add New Source (for example Northwind Warehouse); Stores > Inventory > Stocks > Add New Stock with the website as its sales channel and the new source assigned; then move the website's products' quantities to the new source (Catalog > Products > Actions > Move stock between the ERP's warehouses) and save each product once, so the storefront's catalog reads the new stock.",
+          "check": "erp-source-in-website-stock"
         }
       ],
       "description": "Adobe Commerce and an ERP, on the Commerce integration starter kit: orders get an ERP number, price, stock and order-status changes in the ERP land in Commerce, contract prices apply in the cart, and a screen inside the Commerce Admin shows it all. Comes with its own ERP.",

@@ -111,41 +111,67 @@ interface StockLinkRow {
     source_code?: string;
 }
 
+interface StockRow {
+    stock_id?: number;
+    name?: string;
+    extension_attributes?: { sales_channels?: Array<{ type?: string; code?: string }> };
+}
+
 const SOURCES_PATH = 'inventory/sources?searchCriteria[pageSize]=200';
 const LINKS_PATH = 'inventory/stock-source-links?searchCriteria[pageSize]=200';
+const STOCKS_PATH = 'inventory/stocks?searchCriteria[pageSize]=200';
 const DEFAULT_SOURCE = 'default';
 
+const couldNot = (answer: string): SetupCheckResult => ({ note: `Could not check: ${answer.replace(/^Error: /u, '')}` });
+
+/** The websites a stock sells to, by code. */
+const websitesOf = (stock: StockRow): string[] =>
+    (stock.extension_attributes?.sales_channels ?? []).filter((c) => c.type === 'website' && c.code).map((c) => String(c.code));
+
 /**
- * A second enabled inventory source sits in a stock beside the Default Source (owner,
- * 2026-09-27), so the ERP holds stock in more than one warehouse. A source in no stock sells
- * nothing, so the stock link is what counts, not the source alone.
+ * The ERP has an inventory source of its own, in a stock a website sells from (owner,
+ * 2026-09-27). Commerce's Default Stock holds only the Default Source ("Custom sources cannot
+ * be assigned to Default Stock", Adobe's "Add a stock"; Commerce refused the link on Bodea the
+ * same day), so a website sells from the ERP's warehouse only through a stock of its own.
  */
-async function secondSourceInStock(read: CommerceRead): Promise<SetupCheckResult> {
+async function erpSourceInWebsiteStock(read: CommerceRead): Promise<SetupCheckResult> {
     const sources = await readItems<SourceRow>(read, SOURCES_PATH, 'source');
-    if (typeof sources === 'string') return { note: `Could not check: ${sources.replace(/^Error: /u, '')}` };
+    if (typeof sources === 'string') return couldNot(sources);
     const others = sources.filter((s) => s.enabled && s.source_code !== DEFAULT_SOURCE);
     if (others.length === 0) return { done: false, note: 'Commerce has only the Default Source.' };
     const links = await readItems<StockLinkRow>(read, LINKS_PATH, 'stock link');
-    if (typeof links === 'string') return { note: `Could not check: ${links.replace(/^Error: /u, '')}` };
-    const linked = new Set(links.map((link) => link.source_code));
-    const inStock = others.filter((s) => linked.has(s.source_code));
-    if (inStock.length === 0) {
-        return { done: false, note: `${listed(others)} in no stock, so no website sells from ${plural(others, 'them', 'it')}.` };
+    if (typeof links === 'string') return couldNot(links);
+    const stocks = await readItems<StockRow>(read, STOCKS_PATH, 'stock');
+    if (typeof stocks === 'string') return couldNot(stocks);
+    const stockById = new Map(stocks.map((stock) => [stock.stock_id, stock]));
+    const sold = others.flatMap((source) =>
+        links
+            .filter((link) => link.source_code === source.source_code)
+            .map((link) => ({ source, stock: stockById.get(link.stock_id) }))
+            .filter((row): row is { source: SourceRow; stock: StockRow } => Boolean(row.stock && websitesOf(row.stock).length)),
+    );
+    if (sold.length > 0) {
+        const { source, stock } = sold[0];
+        return { done: true, note: `${sourceName(source)} is in ${stock.name}, which ${websitesOf(stock).join(', ')} sells from.` };
     }
-    return { done: true, note: `${listed(inStock)} in a stock beside the Default Source.` };
+    const linked = others.filter((source) => links.some((link) => link.source_code === source.source_code));
+    if (linked.length > 0) {
+        return { done: false, note: `${listed(linked)} in a stock no website sells from.` };
+    }
+    return { done: false, note: `${listed(others)} in no stock, so no website sells from ${plural(others, 'them', 'it')}.` };
 }
 
 const plural = (rows: unknown[], many: string, one: string): string => (rows.length > 1 ? many : one);
+const sourceName = (source: SourceRow): string => source.name ?? source.source_code ?? 'a source';
 
 /** "East Warehouse is" / "East Warehouse, West Warehouse are". */
 function listed(sources: SourceRow[]): string {
-    const names = sources.map((s) => s.name ?? s.source_code ?? 'a source').join(', ');
-    return `${names} ${plural(sources, 'are', 'is')}`;
+    return `${sources.map(sourceName).join(', ')} ${plural(sources, 'are', 'is')}`;
 }
 
 const CHECKS: Record<SetupCheck, (read: CommerceRead) => Promise<SetupCheckResult>> = {
     'companies-have-own-catalogs': companiesHaveOwnCatalogs,
-    'second-source-in-stock': secondSourceInStock,
+    'erp-source-in-website-stock': erpSourceInWebsiteStock,
 };
 
 /**
