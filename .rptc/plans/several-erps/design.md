@@ -9,6 +9,22 @@ research passes run 2026-09-27 (customers and credit; catalogue, prices and stoc
 fulfilment; after the sale), a comparison with the integration-examples deck, and the client
 tech case (kept outside this public repo; no client detail here).
 
+## Pending client answers
+
+The design holds no rule that depends on a client's answer beyond those marked here (agreed with
+the client tech-case session, 2026-09-28). Numbers are that session's client question register;
+the answers arrive from it and cut design v2.
+
+| Rule in this design | Pending |
+|---|---|
+| Sales organisation chosen per website, per ERP | client #1 (how a web order is booked in each ERP: company or legal entity, sales unit, region; do regions sell through different entities) |
+| Credit limit owner (the ERPs in the demo; a CRM for some customers) | client #20 |
+| Which brands share one website's cart | client #9 |
+| One owning ERP per product; variants follow their product | client #17 |
+| A company is a customer in each ERP it buys from; its number there | client #19 |
+| Invoicing per ERP, and purchase-order payment | client #4 |
+| Web routing only; whether EDI orders must share it | client #2 |
+
 ## 1. The rule this design keeps
 
 **The demo integration is the integration we would recommend.** Its code is what a customer
@@ -215,3 +231,4 @@ for a mixed order; whether any SKU is sold by two ERPs.
 - 2026-09-28: how a brand is made: a `brand` attribute for shoppers, separate from the `erp_owner` attribute routing reads; one shared website in the demo, a stand-alone brand website spoken to. Vignettes gain "0. What a brand is"; their Today lines now say what is built for several ERPs but not yet live.
 - 2026-09-28: nothing is seeded; the SC creates brands and products and sets both values; instructions in the integration's setup guide, story 3 (integration `5bffd76`).
 - 2026-09-28: brand, business unit, ERP and sales organisation defined (provisional on the client's answer about selling units); "each brand for itself" reads as each ERP for itself.
+- 2026-09-28: pending client answers listed by the tech case's register numbers (#1, #2, #4, #9, #17, #19, #20); no new rule added that depends on a client answer. The ERP's own credit block and the website account are two separate switches in each ERP (owner); the ERP never takes its own block from Commerce.
