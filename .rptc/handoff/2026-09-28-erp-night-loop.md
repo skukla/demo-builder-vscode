@@ -89,7 +89,11 @@ Full tests before every commit. Bodea only; never signs in; never deletes a work
   its own) disagreed. Fixed in the integration (`18b6881`, 656 tests): with several ERPs an
   ERP's resolved settings carry routing's rule, so the fill agrees. Proven by tests; Contoso
   still holds the whole catalog from tonight's fill until its data is loaded again.
-- Still open (not fixed): `get_erp_status` reports live figures for the first ERP only.
+- Fixed and proven live: the Admin page and `get_erp_status` showed an ERP that refuses the
+  integration as healthy (the ERP client never throws on an HTTP error). Both now say "not
+  reachable" with Adobe's reason, and `get_erp_status` takes an optional `erp`, so an agent
+  can read Contoso's health, not only Northwind's (integration `45daaca`, `a098aad`; Demo
+  Builder `5434c0f`). Live: Contoso reads not reachable, 401, "Technical account mismatch".
 - Router fix deployed to Bodea (`d6ef93c` → `a926063`); the deploy returned normally in
   minutes, with no republish hang. The live check of it stopped: carts holding Contoso's
   products fail (3 tries), because Contoso refuses the cart price check too and Commerce runs
