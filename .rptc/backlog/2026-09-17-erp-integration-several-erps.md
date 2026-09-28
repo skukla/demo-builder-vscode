@@ -189,3 +189,4 @@ one partner to several, and that is AB-16's own work either way.
 - 2026-09-26  docs(rptc): one integration per ERP, and a simplified Admin page with settings apart from the mapping (`2c93afb1e`)
 - 2026-09-26  docs(rptc): one plan for the remaining ERP work, and the freeze after contracts (`b5c4f4b6e`)
 - 2026-09-28  Phase B0 built (integration 21306ab, loop branch): the code layout of design v1 — router, adapter contract, demo-erp and example adapters, the ERP list keyed by id; every existing test unchanged and passing (455).
+- 2026-09-28  Phase B1 built (integration 639c888): the router splits each order by owning ERP (product attribute erp_owner holds the ERP id), sends each ERP only its lines, stores parts per order in App Builder State, holds unowned lines, records doubly-claimed SKUs as setup errors; one ERP unchanged. 460 tests. Open: the erp_owner attribute is a Demo Builder setup step for several ERPs.
