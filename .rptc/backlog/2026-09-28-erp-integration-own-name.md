@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: high
-status: backlog
+status: built
 parent: AB-16
 ---
 
@@ -37,3 +37,7 @@ App Management's app name "Northwind ERP" (integration `app.commerce.config.ts`)
 
 On Bodea: the card and Commerce Admin carry the integration's own name, the column and action
 read neutrally, both ERP cards say they are linked to that name, and one ERP looks right too.
+
+## Shipped so far
+
+- 2026-09-28  2026-09-28 built and deployed: integration main 0deb4b8 (INTEGRATION_DISPLAY_NAME names the page and app, default 'ERP Integration'; grid column 'ERP order'; action 'Move stock between ERP warehouses'; app version 0.9.2; 851 tests), Demo Builder cb8231288 (own-name input, nameSuffix removed, existing projects keep their recorded name, rename sets the input and says Commerce follows on the next update). On Bodea: renamed to 'ERP Integration', integration updated 40017f1 -> 0deb4b8. Not yet seen in Commerce Admin (the check hit a sign-in page; not signed in on the owner's behalf). Open: whether Commerce needs 'Refresh registrations' for the column label; naming at add time.
