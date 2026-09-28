@@ -170,3 +170,13 @@ a mixed order was split correctly across both. The failing Bodea carts are fixed
 
 **Your decisions:** none needed. When you are back: whether to merge `feature/erp-integration`
 into `develop` again (it has AB-26z's and AB-16a's Demo Builder parts).
+- **Later in the same hour.** AB-16h built and proven live: cancelling a split order in Commerce
+  cancelled both ERPs' sales orders within 10 seconds. AB-16i built and proven live: Contoso's
+  own events now reach the integration (a price list change reached the catalog in 12 seconds,
+  both ways). A live bug found on the way and fixed: since the ERPs began naming themselves on
+  their events, their stock events arrived in a shape the integration rejected, so ERP stock
+  changes were not reaching Commerce; every ERP on Bodea now has the fix.
+- **Still open under AB-16:** AB-16c (screens and tools that assume one ERP, plus showing
+  scheduled runs), AB-16d (the remaining live proofs: Partially Held and Re-send, the journeys),
+  AB-16e (returns, awaiting your review), AB-16f (fresh start), AB-16g (lost key-map pairs, cause
+  unknown). Also AB-38 (schedules a business user edits) and AB-26m (Mapping view, parked).
