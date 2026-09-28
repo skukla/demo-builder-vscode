@@ -36,3 +36,5 @@ Each gap is either fixed or recorded here as deliberately one-ERP, with the reas
 ## Shipped so far
 
 - 2026-09-28  Added (owner conversation, 2026-09-28): show the integration's scheduled runs (the hourly price publish; when each ran and what it changed) on the Admin page's Activity section, so an SC can show a prospect the schedule working. Scheduled work runs as App Builder alarms, not Commerce cron (Adobe's App Development Comparison: alarms are the recommended method); prospects often expect Commerce cron.
+- 2026-09-28  2026-09-28 load_erp_demo_data and reset_erp_records descriptions and dialogs now say every ERP (they said the ERP that comes with the integration).
+- 2026-09-28  2026-09-28 per-ERP reset designed (.rptc/plans/several-erps/per-erp-reset.md): the ERPs share two Commerce values (a company's custom attribute set and its total credit limit), so one ERP's undo removes its own attributes and recomputes the total instead of restoring the first before. Building on a loop branch.
