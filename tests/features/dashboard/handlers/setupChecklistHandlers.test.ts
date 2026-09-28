@@ -61,6 +61,9 @@ describe('getSetupChecklist', () => {
             'confirmed-status',
             'company-catalogs',
             'second-source',
+            'erp-attributes',
+            'partially-held-status',
+            'payment-on-account',
         ]);
         expect(mockSendRest).not.toHaveBeenCalled();
     });
@@ -159,6 +162,7 @@ describe('checkSetupSteps', () => {
         const { context } = setup({
             'company-catalogs': { state: 'dismissed' },
             'second-source': { state: 'dismissed' },
+            'erp-attributes': { state: 'dismissed' },
         });
         await handleCheckSetupSteps(context, { id: 'erp-integration' });
         expect(mockSendRest).not.toHaveBeenCalled();

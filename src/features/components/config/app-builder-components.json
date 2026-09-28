@@ -103,6 +103,25 @@
           "why": "The ERP keeps stock per warehouse, one for each Commerce source. Commerce's Default Stock can hold only the Default Source, so a website sells from the ERP's warehouse only through a stock of its own.",
           "where": "Stores > Inventory > Sources > Add New Source (for example Northwind Warehouse); Stores > Inventory > Stocks > Add New Stock with the website as its sales channel and the new source assigned; then move the website's products' quantities to the new source (Catalog > Products > Actions > Move stock between the ERP's warehouses) and save each product once, so the storefront's catalog reads the new stock.",
           "check": "erp-source-in-website-stock"
+        },
+        {
+          "id": "erp-attributes",
+          "title": "Create the erp_owner and brand product attributes",
+          "why": "With several ERPs, each product goes to the ERP its erp_owner names (an ERP's id, such as erp or demo-erp-2); brand is what buyers see and filter on.",
+          "where": "Stores > Attributes > Product > Add New Attribute: erp_owner as a Text Field (a Dropdown sends a number, not the id) and brand; then Stores > Attributes > Attribute Set to add both to the set. Set both on the products you sell.",
+          "check": "erp-attributes-exist"
+        },
+        {
+          "id": "partially-held-status",
+          "title": "Create the \"Partially Held\" order status",
+          "why": "When one ERP holds its part of an order and another carries on, the order says so; without the status the integration writes only a note.",
+          "where": "Stores > Settings > Order Status: create partially_held (label Partially Held), then assign it to Processing and to Pending (not as default, not visible on the storefront)."
+        },
+        {
+          "id": "payment-on-account",
+          "title": "Switch on Payment on Account for the website",
+          "why": "Company buyers pay against the company's credit line, which the ERP credit story needs.",
+          "where": "Stores > Configuration > Sales > Payment Methods > Payment on Account, at the website's scope: untick Use Default beside Enabled, set Enabled to Yes, Save Config."
         }
       ],
       "description": "Adobe Commerce and an ERP, on the Commerce integration starter kit: orders get an ERP number, price, stock and order-status changes in the ERP land in Commerce, contract prices apply in the cart, and a screen inside the Commerce Admin shows it all. Comes with its own ERP.",

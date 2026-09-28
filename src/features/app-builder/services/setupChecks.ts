@@ -169,9 +169,54 @@ function listed(sources: SourceRow[]): string {
     return `${sources.map(sourceName).join(', ')} ${plural(sources, 'are', 'is')}`;
 }
 
+interface AttributeRow {
+    attribute_code?: string;
+    frontend_input?: string;
+}
+
+/** Commerce answers a missing attribute with a 404; anything else is a read that failed. */
+const MISSING = /^Error: Commerce REST answered HTTP 404\./u;
+
+/** One product attribute: its row, `null` when Commerce has none, or the error line. */
+async function readAttribute(read: CommerceRead, code: string): Promise<AttributeRow | null | string> {
+    const text = await read(`products/attributes/${code}`);
+    if (MISSING.test(text)) return null;
+    if (text.startsWith('Error:')) return text;
+    try {
+        return JSON.parse(text.slice(text.indexOf('{'))) as AttributeRow;
+    } catch {
+        return 'Error: Commerce answered something that is not a product attribute.';
+    }
+}
+
+/**
+ * The two product values several ERPs route and sell by exist (owner, 2026-09-28): `erp_owner`
+ * names the ERP that fulfils a product, and must be a Text Field, because a Dropdown's API value
+ * is the option's number, not the ERP's id; `brand` is what buyers see, in any input type. Only
+ * the attributes are checked: which products carry them is the SC's scenario, never seeded.
+ */
+async function erpAttributesExist(read: CommerceRead): Promise<SetupCheckResult> {
+    const owner = await readAttribute(read, 'erp_owner');
+    if (typeof owner === 'string') return couldNot(owner);
+    const brand = await readAttribute(read, 'brand');
+    if (typeof brand === 'string') return couldNot(brand);
+    const missing = [owner ? undefined : 'erp_owner', brand ? undefined : 'brand'].filter(Boolean);
+    if (missing.length > 0) {
+        return { done: false, note: `Commerce has no ${missing.join(' or ')} product attribute.` };
+    }
+    if (owner?.frontend_input !== 'text') {
+        return {
+            done: false,
+            note: `erp_owner is a ${owner?.frontend_input ?? 'field of unknown type'}; it must be a Text Field so it carries the ERP's id.`,
+        };
+    }
+    return { done: true, note: 'erp_owner (Text Field) and brand both exist.' };
+}
+
 const CHECKS: Record<SetupCheck, (read: CommerceRead) => Promise<SetupCheckResult>> = {
     'companies-have-own-catalogs': companiesHaveOwnCatalogs,
     'erp-source-in-website-stock': erpSourceInWebsiteStock,
+    'erp-attributes-exist': erpAttributesExist,
 };
 
 /**

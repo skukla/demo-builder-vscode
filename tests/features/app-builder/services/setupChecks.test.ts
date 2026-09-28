@@ -194,3 +194,60 @@ describe('erp-source-in-website-stock', () => {
         expect(await sourceCheck(failing)).toStrictEqual({ note: 'Could not check: Commerce REST answered HTTP 503. busy' });
     });
 });
+
+/*
+ * erp-attributes-exist: the two product values several ERPs route and sell by. Commerce
+ * answers a missing attribute with a 404 (the read hands that on as an "Error: … HTTP 404."
+ * line, `commerceRestClient`), which here means "not there", not "could not check".
+ */
+describe('erp-attributes-exist', () => {
+    const NOT_FOUND = 'Error: Commerce REST answered HTTP 404. {"message":"The attribute with a \\"%1\\" attributeCode doesn\'t exist."}';
+    const OWNER = { attribute_code: 'erp_owner', frontend_input: 'text' };
+    const BRAND = { attribute_code: 'brand', frontend_input: 'select' };
+
+    function attributes(byCode: Record<string, object | string>) {
+        return jest.fn(async (path: string) => {
+            const answer = byCode[path.replace('products/attributes/', '')] ?? NOT_FOUND;
+            return typeof answer === 'string' ? answer : JSON.stringify(answer);
+        });
+    }
+    const attributeCheck = (read: (path: string) => Promise<string>) => runSetupCheck('erp-attributes-exist', read);
+
+    it('reads both attributes by code', async () => {
+        const read = attributes({ erp_owner: OWNER, brand: BRAND });
+        await attributeCheck(read);
+        expect(read).toHaveBeenCalledWith('products/attributes/erp_owner');
+        expect(read).toHaveBeenCalledWith('products/attributes/brand');
+    });
+
+    it('is done when erp_owner is a Text Field and brand exists in any input type', async () => {
+        expect(await attributeCheck(attributes({ erp_owner: OWNER, brand: BRAND }))).toStrictEqual({
+            done: true,
+            note: 'erp_owner (Text Field) and brand both exist.',
+        });
+    });
+
+    it('names each attribute Commerce does not have', async () => {
+        expect(await attributeCheck(attributes({}))).toStrictEqual({
+            done: false,
+            note: 'Commerce has no erp_owner or brand product attribute.',
+        });
+        expect(await attributeCheck(attributes({ erp_owner: OWNER }))).toStrictEqual({
+            done: false,
+            note: 'Commerce has no brand product attribute.',
+        });
+    });
+
+    it('is not done when erp_owner is a Dropdown, whose API value is a number', async () => {
+        const result = await attributeCheck(attributes({ erp_owner: { ...OWNER, frontend_input: 'select' }, brand: BRAND }));
+        expect(result).toStrictEqual({
+            done: false,
+            note: "erp_owner is a select; it must be a Text Field so it carries the ERP's id.",
+        });
+    });
+
+    it('cannot tell when a read failed for another reason', async () => {
+        const failing = jest.fn(async () => 'Error: Commerce REST answered HTTP 503. busy');
+        expect(await attributeCheck(failing)).toStrictEqual({ note: 'Could not check: Commerce REST answered HTTP 503. busy' });
+    });
+});

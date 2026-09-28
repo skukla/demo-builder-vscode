@@ -72,7 +72,7 @@ export interface WebActionCall {
 }
 
 /** How Demo Builder can tell a setup step is done, when it can (`setupChecks.ts`). */
-export type SetupCheck = 'companies-have-own-catalogs' | 'erp-source-in-website-stock';
+export type SetupCheck = 'companies-have-own-catalogs' | 'erp-source-in-website-stock' | 'erp-attributes-exist';
 
 /** One thing an SC prepares by hand for a demo (see `setupSteps`). */
 export interface SetupStep {
