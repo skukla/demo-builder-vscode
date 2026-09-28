@@ -28,7 +28,7 @@ jest.mock('@/features/app-builder/services/erpIntegrationClient', () => ({
         constructor(...args: unknown[]) {
             mockClientCtor(...args);
         }
-        status = () => mockStatus();
+        status = (erpId?: string) => mockStatus(erpId);
         detach = () => mockDetach();
         lookup = (query: unknown) => mockLookup(query);
         traceOrder = (orderNumber: string) => mockTraceOrder(orderNumber);
@@ -41,7 +41,15 @@ jest.mock('@/features/project-creation/services/erpFillForProject', () => ({
 }));
 
 jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
-    getAppBuilderComponentCatalog: jest.fn(() => [{ id: 'demo-erp', kind: 'system', boundTo: 'erp-integration' }]),
+    // listedAs as the bundled catalog declares it (app-builder-components.json, demo-erp).
+    getAppBuilderComponentCatalog: jest.fn(() => [
+        {
+            id: 'demo-erp',
+            kind: 'system',
+            boundTo: 'erp-integration',
+            listedAs: { envVar: 'ERP_ID', firstId: 'erp', adapter: 'demo-erp' },
+        },
+    ]),
     getAppBuilderComponentEntry: jest.fn(),
     buildCustomIntegrationEntry: jest.fn(),
     entryFitsProjectAxes: jest.fn().mockReturnValue(true),
@@ -157,6 +165,23 @@ describe('handleGetErpStatus', () => {
         });
         // A read: no guard ran.
         expect(mockEnsureAdobeIOAuth).not.toHaveBeenCalled();
+    });
+
+    it("with an added ERP named, asks the integration for that ERP's health by its list id", async () => {
+        const project = pairProject({ systems: ['demo-erp', 'demo-erp-2'] });
+        project.appBuilderComponents!['demo-erp-2'] = { ...ERP, catalogId: 'demo-erp', name: 'Contoso', usedBy: 'erp-integration' };
+        const { mockContext } = setupMocks(project);
+
+        const result = await handleGetErpStatus(mockContext, { id: 'erp-integration', erp: 'demo-erp-2' });
+
+        expect(mockStatus).toHaveBeenCalledWith('demo-erp-2');
+        expect(result).toMatchObject({ success: true, data: { erp: { id: 'demo-erp-2', name: 'Contoso' } } });
+    });
+
+    it('with no ERP named, asks for the first ERP as before', async () => {
+        const { mockContext } = setupMocks(pairProject());
+        await handleGetErpStatus(mockContext, { id: 'erp-integration' });
+        expect(mockStatus).toHaveBeenCalledWith(undefined);
     });
 
     it('refuses an integration that deploys no erp actions', async () => {

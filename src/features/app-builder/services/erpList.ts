@@ -74,6 +74,24 @@ export function erpNameProblem(project: Components, name: string | undefined, re
 }
 
 /**
+ * The id the integration's list knows one of its ERPs by (`listIdOf`): `erp` for the
+ * integration's own, the component id for one added from the card.
+ *
+ * @param project - the project
+ * @param componentId - the ERP's component id
+ * @param catalog - the catalog
+ * @returns the list id, or undefined when the component is not a listed system
+ */
+export function erpListIdOf(
+    project: Components,
+    componentId: string,
+    catalog: readonly AppBuilderComponentCatalogEntry[],
+): string | undefined {
+    const entry = catalogEntryFor(project, componentId, catalog);
+    return entry?.listedAs ? listIdOf(project, entry) : undefined;
+}
+
+/**
  * The ERP list an integration is sent: every deployed, listed system it uses, in link order,
  * each with its own id (`listIdOf`), name, adapter and address. An ERP already in the list
  * the integration answered keeps the settings it holds there, so a PUT, which replaces the
@@ -97,8 +115,8 @@ export function erpListFor(
         const state = project.appBuilderComponents?.[id];
         const entry = catalogEntryFor(project, id, catalog);
         const baseUrl = deriveWebBase(state?.deployedUrls);
-        if (id === leaving || !state || !entry?.listedAs || state.status !== 'deployed' || !baseUrl) return [];
-        const listId = listIdOf(project, entry);
+        const listId = erpListIdOf(project, id, catalog);
+        if (id === leaving || !state || !entry?.listedAs || !listId || state.status !== 'deployed' || !baseUrl) return [];
         const settings = current.find((known) => known.id === listId)?.settings;
         return [
             {

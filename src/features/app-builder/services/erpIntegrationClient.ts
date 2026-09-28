@@ -123,9 +123,12 @@ export class ErpIntegrationClient {
         this.fetchImpl = fetchImpl ?? globalThis.fetch;
     }
 
-    /** The ERP's health as the integration sees it, the ledger size, the app's identity. */
-    async status(): Promise<ErpIntegrationStatus> {
-        return (await this.call('status', 'GET')) as ErpIntegrationStatus;
+    /**
+     * The ERP's health as the integration sees it, the ledger size, the app's identity. With
+     * `erpId` (the ERP's id in the integration's list), that ERP's health; else the first's.
+     */
+    async status(erpId?: string): Promise<ErpIntegrationStatus> {
+        return (await this.call('status', 'GET', erpId ? { erp: erpId } : undefined)) as ErpIntegrationStatus;
     }
 
     /** Undo what the integration wrote onto Commerce, leaving the ERP as it is. */

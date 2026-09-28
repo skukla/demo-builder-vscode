@@ -67,7 +67,7 @@ const CATALOG: Row[] = [
         map: dashboardHandlers,
         type: 'getErpStatus',
         needsAuth: false,
-        args: ['id'],
+        args: ['id', 'erp'],
     },
     {
         tool: 'get_erp_record',

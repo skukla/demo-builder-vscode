@@ -398,9 +398,9 @@ back to Commerce's; it removes nothing.
 `add_erp` (2026-09-28, AB-16) is gated although it only adds: it creates an Adobe workspace
 and deploys a new ERP into it, which takes minutes and is undone only by `remove_integration`
 on the new ERP's id. The ERP tools that act on one ERP (`load_erp_demo_data`,
-`open_erp_screen`, `run_erp_rest`, `write_erp_rest`) take an optional `erp`, the ERP's
-component id, and default to the integration's first; `get_erp_status` lists every ERP the
-integration serves.
+`open_erp_screen`, `run_erp_rest`, `write_erp_rest`, `get_erp_status`) take an optional `erp`,
+the ERP's component id, and default to the integration's first; `get_erp_status` lists every
+ERP the integration serves, and its live health is the named ERP's.
 
 `reset_erp_records` (2026-09-14) is gated for the same reason `reset_datapack` is: it wipes
 the ERP that comes with the ERP integration and undoes what that ERP wrote into Commerce

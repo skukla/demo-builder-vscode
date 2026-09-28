@@ -55,6 +55,14 @@ describe('ErpIntegrationClient', () => {
         expect(status.ledger.entries).toBe(2);
     });
 
+    it('asks status for one ERP by its list id', async () => {
+        const fetchImpl = answering(200, { app: { id: 'erp', version: '1' }, erp: { reachable: true }, erpBaseUrl: 'x', ledger: { entries: 0 } });
+
+        await new ErpIntegrationClient(URLS, AUTH, fetchImpl).status('demo-erp-2');
+
+        expect(fetchImpl.mock.calls[0][0]).toBe(`${URLS['runtime/erp/status']}?erp=demo-erp-2`);
+    });
+
     it('POSTs detach and answers the report', async () => {
         const body = { reverted: { reverted: 1, failed: [] }, orders: { cleared: 2, failed: [] } };
         const fetchImpl = answering(200, body);

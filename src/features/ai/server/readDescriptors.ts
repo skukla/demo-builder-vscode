@@ -311,11 +311,13 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
             '(reachable, its base URL, how many company writes it holds in its ledger) plus the ' +
             'persisted rows of the integration and its ERPs (name, status, the ERP screen\'s URL; ' +
             '`erps` lists every ERP it serves, by component id). ' +
-            'Use before reset_erp_records, or to answer "is the ERP up". Takes the integration id.',
+            'Use before reset_erp_records, or to answer "is the ERP up". Takes the integration id; ' +
+            'with several ERPs, `erp` names which one the live health is for (default the first).',
         map: dashboardHandlers,
         type: 'getErpStatus',
         inputSchema: {
             id: z.string().describe('The ERP integration id (from get_project)'),
+            erp: z.string().optional().describe("Which ERP, by its component id (from this tool's erps); default the first"),
         },
     },
     {

@@ -41,6 +41,7 @@ import {
     type ImsCallMethod,
 } from '@/features/app-builder/services/erpIntegrationClient';
 import type { ErpFillResult } from '@/features/app-builder/services/erpFill';
+import { erpListIdOf } from '@/features/app-builder/services/erpList';
 import { deriveScreenUrl, readScreenKey, screenLink } from '@/features/app-builder/services/systemScreen';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { systemsUsedBy } from '@/features/components/services/appBuilderComponentLinks';
@@ -124,13 +125,17 @@ export function shapeErpRow(erp: ErpCall['erp']) {
 }
 
 /**
- * Handle 'getErpStatus' — the integration's `erp/status` plus both persisted rows.
+ * Handle 'getErpStatus' — the integration's `erp/status` plus both persisted rows. With `erp`
+ * named, the live health is that ERP's (asked by its id in the integration's list).
  */
-export const handleGetErpStatus: MessageHandler<{ id?: string }> = async (context, payload): Promise<HandlerResponse> => {
+export const handleGetErpStatus: MessageHandler<ErpCallPayload> = async (context, payload): Promise<HandlerResponse> => {
     const call = await openErpCall(context, payload, 'read the ERP status');
     if ('error' in call) return call.error;
+    const listId = payload?.erp && call.erp
+        ? erpListIdOf(call.project, call.erp.id, getAppBuilderComponentCatalog())
+        : undefined;
     try {
-        const status = await new ErpIntegrationClient(call.integration.deployedUrls, call.auth).status();
+        const status = await new ErpIntegrationClient(call.integration.deployedUrls, call.auth).status(listId);
         return {
             success: true,
             data: {
