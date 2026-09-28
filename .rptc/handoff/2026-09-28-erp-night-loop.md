@@ -143,3 +143,30 @@ Full tests before every commit. Bodea only; never signs in; never deletes a work
   Order trace, ERP-number column, Move stock assume one ERP). Also: Reset records wipes every
   ERP while its dialog names one; no agent tool can read or set an ERP's own settings; a second
   mock ERP starts with the first one's look and company code.
+
+## Midday loop, 2026-09-28 (owner away about an hour)
+
+**Summary.** Contract prices now flow from an ERP's price list into each company's shared catalog
+in Commerce, proven live for both ERPs. Contoso, the second ERP, now answers the integration, and
+a mixed order was split correctly across both. The failing Bodea carts are fixed.
+
+- **AB-26z built and proven live.** A Northwind price list for Kukla Studios put 150 (and 140
+  from 10 units) into its shared catalog; the catalog service showed 150 to that company's buyers
+  about five minutes later; deactivating the list removed both within two minutes; another
+  company's hand-set price was untouched. The old cart webhooks were removed by a normal app
+  upgrade (the integration README said a reinstall was needed; corrected, with the measurement).
+- **AB-16b closed.** With the cart webhooks gone, carts and orders work (5 of 5 carts; order
+  3000000020).
+- **AB-16a built and proven live.** Each ERP is signed in with its own credential. Contoso's
+  health reads reachable (it answered 401 before). Order 3000000021: Northwind got only the
+  access point (0000001011), Contoso only the server (0000001000). A Contoso price list reached
+  Kukla Studios' catalog and was removed again.
+- **Found and filed, not blocking:** AB-16g (Northwind's customer pairings were lost; a data load
+  restored them; cause not found), AB-16h (integration paths that still reach only the first
+  ERP), AB-16i (an added ERP's own events never reach the integration). AB-16h and AB-16i are
+  being built now.
+- **Also:** three integration actions were logging the integration's own secret at debug level;
+  fixed.
+
+**Your decisions:** none needed. When you are back: whether to merge `feature/erp-integration`
+into `develop` again (it has AB-26z's and AB-16a's Demo Builder parts).
