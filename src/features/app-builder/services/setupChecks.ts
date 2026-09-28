@@ -80,9 +80,10 @@ function catalogProblems(companies: CompanyRow[], catalogs: CatalogRow[]): strin
 /**
  * Every company sits in a shared catalog, and a company with prices of its own has a custom
  * catalog nobody else is in (owner, 2026-09-26). Companies on the public catalog are fine:
- * that is where a company without its own prices belongs. At the cart Commerce tells the
- * integration only the buyer's customer group, and a shared catalog is what gives a company
- * its own group; a bare group with no catalog leaves the company in none.
+ * that is where a company without its own prices belongs. The company's own shared catalog is
+ * where the integration publishes the ERP's customer prices (`erp/prices`, AB-26z), so the
+ * buyer sees them on the listing, the product page and the cart; Commerce allows a company
+ * one shared catalog, and a bare customer group with no catalog leaves the company in none.
  */
 async function companiesHaveOwnCatalogs(read: CommerceRead): Promise<SetupCheckResult> {
     const companies = await readItems<CompanyRow>(read, COMPANIES_PATH, 'company');

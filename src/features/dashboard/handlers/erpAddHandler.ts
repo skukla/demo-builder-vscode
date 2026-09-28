@@ -153,9 +153,11 @@ async function listAndFill(
         { authManager, getAuth: async () => auth, onProgress: (step) => report(OPERATION_STAGES.loadingErpDemoData.label, step) },
         entry.id,
     );
-    return filled.status === 'filled'
-        ? { success: true, listed: listed.ids, filled: true }
-        : { success: true, listed: listed.ids, filled: false, fillNote: `Demo data did not load: ${sentence(filled.detail)} Use Load demo data on its card.` };
+    if (filled.status === 'filled') {
+        // Prices not published after the fill (AB-26z): said, and the add stands.
+        return { success: true, listed: listed.ids, filled: true, ...(filled.note ? { fillNote: filled.note } : {}) };
+    }
+    return { success: true, listed: listed.ids, filled: false, fillNote: `Demo data did not load: ${sentence(filled.detail)} Use Load demo data on its card.` };
 }
 
 /** A reason as a sentence: ending in a full stop, whether or not it came with one. */

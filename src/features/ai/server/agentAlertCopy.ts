@@ -242,14 +242,14 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     load_erp_demo_data: {
         action: 'Load demo data into the ERP',
         consequence:
-            "Copies Commerce's products, companies and websites into the ERP; a value changed by hand in the ERP is set back to Commerce's.",
+            "Copies Commerce's products, companies and websites into the ERP; a value changed by hand in the ERP is set back to Commerce's. Then publishes the ERP's customer prices into the companies' shared catalogs in Commerce.",
         target: ['id'],
         sessionGrant: false,
     },
     reset_erp_records: {
         action: 'Reset the ERP records',
         consequence:
-            'Wipes every record in the ERP and fills it from Commerce again; the credit limits and company blocks the ERP set in Commerce are undone.',
+            "Wipes every record in the ERP and fills it from Commerce again; the credit limits and company blocks the ERP set in Commerce are undone, and the ERP's customer prices are published into the companies' shared catalogs again.",
         target: ['id'],
         sessionGrant: false,
     },

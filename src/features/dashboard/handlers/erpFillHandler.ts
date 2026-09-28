@@ -6,7 +6,9 @@
  * same path an add takes once the integration is installed.
  *
  * Guards → progress → the fill, the shape `resetErpRecords` has. Adding records never
- * removes any: a record already in the ERP is updated in place.
+ * removes any: a record already in the ERP is updated in place. Each fill ends with the
+ * ERP's prices published into the companies' shared catalogs (AB-26z); prices that were not
+ * are the answer's `warning`, and the fill still stands.
  *
  * @module features/dashboard/handlers/erpFillHandler
  */
@@ -16,12 +18,11 @@ import { openErpCall, shapeErpRow, type ErpCallPayload } from './erpIntegrationH
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
-import type { ErpFillResult } from '@/features/app-builder/services/erpFill';
-import { fillErpForProject } from '@/features/project-creation/services/erpFillForProject';
+import { fillErpForProject, fillNotes, type ErpFillForProjectResult } from '@/features/project-creation/services/erpFillForProject';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerResponse, MessageHandler } from '@/types/handlers';
 
-type FillOutcome = GuardableResult & { loaded?: Array<{ erp: string; name: string; result: ErpFillResult }> };
+type FillOutcome = GuardableResult & { loaded?: Array<{ erp: string; name: string; result: ErpFillForProjectResult; note?: string }> };
 
 /**
  * Handle 'loadErpDemoData' — fill the ERPs an integration serves from Commerce as it stands:
@@ -57,18 +58,25 @@ export const handleLoadErpDemoData: MessageHandler<ErpCallPayload & { progress?:
                     if (filled.status === 'failed') {
                         return { success: false, error: `Loading demo data into ${name} did not finish: ${filled.detail}` };
                     }
-                    loaded.push({ erp: erp.id, name, result: filled.result });
+                    loaded.push({ erp: erp.id, name, result: filled.result, ...(filled.note ? { note: filled.note } : {}) });
                 }
                 return { success: true, loaded };
             },
         );
         if (outcome.blocked || !outcome.success) return { success: false, error: outcome.error };
-        return { success: true, data: { id: call.id, erp: shapeErpRow(erps[0]), loaded: loadedAnswer(outcome.loaded ?? []) } };
+        const loaded = outcome.loaded ?? [];
+        // Prices not published after a fill that stood: said, never a failure (AB-26z).
+        const warning = fillNotes(loaded);
+        return { success: true, data: { id: call.id, erp: shapeErpRow(erps[0]), loaded: loadedAnswer(loaded), ...(warning ? { warning } : {}) } };
     },
     (payload) => payload?.id ?? '',
 );
 
-/** One ERP's result as before (an agent reads `loaded.partners`); several, each by its ERP. */
+/**
+ * One ERP's result as before (an agent reads `loaded.partners`); several, each by its ERP.
+ * A note is answered once, as the `warning`, not again inside each row.
+ */
 function loadedAnswer(loaded: NonNullable<FillOutcome['loaded']>): unknown {
-    return loaded.length === 1 ? loaded[0].result : loaded;
+    if (loaded.length === 1) return loaded[0].result;
+    return loaded.map(({ erp, name, result }) => ({ erp, name, result }));
 }

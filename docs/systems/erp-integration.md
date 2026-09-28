@@ -17,8 +17,9 @@ Adobe's Commerce integration starter kit. The design record is
   or stock change in the ERP lands on the Commerce product. A company's credit limit
   set in the ERP lands on the Commerce company; a block set in the ERP holds that ERP's orders
   of the company (On Hold, the reason in each order's history) and never switches the company
-  off: each ERP for itself (owner, 2026-09-28). A contract price for a company
-  applies in that company's cart, with a discount ceiling.
+  off: each ERP for itself (owner, 2026-09-28). A company's prices in the ERP (its customer
+  price list, or its price group's) are published into that company's own shared catalog, so
+  its buyers see them on the listing, the product page and the cart (AB-26z).
 - **A screen inside the Commerce Admin** (Admin UI SDK), showing whether the ERP is
   reachable, counts of what it holds, and buttons to refresh partners, push records and
   reset. It keeps no history of what crossed — its log is only what its own buttons did
@@ -88,13 +89,20 @@ mints per call from the workspace's own credential; nothing else — not the bro
 API Mesh — has a way in, and none is added. Whatever the ERP decides is written into
 Commerce, and the storefront reads Commerce, the same for every channel.
 
-Live calls happen at DECISIONS, through Commerce webhooks. Cart pricing is the one built:
-the totals collector calls two of this integration's actions for contract prices and the
-discount ceiling. Both are optional (`required: false`), so an ERP that does not answer
-leaves Commerce's own prices in place and the shopper sees no error. Two more are designed
-and not built — availability and a credit check at order placement — and both are
-`required: true`, because an over-limit order let through is not survivable the way a
-missing discount is.
+Prices are synced ahead, never asked on a cart change (owner, 2026-09-28;
+`.rptc/plans/several-erps/pricing-and-live-checks.md`). The ERP holds price lists, per
+customer or per price group, with dated lines and quantity breaks. The integration publishes
+the prices in force for each customer into that company's own shared catalog, as tier prices
+(`erp/prices`), after every fill and whenever the ERP changes a price list; each ERP writes
+and removes only its own products' prices. The cart, the listing and the product page all
+price from Commerce, so the buyer sees the company's price everywhere and checkout never
+waits on an ERP. There is no cart webhook: the two that priced the cart (contract price and
+discount ceiling) were removed with AB-26z.
+
+Live calls happen once per owning ERP, at checkout, for the decisions that must be current:
+credit (can this company carry this order, AB-20) and availability (can this ERP promise this
+quantity, AB-19). Neither is built yet. Each will have a time limit and a fallback: an ERP
+that is slow or down accepts the order, holds its part, and sends it when it is back.
 
 Not done, on purpose: a live price on the product page (it would put the ERP in front of
 every product view, and a price that arrives by another route can disagree with what
@@ -173,13 +181,18 @@ the integration for its resolved settings per website (`GET erp/settings?website
 sends the records to the ERP's `POST admin/import` in batches of 25 products
 (`erpFill.ts`, wired for a project by `erpFillForProject.ts`). It runs in three places, all
 the same call: after the add, inside **Reset records** (undo the ERP's writes in Commerce,
-then the ERP's `admin/wipe`, then the fill), and as `load_erp_demo_data`. Because it runs in
+then the ERP's `admin/wipe`, then the fill), and as `load_erp_demo_data`. Every fill ends by
+asking the integration to publish that ERP's prices into the companies' shared catalogs
+(`POST erp/prices` with the ERP's list id); the answer carries the counts (`prices`:
+written, removed, unchanged, skipped). A publish that fails does not fail the fill: the
+answer's `warning` says so in plain words, and Load demo data again retries it. An
+integration deployed before it had `erp/prices` is filled without it, silently. Because it runs in
 the extension, it has no one-minute web-request limit. Last, it hands the integration its key map
 (`PUT erp/keymap`: which Commerce company is which ERP customer), the way a key map is loaded
 at a go-live; an integration deployed before it had `erp/keymap` is filled without one, and
 the progress says so. The ERP itself holds no Commerce id (its contract version 3): the customers
 the fill sends carry no Commerce company id, customer group, email domain or website, and
-orders and cart prices name the customer only by the ERP number the integration finds in the
+orders and prices name the customer only by the ERP number the integration finds in the
 key map. Measured on Bodea: 4 customers and
 182 products in 2m15s, the same records the integration's mirror produced.
 
@@ -236,7 +249,10 @@ changes a text setting (the ERP's name) and redeploys; a secret setting is enter
 tile, never passed to a tool.
 `open_erp_screen` (confirm-gated, like `open_url`) opens the ERP's screen; it answers the
 address and never the key.
-`reset_erp_records` (confirm-gated, with a consent dialog) runs the reset for every ERP.
+`reset_erp_records` (confirm-gated, with a consent dialog) runs the reset for every ERP, and
+`load_erp_demo_data` fills every ERP (or the one named by `erp`); both end by publishing each
+ERP's prices into the companies' shared catalogs. There is no tool of its own for prices: they
+are published by the fill and by the ERP's own change events.
 `add_erp` (confirm-gated) adds another ERP by name; `remove_integration` on its id removes it
 alone. The tools that act on one ERP take `erp`, its component id. The existing
 `add_integration`, `deploy_integration`, `redeploy_integration` and `remove_integration`
@@ -251,7 +267,8 @@ unless Commerce refused an upgrade.
 Add the tile to a project on a Commerce instance; the ERP screen lists the instance's
 products and companies. Place an order; it shows the ERP number. Ship it in the ERP; the
 Commerce order follows. Change a price and a stock figure in the ERP; the product follows.
-Add a contract price for a company; that company's cart prices from it. Block a company in
+Give a company a price list in the ERP; that company's shared catalog carries the price, so
+its buyer sees it on the listing, the product page and the cart. Block a company in
 the ERP; the Commerce company stays active, its open orders go On Hold and its next order waits
 there; open the company again and they are released. Reset; the ERP is filled again.
 Remove the integration; both apps are gone and Commerce is clean.

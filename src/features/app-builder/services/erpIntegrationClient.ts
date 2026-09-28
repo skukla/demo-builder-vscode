@@ -2,9 +2,10 @@
  * The ERP integration's own actions, as Demo Builder calls them: `erp/status`, `erp/lookup` and
  * `erp/history` (what the integration sees of its ERP), `erp/settings` (the settings in force,
  * which the ERP fill sorts records by), `erp/keymap` and `erp/erps` (the key map and the list of
- * ERPs, both replaced whole by Demo Builder) and `erp/detach` (undo what the integration wrote into
- * Commerce, run by a reset and before the integration is removed). The reset and the fill are
- * Demo Builder's own since 2026-09-27 (AB-26y).
+ * ERPs, both replaced whole by Demo Builder), `erp/prices` (publish an ERP's customer prices into
+ * the companies' shared catalogs, run after every fill, AB-26z) and `erp/detach` (undo what the
+ * integration wrote into Commerce, run by a reset and before the integration is removed). The
+ * reset and the fill are Demo Builder's own since 2026-09-27 (AB-26y).
  *
  * All are web actions with `require-adobe-auth`, so they take the same
  * bearer token and org header the App Management client sends. The URLs come
@@ -33,14 +34,28 @@ export interface ErpIntegrationStatus {
     ledger: { entries: number };
 }
 
-/** What `erp/reset` answers: counts of what was undone, wiped and mirrored. */
 /** What `erp/detach` answers: the company writes undone and the ERP order numbers cleared. */
 export interface ErpDetachReport {
     reverted?: { reverted: number; failed: unknown[] };
     orders?: { cleared: number; failed: unknown[] };
 }
 
-export type ErpAction = 'status' | 'detach' | 'lookup' | 'history' | 'settings' | 'keymap' | 'erps';
+export type ErpAction = 'status' | 'detach' | 'lookup' | 'history' | 'settings' | 'keymap' | 'erps' | 'prices';
+
+/**
+ * What `erp/prices` answers (the integration's `actions/erp/prices/index.js`, read 2026-09-28):
+ * the ERPs it published for and the tier prices written, removed (no longer in force) and left
+ * as they were, across every company. A company it could not price is `skipped` with the
+ * reason (no shared catalog, say); one whose write failed is in `failed`.
+ */
+export interface ErpPricesReport {
+    erps: string[];
+    written: number;
+    removed: number;
+    unchanged: number;
+    skipped: Array<{ erpId: string; partnerId: string; reason: string }>;
+    failed: Array<{ erpId: string; partnerId?: string; error: string }>;
+}
 
 /**
  * What `erp/lookup` answers (the integration's `lib/lookup.js`, `productLookup` and
@@ -165,6 +180,19 @@ export class ErpIntegrationClient {
     async readKeyMap(): Promise<ErpKeyMapEntry[]> {
         const answer = (await this.call('keymap', 'GET')) as { entries?: ErpKeyMapEntry[] };
         return answer.entries ?? [];
+    }
+
+    /** Whether this deployment publishes prices (`erp/prices`); one deployed before it does not. */
+    publishesPrices(): boolean {
+        return deriveErpActionUrl(this.deployedUrls, 'prices') !== undefined;
+    }
+
+    /**
+     * Publish an ERP's customer prices in force into each company's shared catalog, as a
+     * replace (`POST erp/prices`). With `erpId` (its list id), that ERP's; else every ERP's.
+     */
+    async publishPrices(erpId?: string): Promise<ErpPricesReport> {
+        return (await this.call('prices', 'POST', undefined, erpId ? { erpId } : undefined)) as ErpPricesReport;
     }
 
     /** Whether this deployment serves several ERPs (`erp/erps`); one deployed before it does not. */

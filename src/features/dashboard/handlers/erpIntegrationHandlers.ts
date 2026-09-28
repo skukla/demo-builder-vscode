@@ -40,13 +40,12 @@ import {
     type ErpDetachReport,
     type ImsCallMethod,
 } from '@/features/app-builder/services/erpIntegrationClient';
-import type { ErpFillResult } from '@/features/app-builder/services/erpFill';
 import { erpListIdOf } from '@/features/app-builder/services/erpList';
 import { deriveScreenUrl, readScreenKey, screenLink } from '@/features/app-builder/services/systemScreen';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { systemsUsedBy } from '@/features/components/services/appBuilderComponentLinks';
 import { resolveAppManagementAuth } from '@/features/project-creation/services/appBuilderComponentRunnerDeps';
-import { fillErpForProject } from '@/features/project-creation/services/erpFillForProject';
+import { fillErpForProject, fillNotes, type ErpFillForProjectResult } from '@/features/project-creation/services/erpFillForProject';
 import type { AppBuilderComponentState, Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
@@ -160,17 +159,21 @@ export const handleGetErpStatus: MessageHandler<ErpCallPayload> = async (context
  * modal like every other card action; it was still opening a notification of its
  * own (owner, 2026-09-20).
  */
-/** What a reset did: the integration's Commerce writes undone, then each ERP wiped and filled again. */
+/**
+ * What a reset did: the integration's Commerce writes undone, then each ERP wiped and filled
+ * again, its prices published. `warning`: prices a fill could not publish (AB-26z).
+ */
 interface ErpResetReport {
     undone: ErpDetachReport;
-    erps: Array<{ id: string; name: string; wiped: unknown; loaded: ErpFillResult }>;
+    erps: Array<{ id: string; name: string; wiped: unknown; loaded: ErpFillForProjectResult }>;
+    warning?: string;
 }
 
 /**
  * The reset's steps, in order, none resumable part-way: the integration undoes what it wrote
  * into Commerce for every ERP (its `erp/detach`), then each ERP it serves deletes its records
  * (its own `admin/wipe`) and Demo Builder fills it from Commerce again (`fillErpForProject`,
- * AB-26y). Every ERP, because the undo is the integration's and covers them all (AB-16).
+ * AB-26y), which ends by publishing that ERP's prices (AB-26z). Every ERP, because the undo is the integration's and covers them all (AB-16).
  * Throws in the words of the step that stopped.
  */
 async function resetErp(
@@ -184,6 +187,7 @@ async function resetErp(
     if (!context.authManager) throw new Error('Adobe sign-in required.');
     const authManager = context.authManager;
     const erps: ErpResetReport['erps'] = [];
+    const notes: Array<{ name: string; note?: string }> = [];
     for (const erp of call.erps) {
         const name = erp.name ?? erp.id;
         report(stage, `Wiping ${name}`);
@@ -198,8 +202,10 @@ async function resetErp(
         );
         if (filled.status === 'failed') throw new Error(`${name} was wiped but not filled again: ${filled.detail}`);
         erps.push({ id: erp.id, name, wiped: (wipe.body as { wiped?: unknown }).wiped, loaded: filled.result });
+        notes.push({ name, note: filled.note });
     }
-    return { undone, erps };
+    const warning = fillNotes(notes);
+    return warning ? { undone, erps, warning } : { undone, erps };
 }
 
 export const handleResetErpRecords: MessageHandler<ErpCallPayload & { progress?: 'modal' }> =
@@ -232,7 +238,10 @@ export const handleResetErpRecords: MessageHandler<ErpCallPayload & { progress?:
     if (result.blocked || !result.success) {
         return { success: false, error: result.error };
     }
-    return { success: true, data: { id: call.id, erp: shapeErpRow(call.erp), report: result.report } };
+    // Prices a fill could not publish: said beside the report, never a failed reset (AB-26z).
+    const warning = result.report?.warning;
+    const report = result.report && { undone: result.report.undone, erps: result.report.erps };
+    return { success: true, data: { id: call.id, erp: shapeErpRow(call.erp), report, ...(warning ? { warning } : {}) } };
     },
     (payload) => payload?.id ?? '',
 );

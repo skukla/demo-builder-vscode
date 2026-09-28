@@ -393,14 +393,17 @@ and published to a live site ungated while its exact inverse
 above, not against this list.
 
 `load_erp_demo_data` (2026-09-27) is gated because it sets any ERP value changed by hand
-back to Commerce's; it removes nothing.
+back to Commerce's; it removes nothing. Like `reset_erp_records`, it ends by publishing each
+filled ERP's customer prices into the companies' shared catalogs (AB-26z); prices not
+published are the answer's `warning`, not a failure.
 
 `add_erp` (2026-09-28, AB-16) is gated although it only adds: it creates an Adobe workspace
 and deploys a new ERP into it, which takes minutes and is undone only by `remove_integration`
 on the new ERP's id. The ERP tools that act on one ERP (`load_erp_demo_data`,
 `open_erp_screen`, `run_erp_rest`, `write_erp_rest`, `get_erp_status`) take an optional `erp`,
-the ERP's component id, and default to the integration's first; `get_erp_status` lists every
-ERP the integration serves, and its live health is the named ERP's.
+the ERP's component id, and default to the integration's first, except `load_erp_demo_data`,
+which fills every ERP without it; `get_erp_status` lists every ERP the integration serves,
+and its live health is the named ERP's.
 
 `reset_erp_records` (2026-09-14) is gated for the same reason `reset_datapack` is: it wipes
 the ERP that comes with the ERP integration and undoes what that ERP wrote into Commerce

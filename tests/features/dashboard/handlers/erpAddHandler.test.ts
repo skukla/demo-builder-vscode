@@ -218,6 +218,16 @@ describe('handleAddErp', () => {
         });
     });
 
+    it("a fill whose prices were not published still adds the ERP, and says so (AB-26z)", async () => {
+        const note = 'Demo data loaded; prices were not published: ERP prices answered 500: boom. Load demo data again to retry.';
+        mockFill.mockResolvedValue({ status: 'filled', result: { partners: 2, products: 10, skipped: 0 }, erpId: 'demo-erp-2', note });
+        const { mockContext } = setup();
+
+        const result = await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP' });
+
+        expect(result).toMatchObject({ success: true, data: { added: { id: 'demo-erp-2' }, warning: note } });
+    });
+
     it('runs nothing when the guards refuse', async () => {
         mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: false, error: 'Sign in to Adobe first.' });
         const { mockContext } = setup();

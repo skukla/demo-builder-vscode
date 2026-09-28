@@ -37,6 +37,7 @@ jest.mock('@/features/app-builder/services/erpIntegrationClient', () => ({
 
 const mockFillErpForProject = jest.fn();
 jest.mock('@/features/project-creation/services/erpFillForProject', () => ({
+    ...jest.requireActual('@/features/project-creation/services/erpFillForProject'),
     fillErpForProject: (...args: unknown[]) => mockFillErpForProject(...args),
 }));
 
@@ -277,6 +278,22 @@ describe('handleResetErpRecords', () => {
             success: false,
             error: 'The ERP reset did not finish: Nordwind was wiped but not filled again: Commerce answered 401 for products',
         });
+    });
+
+    it('answers a reset whose prices were not published as done, with the note as its warning (AB-26z)', async () => {
+        const { mockContext } = setupMocks(pairProject());
+        allowDeveloperRole();
+        const note = 'Demo data loaded; prices were not published: ERP prices answered 500: boom. Load demo data again to retry.';
+        mockFillErpForProject.mockResolvedValue({
+            status: 'filled',
+            erpId: 'demo-erp',
+            result: { partners: 3, products: 40, skipped: 0 },
+            note,
+        });
+
+        const result = await handleResetErpRecords(mockContext, { id: 'erp-integration' });
+
+        expect(result).toMatchObject({ success: true, data: { warning: note } });
     });
 
     it('needs an id, even with no payload at all', async () => {

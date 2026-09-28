@@ -90,6 +90,35 @@ describe('ErpIntegrationClient', () => {
     });
 
     /*
+     * Prices (AB-26z). Shape from the integration's `actions/erp/prices/index.js` (read
+     * 2026-09-28): POST `{ erpId? }`, answering the counts of what it published.
+     */
+    it("POSTs prices for one ERP by its list id, and answers the integration's counts", async () => {
+        const answer = { erps: ['demo-erp-2'], written: 3, removed: 1, unchanged: 2, skipped: [], failed: [] };
+        const fetchImpl = answering(200, answer);
+        const urls = { ...URLS, 'runtime/erp/prices': 'https://ns.adobeioruntime.net/api/v1/web/erp/prices' };
+
+        const report = await new ErpIntegrationClient(urls, AUTH, fetchImpl).publishPrices('demo-erp-2');
+
+        expect(fetchImpl.mock.calls[0][0]).toBe(urls['runtime/erp/prices']);
+        const init = fetchImpl.mock.calls[0][1] as RequestInit;
+        expect(init.method).toBe('POST');
+        expect(JSON.parse(String(init.body))).toEqual({ erpId: 'demo-erp-2' });
+        expect(report).toEqual(answer);
+    });
+
+    it('POSTs prices with no body for every ERP, and knows a deployment without the action has none', async () => {
+        const fetchImpl = answering(200, { erps: ['erp'], written: 0, removed: 0, unchanged: 0, skipped: [], failed: [] });
+        const urls = { ...URLS, 'runtime/erp/prices': 'https://ns.adobeioruntime.net/api/v1/web/erp/prices' };
+
+        await new ErpIntegrationClient(urls, AUTH, fetchImpl).publishPrices();
+
+        expect((fetchImpl.mock.calls[0][1] as RequestInit).body).toBeUndefined();
+        expect(new ErpIntegrationClient(urls, AUTH, fetchImpl).publishesPrices()).toBe(true);
+        expect(new ErpIntegrationClient(URLS, AUTH, fetchImpl).publishesPrices()).toBe(false);
+    });
+
+    /*
      * Several ERPs (AB-16). Shapes from the integration's `actions/erp/erps/index.js` and
      * `actions/erp/keymap/index.js` (read 2026-09-28): GET answers `{ entries }` (erps adds
      * `stored`), PUT takes `{ entries }` and replaces the whole list or map.

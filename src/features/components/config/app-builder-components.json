@@ -98,7 +98,7 @@
         {
           "id": "company-catalogs",
           "title": "Give each company that gets its own prices a shared catalog of its own",
-          "why": "At the cart Commerce tells the integration only the buyer's customer group, so companies sharing a group get the same prices.",
+          "why": "The company's own shared catalog is where the ERP's customer prices are published, so its buyers see them on the listing, the product page and the cart. Companies sharing a catalog would share its prices.",
           "where": "Catalog > Shared Catalogs > Add Shared Catalog, then Assign Companies.",
           "check": "companies-have-own-catalogs"
         },
