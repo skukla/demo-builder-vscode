@@ -15,10 +15,10 @@
 
 import { requestRest, resolveRestTargetFor, type RestTarget } from '@/features/ai/server/commerceRestClient';
 import type { AppManagementAuth } from '@/features/app-builder/services/appManagementClient';
-import { fillErp, type ErpFillDeps, type ErpFillResult } from '@/features/app-builder/services/erpFill';
-import { CommerceReadError, type CommerceGet } from '@/features/app-builder/services/erpFillReaders';
 import { catalogEntryFor } from '@/features/app-builder/services/componentEntry';
 import { listIdOf } from '@/features/app-builder/services/deployInputs';
+import { fillErp, type ErpFillDeps, type ErpFillResult } from '@/features/app-builder/services/erpFill';
+import { CommerceReadError, type CommerceGet } from '@/features/app-builder/services/erpFillReaders';
 import { ErpIntegrationClient, callErpApi } from '@/features/app-builder/services/erpIntegrationClient';
 import { mergeKeyMap } from '@/features/app-builder/services/erpList';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
@@ -88,13 +88,27 @@ interface FillTarget {
 /**
  * Which ERP a fill is for: the one named (it must be one the integration uses), else the
  * integration's first. Its list id is what the integration's settings and key map know it by.
+ * Only the first ERP may fall back to the single-ERP id: an added ERP whose listing cannot be
+ * read would otherwise be filled as the first, and its pairs would replace the first ERP's in
+ * the key map (AB-16g). That is a refusal, in words.
  */
-function fillTarget(project: Project, integrationId: string, erpComponentId: string | undefined): FillTarget | undefined {
+function fillTarget(
+    project: Project,
+    integrationId: string,
+    erpComponentId: string | undefined,
+): FillTarget | { refusal: string } | undefined {
     const catalog = getAppBuilderComponentCatalog();
     const used = systemsUsedBy(project, integrationId, catalog);
     const componentId = erpComponentId ?? used[0];
     if (!componentId || !used.includes(componentId)) return undefined;
     const entry = catalogEntryFor(project, componentId, catalog);
+    if (!entry?.listedAs && componentId !== used[0]) {
+        return {
+            refusal:
+                `Cannot tell which ERP "${componentId}" is in the integration's list, so its pairs could ` +
+                "replace another ERP's. Redeploy it, then load demo data again.",
+        };
+    }
     const firstId = entry?.listedAs?.firstId ?? SINGLE_ERP_ID;
     return { componentId, listId: entry?.listedAs ? listIdOf(project, entry) : firstId, firstId };
 }
@@ -163,7 +177,9 @@ export async function fillErpForProject(
 ): Promise<ErpFillOutcome> {
     const fetchImpl = deps.fetchImpl ?? globalThis.fetch;
     const integration = project.appBuilderComponents?.[integrationId];
-    const target = fillTarget(project, integrationId, erpComponentId);
+    const resolved = fillTarget(project, integrationId, erpComponentId);
+    if (resolved && 'refusal' in resolved) return { status: 'failed', detail: resolved.refusal };
+    const target = resolved;
     const erp = target ? project.appBuilderComponents?.[target.componentId] : undefined;
     if (!integration || !target || !erp) {
         return { status: 'failed', detail: `"${integrationId}" has no ERP ${erpComponentId ? `"${erpComponentId}" ` : ''}in this project.` };
