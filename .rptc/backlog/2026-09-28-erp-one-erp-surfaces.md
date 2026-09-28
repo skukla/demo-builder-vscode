@@ -32,3 +32,7 @@ shows as not reachable.
 ## Done when
 
 Each gap is either fixed or recorded here as deliberately one-ERP, with the reason.
+
+## Shipped so far
+
+- 2026-09-28  Added (owner conversation, 2026-09-28): show the integration's scheduled runs (the hourly price publish; when each ran and what it changed) on the Admin page's Activity section, so an SC can show a prospect the schedule working. Scheduled work runs as App Builder alarms, not Commerce cron (Adobe's App Development Comparison: alarms are the recommended method); prospects often expect Commerce cron.
