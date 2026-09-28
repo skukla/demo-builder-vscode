@@ -46,7 +46,8 @@ it uninstalls the integration from Commerce and deletes the ERP's records (the E
 `POST admin/wipe`, declared as `wipe` in the catalog; its order-number counters and settings
 stay). Only then does it undeploy the integration and the ERP. Removing the ERP does the
 same: it removes the integration, which takes the ERP with it. The ERP is never offered on
-its own.
+its own. The integration is added once; more ERPs are added from its card (see "Several
+ERPs"), and removing the integration removes every one of them.
 
 Those three clean-ups live in code the undeploy deletes, so if any of them fails, **nothing
 is removed**: the removal stops, the reason is saved on the component (`removalStopped`),
@@ -119,6 +120,51 @@ When Commerce will not upgrade the integration in place, the screen opens a conf
 offering **Reinstall in Commerce**: uninstall, then install the version already deployed.
 The kebab keeps offering it until it has been done, and nowhere else.
 
+## Several ERPs
+
+The integration serves a list of ERPs (design v1, `.rptc/plans/several-erps/design.md`),
+kept in its App Builder State and read and replaced through its `erp/erps` action. Each
+entry is `{ id, name, adapter: "demo-erp", connection: { baseUrl }, settings? }`. With no
+list stored, the integration serves one ERP, id `erp`, from its deploy settings.
+
+**Adding one.** The integration's card offers **Add another ERP** once the integration is
+deployed (the catalog's `addOnce` on the integration, `listedAs` on the ERP). It asks for a
+name that no ERP in the project has, compared without case, then (`erpAddHandler.ts`):
+
+1. adds a demo-erp system `demo-erp-2` (then `-3`, …) in an Adobe workspace of its own, named
+   for it, and deploys it with `ERP_DISPLAY_NAME` = the name and `ERP_ID` = its id;
+2. links it to the integration (`systems` / `usedBy`) and sends the integration the whole
+   list (`PUT erp/erps`, `erpListSync.ts`), keeping the settings each ERP already has there;
+3. fills it from Commerce with that ERP's own settings (`GET erp/settings?…&erp=<id>`), and
+   merges its key map rows, each carrying `erpId`, into the map the integration holds.
+
+A list that cannot be sent fails the add with the ERP left deployed; adding again with the
+same name finishes it (no second deploy). A fill that does not finish is said, and Load demo
+data on the ERP's card runs it again.
+
+**Its id.** The integration's own ERP is `erp`, never its component id, because the
+integration reads any event or key map row that names no ERP as `erp`, and its per-ERP
+credit attributes are keyed by it. An added ERP's id is its component id. Both are sent as
+`ERP_ID` on every deploy (`listIdOf`, `deployInputs.ts`), and a product goes to an ERP when
+its `erp_owner` attribute is that id. An ERP added from the card is numbered where no
+`erp-integration-N` exists, so it is never mistaken for a legacy numbered pair's own ERP.
+
+**Filling and resetting.** Load demo data and Reset records on the integration, and their
+agent tools without `erp`, cover every ERP: the reset undoes the integration's Commerce
+writes once, then wipes and fills each ERP. Load demo data and Open on one ERP's card reach
+that ERP only.
+
+**Removing one.** Remove on an added ERP's card takes it off the integration's list first
+(the list without it), then wipes its records, undeploys it and deletes its workspace. If the
+list cannot be sent, nothing is removed, and Remove anyway goes on without it. The
+integration's own ERP still goes only with the integration.
+
+**Before several ERPs can be shown**, the integration's setup checklist asks for the
+`erp_owner` (a Text Field) and `brand` product attributes, which Demo Builder checks, the
+"Partially Held" order status (`partially_held`, on Processing and Pending) and Payment on
+Account for the website, which the SC marks done: Commerce's REST API lists neither order
+statuses by state nor payment settings.
+
 ## Filling the ERP
 
 Demo Builder fills the ERP itself (AB-26y, 2026-09-27): it reads the project's Commerce
@@ -190,9 +236,11 @@ changes a text setting (the ERP's name) and redeploys; a secret setting is enter
 tile, never passed to a tool.
 `open_erp_screen` (confirm-gated, like `open_url`) opens the ERP's screen; it answers the
 address and never the key.
-`reset_erp_records` (confirm-gated, with a consent dialog) runs the reset. The existing
+`reset_erp_records` (confirm-gated, with a consent dialog) runs the reset for every ERP.
+`add_erp` (confirm-gated) adds another ERP by name; `remove_integration` on its id removes it
+alone. The tools that act on one ERP take `erp`, its component id. The existing
 `add_integration`, `deploy_integration`, `redeploy_integration` and `remove_integration`
-cover the pair by id; `remove_integration` on either one removes both, and stops with the
+cover the pair by id; `remove_integration` on either one removes the integration and every ERP, and stops with the
 error code `COMPONENT_REMOVAL_STOPPED` when a clean-up fails (`force: true` goes ahead).
 `check_integration_updates` records which apps have newer code, `update_integration`
 updates the pair (the ERP first), and `reinstall_integration` (confirm-gated) is refused
