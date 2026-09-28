@@ -7,8 +7,8 @@
  * @module features/eds/services/github/githubTreePush
  */
 
-import { isBinary } from '../storefront/zipStorefrontImport';
 import type { GitHubTreeInput } from '../types';
+import { isBinary } from './archiveFile';
 import { batchTreeEntries, type GitHubFileOperations } from './githubFileOperations';
 import type { Logger } from '@/types/logger';
 
@@ -48,7 +48,9 @@ export async function pushFiles(
     onProgress?: (progress: PushProgress) => void,
 ): Promise<{ commitSha: string; fileCount: number }> {
     const head = await ops.getBranchInfo(owner, repo, BRANCH);
-    const binaries = new Set([...files].filter(([, bytes]) => isBinary(bytes)).map(([path]) => path));
+    const binaries = new Set(
+        [...files].filter(([, bytes]) => isBinary(bytes)).map(([path]) => path),
+    );
     const entries: GitHubTreeInput[] = [];
     let blobs = 0;
     for (const [path, bytes] of files) {
@@ -61,10 +63,13 @@ export async function pushFiles(
             entries.push({ path, mode: '100644', type: 'blob', content: bytes.toString('utf-8') });
         }
     }
-    if (entries.length === 0) throw new Error('Nothing to push: the zip held no files a repository would keep.');
+    if (entries.length === 0)
+        throw new Error('Nothing to push: the zip held no files a repository would keep.');
 
     const batches = batchTreeEntries(entries);
-    logger.info(`[GitHub] Pushing ${entries.length} files (${blobs} binary) to ${owner}/${repo} in ${batches.length} tree request(s)`);
+    logger.info(
+        `[GitHub] Pushing ${entries.length} files (${blobs} binary) to ${owner}/${repo} in ${batches.length} tree request(s)`,
+    );
     let treeSha: string | undefined;
     let pushed = 0;
     for (const batch of batches) {
@@ -72,7 +77,13 @@ export async function pushFiles(
         pushed += batch.length;
         onProgress?.({ kind: 'files', done: pushed, total: entries.length });
     }
-    const commitSha = await ops.createCommit(owner, repo, message, treeSha as string, head.commitSha);
+    const commitSha = await ops.createCommit(
+        owner,
+        repo,
+        message,
+        treeSha as string,
+        head.commitSha,
+    );
     await ops.updateBranchRef(owner, repo, BRANCH, commitSha, true);
     logger.info(`[GitHub] ${owner}/${repo}@${BRANCH} is now ${commitSha.substring(0, 7)}`);
     return { commitSha, fileCount: entries.length };

@@ -15,7 +15,11 @@ import AdmZip from 'adm-zip';
 import { BUNDLE_SETUP_FILE, BUNDLE_STOREFRONT_DIR } from '../demoPackage/demoBundle';
 import type { GitHubRepoOperations } from '../github/githubRepoOperations';
 import { pushFiles, type TreePushOps } from '../github/githubTreePush';
-import { CANONICAL_STOREFRONT_FILES, classifyRepoForStorefront, type RepoReadiness } from './repoStorefrontReadiness';
+import {
+    CANONICAL_STOREFRONT_FILES,
+    classifyRepoForStorefront,
+    type RepoReadiness,
+} from './repoStorefrontReadiness';
 import { ZIP_COMMIT_MESSAGE } from './zipImportCommit';
 import { readSharedDemoDescription } from '@/core/state/projectFileReader';
 import { normalizeRepositoryName } from '@/core/validation/normalizers';
@@ -61,7 +65,12 @@ function ignoreRule(line: string): ((path: string) => boolean) | undefined {
         '^' +
             body
                 .split('**')
-                .map((part) => part.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]*').replace(/\?/g, '[^/]'))
+                .map((part) =>
+                    part
+                        .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+                        .replace(/\*/g, '[^/]*')
+                        .replace(/\?/g, '[^/]'),
+                )
                 .join('.*') +
             '$',
     );
@@ -72,13 +81,17 @@ function ignoreRule(line: string): ((path: string) => boolean) | undefined {
             return (dirOnly ? directories : segments).some((segment) => regex.test(segment));
         }
         const prefixes = directories.map((_, i) => segments.slice(0, i + 1).join('/'));
-        return (dirOnly ? prefixes : [path, ...prefixes]).some((candidate) => regex.test(candidate));
+        return (dirOnly ? prefixes : [path, ...prefixes]).some((candidate) =>
+            regex.test(candidate),
+        );
     };
 }
 
 function alwaysDropped(path: string): boolean {
     return ALWAYS_DROPPED.some((rule) =>
-        rule.endsWith('/') ? path.startsWith(rule) || path.includes(`/${rule}`) : path === rule || path.endsWith(`/${rule}`),
+        rule.endsWith('/')
+            ? path.startsWith(rule) || path.includes(`/${rule}`)
+            : path === rule || path.endsWith(`/${rule}`),
     );
 }
 
@@ -91,12 +104,22 @@ function alwaysDropped(path: string): boolean {
 export function readStorefrontZip(zipPath: string): ZipStorefront {
     const entries = new AdmZip(zipPath).getEntries().filter((entry) => !entry.isDirectory);
     const firstSegments = new Set(entries.map((entry) => entry.entryName.split('/')[0]));
-    const rootName = firstSegments.size === 1 && entries.every((entry) => entry.entryName.includes('/')) ? [...firstSegments][0] : undefined;
+    const rootName =
+        firstSegments.size === 1 && entries.every((entry) => entry.entryName.includes('/'))
+            ? [...firstSegments][0]
+            : undefined;
     const strip = rootName ? rootName.length + 1 : 0;
     const relative = entries.map((entry) => ({ path: entry.entryName.slice(strip), entry }));
 
-    const ignoreLines = relative.find((file) => file.path === '.gitignore')?.entry.getData().toString('utf-8').split('\n') ?? [];
-    const rules = ignoreLines.map(ignoreRule).filter((rule): rule is (path: string) => boolean => rule !== undefined);
+    const ignoreLines =
+        relative
+            .find((file) => file.path === '.gitignore')
+            ?.entry.getData()
+            .toString('utf-8')
+            .split('\n') ?? [];
+    const rules = ignoreLines
+        .map(ignoreRule)
+        .filter((rule): rule is (path: string) => boolean => rule !== undefined);
 
     const files = new Map<string, Buffer>();
     let dropped = 0;
@@ -126,22 +149,30 @@ function setupOfBundle(files: Map<string, Buffer>): Pick<ZipStorefront, 'setup' 
  */
 function storefrontOfBundle(files: Map<string, Buffer>): Map<string, Buffer> {
     const atTop = CANONICAL_STOREFRONT_FILES.some((name) => files.has(name));
-    const inBundle = CANONICAL_STOREFRONT_FILES.some((name) => files.has(`${BUNDLE_STOREFRONT_DIR}${name}`));
+    const inBundle = CANONICAL_STOREFRONT_FILES.some((name) =>
+        files.has(`${BUNDLE_STOREFRONT_DIR}${name}`),
+    );
     if (atTop || !inBundle) return files;
     const storefront = new Map<string, Buffer>();
     for (const [path, bytes] of files) {
-        if (path.startsWith(BUNDLE_STOREFRONT_DIR)) storefront.set(path.slice(BUNDLE_STOREFRONT_DIR.length), bytes);
+        if (path.startsWith(BUNDLE_STOREFRONT_DIR))
+            storefront.set(path.slice(BUNDLE_STOREFRONT_DIR.length), bytes);
     }
     return storefront;
 }
 
 /** The same verdict the probe gives a repository, over the unpacked files. */
-export async function classifyZipStorefront(files: Map<string, Buffer>, logger: Logger): Promise<RepoReadiness> {
+export async function classifyZipStorefront(
+    files: Map<string, Buffer>,
+    logger: Logger,
+): Promise<RepoReadiness> {
     return classifyRepoForStorefront(
         {
             getFileContent: async (_owner: string, _repo: string, path: string) => {
                 const bytes = files.get(path);
-                return bytes ? { content: bytes.toString('utf-8'), sha: '', path, encoding: 'utf-8' } : null;
+                return bytes
+                    ? { content: bytes.toString('utf-8'), sha: '', path, encoding: 'utf-8' }
+                    : null;
             },
         },
         'zip',
@@ -155,7 +186,10 @@ export async function classifyZipStorefront(files: Map<string, Buffer>, logger: 
  * `citisignal-b2b-summit`; a bundle's `bodea-demo-bundle` → `bodea`.
  */
 export function suggestRepoName(rootName: string | undefined, fallback: string): string {
-    const base = (rootName ?? fallback).replace(/\.zip$/i, '').replace(/-demo-bundle$/i, '').replace(/-(main|master)$/i, '');
+    const base = (rootName ?? fallback)
+        .replace(/\.zip$/i, '')
+        .replace(/-demo-bundle$/i, '')
+        .replace(/-(main|master)$/i, '');
     return normalizeRepositoryName(base) || normalizeRepositoryName(fallback);
 }
 
@@ -168,7 +202,10 @@ export interface CreatedRepository {
 }
 
 export interface CreateRepositoryDeps {
-    repoOps: Pick<GitHubRepoOperations, 'createEmptyRepository' | 'waitForContent' | 'setTemplateFlag'>;
+    repoOps: Pick<
+        GitHubRepoOperations,
+        'createEmptyRepository' | 'waitForContent' | 'setTemplateFlag'
+    >;
     fileOps: TreePushOps;
     logger: Logger;
     /** Each step, for a person watching: the step's name and a detail such as a file count. */
@@ -176,8 +213,6 @@ export interface CreateRepositoryDeps {
 }
 
 const count = (n: number): string => n.toLocaleString('en-US');
-
-
 
 /**
  * The unpacked storefront becomes a repository in the SC's own account (D28):
@@ -195,19 +230,42 @@ export async function createRepositoryFromZip(
     files: Map<string, Buffer>,
     opts: { repoName: string; isPrivate: boolean; leftOut?: number },
 ): Promise<CreatedRepository> {
-    deps.logger.info(`[Zip] Creating ${opts.repoName} (${opts.isPrivate ? 'private' : 'public'}): ${files.size} files`);
+    deps.logger.info(
+        `[Zip] Creating ${opts.repoName} (${opts.isPrivate ? 'private' : 'public'}): ${files.size} files`,
+    );
     const leftOut = opts.leftOut ? ` · ${count(opts.leftOut)} left out` : '';
-    deps.onProgress?.('Creating the repository', `${opts.repoName} · ${count(files.size)} files${leftOut}`);
+    deps.onProgress?.(
+        'Creating the repository',
+        `${opts.repoName} · ${count(files.size)} files${leftOut}`,
+    );
     const repository = await deps.repoOps.createEmptyRepository(opts.repoName, opts.isPrivate);
     const [owner, repo] = repository.fullName.split('/');
     await deps.repoOps.waitForContent(owner, repo);
-    const pushed = await pushFiles(deps.fileOps, owner, repo, files, ZIP_COMMIT_MESSAGE, deps.logger, (p) =>
-        deps.onProgress?.(p.kind === 'binary' ? 'Uploading binary files' : 'Pushing files', `${count(p.done)} of ${count(p.total)}`),
+    const pushed = await pushFiles(
+        deps.fileOps,
+        owner,
+        repo,
+        files,
+        ZIP_COMMIT_MESSAGE,
+        deps.logger,
+        (p) =>
+            deps.onProgress?.(
+                p.kind === 'binary' ? 'Uploading binary files' : 'Pushing files',
+                `${count(p.done)} of ${count(p.total)}`,
+            ),
     );
     deps.onProgress?.('Finishing up', 'Marking it as a template');
     await deps.repoOps.setTemplateFlag(owner, repo, true);
-    deps.logger.info(`[Zip] ${repository.fullName}: ${pushed.fileCount} files pushed, marked as a template`);
-    return { owner, repo, fullName: repository.fullName, defaultBranch: repository.defaultBranch || 'main', fileCount: pushed.fileCount };
+    deps.logger.info(
+        `[Zip] ${repository.fullName}: ${pushed.fileCount} files pushed, marked as a template`,
+    );
+    return {
+        owner,
+        repo,
+        fullName: repository.fullName,
+        defaultBranch: repository.defaultBranch || 'main',
+        fileCount: pushed.fileCount,
+    };
 }
 
 /**
@@ -216,7 +274,10 @@ export async function createRepositoryFromZip(
  * Remove can offer to delete it. Absent when the zip had no valid
  * description file; the caller probes the repository instead.
  */
-export function cardFromZip(files: Map<string, Buffer>, created: CreatedRepository): RememberedDemo | undefined {
+export function cardFromZip(
+    files: Map<string, Buffer>,
+    created: CreatedRepository,
+): RememberedDemo | undefined {
     const bytes = files.get(SHARED_DEMO_FILE_NAME);
     if (!bytes) return undefined;
     const read = readSharedDemoDescription(bytes.toString('utf-8'));
@@ -237,11 +298,4 @@ export function cardFromZip(files: Map<string, Buffer>, created: CreatedReposito
 export function setupForCard(setup: SettingsFile, card: AddedDemo): SettingsFile {
     const { edsConfig: _sendersStorefront, ...rest } = setup;
     return { ...rest, demo: card, selectedPackage: addedDemoId(card) };
-}
-
-/** Bytes that cannot travel as inline text in a tree entry go through a blob. */
-export function isBinary(bytes: Buffer): boolean {
-    const sample = bytes.subarray(0, 8000);
-    if (sample.includes(0)) return true;
-    return sample.toString('utf-8').includes('�');
 }
