@@ -84,8 +84,12 @@ Full tests before every commit. Bodea only; never signs in; never deletes a work
   - the order event carries no order id (its subscription names none), so the router never
     recorded a company's orders or wrote any status at order time; only the tests' made-up
     orders had one. The router now looks the id up.
-- Also found, not fixed: the fill copies the whole Commerce catalog into every ERP, not only
-  the products it owns; `get_erp_status` reports live figures for the first ERP only.
+- Found: the fill gave every ERP the whole Commerce catalog. Routing's rule (a product belongs
+  to the ERP its `erp_owner` names) and the fill's ("every product" when an ERP has no rule of
+  its own) disagreed. Fixed in the integration (`18b6881`, 656 tests): with several ERPs an
+  ERP's resolved settings carry routing's rule, so the fill agrees. Proven by tests; Contoso
+  still holds the whole catalog from tonight's fill until its data is loaded again.
+- Still open (not fixed): `get_erp_status` reports live figures for the first ERP only.
 - Router fix deployed to Bodea (`d6ef93c` → `a926063`); the deploy returned normally in
   minutes, with no republish hang. The live check of it stopped: carts holding Contoso's
   products fail (3 tries), because Contoso refuses the cart price check too and Commerce runs
@@ -109,9 +113,7 @@ Full tests before every commit. Bodea only; never signs in; never deletes a work
    places one order as usual") cannot happen. Either the price check lets the cart through at
    list price when that ERP is down (and the order goes Partially Held), or the vignette
    changes to "that brand's products cannot be bought until its ERP is back".
-3. **The fill copies the whole catalog into every ERP.** Should an added ERP hold only the
-   products it owns (`erp_owner`)? The design says each ERP receives only its own.
-4. **Merge** the three branches when you are happy (Demo Builder `feature/erp-integration`,
+3. **Merge** the three branches when you are happy (Demo Builder `feature/erp-integration`,
    the two ERP repos' loop branches; the ERP repos' `main` already carry tonight's work).
 
 ## Left on Bodea from tonight
@@ -122,3 +124,18 @@ Full tests before every commit. Bodea only; never signs in; never deletes a work
   0000001008 and 0000001009 (checked); Reset records clears them.
 - `erp_owner` values, the `east` stock rows and the Partially Held status: all listed in
   `fresh-start.md`.
+
+## Design documents written tonight (for review, nothing built)
+- `.rptc/plans/several-erps/returns-design.md`: returns across several ERPs. Recommends:
+  the buyer asks for one return in Commerce; staff authorise it there; the integration splits
+  it by the order's parts and each ERP credits its own lines; Commerce gets one credit memo per
+  ERP; a refusing ERP's piece stays open with Re-send. Seven slices, R0 (live tests) to R6.
+  Its author reports two things to check: Commerce's REST reference lists return endpoints
+  (`/V1/returns`), which the locked design says do not exist (listed, not tried live); and a
+  credit memo cannot be deleted, so a demo reset cannot undo one (a reversibility finding).
+- `.rptc/plans/several-erps/c1-screen-listing.md`: all 50 surfaces an SC or merchant uses
+  (Demo Builder, the Admin page in Commerce, the mock ERP screen, agent tools): 28 ready for
+  several ERPs, 8 partly, 13 not. The Admin page is the weak spot (Overview, Lookup, History,
+  Order trace, ERP-number column, Move stock assume one ERP). Also: Reset records wipes every
+  ERP while its dialog names one; no agent tool can read or set an ERP's own settings; a second
+  mock ERP starts with the first one's look and company code.
