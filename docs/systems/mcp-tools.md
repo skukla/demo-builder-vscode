@@ -31,7 +31,7 @@ server IS — transport, lifecycle, scoping, security — is in
 | `install_integration` |  | Re-run the Commerce install/associate pass for a DEPLOYED App Management |
 | `install_prerequisite` | **confirm** | Install one missing prerequisite (Node, aio CLI, plugins) by its prereqId from |
 | `invoke_runtime_action` | **confirm** | Run one deployed action in this project's Adobe I/O Runtime namespace (or the |
-| `load_erp_demo_data` | **confirm** | Load demo data into the ERP that comes with the ERP integration: copy Commerce's |
+| `load_erp_demo_data` | **confirm** | Load demo data into the ERPs the ERP integration serves: copy Commerce's |
 | `open_erp_screen` | **confirm** | Open the ERP's own screen (products, partners, pricing, orders, events) in a private |
 | `redeploy_integration` |  | Redeploy one App Builder integration by its id (idempotent re-run of its deploy). |
 | `refresh_block_library` | **confirm** | Rebuild the current EDS project's DA.live authoring block library from its |
@@ -40,7 +40,7 @@ server IS — transport, lifecycle, scoping, security — is in
 | `remove_integration` | **confirm** | Remove one App Builder integration by its id. DESTRUCTIVE: undeploys it remotely |
 | `rename_integration` |  | Change one App Builder integration's DISPLAY NAME on the current project. The id, |
 | `rename_project` |  | Rename the current project — the folder on disk, saved state, and the |
-| `reset_erp_records` | **confirm** | Reset the ERP that comes with the ERP integration: undo the credit limits and |
+| `reset_erp_records` | **confirm** | Reset every ERP the ERP integration serves: undo the credit limits and |
 | `restart_demo` |  | Stop and restart the current project's demo server. Use after a config change that |
 | `save_ai_prompt` |  | Create or update a saved AI prompt |
 | `set_console_apis` | **confirm** | Set the OPTIONAL Adobe API subscriptions on this project's Developer Console |

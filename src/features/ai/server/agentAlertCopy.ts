@@ -240,16 +240,16 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         sessionGrant: false,
     },
     load_erp_demo_data: {
-        action: 'Load demo data into the ERP',
+        action: 'Load demo data into the ERPs',
         consequence:
-            "Copies Commerce's products, companies and websites into the ERP; a value changed by hand in the ERP is set back to Commerce's. Then publishes the ERP's customer prices into the companies' shared catalogs in Commerce.",
+            "Copies Commerce's products, companies and websites into every ERP (or the one named); a value changed by hand in an ERP is set back to Commerce's. Then publishes each ERP's customer prices into the companies' shared catalogs in Commerce.",
         target: ['id'],
         sessionGrant: false,
     },
     reset_erp_records: {
         action: 'Reset the ERP records',
         consequence:
-            "Wipes every record in the ERP and fills it from Commerce again; the credit limits and company blocks the ERP set in Commerce are undone, and the ERP's customer prices are published into the companies' shared catalogs again.",
+            "Wipes every record in every ERP the integration serves and fills each from Commerce again; the credit limits and company blocks the ERPs set in Commerce are undone, and each ERP's customer prices are published into the companies' shared catalogs again.",
         target: ['id'],
         sessionGrant: false,
     },

@@ -407,8 +407,8 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            "Load demo data into the ERP that comes with the ERP integration: copy Commerce's " +
-            'products, B2B companies (with credit limits) and websites into it as they stand, sorted ' +
+            "Load demo data into the ERPs the ERP integration serves: copy Commerce's " +
+            'products, B2B companies (with credit limits) and websites into each as they stand, sorted ' +
             "by the integration's settings (each website's sales organisation, which products this ERP " +
             'owns). Adds and updates; removes nothing, but a value changed by hand in the ERP is set ' +
             'back to Commerce\'s. Then publishes each filled ERP\'s customer prices into the companies\' ' +
@@ -448,10 +448,10 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            "Reset the ERP that comes with the ERP integration: undo the credit limits and " +
-            'company blocks it wrote into Commerce, clear the ERP order numbers from Commerce ' +
-            'orders, wipe every ERP record, then fill it again from the Commerce products, companies ' +
-            'and customers as they stand, for every ERP the integration serves, and publish each ERP\'s ' +
+            "Reset every ERP the ERP integration serves: undo the credit limits and " +
+            'company blocks they wrote into Commerce, clear the ERP order numbers from Commerce ' +
+            'orders, wipe every ERP record, then fill each again from the Commerce products, companies ' +
+            'and customers as they stand, and publish each ERP\'s ' +
             "customer prices into the companies' shared catalogs (data.warning says when they were not). " +
             'Commerce is the master; the ERP is transitory. Confirm with the user first. Takes the integration id.',
         map: dashboardHandlers,

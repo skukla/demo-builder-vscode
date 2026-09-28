@@ -406,7 +406,7 @@ which fills every ERP without it; `get_erp_status` lists every ERP the integrati
 and its live health is the named ERP's.
 
 `reset_erp_records` (2026-09-14) is gated for the same reason `reset_datapack` is: it wipes
-the ERP that comes with the ERP integration and undoes what that ERP wrote into Commerce
+every ERP the ERP integration serves and undoes what those ERPs wrote into Commerce
 companies. Its read, `get_erp_status`, is not. `open_erp_screen` (2026-09-16) is gated for
 `open_url`'s reason: it opens a browser window.
 
