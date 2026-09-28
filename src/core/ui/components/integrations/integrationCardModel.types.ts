@@ -49,6 +49,8 @@ export type CardAction =
     // both run through the integration that uses it).
     | 'load-demo-data'
     | 'reset-records'
+    // The ERP integration's: add another ERP beside the ones it serves (AB-16).
+    | 'add-erp'
     // After a removal stopped on a clean-up that did not finish: go ahead.
     | 'remove-anyway';
 
@@ -151,6 +153,11 @@ export interface IntegrationCardModel {
     isSystem?: boolean;
     /** What kind of system it is ("ERP"), shown as a badge. System cards only. */
     typeBadge?: string;
+    /**
+     * A system added from its integration's card ("Add another ERP", AB-16): removing it
+     * leaves the integration, which only stops sending it orders. System cards only.
+     */
+    removesAlone?: boolean;
     /**
      * The cards this one is linked to: the systems an integration uses ("Uses")
      * or the integration a system belongs to ("Used by"). Absent when none.

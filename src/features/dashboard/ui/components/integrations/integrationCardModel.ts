@@ -48,7 +48,7 @@ import {
     getAppBuilderComponentEntry,
     isBlankSource,
 } from '@/features/components/services/appBuilderComponentCatalogLoader';
-import { systemsUsedBy } from '@/features/components/services/appBuilderComponentLinks';
+import { isAddedSystem, listedSystemOf, systemsUsedBy } from '@/features/components/services/appBuilderComponentLinks';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState } from '@/types/base';
 import type { CommerceStoreStructure } from '@/types/commerceStore';
@@ -423,11 +423,24 @@ export function deriveIntegrationCard(
         apis: facet.apis,
         lastDeployed: formatLastDeployed(entry.lastDeployed),
         installation,
-        menuActions: buildMenuActions(face.status, primaryUrl, installation, Boolean(entry.updateAvailable)),
+        menuActions: withAddErp(entry, face.status, buildMenuActions(face.status, primaryUrl, installation, Boolean(entry.updateAvailable))),
         canRename: entry.kind === 'integration' && !facet.isCatalog,
         ...(systems.length > 0 ? { linked: { label: 'Uses' as const, cards: systems } } : {}),
         ...withSetupChecklist(entry),
     });
+}
+
+/**
+ * "Add another ERP" (AB-16), just above Remove, on a deployed integration that is added once
+ * and serves a list of systems: the ERP integration. The only way to a second ERP, since the
+ * gallery adds the integration once.
+ */
+function withAddErp(entry: IdentifiedAppBuilderComponent, status: IntegrationStatus, actions: CardAction[]): CardAction[] {
+    const kind = entry.catalogId ?? entry.id;
+    const addsErps = getAppBuilderComponentEntry(kind)?.addOnce && listedSystemOf(kind, getAppBuilderComponentCatalog());
+    if (status !== 'deployed' || !addsErps) return actions;
+    const at = actions.indexOf('remove');
+    return at === -1 ? [...actions, 'add-erp'] : [...actions.slice(0, at), 'add-erp', ...actions.slice(at)];
 }
 
 /** The demo setup checklist, when the entry declares one (`setupChecklist.ts`). */
@@ -716,7 +729,10 @@ export function buildIntegrationCards(
         const own = deriveIntegrationCard(integration, overrides[integration.id]);
         const systems = systemIds.flatMap((systemId) => {
             const system = byId.get(systemId);
-            return system ? [deriveSystemCard(system, overrides[systemId], toLinkedCard(own), links)] : [];
+            if (!system) return [];
+            const card = deriveSystemCard(system, overrides[systemId], toLinkedCard(own), links);
+            // An ERP added from the integration's card is removed on its own (AB-16).
+            return [isAddedSystem(project, systemId, integration.id) ? { ...card, removesAlone: true } : card];
         });
         cards.push(deriveIntegrationCard(integration, overrides[integration.id], systems.map(toLinkedCard)), ...systems);
         placed.add(integration.id);

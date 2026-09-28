@@ -14,6 +14,7 @@
  * @module core/ui/components/ui/menuIcons
  */
 
+import Add from '@spectrum-icons/workflow/Add';
 import Beaker from '@spectrum-icons/workflow/Beaker';
 import Copy from '@spectrum-icons/workflow/Copy';
 import DataAdd from '@spectrum-icons/workflow/DataAdd';
@@ -62,6 +63,8 @@ const MENU_ICONS: Record<string, React.ReactElement> = {
     measure: <Beaker size="S" />,
     /** Fill something with records from elsewhere (an ERP from Commerce). */
     loadData: <DataAdd size="S" />,
+    /** Add another of something beside what is there (another ERP for an integration). */
+    add: <Add size="S" />,
 };
 
 /**

@@ -44,6 +44,8 @@ const FAKE_CATALOG: Record<string, AppBuilderComponentCatalogEntry> = {
         name: 'ERP integration',
         description: 'the integration',
         kind: 'integration',
+        // As the bundled catalog has it (AB-16): added once, more ERPs from its card.
+        addOnce: true,
         source: { owner: 'skukla', repo: 'commerce-erp-integration', branch: 'main' },
     },
     'demo-erp': {
@@ -53,6 +55,7 @@ const FAKE_CATALOG: Record<string, AppBuilderComponentCatalogEntry> = {
         kind: 'system',
         boundTo: 'erp-integration',
         systemType: 'ERP',
+        listedAs: { envVar: 'ERP_ID', firstId: 'erp', adapter: 'demo-erp' },
         source: { owner: 'skukla', repo: 'demo-erp', branch: 'main' },
     },
     'app-builder-shell': {

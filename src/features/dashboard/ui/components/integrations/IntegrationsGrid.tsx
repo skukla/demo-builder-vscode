@@ -26,6 +26,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ComponentOperationControls } from '../../hooks/useComponentOperation';
+import { AddErpDialog } from '../AddErpDialog';
 import { AppBuilderComponentRemoveDialog } from '../AppBuilderComponentRemoveDialog';
 import { ErpResetDialog } from '../ErpResetDialog';
 import { IntegrationSettingsModal } from '../IntegrationSettingsModal';
@@ -90,6 +91,8 @@ function removalConsequence(target: IntegrationCardModel | undefined): string | 
  */
 function linkedRemovalConsequence(target: IntegrationCardModel): string {
     const names = (target.linked?.cards ?? []).map((card) => card.name).join(' and ');
+    // An ERP added from the integration's card goes alone (AB-16).
+    if (target.removesAlone) return `Its records will be deleted, and ${names} stops sending it orders.`;
     return target.isSystem
         ? `Its records will be deleted, and ${names} will be removed too.`
         : `${names} will be removed too, with its records.`;
@@ -119,6 +122,8 @@ export function IntegrationsGrid({
     // The ERP reset awaiting confirmation: the INTEGRATION's id (the reset runs
     // through it) and the ERP's name (what the dialog says).
     const [pendingReset, setPendingReset] = useState<{ id: string; erpName: string } | null>(null);
+    // The integration "Add another ERP" is naming a new ERP for (AB-16).
+    const [addingErpTo, setAddingErpTo] = useState<IntegrationCardModel | null>(null);
     // Confirms that open by themselves when a card gains their flag, and from
     // the card's menu: an upgrade Commerce refused, a removal that stopped.
     const reinstall = useFlaggedCardDialog(cards, needsReinstall);
@@ -205,6 +210,10 @@ export function IntegrationsGrid({
                 openRemoveAnyway(model);
                 return;
             }
+            if (action === 'add-erp') {
+                setAddingErpTo(model);
+                return;
+            }
             operations.run(model.id, model.name, action);
         },
         [handleMeshAction, onOpenGuide, openReinstall, openRemoveAnyway, openSettings, operations],
@@ -247,6 +256,16 @@ export function IntegrationsGrid({
         }
         setPendingReset(null);
     }, [operations, pendingReset]);
+
+    const closeAddErp = useCallback((): void => setAddingErpTo(null), []);
+    const addErp = useCallback(
+        (name: string): void => {
+            if (addingErpTo) operations.addErp(addingErpTo.id, name);
+            setAddingErpTo(null);
+        },
+        [addingErpTo, operations],
+    );
+    const systemNames = useMemo(() => cards.filter((card) => card.isSystem).map((card) => card.name), [cards]);
 
     const Item = viewMode === 'rows' ? IntegrationRow : IntegrationCard;
     const closeRemoveDialog = useCallback((): void => setPendingRemoveId(null), []);
@@ -314,6 +333,13 @@ export function IntegrationsGrid({
                 erpName={pendingReset?.erpName ?? 'the ERP'}
                 onConfirm={confirmReset}
                 onClose={closeResetDialog}
+            />
+
+            <AddErpDialog
+                integrationName={addingErpTo?.name}
+                takenNames={systemNames}
+                onAdd={addErp}
+                onClose={closeAddErp}
             />
 
             <FlaggedCardDialogs reinstall={reinstall} removeAnyway={removeAnyway} />

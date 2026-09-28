@@ -49,6 +49,8 @@ const MENU_ROWS: Partial<Record<CardAction, { label: string; icon: string }>> = 
     redeploy: { label: 'Redeploy', icon: 'redeploy' },
     settings: { label: 'Settings', icon: 'settings' },
     'manage-apis': { label: 'Manage APIs', icon: 'apiAccess' },
+    // The ERP integration's: another ERP beside the one it has (AB-16).
+    'add-erp': { label: 'Add another ERP', icon: 'add' },
     remove: { label: 'Remove', icon: 'delete' },
     'remove-anyway': { label: 'Remove anyway', icon: 'delete' },
     // A system card's own verbs.

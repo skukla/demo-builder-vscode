@@ -104,7 +104,30 @@ describe('deriveIntegrationCard with systems', () => {
         expect(card.linked).toEqual({ label: 'Uses', cards: [system] });
         // Its own status: a broken system shows on the system's card, not here.
         expect(card.status).toBe('deployed');
-        expect(card.menuActions).toEqual(['open', 'redeploy', 'manage-apis', 'remove']);
+        // Add another ERP sits just above Remove on the deployed ERP integration (AB-16).
+        expect(card.menuActions).toEqual(['open', 'redeploy', 'manage-apis', 'add-erp', 'remove']);
+    });
+
+    it('offers Add another ERP only while the ERP integration is deployed, and on no other integration', () => {
+        expect(deriveIntegrationCard(pairIntegration({ status: 'error' })).menuActions).not.toContain('add-erp');
+        expect(deriveIntegrationCard(integration({ id: 'sfdc-connector' })).menuActions).not.toContain('add-erp');
+    });
+
+    it('an ERP added from the card is marked to be removed on its own; the brought one is not', () => {
+        const cards = buildIntegrationCards(
+            [
+                pairIntegration({ systems: ['demo-erp', 'demo-erp-2'] }),
+                erp({ usedBy: 'erp-integration' }),
+                erp({ id: 'demo-erp-2', name: 'Brand B ERP', catalogId: 'demo-erp', usedBy: 'erp-integration' }),
+            ],
+            {},
+            CATALOG,
+        );
+        expect(cards.map((c) => [c.id, c.removesAlone ?? false])).toEqual([
+            ['erp-integration', false],
+            ['demo-erp', false],
+            ['demo-erp-2', true],
+        ]);
     });
 
     it('an integration that stands alone has no link', () => {

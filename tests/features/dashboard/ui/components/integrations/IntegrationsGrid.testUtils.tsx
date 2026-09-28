@@ -79,13 +79,19 @@ jest.mock('@adobe/react-spectrum', () => ({
     Text: ({ children, UNSAFE_className, minHeight: _m, marginTop: _t, ...props }: any) => (
         <span className={UNSAFE_className} {...props}>{children}</span>
     ),
-    TextField: ({ label, value, onChange, ...props }: any) => (
-        <input
-            aria-label={label}
-            value={value ?? ''}
-            onChange={(e) => onChange?.(e.target.value)}
-            {...props}
-        />
+    // The Spectrum-only props are taken off the input; the error message renders as text,
+    // as Spectrum shows it under an invalid field (the Add another ERP prompt).
+    TextField: ({ label, value, onChange, errorMessage, validationState, autoFocus: _af, width: _w, ...props }: any) => (
+        <>
+            <input
+                aria-label={label}
+                value={value ?? ''}
+                onChange={(e) => onChange?.(e.target.value)}
+                data-validation-state={validationState}
+                {...props}
+            />
+            {validationState === 'invalid' && errorMessage ? <span>{errorMessage}</span> : null}
+        </>
     ),
     DialogContainer: ({ children }: any) => <div data-testid="dialog-container">{children}</div>,
     Badge: ({ children }: any) => <span data-testid="type-badge">{children}</span>,
