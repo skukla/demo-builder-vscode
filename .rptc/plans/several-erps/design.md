@@ -56,8 +56,8 @@ sandbox test before it is built on.
 
 | Entity | Across several ERPs | State |
 |---|---|---|
-| Product and its owner | Exactly one owning ERP per SKU, from a product attribute a PIM would master (decided 2026-09-24; inventory sources are the alternative) | Built (`ownershipFilter`). **Gap**: under source-based ownership a SKU stocked in two ERPs' sources belongs to both; the design takes the attribute as the rule |
-| Variants | Ownership is per child SKU; a configurable's children could belong to different ERPs | **Gap**: not handled; decide whether that is allowed |
+| Product and its owner | Exactly one owning ERP per SKU, from a product attribute a PIM would master (decided 2026-09-24; inventory sources are the alternative). Products do not cross ERPs: the client described ERPs split by product type and manufacturing facility, one ERP per brand (client tech case, architecture walk-through; the owner's recollection agrees). Stated for product types, not SKUs, so it is to be confirmed with the client | Built (`ownershipFilter`). Under source-based ownership a SKU stocked in two ERPs' sources would belong to both; the design takes the attribute as the rule |
+| Variants | All variants of a product belong to its ERP (follows from products not crossing ERPs; to confirm with the client). Setup can check it: a configurable whose children name different owners is a setup error | Not checked today |
 | List price | The owning ERP writes it | Built and proven |
 | Contract prices | Each ERP writes its own SKUs' rows into the company's one shared catalog (tier prices) | Built only as a cart-time webhook; catalog write not built (AB-26z). **Test**: does the storefront send the customer-group header for a signed-in buyer? |
 | Discount ceiling | Per ERP, at the cart | Built and proven; may fold into catalog pricing (AB-26z open) |
@@ -75,7 +75,7 @@ sandbox test before it is built on.
 | ERP acceptance and number | Each ERP's number goes to an order comment and the router's record; `ext_order_id` holds one value and is written only by the router, if at all. **Test**: custom order attributes written after Pending | Comment and write-back built for one ERP |
 | Credit hold | One ERP holds its part; the order goes On Hold with the reason in a comment | Proven for one ERP |
 | Hold, unhold, cancel from Commerce | Commerce acts on the whole order: the router tells every ERP with an open part | Proven for one ERP |
-| Cancel from an ERP | That ERP's part only. An order with any invoice cannot be cancelled in Commerce: the remaining part is closed by a credit memo | **Gap**: the handler always calls cancel, which fails once any part is invoiced |
+| Cancel from an ERP | That ERP's part only. An order with any invoice or shipment cannot be cancelled in Commerce: the rest is closed by a credit memo | Fixed 2026-09-27 (integration `71c1ab5`): the handler reads the order back and, if Commerce kept it, holds it for staff with the reason. The credit memo itself waits on AB-26r |
 | Order edits | A Processing order cannot be substantially edited (Adobe) | Nothing to design |
 | Shipments | One or more per ERP, each from that ERP's source, carrying only its lines | Proven for one ERP |
 | Invoices | Each ERP invoices only its own lines (`items[]`), and invoices before it ships. Invoice calls on one order run one at a time (Adobe patch note MDVA-40399 reports simultaneous partial invoices fail; reported, not re-verified) | **Gap**: today whole-order `capture: true` would bill the other ERP's lines (AB-37) |
@@ -131,10 +131,12 @@ The tech-case session owns the deck and decides the edits.
 
 1. **Lock this design as v1**, or name what to change.
 2. **A company's block across ERPs**: blocked in Commerce while any ERP blocks (recommended).
-3. **A configurable product whose variants belong to different ERPs**: allowed (each child
-   routes on its own, recommended) or forbidden by setup.
-4. **Cancel from an ERP after invoicing**: close the rest with a credit memo (recommended; needs
-   the frozen credit-memo work) or refuse and hold for staff.
+3. ~~Variants across ERPs~~: answered 2026-09-27. Products do not cross ERPs (owner, from the
+   walk-through; the tech case's transcripts agree for product types). To confirm with the client:
+   (a) is any SKU stocked or sold by two ERPs, including after an acquisition; (b) can variants
+   of one product come from different ERPs.
+4. **Cancel from an ERP after invoicing**: holding for staff is built (the interim answer);
+   closing the rest by credit memo automatically waits on the credit-memo work (AB-26r).
 5. **Returns**: in the first build, or after the routing slices.
 
 ## 7. Client questions this design depends on
@@ -147,3 +149,4 @@ for a mixed order; whether any SKU is sold by two ERPs.
 ## Change log
 
 - 2026-09-27: v1 draft.
+- 2026-09-27: products do not cross ERPs (owner; client transcripts agree for product types), variants follow their product; cancel-after-invoice holds for staff (fix built).
