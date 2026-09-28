@@ -48,6 +48,13 @@ the value a product's owner attribute holds, and the key for parts, the key map 
 `name` (the SC's label, fixed at creation, for people), `adapter` (the kind) and its connection.
 Demo Builder refuses a second ERP whose name is already used in the project.
 
+**Adding an ERP in Demo Builder (owner, 2026-09-27):** the ERP integration card offers "Add
+another ERP". It asks for a name unique in the project, creates a new mock ERP in its own
+workspace (own screen and look), and registers it in the integration's ERP list. The gallery
+tile adds the integration once; adding it again is refused with a pointer to "Add another ERP".
+Removing an ERP removes it from the list and deletes its workspace; removing the integration
+removes every ERP. Filling, reset and "Load demo data" cover every ERP.
+
 An adapter that must deploy on its own (another team, another release cycle) moves behind a pair
 of events without changing the router (research §Recommendation). **Demo:** at most two ERPs; a
 second demo ERP is a settings entry because every mock ERP runs the same code.
@@ -172,3 +179,4 @@ for a mixed order; whether any SKU is sold by two ERPs.
 - 2026-09-27 (after lock): company block is each brand for itself; the code layout (router, one adapter folder per ERP kind, the written contract, an example adapter, the ERP list keyed by id) and unique ERP names in a project. Diagrams affected: any that show a company block, and the integration's internal structure.
 - 2026-09-27: the credit-limit row marked as depending on a client question (the client's stated direction is that their CRM owns credit limits). No decision changed. Phase B slice B5 waits on the answer.
 - 2026-09-27: demo scope recorded: Commerce and the ERPs only; CRM and PIM are spoken to, not built. The credit limit is ERP-owned in the demo (no longer waiting on a client answer); a CRM-owned limit is a customer variation.
+- 2026-09-27: adding a second ERP in Demo Builder is "Add another ERP" on the integration card; the tile is add-once (owner).
