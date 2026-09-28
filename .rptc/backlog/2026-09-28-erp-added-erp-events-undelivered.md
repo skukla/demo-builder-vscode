@@ -30,3 +30,7 @@ make sure that ingestion action accepts a call signed with the ADDED ERP's crede
 account: the same mismatch as AB-16a, the other way round). Either the ingestion accepts calls
 from the ERP's credential, or the ERP signs its event posts with a credential the integration's
 workspace accepts. Decide with a measurement, then redeploy Contoso and prove one event.
+
+## Shipped so far
+
+- 2026-09-28  Measured from code (2026-09-28): the integration's ingestion web action is require-adobe-auth: true in the integration's workspace (src/commerce-extensibility-1/actions/ingestion/actions.config.yaml), so a post signed with the added ERP's own credential would be refused as a technical account mismatch. Chosen shape (a real ERP posts to middleware with a credential the middleware issued): Demo Builder deploys an added ERP with EVENTS_WEBHOOK_URL = the integration's ingestion URL and a publishing credential from the integration's workspace (EVENTS_AUTH_* inputs); the ERP signs event posts with it when given, else with its own. The first ERP is unchanged.
