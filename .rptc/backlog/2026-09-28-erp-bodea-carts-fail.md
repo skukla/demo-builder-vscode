@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-16
 needs: []
 value: high
-status: backlog
+status: shipped
 ---
 
 # Bodea carts fail intermittently with "Internal server error"
@@ -39,3 +39,4 @@ Webhooks Logs grid would not finish loading on 2026-09-28). Then compare with th
 ## Shipped so far
 
 - 2026-09-28  2026-09-28 after AB-26z removed both cart webhooks: 5 of 5 Northwind guest carts built (earlier the same day 4 of 5 failed with the same cart). Strong evidence the cart webhooks were the cause; which aspect is not known. Close once a placed order also succeeds.
+- 2026-09-28  Order 3000000020 (Northwind guest, accesspoint) placed after the cart webhooks were removed. Closed: the failures stopped when AB-26z removed the cart webhooks; which part of them caused it is unknown and no longer reachable.
