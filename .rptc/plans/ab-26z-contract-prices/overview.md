@@ -50,6 +50,27 @@ active contract past its ending date prices nothing, without a status change.
 belongs to no catalog: measured 2026-09-25). Keeping a cart webhook as a safety net (it is the
 per-change ERP call the rule removes, and the platform runs it as required).
 
+## Decided with the owner, 2026-09-28 (after reading SAP's documentation)
+
+The SC demos this inside the mock ERP, so the ERP stays easy to explain and realistic at once:
+**a "Customer price list"** (Business Central's shape, the words an SC can say in a sentence)
+with **SAP-grade behaviour** underneath (`sap-mapping.md`). All in this item, now:
+
+- **Customer price lists and group price lists.** A list applies to one customer or to a
+  **price group** (Business Central: customer price group; SAP: customer group / price list
+  type). The ERP gets price groups; a customer belongs to at most one. Precedence, most
+  specific first (SAP's access sequence, simplified): the customer's own list, then its group's
+  list, then the loose conditions, then the list price. The store-wide maximum discount still
+  caps.
+- **Dates on each line** (both ERPs date each line), as well as on the list, so "this price goes
+  up on 1 January" is one dated line. A line is in force when its list is active and today is
+  within both the list's and the line's dates.
+- **Quantity breaks** ("from quantity") become tier prices at that quantity.
+- The integration asks the ERP for the prices in force per customer (groups resolved in the
+  ERP) and writes them into each company's shared catalog; a group list change reaches every
+  member company.
+- The talk track maps it to both ERPs (`sap-mapping.md`, "The mapping").
+
 ## Slices
 
 - **Z1 (demo-erp): contracts.** Record, routes, a Contracts screen and the customer page's
