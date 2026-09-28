@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: high
-status: active
+status: built
 parent: AB-26
 ---
 
@@ -102,3 +102,4 @@ naming fields, so the screen uses the words an SC's prospect would recognise.
 - 2026-09-28  Z1 (demo-erp feature/ab-26z-contracts, 5 commits, 311 tests, contract v7 a94ff2d) and Z2/Z3 (integration feature/ab-26z-catalog-prices, 12 commits, 683 tests) built. Follow-ups, not blocking: the ERP product page still says 'contract prices' for the loose rules; a price list has no 'all products' line; import takes no price lists or groups (matches loose conditions); two ERP tests were written with their code, not before it (customer-page list, wipe wording); the ERP screen bundle has ~36 KB of headroom (960 KB of 996 KB). Scheduled publish being switched from daily to hourly (UTC-only cron).
 - 2026-09-28  Correction and follow-up (2026-09-28): hourly publishing (integration 5ddc65f) catches a missed run within the hour but does NOT make a dated price change at local midnight. The mock ERP decides 'today' in UTC (demo-erp lib/pricing.js today()), so a 1 January line is in force from 00:00 UTC (the US evening of 31 December). Recommended fix, in demo-erp: a timezone on the ERP's company code (a real ERP prices by the sales organisation's local date), used by today(); default UTC so nothing changes until it is set. Not blocking the live proof.
 - 2026-09-28  Z4 built (Demo Builder 636fb6fa1): every fill publishes that ERP's prices; a failed publish is a warning, not a failure. Gap, not blocking: when a person presses the button, the progress window closes on success without showing the warning (it reaches the Debug Logs only); Add another ERP's 'demo data did not load' note has the same gap. Fix: a success note in the shared progress window.
+- 2026-09-28  Live on Bodea (2026-09-28): ERP main bad5cea and integration main 5ddc65f deployed (app 0.9.1). The upgrade removed both cart webhooks (webhooks/list: 2 before, 0 after) and registered the new customer prices event. Northwind price list 4000000001 for Kukla Studios (C21): activated -> tier prices 150 (qty 1) and 140 (qty 10) in Kukla Studios' shared catalog group; Catalog Service answered 150 for group 19 about 5 minutes later (export delay; control: ServerSavvy accessmesh 49); deactivated 12:56 -> both rows gone by 12:58 through the event; ServerSavvy's own 199 untouched throughout. Load demo data re-paired 4 companies, loaded only the 3 products Northwind owns (179 skipped), and published 2 prices. Blocker met on the way: AB-16g (key map lost its pairs). README corrected: an upgrade removes a deleted webhook and registers a new event (measured).

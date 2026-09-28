@@ -35,3 +35,7 @@ registrations: System → Webhooks Subscriptions lists exactly two.
 Read Commerce's webhook log (database logging is on, level WARNING, one-day retention; the
 Webhooks Logs grid would not finish loading on 2026-09-28). Then compare with the price sync
 (AB-26z), which removes these cart webhooks entirely.
+
+## Shipped so far
+
+- 2026-09-28  2026-09-28 after AB-26z removed both cart webhooks: 5 of 5 Northwind guest carts built (earlier the same day 4 of 5 failed with the same cart). Strong evidence the cart webhooks were the cause; which aspect is not known. Close once a placed order also succeeds.
