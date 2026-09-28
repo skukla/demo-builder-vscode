@@ -8,11 +8,12 @@ Backlog: [[AB-26z]] (built), [[AB-16k]], [[AB-16l]] (to build).
 
 1. **The ERP owns every customer price.** List prices and each company's own prices are set
    in the ERP and nowhere else.
-2. **Commerce owns promotions.** Catalog price rules and cart price rules are marketing's,
-   and they sit on top of the ERP's price.
+2. **Commerce promotions are optional: a client choice** (owner, 2026-09-28). A client can
+   keep all pricing, discounts included, in the ERPs; or run Commerce's catalog and cart price
+   rules as well, either competing with the ERP's price or on top of it (see "Three setups").
 3. **Prices are synced ahead, never asked on a cart change.** The listing, the product page
    and the cart all price from Commerce, so checkout never waits on an ERP.
-4. **The order goes back to the ERP with what the buyer actually paid**, promotions included.
+4. **The order goes back to the ERP with what the buyer actually paid**, any promotion included.
    The ERP takes the web price as sold and does not reprice it.
 
 ## The layers, in the order they apply
@@ -36,17 +37,22 @@ rule discounts the group's quantity-1 tier price instead of competing with it: a
 price with a 10% rule becomes 81. It applies only to a group that has a tier price at quantity
 1, and never to tier prices above quantity 1 (those apply as usual, without the rule).
 
-So there are two ways to run promotions over ERP prices, and it is a real choice for a client:
+## Three setups: a client choice, not a rule
 
-| Setting | A 10% catalog rule on a company whose ERP price is 90 (list price 100) | Suits |
-|---|---|---|
-| Off (lowest wins) | 90 (the rule's 90 does not beat it) | Contract prices are final; campaigns reach only buyers without one |
-| On (rule on top) | 81 | Campaigns reach contract buyers too, on top of their price |
+The client worksheet asks which one (owner with the case agent, 2026-09-28). Example: a company
+whose ERP price is 90 (list price 100), and a 10% catalog promotion.
 
-**Recommended for the demo: On.** It is what "Commerce promotions sit on top of the ERP's
-price" means, and it shows both systems at work on one price. To make it work, every ERP price
-list line the demo shows must include a quantity-1 line for the product, since only that line
-takes the rule. The setting's value on the demo store has not been read yet.
+| Setup | Commerce promotions | The company pays | Suits |
+|---|---|---|---|
+| 1. ERP only | None; every price and discount is the ERP's | 90 | A client whose discounts all live in the ERPs |
+| 2. Promotions compete (setting off, Commerce's default) | Catalog and cart rules | 90 (the rule's 90 does not beat it) | Contract prices are final; campaigns reach only buyers without one |
+| 3. Promotions on top (setting on) | Catalog and cart rules | 81 | Campaigns reach contract buyers too, on their price |
+
+Setup 3 takes the rule only on the quantity-1 contract price: each ERP price list line shown
+needs a quantity-1 line for the product. Cart rules (layer 4) apply in setups 2 and 3 alike.
+
+**For the demo:** the owner's choice of which setup to show is open. The demo store's value of
+the setting has not been read yet.
 
 **Layer 4** applies afterwards, to the cart total built from that price.
 
