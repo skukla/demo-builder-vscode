@@ -36,3 +36,19 @@ Full tests before every commit. Bodea only; never signs in; never deletes a work
   known write-back echo.) The diagnostic log on the integration's main can go at the B8 merge.
 - Bodea clean-up: Kukla Studios' $120 test charge reimbursed (balance 0). Recorded in
   `fresh-start.md`.
+- B8 started. The integration's work branch took main's three commits (all already superseded
+  there: the cancel fix in its per-ERP form, two diagnostic logs dropped), passed 644 tests and
+  lint, and both repos' main now equal their work branches (integration `f149a6f`, ERP
+  `1e65217`, 264 tests). Deploying to Bodea: the ERP first, since the new integration expects
+  the ERP's contract version 5.
+- **B6 shipped** (Demo Builder, pushed with the full gate: 1,735 suites). "Add another ERP" on
+  the integration card: a unique name, a new mock ERP in its own workspace, the integration told
+  the full list, the new ERP filled. Adding the integration twice from the gallery is refused
+  and points there instead. Remove on an added ERP removes only it. Three setup steps added:
+  the two product attributes (checked), the Partially Held status and Payment on Account
+  (ticked by hand; Commerce's API cannot show them). Agent tool: `add_erp`. Not yet run live.
+- B6 found a gap in the integration, fixed tonight (`d6ef93c`, 649 tests): a first ERP deployed
+  before events carried an ERP id sends none, and once a second ERP was listed its credit and
+  block events were refused. They now count as the first ERP's. Bodea's ERP is exactly that case.
+- ERP deployed to Bodea (the deploy call outlasted its 25-minute wait, but the extension now
+  reports no pending ERP update). Integration deploy running.
