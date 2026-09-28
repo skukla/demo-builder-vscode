@@ -52,3 +52,5 @@ PO invoicing at checkout) have results recorded.
 
 ## Shipped so far
 - 2026-09-27  docs(backlog): AB-37, four places the several-ERPs design and the Cloud Service docs disagree (`60440bb9f`)
+- 2026-09-28  docs(plan): design v1 records the Payment on Account live test (`a8833f601`)
+- 2026-09-28  docs(plan): design v1 records the three live test results from Bodea (`1e043fada`)

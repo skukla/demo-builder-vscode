@@ -78,3 +78,6 @@ routing integration) · AB-26r (credit memo) · AB-26s (the payment leg) · AB-2
 - 2026-09-26  docs(integrations): the ERP's Admin entry is under Apps (`ec2f7b110`)
 - 2026-09-28  Owner, 2026-09-28 night: unattended loop to build and prove Phase B. Authorised: merge the loop branches to main and deploy the integration and ERP to Bodea; place, inspect and clean up test orders and test buyers on Bodea; change and restore Bodea Commerce settings for tests. Not authorised: other projects, sign-ins, deleting workspaces or projects. Stop and report when a deploy or live test fails twice.
 - 2026-09-28  Owner, 2026-09-28 night: the loop continues past B8 as far as it can: credit memo and repeat order (AB-26r, full credit only as decided), returns across ERPs as a DESIGN only (owner approves before any build), and the Phase C1 reassessment list (no visual changes). Payment leg (AB-26s), invoice reconciliation (AB-26v), merchant settings (AB-26w) and visual clean-up wait for the owner. Frequent progress updates in chat and in the handoff report.
+- 2026-09-28  docs(erp): fresh-start checklist, walk-through journeys, event-check result (`3db5ac63e`)
+- 2026-09-28  docs(handoff): the night loop's running report, and the extended scope (`711c86ff1`)
+- 2026-09-28  docs(backlog): the owner's authorisation for tonight's unattended loop (`5f1a82ed3`)

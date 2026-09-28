@@ -121,3 +121,4 @@ events.
 - 2026-09-27  docs(backlog): the cart carries the buyer's company; the key map reaches the cart (`cc16341e7`)
 - 2026-09-27  docs(backlog): the key map built to the cart decision (`651005a47`)
 - 2026-09-27  Key map part (e) built, loop branches, not deployed: the ERP holds and speaks no Commerce id, contract version 3 (demo-erp ec50cfe: customers drop commerceCompanyId, customerGroupId, emailDomain, website; a quote or order names its customer by number or is the walk-in's; events carry partnerId only; every non-walk-in customer has credit). Integration b309a8a sends only the key map's number; Demo Builder 22f9fec16 fills without them. Open for the owner: Demo Builder's setup step 'Give each company that gets its own prices a shared catalog of its own' and the integration's demo-setup row both rest on 'the cart names only the group', no longer true.
+- 2026-09-27  docs(backlog): the ERP holds no Commerce id (key map part e) (`d723d454e`)
