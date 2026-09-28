@@ -69,3 +69,4 @@ need a decision rather than a lookup.)
 ## Shipped so far
 
 - 2026-09-28  Owner decision: the live credit check is one call per owning ERP at checkout (as the order is placed), never on each cart change; each has a time limit, and an ERP that cannot answer accepts the order and its part waits (the order is Partially Held). See .rptc/plans/several-erps/pricing-and-live-checks.md.
+- 2026-09-28  Owner decision (2026-09-28): when an ERP refuses credit, checkout stops before the order is placed, with a message naming the brand ('This order exceeds your credit with Brand B'); the buyer removes that brand's lines or pays another way. Availability (AB-19) deliberately differs: it never blocks. An ERP that cannot answer at all still accepts the order and its part waits.
