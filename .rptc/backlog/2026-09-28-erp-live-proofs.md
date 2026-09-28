@@ -26,3 +26,7 @@ the integration until AB-16a.
 ## Done when
 
 Each line above has been seen working on Bodea, with the order numbers recorded here.
+
+## Shipped so far
+
+- 2026-09-28  2026-09-28: proven live: a mixed order sends each ERP only its lines (3000000021: Northwind 0000001011, Contoso 0000001000); Contoso's prices reach the shared catalog through the publish (AB-16a). Still owed: Partially Held for a refused/down part and Re-send; company-order remembered; Contoso filled with only its products (it still holds 182 from its first fill: needs a per-ERP reset, AB-16c); B7 checks; the journeys. Contoso's events are not delivered (AB-16i).
