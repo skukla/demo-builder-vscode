@@ -1,6 +1,6 @@
 # Several ERPs: the reference design
 
-**Version: v1 DRAFT (2026-09-27), for the owner to lock.** Until it says "locked v1", diagrams
+**Version: LOCKED v1 (owner, 2026-09-27).** Before locking, diagrams
 and decks drawn from it are drafts. Every change after locking goes in the change log at the end
 and is sent to the client tech-case session, naming the diagrams it affects.
 
@@ -129,15 +129,15 @@ The tech-case session owns the deck and decides the edits.
 
 ## 6. Decisions for the owner
 
-1. **Lock this design as v1**, or name what to change.
-2. **A company's block across ERPs**: blocked in Commerce while any ERP blocks (recommended).
+1. ~~Lock~~: locked as v1 (owner, 2026-09-27).
+2. **A company's block across ERPs**: blocked in Commerce while any ERP blocks (recommended). Open: the owner asked for an explanation (2026-09-27).
 3. ~~Variants across ERPs~~: answered 2026-09-27. Products do not cross ERPs (owner, from the
    walk-through; the tech case's transcripts agree for product types). To confirm with the client:
    (a) is any SKU stocked or sold by two ERPs, including after an acquisition; (b) can variants
    of one product come from different ERPs.
 4. **Cancel from an ERP after invoicing**: holding for staff is built (the interim answer);
    closing the rest by credit memo automatically waits on the credit-memo work (AB-26r).
-5. **Returns**: in the first build, or after the routing slices.
+5. ~~Returns~~: after the routing slices (owner, 2026-09-27).
 
 ## 7. Client questions this design depends on
 
@@ -150,3 +150,4 @@ for a mixed order; whether any SKU is sold by two ERPs.
 
 - 2026-09-27: v1 draft.
 - 2026-09-27: products do not cross ERPs (owner; client transcripts agree for product types), variants follow their product; cancel-after-invoice holds for staff (fix built).
+- 2026-09-27: LOCKED v1 by the owner. Returns come after the routing slices. The cancel fix went to the integration's main (`a76789a`).
