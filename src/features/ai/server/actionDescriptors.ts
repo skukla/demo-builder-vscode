@@ -77,8 +77,8 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             'workspace), clone it, subscribe its Adobe APIs there, build and deploy it, and ' +
             'register it on the dashboard. get_project shows the workspace on its record. ' +
             'Pass a catalog `id` (from list_components) OR a custom GitHub `source`. Adding a ' +
-            'catalog id the project already has adds a numbered copy (`erp-integration-2`, which ' +
-            'brings its own `demo-erp-2`); a project has one mesh. ' +
+            'catalog id the project already has adds a numbered copy in its own workspace; a ' +
+            'project has one mesh and one ERP integration (a second ERP is add_erp). ' +
             'Takes about a minute. Returns the id to use with deploy_integration / ' +
             'remove_integration. Confirm the choice with the user first.',
         map: dashboardHandlers,
@@ -359,7 +359,8 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             'Remove one App Builder integration by its id. DESTRUCTIVE: undeploys it remotely ' +
             '(aio app undeploy / api-mesh:delete), deletes its local files and its own Adobe ' +
             'workspace, and republishes the storefront without it. The ERP integration first undoes what it wrote into Commerce ' +
-            'and takes its ERP with it; removing the ERP removes its integration the same way. ' +
+            'and takes every ERP with it; removing its first ERP removes the integration the same way. ' +
+            'An ERP added with add_erp is removed on its own: the integration stops listing it first. ' +
             'Before undeploying it runs the clean-ups only the deployed code can do (the Commerce ' +
             "undo and uninstall, the ERP's records); if one fails NOTHING is removed and the " +
             'error code is COMPONENT_REMOVAL_STOPPED, with the reasons. Retry, or pass force:true ' +
@@ -410,12 +411,33 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             'products, B2B companies (with credit limits) and websites into it as they stand, sorted ' +
             "by the integration's settings (each website's sales organisation, which products this ERP " +
             'owns). Adds and updates; removes nothing, but a value changed by hand in the ERP is set ' +
-            'back to Commerce\'s. Use on a fresh or empty ERP. Confirm with the user first. Takes the integration id.',
+            'back to Commerce\'s. Use on a fresh or empty ERP. Confirm with the user first. Takes the ' +
+            'integration id, and `erp` (an ERP\'s component id) to fill only that one; without it every ERP is filled.',
         map: dashboardHandlers,
         type: 'loadErpDemoData',
         confirm: true,
         inputSchema: {
             id: z.string().describe('The ERP integration id (from get_project)'),
+            erp: z.string().optional().describe("Which ERP, by its component id (from get_erp_status's erps); default the first"),
+        },
+    },
+    {
+        tool: 'add_erp',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            'Add another ERP to the ERP integration ("Add another ERP" on its card): a new mock ERP ' +
+            'with the given name (unique in the project), in an Adobe workspace of its own, deployed, ' +
+            "added to the integration's ERP list and filled from Commerce. Products go to it when " +
+            'their erp_owner attribute is its id (data.added.id; data.erpList lists every id). The ' +
+            'ERP integration is added once; add_integration refuses a second. Remove one ERP with ' +
+            'remove_integration on its id. Takes a few minutes. Requires confirm:true.',
+        map: dashboardHandlers,
+        type: 'addErp',
+        confirm: true,
+        inputSchema: {
+            id: z.string().describe('The ERP integration id (from get_project)'),
+            name: z.string().min(1).max(40).describe('The new ERP\'s name, e.g. "Brand B ERP"'),
         },
     },
     {
@@ -426,8 +448,8 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             "Reset the ERP that comes with the ERP integration: undo the credit limits and " +
             'company blocks it wrote into Commerce, clear the ERP order numbers from Commerce ' +
             'orders, wipe every ERP record, then fill it again from the Commerce products, companies ' +
-            'and customers as they stand. Commerce is the master; the ERP is transitory. Confirm with the ' +
-            'user first. Takes the integration id.',
+            'and customers as they stand, for every ERP the integration serves. Commerce is the master; ' +
+            'the ERP is transitory. Confirm with the user first. Takes the integration id.',
         map: dashboardHandlers,
         type: 'resetErpRecords',
         confirm: true,
@@ -451,6 +473,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         confirm: true,
         inputSchema: {
             id: z.string().describe('The ERP integration id (from get_project)'),
+            erp: z.string().optional().describe("Which ERP, by its component id (from get_erp_status's erps); default the first"),
             method: z.enum(['POST', 'PUT', 'PATCH', 'DELETE']).describe('The ERP route\'s verb'),
             path: z.string().describe('The ERP route, e.g. "orders/0000001003/confirm" or "partners/C21"'),
             body: z.record(z.unknown()).optional().describe('The JSON body the route takes'),
@@ -497,6 +520,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         confirm: true,
         inputSchema: {
             id: z.string().describe('The ERP integration id (from get_project)'),
+            erp: z.string().optional().describe("Which ERP, by its component id (from get_erp_status's erps); default the first"),
         },
     },
     {

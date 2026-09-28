@@ -309,7 +309,8 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         description:
             "Read the ERP integration's state: the ERP's health as the integration sees it " +
             '(reachable, its base URL, how many company writes it holds in its ledger) plus the ' +
-            'persisted rows of the integration and its ERP (name, status, the ERP screen\'s URL). ' +
+            'persisted rows of the integration and its ERPs (name, status, the ERP screen\'s URL; ' +
+            '`erps` lists every ERP it serves, by component id). ' +
             'Use before reset_erp_records, or to answer "is the ERP up". Takes the integration id.',
         map: dashboardHandlers,
         type: 'getErpStatus',
@@ -348,6 +349,7 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         type: 'readErpApi',
         inputSchema: {
             id: z.string().describe('The ERP integration id (from get_project)'),
+            erp: z.string().optional().describe("Which ERP, by its component id (from get_erp_status's erps); default the first"),
             path: z.string().describe('The ERP route, e.g. "partners/C21" or "orders"'),
         },
     },

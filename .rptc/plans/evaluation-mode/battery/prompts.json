@@ -1163,5 +1163,13 @@
       "check_setup_steps"
     ],
     "why": "Added with the tool (2026-09-25, AB-26x): the SC's demo setup steps in Commerce Admin, as a checklist Demo Builder keeps. A MISS is a discoverability finding about the tool, not a bad prompt."
+  },
+  {
+    "id": "erp-add-another",
+    "prompt": "Add a second ERP to this demo called Brand B ERP, next to the one the ERP integration already has.",
+    "expect": [
+      "add_erp"
+    ],
+    "why": "Added with the tool (2026-09-28, AB-16): the ERP integration is added once and more ERPs are added beside it; add_integration now refuses a second. A MISS is a discoverability finding about the tool, not a bad prompt."
   }
 ]

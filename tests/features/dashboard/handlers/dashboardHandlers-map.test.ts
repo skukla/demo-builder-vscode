@@ -132,14 +132,14 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'exportProjectSettings')).toBe(true);
         });
 
-        it('should have exactly 60 handlers', () => {
+        it('should have exactly 73 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers) as Array<
                 keyof typeof dashboardHandlers
             >;
 
-            // Then: exactly 60 — the 49 below, then the additions noted after the
+            // Then: exactly 73 — the 49 below, then the additions noted after the
             // table — derived in the map's own declaration order so a
             // reader can check it against the source top to bottom.
             //
@@ -267,7 +267,10 @@ describe('dashboardHandlers', () => {
             //
             // loadErpDemoData (71 → 72, 2026-09-27): Demo Builder fills the ERP from
             // Commerce, the copy the integration used to make (AB-26y step 1).
-            expect(types).toHaveLength(72);
+            //
+            // addErp (72 → 73, 2026-09-28): "Add another ERP" on the ERP integration's
+            // card, and the add_erp tool (AB-16).
+            expect(types).toHaveLength(73);
         });
 
         it('should have handlers as functions', () => {

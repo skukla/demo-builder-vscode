@@ -53,6 +53,8 @@ export interface ErpKeyMapEntry {
     kind: 'customer';
     commerce: string;
     erp: string;
+    /** The ERP the pair belongs to, by its list id; absent = the integration's first ERP. */
+    erpId?: string;
 }
 
 export interface ErpFillDeps {

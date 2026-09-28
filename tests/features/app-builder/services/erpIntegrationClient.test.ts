@@ -16,6 +16,8 @@ const URLS = {
     'runtime/erp/keymap': 'https://ns.adobeioruntime.net/api/v1/web/erp/keymap',
     'runtime/erp/lookup': 'https://ns.adobeioruntime.net/api/v1/web/erp/lookup',
     'runtime/erp/history': 'https://ns.adobeioruntime.net/api/v1/web/erp/history',
+    'runtime/erp/erps': 'https://ns.adobeioruntime.net/api/v1/web/erp/erps',
+    'runtime/erp/settings': 'https://ns.adobeioruntime.net/api/v1/web/erp/settings',
 };
 const AUTH = { accessToken: 'fake-test-pw-not-a-secret', imsOrgId: 'ABC@AdobeOrg' };
 
@@ -77,6 +79,48 @@ describe('ErpIntegrationClient', () => {
         expect(new ErpIntegrationClient(URLS, AUTH, fetchImpl).keepsKeyMap()).toBe(true);
         const { ['runtime/erp/keymap']: _gone, ...older } = URLS;
         expect(new ErpIntegrationClient(older, AUTH, fetchImpl).keepsKeyMap()).toBe(false);
+    });
+
+    /*
+     * Several ERPs (AB-16). Shapes from the integration's `actions/erp/erps/index.js` and
+     * `actions/erp/keymap/index.js` (read 2026-09-28): GET answers `{ entries }` (erps adds
+     * `stored`), PUT takes `{ entries }` and replaces the whole list or map.
+     */
+    it('GETs and PUTs the ERP list, and says whether the deployment has one', async () => {
+        const entries = [{ id: 'erp', name: 'Acme ERP', adapter: 'demo-erp', connection: { baseUrl: 'https://x/web/demo-erp' } }];
+        const fetchImpl = answering(200, { entries, stored: false });
+        const client = new ErpIntegrationClient(URLS, AUTH, fetchImpl);
+
+        expect(await client.listErps()).toEqual(entries);
+        await client.replaceErps(entries);
+
+        expect(fetchImpl.mock.calls[0][0]).toBe(URLS['runtime/erp/erps']);
+        expect((fetchImpl.mock.calls[0][1] as RequestInit).method).toBe('GET');
+        const put = fetchImpl.mock.calls[1][1] as RequestInit;
+        expect(put.method).toBe('PUT');
+        expect(JSON.parse(String(put.body))).toEqual({ entries });
+        expect(client.keepsErpList()).toBe(true);
+        const { ['runtime/erp/erps']: _gone, ...older } = URLS;
+        expect(new ErpIntegrationClient(older, AUTH, fetchImpl).keepsErpList()).toBe(false);
+    });
+
+    it('GETs the key map the integration holds', async () => {
+        const entries = [{ kind: 'customer', commerce: '12', erp: 'C12', erpId: 'demo-erp-2' }];
+        const fetchImpl = answering(200, { entries });
+
+        expect(await new ErpIntegrationClient(URLS, AUTH, fetchImpl).readKeyMap()).toEqual(entries);
+        expect(fetchImpl.mock.calls[0][0]).toBe(URLS['runtime/erp/keymap']);
+    });
+
+    it("reads the settings in force with one ERP's own on top when it names the ERP", async () => {
+        const fetchImpl = answering(200, { default: {}, websites: {} });
+        const client = new ErpIntegrationClient(URLS, AUTH, fetchImpl);
+
+        await client.resolvedSettings(['base', 'b2b'], 'demo-erp-2');
+        await client.resolvedSettings(['base']);
+
+        expect(fetchImpl.mock.calls[0][0]).toBe(`${URLS['runtime/erp/settings']}?websites=base%2Cb2b&erp=demo-erp-2`);
+        expect(fetchImpl.mock.calls[1][0]).toBe(`${URLS['runtime/erp/settings']}?websites=base`);
     });
 
     it('GETs lookup with the one query the action takes, encoded, and answers the lookup', async () => {

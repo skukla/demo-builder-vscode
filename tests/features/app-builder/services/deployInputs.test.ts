@@ -11,6 +11,7 @@ import {
     deriveProvidedValues,
     deriveWebBase,
     displayNameInProject,
+    listIdOf,
     resolveDeployInputs,
     resolveDisplayName,
 } from '@/features/app-builder/services/deployInputs';
@@ -116,6 +117,38 @@ describe('resolveDeployInputs', () => {
             ERP_DISPLAY_NAME: 'Acme ERP',
         });
         expect(resolveDeployInputs(createMockProject(), INTEGRATION)).not.toHaveProperty('DEMO_BUILDER_COPY_NUMBER');
+    });
+});
+
+/*
+ * A listed system is told its id in its integration's list (AB-16). The integration's own
+ * ERP is "erp", the id the integration gives an event or key map row that names none; an
+ * ERP added from the card is its component id. The legacy numbered pair (an
+ * erp-integration-2 in the project) keeps "erp" inside its own integration.
+ */
+describe('resolveDeployInputs — listed systems', () => {
+    const LISTED = { ...SYSTEM, listedAs: { envVar: 'ERP_ID', firstId: 'erp', adapter: 'demo-erp' } };
+    const added = { ...LISTED, id: 'demo-erp-2', catalogId: 'demo-erp' };
+    const withIntegration = (...ids: string[]) =>
+        createMockProject({
+            appBuilderComponents: Object.fromEntries(ids.map((id) => [id, { kind: 'integration' as const, status: 'deployed' as const, source: { owner: 'skukla', repo: 'x' } }])),
+        });
+
+    it("the integration's own ERP is told the single-ERP id", () => {
+        expect(resolveDeployInputs(withIntegration('erp-integration'), LISTED)).toMatchObject({ ERP_ID: 'erp' });
+        expect(listIdOf(createMockProject(), LISTED)).toBe('erp');
+    });
+
+    it('an ERP added from the card is told its own component id', () => {
+        expect(resolveDeployInputs(withIntegration('erp-integration'), added)).toMatchObject({ ERP_ID: 'demo-erp-2' });
+    });
+
+    it("a legacy numbered pair's ERP is its own integration's first ERP", () => {
+        expect(listIdOf(withIntegration('erp-integration', 'erp-integration-2'), added)).toBe('erp');
+    });
+
+    it('an entry with no listing is told no id', () => {
+        expect(resolveDeployInputs(createMockProject(), SYSTEM)).not.toHaveProperty('ERP_ID');
     });
 });
 

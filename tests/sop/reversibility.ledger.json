@@ -15,6 +15,11 @@
             "reverses": "remove_integration"
         },
         {
+            "tool": "add_erp",
+            "reverses": "remove_integration",
+            "note": "An ERP added from the integration's card is removed on its own: the integration stops listing it, its records are wiped, it is undeployed and its workspace deleted (AB-16)."
+        },
+        {
             "tool": "add_shared_demo",
             "reverses": "forget_added_demo"
         },

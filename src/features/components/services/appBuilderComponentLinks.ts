@@ -219,8 +219,8 @@ export function nextCopyOf<T extends { id: string; name: string }>(
 /**
  * The copy an add of this entry makes, or undefined when the add is of the entry
  * itself: the project does not hold it, or holds it from an add that failed (adding
- * again retries it). A mesh is never copied — a project has one — so a second mesh
- * meets the add door's same-id refusal instead.
+ * again retries it). A mesh is never copied — a project has one — nor an `addOnce`
+ * integration; a second of either meets the add door's same-id refusal instead.
  *
  * One rule for the add handler and the Add Integration screen, so the id the screen
  * opens its progress modal under is the id the handler adds.
@@ -230,13 +230,58 @@ export function nextCopyOf<T extends { id: string; name: string }>(
  * @param catalog - the catalog, for the systems the entry brings
  * @returns the copy, or undefined
  */
-export function copyForAdd<T extends { id: string; name: string; kind: string }>(
+export function copyForAdd<T extends { id: string; name: string; kind: string; addOnce?: boolean }>(
     project: Components,
     entry: T,
     catalog: Catalog,
 ): (T & { catalogId: string }) | undefined {
-    if (entry.kind === 'mesh') return undefined;
+    // An add-once integration is not copied either: its card adds more of its system
+    // instead (the ERP integration, AB-16), and a second add meets the same-id refusal.
+    if (entry.kind === 'mesh' || entry.addOnce) return undefined;
     const existing = project.appBuilderComponents?.[entry.id];
     if (!existing || existing.status === 'error') return undefined;
     return nextCopyOf(project, entry, catalog);
+}
+
+/** The part of a catalog entry the card's "Add another" reads. */
+type ListingEntry = Pick<AppBuilderComponentCatalogEntry, 'id' | 'kind' | 'boundTo' | 'systemType' | 'listedAs'>;
+
+/**
+ * The catalog entry of the system an integration serves in a LIST (`listedAs`), the one
+ * its card adds more of ("Add another ERP", AB-16), or undefined when it serves none.
+ *
+ * @param integrationKind - the integration's catalog id (`catalogId ?? id`)
+ * @param catalog - the catalog
+ * @returns the listed system's entry
+ */
+export function listedSystemOf<T extends ListingEntry>(integrationKind: string, catalog: readonly T[]): T | undefined {
+    return catalog.find((entry) => entry.kind === 'system' && entry.boundTo === integrationKind && entry.listedAs);
+}
+
+/**
+ * What the card's action that adds another listed system is called: "Add another ERP".
+ *
+ * @param system - the listed system's entry
+ * @returns the action's label
+ */
+export function addAnotherLabel(system: Pick<ListingEntry, 'systemType'>): string {
+    return `Add another ${system.systemType ?? 'system'}`;
+}
+
+/**
+ * Whether a system was added from its integration's card ("Add another ERP", AB-16) rather
+ * than brought by it. The brought one is the integration's own pair (`pairedInstanceId`):
+ * `demo-erp` for `erp-integration`, `demo-erp-2` for a legacy `erp-integration-2`. An added
+ * one is removed on its own; the brought one goes only with its integration.
+ *
+ * @param project - the project
+ * @param systemId - the system
+ * @param integrationId - the integration that uses it
+ * @returns whether it was added beside the integration's own
+ */
+export function isAddedSystem(project: Components, systemId: string, integrationId: string): boolean {
+    const system = project.appBuilderComponents?.[systemId];
+    const integration = project.appBuilderComponents?.[integrationId];
+    if (!system || !integration) return false;
+    return pairedInstanceId(integrationId, integration.catalogId, system.catalogId ?? systemId) !== systemId;
 }

@@ -51,7 +51,11 @@ import {
     getAppBuilderComponentCatalog,
     getAppBuilderComponentEntry,
 } from '@/features/components/services/appBuilderComponentCatalogLoader';
-import { copyForAdd } from '@/features/components/services/appBuilderComponentLinks';
+import {
+    addAnotherLabel,
+    copyForAdd,
+    listedSystemOf,
+} from '@/features/components/services/appBuilderComponentLinks';
 import {
     buildDefaultRunnerDeps,
     buildRunnerDepsContext,
@@ -434,9 +438,21 @@ function alreadyAddedRefusal(
     if (!existing || existing.status === 'error') return undefined;
     return {
         success: false,
-        error: `"${entry.name ?? entry.id}" is already added to this project.`,
+        error: `"${entry.name ?? entry.id}" is already added to this project.${addAnotherPointer(entry)}`,
         code: ErrorCode.CONFIG_INVALID,
     };
+}
+
+/**
+ * For an add-once integration, where the SC adds more of what it serves instead: its
+ * card's "Add another ERP" (AB-16). Empty for every other entry.
+ */
+function addAnotherPointer(entry: AppBuilderComponentCatalogEntry): string {
+    if (!entry.addOnce) return '';
+    const system = listedSystemOf(entry.catalogId ?? entry.id, getAppBuilderComponentCatalog());
+    if (!system) return '';
+    const label = addAnotherLabel(system);
+    return ` To add another ${system.systemType ?? 'system'}, use "${label}" on its card (add_erp for an agent).`;
 }
 
 /**
@@ -648,9 +664,10 @@ export const handleAddAppBuilderComponent: MessageHandler<
 
 /**
  * A catalog entry the project already holds is added again as a numbered copy
- * (`erp-integration-2`), which brings its own ERP and gets its own workspace (AB-23).
- * Not for a mesh — a project has one — nor for a custom source, whose id is its repo;
- * those still meet the same-id refusal. A copy whose add failed keeps its id, so
+ * (`commerce-integration-starter-kit-2`), in a workspace of its own (AB-23). Not for a
+ * mesh — a project has one — nor an add-once integration (the ERP integration, whose card
+ * adds another ERP instead), nor a custom source, whose id is its repo; those still meet
+ * the same-id refusal. A copy whose add failed keeps its id, so
  * adding again retries it.
  */
 function copyWhenTaken(

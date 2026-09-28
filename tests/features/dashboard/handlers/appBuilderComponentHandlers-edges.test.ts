@@ -29,6 +29,7 @@ import {
     mockBuildRunnerDepsContext,
     mockDeployAppBuilderComponent,
     mockEnsureAdobeIOAuth,
+    mockGetAppBuilderComponentCatalog,
     mockGetAppBuilderComponentEntry,
     mockRemoveAppBuilderComponent,
     mockSendAppBuilderComponentStatusUpdate,
@@ -156,6 +157,33 @@ describe('the same-id gate', () => {
             expect.objectContaining({ id: 'erp-sync' }),
             expect.anything(),
         );
+    });
+
+    // AB-16: the ERP integration is added once; a second ERP is added from its card.
+    it('refuses a second add-once integration, pointing at the card action that adds another ERP', async () => {
+        const { mockContext } = setupMocks({
+            appBuilderComponents: { 'erp-sync': deployed('acme', 'erp-sync') },
+        });
+        mockTestDeveloperPermissions(true);
+        mockGetAppBuilderComponentEntry.mockReturnValue({ ...ERP_ENTRY, addOnce: true });
+        mockGetAppBuilderComponentCatalog.mockReturnValue([
+            {
+                id: 'demo-erp',
+                name: 'ERP',
+                description: '',
+                kind: 'system',
+                boundTo: 'erp-sync',
+                systemType: 'ERP',
+                listedAs: { envVar: 'ERP_ID', firstId: 'erp', adapter: 'demo-erp' },
+                source: { owner: 'skukla', repo: 'demo-erp', branch: 'main' },
+            },
+        ]);
+
+        const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('is already added to this project. To add another ERP, use "Add another ERP" on its card');
+        expect(mockAddAppBuilderComponent).not.toHaveBeenCalled();
     });
 
     it('still refuses a second mesh, naming the one it has', async () => {

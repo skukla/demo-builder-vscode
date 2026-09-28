@@ -1,7 +1,8 @@
 /**
  * The ERP integration's own actions, as Demo Builder calls them: `erp/status`, `erp/lookup` and
  * `erp/history` (what the integration sees of its ERP), `erp/settings` (the settings in force,
- * which the ERP fill sorts records by) and `erp/detach` (undo what the integration wrote into
+ * which the ERP fill sorts records by), `erp/keymap` and `erp/erps` (the key map and the list of
+ * ERPs, both replaced whole by Demo Builder) and `erp/detach` (undo what the integration wrote into
  * Commerce, run by a reset and before the integration is removed). The reset and the fill are
  * Demo Builder's own since 2026-09-27 (AB-26y).
  *
@@ -16,6 +17,7 @@
 
 import type { AppManagementAuth } from './appManagementClient';
 import type { ErpKeyMapEntry, ResolvedErpSettings } from './erpFill';
+import type { ErpListEntry } from './erpList';
 
 /** What `erp/status` answers (the integration's `actions/erp/status`). */
 export interface ErpIntegrationStatus {
@@ -38,7 +40,7 @@ export interface ErpDetachReport {
     orders?: { cleared: number; failed: unknown[] };
 }
 
-export type ErpAction = 'status' | 'detach' | 'lookup' | 'history' | 'settings' | 'keymap';
+export type ErpAction = 'status' | 'detach' | 'lookup' | 'history' | 'settings' | 'keymap' | 'erps';
 
 /**
  * What `erp/lookup` answers (the integration's `lib/lookup.js`, `productLookup` and
@@ -138,10 +140,12 @@ export class ErpIntegrationClient {
 
     /**
      * The settings in force, Default Config and each named website's, as an order reads
-     * them (`GET erp/settings?websites=`): what the ERP fill sorts records by.
+     * them (`GET erp/settings?websites=`): what the ERP fill sorts records by. With `erpId`,
+     * that ERP's own settings sit on top (`&erp=`), which is how several ERPs split products.
      */
-    async resolvedSettings(websiteCodes: string[]): Promise<ResolvedErpSettings> {
-        return (await this.call('settings', 'GET', { websites: websiteCodes.join(',') })) as ResolvedErpSettings;
+    async resolvedSettings(websiteCodes: string[], erpId?: string): Promise<ResolvedErpSettings> {
+        const query = { websites: websiteCodes.join(','), ...(erpId ? { erp: erpId } : {}) };
+        return (await this.call('settings', 'GET', query)) as ResolvedErpSettings;
     }
 
     /** Whether this deployment has the key map (`erp/keymap`); one deployed before it does not. */
@@ -152,6 +156,28 @@ export class ErpIntegrationClient {
     /** Replace the integration's key map, whole (`PUT erp/keymap`). */
     async replaceKeyMap(entries: ErpKeyMapEntry[]): Promise<void> {
         await this.call('keymap', 'PUT', undefined, { entries });
+    }
+
+    /** The key map as the integration holds it (`GET erp/keymap`). */
+    async readKeyMap(): Promise<ErpKeyMapEntry[]> {
+        const answer = (await this.call('keymap', 'GET')) as { entries?: ErpKeyMapEntry[] };
+        return answer.entries ?? [];
+    }
+
+    /** Whether this deployment serves several ERPs (`erp/erps`); one deployed before it does not. */
+    keepsErpList(): boolean {
+        return deriveErpActionUrl(this.deployedUrls, 'erps') !== undefined;
+    }
+
+    /** The ERP list it serves (`GET erp/erps`): the stored list, else its single ERP. */
+    async listErps(): Promise<ErpListEntry[]> {
+        const answer = (await this.call('erps', 'GET')) as { entries?: ErpListEntry[] };
+        return answer.entries ?? [];
+    }
+
+    /** Replace the ERP list, whole (`PUT erp/erps`). */
+    async replaceErps(entries: ErpListEntry[]): Promise<void> {
+        await this.call('erps', 'PUT', undefined, { entries });
     }
 
     /** One Commerce order's whole life across both systems and the integration. */

@@ -219,6 +219,21 @@
             }
           }
         },
+        "addOnce": {
+          "type": "boolean",
+          "description": "kind 'integration' only: a project holds this integration once. Adding it again is refused rather than made a numbered copy; its card adds more of the system it serves instead (the system's listedAs)."
+        },
+        "listedAs": {
+          "type": "object",
+          "required": ["envVar", "firstId", "adapter"],
+          "additionalProperties": false,
+          "description": "kind 'system' only: its integration serves a LIST of these systems, keyed by id. The deploy tells the system its id; the integration's own system has firstId, one added from the integration's card has its component id.",
+          "properties": {
+            "envVar": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$", "description": "The deploy-time input that carries the id, e.g. ERP_ID." },
+            "firstId": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$", "description": "The id of the integration's own system, the one it brings (the integration's single-ERP id, erp)." },
+            "adapter": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$", "description": "Which of the integration's adapters talks to it, e.g. demo-erp." }
+          }
+        },
         "fillsSystem": {
           "type": "boolean",
           "description": "lifecycle 'app-management' only: Demo Builder fills the system this integration serves from Commerce once the Commerce install succeeds on an add, and on Load demo data."

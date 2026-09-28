@@ -74,6 +74,16 @@ export interface WebActionCall {
 /** How Demo Builder can tell a setup step is done, when it can (`setupChecks.ts`). */
 export type SetupCheck = 'companies-have-own-catalogs' | 'erp-source-in-website-stock' | 'erp-attributes-exist';
 
+/** How a system is known in its integration's list of systems (see `listedAs`). */
+export interface SystemListing {
+    /** The deploy-time input that carries the id, e.g. "ERP_ID". */
+    envVar: string;
+    /** The id of the integration's own system (the ERP integration's single-ERP id, "erp"). */
+    firstId: string;
+    /** Which of the integration's adapters talks to it, e.g. "demo-erp". */
+    adapter: string;
+}
+
 /** One thing an SC prepares by hand for a demo (see `setupSteps`). */
 export interface SetupStep {
     /** Stable key the project records the step's state under. */
@@ -217,6 +227,19 @@ export interface AppBuilderComponentCatalogEntry {
      * (AB-26y, 2026-09-27). A failure never fails the deploy; the line says why.
      */
     fillsSystem?: boolean;
+    /**
+     * kind 'integration' only: a project holds it once. Adding it again is refused
+     * rather than made a numbered copy (`copyForAdd`); its card adds more of the system
+     * it serves instead ("Add another ERP", AB-16), each named by the system's `listedAs`.
+     */
+    addOnce?: boolean;
+    /**
+     * kind 'system' only: its integration serves a LIST of these systems, keyed by id
+     * (the ERP list, `erpList.ts`). The deploy tells each system its id through `envVar`;
+     * the integration's own system has `firstId`, and one added from the card has its
+     * component id.
+     */
+    listedAs?: SystemListing;
     /** Pre-built source repo (owner/repo/branch). */
     source: AddonSource;
     /** Backend ids this appBuilderComponent fits (omitted/empty = any backend). */

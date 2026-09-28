@@ -3,7 +3,7 @@
  *
  * Catalog app repos ship no `.env`; everything they take as an `inputs:` value
  * arrives in the deploy's process environment. Until the ERP pair (2026-09-14)
- * the only such values were the App Management IMS credentials. Three more kinds
+ * the only such values were the App Management IMS credentials. Four more kinds
  * exist now, and all resolve here so add and redeploy cannot drift on them:
  *
  *   - the entry's TEXT settings (`componentConfigs[id]`, set on the integration's
@@ -12,6 +12,8 @@
  *   - the values another component PROVIDES (`envSchema[].providedBy`), read off
  *     the persisted `providesEnvVars` of every component in the project;
  *   - for a second copy of a kind, which copy it is (`DEMO_BUILDER_COPY_NUMBER`).
+ *   - for a system its integration serves in a list, its id there (`listedAs`: the
+ *     ERP's `ERP_ID`, AB-16).
  *
  * And the inverse: what a deployed component provides to others. A mesh provides
  * its endpoint; any other component provides the WEB BASE of its deployed
@@ -104,6 +106,9 @@ export function resolveDeployInputs(
             inputs[envVar.name] = value;
         }
     }
+    if (entry.listedAs) {
+        inputs[entry.listedAs.envVar] = listIdOf(project, entry);
+    }
     const copy = copyNumber(entry);
     if (copy) {
         inputs[COPY_NUMBER] = copy;
@@ -114,6 +119,31 @@ export function resolveDeployInputs(
         if (appId) inputs[APP_ID] = appId;
     }
     return inputs;
+}
+
+/**
+ * The id a listed system has in its integration's list (`listedAs`, AB-16): `firstId` for
+ * the system its integration brings, its own component id for one added from the
+ * integration's card.
+ *
+ * The brought system is the catalog's own entry, or a numbered copy whose numbered
+ * integration is in the project (`erp-integration-2` brings `demo-erp-2`, from before the
+ * integration was add-once). An ERP added from the card is numbered where no such
+ * integration exists (`nextListedSystemId`), so it is never mistaken for one.
+ *
+ * `firstId` is the integration's single-ERP id (`erp`), not the component id: the
+ * integration reads an event or a key map row that names no ERP as that one, and the
+ * credit attributes it wrote are keyed by it, so a first ERP keeps its history.
+ *
+ * @param project - the project
+ * @param entry - a system entry with `listedAs`
+ * @returns its id in the list
+ */
+export function listIdOf(project: Pick<Project, 'appBuilderComponents'>, entry: AppBuilderComponentCatalogEntry): string {
+    const firstId = entry.listedAs?.firstId ?? entry.id;
+    if (!entry.catalogId || entry.id === entry.catalogId) return firstId;
+    const partner = entry.boundTo ? pairedInstanceId(entry.id, entry.catalogId, entry.boundTo) : undefined;
+    return partner && project.appBuilderComponents?.[partner] ? firstId : entry.id;
 }
 
 /**

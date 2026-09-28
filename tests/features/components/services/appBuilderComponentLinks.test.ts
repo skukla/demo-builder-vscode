@@ -6,9 +6,13 @@
  */
 
 import {
+    addAnotherLabel,
+    copyForAdd,
     integrationUsing,
+    isAddedSystem,
     linkBroughtSystem,
     linkComponents,
+    listedSystemOf,
     nextCopyOf,
     pairedInstanceId,
     systemsUsedBy,
@@ -256,5 +260,45 @@ describe('nextCopyOf', () => {
         });
 
         expect(nextCopyOf(p, INTEGRATION, CATALOG).id).toBe('erp-integration-2');
+    });
+});
+
+/*
+ * Several ERPs (AB-16): the ERP integration is added once, its card adds more ERPs, and an
+ * added ERP is told apart from the one the integration brings by the pair's numbering.
+ */
+describe('add-once integrations and the systems added beside them', () => {
+    const LISTING = { envVar: 'ERP_ID', firstId: 'erp', adapter: 'demo-erp' };
+
+    it('copyForAdd makes no copy of an add-once integration, so a second add meets the refusal', () => {
+        const held = project({ 'erp-integration': component('integration') });
+        const entry = { id: 'erp-integration', name: 'ERP Integration', kind: 'integration' };
+
+        expect(copyForAdd(held, { ...entry, addOnce: true }, CATALOG)).toBeUndefined();
+        // The generic copy stays for every other entry.
+        expect(copyForAdd(held, entry, CATALOG)).toMatchObject({ id: 'erp-integration-2' });
+    });
+
+    it('isAddedSystem: the brought pair is not, an ERP added beside it is', () => {
+        const p = project({
+            'erp-integration': component('integration'),
+            'demo-erp': component('system'),
+            'demo-erp-2': component('system', { catalogId: 'demo-erp' }),
+            'erp-integration-3': component('integration', { catalogId: 'erp-integration' }),
+            'demo-erp-3': component('system', { catalogId: 'demo-erp' }),
+        });
+
+        expect(isAddedSystem(p, 'demo-erp', 'erp-integration')).toBe(false);
+        expect(isAddedSystem(p, 'demo-erp-2', 'erp-integration')).toBe(true);
+        // A legacy numbered pair: its ERP is its integration's own.
+        expect(isAddedSystem(p, 'demo-erp-3', 'erp-integration-3')).toBe(false);
+    });
+
+    it('listedSystemOf finds the listed system an integration serves; addAnotherLabel names the action', () => {
+        const catalog = [{ id: 'demo-erp', kind: 'system' as const, boundTo: 'erp-integration', systemType: 'ERP', listedAs: LISTING }];
+
+        expect(listedSystemOf('erp-integration', catalog)?.id).toBe('demo-erp');
+        expect(listedSystemOf('erp-integration', CATALOG)).toBeUndefined();
+        expect(addAnotherLabel({ systemType: 'ERP' })).toBe('Add another ERP');
     });
 });

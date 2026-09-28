@@ -680,6 +680,16 @@ export type SaveIntegrationSettingsResult = {
  * `addAppBuilderComponent` — add (and deploy) an App Builder integration on a
  * live project: a catalog entry by `id`, or a custom source by owner/repo.
  */
+/** `addErp` — "Add another ERP" on the ERP integration's card (AB-16). */
+export interface AddErpRequestPayload {
+    /** The ERP integration's component id. */
+    id?: string;
+    /** The new ERP's name, unique in the project (compared without case). */
+    name?: string;
+    /** `'modal'` when the SC started it from the integrations screen (PL-59). */
+    progress?: 'modal';
+}
+
 export interface AddAppBuilderComponentRequestPayload {
     id?: string;
     source?: { owner: string; repo: string };

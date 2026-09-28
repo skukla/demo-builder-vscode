@@ -200,7 +200,7 @@ async function erpAttributesExist(read: CommerceRead): Promise<SetupCheckResult>
     if (typeof owner === 'string') return couldNot(owner);
     const brand = await readAttribute(read, 'brand');
     if (typeof brand === 'string') return couldNot(brand);
-    const missing = [owner ? undefined : 'erp_owner', brand ? undefined : 'brand'].filter(Boolean);
+    const missing = (['erp_owner', 'brand'] as const).filter((code) => (code === 'erp_owner' ? owner : brand) === null);
     if (missing.length > 0) {
         return { done: false, note: `Commerce has no ${missing.join(' or ')} product attribute.` };
     }

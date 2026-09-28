@@ -32,6 +32,7 @@ import { actionRow as row, actionRows } from './actionDescriptors.testUtils';
 const NEEDS_AUTH: Record<string, AuthProvider[] | false> = {
     regenerate_ai_files: false,
     start_demo: false,
+    add_erp: ['adobe'],
     add_integration: ['adobe'],
     rename_integration: false,
     // Stores the change, then redeploys through the guarded deploy path.
@@ -73,6 +74,7 @@ const NEEDS_AUTH: Record<string, AuthProvider[] | false> = {
 const INPUT_KEYS: Record<string, string[]> = {
     regenerate_ai_files: [],
     start_demo: [],
+    add_erp: ['id', 'name'],
     add_integration: ['apis', 'id', 'instanceId', 'name', 'refreshCli', 'source'],
     rename_integration: ['id', 'name'],
     // No `secrets`: a secret must never be a tool argument (AB-21).
@@ -89,11 +91,11 @@ const INPUT_KEYS: Record<string, string[]> = {
     check_integration_updates: [],
     remove_integration: ['force', 'id'],
     delete_undeclared_runtime_code: ['componentId'],
-    load_erp_demo_data: ['id'],
+    load_erp_demo_data: ['erp', 'id'],
     reset_erp_records: ['id'],
-    write_erp_rest: ['body', 'id', 'method', 'path'],
+    write_erp_rest: ['body', 'erp', 'id', 'method', 'path'],
     invoke_runtime_action: ['action', 'componentId', 'payload'],
-    open_erp_screen: ['id'],
+    open_erp_screen: ['erp', 'id'],
     stop_demo: [],
     restart_demo: [],
     set_current_project: ['projectPath'],

@@ -69,6 +69,11 @@
         "branch": "main"
       },
       "nameFromEnvVar": "ERP_DISPLAY_NAME",
+      "listedAs": {
+        "envVar": "ERP_ID",
+        "firstId": "erp",
+        "adapter": "demo-erp"
+      },
       "screen": {
         "action": "screen",
         "keyEnvVar": "ERP_SCREEN_KEY"
@@ -129,6 +134,7 @@
       "layout": "extension",
       "lifecycle": "app-management",
       "fillsSystem": true,
+      "addOnce": true,
       "nodeVersion": "24",
       "compatibleBackends": [
         "adobe-commerce-paas",

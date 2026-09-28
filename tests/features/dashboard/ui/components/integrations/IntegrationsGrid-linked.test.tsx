@@ -88,7 +88,7 @@ describe('IntegrationsGrid — the system card verbs', () => {
 
         await user.click(within(panel).getByRole('button', { name: /^open$/i }));
 
-        expect(getClient().postMessage).toHaveBeenCalledWith('openErpScreen', { id: 'erp-integration' });
+        expect(getClient().postMessage).toHaveBeenCalledWith('openErpScreen', { id: 'erp-integration', erp: 'demo-erp' });
         expect(getClient().postMessage).not.toHaveBeenCalledWith('openLiveSite', expect.anything());
     });
 
@@ -97,7 +97,7 @@ describe('IntegrationsGrid — the system card verbs', () => {
 
         await user.click(within(panel).getByRole('link', { name: 'Open Nordwind' }));
 
-        expect(getClient().postMessage).toHaveBeenCalledWith('openErpScreen', { id: 'erp-integration' });
+        expect(getClient().postMessage).toHaveBeenCalledWith('openErpScreen', { id: 'erp-integration', erp: 'demo-erp' });
     });
 
     it("Redeploy posts the system's OWN id", async () => {
@@ -120,6 +120,8 @@ describe('IntegrationsGrid — the system card verbs', () => {
         expect(screen.queryByRole('dialog', { name: /reset erp records/i })).toBeNull();
         expect(getClient().postMessage).toHaveBeenCalledWith('loadErpDemoData', {
             id: 'erp-integration',
+            // This ERP, by its own id: an integration can serve several (AB-16).
+            erp: 'demo-erp',
             progress: 'modal',
         });
     });

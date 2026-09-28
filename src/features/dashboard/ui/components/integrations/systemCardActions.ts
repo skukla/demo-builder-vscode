@@ -1,7 +1,8 @@
 /**
  * A system card's verbs that differ from an integration's: its screen, its fill from
  * Commerce and its reset all go through the integration that uses it — the extension
- * holds the screen key and runs the fill and the reset. Everything else (redeploy,
+ * holds the screen key and runs the fill and the reset. The screen and the fill name
+ * this ERP, since an integration can serve several (AB-16); the reset covers them all. Everything else (redeploy,
  * update, remove) is the ordinary keyed path with the system's own id.
  *
  * Split from `IntegrationsGrid.tsx` when the fill joined the reset (AB-26y).
@@ -16,8 +17,8 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 export interface SystemCardHandlers {
     /** Ask before a reset: the INTEGRATION's id and the ERP's name, for the dialog. */
     confirmReset: (pending: { id: string; erpName: string }) => void;
-    /** Fill the ERP now: the integration's id and the ERP's name, for the modal. */
-    loadErpData: (id: string, erpName: string) => void;
+    /** Fill this ERP now: the integration's id, the ERP's name for the modal, and the ERP's id. */
+    loadErpData: (id: string, erpName: string, erp: string) => void;
 }
 
 /**
@@ -35,11 +36,11 @@ export function handleSystemAction(
 ): boolean {
     const integrationId = model.linked?.cards[0]?.id;
     if (action === 'open') {
-        if (integrationId) webviewClient.postMessage('openErpScreen', { id: integrationId });
+        if (integrationId) webviewClient.postMessage('openErpScreen', { id: integrationId, erp: model.id });
         return true;
     }
     if (action === 'load-demo-data') {
-        if (integrationId) handlers.loadErpData(integrationId, model.name);
+        if (integrationId) handlers.loadErpData(integrationId, model.name, model.id);
         return true;
     }
     if (action === 'reset-records') {

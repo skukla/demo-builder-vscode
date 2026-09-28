@@ -5,8 +5,8 @@
  *   persisted rows of both halves of the pair. Read-only, headless-safe: no
  *   guards, no prompts; a missing sign-in is a typed AUTH_REQUIRED.
  * - `resetErpRecords` — undo the ledgered Commerce writes (the integration's
- *   `erp/detach`), wipe the ERP (its `admin/wipe`), then fill it from Commerce
- *   as it stands (`fillErpForProject`, AB-26y). Guards → progress → the calls. Commerce orders keep nothing of the
+ *   `erp/detach`), wipe every ERP it serves (each one's `admin/wipe`), then fill
+ *   each from Commerce as it stands (`fillErpForProject`, AB-26y). Guards → progress → the calls. Commerce orders keep nothing of the
  *   ERP's after it; the ERP's order numbers continue where they were.
  * - `openErpScreen` — open the ERP's own screen in a private browser window,
  *   with the key it was deployed with (`systemScreen.ts`). The key is added
@@ -55,8 +55,20 @@ interface ErpCall {
     id: string;
     project: Project;
     integration: AppBuilderComponentState;
-    erp?: AppBuilderComponentState & { id: string };
+    /** The ERP named in the call, else the integration's first. */
+    erp?: ErpRow;
+    /** Every ERP the integration serves, in link order (AB-16). */
+    erps: ErpRow[];
     auth: AppManagementAuth;
+}
+
+type ErpRow = AppBuilderComponentState & { id: string };
+
+/** What an ERP verb is sent: the integration's id, and which of its ERPs when it serves several. */
+export interface ErpCallPayload {
+    id?: string;
+    /** An ERP's component id (`demo-erp-2`); absent = the integration's first. */
+    erp?: string;
 }
 
 /**
@@ -68,7 +80,7 @@ interface ErpCall {
  */
 export async function openErpCall(
     context: HandlerContext,
-    payload: { id?: string } | undefined,
+    payload: ErpCallPayload | undefined,
     needsAuthFor: string,
 ): Promise<ErpCall | { error: HandlerResponse }> {
     const target = await resolveComponentTarget(context, payload?.id);
@@ -86,14 +98,23 @@ export async function openErpCall(
     if (!auth) {
         return { error: { success: false, error: `Adobe sign-in required to ${needsAuthFor}.`, code: ErrorCode.AUTH_REQUIRED } };
     }
-    const erpId = erpOf(project, id);
-    const erpState = erpId ? getAppBuilderComponent(project, erpId) : undefined;
-    return { id, project, integration, auth, erp: erpId && erpState ? { id: erpId, ...erpState } : undefined };
+    const erps = erpsOf(project, id);
+    const named = payload?.erp?.trim();
+    const erp = named ? erps.find((row) => row.id === named) : erps[0];
+    if (named && !erp) {
+        const listed = erps.map((row) => row.id).join(', ') || 'none';
+        const error = `"${integration.name ?? id}" serves no ERP "${named}" (its ERPs: ${listed}).`;
+        return { error: { success: false, error, code: ErrorCode.CONFIG_INVALID } };
+    }
+    return { id, project, integration, auth, erp, erps };
 }
 
-/** The ERP this integration uses in the project (the first, while there is one per integration). */
-function erpOf(project: Project, integrationId: string): string | undefined {
-    return systemsUsedBy(project, integrationId, getAppBuilderComponentCatalog())[0];
+/** The ERPs this integration serves in the project, in link order: its own first, then any added (AB-16). */
+function erpsOf(project: Project, integrationId: string): ErpRow[] {
+    return systemsUsedBy(project, integrationId, getAppBuilderComponentCatalog()).flatMap((erpId) => {
+        const state = getAppBuilderComponent(project, erpId);
+        return state ? [{ id: erpId, ...state }] : [];
+    });
 }
 
 /** The ERP row as an agent or the flyout reads it: name, status, its screen's URL. */
@@ -116,6 +137,7 @@ export const handleGetErpStatus: MessageHandler<{ id?: string }> = async (contex
                 id: call.id,
                 integration: { name: call.integration.name ?? call.id, status: call.integration.status },
                 erp: shapeErpRow(call.erp),
+                erps: call.erps.map(shapeErpRow),
                 live: status,
             },
         };
@@ -133,18 +155,18 @@ export const handleGetErpStatus: MessageHandler<{ id?: string }> = async (contex
  * modal like every other card action; it was still opening a notification of its
  * own (owner, 2026-09-20).
  */
-/** What a reset did: the integration's Commerce writes undone, the ERP wiped, the ERP filled again. */
+/** What a reset did: the integration's Commerce writes undone, then each ERP wiped and filled again. */
 interface ErpResetReport {
     undone: ErpDetachReport;
-    wiped: unknown;
-    loaded: ErpFillResult;
+    erps: Array<{ id: string; name: string; wiped: unknown; loaded: ErpFillResult }>;
 }
 
 /**
- * The reset's three steps, in order, none resumable part-way: the integration undoes what it
- * wrote into Commerce (its `erp/detach`), the ERP deletes its records (its own `admin/wipe`),
- * and Demo Builder fills it from Commerce again (`fillErpForProject`, AB-26y). Throws in the
- * words of the step that stopped.
+ * The reset's steps, in order, none resumable part-way: the integration undoes what it wrote
+ * into Commerce for every ERP (its `erp/detach`), then each ERP it serves deletes its records
+ * (its own `admin/wipe`) and Demo Builder fills it from Commerce again (`fillErpForProject`,
+ * AB-26y). Every ERP, because the undo is the integration's and covers them all (AB-16).
+ * Throws in the words of the step that stopped.
  */
 async function resetErp(
     context: HandlerContext,
@@ -152,23 +174,30 @@ async function resetErp(
     report: (stage: string, step?: string) => void,
 ): Promise<ErpResetReport> {
     const stage = OPERATION_STAGES.resettingErpRecords.label;
-    report(stage, "Undoing the ERP's writes in Commerce");
+    report(stage, "Undoing the ERPs' writes in Commerce");
     const undone = await new ErpIntegrationClient(call.integration.deployedUrls, call.auth).detach();
-    report(stage, 'Wiping the ERP');
-    const wipe = await callErpApi(call.erp?.deployedUrls, call.auth, 'POST', 'admin/wipe', undefined);
-    if ('refusal' in wipe) throw new Error(wipe.refusal);
-    if (!wipe.ok) throw new Error(`the ERP's wipe answered ${wipe.status}: ${wipe.detail}`);
     if (!context.authManager) throw new Error('Adobe sign-in required.');
-    const filled = await fillErpForProject(call.project, call.id, {
-        authManager: context.authManager,
-        getAuth: async () => call.auth,
-        onProgress: (step) => report(OPERATION_STAGES.loadingErpDemoData.label, step),
-    });
-    if (filled.status === 'failed') throw new Error(`the ERP was wiped but not filled again: ${filled.detail}`);
-    return { undone, wiped: (wipe.body as { wiped?: unknown }).wiped, loaded: filled.result };
+    const authManager = context.authManager;
+    const erps: ErpResetReport['erps'] = [];
+    for (const erp of call.erps) {
+        const name = erp.name ?? erp.id;
+        report(stage, `Wiping ${name}`);
+        const wipe = await callErpApi(erp.deployedUrls, call.auth, 'POST', 'admin/wipe', undefined);
+        if ('refusal' in wipe) throw new Error(`${name}: ${wipe.refusal}`);
+        if (!wipe.ok) throw new Error(`${name}'s wipe answered ${wipe.status}: ${wipe.detail}`);
+        const filled = await fillErpForProject(
+            call.project,
+            call.id,
+            { authManager, getAuth: async () => call.auth, onProgress: (step) => report(OPERATION_STAGES.loadingErpDemoData.label, `${name}: ${step}`) },
+            erp.id,
+        );
+        if (filled.status === 'failed') throw new Error(`${name} was wiped but not filled again: ${filled.detail}`);
+        erps.push({ id: erp.id, name, wiped: (wipe.body as { wiped?: unknown }).wiped, loaded: filled.result });
+    }
+    return { undone, erps };
 }
 
-export const handleResetErpRecords: MessageHandler<{ id?: string; progress?: 'modal' }> =
+export const handleResetErpRecords: MessageHandler<ErpCallPayload & { progress?: 'modal' }> =
     narrateOutcomeToModal(async (context, payload): Promise<HandlerResponse> => {
     const call = await openErpCall(context, payload, 'reset the ERP');
     if ('error' in call) return call.error;
@@ -177,7 +206,7 @@ export const handleResetErpRecords: MessageHandler<{ id?: string; progress?: 'mo
         return { success: false, error, code: ErrorCode.INVALID_OPERATION };
     }
 
-    const erpName = call.erp?.name ?? 'ERP';
+    const erpName = call.erps.length > 1 ? `${call.integration.name ?? call.id}'s ERPs` : (call.erp?.name ?? 'ERP');
     const result = await withOperationProgress(
         {
             id: call.id,
@@ -207,17 +236,19 @@ export const handleResetErpRecords: MessageHandler<{ id?: string; progress?: 'mo
  * Handle 'openErpScreen' — open the ERP bound to an integration at its own
  * screen. Answers with the screen's address WITHOUT the key.
  */
-export const handleOpenErpScreen: MessageHandler<{ id?: string }> = async (context, payload): Promise<HandlerResponse> => {
+export const handleOpenErpScreen: MessageHandler<ErpCallPayload> = async (context, payload): Promise<HandlerResponse> => {
     const target = await resolveComponentTarget(context, payload?.id);
     if (!target.ok) return target.error;
     const { id, project } = target;
-    const erpId = erpOf(project, id);
-    const erp = erpId ? getAppBuilderComponent(project, erpId) : undefined;
+    const erps = erpsOf(project, id);
+    const erp = payload?.erp ? erps.find((row) => row.id === payload.erp) : erps[0];
+    const erpId = erp?.id;
     // Under the ERP's OWN id: a second ERP (AB-23) is the catalog's ERP re-keyed, and
     // its screen key is stored under its id — the first ERP's key would be refused.
     const systemEntry = erpId ? catalogEntryFor(project, erpId, getAppBuilderComponentCatalog()) : undefined;
     if (!systemEntry || !erp) {
-        return { success: false, error: `"${id}" has no ERP in this project.`, code: ErrorCode.INVALID_OPERATION };
+        const which = payload?.erp ? ` "${payload.erp}"` : '';
+        return { success: false, error: `"${id}" has no ERP${which} in this project.`, code: ErrorCode.INVALID_OPERATION };
     }
     const name = erp.name ?? systemEntry.name;
     const screenUrl = deriveScreenUrl(systemEntry, erp.deployedUrls);
@@ -333,7 +364,7 @@ function shapeErpAnswer(body: unknown): unknown {
 /** Both ERP API verbs share this: the pair resolved, the route called, the answer shaped. */
 async function callErpRoute(
     context: HandlerContext,
-    payload: { id?: string; path?: string; body?: unknown } | undefined,
+    payload: (ErpCallPayload & { path?: string; body?: unknown }) | undefined,
     method: ImsCallMethod,
     verb: string,
 ): Promise<HandlerResponse> {
@@ -364,7 +395,7 @@ async function callErpRoute(
  * Handle 'readErpApi' — GET one of the ERP's own routes (partners, products, pricing,
  * orders, shipments, invoices, settings, health, search) as the ERP's screens read them.
  */
-export const handleReadErpApi: MessageHandler<{ id?: string; path?: string }> = (context, payload) =>
+export const handleReadErpApi: MessageHandler<ErpCallPayload & { path?: string }> = (context, payload) =>
     callErpRoute(context, payload, 'GET', 'read the ERP');
 
 /**
@@ -374,7 +405,7 @@ export const handleReadErpApi: MessageHandler<{ id?: string; path?: string }> = 
  * integration, which applies it to Commerce, so this is how the ERP → Commerce half is
  * driven from the agent surface.
  */
-export const handleWriteErpApi: MessageHandler<{ id?: string; method?: string; path?: string; body?: unknown }> = (
+export const handleWriteErpApi: MessageHandler<ErpCallPayload & { method?: string; path?: string; body?: unknown }> = (
     context,
     payload,
 ) => {

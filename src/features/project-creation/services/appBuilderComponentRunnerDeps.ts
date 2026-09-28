@@ -59,7 +59,8 @@ import {
     readMeshEnvVarsFromFile,
 } from '@/features/mesh/services/stalenessDetector';
 import { regenerateComponentEnvFile } from '@/features/project-creation/helpers/envFileGenerator';
-import { fillErpForProject } from '@/features/project-creation/services/erpFillForProject';
+import { fillEveryErp, summarizeFills } from '@/features/project-creation/services/erpFillForProject';
+import { unlistErp } from '@/features/project-creation/services/erpListSync';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';
 import type { ComponentRegistry } from '@/types/components';
@@ -92,7 +93,6 @@ export interface RunnerDepsContext {
     loadRegistry: () => Promise<ComponentRegistry>;
 }
 
-/** Wire the runner's deps to the real deploy tails + subscriber + republish. */
 /**
  * The UI-default toolchain-refresh consent: one notification, two buttons.
  * Callers with NO interactive surface (the MCP handlers when `context.panel`
@@ -205,9 +205,9 @@ export function buildDefaultRunnerDeps(
                 appVersion: options?.appVersion,
                 since: options?.since,
             }),
-        // Demo Builder fills the ERP from Commerce once the install stands (AB-26y).
-        fillSystem: (project, entry, onStep) =>
-            fillErpForProject(project, entry.id, { authManager: ctx.authManager, getAuth: authFor(project), onProgress: onStep }),
+        // Every ERP is filled once the install stands (AB-26y); an added one leaves the list first (AB-16).
+        fillSystem: async (project, entry, onProgress) => summarizeFills(await fillEveryErp(project, entry.id, { authManager: ctx.authManager, getAuth: authFor(project), onProgress })),
+        unlistSystem: async (project, integrationId, erpId) => unlistErp(project, integrationId, erpId, await authFor(project)()),
         readAppVersion: readAppManifestVersion,
         // Update: fast-forward the clone, then the same dependency install the
         // add path runs (ComponentManager, with the entry's Node version).

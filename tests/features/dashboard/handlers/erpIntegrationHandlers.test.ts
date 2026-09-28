@@ -150,6 +150,8 @@ describe('handleGetErpStatus', () => {
                 id: 'erp-integration',
                 integration: { name: 'Nordwind integration', status: 'deployed' },
                 erp: { id: 'demo-erp', name: 'Nordwind', status: 'deployed', url: ERP.url, lastDeployed: ERP.lastDeployed },
+                // Every ERP the integration serves (AB-16); one here.
+                erps: [{ id: 'demo-erp', name: 'Nordwind', status: 'deployed', url: ERP.url, lastDeployed: ERP.lastDeployed }],
                 live: LIVE,
             },
         });
@@ -197,7 +199,8 @@ describe('handleResetErpRecords', () => {
         expect(mockDetach).toHaveBeenCalledTimes(1);
         // The ERP's own wipe, at its own URLs, with the sign-in.
         expect(mockCallErpApi).toHaveBeenCalledWith(ERP_URLS, expect.objectContaining({ imsOrgId: 'ABC@AdobeOrg' }), 'POST', 'admin/wipe', undefined);
-        expect(mockFillErpForProject).toHaveBeenCalledWith(expect.any(Object), 'erp-integration', expect.any(Object));
+        // Each ERP by its own id: an integration can serve several (AB-16).
+        expect(mockFillErpForProject).toHaveBeenCalledWith(expect.any(Object), 'erp-integration', expect.any(Object), 'demo-erp');
         expect(result).toEqual({
             success: true,
             data: {
@@ -205,8 +208,9 @@ describe('handleResetErpRecords', () => {
                 erp: { id: 'demo-erp', name: 'Nordwind', status: 'deployed', url: ERP.url, lastDeployed: ERP.lastDeployed },
                 report: {
                     undone: { reverted: { reverted: 2, failed: [] }, orders: { cleared: 1, failed: [] } },
-                    wiped: { products: 40 },
-                    loaded: { partners: 3, products: 40, skipped: 0 },
+                    erps: [
+                        { id: 'demo-erp', name: 'Nordwind', wiped: { products: 40 }, loaded: { partners: 3, products: 40, skipped: 0 } },
+                    ],
                 },
             },
         });
@@ -234,7 +238,7 @@ describe('handleResetErpRecords', () => {
         const result = await handleResetErpRecords(mockContext, { id: 'erp-integration' });
         expect(result).toEqual({
             success: false,
-            error: "The ERP reset did not finish: the ERP's wipe answered 503: database unavailable",
+            error: "The ERP reset did not finish: Nordwind's wipe answered 503: database unavailable",
         });
         expect(mockFillErpForProject).not.toHaveBeenCalled();
     });
@@ -246,7 +250,7 @@ describe('handleResetErpRecords', () => {
         const result = await handleResetErpRecords(mockContext, { id: 'erp-integration' });
         expect(result).toEqual({
             success: false,
-            error: 'The ERP reset did not finish: the ERP was wiped but not filled again: Commerce answered 401 for products',
+            error: 'The ERP reset did not finish: Nordwind was wiped but not filled again: Commerce answered 401 for products',
         });
     });
 

@@ -77,6 +77,8 @@ describe('ACTION_DESCRIPTORS', () => {
     it('pins the exact confirm-gated set', () => {
         const gated = actionRows().filter((d) => d.confirm).map((d) => d.tool);
         expect(gated.sort()).toEqual([
+            // Makes an Adobe workspace and deploys a new ERP into it (AB-16).
+            'add_erp',
             'delete_ai_prompt',
             'delete_mesh',
             // Deletes deployed Runtime code; a redeploy of an older version is the only undo.

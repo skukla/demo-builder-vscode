@@ -157,3 +157,82 @@ describe('removal follows the stored link', () => {
         expect(Object.keys(project.appBuilderComponents ?? {})).toEqual(['erp-integration', 'erp-a']);
     });
 });
+
+/*
+ * An ERP added from the integration's card (AB-16): `demo-erp-2`, made from the catalog's
+ * `demo-erp`, linked to `erp-integration` (whose own pair is `demo-erp`). It is removed on its
+ * own, after the integration stops listing it; the integration's removal still takes it.
+ */
+describe('an ERP added from the card', () => {
+    function withAddedErp() {
+        return createProject({
+            componentInstances: {
+                'erp-integration': instance('erp-integration'),
+                'demo-erp': instance('demo-erp'),
+                'demo-erp-2': instance('demo-erp-2'),
+            },
+            appBuilderComponents: {
+                'erp-integration': state('integration', { systems: ['demo-erp', 'demo-erp-2'], name: 'Acme ERP Integration' }),
+                'demo-erp': state('system', { usedBy: 'erp-integration' }),
+                'demo-erp-2': state('system', { usedBy: 'erp-integration', catalogId: 'demo-erp', name: 'Brand B ERP' }),
+            },
+        });
+    }
+
+    it('goes alone, and only after the integration stopped listing it', async () => {
+        const project = withAddedErp();
+        const order: string[] = [];
+        const unlistSystem = jest.fn(async () => {
+            order.push('unlist');
+            return undefined;
+        });
+        const deps = createDeps({ catalog: [SYSTEM, INTEGRATION], unlistSystem });
+        const execute = deps.commandManager.execute.getMockImplementation();
+        deps.commandManager.execute.mockImplementation(async (command, options) => {
+            if (command === 'aio app undeploy') order.push('undeploy');
+            return execute!(command, options);
+        });
+
+        const result = await removeAppBuilderComponent(project, 'demo-erp-2', deps);
+
+        expect(result.success).toBe(true);
+        expect(unlistSystem).toHaveBeenCalledWith(project, 'erp-integration', 'demo-erp-2');
+        expect(order).toEqual(['unlist', 'undeploy']);
+        expect(Object.keys(project.appBuilderComponents ?? {})).toEqual(['erp-integration', 'demo-erp']);
+    });
+
+    it('removes nothing when the integration could not be told, and says so', async () => {
+        const project = withAddedErp();
+        const deps = createDeps({ catalog: [SYSTEM, INTEGRATION], unlistSystem: jest.fn(async () => 'Adobe sign-in required.') });
+
+        const result = await removeAppBuilderComponent(project, 'demo-erp-2', deps);
+
+        expect(result).toEqual({
+            success: false,
+            error: 'Acme ERP Integration still lists Brand B ERP (Adobe sign-in required). Nothing was removed; Remove anyway goes on without it.',
+        });
+        expect(Object.keys(project.appBuilderComponents ?? {})).toEqual(['erp-integration', 'demo-erp', 'demo-erp-2']);
+    });
+
+    it('Remove anyway goes on without the list', async () => {
+        const project = withAddedErp();
+        const deps = createDeps({ catalog: [SYSTEM, INTEGRATION], unlistSystem: jest.fn(async () => 'Adobe sign-in required.') });
+
+        const result = await removeAppBuilderComponent(project, 'demo-erp-2', deps, { force: true });
+
+        expect(result.success).toBe(true);
+        expect(project.appBuilderComponents).not.toHaveProperty('demo-erp-2');
+    });
+
+    it("the integration's removal takes every ERP, without unlisting any", async () => {
+        const project = withAddedErp();
+        const unlistSystem = jest.fn(async () => undefined);
+        const deps = createDeps({ catalog: [SYSTEM, INTEGRATION], unlistSystem });
+
+        const result = await removeAppBuilderComponent(project, 'erp-integration', deps);
+
+        expect(result.success).toBe(true);
+        expect(project.appBuilderComponents).toStrictEqual({});
+        expect(unlistSystem).not.toHaveBeenCalled();
+    });
+});

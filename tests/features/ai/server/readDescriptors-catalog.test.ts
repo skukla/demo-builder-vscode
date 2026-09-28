@@ -81,7 +81,7 @@ const CATALOG: Row[] = [
         map: dashboardHandlers,
         type: 'readErpApi',
         needsAuth: false,
-        args: ['id', 'path'],
+        args: ['id', 'erp', 'path'],
     },
     {
         tool: 'get_erp_order_trace',

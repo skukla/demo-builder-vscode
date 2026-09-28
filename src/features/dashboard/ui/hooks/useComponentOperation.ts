@@ -87,8 +87,10 @@ export interface ComponentOperationControls extends OperationRunnerControls {
     started: (id: string, name: string, payload?: Record<string, unknown>) => void;
     /** Run the ERP reset the card's confirmation dialog just agreed to. */
     resetErp: (id: string, erpName: string) => void;
-    /** Fill the ERP from Commerce; `id` is the integration it runs through. */
-    loadErpData: (id: string, erpName: string) => void;
+    /** Fill an ERP from Commerce; `id` is the integration it runs through, `erp` which of its ERPs. */
+    loadErpData: (id: string, erpName: string, erp?: string) => void;
+    /** Add another ERP to the integration `id`, named `erpName` (AB-16). */
+    addErp: (id: string, erpName: string) => void;
 }
 
 /** The integrations screen's operation controls. */
@@ -129,11 +131,12 @@ export function useComponentOperation(): ComponentOperationControls {
 
     /** The ERP fill: through the integration's id, like the reset, with no confirm (it removes nothing). */
     const loadErpData = useCallback(
-        (id: string, erpName: string): void => {
+        (id: string, erpName: string, erp?: string): void => {
             start({
                 id,
                 name: erpName,
                 message: 'loadErpDemoData',
+                ...(erp ? { payload: { erp } } : {}),
                 title: `Loading demo data into ${erpName}`,
                 failureTitle: `Couldn't load demo data into ${erpName}`,
                 successTitle: `Demo data loaded into ${erpName}`,
@@ -171,8 +174,27 @@ export function useComponentOperation(): ComponentOperationControls {
         [show],
     );
 
+    /**
+     * Add another ERP (AB-16): keyed by the INTEGRATION, whose card asked, because the new
+     * ERP's id is chosen by the extension.
+     */
+    const addErp = useCallback(
+        (id: string, erpName: string): void => {
+            start({
+                id,
+                name: erpName,
+                message: 'addErp',
+                payload: { name: erpName },
+                title: `Adding ${erpName}`,
+                failureTitle: `Couldn't add ${erpName}`,
+                successTitle: `${erpName} added`,
+            });
+        },
+        [start],
+    );
+
     return useMemo(
-        () => ({ ...runner, run, started, resetErp, loadErpData }),
-        [runner, run, started, resetErp, loadErpData],
+        () => ({ ...runner, run, started, resetErp, loadErpData, addErp }),
+        [runner, run, started, resetErp, loadErpData, addErp],
     );
 }

@@ -89,6 +89,7 @@ import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { explainAdobeAccessFailure } from '@/features/authentication/services/authenticationErrorFormatter';
 import {
     integrationUsing,
+    isAddedSystem,
     linkBroughtSystem,
     pairedInstanceId,
     systemsUsedBy,
@@ -301,6 +302,12 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
      * setup, so Demo Builder does it rather than the integration (AB-26y). Never fails
      * the deploy. Optional: deploy-only paths and bare tests never need it.
      */
+    /**
+     * Take a system added from its integration's card out of the integration's list
+     * (`syncErpList`, AB-16) before it is removed. Answers why it could not, or undefined.
+     * Optional: bare tests and integrations that list nothing never need it.
+     */
+    unlistSystem?: (project: Project, integrationId: string, systemId: string) => Promise<string | undefined>;
     fillSystem?: (
         project: Project,
         entry: AppBuilderComponentCatalogEntry,
@@ -1336,10 +1343,14 @@ export async function removeAppBuilderComponent(
     // A linked system goes with its integration, whichever card asked (decision
     // 2): remove the integration, which takes its systems after it. Once the
     // integration's record is gone the link no longer resolves, so this cannot loop.
+    // An ERP added from the integration's card goes on its own (AB-16), once the
+    // integration no longer lists it.
     const consumerId = integrationUsing(project, id, deps.catalog);
-    if (consumerId) {
+    if (consumerId && !isAddedSystem(project, id, consumerId)) {
         return removeAppBuilderComponent(project, consumerId, deps, options);
     }
+    const stillListed = consumerId ? await unlistFirst(project, consumerId, id, state, deps, options) : undefined;
+    if (stillListed && !options.force) return { success: false, error: stillListed };
     // Read before the record goes: afterwards nothing says which systems it used.
     const systems = state.kind === 'integration' ? systemsUsedBy(project, id, deps.catalog) : [];
     // Same reason: once the records are cleared, nothing says which workspaces these
@@ -1393,6 +1404,30 @@ export async function removeAppBuilderComponent(
         ]),
         ...withDeleted([...released.deleted, ...after.workspacesDeleted]),
     };
+}
+
+/**
+ * Take an added system out of its integration's list before anything of it is removed, so
+ * the integration never routes to a system that is gone. Answers why it could not, in words
+ * that say nothing was removed; Remove anyway goes on regardless.
+ */
+async function unlistFirst(
+    project: Project,
+    integrationId: string,
+    id: string,
+    state: AppBuilderComponentState,
+    deps: AppBuilderComponentRunnerDeps,
+    options: RemoveOptions,
+): Promise<string | undefined> {
+    if (!deps.unlistSystem) return undefined;
+    deps.onProgress?.(OPERATION_STAGES.removing.label, 'Taking it off the integration\'s list');
+    const reason = await deps.unlistSystem(project, integrationId, id);
+    if (!reason) return undefined;
+    const name = shownNameOf(project, id, state);
+    const integration = project.appBuilderComponents?.[integrationId]?.name ?? integrationId;
+    deps.logger.warn(`[AppBuilderComponent Runner] ${id} not taken off ${integrationId}'s list: ${reason}`);
+    const detail = `${integration} still lists ${name} (${reason.replace(/\.$/u, '')})`;
+    return options.force ? undefined : `${detail}. Nothing was removed; Remove anyway goes on without it.`;
 }
 
 /**

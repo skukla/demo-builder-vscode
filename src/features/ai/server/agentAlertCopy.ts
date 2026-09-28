@@ -232,6 +232,13 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         // The deployment could be redeployed, but the local files are deleted.
         sessionGrant: false,
     },
+    add_erp: {
+        action: 'Add another ERP',
+        consequence:
+            "Creates an Adobe workspace for a new ERP, deploys it there, adds it to the ERP integration's list and fills it from Commerce.",
+        target: ['name'],
+        sessionGrant: false,
+    },
     load_erp_demo_data: {
         action: 'Load demo data into the ERP',
         consequence:

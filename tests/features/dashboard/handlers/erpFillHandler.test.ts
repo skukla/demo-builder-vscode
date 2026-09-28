@@ -21,9 +21,14 @@ jest.mock('@/features/app-builder/services/erpIntegrationClient', () => ({
     ...jest.requireActual('@/features/app-builder/services/erpIntegrationClient'),
     callErpApi: (...args: unknown[]) => mockCallErpApi(...args),
     ErpIntegrationClient: class {
-        resolvedSettings = (codes: string[]) => mockResolvedSettings(codes);
+        resolvedSettings = (codes: string[], erp?: string) => mockResolvedSettings(codes, erp);
+        keepsKeyMap = () => true;
+        readKeyMap = () => mockReadKeyMap();
+        replaceKeyMap = (entries: unknown) => mockReplaceKeyMap(entries);
     },
 }));
+const mockReadKeyMap = jest.fn();
+const mockReplaceKeyMap = jest.fn();
 
 const mockFillErp = jest.fn();
 jest.mock('@/features/app-builder/services/erpFill', () => ({
@@ -38,7 +43,14 @@ jest.mock('@/features/ai/server/commerceRestClient', () => ({
 }));
 
 jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
-    getAppBuilderComponentCatalog: jest.fn(() => [{ id: 'demo-erp', kind: 'system', boundTo: 'erp-integration' }]),
+    getAppBuilderComponentCatalog: jest.fn(() => [
+        {
+            id: 'demo-erp',
+            kind: 'system',
+            boundTo: 'erp-integration',
+            listedAs: { envVar: 'ERP_ID', firstId: 'erp', adapter: 'demo-erp' },
+        },
+    ]),
     getAppBuilderComponentEntry: jest.fn(),
     buildCustomIntegrationEntry: jest.fn(),
     entryFitsProjectAxes: jest.fn().mockReturnValue(true),
@@ -165,7 +177,8 @@ describe('handleLoadErpDemoData', () => {
         await expect(handedDeps().get('store/websites')).resolves.toStrictEqual([{ id: 1, code: 'bodea', name: 'Bodea' }]);
         expect(mockRequestRest).toHaveBeenCalledWith('GET', TARGET, 'store/websites', undefined, expect.any(Function));
         await handedDeps().settings(['bodea']);
-        expect(mockResolvedSettings).toHaveBeenCalledWith(['bodea']);
+        // The integration's own ERP, by its list id (AB-16).
+        expect(mockResolvedSettings).toHaveBeenCalledWith(['bodea'], 'erp');
     });
 
     it('hands the fill a Commerce read that carries the status when Commerce refuses', async () => {
@@ -187,7 +200,7 @@ describe('handleLoadErpDemoData', () => {
         mockResolveRestTarget.mockResolvedValue({ refusal: 'Error: Adobe sign-in required.' });
         const { mockContext } = setup();
         const result = await handleLoadErpDemoData(mockContext, { id: 'erp-integration' });
-        expect(result).toStrictEqual({ success: false, error: 'Loading demo data did not finish: Adobe sign-in required.' });
+        expect(result).toStrictEqual({ success: false, error: 'Loading demo data into Northwind ERP did not finish: Adobe sign-in required.' });
         expect(mockFillErp).not.toHaveBeenCalled();
     });
 
@@ -195,6 +208,80 @@ describe('handleLoadErpDemoData', () => {
         mockFillErp.mockRejectedValue(new Error('Commerce answered 401 for products'));
         const { mockContext } = setup();
         const result = await handleLoadErpDemoData(mockContext, { id: 'erp-integration' });
-        expect(result).toStrictEqual({ success: false, error: 'Loading demo data did not finish: Commerce answered 401 for products' });
+        expect(result).toStrictEqual({ success: false, error: 'Loading demo data into Northwind ERP did not finish: Commerce answered 401 for products' });
+    });
+});
+
+/*
+ * Several ERPs (AB-16): an ERP added from the integration's card (`demo-erp-2`, linked to it).
+ * Load demo data on the integration fills every ERP; on one ERP's card, only that one. Each
+ * fill reads its own ERP's settings and replaces only its own rows in the key map.
+ */
+describe('handleLoadErpDemoData — several ERPs', () => {
+    function twoErps(): Partial<Project> {
+        const base = pairProject();
+        const components = base.appBuilderComponents!;
+        return {
+            ...base,
+            appBuilderComponents: {
+                'erp-integration': { ...components['erp-integration'], systems: ['demo-erp', 'demo-erp-2'] },
+                'demo-erp': { ...components['demo-erp'], usedBy: 'erp-integration' },
+                'demo-erp-2': {
+                    ...components['demo-erp'],
+                    name: 'Brand B ERP',
+                    catalogId: 'demo-erp',
+                    usedBy: 'erp-integration',
+                    deployedUrls: { 'runtime/demo-erp-2/admin': 'https://ns.adobeioruntime.net/api/v1/web/demo-erp-2/admin' },
+                },
+            },
+        };
+    }
+
+    it('fills every ERP the integration serves, each with its own settings', async () => {
+        mockResolvedSettings.mockResolvedValue({ default: {}, websites: {} });
+        const { mockContext } = setup(twoErps());
+
+        const result = await handleLoadErpDemoData(mockContext, { id: 'erp-integration' });
+
+        expect(mockFillErp).toHaveBeenCalledTimes(2);
+        await (mockFillErp.mock.calls[1][0] as ErpFillDeps).settings(['bodea']);
+        expect(mockResolvedSettings).toHaveBeenCalledWith(['bodea'], 'demo-erp-2');
+        expect(result).toMatchObject({
+            success: true,
+            data: {
+                loaded: [
+                    { erp: 'demo-erp', name: 'Northwind ERP' },
+                    { erp: 'demo-erp-2', name: 'Brand B ERP' },
+                ],
+            },
+        });
+    });
+
+    it('fills only the ERP its card names', async () => {
+        const { mockContext } = setup(twoErps());
+
+        await handleLoadErpDemoData(mockContext, { id: 'erp-integration', erp: 'demo-erp-2' });
+
+        expect(mockFillErp).toHaveBeenCalledTimes(1);
+    });
+
+    it("replaces only that ERP's rows in the key map the integration holds", async () => {
+        const first = { kind: 'customer', commerce: '1', erp: 'C1' };
+        mockReadKeyMap.mockResolvedValue([first, { kind: 'customer', commerce: '1', erp: 'OLD', erpId: 'demo-erp-2' }]);
+        const { mockContext } = setup(twoErps());
+        await handleLoadErpDemoData(mockContext, { id: 'erp-integration', erp: 'demo-erp-2' });
+
+        await handedDeps().saveKeyMap([{ kind: 'customer', commerce: '1', erp: 'B1' }]);
+
+        expect(mockReplaceKeyMap).toHaveBeenCalledWith([first, { kind: 'customer', commerce: '1', erp: 'B1', erpId: 'demo-erp-2' }]);
+    });
+
+    it('refuses an ERP the integration does not serve', async () => {
+        const { mockContext } = setup(twoErps());
+
+        const result = await handleLoadErpDemoData(mockContext, { id: 'erp-integration', erp: 'demo-erp-9' });
+
+        expect(result).toMatchObject({ success: false, code: ErrorCode.CONFIG_INVALID });
+        expect(mockFillErp).not.toHaveBeenCalled();
     });
 });
