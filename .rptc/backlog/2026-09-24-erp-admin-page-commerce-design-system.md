@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: med
-status: backlog
+status: active
 ---
 
 # The ERP integration's Commerce Admin page uses the Commerce back-office design system
@@ -38,3 +38,7 @@ fingerprints alone do not close this; the owner looks.
 ## Related
 
 AB-26 (the ERP programme), AB-26m (the Mapping tab handoff), AB-26u (the walk-through).
+
+## Shipped so far
+
+- 2026-09-28  2026-09-28 owner approved static mockups of the redesigned Admin page (integration branch loop/admin-redesign-mockups, 7cf1f78: Overview, Activity, Settings in the native Admin look; every setting and record kind read from the code; American English; ERP and website as dropdowns). Build started on loop/admin-redesign, closing: confirm status as a dropdown, company names in Activity, company search by name, the ERP on Commerce-made changes, American wording. Deferred: recording product/company changes sent from Commerce; per-ERP split of today's counts. Cosmetic feedback comes after, on the real page.
