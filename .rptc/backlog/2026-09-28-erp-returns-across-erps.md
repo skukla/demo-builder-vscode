@@ -27,3 +27,7 @@ credit memo per ERP. A refusing ERP's piece stays open with Re-send.
 - No event for a saved or authorised return has been found.
 - A credit memo cannot be deleted, so a demo reset cannot undo one: a reversibility finding.
 - The owner and client questions listed in the design.
+
+## Shipped so far
+
+- 2026-09-28  2026-09-28 design r1 APPROVED by the owner (returns-design.md, 'r1: the integrated flow'): the owning ERP's policy authorizes or denies lines, the integration moves the return's status, a carrier label on authorization, shipping refunded by rule, credit memo per ERP. Next: live tests R-T1 to R-T7 on Bodea, then slices R1-R6.
