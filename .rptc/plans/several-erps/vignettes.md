@@ -148,3 +148,38 @@ also have its own website, with its own cart and checkout. Adobe has no built-in
   in front of Commerce, is an open question for the client.
 - **Design:** §7 client questions.
 - **Today:** not applicable.
+
+## 11. Where an order line goes, and who books it
+
+Brings together the website, the owning-ERP attribute, the per-website settings, and the sales
+organisation per website per ERP.
+
+- **Situation:** the same cabinet (brand Safe-Store, `erp_owner` = ERP-A) is ordered twice: once
+  on the North America website, once on a stand-alone Safe-Store website. A sign (brand SignCo,
+  `erp_owner` = ERP-B) is in the North America order too.
+- **Step 1, the website:** each order belongs to the website it was placed on. The website sets
+  the cart and checkout, the currency and prices, and which of the integration's settings apply
+  (App Management settings per website: send orders, hold while offline, pricing on or off).
+- **Step 2, the owning ERP:** each line goes to the ERP its product's `erp_owner` names, the
+  same on every website. The cabinet lines go to ERP-A; the sign line to ERP-B. `brand` is not
+  used.
+- **Step 3, the sales organisation:** each ERP has its own settings per website (on its entry in
+  the integration's ERP list): "orders from website X are booked under sales organisation Y". So:
+
+  | Order line | Website | ERP (from `erp_owner`) | Booked under (ERP's setting for that website) |
+  |---|---|---|---|
+  | Cabinet | North America | ERP-A | ERP-A's "1000 · Online US" |
+  | Sign | North America | ERP-B | ERP-B's "2100 · Web" |
+  | Cabinet | Safe-Store site | ERP-A | ERP-A's "1100 · Safe-Store direct" |
+
+- **Buyer sees:** on North America, one order with two brands; on the Safe-Store site, a
+  Safe-Store-only order. Neither sees ERPs or sales organisations.
+- **Staff see:** in each ERP, the order under the right sales organisation, with that unit's
+  numbering, prices and terms; in Commerce, one order per checkout with each ERP's part.
+- **Why it matters:** adding a website is a setting per ERP, not a new integration; adding an
+  ERP is an adapter and an entry, not a new website.
+- **Design:** "Brand, business unit, ERP, sales organisation"; §2 per-ERP settings; §3.2 product
+  and its owner.
+- **Today:** sales organisation per website is built and proven for one ERP (story 2 of the setup
+  guide); per ERP per website is built for several ERPs, not yet live. Provisional: how the
+  client's ERPs actually book web orders (company, unit, region) is a client question.
