@@ -39,8 +39,9 @@ this section and the r0 text below differ, this section wins.
 
 **What the mock ERP gains beyond r0 §5.1:** a return policy (a return window in days per ERP,
 and "returnable" per product), the check that accepts or refuses a return order line against it.
-Both are standard (SAP returns with approval; Business Central return reason codes and a
-return period); r0 had left return windows out.
+Return reason codes are standard in both (§2). Whether SAP or Business Central enforce a
+return WINDOW out of the box was not read from their documentation: verify before the mock ERP
+models it (the owner's rule: only standard ERP features). r0 had left return windows out.
 
 **Live tests added to §6:** R-T2 now decides the status writes (it was optional). R-T6: are the
 built-in carrier connections, "Enabled for RMA", available on Adobe Commerce as a Cloud Service?
