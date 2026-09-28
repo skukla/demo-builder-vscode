@@ -239,7 +239,18 @@ for a mixed order; whether any SKU is sold by two ERPs.
    units then succeeded (Processing, $65 invoiced, $55 due). Per-ERP partial invoices live in
    Commerce for PO-paid orders (the two Adobe pages' conflict resolved for this method).
 
-Left on Bodea: orders 3000000014 (Complete) and 3000000015 (Processing, part invoiced), both also
+4. **Payment on Account** (the B2B payment against the company's credit line; owner asked
+   whether (3) was representative, since B2B buyers usually pay this way). With it switched on
+   for the Bodea website, a company buyer's order paid on account (3000000016) was NOT invoiced at
+   checkout (Pending, no invoice, $120 due); the company's credit was charged at placement
+   (balance -$120); a partial invoice for 1 of 2 units then succeeded (Processing, $65 invoiced,
+   $55 due) and did not move the credit balance again. Per-ERP partial invoices live in Commerce
+   for on-account orders too. Not tested: the B2B purchase-order APPROVAL workflow (it needs the
+   buyer's own signed-in session); once approved it becomes an ordinary order paid by its method,
+   so (3) and (4) cover the invoicing question. Switching Payment on Account on is a setup step
+   (integration `583825e`).
+
+Left on Bodea: orders 3000000014 (Complete), 3000000015 and 3000000016 (Processing, part invoiced; 16 charged $120 to Kukla Studios' credit), both also
 sent to the Northwind ERP by the deployed integration; test attribute `erp_test_number` on 14.
 The test buyers were deleted; the payment setting is back to its default.
 
