@@ -144,7 +144,7 @@ that creates something ships its removal (the cleanup rule).
 | A | A4 shared catalogs and contracts | filed with measurements; Kukla Studios' catalog set up by hand as the model |
 | A | A5 sync validation baseline | D7 and D8 built; journeys not yet written |
 | A | A6 website scope | built and deployed ([[AB-36]], integration a2a13a8); the live tree holds every website; owner questions from the research still open |
-| B | B0 to B8 (one integration, a routing action) | B0 started 2026-09-27 |
+| B | B0 to B8 (one integration, a routing action) | B0 done 2026-09-27 (integration `21306ab`: router, contract, demo-erp and example adapters, ERP list; no behaviour change, 455 tests); B1 started |
 | C | C1 to C4, readability | after Phase B |
 
 ## 8. Decisions for the owner (recommendation first)

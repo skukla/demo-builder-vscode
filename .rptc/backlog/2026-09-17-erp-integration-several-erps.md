@@ -188,3 +188,4 @@ one partner to several, and that is AB-16's own work either way.
 - 2026-09-26  docs(research): how Commerce can hold two ERPs' credit for one company (`74809f59c`)
 - 2026-09-26  docs(rptc): one integration per ERP, and a simplified Admin page with settings apart from the mapping (`2c93afb1e`)
 - 2026-09-26  docs(rptc): one plan for the remaining ERP work, and the freeze after contracts (`b5c4f4b6e`)
+- 2026-09-28  Phase B0 built (integration 21306ab, loop branch): the code layout of design v1 — router, adapter contract, demo-erp and example adapters, the ERP list keyed by id; every existing test unchanged and passing (455).
