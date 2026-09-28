@@ -30,6 +30,15 @@ One integration app, one workspace, one Commerce app, one Admin page:
   2026-09-27);
 - the ERPs are separate systems, each with its own data, screen and look.
 
+**Code layout, as a customer would lay it out (owner, 2026-09-27):** a router folder that knows no
+ERP; `adapters/<kind>/` with one folder per kind of ERP, each implementing the written contract
+(one file stating "send this part" and "report this part's outcome"); an `adapters/example/`
+skeleton with both functions stubbed and commented, to show what adding a new kind of ERP takes;
+and a list of ERPs, one entry each: `id` (assigned when the ERP is added, unique, never changes;
+the value a product's owner attribute holds, and the key for parts, the key map and settings),
+`name` (the SC's label, fixed at creation, for people), `adapter` (the kind) and its connection.
+Demo Builder refuses a second ERP whose name is already used in the project.
+
 An adapter that must deploy on its own (another team, another release cycle) moves behind a pair
 of events without changing the router (research §Recommendation). **Demo:** at most two ERPs; a
 second demo ERP is a settings entry because every mock ERP runs the same code.
@@ -46,7 +55,7 @@ sandbox test before it is built on.
 |---|---|---|
 | Company (identity) | One Commerce company becomes a customer in every ERP the buyer deals with; Commerce is the master | Built for one ERP; the company event is not proven live |
 | Key map (company to ERP customer) | One pair **per ERP**: the map must record which ERP a pair belongs to | **Gap**: today one company may pair with one ERP customer only (`key-map.js` rejects a second) |
-| Company block | Each ERP has its own blocking level; Commerce has one active/blocked flag | **Gap**: one ERP unblocking can undo another ERP's block. Proposed rule: Commerce is blocked while ANY ERP blocks |
+| Company block | Each ERP has its own blocking level; Commerce has one active/blocked flag. **Decided (owner, 2026-09-27): each brand for itself.** An ERP's block holds only that ERP's part of an order; it never changes the Commerce company's flag, which stays a group decision made in Commerce. Fits a group of separate brands whose orders span brands; to confirm with the client (is there group-level credit management?) | **Gap**: today the integration copies an ERP's block onto the company flag; that write is to be removed and replaced by per-part holds |
 | Credit limit | Commerce's limit is the TOTAL across ERPs; each ERP's own limit, exposure and available credit in its own prefixed company custom attributes (decided 2026-09-26) | Built for one ERP (writes the limit); per-ERP attributes not built. **Test**: does REST `setCustomAttributes` replace the whole set? |
 | Credit exposure and balance | Each ERP counts only its own open orders and unpaid invoices; a hold on one ERP's exposure holds only its part | Built for one ERP; the payment leg (Commerce balance) is frozen (AB-26s) |
 | Payment terms | Each ERP keeps its own; never in Commerce | Nothing to do |
@@ -130,7 +139,7 @@ The tech-case session owns the deck and decides the edits.
 ## 6. Decisions for the owner
 
 1. ~~Lock~~: locked as v1 (owner, 2026-09-27).
-2. **A company's block across ERPs**: blocked in Commerce while any ERP blocks (recommended). Open: the owner asked for an explanation (2026-09-27).
+2. ~~Company block~~: each brand for itself (owner, 2026-09-27); see §3.1.
 3. ~~Variants across ERPs~~: answered 2026-09-27. Products do not cross ERPs (owner, from the
    walk-through; the tech case's transcripts agree for product types). To confirm with the client:
    (a) is any SKU stocked or sold by two ERPs, including after an acquisition; (b) can variants
@@ -151,3 +160,4 @@ for a mixed order; whether any SKU is sold by two ERPs.
 - 2026-09-27: v1 draft.
 - 2026-09-27: products do not cross ERPs (owner; client transcripts agree for product types), variants follow their product; cancel-after-invoice holds for staff (fix built).
 - 2026-09-27: LOCKED v1 by the owner. Returns come after the routing slices. The cancel fix went to the integration's main (`a76789a`).
+- 2026-09-27 (after lock): company block is each brand for itself; the code layout (router, one adapter folder per ERP kind, the written contract, an example adapter, the ERP list keyed by id) and unique ERP names in a project. Diagrams affected: any that show a company block, and the integration's internal structure.
