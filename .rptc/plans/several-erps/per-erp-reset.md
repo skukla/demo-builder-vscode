@@ -47,3 +47,19 @@ The integration's record of its writes (`src/lib/ledger.js`) keeps, per value, t
 Contoso on Bodea still holds 182 products from its first, whole-catalog fill (AB-16d). A
 per-ERP reset clears them without touching Northwind. A full reset also clears them, and needs
 nothing built.
+
+## Built (2026-09-28, loop)
+
+- Integration `loop/ab-16c-per-erp-detach` (`f73642a`, `368522c`, `adf14cc`; 768 tests): every
+  ledger write names its ERP; `erp/detach?erp=` undoes one ERP and answers `erp`; `erp/status`
+  answers `detachesPerErp: true`. An unlisted id is a 400.
+- Demo Builder `feature/erp-integration`: the ERP card and `reset_erp_records` (`erp`) reset one
+  ERP; an integration without `detachesPerErp` is refused before any undo.
+- Choices made while building:
+  - One ledger entry per value still keeps the FIRST `before`; its ERP is the latest writer.
+    Undoing the latest writer restores Commerce's original, not an older ERP's value.
+  - Company credit entries list their ERPs (`erpIds`); the attribute set written back is
+    Commerce's CURRENT set minus that ERP's attributes, so hand edits survive.
+- **Limit:** entries written before this change name no ERP and count as the first ERP's. So a
+  one-ERP reset of Contoso on Bodea will NOT revert its 182 old product writes until Contoso
+  writes them again; a full reset clears them.
