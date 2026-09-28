@@ -70,22 +70,27 @@ After A4, no new ERP feature is started until Phase B lands. These wait, status 
 
 A fix to something built is not growth and is not frozen.
 
-## 5. Phase B: one integration per ERP (rewritten 2026-09-26) — WITHDRAWN, to be rewritten around the routing action
+## 5. Phase B: one integration, several ERPs, a routing action (rewritten 2026-09-27)
 
-The first shape of this phase (one integration holding a list of ERPs, with a router) was
-dropped the same day in favour of what the owner asked for: each ERP with its own integration.
-The second pair is added from the ERP tile, as today. Each slice is TDD, runs the A5 journeys,
-and is proven live with Northwind ERP and a second ERP on Bodea.
+Built from the LOCKED design v1 (`design.md`); the design is the source, this is the order of
+work. Each slice is TDD, keeps every existing single-ERP journey green, runs in the
+pair-in-a-box harness, and is proven live on Bodea before the next starts. The integration's
+`main` stays what Bodea runs; slices land on the loop branch and reach `main` as a set.
 
 | # | Slice | What changes | Done when |
 |---|---|---|---|
-| B1 | **Each integration sends only its own lines** | An order is sent to an ERP with only the lines for products that ERP owns (the ownership setting that exists: product attribute, sources or all); an order with none of its products is not its business. Status, shipments and invoices coming back touch only those lines. | a mixed order becomes one ERP order in each ERP, each holding only its lines |
-| B2 | **Each ERP's number in its own order field** | Every integration writes its ERP's order number to its own custom order attribute on the Commerce order (Q-num, validated live first); `ext_order_id` is no longer written by two apps. | a mixed order shows both ERP numbers on the Commerce order page |
-| B3 | **Prices from each ERP's contracts** | A4's shared-catalog writes, made by each integration for the SKUs its ERP owns, into the company's one catalog. The cart price webhook is already gone by then, which removes the webhook collision between two pairs. | a company buying from both ERPs sees both contracts' prices |
-| B4 | **Companies and credit across two ERPs** | Every company is filled into each ERP as that ERP's own customer. Each ERP keeps its own limit and holds its own part of an order. Each integration writes its ERP's limit, exposure and available credit into its own prefixed company custom attributes (`POST V1/company/setCustomAttributes`; whether a set replaces the whole set is checked live first). Commerce's company credit limit is the TOTAL across the ERPs, recomputed from those attributes by whichever integration last changed one. Each integration's Admin page has a Credit section that edits its ERP's limit, writing through to the ERP (research: `.rptc/research/erp-company-credit-options/`). | a held part in one ERP leaves the other part flowing; Commerce's limit equals the sum of both ERPs' limits |
-| B5 | **The second pair, live** | Add a second ERP from the tile on Bodea; both install; both Admin pages work; removal of either follows the cleanup rule and leaves the other untouched. | two pairs installed and removed cleanly, in either order |
-| B6 | **Surfaces** | Each card, Admin page, history and order trace names its ERP; the walk-through ([[AB-26u]]) gains the two-ERP section. | the two-ERP demo path is walkable |
-| B7 | **Harness** | The pair-in-a-box harness runs two pairs against one fake Commerce. | the mixed-order journeys pass in the harness and live |
+| B0 | **The code layout** (no behaviour change) | A router folder that knows no ERP; `adapters/demo-erp/` implementing the written contract ("send this part", "report this part's outcome"); `adapters/example/` skeleton; the ERP list with ONE entry keyed by id. Today's order sender becomes the demo-erp adapter's "send this part" with the whole order as one part | every existing test and journey passes unchanged; the layout reads as design §2 describes |
+| B1 | **The router** | The routing action becomes the only subscriber to the order event: reads each line's owning ERP (the product attribute), splits the order into parts, stores them, and sends each part through its adapter, keyed by order and part. One ERP in the list: pass-through | a mixed order in the harness becomes one part per owning ERP, each sent once |
+| B2 | **Outcomes and the combined status** | Each part's outcome (sent, held, refused, failed) recorded by the router; the combined order status rule (design §3.3); ERP numbers in comments and the router's record; `ext_order_id` written only by the router | the harness shows the right status for every mix of part outcomes |
+| B3 | **Several ERPs in one integration** | The ERP list holds several entries; the key map is keyed by ERP and company; each ERP's inbound events are matched to its own part; per-ERP settings on the Admin page with a switcher | two harness ERPs each receive and report only their part |
+| B4 | **Shipments and invoices per part** | Each ERP ships and invoices only its own lines (`items[]`), invoice before shipment, one invoice at a time per order | a two-ERP order ends Complete with two shipments and two partial invoices |
+| B5 | **Blocks and credit per brand** | An ERP's block holds only its part (the company-flag write is removed); each ERP's limit, exposure and available credit in its own company attributes; Commerce's limit the total | a held part leaves the other flowing; the company can still order |
+| B6 | **Demo Builder adds a second ERP** | Adding an ERP to an existing integration: a new ERP system in its own workspace, a unique name, registered in the integration's ERP list; filling, reset and removal cover every ERP | two ERPs added, filled, reset and removed on Bodea, in either order |
+| B7 | **Admin surfaces** | The order-grid column and order-view button showing each part and its ERP; Re-send for a failed part; product delete and variant checks by owner | staff can see and re-send every part |
+| B8 | **Two ERPs live** | The mixed-order journeys on Bodea with two ERPs; the walk-through gains the two-ERP section ([[AB-26u]]) | the vignettes' "Today" lines can be updated to built |
+
+Returns come after B8 (owner, 2026-09-27). Contract prices in shared catalogs ([[AB-26z]]) stay
+Phase A's last feature; B3 makes them per ERP when they land.
 
 ## 5b. The integration's Admin page, simplified (owner, 2026-09-26)
 
@@ -139,7 +144,7 @@ that creates something ships its removal (the cleanup rule).
 | A | A4 shared catalogs and contracts | filed with measurements; Kukla Studios' catalog set up by hand as the model |
 | A | A5 sync validation baseline | D7 and D8 built; journeys not yet written |
 | A | A6 website scope | built and deployed ([[AB-36]], integration a2a13a8); the live tree holds every website; owner questions from the research still open |
-| B | B1 to B7 (one integration per ERP) | not started |
+| B | B0 to B8 (one integration, a routing action) | B0 started 2026-09-27 |
 | C | C1 to C4, readability | after Phase B |
 
 ## 8. Decisions for the owner (recommendation first)
