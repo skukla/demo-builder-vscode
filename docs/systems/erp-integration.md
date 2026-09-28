@@ -14,8 +14,10 @@ Adobe's Commerce integration starter kit. The design record is
   fills the ERP from the Commerce instance again. Commerce is the master the SC prepares in; the ERP adapts.
 - **Data flowing both ways.** An order placed on the storefront gets an ERP order number;
   marking it shipped, invoiced or cancelled in the ERP reaches the Commerce order. A price
-  or stock change in the ERP lands on the Commerce product. A company's credit limit or
-  block set in the ERP lands on the Commerce company. A contract price for a company
+  or stock change in the ERP lands on the Commerce product. A company's credit limit
+  set in the ERP lands on the Commerce company; a block set in the ERP holds that ERP's orders
+  of the company (On Hold, the reason in each order's history) and never switches the company
+  off: each ERP for itself (owner, 2026-09-28). A contract price for a company
   applies in that company's cart, with a discount ceiling.
 - **A screen inside the Commerce Admin** (Admin UI SDK), showing whether the ERP is
   reachable, counts of what it holds, and buttons to refresh partners, push records and
@@ -201,8 +203,9 @@ unless Commerce refused an upgrade.
 Add the tile to a project on a Commerce instance; the ERP screen lists the instance's
 products and companies. Place an order; it shows the ERP number. Ship it in the ERP; the
 Commerce order follows. Change a price and a stock figure in the ERP; the product follows.
-Add a contract price for a company; that company's cart prices from it. Block a company;
-the Commerce company is blocked. Reset; the block is undone and the ERP is filled again.
+Add a contract price for a company; that company's cart prices from it. Block a company in
+the ERP; the Commerce company stays active, its open orders go On Hold and its next order waits
+there; open the company again and they are released. Reset; the ERP is filled again.
 Remove the integration; both apps are gone and Commerce is clean.
 
 ## What live testing taught (2026-09-24 and 25)
