@@ -31,3 +31,7 @@ guidance on practical limits (ACCS), or on catalog-export time at that count, wa
    price the others still hold.
 
 The demo stays on one catalog per priced company until this is answered.
+
+## Shipped so far
+
+- 2026-09-28  2026-09-28 the wrinkle (owner with the tech case): a shared catalog is one customer group carrying both visibility and price, so with one catalog per priced company each catalog's product list must follow that company's entitlements (from the CRM). The count of catalogs and the work to keep their product lists right grow together.

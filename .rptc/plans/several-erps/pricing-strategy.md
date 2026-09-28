@@ -57,13 +57,28 @@ of its own, which is the only way Commerce gives one company a price nobody else
 types prices into it in this demo: the integration writes the ERP's prices there and removes
 them when the ERP stops pricing them.
 
-**Who owns the catalog assignment** (from the case agent's review, 2026-09-28): the customer
-master owns each company, its customer group and its shared-catalog assignment, product
-visibility included: Salesforce for the JustRite client; setup (or the ERP, per demo scope) in
-the demo. The ERP integration only writes prices into whatever catalog the company is assigned
-to, and never creates or reassigns a catalog. Checked in the integration 2026-09-28: it only
-reads the assignment (`sharedCatalogGroupOf`, `src/lib/commerce-tier-prices.js`) and skips a
-company that has no catalog of its own.
+**Who owns what around the catalog** (agreed by the owner with the case agent, 2026-09-28):
+
+| Owner | Owns |
+|---|---|
+| The CRM (customer master; Salesforce for the JustRite client) | The company and its ENTITLEMENTS: which product lines it may buy (a segment or authorization on the account). Not the catalog |
+| Commerce | The shared catalog itself |
+| The CRM integration (the Commerce side of the CRM sync) | Assigning the company's shared catalog, derived from its entitlements |
+| The PIM | The products |
+| The ERPs (through the ERP integration) | The prices written into that catalog |
+
+In the demo there is no CRM: setup plays its part (the SC creates the catalog and assigns the
+company, per the setup guide).
+
+The ERP integration only writes prices into whatever catalog the company is assigned to, and
+never creates or reassigns a catalog. Checked 2026-09-28: it only reads the assignment
+(`sharedCatalogGroupOf`, `src/lib/commerce-tier-prices.js`) and skips a company that has no
+catalog of its own.
+
+**The wrinkle:** a shared catalog is ONE customer group that carries both product visibility
+and price. With one catalog per priced company, each catalog's product list must be derived
+from that company's entitlements, so the number of catalogs and the work to keep their product
+lists right grow together ([[AB-16m]]).
 
 **Scale, open ([[AB-16m]]):** one shared catalog and customer group per priced company could
 mean thousands for a client with about 3,000 ordering customers. No Adobe guidance on practical
