@@ -15,3 +15,24 @@ Full tests before every commit. Bodea only; never signs in; never deletes a work
 
 ## Progress
 - Loop started. Event-check deploy running; B6 being built.
+- B7 (the Admin page) started in parallel: it lives in the integration, B6 in Demo Builder.
+- Owner added (while awake): after all this work, delete Bodea, clean Commerce, rebuild from
+  the setup guide as an SC would, then walk the journeys. Drafted tonight:
+  `.rptc/plans/several-erps/fresh-start.md` (what removal undoes, what it does not, the
+  clean-up list, the rehearsal steps) and `.rptc/plans/several-erps/journeys.md` (nine
+  walk-through journeys from the vignettes, each with what to show and what to say).
+- Event check: Bodea's integration updated to the logging version (main `2434ad2`). The first
+  test cart failed ("ERP discounts are unavailable") right after the deploy: the cart checks
+  were still starting. A retry placed order 3000000017. Recorded as a setup note (warm up after
+  a deploy).
+- The shell permission checker stopped answering (a temporary outage on its side) while
+  reading the event log; file work continued. The event result follows once it is back.
+- Event check answered: **no**. The order event cannot say which warehouse was chosen for each
+  line. The integration's subscription asks for five line fields only (item id, SKU, quantity,
+  price, parent), and an event carries only what its subscription asks for; Commerce's event
+  field list has no warehouse field for the order. Same as the REST finding. Routing by the
+  `erp_owner` product attribute stands. (Successful handler runs do not show in the Runtime
+  run list, so the logged line itself could not be read; the two failures that do show are the
+  known write-back echo.) The diagnostic log on the integration's main can go at the B8 merge.
+- Bodea clean-up: Kukla Studios' $120 test charge reimbursed (balance 0). Recorded in
+  `fresh-start.md`.
