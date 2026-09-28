@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: [AB-26b, AB-26r]
 value: med
-status: gated
+status: backlog
 waiting-on: the several-ERPs build (owner froze ERP feature growth after contracts, 2026-09-26)
 ---
 
@@ -25,3 +25,4 @@ Harness journeys both legs; ledger revert of the reimbursement on reset; headles
 - 2026-09-25  Owner 2026-09-25: first concrete job. When Commerce charged the card at checkout, the order sent to the ERP carries 'paid at checkout' (amount, payment reference), so the ERP's later invoice is matched to that payment instead of opening an unpaid debt. Also: an ERP cancel of an order paid at checkout needs a Commerce credit memo (refund), not a cancel; check the integration handles it. See .rptc/research/erp-order-to-cash-capture.
 - 2026-09-26  Frozen (owner, 2026-09-26): ERP feature growth stops after contracts (AB-26z) until several ERPs land; every ERP will run the same baseline code. See .rptc/plans/several-erps/overview.md §4.
 - 2026-09-27  2026-09-27  Owner: yes, count unpaid invoices in credit exposure. Measured on Bodea: Kukla Studios owes 180 on invoice 9000000001 and the ERP shows exposure 0, because demo-erp lib/partners.js counts only orders not yet invoiced (created/confirmed/shipped), while its own comment says open receivables plus open orders. With this slice, exposure = open orders + open (unpaid) invoices, and an incoming payment clearing the open item is what brings it down
+- 2026-09-28  2026-09-28 freeze lifted (owner: 'yes'; several ERPs landed and proven live on Bodea).

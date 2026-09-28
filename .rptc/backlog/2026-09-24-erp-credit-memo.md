@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: [AB-26g]
 value: med
-status: gated
+status: backlog
 waiting-on: the several-ERPs build (owner froze ERP feature growth after contracts, 2026-09-26)
 ---
 
@@ -24,3 +24,4 @@ Harness journey credit → Commerce credit memo recorded → statuses; refusal t
 ## Shipped so far
 - 2026-09-24  Ungated 2026-09-24: the owner answered O5 yes (full credit only) and O4 terminal (Repeat order, no un-cancel). Still needs AB-26g's live proof before the Commerce credit-memo call is built on it
 - 2026-09-26  Frozen (owner, 2026-09-26): ERP feature growth stops after contracts (AB-26z) until several ERPs land; every ERP will run the same baseline code. See .rptc/plans/several-erps/overview.md §4.
+- 2026-09-28  2026-09-28 freeze lifted (owner: 'yes'; several ERPs landed and proven live on Bodea).

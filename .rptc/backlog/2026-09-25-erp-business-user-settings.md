@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: high
-status: gated
+status: backlog
 parent: AB-26
 waiting-on: the several-ERPs build (owner froze ERP feature growth after contracts, 2026-09-26)
 ---
@@ -89,3 +89,4 @@ preparation) in the setup guide.
 - 2026-09-25  Owner 2026-09-25, D1 closed: NO new settings. Test applied to each row: a setting only where two merchants would reasonably choose differently. Notes visibility: fixed rule, ERP notes are internal (never visible on the storefront; the buyer sees status, shipments and invoices through Commerce). Customer email: the integration always asks Commerce to notify, as an Admin user ticking 'Email a copy' would, and Commerce's own Sales Emails configuration decides (verify on the sandbox that disabled Sales Emails suppress an API notify before switching; demo setup guide turns them off). Credit rejection: fixed rule, an ERP rejection cancels the Commerce order (the 'wait' case is the hold staying in place). Credit hold: fixed rule. Invoice capture: mapping (earlier entry). Write-back switches: left out. Refused-change notification goes to Commerce Admin's notification inbox if an app may write to it (unverified), never an email service. Every fixed rule is stated on its Mapping card.
 - 2026-09-25  D1 applied (commerce-erp-integration 388f116): every ERP note on a Commerce order is staff-only (is_visible_on_front 0). The notify change waits on the sandbox check that disabled Sales Emails suppress an API notify.
 - 2026-09-26  Frozen (owner, 2026-09-26): ERP feature growth stops after contracts (AB-26z) until several ERPs land; every ERP will run the same baseline code. See .rptc/plans/several-erps/overview.md §4.
+- 2026-09-28  2026-09-28 freeze lifted (owner: 'yes'; several ERPs landed and proven live on Bodea).

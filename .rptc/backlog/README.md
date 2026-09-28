@@ -325,12 +325,12 @@ each item's own file; what has already landed against an item is in its
 | `AB-26o` | feature | └ [Screen redesign 2 — lists](2026-09-24-erp-ui-lists.md) | AB-26k | med | built |
 | `AB-26p` | feature | └ [Screen redesign 3 — documents](2026-09-24-erp-ui-documents.md) | AB-26j, AB-26k | med | built |
 | `AB-26q` | feature | └ [Screen redesign 4 — settings and journal](2026-09-24-erp-ui-settings-journal.md) | AB-26j | med | built |
-| `AB-26r` | feature | └ [Credit memo and Repeat order — the way back from invoiced and cancelled](2026-09-24-erp-credit-memo.md) | AB-26g | med | gated |
-| `AB-26s` | feature | └ [Order to cash — the payment leg (incoming payment, open items, company balance)](2026-09-24-erp-payment-leg.md) | AB-26b, AB-26r | med | gated |
+| `AB-26r` | feature | └ [Credit memo and Repeat order — the way back from invoiced and cancelled](2026-09-24-erp-credit-memo.md) | AB-26g | med | backlog |
+| `AB-26s` | feature | └ [Order to cash — the payment leg (incoming payment, open items, company balance)](2026-09-24-erp-payment-leg.md) | AB-26b, AB-26r | med | backlog |
 | `AB-26t` | feature | └ [The routing integration — one Commerce order split across ERP pairs](2026-09-24-erp-routing-integration.md) | AB-16, AB-26j | high | superseded |
 | `AB-26u` | feature | └ [The walk-through — what to look at in the ERP, what to look at in Commerce, and how each relates](2026-09-24-erp-walkthrough.md) | AB-26e, AB-26m, AB-26l | high | built |
-| `AB-26v` | feature | └ [Reconciling partial invoices against one Commerce order — a customization opportunity](2026-09-24-erp-partial-invoice-reconciliation.md) | _the several-ERPs build (owner froze ERP feature growth after contracts, 2026-09-26)_ | med | gated |
-| `AB-26w` | feature | └ [Business-user settings for the ERP pair — which behaviours a merchant chooses, and where](2026-09-25-erp-business-user-settings.md) | _the several-ERPs build (owner froze ERP feature growth after contracts, 2026-09-26)_ | high | gated |
+| `AB-26v` | feature | └ [Reconciling partial invoices against one Commerce order — a customization opportunity](2026-09-24-erp-partial-invoice-reconciliation.md) | _the several-ERPs build (owner froze ERP feature growth after contracts, 2026-09-26)_ | med | backlog |
+| `AB-26w` | feature | └ [Business-user settings for the ERP pair — which behaviours a merchant chooses, and where](2026-09-25-erp-business-user-settings.md) | _the several-ERPs build (owner froze ERP feature growth after contracts, 2026-09-26)_ | high | backlog |
 | `AB-26x` | feature | └ [Manual Commerce steps the pair depends on — are they required, and how does the SC learn?](2026-09-25-erp-manual-commerce-steps.md) | — | high | active |
 | `AB-26y` | feature | └ [The mock ERP knows nothing about Commerce: filling at reset, running as if the ERP were the source](2026-09-25-erp-standard-features.md) | — | high | active |
 | `AB-26z` | feature | └ [ERP contract prices live in each company's shared catalog, not in a cart webhook](2026-09-26-erp-contract-prices-in-shared-catalogs.md) | — | high | built |
