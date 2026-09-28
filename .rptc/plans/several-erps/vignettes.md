@@ -87,8 +87,9 @@ also have its own website, with its own cart and checkout. Adobe has no built-in
 - **Buyer sees:** the cabinets proceed; the signs show as on hold.
 - **Staff see:** a hold on Brand B's part with the reason in the order history; the company can
   still order from Brand A.
-- **Each ERP:** Brand B holds its part; Brand A carries on. A brand's block never switches the
-  company off site-wide (each brand for itself, owner 2026-09-27).
+- **Each ERP:** Brand B holds its part; Brand A carries on. A block never switches the company off
+  site-wide; it holds only that ERP's lines, whatever their brand (each ERP for itself, owner
+  2026-09-27).
 - **Design:** §3.1 company block, credit; §3.3 credit hold; the combined status (On Hold while
   any part is held).
 - **Today:** a credit hold round trip for one ERP (proven live); a block held per ERP part is

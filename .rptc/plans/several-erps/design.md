@@ -71,7 +71,7 @@ sandbox test before it is built on.
 |---|---|---|
 | Company (identity) | One Commerce company becomes a customer in every ERP the buyer deals with; Commerce is the master | Built for one ERP; the company event is not proven live |
 | Key map (company to ERP customer) | One pair **per ERP**: the map must record which ERP a pair belongs to | **Gap**: today one company may pair with one ERP customer only (`key-map.js` rejects a second) |
-| Company block | Each ERP has its own blocking level; Commerce has one active/blocked flag. **Decided (owner, 2026-09-27): each brand for itself.** An ERP's block holds only that ERP's part of an order; it never changes the Commerce company's flag, which stays a group decision made in Commerce. Fits a group of separate brands whose orders span brands; to confirm with the client (is there group-level credit management?) | **Gap**: today the integration copies an ERP's block onto the company flag; that write is to be removed and replaced by per-part holds |
+| Company block | Each ERP has its own blocking level; Commerce has one active/blocked flag. **Decided (owner, 2026-09-27): each brand for itself**, more exactly each ERP for itself: a block holds the lines whose `erp_owner` is that ERP, on any website and of any brand.** An ERP's block holds only that ERP's part of an order; it never changes the Commerce company's flag, which stays a group decision made in Commerce. Fits a group of separate brands whose orders span brands; to confirm with the client (is there group-level credit management?) | **Gap**: today the integration copies an ERP's block onto the company flag; that write is to be removed and replaced by per-part holds |
 | Credit limit | Commerce's limit is the TOTAL across ERPs; each ERP's own limit, exposure and available credit in its own prefixed company custom attributes (decided 2026-09-26). **Demo: the ERPs own it** (demo scope above). For a customer whose CRM owns credit limits, the integration does not write the limit; the tech case tracks which applies to the client (#20). A brand's credit HOLD on its own part is unaffected | Built for one ERP (writes the limit); per-ERP attributes and the total built for several ERPs (B5, integration `f739c94`), not yet live. **Test**: does REST `setCustomAttributes` replace the whole set? |
 | Credit exposure and balance | Each ERP counts only its own open orders and unpaid invoices; a hold on one ERP's exposure holds only its part | Built for one ERP; the payment leg (Commerce balance) is frozen (AB-26s) |
 | Payment terms | Each ERP keeps its own; never in Commerce | Nothing to do |
@@ -87,6 +87,24 @@ settings the integration already has. The demo shows one website with brands by 
 brand website is spoken to. Adobe docs: stores under one website share one checkout; each website
 has its own cart and checkout (cart calls are store-scoped); Adobe's search ships
 `attributes_brand` as a filter; Adobe has no built-in brand object.
+
+**Brand, business unit, ERP, sales organisation (2026-09-28, PROVISIONAL: the sales-organisation
+part depends on what the client tells the tech case).** Four words, four things:
+
+| Word | What it is | Where it lives | What it decides |
+|---|---|---|---|
+| Brand | the name a buyer sees | product attribute `brand` | only what shoppers see and filter by; the ERP never sees it |
+| Business unit | an acquired company that runs an ERP (the client says "brand" for this) | outside Commerce | who owns the ERP |
+| ERP | a business unit's back-office system | its own system; one entry in the ERP list | who fulfils, ships, invoices, extends credit; routing uses product attribute `erp_owner` |
+| Sales organisation | a selling unit inside one ERP | a setting on the ERP's entry, chosen by the order's website | which unit of that ERP books the order (numbering, prices, terms) |
+
+An order line goes to the ERP its product's `erp_owner` names; that ERP books it under the sales
+organisation it maps to the order's website; the brand is not used on the way. A block or credit
+hold is the ERP's decision about its own customer account, so it holds that ERP's lines,
+whatever their brand or website ("each ERP for itself"). Open with the client (tech case): how
+each business unit books web orders (company, sales unit, region), and whether an ERP holding two
+brands books them under different units; the design can express a sales organisation by website,
+not by brand.
 
 **Nothing is seeded (owner, 2026-09-28).** Demo Builder does not create brands, products or a
 catalogue split. The SC creates the scenario they want and sets `brand` and `erp_owner` on the
@@ -196,3 +214,4 @@ for a mixed order; whether any SKU is sold by two ERPs.
 - 2026-09-27: adding a second ERP in Demo Builder is "Add another ERP" on the integration card; the tile is add-once (owner).
 - 2026-09-28: how a brand is made: a `brand` attribute for shoppers, separate from the `erp_owner` attribute routing reads; one shared website in the demo, a stand-alone brand website spoken to. Vignettes gain "0. What a brand is"; their Today lines now say what is built for several ERPs but not yet live.
 - 2026-09-28: nothing is seeded; the SC creates brands and products and sets both values; instructions in the integration's setup guide, story 3 (integration `5bffd76`).
+- 2026-09-28: brand, business unit, ERP and sales organisation defined (provisional on the client's answer about selling units); "each brand for itself" reads as each ERP for itself.
