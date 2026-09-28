@@ -76,3 +76,4 @@ and the answer reaches the shopper as Commerce data.
 
 - 2026-09-17  docs(backlog): AB-19 and AB-20 — the two live ERP calls a real B2B integration makes (`43164d8db`)
 - 2026-09-17  docs: how the ERP reaches a shopper, and where its live calls go (`64fc77a37`)
+- 2026-09-28  Owner decision: the live availability check follows the same rule as the credit check (AB-20): one call per owning ERP at checkout, time-limited, with the fallback of accepting the order. See .rptc/plans/several-erps/pricing-and-live-checks.md.

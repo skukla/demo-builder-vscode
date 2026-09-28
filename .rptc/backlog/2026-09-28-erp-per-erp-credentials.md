@@ -1,0 +1,37 @@
+---
+id: AB-16a
+kind: feature
+area: app-builder
+parent: AB-16
+needs: []
+value: high
+status: backlog
+---
+
+# The integration signs in to each ERP with that ERP's own credential
+
+Filed 2026-09-28. **Decided by the owner, 2026-09-28: "Do what is recommended."**
+
+## Why
+
+Each mock ERP lives in its own Adobe workspace (the owner's one-workspace-per-ERP choice). An
+ERP's actions are `require-adobe-auth`, and Adobe's check accepts machine calls only from that
+workspace's own technical account. The integration calls every ERP with its own workspace's
+credential, so a second ERP refuses everything: measured on Bodea, Contoso ERP (`demo-erp-2`)
+answered 401 "Technical account mismatch" to orders, cart prices and health checks.
+
+## What to build
+
+- When Demo Builder adds an ERP, it hands the integration that ERP workspace's
+  server-to-server credential with the ERP's list entry (`PUT erp/erps`).
+- The integration keeps it (App Builder State), never returns it (`GET erp/erps` redacts it),
+  and the adapter signs each call to that ERP with it (`paramsForErp`). The first ERP keeps
+  using the integration's own credential.
+- Removing the ERP removes its entry and so its credential; deleting its workspace revokes it.
+- A real client's integration holds one API credential per ERP the same way.
+
+## Done when
+
+Contoso on Bodea answers the integration: a mixed order sends Contoso its part, its health
+reads reachable, and its cart price applies. The credential never appears in a response, a
+log or the repository.

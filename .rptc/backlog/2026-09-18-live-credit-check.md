@@ -65,3 +65,7 @@ order the ERP could not TAKE, after it was placed. This one decides whether it i
 need a decision rather than a lookup.)
 - What happens to an order already placed when the ERP later rejects it; a real integration
   has an order-hold state, and this one does not.
+
+## Shipped so far
+
+- 2026-09-28  Owner decision: the live credit check is one call per owning ERP at checkout (as the order is placed), never on each cart change; each has a time limit, and an ERP that cannot answer accepts the order and its part waits (the order is Partially Held). See .rptc/plans/several-erps/pricing-and-live-checks.md.
