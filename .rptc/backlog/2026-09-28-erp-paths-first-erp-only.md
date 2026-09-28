@@ -27,3 +27,7 @@ Each path resolves the ERP that owns the record (the event's `erpId`, the order 
 product's owner) and calls it through `paramsForErp`; tests assert the call's address and
 credential for a second ERP (argument assertions). Proven live with Contoso on Bodea as part of
 AB-16d.
+
+## Shipped so far
+
+- 2026-09-28  Built (integration feature/ab-16h-route-every-erp, 8 commits 11b5290..e308e7f, 746 tests): inbound product (event erpId) and stock (per-SKU owner) read-backs, Commerce-side cancel/hold/release to every ERP holding an open part, product/stock senders by owner, move-stock per owner, detach over every ERP, the order trace per part. Item corrected: inbound order hold already worked (pinned by a test). Follow-ups, not blocking: (1) a stored list with ONE ERP that is not the deployed one still uses raw params; (2) old orders with an ERP number but no parts go through the one-ERP path and the trace assumes the first ERP; (3) the Admin trace headline shows one ERP for a split order (the answer now has an erps list); (4) found: demo-erp named() turns a list-valued stock event into an object when ERP_ID is set (live on main since e1425f3), being fixed with AB-16i; (5) move-stock's GET names the deployed ERP. Not yet deployed.
