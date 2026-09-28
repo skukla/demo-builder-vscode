@@ -453,12 +453,15 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             'orders, wipe every ERP record, then fill each again from the Commerce products, companies ' +
             'and customers as they stand, and publish each ERP\'s ' +
             "customer prices into the companies' shared catalogs (data.warning says when they were not). " +
-            'Commerce is the master; the ERP is transitory. Confirm with the user first. Takes the integration id.',
+            'Commerce is the master; the ERP is transitory. Confirm with the user first. Takes the integration id, ' +
+            "and `erp` (an ERP's component id) to reset only that one: only its writes are undone and the " +
+            'other ERPs are untouched. An integration deployed before per-ERP reset refuses `erp`; redeploy it.',
         map: dashboardHandlers,
         type: 'resetErpRecords',
         confirm: true,
         inputSchema: {
             id: z.string().describe('The ERP integration id (from get_project)'),
+            erp: z.string().optional().describe("Which ERP, by its component id (from get_erp_status's erps); default every ERP"),
         },
     },
     {

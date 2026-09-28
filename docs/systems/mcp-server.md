@@ -401,9 +401,10 @@ published are the answer's `warning`, not a failure.
 and deploys a new ERP into it, which takes minutes and is undone only by `remove_integration`
 on the new ERP's id. The ERP tools that act on one ERP (`load_erp_demo_data`,
 `open_erp_screen`, `run_erp_rest`, `write_erp_rest`, `get_erp_status`) take an optional `erp`,
-the ERP's component id, and default to the integration's first, except `load_erp_demo_data`,
-which fills every ERP without it; `get_erp_status` lists every ERP the integration serves,
-and its live health is the named ERP's.
+the ERP's component id, and default to the integration's first, except `load_erp_demo_data`
+and `reset_erp_records`, which act on every ERP without it (a reset of one ERP undoes only
+that ERP's writes, and an integration deployed before that refuses it); `get_erp_status`
+lists every ERP the integration serves, and its live health is the named ERP's.
 
 `reset_erp_records` (2026-09-14) is gated for the same reason `reset_datapack` is: it wipes
 every ERP the ERP integration serves and undoes what those ERPs wrote into Commerce

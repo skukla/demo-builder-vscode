@@ -74,6 +74,16 @@ describe('ErpIntegrationClient', () => {
         expect(report).toEqual(body);
     });
 
+    it("POSTs detach for one ERP by its list id (AB-16c)", async () => {
+        const fetchImpl = answering(200, { erp: 'demo-erp-2', reverted: { reverted: 1, failed: [] } });
+
+        const report = await new ErpIntegrationClient(URLS, AUTH, fetchImpl).detach('demo-erp-2');
+
+        expect(fetchImpl.mock.calls[0][0]).toBe(`${URLS['runtime/erp/detach']}?erp=demo-erp-2`);
+        expect((fetchImpl.mock.calls[0][1] as RequestInit).method).toBe('POST');
+        expect(report.erp).toBe('demo-erp-2');
+    });
+
     it('PUTs the whole key map as JSON, and knows a deployment without the action keeps none', async () => {
         const fetchImpl = answering(200, { entries: 1 });
         const entries = [{ kind: 'customer' as const, commerce: '12', erp: 'C12' }];

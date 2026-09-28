@@ -171,24 +171,26 @@ interface ErpResetReport {
 
 /**
  * The reset's steps, in order, none resumable part-way: the integration undoes what it wrote
- * into Commerce for every ERP (its `erp/detach`), then each ERP it serves deletes its records
- * (its own `admin/wipe`) and Demo Builder fills it from Commerce again (`fillErpForProject`,
- * AB-26y), which ends by publishing that ERP's prices (AB-26z). Every ERP, because the undo is the integration's and covers them all (AB-16).
- * Throws in the words of the step that stopped.
+ * into Commerce (its `erp/detach`), then each ERP reset deletes its records (its own
+ * `admin/wipe`) and Demo Builder fills it from Commerce again (`fillErpForProject`, AB-26y),
+ * which ends by publishing that ERP's prices (AB-26z). With `only`, that ERP alone (AB-16c);
+ * else every ERP the integration serves. Throws in the words of the step that stopped.
  */
 async function resetErp(
     context: HandlerContext,
     call: ErpCall,
     report: (stage: string, step?: string) => void,
+    only?: ErpRow,
 ): Promise<ErpResetReport> {
     const stage = OPERATION_STAGES.resettingErpRecords.label;
-    report(stage, "Undoing the ERPs' writes in Commerce");
-    const undone = await new ErpIntegrationClient(call.integration.deployedUrls, call.auth).detach();
+    const client = new ErpIntegrationClient(call.integration.deployedUrls, call.auth);
+    report(stage, only ? `Undoing ${only.name ?? only.id}'s writes in Commerce` : "Undoing the ERPs' writes in Commerce");
+    const undone = only ? await detachOne(client, call, only) : await client.detach();
     if (!context.authManager) throw new Error('Adobe sign-in required.');
     const authManager = context.authManager;
     const erps: ErpResetReport['erps'] = [];
     const notes: Array<{ name: string; note?: string }> = [];
-    for (const erp of call.erps) {
+    for (const erp of only ? [only] : call.erps) {
         const name = erp.name ?? erp.id;
         report(stage, `Wiping ${name}`);
         const wipe = await callErpApi(erp.deployedUrls, call.auth, 'POST', 'admin/wipe', undefined);
@@ -208,6 +210,25 @@ async function resetErp(
     return warning ? { undone, erps, warning } : { undone, erps };
 }
 
+/**
+ * Undo one ERP's writes (AB-16c). A deployment from before per-ERP undo ignores the id and undoes
+ * every ERP, so it is asked first and refused; an answer that does not name the ERP stops the
+ * reset before any wipe, saying what happened.
+ */
+async function detachOne(client: ErpIntegrationClient, call: ErpCall, erp: ErpRow): Promise<ErpDetachReport> {
+    const integrationName = call.integration.name ?? call.id;
+    const name = erp.name ?? erp.id;
+    const listId = erpListIdOf(call.project, erp.id, getAppBuilderComponentCatalog()) ?? erp.id;
+    if ((await client.status()).detachesPerErp !== true) {
+        throw new Error(`${integrationName} can only reset every ERP at once. Redeploy it to reset ${name} alone.`);
+    }
+    const undone = await client.detach(listId);
+    if (undone.erp !== listId) {
+        throw new Error(`${integrationName} undid every ERP's writes, not only ${name}'s. Reset every ERP to finish.`);
+    }
+    return undone;
+}
+
 export const handleResetErpRecords: MessageHandler<ErpCallPayload & { progress?: 'modal' }> =
     narrateOutcomeToModal(async (context, payload): Promise<HandlerResponse> => {
     const call = await openErpCall(context, payload, 'reset the ERP');
@@ -217,7 +238,9 @@ export const handleResetErpRecords: MessageHandler<ErpCallPayload & { progress?:
         return { success: false, error, code: ErrorCode.INVALID_OPERATION };
     }
 
-    const erpName = call.erps.length > 1 ? `${call.integration.name ?? call.id}'s ERPs` : (call.erp?.name ?? 'ERP');
+    // One ERP when named (its card, AB-16c); else every ERP the integration serves.
+    const only = payload?.erp ? call.erp : undefined;
+    const erpName = only?.name ?? (call.erps.length > 1 ? `${call.integration.name ?? call.id}'s ERPs` : (call.erp?.name ?? 'ERP'));
     const result = await withOperationProgress(
         {
             id: call.id,
@@ -229,7 +252,7 @@ export const handleResetErpRecords: MessageHandler<ErpCallPayload & { progress?:
             const refused = await guardOrBlock(context, call.project, (message) => report(message));
             if (refused) return refused;
             try {
-                return { success: true, report: await resetErp(context, call, report) };
+                return { success: true, report: await resetErp(context, call, report, only) };
             } catch (error) {
                 return { success: false, error: `The ERP reset did not finish: ${errorText(error)}` };
             }

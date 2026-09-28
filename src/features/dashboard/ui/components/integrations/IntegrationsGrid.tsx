@@ -121,7 +121,7 @@ export function IntegrationsGrid({
     const [manageApis, setManageApis] = useState<{ id: string; name: string } | null>(null);
     // The ERP reset awaiting confirmation: the INTEGRATION's id (the reset runs
     // through it) and the ERP's name (what the dialog says).
-    const [pendingReset, setPendingReset] = useState<{ id: string; erpName: string } | null>(null);
+    const [pendingReset, setPendingReset] = useState<{ id: string; erpName: string; erp: string } | null>(null);
     // The integration "Add another ERP" is naming a new ERP for (AB-16).
     const [addingErpTo, setAddingErpTo] = useState<IntegrationCardModel | null>(null);
     // Confirms that open by themselves when a card gains their flag, and from
@@ -252,7 +252,7 @@ export function IntegrationsGrid({
     // (owner, 2026-09-20).
     const confirmReset = useCallback((): void => {
         if (pendingReset) {
-            operations.resetErp(pendingReset.id, pendingReset.erpName);
+            operations.resetErp(pendingReset.id, pendingReset.erpName, pendingReset.erp);
         }
         setPendingReset(null);
     }, [operations, pendingReset]);

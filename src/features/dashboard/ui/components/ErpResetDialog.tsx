@@ -45,6 +45,7 @@ export function ErpResetDialog({ isOpen, erpName, onConfirm, onClose }: ErpReset
                 The credit limits and company blocks {erpName} set in Commerce are undone, and Commerce
                 orders lose their ERP order numbers. Nothing else in Commerce changes.
             </Text>
+            <Text>Any other ERP is left as it is.</Text>
         </ConfirmActionDialog>
     );
 }

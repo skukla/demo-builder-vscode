@@ -32,10 +32,16 @@ export interface ErpIntegrationStatus {
     };
     erpBaseUrl: string | null;
     ledger: { entries: number };
+    /** Whether `erp/detach` can undo one ERP's writes alone (`?erp=`); absent on a deployment before it. */
+    detachesPerErp?: boolean;
 }
 
-/** What `erp/detach` answers: the company writes undone and the ERP order numbers cleared. */
+/**
+ * What `erp/detach` answers: the company writes undone and the ERP order numbers cleared, and
+ * `erp`, the one ERP undone, when one was asked for and the deployment honoured it.
+ */
 export interface ErpDetachReport {
+    erp?: string;
     reverted?: { reverted: number; failed: unknown[] };
     orders?: { cleared: number; failed: unknown[] };
 }
@@ -146,9 +152,13 @@ export class ErpIntegrationClient {
         return (await this.call('status', 'GET', erpId ? { erp: erpId } : undefined)) as ErpIntegrationStatus;
     }
 
-    /** Undo what the integration wrote onto Commerce, leaving the ERP as it is. */
-    async detach(): Promise<ErpDetachReport> {
-        return (await this.call('detach', 'POST')) as ErpDetachReport;
+    /**
+     * Undo what the integration wrote onto Commerce, leaving the ERP as it is. With `erpId` (its
+     * list id), that ERP's writes alone; else every ERP's. Ask `status().detachesPerErp` first:
+     * a deployment before it ignores the id and undoes every ERP.
+     */
+    async detach(erpId?: string): Promise<ErpDetachReport> {
+        return (await this.call('detach', 'POST', erpId ? { erp: erpId } : undefined)) as ErpDetachReport;
     }
 
     /** One product (by SKU) or one company (by Commerce id) as both systems hold it. */
