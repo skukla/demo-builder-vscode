@@ -24,10 +24,29 @@ Backlog: [[AB-26z]] (built), [[AB-16k]], [[AB-16l]] (to build).
 | 3 | Catalog price rule | Commerce | Applied by Commerce | The groups the rule targets |
 | 4 | Cart price rule | Commerce | Applied in the cart | Whoever meets its conditions |
 
-**How Commerce combines 1 to 3:** the final price is the LOWEST of the product price, the tier
+**How Commerce combines 1 to 3, by default:** the final price is the LOWEST of the product price, the tier
 price, a special price and a catalog price rule (Experience League, "Tier pricing": Final Price
 = Min(Regular Price, Group (Tier) Price, Special Price, Catalog Price Rule)). They do not stack.
 A catalog rule beats a company's ERP price only when it comes out lower.
+
+**Unless one setting is on** (found by the case agent, confirmed on the same Experience League
+page 2026-09-28). Adobe Commerce as a Cloud Service has **Apply Catalog Price Rule on Grouped
+Price** (Stores → Settings → Configuration → Sales → Sales → Promotions). With it on, a catalog
+rule discounts the group's quantity-1 tier price instead of competing with it: a 90 company
+price with a 10% rule becomes 81. It applies only to a group that has a tier price at quantity
+1, and never to tier prices above quantity 1 (those apply as usual, without the rule).
+
+So there are two ways to run promotions over ERP prices, and it is a real choice for a client:
+
+| Setting | A 10% catalog rule on a company whose ERP price is 90 (list price 100) | Suits |
+|---|---|---|
+| Off (lowest wins) | 90 (the rule's 90 does not beat it) | Contract prices are final; campaigns reach only buyers without one |
+| On (rule on top) | 81 | Campaigns reach contract buyers too, on top of their price |
+
+**Recommended for the demo: On.** It is what "Commerce promotions sit on top of the ERP's
+price" means, and it shows both systems at work on one price. To make it work, every ERP price
+list line the demo shows must include a quantity-1 line for the product, since only that line
+takes the rule. The setting's value on the demo store has not been read yet.
 
 **Layer 4** applies afterwards, to the cart total built from that price.
 

@@ -35,3 +35,7 @@ the web store. The ERP takes the web order's prices as sold and does not reprice
 - Setup guide: a catalog price rule aimed at an ERP-priced company's customer group competes
   with the ERP's price (lowest wins); aim campaigns at groups the ERP does not price, unless
   that is the point of the demo.
+
+## Shipped so far
+
+- 2026-09-28  2026-09-28 correction (case agent, confirmed on Experience League 'Tier pricing'): 'lowest wins' is Commerce's DEFAULT. With 'Apply Catalog Price Rule on Grouped Price' on (SaaS only; Sales > Promotions), a catalog rule discounts the group's quantity-1 tier price instead (90 with 10% = 81). Recommended for the demo: on, with a quantity-1 line on every ERP price list line shown. The demo store's setting has not been read yet. Written into pricing-strategy.md.
