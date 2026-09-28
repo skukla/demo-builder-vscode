@@ -22,7 +22,7 @@ each by hand in the Commerce Admin, or say it stays.
 
 | Left behind | Where | Undo |
 |---|---|---|
-| Test orders 3000000014 to 3000000022 (3000000022: the maintenance-mode proof, guest, check/money order; Northwind 0000001012, Contoso 0000001001) and earlier demo orders, with their invoices, shipments and comments | Sales → Orders | **Cannot be deleted** in Commerce. Cancel or credit-memo what is open; they stay in history |
+| Test orders 3000000014 to 3000000023 (the 2026-09-28 full reset cancelled 6 and noted 6 as closed by the demo reset; 3000000023 was placed after it: Northwind 0000001013, Contoso 0000001002; (3000000022: the maintenance-mode proof, guest, check/money order; Northwind 0000001012, Contoso 0000001001) and earlier demo orders, with their invoices, shipments and comments | Sales → Orders | **Cannot be deleted** in Commerce. Cancel or credit-memo what is open; they stay in history |
 | Credit charged by test orders (Kukla Studios: $120 from 3000000016) | Customers → Companies → Kukla Studios → Company Credit | **Done 2026-09-28**: reimbursed; balance 0, $120,000 available. Repeat for any later test order placed on account |
 | Test custom order attribute `erp_test_number` on order 3000000014 | the order | Leave (historic) |
 | Inventory sources `northwind` and `east`, and the stock "Bodea Stock" | Stores → Inventory → Sources / Stocks | Delete the stock (the website returns to Default Stock); move quantities back to Default Source; **sources cannot be deleted**: disable them |

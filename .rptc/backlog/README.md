@@ -305,7 +305,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-16k` | feature | └ [The ERP sends the price it would charge, whatever set it](2026-09-28-erp-net-price-in-force.md) | — | high | built |
 | `AB-16l` | feature | └ [Commerce promotions reach the ERP's sales order](2026-09-28-erp-promotions-reach-erp.md) | — | med | backlog |
 | `AB-16m` | question | └ [One shared catalog per priced company: does it scale to thousands?](2026-09-28-erp-shared-catalog-scale.md) | — | med | backlog |
-| `AB-16n` | feature | └ [A reset returns the whole ERP story to zero, orders included](2026-09-28-erp-reset-closes-orders.md) | — | high | backlog |
+| `AB-16n` | feature | └ [A reset returns the whole ERP story to zero, orders included](2026-09-28-erp-reset-closes-orders.md) | — | high | built |
 | `AB-21` | feature | [An integration's settings live on its tile, not on Configure Project](2026-09-18-integration-settings-on-tile.md) | — | med | active |
 | `AB-22` | feature | [Import a colleague's integration, and ask only for what it really needs](2026-09-18-import-colleague-integration.md) | AB-21 | med | backlog |
 | `AB-24` | chore | [Stop creating a Stage workspace](2026-09-20-drop-the-stage-workspace.md) | — | med | built |
