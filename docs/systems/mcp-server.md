@@ -401,14 +401,14 @@ published are the answer's `warning`, not a failure.
 and deploys a new ERP into it, which takes minutes and is undone only by `remove_integration`
 on the new ERP's id. The ERP tools that act on one ERP (`load_erp_demo_data`,
 `open_erp_screen`, `run_erp_rest`, `write_erp_rest`, `get_erp_status`) take an optional `erp`,
-the ERP's component id, and default to the integration's first, except `load_erp_demo_data`
-and `reset_erp_records`, which act on every ERP without it (a reset of one ERP undoes only
-that ERP's writes, and an integration deployed before that refuses it); `get_erp_status`
-lists every ERP the integration serves, and its live health is the named ERP's.
+the ERP's component id, and default to the integration's first, except `load_erp_demo_data`,
+which fills every ERP without it. `reset_erp_records` takes no `erp`: a reset always covers
+every ERP and closes off the orders they hold (AB-16n). `get_erp_status` lists every ERP the
+integration serves, and its live health is the named ERP's.
 
 `reset_erp_records` (2026-09-14) is gated for the same reason `reset_datapack` is: it wipes
-every ERP the ERP integration serves and undoes what those ERPs wrote into Commerce
-companies. Its read, `get_erp_status`, is not. `open_erp_screen` (2026-09-16) is gated for
+every ERP the ERP integration serves, cancels the open orders they hold (a cancelled order
+cannot be reopened) and undoes what those ERPs wrote into Commerce companies. Its read, `get_erp_status`, is not. `open_erp_screen` (2026-09-16) is gated for
 `open_url`'s reason: it opens a browser window.
 
 Both block-library gaps were closed together on 2026-08-16, and they are the

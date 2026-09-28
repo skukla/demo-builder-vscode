@@ -38,14 +38,17 @@ export function ErpResetDialog({ isOpen, erpName, onConfirm, onClose }: ErpReset
             onClose={onClose}
         >
             <Text>
-                Wipes every record in <strong>{erpName}</strong> and fills it from Commerce again,
-                as Commerce stands now.
+                Resets every ERP this integration serves, {erpName} included: wipes their records and
+                fills them from Commerce again, as Commerce stands now.
             </Text>
             <Text>
-                The credit limits and company blocks {erpName} set in Commerce are undone, and Commerce
-                orders lose their ERP order numbers. Nothing else in Commerce changes.
+                Every open order the ERPs hold is cancelled; an order already invoiced or shipped keeps
+                a note instead. A cancelled order cannot be reopened.
             </Text>
-            <Text>Any other ERP is left as it is.</Text>
+            <Text>
+                The credit limits and company blocks the ERPs set in Commerce are undone. Nothing else
+                in Commerce changes.
+            </Text>
         </ConfirmActionDialog>
     );
 }

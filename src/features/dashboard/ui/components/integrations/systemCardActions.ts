@@ -2,7 +2,7 @@
  * A system card's verbs that differ from an integration's: its screen, its fill from
  * Commerce and its reset all go through the integration that uses it — the extension
  * holds the screen key and runs the fill and the reset. The screen and the fill name
- * this ERP, since an integration can serve several (AB-16), and so does the reset (AB-16c). Everything else (redeploy,
+ * this ERP, since an integration can serve several (AB-16); the reset covers them all (AB-16n). Everything else (redeploy,
  * update, remove) is the ordinary keyed path with the system's own id.
  *
  * Split from `IntegrationsGrid.tsx` when the fill joined the reset (AB-26y).
@@ -15,8 +15,8 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
 /** What the grid does for the two verbs that need more than a message. */
 export interface SystemCardHandlers {
-    /** Ask before a reset: the INTEGRATION's id, the ERP's name for the dialog, and the ERP's id. */
-    confirmReset: (pending: { id: string; erpName: string; erp: string }) => void;
+    /** Ask before a reset: the INTEGRATION's id and the ERP's name, for the dialog. */
+    confirmReset: (pending: { id: string; erpName: string }) => void;
     /** Fill this ERP now: the integration's id, the ERP's name for the modal, and the ERP's id. */
     loadErpData: (id: string, erpName: string, erp: string) => void;
 }
@@ -44,7 +44,7 @@ export function handleSystemAction(
         return true;
     }
     if (action === 'reset-records') {
-        if (integrationId) handlers.confirmReset({ id: integrationId, erpName: model.name, erp: model.id });
+        if (integrationId) handlers.confirmReset({ id: integrationId, erpName: model.name });
         return true;
     }
     return false;

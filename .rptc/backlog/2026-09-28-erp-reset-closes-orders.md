@@ -38,3 +38,7 @@ an order. The reset's confirm dialog says so.
 
 On Bodea: a full reset cancels the open test orders, comments the rest, leaves no parts record,
 and a fresh mixed order afterwards routes cleanly to both ERPs.
+
+## Shipped so far
+
+- 2026-09-28  2026-09-28 built: integration main 40017f1 (erp/detach closeOrders cancels what Commerce can still cancel with nothing invoiced or shipped, notes the rest, forgets parts records; a per-order State mark stops the new-order handler re-sending a reset-closed order; erp/status answers closesOrdersOnReset; 850 tests). Demo Builder: one-ERP reset removed; the reset asks the integration first and refuses one that cannot close orders, and stops before any wipe if the answer has no 'closed'. Left open (builder): Admin Retry of a closed order is not blocked; plain detach (integration removal) releasing a hold can re-send an order (the ERP answers with its existing number).

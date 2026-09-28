@@ -132,13 +132,13 @@ describe('IntegrationsGrid — the system card verbs', () => {
         await user.click(within(panel).getByRole('button', { name: /^reset records$/i }));
 
         const dialog = screen.getByRole('dialog', { name: /reset erp records/i });
-        expect(dialog).toHaveTextContent('Wipes every record in Nordwind');
-        // One ERP per card (AB-16c): the dialog says the others are left alone.
-        expect(dialog).toHaveTextContent('Any other ERP is left as it is.');
+        // Every ERP, and the orders it closes off (AB-16n): the dialog says both.
+        expect(dialog).toHaveTextContent('Resets every ERP this integration serves, Nordwind included');
+        expect(dialog).toHaveTextContent('A cancelled order cannot be reopened.');
         expect(getClient().postMessage).not.toHaveBeenCalledWith('resetErpRecords', expect.anything());
     });
 
-    it("confirming posts resetErpRecords with the INTEGRATION's id and this ERP's (the reset runs through it)", async () => {
+    it("confirming posts resetErpRecords with the INTEGRATION's id (the reset runs through it)", async () => {
         const { user, panel } = await openSystem();
         await user.click(within(panel).getByRole('button', { name: /^reset records$/i }));
 
@@ -150,7 +150,6 @@ describe('IntegrationsGrid — the system card verbs', () => {
         // (owner, 2026-09-20).
         expect(getClient().postMessage).toHaveBeenCalledWith('resetErpRecords', {
             id: 'erp-integration',
-            erp: 'demo-erp',
             progress: 'modal',
         });
     });

@@ -249,8 +249,8 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     reset_erp_records: {
         action: 'Reset the ERP records',
         consequence:
-            "Wipes every record in every ERP the integration serves (or only the one named, leaving the others untouched) and fills each from Commerce again; the credit limits and company blocks those ERPs set in Commerce are undone, and each one's customer prices are published into the companies' shared catalogs again.",
-        target: ['id', 'erp'],
+            "Cancels every open order the ERPs hold (the rest keep a note; a cancelled order cannot be reopened), undoes the credit limits and company blocks the ERPs set in Commerce, wipes every record in every ERP the integration serves and fills each from Commerce again.",
+        target: ['id'],
         sessionGrant: false,
     },
     delete_event_registration: {

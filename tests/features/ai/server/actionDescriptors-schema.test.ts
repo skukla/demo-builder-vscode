@@ -92,7 +92,7 @@ const INPUT_KEYS: Record<string, string[]> = {
     remove_integration: ['force', 'id'],
     delete_undeclared_runtime_code: ['componentId'],
     load_erp_demo_data: ['erp', 'id'],
-    reset_erp_records: ['erp', 'id'],
+    reset_erp_records: ['id'],
     write_erp_rest: ['body', 'erp', 'id', 'method', 'path'],
     invoke_runtime_action: ['action', 'componentId', 'payload'],
     open_erp_screen: ['erp', 'id'],

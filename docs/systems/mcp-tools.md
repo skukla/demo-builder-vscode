@@ -40,7 +40,7 @@ server IS — transport, lifecycle, scoping, security — is in
 | `remove_integration` | **confirm** | Remove one App Builder integration by its id. DESTRUCTIVE: undeploys it remotely |
 | `rename_integration` |  | Change one App Builder integration's DISPLAY NAME on the current project. The id, |
 | `rename_project` |  | Rename the current project — the folder on disk, saved state, and the |
-| `reset_erp_records` | **confirm** | Reset every ERP the ERP integration serves: undo the credit limits and |
+| `reset_erp_records` | **confirm** | Reset every ERP the ERP integration serves, back to zero: close off every order the ERPs |
 | `restart_demo` |  | Stop and restart the current project's demo server. Use after a config change that |
 | `save_ai_prompt` |  | Create or update a saved AI prompt |
 | `set_console_apis` | **confirm** | Set the OPTIONAL Adobe API subscriptions on this project's Developer Console |
