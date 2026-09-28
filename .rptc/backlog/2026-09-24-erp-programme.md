@@ -81,3 +81,8 @@ routing integration) · AB-26r (credit memo) · AB-26s (the payment leg) · AB-2
 - 2026-09-28  docs(erp): fresh-start checklist, walk-through journeys, event-check result (`3db5ac63e`)
 - 2026-09-28  docs(handoff): the night loop's running report, and the extended scope (`711c86ff1`)
 - 2026-09-28  docs(backlog): the owner's authorisation for tonight's unattended loop (`5f1a82ed3`)
+- 2026-09-28  docs(handoff): B8 on Bodea — second ERP added, routing proven, credentials decision (`cc7ebd317`)
+- 2026-09-28  fix(erp): adding an ERP again finishes one that stopped before its link (`bf2a89cb5`)
+- 2026-09-28  fix(app-builder): only a component that feeds the storefront republishes it (`9577fd326`)
+- 2026-09-28  docs(erp): Bodea setup for the two-ERP test, and what it leaves behind (`47d945ff7`)
+- 2026-09-28  docs(handoff): night loop — B6 shipped, integration fix, deploys under way (`cac9716ed`)
