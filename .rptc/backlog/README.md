@@ -260,7 +260,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-20` | fix | [Setup resumes when the install dialog detects AEM Code Sync, instead of demanding a Retry](2026-09-25-eds-setup-resumes-after-code-sync-install.md) | — | high | built |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | backlog |
 
-### app-builder  (79)
+### app-builder  (80)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -302,9 +302,10 @@ each item's own file; what has already landed against an item is in its
 | `AB-16h` | fix | └ [Integration paths that still reach only the first ERP](2026-09-28-erp-paths-first-erp-only.md) | AB-16a | high | built |
 | `AB-16i` | fix | └ [Events from an added ERP never reach the integration](2026-09-28-erp-added-erp-events-undelivered.md) | — | high | built |
 | `AB-16j` | feature | └ [The ERP's maintenance mode: take an ERP down on purpose, and bring it back](2026-09-28-erp-maintenance-mode.md) | — | high | built |
-| `AB-16k` | feature | └ [The ERP sends the price it would charge, whatever set it](2026-09-28-erp-net-price-in-force.md) | — | high | backlog |
+| `AB-16k` | feature | └ [The ERP sends the price it would charge, whatever set it](2026-09-28-erp-net-price-in-force.md) | — | high | built |
 | `AB-16l` | feature | └ [Commerce promotions reach the ERP's sales order](2026-09-28-erp-promotions-reach-erp.md) | — | med | backlog |
 | `AB-16m` | question | └ [One shared catalog per priced company: does it scale to thousands?](2026-09-28-erp-shared-catalog-scale.md) | — | med | backlog |
+| `AB-16n` | feature | └ [A reset returns the whole ERP story to zero, orders included](2026-09-28-erp-reset-closes-orders.md) | — | high | backlog |
 | `AB-21` | feature | [An integration's settings live on its tile, not on Configure Project](2026-09-18-integration-settings-on-tile.md) | — | med | active |
 | `AB-22` | feature | [Import a colleague's integration, and ask only for what it really needs](2026-09-18-import-colleague-integration.md) | AB-21 | med | backlog |
 | `AB-24` | chore | [Stop creating a Stage workspace](2026-09-20-drop-the-stage-workspace.md) | — | med | built |
@@ -579,7 +580,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — backlog
 
-*179 item(s) sit outside the A–G chain.*
+*180 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 
