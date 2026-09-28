@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-9
 needs: []
 value: high
-status: active
+status: built
 ---
 
 # Every integration and system gets its own Adobe workspace
@@ -508,3 +508,4 @@ and re-adding an integration — no migration code ships.
 - 2026-09-22  fix(state): the healed record carries a source GitHub would accept (`c2d8265ef`)
 - 2026-09-22  fix(state): heal a source that is present and unusable, not only a missing one (`293fac931`)
 - 2026-09-22  fix(integrations): a pair that never stored its link is still a pair (`aade1e06c`)
+- 2026-09-28  2026-09-28 status tidy (owner: yes): built. A second pair added live 09-22, each in its own workspace; remove_integration took records and workspace away (AB-26 log, 09-24). Left: release.

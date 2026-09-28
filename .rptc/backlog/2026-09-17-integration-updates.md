@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-9
 needs: []
 value: high
-status: active
+status: built
 ---
 
 # An installed integration takes an update: new code, then Commerce brought to it
@@ -37,3 +37,4 @@ Filed 2026-09-17.
 - 2026-09-18  feat(integrations): an integration and its ERP update together, from either card (`6a4ba391b`)
 - 2026-09-18  fix(integrations): an update shows each card's own state, and redeploys what failed (`860123220`)
 - 2026-09-18  fix(integrations): a pair update also redeploys a member whose last deploy failed (`86d2ba451`)
+- 2026-09-28  2026-09-28 status tidy (owner: yes): built. All five plan steps built 09-17/18; an upgrade removing a deleted webhook measured live (integration 977e5f9). Left: release.

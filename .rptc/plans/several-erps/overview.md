@@ -30,6 +30,7 @@ evidence and what is built; this document says what is left and in what order.
   cart prices, product and stock events both ways, company changes, setup checklist, the
   Mapping tab. Proven today: an ERP rename reaches Commerce in about five seconds, and the
   Commerce stock event reaches the ERP (the stock handler was fixed today, [[AB-35]]).
+- **Correction (2026-09-28):** the next line was already wrong when written; AB-26f, AB-26g and AB-26h were proven live on 2026-09-25 (AB-26e's list), and again on 09-27. See each item's log.
 - **Built but never proven live**, because no credential existed until today: the credit hold
   reaching Commerce ([[AB-26f]]), Commerce Admin changes flowing back to the ERP
   ([[AB-26g]]), per-source stock, product delete and the exposure rule ([[AB-26h]]), and the
@@ -168,3 +169,10 @@ Still open:
 
 Each slice gets its own step file here when it starts, moves to `.rptc/complete/` when it ships,
 and logs to its backlog item. The programme overview's §6 table points here for the order of work.
+
+## Answers to the four disagreements (AB-37)
+
+Recorded in `design.md`, "Live test results (Bodea, 2026-09-28)": custom order attributes can be
+written in every order state; a purchase-order payment is not invoiced at checkout and a partial
+invoice works (built as B4); finding 3 became an order-view button (`design.md`); finding 4 was
+settled by the 2026-09-27 decision on one routing action (above).

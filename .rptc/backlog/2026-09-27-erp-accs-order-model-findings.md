@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: [AB-16]
 value: high
-status: open
+status: shipped
 ---
 
 # Four places the several-ERPs design and the ACCS docs disagree
@@ -54,3 +54,4 @@ PO invoicing at checkout) have results recorded.
 - 2026-09-27  docs(backlog): AB-37, four places the several-ERPs design and the Cloud Service docs disagree (`60440bb9f`)
 - 2026-09-28  docs(plan): design v1 records the Payment on Account live test (`a8833f601`)
 - 2026-09-28  docs(plan): design v1 records the three live test results from Bodea (`1e043fada`)
+- 2026-09-28  2026-09-28 status tidy (owner: yes): shipped. Answered: both live tests recorded in design.md 'Live test results'; overview.md now points to them.

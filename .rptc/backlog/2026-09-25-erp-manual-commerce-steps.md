@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: high
-status: active
+status: built
 parent: AB-26
 ---
 
@@ -111,3 +111,4 @@ optional ones are labelled optional with what they add.
 - 2026-09-27  feat(setup): a second inventory source in the website's stock is a demo setup step (`221ef2f05`)
 - 2026-09-27  docs(backlog): AB-26x logs the second-source setup step, AB-26s the credit exposure rule (`37a9afeac`)
 - 2026-09-27  fix(setup): the ERP's warehouse step asks for a stock of the website's own (`756aa97ba`)
+- 2026-09-28  2026-09-28 status tidy (owner: yes): built. Checklist built on develop (e9a87e742, d8c5aae, 756aa97ba); the provider-id fix on the integration's main (169a674). Left: live proof that a fresh install sets the provider id.

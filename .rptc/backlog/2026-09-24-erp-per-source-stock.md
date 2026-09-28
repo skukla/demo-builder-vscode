@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: [AB-26b]
 value: med
-status: active
+status: built
 ---
 
 # Per-source stock changes reach the ERP, plus the small gaps (product delete, credit truth, currency)
@@ -24,3 +24,4 @@ Harness journeys for each gap; fixture-backed tests for the new reads; the custo
 - 2026-09-24  G2 BUILT TO THE EDGE — demo-erp 88b6679 (stock-only import key, journaled per SKU, does not move lastImportAt) + integration 6488c0d (minute timer refreshes stock: snapshot in State, diff, send moved SKUs with full warehouse lists; ERP-written quantities noted so they are not echoed; worker renamed refresh-job; 321 tests). Live proof waits for a credential. G1 (product delete), G3 (truth note on the customer card) next; G5 (currency) waits for AB-26j
 - 2026-09-24  G1 + G3 BUILT TO THE EDGE — demo-erp 52b1acd (DELETE products/:sku, a deleted parent's variants stay as products of their own, journaled; customer card states the exposure rule) + integration 0ccb226 (subscription to observer.catalog_product_delete_commit_after + handler; manifest regenerated; 323 tests). G2 shipped earlier today (88b6679 / 6488c0d). Remaining: G5 currency (waits for AB-26j); live proof of the two new subscriptions and the minute stock refresh (a credential). Owner to confirm G3: the ERP's exposure is the demo's truth
 - 2026-09-24  docs(backlog): AB-26h per-source stock, product delete and the exposure rule built to the edge; loop report updated (`9d145ddff`)
+- 2026-09-28  2026-09-28 status tidy (owner: yes): built. Product delete proven live 09-25/27; exposure note built; currency from the mapped website built (demo-erp f04c897, 09-24); Move stock replaced the removed minute timer. Left: owner confirms the exposure rule; non-default-source stock not proven live; AB-26y step 6 plans to remove the ERP's product delete route.

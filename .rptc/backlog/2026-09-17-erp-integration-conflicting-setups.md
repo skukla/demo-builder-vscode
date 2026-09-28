@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-9
 needs: [AB-23]
 value: med
-status: active
+status: backlog
 ---
 
 # Refuse an ERP integration that would collide with another project's
@@ -76,3 +76,4 @@ reach the same workspace.
 - 2026-09-20  Rewritten around AB-17's answer: the two-projects-one-workspace case disappears with AB-23 and needs no refusal; the Commerce-instance collision remains, and a per-copy app id could later make it a fix.
 - 2026-09-22  feat(app-builder): a second copy is told which copy it is (`ed6e6b56c`)
 - 2026-09-22  feat(app-builder): a second ERP calls itself by its name in Commerce (`a4913e015`)
+- 2026-09-28  2026-09-28 status tidy (owner: yes): backlog. Not being worked: the refusal its Done-when asks for does not exist (last work 09-22 built a per-copy app id instead). May need rewording, since copies are no longer the model.
