@@ -102,7 +102,8 @@ export interface ErpProductRow {
 export interface ErpPartnerRow {
     id: string;
     name: string;
-    blocked: boolean;
+    /** Commerce's company status (the website account), never the ERP's own credit block. */
+    websiteAccountClosed: boolean;
     creditLimit?: number;
     legalAddress: LegalAddress | null;
     legalName: string | null;
@@ -246,7 +247,7 @@ export function partnersFrom(
     return companies.map((c) => {
         const site = c.websiteId === null ? undefined : siteById.get(c.websiteId);
         return {
-            blocked: c.blocked,
+            websiteAccountClosed: c.blocked,
             creditLimit: c.creditLimit ?? undefined,
             id: `C${c.id}`,
             legalAddress: c.legalAddress,

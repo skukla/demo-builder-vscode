@@ -6,8 +6,10 @@
 
 import {
     ownershipFilter,
+    partnersFrom,
     productsFrom,
     salesOrgOf,
+    type CommerceCompanyRow,
     type CommerceProductRow,
 } from '@/features/app-builder/services/erpFillRows';
 
@@ -72,5 +74,27 @@ describe('salesOrgOf', () => {
             salesOrgName: 'Europe',
         });
         expect(salesOrgOf(undefined)).toStrictEqual({ salesOrg: '1000' });
+    });
+});
+
+describe('partnersFrom', () => {
+    const company = (blocked: boolean): CommerceCompanyRow => ({
+        id: 21,
+        name: 'Acme',
+        blocked,
+        creditLimit: 5000,
+        legalAddress: null,
+        legalName: null,
+        resellerId: null,
+        vatTaxId: null,
+        websiteId: null,
+    });
+
+    it("sends Commerce's company status as the website account, never as the ERP's own credit block", () => {
+        const [closed] = partnersFrom([company(true)], [], new Map());
+        expect(closed.websiteAccountClosed).toBe(true);
+        expect(closed).not.toHaveProperty('blocked');
+        const [open] = partnersFrom([company(false)], [], new Map());
+        expect(open.websiteAccountClosed).toBe(false);
     });
 });

@@ -83,17 +83,23 @@ also have its own website, with its own cart and checkout. Adobe has no built-in
 
 ## 5. One brand says "not yet"
 
-- **Situation:** the buyer is over its credit limit at Brand B, but in good standing at Brand A.
-- **Buyer sees:** the cabinets proceed; the signs show as on hold.
-- **Staff see:** a hold on Brand B's part with the reason in the order history; the company can
-  still order from Brand A.
-- **Each ERP:** Brand B holds its part; Brand A carries on. A block never switches the company off
-  site-wide; it holds only that ERP's lines, whatever their brand (each ERP for itself, owner
-  2026-09-27).
-- **Design:** §3.1 company block, credit; §3.3 credit hold; the combined status (On Hold while
-  any part is held).
-- **Today:** a credit hold round trip for one ERP (proven live); a block held per ERP part is
-  built for several ERPs, not yet live.
+- **Situation:** Brand B's ERP puts a credit block on the buyer (unpaid Brand B invoices); the
+  buyer is in good standing with Brand A's ERP. The buyer orders cabinets (Brand A) and signs
+  (Brand B) together.
+- **Buyer sees:** one order; the cabinets ship and are invoiced; the signs wait.
+- **Staff see:** the order stays in Processing with the status "Partly on hold" and a note: Brand
+  B's lines are waiting for Brand B's credit block. Brand A's lines get a partial shipment and a
+  partial invoice on the same order. When Brand B lifts its block, its lines are sent, then
+  shipped and invoiced as a second partial shipment and invoice.
+- **Each ERP:** Brand B holds its part (its own "Credit block"); Brand A carries on. Neither ever
+  switches the company off on the website: that is the separate "Website account", set only in
+  Commerce (each ERP for itself, owner 2026-09-27/28).
+- **Why not On Hold:** Commerce will not ship or invoice an order that is On Hold, so the whole
+  order goes On Hold only when every part is waiting (owner, 2026-09-28).
+- **Design:** §3.1 company block and the two switches; §3.3 combined status, shipments, invoices.
+- **Today:** a credit hold round trip for one ERP (proven live); partial shipments and invoices
+  per ERP and blocks per ERP are built for several ERPs, not yet live; "Partly on hold" is being
+  built.
 
 ## 6. A brand's system is down
 
