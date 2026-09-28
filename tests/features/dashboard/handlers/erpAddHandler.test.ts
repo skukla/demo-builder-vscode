@@ -29,6 +29,14 @@ jest.mock('@/features/project-creation/services/erpListSync', () => ({
     syncErpList: (...a: unknown[]) => mockSync(...a),
 }));
 
+// The reader of an added ERP's own credential (AB-16a): what it is built from is asserted,
+// and the reader it answers is a sentinel whose hand-off to the list sync is asserted.
+const mockReader = jest.fn();
+const readCredential = jest.fn();
+jest.mock('@/features/app-builder/services/erpCredential', () => ({
+    erpCredentialReader: (...a: unknown[]) => mockReader(...a),
+}));
+
 const mockFill = jest.fn();
 jest.mock('@/features/project-creation/services/erpFillForProject', () => ({
     fillErpForProject: (...a: unknown[]) => mockFill(...a),
@@ -68,6 +76,9 @@ import { handleAddErp } from '@/features/dashboard/handlers/erpAddHandler';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import { ErrorCode } from '@/types/errorCodes';
 
+const CACHED_ORG = { id: 'org-1', code: 'ABC@AdobeOrg', name: 'Fake Org' };
+const EXECUTOR = { execute: jest.fn() };
+
 const AUTH = { accessToken: 'fake-test-pw-not-a-secret', imsOrgId: 'ABC@AdobeOrg' };
 
 function erpProject(extra: Record<string, AppBuilderComponentState> = {}): Partial<Project> {
@@ -99,6 +110,8 @@ function setup(project: Partial<Project> = erpProject()) {
     const mocks = setupMocks(project);
     const { ServiceLocator } = require('@/core/di/serviceLocator');
     ServiceLocator.getAuthenticationService().testDeveloperPermissions = jest.fn().mockResolvedValue({ hasPermissions: true });
+    ServiceLocator.getAuthenticationService().getCachedOrganization = jest.fn(() => CACHED_ORG);
+    ServiceLocator.getCommandExecutor.mockReturnValue(EXECUTOR);
     return mocks;
 }
 
@@ -116,7 +129,8 @@ beforeEach(() => {
         };
         return { success: true };
     });
-    mockSync.mockResolvedValue({ status: 'registered', ids: ['erp', 'demo-erp-2'] });
+    mockReader.mockReturnValue(readCredential);
+    mockSync.mockResolvedValue({ status: 'registered', ids: ['erp', 'demo-erp-2'], warnings: [] });
     mockFill.mockResolvedValue({ status: 'filled', result: { partners: 2, products: 10, skipped: 0 }, erpId: 'demo-erp-2' });
 });
 
@@ -132,7 +146,8 @@ describe('handleAddErp', () => {
         expect(project.componentConfigs?.['demo-erp-2']).toEqual({ ERP_DISPLAY_NAME: 'Brand B ERP' });
         expect(project.appBuilderComponents?.['erp-integration']?.systems).toEqual(['demo-erp', 'demo-erp-2']);
         expect(project.appBuilderComponents?.['demo-erp-2']?.usedBy).toBe('erp-integration');
-        expect(mockSync).toHaveBeenCalledWith(project, 'erp-integration', AUTH);
+        expect(mockReader).toHaveBeenCalledWith(EXECUTOR, project, CACHED_ORG);
+        expect(mockSync).toHaveBeenCalledWith(project, 'erp-integration', AUTH, { readCredential });
         expect(mockFill).toHaveBeenCalledWith(project, 'erp-integration', expect.any(Object), 'demo-erp-2');
         expect(result).toEqual({
             success: true,
@@ -186,7 +201,8 @@ describe('handleAddErp', () => {
         const result = await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP' });
 
         expect(mockAdd).not.toHaveBeenCalled();
-        expect(mockSync).toHaveBeenCalled();
+        // The repair for an ERP added before AB-16a: the list goes again, WITH its credential.
+        expect(mockSync).toHaveBeenCalledWith(expect.any(Object), 'erp-integration', AUTH, { readCredential });
         expect(mockFill).toHaveBeenCalledWith(expect.any(Object), 'erp-integration', expect.any(Object), 'demo-erp-2');
         expect(result).toMatchObject({ success: true, data: { added: { id: 'demo-erp-2' } } });
     });
@@ -226,6 +242,20 @@ describe('handleAddErp', () => {
         const result = await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP' });
 
         expect(result).toMatchObject({ success: true, data: { added: { id: 'demo-erp-2' }, warning: note } });
+    });
+
+    it("a credential the list could not carry still adds the ERP, and says so beside the fill's note", async () => {
+        const warning = "Brand B ERP's credential could not be read; the integration cannot reach it: boom.";
+        mockSync.mockResolvedValue({ status: 'registered', ids: ['erp', 'demo-erp-2'], warnings: [warning] });
+        mockFill.mockResolvedValue({ status: 'failed', detail: 'Commerce answered 401 for products' });
+        const { mockContext } = setup();
+
+        const result = await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP' });
+
+        expect(result).toMatchObject({
+            success: true,
+            data: { warning: `${warning} Demo data did not load: Commerce answered 401 for products. Use Load demo data on its card.` },
+        });
     });
 
     it('runs nothing when the guards refuse', async () => {

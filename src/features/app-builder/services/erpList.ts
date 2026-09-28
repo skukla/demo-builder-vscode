@@ -4,8 +4,9 @@
  * from the integration's card ("Add another ERP") is a demo-erp system of its own, in its own
  * workspace, linked to the integration and registered in that list.
  *
- * Pure: which id the next ERP gets, whether a name is free, the list an integration is sent,
- * and one ERP's rows merged into the key map. The calls live in `erpListSync.ts`.
+ * Pure: which id the next ERP gets, whether a name is free, the list an integration is sent
+ * (with the credential each added ERP answers, AB-16a), and one ERP's rows merged into the key
+ * map. The calls, and the credential reads, live in `erpListSync.ts`.
  *
  * @module features/app-builder/services/erpList
  */
@@ -15,14 +16,34 @@ import { deriveWebBase, listIdOf } from './deployInputs';
 import type { ErpKeyMapEntry } from './erpFill';
 import { pairedInstanceId, systemsUsedBy } from '@/features/components/services/appBuilderComponentLinks';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
-import type { Project } from '@/types/base';
+import type { AppBuilderComponentState, Project } from '@/types/base';
+
+/**
+ * The server-to-server credential an ERP in a workspace of its own answers (AB-16a): each
+ * mock ERP accepts machine calls only from its own workspace's technical account. Sent on a
+ * `PUT erp/erps` entry; the integration keeps it and never answers the secret back. Holds a
+ * live secret: never persisted, logged, or returned to a webview or an agent.
+ */
+export interface ErpAuth {
+    clientId: string;
+    clientSecret: string;
+    orgId: string;
+    scopes: string[];
+    technicalAccountId?: string;
+    technicalAccountEmail?: string;
+}
 
 /** One ERP as the integration's `erp/erps` holds it. */
 export interface ErpListEntry {
     id: string;
     name: string;
     adapter: string;
-    connection: { baseUrl: string | null };
+    /**
+     * `auth` only on a PUT, only for an ERP outside the integration's workspace. Omitted, the
+     * integration keeps the credential it holds; `null` clears it. A GET never carries the
+     * secret, and this module never reads what a GET answered for it.
+     */
+    connection: { baseUrl: string | null; auth?: ErpAuth | null };
     /** Its own settings (the Admin page's ERP switcher); carried over, never made here. */
     settings?: unknown;
 }
@@ -91,17 +112,80 @@ export function erpListIdOf(
     return entry?.listedAs ? listIdOf(project, entry) : undefined;
 }
 
+/** One ERP the list will carry, as `erpListFor` and `erpsWithOwnCredential` read it. */
+interface ListedErp {
+    componentId: string;
+    listId: string;
+    /** The integration's single-ERP id: the ERP that shares its workspace carries it. */
+    firstId: string;
+    name: string;
+    adapter: string;
+    baseUrl: string;
+    state: AppBuilderComponentState;
+}
+
+/** Every deployed, listed system the integration uses, in link order, less the one leaving. */
+function listedErps(
+    project: Project,
+    integrationId: string,
+    catalog: readonly AppBuilderComponentCatalogEntry[],
+    leaving?: string,
+): ListedErp[] {
+    return systemsUsedBy(project, integrationId, catalog).flatMap((id): ListedErp[] => {
+        const state = project.appBuilderComponents?.[id];
+        const entry = catalogEntryFor(project, id, catalog);
+        const baseUrl = deriveWebBase(state?.deployedUrls);
+        const listId = erpListIdOf(project, id, catalog);
+        if (id === leaving || !state || !entry?.listedAs || !listId || state.status !== 'deployed' || !baseUrl) return [];
+        const { adapter, firstId } = entry.listedAs;
+        return [{ componentId: id, listId, firstId, name: state.name ?? entry.name, adapter, baseUrl, state }];
+    });
+}
+
+/** An ERP added from the card, in a workspace of its own, whose credential the list must carry. */
+interface ErpWithOwnCredential {
+    componentId: string;
+    name: string;
+    /** Its own workspace, where the credential is read; absent only for a malformed record. */
+    workspace?: AppBuilderComponentState['workspace'];
+}
+
+/**
+ * The ERPs the list carries that are NOT in the integration's workspace (AB-16a): every one
+ * added from the card, since each is deployed into a workspace of its own. The first ERP
+ * shares the integration's workspace and answers its credential.
+ *
+ * @param project - the project
+ * @param integrationId - the integration
+ * @param catalog - the catalog
+ * @param leaving - a system being removed, left out
+ * @returns each such ERP by component id, with its name and workspace
+ */
+export function erpsWithOwnCredential(
+    project: Project,
+    integrationId: string,
+    catalog: readonly AppBuilderComponentCatalogEntry[],
+    leaving?: string,
+): ErpWithOwnCredential[] {
+    return listedErps(project, integrationId, catalog, leaving)
+        .filter((erp) => erp.listId !== erp.firstId)
+        .map(({ componentId, name, state }) => ({ componentId, name, ...(state.workspace ? { workspace: state.workspace } : {}) }));
+}
+
 /**
  * The ERP list an integration is sent: every deployed, listed system it uses, in link order,
  * each with its own id (`listIdOf`), name, adapter and address. An ERP already in the list
  * the integration answered keeps the settings it holds there, so a PUT, which replaces the
- * whole list, never loses what the SC set on the Admin page.
+ * whole list, never loses what the SC set on the Admin page. An added ERP whose credential
+ * was read carries it (`connection.auth`); the first ERP never does, and one with none read
+ * carries no `auth` key, so the integration keeps whatever it holds.
  *
  * @param project - the project
  * @param integrationId - the integration
  * @param catalog - the catalog
  * @param current - the list the integration serves now (`GET erp/erps`)
  * @param leaving - a system being removed, left out
+ * @param auths - each added ERP's own credential, by component id
  * @returns the list to PUT
  */
 export function erpListFor(
@@ -110,23 +194,18 @@ export function erpListFor(
     catalog: readonly AppBuilderComponentCatalogEntry[],
     current: readonly ErpListEntry[],
     leaving?: string,
+    auths: Readonly<Record<string, ErpAuth>> = {},
 ): ErpListEntry[] {
-    return systemsUsedBy(project, integrationId, catalog).flatMap((id): ErpListEntry[] => {
-        const state = project.appBuilderComponents?.[id];
-        const entry = catalogEntryFor(project, id, catalog);
-        const baseUrl = deriveWebBase(state?.deployedUrls);
-        const listId = erpListIdOf(project, id, catalog);
-        if (id === leaving || !state || !entry?.listedAs || !listId || state.status !== 'deployed' || !baseUrl) return [];
-        const settings = current.find((known) => known.id === listId)?.settings;
-        return [
-            {
-                id: listId,
-                name: state.name ?? entry.name,
-                adapter: entry.listedAs.adapter,
-                connection: { baseUrl },
-                ...(settings !== undefined ? { settings } : {}),
-            },
-        ];
+    return listedErps(project, integrationId, catalog, leaving).map((erp): ErpListEntry => {
+        const settings = current.find((known) => known.id === erp.listId)?.settings;
+        const auth = erp.listId !== erp.firstId ? auths[erp.componentId] : undefined;
+        return {
+            id: erp.listId,
+            name: erp.name,
+            adapter: erp.adapter,
+            connection: { baseUrl: erp.baseUrl, ...(auth ? { auth } : {}) },
+            ...(settings !== undefined ? { settings } : {}),
+        };
     });
 }
 

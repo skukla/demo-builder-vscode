@@ -150,6 +150,17 @@ A list that cannot be sent fails the add with the ERP left deployed; adding agai
 same name finishes it (no second deploy). A fill that does not finish is said, and Load demo
 data on the ERP's card runs it again.
 
+**Its credential.** Each added ERP lives in its own Adobe workspace and accepts machine
+calls only from that workspace's own technical account, so the integration cannot reach it
+with its own credential (401 "Technical account mismatch"). Every time Demo Builder sends the
+list on an add, each added ERP's entry carries its workspace's server-to-server credential as
+`connection.auth` (`erpCredential.ts`, `erpListSync.ts`); the first ERP, which shares the
+integration's workspace, never does. The credential is never stored in the project or any
+file, never logged, and never returned to a webview or an agent; the integration never
+answers it back. If it cannot be read, the list still goes without it and the add says so.
+Adding again with the same name re-sends the list with it, which is how an ERP added before
+this existed gets its credential.
+
 **Its id.** The integration's own ERP is `erp`, never its component id, because the
 integration reads any event or key map row that names no ERP as `erp`, and its per-ERP
 credit attributes are keyed by it. An added ERP's id is its component id. Both are sent as

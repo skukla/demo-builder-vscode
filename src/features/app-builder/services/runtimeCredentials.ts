@@ -71,7 +71,22 @@ interface WorkspaceCredential {
         client_id?: string;
         client_secrets?: string[];
         scopes?: string[];
+        technical_account_id?: string;
+        technical_account_email?: string;
     };
+}
+
+/**
+ * A workspace's OAuth server-to-server credential, read whole. Carries a live client
+ * secret: held in memory for the one call that needs it, never logged or written.
+ */
+export interface WorkspaceS2SCredential {
+    clientId: string;
+    clientSecret: string;
+    orgId: string;
+    scopes: string[];
+    technicalAccountId?: string;
+    technicalAccountEmail?: string;
 }
 
 /** Shape of the workspace-download JSON we consume (defensively partial). */
@@ -91,12 +106,11 @@ interface WorkspaceJson {
 }
 
 /**
- * The workspace S2S credential as `IMS_OAUTH_S2S_*` env, mapped exactly as
- * `aio app use` maps it (aio-cli-plugin-app 14.8 `getOAuthS2SCredential` and
- * `importConsoleConfig`, read 2026-09-15): client_id, the FIRST client secret, the
- * project's IMS org id, and the scopes as a JSON string.
+ * The workspace's OAuth server-to-server credential: client_id, the FIRST client
+ * secret, the project's IMS org id and the scopes, plus the technical account when the
+ * download carries it. Undefined when any of the first three is missing.
  */
-function imsOAuthS2SEnvOf(config: WorkspaceJson | undefined): Record<string, string> | undefined {
+function s2sCredentialOf(config: WorkspaceJson | undefined): WorkspaceS2SCredential | undefined {
     const credential = config?.project?.workspace?.details?.credentials?.find(
         (c) => c.integration_type === 'oauth_server_to_server',
     )?.oauth_server_to_server;
@@ -105,10 +119,29 @@ function imsOAuthS2SEnvOf(config: WorkspaceJson | undefined): Record<string, str
     const orgId = config?.project?.org?.ims_org_id;
     if (!clientId || !clientSecret || !orgId) return undefined;
     return {
-        IMS_OAUTH_S2S_CLIENT_ID: clientId,
-        IMS_OAUTH_S2S_CLIENT_SECRET: clientSecret,
-        IMS_OAUTH_S2S_ORG_ID: orgId,
-        IMS_OAUTH_S2S_SCOPES: JSON.stringify(credential?.scopes ?? []),
+        clientId,
+        clientSecret,
+        orgId,
+        scopes: credential?.scopes ?? [],
+        ...(credential?.technical_account_id ? { technicalAccountId: credential.technical_account_id } : {}),
+        ...(credential?.technical_account_email ? { technicalAccountEmail: credential.technical_account_email } : {}),
+    };
+}
+
+/**
+ * The workspace S2S credential as `IMS_OAUTH_S2S_*` env, mapped exactly as
+ * `aio app use` maps it (aio-cli-plugin-app 14.8 `getOAuthS2SCredential` and
+ * `importConsoleConfig`, read 2026-09-15): client_id, the FIRST client secret, the
+ * project's IMS org id, and the scopes as a JSON string.
+ */
+function imsOAuthS2SEnvOf(config: WorkspaceJson | undefined): Record<string, string> | undefined {
+    const credential = s2sCredentialOf(config);
+    if (!credential) return undefined;
+    return {
+        IMS_OAUTH_S2S_CLIENT_ID: credential.clientId,
+        IMS_OAUTH_S2S_CLIENT_SECRET: credential.clientSecret,
+        IMS_OAUTH_S2S_ORG_ID: credential.orgId,
+        IMS_OAUTH_S2S_SCOPES: JSON.stringify(credential.scopes),
     };
 }
 
@@ -160,6 +193,20 @@ function credentialsIn(config: WorkspaceJson | undefined, logger: Logger): Runti
     logger.debug(`[App Builder] Runtime namespace resolved: ${ns.name}`);
     const imsOAuthS2SEnv = imsOAuthS2SEnvOf(config);
     return { namespace: ns.name, auth: ns.auth, ...(imsOAuthS2SEnv ? { imsOAuthS2SEnv } : {}) };
+}
+
+/**
+ * The targeted workspace's OAuth server-to-server credential, or undefined when it has
+ * none. Unlike {@link fetchRuntimeCredentials}, a workspace without Runtime is not an
+ * error here. Callers run this inside `withOrgContext` aimed at the workspace wanted.
+ *
+ * @throws When the download fails
+ */
+export async function fetchWorkspaceS2SCredential(
+    commandManager: CommandExecutor,
+    nodeVersion: string,
+): Promise<WorkspaceS2SCredential | undefined> {
+    return s2sCredentialOf(await downloadWorkspaceConfig(commandManager, nodeVersion));
 }
 
 /**

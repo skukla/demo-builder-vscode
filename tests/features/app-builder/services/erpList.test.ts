@@ -7,7 +7,13 @@
  * `actions/erp/erps/index.js`): `{ id, name, adapter, connection: { baseUrl }, settings? }`.
  */
 
-import { erpListFor, erpNameProblem, mergeKeyMap, nextListedSystemId } from '@/features/app-builder/services/erpList';
+import {
+    erpListFor,
+    erpNameProblem,
+    erpsWithOwnCredential,
+    mergeKeyMap,
+    nextListedSystemId,
+} from '@/features/app-builder/services/erpList';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { AppBuilderComponentState } from '@/types/base';
 import { createMockProject } from '../../../helpers/projectFake';
@@ -113,6 +119,43 @@ describe('erpListFor', () => {
         });
 
         expect(erpListFor(p, 'erp-integration', catalog, [], 'demo-erp-2').map((entry) => entry.id)).toEqual(['erp']);
+    });
+});
+
+// AB-16a: an ERP in a workspace of its own answers only its own workspace's credential, so
+// the integration is handed it with the list. The first ERP shares the integration's.
+describe('the ERP credentials the list carries', () => {
+    const CONTOSO_WS = { id: 'ws-contoso', name: 'ContosoERP' };
+    const AUTH = { clientId: 'fake-client', clientSecret: 'fake-test-pw-not-a-secret', orgId: 'FAKE@AdobeOrg', scopes: ['AdobeID'] };
+    const p = project({
+        'erp-integration': INTEGRATION,
+        'demo-erp': erp({ name: 'Acme ERP' }),
+        'demo-erp-2': erp({ name: 'Contoso ERP', catalogId: 'demo-erp', deployedUrls: web('demo-erp-2'), workspace: CONTOSO_WS }),
+    });
+
+    it('names each added ERP that needs its own credential, with its workspace, and not the first', () => {
+        expect(erpsWithOwnCredential(p, 'erp-integration', catalog)).toStrictEqual([
+            { componentId: 'demo-erp-2', name: 'Contoso ERP', workspace: CONTOSO_WS },
+        ]);
+    });
+
+    it('names none for an ERP being removed', () => {
+        expect(erpsWithOwnCredential(p, 'erp-integration', catalog, 'demo-erp-2')).toStrictEqual([]);
+    });
+
+    it("puts the credential on the added ERP's connection and never on the first ERP's", () => {
+        const auths = { 'demo-erp-2': AUTH, 'demo-erp': AUTH };
+
+        const [first, added] = erpListFor(p, 'erp-integration', catalog, [], undefined, auths);
+
+        expect(first.connection).toStrictEqual({ baseUrl: 'https://ns.adobeioruntime.net/api/v1/web/demo-erp' });
+        expect(added.connection).toStrictEqual({ baseUrl: 'https://ns.adobeioruntime.net/api/v1/web/demo-erp-2', auth: AUTH });
+    });
+
+    it('sends no auth key for an added ERP whose credential was not read, so the integration keeps its own', () => {
+        const [, added] = erpListFor(p, 'erp-integration', catalog, []);
+
+        expect(added.connection).not.toHaveProperty('auth');
     });
 });
 

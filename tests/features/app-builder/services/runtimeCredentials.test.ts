@@ -14,6 +14,7 @@ import {
     aioOutputTail,
     extractAioErrorDetail,
     fetchRuntimeCredentials,
+    fetchWorkspaceS2SCredential,
     readRuntimeCredentials,
     workspaceHasRuntime,
 } from '@/features/app-builder/services/runtimeCredentials';
@@ -224,6 +225,48 @@ describe('fetchRuntimeCredentials', () => {
         await expect(fetchRuntimeCredentials(commandManager, logger, 'auto')).rejects.toThrow(
             /404 - Not Found/
         );
+    });
+});
+
+// An ERP added in its own workspace is reached by the integration only with THAT workspace's
+// credential (AB-16a): read whole, including the technical account when the download has it.
+describe('fetchWorkspaceS2SCredential', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        (fsPromises.mkdtemp as jest.Mock).mockResolvedValue('/tmp/db-ws-abc');
+        executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
+    });
+
+    it('reads the S2S credential with its first secret, org, scopes and technical account', async () => {
+        const config = JSON.parse(WORKSPACE_WITH_S2S);
+        Object.assign(config.project.workspace.details.credentials[1].oauth_server_to_server, {
+            technical_account_id: 'fake-ta@techacct.adobe.com',
+            technical_account_email: 'fake-ta@example.com',
+        });
+        (fsPromises.readFile as jest.Mock).mockResolvedValue(JSON.stringify(config));
+
+        await expect(fetchWorkspaceS2SCredential(commandManager, 'auto')).resolves.toStrictEqual({
+            clientId: 's2s-client',
+            clientSecret: 'fake-test-pw-not-a-secret-1',
+            orgId: 'ABC123@AdobeOrg',
+            scopes: ['AdobeID', 'adobeio.abdata.read'],
+            technicalAccountId: 'fake-ta@techacct.adobe.com',
+            technicalAccountEmail: 'fake-ta@example.com',
+        });
+        expect(executeMock).toHaveBeenCalledWith(expect.stringMatching(/^aio console workspace download "/), expect.anything());
+        expect(fsPromises.rm).toHaveBeenCalledWith('/tmp/db-ws-abc', expect.objectContaining({ recursive: true }));
+    });
+
+    it('answers undefined for a workspace with no S2S credential, Runtime or not', async () => {
+        (fsPromises.readFile as jest.Mock).mockResolvedValue(JSON.stringify({ project: {} }));
+
+        await expect(fetchWorkspaceS2SCredential(commandManager, 'auto')).resolves.toBeUndefined();
+    });
+
+    it('throws the aio error when the download fails', async () => {
+        executeMock.mockResolvedValue({ code: 2, stdout: '', stderr: ' ›   Error: 404 - Not Found' });
+
+        await expect(fetchWorkspaceS2SCredential(commandManager, 'auto')).rejects.toThrow(/404 - Not Found/);
     });
 });
 

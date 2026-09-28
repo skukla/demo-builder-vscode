@@ -5,11 +5,14 @@
  * The integration is added once; more ERPs are added beside it. Each is a demo-erp system of
  * its own (`demo-erp-2`, …) in a workspace of its own, named as the SC typed it, and deployed
  * with its id in the integration's list (`ERP_ID`, `listIdOf`). Once deployed it is linked to
- * the integration, the integration is told the whole ERP list (`PUT erp/erps`), and the new
- * ERP is filled from Commerce, its key map rows carrying its id.
+ * the integration, the integration is told the whole ERP list (`PUT erp/erps`), each added ERP
+ * with its own workspace's credential (AB-16a), and the new ERP is filled from Commerce, its
+ * key map rows carrying its id.
  *
  * Adding again with the name of an ERP whose add stopped partway finishes it: a failed deploy
- * is retried, and a deployed one that the list or the fill missed is listed and filled.
+ * is retried, and a deployed one that the list or the fill missed is listed and filled. The
+ * list sent then carries every added ERP's credential, which is also how an ERP added before
+ * AB-16a gets its credential to the integration.
  * Removing is the ordinary Remove on the ERP's own card (`removeAppBuilderComponent` takes an
  * added ERP out of the list first); removing the integration removes every ERP.
  *
@@ -30,6 +33,7 @@ import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operatio
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
 import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
 import { catalogEntryFor } from '@/features/app-builder/services/componentEntry';
+import { erpCredentialReader } from '@/features/app-builder/services/erpCredential';
 import { erpNameProblem, nextListedSystemId } from '@/features/app-builder/services/erpList';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import {
@@ -140,7 +144,8 @@ async function listAndFill(
     const authManager = ServiceLocator.getAuthenticationService();
     const auth = await resolveAppManagementAuth(project, authManager);
     report(OPERATION_STAGES.adding.label, 'Telling the integration about its ERPs');
-    const listed = await syncErpList(project, integrationId, auth);
+    const readCredential = erpCredentialReader(ServiceLocator.getCommandExecutor(), project, authManager.getCachedOrganization());
+    const listed = await syncErpList(project, integrationId, auth, { readCredential });
     if (listed.status === 'failed') {
         return {
             success: false,
@@ -153,11 +158,14 @@ async function listAndFill(
         { authManager, getAuth: async () => auth, onProgress: (step) => report(OPERATION_STAGES.loadingErpDemoData.label, step) },
         entry.id,
     );
-    if (filled.status === 'filled') {
-        // Prices not published after the fill (AB-26z): said, and the add stands.
-        return { success: true, listed: listed.ids, filled: true, ...(filled.note ? { fillNote: filled.note } : {}) };
-    }
-    return { success: true, listed: listed.ids, filled: false, fillNote: `Demo data did not load: ${sentence(filled.detail)} Use Load demo data on its card.` };
+    // A credential the list could not carry (AB-16a) and a fill that did not finish are
+    // both said, and the add stands.
+    const notes = [...listed.warnings];
+    // Prices not published after the fill (AB-26z).
+    if (filled.status === 'filled' && filled.note) notes.push(filled.note);
+    if (filled.status !== 'filled') notes.push(`Demo data did not load: ${sentence(filled.detail)} Use Load demo data on its card.`);
+    const fillNote = notes.length ? { fillNote: notes.join(' ') } : {};
+    return { success: true, listed: listed.ids, filled: filled.status === 'filled', ...fillNote };
 }
 
 /** A reason as a sentence: ending in a full stop, whether or not it came with one. */
