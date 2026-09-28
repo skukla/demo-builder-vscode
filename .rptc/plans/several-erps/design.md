@@ -155,8 +155,8 @@ integration's setup guide (`commerce-erp-integration/docs/demo-setup.md`, story 
 | Payment capture | One authorisation per order; each partial invoice captures its own amount. **Test**: is a purchase-order payment invoiced at checkout? (two Adobe pages disagree) | Whole-order capture built |
 | Notifications | Each shipment and invoice can notify the buyer; the demo writes internal comments only | Deliberate demo choice |
 
-**Combined order status** (the router is the only writer): Pending until every part is sent;
-On Hold while any part is held or its ERP is down; Processing while parts are moving; Complete
+**Combined order status** (the router is the only writer; revised by the owner 2026-09-28): Pending until every part is sent;
+On Hold only while EVERY part is held (Commerce will not ship or invoice an order On Hold, so holding the whole order for one ERP's part would stop the other ERPs' shipments and invoices); while SOME parts are held, the order stays Processing with a custom "Partly on hold" status and a note naming the waiting ERP and why; Processing while parts are moving; Complete
 only when every part is shipped and invoiced (Commerce's own rule); never cancelled
 automatically. What a status cannot say ("one ERP confirmed, one refused") lives in the router's
 per-part record, order comments, and an order-grid column plus an order-view button on the Admin
@@ -232,3 +232,4 @@ for a mixed order; whether any SKU is sold by two ERPs.
 - 2026-09-28: nothing is seeded; the SC creates brands and products and sets both values; instructions in the integration's setup guide, story 3 (integration `5bffd76`).
 - 2026-09-28: brand, business unit, ERP and sales organisation defined (provisional on the client's answer about selling units); "each brand for itself" reads as each ERP for itself.
 - 2026-09-28: pending client answers listed by the tech case's register numbers (#1, #2, #4, #9, #17, #19, #20); no new rule added that depends on a client answer. The ERP's own credit block and the website account are two separate switches in each ERP (owner); the ERP never takes its own block from Commerce.
+- 2026-09-28: combined status revised (owner): Commerce's On Hold only when every part is held; a partly held order stays Processing with a "Partly on hold" status and a note, so other ERPs can still ship and invoice. With one ERP, a held part is the whole order, so it goes On Hold as before.
