@@ -191,6 +191,21 @@ describe('handleAddErp', () => {
         expect(result).toMatchObject({ success: true, data: { added: { id: 'demo-erp-2' } } });
     });
 
+    it('adding again finishes one that stopped between its deploy and its link: no second deploy, linked, listed, filled', async () => {
+        // The record an add left on Bodea (2026-09-28) when it stopped after the deploy.
+        const { mockContext } = setup(erpProject({
+            'demo-erp-2': { kind: 'system', status: 'deployed', catalogId: 'demo-erp', name: 'Brand B ERP', source: { owner: 'skukla', repo: 'demo-erp' } },
+        }));
+
+        const result = await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP' });
+
+        expect(mockAdd).not.toHaveBeenCalled();
+        const [project] = mockSync.mock.calls[0] as [Project];
+        expect(project.appBuilderComponents?.['erp-integration']?.systems).toEqual(['demo-erp', 'demo-erp-2']);
+        expect(mockFill).toHaveBeenCalledWith(expect.any(Object), 'erp-integration', expect.any(Object), 'demo-erp-2');
+        expect(result).toMatchObject({ success: true, data: { added: { id: 'demo-erp-2' } } });
+    });
+
     it('a fill that did not finish still adds the ERP, and says so', async () => {
         mockFill.mockResolvedValue({ status: 'failed', detail: 'Commerce answered 401 for products' });
         const { mockContext } = setup();

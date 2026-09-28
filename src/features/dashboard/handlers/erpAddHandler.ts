@@ -65,8 +65,10 @@ type AddOutcome = GuardableResult & { listed?: string[]; filled?: boolean; fillN
 
 /**
  * An ADDED ERP of this name whose add can be finished: one the integration uses (its list or
- * fill may have been missed), or one whose deploy failed before it was linked. The
- * integration's own ERP is never one: its name is simply taken.
+ * fill may have been missed), or one of the ERP's kind that was never linked, whether its deploy
+ * failed or landed (an add that stopped between the deploy and the link, as one did on Bodea on
+ * 2026-09-28). Only an added ERP carries `catalogId`, so the integration's own ERP is never
+ * one: its name is simply taken.
  */
 function unfinishedNamed(project: Project, integrationId: string, system: AppBuilderComponentCatalogEntry, name: string): string | undefined {
     const lower = name.toLowerCase();
@@ -76,7 +78,8 @@ function unfinishedNamed(project: Project, integrationId: string, system: AppBui
     );
     if (linked) return linked;
     return Object.entries(project.appBuilderComponents ?? {}).find(
-        ([id, state]) => state.catalogId === system.id && state.status === 'error' && named(id),
+        ([id, state]) =>
+            state.catalogId === system.id && (state.status === 'error' || state.status === 'deployed') && named(id),
     )?.[0];
 }
 
