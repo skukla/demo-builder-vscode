@@ -180,3 +180,26 @@ into `develop` again (it has AB-26z's and AB-16a's Demo Builder parts).
   scheduled runs), AB-16d (the remaining live proofs: Partially Held and Re-send, the journeys),
   AB-16e (returns, awaiting your review), AB-16f (fresh start), AB-16g (lost key-map pairs, cause
   unknown). Also AB-38 (schedules a business user edits) and AB-26m (Mapping view, parked).
+
+## Afternoon loop (owner away)
+
+Nothing was deployed and nothing on Bodea changed in this stretch. Everything is on branches.
+
+- **Reset one ERP (AB-16c).** An ERP card's "Reset records" named one ERP but wiped every ERP.
+  Now it resets only that ERP, and the agent's `reset_erp_records` takes the same optional
+  `erp`. Needs the integration from `loop/ab-16c-per-erp-detach` (pushed, not merged). Until
+  that is deployed, a one-ERP reset is refused before it touches anything.
+  One limit: Contoso's 182 old products were written before ERPs were recorded per write, so
+  only a full reset clears them.
+- **A second ERP looks different from the first** (demo-erp `loop/erp-theme-per-erp`): a new
+  ERP starts with the next of the four themes. Existing ERPs keep their look.
+- **Prices change at the ERP's own midnight** (demo-erp `loop/erp-local-date`): a time zone
+  setting, default UTC. No screen field yet.
+- **Wording:** the ERP's product page said "contract prices" for its pricing rules; the load and
+  reset tool descriptions said "the ERP" while acting on every ERP. Both fixed.
+- **Lost key-map pairs (AB-16g):** one way it could happen found and closed (an added ERP that
+  could not be identified was filled as the first ERP). Whether that is what happened cannot be
+  read back.
+- **Question filed, not blocking (AB-16d):** the Partially Held live proof needs a connection
+  broken on purpose (the demo ERP never refuses an order). Recommended: break Contoso's address
+  in the ERP list, place a mixed order, restore it, press Re-send, all in one sitting.
