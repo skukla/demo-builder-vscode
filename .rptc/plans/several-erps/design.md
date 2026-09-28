@@ -88,6 +88,11 @@ brand website is spoken to. Adobe docs: stores under one website share one check
 has its own cart and checkout (cart calls are store-scoped); Adobe's search ships
 `attributes_brand` as a filter; Adobe has no built-in brand object.
 
+**Nothing is seeded (owner, 2026-09-28).** Demo Builder does not create brands, products or a
+catalogue split. The SC creates the scenario they want and sets `brand` and `erp_owner` on the
+products; the integration responds to whatever is there. The SC's instructions are the
+integration's setup guide (`commerce-erp-integration/docs/demo-setup.md`, story 3).
+
 | Entity | Across several ERPs | State |
 |---|---|---|
 | Product and its owner | Exactly one owning ERP per SKU, from a product attribute a PIM would master (decided 2026-09-24; inventory sources are the alternative). Products do not cross ERPs: the client described ERPs split by product type and manufacturing facility, one ERP per brand (client tech case, architecture walk-through; the owner's recollection agrees). Stated for product types, not SKUs, so it is to be confirmed with the client | Built (`ownershipFilter`). Under source-based ownership a SKU stocked in two ERPs' sources would belong to both; the design takes the attribute as the rule |
@@ -190,3 +195,4 @@ for a mixed order; whether any SKU is sold by two ERPs.
 - 2026-09-27: demo scope recorded: Commerce and the ERPs only; CRM and PIM are spoken to, not built. The credit limit is ERP-owned in the demo (no longer waiting on a client answer); a CRM-owned limit is a customer variation.
 - 2026-09-27: adding a second ERP in Demo Builder is "Add another ERP" on the integration card; the tile is add-once (owner).
 - 2026-09-28: how a brand is made: a `brand` attribute for shoppers, separate from the `erp_owner` attribute routing reads; one shared website in the demo, a stand-alone brand website spoken to. Vignettes gain "0. What a brand is"; their Today lines now say what is built for several ERPs but not yet live.
+- 2026-09-28: nothing is seeded; the SC creates brands and products and sets both values; instructions in the integration's setup guide, story 3 (integration `5bffd76`).
