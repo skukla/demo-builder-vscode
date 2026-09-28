@@ -35,3 +35,7 @@ answered 401 "Technical account mismatch" to orders, cart prices and health chec
 Contoso on Bodea answers the integration: a mixed order sends Contoso its part, its health
 reads reachable, and its cart price applies. The credential never appears in a response, a
 log or the repository.
+
+## Shipped so far
+
+- 2026-09-28  Integration side built (feature/ab-16a-per-erp-credentials: e2465c9, 0ba4c23, 425da37, c32826a, b41c806; 712 tests). paramsForErp overrides AIO_COMMERCE_AUTH_IMS_CLIENT_ID/_CLIENT_SECRETS/_ORG_ID/_SCOPES (+ technical account when given) and gives each ERP its own token cache context. Found and fixed outside the item: three actions logged the integration's IMS secret at debug level. Follow-up filed: AB-16h (paths that still reach only the first ERP). Known, not ours: aio-lib-ims-oauth prints its config, secret included, when DEBUG is on.
