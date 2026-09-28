@@ -260,7 +260,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-20` | fix | [Setup resumes when the install dialog detects AEM Code Sync, instead of demanding a Retry](2026-09-25-eds-setup-resumes-after-code-sync-install.md) | — | high | built |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | backlog |
 
-### app-builder  (72)
+### app-builder  (73)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -298,6 +298,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-16d` | feature | └ [Live proofs still owed on Bodea for several ERPs](2026-09-28-erp-live-proofs.md) | AB-16a | high | backlog |
 | `AB-16e` | feature | └ [Returns across several ERPs](2026-09-28-erp-returns-across-erps.md) | — | med | backlog |
 | `AB-16f` | feature | └ [Fresh start: delete Bodea, rebuild from the setup guide, walk the journeys](2026-09-28-erp-fresh-start-rehearsal.md) | AB-16a, AB-16d, AB-26z | high | backlog |
+| `AB-16g` | fix | └ [Northwind's key map lost its company pairs](2026-09-28-erp-key-map-lost-pairs.md) | — | high | backlog |
 | `AB-21` | feature | [An integration's settings live on its tile, not on Configure Project](2026-09-18-integration-settings-on-tile.md) | — | med | active |
 | `AB-22` | feature | [Import a colleague's integration, and ask only for what it really needs](2026-09-18-import-colleague-integration.md) | AB-21 | med | backlog |
 | `AB-24` | chore | [Stop creating a Stage workspace](2026-09-20-drop-the-stage-workspace.md) | — | med | built |
@@ -572,7 +573,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — backlog
 
-*172 item(s) sit outside the A–G chain.*
+*173 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 
