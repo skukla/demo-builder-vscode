@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: high
-status: backlog
+status: built
 parent: AB-16
 ---
 
@@ -41,3 +41,7 @@ Filed 2026-09-28. **Owner, 2026-09-28: "Yes" (add it back), filed under AB-16.**
 On Bodea: Contoso put in maintenance, a mixed order placed (Northwind's part sent, the order
 Partially Held naming Contoso), maintenance ended, Re-send pressed, Contoso's part sent once.
 Order numbers recorded here and on AB-16d.
+
+## Shipped so far
+
+- 2026-09-28  2026-09-28 proven live on Bodea (integration d8d5aae, both ERPs fafaddb): Contoso put in maintenance (15:25 UTC, until 15:55) through write_erp_rest; get_erp_status: Contoso not reachable, 'Contoso ERP is in maintenance until 15:55 UTC.'. Guest order 3000000022 (accesspoint + proliantdl380): Northwind sales order 0000001012 at once; Contoso's part held, retried 4 times with the maintenance reason; Commerce status partially_held. Maintenance ended 15:30:57; Re-send (erp/resend-part) 15:31: Contoso sales order 0000001001; Commerce status back to pending; a second Re-send answered skipped; each ERP holds exactly one sales order for it.
