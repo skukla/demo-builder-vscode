@@ -6,6 +6,7 @@
  * stops with the reason instead.
  */
 
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 import { createMockProject } from '../../../helpers/projectFake';
 import type { AppBuilderComponentState, Project } from '@/types/base';
 
@@ -45,7 +46,7 @@ function project(added: AppBuilderComponentState): Project {
     });
 }
 
-const deps = { authManager: {} as never, getAuth: async () => undefined };
+const deps = { authManager: createMockAuthenticationService(), getAuth: async () => undefined };
 
 describe('fillErpForProject — which ERP it fills', () => {
     it('stops, naming the ERP, when an added ERP cannot be told from the first', async () => {
