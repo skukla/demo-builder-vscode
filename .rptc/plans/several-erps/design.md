@@ -79,6 +79,15 @@ sandbox test before it is built on.
 
 ### 3.2 Catalogue, prices and stock
 
+**How a brand is made (owner, 2026-09-28, from `.rptc/research` brand findings below).** A brand
+is a product attribute (`brand`), shown to shoppers as a name and a filter on the one shared
+website. Which ERP owns a product is a separate attribute (`erp_owner`); routing reads only that.
+A stand-alone brand may also have its own website (own cart and checkout), using the per-website
+settings the integration already has. The demo shows one website with brands by attribute; a
+brand website is spoken to. Adobe docs: stores under one website share one checkout; each website
+has its own cart and checkout (cart calls are store-scoped); Adobe's search ships
+`attributes_brand` as a filter; Adobe has no built-in brand object.
+
 | Entity | Across several ERPs | State |
 |---|---|---|
 | Product and its owner | Exactly one owning ERP per SKU, from a product attribute a PIM would master (decided 2026-09-24; inventory sources are the alternative). Products do not cross ERPs: the client described ERPs split by product type and manufacturing facility, one ERP per brand (client tech case, architecture walk-through; the owner's recollection agrees). Stated for product types, not SKUs, so it is to be confirmed with the client | Built (`ownershipFilter`). Under source-based ownership a SKU stocked in two ERPs' sources would belong to both; the design takes the attribute as the rule |
@@ -180,3 +189,4 @@ for a mixed order; whether any SKU is sold by two ERPs.
 - 2026-09-27: the credit-limit row marked as depending on a client question (the client's stated direction is that their CRM owns credit limits). No decision changed. Phase B slice B5 waits on the answer.
 - 2026-09-27: demo scope recorded: Commerce and the ERPs only; CRM and PIM are spoken to, not built. The credit limit is ERP-owned in the demo (no longer waiting on a client answer); a CRM-owned limit is a customer variation.
 - 2026-09-27: adding a second ERP in Demo Builder is "Add another ERP" on the integration card; the tile is add-once (owner).
+- 2026-09-28: how a brand is made: a `brand` attribute for shoppers, separate from the `erp_owner` attribute routing reads; one shared website in the demo, a stand-alone brand website spoken to. Vignettes gain "0. What a brand is"; their Today lines now say what is built for several ERPs but not yet live.
