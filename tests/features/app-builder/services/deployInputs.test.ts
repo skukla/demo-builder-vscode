@@ -186,35 +186,96 @@ describe('resolveDisplayName', () => {
         expect(resolveDisplayName(INTEGRATION, { ERP_DISPLAY_NAME: 'Nordwind' })).toBe('ERP integration');
     });
 
-    // An integration is named for the system it talks to (owner, 2026-09-24):
-    // "Northwind ERP Integration", never a bare "ERP Integration" beside an ERP
-    // called something else.
-    it('appends nameSuffix to the input-supplied name; an empty input falls back to the entry name, suffix and all', () => {
-        const named: AppBuilderComponentCatalogEntry = {
-            ...INTEGRATION,
-            nameFromEnvVar: 'ERP_DISPLAY_NAME',
-            nameSuffix: ' Integration',
-        };
-        expect(resolveDisplayName(named, { ERP_DISPLAY_NAME: 'Northwind ERP' })).toBe('Northwind ERP Integration');
-        expect(resolveDisplayName(named, { ERP_DISPLAY_NAME: '  Northwind ERP ' })).toBe('Northwind ERP Integration');
-        expect(resolveDisplayName(named, { ERP_DISPLAY_NAME: '' })).toBe('ERP integration');
-        expect(resolveDisplayName(named, {})).toBe('ERP integration');
+    // The shipped catalog, not a fixture: this is the contract the dashboard row,
+    // the agent's get_erp_status and the add's progress title all read. The integration
+    // has a name of its own (AB-16o, owner 2026-09-28), not its first ERP's.
+    it('the shipped ERP integration is called by its own name — ERP Integration by default', () => {
+        const entry = shippedEntry('erp-integration');
+
+        expect(resolveDisplayName(entry, resolveDeployInputs(createMockProject(), entry))).toBe('ERP Integration');
+        const named = createMockProject({
+            componentConfigs: {
+                'erp-integration': { ERP_DISPLAY_NAME: 'Northwind ERP', INTEGRATION_DISPLAY_NAME: 'Bodea ERP Hub' },
+            },
+        });
+        expect(displayNameInProject(named, entry)).toBe('Bodea ERP Hub');
+    });
+});
+
+/** A project made before the integration had a name of its own, as Bodea's file holds it. */
+function projectFromBeforeOwnName() {
+    return createMockProject({
+        appBuilderComponents: {
+            'demo-erp': {
+                kind: 'system',
+                status: 'deployed',
+                name: 'Northwind ERP',
+                source: { owner: 'skukla', repo: 'demo-erp' },
+            },
+            'erp-integration': {
+                kind: 'integration',
+                status: 'deployed',
+                name: 'Northwind ERP Integration',
+                source: { owner: 'skukla', repo: 'commerce-erp-integration' },
+            },
+        },
+        componentConfigs: { 'erp-integration': { ERP_DISPLAY_NAME: 'Northwind ERP' } },
+    });
+}
+
+function shippedEntry(id: string): AppBuilderComponentCatalogEntry {
+    const entry = getAppBuilderComponentCatalog().find((candidate) => candidate.id === id);
+    expect(entry).toBeDefined();
+    return entry as AppBuilderComponentCatalogEntry;
+}
+
+describe("the integration's own name (AB-16o)", () => {
+    // Existing projects keep their names (owner rule): nothing changes under anyone.
+    it('a project from before keeps its recorded name, and its next deploy sends that name to Commerce', () => {
+        const project = projectFromBeforeOwnName();
+        const entry = shippedEntry('erp-integration');
+
+        const inputs = resolveDeployInputs(project, entry);
+
+        expect(inputs.INTEGRATION_DISPLAY_NAME).toBe('Northwind ERP Integration');
+        expect(resolveDisplayName(entry, inputs)).toBe('Northwind ERP Integration');
+        expect(displayNameInProject(project, entry)).toBe('Northwind ERP Integration');
     });
 
-    // The shipped catalog, not a fixture: this is the contract the dashboard row,
-    // the agent's get_erp_status and the add's progress title all read.
-    it('the shipped ERP integration is named for its ERP — by default, and as typed', () => {
-        const erpIntegration = getAppBuilderComponentCatalog().find((entry) => entry.id === 'erp-integration');
-        expect(erpIntegration).toBeDefined();
-        const entry = erpIntegration as AppBuilderComponentCatalogEntry;
-
-        expect(resolveDisplayName(entry, resolveDeployInputs(createMockProject(), entry))).toBe(
-            'Acme ERP Integration',
-        );
-        const typed = createMockProject({
+    it('a new integration, with no record yet, is ERP Integration', () => {
+        const project = createMockProject({
             componentConfigs: { 'erp-integration': { ERP_DISPLAY_NAME: 'Northwind ERP' } },
         });
-        expect(displayNameInProject(typed, entry)).toBe('Northwind ERP Integration');
+
+        expect(resolveDeployInputs(project, shippedEntry('erp-integration')).INTEGRATION_DISPLAY_NAME).toBe(
+            'ERP Integration',
+        );
+    });
+
+    it('a name set on the integration (a rename) wins over the recorded one', () => {
+        const project = projectFromBeforeOwnName();
+        project.componentConfigs = {
+            'erp-integration': { ERP_DISPLAY_NAME: 'Northwind ERP', INTEGRATION_DISPLAY_NAME: 'Bodea ERP Hub' },
+        };
+
+        expect(resolveDeployInputs(project, shippedEntry('erp-integration')).INTEGRATION_DISPLAY_NAME).toBe(
+            'Bodea ERP Hub',
+        );
+    });
+
+    // The ERP reads its integration's values first; it must not take the integration's name.
+    it("the ERP keeps its own ERP_DISPLAY_NAME and is never sent the integration's name", () => {
+        const project = projectFromBeforeOwnName();
+        project.componentConfigs = {
+            'erp-integration': { ERP_DISPLAY_NAME: 'Northwind ERP', INTEGRATION_DISPLAY_NAME: 'Bodea ERP Hub' },
+        };
+        const erp = shippedEntry('demo-erp');
+
+        const inputs = resolveDeployInputs(project, erp);
+
+        expect(inputs.ERP_DISPLAY_NAME).toBe('Northwind ERP');
+        expect(inputs).not.toHaveProperty('INTEGRATION_DISPLAY_NAME');
+        expect(resolveDisplayName(erp, inputs)).toBe('Northwind ERP');
     });
 });
 

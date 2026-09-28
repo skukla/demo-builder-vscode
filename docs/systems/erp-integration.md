@@ -31,7 +31,7 @@ Adobe's Commerce integration starter kit. The design record is
 |---|---|---|
 | Catalog kind | `system`, bound to `erp-integration` | `integration`, extension layout, App Management lifecycle |
 | Repository | `skukla/demo-erp` | `skukla/commerce-erp-integration` |
-| Provides / consumes | provides `ERP_BASE_URL` | consumes `ERP_BASE_URL`; both take `ERP_DISPLAY_NAME` (default "Acme ERP") |
+| Provides / consumes | provides `ERP_BASE_URL` | consumes `ERP_BASE_URL`; both take `ERP_DISPLAY_NAME` (default "Acme ERP"); the integration alone takes `INTEGRATION_DISPLAY_NAME` (default "ERP Integration") |
 | Commerce install | none | yes, the starter kit's, after the deploy |
 | Screen | its own, served by its `screen` action, opened with a key | the Commerce Admin page, on the workspace's static site |
 
@@ -239,11 +239,21 @@ ERP** adds the key to the link in the extension (`systemScreen.ts`), so it never
 webview, a log, the project file or an agent. An ERP deployed before the screen existed
 answers "Redeploy it to add one."
 
-The ERP's name is a setting of the ERP integration ("ERP name", default Acme ERP). It is
-changed in the integration's **Settings** — the tile's menu, or the flyout's Settings row —
-and saving redeploys the ERP and then the integration, since a setting reaches an app only
-through its deploy. The ERP reads the integration's value, so the name is set in one place;
-it names the ERP's row and the ERP calls itself that. Configure Project holds project
+The ERP's name is an input of the ERP integration ("ERP name", default Acme ERP), typed when
+the pair is added. The ERP reads the integration's value, so the name is set in one place; it
+names the ERP's row and the ERP calls itself that. It is fixed once the pair is added: a
+different name means removing the pair and adding it again (Settings refuse it).
+
+The integration has a name of its own (`INTEGRATION_DISPLAY_NAME`, "Integration name", default
+**ERP Integration**; AB-16o), never its ERP's: its card, and Commerce Admin's menu entry, page
+title and App Management app name. Commerce's order column reads "ERP order" and the product
+action "Move stock between ERP warehouses", since both are about every ERP. The name changes
+by a **rename** (the pencil beside it, or `rename_integration`), which sets the input as well
+as the card. Commerce's labels are fixed when the app is deployed, so a new name reaches
+Commerce on the integration's next update or redeploy; the rename says so and runs neither. A
+project made before this has no value for the input: its integration keeps the name its card
+already shows ("Northwind ERP Integration"), and its next deploy sends that name to Commerce.
+The ERP cards' **Used by** row follows the integration's name. Configure Project holds project
 settings only (AB-21).
 
 ## For agents
@@ -268,7 +278,7 @@ answers the whole record, result and log lines, of the run it started. The list 
 `failedOnly`, `since` and `skip`, and hides the timer firings unless asked. Beside them, `run_commerce_rest` and `write_commerce_rest` reach the
 Commerce REST API for the same instance (AB-29).
 `get_integration_settings` reads the integration's settings, and `set_integration_settings`
-changes a text setting (the ERP's name) and redeploys; a secret setting is entered on the
+changes a text setting and redeploys; a secret setting is entered on the
 tile, never passed to a tool.
 `open_erp_screen` (confirm-gated, like `open_url`) opens the ERP's screen; it answers the
 address and never the key.

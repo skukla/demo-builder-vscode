@@ -11,6 +11,7 @@ import {
     redeployOrder,
     validateSettingsChange,
 } from '@/features/app-builder/services/componentSettings';
+import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import { createMockProject } from '../../../helpers/projectFake';
 
@@ -62,6 +63,20 @@ describe('editableSettingsOf / hasSettings', () => {
     it('a bound system leaves out what its integration sets, so the ERP has no Settings of its own', () => {
         expect(editableSettingsOf(SYSTEM, CATALOG)).toStrictEqual([]);
         expect(hasSettings(SYSTEM, CATALOG)).toBe(false);
+    });
+
+    // AB-16o: the shipped ERP integration is named from its own input now, and its ERP's
+    // name is still fixed when the pair is added. Neither is a Setting: the integration's
+    // name changes by a rename, which also relabels its card.
+    it("the shipped ERP integration's Settings show neither its own name nor its ERP's", () => {
+        const catalog = [...getAppBuilderComponentCatalog()];
+        const integration = catalog.find((entry) => entry.id === 'erp-integration') as AppBuilderComponentCatalogEntry;
+
+        const names = editableSettingsOf(integration, catalog).map((v) => v.name);
+
+        expect(integration.nameFromEnvVar).toBe('INTEGRATION_DISPLAY_NAME');
+        expect(names).not.toContain('INTEGRATION_DISPLAY_NAME');
+        expect(names).not.toContain('ERP_DISPLAY_NAME');
     });
 
     it('an entry with no settings has none', () => {
@@ -129,6 +144,22 @@ describe('validateSettingsChange', () => {
             values: { ERP_DISPLAY_NAME: 'Nordwind' },
             secrets: {},
         })).toBe('The name is fixed when the pair is added. To use a different name, remove it and add it again.');
+    });
+
+    it("refuses the integration's own name, which changes by a rename", () => {
+        const named: AppBuilderComponentCatalogEntry = {
+            ...INTEGRATION,
+            nameFromEnvVar: 'INTEGRATION_DISPLAY_NAME',
+            envSchema: [
+                ...(INTEGRATION.envSchema ?? []),
+                { name: 'INTEGRATION_DISPLAY_NAME', type: 'text', label: 'Integration name', default: 'ERP Integration' },
+            ],
+        };
+
+        expect(validateSettingsChange(named, CATALOG, {
+            values: { INTEGRATION_DISPLAY_NAME: 'Bodea ERP Hub' },
+            secrets: {},
+        })).toBe("The integration's name changes by renaming it (the pencil beside its name, or rename_integration).");
     });
 
     it.each([

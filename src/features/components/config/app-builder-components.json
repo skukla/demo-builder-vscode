@@ -86,8 +86,7 @@
     {
       "id": "erp-integration",
       "name": "ERP Integration",
-      "nameFromEnvVar": "ERP_DISPLAY_NAME",
-      "nameSuffix": " Integration",
+      "nameFromEnvVar": "INTEGRATION_DISPLAY_NAME",
       "setupSteps": [
         {
           "id": "confirmed-status",
@@ -157,6 +156,12 @@
           "type": "text",
           "label": "ERP name",
           "default": "Acme ERP"
+        },
+        {
+          "name": "INTEGRATION_DISPLAY_NAME",
+          "type": "text",
+          "label": "Integration name",
+          "default": "ERP Integration"
         }
       ],
       "source": {
