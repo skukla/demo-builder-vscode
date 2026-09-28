@@ -93,8 +93,9 @@ more than the demo can show. The multi-ERP routing itself is designed, not built
 
 - **Situation:** the group acquires Brand C, with its own ERP.
 - **What changes:** one adapter for Brand C's kind of ERP (or none, if the group already runs
-  that kind), one line in the ERP list, and Brand C's products tagged with their owning ERP in
-  the product information system.
+  that kind), one line in the ERP list, and Brand C's products tagged with their owning ERP. In
+  the demo that tag is set in Commerce; for a customer, their product information system would
+  write it (spoken to, not built).
 - **What does not change:** the routing action, the storefront, the checkout, the other brands.
 - **Design:** §2 code layout (router, one adapter folder per kind of ERP, the written contract,
   the ERP list).

@@ -16,6 +16,15 @@ would be told to build. What exists only because it is a demo (filling the ERP, 
 the ERP's writes in Commerce) lives in Demo Builder, never in the integration. Where the demo
 simplifies, the design says so, next to what a customer would do instead (marked **Demo:**).
 
+### Demo scope: Commerce and the ERPs only (owner, 2026-09-27)
+
+The demo shows how ERPs integrate directly with Commerce. It builds no CRM and no product
+information system (PIM). Where a customer's CRM or PIM would own something, the demo lets the
+ERP or the setup own it, and the talk track names the system that would own it for a customer:
+the product's owning ERP is set in Commerce by setup (a PIM would write it); credit limits come
+from the ERPs (a customer's CRM may own them instead, and then the integration simply does not
+write the limit). These are named integrations the SC speaks to, not built ones.
+
 ## 2. The shape
 
 One integration app, one workspace, one Commerce app, one Admin page:
@@ -56,7 +65,7 @@ sandbox test before it is built on.
 | Company (identity) | One Commerce company becomes a customer in every ERP the buyer deals with; Commerce is the master | Built for one ERP; the company event is not proven live |
 | Key map (company to ERP customer) | One pair **per ERP**: the map must record which ERP a pair belongs to | **Gap**: today one company may pair with one ERP customer only (`key-map.js` rejects a second) |
 | Company block | Each ERP has its own blocking level; Commerce has one active/blocked flag. **Decided (owner, 2026-09-27): each brand for itself.** An ERP's block holds only that ERP's part of an order; it never changes the Commerce company's flag, which stays a group decision made in Commerce. Fits a group of separate brands whose orders span brands; to confirm with the client (is there group-level credit management?) | **Gap**: today the integration copies an ERP's block onto the company flag; that write is to be removed and replaced by per-part holds |
-| Credit limit | Commerce's limit is the TOTAL across ERPs; each ERP's own limit, exposure and available credit in its own prefixed company custom attributes (decided 2026-09-26). **Depends on a client question** (the tech case's #20): the client's stated future is that sales manage credit limits in their CRM, which would then own the Commerce limit instead of the ERPs; the two cannot both write it. A brand's credit HOLD on its own part is unaffected | Built for one ERP (writes the limit); per-ERP attributes not built. **Test**: does REST `setCustomAttributes` replace the whole set? |
+| Credit limit | Commerce's limit is the TOTAL across ERPs; each ERP's own limit, exposure and available credit in its own prefixed company custom attributes (decided 2026-09-26). **Demo: the ERPs own it** (demo scope above). For a customer whose CRM owns credit limits, the integration does not write the limit; the tech case tracks which applies to the client (#20). A brand's credit HOLD on its own part is unaffected | Built for one ERP (writes the limit); per-ERP attributes not built. **Test**: does REST `setCustomAttributes` replace the whole set? |
 | Credit exposure and balance | Each ERP counts only its own open orders and unpaid invoices; a hold on one ERP's exposure holds only its part | Built for one ERP; the payment leg (Commerce balance) is frozen (AB-26s) |
 | Payment terms | Each ERP keeps its own; never in Commerce | Nothing to do |
 | Company users, groups, shared catalogs | Commerce only. A company keeps ONE shared catalog; each ERP writes only its own SKUs' prices into it | Catalog writes not built (AB-26z) |
@@ -162,3 +171,4 @@ for a mixed order; whether any SKU is sold by two ERPs.
 - 2026-09-27: LOCKED v1 by the owner. Returns come after the routing slices. The cancel fix went to the integration's main (`a76789a`).
 - 2026-09-27 (after lock): company block is each brand for itself; the code layout (router, one adapter folder per ERP kind, the written contract, an example adapter, the ERP list keyed by id) and unique ERP names in a project. Diagrams affected: any that show a company block, and the integration's internal structure.
 - 2026-09-27: the credit-limit row marked as depending on a client question (the client's stated direction is that their CRM owns credit limits). No decision changed. Phase B slice B5 waits on the answer.
+- 2026-09-27: demo scope recorded: Commerce and the ERPs only; CRM and PIM are spoken to, not built. The credit limit is ERP-owned in the demo (no longer waiting on a client answer); a CRM-owned limit is a customer variation.
