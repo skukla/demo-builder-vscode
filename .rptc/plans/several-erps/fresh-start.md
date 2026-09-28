@@ -22,7 +22,7 @@ each by hand in the Commerce Admin, or say it stays.
 
 | Left behind | Where | Undo |
 |---|---|---|
-| Test orders 3000000014, 3000000015, 3000000016, 3000000017 and earlier demo orders, with their invoices, shipments and comments | Sales → Orders | **Cannot be deleted** in Commerce. Cancel or credit-memo what is open; they stay in history |
+| Test orders 3000000014 to 3000000020 and earlier demo orders, with their invoices, shipments and comments | Sales → Orders | **Cannot be deleted** in Commerce. Cancel or credit-memo what is open; they stay in history |
 | Credit charged by test orders (Kukla Studios: $120 from 3000000016) | Customers → Companies → Kukla Studios → Company Credit | **Done 2026-09-28**: reimbursed; balance 0, $120,000 available. Repeat for any later test order placed on account |
 | Test custom order attribute `erp_test_number` on order 3000000014 | the order | Leave (historic) |
 | Inventory sources `northwind` and `east`, and the stock "Bodea Stock" | Stores → Inventory → Sources / Stocks | Delete the stock (the website returns to Default Stock); move quantities back to Default Source; **sources cannot be deleted**: disable them |
@@ -30,6 +30,7 @@ each by hand in the Commerce Admin, or say it stays.
 | Second-ERP stock: `proliantdl380`, `poweredger752`, `primergyrx4770m5` at `east`, 50 each (added 2026-09-28; their `northwind` rows unchanged) | products' Sources | Unassign `east` from the three products |
 | Payment on Account switched on for the Bodea website | Stores → Configuration → Sales → Payment Methods (scope Bodea Website) | Tick Use Default beside Enabled. Or keep: it is a setup step the guide asks for |
 | Shared catalog for Kukla Studios (catalog 14, group 19) and ServerSavvy (catalog 12, group 16), set up by hand for contract prices | Catalog → Shared Catalogs | Keep if the new project's demo uses them; else assign the companies back to the default catalog |
+| Northwind price list 4000000001 (Kukla Studios, inactive) and the ERP's price data | the ERP | A reset or the ERP's removal wipes it; its catalog prices were already removed |
 | Order status "Partially Held" (`partially_held`), created 2026-09-28 and assigned to Processing and Pending (not default, not on storefront) | Stores → Order Status | Unassign from both states, then delete |
 | Product attribute `erp_owner` (created 2026-09-28, Text Field, in the Default set; values on `accesspoint`, `switchlite8`, `switchenterprise8` = `erp`; `proliantdl380`, `poweredger752`, `primergyrx4770m5` = `demo-erp-2`) | Stores → Attributes → Product | Delete the attribute (removes the values) |
 | Product attribute `brand` | Stores → Attributes → Product | **Do not delete**: it came with the sample catalog (a Dropdown with its own values), not from this work |
