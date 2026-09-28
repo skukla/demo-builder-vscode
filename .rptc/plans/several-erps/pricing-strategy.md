@@ -4,6 +4,26 @@ Settled with the owner, 2026-09-28. Draft for review by the case agent (possible
 Companion to `pricing-and-live-checks.md` (what is synced ahead and what is asked live).
 Backlog: [[AB-26z]] (built), [[AB-16k]], [[AB-16l]] (to build).
 
+## The recommendation (owner, 2026-09-28)
+
+**Prices and discounts that come from a company relationship live in the ERP**: contract
+prices, price-group prices, customer discounts. Sales negotiates them, they apply on every
+channel (web, phone, EDI), and they must match the invoice. The ERP sends Commerce the net
+price it would charge ([[AB-16k]]).
+
+**Seasonal web campaigns may live in Commerce, if the client wants them**: holiday promotions,
+coupon codes, free shipping, bundles. Marketing runs them; they are web-only and short-lived.
+When a client has them, two questions follow: does a campaign reach buyers who have a contract
+price (setup 2 or 3 below), and the order carries the campaign discount to the ERP ([[AB-16l]]).
+
+ERPs own discounts, not only list prices: an ERP's pricing turns a list price into a
+customer's net price on every sales document (SAP: base price then discount conditions,
+`../../plans/ab-26z-contract-prices/sap-mapping.md`; Business Central: line and invoice
+discounts, from general knowledge, not re-read). List price is the item's own master data.
+
+**For the demo:** setup 1 (ERP only) is the default story; a seasonal campaign (setup 3) is an
+optional extra beat.
+
 ## The strategy in one line each
 
 1. **The ERP owns every customer price.** List prices and each company's own prices are set
@@ -51,8 +71,8 @@ whose ERP price is 90 (list price 100), and a 10% catalog promotion.
 Setup 3 takes the rule only on the quantity-1 contract price: each ERP price list line shown
 needs a quantity-1 line for the product. Cart rules (layer 4) apply in setups 2 and 3 alike.
 
-**For the demo:** the owner's choice of which setup to show is open. The demo store's value of
-the setting has not been read yet.
+**For the demo:** setup 1 by default; setup 3 as an optional extra beat. The demo store's value
+of the setting has not been read yet.
 
 **Layer 4** applies afterwards, to the cart total built from that price.
 
