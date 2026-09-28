@@ -86,3 +86,7 @@ routing integration) · AB-26r (credit memo) · AB-26s (the payment leg) · AB-2
 - 2026-09-28  fix(app-builder): only a component that feeds the storefront republishes it (`9577fd326`)
 - 2026-09-28  docs(erp): Bodea setup for the two-ERP test, and what it leaves behind (`47d945ff7`)
 - 2026-09-28  docs(handoff): night loop — B6 shipped, integration fix, deploys under way (`cac9716ed`)
+- 2026-09-28  docs(handoff): ERP health now tells a refusing ERP from a working one (`18a0aa9bd`)
+- 2026-09-28  feat(erp): get_erp_status reports the ERP it is asked for (`5434c0f1f`)
+- 2026-09-28  docs(erp): returns design, screen listing, and the fill ownership fix (`a7cc715df`)
+- 2026-09-28  docs(backlog): AB-26 logs tonight's B8 commits (`b8c60d0bc`)
