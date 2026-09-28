@@ -300,7 +300,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-16f` | feature | └ [Fresh start: delete Bodea, rebuild from the setup guide, walk the journeys](2026-09-28-erp-fresh-start-rehearsal.md) | AB-16a, AB-16d, AB-26z | high | backlog |
 | `AB-16g` | fix | └ [Northwind's key map lost its company pairs](2026-09-28-erp-key-map-lost-pairs.md) | — | high | backlog |
 | `AB-16h` | fix | └ [Integration paths that still reach only the first ERP](2026-09-28-erp-paths-first-erp-only.md) | AB-16a | high | built |
-| `AB-16i` | fix | └ [Events from an added ERP never reach the integration](2026-09-28-erp-added-erp-events-undelivered.md) | — | high | backlog |
+| `AB-16i` | fix | └ [Events from an added ERP never reach the integration](2026-09-28-erp-added-erp-events-undelivered.md) | — | high | built |
 | `AB-21` | feature | [An integration's settings live on its tile, not on Configure Project](2026-09-18-integration-settings-on-tile.md) | — | med | active |
 | `AB-22` | feature | [Import a colleague's integration, and ask only for what it really needs](2026-09-18-import-colleague-integration.md) | AB-21 | med | backlog |
 | `AB-24` | chore | [Stop creating a Stage workspace](2026-09-20-drop-the-stage-workspace.md) | — | med | built |
