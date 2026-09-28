@@ -146,7 +146,7 @@ integration's setup guide (`commerce-erp-integration/docs/demo-setup.md`, story 
 | Line owner on the order | Read from the product attribute at routing time. **Test**: the per-line nominated source (Cloud Service, 2026) as the carrier, set at checkout | Attribute read built |
 | Sending a part | The adapter sends only that part's lines, keyed by order and part so a retry never double-sends | Built for whole orders (idempotent by order) |
 | ERP acceptance and number | Each ERP's number goes to an order comment and the router's record; `ext_order_id` holds one value and is written only by the router, if at all. **Test**: custom order attributes written after Pending | Comment and write-back built for one ERP |
-| Credit hold | One ERP holds its part; the order goes On Hold with the reason in a comment | Proven for one ERP |
+| Credit hold | One ERP holds its part; the order is Partially Held (still Processing) with the reason in a comment, and goes On Hold only when every part is held (see "Combined status" below) | Proven for one ERP (where the one part is the whole order, so On Hold) |
 | Hold, unhold, cancel from Commerce | Commerce acts on the whole order: the router tells every ERP with an open part | Proven for one ERP |
 | Cancel from an ERP | That ERP's part only. An order with any invoice or shipment cannot be cancelled in Commerce: the rest is closed by a credit memo | Fixed 2026-09-27 (integration `71c1ab5`): the handler reads the order back and, if Commerce kept it, holds it for staff with the reason. The credit memo itself waits on AB-26r |
 | Order edits | A Processing order cannot be substantially edited (Adobe) | Nothing to design |
