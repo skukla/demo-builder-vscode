@@ -87,7 +87,7 @@ also have its own website, with its own cart and checkout. Adobe has no built-in
   buyer is in good standing with Brand A's ERP. The buyer orders cabinets (Brand A) and signs
   (Brand B) together.
 - **Buyer sees:** one order; the cabinets ship and are invoiced; the signs wait.
-- **Staff see:** the order stays in Processing with the status "Partly on hold" and a note: Brand
+- **Staff see:** the order stays in Processing with the status "Partially Held" and a note: Brand
   B's lines are waiting for Brand B's credit block. Brand A's lines get a partial shipment and a
   partial invoice on the same order. When Brand B lifts its block, its lines are sent, then
   shipped and invoiced as a second partial shipment and invoice.
@@ -98,7 +98,7 @@ also have its own website, with its own cart and checkout. Adobe has no built-in
   order goes On Hold only when every part is waiting (owner, 2026-09-28).
 - **Design:** §3.1 company block and the two switches; §3.3 combined status, shipments, invoices.
 - **Today:** a credit hold round trip for one ERP (proven live); partial shipments and invoices
-  per ERP and blocks per ERP are built for several ERPs, not yet live; "Partly on hold" is being
+  per ERP and blocks per ERP are built for several ERPs, not yet live; "Partially Held" is being
   built.
 
 ## 6. A brand's system is down
