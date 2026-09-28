@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: [AB-26j, AB-26g]
 value: high
-status: active
+status: backlog
 ---
 
 # The entity map — the Commerce Admin page where the settings are the mapping
@@ -80,3 +80,4 @@ Component tests on the mapping view with fixtures for each card; the Admin page'
 - 2026-09-24  Step 2 BUILT — integration bb06879: the look-up on the Buying organization and Sellable item cards. erp/lookup (GET ?sku= | ?company=) asks Commerce (product + source assignments; company + credit) and the ERP (product document; partner list then document) and answers both sides row by row via lib/lookup.js (pure); a Commerce 404 is absent, an ERP 5xx an error, malformed input refused first. ERP client gains product/partners/partner, Commerce client getProduct. 10 tests (4 arrangement, 6 action incl. the config declaring it); suite 379; biome clean; preview driven headlessly (type, click, 7 rows) with a clean console. The item is built to its supervised edge: what remains is a person looking at the live Admin page and at App Management's own form against this page
 - 2026-09-24  docs(rptc): entity map built — the look-up logged, item built, report (`dd6c2fb2a`)
 - 2026-09-28  Reopened (owner, 2026-09-28): the Mapping tab was deleted in the page redesign of 2026-09-27 (ec40ca5). The owner wants a simplified, attractive Mapping view in the integration's Admin page so a business user sees what each setting connects in each system, including AB-26z's prices. Brief: .rptc/plans/erp-mapping-view/overview.md. Prototype in preview/next first, for the owner's review.
+- 2026-09-28  Parked by the owner (2026-09-28) to come back to after AB-26z and the loop's follow-ups. Where it stands: the brief (.rptc/plans/erp-mapping-view/overview.md); an unfinished first draft of the section on commerce-erp-integration branch feature/mapping-view (preview/next/mapping.jsx and sample data, not wired into the shell; worktree ../commerce-erp-integration.worktrees/mapping-view). Next: finish the prototype for the owner's review, then build it into src/commerce-backend-ui-2; fix the README's description of the deleted Mapping tab.
