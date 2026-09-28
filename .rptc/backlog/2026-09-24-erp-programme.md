@@ -76,3 +76,4 @@ routing integration) · AB-26r (credit memo) · AB-26s (the payment leg) · AB-2
 - 2026-09-26  docs(plan): several ERPs records the credit model and the side-list page (`25ced77dc`)
 - 2026-09-26  docs(rptc): the ERP plan ends with a readability pass over both screens (`9b3773a9a`)
 - 2026-09-26  docs(integrations): the ERP's Admin entry is under Apps (`ec2f7b110`)
+- 2026-09-28  Owner, 2026-09-28 night: unattended loop to build and prove Phase B. Authorised: merge the loop branches to main and deploy the integration and ERP to Bodea; place, inspect and clean up test orders and test buyers on Bodea; change and restore Bodea Commerce settings for tests. Not authorised: other projects, sign-ins, deleting workspaces or projects. Stop and report when a deploy or live test fails twice.
