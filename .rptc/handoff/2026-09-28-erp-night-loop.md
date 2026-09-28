@@ -52,3 +52,10 @@ Full tests before every commit. Bodea only; never signs in; never deletes a work
   block events were refused. They now count as the first ERP's. Bodea's ERP is exactly that case.
 - ERP deployed to Bodea (the deploy call outlasted its 25-minute wait, but the extension now
   reports no pending ERP update). Integration deploy running.
+- Commerce set up for the two-ERP test, following the setup guide: `erp_owner` created (Text
+  Field, Default set; `accesspoint`, `switchlite8`, `switchenterprise8` = `erp`), and the
+  Partially Held status created and assigned to Processing and Pending (Admin, since REST cannot
+  create statuses). Found: Bodea already had a `brand` attribute from its sample catalog; the
+  guide now says to reuse one, and the clean-up list says not to delete it.
+- Integration deployed to Bodea (again past the 40-minute wait; the extension reports no update
+  pending for either).
