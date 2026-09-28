@@ -219,6 +219,30 @@ EDI and email orders must share the routing; one order per checkout; payment and
 brand; who owns price, stock and contract prices; one ERP down (send the rest, or hold); returns
 for a mixed order; whether any SKU is sold by two ERPs.
 
+## Live test results (Bodea, 2026-09-28, owner-authorised)
+
+1. **Nominated source per line.** The storefront call `setNominatedSourceOnCartItems` sets a cart
+   line's source (test order 3000000014, source `east`); the Admin order page shows "Nominated
+   Source: East Warehouse"; Commerce refuses a shipment from any other source ("must be shipped from
+   their nominated source"). It is NOT in the admin REST order data or the storefront order data,
+   so the router keeps reading the product's `erp_owner`. The nomination is a safety net that makes
+   each ERP ship from its own warehouse, not a routing key. Setting it from `erp_owner` at checkout
+   is storefront code, not proven.
+2. **Custom order attributes after placement.** `POST /V1/orders` with `entity_id` and
+   `custom_attributes` wrote and changed a value while the order was Pending, Processing and
+   Complete (same order), totals intact. Experience League's "only while Pending" is the Admin
+   editor's rule, not the API's: each ERP's number can go in its own custom order attribute (Q-num
+   passes; AB-37 finding 1 resolved).
+3. **Purchase-order payment.** With Purchase Order enabled for the Bodea website (then restored), a
+   company buyer's order paid by purchase order (3000000015, PO-TEST-001) was NOT invoiced at
+   checkout (Pending, no invoice, full amount due); a partial invoice with `items[]` for 1 of 2
+   units then succeeded (Processing, $65 invoiced, $55 due). Per-ERP partial invoices live in
+   Commerce for PO-paid orders (the two Adobe pages' conflict resolved for this method).
+
+Left on Bodea: orders 3000000014 (Complete) and 3000000015 (Processing, part invoiced), both also
+sent to the Northwind ERP by the deployed integration; test attribute `erp_test_number` on 14.
+The test buyers were deleted; the payment setting is back to its default.
+
 ## Change log
 
 - 2026-09-27: v1 draft.
@@ -234,3 +258,4 @@ for a mixed order; whether any SKU is sold by two ERPs.
 - 2026-09-28: pending client answers listed by the tech case's register numbers (#1, #2, #4, #9, #17, #19, #20); no new rule added that depends on a client answer. The ERP's own credit block and the website account are two separate switches in each ERP (owner); the ERP never takes its own block from Commerce.
 - 2026-09-28: combined status revised (owner): Commerce's On Hold only when every part is held; a partly held order stays Processing with a "Partially Held" status and a note, so other ERPs can still ship and invoice. With one ERP, a held part is the whole order, so it goes On Hold as before.
 - 2026-09-28: the waiting-lines status is named "Partially Held" (code `partially_held`), owner; built in integration `6387fc9` and renamed after.
+- 2026-09-28: live test results recorded: nominated source is a shipping safety net, not readable by the integration; custom order attributes writable through the API in every state (ERP numbers per ERP go there); purchase-order payment is not invoiced at checkout and takes per-ERP partial invoices.
