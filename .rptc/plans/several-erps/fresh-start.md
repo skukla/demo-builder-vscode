@@ -27,10 +27,11 @@ each by hand in the Commerce Admin, or say it stays.
 | Test custom order attribute `erp_test_number` on order 3000000014 | the order | Leave (historic) |
 | Inventory sources `northwind` and `east`, and the stock "Bodea Stock" | Stores → Inventory → Sources / Stocks | Delete the stock (the website returns to Default Stock); move quantities back to Default Source; **sources cannot be deleted**: disable them |
 | Product source assignments and quantities at `northwind` / `east` (49 Bodea products) | products' Sources | Move back to Default Source (the saved pre-change rows: session scratchpad `bodea-default-rows-before.json`, not in the repo) |
+| Second-ERP stock: `proliantdl380`, `poweredger752`, `primergyrx4770m5` at `east`, 50 each (added 2026-09-28; their `northwind` rows unchanged) | products' Sources | Unassign `east` from the three products |
 | Payment on Account switched on for the Bodea website | Stores → Configuration → Sales → Payment Methods (scope Bodea Website) | Tick Use Default beside Enabled. Or keep: it is a setup step the guide asks for |
 | Shared catalog for Kukla Studios (catalog 14, group 19) and ServerSavvy (catalog 12, group 16), set up by hand for contract prices | Catalog → Shared Catalogs | Keep if the new project's demo uses them; else assign the companies back to the default catalog |
 | Order status "Partially Held" (`partially_held`), created 2026-09-28 and assigned to Processing and Pending (not default, not on storefront) | Stores → Order Status | Unassign from both states, then delete |
-| Product attribute `erp_owner` (created 2026-09-28, Text Field, in the Default set; values on `accesspoint`, `switchlite8`, `switchenterprise8` = `erp`, and the server products once the second ERP exists) | Stores → Attributes → Product | Delete the attribute (removes the values) |
+| Product attribute `erp_owner` (created 2026-09-28, Text Field, in the Default set; values on `accesspoint`, `switchlite8`, `switchenterprise8` = `erp`; `proliantdl380`, `poweredger752`, `primergyrx4770m5` = `demo-erp-2`) | Stores → Attributes → Product | Delete the attribute (removes the values) |
 | Product attribute `brand` | Stores → Attributes → Product | **Do not delete**: it came with the sample catalog (a Dropdown with its own values), not from this work |
 | Test customers | Customers | All test buyers were deleted after each test (45, 46, 47, 48) |
 | Order status "Confirmed in ERP" (`erp_confirmed`, on Pending; exists on Bodea, setup guide optional step) | Stores → Order Status | Unassign, delete |

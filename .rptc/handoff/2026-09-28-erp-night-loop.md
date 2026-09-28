@@ -59,3 +59,66 @@ Full tests before every commit. Bodea only; never signs in; never deletes a work
   guide now says to reuse one, and the clean-up list says not to delete it.
 - Integration deployed to Bodea (again past the 40-minute wait; the extension reports no update
   pending for either).
+- **B8 live: the second ERP.** Demo Builder rebuilt and reloaded with B6. `add_erp` "Contoso ERP"
+  deployed Contoso in its own workspace in about a minute, then stuck: the add republished the
+  storefront, the DA.live session had expired, and it waited on a sign-in prompt in the window.
+  Two Demo Builder fixes, gated and pushed:
+  - `9577fd3` only a component that feeds the storefront republishes it (the check read the
+    whole project, so on any project with a mesh every add and redeploy republished; this is
+    also why tonight's deploys seemed to take 25–40 minutes);
+  - `bf2a89c` adding an ERP again finishes one that stopped between its deploy and its link
+    (before, the retry was refused as a duplicate name).
+  Added again: the integration now lists both ERPs (`erp`, `demo-erp-2`) and Contoso is filled.
+- **Mixed order 3000000018** (an access point and a server): Northwind got only the access
+  point (sales order 0000001008). Routing by `erp_owner` works live.
+- **Contoso refuses the integration (401).** Adobe's check on Contoso's actions says "Technical
+  account mismatch": an ERP accepts machine calls only from its own workspace's credential, and
+  the integration has only Northwind's workspace credential. So with each ERP in its own
+  workspace (the owner's choice), the integration needs each ERP's credential. **Your
+  decision** (see the walkthrough queue). Cart pricing for Contoso's products is refused the
+  same way (the cart still went through).
+- That refusal exposed two integration defects, fixed (`a926063`, 655 tests), deploying now:
+  - a part its ERP refused was dropped: the order stayed Pending, no Partially Held, no
+    Re-send, and the event counted as done. It is now failed and open: Partially Held, and
+    Re-send works on it;
+  - the order event carries no order id (its subscription names none), so the router never
+    recorded a company's orders or wrote any status at order time; only the tests' made-up
+    orders had one. The router now looks the id up.
+- Also found, not fixed: the fill copies the whole Commerce catalog into every ERP, not only
+  the products it owns; `get_erp_status` reports live figures for the first ERP only.
+- Router fix deployed to Bodea (`d6ef93c` → `a926063`); the deploy returned normally in
+  minutes, with no republish hang. The live check of it stopped: carts holding Contoso's
+  products fail (3 tries), because Contoso refuses the cart price check too and Commerce runs
+  every cart webhook as required. A Northwind-only order went through (3000000019). The fix is
+  proven by its tests (655), not yet live; it needs Contoso to accept the integration first.
+- Stopped B8 here, by the loop's rule (a live test failing twice stops the item).
+
+## Walkthrough queue (your decisions, in order)
+
+1. **How the integration signs in to an ERP in another workspace.** Each ERP accepts machine
+   calls only from its own workspace's credential. Options:
+   - **Recommended: each ERP entry carries its own credential.** Demo Builder hands the
+     integration the new ERP workspace's server-to-server credential when it adds the ERP; the
+     adapter signs each call with that ERP's credential. This is what a client's integration
+     does (one API credential per ERP), and it keeps one workspace per ERP. Cost: a secret per
+     ERP stored by the integration (App Builder State), and removal must delete it.
+   - Deploy added ERPs into the integration's workspace. Works at once, but reverses your
+     one-workspace-per-ERP decision (own screen, own look stay; own workspace goes).
+2. **What a buyer sees while one brand's ERP is down.** As built, a down or refusing ERP stops
+   checkout for its products (the cart price check is required), so vignette 6 ("the buyer
+   places one order as usual") cannot happen. Either the price check lets the cart through at
+   list price when that ERP is down (and the order goes Partially Held), or the vignette
+   changes to "that brand's products cannot be bought until its ERP is back".
+3. **The fill copies the whole catalog into every ERP.** Should an added ERP hold only the
+   products it owns (`erp_owner`)? The design says each ERP receives only its own.
+4. **Merge** the three branches when you are happy (Demo Builder `feature/erp-integration`,
+   the two ERP repos' loop branches; the ERP repos' `main` already carry tonight's work).
+
+## Left on Bodea from tonight
+- Contoso ERP (`demo-erp-2`) in its own workspace, listed with the integration. Removing it
+  deletes that workspace, which the loop may not do; it stays for your decision.
+- Test orders 3000000018 (Northwind part sent; Contoso part refused under the old code) and
+  3000000019 (Northwind only), guest, check/money order. Northwind has their sales orders
+  0000001008 and 0000001009 (checked); Reset records clears them.
+- `erp_owner` values, the `east` stock rows and the Partially Held status: all listed in
+  `fresh-start.md`.
