@@ -96,7 +96,9 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             "Change one App Builder integration's DISPLAY NAME on the current project. The id, " +
             'its folder and its Runtime package are immutable and do not move. Local metadata ' +
             'only — nothing redeploys. Pre-built catalog integrations and the API Mesh cannot ' +
-            'be renamed.',
+            'be renamed, except the ERP integration: its new name reaches Commerce Admin (menu, ' +
+            'page title, app name) on its next update_integration or redeploy_integration, which ' +
+            'the answer\'s note says; ask the user before running either. Its ERPs keep their names.',
         map: dashboardHandlers,
         type: 'renameAppBuilderComponent',
         inputSchema: {

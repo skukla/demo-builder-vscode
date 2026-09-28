@@ -471,7 +471,7 @@ function runAdd(
         {
             title: 'Adding',
             id: entry.id,
-            label: addLabel(project, entry, payload.name),
+            label: addLabel(project, entry),
             noun: kindNoun(entry.kind),
             logger: context.logger,
             progress,
@@ -523,21 +523,12 @@ function runAdd(
 }
 
 /**
- * What the add is called while it runs: the name its inputs give it — for the ERP
- * integration, "<ERP name> Integration" — with the name the SC just typed for the
- * bound system applied BEFORE anything is recorded, because the title is fixed
- * when the progress starts and the recording happens inside it.
+ * What the add is called while it runs: the name its inputs give it. For the ERP
+ * integration that is its own name ("ERP Integration" by default, AB-16o); a name the
+ * SC types on the add names its ERP, not the integration.
  */
-function addLabel(
-    project: Project,
-    entry: AppBuilderComponentCatalogEntry,
-    typedName: string | undefined,
-): string {
-    const inputs = resolveDeployInputs(project, entry);
-    const key = pairedNameKey(entry);
-    const typed = typedName?.trim();
-    if (key && typed) inputs[key] = typed;
-    return resolveDisplayName(entry, inputs);
+function addLabel(project: Project, entry: AppBuilderComponentCatalogEntry): string {
+    return resolveDisplayName(entry, resolveDeployInputs(project, entry));
 }
 
 /** The input the entry's bound system is NAMED from, when it has one. */
@@ -550,8 +541,8 @@ function pairedNameKey(entry: AppBuilderComponentCatalogEntry): string | undefin
 }
 
 /**
- * A typed name on a PAIRED entry names its bound SYSTEM — and, through
- * `nameSuffix`, the integration too ("Northwind ERP Integration").
+ * A typed name on a PAIRED entry names its bound SYSTEM, not the integration,
+ * which has a name of its own (AB-16o).
  *
  * The ERP it talks to is called whatever the SC typed. Recorded against the
  * INTEGRATION's id because
@@ -657,7 +648,7 @@ export const handleAddAppBuilderComponent: MessageHandler<
     const refusal = refuseAdd(project, entry);
     if (refusal) return refusal;
 
-    const label = addLabel(project, entry, payload?.name);
+    const label = addLabel(project, entry);
     const result = await runAdd(context, project, entry, payload ?? {});
     return reportAddOutcome(context, entry, result, label);
 }, addedIdOf);
@@ -1193,7 +1184,10 @@ export const handleRenameAppBuilderComponent: MessageHandler<{
     // rename would be silently reverted. Same exclusion the settings
     // serializer applies (deriveAppBuilderComponentSources).
     // A second copy of a pre-built integration (AB-23) is pre-built too.
-    if (getAppBuilderComponentEntry(entry.catalogId ?? id) !== undefined) {
+    // EXCEPT one named from an input (the ERP integration, AB-16o): the rename sets
+    // that input, so the redeploy carries the new name instead of reverting it.
+    const catalogEntry = getAppBuilderComponentEntry(entry.catalogId ?? id);
+    if (catalogEntry !== undefined && !catalogEntry.nameFromEnvVar) {
         return {
             success: false,
             error: 'Pre-built catalog integrations cannot be renamed',
@@ -1211,13 +1205,47 @@ export const handleRenameAppBuilderComponent: MessageHandler<{
     }
 
     const { name } = resolved;
-    await context.stateManager.saveProject(setAppBuilderComponent(project, id, { ...entry, name }));
+    const renamed = setAppBuilderComponent(project, id, { ...entry, name });
+    setNameInput(renamed, id, catalogEntry?.nameFromEnvVar, name);
+    await context.stateManager.saveProject(renamed);
     // Same per-row channel the deploy path pushes — the status is unchanged
     // (the entry's current one); the name rides along to refresh the row label.
     await postRowStatus(id, entry.status, undefined, name);
     await postComponentsSnapshot(context);
+    const note = commerceRenameNote(catalogEntry, name);
+    // Not awaited: an agent's rename must not wait on a notification nobody clicks.
+    if (note) void vscode.window.showInformationMessage(note);
     // The TRIMMED name, which is not necessarily what the caller sent. Additive:
     // the drawer's InlineRenameField reads `success`/`error` and ignores this.
     // `rename_integration` does not — a bare success renders as "{}".
-    return { success: true, renamed: { id, name } };
+    return { success: true, renamed: { id, name }, ...(note ? { note } : {}) };
 };
+
+/**
+ * A pre-built integration named from an input keeps its name in that input, keyed by
+ * its own id (a second copy has its own), so its next deploy sends the new name.
+ */
+function setNameInput(project: Project, id: string, input: string | undefined, name: string): void {
+    if (!input) return;
+    project.componentConfigs = {
+        ...(project.componentConfigs ?? {}),
+        [id]: { ...(project.componentConfigs?.[id] ?? {}), [input]: name },
+    };
+}
+
+/**
+ * What a rename of an app Commerce installs does NOT do yet: Commerce's labels are fixed
+ * when the app is deployed, so they change on its next update. Offered, never run: a
+ * deploy is a cloud operation the SC confirms.
+ */
+function commerceRenameNote(
+    catalogEntry: AppBuilderComponentCatalogEntry | undefined,
+    name: string,
+): string | undefined {
+    if (!catalogEntry?.nameFromEnvVar || catalogEntry.lifecycle !== 'app-management') return undefined;
+    return (
+        `Commerce Admin shows "${name}" (its menu entry, page title and app name) after the ` +
+        "integration's next update: Update or Redeploy on its card, or update_integration / " +
+        'redeploy_integration.'
+    );
+}

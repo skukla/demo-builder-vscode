@@ -317,13 +317,15 @@ function deriveInstallation(
  * kindLabel / source-line / apis facet. Catalog id → 'Pre-built' (+ its
  * requiredApis); a blank-entry source → 'Custom · built with AI' (the shell
  * instancing path); anything else → 'Imported repo' with a mono owner/repo.
+ * `renamable`: a pre-built one only when its name comes from an input (the ERP
+ * integration, AB-16o) — the rename sets that input, so a redeploy keeps it.
  */
 function deriveKindFacet(entry: IdentifiedAppBuilderComponent): {
     kindLabel: string;
     sourceLine: string;
     sourceIsAi: boolean;
     apis?: string[];
-    isCatalog: boolean;
+    renamable: boolean;
 } {
     // A second copy of a kind (AB-23) reads as the entry it was made from.
     const catalogEntry = getAppBuilderComponentEntry(entry.catalogId ?? entry.id);
@@ -333,7 +335,7 @@ function deriveKindFacet(entry: IdentifiedAppBuilderComponent): {
             sourceLine: formatSourceLine(entry.source),
             sourceIsAi: false,
             apis: catalogEntry.requiredApis,
-            isCatalog: true,
+            renamable: Boolean(catalogEntry.nameFromEnvVar),
         };
     }
     if (isBlankSource(entry.source)) {
@@ -345,14 +347,14 @@ function deriveKindFacet(entry: IdentifiedAppBuilderComponent): {
             kindLabel: 'Custom · blank starter',
             sourceLine: 'Blank starter — build it out',
             sourceIsAi: true,
-            isCatalog: false,
+            renamable: true,
         };
     }
     return {
         kindLabel: 'Imported repo',
         sourceLine: formatSourceLine(entry.source),
         sourceIsAi: false,
-        isCatalog: false,
+        renamable: true,
     };
 }
 
@@ -424,7 +426,7 @@ export function deriveIntegrationCard(
         lastDeployed: formatLastDeployed(entry.lastDeployed),
         installation,
         menuActions: withAddErp(entry, face.status, buildMenuActions(face.status, primaryUrl, installation, Boolean(entry.updateAvailable))),
-        canRename: entry.kind === 'integration' && !facet.isCatalog,
+        canRename: entry.kind === 'integration' && facet.renamable,
         ...(systems.length > 0 ? { linked: { label: 'Uses' as const, cards: systems } } : {}),
         ...withSetupChecklist(entry),
     });

@@ -98,6 +98,27 @@ describe('deriveSystemCard', () => {
 });
 
 describe('deriveIntegrationCard with systems', () => {
+    // AB-16o: the ERP integration has a name of its own, changed by a rename. The fake
+    // catalog names it from INTEGRATION_DISPLAY_NAME, as the bundled one does.
+    it('the ERP integration and its second copy can be renamed; the ERP cannot', () => {
+        expect(deriveIntegrationCard(pairIntegration()).canRename).toBe(true);
+        expect(
+            deriveIntegrationCard(pairIntegration({ id: 'erp-integration-2', catalogId: 'erp-integration' })).canRename,
+        ).toBe(true);
+        expect(deriveSystemCard(erp(), undefined, usedBy(), CATALOG).canRename).toBe(false);
+    });
+
+    it('the ERP card says it is used by the integration under its recorded name, rename included', () => {
+        const cards = buildIntegrationCards(
+            [pairIntegration({ name: 'Bodea ERP Hub', systems: ['demo-erp'] }), erp({ usedBy: 'erp-integration' })],
+            {},
+        );
+
+        const erpCard = cards.find((card) => card.id === 'demo-erp');
+        expect(erpCard?.linked?.label).toBe('Used by');
+        expect(erpCard?.linked?.cards.map((card) => card.name)).toEqual(['Bodea ERP Hub']);
+    });
+
     it('lists the systems it Uses, and keeps its own verbs', () => {
         const system: LinkedCard = { id: 'demo-erp', name: 'Nordwind', status: 'error', statusLabel: 'Deploy failed', dotVariant: 'error' };
         const card = deriveIntegrationCard(pairIntegration(), undefined, [system]);
