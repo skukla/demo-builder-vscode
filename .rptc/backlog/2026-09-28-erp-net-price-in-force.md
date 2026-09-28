@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: high
-status: backlog
+status: built
 parent: AB-16
 ---
 
@@ -39,3 +39,4 @@ price rules apply after that, in the cart.
 
 - 2026-09-28  2026-09-28 built and merged: demo-erp main 0bbe169 (33044bf decide() shared by quote and in-force; dcf62e4 lib/net-prices.js; bb753e7 in-force and contract.changed carry what the ERP would charge; contract v9), integration main 4de1d30 (contract vendored; box journey: a 10% Pricing-screen discount lands as a 10% tier price, a 5% ceiling cuts it to 5%, deleting it leaves catalog and ledger as they began). 356 ERP tests, 774 integration tests, lint clean; an agreement test checks 140 customer/product/quantity cases where Commerce's price equals the ERP's quote. Integration logic unchanged.
 - 2026-09-28  2026-09-28 left open (builder's report): (1) a pricing condition scoped to one sales organisation applies on every website (per-website lines would be a contract and integration change); (2) Commerce takes the lowest price, the ERP the highest quantity break reached: they disagree when a higher break costs more or a fixed price sits above list (existed for price lists; a ceiling with a minimum quantity can now cause it); a surcharge is not sent; (3) no event, the hourly publish catches up: a fill/import changing list prices, a new product under an all-products discount, a product deleted in the ERP; (4) a list line for a product the ERP no longer holds is now dropped; (5) load unmeasured: a store-wide condition recomputes every customer across every product (Bodea: up to ~182 lines per customer).
+- 2026-09-28  2026-09-28 proven live on Bodea (ERPs 0bbe169, integration 4de1d30): a Pricing-screen discount in Northwind (contractDiscount, C21 Kukla Studios, accesspoint, 10%) created 16:25:17 UTC reached Commerce by 16:25:49 as a 10% tier price for Kukla Studios' group 19 (179.10 against list 199); deleted 16:25:57, gone by 16:26:26. ServerSavvy's row (group 16) untouched throughout.
