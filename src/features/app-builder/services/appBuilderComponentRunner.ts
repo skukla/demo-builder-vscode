@@ -79,7 +79,6 @@ import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { buildOrgTargetFromProjectAdobe, withOrgContext, type CachedOrgRef } from '@/core/shell/orgContextEnv';
 import {
     clearUpdateAvailable,
-    getProvidedEnvVars,
     recordInstallation,
     workspacesHeldBy,
     workspacesToRelease,
@@ -548,10 +547,12 @@ async function persistOutcome(
 const STOREFRONT_PROVIDED_VAR = 'MESH_ENDPOINT';
 
 /**
- * Republish the storefront when the project carries the provided var the
+ * Republish the storefront when the component just deployed provides the var the
  * storefront config READS (else no-op). A component that provides only to other
  * components — the ERP's base URL to its integration — changes nothing the
- * storefront serves, so it earns no republish.
+ * storefront serves, so it earns no republish. It asked of the whole PROJECT
+ * until 2026-09-28, so on any project with a mesh every add republished, and an
+ * expired DA.live session held an agent's ERP add on a sign-in prompt for good.
  *
  * @returns a warning for the SC when the republish did not fully land — the
  *   operation stands, but the storefront is not current. On 2026-09-24 an add
@@ -560,9 +561,11 @@ const STOREFRONT_PROVIDED_VAR = 'MESH_ENDPOINT';
  */
 async function republishIfProvided(
     project: Project,
+    id: string,
     deps: AppBuilderComponentRunnerDeps,
 ): Promise<string | undefined> {
-    if (!(STOREFRONT_PROVIDED_VAR in getProvidedEnvVars(project))) {
+    const state = project.appBuilderComponents?.[id];
+    if (!state || !providesStorefrontVar(state)) {
         return undefined;
     }
     const published = await deps.republishStorefront({
@@ -1033,7 +1036,7 @@ async function runAdd(
         await persistOutcome(project, entry, deployed.outcome, deps);
         if (linkBroughtSystem(project, entry.id, deps.catalog)) await deps.saveProject(project);
         await installIfAppManagement(project, entry, deps, { componentPath: installed.path, since });
-        return withWarnings(deployed.warning, await republishIfProvided(project, deps));
+        return withWarnings(deployed.warning, await republishIfProvided(project, entry.id, deps));
     } catch (error) {
         deps.logger.error('[AppBuilderComponent Runner] add failed', error as Error);
         return { success: false, error: readableFailure(toError(error).message, deps.logger) };
@@ -1189,7 +1192,7 @@ export async function deployAppBuilderComponent(
         recordDeployOutcome(project, entry.kind, id, deployed.outcome);
         await deps.saveProject(project);
         await installIfAppManagement(project, entry, deps, { componentPath, since });
-        return withWarnings(deployed.warning, await republishIfProvided(project, deps));
+        return withWarnings(deployed.warning, await republishIfProvided(project, entry.id, deps));
     } catch (error) {
         deps.logger.error('[AppBuilderComponent Runner] deploy failed', error as Error);
         const reason = readableFailure(toError(error).message, deps.logger);

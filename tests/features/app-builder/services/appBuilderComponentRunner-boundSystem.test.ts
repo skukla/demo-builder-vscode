@@ -242,6 +242,24 @@ describe('adding the integration adds its system first', () => {
 
         expect(deps.republishStorefront).not.toHaveBeenCalled();
     });
+
+    it("on a project whose mesh feeds the storefront, the ERP's add still republishes nothing", async () => {
+        const project = createProject({
+            appBuilderComponents: {
+                'eds-accs-mesh': {
+                    kind: 'mesh',
+                    status: 'deployed',
+                    source: { owner: 'skukla', repo: 'eds-accs-mesh', branch: 'stable' },
+                    providesEnvVars: { MESH_ENDPOINT: 'https://mesh.example/graphql' },
+                },
+            },
+        });
+        const deps = createDeps({ deployApp: deployByPath(), catalog: [SYSTEM, INTEGRATION] });
+
+        await addAppBuilderComponent(project, INTEGRATION, deps);
+
+        expect(deps.republishStorefront).not.toHaveBeenCalled();
+    });
 });
 
 describe('removing the pair', () => {
