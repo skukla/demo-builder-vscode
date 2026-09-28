@@ -161,6 +161,18 @@ answers it back. If it cannot be read, the list still goes without it and the ad
 Adding again with the same name re-sends the list with it, which is how an ERP added before
 this existed gets its credential.
 
+**Its events.** The other direction has the same mismatch. The integration's ingestion web
+action is `require-adobe-auth` in the INTEGRATION's workspace, and an added ERP would
+otherwise post to the ingestion address in its own namespace, where nothing listens. So every
+deploy of an added ERP (add, redeploy, update) is given `EVENTS_WEBHOOK_URL`, the
+integration's deployed `…/ingestion/webhook` URL, and a publishing credential read from the
+integration's workspace: `EVENTS_AUTH_CLIENT_ID`, `EVENTS_AUTH_CLIENT_SECRET`,
+`EVENTS_AUTH_ORG_ID`, `EVENTS_AUTH_SCOPES` (`erpEventsDelivery.ts`). They travel as the
+screen key does, in the deploy's process env only; the ERP signs its event posts with them
+(demo-erp `lib/events.js`). The first ERP gets none of them. An integration with no ingestion
+address yet, or a credential that cannot be read, deploys the ERP as before and says so; its
+events wait in its outbox until it is redeployed.
+
 **Its id.** The integration's own ERP is `erp`, never its component id, because the
 integration reads any event or key map row that names no ERP as `erp`, and its per-ERP
 credit attributes are keyed by it. An added ERP's id is its component id. Both are sent as

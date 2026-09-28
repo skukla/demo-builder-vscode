@@ -39,6 +39,7 @@ import { deployAppComponentIsolated } from '@/features/app-builder/services/depl
 import { displayNameInProject } from '@/features/app-builder/services/deployInputs';
 import { subscriberTarget } from '@/features/app-builder/services/ensureMeshApiSubscribed';
 import { detachErpWrites } from '@/features/app-builder/services/erpDetach';
+import { erpEventsEnvResolver } from '@/features/app-builder/services/erpEventsDelivery';
 import {
     checkCloneForUpdate,
     fastForwardClone,
@@ -232,6 +233,7 @@ export function buildDefaultRunnerDeps(
         wipeSystemRecords: (project, entry, deployedUrls, name) =>
             wipeSystemRecords(entry, deployedUrls, name, { getAuth: authFor(project), onProgress }),
         resolveSecretEnv: (project, entry) => resolveSecretDeployEnv(ctx.secrets, project.path, entry),
+        resolveEventsEnv: erpEventsEnvResolver(ctx),
         forgetScreenKey: (project, entry) => forgetScreenKey(ctx.secrets, project.path, entry),
         // The AIO_COMMERCE_AUTH_IMS_* deploy env for app-management entries:
         // the workspace S2S credential's full identity (ensured + read via the
@@ -247,11 +249,7 @@ export function buildDefaultRunnerDeps(
                     'The project has no Adobe org/project/workspace context to resolve credentials from.',
                 );
             }
-            const credentials = await ctx.authManager.getS2SDeployCredentials(
-                    adobe.organization,
-                    adobe.projectId,
-                    workspaceId,
-                );
+            const credentials = await ctx.authManager.getS2SDeployCredentials(adobe.organization, adobe.projectId, workspaceId);
             return buildS2SDeployEnv(credentials);
         },
         createComponentWorkspace: (project, entry, onMaking) =>

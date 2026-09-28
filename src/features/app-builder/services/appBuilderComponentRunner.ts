@@ -68,6 +68,7 @@ import {
     resolveDisplayName,
 } from './deployInputs';
 import type { CommerceDetachResult } from './erpDetach';
+import type { ErpEventsEnv } from './erpEventsDelivery';
 import type { SourceUpdateResult, UpdateCheckResult } from './integrationSourceUpdate';
 import { deriveOwPackage } from './owPackageName';
 import type { RuntimeCleanupSummary } from './runtimeLeftoverCleanup';
@@ -280,6 +281,13 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
      * live secrets, so it goes into the per-invocation env and nowhere else.
      */
     resolveSecretEnv?: (project: Project, entry: AppBuilderComponentCatalogEntry) => Promise<Record<string, string>>;
+    /**
+     * The event address and publishing credential an ADDED ERP deploys with
+     * (`erpEventsDelivery.ts`, AB-16i), with a note when it deploys without them. Carries a
+     * live secret, so it goes into the per-invocation env and nowhere else. Optional: bare
+     * tests and headless callers without an ERP never need it.
+     */
+    resolveEventsEnv?: (project: Project, entry: AppBuilderComponentCatalogEntry) => Promise<ErpEventsEnv>;
     /** Delete an entry's screen key when the component is removed. */
     forgetScreenKey?: (project: Project, entry: AppBuilderComponentCatalogEntry) => Promise<void>;
     /**
@@ -769,6 +777,10 @@ async function dispatchDeploy(
     if (deps.resolveSecretEnv) {
         extraEnv = { ...extraEnv, ...(await deps.resolveSecretEnv(project, entry)) };
     }
+    // An added ERP's event address and publishing credential (AB-16i): asked on every
+    // app deploy, so add and redeploy agree; empty for anything but an added ERP.
+    const events = await deps.resolveEventsEnv?.(project, entry);
+    extraEnv = { ...extraEnv, ...(events?.env ?? {}) };
     // App Management apps authenticate their actions with the workspace S2S
     // credential, taken as deploy-time env inputs. Resolved here — the one
     // kind-dispatched seam — so add and redeploy cannot drift on it. A resolve
@@ -803,10 +815,12 @@ async function dispatchDeploy(
         },
     );
     if (!result.success) return { ok: false, error: result.error || 'App deployment failed.' };
+    const leftovers = await deleteLeftBehindActions(project, entry, componentPath, deps);
+    const warning = [events?.note, leftovers].filter(Boolean).join(' ');
     return {
         ok: true,
         outcome: integrationOutcome(entry, result.data, resolveDisplayName(entry, inputs)),
-        warning: await deleteLeftBehindActions(project, entry, componentPath, deps),
+        ...(warning ? { warning } : {}),
     };
 }
 
