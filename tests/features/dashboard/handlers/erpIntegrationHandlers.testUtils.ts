@@ -18,6 +18,8 @@ export const mockStatus = jest.fn();
 export const mockDetach = jest.fn();
 export const mockLookup = jest.fn();
 export const mockTraceOrder = jest.fn();
+export const mockResolvedSettings = jest.fn();
+export const mockUpdateErpSettings = jest.fn();
 export const mockCallErpApi = jest.fn();
 export const mockClientCtor = jest.fn();
 jest.mock('@/features/app-builder/services/erpIntegrationClient', () => ({
@@ -31,6 +33,10 @@ jest.mock('@/features/app-builder/services/erpIntegrationClient', () => ({
         detach = (erpId?: string) => mockDetach(erpId);
         lookup = (query: unknown) => mockLookup(query);
         traceOrder = (orderNumber: string) => mockTraceOrder(orderNumber);
+        resolvedSettings = (websites: string[], erpId?: string) =>
+            mockResolvedSettings(websites, erpId);
+        updateErpSettings = (id: string, website: string | undefined, values: unknown) =>
+            mockUpdateErpSettings(id, website, values);
     },
 }));
 
@@ -93,10 +99,12 @@ import * as vscode from 'vscode';
 export { vscode };
 export {
     handleFollowErpOrder,
+    handleGetErpSettings,
     handleGetErpStatus,
     handleLookupErpRecord,
     handleReadErpApi,
     handleResetErpRecords,
+    handleSetErpSettings,
     handleWriteErpApi,
 } from '@/features/dashboard/handlers/erpIntegrationHandlers';
 
@@ -125,7 +133,12 @@ export const ERP: AppBuilderComponentState = {
     lastDeployed: '2026-09-14T00:00:00Z',
 };
 export function pairProject(over: Partial<AppBuilderComponentState> = {}): Partial<Project> {
-    return { appBuilderComponents: { 'erp-integration': { ...INTEGRATION, ...over }, 'demo-erp': { ...ERP } } };
+    return {
+        appBuilderComponents: {
+            'erp-integration': { ...INTEGRATION, ...over },
+            'demo-erp': { ...ERP },
+        },
+    };
 }
 
 /** setupMocks installs its own auth service; the guard chain's third step needs this on it. */
@@ -135,16 +148,36 @@ export function allowDeveloperRole(): void {
         .fn()
         .mockResolvedValue({ hasPermissions: true });
 }
-export const LIVE = { app: { id: 'erp', version: '1' }, erp: { reachable: true, ok: true }, erpBaseUrl: 'x', ledger: { entries: 3 } };
+export const LIVE = {
+    app: { id: 'erp', version: '1' },
+    erp: { reachable: true, ok: true },
+    erpBaseUrl: 'x',
+    ledger: { entries: 3 },
+};
 
 /** Each spec calls this from its own beforeEach: a beforeEach here would not reach it. */
 export function resetErpHandlerMocks(): void {
     jest.clearAllMocks();
-    mockResolveAppManagementAuth.mockResolvedValue({ accessToken: 'fake-test-pw-not-a-secret', imsOrgId: 'ABC@AdobeOrg' });
+    mockResolveAppManagementAuth.mockResolvedValue({
+        accessToken: 'fake-test-pw-not-a-secret',
+        imsOrgId: 'ABC@AdobeOrg',
+    });
     mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
     mockDetectProjectOrgMismatch.mockResolvedValue({ reachable: true });
     mockStatus.mockResolvedValue(LIVE);
-    mockDetach.mockResolvedValue({ reverted: { reverted: 2, failed: [] }, orders: { cleared: 1, failed: [] } });
-    mockCallErpApi.mockResolvedValue({ ok: true, status: 200, body: { wiped: { products: 40 } }, detail: '' });
-    mockFillErpForProject.mockResolvedValue({ status: 'filled', erpId: 'demo-erp', result: { partners: 3, products: 40, skipped: 0 } });
+    mockDetach.mockResolvedValue({
+        reverted: { reverted: 2, failed: [] },
+        orders: { cleared: 1, failed: [] },
+    });
+    mockCallErpApi.mockResolvedValue({
+        ok: true,
+        status: 200,
+        body: { wiped: { products: 40 } },
+        detail: '',
+    });
+    mockFillErpForProject.mockResolvedValue({
+        status: 'filled',
+        erpId: 'demo-erp',
+        result: { partners: 3, products: 40, skipped: 0 },
+    });
 }

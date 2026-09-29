@@ -21,7 +21,11 @@
  */
 
 import * as vscode from 'vscode';
-import { handleGetDemoPackagePreview, handleSaveDemoPackage, handleRemoveDemoPackage } from './demoPackageHandlers';
+import {
+    handleGetDemoPackagePreview,
+    handleSaveDemoPackage,
+    handleRemoveDemoPackage,
+} from './demoPackageHandlers';
 import { handleSetProjectDestination } from './destinationHandlers';
 import {
     handleSyncStorefront,
@@ -88,11 +92,13 @@ import { handleAddErp } from '@/features/dashboard/handlers/erpAddHandler';
 import { handleLoadErpDemoData } from '@/features/dashboard/handlers/erpFillHandler';
 import {
     handleFollowErpOrder,
+    handleGetErpSettings,
     handleGetErpStatus,
     handleLookupErpRecord,
     handleOpenErpScreen,
     handleReadErpApi,
     handleResetErpRecords,
+    handleSetErpSettings,
     handleWriteErpApi,
 } from '@/features/dashboard/handlers/erpIntegrationHandlers';
 import {
@@ -115,7 +121,10 @@ import {
 } from '@/features/dashboard/handlers/setupChecklistHandlers';
 import { handleAddSharedDemo } from '@/features/eds/handlers/addSharedDemoHandler';
 import { handleChangeDemoSource } from '@/features/eds/handlers/changeDemoSourceHandler';
-import { handleImportStorefrontZip, handleUseBundleSetup } from '@/features/eds/handlers/importStorefrontZipHandler';
+import {
+    handleImportStorefrontZip,
+    handleUseBundleSetup,
+} from '@/features/eds/handlers/importStorefrontZipHandler';
 import { handleProbeSharedDemo } from '@/features/eds/handlers/probeSharedDemoHandler';
 import { deployMeshFromScreen } from '@/features/mesh/handlers/deployHandler';
 import { MESH_OPERATION_ID } from '@/features/mesh/services/deployMeshWithFeedback';
@@ -250,16 +259,17 @@ export const handleRestartDemo: MessageHandler = async (context) => {
  * modal (`progress: 'modal'`), it reports there and answers with the outcome (PL-59
  * phase 2, rule R1); otherwise it runs the palette command, with its notification.
  */
-export const handleDeployMesh: MessageHandler<{ id?: string; progress?: 'modal' }> = narrateOutcomeToModal(
-    async (context, payload) => {
-        if (progressSurfaceOf(payload) !== 'modal') {
-            await vscode.commands.executeCommand('demoBuilder.deployMesh');
-            return { success: true };
-        }
-        return deployMeshFromScreen(context, payload?.id ?? MESH_OPERATION_ID);
-    },
-    (payload) => payload?.id ?? MESH_OPERATION_ID,
-);
+export const handleDeployMesh: MessageHandler<{ id?: string; progress?: 'modal' }> =
+    narrateOutcomeToModal(
+        async (context, payload) => {
+            if (progressSurfaceOf(payload) !== 'modal') {
+                await vscode.commands.executeCommand('demoBuilder.deployMesh');
+                return { success: true };
+            }
+            return deployMeshFromScreen(context, payload?.id ?? MESH_OPERATION_ID);
+        },
+        (payload) => payload?.id ?? MESH_OPERATION_ID,
+    );
 
 /**
  * Handle 'openDataInstaller' — open the Data Installer surface.
@@ -344,6 +354,9 @@ export const dashboardHandlers = defineHandlers({
     // The ERP integration's two verbs (plan step 05): the ERP's health as the
     // integration sees it, and the reset that re-mirrors Commerce into it.
     getErpStatus: handleGetErpStatus,
+    // An ERP's own settings (ownership, sales-org per website) for agents (AB-16j).
+    getErpSettings: handleGetErpSettings,
+    setErpSettings: handleSetErpSettings,
     resetErpRecords: handleResetErpRecords,
     // Demo Builder fills the ERP from Commerce (AB-26y step 1).
     loadErpDemoData: handleLoadErpDemoData,

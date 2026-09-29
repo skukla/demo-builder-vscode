@@ -41,11 +41,19 @@ import {
     type ImsCallMethod,
 } from '@/features/app-builder/services/erpIntegrationClient';
 import { erpListIdOf } from '@/features/app-builder/services/erpList';
-import { deriveScreenUrl, readScreenKey, screenLink } from '@/features/app-builder/services/systemScreen';
+import {
+    deriveScreenUrl,
+    readScreenKey,
+    screenLink,
+} from '@/features/app-builder/services/systemScreen';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { systemsUsedBy } from '@/features/components/services/appBuilderComponentLinks';
 import { resolveAppManagementAuth } from '@/features/project-creation/services/appBuilderComponentRunnerDeps';
-import { fillErpForProject, fillNotes, type ErpFillForProjectResult } from '@/features/project-creation/services/erpFillForProject';
+import {
+    fillErpForProject,
+    fillNotes,
+    type ErpFillForProjectResult,
+} from '@/features/project-creation/services/erpFillForProject';
 import type { AppBuilderComponentState, Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
@@ -71,6 +79,18 @@ export interface ErpCallPayload {
     erp?: string;
 }
 
+/** Reading an ERP's own settings: the ERP, and a website scope (absent = Default Config). */
+export interface GetErpSettingsPayload extends ErpCallPayload {
+    /** A Commerce website code; absent reads the ERP's Default-Config settings. */
+    website?: string;
+}
+
+/** Changing an ERP's own settings at a scope. */
+export interface SetErpSettingsPayload extends GetErpSettingsPayload {
+    /** Per-ERP setting values; `null` clears an override so the wider scope applies. */
+    values?: Record<string, string | boolean | null>;
+}
+
 /**
  * Resolve the target, the pair and the sign-in once, for both verbs: the
  * integration row (must be an integration that deploys erp actions), its bound
@@ -88,7 +108,13 @@ export async function openErpCall(
     const { id, project } = target;
     const integration = getAppBuilderComponent(project, id);
     if (!integration || integration.kind !== 'integration') {
-        return { error: { success: false, error: `Integration "${id}" not found.`, code: ErrorCode.PROJECT_NOT_FOUND } };
+        return {
+            error: {
+                success: false,
+                error: `Integration "${id}" not found.`,
+                code: ErrorCode.PROJECT_NOT_FOUND,
+            },
+        };
     }
     if (!deriveErpActionUrl(integration.deployedUrls, 'status')) {
         const error = `"${integration.name ?? id}" has no ERP (it deploys no erp actions).`;
@@ -96,7 +122,13 @@ export async function openErpCall(
     }
     const auth = await resolveAppManagementAuth(project, ServiceLocator.getAuthenticationService());
     if (!auth) {
-        return { error: { success: false, error: `Adobe sign-in required to ${needsAuthFor}.`, code: ErrorCode.AUTH_REQUIRED } };
+        return {
+            error: {
+                success: false,
+                error: `Adobe sign-in required to ${needsAuthFor}.`,
+                code: ErrorCode.AUTH_REQUIRED,
+            },
+        };
     }
     const erps = erpsOf(project, id);
     const named = payload?.erp?.trim();
@@ -111,35 +143,53 @@ export async function openErpCall(
 
 /** The ERPs this integration serves in the project, in link order: its own first, then any added (AB-16). */
 function erpsOf(project: Project, integrationId: string): ErpRow[] {
-    return systemsUsedBy(project, integrationId, getAppBuilderComponentCatalog()).flatMap((erpId) => {
-        const state = getAppBuilderComponent(project, erpId);
-        return state ? [{ id: erpId, ...state }] : [];
-    });
+    return systemsUsedBy(project, integrationId, getAppBuilderComponentCatalog()).flatMap(
+        (erpId) => {
+            const state = getAppBuilderComponent(project, erpId);
+            return state ? [{ id: erpId, ...state }] : [];
+        },
+    );
 }
 
 /** The ERP row as an agent or the flyout reads it: name, status, its screen's URL. */
 export function shapeErpRow(erp: ErpCall['erp']) {
     if (!erp) return undefined;
-    return { id: erp.id, name: erp.name ?? erp.id, status: erp.status, url: erp.url, lastDeployed: erp.lastDeployed };
+    return {
+        id: erp.id,
+        name: erp.name ?? erp.id,
+        status: erp.status,
+        url: erp.url,
+        lastDeployed: erp.lastDeployed,
+    };
 }
 
 /**
  * Handle 'getErpStatus' — the integration's `erp/status` plus both persisted rows. With `erp`
  * named, the live health is that ERP's (asked by its id in the integration's list).
  */
-export const handleGetErpStatus: MessageHandler<ErpCallPayload> = async (context, payload): Promise<HandlerResponse> => {
+export const handleGetErpStatus: MessageHandler<ErpCallPayload> = async (
+    context,
+    payload,
+): Promise<HandlerResponse> => {
     const call = await openErpCall(context, payload, 'read the ERP status');
     if ('error' in call) return call.error;
-    const listId = payload?.erp && call.erp
-        ? erpListIdOf(call.project, call.erp.id, getAppBuilderComponentCatalog())
-        : undefined;
+    const listId =
+        payload?.erp && call.erp
+            ? erpListIdOf(call.project, call.erp.id, getAppBuilderComponentCatalog())
+            : undefined;
     try {
-        const status = await new ErpIntegrationClient(call.integration.deployedUrls, call.auth).status(listId);
+        const status = await new ErpIntegrationClient(
+            call.integration.deployedUrls,
+            call.auth,
+        ).status(listId);
         return {
             success: true,
             data: {
                 id: call.id,
-                integration: { name: call.integration.name ?? call.id, status: call.integration.status },
+                integration: {
+                    name: call.integration.name ?? call.id,
+                    status: call.integration.status,
+                },
                 erp: shapeErpRow(call.erp),
                 erps: call.erps.map(shapeErpRow),
                 live: status,
@@ -147,6 +197,80 @@ export const handleGetErpStatus: MessageHandler<ErpCallPayload> = async (context
         };
     } catch (error) {
         return { success: false, error: `Could not read the ERP status: ${errorText(error)}` };
+    }
+};
+
+/**
+ * Handle 'getErpSettings' — one ERP's own settings in force (ownership and, per website, its
+ * sales organisation), as the integration resolves them (`GET erp/settings?erp=&websites=`).
+ * With `website`, that website's; else the ERP's Default-Config settings. Read-only.
+ */
+export const handleGetErpSettings: MessageHandler<GetErpSettingsPayload> = async (
+    context,
+    payload,
+): Promise<HandlerResponse> => {
+    const call = await openErpCall(context, payload, 'read the ERP settings');
+    if ('error' in call) return call.error;
+    const listId =
+        payload?.erp && call.erp
+            ? erpListIdOf(call.project, call.erp.id, getAppBuilderComponentCatalog())
+            : undefined;
+    const website = payload?.website;
+    try {
+        const settings = await new ErpIntegrationClient(
+            call.integration.deployedUrls,
+            call.auth,
+        ).resolvedSettings(website ? [website] : [], listId);
+        return {
+            success: true,
+            data: { id: call.id, erp: shapeErpRow(call.erp), website: website ?? null, settings },
+        };
+    } catch (error) {
+        return { success: false, error: `Could not read the ERP settings: ${errorText(error)}` };
+    }
+};
+
+/**
+ * Handle 'setErpSettings' — save one named ERP's own settings at a scope
+ * (`PATCH erp/erps` via updateErpSettings): each value a string/boolean, or `null` to clear the
+ * override so the wider scope applies. `website` omitted edits the ERP's own defaults. The ERP
+ * must be named; a single-ERP install has no per-ERP list and is refused with the reason.
+ */
+export const handleSetErpSettings: MessageHandler<SetErpSettingsPayload> = async (
+    context,
+    payload,
+): Promise<HandlerResponse> => {
+    const call = await openErpCall(context, payload, 'change the ERP settings');
+    if ('error' in call) return call.error;
+    const listId =
+        payload?.erp && call.erp
+            ? erpListIdOf(call.project, call.erp.id, getAppBuilderComponentCatalog())
+            : undefined;
+    if (!listId) {
+        return {
+            success: false,
+            error: 'Name the ERP (erp) whose own settings to change.',
+            code: ErrorCode.INVALID_OPERATION,
+        };
+    }
+    if (!payload?.values || typeof payload.values !== 'object') {
+        return {
+            success: false,
+            error: 'values is required: the settings to change, by name.',
+            code: ErrorCode.INVALID_OPERATION,
+        };
+    }
+    try {
+        const { entry } = await new ErpIntegrationClient(
+            call.integration.deployedUrls,
+            call.auth,
+        ).updateErpSettings(listId, payload.website, payload.values);
+        return {
+            success: true,
+            data: { id: call.id, erp: listId, website: payload.website ?? null, entry },
+        };
+    } catch (error) {
+        return { success: false, error: `Could not change the ERP settings: ${errorText(error)}` };
     }
 };
 
@@ -184,7 +308,12 @@ async function resetErp(
 ): Promise<ErpResetReport> {
     const stage = OPERATION_STAGES.resettingErpRecords.label;
     const client = new ErpIntegrationClient(call.integration.deployedUrls, call.auth);
-    report(stage, only ? `Undoing ${only.name ?? only.id}'s writes in Commerce` : "Undoing the ERPs' writes in Commerce");
+    report(
+        stage,
+        only
+            ? `Undoing ${only.name ?? only.id}'s writes in Commerce`
+            : "Undoing the ERPs' writes in Commerce",
+    );
     const undone = only ? await detachOne(client, call, only) : await client.detach();
     if (!context.authManager) throw new Error('Adobe sign-in required.');
     const authManager = context.authManager;
@@ -199,11 +328,22 @@ async function resetErp(
         const filled = await fillErpForProject(
             call.project,
             call.id,
-            { authManager, getAuth: async () => call.auth, onProgress: (step) => report(OPERATION_STAGES.loadingErpDemoData.label, `${name}: ${step}`) },
+            {
+                authManager,
+                getAuth: async () => call.auth,
+                onProgress: (step) =>
+                    report(OPERATION_STAGES.loadingErpDemoData.label, `${name}: ${step}`),
+            },
             erp.id,
         );
-        if (filled.status === 'failed') throw new Error(`${name} was wiped but not filled again: ${filled.detail}`);
-        erps.push({ id: erp.id, name, wiped: (wipe.body as { wiped?: unknown }).wiped, loaded: filled.result });
+        if (filled.status === 'failed')
+            throw new Error(`${name} was wiped but not filled again: ${filled.detail}`);
+        erps.push({
+            id: erp.id,
+            name,
+            wiped: (wipe.body as { wiped?: unknown }).wiped,
+            loaded: filled.result,
+        });
         notes.push({ name, note: filled.note });
     }
     const warning = fillNotes(notes);
@@ -215,65 +355,100 @@ async function resetErp(
  * every ERP, so it is asked first and refused; an answer that does not name the ERP stops the
  * reset before any wipe, saying what happened.
  */
-async function detachOne(client: ErpIntegrationClient, call: ErpCall, erp: ErpRow): Promise<ErpDetachReport> {
+async function detachOne(
+    client: ErpIntegrationClient,
+    call: ErpCall,
+    erp: ErpRow,
+): Promise<ErpDetachReport> {
     const integrationName = call.integration.name ?? call.id;
     const name = erp.name ?? erp.id;
     const listId = erpListIdOf(call.project, erp.id, getAppBuilderComponentCatalog()) ?? erp.id;
     if ((await client.status()).detachesPerErp !== true) {
-        throw new Error(`${integrationName} can only reset every ERP at once. Redeploy it to reset ${name} alone.`);
+        throw new Error(
+            `${integrationName} can only reset every ERP at once. Redeploy it to reset ${name} alone.`,
+        );
     }
     const undone = await client.detach(listId);
     if (undone.erp !== listId) {
-        throw new Error(`${integrationName} undid every ERP's writes, not only ${name}'s. Reset every ERP to finish.`);
+        throw new Error(
+            `${integrationName} undid every ERP's writes, not only ${name}'s. Reset every ERP to finish.`,
+        );
     }
     return undone;
 }
 
 export const handleResetErpRecords: MessageHandler<ErpCallPayload & { progress?: 'modal' }> =
-    narrateOutcomeToModal(async (context, payload): Promise<HandlerResponse> => {
-    const call = await openErpCall(context, payload, 'reset the ERP');
-    if ('error' in call) return call.error;
-    if (call.integration.status !== 'deployed') {
-        const error = `"${call.integration.name ?? call.id}" is not deployed, so there is nothing to reset through.`;
-        return { success: false, error, code: ErrorCode.INVALID_OPERATION };
-    }
-
-    // One ERP when named (its card, AB-16c); else every ERP the integration serves.
-    const only = payload?.erp ? call.erp : undefined;
-    const erpName = only?.name ?? (call.erps.length > 1 ? `${call.integration.name ?? call.id}'s ERPs` : (call.erp?.name ?? 'ERP'));
-    const result = await withOperationProgress(
-        {
-            id: call.id,
-            title: `Resetting ${erpName} records`,
-            inModal: progressSurfaceOf(payload) === 'modal',
-            cardLabel: `${erpName} records`,
-        },
-        async (report): Promise<GuardableResult & { report?: ErpResetReport }> => {
-            const refused = await guardOrBlock(context, call.project, (message) => report(message));
-            if (refused) return refused;
-            try {
-                return { success: true, report: await resetErp(context, call, report, only) };
-            } catch (error) {
-                return { success: false, error: `The ERP reset did not finish: ${errorText(error)}` };
+    narrateOutcomeToModal(
+        async (context, payload): Promise<HandlerResponse> => {
+            const call = await openErpCall(context, payload, 'reset the ERP');
+            if ('error' in call) return call.error;
+            if (call.integration.status !== 'deployed') {
+                const error = `"${call.integration.name ?? call.id}" is not deployed, so there is nothing to reset through.`;
+                return { success: false, error, code: ErrorCode.INVALID_OPERATION };
             }
+
+            // One ERP when named (its card, AB-16c); else every ERP the integration serves.
+            const only = payload?.erp ? call.erp : undefined;
+            const erpName =
+                only?.name ??
+                (call.erps.length > 1
+                    ? `${call.integration.name ?? call.id}'s ERPs`
+                    : (call.erp?.name ?? 'ERP'));
+            const result = await withOperationProgress(
+                {
+                    id: call.id,
+                    title: `Resetting ${erpName} records`,
+                    inModal: progressSurfaceOf(payload) === 'modal',
+                    cardLabel: `${erpName} records`,
+                },
+                async (report): Promise<GuardableResult & { report?: ErpResetReport }> => {
+                    const refused = await guardOrBlock(context, call.project, (message) =>
+                        report(message),
+                    );
+                    if (refused) return refused;
+                    try {
+                        return {
+                            success: true,
+                            report: await resetErp(context, call, report, only),
+                        };
+                    } catch (error) {
+                        return {
+                            success: false,
+                            error: `The ERP reset did not finish: ${errorText(error)}`,
+                        };
+                    }
+                },
+            );
+            if (result.blocked || !result.success) {
+                return { success: false, error: result.error };
+            }
+            // Prices a fill could not publish: said beside the report, never a failed reset (AB-26z).
+            const warning = result.report?.warning;
+            const report = result.report && {
+                undone: result.report.undone,
+                erps: result.report.erps,
+            };
+            return {
+                success: true,
+                data: {
+                    id: call.id,
+                    erp: shapeErpRow(call.erp),
+                    report,
+                    ...(warning ? { warning } : {}),
+                },
+            };
         },
+        (payload) => payload?.id ?? '',
     );
-    if (result.blocked || !result.success) {
-        return { success: false, error: result.error };
-    }
-    // Prices a fill could not publish: said beside the report, never a failed reset (AB-26z).
-    const warning = result.report?.warning;
-    const report = result.report && { undone: result.report.undone, erps: result.report.erps };
-    return { success: true, data: { id: call.id, erp: shapeErpRow(call.erp), report, ...(warning ? { warning } : {}) } };
-    },
-    (payload) => payload?.id ?? '',
-);
 
 /**
  * Handle 'openErpScreen' — open the ERP bound to an integration at its own
  * screen. Answers with the screen's address WITHOUT the key.
  */
-export const handleOpenErpScreen: MessageHandler<ErpCallPayload> = async (context, payload): Promise<HandlerResponse> => {
+export const handleOpenErpScreen: MessageHandler<ErpCallPayload> = async (
+    context,
+    payload,
+): Promise<HandlerResponse> => {
     const target = await resolveComponentTarget(context, payload?.id);
     if (!target.ok) return target.error;
     const { id, project } = target;
@@ -282,10 +457,16 @@ export const handleOpenErpScreen: MessageHandler<ErpCallPayload> = async (contex
     const erpId = erp?.id;
     // Under the ERP's OWN id: a second ERP (AB-23) is the catalog's ERP re-keyed, and
     // its screen key is stored under its id — the first ERP's key would be refused.
-    const systemEntry = erpId ? catalogEntryFor(project, erpId, getAppBuilderComponentCatalog()) : undefined;
+    const systemEntry = erpId
+        ? catalogEntryFor(project, erpId, getAppBuilderComponentCatalog())
+        : undefined;
     if (!systemEntry || !erp) {
         const which = payload?.erp ? ` "${payload.erp}"` : '';
-        return { success: false, error: `"${id}" has no ERP${which} in this project.`, code: ErrorCode.INVALID_OPERATION };
+        return {
+            success: false,
+            error: `"${id}" has no ERP${which} in this project.`,
+            code: ErrorCode.INVALID_OPERATION,
+        };
     }
     const name = erp.name ?? systemEntry.name;
     const screenUrl = deriveScreenUrl(systemEntry, erp.deployedUrls);
@@ -302,11 +483,17 @@ export const handleOpenErpScreen: MessageHandler<ErpCallPayload> = async (contex
     try {
         validateURL(link);
     } catch {
-        return { success: false, error: `${name}'s screen address is not a valid URL.`, code: ErrorCode.CONFIG_INVALID };
+        return {
+            success: false,
+            error: `${name}'s screen address is not a valid URL.`,
+            code: ErrorCode.CONFIG_INVALID,
+        };
     }
     // A private window: the key is in the address, and a private window keeps no history.
     const privateWindow = await openInIncognito(link);
-    context.logger.debug(`[ERP] Opened ${systemEntry.id}'s screen (private window: ${privateWindow})`);
+    context.logger.debug(
+        `[ERP] Opened ${systemEntry.id}'s screen (private window: ${privateWindow})`,
+    );
     return { success: true, data: { id, erp: systemEntry.id, screenUrl } };
 };
 
@@ -340,19 +527,33 @@ export const handleLookupErpRecord: MessageHandler<LookupErpRecordPayload> = asy
     const sku = payload?.sku?.trim();
     const company = payload?.company?.trim();
     if ((sku === undefined) === (company === undefined)) {
-        return { success: false, error: 'Name ONE record: a sku or a company id.', code: ErrorCode.CONFIG_INVALID };
+        return {
+            success: false,
+            error: 'Name ONE record: a sku or a company id.',
+            code: ErrorCode.CONFIG_INVALID,
+        };
     }
     if (sku !== undefined && !SKU.test(sku)) {
-        return { success: false, error: 'That is not a SKU Commerce allows.', code: ErrorCode.CONFIG_INVALID };
+        return {
+            success: false,
+            error: 'That is not a SKU Commerce allows.',
+            code: ErrorCode.CONFIG_INVALID,
+        };
     }
     if (company !== undefined && !COMPANY_ID.test(company)) {
-        return { success: false, error: 'A company is looked up by its numeric Commerce id.', code: ErrorCode.CONFIG_INVALID };
+        return {
+            success: false,
+            error: 'A company is looked up by its numeric Commerce id.',
+            code: ErrorCode.CONFIG_INVALID,
+        };
     }
     const call = await openErpCall(context, payload, 'look up a record');
     if ('error' in call) return call.error;
     try {
         const client = new ErpIntegrationClient(call.integration.deployedUrls, call.auth);
-        const lookup = await client.lookup(sku !== undefined ? { sku } : { company: company as string });
+        const lookup = await client.lookup(
+            sku !== undefined ? { sku } : { company: company as string },
+        );
         return { success: true, data: { id: call.id, erp: shapeErpRow(call.erp), lookup } };
     } catch (error) {
         return { success: false, error: `Could not look up the record: ${errorText(error)}` };
@@ -370,13 +571,23 @@ export const handleFollowErpOrder: MessageHandler<{ id?: string; orderNumber?: s
 ): Promise<HandlerResponse> => {
     const orderNumber = payload?.orderNumber?.trim();
     if (!orderNumber || !ORDER_NUMBER.test(orderNumber)) {
-        return { success: false, error: 'Name the order to follow by its Commerce order number.', code: ErrorCode.CONFIG_INVALID };
+        return {
+            success: false,
+            error: 'Name the order to follow by its Commerce order number.',
+            code: ErrorCode.CONFIG_INVALID,
+        };
     }
     const call = await openErpCall(context, payload, 'follow an order');
     if ('error' in call) return call.error;
     try {
-        const trace = await new ErpIntegrationClient(call.integration.deployedUrls, call.auth).traceOrder(orderNumber);
-        return { success: true, data: { id: call.id, erp: shapeErpRow(call.erp), orderNumber, trace } };
+        const trace = await new ErpIntegrationClient(
+            call.integration.deployedUrls,
+            call.auth,
+        ).traceOrder(orderNumber);
+        return {
+            success: true,
+            data: { id: call.id, erp: shapeErpRow(call.erp), orderNumber, trace },
+        };
     } catch (error) {
         return { success: false, error: `Could not follow the order: ${errorText(error)}` };
     }
@@ -407,22 +618,48 @@ async function callErpRoute(
 ): Promise<HandlerResponse> {
     const route = payload?.path?.trim();
     if (!route) {
-        return { success: false, error: 'Name the ERP route, e.g. "partners" or "orders/0000001003".', code: ErrorCode.CONFIG_INVALID };
+        return {
+            success: false,
+            error: 'Name the ERP route, e.g. "partners" or "orders/0000001003".',
+            code: ErrorCode.CONFIG_INVALID,
+        };
     }
     const call = await openErpCall(context, payload, verb);
     if ('error' in call) return call.error;
     if (!call.erp) {
-        return { success: false, error: `"${call.id}" has no ERP in this project.`, code: ErrorCode.INVALID_OPERATION };
+        return {
+            success: false,
+            error: `"${call.id}" has no ERP in this project.`,
+            code: ErrorCode.INVALID_OPERATION,
+        };
     }
     try {
-        const answer = await callErpApi(call.erp.deployedUrls, call.auth, method, route, payload?.body);
+        const answer = await callErpApi(
+            call.erp.deployedUrls,
+            call.auth,
+            method,
+            route,
+            payload?.body,
+        );
         if ('refusal' in answer) {
             return { success: false, error: answer.refusal, code: ErrorCode.CONFIG_INVALID };
         }
         if (!answer.ok) {
-            return { success: false, error: `The ERP answered ${answer.status} for ${method} ${route}: ${answer.detail}` };
+            return {
+                success: false,
+                error: `The ERP answered ${answer.status} for ${method} ${route}: ${answer.detail}`,
+            };
         }
-        return { success: true, data: { id: call.id, erp: shapeErpRow(call.erp), method, path: route, answer: shapeErpAnswer(answer.body) } };
+        return {
+            success: true,
+            data: {
+                id: call.id,
+                erp: shapeErpRow(call.erp),
+                method,
+                path: route,
+                answer: shapeErpAnswer(answer.body),
+            },
+        };
     } catch (error) {
         return { success: false, error: `Could not reach the ERP: ${errorText(error)}` };
     }
@@ -432,8 +669,10 @@ async function callErpRoute(
  * Handle 'readErpApi' — GET one of the ERP's own routes (partners, products, pricing,
  * orders, shipments, invoices, settings, health, search) as the ERP's screens read them.
  */
-export const handleReadErpApi: MessageHandler<ErpCallPayload & { path?: string }> = (context, payload) =>
-    callErpRoute(context, payload, 'GET', 'read the ERP');
+export const handleReadErpApi: MessageHandler<ErpCallPayload & { path?: string }> = (
+    context,
+    payload,
+) => callErpRoute(context, payload, 'GET', 'read the ERP');
 
 /**
  * Handle 'writeErpApi' — POST, PUT, PATCH or DELETE one of the ERP's own routes: the
@@ -442,10 +681,9 @@ export const handleReadErpApi: MessageHandler<ErpCallPayload & { path?: string }
  * integration, which applies it to Commerce, so this is how the ERP → Commerce half is
  * driven from the agent surface.
  */
-export const handleWriteErpApi: MessageHandler<ErpCallPayload & { method?: string; path?: string; body?: unknown }> = (
-    context,
-    payload,
-) => {
+export const handleWriteErpApi: MessageHandler<
+    ErpCallPayload & { method?: string; path?: string; body?: unknown }
+> = (context, payload) => {
     const method = String(payload?.method ?? '').toUpperCase() as ImsCallMethod;
     if (!ERP_WRITE_METHODS.includes(method)) {
         return Promise.resolve({

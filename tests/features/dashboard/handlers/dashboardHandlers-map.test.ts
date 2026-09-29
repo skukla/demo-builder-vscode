@@ -270,7 +270,10 @@ describe('dashboardHandlers', () => {
             //
             // addErp (72 → 73, 2026-09-28): "Add another ERP" on the ERP integration's
             // card, and the add_erp tool (AB-16).
-            expect(types).toHaveLength(73);
+            //
+            // getErpSettings + setErpSettings (73 → 75, AB-16j, 2026-09-29): read and set an
+            // ERP's own settings (ownership, sales-org per website) for agents.
+            expect(types).toHaveLength(75);
         });
 
         it('should have handlers as functions', () => {
