@@ -102,9 +102,9 @@ export {
     handleGetErpStatus,
     handleLookupErpRecord,
     handleReadErpApi,
-    handleResetErpRecords,
     handleWriteErpApi,
 } from '@/features/dashboard/handlers/erpIntegrationHandlers';
+export { handleResetErpRecords } from '@/features/dashboard/handlers/erpResetHandlers';
 export {
     handleGetErpSettings,
     handleSetErpSettings,

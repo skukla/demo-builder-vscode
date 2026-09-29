@@ -5,7 +5,7 @@
  * openErpCall / shapeErpRow / errorText so both verbs resolve the pair and the sign-in the same
  * way. The read is guard-free; the write goes through the integration's `erp/erps` PATCH.
  */
-import { type ErpCallPayload, errorText, openErpCall, shapeErpRow } from './erpIntegrationHandlers';
+import { type ErpCallPayload, errorText, openErpCall, shapeErpRow } from './erpCall';
 import { ErpIntegrationClient } from '@/features/app-builder/services/erpIntegrationClient';
 import { erpListIdOf } from '@/features/app-builder/services/erpList';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';

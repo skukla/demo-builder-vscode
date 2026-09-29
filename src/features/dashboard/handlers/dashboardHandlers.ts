@@ -96,9 +96,9 @@ import {
     handleLookupErpRecord,
     handleOpenErpScreen,
     handleReadErpApi,
-    handleResetErpRecords,
     handleWriteErpApi,
 } from '@/features/dashboard/handlers/erpIntegrationHandlers';
+import { handleResetErpRecords } from '@/features/dashboard/handlers/erpResetHandlers';
 import {
     handleGetErpSettings,
     handleSetErpSettings,
