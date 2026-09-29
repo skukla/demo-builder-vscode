@@ -231,6 +231,32 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         },
     },
     {
+        tool: 'set_erp_settings',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        confirm: true,
+        description:
+            "Change one ERP's own settings (from get_erp_settings): which products it owns " +
+            '(ownership) and, per website, the sales organisation it sells through. Each value is ' +
+            'text or true/false, or null to clear an override so the wider scope applies. ' +
+            "`website` omitted edits the ERP's Default-Config settings. Name the ERP by its " +
+            'component id; a single-ERP install has no per-ERP settings and is refused. Secrets ' +
+            'are never set here. Confirm the change with the user first.',
+        map: dashboardHandlers,
+        type: 'setErpSettings',
+        inputSchema: {
+            id: z.string().describe('The ERP integration id (from get_project)'),
+            erp: z.string().describe("Which ERP, by its component id (from get_erp_status's erps)"),
+            website: z
+                .string()
+                .optional()
+                .describe("A Commerce website code; omit for the ERP's Default-Config settings"),
+            values: z
+                .record(z.string(), z.union([z.string(), z.boolean(), z.null()]))
+                .describe('Per-ERP settings to change, by name; null clears an override'),
+        },
+    },
+    {
         tool: 'set_setup_step',
         needsAuth: false,
         readOnly: false,
@@ -340,7 +366,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             'Uninstall a DEPLOYED App Management integration from Commerce and install it again ' +
             'from the code already deployed. Use when get_integration_install_status shows ' +
             'needsReinstall (Commerce refused to upgrade it in place), and as the REPAIR when ' +
-            "Commerce has lost what the app registered (its webhooks or events are gone) while " +
+            'Commerce has lost what the app registered (its webhooks or events are gone) while ' +
             'the app still reports itself installed — install_integration then answers skipped. ' +
             'DESTRUCTIVE: what the app set up in Commerce is removed first, and its saved ' +
             'settings may reset. Confirm with the user first.',
@@ -380,7 +406,9 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             force: z
                 .boolean()
                 .optional()
-                .describe('Remove even though a clean-up did not finish. Only when the user chose to.'),
+                .describe(
+                    'Remove even though a clean-up did not finish. Only when the user chose to.',
+                ),
         },
     },
     {
@@ -388,10 +416,10 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            "Delete the Runtime actions an integration left behind: deployed in its own " +
+            'Delete the Runtime actions an integration left behind: deployed in its own ' +
             "packages but no longer in its config (an action moved or renamed; the Adobe CLI's " +
             'deploy never deletes those). Every deploy now does this itself; use it for code left from ' +
-            "before, or when a deploy warned that some could not be deleted. Reads every app " +
+            'before, or when a deploy warned that some could not be deleted. Reads every app ' +
             "sharing the integration's workspace, never touches a package no app declares, and " +
             'deletes nothing when the namespace cannot be read. Returns what it deleted and what ' +
             'Runtime refused. Use list_runtime_packages to look first.',
@@ -411,17 +439,22 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             'products, B2B companies (with credit limits) and websites into each as they stand, sorted ' +
             "by the integration's settings (each website's sales organisation, which products this ERP " +
             'owns). Adds and updates; removes nothing, but a value changed by hand in the ERP is set ' +
-            'back to Commerce\'s. Then publishes each filled ERP\'s customer prices into the companies\' ' +
+            "back to Commerce's. Then publishes each filled ERP's customer prices into the companies' " +
             'shared catalogs (data.loaded.prices counts them; data.warning says when they were not ' +
             'published, and the load still stands). Use on a fresh or empty ERP. Confirm with the user ' +
-            'first. Takes the integration id, and `erp` (an ERP\'s component id) to fill only that one; ' +
+            "first. Takes the integration id, and `erp` (an ERP's component id) to fill only that one; " +
             'without it every ERP is filled.',
         map: dashboardHandlers,
         type: 'loadErpDemoData',
         confirm: true,
         inputSchema: {
             id: z.string().describe('The ERP integration id (from get_project)'),
-            erp: z.string().optional().describe("Which ERP, by its component id (from get_erp_status's erps); default every ERP"),
+            erp: z
+                .string()
+                .optional()
+                .describe(
+                    "Which ERP, by its component id (from get_erp_status's erps); default every ERP",
+                ),
         },
     },
     {
@@ -448,10 +481,10 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            "Reset every ERP the ERP integration serves: undo the credit limits and " +
+            'Reset every ERP the ERP integration serves: undo the credit limits and ' +
             'company blocks they wrote into Commerce, clear the ERP order numbers from Commerce ' +
             'orders, wipe every ERP record, then fill each again from the Commerce products, companies ' +
-            'and customers as they stand, and publish each ERP\'s ' +
+            "and customers as they stand, and publish each ERP's " +
             "customer prices into the companies' shared catalogs (data.warning says when they were not). " +
             'Commerce is the master; the ERP is transitory. Confirm with the user first. Takes the integration id, ' +
             "and `erp` (an ERP's component id) to reset only that one: only its writes are undone and the " +
@@ -461,7 +494,12 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         confirm: true,
         inputSchema: {
             id: z.string().describe('The ERP integration id (from get_project)'),
-            erp: z.string().optional().describe("Which ERP, by its component id (from get_erp_status's erps); default every ERP"),
+            erp: z
+                .string()
+                .optional()
+                .describe(
+                    "Which ERP, by its component id (from get_erp_status's erps); default every ERP",
+                ),
         },
     },
     {
@@ -470,7 +508,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         readOnly: false,
         description:
             "POST, PUT, PATCH or DELETE one of the ERP's own routes — the actions a person takes " +
-            "on its screens, without the screen: confirm, ship, invoice, hold, release or cancel an " +
+            'on its screens, without the screen: confirm, ship, invoice, hold, release or cancel an ' +
             'order (orders/<number>/confirm …), change a price or list price (PATCH products/<sku>), ' +
             'a credit limit or block (PATCH partners/<id>), add a pricing condition (POST pricing). ' +
             'The ERP publishes the change to the integration, which applies it to Commerce. Requires ' +
@@ -480,9 +518,16 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         confirm: true,
         inputSchema: {
             id: z.string().describe('The ERP integration id (from get_project)'),
-            erp: z.string().optional().describe("Which ERP, by its component id (from get_erp_status's erps); default the first"),
-            method: z.enum(['POST', 'PUT', 'PATCH', 'DELETE']).describe('The ERP route\'s verb'),
-            path: z.string().describe('The ERP route, e.g. "orders/0000001003/confirm" or "partners/C21"'),
+            erp: z
+                .string()
+                .optional()
+                .describe(
+                    "Which ERP, by its component id (from get_erp_status's erps); default the first",
+                ),
+            method: z.enum(['POST', 'PUT', 'PATCH', 'DELETE']).describe("The ERP route's verb"),
+            path: z
+                .string()
+                .describe('The ERP route, e.g. "orders/0000001003/confirm" or "partners/C21"'),
             body: z.record(z.unknown()).optional().describe('The JSON body the route takes'),
         },
     },
@@ -507,9 +552,18 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         type: 'invokeRuntimeAction',
         confirm: true,
         inputSchema: {
-            componentId: z.string().min(1).optional().describe('An integration id, to run in its own workspace'),
-            action: z.string().describe('The action, as <package>/<action>, e.g. "webhook/item-prices"'),
-            payload: z.record(z.unknown()).optional().describe("The action's parameters as a JSON object"),
+            componentId: z
+                .string()
+                .min(1)
+                .optional()
+                .describe('An integration id, to run in its own workspace'),
+            action: z
+                .string()
+                .describe('The action, as <package>/<action>, e.g. "webhook/item-prices"'),
+            payload: z
+                .record(z.unknown())
+                .optional()
+                .describe("The action's parameters as a JSON object"),
         },
     },
     {
@@ -527,7 +581,12 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         confirm: true,
         inputSchema: {
             id: z.string().describe('The ERP integration id (from get_project)'),
-            erp: z.string().optional().describe("Which ERP, by its component id (from get_erp_status's erps); default the first"),
+            erp: z
+                .string()
+                .optional()
+                .describe(
+                    "Which ERP, by its component id (from get_erp_status's erps); default the first",
+                ),
         },
     },
     {
@@ -721,7 +780,9 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             componentId: z
                 .string()
                 .optional()
-                .describe("Add to this integration's APIs, in its own workspace; omit for the project's"),
+                .describe(
+                    "Add to this integration's APIs, in its own workspace; omit for the project's",
+                ),
         },
     },
     {

@@ -79,18 +79,6 @@ export interface ErpCallPayload {
     erp?: string;
 }
 
-/** Reading an ERP's own settings: the ERP, and a website scope (absent = Default Config). */
-export interface GetErpSettingsPayload extends ErpCallPayload {
-    /** A Commerce website code; absent reads the ERP's Default-Config settings. */
-    website?: string;
-}
-
-/** Changing an ERP's own settings at a scope. */
-export interface SetErpSettingsPayload extends GetErpSettingsPayload {
-    /** Per-ERP setting values; `null` clears an override so the wider scope applies. */
-    values?: Record<string, string | boolean | null>;
-}
-
 /**
  * Resolve the target, the pair and the sign-in once, for both verbs: the
  * integration row (must be an integration that deploys erp actions), its bound
@@ -197,80 +185,6 @@ export const handleGetErpStatus: MessageHandler<ErpCallPayload> = async (
         };
     } catch (error) {
         return { success: false, error: `Could not read the ERP status: ${errorText(error)}` };
-    }
-};
-
-/**
- * Handle 'getErpSettings' — one ERP's own settings in force (ownership and, per website, its
- * sales organisation), as the integration resolves them (`GET erp/settings?erp=&websites=`).
- * With `website`, that website's; else the ERP's Default-Config settings. Read-only.
- */
-export const handleGetErpSettings: MessageHandler<GetErpSettingsPayload> = async (
-    context,
-    payload,
-): Promise<HandlerResponse> => {
-    const call = await openErpCall(context, payload, 'read the ERP settings');
-    if ('error' in call) return call.error;
-    const listId =
-        payload?.erp && call.erp
-            ? erpListIdOf(call.project, call.erp.id, getAppBuilderComponentCatalog())
-            : undefined;
-    const website = payload?.website;
-    try {
-        const settings = await new ErpIntegrationClient(
-            call.integration.deployedUrls,
-            call.auth,
-        ).resolvedSettings(website ? [website] : [], listId);
-        return {
-            success: true,
-            data: { id: call.id, erp: shapeErpRow(call.erp), website: website ?? null, settings },
-        };
-    } catch (error) {
-        return { success: false, error: `Could not read the ERP settings: ${errorText(error)}` };
-    }
-};
-
-/**
- * Handle 'setErpSettings' — save one named ERP's own settings at a scope
- * (`PATCH erp/erps` via updateErpSettings): each value a string/boolean, or `null` to clear the
- * override so the wider scope applies. `website` omitted edits the ERP's own defaults. The ERP
- * must be named; a single-ERP install has no per-ERP list and is refused with the reason.
- */
-export const handleSetErpSettings: MessageHandler<SetErpSettingsPayload> = async (
-    context,
-    payload,
-): Promise<HandlerResponse> => {
-    const call = await openErpCall(context, payload, 'change the ERP settings');
-    if ('error' in call) return call.error;
-    const listId =
-        payload?.erp && call.erp
-            ? erpListIdOf(call.project, call.erp.id, getAppBuilderComponentCatalog())
-            : undefined;
-    if (!listId) {
-        return {
-            success: false,
-            error: 'Name the ERP (erp) whose own settings to change.',
-            code: ErrorCode.INVALID_OPERATION,
-        };
-    }
-    if (!payload?.values || typeof payload.values !== 'object') {
-        return {
-            success: false,
-            error: 'values is required: the settings to change, by name.',
-            code: ErrorCode.INVALID_OPERATION,
-        };
-    }
-    try {
-        const { entry } = await new ErpIntegrationClient(
-            call.integration.deployedUrls,
-            call.auth,
-        ).updateErpSettings(listId, payload.website, payload.values);
-        return {
-            success: true,
-            data: { id: call.id, erp: listId, website: payload.website ?? null, entry },
-        };
-    } catch (error) {
-        return { success: false, error: `Could not change the ERP settings: ${errorText(error)}` };
     }
 };
 
@@ -497,7 +411,7 @@ export const handleOpenErpScreen: MessageHandler<ErpCallPayload> = async (
     return { success: true, data: { id, erp: systemEntry.id, screenUrl } };
 };
 
-function errorText(error: unknown): string {
+export function errorText(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
 }
 

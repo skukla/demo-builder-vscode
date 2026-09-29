@@ -99,14 +99,16 @@ import * as vscode from 'vscode';
 export { vscode };
 export {
     handleFollowErpOrder,
-    handleGetErpSettings,
     handleGetErpStatus,
     handleLookupErpRecord,
     handleReadErpApi,
     handleResetErpRecords,
-    handleSetErpSettings,
     handleWriteErpApi,
 } from '@/features/dashboard/handlers/erpIntegrationHandlers';
+export {
+    handleGetErpSettings,
+    handleSetErpSettings,
+} from '@/features/dashboard/handlers/erpSettingsHandlers';
 
 export const INT_URLS = {
     'runtime/erp/status': 'https://ns.adobeioruntime.net/api/v1/web/erp/status',

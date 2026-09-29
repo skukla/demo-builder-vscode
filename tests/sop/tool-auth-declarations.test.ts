@@ -60,7 +60,9 @@ const EXPECTED: Record<string, number> = {
     // 49 -> 50 on 2026-09-27: load_erp_demo_data reads Commerce with the workspace credential
     // and calls the ERP and its integration as the signed-in user.
     // 50 -> 51 on 2026-09-28: add_erp deploys another ERP into a workspace of its own (AB-16).
-    adobe: 51,
+    // 51 -> 52 on 2026-09-29: set_erp_settings writes an ERP's own settings to the deployed
+    // integration through the Adobe sign-in (AB-16j).
+    adobe: 52,
     dalive: 21,
     // 10 -> 12 on 2026-09-12: forget_added_demo and change_demo_source (step 06
     // of the shareable-demo program) both read and write GitHub; 12 -> 14 the
@@ -78,7 +80,8 @@ const EXPECTED: Record<string, number> = {
     // identity itself and answers a typed AUTH_REQUIRED when there is none.
     // 52 -> 54 on 2026-09-24: run_erp_rest and write_erp_rest declare like get_erp_status.
     // 54 -> 56 on 2026-09-25: get_setup_checklist and set_setup_step touch saved state only.
-    none: 56,
+    // 56 -> 57 on 2026-09-29: get_erp_settings declares no sign-in like get_erp_status (AB-16j).
+    none: 57,
 };
 
 /**
@@ -92,9 +95,10 @@ const EXPECTED: Record<string, number> = {
  * files. That counts text, not declarations, and was roughly double. The CONTROL below
  * caught it — which is the argument for having one.)
  */
-const EXPECTED_TOOLS = 144; // 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x); 144 with add_erp (AB-16).
+const EXPECTED_TOOLS = 146; // 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x); 144 with add_erp (AB-16).
 // 141 -> 142 on 2026-09-27: delete_undeclared_runtime_code.
 // 142 -> 143 on 2026-09-27: load_erp_demo_data.
+// 144 -> 146 on 2026-09-29: get_erp_settings and set_erp_settings (AB-16j).
 
 interface Declaration {
     name: string;
@@ -146,7 +150,13 @@ describe('every tool declares real sign-ins', () => {
     });
 
     it('the per-provider totals match the pin', () => {
-        const counts: Record<string, number> = { adobe: 0, dalive: 0, github: 0, commerce: 0, none: 0 };
+        const counts: Record<string, number> = {
+            adobe: 0,
+            dalive: 0,
+            github: 0,
+            commerce: 0,
+            none: 0,
+        };
         for (const d of decls) {
             const p = d.providers ?? [];
             if (p.length === 0) counts.none += 1;

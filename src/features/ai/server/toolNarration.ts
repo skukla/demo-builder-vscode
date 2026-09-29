@@ -183,6 +183,8 @@ export const TOOL_NARRATION: Record<string, string> = {
     run_commerce_rest: 'Reading Commerce records',
     write_commerce_rest: 'Changing Commerce records',
     get_erp_status: 'Reading the ERP status',
+    get_erp_settings: "Reading an ERP's settings",
+    set_erp_settings: "Changing an ERP's settings",
     run_erp_rest: 'Reading the ERP',
     write_erp_rest: 'Changing the ERP',
     list_runtime_activations: 'Reading what ran in Runtime',

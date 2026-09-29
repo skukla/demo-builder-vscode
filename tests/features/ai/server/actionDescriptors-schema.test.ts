@@ -37,6 +37,8 @@ const NEEDS_AUTH: Record<string, AuthProvider[] | false> = {
     rename_integration: false,
     // Stores the change, then redeploys through the guarded deploy path.
     set_integration_settings: ['adobe'],
+    // Writes an ERP's own settings to the deployed integration (AB-16j).
+    set_erp_settings: ['adobe'],
     // The demo setup checklist (AB-26x): marking a step is saved state only; checking reads Commerce.
     set_setup_step: false,
     check_setup_steps: ['adobe'],
@@ -79,6 +81,7 @@ const INPUT_KEYS: Record<string, string[]> = {
     rename_integration: ['id', 'name'],
     // No `secrets`: a secret must never be a tool argument (AB-21).
     set_integration_settings: ['id', 'values'],
+    set_erp_settings: ['erp', 'id', 'values', 'website'],
     set_setup_step: ['id', 'state', 'stepId'],
     check_setup_steps: ['id'],
     set_console_apis: ['apis', 'componentId'],
@@ -113,7 +116,9 @@ const INPUT_KEYS: Record<string, string[]> = {
 
 describe('ACTION_DESCRIPTORS — per-row contract', () => {
     it('covers every shipped row in both tables', () => {
-        const tools = actionRows().map((d) => d.tool).sort();
+        const tools = actionRows()
+            .map((d) => d.tool)
+            .sort();
         // Control: without this, a table entry for a row that no longer exists
         // would pass every loop below by never being visited.
         expect(tools.length).toBeGreaterThan(0);
@@ -185,7 +190,7 @@ describe('ACTION_DESCRIPTORS — per-row contract', () => {
             expect(d.inputSchema!.workspace.safeParse({ id: 'w1' }).success).toBe(false);
             expect(d.inputSchema!.workspace.safeParse({ id: 'w1', name: '' }).success).toBe(false);
             expect(d.inputSchema!.workspace.safeParse({ id: 'w1', name: 'Stage' }).success).toBe(
-                true,
+                true
             );
         });
 

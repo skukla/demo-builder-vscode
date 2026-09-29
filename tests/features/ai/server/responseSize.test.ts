@@ -115,7 +115,11 @@ const PAYLOADS: Record<string, HandlerResponse> = {
             kind: 'eds',
             contentSource: { org: 'jen', site: 'isle5-demo' },
             contentPublished: { indexFound: true, pageCount: 42 },
-            storeCodes: { websiteCode: 'isle5', storeCode: 'isle5_store', storeViewCode: 'isle5_us' },
+            storeCodes: {
+                websiteCode: 'isle5',
+                storeCode: 'isle5_store',
+                storeViewCode: 'isle5_us',
+            },
             b2b: 'on',
             b2bSource: 'config-json',
             description: {
@@ -123,7 +127,9 @@ const PAYLOADS: Record<string, HandlerResponse> = {
                 version: 1,
                 name: 'Isle5 by Jen',
                 description: 'x'.repeat(300),
-                configDefaults: Object.fromEntries(Array.from({ length: 12 }, (_, i) => [`KEY_${i}`, `value-${i}`])),
+                configDefaults: Object.fromEntries(
+                    Array.from({ length: 12 }, (_, i) => [`KEY_${i}`, `value-${i}`])
+                ),
                 blockLibraries: ['isle5', 'demo-team-blocks'],
                 integrations: ['erp-sync', 'loyalty'],
                 datapack: { name: 'isle5', version: '2026.09' },
@@ -446,6 +452,11 @@ describe('rows with no output safety net are classified', () => {
         // fixed shapes, and never a secret's value.
         'get_integration_settings',
         'set_integration_settings',
+        // An ERP's own settings (AB-16j): `handleGetErpSettings` returns
+        // `{id, erp, website, settings}` and `handleSetErpSettings` returns
+        // `{id, erp, website, entry}` — bounded, fixed shapes.
+        'get_erp_settings',
+        'set_erp_settings',
         // The demo setup checklist (AB-26x): each returns `{items}`, one row per step the
         // catalog entry declares, with fixed fields.
         'get_setup_checklist',
@@ -583,6 +594,9 @@ describe('the ceiling table tracks the tool surface', () => {
         // the entry, not by the project or the instance.
         'get_integration_settings',
         'set_integration_settings',
+        // An ERP's own settings (AB-16j): fixed shapes, bounded by the ERP entry.
+        'get_erp_settings',
+        'set_erp_settings',
         // One row per setup step the catalog entry declares (two for the ERP integration),
         // bounded by the entry, not by the project or the instance.
         'get_setup_checklist',

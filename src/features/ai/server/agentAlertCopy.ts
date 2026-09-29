@@ -149,6 +149,13 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: ['method', 'path'],
         sessionGrant: false,
     },
+    set_erp_settings: {
+        action: "Change an ERP's settings",
+        consequence:
+            'Changes which products this ERP owns and, per website, its sales organisation on the deployed integration — it changes how orders and companies route to this ERP.',
+        target: ['erp', 'website'],
+        sessionGrant: false,
+    },
     write_commerce_rest: {
         action: 'Change data in the Commerce store',
         consequence:

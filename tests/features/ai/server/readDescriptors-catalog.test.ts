@@ -70,6 +70,13 @@ const CATALOG: Row[] = [
         args: ['id', 'erp'],
     },
     {
+        tool: 'get_erp_settings',
+        map: dashboardHandlers,
+        type: 'getErpSettings',
+        needsAuth: false,
+        args: ['id', 'erp', 'website'],
+    },
+    {
         tool: 'get_erp_record',
         map: dashboardHandlers,
         type: 'lookupErpRecord',

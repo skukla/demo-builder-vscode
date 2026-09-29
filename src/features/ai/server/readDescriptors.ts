@@ -293,8 +293,8 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
             'outcome plus the LIVE state from the app’s own install API (failed step names ' +
             'included). Use after deploy_integration to answer "did it install, and which step ' +
             'failed" — a failed install is retried with install_integration, not a redeploy; ' +
-            'a persisted needsReinstall (Commerce refused an in-place upgrade) needs reinstall_integration, '  +
-            'which is also the repair when Commerce has lost the app\'s webhooks or events while the '  +
+            'a persisted needsReinstall (Commerce refused an in-place upgrade) needs reinstall_integration, ' +
+            "which is also the repair when Commerce has lost the app's webhooks or events while the " +
             'app still reports itself installed (install_integration then answers skipped).',
         map: dashboardHandlers,
         type: 'getAppBuilderInstallStatus',
@@ -309,7 +309,7 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         description:
             "Read the ERP integration's state: the ERP's health as the integration sees it " +
             '(reachable, its base URL, how many company writes it holds in its ledger) plus the ' +
-            'persisted rows of the integration and its ERPs (name, status, the ERP screen\'s URL; ' +
+            "persisted rows of the integration and its ERPs (name, status, the ERP screen's URL; " +
             '`erps` lists every ERP it serves, by component id). ' +
             'Use before reset_erp_records, or to answer "is the ERP up". Takes the integration id; ' +
             'with several ERPs, `erp` names which one the live health is for (default the first).',
@@ -317,7 +317,38 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         type: 'getErpStatus',
         inputSchema: {
             id: z.string().describe('The ERP integration id (from get_project)'),
-            erp: z.string().optional().describe("Which ERP, by its component id (from this tool's erps); default the first"),
+            erp: z
+                .string()
+                .optional()
+                .describe(
+                    "Which ERP, by its component id (from this tool's erps); default the first",
+                ),
+        },
+    },
+    {
+        tool: 'get_erp_settings',
+        needsAuth: false,
+        readOnly: true,
+        description:
+            "Read one ERP's own settings in force: which products it owns (ownership) and, per " +
+            'website, the sales organisation it sells through, as the integration resolves them. ' +
+            'Use before set_erp_settings, or to see how a website or order is routed to an ERP. ' +
+            'Takes the integration id and the ERP (its component id, from get_erp_status); with ' +
+            "`website`, that website's scope, else the ERP's Default-Config settings.",
+        map: dashboardHandlers,
+        type: 'getErpSettings',
+        inputSchema: {
+            id: z.string().describe('The ERP integration id (from get_project)'),
+            erp: z
+                .string()
+                .optional()
+                .describe(
+                    "Which ERP, by its component id (from get_erp_status's erps); default the first",
+                ),
+            website: z
+                .string()
+                .optional()
+                .describe("A Commerce website code; omit for the ERP's Default-Config settings"),
         },
     },
     {
@@ -351,7 +382,12 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         type: 'readErpApi',
         inputSchema: {
             id: z.string().describe('The ERP integration id (from get_project)'),
-            erp: z.string().optional().describe("Which ERP, by its component id (from get_erp_status's erps); default the first"),
+            erp: z
+                .string()
+                .optional()
+                .describe(
+                    "Which ERP, by its component id (from get_erp_status's erps); default the first",
+                ),
             path: z.string().describe('The ERP route, e.g. "partners/C21" or "orders"'),
         },
     },
@@ -368,7 +404,9 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         type: 'followErpOrder',
         inputSchema: {
             id: z.string().describe('The ERP integration id (from get_project)'),
-            orderNumber: z.string().describe('The Commerce order number (increment id, e.g. 000000123)'),
+            orderNumber: z
+                .string()
+                .describe('The Commerce order number (increment id, e.g. 000000123)'),
         },
     },
     {
@@ -446,13 +484,34 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         map: dashboardHandlers,
         type: 'listRuntimeActivations',
         inputSchema: {
-            componentId: z.string().min(1).optional().describe('An integration id, to read its own workspace'),
+            componentId: z
+                .string()
+                .min(1)
+                .optional()
+                .describe('An integration id, to read its own workspace'),
             action: z.string().optional().describe('Only this action, e.g. "erp/refresh-job"'),
-            limit: z.number().int().min(1).max(50).optional().describe('How many, newest first (default 30, max 50)'),
-            skip: z.number().int().min(0).optional().describe('Skip this many newest rows, to page past 50'),
+            limit: z
+                .number()
+                .int()
+                .min(1)
+                .max(50)
+                .optional()
+                .describe('How many, newest first (default 30, max 50)'),
+            skip: z
+                .number()
+                .int()
+                .min(0)
+                .optional()
+                .describe('Skip this many newest rows, to page past 50'),
             since: z.string().optional().describe('Only activations after this ISO 8601 time'),
-            failedOnly: z.boolean().optional().describe('Only runs that did not succeed (status other than 0)'),
-            includeTriggers: z.boolean().optional().describe('Keep the timer firings themselves; hidden by default'),
+            failedOnly: z
+                .boolean()
+                .optional()
+                .describe('Only runs that did not succeed (status other than 0)'),
+            includeTriggers: z
+                .boolean()
+                .optional()
+                .describe('Keep the timer firings themselves; hidden by default'),
         },
     },
     {
@@ -465,7 +524,11 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         map: dashboardHandlers,
         type: 'readRuntimeActivation',
         inputSchema: {
-            componentId: z.string().min(1).optional().describe('An integration id, to read its own workspace'),
+            componentId: z
+                .string()
+                .min(1)
+                .optional()
+                .describe('An integration id, to read its own workspace'),
             activationId: z.string().describe('The 32-character activation id'),
         },
     },
@@ -516,7 +579,9 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
             link: z
                 .string()
                 .optional()
-                .describe('Instead of owner+repo: a GitHub link, or the site address (main--repo--owner.aem.live)'),
+                .describe(
+                    'Instead of owner+repo: a GitHub link, or the site address (main--repo--owner.aem.live)',
+                ),
         },
         shape: shapeProbeResult,
     },

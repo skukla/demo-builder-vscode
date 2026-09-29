@@ -75,7 +75,9 @@ describe('ACTION_DESCRIPTORS', () => {
     // which published to a live site ungated. Pinning the exact set means adding
     // a destructive tool forces a deliberate edit here rather than sliding in.
     it('pins the exact confirm-gated set', () => {
-        const gated = actionRows().filter((d) => d.confirm).map((d) => d.tool);
+        const gated = actionRows()
+            .filter((d) => d.confirm)
+            .map((d) => d.tool);
         expect(gated.sort()).toEqual([
             // Makes an Adobe workspace and deploys a new ERP into it (AB-16).
             'add_erp',
@@ -104,6 +106,8 @@ describe('ACTION_DESCRIPTORS', () => {
             // Says "set", not "delete", and removes on a live workspace credential
             // — exactly the case the delete_* rule above cannot see.
             'set_console_apis',
+            // Changes an ERP's own settings on the deployed integration (AB-16j).
+            'set_erp_settings',
             // Acts on the ERP as its screens do; the ERP then writes into Commerce.
             'write_erp_rest',
         ]);

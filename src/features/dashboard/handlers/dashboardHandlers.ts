@@ -92,15 +92,17 @@ import { handleAddErp } from '@/features/dashboard/handlers/erpAddHandler';
 import { handleLoadErpDemoData } from '@/features/dashboard/handlers/erpFillHandler';
 import {
     handleFollowErpOrder,
-    handleGetErpSettings,
     handleGetErpStatus,
     handleLookupErpRecord,
     handleOpenErpScreen,
     handleReadErpApi,
     handleResetErpRecords,
-    handleSetErpSettings,
     handleWriteErpApi,
 } from '@/features/dashboard/handlers/erpIntegrationHandlers';
+import {
+    handleGetErpSettings,
+    handleSetErpSettings,
+} from '@/features/dashboard/handlers/erpSettingsHandlers';
 import {
     handleCheckIntegrationUpdates,
     handleUpdateAppBuilderComponent,
