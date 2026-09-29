@@ -4,7 +4,7 @@ kind: question
 area: app-builder
 needs: []
 value: high
-status: open
+status: shipped
 parent: AB-16
 ---
 
@@ -53,3 +53,4 @@ whatever is decided.
 
 - 2026-09-28  docs(loop): file AB-16k — Admin-page design divergence (tabs vs §5b side-list) (`2ee11706a`)
 - 2026-09-29  Owner confirmed the shipped tabbed page is canonical (the Examples Data Map shipped as a tab within it). Remaining: retire the preview/next §5b prototype — git rm blocked by the local-destruction guard, awaiting owner OK to delete preview/next/ + preview/next.html + the package.json source line.
+- 2026-09-29  Retired the preview/next prototype in commerce-erp-integration (commit a3111fc): deleted preview/next/ + preview/next.html + the Parcel source line. Shipped tabbed page is the sole Admin design.
