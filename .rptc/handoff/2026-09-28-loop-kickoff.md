@@ -4,6 +4,18 @@ Read this FIRST on every wake, then follow the `unattended-loop` skill. Owner is
 runs all night and **stops + reports** when the epic's unattended work is exhausted (owner's
 kickoff choice — do NOT fall back to maintenance/bug-fixes).
 
+## Two standing rules the owner added (2026-09-28) — apply on EVERY item
+
+1. **VALIDATE every item against current reality before working it.** Not just the skill's
+   staleness check — treat validation as the first unit of every pickup: re-verify its central
+   claims in the code/live state, and record what you found (closed, stale, still-open) before
+   doing any implementation. AB-16c is the worked example: its "Admin page shows one ERP" gap
+   was already closed by the redesign, verified per surface and recorded, before touching code.
+2. **When you discover something that needs its own investigation, FILE A NEW BACKLOG ITEM**
+   (`backlog.mjs new <slug> --id <id>`, set `parent`, write a real body, `check` + `sync`) —
+   do NOT bury it as a log note on the current item. AB-16j (the missing ERP-settings agent
+   tool) is the worked example: discovered under AB-16c, split into its own item.
+
 ## Scope
 
 The **Multi-ERP / several-ERPs epic** ([[AB-26]], [[AB-16]]). Order of work is
