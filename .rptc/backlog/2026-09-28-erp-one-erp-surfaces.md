@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-16
 needs: []
 value: med
-status: backlog
+status: shipped
 ---
 
 # Screens and agent tools that still assume one ERP
@@ -46,3 +46,5 @@ Each gap is either fixed or recorded here as deliberately one-ERP, with the reas
 - 2026-09-29  2026-09-28 (loop) The agent-settings gap is now its own item, AB-16j (owner: file discoveries as their own backlog item, don't bury them).
 - 2026-09-29  2026-09-28 (loop) preview/next 'one hard-coded ERP' gap: VALIDATED true (preview/next/data.js hard-codes ERP={name:'Northwind ERP'}), but preview/next is a DIFFERENT Admin-page design (§5b side-list with a Credit section, single ERP) than today's shipped tabbed multi-ERP page. Deferred pending the design decision, now filed as AB-16k (question). Do not make preview/next multi-ERP until AB-16k is answered.
 - 2026-09-29  2026-09-28 (loop) Second-ERP look gap: theme half CLOSED — demo-erp fc76084 (themeForErpId derives a distinct theme from the ERP list-id number; demo-erp-2 Meridian, -3 Granite; stored look kept) is MERGED to demo-erp main with test/erp-theme.test.js (kickoff brief's 'not merged/deployed' was STALE). Company-code '1000' sub-gap: recorded as deliberate shared fallback — 1000 is only the sales-org default when none is set (orders.js:233); real per-website sales orgs are configured via the integration's Settings (structure_sales_org), so two ERPs are differentiated there, not by a hard-coded per-ERP code. Optional future enhancement: auto-derive a distinct default sales org per ERP list-id, mirroring the theme — small, not filed.
+- 2026-09-29  2026-09-28 (loop) Reset gap RESOLVED as deliberate every-ERP behaviour (not a per-ERP-reset gap). VALIDATED in code: resetErp (erpIntegrationHandlers.ts:180) loops ALL call.erps unconditionally; docstring 'Always every ERP … resetting one left half an order pointing at sales orders that no longer existed (owner 2026-09-28, AB-16n)'. reset_erp_records descriptor correctly exposes only id / 'Always every ERP'. The earlier per-ERP-reset attempt (5c2ee03d4, per-erp-reset.md draft) was reversed by the AB-16n decision; per-erp-reset.md is a SUPERSEDED draft. Per-ERP UNDO still exists for the removal path (detach.js params.erp, merged to integration main), which is correct — removing one ERP undoes only its writes. Note: an earlier AB-16c log line claiming 'reset_erp_records takes an optional erp / resets that ERP alone' is itself superseded by AB-16n.
+- 2026-09-29  2026-09-28 (loop) AB-16c TRIAGE COMPLETE — every listed gap fixed, recorded as deliberate, or split into its own item: (1) Admin-page 6 surfaces CLOSED; (2) reset deliberate every-ERP (AB-16n); (3) agent ERP-settings tool split to AB-16j; (4) second-ERP look CLOSED (theme) + company-code recorded; (5) load_erp_demo_data description FIXED; (6) preview/next deferred to design decision AB-16k. Remaining work lives in AB-16j (build) and AB-16k (owner decision). Marking shipped: the inventory/triage job is done.

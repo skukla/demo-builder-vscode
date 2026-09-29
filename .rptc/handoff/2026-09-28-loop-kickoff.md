@@ -37,7 +37,11 @@ Wider than the default no-cloud rails, for this epic only:
 - **NO delete/rebuild of Bodea** → **skip AB-16f entirely.**
 - No other destructive ops; Bodea live-proofs that need the owner watching are lane-2 handoffs.
 
-## First item: AB-16c — screens and agent tools that still assume one ERP
+## AB-16c — DONE (shipped 2026-09-28, loop). Triage complete: Admin surfaces closed; reset is
+## deliberate every-ERP (AB-16n, not a gap); settings tool → AB-16j; second-ERP look closed;
+## preview/next → AB-16k (design decision). Next item: AB-16g, then B6/B7 etc. (see order below).
+
+## (historical) AB-16c — screens and agent tools that still assume one ERP
 
 `backlog`, in progress (commits today, some built-but-unpushed on loop branches). Remaining,
 per the item + `c1-screen-listing.md`:
