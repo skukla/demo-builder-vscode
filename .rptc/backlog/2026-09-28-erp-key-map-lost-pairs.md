@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-16
 needs: []
 value: high
-status: active
+status: shipped
 ---
 
 # Northwind's key map lost its company pairs
@@ -51,3 +51,4 @@ are skipped and orders go to the walk-in customer, silently. Load demo data rest
 - 2026-09-28  test(erp): the fill-target suite stands alone and erases no type (`a17b5065c`)
 - 2026-09-28  fix(erp): a fill never takes an added ERP for the first one (`55657ce56`)
 - 2026-09-29  Merged the State-lock fix to commerce-erp-integration main (merge 4d7247d). Live proof on the demo instance remains (console, owner).
+- 2026-09-29  Live proof on Bodea (2026-09-29): deployed the fix (integration d373762->a3111fc, includes the lock merge), ran load_erp_demo_data — Northwind paired 4/4, Contoso paired 4/4, zero dropped pairs; canary company 21 (Kukla Studios) found in both Commerce and ERP as C21. Note: a single fill cannot reproduce the race on demand — the deterministic proof is the shipped RED-first unit test; this confirms the fixed code deploys and a real fill against the live State store keeps every pair.

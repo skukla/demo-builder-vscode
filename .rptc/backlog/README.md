@@ -260,7 +260,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-20` | fix | [Setup resumes when the install dialog detects AEM Code Sync, instead of demanding a Retry](2026-09-25-eds-setup-resumes-after-code-sync-install.md) | — | high | built |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | backlog |
 
-### app-builder  (78)
+### app-builder  (81)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -298,11 +298,11 @@ each item's own file; what has already landed against an item is in its
 | `AB-16d` | feature | └ [Live proofs still owed on Bodea for several ERPs](2026-09-28-erp-live-proofs.md) | AB-16a | high | backlog |
 | `AB-16e` | feature | └ [Returns across several ERPs](2026-09-28-erp-returns-across-erps.md) | — | med | backlog |
 | `AB-16f` | feature | └ [Fresh start: delete Bodea, rebuild from the setup guide, walk the journeys](2026-09-28-erp-fresh-start-rehearsal.md) | AB-16a, AB-16d, AB-26z | high | backlog |
-| `AB-16g` | fix | └ [Northwind's key map lost its company pairs](2026-09-28-erp-key-map-lost-pairs.md) | — | high | active |
+| `AB-16g` | fix | └ [Northwind's key map lost its company pairs](2026-09-28-erp-key-map-lost-pairs.md) | — | high | shipped |
 | `AB-16h` | fix | └ [Integration paths that still reach only the first ERP](2026-09-28-erp-paths-first-erp-only.md) | AB-16a | high | built |
 | `AB-16i` | fix | └ [Events from an added ERP never reach the integration](2026-09-28-erp-added-erp-events-undelivered.md) | — | high | built |
-| `AB-16j` | feature | └ [An agent tool for an ERP's own settings (ownership, sales-org per website)](2026-09-29-erp-settings-agent-tool.md) | — | med | backlog |
-| `AB-16k` | question | └ [Two Admin-page designs diverge: shipped tabs vs the §5b side-list prototype](2026-09-29-admin-page-design-divergence.md) | — | high | open |
+| `AB-16j` | feature | └ [An agent tool for an ERP's own settings (ownership, sales-org per website)](2026-09-29-erp-settings-agent-tool.md) | — | med | active |
+| `AB-16k` | question | └ [Two Admin-page designs diverge: shipped tabs vs the §5b side-list prototype](2026-09-29-admin-page-design-divergence.md) | — | high | shipped |
 | `AB-21` | feature | [An integration's settings live on its tile, not on Configure Project](2026-09-18-integration-settings-on-tile.md) | — | med | active |
 | `AB-22` | feature | [Import a colleague's integration, and ask only for what it really needs](2026-09-18-import-colleague-integration.md) | AB-21 | med | backlog |
 | `AB-24` | chore | [Stop creating a Stage workspace](2026-09-20-drop-the-stage-workspace.md) | — | med | built |
@@ -336,11 +336,14 @@ each item's own file; what has already landed against an item is in its
 | `AB-36` | fix | └ [The integration's Admin page lists no websites to set things for](2026-09-26-erp-admin-website-scope.md) | — | high | built |
 | `AB-37` | question | └ [Four places the several-ERPs design and the ACCS docs disagree](2026-09-27-erp-accs-order-model-findings.md) | AB-16 | high | open |
 | `AB-38` | feature | └ [A business user edits the integration's schedules](2026-09-28-erp-schedules-business-user.md) | AB-26z | med | backlog |
+| `AB-40` | fix | └ [write_erp_rest with a body fails: the ERP action's own inputs leak into the body](2026-09-29-erp-write-rest-erp-id-leak.md) | — | high | shipped |
+| `AB-41` | fix | └ [Company updates never reach the ERP: the company-saved event carries no id](2026-09-29-erp-company-event-no-id.md) | — | high | active |
+| `AB-42` | question | └ [Should the ERP be seeded with price groups / price lists from Commerce's shared catalogs at setup?](2026-09-29-erp-seed-price-groups-from-shared-catalogs.md) | — | high | open |
 | `AB-29` | feature | [Commerce test data cleanup tools](2026-09-24-commerce-test-data-cleanup-tools.md) | — | med | active |
 | `AB-30` | feature | [The ERP integration's Commerce Admin page uses the Commerce back-office design system](2026-09-24-erp-admin-page-commerce-design-system.md) | — | med | backlog |
 | `AB-33` | fix | [Removing an integration reports Runtime packages left behind in a workspace it then deletes](2026-09-26-remove-integration-leaves-runtime-packages.md) | — | med | built |
 | `AB-34` | fix | [add_integration's answer names the catalog entry, not the name the SC gave](2026-09-26-add-integration-answer-names-catalog-entry.md) | — | low | built |
-| `AB-39` | question | [Loop branch labels use AB-16 sub-ids that are not their backlog items](2026-09-29-erp-branch-label-id-divergence.md) | — | low | open |
+| `AB-39` | question | [Loop branch labels use AB-16 sub-ids that are not their backlog items](2026-09-29-erp-branch-label-id-divergence.md) | — | low | shipped |
 | `PL-24` | feature | [Component updates cannot follow an environment-variable rename](2026-08-30-env-var-rename-migration.md) | — | med | backlog |
 
 ### data-installer  (3)
@@ -578,7 +581,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — backlog
 
-*178 item(s) sit outside the A–G chain.*
+*181 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 
