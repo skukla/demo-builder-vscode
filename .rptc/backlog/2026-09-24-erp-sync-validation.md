@@ -25,6 +25,7 @@ Every matrix row has a journey; the baseline's failures match the matrix's gaps 
 - 2026-09-25  D15 built (commerce-erp-integration 536e3cd): product and stock events from the ERP write what the ERP holds now, read through its product API; a late or repeated event can no longer leave Commerce behind the ERP.
 - 2026-09-25  D7 built (commerce-erp-integration e4d1d9a, demo-erp fcb4ced): a Commerce read that times out no longer blanks 'Follow an order'; the ERP order is found by its customer reference (a standard ERP filter the ERP gained) and the headline says Commerce's part is missing.
 - 2026-09-25  D8 built (commerce-erp-integration a5cbb17, 0af7799): a send to the ERP is recorded as 'sending' with a staff note on the order before the ERP is called; a failed write-back is its own 'failed' outcome carrying the ERP number and retried; stuck sends offer Retry.
+- 2026-09-29  2026-09-29 (loop) VALIDATED: the harness/box journeys ARE built (test/box/journeys.test.js + several-erps.test.js, both directions + reset) — the several-erps plan §7 note 'journeys not yet written' is STALE. A5's remaining LANE-1 deliverable is docs/sync-validation.md (MISSING): the live-validation script, one journey per entity-matrix row with the expected result beside each step, products first, derived from the box journeys + erp-bidirectional-review matrix. The live RUN of it is lane-2 (demo instance, authorised). Teed up for the next fire.
 
 ## The end-to-end matrix, live status (2026-09-25 — owner: "our goal is a complete end to end test of all data flows")
 
