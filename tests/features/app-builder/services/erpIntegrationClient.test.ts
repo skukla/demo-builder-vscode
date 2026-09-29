@@ -33,14 +33,24 @@ describe('deriveErpActionUrl', () => {
     it('finds the action by its path suffix and nothing else', () => {
         expect(deriveErpActionUrl(URLS, 'status')).toBe(URLS['runtime/erp/status']);
         expect(deriveErpActionUrl(URLS, 'detach')).toBe(URLS['runtime/erp/detach']);
-        expect(deriveErpActionUrl({ 'web/app': 'https://x/api/v1/web/app-management/installation' }, 'status')).toBeUndefined();
+        expect(
+            deriveErpActionUrl(
+                { 'web/app': 'https://x/api/v1/web/app-management/installation' },
+                'status'
+            )
+        ).toBeUndefined();
         expect(deriveErpActionUrl(undefined, 'detach')).toBeUndefined();
     });
 });
 
 describe('ErpIntegrationClient', () => {
     it('GETs status with the bearer token and the org header, and answers the body', async () => {
-        const fetchImpl = answering(200, { app: { id: 'erp', version: '1' }, erp: { reachable: true, ok: true }, erpBaseUrl: 'x', ledger: { entries: 2 } });
+        const fetchImpl = answering(200, {
+            app: { id: 'erp', version: '1' },
+            erp: { reachable: true, ok: true },
+            erpBaseUrl: 'x',
+            ledger: { entries: 2 },
+        });
 
         const status = await new ErpIntegrationClient(URLS, AUTH, fetchImpl).status();
 
@@ -56,7 +66,12 @@ describe('ErpIntegrationClient', () => {
     });
 
     it('asks status for one ERP by its list id', async () => {
-        const fetchImpl = answering(200, { app: { id: 'erp', version: '1' }, erp: { reachable: true }, erpBaseUrl: 'x', ledger: { entries: 0 } });
+        const fetchImpl = answering(200, {
+            app: { id: 'erp', version: '1' },
+            erp: { reachable: true },
+            erpBaseUrl: 'x',
+            ledger: { entries: 0 },
+        });
 
         await new ErpIntegrationClient(URLS, AUTH, fetchImpl).status('demo-erp-2');
 
@@ -74,8 +89,11 @@ describe('ErpIntegrationClient', () => {
         expect(report).toEqual(body);
     });
 
-    it("POSTs detach for one ERP by its list id (AB-16c)", async () => {
-        const fetchImpl = answering(200, { erp: 'demo-erp-2', reverted: { reverted: 1, failed: [] } });
+    it('POSTs detach for one ERP by its list id (AB-16c)', async () => {
+        const fetchImpl = answering(200, {
+            erp: 'demo-erp-2',
+            reverted: { reverted: 1, failed: [] },
+        });
 
         const report = await new ErpIntegrationClient(URLS, AUTH, fetchImpl).detach('demo-erp-2');
 
@@ -104,11 +122,23 @@ describe('ErpIntegrationClient', () => {
      * 2026-09-28): POST `{ erpId? }`, answering the counts of what it published.
      */
     it("POSTs prices for one ERP by its list id, and answers the integration's counts", async () => {
-        const answer = { erps: ['demo-erp-2'], written: 3, removed: 1, unchanged: 2, skipped: [], failed: [] };
+        const answer = {
+            erps: ['demo-erp-2'],
+            written: 3,
+            removed: 1,
+            unchanged: 2,
+            skipped: [],
+            failed: [],
+        };
         const fetchImpl = answering(200, answer);
-        const urls = { ...URLS, 'runtime/erp/prices': 'https://ns.adobeioruntime.net/api/v1/web/erp/prices' };
+        const urls = {
+            ...URLS,
+            'runtime/erp/prices': 'https://ns.adobeioruntime.net/api/v1/web/erp/prices',
+        };
 
-        const report = await new ErpIntegrationClient(urls, AUTH, fetchImpl).publishPrices('demo-erp-2');
+        const report = await new ErpIntegrationClient(urls, AUTH, fetchImpl).publishPrices(
+            'demo-erp-2'
+        );
 
         expect(fetchImpl.mock.calls[0][0]).toBe(urls['runtime/erp/prices']);
         const init = fetchImpl.mock.calls[0][1] as RequestInit;
@@ -118,8 +148,18 @@ describe('ErpIntegrationClient', () => {
     });
 
     it('POSTs prices with no body for every ERP, and knows a deployment without the action has none', async () => {
-        const fetchImpl = answering(200, { erps: ['erp'], written: 0, removed: 0, unchanged: 0, skipped: [], failed: [] });
-        const urls = { ...URLS, 'runtime/erp/prices': 'https://ns.adobeioruntime.net/api/v1/web/erp/prices' };
+        const fetchImpl = answering(200, {
+            erps: ['erp'],
+            written: 0,
+            removed: 0,
+            unchanged: 0,
+            skipped: [],
+            failed: [],
+        });
+        const urls = {
+            ...URLS,
+            'runtime/erp/prices': 'https://ns.adobeioruntime.net/api/v1/web/erp/prices',
+        };
 
         await new ErpIntegrationClient(urls, AUTH, fetchImpl).publishPrices();
 
@@ -134,7 +174,14 @@ describe('ErpIntegrationClient', () => {
      * `stored`), PUT takes `{ entries }` and replaces the whole list or map.
      */
     it('GETs and PUTs the ERP list, and says whether the deployment has one', async () => {
-        const entries = [{ id: 'erp', name: 'Acme ERP', adapter: 'demo-erp', connection: { baseUrl: 'https://x/web/demo-erp' } }];
+        const entries = [
+            {
+                id: 'erp',
+                name: 'Acme ERP',
+                adapter: 'demo-erp',
+                connection: { baseUrl: 'https://x/web/demo-erp' },
+            },
+        ];
         const fetchImpl = answering(200, { entries, stored: false });
         const client = new ErpIntegrationClient(URLS, AUTH, fetchImpl);
 
@@ -149,6 +196,46 @@ describe('ErpIntegrationClient', () => {
         expect(client.keepsErpList()).toBe(true);
         const { ['runtime/erp/erps']: _gone, ...older } = URLS;
         expect(new ErpIntegrationClient(older, AUTH, fetchImpl).keepsErpList()).toBe(false);
+    });
+
+    it("PATCHes one ERP's own settings at a website scope and answers its entry (AB-16j)", async () => {
+        const entry = {
+            id: 'demo-erp-2',
+            name: 'Contoso ERP',
+            adapter: 'demo-erp',
+            connection: { baseUrl: 'https://x/web/demo-erp-2' },
+            settings: { websites: { bodea: { structure_sales_org: '2000' } } },
+        };
+        const fetchImpl = answering(200, { entry });
+        const client = new ErpIntegrationClient(URLS, AUTH, fetchImpl);
+
+        const answer = await client.updateErpSettings('demo-erp-2', 'bodea', {
+            structure_sales_org: '2000',
+        });
+
+        expect(answer).toEqual({ entry });
+        expect(fetchImpl.mock.calls[0][0]).toBe(URLS['runtime/erp/erps']);
+        const patch = fetchImpl.mock.calls[0][1] as RequestInit;
+        expect(patch.method).toBe('PATCH');
+        expect(JSON.parse(String(patch.body))).toEqual({
+            id: 'demo-erp-2',
+            values: { structure_sales_org: '2000' },
+            website: 'bodea',
+        });
+    });
+
+    it("PATCHes one ERP's own defaults when no website is named, and can clear an override with null", async () => {
+        const fetchImpl = answering(200, { entry: { id: 'demo-erp-2' } });
+        await new ErpIntegrationClient(URLS, AUTH, fetchImpl).updateErpSettings(
+            'demo-erp-2',
+            undefined,
+            { structure_owns: null }
+        );
+
+        expect(JSON.parse(String((fetchImpl.mock.calls[0][1] as RequestInit).body))).toEqual({
+            id: 'demo-erp-2',
+            values: { structure_owns: null },
+        });
     });
 
     it('GETs the key map the integration holds', async () => {
@@ -166,16 +253,26 @@ describe('ErpIntegrationClient', () => {
         await client.resolvedSettings(['base', 'b2b'], 'demo-erp-2');
         await client.resolvedSettings(['base']);
 
-        expect(fetchImpl.mock.calls[0][0]).toBe(`${URLS['runtime/erp/settings']}?websites=base%2Cb2b&erp=demo-erp-2`);
+        expect(fetchImpl.mock.calls[0][0]).toBe(
+            `${URLS['runtime/erp/settings']}?websites=base%2Cb2b&erp=demo-erp-2`
+        );
         expect(fetchImpl.mock.calls[1][0]).toBe(`${URLS['runtime/erp/settings']}?websites=base`);
     });
 
     it('GETs lookup with the one query the action takes, encoded, and answers the lookup', async () => {
         // Shape from lib/lookup.js productLookup (read 2026-09-24).
-        const body = { kind: 'product', key: 'A 1/B', found: { commerce: true, erp: false }, rows: [], erpHash: null };
+        const body = {
+            kind: 'product',
+            key: 'A 1/B',
+            found: { commerce: true, erp: false },
+            rows: [],
+            erpHash: null,
+        };
         const fetchImpl = answering(200, body);
 
-        const lookup = await new ErpIntegrationClient(URLS, AUTH, fetchImpl).lookup({ sku: 'A 1/B' });
+        const lookup = await new ErpIntegrationClient(URLS, AUTH, fetchImpl).lookup({
+            sku: 'A 1/B',
+        });
 
         expect(fetchImpl.mock.calls[0][0]).toBe(`${URLS['runtime/erp/lookup']}?sku=A+1%2FB`);
         expect((fetchImpl.mock.calls[0][1] as RequestInit).method).toBe('GET');
@@ -188,12 +285,22 @@ describe('ErpIntegrationClient', () => {
     it('GETs history?trace=<order> and unwraps the trace the action returns under `trace`', async () => {
         // Shape from lib/order-trace.js buildOrderTrace, wrapped as history/index.js answers it.
         const trace = {
-            summary: { incrementId: '000000123', commerceStatus: 'processing', erpNumber: '0000001003', erpStatus: 'confirmed', reachedErp: true },
-            steps: [{ at: '2026-09-24T10:00:00Z', where: 'commerce', what: 'Order 000000123 placed' }],
+            summary: {
+                incrementId: '000000123',
+                commerceStatus: 'processing',
+                erpNumber: '0000001003',
+                erpStatus: 'confirmed',
+                reachedErp: true,
+            },
+            steps: [
+                { at: '2026-09-24T10:00:00Z', where: 'commerce', what: 'Order 000000123 placed' },
+            ],
         };
         const fetchImpl = answering(200, { trace });
 
-        const answer = await new ErpIntegrationClient(URLS, AUTH, fetchImpl).traceOrder('000000123');
+        const answer = await new ErpIntegrationClient(URLS, AUTH, fetchImpl).traceOrder(
+            '000000123'
+        );
 
         expect(fetchImpl.mock.calls[0][0]).toBe(`${URLS['runtime/erp/history']}?trace=000000123`);
         expect(answer).toEqual(trace);
@@ -203,13 +310,15 @@ describe('ErpIntegrationClient', () => {
         const fetchImpl = answering(500, { error: 'Commerce answered 503: unavailable' });
 
         await expect(new ErpIntegrationClient(URLS, AUTH, fetchImpl).detach()).rejects.toThrow(
-            new ErpIntegrationApiError('detach', 500, 'Commerce answered 503: unavailable'),
+            new ErpIntegrationApiError('detach', 500, 'Commerce answered 503: unavailable')
         );
     });
 
     it('an integration without the action is refused before any call', async () => {
         const fetchImpl = answering(200, {});
-        await expect(new ErpIntegrationClient({}, AUTH, fetchImpl).status()).rejects.toThrow(/deployed no erp\/status action/);
+        await expect(new ErpIntegrationClient({}, AUTH, fetchImpl).status()).rejects.toThrow(
+            /deployed no erp\/status action/
+        );
         expect(fetchImpl).not.toHaveBeenCalled();
     });
 });
@@ -223,25 +332,38 @@ describe("callErpApi — the ERP's own routes", () => {
     it('addresses <action>/<rest>?query under the deployed action and sends the JSON body with the sign-in', async () => {
         const fetchImpl = answering(200, { number: '0000001003', status: 'confirmed' });
 
-        const answer = await callErpApi(ERP_URLS, AUTH, 'POST', 'orders/0000001003/confirm?force=1', { reason: 'demo' }, fetchImpl);
+        const answer = await callErpApi(
+            ERP_URLS,
+            AUTH,
+            'POST',
+            'orders/0000001003/confirm?force=1',
+            { reason: 'demo' },
+            fetchImpl
+        );
 
-        expect(fetchImpl).toHaveBeenCalledWith('https://ns.adobeioruntime.net/api/v1/web/demo-erp/orders/0000001003/confirm?force=1', {
-            method: 'POST',
-            headers: {
-                Authorization: 'Bearer fake-test-pw-not-a-secret',
-                'x-gw-ims-org-id': 'ABC@AdobeOrg',
-                Accept: 'application/json',
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ reason: 'demo' }),
-        });
+        expect(fetchImpl).toHaveBeenCalledWith(
+            'https://ns.adobeioruntime.net/api/v1/web/demo-erp/orders/0000001003/confirm?force=1',
+            {
+                method: 'POST',
+                headers: {
+                    Authorization: 'Bearer fake-test-pw-not-a-secret',
+                    'x-gw-ims-org-id': 'ABC@AdobeOrg',
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ reason: 'demo' }),
+            }
+        );
         expect(answer).toMatchObject({ ok: true, status: 200, body: { status: 'confirmed' } });
     });
 
     it('a GET carries no body and no Content-Type', async () => {
         const fetchImpl = answering(200, { items: [] });
         await callErpApi(ERP_URLS, AUTH, 'GET', 'partners', undefined, fetchImpl);
-        const [, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit & { headers: Record<string, string> }];
+        const [, init] = fetchImpl.mock.calls[0] as unknown as [
+            string,
+            RequestInit & { headers: Record<string, string> },
+        ];
         expect(init.method).toBe('GET');
         expect(init.body).toBeUndefined();
         expect(init.headers['Content-Type']).toBeUndefined();
@@ -249,9 +371,15 @@ describe("callErpApi — the ERP's own routes", () => {
 
     it('refuses a malformed route and an action the ERP does not deploy, before any call', async () => {
         const fetchImpl = answering(200, {});
-        expect(await callErpApi(ERP_URLS, AUTH, 'GET', '../admin', undefined, fetchImpl)).toHaveProperty('refusal');
-        expect(await callErpApi(ERP_URLS, AUTH, 'GET', 'https://x/partners', undefined, fetchImpl)).toHaveProperty('refusal');
-        expect(await callErpApi(ERP_URLS, AUTH, 'GET', 'pricing', undefined, fetchImpl)).toEqual({ refusal: 'The ERP deploys no "pricing" action.' });
+        expect(
+            await callErpApi(ERP_URLS, AUTH, 'GET', '../admin', undefined, fetchImpl)
+        ).toHaveProperty('refusal');
+        expect(
+            await callErpApi(ERP_URLS, AUTH, 'GET', 'https://x/partners', undefined, fetchImpl)
+        ).toHaveProperty('refusal');
+        expect(await callErpApi(ERP_URLS, AUTH, 'GET', 'pricing', undefined, fetchImpl)).toEqual({
+            refusal: 'The ERP deploys no "pricing" action.',
+        });
         expect(fetchImpl).not.toHaveBeenCalled();
     });
 });

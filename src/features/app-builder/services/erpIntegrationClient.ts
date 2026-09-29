@@ -46,7 +46,15 @@ export interface ErpDetachReport {
     orders?: { cleared: number; failed: unknown[] };
 }
 
-export type ErpAction = 'status' | 'detach' | 'lookup' | 'history' | 'settings' | 'keymap' | 'erps' | 'prices';
+export type ErpAction =
+    | 'status'
+    | 'detach'
+    | 'lookup'
+    | 'history'
+    | 'settings'
+    | 'keymap'
+    | 'erps'
+    | 'prices';
 
 /**
  * What `erp/prices` answers (the integration's `actions/erp/prices/index.js`, read 2026-09-28):
@@ -149,7 +157,11 @@ export class ErpIntegrationClient {
      * `erpId` (the ERP's id in the integration's list), that ERP's health; else the first's.
      */
     async status(erpId?: string): Promise<ErpIntegrationStatus> {
-        return (await this.call('status', 'GET', erpId ? { erp: erpId } : undefined)) as ErpIntegrationStatus;
+        return (await this.call(
+            'status',
+            'GET',
+            erpId ? { erp: erpId } : undefined,
+        )) as ErpIntegrationStatus;
     }
 
     /**
@@ -158,7 +170,11 @@ export class ErpIntegrationClient {
      * a deployment before it ignores the id and undoes every ERP.
      */
     async detach(erpId?: string): Promise<ErpDetachReport> {
-        return (await this.call('detach', 'POST', erpId ? { erp: erpId } : undefined)) as ErpDetachReport;
+        return (await this.call(
+            'detach',
+            'POST',
+            erpId ? { erp: erpId } : undefined,
+        )) as ErpDetachReport;
     }
 
     /** One product (by SKU) or one company (by Commerce id) as both systems hold it. */
@@ -202,7 +218,12 @@ export class ErpIntegrationClient {
      * replace (`POST erp/prices`). With `erpId` (its list id), that ERP's; else every ERP's.
      */
     async publishPrices(erpId?: string): Promise<ErpPricesReport> {
-        return (await this.call('prices', 'POST', undefined, erpId ? { erpId } : undefined)) as ErpPricesReport;
+        return (await this.call(
+            'prices',
+            'POST',
+            undefined,
+            erpId ? { erpId } : undefined,
+        )) as ErpPricesReport;
     }
 
     /** Whether this deployment serves several ERPs (`erp/erps`); one deployed before it does not. */
@@ -221,15 +242,35 @@ export class ErpIntegrationClient {
         await this.call('erps', 'PUT', undefined, { entries });
     }
 
+    /**
+     * Save one ERP's own settings (`PATCH erp/erps`): each value is `true`/`false`/a string, or
+     * `null` to clear the override so the wider scope applies. `website` omitted edits the ERP's
+     * own defaults; a website code edits that website's. Answers the ERP's entry as it now reads
+     * (its credential named, never revealed).
+     */
+    async updateErpSettings(
+        id: string,
+        website: string | undefined,
+        values: Record<string, string | boolean | null>,
+    ): Promise<{ entry: ErpListEntry }> {
+        return (await this.call('erps', 'PATCH', undefined, {
+            id,
+            values,
+            ...(website ? { website } : {}),
+        })) as { entry: ErpListEntry };
+    }
+
     /** One Commerce order's whole life across both systems and the integration. */
     async traceOrder(incrementId: string): Promise<ErpOrderTrace> {
-        const answer = (await this.call('history', 'GET', { trace: incrementId })) as { trace: ErpOrderTrace };
+        const answer = (await this.call('history', 'GET', { trace: incrementId })) as {
+            trace: ErpOrderTrace;
+        };
         return answer.trace;
     }
 
     private async call(
         action: ErpAction,
-        method: 'GET' | 'POST' | 'PUT',
+        method: 'GET' | 'POST' | 'PUT' | 'PATCH',
         query?: Record<string, string>,
         payload?: unknown,
     ): Promise<unknown> {
@@ -319,7 +360,10 @@ export async function callErpApi(
 ): Promise<ImsCallAnswer | { refusal: string }> {
     const trimmed = route.trim().replace(/^\/+/, '');
     if (!ERP_ROUTE.test(trimmed)) {
-        return { refusal: 'An ERP route is <action>[/<rest>], e.g. "partners/C2" or "orders/0000001003/confirm".' };
+        return {
+            refusal:
+                'An ERP route is <action>[/<rest>], e.g. "partners/C2" or "orders/0000001003/confirm".',
+        };
     }
     const [action, ...rest] = trimmed.split('?')[0].split('/');
     const query = trimmed.includes('?') ? `?${trimmed.split('?')[1]}` : '';
