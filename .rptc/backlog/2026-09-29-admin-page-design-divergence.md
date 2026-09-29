@@ -48,3 +48,7 @@ AB-16c's `preview/next` "one hard-coded ERP" fix is **deferred** until this is a
 a superseded prototype multi-ERP is wasted work; if the prototype survives, the fix comes free
 with whichever slice makes it multi-ERP. §5b of the several-erps plan should be reconciled with
 whatever is decided.
+
+## Shipped so far
+
+- 2026-09-28  docs(loop): file AB-16k — Admin-page design divergence (tabs vs §5b side-list) (`2ee11706a`)

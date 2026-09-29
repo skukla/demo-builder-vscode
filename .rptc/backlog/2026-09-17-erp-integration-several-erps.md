@@ -227,3 +227,6 @@ one partner to several, and that is AB-16's own work either way.
 - 2026-09-27  docs(plan): several ERPs, the reference design v1 draft (`70ffe26c5`)
 - 2026-09-27  docs(research): one multi-ERP integration with a routing action, or an app per ERP (`bbfd4675c`)
 - 2026-09-27  docs(plan): the routing action in one multi-ERP integration is the decision; per-ERP integrations withdrawn (`66f24f522`)
+- 2026-09-28  docs(handoff): the afternoon loop, in plain words (`9db50a41e`)
+- 2026-09-28  docs(handoff): AB-16h and AB-16i proven live; what remains under AB-16 (`a4f0b41f9`)
+- 2026-09-28  docs(handoff): the midday loop, AB-26z and AB-16a proven live (`35ea1b8e4`)

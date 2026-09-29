@@ -20,3 +20,7 @@ not, and the clean-up list). The journeys are `.rptc/plans/several-erps/journeys
 
 Deleting the project is permanent and the owner's to do. Every step the guide gets wrong or
 leaves out is a guide defect, filed as found.
+
+## Shipped so far
+
+- 2026-09-28  docs(erp): the clean-up list gains today's test orders and price list (`8f4bb9a7e`)
