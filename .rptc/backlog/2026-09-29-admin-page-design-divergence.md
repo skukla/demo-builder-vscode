@@ -52,3 +52,4 @@ whatever is decided.
 ## Shipped so far
 
 - 2026-09-28  docs(loop): file AB-16k — Admin-page design divergence (tabs vs §5b side-list) (`2ee11706a`)
+- 2026-09-29  Owner confirmed the shipped tabbed page is canonical (the Examples Data Map shipped as a tab within it). Remaining: retire the preview/next §5b prototype — git rm blocked by the local-destruction guard, awaiting owner OK to delete preview/next/ + preview/next.html + the package.json source line.

@@ -50,3 +50,4 @@ are skipped and orders go to the walk-in customer, silently. Load demo data rest
 - 2026-09-28  docs(loop): AB-16g root cause proven — unguarded key-map read-modify-write race (`a4a12b0d9`)
 - 2026-09-28  test(erp): the fill-target suite stands alone and erases no type (`a17b5065c`)
 - 2026-09-28  fix(erp): a fill never takes an added ERP for the first one (`55657ce56`)
+- 2026-09-29  Merged the State-lock fix to commerce-erp-integration main (merge 4d7247d). Live proof on the demo instance remains (console, owner).

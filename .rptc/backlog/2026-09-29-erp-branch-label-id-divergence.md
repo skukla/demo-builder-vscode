@@ -4,7 +4,7 @@ kind: question
 area: app-builder
 needs: []
 value: low
-status: open
+status: shipped
 ---
 
 # Loop branch labels use AB-16 sub-ids that are not their backlog items
@@ -36,3 +36,7 @@ merged `ab-16j/k/n/o` branch work is logged to whatever backlog items it belongs
 (`backlog.mjs unlogged` covers commits that name an item), and (b) deleting or renaming the
 stale merged branches so the labels stop implying a backlog id. Low value; hygiene, not work —
 raised so a future reader cross-referencing a branch name against the backlog is not misled.
+
+## Shipped so far
+
+- 2026-09-29  Deleted the 7 stale ab-16j/k/n/o loop branches (5 commerce + 2 demo-erp), all local-only and merged to main; also removed the merged keymap branch. Backlog ids AB-16j/k kept as filed.
