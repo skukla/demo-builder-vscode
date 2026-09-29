@@ -48,8 +48,10 @@ per the item + `c1-screen-listing.md`:
   Suspect still-one-ERP: TracePanel's headline uses `erpInfo.erps[0]` (`trace-view.js`).
 - **Per-ERP reset, integration side** — building on `loop/ab-16c-per-erp-detach`; the Demo
   Builder side is an unpushed commit on `feature/erp-integration`. Finish + push.
-- **Second ERP's look** — `demo-erp` `loop/erp-theme-per-erp` fc76084, unmerged/undeployed.
-- **`preview/next` hard-coded ERP.**
+- **Second ERP's look** — DONE: `demo-erp` fc76084 (themeForErpId) is MERGED to demo-erp main
+  with tests; the brief's earlier "unmerged" was stale. Company-code "1000" recorded as a
+  deliberate shared fallback (see AB-16c log). Gap closed.
+- **`preview/next` hard-coded ERP** — DEFERRED pending AB-16k (design divergence).
 
 ## Environment
 

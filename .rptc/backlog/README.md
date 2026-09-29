@@ -260,7 +260,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-20` | fix | [Setup resumes when the install dialog detects AEM Code Sync, instead of demanding a Retry](2026-09-25-eds-setup-resumes-after-code-sync-install.md) | — | high | built |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | backlog |
 
-### app-builder  (77)
+### app-builder  (78)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -340,6 +340,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-30` | feature | [The ERP integration's Commerce Admin page uses the Commerce back-office design system](2026-09-24-erp-admin-page-commerce-design-system.md) | — | med | backlog |
 | `AB-33` | fix | [Removing an integration reports Runtime packages left behind in a workspace it then deletes](2026-09-26-remove-integration-leaves-runtime-packages.md) | — | med | built |
 | `AB-34` | fix | [add_integration's answer names the catalog entry, not the name the SC gave](2026-09-26-add-integration-answer-names-catalog-entry.md) | — | low | built |
+| `AB-39` | question | [Loop branch labels use AB-16 sub-ids that are not their backlog items](2026-09-29-erp-branch-label-id-divergence.md) | — | low | open |
 | `PL-24` | feature | [Component updates cannot follow an environment-variable rename](2026-08-30-env-var-rename-migration.md) | — | med | backlog |
 
 ### data-installer  (3)
@@ -577,7 +578,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — backlog
 
-*177 item(s) sit outside the A–G chain.*
+*178 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 
