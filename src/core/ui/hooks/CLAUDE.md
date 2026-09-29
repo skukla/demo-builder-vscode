@@ -63,7 +63,8 @@ signed-out users "Connected" for two steps.
 
 Reach for this hook only against a handler that genuinely throws. Otherwise type the
 ENVELOPE and branch on `.success`. The full treatment — why the channel behaves this
-way, and the `GitHubAppCheckResult` pattern to copy — is in
+way, and the envelope-typing pattern to copy (`webviewClient.request<{ success; … }>`
+then branch on `.success`, as `GitHubAppInstallDialog` does) — is in
 [webview-command-handler](../../../../.claude/skills/webview-command-handler/SKILL.md),
 which is where you will be when you wire one.
 

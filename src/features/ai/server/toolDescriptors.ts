@@ -80,8 +80,8 @@ export interface ToolDescriptor {
      * Arguments forced onto every call, overriding anything the agent sends.
      *
      * Exists because a handler's default can be a WRITE. `checkGitHubApp` fires
-     * `triggerAndWaitForCodeSync` against the repo when Helix 404s, unless
-     * `skipTrigger` is set (`checkGitHubAppHandler.ts:202-228`) — so exposing it
+     * `triggerCodeSync` against the repo when Helix 404s, unless `skipTrigger`
+     * is set (`checkGitHubAppHandler.ts`) — so exposing it
      * as `check_github_app` without forcing that flag ships a read tool that
      * mutates a repo, and an agent enumerating checks would trip it.
      *

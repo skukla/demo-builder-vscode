@@ -66,12 +66,12 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
 
     // AEM Code Sync check. The fast path answers in about a second, but only
     // because the caller passed `skipTrigger`. "Check Again" does NOT, and when
-    // Helix has never heard of the repo the handler TRIGGERS a real code sync and
-    // polls it (`checkGitHubAppHandler.triggerAndWaitForCodeSync`, bounded by
-    // TIMEOUTS.LONG over 30 attempts). Unbudgeted, the frontend hung up at 30s and
-    // showed "couldn't verify" while the sync ran on for up to another 2.5 minutes
-    // and often succeeded — the 2026-07-31 failure above, in a different message.
-    'check-github-app': TIMEOUTS.LONG, // 180s - may trigger a code sync and poll it
+    // Helix has never heard of the repo the handler TRIGGERS a real code sync
+    // (`checkGitHubApp` → `triggerCodeSync`) and re-checks once. Unbudgeted, the
+    // frontend hung up at 30s and showed "couldn't verify" while the sync ran on
+    // for up to another 2.5 minutes and often succeeded — the 2026-07-31 failure
+    // above, in a different message.
+    'check-github-app': TIMEOUTS.LONG, // 180s - may trigger a code sync and re-check
 
     // An integration's Settings (AB-21): the save redeploys what uses the change,
     // up to two app deploys in a row (the ERP, then its integration).
@@ -266,20 +266,14 @@ export class WebviewCommunicationManager {
     /**
      * Register a message handler
      */
-    on<P = unknown, R = unknown>(
-        type: string,
-        handler: MessageHandlerFunction<P, R>,
-    ): void {
+    on<P = unknown, R = unknown>(type: string, handler: MessageHandlerFunction<P, R>): void {
         this.messageHandlers.set(type, handler as MessageHandlerFunction);
     }
 
     /**
      * Register a one-time message handler
      */
-    once<P = unknown, R = unknown>(
-        type: string,
-        handler: MessageHandlerFunction<P, R>,
-    ): void {
+    once<P = unknown, R = unknown>(type: string, handler: MessageHandlerFunction<P, R>): void {
         const wrappedHandler: MessageHandlerFunction = (payload: unknown) => {
             this.messageHandlers.delete(type);
             return handler(payload as P);

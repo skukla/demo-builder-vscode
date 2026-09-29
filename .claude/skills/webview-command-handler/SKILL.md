@@ -100,9 +100,9 @@ gates read, and for the fields its JSX renders. Three different lists.
   (2026-08-12, Data Installer: a connectivity line read `data.reachable` off a guard refusal
   and told signed-out users "Connected to the Data Installer service" for two steps.)
   - **Type the ENVELOPE and branch on `.success`** — the pattern EDS already uses:
-    `webviewClient.request<GitHubAppCheckResult>(…)`, where that interface declares
-    `success: boolean` and `pollGitHubAppInstallation` checks it before reading any other
-    field (`repoSelectionInline.helpers.tsx`; same shape in `RepoSelectionInline.tsx`).
+    `webviewClient.request<{ success: boolean; isInstalled: boolean }>('check-github-app', …)`,
+    then branches on `result.success` before reading any other field
+    (`GitHubAppInstallDialog.tsx`, `handleCheckInstallation`).
   - `useVSCodeRequest` is only safe against a handler that THROWS on failure. Since this
     project's convention is the opposite (bullet above), treat the hook's domain-typed
     generic as the exception, not the default.

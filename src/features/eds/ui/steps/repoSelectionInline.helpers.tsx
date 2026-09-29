@@ -155,11 +155,11 @@ export function isJustCreatedSelection(
  * Copy for a Code Sync check that outlives a glance.
  *
  * Two different checks render this same view. The selection-time probe passes
- * `skipTrigger` and answers in about a second. "Check Again"
- * (`pollGitHubAppInstallation`) does NOT, so when Helix has never heard of the
- * repo the handler TRIGGERS a real code sync and polls for it — bounded by
- * `TIMEOUTS.LONG` over 30 attempts in `checkGitHubAppHandler.triggerAndWaitForCodeSync`,
- * i.e. up to three minutes. That path previously showed one static line for its
+ * `skipTrigger` and answers in about a second. "Check Again" does NOT, so when
+ * Helix has never heard of the repo the handler TRIGGERS a real code sync
+ * (`checkGitHubApp` → `triggerCodeSync`) and re-checks — the `check-github-app`
+ * message budgeted at `TIMEOUTS.LONG`, up to three minutes, since the bulk
+ * preview can run that long. That path previously showed one static line for its
  * whole duration, so the user with the most to wait for got the least evidence
  * anything was happening.
  *
@@ -362,9 +362,9 @@ export function DefaultBranchNotice({
             title="This repository uses a different default branch"
             testId="default-branch-notice"
         >
-            Demo Builder builds storefronts from <strong>main</strong>, and{' '}
-            {selectedRepo.fullName} defaults to <strong>{branch}</strong>. Rename its default
-            branch to main on GitHub, or choose a different repository.
+            Demo Builder builds storefronts from <strong>main</strong>, and {selectedRepo.fullName}{' '}
+            defaults to <strong>{branch}</strong>. Rename its default branch to main on GitHub, or
+            choose a different repository.
         </InlineNotice>
     );
 }
