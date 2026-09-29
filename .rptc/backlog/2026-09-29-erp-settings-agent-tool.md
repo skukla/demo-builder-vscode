@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: med
-status: backlog
+status: active
 parent: AB-16
 ---
 
@@ -46,3 +46,7 @@ build.
 An agent can read and set an ERP's ownership and per-website sales-organisation
 settings through purpose-built tools, proven against the running server
 (`mcp-live-probe`), with the human Settings tab and the tools reaching the same state.
+
+## Shipped so far
+
+- 2026-09-29  2026-09-29 (loop) DESIGN settled (validated the surface). Per-ERP/per-website settings are the integration's erp/settings action (commerce-erp-integration src/commerce-extensibility-1/actions/erp/settings + lib/settings.js settingsPage/resolvedSettings/saveSettings + lib/erp-settings.js PER_ERP_KEYS/WEBSITE_KEYS/withErpSettings/applyErpSettingChanges), scoped by params.erp and website. This is OUTSIDE the demo-builder extension — the human path is the Commerce-Admin webview calling that action directly; get/set_integration_settings only reach componentConfigs. TOOL SHAPE (two tools, extends the ErpIntegrationClient/callErpApi pattern used by get_erp_status/run_erp_rest): get_erp_settings(id, erp, website?) -> GET erp/settings, returns the resolved per-ERP/per-website settings (withErpSettings shape); set_erp_settings(id, erp, website, changes) -> PUT erp/settings, applyErpSettingChanges, write-only text (no secrets as args), confirm:true. Follows mcp-tool-authoring: headless handler, READ/WRITE descriptors, TOOL_NARRATION, agent-alert for the write, count-pinned tests, realSdkRegistration + mcp-server.md sync. BUILD is the next fire(s), RED-first, verified with mcp-live-probe.
