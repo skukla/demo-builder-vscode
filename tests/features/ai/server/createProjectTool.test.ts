@@ -382,12 +382,25 @@ describe('create_project', () => {
             });
         });
 
+        it("records the endpoint on the backend's config, where the wizard's Connection step puts it", async () => {
+            // Until 2026-09-30 it reached only the storefront's config.json, so the
+            // project had a store scope and no endpoint: every Commerce tool refused.
+            const s = toolServer();
+
+            await s.call({ ...EDS, stack: 'eds-accs', accsEndpoint: 'https://commerce.example' });
+
+            expect(capturedWizardState().componentConfigs).toStrictEqual({
+                'adobe-commerce-accs': { ACCS_GRAPHQL_ENDPOINT: 'https://commerce.example' },
+            });
+        });
+
         it('does not refuse a NON-accs stack that omits accsEndpoint', async () => {
             const s = toolServer();
 
             await s.call(EDS);
 
             expect(storefrontSetup).toHaveBeenCalled();
+            expect(capturedWizardState().componentConfigs).toStrictEqual({});
         });
 
         it('creates a mesh-requiring EDS project from the session target', async () => {

@@ -46,11 +46,19 @@ jest.mock('@/features/components/services/demoPackageLoader', () => ({
     getAvailableStacksForPackage: jest.fn(async () => ['headless-paas', 'eds-paas']),
     getAutoSelectedOptionalDependencies: jest.fn(async () => []),
     getResolvedMeshRequirement: jest.fn(() => false),
+    // The backend ids `stacks.json` names for the two EDS stacks (read 2026-09-30).
+    getStackById: jest.fn((id: string) => {
+        if (id === 'eds-accs') return { id, backend: 'adobe-commerce-accs' };
+        if (id === 'eds-paas') return { id, backend: 'adobe-commerce-paas' };
+        return undefined;
+    }),
 }));
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     // The signed-in account: the tool creates the repository under it by default.
     getGitHubServices: jest.fn(() => ({
-        tokenService: { validateToken: jest.fn(async () => ({ valid: true, user: { login: 'steve' } })) },
+        tokenService: {
+            validateToken: jest.fn(async () => ({ valid: true, user: { login: 'steve' } })),
+        },
     })),
     getDaLiveAuthService: jest.fn(() => ({ isAuthenticated: jest.fn(async () => true) })),
 }));
@@ -101,14 +109,13 @@ export function defaultStorefrontSetup(): void {
     );
 }
 
- 
 type ToolHandler = (args?: any) => Promise<{ content: Array<{ text: string }> }>;
 
 export interface FakeServer {
     registerTool(name: string, def: McpToolSchema, handler: ToolHandler): void;
     /** The schema block `registerTool` was handed — what `tools/list` shows an agent. */
     definitionOf(): McpToolSchema;
-     
+
     call(args?: unknown): Promise<any>;
 }
 
@@ -186,7 +193,7 @@ export function toolServer(): FakeServer {
 }
 
 /** The `ProjectConfigSource` `buildProjectConfig` was handed on its first call. */
- 
+
 export function capturedWizardState(): any {
     return (buildProjectConfig as jest.Mock).mock.calls[0][0];
 }
