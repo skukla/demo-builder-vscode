@@ -85,3 +85,4 @@ ERP integration + Northwind (`erp`) + Contoso (`demo-erp-2`).
   or point the project at his site read-only?
 
 ## Shipped so far
+- 2026-09-30  Owner decisions 2026-09-30: (1) copy Khalil's content into the owner's OWN DA.live site (the shape the shared-storefront feature builds; his site stays untouched); (2) proceed without his read grant — his published site is what the copy uses (sitemap.json lists 122 pages, read 2026-09-30); the block library rebuilds from his repo's component-definition.json until EDS-22's authored copy exists, and stays as the fallback after it. Starting step 2 (tear down) now.
