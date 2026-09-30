@@ -103,7 +103,8 @@ export function resetCommerceRestTokens(): void {
 /** A path that reaches only the REST API under the tenant, or why not. */
 export function validateRestPath(raw: unknown): { path: string } | { error: string } {
     const path = String(raw ?? '').trim();
-    if (!path) return { error: '`path` is required, e.g. customers/search?searchCriteria[pageSize]=20' };
+    if (!path)
+        return { error: '`path` is required, e.g. customers/search?searchCriteria[pageSize]=20' };
     if (path.startsWith('/') || /^[a-z]+:\/\//i.test(path)) {
         return { error: 'Give the path under /V1 only, without a leading slash or a host.' };
     }
@@ -118,7 +119,9 @@ export function validateRestPath(raw: unknown): { path: string } | { error: stri
  * catalog row requires the API and that has a workspace of its own, else the
  * project's workspace. Deterministic and stated, rather than probing credentials.
  */
-export function restWorkspaceId(project: Pick<Project, 'adobe' | 'appBuilderComponents'>): string | undefined {
+export function restWorkspaceId(
+    project: Pick<Project, 'adobe' | 'appBuilderComponents'>,
+): string | undefined {
     const catalog = getAppBuilderComponentCatalog();
     for (const [id, state] of Object.entries(project.appBuilderComponents ?? {})) {
         if (state.kind !== 'integration' || !state.workspace?.id) continue;
@@ -153,7 +156,8 @@ async function mintToken(
         body: body.toString(),
     });
     const text = await res.text();
-    if (!res.ok) throw new Error(`IMS refused the credential (HTTP ${res.status}): ${text.slice(0, 300)}`);
+    if (!res.ok)
+        throw new Error(`IMS refused the credential (HTTP ${res.status}): ${text.slice(0, 300)}`);
     const answer = JSON.parse(text) as { access_token?: string; expires_in?: number };
     if (!answer.access_token) throw new Error('IMS answered without an access token.');
     tokens.set(workspaceId, {
@@ -182,7 +186,10 @@ export async function resolveRestTarget(
     fetchImpl: typeof fetch,
 ): Promise<RestTarget | { refusal: string }> {
     const project = await ctx.stateManager.getCurrentProject();
-    if (!project) return { refusal: 'Error: no current project. Use list_projects then set the current project.' };
+    if (!project)
+        return {
+            refusal: 'Error: no current project. Use list_projects then set the current project.',
+        };
     return resolveRestTargetFor(project, ctx.authManager, storeViewArg, fetchImpl);
 }
 
@@ -211,20 +218,45 @@ export async function resolveRestTargetFor(
     const { organization, projectId } = project.adobe ?? {};
     const workspaceId = restWorkspaceId(project);
     if (!organization || !projectId || !workspaceId) {
-        return { refusal: 'Error: the project has no Adobe org, project and workspace to take a credential from.' };
+        return {
+            refusal:
+                'Error: the project has no Adobe org, project and workspace to take a credential from.',
+        };
     }
     try {
-        const credentials = await authManager.getS2SDeployCredentials(organization, projectId, workspaceId);
+        const credentials = await authManager.getS2SDeployCredentials(
+            organization,
+            projectId,
+            workspaceId,
+        );
         const token = await mintToken(workspaceId, credentials, fetchImpl);
-        const storeView = typeof storeViewArg === 'string' && storeViewArg ? storeViewArg : facts.headers.all?.Store;
-        return { base, token, clientId: credentials.clientId, imsOrgCode: credentials.imsOrgCode, storeView };
+        const storeView =
+            typeof storeViewArg === 'string' && storeViewArg
+                ? storeViewArg
+                : facts.headers.all?.Store;
+        return {
+            base,
+            token,
+            clientId: credentials.clientId,
+            imsOrgCode: credentials.imsOrgCode,
+            storeView,
+        };
     } catch (error) {
-        return { refusal: `Error: could not sign the request — ${error instanceof Error ? error.message : String(error)}` };
+        return {
+            refusal: `Error: could not sign the request — ${error instanceof Error ? error.message : String(error)}`,
+        };
     }
 }
 
+/** Commerce's ACL refusal — the one 403 that IS about the credential. */
+const ACL_REFUSAL = /isn't authorized to access/u;
+
 function explainStatus(status: number, body: string): string {
-    if (status === 401 || status === 403) {
+    // A 403 is only a credential problem when Commerce says so. Its other 403s carry
+    // their own reason — "Adding a new gallery entry has been disabled by AEM Assets
+    // Integration" (2026-09-30) — and blaming the credential for those sent the reader
+    // to reinstall an integration that was fine.
+    if (status === 401 || (status === 403 && ACL_REFUSAL.test(body))) {
         return (
             `Error: Commerce REST answered HTTP ${status}. The workspace credential is not accepted ` +
             `by this instance — it needs the ${ACCS_REST_API} API subscribed and the instance must ` +

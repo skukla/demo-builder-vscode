@@ -15,12 +15,19 @@ import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
     getAppBuilderComponentCatalog: jest.fn(() => [
-        { id: 'erp-integration', kind: 'integration', requiredApis: ['CloudIntegrationSDK', 'ACCS-REST-API'] },
+        {
+            id: 'erp-integration',
+            kind: 'integration',
+            requiredApis: ['CloudIntegrationSDK', 'ACCS-REST-API'],
+        },
     ]),
 }));
 
 function fakeServer() {
-    const tools = new Map<string, (args: any) => Promise<{ content: Array<{ text: string }>; isError?: true }>>();
+    const tools = new Map<
+        string,
+        (args: any) => Promise<{ content: Array<{ text: string }>; isError?: true }>
+    >();
     const declarations = new Map<string, McpToolSchema>();
     return {
         registerTool(name: string, def: McpToolSchema, handler: (args: any) => Promise<any>) {
@@ -29,7 +36,8 @@ function fakeServer() {
         },
         declaration: (): McpToolSchema => declarations.get('write_commerce_rest')!,
         call: async (args?: unknown) => tools.get('write_commerce_rest')!(args),
-        raw: async (args?: unknown): Promise<string> => (await tools.get('write_commerce_rest')!(args)).content[0].text,
+        raw: async (args?: unknown): Promise<string> =>
+            (await tools.get('write_commerce_rest')!(args)).content[0].text,
     };
 }
 
@@ -43,7 +51,8 @@ const ACCS_PROJECT = {
             ACCS_WEBSITE_CODE: 'bodea',
             ACCS_STORE_CODE: 'bodea_store',
             ACCS_STORE_VIEW_CODE: 'bodea_us',
-            ACCS_GRAPHQL_ENDPOINT: 'https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/graphql',
+            ACCS_GRAPHQL_ENDPOINT:
+                'https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/graphql',
         },
     },
     componentInstances: {},
@@ -83,7 +92,11 @@ function answering(restStatus: number, restBody: string) {
             status: 200,
             text: async () => JSON.stringify({ access_token: 'minted-token', expires_in: 86399 }),
         })
-        .mockResolvedValueOnce({ ok: restStatus < 300, status: restStatus, text: async () => restBody });
+        .mockResolvedValueOnce({
+            ok: restStatus < 300,
+            status: restStatus,
+            text: async () => restBody,
+        });
 }
 
 let fetchMock: jest.Mock;
@@ -113,7 +126,9 @@ describe('declaration and gate', () => {
 
     it('refuses without confirm:true, before any call, with the shared wording', async () => {
         const result = await serve().call({ method: 'DELETE', path: 'customers/43' });
-        expect(result.content[0].text).toBe('write_commerce_rest requires confirm:true to proceed.');
+        expect(result.content[0].text).toBe(
+            'write_commerce_rest requires confirm:true to proceed.'
+        );
         expect(result.isError).toBe(true);
         expect(fetchMock).not.toHaveBeenCalled();
     });
@@ -135,7 +150,9 @@ describe('the signed write (args pinned)', () => {
         });
 
         const [url, init] = fetchMock.mock.calls[1];
-        expect(url).toBe('https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/V1/companyCredits/12');
+        expect(url).toBe(
+            'https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/V1/companyCredits/12'
+        );
         expect(init.method).toBe('PUT');
         expect(init.headers).toEqual({
             Authorization: 'Bearer minted-token',
@@ -151,7 +168,12 @@ describe('the signed write (args pinned)', () => {
 
     it('DELETE sends no body and no Content-Type, and a bare `true` answer is passed through', async () => {
         fetchMock = answering(200, 'true');
-        const out = await serve().raw({ method: 'DELETE', path: 'customers/43', body: { ignored: 1 }, confirm: true });
+        const out = await serve().raw({
+            method: 'DELETE',
+            path: 'customers/43',
+            body: { ignored: 1 },
+            confirm: true,
+        });
 
         const [, init] = fetchMock.mock.calls[1];
         expect(init.method).toBe('DELETE');
@@ -167,9 +189,49 @@ describe('the signed write (args pinned)', () => {
     });
 
     it('a Commerce 400 is answered with its own words, not thrown', async () => {
-        fetchMock = answering(400, '{"message":"The company credit limit must be a positive number."}');
-        const out = await serve().raw({ method: 'PUT', path: 'companyCredits/12', body: {}, confirm: true });
+        fetchMock = answering(
+            400,
+            '{"message":"The company credit limit must be a positive number."}'
+        );
+        const out = await serve().raw({
+            method: 'PUT',
+            path: 'companyCredits/12',
+            body: {},
+            confirm: true,
+        });
         expect(out).toContain('HTTP 400');
         expect(out).toContain('positive number');
+    });
+
+    it("a 403 that is Commerce's ACL refusal is explained as the credential", async () => {
+        fetchMock = answering(
+            403,
+            '{"message":"The consumer isn\'t authorized to access %resources.","parameters":{"resources":"Magento_Backend::store"}}'
+        );
+        const out = await serve().raw({
+            method: 'POST',
+            path: 'products',
+            body: {},
+            confirm: true,
+        });
+        expect(out).toContain('workspace credential is not accepted');
+    });
+
+    it("a 403 with any other reason is answered in Commerce's own words, not blamed on the credential", async () => {
+        // Live 2026-09-30: the media endpoint on an instance with the AEM Assets
+        // Integration. The credential was fine; the old wording said to reinstall.
+        fetchMock = answering(
+            403,
+            '{"message":"Adding a new gallery entry has been disabled by AEM Assets Integration"}'
+        );
+        const out = await serve().raw({
+            method: 'POST',
+            path: 'products/ACC-1/media',
+            body: {},
+            confirm: true,
+        });
+        expect(out).toContain('HTTP 403');
+        expect(out).toContain('disabled by AEM Assets Integration');
+        expect(out).not.toContain('workspace credential');
     });
 });
