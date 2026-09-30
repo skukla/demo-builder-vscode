@@ -11,6 +11,7 @@
  * @module features/app-builder/services/erpFillReaders
  */
 
+import type { CommercePost, SharedCatalog, TierPrice } from './erpFillPricing';
 import type {
     CommerceCompanyRow,
     CommerceProductRow,
@@ -84,15 +85,20 @@ interface RawProduct {
 
 /** Enabled products (status 1), in the fields the fill uses. */
 export async function listProducts(get: CommerceGet): Promise<CommerceProductRow[]> {
-    const status = '&searchCriteria[filter_groups][0][filters][0][field]=status&searchCriteria[filter_groups][0][filters][0][value]=1';
+    const status =
+        '&searchCriteria[filter_groups][0][filters][0][field]=status&searchCriteria[filter_groups][0][filters][0][value]=1';
     const items = await readAllPages<RawProduct>(get, 'products', status);
     return items.map((p) => ({
         childIds: p.extension_attributes?.configurable_product_links ?? [],
-        customAttributes: Object.fromEntries((p.custom_attributes ?? []).map((a) => [a.attribute_code, a.value])),
+        customAttributes: Object.fromEntries(
+            (p.custom_attributes ?? []).map((a) => [a.attribute_code, a.value]),
+        ),
         id: p.id,
         listPrice: Number(p.price ?? 0),
         name: p.name,
-        optionAttributeIds: (p.extension_attributes?.configurable_product_options ?? []).map((o) => String(o.attribute_id)),
+        optionAttributeIds: (p.extension_attributes?.configurable_product_options ?? []).map((o) =>
+            String(o.attribute_id),
+        ),
         sku: p.sku,
         typeId: p.type_id,
     }));
@@ -106,7 +112,10 @@ interface RawAttribute {
 }
 
 /** The attributes configurables vary on, by id; asked only for the ids the catalog uses. */
-export async function listVariantAttributes(get: CommerceGet, ids: string[]): Promise<Map<string, VariantAttribute>> {
+export async function listVariantAttributes(
+    get: CommerceGet,
+    ids: string[],
+): Promise<Map<string, VariantAttribute>> {
     if (ids.length === 0) return new Map();
     const inIds =
         '&searchCriteria[filter_groups][0][filters][0][condition_type]=in' +
@@ -118,7 +127,9 @@ export async function listVariantAttributes(get: CommerceGet, ids: string[]): Pr
             {
                 code: a.attribute_code,
                 label: a.default_frontend_label || a.attribute_code,
-                options: new Map((a.options ?? []).map((o) => [String(o.value), String(o.label).trim()])),
+                options: new Map(
+                    (a.options ?? []).map((o) => [String(o.value), String(o.label).trim()]),
+                ),
             },
         ]),
     );
@@ -126,11 +137,17 @@ export async function listVariantAttributes(get: CommerceGet, ids: string[]): Pr
 
 /** Stock per SKU, one row per inventory source, in whole non-negative units. */
 export async function listStock(get: CommerceGet): Promise<Map<string, StockRow[]>> {
-    const items = await readAllPages<{ sku: string; source_code: string; quantity?: number }>(get, 'inventory/source-items');
+    const items = await readAllPages<{ sku: string; source_code: string; quantity?: number }>(
+        get,
+        'inventory/source-items',
+    );
     const bySku = new Map<string, StockRow[]>();
     for (const item of items) {
         const rows = bySku.get(item.sku) ?? [];
-        rows.push({ code: item.source_code, quantity: Math.max(0, Math.round(Number(item.quantity ?? 0))) });
+        rows.push({
+            code: item.source_code,
+            quantity: Math.max(0, Math.round(Number(item.quantity ?? 0))),
+        });
         bySku.set(item.sku, rows);
     }
     return bySku;
@@ -147,6 +164,7 @@ export async function listSources(get: CommerceGet): Promise<Map<string, string>
 interface RawCompany {
     id: number;
     company_name: string;
+    customer_group_id?: number | string;
     status?: number | string;
     legal_name?: string;
     reseller_id?: string;
@@ -161,7 +179,9 @@ interface RawCompany {
 }
 
 function legalAddressOf(c: RawCompany): LegalAddress | null {
-    const street = (Array.isArray(c.street) ? c.street : [c.street]).filter((line): line is string => Boolean(line));
+    const street = (Array.isArray(c.street) ? c.street : [c.street]).filter(
+        (line): line is string => Boolean(line),
+    );
     const address = {
         city: c.city ?? null,
         countryId: c.country_id ?? null,
@@ -170,7 +190,13 @@ function legalAddressOf(c: RawCompany): LegalAddress | null {
         street,
         telephone: c.telephone ?? null,
     };
-    const fields = [address.city, address.countryId, address.postcode, address.region, address.telephone];
+    const fields = [
+        address.city,
+        address.countryId,
+        address.postcode,
+        address.region,
+        address.telephone,
+    ];
     const empty = street.length === 0 && fields.every((value) => !value);
     return empty ? null : address;
 }
@@ -185,13 +211,21 @@ async function orNull<T>(read: () => Promise<T>): Promise<T | null> {
 }
 
 async function companyRow(get: CommerceGet, c: RawCompany): Promise<CommerceCompanyRow> {
-    const credit = (await orNull(() => get(`companyCredits/company/${c.id}`))) as { credit_limit?: number } | null;
+    const credit = (await orNull(() => get(`companyCredits/company/${c.id}`))) as {
+        credit_limit?: number;
+    } | null;
     const admin = c.super_user_id
-        ? ((await orNull(() => get(`customers/${c.super_user_id}`))) as { website_id?: number } | null)
+        ? ((await orNull(() => get(`customers/${c.super_user_id}`))) as {
+              website_id?: number;
+          } | null)
         : null;
     return {
         blocked: Number(c.status) === COMPANY_BLOCKED,
         creditLimit: credit ? Number(credit.credit_limit ?? 0) : null,
+        customerGroupId:
+            c.customer_group_id === undefined || c.customer_group_id === null
+                ? null
+                : Number(c.customer_group_id),
         id: c.id,
         legalAddress: legalAddressOf(c),
         legalName: c.legal_name ?? null,
@@ -213,8 +247,14 @@ export async function listCompanies(get: CommerceGet): Promise<CommerceCompanyRo
 
 /** Commerce's websites, without Admin. */
 export async function listWebsites(get: CommerceGet): Promise<CommerceWebsite[]> {
-    const sites = ((await get('store/websites')) ?? []) as Array<{ id: number | string; code: string; name: string }>;
-    return sites.filter((s) => s.code !== 'admin').map((s) => ({ code: s.code, id: Number(s.id), name: s.name }));
+    const sites = ((await get('store/websites')) ?? []) as Array<{
+        id: number | string;
+        code: string;
+        name: string;
+    }>;
+    return sites
+        .filter((s) => s.code !== 'admin')
+        .map((s) => ({ code: s.code, id: Number(s.id), name: s.name }));
 }
 
 /** Each website's base currency and locale; the first store view of a website speaks for it. */
@@ -227,7 +267,76 @@ export async function storeConfigs(get: CommerceGet): Promise<Map<number, Websit
     const byWebsite = new Map<number, WebsiteConfig>();
     for (const config of configs) {
         const id = Number(config.website_id);
-        if (!byWebsite.has(id)) byWebsite.set(id, { currency: config.base_currency_code ?? null, locale: config.locale ?? null });
+        if (!byWebsite.has(id))
+            byWebsite.set(id, {
+                currency: config.base_currency_code ?? null,
+                locale: config.locale ?? null,
+            });
     }
     return byWebsite;
+}
+
+const CUSTOM_SHARED_CATALOG = 0;
+
+interface RawSharedCatalog {
+    id: number | string;
+    name: string;
+    customer_group_id?: number | string;
+    type?: number | string;
+}
+
+/** Commerce's CUSTOM shared catalogs (type 0); a store without B2B answers none. */
+export async function listSharedCatalogs(get: CommerceGet): Promise<SharedCatalog[]> {
+    const catalogs = await absentAsEmpty(() =>
+        readAllPages<RawSharedCatalog>(get, 'sharedCatalog'),
+    );
+    return catalogs
+        .filter(
+            (c) =>
+                Number(c.type) === CUSTOM_SHARED_CATALOG &&
+                c.customer_group_id !== undefined &&
+                c.customer_group_id !== null,
+        )
+        .map((c) => ({
+            id: Number(c.id),
+            name: c.name,
+            customerGroupId: Number(c.customer_group_id),
+        }));
+}
+
+/** Each customer group's code, by id (GET customerGroups/{id}); a group that cannot be read is left out. */
+export async function listCustomerGroupCodes(
+    get: CommerceGet,
+    ids: number[],
+): Promise<Map<number, string>> {
+    const out = new Map<number, string>();
+    for (const id of [...new Set(ids)]) {
+        const group = (await orNull(() => get(`customerGroups/${id}`))) as { code?: string } | null;
+        if (group && typeof group.code === 'string' && group.code.trim()) out.set(id, group.code);
+    }
+    return out;
+}
+
+interface RawTierPrice {
+    sku: string;
+    customer_group?: string;
+    quantity?: number | string;
+    price?: number | string;
+    price_type?: string;
+}
+
+/** Every shared-catalog tier price for these SKUs (POST products/tier-prices-information → a bare array). */
+export async function tierPricesFor(post: CommercePost, skus: string[]): Promise<TierPrice[]> {
+    if (skus.length === 0) return [];
+    const answer = (await post('products/tier-prices-information', { skus })) as
+        | RawTierPrice[]
+        | null;
+    const items = Array.isArray(answer) ? answer : [];
+    return items.map((t) => ({
+        sku: t.sku,
+        customerGroup: String(t.customer_group ?? ''),
+        quantity: Number(t.quantity ?? 1),
+        price: Number(t.price ?? 0),
+        priceType: t.price_type === 'discount' ? 'discount' : 'fixed',
+    }));
 }

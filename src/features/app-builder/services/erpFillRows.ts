@@ -46,6 +46,8 @@ export interface CommerceCompanyRow {
     name: string;
     blocked: boolean;
     creditLimit: number | null;
+    /** The company's Commerce customer group; links it to a shared catalog for the pricing seed. */
+    customerGroupId: number | null;
     legalAddress: LegalAddress | null;
     legalName: string | null;
     resellerId: string | null;
@@ -119,14 +121,22 @@ export interface ErpStructure {
         name: string;
         salesOrg: string;
         salesOrgName: string | null;
-        storeInfo: { address: null; countryId: string | null; currency: string | null; vatNumber: null };
+        storeInfo: {
+            address: null;
+            countryId: string | null;
+            currency: string | null;
+            vatNumber: null;
+        };
     }>;
 }
 
 const DEFAULT_SALES_ORG = '1000';
 
 /** The sales organisation a website's settings name, else 1000. */
-export function salesOrgOf(settings: ErpSettings | undefined): { salesOrg: string; salesOrgName?: string } {
+export function salesOrgOf(settings: ErpSettings | undefined): {
+    salesOrg: string;
+    salesOrgName?: string;
+} {
     const set = settings?.structure_sales_org;
     const salesOrg = typeof set === 'string' && set ? set : DEFAULT_SALES_ORG;
     const name = settings?.structure_sales_org_name;
@@ -146,7 +156,10 @@ export interface OwnershipFilter {
 }
 
 const codesOf = (text: unknown): string[] =>
-    String(text ?? '').split(',').map((code) => code.trim()).filter(Boolean);
+    String(text ?? '')
+        .split(',')
+        .map((code) => code.trim())
+        .filter(Boolean);
 
 function attributeOf(text: unknown): { code: string; value: string } | null {
     const raw = String(text ?? '');
@@ -178,14 +191,24 @@ export function ownershipFilter(settings: ErpSettings | undefined): OwnershipFil
                 ? `products whose ${attribute.code} is ${attribute.value}`
                 : 'products whose attribute names this ERP (the setting is blank)',
             owns: (product) =>
-                Boolean(attribute) && String(product.customAttributes?.[attribute?.code ?? ''] ?? '') === attribute?.value,
+                Boolean(attribute) &&
+                String(product.customAttributes?.[attribute?.code ?? ''] ?? '') ===
+                    attribute?.value,
         };
     }
     return { mode: 'all', describe: 'every product', owns: () => true };
 }
 
-function warehousesFor(sku: string, stock: Map<string, StockRow[]>, names: Map<string, string>): ErpWarehouse[] {
-    return (stock.get(sku) ?? []).map((row) => ({ code: row.code, name: names.get(row.code) || row.code, quantity: row.quantity }));
+function warehousesFor(
+    sku: string,
+    stock: Map<string, StockRow[]>,
+    names: Map<string, string>,
+): ErpWarehouse[] {
+    return (stock.get(sku) ?? []).map((row) => ({
+        code: row.code,
+        name: names.get(row.code) || row.code,
+        quantity: row.quantity,
+    }));
 }
 
 /** "Silver · 128GB"-style values of a variant, in the order its parent lists them. */
@@ -197,7 +220,10 @@ function variantValues(
     return parent.optionAttributeIds.map((id) => {
         const attribute = attributes.get(id);
         const raw = attribute ? product.customAttributes[attribute.code] : undefined;
-        const value = raw === undefined || raw === null ? '' : (attribute?.options.get(String(raw)) ?? String(raw));
+        const value =
+            raw === undefined || raw === null
+                ? ''
+                : (attribute?.options.get(String(raw)) ?? String(raw));
         return { label: attribute?.label ?? id, value };
     });
 }
@@ -229,8 +255,15 @@ export function productsFrom(
         const row = { listPrice: p.listPrice, name: p.name || p.sku, sku: p.sku };
         if (p.typeId === 'configurable') return { ...row, type: 'configurable', warehouses: [] };
         const parent = parentOf.get(p.id);
-        const variant = parent ? { parentSku: parent.sku, variantAttributes: variantValues(p, parent, attributes) } : {};
-        return { ...row, ...variant, type: 'simple', warehouses: warehousesFor(p.sku, stock, sourceNames) };
+        const variant = parent
+            ? { parentSku: parent.sku, variantAttributes: variantValues(p, parent, attributes) }
+            : {};
+        return {
+            ...row,
+            ...variant,
+            type: 'simple',
+            warehouses: warehousesFor(p.sku, stock, sourceNames),
+        };
     });
 }
 

@@ -12,14 +12,18 @@
  * @module features/app-builder/services/erpFill
  */
 
+import { seedFrom, type CommercePost, type ErpSeed } from './erpFillPricing';
 import {
     listCompanies,
+    listCustomerGroupCodes,
     listProducts,
+    listSharedCatalogs,
     listSources,
     listStock,
     listVariantAttributes,
     listWebsites,
     storeConfigs,
+    tierPricesFor,
     type CommerceGet,
 } from './erpFillReaders';
 import {
@@ -28,6 +32,8 @@ import {
     productsFrom,
     salesOrgOf,
     structureFrom,
+    type CommerceCompanyRow,
+    type CommerceProductRow,
     type ErpPartnerRow,
     type ErpProductRow,
     type ErpSettings,
@@ -46,6 +52,8 @@ export interface ErpImportBody {
     products?: ErpProductRow[];
     projectName?: string;
     structure?: ErpStructure;
+    /** The one-time pricing seed (AB-44), sent last so its groups and lists follow the records. */
+    seed?: ErpSeed;
 }
 
 /** One row of the integration's key map (its `erp/keymap`): which Commerce record is which ERP record. */
@@ -59,6 +67,8 @@ export interface ErpKeyMapEntry {
 
 export interface ErpFillDeps {
     get: CommerceGet;
+    /** A Commerce POST, for the tier-price read the pricing seed needs; absent → no price lists seeded. */
+    post?: CommercePost;
     settings: (websiteCodes: string[]) => Promise<ResolvedErpSettings>;
     /** The ERP's import; throws with the ERP's own words when it refuses. */
     importRecords: (body: ErpImportBody) => Promise<void>;
@@ -121,7 +131,9 @@ async function readEverything(deps: ErpFillDeps) {
 export async function fillErp(deps: ErpFillDeps, projectName: string): Promise<ErpFillResult> {
     deps.onProgress?.('Reading Commerce');
     const read = await readEverything(deps);
-    const settingsByWebsite = new Map(read.websites.map((site) => [site.id, read.settings.websites[site.code] ?? {}]));
+    const settingsByWebsite = new Map(
+        read.websites.map((site) => [site.id, read.settings.websites[site.code] ?? {}]),
+    );
     const salesOrgByWebsite = new Map(
         read.websites.map((site) => [site.id, salesOrgOf(settingsByWebsite.get(site.id)).salesOrg]),
     );
@@ -145,10 +157,18 @@ export async function fillErp(deps: ErpFillDeps, projectName: string): Promise<E
         done += batch.length;
         deps.onProgress?.(`Sent ${done} of ${products.length} products`);
     }
+    // The one-time pricing seed (AB-44): adopt Commerce's custom shared-catalog pricing — a group
+    // per catalog, each company's group, the catalogs' tier prices as price lists — after the
+    // records it references. Best-effort: a store without shared catalogs seeds nothing.
+    await seedPricing(deps, read.companies, owned);
     // Last, so the map never names a customer the ERP does not hold yet.
     // Paired from the companies: the rows the ERP takes carry no Commerce id.
     const keyMap = read.companies.map(
-        (company, index): ErpKeyMapEntry => ({ kind: 'customer', commerce: String(company.id), erp: partners[index].id }),
+        (company, index): ErpKeyMapEntry => ({
+            kind: 'customer',
+            commerce: String(company.id),
+            erp: partners[index].id,
+        }),
     );
     const kept = await deps.saveKeyMap(keyMap);
     if (!kept) deps.onProgress?.('The integration keeps no key map yet; update it to have one');
@@ -160,4 +180,52 @@ export async function fillErp(deps: ErpFillDeps, projectName: string): Promise<E
         ...(skipped > 0 ? { owns: filter.describe } : {}),
         ...(kept ? { paired: keyMap.length } : {}),
     };
+}
+
+/**
+ * Read Commerce's custom shared catalogs and their tier prices and send them to the ERP as its
+ * price groups and price lists (AB-44). Best-effort and last: a store without shared catalogs
+ * seeds nothing, and a read that fails leaves the filled ERP as it was rather than failing the
+ * fill. `post` is needed for the tier prices; without it only the groups and memberships seed.
+ */
+async function seedPricing(
+    deps: ErpFillDeps,
+    companies: CommerceCompanyRow[],
+    owned: CommerceProductRow[],
+): Promise<void> {
+    try {
+        const catalogs = await listSharedCatalogs(deps.get);
+        if (catalogs.length === 0) return;
+        const groupIds = [
+            ...catalogs.map((catalog) => catalog.customerGroupId),
+            ...companies
+                .map((company) => company.customerGroupId)
+                .filter((id): id is number => id !== null),
+        ];
+        const groupCodes = await listCustomerGroupCodes(deps.get, groupIds);
+        const ownedSkus = new Set(owned.map((product) => product.sku));
+        const tierPrices = deps.post ? await tierPricesFor(deps.post, [...ownedSkus]) : [];
+        const seed = seedFrom({
+            catalogs,
+            groupCodes,
+            companies,
+            tierPrices,
+            ownedSkus,
+            startingDate: new Date().toISOString().slice(0, 10),
+        });
+        if (
+            seed.priceGroups.length === 0 &&
+            seed.partnerGroups.length === 0 &&
+            seed.contracts.length === 0
+        )
+            return;
+        deps.onProgress?.(
+            `Seeding ${seed.priceGroups.length} price group(s) from Commerce's shared catalogs`,
+        );
+        await deps.importRecords({ seed });
+    } catch (error) {
+        deps.onProgress?.(
+            `Pricing seed skipped: ${error instanceof Error ? error.message : String(error)}`,
+        );
+    }
 }
