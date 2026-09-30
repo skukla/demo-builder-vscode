@@ -75,8 +75,12 @@ export const NEW_DESTINATION = {
     workspace: { id: 'new-workspace-id', name: 'Production', title: 'Production' },
 };
 
-/** A handler context over a project carrying the given `adobe` binding. */
-export function makeDestinationContext(adobe: Record<string, unknown> | undefined = EXISTING_ADOBE) {
+/**
+ * A handler context over a project carrying the given `adobe` binding.
+ * `null` means a project with no binding at all (an explicit `undefined` would
+ * take the default, which is the opposite of what that caller means).
+ */
+export function makeDestinationContext(adobe: Record<string, unknown> | null = EXISTING_ADOBE) {
     const project = { name: 'demo', path: '/p/demo', adobe: adobe ? { ...adobe } : undefined };
     const saveProject = jest.fn().mockResolvedValue(undefined);
     const context = createMockHandlerContext({
@@ -85,6 +89,9 @@ export function makeDestinationContext(adobe: Record<string, unknown> | undefine
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject,
         }),
+        // Nobody signed in unless a suite says so: the handler resolves the org
+        // through the auth manager only when the project has none recorded.
+        authManager: createMockAuthenticationService(),
     });
     return { context, project, saveProject };
 }
