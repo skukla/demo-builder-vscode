@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.149] - 2026-09-30
+
+One thing, released on its own so a colleague can use it this week: letting
+someone read your storefront's authored content on DA.live from inside Demo Builder.
+
+### Added
+- **Let a colleague read your storefront's content.** "Add a demo someone shared" copies a storefront from the public CDN, so it sees only what was published — never the block library under `.da/`, never an unpublished page. Read access to the authored site is what unlocks those, and DA.live had no in-app way to grant it. "Manage Site Access" now manages two things: who administers the site's configuration (as before) and who may **read its authored content** on DA.live — one row in your org's permissions sheet, added or removed from the same list, and verified by re-reading. When no project is open, the command asks for the DA.live organization and site, so the person sharing need not have built the storefront with Demo Builder. An org whose permissions sheet is empty first gets your own write rows, so a grant can never lock you out. Agents get `get_content_access` and `set_content_reader` (confirm-gated). Read-only: the reader's project copies into their own site and never writes to yours.
+
 ## [1.0.0-beta.148] - 2026-09-23
 
 Demos become shareable: a storefront a colleague built can be added to your own

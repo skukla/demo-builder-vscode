@@ -970,5 +970,21 @@
             "list_runtime_packages"
         ],
         "why": "Added with the tool (2026-09-21): a removal reported done while fifteen packages kept running in Stage, and no tool could show it. A MISS is a discoverability finding about the tool, not a bad prompt."
+    },
+    {
+        "id": "content-access",
+        "prompt": "Who can read my storefront's authored content on DA.live — could a colleague see its block library and unpublished pages?",
+        "expect": [
+            "get_content_access"
+        ],
+        "why": "EDS-22 (hotfix beta.149) tier 1: coverage prompt, drafted from the tool description. A MISS here is a discoverability finding about the tool, not a bad prompt."
+    },
+    {
+        "id": "t3-content-reader",
+        "prompt": "Let colleague@example.test read my storefront's content on DA.live so they can build on it.",
+        "expect": [
+            "set_content_reader"
+        ],
+        "why": "EDS-22 (hotfix beta.149) tier 3: changes another person's access on the SC's DA.live org, so it never runs unattended; represented by siteTools.test + the consent gate. Listed so the tool is judged, not grandfathered."
     }
 ]

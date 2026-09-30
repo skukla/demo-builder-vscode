@@ -46,10 +46,18 @@ import {
     type SiteAccessListing,
     type SiteAccessMutation,
 } from '@/features/eds/services/configService/siteAccessManagerHeadless';
+import {
+    addContentReader,
+    listContentReaders,
+    removeContentReader,
+    type ContentAccessListing,
+    type ContentAccessMutation,
+    type DaSiteTarget,
+} from '@/features/eds/services/daLive/contentAccessManagerHeadless';
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
 import { GITHUB_APP_INSTALL_URL } from '@/features/eds/services/github/githubAppService';
 import type { Project } from '@/types/base';
-import { getEdsRepoParts } from '@/types/typeGuards';
+import { getEdsDaLiveTarget, getEdsRepoParts } from '@/types/typeGuards';
 
 /** The button that opens the AEM Code Sync app on GitHub. */
 const OPEN_CODE_SYNC_APP = 'Open Code Sync App';
@@ -61,15 +69,26 @@ const GITHUB_EMAIL_SETTINGS_URL = 'https://github.com/settings/emails';
 
 /** QuickPick rows carry their action so the handler does not re-parse labels. */
 interface AccessAction extends vscode.QuickPickItem {
-    action: 'add' | 'remove' | 'noop';
+    action: 'add' | 'remove' | 'add-reader' | 'remove-reader' | 'noop';
     email?: string;
 }
 
+/**
+ * Two systems, one picker (EDS-22). The Configuration Service roster says who may
+ * ADMINISTER the site (preview, publish, its config); DA.live's org permissions
+ * sheet says who may READ the authored content — which is what a colleague needs
+ * to build on this storefront with its block library and unpublished pages, not
+ * only what the CDN serves. Both are managed here because they are the same job
+ * on two systems, and neither had a button before.
+ *
+ * With no project open, the content half still works from a typed org and site:
+ * the person sharing a storefront need not have built it with Demo Builder.
+ */
 export class ManageSiteAccessCommand extends BaseCommand {
     public async execute(): Promise<void> {
         const project = await this.stateManager.getCurrentProject();
         if (!project) {
-            await this.showWarning('No project loaded.');
+            await this.manageContentReadersByInput();
             return;
         }
 
@@ -91,17 +110,183 @@ export class ManageSiteAccessCommand extends BaseCommand {
             return;
         }
 
-        const choice = await vscode.window.showQuickPick(this.buildItems(listing), {
-            title: `Site access — ${listing.site}`,
-            placeHolder: 'Add or remove a configuration admin',
-        });
+        const target = getEdsDaLiveTarget(project);
+        const readers = target ? await listContentReaders(target, this.context, this.logger) : undefined;
+        const choice = await vscode.window.showQuickPick(
+            [...this.buildItems(listing), ...this.buildReaderItems(readers)],
+            {
+                title: `Site access — ${listing.site}`,
+                placeHolder: 'Add or remove a configuration admin, or a content reader',
+            },
+        );
         if (!choice || choice.action === 'noop') return;
 
         if (choice.action === 'add') {
             await this.handleAdd(project);
             return;
         }
-        if (choice.email) await this.handleRemove(project, choice.email);
+        if (choice.action === 'remove' && choice.email) {
+            await this.handleRemove(project, choice.email);
+            return;
+        }
+        if (target) await this.handleReaderAction(target, choice);
+    }
+
+    /** No project open: the content readers of a site named by hand. */
+    private async manageContentReadersByInput(): Promise<void> {
+        const org = await vscode.window.showInputBox({
+            title: 'Content readers — which DA.live organization?',
+            prompt: 'Your DA.live organization — usually your GitHub username',
+            placeHolder: 'my-github-name',
+            validateInput: (value) => (value.trim() ? undefined : 'Enter the organization'),
+        });
+        if (!org) return;
+        const site = await vscode.window.showInputBox({
+            title: `Content readers — which site in ${org.trim()}?`,
+            prompt: 'The DA.live site — usually the storefront repository name',
+            placeHolder: 'my-storefront',
+            validateInput: (value) => (value.trim() ? undefined : 'Enter the site'),
+        });
+        if (!site) return;
+        const target: DaSiteTarget = { org: org.trim(), site: site.trim() };
+
+        let readers: ContentAccessListing | undefined;
+        await this.withProgress('Reading content access', async () => {
+            readers = await listContentReaders(target, this.context, this.logger);
+        });
+        if (!readers) return;
+        if (readers.status !== 'ok') {
+            await this.reportReaderStatus(readers);
+            return;
+        }
+        const choice = await vscode.window.showQuickPick(this.buildReaderItems(readers), {
+            title: `Content readers — ${target.org}/${target.site}`,
+            placeHolder: 'Let someone read the authored content, or stop them',
+        });
+        if (!choice || choice.action === 'noop') return;
+        await this.handleReaderAction(target, choice);
+    }
+
+    /** The content-reader rows: one add action, one remove per reader; writers shown, not removable here. */
+    private buildReaderItems(readers: ContentAccessListing | undefined): AccessAction[] {
+        if (!readers) return [];
+        if (readers.status !== 'ok') {
+            return [
+                {
+                    label: 'Content readers could not be read',
+                    description: readers.error ?? readers.status,
+                    action: 'noop',
+                },
+            ];
+        }
+        const items: AccessAction[] = [
+            { label: '$(add) Let someone read the authored content', description: 'DA.live', action: 'add-reader' },
+        ];
+        for (const reader of readers.readers ?? []) {
+            if (reader.actions === 'read') {
+                items.push({
+                    label: `$(trash) Stop ${reader.email} reading the content`,
+                    description: 'content reader',
+                    action: 'remove-reader',
+                    email: reader.email,
+                });
+            } else {
+                items.push({ label: reader.email, description: 'writes the content (not removable here)', action: 'noop' });
+            }
+        }
+        return items;
+    }
+
+    private async handleReaderAction(target: DaSiteTarget, choice: AccessAction): Promise<void> {
+        if (choice.action === 'add-reader') {
+            await this.handleAddReader(target);
+            return;
+        }
+        if (choice.action === 'remove-reader' && choice.email) {
+            await this.handleRemoveReader(target, choice.email);
+        }
+    }
+
+    private async handleAddReader(target: DaSiteTarget): Promise<void> {
+        const email = await vscode.window.showInputBox({
+            title: 'Let someone read the authored content',
+            prompt: `The Adobe account email that may read ${target.org}/${target.site} on DA.live`,
+            placeHolder: 'name@adobe.com',
+            validateInput: (value) =>
+                looksLikeEmail(value) ? undefined : 'Enter a valid email address',
+        });
+        if (!email) return;
+
+        let result: ContentAccessMutation | undefined;
+        await this.withProgress(`Letting ${email} read the content`, async () => {
+            result = await addContentReader(target, email, this.context, this.logger);
+        });
+        await this.reportReaderMutation(
+            result,
+            `${email} can now read ${target.site}'s content on DA.live.`,
+            `${maskEmail(email)} can now read ${target.site}'s content on DA.live.`,
+        );
+    }
+
+    private async handleRemoveReader(target: DaSiteTarget, email: string): Promise<void> {
+        const confirmed = await vscode.window.showWarningMessage(
+            `Stop ${email} reading ${target.site}'s content?`,
+            { modal: true },
+            'Stop',
+        );
+        if (confirmed !== 'Stop') return;
+
+        let result: ContentAccessMutation | undefined;
+        await this.withProgress(`Removing ${email}`, async () => {
+            result = await removeContentReader(target, email, this.context, this.logger);
+        });
+        await this.reportReaderMutation(
+            result,
+            `${email} no longer reads ${target.site}'s content.`,
+            `${maskEmail(email)} no longer reads ${target.site}'s content.`,
+        );
+    }
+
+    /** A reader listing or mutation that did not answer ok, in words a person can act on. */
+    private async reportReaderStatus(result: ContentAccessListing): Promise<void> {
+        if (result.status === 'no_credential') {
+            await this.showWarning('No DA.live credential is stored. Sign in to DA.live, then try again.');
+            return;
+        }
+        if (result.status === 'not_authorized') {
+            await this.showWarning(
+                `DA.live refused: only the owner of the ${result.org} organization can change who reads its content.`,
+            );
+            return;
+        }
+        if (result.status === 'invalid') {
+            await this.showWarning(result.error ?? 'That change is not allowed.');
+            return;
+        }
+        await this.showError(`The change did not go through: ${result.error ?? 'unknown error'}`);
+    }
+
+    /** Report a content-reader mutation, "accepted" and "landed" kept apart (see `reportMutation`). */
+    private async reportReaderMutation(
+        result: ContentAccessMutation | undefined,
+        successMessage: string,
+        loggableMessage: string,
+    ): Promise<void> {
+        if (!result) return;
+        if (result.status !== 'ok') {
+            await this.reportReaderStatus(result);
+            return;
+        }
+        if (!result.verified) {
+            await this.showWarning(
+                'DA.live accepted the change but it did not show up when re-read. ' +
+                    'Wait a moment and re-open this list before relying on it.',
+            );
+            return;
+        }
+        this.logger.info(loggableMessage);
+        await this.showProgressNotification(successMessage, TIMEOUTS.UI.NOTIFICATION);
+        vscode.window.setStatusBarMessage(`✅ ${successMessage}`, TIMEOUTS.STATUS_BAR_SUCCESS);
     }
 
     /**
