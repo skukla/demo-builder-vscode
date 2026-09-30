@@ -56,6 +56,43 @@ site-permissions sheet; the colleague grants it, nothing here can), the extensio
 Read-only is the right grant: the SC's project copies into its own site and never writes to the
 colleague's. "Shared ownership" is the wrong word for what is wanted; shared READING is.
 
+## Design (owner's follow-up, 2026-09-30: "Can we not provide an interface, similar to the admin
+user grant? … should we not include an intake for this as part of sharing the storefront?")
+
+Yes to both, and the plumbing is mostly here.
+
+**How DA.live grants read** (docs.da.live/administrators/guides/permissions, read 2026-09-30):
+permissions are a `permissions` sheet in the ORG-level config (`/config/{org}`), rows of
+`path | groups | actions`; `groups` takes IMS org ids, `orgid/group`, or plain email addresses;
+actions are `read`, `write` (implies read and delete) or none (a deny); `/{site}/+**` covers a
+site and everything under it, including its site-level config. The extension already reads a DA
+config, merges rows into one sheet and writes the multi-sheet back preserving the others —
+`daLiveConfigOperations.ts` does exactly that for site config and preserves the `permissions`
+sheet on purpose. The org config is the same shape one level up.
+
+**The trap, and why the roster pattern applies:** the moment an org config carries any
+permissions row, everyone not listed loses access — the owner included ("Help! I messed
+something up and cannot access my org" is in the FAQ, and the answer is Adobe Support). So the
+writer is read-merge-write, never replace, and it always carries the owner's own `write` on
+`/+**` and `CONFIG` — the same reason `grantSiteAdmin` is module-private and callers go through
+`ensureSiteAdmin` on the Config Service roster.
+
+**The interface.** On the sharer's side, one grant per reader: "Let <email> read this
+storefront's content" → a `/{site}/+** | <email> | read` row in the sharer's org config, and its
+undo (drop the row). Reachable from the Save as demo package dialog (the intake below), from the
+dashboard's More menu, and as an agent tool (`grant_content_read` / `revoke_content_read`,
+confirm-gated: it changes who can read the SC's content).
+
+**The intake.** Save as demo package already writes the description file and hands back the
+link. It gains "Who may read the authored content?" (emails, optional): each one gets the read
+row, and the description file records that authored access is granted rather than published-only,
+so the receiving side's probe (item 4 above) knows what to expect. Sharing by link stays
+permission-free: published pages copy as today; the grant is what unlocks the library and the
+unpublished pages.
+
+**Who runs it:** the sharer, in their own org (their GitHub namespace, which is what the DA org
+is here), with their own DA.live sign-in. Nothing in this design writes to anyone else's org.
+
 ## Not in scope
 
 Granting on the colleague's behalf (DA permissions are theirs), and writing to their site.
