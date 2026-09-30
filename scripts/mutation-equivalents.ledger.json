@@ -6102,7 +6102,7 @@
             "anchors": [
                 "if (response.status === 204 || response.status === 404) {"
             ],
-            "line": 478,
+            "line": 482,
             "mutants": 1,
             "category": "branch",
             "reason": "Stryker replaces the FIRST operand (response.status === 204, cols 13-36) with false, leaving the 404 arm intact. A 204 is response.ok, so with the operand disabled the ladder simply falls one rung further and returns the identical { success: true } from the trailing return. The return value, the thrown errors and the request sequence are unchanged for every status; the only difference is that one logger.debug line does not print. The 404 arm IS constrained (helixService-delete: 'treats 404 as done').",
@@ -7505,7 +7505,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 52,
+            "line": 57,
             "mutants": 1,
             "category": "block",
             "reason": "This catch exists to swallow a failed CDN preview so the phase continues; its body is one logger.warn naming the error. Emptying the block still swallows it \u2014 control still leaves the try and still sends the 'Code synchronized' progress message and everything after it. 'carries on when the CDN preview fails' drives a rejecting previewCode through this exact path and pins that the phase completes; what an empty catch loses is the message, not a decision.",
@@ -7518,7 +7518,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 87,
+            "line": 93,
             "mutants": 1,
             "category": "block",
             "reason": "The else arm of the user-email check contains only a logger.warn saying no email was available. Emptying it leaves the phase doing exactly the same thing: no permissions call, straight on to registerConfigurationService. That the permissions call is genuinely skipped, and that the phase still completes, is pinned by 'skips permissions when no email is known anywhere' and 'skips permissions when the GitHub record carries no user', both of which assert the collaborator was not called.",
@@ -7714,7 +7714,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 280,
+            "line": 296,
             "mutants": 1,
             "category": "block",
             "reason": "The final arm of the same log-only chain: emptying it removes one logger.trace call and nothing else, because { isInstalled, codeStatus } is returned unchanged below regardless of which arm ran. The arm is a bare else rather than a 400 test because the isDefinitiveStatus guard above already returned for every status outside {200, 400, 404}.",
@@ -9822,7 +9822,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 157,
+            "line": 179,
             "mutants": 1,
             "category": "block",
             "reason": "Stryker empties the catch, so a throwing validateToken leaves githubOk unassigned instead of false. Both readings are falsy at the 'if (!githubOk)' below, so the tool returns the same needsAuth:'github' handoff and calls the same collaborators either way. The only difference is the variable's binding, which nothing observes; a test asserting it would have to reach inside the function.",
@@ -9835,7 +9835,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 172,
+            "line": 194,
             "mutants": 1,
             "category": "block",
             "reason": "Stryker empties the catch, so a throwing isAuthenticated leaves daLiveOk unassigned instead of false. Both readings are falsy at the 'if (!daLiveOk)' below, so the tool returns the same needsAuth:'dalive' handoff and calls the same collaborators either way. The only difference is the variable's binding, which nothing observes; a test asserting it would have to reach inside the function.",
@@ -11946,18 +11946,6 @@
             "category": "branch",
             "reason": "familiesOf's result is read in exactly one place \u2014 familiesOf(api).includes(family) \u2014 where family is a chip code, and every chip code comes from API_FAMILIES or a cloud group. Seeding the array with an extra string, or pushing undefined when there is no curated family, therefore adds a member that can never equal the value being looked for: both mutants leave every membership answer unchanged. Verified by planting both together and running all six suites that render this picker (148 tests, all pass).",
             "decision": "none \u2014 the array is local and its only reader compares against a closed set of chip codes",
-            "recorded": "2026-09-06",
-            "source": "PL-22 batch MUT-02"
-        },
-        {
-            "module": "src/features/dashboard/handlers/destinationHandlers.ts",
-            "anchors": [
-                "project.adobe?.workspace === nextWorkspace.id"
-            ],
-            "mutants": 1,
-            "category": "optionalChain",
-            "reason": "This line is only evaluated when the line above it was true, and that requires project.adobe?.projectId to equal nextProject.id \u2014 a string the caller has already proved non-empty. So project.adobe is guaranteed to exist by the time this optional chain runs, and removing the ?. cannot throw. Verified by planting project.adobe.workspace: all 40 tests pass, including the one that drives a project carrying no adobe at all (which short-circuits on the line above).",
-            "decision": "none \u2014 the ?. mirrors the line above it and reads as one condition; splitting the two spellings would be worse",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-02"
         },
