@@ -150,6 +150,25 @@ describe('handleResetErpRecords', () => {
         expect(mockCallErpApi).not.toHaveBeenCalled();
     });
 
+    it('stops before any wipe when some orders could not be closed off, and names them', async () => {
+        const { mockContext } = setupMocks(pairProject());
+        allowDeveloperRole();
+        mockDetach.mockResolvedValue({
+            ...UNDONE,
+            closed: { ...CLOSED, cancelled: 1, failed: [{ orderId: '000000042', error: 'Commerce timed out' }] },
+        });
+
+        const result = await handleResetErpRecords(mockContext, { id: 'erp-integration' });
+
+        expect(result).toEqual({
+            success: false,
+            error:
+                'The ERP reset did not finish: Nordwind integration could not close off 1 order(s): 000000042 (Commerce timed out). Nothing was wiped; cancel or finish them in Commerce, then reset again.',
+        });
+        // The ERPs are untouched: the reset is run again once the order is dealt with.
+        expect(mockCallErpApi).not.toHaveBeenCalled();
+    });
+
     it('guards, then undoes, wipes and fills under one progress notification, and answers what each did', async () => {
         const { mockContext } = setupMocks(pairProject());
         allowDeveloperRole();

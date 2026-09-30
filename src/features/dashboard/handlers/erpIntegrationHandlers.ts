@@ -213,7 +213,11 @@ async function resetErp(
  * Close off every order the ERPs hold, then undo their writes (AB-16n): the integration's
  * `erp/detach` with `closeOrders`. A deployment from before it would ignore the option and
  * leave orders open that point at sales orders the wipe removes, so it is asked first and
- * refused; an answer without `closed` stops the reset before any wipe.
+ * refused; an answer without `closed` stops the reset before any wipe. So does an answer
+ * that closed SOME orders and failed on others (Commerce timed out cancelling one, say):
+ * wiping then would leave exactly the half-an-order this step exists to prevent, under a
+ * green toast (review, 2026-09-30). Nothing is wiped on a refusal, so the reset is simply
+ * run again once the named orders are dealt with.
  */
 async function closeOffAndDetach(client: ErpIntegrationClient, call: ErpCall): Promise<ErpDetachReport> {
     const name = call.integration.name ?? call.id;
@@ -223,6 +227,12 @@ async function closeOffAndDetach(client: ErpIntegrationClient, call: ErpCall): P
     const undone = await client.detach({ closeOrders: true });
     if (!undone.closed) {
         throw new Error(`${name} did not close off the orders; nothing was wiped. Update it, then reset again.`);
+    }
+    if (undone.closed.failed.length > 0) {
+        const named = undone.closed.failed.map((f) => `${f.orderId} (${f.error})`).join(', ');
+        throw new Error(
+            `${name} could not close off ${undone.closed.failed.length} order(s): ${named}. Nothing was wiped; cancel or finish them in Commerce, then reset again.`,
+        );
     }
     return undone;
 }
