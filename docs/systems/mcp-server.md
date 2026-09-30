@@ -404,7 +404,8 @@ on the new ERP's id. The ERP tools that act on one ERP (`load_erp_demo_data`,
 the ERP's component id, and default to the integration's first, except `load_erp_demo_data`,
 which fills every ERP without it. `reset_erp_records` takes no `erp`: a reset always covers
 every ERP and closes off the orders they hold (AB-16n). `get_erp_status` lists every ERP the
-integration serves, and its live health is the named ERP's.
+integration serves — each row with its `listId`, the value a product's `erp_owner` takes to
+route to that ERP (AB-51) — and its live health is the named ERP's.
 
 `reset_erp_records` (2026-09-14) is gated for the same reason `reset_datapack` is: it wipes
 every ERP the ERP integration serves, cancels the open orders they hold (a cancelled order

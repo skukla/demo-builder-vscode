@@ -310,7 +310,8 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
             "Read the ERP integration's state: the ERP's health as the integration sees it " +
             '(reachable, its base URL, how many company writes it holds in its ledger) plus the ' +
             "persisted rows of the integration and its ERPs (name, status, the ERP screen's URL; " +
-            '`erps` lists every ERP it serves, by component id). ' +
+            '`erps` lists every ERP it serves, by component id, each with its listId — the value ' +
+            "a product's erp_owner takes to route to it). " +
             'Use before reset_erp_records, or to answer "is the ERP up". Takes the integration id; ' +
             'with several ERPs, `erp` names which one the live health is for (default the first).',
         map: dashboardHandlers,

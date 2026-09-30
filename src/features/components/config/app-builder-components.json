@@ -116,7 +116,7 @@
         {
           "id": "erp-attributes",
           "title": "Create the erp_owner and brand product attributes",
-          "why": "With several ERPs, each product goes to the ERP its erp_owner names (an ERP's id, such as erp or demo-erp-2); brand is what buyers see and filter on.",
+          "why": "With several ERPs, each product goes to the ERP its erp_owner names (the ERP's list id: its name in lower case without the word ERP — Justrite ERP is justrite); brand is what buyers see and filter on.",
           "where": "Stores > Attributes > Product > Add New Attribute: erp_owner as a Text Field (a Dropdown sends a number, not the id) and brand; then Stores > Attributes > Attribute Set to add both to the set. Set both on the products you sell.",
           "check": "erp-attributes-exist"
         },

@@ -77,6 +77,20 @@ describe('handleGetErpStatus', () => {
         expect(mockEnsureAdobeIOAuth).not.toHaveBeenCalled();
     });
 
+    it("carries each ERP's list id, the value a product's erp_owner takes (AB-51)", async () => {
+        // Nothing else showed it: the setup checklist told the SC to set erp_owner
+        // and no surface said to what (2026-09-30).
+        const project = pairProject();
+        project.appBuilderComponents!['demo-erp'] = { ...ERP, listId: 'nordwind' };
+        const { mockContext } = setupMocks(project);
+
+        const result = await handleGetErpStatus(mockContext, { id: 'erp-integration' });
+
+        const data = result.data as { erp: { listId?: string }; erps: Array<{ listId?: string }> };
+        expect(data.erp.listId).toBe('nordwind');
+        expect(data.erps.map((row) => row.listId)).toEqual(['nordwind']);
+    });
+
     it("with an added ERP named, asks the integration for that ERP's health by its list id", async () => {
         const project = pairProject({ systems: ['demo-erp', 'demo-erp-2'] });
         project.appBuilderComponents!['demo-erp-2'] = {

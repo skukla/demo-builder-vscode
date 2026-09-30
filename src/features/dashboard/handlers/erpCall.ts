@@ -104,12 +104,18 @@ export function erpsOf(project: Project, integrationId: string): ErpRow[] {
     );
 }
 
-/** The ERP row as an agent or the flyout reads it: name, status, its screen's URL. */
+/**
+ * The ERP row as an agent or the flyout reads it: name, status, its screen's URL, and
+ * the list id — the value a product's `erp_owner` takes to route to this ERP (AB-51).
+ * Nothing else showed it (2026-09-30): the setup checklist told the SC to set
+ * erp_owner and no surface said to what.
+ */
 export function shapeErpRow(erp: ErpCall['erp']) {
     if (!erp) return undefined;
     return {
         id: erp.id,
         name: erp.name ?? erp.id,
+        listId: erp.listId,
         status: erp.status,
         url: erp.url,
         lastDeployed: erp.lastDeployed,
