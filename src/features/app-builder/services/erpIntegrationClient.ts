@@ -251,7 +251,7 @@ export class ErpIntegrationClient {
     async updateErpSettings(
         id: string,
         website: string | undefined,
-        values: Record<string, string | boolean | null>,
+        values: Record<string, string | null>,
     ): Promise<{ entry: ErpListEntry }> {
         return (await this.call('erps', 'PATCH', undefined, {
             id,

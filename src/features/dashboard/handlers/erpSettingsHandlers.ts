@@ -20,8 +20,9 @@ export interface GetErpSettingsPayload extends ErpCallPayload {
 
 /** Changing an ERP's own settings at a scope. */
 export interface SetErpSettingsPayload extends GetErpSettingsPayload {
-    /** Per-ERP setting values; `null` clears an override so the wider scope applies. */
-    values?: Record<string, string | boolean | null>;
+    /** Per-ERP setting values; `null` clears an override so the wider scope applies. The
+     *  integration accepts only strings (or null), so booleans are not allowed here. */
+    values?: Record<string, string | null>;
 }
 
 /**

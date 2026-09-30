@@ -301,7 +301,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-16g` | fix | └ [Northwind's key map lost its company pairs](2026-09-28-erp-key-map-lost-pairs.md) | — | high | shipped |
 | `AB-16h` | fix | └ [Integration paths that still reach only the first ERP](2026-09-28-erp-paths-first-erp-only.md) | AB-16a | high | built |
 | `AB-16i` | fix | └ [Events from an added ERP never reach the integration](2026-09-28-erp-added-erp-events-undelivered.md) | — | high | built |
-| `AB-16j` | feature | └ [An agent tool for an ERP's own settings (ownership, sales-org per website)](2026-09-29-erp-settings-agent-tool.md) | — | med | active |
+| `AB-16j` | feature | └ [An agent tool for an ERP's own settings (ownership, sales-org per website)](2026-09-29-erp-settings-agent-tool.md) | — | med | built |
 | `AB-16k` | question | └ [Two Admin-page designs diverge: shipped tabs vs the §5b side-list prototype](2026-09-29-admin-page-design-divergence.md) | — | high | shipped |
 | `AB-21` | feature | [An integration's settings live on its tile, not on Configure Project](2026-09-18-integration-settings-on-tile.md) | — | med | active |
 | `AB-22` | feature | [Import a colleague's integration, and ask only for what it really needs](2026-09-18-import-colleague-integration.md) | AB-21 | med | backlog |
@@ -340,7 +340,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-41` | fix | └ [Company updates never reach the ERP: the company-saved event carries no id](2026-09-29-erp-company-event-no-id.md) | — | high | shipped |
 | `AB-42` | question | └ [Should the ERP be seeded with price groups / price lists from Commerce's shared catalogs at setup?](2026-09-29-erp-seed-price-groups-from-shared-catalogs.md) | — | high | built |
 | `AB-43` | fix | └ [ERP shipment never lands in Commerce for a non-default inventory source](2026-09-29-erp-shipment-source-not-applied.md) | — | high | shipped |
-| `AB-44` | feature | └ [Seed the ERP with price groups and price lists from Commerce's shared catalogs](2026-09-30-erp-seed-price-groups-from-commerce.md) | — | high | active |
+| `AB-44` | feature | └ [Seed the ERP with price groups and price lists from Commerce's shared catalogs](2026-09-30-erp-seed-price-groups-from-commerce.md) | — | high | built |
 | `AB-45` | feature | └ [A Warehouses master-data screen in the ERP](2026-09-30-erp-warehouses-master-data-screen.md) | — | med | built |
 | `AB-29` | feature | [Commerce test data cleanup tools](2026-09-24-commerce-test-data-cleanup-tools.md) | — | med | active |
 | `AB-30` | feature | [The ERP integration's Commerce Admin page uses the Commerce back-office design system](2026-09-24-erp-admin-page-commerce-design-system.md) | — | med | backlog |

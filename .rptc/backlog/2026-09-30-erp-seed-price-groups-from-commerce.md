@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: high
-status: active
+status: built
 parent: AB-26
 ---
 
@@ -49,3 +49,4 @@ A fill/reset gives each ERP a price group per custom shared catalog, each compan
 group, and the shared-catalog tier prices as ERP contract lines — proven live on Bodea.
 
 ## Shipped so far
+- 2026-09-30  2026-09-30 (loop) Extension side BUILT + pushed (288f93309 on loop/2026-09-30-erp-programme). erpFillPricing.ts pure builders (Commerce group code->ERP code, price groups per custom shared catalog, each company's group, tier prices->group price lists) + readers (listSharedCatalogs/listCustomerGroupCodes/tierPricesFor, customer_group_id on the company row) + fillErp sends the seed last best-effort + commercePost. Full gate green (jest 30815, tsc, typecheck:tests, lint, source-duplication back to 49 after extracting commerceReply). REMAINING (edge): deploy demo-erp + re-fill Bodea, confirm price groups land live.

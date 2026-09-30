@@ -252,7 +252,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
                 .optional()
                 .describe("A Commerce website code; omit for the ERP's Default-Config settings"),
             values: z
-                .record(z.string(), z.union([z.string(), z.boolean(), z.null()]))
+                .record(z.string(), z.union([z.string(), z.null()]))
                 .describe('Per-ERP settings to change, by name; null clears an override'),
         },
     },

@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: med
-status: active
+status: built
 parent: AB-16
 ---
 
@@ -62,3 +62,4 @@ settings through purpose-built tools, proven against the running server
 - 2026-09-29  docs(loop): AB-16j design corrected — two settings surfaces, not one (`7a4cd02a1`)
 - 2026-09-29  docs(loop): AB-16j design settled — two tools over the erp/settings action (`012f44e84`)
 - 2026-09-28  docs(loop): file AB-16j for the ERP-settings agent tool; loop validate/split rules (`651ed4cc8`)
+- 2026-09-30  2026-09-30 (loop) BUILT + gate-green. The tools get_erp_settings/set_erp_settings already existed on this branch (b57d1cc1c) and the god-file-ratchet blocker was resolved by decomposing erpIntegrationHandlers (45e952db8); the whole branch passes the full gate (confirmed by the AB-44 push: jest 30815, tsc, typecheck:tests, lint, validators, dead-code). Design correction confirmed: the write is erp/erps PATCH, not erp/settings. FIXED a verified footgun: the set_erp_settings schema + client + payload accepted booleans, but the integration only accepts strings — narrowed the zod union + types to string|null. REMAINING (edge): mcp-live-probe against the running server (human Settings tab and the tools reaching the same state).
