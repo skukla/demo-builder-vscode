@@ -11,6 +11,7 @@ describe('setupChecklistOf', () => {
         expect(items?.map((item) => [item.id, item.state, item.checkable])).toEqual([
             ['confirmed-status', 'open', false],
             ['company-catalogs', 'open', true],
+            ['price-scope-website', 'open', false],
             ['second-source', 'open', true],
             ['erp-attributes', 'open', true],
             ['partially-held-status', 'open', false],
@@ -22,15 +23,28 @@ describe('setupChecklistOf', () => {
         const items = setupChecklistOf('erp-integration', {
             setupSteps: {
                 'confirmed-status': { state: 'dismissed' },
-                'company-catalogs': { state: 'done', note: 'Each of the 2 companies has a customer group of its own.' },
+                'company-catalogs': {
+                    state: 'done',
+                    note: 'Each of the 2 companies has a customer group of its own.',
+                },
             },
         });
-        expect(items?.map((item) => item.state)).toEqual(['dismissed', 'done', 'open', 'open', 'open', 'open']);
+        expect(items?.map((item) => item.state)).toEqual([
+            'dismissed',
+            'done',
+            'open',
+            'open',
+            'open',
+            'open',
+            'open',
+        ]);
         expect(items?.[1].note).toMatch(/customer group of its own/);
     });
 
     it('reads a second copy through the entry it was made from', () => {
-        expect(setupChecklistOf('erp-integration-2', { catalogId: 'erp-integration' })).toHaveLength(6);
+        expect(
+            setupChecklistOf('erp-integration-2', { catalogId: 'erp-integration' })
+        ).toHaveLength(7);
     });
 
     it('is undefined for an entry that declares no steps', () => {
@@ -39,7 +53,14 @@ describe('setupChecklistOf', () => {
 });
 
 describe('setupSummary', () => {
-    const item = (state: 'open' | 'done' | 'dismissed') => ({ id: state, title: '', why: '', where: '', state, checkable: false });
+    const item = (state: 'open' | 'done' | 'dismissed') => ({
+        id: state,
+        title: '',
+        why: '',
+        where: '',
+        state,
+        checkable: false,
+    });
 
     it('counts done out of the steps not dismissed', () => {
         expect(setupSummary([item('done'), item('open'), item('dismissed')])).toBe('1 of 2 done');

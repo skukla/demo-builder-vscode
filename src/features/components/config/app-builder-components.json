@@ -103,6 +103,12 @@
           "check": "companies-have-own-catalogs"
         },
         {
+          "id": "price-scope-website",
+          "title": "Set the catalog price scope to Website",
+          "why": "The ERP publishes a company's prices into its shared catalog per website, so a price or discount the ERP grants for one site lands on that site only. At Commerce's default scope, Global, a tier price's website is ignored and every site would show the same prices. No API sets this; it is a one-time Admin setting for the store.",
+          "where": "Stores > Configuration > Catalog > Catalog > Price > Catalog Price Scope: set to Website, Save Config. Catalog > Shared Catalogs > Set Pricing and Structure then shows a Website chooser above the prices."
+        },
+        {
           "id": "second-source",
           "title": "Give the ERP a warehouse of its own, and a stock for the website that holds it",
           "why": "The ERP keeps stock per warehouse, one for each Commerce source. Commerce's Default Stock can hold only the Default Source, so a website sells from the ERP's warehouse only through a stock of its own.",

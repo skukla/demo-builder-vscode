@@ -43,7 +43,8 @@ function setup(setupSteps?: Record<string, SetupStepRecord>) {
     });
     const stateManager = makeStateManager(project);
     const context = createMockHandlerContext({ stateManager }) as HandlerContext;
-    const saved = () => (stateManager.saveProject as jest.Mock).mock.calls.at(-1)?.[0] as Project | undefined;
+    const saved = () =>
+        (stateManager.saveProject as jest.Mock).mock.calls.at(-1)?.[0] as Project | undefined;
     return { context, saved, project };
 }
 
@@ -60,6 +61,7 @@ describe('getSetupChecklist', () => {
         expect((result.data as { items: { id: string }[] }).items.map((item) => item.id)).toEqual([
             'confirmed-status',
             'company-catalogs',
+            'price-scope-website',
             'second-source',
             'erp-attributes',
             'partially-held-status',
@@ -72,7 +74,11 @@ describe('getSetupChecklist', () => {
 describe('setSetupStep', () => {
     it('marks a step done, saves it on the component, and pushes the snapshot', async () => {
         const { context, saved } = setup();
-        const result = await handleSetSetupStep(context, { id: 'erp-integration', stepId: 'confirmed-status', state: 'done' });
+        const result = await handleSetSetupStep(context, {
+            id: 'erp-integration',
+            stepId: 'confirmed-status',
+            state: 'done',
+        });
         expect(result.success).toBe(true);
         expect(saved()?.appBuilderComponents?.['erp-integration'].setupSteps).toEqual({
             'confirmed-status': { state: 'done' },
@@ -81,8 +87,14 @@ describe('setSetupStep', () => {
     });
 
     it('reopening drops the state and keeps the last check note', async () => {
-        const { context, saved } = setup({ 'company-catalogs': { state: 'done', note: 'fine', checkedAt: 'x' } });
-        await handleSetSetupStep(context, { id: 'erp-integration', stepId: 'company-catalogs', state: 'open' });
+        const { context, saved } = setup({
+            'company-catalogs': { state: 'done', note: 'fine', checkedAt: 'x' },
+        });
+        await handleSetSetupStep(context, {
+            id: 'erp-integration',
+            stepId: 'company-catalogs',
+            state: 'open',
+        });
         expect(saved()?.appBuilderComponents?.['erp-integration'].setupSteps).toEqual({
             'company-catalogs': { note: 'fine', checkedAt: 'x' },
         });
@@ -90,11 +102,23 @@ describe('setSetupStep', () => {
 
     it('refuses a step the entry does not declare, and a state that is not one', async () => {
         const { context } = setup();
-        expect(await handleSetSetupStep(context, { id: 'erp-integration', stepId: 'nope', state: 'done' })).toMatchObject({
+        expect(
+            await handleSetSetupStep(context, {
+                id: 'erp-integration',
+                stepId: 'nope',
+                state: 'done',
+            })
+        ).toMatchObject({
             success: false,
             code: ErrorCode.CONFIG_INVALID,
         });
-        expect(await handleSetSetupStep(context, { id: 'erp-integration', stepId: 'confirmed-status', state: 'maybe' })).toMatchObject({
+        expect(
+            await handleSetSetupStep(context, {
+                id: 'erp-integration',
+                stepId: 'confirmed-status',
+                state: 'maybe',
+            })
+        ).toMatchObject({
             success: false,
             code: ErrorCode.CONFIG_INVALID,
         });
@@ -105,12 +129,13 @@ describe('checkSetupSteps', () => {
     /** Commerce as the check reads it: companies on one path, shared catalogs on the other. */
     const answerByPath = (companies: object[], catalogs: object[]) =>
         mockSendRest.mockImplementation(async (_method: string, _target: unknown, path: string) =>
-            JSON.stringify({ items: path.startsWith('company/') ? companies : catalogs }));
+            JSON.stringify({ items: path.startsWith('company/') ? companies : catalogs })
+        );
 
     it('reads the companies through the signed client and marks the step done when each has its own catalog', async () => {
         answerByPath(
             [{ id: 1, company_name: 'Acme', customer_group_id: 4 }],
-            [{ id: 7, name: 'Acme', customer_group_id: 4, type: 0 }],
+            [{ id: 7, name: 'Acme', customer_group_id: 4, type: 0 }]
         );
         const { context, saved } = setup();
         await handleCheckSetupSteps(context, { id: 'erp-integration' });
@@ -119,21 +144,29 @@ describe('checkSetupSteps', () => {
             TARGET,
             'company/?searchCriteria[pageSize]=200&fields=items[id,company_name,customer_group_id]',
             undefined,
-            expect.any(Function),
+            expect.any(Function)
         );
-        const step = saved()?.appBuilderComponents?.['erp-integration'].setupSteps?.['company-catalogs'];
-        expect(step).toMatchObject({ state: 'done', note: expect.stringMatching(/1 with their own/) });
+        const step =
+            saved()?.appBuilderComponents?.['erp-integration'].setupSteps?.['company-catalogs'];
+        expect(step).toMatchObject({
+            state: 'done',
+            note: expect.stringMatching(/1 with their own/),
+        });
         expect(step?.checkedAt).toEqual(expect.any(String));
     });
 
     it('opens a step again when the check finds a company in no shared catalog', async () => {
         answerByPath(
-            [{ id: 1, company_name: 'Acme', customer_group_id: 1 }, { id: 2, company_name: 'Globex', customer_group_id: 18 }],
-            [{ id: 1, name: 'Default (General)', customer_group_id: 1, type: 1 }],
+            [
+                { id: 1, company_name: 'Acme', customer_group_id: 1 },
+                { id: 2, company_name: 'Globex', customer_group_id: 18 },
+            ],
+            [{ id: 1, name: 'Default (General)', customer_group_id: 1, type: 1 }]
         );
         const { context, saved } = setup({ 'company-catalogs': { state: 'done' } });
         await handleCheckSetupSteps(context, { id: 'erp-integration' });
-        const step = saved()?.appBuilderComponents?.['erp-integration'].setupSteps?.['company-catalogs'];
+        const step =
+            saved()?.appBuilderComponents?.['erp-integration'].setupSteps?.['company-catalogs'];
         expect(step?.state).toBeUndefined();
         expect(step?.note).toBe('Globex is in no shared catalog (customer group 18 has none).');
     });
@@ -143,7 +176,9 @@ describe('checkSetupSteps', () => {
         const { context, saved } = setup({ 'company-catalogs': { state: 'done' } });
         await handleCheckSetupSteps(context, { id: 'erp-integration' });
         expect(mockSendRest).not.toHaveBeenCalled();
-        expect(saved()?.appBuilderComponents?.['erp-integration'].setupSteps?.['company-catalogs']).toMatchObject({
+        expect(
+            saved()?.appBuilderComponents?.['erp-integration'].setupSteps?.['company-catalogs']
+        ).toMatchObject({
             state: 'done',
             note: 'Could not check: Adobe sign-in required.',
         });

@@ -196,6 +196,13 @@ integration's own ERP still goes only with the integration.
 Account for the website, which the SC marks done: Commerce's REST API lists neither order
 statuses by state nor payment settings.
 
+**Before a price the ERP grants for one website can show on that website only** (AB-46), the
+checklist asks for Commerce's Catalog Price Scope to be Website (Stores > Configuration >
+Catalog > Catalog > Price). The ERP publishes a company's prices into its shared catalog per
+website — each tier price carries a website — and at the default scope, Global, Commerce
+ignores that website and every site shows the same prices. No API reads or sets the scope, so
+the SC sets it once and marks the step done.
+
 ## Filling the ERP
 
 Demo Builder fills the ERP itself (AB-26y, 2026-09-27): it reads the project's Commerce
