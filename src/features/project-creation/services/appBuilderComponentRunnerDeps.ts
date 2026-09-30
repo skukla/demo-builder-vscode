@@ -41,9 +41,6 @@ import { buildWorkspaceReleaseDeps } from '@/features/app-builder/services/compo
 import { deployAppComponentIsolated } from '@/features/app-builder/services/deployAppIsolated';
 import { displayNameInProject } from '@/features/app-builder/services/deployInputs';
 import { subscriberTarget } from '@/features/app-builder/services/ensureMeshApiSubscribed';
-import { erpCredentialReader } from '@/features/app-builder/services/erpCredential';
-import { detachErpWrites } from '@/features/app-builder/services/erpDetach';
-import { erpEventsEnvResolver } from '@/features/app-builder/services/erpEventsDelivery';
 import {
     checkCloneForUpdate,
     fastForwardClone,
@@ -51,7 +48,6 @@ import {
 } from '@/features/app-builder/services/integrationSourceUpdate';
 import { deleteUndeclaredActions } from '@/features/app-builder/services/runtimeUndeclaredActions';
 import { buildS2SDeployEnv } from '@/features/app-builder/services/s2sDeployEnv';
-import { wipeSystemRecords } from '@/features/app-builder/services/systemRecordsWipe';
 import { forgetScreenKey } from '@/features/app-builder/services/systemScreen';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
@@ -64,11 +60,7 @@ import {
     readMeshEnvVarsFromFile,
 } from '@/features/mesh/services/stalenessDetector';
 import { regenerateComponentEnvFile } from '@/features/project-creation/helpers/envFileGenerator';
-import {
-    fillEveryErp,
-    summarizeFills,
-} from '@/features/project-creation/services/erpFillForProject';
-import { syncErpList, unlistErp } from '@/features/project-creation/services/erpListSync';
+import { erpRunnerDeps } from '@/features/project-creation/services/erpRunnerDeps';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';
 import type { ComponentRegistry } from '@/types/components';
@@ -218,29 +210,7 @@ export function buildDefaultRunnerDeps(
                 appVersion: options?.appVersion,
                 since: options?.since,
             }),
-        // Every ERP is filled once the install stands (AB-26y); an added one leaves the list first (AB-16).
-        fillSystem: async (project, entry, onProgress) =>
-            summarizeFills(
-                await fillEveryErp(project, entry.id, {
-                    authManager: ctx.authManager,
-                    getAuth: authFor(project),
-                    onProgress,
-                }),
-            ),
-        unlistSystem: async (project, integrationId, erpId) =>
-            unlistErp(project, integrationId, erpId, await authFor(project)()),
-        // After an integration or one of its ERPs deploys, the integration is sent the list
-        // again, each added ERP with the credential its own workspace answers (AB-51).
-        listSystems: async (project, integrationId) => {
-            const outcome = await syncErpList(project, integrationId, await authFor(project)(), {
-                readCredential: erpCredentialReader(
-                    ctx.commandManager,
-                    project,
-                    ctx.getCachedOrganization(),
-                ),
-            });
-            return outcome.status === 'failed' ? outcome.detail : undefined;
-        },
+        ...erpRunnerDeps(ctx, authFor, onProgress),
         readAppVersion: readAppManifestVersion,
         // Update: fast-forward the clone, then the same dependency install the
         // add path runs (ComponentManager, with the entry's Node version).
@@ -250,28 +220,15 @@ export function buildDefaultRunnerDeps(
             checkCloneForUpdate(componentPath, branch, gitIn),
         installComponentDependencies: (componentPath, definition) =>
             ctx.componentManager.installNpmDependencies(componentPath, definition),
-        // The clean-ups ahead of a remove, each living in code the undeploy
-        // deletes. A failure stops the removal unless the SC removes anyway
-        // (appBuilderComponentTeardown). First the ERP integration's undo of its
-        // Commerce writes:
-        detachFromCommerce: (project, deployedUrls, detachProgress) =>
-            detachErpWrites(deployedUrls, {
-                getAuth: authFor(project),
-                onProgress: detachProgress,
-            }),
-        // then the app's own uninstall API, which takes down what its installer created:
+        // The app's own uninstall API ahead of a remove (the ERP undo and wipe: erpRunnerDeps):
         uninstallAppManagement: (project, componentId, uninstallProgress) =>
             uninstallAppManagementApp(project, componentId, deployedUrlsOf(project, componentId), {
                 getAuth: authFor(project),
                 logger: ctx.logger,
                 onProgress: uninstallProgress,
             }),
-        // and a system's records, deleted while its wipe action still exists.
-        wipeSystemRecords: (project, entry, deployedUrls, name) =>
-            wipeSystemRecords(entry, deployedUrls, name, { getAuth: authFor(project), onProgress }),
         resolveSecretEnv: (project, entry) =>
             resolveSecretDeployEnv(ctx.secrets, project.path, entry),
-        resolveEventsEnv: erpEventsEnvResolver(ctx),
         forgetScreenKey: (project, entry) => forgetScreenKey(ctx.secrets, project.path, entry),
         // The AIO_COMMERCE_AUTH_IMS_* deploy env for app-management entries:
         // the workspace S2S credential's full identity (ensured + read via the

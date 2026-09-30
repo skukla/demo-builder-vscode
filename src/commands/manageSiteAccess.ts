@@ -24,10 +24,19 @@
  */
 
 import * as vscode from 'vscode';
-import { stageLine } from '@/core/utils/stageLine';
+import {
+    buildReaderItems,
+    handleReaderAction,
+    manageContentReadersByInput,
+    STATUS_BAR_SUCCESS,
+    type AccessAction,
+    type AccessDeps,
+    type AccessUi,
+} from './manageContentReaders';
 import { BaseCommand } from '@/core/base/baseCommand';
 import { openUrl } from '@/core/utils/browserUtils';
 import { maskEmail } from '@/core/utils/maskEmail';
+import { stageLine } from '@/core/utils/stageLine';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
 import { waitForConfigAccess } from '@/features/eds/services/configService/configAccessRecovery';
@@ -47,10 +56,11 @@ import {
     type SiteAccessListing,
     type SiteAccessMutation,
 } from '@/features/eds/services/configService/siteAccessManagerHeadless';
+import { listContentReaders } from '@/features/eds/services/daLive/contentAccessManagerHeadless';
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
 import { GITHUB_APP_INSTALL_URL } from '@/features/eds/services/github/githubAppService';
 import type { Project } from '@/types/base';
-import { getEdsRepoParts } from '@/types/typeGuards';
+import { getEdsDaLiveTarget, getEdsRepoParts } from '@/types/typeGuards';
 
 /** The button that opens the AEM Code Sync app on GitHub. */
 const OPEN_CODE_SYNC_APP = 'Open Code Sync App';
@@ -60,17 +70,22 @@ const OPEN_GITHUB_APP_SETTINGS = 'Open GitHub App Settings';
 const OPEN_GITHUB_EMAIL_SETTINGS = 'Open GitHub Email Settings';
 const GITHUB_EMAIL_SETTINGS_URL = 'https://github.com/settings/emails';
 
-/** QuickPick rows carry their action so the handler does not re-parse labels. */
-interface AccessAction extends vscode.QuickPickItem {
-    action: 'add' | 'remove' | 'noop';
-    email?: string;
-}
-
+/**
+ * Two systems, one picker (EDS-22). The Configuration Service roster says who may
+ * ADMINISTER the site (preview, publish, its config); DA.live's org permissions
+ * sheet says who may READ the authored content — which is what a colleague needs
+ * to build on this storefront with its block library and unpublished pages, not
+ * only what the CDN serves. Both are managed here because they are the same job
+ * on two systems, and neither had a button before.
+ *
+ * With no project open, the content half still works from a typed org and site:
+ * the person sharing a storefront need not have built it with Demo Builder.
+ */
 export class ManageSiteAccessCommand extends BaseCommand {
     public async execute(): Promise<void> {
         const project = await this.stateManager.getCurrentProject();
         if (!project) {
-            await this.showWarning('No project loaded.');
+            await manageContentReadersByInput(this.accessUi(), this.accessDeps());
             return;
         }
 
@@ -92,17 +107,45 @@ export class ManageSiteAccessCommand extends BaseCommand {
             return;
         }
 
-        const choice = await vscode.window.showQuickPick(this.buildItems(listing), {
-            title: `Site access — ${listing.site}`,
-            placeHolder: 'Add or remove a configuration admin',
-        });
+        const target = getEdsDaLiveTarget(project);
+        const readers = target ? await listContentReaders(target, this.context, this.logger) : undefined;
+        const choice = await vscode.window.showQuickPick(
+            [...this.buildItems(listing), ...buildReaderItems(readers)],
+            {
+                title: `Site access — ${listing.site}`,
+                placeHolder: 'Add or remove a configuration admin, or a content reader',
+            },
+        );
         if (!choice || choice.action === 'noop') return;
 
         if (choice.action === 'add') {
             await this.handleAdd(project);
             return;
         }
-        if (choice.email) await this.handleRemove(project, choice.email);
+        if (choice.action === 'remove' && choice.email) {
+            await this.handleRemove(project, choice.email);
+            return;
+        }
+        if (target) await handleReaderAction(target, choice, this.accessUi(), this.accessDeps());
+    }
+
+    /** The notification surface the content-reader flows report through. */
+    private accessUi(): AccessUi {
+        return {
+            withProgress: (title, task) => this.withProgress(title, task),
+            showWarning: (message) => this.showWarning(message),
+            showError: (message) => this.showError(message),
+            notifySuccess: async (message, loggable) => {
+                // Masked to the log, full to the person — the rule `reportMutation` follows.
+                this.logger.info(loggable);
+                await this.showProgressNotification(message, TIMEOUTS.UI.NOTIFICATION);
+                vscode.window.setStatusBarMessage(`✅ ${message}`, STATUS_BAR_SUCCESS);
+            },
+        };
+    }
+
+    private accessDeps(): AccessDeps {
+        return { context: this.context, logger: this.logger };
     }
 
     /**

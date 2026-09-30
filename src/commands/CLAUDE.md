@@ -13,7 +13,8 @@ works, because each file carries a substantial header comment.
 | `claudeSessionStore.ts` | Probes Claude Code's per-cwd conversation store; decides whether `claude --continue` is safe at launch |
 | `configure.ts` | `demoBuilder.configure` — QuickPick to edit .env, redeploy mesh, and related project configuration |
 | `diagnostics.ts` | The diagnostics report (see below) |
-| `manageSiteAccess.ts` | QuickPick over who holds the Configuration Service admin role on the project's storefront. UX only — logic and post-write verification live in `siteAccessManagerHeadless` |
+| `manageSiteAccess.ts` | QuickPick over who holds the Configuration Service admin role on the project's storefront, and who may read its authored content on DA.live (EDS-22). UX only — logic and post-write verification live in `siteAccessManagerHeadless` and `contentAccessManagerHeadless` |
+| `manageContentReaders.ts` | The content-reader rows and flows of `manageSiteAccess.ts` — let someone read a site's authored content, or stop them — usable with no project open from a typed org and site |
 | `repairSiteConfiguration.ts` | For a legacy project whose DA.live site name differs from the repo name: runs the storefront name migration, then re-runs the refused Configuration Service write, then republishes. Step 2 runs only when step 1 reports `repaired` |
 | `migrateStorefrontNames.ts` | One-shot palette command for projects built before `164fd251`, whose DA.live site name does not match the GitHub repo name |
 | `openInClaude.ts` | Launches the single "home" Claude Code chat terminal (see below) |

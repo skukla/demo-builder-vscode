@@ -62,12 +62,17 @@ import {
     removeSiteAdmin,
 } from '@/features/eds/services/configService/siteAccessManagerHeadless';
 import {
+    addContentReader,
+    listContentReaders,
+    removeContentReader,
+} from '@/features/eds/services/daLive/contentAccessManagerHeadless';
+import {
     findStorefrontNameMismatch,
     migrateStorefrontNameForProject,
 } from '@/features/eds/services/storefront/storefrontNameMigrationForProject';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
-import { isEdsProject } from '@/types/typeGuards';
+import { getEdsDaLiveTarget, isEdsProject } from '@/types/typeGuards';
 
 /**
  * Register the storefront-site tools on `server`: the site-access pair, the
@@ -94,6 +99,17 @@ function refuseIfNotEds(project: Project, tool: string): { error: string } | und
     return isEdsProject(project)
         ? undefined
         : { error: `${tool} applies only to EDS storefront projects` };
+}
+
+/**
+ * The DA.live org and site the content tools act on, or the refusal. Content lives
+ * on DA.live, so a project with no DA.live site (a headless one, or an EDS project
+ * created before the site was recorded) has nothing these tools can answer for.
+ */
+function daLiveTargetOf(project: Project, tool: string): { org: string; site: string } | { error: string } {
+    const wrongShape = refuseIfNotEds(project, tool);
+    if (wrongShape) return wrongShape;
+    return getEdsDaLiveTarget(project) ?? { error: `${tool} needs a DA.live site, and this project records none` };
 }
 
 export function registerSiteTools(server: McpToolServer, ctxFactory: () => HandlerContext): void {
@@ -166,6 +182,83 @@ export function registerSiteTools(server: McpToolServer, ctxFactory: () => Handl
             const result = args.admin
                 ? await addSiteAdmin(project, email, ctx.context, ctx.logger)
                 : await removeSiteAdmin(project, email, ctx.context, ctx.logger);
+            return asText(result);
+        },
+    );
+
+    // The content pair (EDS-22): the same shape as the site-access pair, on DA.live's
+    // permissions sheet instead of the Configuration Service roster. A read grant is
+    // what a colleague needs to build on this storefront with its block library and
+    // unpublished pages; the CDN copy sees only what was published.
+    server.registerTool(
+        'get_content_access',
+        {
+            needsAuth: ['dalive'],
+            annotations: { readOnlyHint: true, destructiveHint: false },
+            title: 'Get Content Access',
+            description:
+                "Who may read or write the current project's authored content on DA.live (the " +
+                "org permissions sheet, site path only). Use before sharing a storefront: a " +
+                'colleague who is not listed sees only the published pages, never the block ' +
+                'library or unpublished pages.',
+            inputSchema: {},
+        },
+        async () => {
+            const ctx = ctxFactory();
+            const project = await ctx.stateManager.getCurrentProject();
+            if (!project) {
+                return asText({ error: 'No current project is open' });
+            }
+            const target = daLiveTargetOf(project, 'get_content_access');
+            if ('error' in target) return asText(target);
+            return asText(await listContentReaders(target, ctx.context, ctx.logger));
+        },
+    );
+
+    server.registerTool(
+        'set_content_reader',
+        {
+            needsAuth: ['dalive'],
+            annotations: { readOnlyHint: false, destructiveHint: true },
+            title: 'Set Content Reader',
+            description:
+                "Let another person read the current project's authored content on DA.live, or " +
+                'stop them (their read row only; a writer is left alone). Requires confirm:true — ' +
+                "it changes who can see the SC's content. Only the org owner can; check " +
+                'get_content_access first.',
+            inputSchema: {
+                email: z.string().describe('The Adobe account address to let read, or to stop'),
+                read: z.boolean().describe('true lets the address read the content, false stops it'),
+                confirm: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        'Must be true — this changes access for another person; ask the user first',
+                    ),
+            },
+        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        async (args: any) => {
+            if (args?.confirm !== true) {
+                return asText({
+                    error:
+                        'set_content_reader requires confirm:true — it changes who can read the ' +
+                        "storefront's content. Ask the user first.",
+                });
+            }
+            const ctx = ctxFactory();
+            const project = await ctx.stateManager.getCurrentProject();
+            if (!project) {
+                return asText({ error: 'No current project is open' });
+            }
+            const target = daLiveTargetOf(project, 'set_content_reader');
+            if ('error' in target) return asText(target);
+
+            const email = String(args.email ?? '');
+            // Both halves verify by re-reading the sheet; `verified` is that re-read.
+            const result = args.read
+                ? await addContentReader(target, email, ctx.context, ctx.logger)
+                : await removeContentReader(target, email, ctx.context, ctx.logger);
             return asText(result);
         },
     );

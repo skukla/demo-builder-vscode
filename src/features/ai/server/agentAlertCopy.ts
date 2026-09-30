@@ -303,6 +303,15 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         // which fails the second test.
         sessionGrant: false,
     },
+    set_content_reader: {
+        action: "Change who can read this storefront's content",
+        consequence:
+            "Lets another person read the authored content on DA.live, or stops them. Their own row only.",
+        // BOTH, as for set_site_admin: `read` says which direction.
+        target: ['email', 'read'],
+        // Reaches another person: no session grant.
+        sessionGrant: false,
+    },
     republish: {
         action: 'Republish the storefront',
         consequence:

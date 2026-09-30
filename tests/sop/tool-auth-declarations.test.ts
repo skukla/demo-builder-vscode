@@ -63,7 +63,9 @@ const EXPECTED: Record<string, number> = {
     // 51 -> 52 on 2026-09-29: set_erp_settings writes an ERP's own settings to the deployed
     // integration through the Adobe sign-in (AB-16j).
     adobe: 52,
-    dalive: 21,
+    // 21 -> 23 on 2026-09-30 (hotfix beta.149 merged): get_content_access and
+    // set_content_reader read and write the DA.live org permissions sheet (EDS-22).
+    dalive: 23,
     // 10 -> 12 on 2026-09-12: forget_added_demo and change_demo_source (step 06
     // of the shareable-demo program) both read and write GitHub; 12 -> 14 the
     // same day for probe_shared_demo and add_shared_demo (step 07).
@@ -95,10 +97,11 @@ const EXPECTED: Record<string, number> = {
  * files. That counts text, not declarations, and was roughly double. The CONTROL below
  * caught it — which is the argument for having one.)
  */
-const EXPECTED_TOOLS = 146; // 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x); 144 with add_erp (AB-16).
+const EXPECTED_TOOLS = 148; // 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x); 144 with add_erp (AB-16).
 // 141 -> 142 on 2026-09-27: delete_undeclared_runtime_code.
 // 142 -> 143 on 2026-09-27: load_erp_demo_data.
 // 144 -> 146 on 2026-09-29: get_erp_settings and set_erp_settings (AB-16j).
+// 144 -> 146 on 2026-09-30: the content-access pair (EDS-22, hotfix beta.149 merged).
 
 interface Declaration {
     name: string;
@@ -165,3 +168,4 @@ describe('every tool declares real sign-ins', () => {
         expect(counts).toEqual(EXPECTED);
     });
 });
+// 146 -> 148 on 2026-09-30, develop merged: both pairs above are in this branch.
