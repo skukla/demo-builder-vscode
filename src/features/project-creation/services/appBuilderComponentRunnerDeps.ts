@@ -33,11 +33,15 @@ import { installAppManagementApp } from '@/features/app-builder/services/appMana
 import { uninstallAppManagementApp } from '@/features/app-builder/services/appManagementUninstaller';
 import { readAppManifestVersion } from '@/features/app-builder/services/appManifestVersion';
 import { resolveSecretDeployEnv } from '@/features/app-builder/services/componentSettingSecrets';
-import { deployWorkspaceId, ensureComponentWorkspace } from '@/features/app-builder/services/componentWorkspace';
+import {
+    deployWorkspaceId,
+    ensureComponentWorkspace,
+} from '@/features/app-builder/services/componentWorkspace';
 import { buildWorkspaceReleaseDeps } from '@/features/app-builder/services/componentWorkspaceRelease';
 import { deployAppComponentIsolated } from '@/features/app-builder/services/deployAppIsolated';
 import { displayNameInProject } from '@/features/app-builder/services/deployInputs';
 import { subscriberTarget } from '@/features/app-builder/services/ensureMeshApiSubscribed';
+import { erpCredentialReader } from '@/features/app-builder/services/erpCredential';
 import { detachErpWrites } from '@/features/app-builder/services/erpDetach';
 import { erpEventsEnvResolver } from '@/features/app-builder/services/erpEventsDelivery';
 import {
@@ -60,8 +64,11 @@ import {
     readMeshEnvVarsFromFile,
 } from '@/features/mesh/services/stalenessDetector';
 import { regenerateComponentEnvFile } from '@/features/project-creation/helpers/envFileGenerator';
-import { fillEveryErp, summarizeFills } from '@/features/project-creation/services/erpFillForProject';
-import { unlistErp } from '@/features/project-creation/services/erpListSync';
+import {
+    fillEveryErp,
+    summarizeFills,
+} from '@/features/project-creation/services/erpFillForProject';
+import { syncErpList, unlistErp } from '@/features/project-creation/services/erpListSync';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';
 import type { ComponentRegistry } from '@/types/components';
@@ -150,7 +157,12 @@ export function buildDefaultRunnerDeps(
 ): AppBuilderComponentRunnerDeps {
     // Git in an integration's clone, for update and its check.
     const gitIn: GitRunner = (command, cwd) =>
-        ctx.commandManager.execute(command, { cwd, enhancePath: true, shell: DEFAULT_SHELL, timeout: TIMEOUTS.LONG });
+        ctx.commandManager.execute(command, {
+            cwd,
+            enhancePath: true,
+            shell: DEFAULT_SHELL,
+            timeout: TIMEOUTS.LONG,
+        });
     // The signed-in identity every per-app API call carries (five callers below).
     const authFor = (project: Project) => () => resolveAppManagementAuth(project, ctx.authManager);
     return {
@@ -207,13 +219,35 @@ export function buildDefaultRunnerDeps(
                 since: options?.since,
             }),
         // Every ERP is filled once the install stands (AB-26y); an added one leaves the list first (AB-16).
-        fillSystem: async (project, entry, onProgress) => summarizeFills(await fillEveryErp(project, entry.id, { authManager: ctx.authManager, getAuth: authFor(project), onProgress })),
-        unlistSystem: async (project, integrationId, erpId) => unlistErp(project, integrationId, erpId, await authFor(project)()),
+        fillSystem: async (project, entry, onProgress) =>
+            summarizeFills(
+                await fillEveryErp(project, entry.id, {
+                    authManager: ctx.authManager,
+                    getAuth: authFor(project),
+                    onProgress,
+                }),
+            ),
+        unlistSystem: async (project, integrationId, erpId) =>
+            unlistErp(project, integrationId, erpId, await authFor(project)()),
+        // After an integration or one of its ERPs deploys, the integration is sent the list
+        // again, each added ERP with the credential its own workspace answers (AB-51).
+        listSystems: async (project, integrationId) => {
+            const outcome = await syncErpList(project, integrationId, await authFor(project)(), {
+                readCredential: erpCredentialReader(
+                    ctx.commandManager,
+                    project,
+                    ctx.getCachedOrganization(),
+                ),
+            });
+            return outcome.status === 'failed' ? outcome.detail : undefined;
+        },
         readAppVersion: readAppManifestVersion,
         // Update: fast-forward the clone, then the same dependency install the
         // add path runs (ComponentManager, with the entry's Node version).
-        fetchComponentSource: (componentPath, branch) => fastForwardClone(componentPath, branch, gitIn),
-        checkComponentSource: (componentPath, branch) => checkCloneForUpdate(componentPath, branch, gitIn),
+        fetchComponentSource: (componentPath, branch) =>
+            fastForwardClone(componentPath, branch, gitIn),
+        checkComponentSource: (componentPath, branch) =>
+            checkCloneForUpdate(componentPath, branch, gitIn),
         installComponentDependencies: (componentPath, definition) =>
             ctx.componentManager.installNpmDependencies(componentPath, definition),
         // The clean-ups ahead of a remove, each living in code the undeploy
@@ -221,7 +255,10 @@ export function buildDefaultRunnerDeps(
         // (appBuilderComponentTeardown). First the ERP integration's undo of its
         // Commerce writes:
         detachFromCommerce: (project, deployedUrls, detachProgress) =>
-            detachErpWrites(deployedUrls, { getAuth: authFor(project), onProgress: detachProgress }),
+            detachErpWrites(deployedUrls, {
+                getAuth: authFor(project),
+                onProgress: detachProgress,
+            }),
         // then the app's own uninstall API, which takes down what its installer created:
         uninstallAppManagement: (project, componentId, uninstallProgress) =>
             uninstallAppManagementApp(project, componentId, deployedUrlsOf(project, componentId), {
@@ -232,7 +269,8 @@ export function buildDefaultRunnerDeps(
         // and a system's records, deleted while its wipe action still exists.
         wipeSystemRecords: (project, entry, deployedUrls, name) =>
             wipeSystemRecords(entry, deployedUrls, name, { getAuth: authFor(project), onProgress }),
-        resolveSecretEnv: (project, entry) => resolveSecretDeployEnv(ctx.secrets, project.path, entry),
+        resolveSecretEnv: (project, entry) =>
+            resolveSecretDeployEnv(ctx.secrets, project.path, entry),
         resolveEventsEnv: erpEventsEnvResolver(ctx),
         forgetScreenKey: (project, entry) => forgetScreenKey(ctx.secrets, project.path, entry),
         // The AIO_COMMERCE_AUTH_IMS_* deploy env for app-management entries:
@@ -249,7 +287,11 @@ export function buildDefaultRunnerDeps(
                     'The project has no Adobe org/project/workspace context to resolve credentials from.',
                 );
             }
-            const credentials = await ctx.authManager.getS2SDeployCredentials(adobe.organization, adobe.projectId, workspaceId);
+            const credentials = await ctx.authManager.getS2SDeployCredentials(
+                adobe.organization,
+                adobe.projectId,
+                workspaceId,
+            );
             return buildS2SDeployEnv(credentials);
         },
         createComponentWorkspace: (project, entry, onMaking) =>
@@ -266,7 +308,10 @@ export function buildDefaultRunnerDeps(
                 catalog: ctx.catalog,
             }),
         deleteUndeclaredActions: (componentPaths) => deleteUndeclaredActions(ctx, componentPaths),
-        ...buildWorkspaceReleaseDeps(ctx, (message) => void vscode.window.showWarningMessage(message)),
+        ...buildWorkspaceReleaseDeps(
+            ctx,
+            (message) => void vscode.window.showWarningMessage(message),
+        ),
         deleteComponentWorkspace: async (project, workspace) => {
             const result = await ctx.authManager.deleteWorkspace(workspace.id, {
                 orgId: project.adobe?.organization,

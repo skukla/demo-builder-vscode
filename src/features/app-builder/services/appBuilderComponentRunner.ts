@@ -336,6 +336,13 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
         integrationId: string,
         systemId: string
     ) => Promise<string | undefined>;
+    /**
+     * Tell an integration which systems it serves, by the ids and addresses they deploy
+     * with (`syncErpList`, AB-51): after the integration deploys, before its fill asks by
+     * those ids, and after a listed system redeploys. Answers why it could not, or
+     * undefined. Optional: bare tests and integrations that list nothing never need it.
+     */
+    listSystems?: (project: Project, integrationId: string) => Promise<string | undefined>;
     fillSystem?: (
         project: Project,
         entry: AppBuilderComponentCatalogEntry,
@@ -789,11 +796,12 @@ async function dispatchDeploy(
     // A listed system's id in its integration's list is chosen once too, from the name
     // it deploys with, because every product it owns and every key-map row carries it
     // (`erpListId.ts`, AB-51).
-    const recordedAppId = ensureCommerceAppId(project, entry, deps.catalog);
-    const recordedListId = ensureListId(project, entry);
-    if (recordedAppId || recordedListId) {
-        await deps.saveProject(project);
-    }
+    // Both run: `some` over the results, not `||`, which would skip the second.
+    const recorded = [
+        ensureCommerceAppId(project, entry, deps.catalog),
+        ensureListId(project, entry),
+    ];
+    if (recorded.some(Boolean)) await deps.saveProject(project);
     // The app's own inputs — its settings, a bound integration's values, the
     // schema defaults, and what other components provide (the ERP's base URL to
     // its integration) — ride the deploy's process env, the same way the
@@ -1086,11 +1094,16 @@ async function runAdd(
 
         await persistOutcome(project, entry, deployed.outcome, deps);
         if (linkBroughtSystem(project, entry.id, deps.catalog)) await deps.saveProject(project);
+        const listed = await listSystemsAfterDeploy(project, entry, deps);
         await installIfAppManagement(project, entry, deps, {
             componentPath: installed.path,
             since,
         });
-        return withWarnings(deployed.warning, await republishIfProvided(project, entry.id, deps));
+        return withWarnings(
+            deployed.warning,
+            listed,
+            await republishIfProvided(project, entry.id, deps),
+        );
     } catch (error) {
         deps.logger.error('[AppBuilderComponent Runner] add failed', error as Error);
         return { success: false, error: readableFailure(toError(error).message, deps.logger) };
@@ -1106,6 +1119,41 @@ async function runAdd(
  * decision (2026-08-27). No-op for every other entry, and when the caller
  * wired no installer (mesh paths, bare tests).
  */
+/**
+ * Send the integration its list of systems once what they deploy with is settled (AB-51):
+ * after an integration that uses listed systems deploys — its fill, next, asks the
+ * integration by those ids — and after a listed system redeploys, whose id or address may
+ * be new. Without this a first pair served the standalone id `erp` while the ERP deployed
+ * as `northwind`, and no fill could find it. A list that could not be sent is a warning
+ * on the deploy, never a failure: the deploy stands, and the next deploy sends it again.
+ *
+ * @returns the warning, or undefined
+ */
+async function listSystemsAfterDeploy(
+    project: Project,
+    entry: AppBuilderComponentCatalogEntry,
+    deps: AppBuilderComponentRunnerDeps,
+): Promise<string | undefined> {
+    if (!deps.listSystems) return undefined;
+    const integrationId =
+        entry.kind === 'integration'
+            ? systemsUsedBy(project, entry.id, deps.catalog).length > 0
+                ? entry.id
+                : undefined
+            : entry.listedAs
+              ? integrationUsing(project, entry.id, deps.catalog)
+              : undefined;
+    if (!integrationId) return undefined;
+    deps.onProgress?.(OPERATION_STAGES.deploying.label, 'Telling the integration about its ERPs');
+    const reason = await deps.listSystems(project, integrationId);
+    if (!reason) return undefined;
+    deps.logger.warn(
+        `[AppBuilderComponent Runner] ${integrationId} was not sent its ERP list: ${reason}`,
+    );
+    const name = project.appBuilderComponents?.[integrationId]?.name ?? integrationId;
+    return `${name} was not told about its ERPs (${reason.replace(/\.$/u, '')}). Redeploy it to send the list again.`;
+}
+
 async function installIfAppManagement(
     project: Project,
     entry: AppBuilderComponentCatalogEntry,
@@ -1248,8 +1296,13 @@ export async function deployAppBuilderComponent(
         }
         recordDeployOutcome(project, entry.kind, id, deployed.outcome);
         await deps.saveProject(project);
+        const listed = await listSystemsAfterDeploy(project, entry, deps);
         await installIfAppManagement(project, entry, deps, { componentPath, since });
-        return withWarnings(deployed.warning, await republishIfProvided(project, entry.id, deps));
+        return withWarnings(
+            deployed.warning,
+            listed,
+            await republishIfProvided(project, entry.id, deps),
+        );
     } catch (error) {
         deps.logger.error('[AppBuilderComponent Runner] deploy failed', error as Error);
         const reason = readableFailure(toError(error).message, deps.logger);
