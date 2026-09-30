@@ -41,9 +41,32 @@ published as such. Two ways out:
 - **B — publish per sales org.** Needs a shared catalog per company × website and a
   publish per site. Bigger; Commerce's shared-catalog model resists it.
 
-**Taken: A**, as the safe default, on the owner's 2026-09-30 "address them immediately";
-reversible. The Admin/screen wording for a scoped condition should say it prices the
-order, not the catalog.
+**Taken first: A** (88ef676), as the safe default. **Then corrected by the owner the same
+day: Commerce supports per-website pricing inside a shared catalog** — each tier price
+carries a website (Adobe B2B, "Set shared catalog pricing and structure": "Set Website to
+the website where the tier price applies"; requires Stores → Configuration → Catalog →
+Price → Catalog Price Scope = Website). The premise of A ("one catalog, so a per-site price
+cannot be published") was wrong. **B is built** on top of A:
+
+- ERP (`lib/net-prices.js`, contract version 12): a customer with any organization-scoped
+  condition is published as one WHOLE set per sales organization the store sells through
+  (from the mirrored business structure), each line tagged `salesOrg`, and no untagged
+  line — so Commerce never has an all-websites row beside a site row for the same product
+  and quantity, whose precedence Adobe's docs do not state. A customer with none keeps one
+  untagged set. With no sales organizations mirrored yet, A's behaviour holds (the scoped
+  condition is left out).
+- Integration (`lib/contract-prices.js`, `lib/contract-price-deps.js`): a tagged line
+  becomes one tier-price row per website whose effective `structure_sales_org` (the ERP's
+  default or its per-website value) is that organization, with that `website_id`, ledgered
+  per website; an organization no website carries is left out and named (`unmapped`),
+  never published everywhere.
+
+## Prerequisites on Bodea (owner)
+
+1. Catalog Price Scope = Website, or site rows are ignored and B degrades to A (safe).
+   Not yet read from Bodea — the dev host was wedged at the time.
+2. Each ERP's websites carry their sales organization in the ERP's per-website settings
+   (the mapping the integration already keeps).
 
 ## Verification
 
@@ -53,3 +76,4 @@ a quote through that org still applies it. The 140-case cross-check still passes
 ## Shipped so far
 
 - 2026-09-30  2026-09-30 FIXED (demo-erp 88ef676, loop branch). Option A taken: a condition scoped to a sales organization stays out of the published prices in force (lib/net-prices.js) and prices the order through that organization, which the quote/order paths already pass. Test: the scoped discount is not published, the unscoped one is; the same condition still prices a quote through its org and not another. 392/392 then. Reversible if the owner prefers per-site catalogs (option B).
+- 2026-09-30  2026-09-30 OWNER CORRECTION → B BUILT (integration ad4501a on feature/live-checks-at-checkout; demo-erp 76634e9 on the loop branch). Per-website pricing IS what Commerce shared catalogs offer (each tier price carries a website; Catalog Price Scope = Website), so the first fix's premise was wrong. ERP: a customer with any org-scoped condition gets one whole set per sales organization, every line tagged salesOrg (contract v12; null = every website), no untagged line beside a tagged one. Integration: a tagged line → one tier-price row per website whose effective structure_sales_org is that org, ledgered per website; an org no website carries is left out and named (unmapped), never published everywhere. Degrades to the first fix when no orgs are mirrored or price scope is Global. Integration 971/971, ERP 401/401. PREREQUISITES (owner): confirm Bodea's Catalog Price Scope = Website (Stores → Configuration → Catalog → Price) — not read, dev host wedged; deploy + live proof: an EU-only discount shows on the EU site's cart and not the US site's.
