@@ -325,6 +325,17 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
             '140 live granting, 115 revoking, 126 for the confirm refusal. Carries the site roster ' +
             'but NOT the org one, so it is bounded more tightly than get_site_access',
     },
+    // The content pair (EDS-22, 2026-09-30) answers the site's readers — one row per
+    // address, ~50 bytes each with its action — so the same shape and bound as the
+    // site-access pair. Not yet measured live; the fixtures below are the ceiling's basis.
+    get_content_access: {
+        bytes: 4_000,
+        why: 'the readers list is the only thing that grows, ~50 bytes an address; 4,000 covers ~75',
+    },
+    set_content_reader: {
+        bytes: 4_000,
+        why: 'carries the readers list after the change, so it is bounded like get_content_access',
+    },
     repair_site_configuration: {
         bytes: 2_000,
         why:
