@@ -217,10 +217,17 @@ export class GitHubAppService {
             return { isInstalled: false, transient: true, httpStatus: response.status, helixError };
         }
 
+        // Does a 200 status answer carry a reason for an inner 400? Logged to find
+        // out (2026-09-30): the code endpoint says "github bot not installed on
+        // repository" for a state this method classes as "installed, initializing".
+        const statusXError = response.headers?.get?.('x-error') ?? undefined;
         const data = await response.json();
         const codeStatus = data?.code?.status;
 
-        this.logger.debug(`[GitHub App] Code status for ${owner}/${repo}: ${codeStatus}`);
+        this.logger.debug(
+            `[GitHub App] Code status for ${owner}/${repo}: ${codeStatus}` +
+                `${statusXError ? ` (x-error: ${statusXError})` : ''}`,
+        );
         if (codeStatus !== undefined && codeStatus !== 200) {
             // Whatever else Helix says about the code — it is the only place the
             // reason behind a 400 can be read, and the status alone hid one for
