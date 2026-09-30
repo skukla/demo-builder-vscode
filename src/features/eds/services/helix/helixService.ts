@@ -19,6 +19,7 @@ import { HelixAdminAuth } from './helixAdminAuth';
 import {
     ADMIN_API_401_MESSAGE,
     captureErrorDetail,
+    getXError,
     throwCredentialRefused,
 } from './helixAdminErrors';
 import {
@@ -29,7 +30,11 @@ import {
 import { HelixApiKeys } from './helixApiKeys';
 import type { BulkProgressCallback } from './helixBulkJobs';
 import * as keyStore from './helixKeyStore';
-import { HelixSiteContent, SITE_PUBLISH_PHASES, type SitePublishProgress } from './helixSiteContent';
+import {
+    HelixSiteContent,
+    SITE_PUBLISH_PHASES,
+    type SitePublishProgress,
+} from './helixSiteContent';
 import { getLogger } from '@/core/logging/debugLogger';
 import { runInBatches } from '@/core/utils/promiseUtils';
 import { sleep } from '@/core/utils/sleep';
@@ -221,7 +226,6 @@ export class HelixService {
                 this.previewAndPublishPage(org, site, path, branch),
         });
     }
-
 
     // ==========================================================
     // Path & Auth Helpers (implementations live in helixAdminAuth /
@@ -796,11 +800,18 @@ export class HelixService {
 
             // Helix's code mirror hasn't caught up with the just-pushed commit
             // yet. Back off and retry; the mirror typically indexes within ~10s.
+            // A 400 also means "cannot fetch this code at all" (the App not
+            // covering the repo, a bad fstab), and only `x-error` says which —
+            // so it is logged on every attempt and carried into the final error.
+            // Measured 2026-09-30: a fresh repo 400'd through every retry on two
+            // publishes and this method reported nothing but "not caught up".
+            const reason = getXError(response);
             if (response.status === 400 && retryIndex < PREVIEW_RETRY_DELAYS_MS.length) {
                 const delayMs = PREVIEW_RETRY_DELAYS_MS[retryIndex];
                 this.logger.debug(
                     `[Helix] previewCode 400 on attempt ${retryIndex + 1} — ` +
-                        `Helix mirror not caught up, retrying in ${delayMs}ms`,
+                        `Helix mirror not caught up, retrying in ${delayMs}ms` +
+                        (reason ? ` (x-error: ${reason})` : ''),
                 );
                 await sleep(delayMs);
                 continue;
@@ -808,7 +819,8 @@ export class HelixService {
 
             if (!response.ok) {
                 throw new Error(
-                    `Failed to preview code: ${response.status} ${response.statusText}`,
+                    `Failed to preview code: ${response.status} ${response.statusText}` +
+                        (reason ? ` — ${reason}` : ''),
                 );
             }
 
@@ -819,5 +831,4 @@ export class HelixService {
     // ==========================================================
     // Helpers
     // ==========================================================
-
 }

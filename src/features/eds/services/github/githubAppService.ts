@@ -17,7 +17,8 @@ import type { Logger } from '@/types/logger';
 // Host constant shared from helixApiClient — one definition (2026-08-22 spine sweep).
 
 /** GitHub App installation URL - direct to GitHub's app installation flow */
-export const GITHUB_APP_INSTALL_URL = 'https://github.com/apps/aem-code-sync/installations/select_target';
+export const GITHUB_APP_INSTALL_URL =
+    'https://github.com/apps/aem-code-sync/installations/select_target';
 
 /**
  * Describe a GitHub credential by its type prefix, never its value.
@@ -220,6 +221,14 @@ export class GitHubAppService {
         const codeStatus = data?.code?.status;
 
         this.logger.debug(`[GitHub App] Code status for ${owner}/${repo}: ${codeStatus}`);
+        if (codeStatus !== undefined && codeStatus !== 200) {
+            // Whatever else Helix says about the code — it is the only place the
+            // reason behind a 400 can be read, and the status alone hid one for
+            // an afternoon (2026-09-30).
+            this.logger.debug(
+                `[GitHub App] Code block for ${owner}/${repo}: ${JSON.stringify(data.code)}`,
+            );
+        }
 
         if (codeStatus === undefined) {
             // Response shape was unrecognized — don't conclude "not installed"

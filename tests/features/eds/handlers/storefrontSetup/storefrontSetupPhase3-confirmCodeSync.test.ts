@@ -188,7 +188,7 @@ describe('the one measurement that earns a pause', () => {
             return { isInstalled: false, codeStatus: 404 };
         });
         await expect(
-            executePhaseCodeSync(makeContext(), EDS_CONFIG, services, REPO, controller.signal),
+            executePhaseCodeSync(makeContext(), EDS_CONFIG, services, REPO, controller.signal)
         ).rejects.toThrow('Operation cancelled');
     });
 
@@ -200,7 +200,10 @@ describe('the one measurement that earns a pause', () => {
             codeStatus: 404,
         });
         const result = await run(makeContext(), services);
-        expect(result).toMatchObject({ success: false, error: expect.stringMatching(/Waited 30 minutes/) });
+        expect(result).toMatchObject({
+            success: false,
+            error: expect.stringMatching(/Waited 30 minutes/),
+        });
     });
 
     it('does NOT halt when the check merely failed', async () => {
@@ -308,7 +311,11 @@ describe('what the phase reports and calls', () => {
                 subMessage: REPO_LABEL,
                 progress: 43,
             },
-            { phase: 'code-sync', message: expect.stringContaining('Code synchronized'), progress: 45 },
+            {
+                phase: 'code-sync',
+                message: expect.stringContaining('Code synchronized'),
+                progress: 45,
+            },
             {
                 phase: 'site-config',
                 message: expect.stringContaining('Configuring site permissions'),
@@ -355,7 +362,9 @@ describe('what the phase reports and calls', () => {
         const result = await run(context, services);
 
         expect(result).toBeNull();
-        expect(messages(context)).toMatch(/Code synchronized/);
+        // …but says so. It used to report "Code synchronized" over the failure.
+        expect(messages(context)).toMatch(/Code not published to the CDN: helix 503/);
+        expect(messages(context)).not.toMatch(/Code synchronized/);
     });
 });
 

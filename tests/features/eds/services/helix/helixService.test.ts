@@ -86,6 +86,24 @@ describe('HelixService.previewCode — 400 retry-with-backoff', () => {
         expect(backoffDelays()).toEqual([1000, 3000, 7000]);
     });
 
+    it('carries the x-error reason into the final error and every retry line', async () => {
+        const refused = {
+            ...res(400, 'Bad Request'),
+            headers: { get: (name: string) => (name === 'x-error' ? '[admin] no code' : null) },
+        } as unknown as Response;
+        mockFetch.mockResolvedValue(refused);
+
+        await expect(service.previewCode('org', 'site', '/config.json')).rejects.toThrow(
+            'Failed to preview code: 400 Bad Request — [admin] no code'
+        );
+
+        const retryLines = (mockLogger.debug as jest.Mock).mock.calls
+            .map((c) => String(c[0]))
+            .filter((line) => line.includes('previewCode 400'));
+        expect(retryLines).toHaveLength(3);
+        expect(retryLines.every((line) => line.includes('(x-error: [admin] no code)'))).toBe(true);
+    });
+
     it('does NOT retry on 401 (auth failure surfaces immediately)', async () => {
         mockFetch.mockResolvedValueOnce(res(401));
 
@@ -161,7 +179,7 @@ describe('HelixService — admin-API authorization', () => {
         await new HelixService(mockLogger, githubTokenService, daLive).previewCode(
             'org',
             'site',
-            '/config.json',
+            '/config.json'
         );
 
         expect(headersOfLastCall()).toEqual({
@@ -176,7 +194,7 @@ describe('HelixService — admin-API authorization', () => {
         await new HelixService(mockLogger, githubTokenService).previewCode(
             'org',
             'site',
-            '/config.json',
+            '/config.json'
         );
 
         expect(headersOfLastCall()).toEqual({ 'x-auth-token': 'gh-token' });

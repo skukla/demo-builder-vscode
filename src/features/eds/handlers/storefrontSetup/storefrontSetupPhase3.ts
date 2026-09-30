@@ -46,16 +46,22 @@ export async function executePhaseCodeSync(
         progress: 43,
     } satisfies StorefrontSetupProgressPayload);
 
+    // The setup carries on either way — the code is on GitHub — but the message
+    // says what happened. It read "Code synchronized" after a failed publish
+    // until 2026-09-30, when a repo whose code never reached the CDN was
+    // reported synchronized and the storefront 404'd on every script.
+    let codeMessage = 'Code synchronized';
     try {
         await helixService.previewCode(repoInfo.repoOwner, repoInfo.repoName, '/*', 'main');
         logger.info('[Storefront Setup] Code published to CDN');
     } catch (error) {
         logger.warn(`[Storefront Setup] Code preview warning: ${(error as Error).message}`);
+        codeMessage = `⚠️ Code not published to the CDN: ${(error as Error).message}`;
     }
 
     await context.sendMessage('storefront-setup-progress', {
         phase: 'code-sync',
-        message: 'Code synchronized',
+        message: codeMessage,
         progress: 45,
     } satisfies StorefrontSetupProgressPayload);
 
