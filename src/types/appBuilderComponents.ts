@@ -185,16 +185,10 @@ export interface AppBuilderComponentCatalogEntry {
     systemType?: string;
     /**
      * The env var whose value NAMES this component's row (the ERP's row reads
-     * "Acme ERP", or whatever the SC typed). Absent = the entry's `name`.
+     * "Acme ERP", or whatever the SC typed; the ERP integration's row reads its
+     * own name, "ERP Integration" by default). Absent = the entry's `name`.
      */
     nameFromEnvVar?: string;
-    /**
-     * Appended to the name `nameFromEnvVar` supplies: the ERP integration's row
-     * reads "Acme ERP Integration" (owner, 2026-09-24 — an integration is named
-     * for the ERP it talks to). Meaningless without `nameFromEnvVar`; when the
-     * input is empty the row falls back to `name`, suffix and all.
-     */
-    nameSuffix?: string;
     /**
      * What an SC prepares in Commerce by hand for this component's demo, shown as a
      * checklist on its tile (AB-26x, owner 2026-09-25). Demo setup, not integration

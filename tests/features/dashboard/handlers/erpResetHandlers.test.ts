@@ -9,12 +9,14 @@
 import {
     ERP,
     ERP_URLS,
+    LIVE,
     allowDeveloperRole,
     handleResetErpRecords,
     mockCallErpApi,
     mockDetach,
     mockEnsureAdobeIOAuth,
     mockFillErpForProject,
+    mockStatus,
     pairProject,
     resetErpHandlerMocks,
     setupMocks,
@@ -22,11 +24,85 @@ import {
 } from './erpIntegrationHandlers.testUtils';
 import { ErrorCode } from '@/types/errorCodes';
 
+/** An integration that closes off orders on a reset (AB-16n), and what its detach answers. */
+const CLOSED = { cancelled: 2, commented: 1, alreadyClosed: 0, partsRemoved: 3, failed: [] };
+const UNDONE = {
+    reverted: { reverted: 2, failed: [] },
+    orders: { cleared: 1, failed: [] },
+    closed: CLOSED,
+};
+
 beforeEach(() => {
     resetErpHandlerMocks();
+    mockStatus.mockResolvedValue({ ...LIVE, closesOrdersOnReset: true });
+    mockDetach.mockResolvedValue(UNDONE);
 });
 
 describe('handleResetErpRecords', () => {
+    it('closes off every order the ERPs hold as it undoes their writes, before any wipe (AB-16n)', async () => {
+        const { mockContext } = setupMocks(pairProject());
+        allowDeveloperRole();
+
+        await handleResetErpRecords(mockContext, { id: 'erp-integration' });
+
+        expect(mockDetach).toHaveBeenCalledWith({ closeOrders: true });
+        expect(mockDetach.mock.invocationCallOrder[0]).toBeLessThan(
+            mockCallErpApi.mock.invocationCallOrder[0]
+        );
+    });
+
+    it('refuses before touching anything when the integration cannot close off orders', async () => {
+        const { mockContext } = setupMocks(pairProject());
+        allowDeveloperRole();
+        mockStatus.mockResolvedValue(LIVE);
+
+        const result = await handleResetErpRecords(mockContext, { id: 'erp-integration' });
+
+        expect(result).toEqual({
+            success: false,
+            error: 'The ERP reset did not finish: Nordwind integration cannot close off orders on a reset. Update it, then reset again.',
+        });
+        expect(mockDetach).not.toHaveBeenCalled();
+        expect(mockCallErpApi).not.toHaveBeenCalled();
+    });
+
+    it('stops before any wipe when the undo did not close off the orders', async () => {
+        const { mockContext } = setupMocks(pairProject());
+        allowDeveloperRole();
+        mockDetach.mockResolvedValue({
+            reverted: { reverted: 0, failed: [] },
+            orders: { cleared: 0, failed: [] },
+        });
+
+        const result = await handleResetErpRecords(mockContext, { id: 'erp-integration' });
+
+        expect(result.success).toBe(false);
+        expect(result.error).toMatch(/did not close off the orders; nothing was wiped/);
+        expect(mockCallErpApi).not.toHaveBeenCalled();
+    });
+
+    it('stops before any wipe when some orders could not be closed off, and names them (AB-47)', async () => {
+        const { mockContext } = setupMocks(pairProject());
+        allowDeveloperRole();
+        mockDetach.mockResolvedValue({
+            ...UNDONE,
+            closed: {
+                ...CLOSED,
+                cancelled: 1,
+                failed: [{ orderId: '000000042', error: 'Commerce timed out' }],
+            },
+        });
+
+        const result = await handleResetErpRecords(mockContext, { id: 'erp-integration' });
+
+        expect(result).toEqual({
+            success: false,
+            error: 'The ERP reset did not finish: Nordwind integration could not close off 1 order(s): 000000042 (Commerce timed out). Nothing was wiped; cancel or finish them in Commerce, then reset again.',
+        });
+        // The ERPs are untouched: the reset is run again once the order is dealt with.
+        expect(mockCallErpApi).not.toHaveBeenCalled();
+    });
+
     it('guards, then undoes, wipes and fills under one progress notification, and answers what each did', async () => {
         const { mockContext } = setupMocks(pairProject());
         allowDeveloperRole();
@@ -66,10 +142,7 @@ describe('handleResetErpRecords', () => {
                     lastDeployed: ERP.lastDeployed,
                 },
                 report: {
-                    undone: {
-                        reverted: { reverted: 2, failed: [] },
-                        orders: { cleared: 1, failed: [] },
-                    },
+                    undone: UNDONE,
                     erps: [
                         {
                             id: 'demo-erp',

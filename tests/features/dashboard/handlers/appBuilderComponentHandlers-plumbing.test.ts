@@ -552,14 +552,19 @@ describe('the add answer names what the SC named', () => {
     // Measured 2026-09-26: an add of the ERP pair named "Northwind ERP" answered
     // "ERP Integration", the catalog entry's name, while the tile, the workspace and the
     // progress title all said Northwind ERP. An agent relayed the wrong name.
-    it('answers with the name the progress title used, built from the typed name', async () => {
+    // Since AB-16o the integration has a name of its own: the typed name names the ERP,
+    // and the answer is the integration's name, the same one the progress title used.
+    it("answers with the integration's own name, and the typed name goes to its ERP", async () => {
         const { mockContext } = setupMocks();
         mockTestDeveloperPermissions(true);
         mockGetAppBuilderComponentEntry.mockReturnValue({
             ...ERP_ENTRY,
             name: 'ERP Integration',
-            nameFromEnvVar: 'ERP_DISPLAY_NAME',
-            nameSuffix: ' Integration',
+            nameFromEnvVar: 'INTEGRATION_DISPLAY_NAME',
+            envSchema: [
+                { name: 'ERP_DISPLAY_NAME', type: 'text', label: 'ERP name', default: 'Acme ERP' },
+                { name: 'INTEGRATION_DISPLAY_NAME', type: 'text', label: 'Integration name', default: 'ERP Integration' },
+            ],
         });
         mockGetAppBuilderComponentCatalog.mockReturnValue([
             { id: 'erp-db', kind: 'system', boundTo: 'erp-sync', nameFromEnvVar: 'ERP_DISPLAY_NAME' },
@@ -567,7 +572,9 @@ describe('the add answer names what the SC named', () => {
 
         const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync', name: 'Northwind ERP' });
 
-        expect(result.added).toEqual({ id: 'erp-sync', name: 'Northwind ERP Integration', kind: 'integration' });
+        expect(result.added).toEqual({ id: 'erp-sync', name: 'ERP Integration', kind: 'integration' });
+        const saved = (mockContext.stateManager.saveProject as jest.Mock).mock.calls[0][0];
+        expect(saved.componentConfigs['erp-sync']).toEqual({ ERP_DISPLAY_NAME: 'Northwind ERP' });
         mockGetAppBuilderComponentCatalog.mockReturnValue([]);
     });
 });

@@ -46,6 +46,8 @@ const FAKE_CATALOG: Record<string, AppBuilderComponentCatalogEntry> = {
         kind: 'integration',
         // As the bundled catalog has it (AB-16): added once, more ERPs from its card.
         addOnce: true,
+        // Named from an input, so it can be renamed (AB-16o).
+        nameFromEnvVar: 'INTEGRATION_DISPLAY_NAME',
         source: { owner: 'skukla', repo: 'commerce-erp-integration', branch: 'main' },
     },
     'demo-erp': {

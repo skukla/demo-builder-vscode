@@ -41,6 +41,7 @@ jest.mock(
         window: {
             activeColorTheme: { kind: 1 }, // Light theme
             showWarningMessage: jest.fn().mockResolvedValue('Cancel'), // Default: user cancels
+            showInformationMessage: jest.fn().mockResolvedValue(undefined),
             // Slow per-integration ops (add/remove/deploy) run inside a progress
             // notification — the mock must INVOKE the task or the handler's result
             // never materializes and every one of them reads as a failure.

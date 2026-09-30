@@ -24,8 +24,10 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
 
 import {
     addAppBuilderComponent,
+    deployAppBuilderComponent,
     removeAppBuilderComponent,
 } from '@/features/app-builder/services/appBuilderComponentRunner';
+import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { createDeps, createProject } from './appBuilderComponentRunner.testUtils';
 import { createSuccessResult } from '../../../helpers/commandResultFake';
 
@@ -101,6 +103,53 @@ describe("the pair's APIs are subscribed for this project only", () => {
             (entries as AppBuilderComponentCatalogEntry[]).map((e) => e.id),
         );
         expect(scopes).toEqual([['demo-erp'], ['demo-erp', 'erp-integration']]);
+    });
+});
+
+// AB-16o: the integration has a name of its own. A project made before it keeps the name
+// its card shows, and the next deploy tells Commerce that same name, not the default.
+describe("an integration from before it had a name of its own", () => {
+    type DeployCall = [string, string, unknown, unknown, { extraEnv?: Record<string, string> }];
+
+    it('redeploys under the name its card shows, and the card keeps it', async () => {
+        const project = createProject({
+            appBuilderComponents: {
+                'demo-erp': {
+                    kind: 'system',
+                    status: 'deployed',
+                    name: 'Northwind ERP',
+                    source: { owner: 'skukla', repo: 'demo-erp' },
+                    providesEnvVars: { ERP_BASE_URL: 'https://ns.adobeioruntime.net/api/v1/web/demo-erp' },
+                },
+                'erp-integration': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    name: 'Northwind ERP Integration',
+                    source: { owner: 'skukla', repo: 'commerce-erp-integration' },
+                },
+            },
+            componentConfigs: { 'erp-integration': { ERP_DISPLAY_NAME: 'Northwind ERP' } },
+            componentInstances: {
+                'erp-integration': {
+                    id: 'erp-integration',
+                    name: 'Northwind ERP Integration',
+                    status: 'ready',
+                    path: '/proj/components/erp-integration',
+                },
+            },
+        });
+        const deployApp = deployByPath();
+        const deps = createDeps({ deployApp, catalog: [...getAppBuilderComponentCatalog()] });
+
+        const result = await deployAppBuilderComponent(project, 'erp-integration', deps);
+
+        expect(result.success).toBe(true);
+        const [[, , , , opts]] = deployApp.mock.calls as unknown as DeployCall[];
+        expect(opts.extraEnv).toMatchObject({
+            INTEGRATION_DISPLAY_NAME: 'Northwind ERP Integration',
+            ERP_DISPLAY_NAME: 'Northwind ERP',
+        });
+        expect(project.appBuilderComponents?.['erp-integration']?.name).toBe('Northwind ERP Integration');
     });
 });
 

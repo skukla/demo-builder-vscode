@@ -40,3 +40,4 @@ raised so a future reader cross-referencing a branch name against the backlog is
 ## Shipped so far
 
 - 2026-09-29  Deleted the 7 stale ab-16j/k/n/o loop branches (5 commerce + 2 demo-erp), all local-only and merged to main; also removed the merged keymap branch. Backlog ids AB-16j/k kept as filed.
+- 2026-09-30  2026-09-30: the premise was half right — the feature branch HAD filed items at AB-16j (maintenance mode) and AB-16k (net price in force), invisible to the loop. On merge, the loop's ids were kept (46 references in code, tests and commits) and the feature branch's two items became AB-16q and AB-16p (7 references).

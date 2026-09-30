@@ -47,3 +47,7 @@ the generic Assets console vs a project-scoped folder is a real difference to th
 Tile renders on the dashboard when `aemAuthorUrl` is set, absent when not; clicking opens
 the correct AEM Assets URL; MCP tool returns/opens the same URL; a test pins the URL
 derivation from the setting.
+
+## Shipped so far
+
+- 2026-09-30  Shipped on loop/2026-09-30-erp-programme (64d3aa7fd): More menu 'AEM Assets' opens https://<demoBuilder.daLive.aemAuthorUrl>/assets.html/content/dam; unset setting → notification offering the setting. Agent surface: get_project_urls reports aemAssets, open_url accepts target aemAssets. Gate: dashboard + server suites (168), sop (58), tsc, typecheck:tests, npm run lint all green. Not yet live-probed — the running host serves the feature/erp-integration worktree build.

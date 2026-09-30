@@ -36,18 +36,27 @@ export interface ComponentSettingsChange {
 }
 
 /**
- * The setting a pair is named from (the ERP's name): its own `nameFromEnvVar`, or that of
- * the system bound to it. Fixed when the pair is added (owner, 2026-09-25): a rename
- * would have to move a label through five places while every id stays on the first name,
- * so a different name means removing the pair and adding it again.
+ * The setting a pair is named from (the ERP's name): the system's own `nameFromEnvVar`, or
+ * that of the system bound to this entry. Fixed when the pair is added (owner, 2026-09-25):
+ * a rename would have to move a label through five places while every id stays on the
+ * first name, so a different name means removing the pair and adding it again.
  */
 function pairNameSetting(
     entry: AppBuilderComponentCatalogEntry,
     catalog: AppBuilderComponentCatalogEntry[],
 ): string | undefined {
-    if (entry.nameFromEnvVar) return entry.nameFromEnvVar;
+    if (entry.kind === 'system') return entry.nameFromEnvVar;
     const kind = entry.catalogId ?? entry.id;
     return catalog.find((candidate) => candidate.kind === 'system' && candidate.boundTo === kind)?.nameFromEnvVar;
+}
+
+/**
+ * The setting an integration is named from (the ERP integration's own name, AB-16o). Not a
+ * Setting either: it changes by a rename, which relabels the card too, where a Settings
+ * save would change only what the next deploy sends.
+ */
+function ownNameSetting(entry: AppBuilderComponentCatalogEntry): string | undefined {
+    return entry.kind === 'system' ? undefined : entry.nameFromEnvVar;
 }
 
 /**
@@ -61,9 +70,9 @@ export function editableSettingsOf(
     const { userText, userSecret } = classifyEnvSchema(entry.envSchema ?? []);
     const partner = entry.boundTo ? catalog.find((candidate) => candidate.id === entry.boundTo) : undefined;
     const ownedByPartner = new Set((partner?.envSchema ?? []).map((envVar) => envVar.name));
-    const fixedName = pairNameSetting(entry, catalog);
+    const names = new Set([pairNameSetting(entry, catalog), ownNameSetting(entry)]);
     return [...userText, ...userSecret].filter(
-        (envVar) => !ownedByPartner.has(envVar.name) && envVar.name !== fixedName,
+        (envVar) => !ownedByPartner.has(envVar.name) && !names.has(envVar.name),
     );
 }
 
@@ -157,6 +166,9 @@ export function validateSettingsChange(
     for (const [name, value, type] of pairs) {
         if (name === fixedName) {
             return 'The name is fixed when the pair is added. To use a different name, remove it and add it again.';
+        }
+        if (name === ownNameSetting(entry)) {
+            return "The integration's name changes by renaming it (the pencil beside its name, or rename_integration).";
         }
         const refusal = refusalFor(editable.get(name), name, value, type);
         if (refusal) return refusal;

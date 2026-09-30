@@ -1,12 +1,55 @@
 # Several ERPs: returns (design draft)
 
-**Version: DRAFT r0, 2026-09-28.** Design only; nothing here is built. Extends the locked design
+**Version: r1, APPROVED by the owner 2026-09-28** (the integrated flow below replaces r0's
+manual steps where they differ). Design only; nothing here is built. Extends the locked design
 v1 (`design.md` §3.4, "Returns" and "Credit memo" rows) and vignette 9. Owner decided
 (2026-09-27): returns come after the routing slices, design first.
 
 **Source labels.** **[Adobe]** = read on an Adobe page (URL given). **[Ref]** = listed in the
 Cloud Service REST reference, not tried live. **[Code]** = read in the repos on 2026-09-28.
 **Not verified** = no source found; a live test is named instead.
+
+## r1: the integrated flow (approved 2026-09-28)
+
+The owner's direction: Commerce's own return process is largely manual, and clients now expect
+an integrated flow that handles the routine steps, with staff handling only exceptions. Where
+this section and the r0 text below differ, this section wins.
+
+| # | Step | Who | Return status in Commerce | Order status |
+|---|---|---|---|---|
+| 1 | Buyer requests a return on the storefront (`requestReturn`); staff can still enter one in Admin | Buyer | Pending | Complete (unchanged) |
+| 2 | The integration splits the lines by the ERP that SOLD each one (the order's parts record) and sends each ERP its return order | Integration | Pending | Complete |
+| 3 | Each ERP checks its own return policy (return window, returnable item) and accepts or refuses its lines; the integration authorizes or denies those lines in Commerce | Each ERP, then integration | Authorized / Partially Authorized / Denied | Complete |
+| 4 | On authorization, a return label: from Commerce's built-in carrier connection for returns (UPS, USPS, FedEx, DHL, "Enabled for RMA") if the client uses one, else from the ERP; emailed with the return number | Commerce or ERP | Authorized | Complete |
+| 5 | Goods arrive at the owning ERP's warehouse; the ERP posts the receipt; the integration sets the status | ERP, then integration | Return Received / Return Partially Received | Complete |
+| 6 | The ERP posts its credit memo; the integration makes the matching Commerce credit memo for that ERP's lines, offline, refunding to company credit when the order was on account; shipping refunded by rule (below) | ERP, then integration | Processed and Closed once every ERP's piece is credited | Closed when fully refunded (Commerce moves it itself) |
+| 7 | The buyer is told at each status by Commerce's own emails | Commerce | | |
+
+**Decisions (owner, 2026-09-28):**
+- **The integration moves the return's status** (Authorized/Denied from the ERP's policy, Return
+  Received from the ERP's receipt, Processed and Closed from the ERP's credit). Replaces r0's
+  "comments only". Waits on live test R-T2.
+- **Shipping is refunded automatically, by rule**: once, on the credit memo that completes the
+  return, when the return reason is the seller's fault (damaged, wrong item); a change of mind
+  gets none. One integration setting, because clients differ. A credit memo's Refund Shipping
+  amount is set through the same API (Experience League, "Issue a credit memo"). Replaces r0's
+  "staff refund shipping by hand".
+- **An ERP's refusal denies its lines in Commerce** (step 3), with the ERP's reason in a comment;
+  staff can override. Replaces r0's "no".
+
+**What the mock ERP gains beyond r0 §5.1:** a return policy (a return window in days per ERP,
+and "returnable" per product), the check that accepts or refuses a return order line against it.
+Return reason codes are standard in both (§2). Whether SAP or Business Central enforce a
+return WINDOW out of the box was not read from their documentation: verify before the mock ERP
+models it (the owner's rule: only standard ERP features). r0 had left return windows out.
+
+**Live tests added to §6:** R-T2 now decides the status writes (it was optional). R-T6: are the
+built-in carrier connections, "Enabled for RMA", available on Adobe Commerce as a Cloud Service?
+R-T7: a credit memo with a shipping refund, to company credit, on an order paid on account.
+
+**Open for the client:** whether they use a carrier connection for return labels or their
+ERP/3PL issues them; their return policy per business unit (window, returnable items); whether
+shipping is refunded for seller-fault returns only.
 
 ## 0. The answer in five lines
 
@@ -215,3 +258,4 @@ Sized like the B-slices. All come after B8.
 
 - 2026-09-28: r0 draft. Returns REST found in the Cloud Service reference (corrects design v1
   §3.4's "no REST endpoint found"); the RMA event is not verified.
+- 2026-09-28: r1 APPROVED by the owner: the integrated flow (ERP policy authorizes, the integration moves the return's status, carrier label on authorization, shipping refunded by rule, an ERP refusal denies its lines). Live tests R-T6, R-T7 added.

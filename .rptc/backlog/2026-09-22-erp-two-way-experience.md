@@ -5,7 +5,8 @@ area: app-builder
 parent: AB-9
 needs: []
 value: med
-status: active
+status: superseded
+superseded-by: AB-26
 ---
 
 # The two-way ERP integration, as the two business users experience it
@@ -201,3 +202,4 @@ Filed 2026-09-22.
 - 2026-09-22  ERP → Commerce events in the same history, with Retry, in skukla/commerce-erp-integration on feature/sync-history (7ae953a); not pushed, not deployed
 - 2026-09-23  docs(research): what ERPs, integrations and commerce connectors actually ship (`541a33cac`)
 - 2026-09-23  docs(plan): rebuild the mock ERP's screens around what an ERP really owns (`116480757`)
+- 2026-09-28  2026-09-28 superseded by AB-26 (owner: yes). Its history, Retry and follow-one-order parts shipped on the integration's main (2244a65, 7ae953a, 6b542ba); price explanations were never built; its decision 1 (pricing stays out of Commerce price lists) was reversed by AB-26z, which moved ERP prices into shared catalogs.

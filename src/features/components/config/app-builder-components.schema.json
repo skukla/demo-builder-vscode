@@ -154,12 +154,7 @@
         },
         "nameFromEnvVar": {
           "type": "string",
-          "description": "The env var whose value names this component's row (the ERP's display name). Omitted = the entry's name."
-        },
-        "nameSuffix": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Appended to the name nameFromEnvVar supplies: the ERP integration reads '<ERP name> Integration'. Requires nameFromEnvVar; an empty input falls back to the entry's name."
+          "description": "The env var whose value names this component's row: the ERP's display name, the ERP integration's own name. Omitted = the entry's name."
         },
         "setupSteps": {
           "type": "array",

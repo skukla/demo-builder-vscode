@@ -96,7 +96,9 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             "Change one App Builder integration's DISPLAY NAME on the current project. The id, " +
             'its folder and its Runtime package are immutable and do not move. Local metadata ' +
             'only — nothing redeploys. Pre-built catalog integrations and the API Mesh cannot ' +
-            'be renamed.',
+            'be renamed, except the ERP integration: its new name reaches Commerce Admin (menu, ' +
+            'page title, app name) on its next update_integration or redeploy_integration, which ' +
+            'the answer\'s note says; ask the user before running either. Its ERPs keep their names.',
         map: dashboardHandlers,
         type: 'renameAppBuilderComponent',
         inputSchema: {
@@ -481,25 +483,19 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            'Reset every ERP the ERP integration serves: undo the credit limits and ' +
-            'company blocks they wrote into Commerce, clear the ERP order numbers from Commerce ' +
-            'orders, wipe every ERP record, then fill each again from the Commerce products, companies ' +
-            "and customers as they stand, and publish each ERP's " +
-            "customer prices into the companies' shared catalogs (data.warning says when they were not). " +
-            'Commerce is the master; the ERP is transitory. Confirm with the user first. Takes the integration id, ' +
-            "and `erp` (an ERP's component id) to reset only that one: only its writes are undone and the " +
-            'other ERPs are untouched. An integration deployed before per-ERP reset refuses `erp`; redeploy it.',
+            "Reset every ERP the ERP integration serves, back to zero: close off every order the ERPs " +
+            'hold (an order Commerce can still cancel is cancelled, one it cannot keeps a note, and the ' +
+            'integration forgets them all), undo the credit limits and company blocks the ERPs wrote into ' +
+            'Commerce, wipe every ERP record, then fill each again from the Commerce products, companies ' +
+            "and customers as they stand, and publish each ERP's customer prices into the companies' " +
+            'shared catalogs (data.warning says when they were not). A cancelled order cannot be ' +
+            'reopened. Always every ERP: a split order spans ERPs. Confirm with the user first. Takes the ' +
+            'integration id.',
         map: dashboardHandlers,
         type: 'resetErpRecords',
         confirm: true,
         inputSchema: {
             id: z.string().describe('The ERP integration id (from get_project)'),
-            erp: z
-                .string()
-                .optional()
-                .describe(
-                    "Which ERP, by its component id (from get_erp_status's erps); default every ERP",
-                ),
         },
     },
     {

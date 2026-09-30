@@ -9,6 +9,8 @@
  *   - the entry's TEXT settings (`componentConfigs[id]`, set on the integration's
  *     tile): a bound system takes its integration's value first (the SC names the
  *     ERP once, on the integration), then its own, then the schema's `default`;
+ *     the input an unbound entry is NAMED from falls back to its recorded name
+ *     before the default, so a project older than that input keeps its name;
  *   - the values another component PROVIDES (`envSchema[].providedBy`), read off
  *     the persisted `providesEnvVars` of every component in the project;
  *   - for a second copy of a kind, which copy it is (`DEMO_BUILDER_COPY_NUMBER`).
@@ -26,7 +28,7 @@
 export { ensureCommerceAppId } from './commerceAppId';
 import { getProvidedEnvVars } from '@/core/state/appBuilderComponentState';
 import { pairedInstanceId } from '@/features/components/services/appBuilderComponentLinks';
-import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
+import type { AppBuilderComponentCatalogEntry, AppBuilderComponentEnvVar } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';
 
 /** The mesh's provided value is its GraphQL endpoint, resolved by the mesh tail, not here. */
@@ -59,6 +61,25 @@ function textInputValue(
         if (typeof value === 'string' && value.trim().length > 0) return value;
     }
     return fallback;
+}
+
+/**
+ * What a text input falls back to when nothing is set: the schema default — except the
+ * input an entry is NAMED from, which first falls back to the name the entry is recorded
+ * under. The ERP integration gained a name of its own (`INTEGRATION_DISPLAY_NAME`, AB-16o)
+ * after projects already showed "Northwind ERP Integration"; without this their next
+ * deploy would rename the card and Commerce's labels to the default (owner rule: existing
+ * projects keep their names). Not for a bound system: it takes its integration's values
+ * first, and its name stays exactly as it resolved before.
+ */
+function fallbackFor(
+    project: Project,
+    entry: AppBuilderComponentCatalogEntry,
+    envVar: AppBuilderComponentEnvVar,
+): string | undefined {
+    if (envVar.name !== entry.nameFromEnvVar || entry.boundTo) return envVar.default;
+    const recorded = project.appBuilderComponents?.[entry.id]?.name?.trim();
+    return recorded || envVar.default;
 }
 
 /**
@@ -101,7 +122,7 @@ export function resolveDeployInputs(
         if (envVar.type === 'secret') continue;
         const value = envVar.providedBy
             ? providedValue(project, entry, envVar.providedBy, envVar.name) ?? provided[envVar.name]
-            : textInputValue(project, entry, envVar.name, envVar.default);
+            : textInputValue(project, entry, envVar.name, fallbackFor(project, entry, envVar));
         if (value !== undefined) {
             inputs[envVar.name] = value;
         }
@@ -202,9 +223,8 @@ export function deriveProvidedValues(
 /**
  * The display name a component's row carries when its catalog entry says the
  * name comes from an input (`nameFromEnvVar`: the ERP is called whatever the
- * SC named it), with the entry's `nameSuffix` appended — so the integration
- * bound to "Northwind ERP" reads "Northwind ERP Integration" (owner,
- * 2026-09-24). Falls back to the entry's own name when the input is empty.
+ * SC named it; the ERP integration by its own name, AB-16o). Falls back to the
+ * entry's own name when the input is empty.
  *
  * @param entry - the catalog entry
  * @param inputs - the resolved deploy inputs
@@ -215,8 +235,7 @@ export function resolveDisplayName(
     inputs: Record<string, string>,
 ): string {
     const fromInput = entry.nameFromEnvVar ? inputs[entry.nameFromEnvVar]?.trim() : undefined;
-    if (!fromInput) return entry.name;
-    return `${fromInput}${entry.nameSuffix ?? ''}`;
+    return fromInput || entry.name;
 }
 
 /**

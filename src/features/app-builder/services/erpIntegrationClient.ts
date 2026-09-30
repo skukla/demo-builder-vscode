@@ -32,18 +32,26 @@ export interface ErpIntegrationStatus {
     };
     erpBaseUrl: string | null;
     ledger: { entries: number };
-    /** Whether `erp/detach` can undo one ERP's writes alone (`?erp=`); absent on a deployment before it. */
-    detachesPerErp?: boolean;
+    /** Whether `erp/detach` closes off the ERPs' orders when asked (`closeOrders`, AB-16n). */
+    closesOrdersOnReset?: boolean;
 }
 
 /**
  * What `erp/detach` answers: the company writes undone and the ERP order numbers cleared, and
- * `erp`, the one ERP undone, when one was asked for and the deployment honoured it.
+ * `closed`, present only when it closed off the orders the ERPs hold (AB-16n): orders
+ * cancelled, orders only noted (invoiced or shipped), orders an earlier reset closed, parts
+ * records removed, and each order it could not close, in words.
  */
 export interface ErpDetachReport {
-    erp?: string;
     reverted?: { reverted: number; failed: unknown[] };
     orders?: { cleared: number; failed: unknown[] };
+    closed?: {
+        cancelled: number;
+        commented: number;
+        alreadyClosed: number;
+        partsRemoved: number;
+        failed: Array<{ orderId: string; error: string }>;
+    };
 }
 
 export type ErpAction =
@@ -165,16 +173,14 @@ export class ErpIntegrationClient {
     }
 
     /**
-     * Undo what the integration wrote onto Commerce, leaving the ERP as it is. With `erpId` (its
-     * list id), that ERP's writes alone; else every ERP's. Ask `status().detachesPerErp` first:
-     * a deployment before it ignores the id and undoes every ERP.
+     * Undo what the integration wrote onto Commerce, leaving the ERP as it is. With
+     * `closeOrders` (a reset, AB-16n), it first closes off every order the ERPs hold: cancelled
+     * when Commerce still can, noted when not, and forgotten by the integration. Ask
+     * `status().closesOrdersOnReset` first: a deployment before it ignores the option.
      */
-    async detach(erpId?: string): Promise<ErpDetachReport> {
-        return (await this.call(
-            'detach',
-            'POST',
-            erpId ? { erp: erpId } : undefined,
-        )) as ErpDetachReport;
+    async detach(options: { closeOrders?: boolean } = {}): Promise<ErpDetachReport> {
+        const body = options.closeOrders ? { closeOrders: true } : undefined;
+        return (await this.call('detach', 'POST', undefined, body)) as ErpDetachReport;
     }
 
     /** One product (by SKU) or one company (by Commerce id) as both systems hold it. */

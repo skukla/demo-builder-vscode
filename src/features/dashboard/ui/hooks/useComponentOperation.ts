@@ -85,8 +85,8 @@ export interface ComponentOperationControls extends OperationRunnerControls {
     run: (id: string, name: string, action: CardAction) => boolean;
     /** Open the modal for an add the Add flow has just sent; Retry re-sends it. */
     started: (id: string, name: string, payload?: Record<string, unknown>) => void;
-    /** Run the ERP reset the card's confirmation dialog just agreed to; `erp` resets that ERP alone. */
-    resetErp: (id: string, erpName: string, erp?: string) => void;
+    /** Run the ERP reset the card's confirmation dialog just agreed to. */
+    resetErp: (id: string, erpName: string) => void;
     /** Fill an ERP from Commerce; `id` is the integration it runs through, `erp` which of its ERPs. */
     loadErpData: (id: string, erpName: string, erp?: string) => void;
     /** Add another ERP to the integration `id`, named `erpName` (AB-16). */
@@ -116,12 +116,11 @@ export function useComponentOperation(): ComponentOperationControls {
      * opening a notification of its own until 2026-09-20.
      */
     const resetErp = useCallback(
-        (id: string, erpName: string, erp?: string): void => {
+        (id: string, erpName: string): void => {
             start({
                 id,
                 name: erpName,
                 message: 'resetErpRecords',
-                ...(erp ? { payload: { erp } } : {}),
                 title: `Resetting ${erpName} records`,
                 failureTitle: `Couldn't reset ${erpName} records`,
                 successTitle: `${erpName} records reset`,
