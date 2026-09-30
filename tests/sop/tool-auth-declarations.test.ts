@@ -48,7 +48,9 @@ const EXPECTED: Record<string, number> = {
     // 36 -> 37 when develop added rename_adobe_project (picked 2026-09-21).
     // 37 -> 38 when develop added list_runtime_packages (picked 2026-09-21).
     adobe: 38,
-    dalive: 21,
+    // 21 -> 23 on 2026-09-30 (hotfix beta.149): get_content_access and set_content_reader
+    // read and write the DA.live org permissions sheet (EDS-22).
+    dalive: 23,
     // 10 -> 12 on 2026-09-12: forget_added_demo and change_demo_source (step 06
     // of the shareable-demo program) both read and write GitHub; 12 -> 14 the
     // same day for probe_shared_demo and add_shared_demo (step 07).
@@ -73,7 +75,8 @@ const EXPECTED: Record<string, number> = {
  * files. That counts text, not declarations, and was roughly double. The CONTROL below
  * caught it — which is the argument for having one.)
  */
-const EXPECTED_TOOLS = 121;
+// 121 -> 123 on 2026-09-30 (hotfix beta.149): the content-access pair (EDS-22).
+const EXPECTED_TOOLS = 123;
 
 interface Declaration {
     name: string;

@@ -19,6 +19,16 @@ jest.mock('@/features/eds/services/configService/siteAccessManagerHeadless', () 
     looksLikeEmail: jest.fn(() => true),
 }));
 
+const mockListContentReaders = jest.fn();
+const mockAddContentReader = jest.fn();
+const mockRemoveContentReader = jest.fn();
+jest.mock('@/features/eds/services/daLive/contentAccessManagerHeadless', () => ({
+    listContentReaders: (...a: unknown[]) => mockListContentReaders(...a),
+    addContentReader: (...a: unknown[]) => mockAddContentReader(...a),
+    removeContentReader: (...a: unknown[]) => mockRemoveContentReader(...a),
+    looksLikeEmail: jest.fn(() => true),
+}));
+
 jest.mock('@/features/eds/services/configService/configAccessRecovery', () => ({
     waitForConfigAccess: jest.fn(),
 }));
@@ -252,3 +262,110 @@ describe('ManageSiteAccessCommand — no admin role', () => {
         expect(mockWait).not.toHaveBeenCalled();
     });
 });
+
+/**
+ * The content half (EDS-22): who may READ the authored content on DA.live, from the
+ * same list as the configuration admins. The service is mocked; what is pinned is the
+ * rows offered, the target the service is handed (the project's DA.live org and site,
+ * or the pair typed when no project is open), and that a removal asks first.
+ */
+describe('ManageSiteAccessCommand — content readers', () => {
+    const showQuickPick = vscode.window.showQuickPick as jest.Mock;
+    const showInputBox = vscode.window.showInputBox as jest.Mock;
+    const OK: SiteAccessListing = { status: 'ok', site: 'demo-org/wire', siteAdmins: [], orgAdmins: [], canManage: true };
+    const TARGET = { org: 'demo-org', site: 'wire' };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockListSiteAccess.mockResolvedValue(OK);
+        mockListContentReaders.mockResolvedValue({
+            status: 'ok',
+            ...TARGET,
+            readers: [
+                { email: 'owner@example.test', actions: 'write' },
+                { email: 'colleague@example.test', actions: 'read' },
+            ],
+        });
+        mockAddContentReader.mockResolvedValue({ status: 'ok', ...TARGET, readers: [], verified: true });
+        mockRemoveContentReader.mockResolvedValue({ status: 'ok', ...TARGET, readers: [], verified: true });
+    });
+
+    /** The rows the picker was offered, by label. */
+    const offered = (): string[] => (showQuickPick.mock.calls[0][0] as Array<{ label: string }>).map((i) => i.label);
+
+    it("lists the project's readers beside its admins, from the project's DA.live org and site", async () => {
+        showQuickPick.mockResolvedValueOnce(undefined);
+
+        await command().execute();
+
+        expect(mockListContentReaders).toHaveBeenCalledWith(TARGET, expect.anything(), expect.anything());
+        expect(offered()).toEqual([
+            '$(add) Add a configuration admin',
+            '$(add) Let someone read the authored content',
+            'owner@example.test',
+            '$(trash) Stop colleague@example.test reading the content',
+        ]);
+    });
+
+    it('lets a typed address read, through the project target', async () => {
+        showQuickPick.mockImplementationOnce(async (items: Array<{ action: string }>) =>
+            items.find((i) => i.action === 'add-reader'),
+        );
+        showInputBox.mockResolvedValueOnce('new.reader@example.test');
+
+        await command().execute();
+
+        expect(mockAddContentReader).toHaveBeenCalledWith(TARGET, 'new.reader@example.test', expect.anything(), expect.anything());
+        expect(mockRemoveContentReader).not.toHaveBeenCalled();
+    });
+
+    it('asks before stopping a reader, and does nothing when the answer is not Stop', async () => {
+        showQuickPick.mockImplementationOnce(async (items: Array<{ action: string }>) =>
+            items.find((i) => i.action === 'remove-reader'),
+        );
+        showWarning.mockResolvedValueOnce('Cancel');
+
+        await command().execute();
+
+        expect(showWarning.mock.calls[0][0]).toContain("Stop colleague@example.test reading wire's content?");
+        expect(mockRemoveContentReader).not.toHaveBeenCalled();
+    });
+
+    it('stops the reader once confirmed', async () => {
+        showQuickPick.mockImplementationOnce(async (items: Array<{ action: string }>) =>
+            items.find((i) => i.action === 'remove-reader'),
+        );
+        showWarning.mockResolvedValueOnce('Stop');
+
+        await command().execute();
+
+        expect(mockRemoveContentReader).toHaveBeenCalledWith(TARGET, 'colleague@example.test', expect.anything(), expect.anything());
+    });
+
+    it('with no project open, asks for the org and site and manages their readers alone', async () => {
+        const stateManager = createMockStateManager({
+            getCurrentProject: jest.fn().mockResolvedValue(undefined),
+        }) as unknown as StateManager;
+        const cmd = new ManageSiteAccessCommand(createMockExtensionContext(), stateManager, createMockLogger() as unknown as Logger);
+        showInputBox.mockResolvedValueOnce(' kmanns ').mockResolvedValueOnce('justrite');
+        mockListContentReaders.mockResolvedValue({ status: 'ok', org: 'kmanns', site: 'justrite', readers: [] });
+        showQuickPick.mockResolvedValueOnce(undefined);
+
+        await cmd.execute();
+
+        expect(mockListSiteAccess).not.toHaveBeenCalled();
+        expect(mockListContentReaders).toHaveBeenCalledWith({ org: 'kmanns', site: 'justrite' }, expect.anything(), expect.anything());
+        expect(offered()).toEqual(['$(add) Let someone read the authored content']);
+        expect(everythingWarned()).not.toContain('No project loaded');
+    });
+
+    it("says who can fix it when DA.live refuses the org's sheet", async () => {
+        mockListContentReaders.mockResolvedValue({ status: 'not_authorized', ...TARGET, error: '401' });
+        showQuickPick.mockResolvedValueOnce(undefined);
+
+        await command().execute();
+
+        expect(offered()).toContain('Content readers could not be read');
+    });
+});
+

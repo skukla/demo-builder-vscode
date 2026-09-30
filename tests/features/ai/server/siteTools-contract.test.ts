@@ -19,6 +19,8 @@ import {
     mockListSiteAccess,
     mockAddSiteAdmin,
     mockRemoveSiteAdmin,
+    mockListContentReaders,
+    mockAddContentReader,
     mockRepairSiteConfigForProject,
     mockFindStorefrontNameMismatch,
     mockMigrateStorefrontNameForProject,
@@ -56,6 +58,40 @@ describe('response ceilings', () => {
             confirm: true,
         });
         expectWithinCeiling('set_site_admin', raw);
+    });
+
+    it('get_content_access stays under its ceiling with a full readers list', async () => {
+        mockListContentReaders.mockResolvedValue({
+            status: 'ok',
+            org: 'someone',
+            site: 'demo-builder-test',
+            readers: [
+                { email: 'first.owner@example.test', actions: 'write' },
+                { email: 'mcp-probe@example.test', actions: 'read' },
+            ],
+        });
+
+        expectWithinCeiling('get_content_access', await harness().callRaw('get_content_access'));
+    });
+
+    it('set_content_reader stays under its ceiling', async () => {
+        mockAddContentReader.mockResolvedValue({
+            status: 'ok',
+            org: 'someone',
+            site: 'demo-builder-test',
+            readers: [
+                { email: 'first.owner@example.test', actions: 'write' },
+                { email: 'mcp-probe@example.test', actions: 'read' },
+            ],
+            verified: true,
+        });
+
+        const raw = await harness().callRaw('set_content_reader', {
+            email: 'mcp-probe@example.test',
+            read: true,
+            confirm: true,
+        });
+        expectWithinCeiling('set_content_reader', raw);
     });
 
     it('repair_site_configuration stays under its ceiling, overlay URL and all', async () => {
@@ -137,6 +173,8 @@ describe('what these tools declare themselves to be', () => {
         ['get_site_access', true, false],
         ['find_storefront_name_mismatches', true, false],
         ['set_site_admin', false, true],
+        ['get_content_access', true, false],
+        ['set_content_reader', false, true],
         ['migrate_storefront_name', false, true],
         ['repair_site_configuration', false, false],
         ['connect_dalive', false, false],
@@ -169,6 +207,8 @@ describe('what these tools declare themselves to be', () => {
         ['find_storefront_name_mismatches', []],
         ['connect_dalive', []],
         ['set_site_admin', ['email', 'admin', 'confirm']],
+        ['get_content_access', []],
+        ['set_content_reader', ['email', 'read', 'confirm']],
         ['repair_site_configuration', ['confirm']],
         ['migrate_storefront_name', ['projectPath', 'confirm', 'confirmName']],
     ];
@@ -193,6 +233,7 @@ describe('what these tools declare themselves to be', () => {
      */
     const ARGS_REACHING_THE_GATE: Record<string, Record<string, unknown>> = {
         set_site_admin: { email: 'someone@example.test', admin: true },
+        set_content_reader: { email: 'someone@example.test', read: true },
         migrate_storefront_name: { projectPath: '/projects/demo' },
     };
 

@@ -94,6 +94,7 @@ export const TOOL_NARRATION: Record<string, string> = {
     get_project_urls: 'Looking up the project URLs',
     get_settings: 'Reading the Demo Builder settings',
     get_site_access: 'Checking who can administer the site',
+    get_content_access: "Checking who can read the storefront's content",
     get_store_structure: 'Reading the saved store structure',
     list_adobe_projects: 'Listing your Adobe Console projects',
     list_ai_prompts: 'Listing your saved prompts',
@@ -196,6 +197,7 @@ export const TOOL_NARRATION: Record<string, string> = {
     repair_site_configuration: 'Repairing the site configuration',
     // Grants OR revokes.
     set_site_admin: 'Changing who can administer the site',
+    set_content_reader: "Changing who can read the storefront's content",
 
     // ── GitHub and DA.live ──────────────────────────────────────────────
     create_github_repo: 'Creating the GitHub repository',

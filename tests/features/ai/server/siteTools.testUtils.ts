@@ -44,6 +44,16 @@ jest.mock('@/features/eds/services/configService/siteAccessManagerHeadless', () 
     removeSiteAdmin: (...a: unknown[]) => mockRemoveSiteAdmin(...a),
 }));
 
+export const mockListContentReaders = jest.fn();
+export const mockAddContentReader = jest.fn();
+export const mockRemoveContentReader = jest.fn();
+
+jest.mock('@/features/eds/services/daLive/contentAccessManagerHeadless', () => ({
+    listContentReaders: (...a: unknown[]) => mockListContentReaders(...a),
+    addContentReader: (...a: unknown[]) => mockAddContentReader(...a),
+    removeContentReader: (...a: unknown[]) => mockRemoveContentReader(...a),
+}));
+
 jest.mock('@/features/eds/services/configService/repairSiteConfigForProject', () => ({
     repairSiteConfigForProject: (...a: unknown[]) => mockRepairSiteConfigForProject(...a),
 }));
@@ -69,7 +79,22 @@ type Tool = (args?: unknown) => Promise<{ content: Array<{ text: string }> }>;
 // owner/repo), and these tools now refuse a project that is not one. The fixture
 // previously carried only name+path, which describes a project with NO stack —
 // a shape these tools were never meant to answer for.
-export const project = { name: 'demo', path: '/projects/demo', selectedStack: 'eds-accs' };
+// The DA.live pair the content tools act on comes from the storefront instance's
+// metadata (`getEdsDaLiveTarget`): the org, and the site as the repository name.
+export const project = {
+    name: 'demo',
+    path: '/projects/demo',
+    selectedStack: 'eds-accs',
+    componentInstances: {
+        'eds-storefront': {
+            id: 'eds-storefront',
+            name: 'EDS Storefront',
+            type: 'frontend',
+            status: 'ready',
+            metadata: { githubRepo: 'someone/demo', daLiveOrg: 'someone' },
+        },
+    },
+};
 /** A project these tools do not apply to. */
 export const headlessProject = { name: 'headless', path: '/projects/headless', selectedStack: 'headless-accs' };
 export const extensionContext = { secrets: {} };
@@ -174,6 +199,14 @@ export const candidate = {
 export function resetSiteToolsMocks(): void {
     jest.clearAllMocks();
     mockListSiteAccess.mockResolvedValue({ status: 'ok', site: 'acme/store', canManage: true });
+    mockListContentReaders.mockResolvedValue({
+        status: 'ok',
+        org: 'someone',
+        site: 'demo',
+        readers: [{ email: 'owner@example.test', actions: 'write' }],
+    });
+    mockAddContentReader.mockResolvedValue({ status: 'ok', org: 'someone', site: 'demo', readers: [], verified: true });
+    mockRemoveContentReader.mockResolvedValue({ status: 'ok', org: 'someone', site: 'demo', readers: [], verified: true });
     mockAddSiteAdmin.mockResolvedValue({ status: 'ok', verified: true, canManage: true });
     mockRemoveSiteAdmin.mockResolvedValue({ status: 'ok', verified: true, canManage: true });
     mockRepairSiteConfigForProject.mockResolvedValue({ status: 'repaired', verified: true });
