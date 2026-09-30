@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: [AB-26c]
 value: high
-status: active
+status: shipped
 ---
 
 # Sync validation — every entity, both directions, proved (V)
@@ -29,6 +29,7 @@ Every matrix row has a journey; the baseline's failures match the matrix's gaps 
 - 2026-09-29  2026-09-29 (loop) LANE-1 DONE: docs/sync-validation.md written on commerce-erp-integration loop/2026-09-29-ab-26e-sync-validation (pushed) — one journey per entity-matrix row (product, stock per source, company, credit limit/block, order+status, shipment/invoice both ways, cancel/hold, contract prices, currency), both directions with reset, expected result beside each step, gaps G1/G2/G3/G5 marked, plus a several-ERPs pass. Products first. REMAINING (lane-2, owner): run it against the demo instance and record PASS/FAIL per row.
 - 2026-09-29  docs(loop): AB-26e live-validation script written (lane-1 done) (`e35ff1713`)
 - 2026-09-29  docs(loop): AB-26e — harness journeys confirmed built; live script is what remains (`58e233005`)
+- 2026-09-29  2026-09-29 (loop) LANE-2 DONE: docs/sync-validation.md run live on Bodea — every entity both directions PASS, gaps confirmed (G2 stock ERP->Commerce, G4 Commerce hold->ERP not built + REST hold no-op, G5 currency now FIXED), three bugs found+fixed+deployed live (AB-40/41/43), currency shows ISO code. Several-ERPs pass PASS (split order fans to owning ERP, each reports only its part, write isolation, reset to zero). RESET leg now proven (reset_erp_records returned both ERPs to zero, ledgered writes undone) — matrix row flipped to +. Remaining - legs (remove-integration clean, fresh add first-sync) fold into AB-16f.
 
 ## The end-to-end matrix, live status (2026-09-25 — owner: "our goal is a complete end to end test of all data flows")
 
@@ -55,7 +56,7 @@ Run through the Demo Builder agent tools against the demo instance (Bodea) and t
 | Credit reject → order cancelled | ERP → Commerce | ✓ 2026-09-25 12:21 |
 | Shipment → Commerce shipment (source) | ERP → Commerce | ✓ 2026-09-25 12:31 |
 | Invoice → Commerce invoice (capture) | ERP → Commerce | ✓ 2026-09-25 12:36 (order complete) |
-| Reset → ledgered writes undone, ERP re-mirrored | both | ○ with real ledger entries |
+| Reset → ledgered writes undone, ERP re-mirrored | both | ✓ 2026-09-29 (reset_erp_records: both ERPs to zero, 8 credit reversions undone, 2 orders cancelled + 5 kept/noted) |
 | Remove integration → Commerce clean (credit, status, ext_order_id, holds) | both | ○ |
 | Fresh add → install-time first sync | install | ○ |
 | Agent tools read both sides and the crossing | agent surface | ✓ 2026-09-25 (`get_erp_order_trace`, `run_commerce_rest`, `run_erp_rest`, activations) |

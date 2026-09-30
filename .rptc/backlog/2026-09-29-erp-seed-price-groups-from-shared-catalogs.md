@@ -4,7 +4,7 @@ kind: question
 area: app-builder
 needs: []
 value: high
-status: open
+status: built
 parent: AB-26
 ---
 
@@ -63,3 +63,4 @@ The owner decides seed-or-not; if seed, an implementation item is opened with th
 ## Shipped so far
 
 - 2026-09-29  Owner decided 2026-09-29: YES, seed each ERP's price groups/price lists from Commerce's custom shared catalogs at setup (one-time reverse seed; ERP stays master afterward). Also set partner.priceGroup from the shared-catalog customer group. Implementation to follow as its own item.
+- 2026-09-30  2026-09-29 Implementation opened as [[AB-44]] and started (reverse seed at fill time). Question resolved.

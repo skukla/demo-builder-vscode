@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-16
 needs: [AB-16a]
 value: high
-status: backlog
+status: built
 ---
 
 # Live proofs still owed on Bodea for several ERPs
@@ -35,3 +35,4 @@ Each line above has been seen working on Bodea, with the order numbers recorded 
 - 2026-09-28  2026-09-28: Contoso's own events reach the integration (AB-16i): a price list change reached the shared catalog in 12 seconds, both ways.
 - 2026-09-28  2026-09-28 QUESTION for the owner (does not block): the demo ERP never refuses an order and no longer has an outage switch (removed 2026-09-17), so the Partially Held proof needs a connection broken on purpose. Two ways: (a) put a wrong address for Contoso in the integration's ERP list, place a mixed order, restore the address, press Re-send; (b) skip the live proof and rely on the tests. Recommended: (a), on Bodea, undone in the same sitting. Not done tonight: breaking a live connection was not in the loop's authorisation.
 - 2026-09-28  docs(backlog): AB-16d logs Contoso's filtered fill (`b6432fb77`)
+- 2026-09-30  2026-09-29 Live several-ERPs proofs RUN on Bodea (AB-26e §Several-ERPs): split fan-out to owning ERP, per-ERP part isolation, Contoso price write reaching Commerce with Northwind untouched, reset to zero — all PASS. The 'not yet seen working live' premise no longer holds.

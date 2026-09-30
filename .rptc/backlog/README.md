@@ -260,7 +260,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-20` | fix | [Setup resumes when the install dialog detects AEM Code Sync, instead of demanding a Retry](2026-09-25-eds-setup-resumes-after-code-sync-install.md) | — | high | built |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | backlog |
 
-### app-builder  (82)
+### app-builder  (84)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -283,7 +283,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-13` | feature | └ [An installed integration takes an update: new code, then Commerce brought to it](2026-09-17-integration-updates.md) | — | high | active |
 | `AB-14` | question | └ [Where does an ERP price go when the project also has ACO?](2026-09-17-erp-pricing-to-aco.md) | PL-60 | low | gated |
 | `AB-15` | fix | └ [Refuse an ERP integration that would collide with another project's](2026-09-17-erp-integration-conflicting-setups.md) | AB-23 | med | active |
-| `AB-16` | feature | └ [One integration, several ERPs](2026-09-17-erp-integration-several-erps.md) | AB-23 | med | active |
+| `AB-16` | feature | └ [One integration, several ERPs](2026-09-17-erp-integration-several-erps.md) | AB-23 | med | built |
 | `AB-17` | question | └ [Should each system and integration get its own Adobe workspace?](2026-09-17-workspace-per-system.md) | — | high | shipped |
 | `AB-18` | fix | └ [A Commerce product profile the SC is not a developer on locks them out of their own project](2026-09-17-accs-subscription-makes-project-read-only.md) | — | high | backlog |
 | `AB-19` | feature | └ [Ask the ERP live whether it can ship this, and when](2026-09-18-live-availability-check.md) | — | med | active |
@@ -295,7 +295,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-16a` | feature | └ [The integration signs in to each ERP with that ERP's own credential](2026-09-28-erp-per-erp-credentials.md) | — | high | built |
 | `AB-16b` | fix | └ [Bodea carts fail intermittently with "Internal server error"](2026-09-28-erp-bodea-carts-fail.md) | — | high | shipped |
 | `AB-16c` | feature | └ [Screens and agent tools that still assume one ERP](2026-09-28-erp-one-erp-surfaces.md) | — | med | shipped |
-| `AB-16d` | feature | └ [Live proofs still owed on Bodea for several ERPs](2026-09-28-erp-live-proofs.md) | AB-16a | high | backlog |
+| `AB-16d` | feature | └ [Live proofs still owed on Bodea for several ERPs](2026-09-28-erp-live-proofs.md) | AB-16a | high | built |
 | `AB-16e` | feature | └ [Returns across several ERPs](2026-09-28-erp-returns-across-erps.md) | — | med | backlog |
 | `AB-16f` | feature | └ [Fresh start: delete Bodea, rebuild from the setup guide, walk the journeys](2026-09-28-erp-fresh-start-rehearsal.md) | AB-16a, AB-16d, AB-26z | high | backlog |
 | `AB-16g` | fix | └ [Northwind's key map lost its company pairs](2026-09-28-erp-key-map-lost-pairs.md) | — | high | shipped |
@@ -310,8 +310,8 @@ each item's own file; what has already landed against an item is in its
 | `AB-26b` | feature | └ [Commerce API inventory and validation — every call the programme needs, proven to exist, captured as fixtures](2026-09-24-erp-commerce-api-inventory.md) | — | high | built |
 | `AB-26c` | feature | └ [Pair-in-a-box: the ERP in-process behind the integration, a fake Commerce in front (T-1)](2026-09-24-erp-pair-in-a-box.md) | AB-26b | high | built |
 | `AB-26d` | feature | └ [Headless screen checks over the ERP preview (T-2)](2026-09-24-erp-headless-screen-checks.md) | — | med | built |
-| `AB-26e` | feature | └ [Sync validation — every entity, both directions, proved (V)](2026-09-24-erp-sync-validation.md) | AB-26c | high | active |
-| `AB-26f` | feature | └ [The credit hold reaches Commerce (hold / unhold), undone on reset](2026-09-24-erp-hold-to-commerce.md) | AB-26b | high | active |
+| `AB-26e` | feature | └ [Sync validation — every entity, both directions, proved (V)](2026-09-24-erp-sync-validation.md) | AB-26c | high | shipped |
+| `AB-26f` | feature | └ [The credit hold reaches Commerce (hold / unhold), undone on reset](2026-09-24-erp-hold-to-commerce.md) | AB-26b | high | built |
 | `AB-26g` | feature | └ [Changes made in Commerce Admin flow back to the ERP (shipment, invoice, cancel, hold)](2026-09-24-erp-commerce-side-changes.md) | AB-26b | high | active |
 | `AB-26h` | feature | └ [Per-source stock changes reach the ERP, plus the small gaps (product delete, credit truth, currency)](2026-09-24-erp-per-source-stock.md) | AB-26b | med | active |
 | `AB-26i` | feature | └ [Pricing conditions with validity, minimum quantity, value help and "why not"](2026-09-24-erp-pricing-conditions.md) | — | high | built |
@@ -338,8 +338,10 @@ each item's own file; what has already landed against an item is in its
 | `AB-38` | feature | └ [A business user edits the integration's schedules](2026-09-28-erp-schedules-business-user.md) | AB-26z | med | backlog |
 | `AB-40` | fix | └ [write_erp_rest with a body fails: the ERP action's own inputs leak into the body](2026-09-29-erp-write-rest-erp-id-leak.md) | — | high | shipped |
 | `AB-41` | fix | └ [Company updates never reach the ERP: the company-saved event carries no id](2026-09-29-erp-company-event-no-id.md) | — | high | shipped |
-| `AB-42` | question | └ [Should the ERP be seeded with price groups / price lists from Commerce's shared catalogs at setup?](2026-09-29-erp-seed-price-groups-from-shared-catalogs.md) | — | high | open |
+| `AB-42` | question | └ [Should the ERP be seeded with price groups / price lists from Commerce's shared catalogs at setup?](2026-09-29-erp-seed-price-groups-from-shared-catalogs.md) | — | high | built |
 | `AB-43` | fix | └ [ERP shipment never lands in Commerce for a non-default inventory source](2026-09-29-erp-shipment-source-not-applied.md) | — | high | shipped |
+| `AB-44` | feature | └ [Seed the ERP with price groups and price lists from Commerce's shared catalogs](2026-09-30-erp-seed-price-groups-from-commerce.md) | — | high | active |
+| `AB-45` | feature | └ [A Warehouses master-data screen in the ERP](2026-09-30-erp-warehouses-master-data-screen.md) | — | med | built |
 | `AB-29` | feature | [Commerce test data cleanup tools](2026-09-24-commerce-test-data-cleanup-tools.md) | — | med | active |
 | `AB-30` | feature | [The ERP integration's Commerce Admin page uses the Commerce back-office design system](2026-09-24-erp-admin-page-commerce-design-system.md) | — | med | backlog |
 | `AB-33` | fix | [Removing an integration reports Runtime packages left behind in a workspace it then deletes](2026-09-26-remove-integration-leaves-runtime-packages.md) | — | med | built |
@@ -582,7 +584,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — backlog
 
-*182 item(s) sit outside the A–G chain.*
+*184 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

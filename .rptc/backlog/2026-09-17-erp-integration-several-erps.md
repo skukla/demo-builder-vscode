@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-9
 needs: [AB-23]
 value: med
-status: active
+status: built
 ---
 
 # One integration, several ERPs
@@ -230,3 +230,4 @@ one partner to several, and that is AB-16's own work either way.
 - 2026-09-28  docs(handoff): the afternoon loop, in plain words (`9db50a41e`)
 - 2026-09-28  docs(handoff): AB-16h and AB-16i proven live; what remains under AB-16 (`a4f0b41f9`)
 - 2026-09-28  docs(handoff): the midday loop, AB-26z and AB-16a proven live (`35ea1b8e4`)
+- 2026-09-30  2026-09-29 Proven live on Bodea: a project holds two ERP pairs (Northwind + Contoso); a split order fans to the owning ERP, each reports only its part, write isolation holds, reset returns both to zero. Item's own 'superseded' note now demonstrated end-to-end.
