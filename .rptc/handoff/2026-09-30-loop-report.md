@@ -5,9 +5,11 @@
 Loaded a colleague's real Justrite product catalog into the live Bodea Commerce
 instance — 43 products, zero failures — after finding and fixing three silent
 Commerce quirks that had made the first attempt fail. One 2-minute Admin step is
-left for you (point the Justrite store at the new catalog). The remaining ERP
-backlog items all need a cloud deploy to finish, which the overnight loop does not
-do, so they are handed off rather than built.
+left for you (point the Justrite store at the new catalog). Then built the ERP side
+of the live credit check (AB-20): the mock ERP now answers, at checkout, whether a
+customer can carry an order — 389/389 tests. The rest of the remaining ERP items
+need a cloud deploy to finish, which the overnight loop does not do, so they are
+handed off rather than built.
 
 ## Shipped
 
@@ -33,6 +35,17 @@ Two Commerce read endpoints (a category's product list, a configurable's child l
 lag behind the write on this instance and can show empty right after a successful
 write — verified the data another way (the product's own record, and Commerce
 rejecting a duplicate link) rather than trusting the lagging reads.
+
+**AB-20 live credit check — ERP side built.** The mock ERP now has an endpoint that
+answers, at the moment an order is placed, whether the customer can carry it: it
+reads their current exposure live and says approved or held, with the reason and the
+numbers (their limit, what they owe, what's left). It creates nothing — that's the
+point: checkout can refuse an over-limit order before it's committed, where the ERP
+otherwise creates the order and holds it. 389/389 tests, no deploy needed. This is
+the same shape as the available-to-promise endpoint built for AB-19. The Commerce
+side that calls it (and the one real product question — should checkout HARD-STOP
+when the ERP can't be reached, unlike pricing which soft-fails) still needs wiring
+and a deploy.
 
 ## Handed off (need a cloud deploy — not doable overnight)
 
