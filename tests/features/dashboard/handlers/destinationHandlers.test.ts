@@ -17,6 +17,7 @@
 // The shared mock wall FIRST: importing it is what registers the module mocks,
 // and an import of the handler above this line would load it unmocked.
 import {
+    EXISTING_ADOBE,
     NEW_DESTINATION,
     makeDestinationContext,
     makeContextWithComponents,
@@ -34,6 +35,7 @@ import {
     handleSetProjectDestination,
     type SetProjectDestinationPayload,
 } from '@/features/dashboard/handlers/destinationHandlers';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
@@ -70,6 +72,59 @@ describe('handleSetProjectDestination', () => {
         const saved = saveProject.mock.calls.at(-1)?.[0] as { adobe: Record<string, string> };
         expect(saved.adobe.organization).toBe('285361');
         expect(saved.adobe.organizationName).toBe('Adobe Demo System');
+    });
+
+    describe('a project that has no org yet', () => {
+        // Creation from a package that deploys no mesh records no Adobe context, so
+        // the first destination write is where the org has to be filled in. Left
+        // empty (2026-09-30, project `justrite`), the destination read as complete
+        // while every credential read refused it.
+        const { organization: _o, organizationName: _n, ...NO_ORG } = EXISTING_ADOBE;
+        const SIGNED_IN = { id: '285361', name: 'Adobe Demo System' };
+
+        function contextSignedInto(adobe: Record<string, unknown> | undefined) {
+            const made = makeDestinationContext(adobe);
+            (made.context as { authManager: unknown }).authManager =
+                createMockAuthenticationService({
+                    getCurrentOrganization: jest.fn().mockResolvedValue(SIGNED_IN),
+                });
+            return made;
+        }
+
+        it('records the signed-in org beside the new project and workspace', async () => {
+            const { context, saveProject } = contextSignedInto(NO_ORG);
+
+            const result = await handleSetProjectDestination(context, NEW_DESTINATION);
+
+            expect(result.success).toBe(true);
+            const saved = saveProject.mock.calls.at(-1)?.[0] as { adobe: Record<string, string> };
+            expect(saved.adobe.organization).toBe('285361');
+            expect(saved.adobe.organizationName).toBe('Adobe Demo System');
+        });
+
+        it('completes a destination that already names this project and workspace', async () => {
+            const { context, saveProject } = contextSignedInto({
+                ...NO_ORG,
+                organization: '',
+                projectId: NEW_DESTINATION.project.id,
+                workspace: NEW_DESTINATION.workspace.id,
+            });
+
+            const result = await handleSetProjectDestination(context, NEW_DESTINATION);
+
+            expect(result.data).not.toMatchObject({ unchanged: true });
+            const saved = saveProject.mock.calls.at(-1)?.[0] as { adobe: Record<string, string> };
+            expect(saved.adobe.organization).toBe('285361');
+        });
+
+        it('leaves the org empty when nobody is signed in, rather than inventing one', async () => {
+            const { context, saveProject } = makeDestinationContext(NO_ORG);
+
+            await handleSetProjectDestination(context, NEW_DESTINATION);
+
+            const saved = saveProject.mock.calls.at(-1)?.[0] as { adobe: Record<string, string> };
+            expect(saved.adobe.organization).toBe('');
+        });
     });
 
     it('returns the previous destination so a caller can address the OLD target', async () => {

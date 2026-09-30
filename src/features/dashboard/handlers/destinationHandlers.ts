@@ -36,9 +36,9 @@ import {
     buildDefaultRunnerDeps,
     buildRunnerDepsContext,
 } from '@/features/project-creation/services/appBuilderComponentRunnerDeps';
+import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type MessageHandler } from '@/types/handlers';
-import type { Project } from '@/types/base';
 import type {
     DestinationRef,
     SetProjectDestinationRequestPayload as SetProjectDestinationPayload,
@@ -58,7 +58,8 @@ export type {
  * The org is deliberately NOT taken from the payload. IMS tokens are org-bound
  * and sign-in owns org selection (`adobe-org-context`); a destination change
  * moves project/workspace WITHIN the current org, so the stored org carries over
- * untouched.
+ * untouched. A project with no stored org takes the signed-in one, for the same
+ * reason: it is the only org the token can address.
  *
  * @param context - handler context (state manager, logger)
  * @param payload - the chosen project and workspace
@@ -66,48 +67,76 @@ export type {
  *          address the old target after this write has overwritten it
  */
 export const handleSetProjectDestination: MessageHandler<SetProjectDestinationPayload> =
-    narrateOutcomeToModal(async (context, payload) => {
-    const project = await context.stateManager.getCurrentProject();
-    if (!project) {
-        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
-    }
+    narrateOutcomeToModal(
+        async (context, payload) => {
+            const project = await context.stateManager.getCurrentProject();
+            if (!project) {
+                return {
+                    success: false,
+                    error: 'No project found',
+                    code: ErrorCode.PROJECT_NOT_FOUND,
+                };
+            }
 
-    const nextProject = payload?.project;
-    const nextWorkspace = payload?.workspace;
-    if (!nextProject?.id || !nextWorkspace?.id) {
-        return {
-            success: false,
-            error: 'A destination needs both an Adobe project and a workspace.',
-            code: ErrorCode.CONFIG_INVALID,
-        };
-    }
+            const nextProject = payload?.project;
+            const nextWorkspace = payload?.workspace;
+            if (!nextProject?.id || !nextWorkspace?.id) {
+                return {
+                    success: false,
+                    error: 'A destination needs both an Adobe project and a workspace.',
+                    code: ErrorCode.CONFIG_INVALID,
+                };
+            }
 
-    const target = `${nextProject.title ?? nextProject.name} \u00b7 ${nextWorkspace.title ?? nextWorkspace.name}`;
-    return withOperationProgress(
-        {
-            // No card options: the destination is PROJECT-scoped, so no single card
-            // owns it. The per-component cards are telegraphed separately, by the
-            // callback handed to the migration below — this slot has no card to fill,
-            // which is NOT the same as the move having nothing to say.
-            id: payload?.id ?? DESTINATION_OPERATION_ID,
-            title: `Changing destination to ${target}`,
-            inModal: progressSurfaceOf(payload) === 'modal',
+            const target = `${nextProject.title ?? nextProject.name} \u00b7 ${nextWorkspace.title ?? nextWorkspace.name}`;
+            return withOperationProgress(
+                {
+                    // No card options: the destination is PROJECT-scoped, so no single card
+                    // owns it. The per-component cards are telegraphed separately, by the
+                    // callback handed to the migration below — this slot has no card to fill,
+                    // which is NOT the same as the move having nothing to say.
+                    id: payload?.id ?? DESTINATION_OPERATION_ID,
+                    title: `Changing destination to ${target}`,
+                    inModal: progressSurfaceOf(payload) === 'modal',
+                },
+                async (report) =>
+                    applyDestination(
+                        context,
+                        project,
+                        // Re-stated rather than relying on narrowing: the guard above proves
+                        // both ids, but TS does not carry that through the object type.
+                        { ...nextProject, id: nextProject.id as string },
+                        { ...nextWorkspace, id: nextWorkspace.id as string },
+                        target,
+                        report,
+                    ),
+            );
         },
-        async (report) =>
-            applyDestination(
-                context,
-                project,
-                // Re-stated rather than relying on narrowing: the guard above proves
-                // both ids, but TS does not carry that through the object type.
-                { ...nextProject, id: nextProject.id as string },
-                { ...nextWorkspace, id: nextWorkspace.id as string },
-                target,
-                report,
-            ),
+        (payload) => payload?.id ?? '',
     );
-    },
-    (payload) => payload?.id ?? '',
-);
+
+/**
+ * The org the destination is recorded under.
+ *
+ * A stored org carries over untouched (sign-in owns org selection). A project
+ * that has NONE — created from a package that deploys no mesh, so creation
+ * recorded no Adobe context — takes the signed-in org, the only one its IMS
+ * token can address. Left empty, the destination looked complete while every
+ * credential read refused it: "no Adobe org, project and workspace to take a
+ * credential from" (2026-09-30, a project pointed at a fresh Console project).
+ */
+async function orgOf(
+    project: Project,
+    context: HandlerContext,
+): Promise<{ organization: string; organizationName: string | undefined }> {
+    const stored = project.adobe?.organization;
+    if (stored) return { organization: stored, organizationName: project.adobe?.organizationName };
+    // Resolved, not read from the cache: the cache is empty until something
+    // resolves the org, and after a window reload nothing has (measured
+    // 2026-09-30 — the cached read answered undefined and wrote '' again).
+    const signedIn = await context.authManager?.getCurrentOrganization();
+    return { organization: signedIn?.id ?? '', organizationName: signedIn?.name };
+}
 
 /**
  * The destination change itself, inside the notification.
@@ -132,9 +161,12 @@ async function applyDestination(
     // to move. Worth catching HERE as well as in the migration — the migration's
     // guard prevents the data loss, this one prevents a pointless "move 2
     // integrations?" prompt for a change that is not one.
+    // A destination with no org is not "unchanged": it is half-recorded, and the
+    // write below completes it.
     if (
-        project.adobe?.projectId === nextProject.id &&
-        project.adobe?.workspace === nextWorkspace.id
+        project.adobe?.organization &&
+        project.adobe.projectId === nextProject.id &&
+        project.adobe.workspace === nextWorkspace.id
     ) {
         context.logger.info(`[Destination] Already deploying to ${target} — no change.`);
         return { success: true, data: { destination: project.adobe, unchanged: true } };
@@ -183,8 +215,7 @@ async function applyDestination(
 
     project.adobe = {
         ...project.adobe,
-        organization: project.adobe?.organization ?? '',
-        organizationName: project.adobe?.organizationName,
+        ...(await orgOf(project, context)),
         authenticated: project.adobe?.authenticated ?? true,
         projectId: nextProject.id,
         projectName: nextProject.name ?? nextProject.title ?? nextProject.id,
@@ -223,9 +254,9 @@ async function applyDestination(
     report('Moving the integrations', undefined, at(moving));
     const deps = buildDefaultRunnerDeps(
         await buildRunnerDepsContext(context, project, {
-                    authManager: ServiceLocator.getAuthenticationService(),
-                    commandManager: ServiceLocator.getCommandExecutor(),
-                }),
+            authManager: ServiceLocator.getAuthenticationService(),
+            commandManager: ServiceLocator.getCommandExecutor(),
+        }),
         // The deploy tails narrate their own steps; surface them as sub-messages so
         // a multi-minute move reads as progress rather than a stalled notification.
         (message, subMessage) =>
@@ -313,7 +344,8 @@ async function confirmLeavingAdobeProject(
     const groups = current && current !== nextProject.id ? ownWorkspaceGroups(project) : [];
     if (groups.length === 0) return true;
 
-    const from = project.adobe?.projectTitle ?? project.adobe?.projectName ?? 'the previous Adobe project';
+    const from =
+        project.adobe?.projectTitle ?? project.adobe?.projectName ?? 'the previous Adobe project';
     const to = nextProject.title ?? nextProject.name ?? nextProject.id;
     const names = groups.map((group) => group.workspace.title ?? group.workspace.name).join(', ');
     const theirs = groups.length > 1 ? 'their workspaces' : 'its workspace';

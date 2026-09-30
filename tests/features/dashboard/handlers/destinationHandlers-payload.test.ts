@@ -29,9 +29,6 @@ import {
     handleSetProjectDestination,
     type SetProjectDestinationPayload,
 } from '@/features/dashboard/handlers/destinationHandlers';
-import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
-import { createMockLogger } from '../../../helpers/loggerFake';
-import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 beforeEach(() => {
     resetDestinationMocks();
@@ -139,19 +136,8 @@ describe('handleSetProjectDestination — what counts as unchanged', () => {
 });
 
 describe('handleSetProjectDestination — a project with no Adobe binding yet', () => {
-    /** A project carrying no `adobe` at all — makeDestinationContext's default fills one in. */
-    function withNoAdobe() {
-        const project = { name: 'demo', path: '/p/demo' };
-        const saveProject = jest.fn().mockResolvedValue(undefined);
-        const context = createMockHandlerContext({
-            logger: createMockLogger(),
-            stateManager: createMockStateManager({
-                getCurrentProject: jest.fn().mockResolvedValue(project),
-                saveProject,
-            }),
-        });
-        return { context, saveProject };
-    }
+    /** A project carrying no `adobe` at all, and nobody signed in. */
+    const withNoAdobe = () => makeDestinationContext(null);
 
     it('writes the destination and seeds the org fields it cannot know', async () => {
         // Nothing wrote `project.adobe` before this handler existed, so a project
@@ -229,7 +215,9 @@ describe('handleSetProjectDestination — what the move is handed and what it sa
     // deliberately shows the stage alone (PL-59 R2).
     it("relays the deploy tails own steps as the move's step line", async () => {
         const { context } = withComponentIds(['erp-sync']);
-        const screen = jest.fn(async (_type: string, _payload?: unknown): Promise<void> => undefined);
+        const screen = jest.fn(
+            async (_type: string, _payload?: unknown): Promise<void> => undefined
+        );
         context.sendMessage = screen;
         startModalRun('destination', screen);
 
