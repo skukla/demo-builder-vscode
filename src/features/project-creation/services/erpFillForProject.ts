@@ -113,22 +113,18 @@ function erpImport(
     };
 }
 
-/** The id the integration gives its single ERP, for an ERP entry that declares no listing. */
-const SINGLE_ERP_ID = 'erp';
-
 /** The ERP one fill is for: its component id, and its id in the integration's list. */
 interface FillTarget {
     componentId: string;
     listId: string;
-    firstId: string;
 }
 
 /**
  * Which ERP a fill is for: the one named (it must be one the integration uses), else the
- * integration's first. Its list id is what the integration's settings and key map know it by.
- * Only the first ERP may fall back to the single-ERP id: an added ERP whose listing cannot be
- * read would otherwise be filled as the first, and its pairs would replace the first ERP's in
- * the key map (AB-16g). That is a refusal, in words.
+ * integration's first. Its list id is what the integration's settings and key map know it by
+ * (`listIdOf`, AB-51). An ERP whose listing cannot be read has no such id, and filling it
+ * under a guessed one would let its pairs replace another ERP's in the key map (AB-16g). That
+ * is a refusal, in words.
  */
 function fillTarget(
     project: Project,
@@ -140,15 +136,14 @@ function fillTarget(
     const componentId = erpComponentId ?? used[0];
     if (!componentId || !used.includes(componentId)) return undefined;
     const entry = catalogEntryFor(project, componentId, catalog);
-    if (!entry?.listedAs && componentId !== used[0]) {
+    if (!entry?.listedAs) {
         return {
             refusal:
                 `Cannot tell which ERP "${componentId}" is in the integration's list, so its pairs could ` +
                 "replace another ERP's. Redeploy it, then load demo data again.",
         };
     }
-    const firstId = entry?.listedAs?.firstId ?? SINGLE_ERP_ID;
-    return { componentId, listId: entry?.listedAs ? listIdOf(project, entry) : firstId, firstId };
+    return { componentId, listId: listIdOf(project, entry) };
 }
 
 /** A reason without its closing full stop, so it can sit inside a sentence. */
@@ -257,9 +252,7 @@ export async function fillErpForProject(
         saveKeyMap: async (entries) => {
             if (!integrationClient.keepsKeyMap()) return false;
             const current = await integrationClient.readKeyMap();
-            await integrationClient.replaceKeyMap(
-                mergeKeyMap(current, target.listId, entries, target.firstId),
-            );
+            await integrationClient.replaceKeyMap(mergeKeyMap(current, target.listId, entries));
             return true;
         },
         onProgress: deps.onProgress,

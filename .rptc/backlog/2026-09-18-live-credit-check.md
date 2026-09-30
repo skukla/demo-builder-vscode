@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-9
 needs: []
 value: med
-status: backlog
+status: built
 ---
 
 # Ask the ERP live whether the account has the credit, as the order is placed

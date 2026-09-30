@@ -299,6 +299,13 @@ export interface AppBuilderComponentState {
      * rename moves the label and leaves this alone (`commerceAppId.ts`).
      */
     commerceAppId?: string;
+    /**
+     * For a system its integration serves in a list (`listedAs`): its id in that list,
+     * derived from its name when it was added (`northwind` for "Northwind ERP") and never
+     * rewritten — it is on every product it owns, every key-map row and every event, so
+     * a later rename moves the label and leaves this alone (`erpListId.ts`, AB-51).
+     */
+    listId?: string;
     /** Display name for the integration (durable home for the user-facing name). */
     name?: string;
     /**

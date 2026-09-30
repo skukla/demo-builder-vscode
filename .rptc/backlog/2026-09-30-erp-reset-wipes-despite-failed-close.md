@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: []
 value: med
-status: active
+status: built
 ---
 
 # An ERP reset wipes the ERPs even when Commerce failed to close an order

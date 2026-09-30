@@ -53,7 +53,7 @@ jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () 
             id: 'demo-erp',
             kind: 'system',
             boundTo: 'erp-integration',
-            listedAs: { envVar: 'ERP_ID', firstId: 'erp', adapter: 'demo-erp' },
+            listedAs: { envVar: 'ERP_ID', adapter: 'demo-erp' },
         },
     ]),
     getAppBuilderComponentEntry: jest.fn(),

@@ -658,6 +658,10 @@
           "type": "string",
           "description": "The id this component declares to Commerce (App Management apps only, and only for a COPY — the first of a kind keeps the id its app ships with).\n\nWritten the first time the copy deploys and never rewritten: Commerce names its webhooks and events from it and refuses to change it on an upgrade, so a later rename moves the label and leaves this alone (`commerceAppId.ts`)."
         },
+        "listId": {
+          "type": "string",
+          "description": "For a system its integration serves in a list (`listedAs`): its id in that list, derived from its name when it was added (`northwind` for \"Northwind ERP\") and never rewritten — it is on every product it owns, every key-map row and every event, so a later rename moves the label and leaves this alone (`erpListId.ts`, AB-51)."
+        },
         "name": {
           "type": "string",
           "description": "Display name for the integration (durable home for the user-facing name)."

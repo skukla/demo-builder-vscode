@@ -12,9 +12,13 @@
  */
 
 import { catalogEntryFor } from './componentEntry';
-import { deriveWebBase, listIdOf } from './deployInputs';
+import { deriveWebBase } from './deployInputs';
 import type { ErpKeyMapEntry } from './erpFill';
-import { pairedInstanceId, systemsUsedBy } from '@/features/components/services/appBuilderComponentLinks';
+import { broughtByItsIntegration, listIdOf } from './erpListId';
+import {
+    pairedInstanceId,
+    systemsUsedBy,
+} from '@/features/components/services/appBuilderComponentLinks';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState, Project } from '@/types/base';
 
@@ -63,11 +67,16 @@ type Components = Pick<Project, 'appBuilderComponents'>;
  * @param system - the listed system's catalog entry (`demo-erp`)
  * @returns the id to add
  */
-export function nextListedSystemId(project: Components, system: AppBuilderComponentCatalogEntry): string {
+export function nextListedSystemId(
+    project: Components,
+    system: AppBuilderComponentCatalogEntry,
+): string {
     const components = project.appBuilderComponents ?? {};
     for (let number = 2; ; number++) {
         const id = `${system.id}-${number}`;
-        const partner = system.boundTo ? pairedInstanceId(id, system.id, system.boundTo) : undefined;
+        const partner = system.boundTo
+            ? pairedInstanceId(id, system.id, system.boundTo)
+            : undefined;
         if (partner && components[partner]) continue;
         const existing = components[id];
         if (!existing || existing.status === 'error' || existing.status === undefined) return id;
@@ -84,19 +93,28 @@ export function nextListedSystemId(project: Components, system: AppBuilderCompon
  * @param retryId - the id being retried, whose own name does not count as taken
  * @returns the problem in words
  */
-export function erpNameProblem(project: Components, name: string | undefined, retryId?: string): string | undefined {
+export function erpNameProblem(
+    project: Components,
+    name: string | undefined,
+    retryId?: string,
+): string | undefined {
     const trimmed = name?.trim() ?? '';
     if (!trimmed) return 'Name the ERP, e.g. "Brand B ERP".';
     if (trimmed.length > MAX_ERP_NAME) return `An ERP name is at most ${MAX_ERP_NAME} characters.`;
     const taken = Object.entries(project.appBuilderComponents ?? {}).some(
-        ([id, state]) => id !== retryId && state.kind === 'system' && state.name?.trim().toLowerCase() === trimmed.toLowerCase(),
+        ([id, state]) =>
+            id !== retryId &&
+            state.kind === 'system' &&
+            state.name?.trim().toLowerCase() === trimmed.toLowerCase(),
     );
-    return taken ? `An ERP named "${trimmed}" is already in this project. Pick another name.` : undefined;
+    return taken
+        ? `An ERP named "${trimmed}" is already in this project. Pick another name.`
+        : undefined;
 }
 
 /**
- * The id the integration's list knows one of its ERPs by (`listIdOf`): `erp` for the
- * integration's own, the component id for one added from the card.
+ * The id the integration's list knows one of its ERPs by (`listIdOf`): the id its name
+ * derived when it was added, recorded on the component (AB-51).
  *
  * @param project - the project
  * @param componentId - the ERP's component id
@@ -116,8 +134,8 @@ export function erpListIdOf(
 interface ListedErp {
     componentId: string;
     listId: string;
-    /** The integration's single-ERP id: the ERP that shares its workspace carries it. */
-    firstId: string;
+    /** The ERP its integration brings, in the integration's own workspace (`broughtByItsIntegration`). */
+    own: boolean;
     name: string;
     adapter: string;
     baseUrl: string;
@@ -136,9 +154,27 @@ function listedErps(
         const entry = catalogEntryFor(project, id, catalog);
         const baseUrl = deriveWebBase(state?.deployedUrls);
         const listId = erpListIdOf(project, id, catalog);
-        if (id === leaving || !state || !entry?.listedAs || !listId || state.status !== 'deployed' || !baseUrl) return [];
-        const { adapter, firstId } = entry.listedAs;
-        return [{ componentId: id, listId, firstId, name: state.name ?? entry.name, adapter, baseUrl, state }];
+        if (
+            id === leaving ||
+            !state ||
+            !entry?.listedAs ||
+            !listId ||
+            state.status !== 'deployed' ||
+            !baseUrl
+        )
+            return [];
+        const { adapter } = entry.listedAs;
+        return [
+            {
+                componentId: id,
+                listId,
+                own: broughtByItsIntegration(project, entry),
+                name: state.name ?? entry.name,
+                adapter,
+                baseUrl,
+                state,
+            },
+        ];
     });
 }
 
@@ -168,8 +204,12 @@ export function erpsWithOwnCredential(
     leaving?: string,
 ): ErpWithOwnCredential[] {
     return listedErps(project, integrationId, catalog, leaving)
-        .filter((erp) => erp.listId !== erp.firstId)
-        .map(({ componentId, name, state }) => ({ componentId, name, ...(state.workspace ? { workspace: state.workspace } : {}) }));
+        .filter((erp) => !erp.own)
+        .map(({ componentId, name, state }) => ({
+            componentId,
+            name,
+            ...(state.workspace ? { workspace: state.workspace } : {}),
+        }));
 }
 
 /**
@@ -198,7 +238,7 @@ export function erpListFor(
 ): ErpListEntry[] {
     return listedErps(project, integrationId, catalog, leaving).map((erp): ErpListEntry => {
         const settings = current.find((known) => known.id === erp.listId)?.settings;
-        const auth = erp.listId !== erp.firstId ? auths[erp.componentId] : undefined;
+        const auth = erp.own ? undefined : auths[erp.componentId];
         return {
             id: erp.listId,
             name: erp.name,
@@ -212,20 +252,18 @@ export function erpListFor(
 /**
  * The key map with one ERP's rows replaced: the integration keeps one map for every ERP
  * (`PUT erp/keymap` replaces it whole), so a fill of one ERP must keep the others' pairs. A
- * row naming no ERP is the first ERP's (`firstId`), as the integration reads it.
+ * row naming no ERP belongs to no listed ERP (every fill names one) and is kept as it is.
  *
  * @param current - the map the integration holds
  * @param erpId - the ERP just filled, by its list id
  * @param rows - its pairs
- * @param firstId - the id a row naming no ERP belongs to
  * @returns the whole map to PUT
  */
 export function mergeKeyMap(
     current: readonly ErpKeyMapEntry[],
     erpId: string,
     rows: readonly ErpKeyMapEntry[],
-    firstId: string,
 ): ErpKeyMapEntry[] {
-    const others = current.filter((row) => (row.erpId ?? firstId) !== erpId);
+    const others = current.filter((row) => row.erpId !== erpId);
     return [...others, ...rows.map((row) => ({ ...row, erpId }))];
 }

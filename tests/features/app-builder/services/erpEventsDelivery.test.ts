@@ -30,7 +30,7 @@ const SYSTEM: AppBuilderComponentCatalogEntry = {
     description: 'the ERP',
     kind: 'system',
     boundTo: 'erp-integration',
-    listedAs: { envVar: 'ERP_ID', firstId: 'erp', adapter: 'demo-erp' },
+    listedAs: { envVar: 'ERP_ID', adapter: 'demo-erp' },
     source: { owner: 'skukla', repo: 'demo-erp', branch: 'main' },
 };
 const INTEGRATION: AppBuilderComponentCatalogEntry = {

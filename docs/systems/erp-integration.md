@@ -133,7 +133,8 @@ The kebab keeps offering it until it has been done, and nowhere else.
 The integration serves a list of ERPs (design v1, `.rptc/plans/several-erps/design.md`),
 kept in its App Builder State and read and replaced through its `erp/erps` action. Each
 entry is `{ id, name, adapter: "demo-erp", connection: { baseUrl }, settings? }`. With no
-list stored, the integration serves one ERP, id `erp`, from its deploy settings.
+list stored (an install without Demo Builder, the pair-in-a-box tests), the integration
+serves one ERP, id `erp`, from its deploy settings.
 
 **Adding one.** The integration's card offers **Add another ERP** once the integration is
 deployed (the catalog's `addOnce` on the integration, `listedAs` on the ERP). It asks for a
@@ -173,12 +174,15 @@ screen key does, in the deploy's process env only; the ERP signs its event posts
 address yet, or a credential that cannot be read, deploys the ERP as before and says so; its
 events wait in its outbox until it is redeployed.
 
-**Its id.** The integration's own ERP is `erp`, never its component id, because the
-integration reads any event or key map row that names no ERP as `erp`, and its per-ERP
-credit attributes are keyed by it. An added ERP's id is its component id. Both are sent as
-`ERP_ID` on every deploy (`listIdOf`, `deployInputs.ts`), and a product goes to an ERP when
-its `erp_owner` attribute is that id. An ERP added from the card is numbered where no
-`erp-integration-N` exists, so it is never mistaken for a legacy numbered pair's own ERP.
+**Its id.** An ERP's id in the list is its name, slugged — `Northwind ERP` → `northwind`,
+numbered when another ERP here has it — derived when it is added, recorded on its component
+(`listId`) the first time it deploys, and never rewritten: it is on every product it owns,
+every key-map row and every event, so a rename moves the label only (`erpListId.ts`, AB-51).
+It is sent as `ERP_ID` on every deploy, and a product goes to an ERP when its `erp_owner`
+attribute holds it. Until 2026-09-30 the integration's own ERP was the literal `erp` and an
+added one its component id — two kinds of id, neither naming the ERP. The ERP its
+integration brings is still told apart from one added from the card (`broughtByItsIntegration`:
+it shares the integration's workspace and answers its credential), by the pairing, not the id.
 
 **Filling and resetting.** Load demo data and Reset records on the integration, and their
 agent tools without `erp`, cover every ERP: the reset undoes the integration's Commerce

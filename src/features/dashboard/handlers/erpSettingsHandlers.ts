@@ -92,7 +92,14 @@ export const handleSetErpSettings: MessageHandler<SetErpSettingsPayload> = async
         ).updateErpSettings(listId, payload.website, payload.values);
         return {
             success: true,
-            data: { id: call.id, erp: listId, website: payload.website ?? null, entry },
+            // `erp` is the ERP as every ERP tool answers it (component id and name); `entry.id`
+            // is the list id the integration keys the settings by (AB-51: the two differ).
+            data: {
+                id: call.id,
+                erp: shapeErpRow(call.erp),
+                website: payload.website ?? null,
+                entry,
+            },
         };
     } catch (error) {
         return { success: false, error: `Could not change the ERP settings: ${errorText(error)}` };

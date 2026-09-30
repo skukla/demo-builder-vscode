@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: []
 value: med
-status: active
+status: built
 ---
 
 # A shipment with no warehouse still fails when a product sits in several warehouses

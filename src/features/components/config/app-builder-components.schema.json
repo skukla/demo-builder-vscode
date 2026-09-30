@@ -220,12 +220,11 @@
         },
         "listedAs": {
           "type": "object",
-          "required": ["envVar", "firstId", "adapter"],
+          "required": ["envVar", "adapter"],
           "additionalProperties": false,
-          "description": "kind 'system' only: its integration serves a LIST of these systems, keyed by id. The deploy tells the system its id; the integration's own system has firstId, one added from the integration's card has its component id.",
+          "description": "kind 'system' only: its integration serves a LIST of these systems, keyed by id. The deploy tells the system its id: the id derived from its name when it was added (listId on its record, AB-51).",
           "properties": {
             "envVar": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$", "description": "The deploy-time input that carries the id, e.g. ERP_ID." },
-            "firstId": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$", "description": "The id of the integration's own system, the one it brings (the integration's single-ERP id, erp)." },
             "adapter": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$", "description": "Which of the integration's adapters talks to it, e.g. demo-erp." }
           }
         },

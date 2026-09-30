@@ -92,7 +92,7 @@ describe('handleGetErpStatus', () => {
             erp: 'demo-erp-2',
         });
 
-        expect(mockStatus).toHaveBeenCalledWith('demo-erp-2');
+        expect(mockStatus).toHaveBeenCalledWith('contoso');
         expect(result).toMatchObject({
             success: true,
             data: { erp: { id: 'demo-erp-2', name: 'Contoso' } },
@@ -164,7 +164,7 @@ describe('handleGetErpSettings (AB-16j)', () => {
             website: 'bodea',
         });
 
-        expect(mockResolvedSettings).toHaveBeenCalledWith(['bodea'], 'demo-erp-2');
+        expect(mockResolvedSettings).toHaveBeenCalledWith(['bodea'], 'contoso');
         expect(result).toEqual({
             success: true,
             data: {
@@ -189,7 +189,7 @@ describe('handleGetErpSettings (AB-16j)', () => {
 
         await handleGetErpSettings(mockContext, { id: 'erp-integration', erp: 'demo-erp-2' });
 
-        expect(mockResolvedSettings).toHaveBeenCalledWith([], 'demo-erp-2');
+        expect(mockResolvedSettings).toHaveBeenCalledWith([], 'contoso');
     });
 });
 
@@ -217,12 +217,25 @@ describe('handleSetErpSettings (AB-16j)', () => {
             values: { structure_sales_org: '2000' },
         });
 
-        expect(mockUpdateErpSettings).toHaveBeenCalledWith('demo-erp-2', 'bodea', {
+        expect(mockUpdateErpSettings).toHaveBeenCalledWith('contoso', 'bodea', {
             structure_sales_org: '2000',
         });
+        // `erp` is the ERP as every ERP tool answers it; `entry.id` is the integration's
+        // list id, which is the ERP's name slugged, not its component id (AB-51).
         expect(result).toEqual({
             success: true,
-            data: { id: 'erp-integration', erp: 'demo-erp-2', website: 'bodea', entry },
+            data: {
+                id: 'erp-integration',
+                erp: {
+                    id: 'demo-erp-2',
+                    name: 'Contoso',
+                    status: 'deployed',
+                    url: ERP.url,
+                    lastDeployed: ERP.lastDeployed,
+                },
+                website: 'bodea',
+                entry,
+            },
         });
     });
 

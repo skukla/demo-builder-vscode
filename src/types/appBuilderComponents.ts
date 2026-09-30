@@ -72,14 +72,15 @@ export interface WebActionCall {
 }
 
 /** How Demo Builder can tell a setup step is done, when it can (`setupChecks.ts`). */
-export type SetupCheck = 'companies-have-own-catalogs' | 'erp-source-in-website-stock' | 'erp-attributes-exist';
+export type SetupCheck =
+    | 'companies-have-own-catalogs'
+    | 'erp-source-in-website-stock'
+    | 'erp-attributes-exist';
 
 /** How a system is known in its integration's list of systems (see `listedAs`). */
 export interface SystemListing {
     /** The deploy-time input that carries the id, e.g. "ERP_ID". */
     envVar: string;
-    /** The id of the integration's own system (the ERP integration's single-ERP id, "erp"). */
-    firstId: string;
     /** Which of the integration's adapters talks to it, e.g. "demo-erp". */
     adapter: string;
 }
@@ -229,9 +230,9 @@ export interface AppBuilderComponentCatalogEntry {
     addOnce?: boolean;
     /**
      * kind 'system' only: its integration serves a LIST of these systems, keyed by id
-     * (the ERP list, `erpList.ts`). The deploy tells each system its id through `envVar`;
-     * the integration's own system has `firstId`, and one added from the card has its
-     * component id.
+     * (the ERP list, `erpList.ts`). The deploy tells each system its id through `envVar`:
+     * the id derived from the system's name when it was added (`listId` on its record,
+     * AB-51).
      */
     listedAs?: SystemListing;
     /** Pre-built source repo (owner/repo/branch). */

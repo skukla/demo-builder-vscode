@@ -71,7 +71,6 @@
       "nameFromEnvVar": "ERP_DISPLAY_NAME",
       "listedAs": {
         "envVar": "ERP_ID",
-        "firstId": "erp",
         "adapter": "demo-erp"
       },
       "screen": {

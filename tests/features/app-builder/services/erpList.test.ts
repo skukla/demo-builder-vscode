@@ -21,10 +21,19 @@ import { createMockProject } from '../../../helpers/projectFake';
 const catalog = getAppBuilderComponentCatalog();
 const DEMO_ERP = catalog.find((entry) => entry.id === 'demo-erp')!;
 
-const web = (pkg: string) => ({ [`runtime/${pkg}/health`]: `https://ns.adobeioruntime.net/api/v1/web/${pkg}/health` });
+const web = (pkg: string) => ({
+    [`runtime/${pkg}/health`]: `https://ns.adobeioruntime.net/api/v1/web/${pkg}/health`,
+});
 
 function erp(extra: Partial<AppBuilderComponentState> = {}): AppBuilderComponentState {
-    return { kind: 'system', status: 'deployed', usedBy: 'erp-integration', deployedUrls: web('demo-erp'), source: { owner: 'skukla', repo: 'x' }, ...extra };
+    return {
+        kind: 'system',
+        status: 'deployed',
+        usedBy: 'erp-integration',
+        deployedUrls: web('demo-erp'),
+        source: { owner: 'skukla', repo: 'x' },
+        ...extra,
+    };
 }
 
 function project(components: Record<string, AppBuilderComponentState>) {
@@ -47,13 +56,19 @@ describe('nextListedSystemId', () => {
         const components = {
             'demo-erp-2': erp(),
             // A legacy pair's integration: demo-erp-3 would read as its own ERP.
-            'erp-integration-3': { kind: 'integration' as const, status: 'deployed' as const, source: { owner: 'skukla', repo: 'x' } },
+            'erp-integration-3': {
+                kind: 'integration' as const,
+                status: 'deployed' as const,
+                source: { owner: 'skukla', repo: 'x' },
+            },
         };
         expect(nextListedSystemId(project(components), DEMO_ERP)).toBe('demo-erp-4');
     });
 
     it('reuses the number of an ERP whose add failed, so adding again retries it', () => {
-        expect(nextListedSystemId(project({ 'demo-erp-2': erp({ status: 'error' }) }), DEMO_ERP)).toBe('demo-erp-2');
+        expect(
+            nextListedSystemId(project({ 'demo-erp-2': erp({ status: 'error' }) }), DEMO_ERP)
+        ).toBe('demo-erp-2');
     });
 });
 
@@ -70,7 +85,9 @@ describe('erpNameProblem', () => {
     });
 
     it('refuses a name already in the project, without case', () => {
-        expect(erpNameProblem(taken, 'acme erp')).toBe('An ERP named "acme erp" is already in this project. Pick another name.');
+        expect(erpNameProblem(taken, 'acme erp')).toBe(
+            'An ERP named "acme erp" is already in this project. Pick another name.'
+        );
     });
 
     it("does not count the retried ERP's own name", () => {
@@ -79,22 +96,26 @@ describe('erpNameProblem', () => {
 });
 
 describe('erpListFor', () => {
-    it("lists the integration's own ERP as erp and an added one by its id, with each address", () => {
+    it("lists each ERP by the id its name derives, with each address", () => {
         const p = project({
             'erp-integration': INTEGRATION,
             'demo-erp': erp({ name: 'Acme ERP' }),
-            'demo-erp-2': erp({ name: 'Brand B ERP', catalogId: 'demo-erp', deployedUrls: web('demo-erp-2') }),
+            'demo-erp-2': erp({
+                name: 'Brand B ERP',
+                catalogId: 'demo-erp',
+                deployedUrls: web('demo-erp-2'),
+            }),
         });
 
         expect(erpListFor(p, 'erp-integration', catalog, [])).toEqual([
             {
-                id: 'erp',
+                id: 'acme',
                 name: 'Acme ERP',
                 adapter: 'demo-erp',
                 connection: { baseUrl: 'https://ns.adobeioruntime.net/api/v1/web/demo-erp' },
             },
             {
-                id: 'demo-erp-2',
+                id: 'brand-b',
                 name: 'Brand B ERP',
                 adapter: 'demo-erp',
                 connection: { baseUrl: 'https://ns.adobeioruntime.net/api/v1/web/demo-erp-2' },
@@ -103,22 +124,38 @@ describe('erpListFor', () => {
     });
 
     it('keeps the settings each ERP holds in the list now, since a PUT replaces it whole', () => {
-        const p = project({ 'erp-integration': INTEGRATION, 'demo-erp': erp({ name: 'Acme ERP' }) });
+        const p = project({
+            'erp-integration': INTEGRATION,
+            'demo-erp': erp({ name: 'Acme ERP' }),
+        });
         const settings = { defaults: { salesOrg: '1000' } };
-        const current = [{ id: 'erp', name: 'Acme ERP', adapter: 'demo-erp', connection: { baseUrl: null }, settings }];
+        const current = [
+            {
+                id: 'acme',
+                name: 'Acme ERP',
+                adapter: 'demo-erp',
+                connection: { baseUrl: null },
+                settings,
+            },
+        ];
 
         expect(erpListFor(p, 'erp-integration', catalog, current)[0].settings).toBe(settings);
     });
 
     it('leaves out the ERP being removed, and one not deployed', () => {
         const p = project({
-            'erp-integration': { ...INTEGRATION, systems: ['demo-erp', 'demo-erp-2', 'demo-erp-3'] },
+            'erp-integration': {
+                ...INTEGRATION,
+                systems: ['demo-erp', 'demo-erp-2', 'demo-erp-3'],
+            },
             'demo-erp': erp({ name: 'Acme ERP' }),
             'demo-erp-2': erp({ name: 'Brand B ERP', catalogId: 'demo-erp' }),
             'demo-erp-3': erp({ name: 'Brand C ERP', catalogId: 'demo-erp', status: 'error' }),
         });
 
-        expect(erpListFor(p, 'erp-integration', catalog, [], 'demo-erp-2').map((entry) => entry.id)).toEqual(['erp']);
+        expect(
+            erpListFor(p, 'erp-integration', catalog, [], 'demo-erp-2').map((entry) => entry.id)
+        ).toEqual(['acme']);
     });
 });
 
@@ -126,11 +163,21 @@ describe('erpListFor', () => {
 // the integration is handed it with the list. The first ERP shares the integration's.
 describe('the ERP credentials the list carries', () => {
     const CONTOSO_WS = { id: 'ws-contoso', name: 'ContosoERP' };
-    const AUTH = { clientId: 'fake-client', clientSecret: 'fake-test-pw-not-a-secret', orgId: 'FAKE@AdobeOrg', scopes: ['AdobeID'] };
+    const AUTH = {
+        clientId: 'fake-client',
+        clientSecret: 'fake-test-pw-not-a-secret',
+        orgId: 'FAKE@AdobeOrg',
+        scopes: ['AdobeID'],
+    };
     const p = project({
         'erp-integration': INTEGRATION,
         'demo-erp': erp({ name: 'Acme ERP' }),
-        'demo-erp-2': erp({ name: 'Contoso ERP', catalogId: 'demo-erp', deployedUrls: web('demo-erp-2'), workspace: CONTOSO_WS }),
+        'demo-erp-2': erp({
+            name: 'Contoso ERP',
+            catalogId: 'demo-erp',
+            deployedUrls: web('demo-erp-2'),
+            workspace: CONTOSO_WS,
+        }),
     });
 
     it('names each added ERP that needs its own credential, with its workspace, and not the first', () => {
@@ -140,7 +187,9 @@ describe('the ERP credentials the list carries', () => {
     });
 
     it('names none for an ERP being removed', () => {
-        expect(erpsWithOwnCredential(p, 'erp-integration', catalog, 'demo-erp-2')).toStrictEqual([]);
+        expect(erpsWithOwnCredential(p, 'erp-integration', catalog, 'demo-erp-2')).toStrictEqual(
+            []
+        );
     });
 
     it("puts the credential on the added ERP's connection and never on the first ERP's", () => {
@@ -148,8 +197,13 @@ describe('the ERP credentials the list carries', () => {
 
         const [first, added] = erpListFor(p, 'erp-integration', catalog, [], undefined, auths);
 
-        expect(first.connection).toStrictEqual({ baseUrl: 'https://ns.adobeioruntime.net/api/v1/web/demo-erp' });
-        expect(added.connection).toStrictEqual({ baseUrl: 'https://ns.adobeioruntime.net/api/v1/web/demo-erp-2', auth: AUTH });
+        expect(first.connection).toStrictEqual({
+            baseUrl: 'https://ns.adobeioruntime.net/api/v1/web/demo-erp',
+        });
+        expect(added.connection).toStrictEqual({
+            baseUrl: 'https://ns.adobeioruntime.net/api/v1/web/demo-erp-2',
+            auth: AUTH,
+        });
     });
 
     it('sends no auth key for an added ERP whose credential was not read, so the integration keeps its own', () => {
@@ -163,15 +217,28 @@ describe('mergeKeyMap', () => {
     const FIRST = { kind: 'customer' as const, commerce: '1', erp: 'C1' };
     const SECOND = { kind: 'customer' as const, commerce: '1', erp: 'B1', erpId: 'demo-erp-2' };
 
-    it("replaces only the filled ERP's rows, reading a row with no ERP as the first", () => {
-        const merged = mergeKeyMap([FIRST, SECOND], 'demo-erp-2', [{ kind: 'customer', commerce: '2', erp: 'B2' }], 'erp');
+    it("replaces only the filled ERP's rows, and keeps a row that names no ERP", () => {
+        // A row naming no ERP belongs to no listed ERP (every fill names one, AB-51): it
+        // is neither replaced nor claimed.
+        const merged = mergeKeyMap([FIRST, SECOND], 'demo-erp-2', [
+            { kind: 'customer', commerce: '2', erp: 'B2' },
+        ]);
 
-        expect(merged).toEqual([FIRST, { kind: 'customer', commerce: '2', erp: 'B2', erpId: 'demo-erp-2' }]);
+        expect(merged).toEqual([
+            FIRST,
+            { kind: 'customer', commerce: '2', erp: 'B2', erpId: 'demo-erp-2' },
+        ]);
     });
 
-    it("replaces the first ERP's rows, stored with or without its id", () => {
-        const merged = mergeKeyMap([FIRST, SECOND], 'erp', [{ kind: 'customer', commerce: '3', erp: 'C3' }], 'erp');
+    it("replaces another ERP's rows by its id, and stamps the new rows with it", () => {
+        const merged = mergeKeyMap([FIRST, SECOND], 'northwind', [
+            { kind: 'customer', commerce: '3', erp: 'C3' },
+        ]);
 
-        expect(merged).toEqual([SECOND, { kind: 'customer', commerce: '3', erp: 'C3', erpId: 'erp' }]);
+        expect(merged).toEqual([
+            FIRST,
+            SECOND,
+            { kind: 'customer', commerce: '3', erp: 'C3', erpId: 'northwind' },
+        ]);
     });
 });

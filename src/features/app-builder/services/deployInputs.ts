@@ -15,7 +15,7 @@
  *     the persisted `providesEnvVars` of every component in the project;
  *   - for a second copy of a kind, which copy it is (`DEMO_BUILDER_COPY_NUMBER`).
  *   - for a system its integration serves in a list, its id there (`listedAs`: the
- *     ERP's `ERP_ID`, AB-16).
+ *     ERP's `ERP_ID`, AB-16 — derived from its name and recorded, `erpListId.ts`).
  *
  * And the inverse: what a deployed component provides to others. A mesh provides
  * its endpoint; any other component provides the WEB BASE of its deployed
@@ -26,9 +26,14 @@
  */
 
 export { ensureCommerceAppId } from './commerceAppId';
+export { ensureListId, listIdOf } from './erpListId';
+import { listIdOf } from './erpListId';
 import { getProvidedEnvVars } from '@/core/state/appBuilderComponentState';
 import { pairedInstanceId } from '@/features/components/services/appBuilderComponentLinks';
-import type { AppBuilderComponentCatalogEntry, AppBuilderComponentEnvVar } from '@/types/appBuilderComponents';
+import type {
+    AppBuilderComponentCatalogEntry,
+    AppBuilderComponentEnvVar,
+} from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';
 
 /** The mesh's provided value is its GraphQL endpoint, resolved by the mesh tail, not here. */
@@ -121,7 +126,8 @@ export function resolveDeployInputs(
     for (const envVar of entry.envSchema ?? []) {
         if (envVar.type === 'secret') continue;
         const value = envVar.providedBy
-            ? providedValue(project, entry, envVar.providedBy, envVar.name) ?? provided[envVar.name]
+            ? (providedValue(project, entry, envVar.providedBy, envVar.name) ??
+              provided[envVar.name])
             : textInputValue(project, entry, envVar.name, fallbackFor(project, entry, envVar));
         if (value !== undefined) {
             inputs[envVar.name] = value;
@@ -140,31 +146,6 @@ export function resolveDeployInputs(
         if (appId) inputs[APP_ID] = appId;
     }
     return inputs;
-}
-
-/**
- * The id a listed system has in its integration's list (`listedAs`, AB-16): `firstId` for
- * the system its integration brings, its own component id for one added from the
- * integration's card.
- *
- * The brought system is the catalog's own entry, or a numbered copy whose numbered
- * integration is in the project (`erp-integration-2` brings `demo-erp-2`, from before the
- * integration was add-once). An ERP added from the card is numbered where no such
- * integration exists (`nextListedSystemId`), so it is never mistaken for one.
- *
- * `firstId` is the integration's single-ERP id (`erp`), not the component id: the
- * integration reads an event or a key map row that names no ERP as that one, and the
- * credit attributes it wrote are keyed by it, so a first ERP keeps its history.
- *
- * @param project - the project
- * @param entry - a system entry with `listedAs`
- * @returns its id in the list
- */
-export function listIdOf(project: Pick<Project, 'appBuilderComponents'>, entry: AppBuilderComponentCatalogEntry): string {
-    const firstId = entry.listedAs?.firstId ?? entry.id;
-    if (!entry.catalogId || entry.id === entry.catalogId) return firstId;
-    const partner = entry.boundTo ? pairedInstanceId(entry.id, entry.catalogId, entry.boundTo) : undefined;
-    return partner && project.appBuilderComponents?.[partner] ? firstId : entry.id;
 }
 
 /**
@@ -189,7 +170,9 @@ function copyNumber(entry: AppBuilderComponentCatalogEntry): string | undefined 
  * segment, cut after the package name.
  * `https://ns.adobeioruntime.net/api/v1/web/demo-erp/health` → `…/web/demo-erp`.
  */
-export function deriveWebBase(deployedUrls: Record<string, string> | undefined): string | undefined {
+export function deriveWebBase(
+    deployedUrls: Record<string, string> | undefined,
+): string | undefined {
     for (const url of Object.values(deployedUrls ?? {})) {
         const at = url.indexOf(WEB_SEGMENT);
         if (at === -1) continue;
@@ -248,7 +231,10 @@ export function resolveDisplayName(
  * @param entry - the catalog entry
  * @returns the display name
  */
-export function displayNameInProject(project: Project, entry: AppBuilderComponentCatalogEntry): string {
+export function displayNameInProject(
+    project: Project,
+    entry: AppBuilderComponentCatalogEntry,
+): string {
     return (
         project.appBuilderComponents?.[entry.id]?.name ??
         resolveDisplayName(entry, resolveDeployInputs(project, entry))

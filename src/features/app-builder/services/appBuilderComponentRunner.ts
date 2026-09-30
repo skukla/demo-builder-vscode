@@ -53,7 +53,10 @@ import {
     listDeclaredTriggersAndRules,
     type AppConfigLayout,
 } from './appConfigPackages';
-import type { AppManagementInstallOptions, AppManagementInstallResult } from './appManagementUpgrade';
+import type {
+    AppManagementInstallOptions,
+    AppManagementInstallResult,
+} from './appManagementUpgrade';
 import { catalogEntryFor, entryFromState, pairedEntry } from './componentEntry';
 import {
     entriesSharingWorkspace,
@@ -64,6 +67,7 @@ import {
 import {
     displayNameInProject,
     ensureCommerceAppId,
+    ensureListId,
     resolveDeployInputs,
     resolveDisplayName,
 } from './deployInputs';
@@ -77,7 +81,11 @@ import type { UndeclaredActionCleanup } from './runtimeUndeclaredActions';
 import type { AppDeploymentResult } from './types';
 import { isMeshComponentId } from '@/core/constants';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
-import { buildOrgTargetFromProjectAdobe, withOrgContext, type CachedOrgRef } from '@/core/shell/orgContextEnv';
+import {
+    buildOrgTargetFromProjectAdobe,
+    withOrgContext,
+    type CachedOrgRef,
+} from '@/core/shell/orgContextEnv';
 import {
     clearUpdateAvailable,
     recordInstallation,
@@ -100,7 +108,7 @@ import type {
 } from '@/features/components/services/types';
 import type { MeshDeploymentResult } from '@/features/mesh/services/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
-import type { Project , AppBuilderComponentState } from '@/types/base';
+import type { Project, AppBuilderComponentState } from '@/types/base';
 import type { TransformedComponentDefinition } from '@/types/components';
 import type { ErrorCode } from '@/types/errorCodes';
 import type { Logger } from '@/types/logger';
@@ -168,7 +176,7 @@ export interface ComponentInstaller {
     installComponent(
         project: Project,
         componentDef: TransformedComponentDefinition,
-        options?: ComponentInstallOptions,
+        options?: ComponentInstallOptions
     ): Promise<ComponentInstallResult>;
     removeComponent(project: Project, componentId: string, deleteFiles?: boolean): Promise<void>;
 }
@@ -273,21 +281,30 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
      * value goes into the per-invocation env and nowhere else. Optional:
      * mesh/standalone paths and bare unit tests never need it.
      */
-    resolveAppManagementEnv?: (project: Project, componentId: string) => Promise<Record<string, string> | undefined>;
+    resolveAppManagementEnv?: (
+        project: Project,
+        componentId: string
+    ) => Promise<Record<string, string> | undefined>;
     /**
      * The deploy env carrying an entry's secrets: its screen key (`systemScreen.ts`,
      * generated the first time) and its secret settings from SecretStorage
      * (`componentSettingSecrets.ts`). Returns `{}` for an entry with neither. Carries
      * live secrets, so it goes into the per-invocation env and nowhere else.
      */
-    resolveSecretEnv?: (project: Project, entry: AppBuilderComponentCatalogEntry) => Promise<Record<string, string>>;
+    resolveSecretEnv?: (
+        project: Project,
+        entry: AppBuilderComponentCatalogEntry
+    ) => Promise<Record<string, string>>;
     /**
      * The event address and publishing credential an ADDED ERP deploys with
      * (`erpEventsDelivery.ts`, AB-16i), with a note when it deploys without them. Carries a
      * live secret, so it goes into the per-invocation env and nowhere else. Optional: bare
      * tests and headless callers without an ERP never need it.
      */
-    resolveEventsEnv?: (project: Project, entry: AppBuilderComponentCatalogEntry) => Promise<ErpEventsEnv>;
+    resolveEventsEnv?: (
+        project: Project,
+        entry: AppBuilderComponentCatalogEntry
+    ) => Promise<ErpEventsEnv>;
     /** Delete an entry's screen key when the component is removed. */
     forgetScreenKey?: (project: Project, entry: AppBuilderComponentCatalogEntry) => Promise<void>;
     /**
@@ -301,7 +318,7 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
         project: Project,
         componentId: string,
         onProgress?: (message: string) => void,
-        options?: AppManagementInstallOptions,
+        options?: AppManagementInstallOptions
     ) => Promise<AppManagementInstallResult>;
     /**
      * Fill the system an app-management entry serves from Commerce, once its Commerce
@@ -314,11 +331,15 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
      * (`syncErpList`, AB-16) before it is removed. Answers why it could not, or undefined.
      * Optional: bare tests and integrations that list nothing never need it.
      */
-    unlistSystem?: (project: Project, integrationId: string, systemId: string) => Promise<string | undefined>;
+    unlistSystem?: (
+        project: Project,
+        integrationId: string,
+        systemId: string
+    ) => Promise<string | undefined>;
     fillSystem?: (
         project: Project,
         entry: AppBuilderComponentCatalogEntry,
-        onStep: (step: string) => void,
+        onStep: (step: string) => void
     ) => Promise<{ status: 'filled' } | { status: 'failed'; detail: string }>;
     /** The version an app's manifest declares (appManifestVersion); optional for bare tests. */
     readAppVersion?: (componentPath: string) => Promise<string | undefined>;
@@ -329,7 +350,7 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
     /** npm install (and build) in an existing clone; update only. */
     installComponentDependencies?: (
         componentPath: string,
-        definition: TransformedComponentDefinition,
+        definition: TransformedComponentDefinition
     ) => Promise<{ success: boolean; error?: string }>;
     /**
      * Union-reconcile API subscriber (step 07). `onStep` carries its own short
@@ -342,7 +363,7 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
         appBuilderComponents: AppBuilderComponentCatalogEntry[],
         project: Project,
         onStep?: (step: string) => void,
-        scope?: SubscribeScope,
+        scope?: SubscribeScope
     ) => Promise<void>;
     /**
      * Give a component being ADDED its own Adobe workspace, and record it on the
@@ -361,7 +382,7 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
         project: Project,
         entry: AppBuilderComponentCatalogEntry,
         /** Called only when a workspace is actually made, not when one is joined. */
-        onMaking?: () => void,
+        onMaking?: () => void
     ) => Promise<{ error: string } | undefined>;
     /**
      * Delete a workspace a removed component held (AB-23), so removal returns the
@@ -374,11 +395,11 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
      */
     deleteComponentWorkspace: (
         project: Project,
-        workspace: { id: string; name: string },
+        workspace: { id: string; name: string }
     ) => Promise<{ error: string } | undefined>;
     /** Storefront config regen + republish (step 04 generalized providesEnvVars path). */
     republishStorefront: (
-        input: RepublishInput,
+        input: RepublishInput
     ) => Promise<{ success: boolean; error?: string; cdnError?: string }>;
     /**
      * After a deploy, delete the actions the apps at these paths no longer declare, in
@@ -412,11 +433,7 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
  * the project's workspace for a component that has its own would deploy to the
  * wrong namespace and report success.
  */
-function targetFor(
-    project: Project,
-    deps: AppBuilderComponentRunnerDeps,
-    componentId?: string,
-) {
+function targetFor(project: Project, deps: AppBuilderComponentRunnerDeps, componentId?: string) {
     const base = buildOrgTargetFromProjectAdobe(project.adobe, deps.getCachedOrganization());
     const own = componentId ? project.appBuilderComponents?.[componentId]?.workspace : undefined;
     return own ? { ...base, workspaceId: own.id } : base;
@@ -680,7 +697,11 @@ function readableFailure(reason: string, logger: Logger): string {
  * name its deploy would give it on an add. The catalog's name here renamed a
  * failed "Acme ERP" to "ERP" (2026-09-18).
  */
-function errorOutcome(entry: AppBuilderComponentCatalogEntry, reason: string, name: string): DeployOutcome {
+function errorOutcome(
+    entry: AppBuilderComponentCatalogEntry,
+    reason: string,
+    name: string,
+): DeployOutcome {
     return { status: 'error', ...identityOf(entry), name, error: reason };
 }
 
@@ -765,7 +786,12 @@ async function dispatchDeploy(
     // Before the inputs are read: a COPY's Commerce id is chosen once and recorded,
     // because Commerce names its webhooks and events from it and refuses to change it
     // on an upgrade (`commerceAppId.ts`). `resolveDeployInputs` reads it back.
-    if (ensureCommerceAppId(project, entry, deps.catalog)) {
+    // A listed system's id in its integration's list is chosen once too, from the name
+    // it deploys with, because every product it owns and every key-map row carries it
+    // (`erpListId.ts`, AB-51).
+    const recordedAppId = ensureCommerceAppId(project, entry, deps.catalog);
+    const recordedListId = ensureListId(project, entry);
+    if (recordedAppId || recordedListId) {
         await deps.saveProject(project);
     }
     // The app's own inputs — its settings, a bound integration's values, the
@@ -811,7 +837,9 @@ async function dispatchDeploy(
             // The project's own logs folder, made at creation — see deployFailureLog.
             // A plain '/' join: Node accepts it on every platform, and a `path`
             // import here would take this file past its 15-import coupling line.
-            failureLogFile: project.path ? `${project.path}/logs/${entry.id}-deploy.log` : undefined,
+            failureLogFile: project.path
+                ? `${project.path}/logs/${entry.id}-deploy.log`
+                : undefined,
         },
     );
     if (!result.success) return { ok: false, error: result.error || 'App deployment failed.' };
@@ -834,7 +862,9 @@ function boundSystemOf(
     catalog: AppBuilderComponentCatalogEntry[],
 ): AppBuilderComponentCatalogEntry | undefined {
     const kind = entry.catalogId ?? entry.id;
-    const system = catalog.find((candidate) => candidate.kind === 'system' && candidate.boundTo === kind);
+    const system = catalog.find(
+        (candidate) => candidate.kind === 'system' && candidate.boundTo === kind,
+    );
     return system && pairedEntry(entry, system);
 }
 
@@ -879,7 +909,10 @@ function atPairPosition(
 ): AppBuilderComponentRunnerDeps {
     const report = deps.onProgress;
     if (!report) return deps;
-    return { ...deps, onProgress: (message, subMessage) => report(message, subMessage, { index, total, name }) };
+    return {
+        ...deps,
+        onProgress: (message, subMessage) => report(message, subMessage, { index, total, name }),
+    };
 }
 
 /**
@@ -1016,10 +1049,14 @@ async function runAdd(
         // workspace recorded above: dropping it sent the deploy, its credentials
         // and its Commerce install to the project's workspace (2026-09-21).
         const workspace = project.appBuilderComponents?.[entry.id]?.workspace;
+        // And its id in its integration's list (AB-51): recorded once, on the first
+        // deploy, and on every product it owns since — a rename must not re-derive it.
+        const listId = project.appBuilderComponents?.[entry.id]?.listId;
         project.appBuilderComponents = {
             ...(project.appBuilderComponents ?? {}),
             [entry.id]: {
                 ...(workspace ? { workspace } : {}),
+                ...(listId ? { listId } : {}),
                 ...(entry.catalogId ? { catalogId: entry.catalogId } : {}),
                 kind: entry.kind,
                 status: 'deploying',
@@ -1049,7 +1086,10 @@ async function runAdd(
 
         await persistOutcome(project, entry, deployed.outcome, deps);
         if (linkBroughtSystem(project, entry.id, deps.catalog)) await deps.saveProject(project);
-        await installIfAppManagement(project, entry, deps, { componentPath: installed.path, since });
+        await installIfAppManagement(project, entry, deps, {
+            componentPath: installed.path,
+            since,
+        });
         return withWarnings(deployed.warning, await republishIfProvided(project, entry.id, deps));
     } catch (error) {
         deps.logger.error('[AppBuilderComponent Runner] add failed', error as Error);
@@ -1128,7 +1168,9 @@ async function fillAfterInstall(
     if (outcome.status === 'filled') {
         return;
     }
-    deps.logger.warn(`[AppBuilderComponent Runner] ${entry.id} installed but its system was not filled: ${outcome.detail}`);
+    deps.logger.warn(
+        `[AppBuilderComponent Runner] ${entry.id} installed but its system was not filled: ${outcome.detail}`,
+    );
     deps.onProgress?.(stage, `Demo data did not load: ${outcome.detail}`);
 }
 
@@ -1161,9 +1203,9 @@ export async function deployAppBuilderComponent(
 
         if (entry.nodeVersion) {
             deps.onProgress?.(
-            OPERATION_STAGES.preparingNode.label,
-            `Installing Node ${entry.nodeVersion} (one-time install)`,
-        );
+                OPERATION_STAGES.preparingNode.label,
+                `Installing Node ${entry.nodeVersion} (one-time install)`,
+            );
             const nodeError = await deps.ensureNodeVersion?.(entry.nodeVersion);
             if (nodeError) {
                 // Thrown so the catch below records it — the marker is already saved.
@@ -1197,7 +1239,8 @@ export async function deployAppBuilderComponent(
             // (measured live 2026-08-27: manifest said deploying while the
             // handler had already returned the build error). The add path has
             // always persisted its error outcome; this makes redeploy match.
-            const name = existing.name ?? resolveDisplayName(entry, resolveDeployInputs(project, entry));
+            const name =
+                existing.name ?? resolveDisplayName(entry, resolveDeployInputs(project, entry));
             const reason = readableFailure(deployed.error, deps.logger);
             recordDeployOutcome(project, entry.kind, id, errorOutcome(entry, reason, name));
             await deps.saveProject(project);
@@ -1215,13 +1258,16 @@ export async function deployAppBuilderComponent(
         // error — Bodea's integration showed a two-day-old 403 over that day's
         // "requires selection of a product" (2026-09-19). Best-effort: the save
         // itself may be what failed, and the caller must still get this answer.
-        const name = existing.name ?? resolveDisplayName(entry, resolveDeployInputs(project, entry));
+        const name =
+            existing.name ?? resolveDisplayName(entry, resolveDeployInputs(project, entry));
         recordDeployOutcome(project, entry.kind, id, errorOutcome(entry, reason, name));
-        await deps.saveProject(project).catch((saveError: unknown) =>
-            deps.logger.warn(
-                `[AppBuilderComponent Runner] could not record ${id}'s failure: ${toError(saveError).message}`,
-            ),
-        );
+        await deps
+            .saveProject(project)
+            .catch((saveError: unknown) =>
+                deps.logger.warn(
+                    `[AppBuilderComponent Runner] could not record ${id}'s failure: ${toError(saveError).message}`,
+                ),
+            );
         return { success: false, error: reason };
     }
 }
@@ -1250,7 +1296,10 @@ export async function updateAppBuilderComponent(
     const entry = catalogEntryFor(project, id, deps.catalog) ?? entryFromState(id, existing);
 
     deps.onProgress?.(OPERATION_STAGES.fetchingUpdate.label);
-    const fetched = await deps.fetchComponentSource(componentPath, existing.source.branch ?? 'main');
+    const fetched = await deps.fetchComponentSource(
+        componentPath,
+        existing.source.branch ?? 'main',
+    );
     if (fetched.status === 'refused' || fetched.status === 'failed') {
         return { success: false, error: fetched.detail };
     }
@@ -1267,7 +1316,10 @@ export async function updateAppBuilderComponent(
         }
     } else {
         deps.onProgress?.(OPERATION_STAGES.installingUpdateDependencies.label);
-        const dependencies = await deps.installComponentDependencies(componentPath, buildDefinition(entry));
+        const dependencies = await deps.installComponentDependencies(
+            componentPath,
+            buildDefinition(entry),
+        );
         if (!dependencies.success) {
             return {
                 success: false,
@@ -1284,14 +1336,17 @@ export async function updateAppBuilderComponent(
 }
 
 /** A finished update leaves nothing to offer; drop the recorded one. */
-async function forgetUpdate(project: Project, id: string, deps: AppBuilderComponentRunnerDeps): Promise<void> {
+async function forgetUpdate(
+    project: Project,
+    id: string,
+    deps: AppBuilderComponentRunnerDeps,
+): Promise<void> {
     // Read afresh: the deploy may have replaced the record.
     const state = project.appBuilderComponents?.[id];
     if (!state?.updateAvailable) return;
     clearUpdateAvailable(state);
     await deps.saveProject(project);
 }
-
 
 /**
  * The project's selections with every mesh dependency dropped.
@@ -1366,7 +1421,9 @@ export async function removeAppBuilderComponent(
     if (consumerId && !isAddedSystem(project, id, consumerId)) {
         return removeAppBuilderComponent(project, consumerId, deps, options);
     }
-    const stillListed = consumerId ? await unlistFirst(project, consumerId, id, state, deps, options) : undefined;
+    const stillListed = consumerId
+        ? await unlistFirst(project, consumerId, id, state, deps, options)
+        : undefined;
     if (stillListed && !options.force) return { success: false, error: stillListed };
     // Read before the record goes: afterwards nothing says which systems it used.
     const systems = state.kind === 'integration' ? systemsUsedBy(project, id, deps.catalog) : [];
@@ -1388,13 +1445,22 @@ export async function removeAppBuilderComponent(
     const checked = await undeployAndCheck(project, id, state, deps);
     const runtimeCleanup = checked?.cleanup;
 
-    const kept = await keepOrLetWorkspaceTake(project, id, [id, ...systems], checked, options, deps);
+    const kept = await keepOrLetWorkspaceTake(
+        project,
+        id,
+        [id, ...systems],
+        checked,
+        options,
+        deps,
+    );
     if (kept) return kept;
 
     // A missing instance (a folder removed by hand, a half-finished add) must not
     // stop the state cleanup below: the remote side is already gone (gap 4).
     await deps.componentManager.removeComponent(project, id, true).catch((error: unknown) => {
-        deps.logger.warn(`[AppBuilderComponent Runner] ${id} local removal skipped: ${toError(error).message}`);
+        deps.logger.warn(
+            `[AppBuilderComponent Runner] ${id} local removal skipped: ${toError(error).message}`,
+        );
     });
 
     // Read while the record is still there: a second copy's entry comes from it.
@@ -1406,19 +1472,23 @@ export async function removeAppBuilderComponent(
     // asked of the project as it now stands. A bound pair shares one, and removing a
     // pair goes through the integration and takes its systems with it — so the shared
     // workspace is released exactly once, when the last holder is gone.
-    const released = await releaseWorkspaces(cleared, workspacesToRelease(heldWorkspaces, cleared), {
-        ...deps,
-        progressLabel: OPERATION_STAGES.removingWorkspace.label,
-    });
+    const released = await releaseWorkspaces(
+        cleared,
+        workspacesToRelease(heldWorkspaces, cleared),
+        {
+            ...deps,
+            progressLabel: OPERATION_STAGES.removingWorkspace.label,
+        },
+    );
     await tidyAfterClear(project, cleared, removedEntry, provided, deps);
 
     const after = await removeBoundSystemsAfter(cleared, project, id, systems, deps, options);
     return {
-        ...removalResult(mergeCleanup(runtimeCleanup, after.runtimeCleanup), cleanup.commerceDetach, [
-            ...leftBehind(cleanup),
-            ...released.warnings,
-            ...after.warnings,
-        ]),
+        ...removalResult(
+            mergeCleanup(runtimeCleanup, after.runtimeCleanup),
+            cleanup.commerceDetach,
+            [...leftBehind(cleanup), ...released.warnings, ...after.warnings],
+        ),
         ...withDeleted([...released.deleted, ...after.workspacesDeleted]),
     };
 }
@@ -1437,14 +1507,18 @@ async function unlistFirst(
     options: RemoveOptions,
 ): Promise<string | undefined> {
     if (!deps.unlistSystem) return undefined;
-    deps.onProgress?.(OPERATION_STAGES.removing.label, 'Taking it off the integration\'s list');
+    deps.onProgress?.(OPERATION_STAGES.removing.label, "Taking it off the integration's list");
     const reason = await deps.unlistSystem(project, integrationId, id);
     if (!reason) return undefined;
     const name = shownNameOf(project, id, state);
     const integration = project.appBuilderComponents?.[integrationId]?.name ?? integrationId;
-    deps.logger.warn(`[AppBuilderComponent Runner] ${id} not taken off ${integrationId}'s list: ${reason}`);
+    deps.logger.warn(
+        `[AppBuilderComponent Runner] ${id} not taken off ${integrationId}'s list: ${reason}`,
+    );
     const detail = `${integration} still lists ${name} (${reason.replace(/\.$/u, '')})`;
-    return options.force ? undefined : `${detail}. Nothing was removed; Remove anyway goes on without it.`;
+    return options.force
+        ? undefined
+        : `${detail}. Nothing was removed; Remove anyway goes on without it.`;
 }
 
 /**
@@ -1461,13 +1535,16 @@ async function undeployAndCheck(
 ): Promise<Awaited<ReturnType<typeof checkRuntimeLeftovers>> | undefined> {
     const componentPath = project.componentInstances?.[id]?.path;
     const app = state.kind !== 'mesh';
-    const declared = app && componentPath ? await readDeclaredRuntime(componentPath) : NO_DECLARED_RUNTIME;
+    const declared =
+        app && componentPath ? await readDeclaredRuntime(componentPath) : NO_DECLARED_RUNTIME;
     const shownName = shownNameOf(project, id, state);
     deps.onProgress?.(OPERATION_STAGES.removing.label, `Undeploying ${shownName}`);
     try {
         await teardownRemote(targetFor(project, deps, id), componentPath, state.kind, deps);
     } catch (error) {
-        deps.logger.warn(`[AppBuilderComponent Runner] remote teardown warning: ${toError(error).message}`);
+        deps.logger.warn(
+            `[AppBuilderComponent Runner] remote teardown warning: ${toError(error).message}`,
+        );
     }
     if (!app) return undefined;
     deps.onProgress?.(OPERATION_STAGES.checkingLeftovers.label);
@@ -1534,7 +1611,11 @@ async function tidyAfterClear(
     }
     await refreshBundleQuietly(cleared, deps, 'remove');
     if (provided) {
-        await deps.republishStorefront({ project: cleared, secrets: deps.secrets, logger: deps.logger });
+        await deps.republishStorefront({
+            project: cleared,
+            secrets: deps.secrets,
+            logger: deps.logger,
+        });
     }
 }
 
@@ -1580,7 +1661,8 @@ async function keepOrLetWorkspaceTake(
     deps: AppBuilderComponentRunnerDeps,
 ): Promise<RunnerResult | undefined> {
     const state = project.appBuilderComponents?.[id];
-    const own = state && workspaceTakesLeftovers(project, id, removing) ? state.workspace : undefined;
+    const own =
+        state && workspaceTakesLeftovers(project, id, removing) ? state.workspace : undefined;
     if (!own || !checked?.stopped) {
         return state ? keepForRetry(project, state, checked, options, deps) : undefined;
     }
@@ -1627,10 +1709,18 @@ async function cleanUpPair(
     systems: string[],
     deps: AppBuilderComponentRunnerDeps,
 ): Promise<CleanupOutcome> {
-    const targets: TeardownTarget[] = [{ project, id, state, entry: entryFor(project, id, state, deps) }];
+    const targets: TeardownTarget[] = [
+        { project, id, state, entry: entryFor(project, id, state, deps) },
+    ];
     for (const systemId of systems) {
         const system = project.appBuilderComponents?.[systemId];
-        if (system) targets.push({ project, id: systemId, state: system, entry: entryFor(project, systemId, system, deps) });
+        if (system)
+            targets.push({
+                project,
+                id: systemId,
+                state: system,
+                entry: entryFor(project, systemId, system, deps),
+            });
     }
     const [own, ...rest] = await sequence(targets, (target) => cleanUpBeforeUndeploy(target, deps));
     return { ...own, unfinished: [...own.unfinished, ...rest.flatMap((r) => r.unfinished)] };
@@ -1647,7 +1737,11 @@ async function sequence<T, R>(items: T[], fn: (item: T) => Promise<R>): Promise<
  * The project without one component: its record, its selection, its API picks
  * and its env-value copies. The caller's reference is synced too.
  */
-function withoutComponent(project: Project, id: string, state: AppBuilderComponentState): Project & {
+function withoutComponent(
+    project: Project,
+    id: string,
+    state: AppBuilderComponentState,
+): Project & {
     appBuilderComponents: NonNullable<Project['appBuilderComponents']>;
 } {
     const cleared = {
@@ -1746,7 +1840,11 @@ async function removeBoundSystemsAfter(
     systems: string[],
     deps: AppBuilderComponentRunnerDeps,
     options: RemoveOptions,
-): Promise<{ warnings: string[]; runtimeCleanup?: RuntimeCleanupSummary; workspacesDeleted: string[] }> {
+): Promise<{
+    warnings: string[];
+    runtimeCleanup?: RuntimeCleanupSummary;
+    workspacesDeleted: string[];
+}> {
     const warnings: string[] = [];
     const workspacesDeleted: string[] = [];
     let runtimeCleanup: RuntimeCleanupSummary | undefined;
@@ -1755,8 +1853,13 @@ async function removeBoundSystemsAfter(
         if (!cleared.appBuilderComponents?.[systemId]) continue;
         deps.onProgress?.(OPERATION_STAGES.removing.label, `Removing ${name}`);
         // A throw's own words go to the log; the SC reads a sentence of ours.
-        const result = await removeAppBuilderComponent(cleared, systemId, deps, { ...options, cleanedUp: true }).catch((error: unknown): RunnerResult => {
-            deps.logger.warn(`[AppBuilderComponent Runner] ${systemId} removal threw: ${toError(error).message}`);
+        const result = await removeAppBuilderComponent(cleared, systemId, deps, {
+            ...options,
+            cleanedUp: true,
+        }).catch((error: unknown): RunnerResult => {
+            deps.logger.warn(
+                `[AppBuilderComponent Runner] ${systemId} removal threw: ${toError(error).message}`,
+            );
             return { success: false, error: 'it stopped partway, and the Debug Logs say why' };
         });
         if (!result.success) {

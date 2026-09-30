@@ -52,7 +52,7 @@ jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () 
             id: 'demo-erp',
             kind: 'system',
             boundTo: 'erp-integration',
-            listedAs: { envVar: 'ERP_ID', firstId: 'erp', adapter: 'demo-erp' },
+            listedAs: { envVar: 'ERP_ID', adapter: 'demo-erp' },
         },
     ]),
     getAppBuilderComponentEntry: jest.fn(),
@@ -141,7 +141,7 @@ beforeEach(() => {
     mockResolveRestTarget.mockResolvedValue(TARGET);
     mockFillErp.mockResolvedValue({ partners: 4, products: 182, skipped: 0 });
     mockPublishesPrices.mockReturnValue(true);
-    mockPublishPrices.mockResolvedValue({ erps: ['erp'], written: 6, removed: 1, unchanged: 2, skipped: [], failed: [] });
+    mockPublishPrices.mockResolvedValue({ erps: ['northwind'], written: 6, removed: 1, unchanged: 2, skipped: [], failed: [] });
 });
 
 describe('handleLoadErpDemoData', () => {
@@ -184,7 +184,7 @@ describe('handleLoadErpDemoData', () => {
         expect(mockRequestRest).toHaveBeenCalledWith('GET', TARGET, 'store/websites', undefined, expect.any(Function));
         await handedDeps().settings(['bodea']);
         // The integration's own ERP, by its list id (AB-16).
-        expect(mockResolvedSettings).toHaveBeenCalledWith(['bodea'], 'erp');
+        expect(mockResolvedSettings).toHaveBeenCalledWith(['bodea'], 'northwind');
     });
 
     it('hands the fill a Commerce read that carries the status when Commerce refuses', async () => {
@@ -229,7 +229,7 @@ describe('handleLoadErpDemoData — prices', () => {
 
         const result = await handleLoadErpDemoData(mockContext, { id: 'erp-integration' });
 
-        expect(mockPublishPrices).toHaveBeenCalledWith('erp');
+        expect(mockPublishPrices).toHaveBeenCalledWith('northwind');
         expect(result).toStrictEqual({
             success: true,
             data: expect.objectContaining({
@@ -266,14 +266,14 @@ describe('handleLoadErpDemoData — prices', () => {
 
     it('says which companies it could not price when some writes failed', async () => {
         mockPublishPrices.mockResolvedValue({
-            erps: ['erp'],
+            erps: ['northwind'],
             written: 2,
             removed: 0,
             unchanged: 0,
             skipped: [],
             failed: [
-                { erpId: 'erp', partnerId: 'C1', error: 'Commerce answered 400' },
-                { erpId: 'erp', partnerId: 'C2', error: 'Commerce answered 400' },
+                { erpId: 'northwind', partnerId: 'C1', error: 'Commerce answered 400' },
+                { erpId: 'northwind', partnerId: 'C2', error: 'Commerce answered 400' },
             ],
         });
         const { mockContext } = setup();
@@ -333,9 +333,9 @@ describe('handleLoadErpDemoData — several ERPs', () => {
 
         expect(mockFillErp).toHaveBeenCalledTimes(2);
         await (mockFillErp.mock.calls[1][0] as ErpFillDeps).settings(['bodea']);
-        expect(mockResolvedSettings).toHaveBeenCalledWith(['bodea'], 'demo-erp-2');
+        expect(mockResolvedSettings).toHaveBeenCalledWith(['bodea'], 'brand-b');
         // Each ERP publishes its own prices, by its own list id.
-        expect(mockPublishPrices.mock.calls).toEqual([['erp'], ['demo-erp-2']]);
+        expect(mockPublishPrices.mock.calls).toEqual([['northwind'], ['brand-b']]);
         expect(result).toMatchObject({
             success: true,
             data: {
@@ -357,8 +357,8 @@ describe('handleLoadErpDemoData — several ERPs', () => {
 
     it("names the ERP whose prices were not published when there are several", async () => {
         mockPublishPrices.mockImplementation(async (erpId?: string) => {
-            if (erpId === 'demo-erp-2') throw new Error('ERP prices answered 502: bad gateway');
-            return { erps: ['erp'], written: 1, removed: 0, unchanged: 0, skipped: [], failed: [] };
+            if (erpId === 'brand-b') throw new Error('ERP prices answered 502: bad gateway');
+            return { erps: ['northwind'], written: 1, removed: 0, unchanged: 0, skipped: [], failed: [] };
         });
         const { mockContext } = setup(twoErps());
 
@@ -372,13 +372,13 @@ describe('handleLoadErpDemoData — several ERPs', () => {
 
     it("replaces only that ERP's rows in the key map the integration holds", async () => {
         const first = { kind: 'customer', commerce: '1', erp: 'C1' };
-        mockReadKeyMap.mockResolvedValue([first, { kind: 'customer', commerce: '1', erp: 'OLD', erpId: 'demo-erp-2' }]);
+        mockReadKeyMap.mockResolvedValue([first, { kind: 'customer', commerce: '1', erp: 'OLD', erpId: 'brand-b' }]);
         const { mockContext } = setup(twoErps());
         await handleLoadErpDemoData(mockContext, { id: 'erp-integration', erp: 'demo-erp-2' });
 
         await handedDeps().saveKeyMap([{ kind: 'customer', commerce: '1', erp: 'B1' }]);
 
-        expect(mockReplaceKeyMap).toHaveBeenCalledWith([first, { kind: 'customer', commerce: '1', erp: 'B1', erpId: 'demo-erp-2' }]);
+        expect(mockReplaceKeyMap).toHaveBeenCalledWith([first, { kind: 'customer', commerce: '1', erp: 'B1', erpId: 'brand-b' }]);
     });
 
     it('refuses an ERP the integration does not serve', async () => {

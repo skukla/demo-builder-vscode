@@ -268,7 +268,7 @@ describe('nextCopyOf', () => {
  * added ERP is told apart from the one the integration brings by the pair's numbering.
  */
 describe('add-once integrations and the systems added beside them', () => {
-    const LISTING = { envVar: 'ERP_ID', firstId: 'erp', adapter: 'demo-erp' };
+    const LISTING = { envVar: 'ERP_ID', adapter: 'demo-erp' };
 
     it('copyForAdd makes no copy of an add-once integration, so a second add meets the refusal', () => {
         const held = project({ 'erp-integration': component('integration') });

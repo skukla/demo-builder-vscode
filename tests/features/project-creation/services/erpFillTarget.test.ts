@@ -15,7 +15,7 @@ jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () 
     // listedAs as the bundled catalog declares it (app-builder-components.json, demo-erp).
     getAppBuilderComponentCatalog: jest.fn(() => [
         { id: 'erp-integration', kind: 'integration' },
-        { id: 'demo-erp', kind: 'system', boundTo: 'erp-integration', listedAs: { envVar: 'ERP_ID', firstId: 'erp', adapter: 'demo-erp' } },
+        { id: 'demo-erp', kind: 'system', boundTo: 'erp-integration', listedAs: { envVar: 'ERP_ID', adapter: 'demo-erp' } },
     ]),
 }));
 

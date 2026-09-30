@@ -53,13 +53,19 @@ const ERP_URLS = {
 
 describe('resolveDeployInputs', () => {
     it('a text var with nothing configured takes its default', () => {
-        expect(resolveDeployInputs(createMockProject(), SYSTEM)).toEqual({ ERP_DISPLAY_NAME: 'Acme ERP' });
+        expect(resolveDeployInputs(createMockProject(), SYSTEM)).toEqual({
+            ERP_DISPLAY_NAME: 'Acme ERP',
+        });
     });
 
     it("Configure's own value wins over the default; blank counts as nothing", () => {
-        const typed = createMockProject({ componentConfigs: { 'demo-erp': { ERP_DISPLAY_NAME: 'Nordwind' } } });
+        const typed = createMockProject({
+            componentConfigs: { 'demo-erp': { ERP_DISPLAY_NAME: 'Nordwind' } },
+        });
         expect(resolveDeployInputs(typed, SYSTEM)).toEqual({ ERP_DISPLAY_NAME: 'Nordwind' });
-        const blank = createMockProject({ componentConfigs: { 'demo-erp': { ERP_DISPLAY_NAME: '   ' } } });
+        const blank = createMockProject({
+            componentConfigs: { 'demo-erp': { ERP_DISPLAY_NAME: '   ' } },
+        });
         expect(resolveDeployInputs(blank, SYSTEM)).toEqual({ ERP_DISPLAY_NAME: 'Acme ERP' });
     });
 
@@ -91,7 +97,9 @@ describe('resolveDeployInputs', () => {
                     kind: 'system',
                     status: 'deployed',
                     source: { owner: 'skukla', repo: 'demo-erp' },
-                    providesEnvVars: { ERP_BASE_URL: 'https://ns.adobeioruntime.net/api/v1/web/demo-erp' },
+                    providesEnvVars: {
+                        ERP_BASE_URL: 'https://ns.adobeioruntime.net/api/v1/web/demo-erp',
+                    },
                 },
             },
         });
@@ -102,7 +110,9 @@ describe('resolveDeployInputs', () => {
     });
 
     it('a provided var whose provider is absent is simply not there (the add door guards it)', () => {
-        expect(resolveDeployInputs(createMockProject(), INTEGRATION)).toEqual({ ERP_DISPLAY_NAME: 'Acme ERP' });
+        expect(resolveDeployInputs(createMockProject(), INTEGRATION)).toEqual({
+            ERP_DISPLAY_NAME: 'Acme ERP',
+        });
     });
 
     // Commerce knows an App Management app by the id it declares, and names its webhooks
@@ -116,35 +126,63 @@ describe('resolveDeployInputs', () => {
             DEMO_BUILDER_COPY_NUMBER: '2',
             ERP_DISPLAY_NAME: 'Acme ERP',
         });
-        expect(resolveDeployInputs(createMockProject(), INTEGRATION)).not.toHaveProperty('DEMO_BUILDER_COPY_NUMBER');
+        expect(resolveDeployInputs(createMockProject(), INTEGRATION)).not.toHaveProperty(
+            'DEMO_BUILDER_COPY_NUMBER'
+        );
     });
 });
 
 /*
- * A listed system is told its id in its integration's list (AB-16). The integration's own
- * ERP is "erp", the id the integration gives an event or key map row that names none; an
- * ERP added from the card is its component id. The legacy numbered pair (an
- * erp-integration-2 in the project) keeps "erp" inside its own integration.
+ * A listed system is told its id in its integration's list (AB-16): the id its name derives,
+ * recorded on its component the first time it deploys and never rewritten (AB-51). Before the
+ * record exists the derivation answers; with one, the record does — a rename must not move the
+ * id that is on every product the ERP owns.
  */
 describe('resolveDeployInputs — listed systems', () => {
-    const LISTED = { ...SYSTEM, listedAs: { envVar: 'ERP_ID', firstId: 'erp', adapter: 'demo-erp' } };
+    const LISTED = { ...SYSTEM, listedAs: { envVar: 'ERP_ID', adapter: 'demo-erp' } };
     const added = { ...LISTED, id: 'demo-erp-2', catalogId: 'demo-erp' };
     const withIntegration = (...ids: string[]) =>
         createMockProject({
-            appBuilderComponents: Object.fromEntries(ids.map((id) => [id, { kind: 'integration' as const, status: 'deployed' as const, source: { owner: 'skukla', repo: 'x' } }])),
+            appBuilderComponents: Object.fromEntries(
+                ids.map((id) => [
+                    id,
+                    {
+                        kind: 'integration' as const,
+                        status: 'deployed' as const,
+                        source: { owner: 'skukla', repo: 'x' },
+                    },
+                ])
+            ),
         });
 
-    it("the integration's own ERP is told the single-ERP id", () => {
-        expect(resolveDeployInputs(withIntegration('erp-integration'), LISTED)).toMatchObject({ ERP_ID: 'erp' });
-        expect(listIdOf(createMockProject(), LISTED)).toBe('erp');
+    it("an ERP with no record yet is told the id its name derives — the schema default's, here", () => {
+        // ERP_DISPLAY_NAME defaults to "Acme ERP": the trailing ERP word goes.
+        expect(resolveDeployInputs(withIntegration('erp-integration'), LISTED)).toMatchObject({
+            ERP_ID: 'acme',
+        });
+        expect(listIdOf(createMockProject(), LISTED)).toBe('acme');
     });
 
-    it('an ERP added from the card is told its own component id', () => {
-        expect(resolveDeployInputs(withIntegration('erp-integration'), added)).toMatchObject({ ERP_ID: 'demo-erp-2' });
+    it('an ERP is told the id recorded on it, whatever its name says now', () => {
+        const project = createMockProject({
+            appBuilderComponents: {
+                'demo-erp-2': {
+                    kind: 'system',
+                    status: 'deployed',
+                    source: { owner: 'skukla', repo: 'x' },
+                    name: 'Renamed ERP',
+                    listId: 'contoso',
+                },
+            },
+        });
+        expect(resolveDeployInputs(project, added)).toMatchObject({ ERP_ID: 'contoso' });
     });
 
-    it("a legacy numbered pair's ERP is its own integration's first ERP", () => {
-        expect(listIdOf(withIntegration('erp-integration', 'erp-integration-2'), added)).toBe('erp');
+    it('an ERP named on its integration derives from that name', () => {
+        const project = createMockProject({
+            componentConfigs: { 'erp-integration': { ERP_DISPLAY_NAME: 'Northwind ERP' } },
+        });
+        expect(listIdOf(project, LISTED)).toBe('northwind');
     });
 
     it('an entry with no listing is told no id', () => {
@@ -159,20 +197,27 @@ describe('deriveWebBase / deriveProvidedValues', () => {
 
     it('a package with a renamed isolation name still yields its own base', () => {
         expect(
-            deriveWebBase({ 'runtime/demo-erp-a1b2/health': 'https://ns.adobeioruntime.net/api/v1/web/demo-erp-a1b2/health' }),
+            deriveWebBase({
+                'runtime/demo-erp-a1b2/health':
+                    'https://ns.adobeioruntime.net/api/v1/web/demo-erp-a1b2/health',
+            })
         ).toBe('https://ns.adobeioruntime.net/api/v1/web/demo-erp-a1b2');
     });
 
     it('no web URL, no base', () => {
-        expect(deriveWebBase({ 'runtime/erp/timer': 'https://ns.adobeioruntime.net/api/v1/erp/timer' })).toBeUndefined();
+        expect(
+            deriveWebBase({ 'runtime/erp/timer': 'https://ns.adobeioruntime.net/api/v1/erp/timer' })
+        ).toBeUndefined();
         expect(deriveWebBase(undefined)).toBeUndefined();
     });
 
-    it('every provided name maps to the web base; the mesh endpoint is not this module\'s to set', () => {
+    it("every provided name maps to the web base; the mesh endpoint is not this module's to set", () => {
         expect(deriveProvidedValues(SYSTEM, ERP_URLS)).toEqual({
             ERP_BASE_URL: 'https://ns.adobeioruntime.net/api/v1/web/demo-erp',
         });
-        expect(deriveProvidedValues({ ...SYSTEM, providesEnvVars: ['MESH_ENDPOINT'] }, ERP_URLS)).toBeUndefined();
+        expect(
+            deriveProvidedValues({ ...SYSTEM, providesEnvVars: ['MESH_ENDPOINT'] }, ERP_URLS)
+        ).toBeUndefined();
         expect(deriveProvidedValues(INTEGRATION, ERP_URLS)).toBeUndefined();
         expect(deriveProvidedValues(SYSTEM, {})).toBeUndefined();
     });
@@ -183,7 +228,9 @@ describe('resolveDisplayName', () => {
         expect(resolveDisplayName(SYSTEM, { ERP_DISPLAY_NAME: 'Nordwind' })).toBe('Nordwind');
         expect(resolveDisplayName(SYSTEM, { ERP_DISPLAY_NAME: '  ' })).toBe('ERP');
         // An entry that does not name itself from an input ignores the input.
-        expect(resolveDisplayName(INTEGRATION, { ERP_DISPLAY_NAME: 'Nordwind' })).toBe('ERP integration');
+        expect(resolveDisplayName(INTEGRATION, { ERP_DISPLAY_NAME: 'Nordwind' })).toBe(
+            'ERP integration'
+        );
     });
 
     // The shipped catalog, not a fixture: this is the contract the dashboard row,
@@ -192,10 +239,15 @@ describe('resolveDisplayName', () => {
     it('the shipped ERP integration is called by its own name — ERP Integration by default', () => {
         const entry = shippedEntry('erp-integration');
 
-        expect(resolveDisplayName(entry, resolveDeployInputs(createMockProject(), entry))).toBe('ERP Integration');
+        expect(resolveDisplayName(entry, resolveDeployInputs(createMockProject(), entry))).toBe(
+            'ERP Integration'
+        );
         const named = createMockProject({
             componentConfigs: {
-                'erp-integration': { ERP_DISPLAY_NAME: 'Northwind ERP', INTEGRATION_DISPLAY_NAME: 'Bodea ERP Hub' },
+                'erp-integration': {
+                    ERP_DISPLAY_NAME: 'Northwind ERP',
+                    INTEGRATION_DISPLAY_NAME: 'Bodea ERP Hub',
+                },
             },
         });
         expect(displayNameInProject(named, entry)).toBe('Bodea ERP Hub');
@@ -247,27 +299,33 @@ describe("the integration's own name (AB-16o)", () => {
             componentConfigs: { 'erp-integration': { ERP_DISPLAY_NAME: 'Northwind ERP' } },
         });
 
-        expect(resolveDeployInputs(project, shippedEntry('erp-integration')).INTEGRATION_DISPLAY_NAME).toBe(
-            'ERP Integration',
-        );
+        expect(
+            resolveDeployInputs(project, shippedEntry('erp-integration')).INTEGRATION_DISPLAY_NAME
+        ).toBe('ERP Integration');
     });
 
     it('a name set on the integration (a rename) wins over the recorded one', () => {
         const project = projectFromBeforeOwnName();
         project.componentConfigs = {
-            'erp-integration': { ERP_DISPLAY_NAME: 'Northwind ERP', INTEGRATION_DISPLAY_NAME: 'Bodea ERP Hub' },
+            'erp-integration': {
+                ERP_DISPLAY_NAME: 'Northwind ERP',
+                INTEGRATION_DISPLAY_NAME: 'Bodea ERP Hub',
+            },
         };
 
-        expect(resolveDeployInputs(project, shippedEntry('erp-integration')).INTEGRATION_DISPLAY_NAME).toBe(
-            'Bodea ERP Hub',
-        );
+        expect(
+            resolveDeployInputs(project, shippedEntry('erp-integration')).INTEGRATION_DISPLAY_NAME
+        ).toBe('Bodea ERP Hub');
     });
 
     // The ERP reads its integration's values first; it must not take the integration's name.
     it("the ERP keeps its own ERP_DISPLAY_NAME and is never sent the integration's name", () => {
         const project = projectFromBeforeOwnName();
         project.componentConfigs = {
-            'erp-integration': { ERP_DISPLAY_NAME: 'Northwind ERP', INTEGRATION_DISPLAY_NAME: 'Bodea ERP Hub' },
+            'erp-integration': {
+                ERP_DISPLAY_NAME: 'Northwind ERP',
+                INTEGRATION_DISPLAY_NAME: 'Bodea ERP Hub',
+            },
         };
         const erp = shippedEntry('demo-erp');
 
@@ -298,7 +356,9 @@ describe('displayNameInProject', () => {
     // The case the workspace title needs: a bound system names its integration's
     // workspace BEFORE the integration has any record.
     it('with no record yet, what its inputs make it, else the catalog name', () => {
-        const typed = createMockProject({ componentConfigs: { 'demo-erp': { ERP_DISPLAY_NAME: 'Northwind ERP' } } });
+        const typed = createMockProject({
+            componentConfigs: { 'demo-erp': { ERP_DISPLAY_NAME: 'Northwind ERP' } },
+        });
 
         expect(displayNameInProject(typed, SYSTEM)).toBe('Northwind ERP');
         expect(displayNameInProject(createMockProject(), INTEGRATION)).toBe('ERP integration');

@@ -73,11 +73,11 @@ describe('syncErpList — each added ERP with its own credential', () => {
         expect(readCredential).toHaveBeenCalledTimes(1);
         expect(readCredential).toHaveBeenCalledWith(CONTOSO_WS);
         const [first, contoso] = sentEntries(fetchImpl);
-        expect(first.id).toBe('erp');
+        expect(first.id).toBe('acme');
         expect(first.connection).not.toHaveProperty('auth');
-        expect(contoso.id).toBe('demo-erp-2');
+        expect(contoso.id).toBe('contoso');
         expect(contoso.connection.auth).toStrictEqual(CONTOSO_AUTH);
-        expect(outcome).toStrictEqual({ status: 'registered', ids: ['erp', 'demo-erp-2'], warnings: [] });
+        expect(outcome).toStrictEqual({ status: 'registered', ids: ['acme', 'contoso'], warnings: [] });
     });
 
     it('still sends the list when the credential cannot be read, without auth, and says why', async () => {
@@ -91,7 +91,7 @@ describe('syncErpList — each added ERP with its own credential', () => {
         expect(sentEntries(fetchImpl)[1].connection).not.toHaveProperty('auth');
         expect(outcome).toStrictEqual({
             status: 'registered',
-            ids: ['erp', 'demo-erp-2'],
+            ids: ['acme', 'contoso'],
             warnings: [
                 "Contoso ERP's credential could not be read; the integration cannot reach it: " +
                     'the ContosoERP workspace has no OAuth server-to-server credential.',
@@ -120,7 +120,7 @@ describe('syncErpList — each added ERP with its own credential', () => {
         await syncErpList(project(), 'erp-integration', AUTH, { fetchImpl: fetchImpl as unknown as typeof fetch, leaving: 'demo-erp' });
 
         const entries = sentEntries(fetchImpl);
-        expect(entries.map((entry) => entry.id)).toStrictEqual(['demo-erp-2']);
+        expect(entries.map((entry) => entry.id)).toStrictEqual(['contoso']);
         expect(entries[0].connection).not.toHaveProperty('auth');
     });
 
@@ -145,7 +145,7 @@ describe('syncErpList — each added ERP with its own credential', () => {
         await expect(unlistErp(project(), 'erp-integration', 'demo-erp-2', AUTH)).resolves.toBeUndefined();
 
         const entries = sentEntries(fetchImpl);
-        expect(entries.map((entry) => entry.id)).toStrictEqual(['erp']);
+        expect(entries.map((entry) => entry.id)).toStrictEqual(['acme']);
         expect(entries[0].connection).not.toHaveProperty('auth');
         spy.mockRestore();
     });
