@@ -40,6 +40,29 @@ describe('ActionGrid — overflow menu', () => {
             expect(defaultProps.handleOpenDevConsole).toHaveBeenCalled();
         });
 
+        it('exposes AEM Assets right after Dev Console, for every project type (EDS-21)', () => {
+            // Not gated on isEds: the AEM binding is a Demo Builder setting, not a
+            // property of the project, and the handler says so when it is unset.
+            for (const props of [defaultProps, edsProps]) {
+                const { container, unmount } = render(<ActionGrid {...props} />);
+                const menu = container.querySelector('[role="menu"]') as HTMLElement;
+                const labels = within(menu)
+                    .getAllByRole('menuitem')
+                    .map((item) => item.textContent);
+                expect(labels.indexOf('AEM Assets')).toBe(labels.indexOf('Dev Console') + 1);
+                unmount();
+            }
+        });
+
+        it('should call handleOpenAemAssets when AEM Assets menu item clicked', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            render(<ActionGrid {...defaultProps} />);
+
+            await user.click(screen.getByText('AEM Assets'));
+
+            expect(defaultProps.handleOpenAemAssets).toHaveBeenCalled();
+        });
+
         it('should expose Export in the overflow menu', () => {
             const { container } = render(<ActionGrid {...defaultProps} />);
 
@@ -67,7 +90,9 @@ describe('ActionGrid — overflow menu', () => {
                 <ActionGrid {...defaultProps} handleChangeDemoSource={handleChangeDemoSource} />
             );
             const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            const labels = within(menu).getAllByRole('menuitem').map((item) => item.textContent);
+            const labels = within(menu)
+                .getAllByRole('menuitem')
+                .map((item) => item.textContent);
             expect(labels.indexOf('Change Demo Source')).toBe(labels.indexOf('Reset') - 1);
 
             await user.click(screen.getByText('Change Demo Source'));
@@ -78,13 +103,19 @@ describe('ActionGrid — overflow menu', () => {
         it('offers Save as demo package, right after Export, for an EDS project only', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const handleSaveDemoPackage = jest.fn();
-            const headless = render(<ActionGrid {...defaultProps} handleSaveDemoPackage={handleSaveDemoPackage} />);
+            const headless = render(
+                <ActionGrid {...defaultProps} handleSaveDemoPackage={handleSaveDemoPackage} />
+            );
             expect(screen.queryByText('Save as demo package')).not.toBeInTheDocument();
             headless.unmount();
 
-            const { container } = render(<ActionGrid {...edsProps} handleSaveDemoPackage={handleSaveDemoPackage} />);
+            const { container } = render(
+                <ActionGrid {...edsProps} handleSaveDemoPackage={handleSaveDemoPackage} />
+            );
             const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            const labels = within(menu).getAllByRole('menuitem').map((item) => item.textContent);
+            const labels = within(menu)
+                .getAllByRole('menuitem')
+                .map((item) => item.textContent);
             expect(labels.indexOf('Save as demo package')).toBe(labels.indexOf('Export') + 1);
 
             await user.click(screen.getByText('Save as demo package'));

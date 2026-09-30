@@ -200,6 +200,17 @@ describe('useDashboardActions', () => {
             expect(mockPostMessage).toHaveBeenCalledWith('openDevConsole');
         });
 
+        it('should send openAemAssets message (EDS-21)', () => {
+            // No URL travels with it: the AEM host is a VS Code setting, which only
+            // the extension side can read.
+            const { result } = renderActionsHook();
+
+            act(() => {
+                result.current.handleOpenAemAssets();
+            });
+
+            expect(mockPostMessage).toHaveBeenCalledWith('openAemAssets');
+        });
 
         it('should send navigateBack message', () => {
             const { result } = renderActionsHook();
@@ -251,8 +262,6 @@ describe('useDashboardActions', () => {
 
             expect(mockPostMessage).toHaveBeenCalledWith('editProject');
         });
-
-
     });
 
     // The authoring-experience flip was relocated to the Configure webview
@@ -284,9 +293,7 @@ describe('useDashboardActions', () => {
         });
     });
 
-    describe('Storefront Actions', () => {
-
-    });
+    describe('Storefront Actions', () => {});
 
     describe('Open Live Site Action', () => {
         const LIVE_URL = 'https://main--demo--acme.aem.live/';
@@ -474,6 +481,7 @@ describe('useDashboardActions', () => {
             expect(result.current.handleStopDemo).toBe(initialHandlers.handleStopDemo);
             expect(result.current.handleConfigure).toBe(initialHandlers.handleConfigure);
             expect(result.current.handleOpenDevConsole).toBe(initialHandlers.handleOpenDevConsole);
+            expect(result.current.handleOpenAemAssets).toBe(initialHandlers.handleOpenAemAssets);
             expect(result.current.handleNavigateBack).toBe(initialHandlers.handleNavigateBack);
             expect(result.current.handleReAuthenticate).toBe(initialHandlers.handleReAuthenticate);
         });

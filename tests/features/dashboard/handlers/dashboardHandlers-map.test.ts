@@ -50,6 +50,7 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'openAdminPanel')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'configure')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'openDevConsole')).toBe(true);
+            expect(hasHandler(dashboardHandlers, 'openAemAssets')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'navigateBack')).toBe(true);
         });
 
@@ -132,7 +133,7 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'exportProjectSettings')).toBe(true);
         });
 
-        it('should have exactly 73 handlers', () => {
+        it('should have exactly 76 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers) as Array<
@@ -273,7 +274,10 @@ describe('dashboardHandlers', () => {
             //
             // getErpSettings + setErpSettings (73 → 75, AB-16j, 2026-09-29): read and set an
             // ERP's own settings (ownership, sales-org per website) for agents.
-            expect(types).toHaveLength(75);
+            //
+            // openAemAssets (75 → 76, EDS-21, 2026-09-30): the More menu's "AEM Assets" —
+            // the bound AEM author's Assets console (demoBuilder.daLive.aemAuthorUrl).
+            expect(types).toHaveLength(76);
         });
 
         it('should have handlers as functions', () => {

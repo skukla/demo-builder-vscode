@@ -59,6 +59,11 @@ jest.mock(
         Uri: {
             parse: jest.fn((url: string) => ({ toString: () => url })),
         },
+        // getProjectUrls reads demoBuilder.daLive.aemAuthorUrl (EDS-21). Unset by
+        // default: no AEM author bound, so no aemAssets URL.
+        workspace: {
+            getConfiguration: jest.fn(() => ({ get: jest.fn(() => undefined) })),
+        },
     }),
     { virtual: true }
 );
@@ -165,10 +170,7 @@ export function setupMocks(projectOverrides?: Partial<Project>): TestMocks {
     const base = createMockHandlerContext({
         panel: createMockWebviewPanel(),
         // The VS Code ExtensionContext seam (secrets used by the appBuilderComponent runner deps).
-        context: createMockExtensionContext(
-            { secrets: createMockSecretStorage().secrets },
-            '/ext'
-        ),
+        context: createMockExtensionContext({ secrets: createMockSecretStorage().secrets }, '/ext'),
         stateManager,
         logger: createMockLogger(),
         sendMessage: jest.fn(),

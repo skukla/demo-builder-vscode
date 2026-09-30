@@ -591,8 +591,9 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         readOnly: true,
         description:
             "The current project's useful URLs as data (no browser opened): local storefront " +
-            '(while running), EDS live site + DA.live authoring, Commerce admin, and the Developer ' +
-            'Console deep link. Absent URLs are omitted.',
+            '(while running), EDS live site + DA.live authoring, Commerce admin, the Developer ' +
+            "Console deep link, and the bound AEM author's Assets console (when " +
+            'demoBuilder.daLive.aemAuthorUrl is set). Absent URLs are omitted.',
         map: dashboardHandlers,
         type: 'getProjectUrls',
     },

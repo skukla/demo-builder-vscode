@@ -44,7 +44,14 @@ import type { HandlerContext } from '@/types/handlers';
  * than that it is unknown. The pairing is asserted in the tool's tests against
  * the handler's own output.
  */
-const URL_TARGETS = ['storefront', 'liveSite', 'daLive', 'commerceAdmin', 'devConsole'] as const;
+const URL_TARGETS = [
+    'storefront',
+    'liveSite',
+    'daLive',
+    'commerceAdmin',
+    'devConsole',
+    'aemAssets',
+] as const;
 
 const TARGET_HINTS: Record<(typeof URL_TARGETS)[number], string> = {
     storefront: 'the local dev storefront — only while the demo is running',
@@ -52,6 +59,8 @@ const TARGET_HINTS: Record<(typeof URL_TARGETS)[number], string> = {
     daLive: 'the DA.live authoring surface (EDS projects only)',
     commerceAdmin: 'the Commerce admin panel',
     devConsole: 'the Adobe Developer Console for this workspace',
+    aemAssets:
+        "the bound AEM author's Assets console (only when demoBuilder.daLive.aemAuthorUrl is set)",
 };
 
 /**
@@ -80,13 +89,11 @@ export function registerLifecycleTools(
                 'one (see get_project_urls for what is set); arbitrary URLs are not accepted. ' +
                 'Requires confirm:true — it takes over the screen.',
             inputSchema: {
-                target: z
-                    .enum(URL_TARGETS)
-                    .describe(
-                        Object.entries(TARGET_HINTS)
-                            .map(([key, hint]) => `${key} = ${hint}`)
-                            .join('; '),
-                    ),
+                target: z.enum(URL_TARGETS).describe(
+                    Object.entries(TARGET_HINTS)
+                        .map(([key, hint]) => `${key} = ${hint}`)
+                        .join('; '),
+                ),
                 confirm: z
                     .boolean()
                     .optional()
@@ -105,7 +112,12 @@ export function registerLifecycleTools(
             // The SAME resolver get_project_urls uses, so the target an agent read
             // there is the target opened here. Re-deriving it would be a second
             // implementation of one fact.
-            const res = await dispatchHandler(dashboardHandlers, ctxFactory(), 'getProjectUrls', {});
+            const res = await dispatchHandler(
+                dashboardHandlers,
+                ctxFactory(),
+                'getProjectUrls',
+                {},
+            );
             if (!res.success) {
                 return asText({ error: res.error ?? 'Could not resolve the project URLs.' });
             }
@@ -134,7 +146,7 @@ export function registerLifecycleTools(
             annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Edit Project',
             description:
-                "Open the creation wizard in edit mode on the current project, for changes the " +
+                'Open the creation wizard in edit mode on the current project, for changes the ' +
                 'configure_project tool cannot make (package, stack, storefront repo). Hands back ' +
                 'to the user — the wizard is theirs to drive; nothing is changed by this call.',
             inputSchema: {},

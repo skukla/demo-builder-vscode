@@ -173,4 +173,38 @@ describe('handleGetProjectUrls', () => {
         expect(urls.liveSite).toBeUndefined();
         expect(urls.daLive).toBeUndefined();
     });
+
+    // The AEM Assets URL comes from a SETTING, not the project (EDS-21): the host
+    // `demoBuilder.daLive.aemAuthorUrl` binds the Assets panel to. The shared vscode
+    // mock answers every `get` with 3000 (a port), so each case installs its own.
+    describe('aemAssets (from demoBuilder.daLive.aemAuthorUrl)', () => {
+        const vscode = require('vscode');
+
+        function settingReads(value: unknown) {
+            vscode.workspace.getConfiguration.mockReturnValue({
+                get: jest.fn().mockReturnValue(value),
+            });
+        }
+
+        it('returns the Assets console on the bound author when the setting is set', async () => {
+            settingReads('author-p1-e1.adobeaemcloud.com');
+            const { mockContext } = setupMocks();
+
+            const urls = urlsOf(await run(mockContext));
+
+            expect(vscode.workspace.getConfiguration).toHaveBeenCalledWith('demoBuilder.daLive');
+            expect(urls.aemAssets).toBe(
+                'https://author-p1-e1.adobeaemcloud.com/assets.html/content/dam'
+            );
+        });
+
+        it('omits it when no AEM author is bound', async () => {
+            settingReads(undefined);
+            const { mockContext } = setupMocks();
+
+            const urls = urlsOf(await run(mockContext));
+
+            expect(urls.aemAssets).toBeUndefined();
+        });
+    });
 });

@@ -40,6 +40,7 @@ import {
     handleOpenDaLive,
     handleOpenAdminPanel,
     handleOpenDevConsole,
+    handleOpenAemAssets,
     handleGetProjectUrls,
 } from './openUrlHandlers';
 import {
@@ -147,6 +148,7 @@ export {
     handleOpenDaLive,
     handleOpenAdminPanel,
     handleOpenDevConsole,
+    handleOpenAemAssets,
     handleGetProjectUrls,
 } from './openUrlHandlers';
 export {
@@ -328,6 +330,7 @@ export const dashboardHandlers = defineHandlers({
     configure: handleConfigure,
     openDebugLogs: handleOpenDebugLogs,
     openDevConsole: handleOpenDevConsole,
+    openAemAssets: handleOpenAemAssets,
     getProjectUrls: handleGetProjectUrls,
     navigateBack: handleNavigateBack,
     openIntegrations: handleOpenIntegrations,

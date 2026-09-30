@@ -152,6 +152,7 @@ export function ProjectDashboardScreen({
         handleConfigure,
         handleEditProject,
         handleOpenDevConsole,
+        handleOpenAemAssets,
         handleRestartDemo,
         handleNavigateBack,
         handleReAuthenticate,
@@ -294,6 +295,7 @@ export function ProjectDashboardScreen({
                                     }
                                     handleConfigure={handleConfigure}
                                     handleOpenDevConsole={handleOpenDevConsole}
+                                    handleOpenAemAssets={handleOpenAemAssets}
                                     handleEditProject={handleEditProject}
                                     handleExportProject={handover.openExport}
                                     handleSaveDemoPackage={handover.openDemoPackage}
@@ -327,7 +329,9 @@ export function ProjectDashboardScreen({
             {handover.exportOpen ? (
                 <ExportModal isOpen isEds={isEdsStable} onClose={handover.closeExport} />
             ) : null}
-            {handover.demoPackageOpen ? <DemoPackageModal isOpen onClose={handover.closeDemoPackage} /> : null}
+            {handover.demoPackageOpen ? (
+                <DemoPackageModal isOpen onClose={handover.closeDemoPackage} />
+            ) : null}
 
             {/* Capability catalog — reached from the "View AI Capabilities" link,
                 NOT the health badge. Two sections (skills + MCP servers) plus a

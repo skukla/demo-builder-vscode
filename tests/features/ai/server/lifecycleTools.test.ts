@@ -28,6 +28,7 @@ const ALL_URLS = {
     daLive: 'https://da.live/#/org/site',
     commerceAdmin: 'https://admin.example.test',
     devConsole: 'https://developer.adobe.com/console',
+    aemAssets: 'https://author-p1-e1.adobeaemcloud.com/assets.html/content/dam',
 };
 
 type Tool = (args: unknown) => Promise<{ content: Array<{ text: string }> }>;

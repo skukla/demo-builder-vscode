@@ -10,12 +10,12 @@
  * the handler validates them before building the URL.
  */
 
-import * as vscode from 'vscode';
 import { handleOpenDevConsole } from '@/features/dashboard/handlers/openUrlHandlers';
 import type { Project } from '@/types/base';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../helpers/projectFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { opened } from './openUrlHandlers.testUtils';
 
 const ORG = '100000';
 const PROJECT = '1000000000000000001';
@@ -30,13 +30,22 @@ function contextFor(project: Project) {
 
 function bodea(): Project {
     return createMockProject({
-        adobe: { organization: ORG, projectId: PROJECT, workspace: PROJECT_WORKSPACE, authenticated: true },
+        adobe: {
+            organization: ORG,
+            projectId: PROJECT,
+            workspace: PROJECT_WORKSPACE,
+            authenticated: true,
+        },
         appBuilderComponents: {
             'erp-integration': {
                 kind: 'integration',
                 status: 'deployed',
                 source: { owner: 'skukla', repo: 'commerce-erp-integration' },
-                workspace: { id: OWN_WORKSPACE, name: 'erpintegrationAb12', title: 'ERP Integration' },
+                workspace: {
+                    id: OWN_WORKSPACE,
+                    name: 'erpintegrationAb12',
+                    title: 'ERP Integration',
+                },
             },
             'old-integration': {
                 kind: 'integration',
@@ -47,12 +56,6 @@ function bodea(): Project {
     });
 }
 
-/** The URL handed to the browser. */
-function opened(): string {
-    const [uri] = (vscode.env.openExternal as jest.Mock).mock.calls[0] ?? [];
-    return (vscode.Uri.parse as jest.Mock).mock.calls.at(-1)?.[0] ?? String(uri);
-}
-
 const workspaceUrl = (workspace: string) =>
     `https://developer.adobe.com/console/projects/${ORG}/${PROJECT}/workspaces/${workspace}/details`;
 
@@ -61,7 +64,7 @@ beforeEach(() => jest.clearAllMocks());
 describe('handleOpenDevConsole', () => {
     it("opens an integration's OWN workspace when the card names it", async () => {
         await expect(
-            handleOpenDevConsole(contextFor(bodea()), { componentId: 'erp-integration' }),
+            handleOpenDevConsole(contextFor(bodea()), { componentId: 'erp-integration' })
         ).resolves.toEqual({ success: true });
 
         expect(opened()).toBe(workspaceUrl(OWN_WORKSPACE));
@@ -79,7 +82,7 @@ describe('handleOpenDevConsole', () => {
         expect(opened()).toBe(workspaceUrl(PROJECT_WORKSPACE));
     });
 
-    it("ignores an id the project does not have, rather than guessing a workspace", async () => {
+    it('ignores an id the project does not have, rather than guessing a workspace', async () => {
         await handleOpenDevConsole(contextFor(bodea()), { componentId: 'nope' });
 
         expect(opened()).toBe(workspaceUrl(PROJECT_WORKSPACE));

@@ -104,6 +104,7 @@ type OverflowKey =
     | 'syncStorefront'
     | 'refreshBlockLibrary'
     | 'devConsole'
+    | 'aemAssets'
     | 'changeDemoSource'
     | 'saveDemoPackage'
     | 'reset'
@@ -181,6 +182,12 @@ export interface ActionGridProps {
     handleConfigure: () => void;
     /** Handler for Dev Console button (overflow menu) */
     handleOpenDevConsole: () => void;
+    /**
+     * Handler for the AEM Assets overflow item (EDS-21). Always offered: the
+     * bound AEM is a setting the webview cannot read, so the host resolves it
+     * and, when none is set, offers the setting instead of failing.
+     */
+    handleOpenAemAssets: () => void;
     /**
      * Handler for the Edit overflow item. Opens the wizard in edit mode for
      * the current project. Optional — gated like the kebab's Edit action
@@ -483,9 +490,7 @@ function PrimaryZone({
                     <Text UNSAFE_className="icon-label">Manage Commerce</Text>
                 </ActionButton>
 
-                {handleEditProject && (
-                    <EditTile canEdit={canEdit} onPress={handleEditProject} />
-                )}
+                {handleEditProject && <EditTile canEdit={canEdit} onPress={handleEditProject} />}
             </div>
         </div>
     );
@@ -516,6 +521,7 @@ export function ActionGrid({
     handleRepublishContent,
     handleConfigure,
     handleOpenDevConsole,
+    handleOpenAemAssets,
     handleEditProject,
     handleExportProject,
     handleChangeDemoSource,
@@ -544,6 +550,7 @@ export function ActionGrid({
             syncStorefront: handleSyncStorefront,
             refreshBlockLibrary: handleRefreshBlockLibrary,
             devConsole: handleOpenDevConsole,
+            aemAssets: handleOpenAemAssets,
             changeDemoSource: handleChangeDemoSource,
             saveDemoPackage: handleSaveDemoPackage,
             reset: handleResetProject,
@@ -588,7 +595,6 @@ export function ActionGrid({
                 {isEds && (
                     <div className="dashboard-zone-section" data-zone="storefront">
                         <div className="dashboard-zone-grid">
-
                             {/* Republish — config.json + authored DA.live content to
                                 the CDN. It carries the drift dot, NOT Sync
                                 Storefront: Sync pushes storefront CODE and never
@@ -663,6 +669,10 @@ export function ActionGrid({
                                     <Item key="refreshBlockLibrary">Refresh Block Library</Item>
                                 ) : null}
                                 <Item key="devConsole">Dev Console</Item>
+                                {/* AEM Assets — the bound AEM author's DAM (EDS-21).
+                                    Beside Dev Console: both open an Adobe surface
+                                    the host resolves. */}
+                                <Item key="aemAssets">AEM Assets</Item>
                                 {handleChangeDemoSource ? (
                                     <Item key="changeDemoSource">Change Demo Source</Item>
                                 ) : null}
