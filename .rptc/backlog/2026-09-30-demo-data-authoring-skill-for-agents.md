@@ -1,0 +1,53 @@
+---
+id: AI-10
+kind: feature
+area: ai
+needs: []
+value: high
+status: backlog
+---
+
+# A demo-data authoring skill: an SC's agent builds and loads the demo data from a brief
+
+<!-- Do NOT template this body. Items vary because the work varies; the
+     provenance, the measurements and the caveats are what make an item useful
+     months later. The frontmatter carries the structure so the prose need not. -->
+
+Filed 2026-09-30. Owner: "I wonder if we can add skills to the demo builder MCP for creating and
+importing demo data as we are having to do. My thought is that we could somehow come up with a
+prompt that an SC can use to get to the result that they would need using an agent."
+
+## What this session did by hand, and would be the skill
+
+Loading Khalil's Justrite spreadsheet (43 products, 15 categories, a variant attribute, images by
+asset URL) and making the AccuformNMC catalog (24 signs × 3 formats, drawn images) took three
+Python scripts against `write_commerce_rest`, and cost three silent Commerce quirks before the
+first product landed (`reference_commerce_product_create_gotchas`): `category_links` need a
+`position`; a select attribute silently drops values unless it is in the product's attribute set;
+there is no PATCH; `/children` and `categories/N/products` reads lag the index. None of that
+belongs in an SC's head. It belongs in a skill the generated AI bundle ships, so the SC's agent
+(Claude Code, Cursor, Codex — the bundle already targets all three) can do it from a brief.
+
+## Shape (to design, not decided)
+
+- **Input:** a brief — the brand(s), the categories, roughly how many products, the price band,
+  which website, which ERP owns what (the `brand` / `erp_owner` model, AB-52) — or a
+  spreadsheet/CSV a colleague supplied.
+- **The skill** (in `skillsWriter.ts`'s always-on set, gated like the others by what the project
+  builds): the order of operations (attributes → attribute set → categories → sources/stocks →
+  products → variants → images → prices → companies/catalogs), the gotchas above as rules, the
+  MSI model (a source per ERP, a stock per website), and the checks after each phase (read back
+  by SKU; count per website; the index lag).
+- **Tools it needs that do not exist yet:** an image upload (`products/{sku}/media` with a local
+  file or a generated sign), a bulk-safe product write (the 300 s ACCS PUT latency is real), and a
+  dry-run/plan step so the SC sees the shape before anything is written. Everything else is
+  `run_commerce_rest` / `write_commerce_rest` already.
+- **A worked example** the skill cites: the Justrite + AccuformNMC load (AB-52), scripts kept in
+  the repo as the fixture, not in a scratchpad.
+- **The prompt** the owner wants: one sentence an SC pastes — "Build the demo data for
+  <brand brief> on the <website> site; the <ERP> owns <lines>" — and the skill carries the rest.
+
+Related: `ai-context-authoring` (four gate seams, AI_CONTEXT_VERSION bump); the data-installer
+service owns DATAPACKS (published sample data); this is the authoring side that produces one.
+
+## Shipped so far

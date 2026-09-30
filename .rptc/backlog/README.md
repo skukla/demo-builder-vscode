@@ -186,7 +186,7 @@ each item's own file; what has already landed against an item is in its
 
 <!-- BEGIN GENERATED registry -->
 
-### ai  (36)
+### ai  (37)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -226,6 +226,7 @@ each item's own file; what has already landed against an item is in its
 | `AI-7` | question | [Unattended teardown consent — how does a commissioned journey get to zero?](2026-08-28-unattended-teardown-consent.md) | — | med | shipped |
 | `AI-8` | question | [Audit our context files against what the research actually says](2026-08-29-context-file-audit-against-evidence.md) | — | high | backlog |
 | `AI-9` | question | [Should an agent's project delete also clean up the cloud, as a person's does?](2026-09-19-agent-project-delete-leaves-cloud.md) | — | med | active |
+| `AI-10` | feature | [A demo-data authoring skill: an SC's agent builds and loads the demo data from a brief](2026-09-30-demo-data-authoring-skill-for-agents.md) | — | high | backlog |
 
 ### eds  (29)
 
@@ -261,7 +262,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-21` | feature | [A project tile that opens AEM Assets](2026-09-30-aem-assets-project-tile.md) | — | med | backlog |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | backlog |
 
-### app-builder  (95)
+### app-builder  (98)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -287,8 +288,8 @@ each item's own file; what has already landed against an item is in its
 | `AB-16` | feature | └ [One integration, several ERPs](2026-09-17-erp-integration-several-erps.md) | AB-23 | med | built |
 | `AB-17` | question | └ [Should each system and integration get its own Adobe workspace?](2026-09-17-workspace-per-system.md) | — | high | shipped |
 | `AB-18` | fix | └ [A Commerce product profile the SC is not a developer on locks them out of their own project](2026-09-17-accs-subscription-makes-project-read-only.md) | — | high | backlog |
-| `AB-19` | feature | └ [Ask the ERP live whether it can ship this, and when](2026-09-18-live-availability-check.md) | — | med | backlog |
-| `AB-20` | feature | └ [Ask the ERP live whether the account has the credit, as the order is placed](2026-09-18-live-credit-check.md) | — | med | backlog |
+| `AB-19` | feature | └ [Ask the ERP live whether it can ship this, and when](2026-09-18-live-availability-check.md) | — | med | built |
+| `AB-20` | feature | └ [Ask the ERP live whether the account has the credit, as the order is placed](2026-09-18-live-credit-check.md) | — | med | built |
 | `AB-23` | feature | └ [Every integration and system gets its own Adobe workspace](2026-09-20-workspace-per-integration.md) | — | high | built |
 | `AB-25` | epic | └ [The two-way ERP integration, as the two business users experience it](2026-09-22-erp-two-way-experience.md) | — | med | superseded |
 | `AB-26` | epic | └ [The ERP programme — every ERP slice, in one order, run by the loop](2026-09-24-erp-programme.md) | — | high | active |
@@ -310,7 +311,9 @@ each item's own file; what has already landed against an item is in its
 | `AB-16o` | feature | └ [The integration has a name of its own, and Commerce's labels are neutral](2026-09-28-erp-integration-own-name.md) | — | high | built |
 | `AB-16p` | feature | └ [The ERP sends the price it would charge, whatever set it](2026-09-28-erp-net-price-in-force.md) | — | high | built |
 | `AB-16q` | feature | └ [The ERP's maintenance mode: take an ERP down on purpose, and bring it back](2026-09-28-erp-maintenance-mode.md) | — | high | built |
-| `AB-48` | fix | └ [The key-map State lock is not exact, and its commit message says more than it does](2026-09-30-erp-key-map-lock-not-exact.md) | — | med | active |
+| `AB-48` | fix | └ [The key-map State lock is not exact, and its commit message says more than it does](2026-09-30-erp-key-map-lock-not-exact.md) | — | med | built |
+| `AB-51` | feature | └ [An ERP's list id is named for the ERP, not `erp` or a component id](2026-09-30-erp-list-ids-named-for-the-erp.md) | — | med | active |
+| `AB-52` | feature | └ [Bodea's demo data reflects the JustRite picture: two brands, two ERPs, one cart](2026-09-30-justrite-demo-data-two-brands-two-erps.md) | AB-51 | high | active |
 | `AB-21` | feature | [An integration's settings live on its tile, not on Configure Project](2026-09-18-integration-settings-on-tile.md) | — | med | active |
 | `AB-22` | feature | [Import a colleague's integration, and ask only for what it really needs](2026-09-18-import-colleague-integration.md) | AB-21 | med | backlog |
 | `AB-24` | chore | [Stop creating a Stage workspace](2026-09-20-drop-the-stage-workspace.md) | — | med | built |
@@ -350,15 +353,16 @@ each item's own file; what has already landed against an item is in its
 | `AB-43` | fix | └ [ERP shipment never lands in Commerce for a non-default inventory source](2026-09-29-erp-shipment-source-not-applied.md) | — | high | shipped |
 | `AB-44` | feature | └ [Seed the ERP with price groups and price lists from Commerce's shared catalogs](2026-09-30-erp-seed-price-groups-from-commerce.md) | — | high | built |
 | `AB-45` | feature | └ [A Warehouses master-data screen in the ERP](2026-09-30-erp-warehouses-master-data-screen.md) | — | med | built |
-| `AB-46` | fix | └ [A price condition scoped to one sales organization is published to every website](2026-09-30-erp-pricing-sales-org-published-everywhere.md) | — | high | active |
-| `AB-47` | fix | └ [An ERP reset wipes the ERPs even when Commerce failed to close an order](2026-09-30-erp-reset-wipes-despite-failed-close.md) | — | med | active |
-| `AB-49` | fix | └ [A shipment with no warehouse still fails when a product sits in several warehouses](2026-09-30-erp-shipment-warehouse-default-several.md) | — | med | active |
+| `AB-46` | fix | └ [A price condition scoped to one sales organization is published to every website](2026-09-30-erp-pricing-sales-org-published-everywhere.md) | — | high | built |
+| `AB-47` | fix | └ [An ERP reset wipes the ERPs even when Commerce failed to close an order](2026-09-30-erp-reset-wipes-despite-failed-close.md) | — | med | built |
+| `AB-49` | fix | └ [A shipment with no warehouse still fails when a product sits in several warehouses](2026-09-30-erp-shipment-warehouse-default-several.md) | — | med | built |
 | `AB-29` | feature | [Commerce test data cleanup tools](2026-09-24-commerce-test-data-cleanup-tools.md) | — | med | active |
 | `AB-30` | feature | [The ERP integration's Commerce Admin page uses the Commerce back-office design system](2026-09-24-erp-admin-page-commerce-design-system.md) | — | med | active |
 | `AB-33` | fix | [Removing an integration reports Runtime packages left behind in a workspace it then deletes](2026-09-26-remove-integration-leaves-runtime-packages.md) | — | med | built |
 | `AB-34` | fix | [add_integration's answer names the catalog entry, not the name the SC gave](2026-09-26-add-integration-answer-names-catalog-entry.md) | — | low | built |
 | `AB-39` | question | [Loop branch labels use AB-16 sub-ids that are not their backlog items](2026-09-29-erp-branch-label-id-divergence.md) | — | low | shipped |
 | `AB-50` | chore | [Push the stranded docs commits; delete the two remote branches already on main](2026-09-30-erp-branches-housekeeping.md) | — | low | backlog |
+| `AB-53` | epic | [JustRite from nothing: wipe the Adobe I/O project, rebuild on Khalil's storefront, one data model](2026-09-30-justrite-from-nothing-fresh-project-khalil-storefront.md) | AB-51 | high | active |
 | `PL-24` | feature | [Component updates cannot follow an environment-variable rename](2026-08-30-env-var-rename-migration.md) | — | med | backlog |
 
 ### data-installer  (3)
@@ -596,7 +600,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — backlog
 
-*196 item(s) sit outside the A–G chain.*
+*200 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 
