@@ -39,11 +39,13 @@ import {
     withCapturedProgress,
     type CapturedEvent,
 } from './progressCapture';
+import { ACCS_GRAPHQL_ENDPOINT } from '@/core/config/envVarKeys';
 import { dispatchHandler } from '@/core/handlers/dispatchHandler';
 import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import {
     getAutoSelectedOptionalDependencies,
     getResolvedMeshRequirement,
+    getStackById,
 } from '@/features/components/services/demoPackageLoader';
 import { projectRowOf } from '@/features/components/services/storefrontResolver';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
@@ -67,6 +69,24 @@ function leanOrg(
 
 function projectsDir(): string {
     return resolveProjectsRoot();
+}
+
+/**
+ * The backend's Commerce endpoint, recorded where the wizard's Connection step
+ * records it: `componentConfigs[<backend id>].ACCS_GRAPHQL_ENDPOINT`.
+ *
+ * Until 2026-09-30 `accsEndpoint` reached only the storefront's `config.json`,
+ * so an agent-created project had a Commerce store scope and no Commerce
+ * endpoint — the REST tools, the mesh env and the admin link all read the
+ * backend's config and found nothing (AB-53, project `justrite`).
+ */
+function backendEndpointConfig(
+    stackId: string,
+    accsEndpoint: string | undefined,
+): ProjectConfigSource['componentConfigs'] {
+    const backend = getStackById(stackId)?.backend;
+    if (!backend || !accsEndpoint) return {};
+    return { [backend]: { [ACCS_GRAPHQL_ENDPOINT]: accsEndpoint } };
 }
 
 const NEEDS_ADOBE = {
@@ -151,7 +171,9 @@ async function edsAuthHandoff(
     let githubOk: boolean;
     let login: string | undefined;
     try {
-        const validation = await getGitHubServices(ctx.context.secrets).tokenService.validateToken();
+        const validation = await getGitHubServices(
+            ctx.context.secrets,
+        ).tokenService.validateToken();
         githubOk = validation.valid;
         login = validation.user?.login;
     } catch {
@@ -193,7 +215,12 @@ interface CreateArgs {
     demo?: AddedDemo;
 }
 
-async function createHeadless(ctx: HandlerContext, args: CreateArgs, pkg: DemoPackage, packages: DemoPackage[]) {
+async function createHeadless(
+    ctx: HandlerContext,
+    args: CreateArgs,
+    pkg: DemoPackage,
+    packages: DemoPackage[],
+) {
     let adobe:
         | {
               org: WizardState['adobeOrg'];
@@ -291,7 +318,9 @@ async function createEds(
     if ('handoff' in auth) return asText(auth.handoff);
     const githubOwner = args.githubOwner ?? auth.login;
     if (!githubOwner) {
-        return asText({ error: 'GitHub did not name the signed-in account; pass githubOwner (your login or an organization you belong to).' });
+        return asText({
+            error: 'GitHub did not name the signed-in account; pass githubOwner (your login or an organization you belong to).',
+        });
     }
 
     const events: CapturedEvent[] = [];
@@ -359,7 +388,7 @@ async function createEds(
         adobeOrg: adobe?.org,
         adobeProject: adobe?.project,
         adobeWorkspace: adobe?.workspace,
-        componentConfigs: {},
+        componentConfigs: backendEndpointConfig(args.stackId, args.accsEndpoint),
         selectedAddons: [],
         selectedBlockLibraries: [],
         customBlockLibraries: [],
@@ -402,7 +431,10 @@ async function createEds(
  * @param server     McpServer (typed `any`; see registerProjectTools docstring).
  * @param ctxFactory Builds a headless HandlerContext per call.
  */
-export function registerCreateProjectTool(server: McpToolServer, ctxFactory: () => HandlerContext): void {
+export function registerCreateProjectTool(
+    server: McpToolServer,
+    ctxFactory: () => HandlerContext,
+): void {
     server.registerTool(
         'create_project',
         {
@@ -416,11 +448,15 @@ export function registerCreateProjectTool(server: McpToolServer, ctxFactory: () 
                 package: z
                     .string()
                     .optional()
-                    .describe('Demo package / brand id, or an added demo id (from list_demo_packages). Omit when passing link.'),
+                    .describe(
+                        'Demo package / brand id, or an added demo id (from list_demo_packages). Omit when passing link.',
+                    ),
                 link: z
                     .string()
                     .optional()
-                    .describe("A colleague's demo: a GitHub link or its site address. Added to your list first, then built on. Omit when passing package."),
+                    .describe(
+                        "A colleague's demo: a GitHub link or its site address. Added to your list first, then built on. Omit when passing package.",
+                    ),
                 stack: z.string().describe('Architecture stack id (from list_stacks)'),
                 repoName: z
                     .string()
@@ -429,7 +465,9 @@ export function registerCreateProjectTool(server: McpToolServer, ctxFactory: () 
                 githubOwner: z
                     .string()
                     .optional()
-                    .describe('EDS only: the GitHub account or organization to create the repo under (default: the signed-in account)'),
+                    .describe(
+                        'EDS only: the GitHub account or organization to create the repo under (default: the signed-in account)',
+                    ),
                 daLiveOrg: z.string().optional().describe('EDS only: DA.live organization'),
                 daLiveSite: z.string().optional().describe('EDS only: DA.live site name'),
                 accsEndpoint: z
@@ -451,7 +489,9 @@ export function registerCreateProjectTool(server: McpToolServer, ctxFactory: () 
             const pkgId = String(args?.package ?? '');
             const stackId = String(args?.stack ?? '');
             if (!projectName || (!pkgId && !link) || !stackId) {
-                return asText({ error: 'projectName, package (or link), and stack are all required.' });
+                return asText({
+                    error: 'projectName, package (or link), and stack are all required.',
+                });
             }
             if (args?.confirm !== true) {
                 return asText({
