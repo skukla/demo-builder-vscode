@@ -33,6 +33,11 @@ node $P call <tool> '<json args>'     # call it; prints byte size and ~token cos
 Flags: `--socket <path>` (when discovery is ambiguous), `--full` (don't truncate),
 `--force <tool>` (permit that ONE non-read-only tool).
 
+**A failed call says `TOOL ERROR` on its header line and exits 1.** That is the tool's
+own `isError` flag. A script driving `call` must check the exit code, never the text:
+before 2026-10-01 neither existed, and a restructure script read an expired Adobe sign-in
+and a refused write as two successes.
+
 ## Read `info` FIRST, every time
 
 ```

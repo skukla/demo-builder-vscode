@@ -85,6 +85,9 @@ export function asText(value: unknown): McpTextResult {
     return isFailedAnswer(value) ? { ...result, isError: true } : result;
 }
 
+/** The prefix this server writes at the start of every refusal and error sentence. */
+const ERROR_PREFIX = 'Error: ';
+
 /**
  * Wrap text that is already final — do NOT serialize it again.
  *
@@ -92,12 +95,19 @@ export function asText(value: unknown): McpTextResult {
  * than parses) and for JSON a caller has already stringified. Passing an object
  * here would answer `[object Object]`, which is why the parameter is `string`.
  *
+ * Text beginning "Error: " is marked failed without being asked. That prefix is
+ * this server's written convention for a refusal ("Every refusal is prose starting
+ * 'Error: '", `commerceRestClient.ts`), so it IS the caller saying so — and until
+ * 2026-10-01 the flag was left to each call site, where 30 of 41 forgot it. A script
+ * then read an expired sign-in and a skipped write as two successes. A refusal
+ * without the prefix (a confirm gate) still passes `isError` explicitly.
+ *
  * @param text - the exact text the agent receives
+ * @param options - `isError` for a failure whose text does not start "Error: "
  * @returns the MCP envelope carrying it
  */
 export function asRawText(text: string, options?: { isError?: true }): McpTextResult {
     const result: McpTextResult = { content: [{ type: 'text' as const, text }] };
-    // Explicit rather than inferred: this takes a STRING, so there is no `success`
-    // field to read. The caller knows whether the call failed and has to say so.
-    return options?.isError ? { ...result, isError: true } : result;
+    const failed = options?.isError === true || text.startsWith(ERROR_PREFIX);
+    return failed ? { ...result, isError: true } : result;
 }

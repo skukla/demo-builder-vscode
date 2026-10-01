@@ -89,9 +89,25 @@ describe('the builders declare failure', () => {
         expect(asText({ installed: false }).isError).toBeUndefined();
     });
 
-    it('asRawText is told, never inferred — it is handed a string', () => {
+    it('asRawText is told — by the flag, or by the "Error: " prefix every refusal carries', () => {
         expect(asRawText('anything').isError).toBeUndefined();
         expect(asRawText('anything', { isError: true }).isError).toBe(true);
+    });
+
+    // The two refusals that read as successes on 2026-10-01: an expired Adobe sign-in
+    // from run_commerce_rest and an HTTP error from write_commerce_rest. Both are
+    // prose that begins "Error: ", which is this server's convention for a refusal.
+    it('asRawText marks text that begins "Error: " as failed', () => {
+        expect(asRawText('Error: Adobe sign-in required. Check get_auth_status.').isError).toBe(true);
+        expect(asRawText('Error: Commerce REST answered HTTP 404. {}').isError).toBe(true);
+    });
+
+    // Only the PREFIX counts: an answer that merely mentions an error, or a JSON body
+    // carrying an "Error" field, is not a failed call.
+    it('asRawText does not mark text that only mentions an error', () => {
+        expect(asRawText('{"message":"Error: none"}').isError).toBeUndefined();
+        expect(asRawText('No Error: found').isError).toBeUndefined();
+        expect(asRawText('error: lower case is not the convention').isError).toBeUndefined();
     });
 
     // Control: the assertions above must be capable of failing.

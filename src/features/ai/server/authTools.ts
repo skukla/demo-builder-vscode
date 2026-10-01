@@ -215,6 +215,7 @@ export function registerAuthTools(server: McpToolServer, ctxFactory: () => Handl
             if (args?.confirm !== true) {
                 return asRawText(
                     'sign_in requires confirm:true — it opens a browser/auth window. Ask the user to confirm first.',
+                    { isError: true },
                 );
             }
             const ctx = ctxFactory();

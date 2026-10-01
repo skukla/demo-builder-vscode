@@ -332,10 +332,14 @@ model so it can self-correct and retry with different arguments.
 
 `asText` sets it from the answer's own top-level `success`, because handlers already
 answer `{ success, … }` (Pattern B) — so the fact is present and this only restates it
-in the protocol's vocabulary. `asRawText` takes a string and therefore has to be TOLD:
-`asRawText(text, { isError: true })`. The descriptor registrar does both — the handler's
-failure branch and the confirm refusal, which is an input-validation error an agent
-corrects by calling again with `confirm: true`.
+in the protocol's vocabulary. `asRawText` takes a string, so it is told in one of two
+ways: text beginning `Error: ` — this server's written convention for every refusal — is
+marked failed by itself, and any other failure passes `asRawText(text, { isError: true })`
+(the confirm refusals of `sign_in`, `open_view` and `reload_window`, which have no
+prefix). Until 2026-10-01 the prefix was not enough and 30 of 41 call sites never passed
+the flag, so an expired sign-in and a Commerce HTTP error read as successes. The descriptor
+registrar does both — the handler's failure branch and the confirm refusal, which is an
+input-validation error an agent corrects by calling again with `confirm: true`.
 
 **Only the top-level `success` counts.** Cancellation is
 `{ success: true, data: { success: false, error: 'cancelled' } }` — a handler that ran

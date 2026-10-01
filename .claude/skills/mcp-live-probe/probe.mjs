@@ -296,8 +296,15 @@ const commands = {
             // units and under-reports any multi-byte content. This field being
             // wrong inside a tool is one of the bugs that motivated this script.
             const bytes = Buffer.byteLength(text, 'utf8');
-            console.log(`── ${tool} → ${bytes} bytes (~${Math.ceil(bytes / 4)} tokens) ──`);
+            // The tool's own failure flag, printed and turned into the exit code. Before
+            // 2026-10-01 neither happened, so a script driving this read an expired
+            // sign-in and a refused write as two successes (the AB-53 restructure).
+            const failed = m.result?.isError === true;
+            console.log(
+                `── ${tool} → ${bytes} bytes (~${Math.ceil(bytes / 4)} tokens)${failed ? ' — TOOL ERROR' : ''} ──`,
+            );
             console.log(!full && text.length > 2000 ? text.slice(0, 2000) + '\n…[truncated, use --full]' : text);
+            if (failed) process.exitCode = 1;
         });
     },
 };

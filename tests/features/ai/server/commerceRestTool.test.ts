@@ -38,6 +38,7 @@ function fakeServer() {
         },
         declaration: (): McpToolSchema => declarations.get('run_commerce_rest')!,
         raw: async (args?: unknown): Promise<string> => (await tools.get('run_commerce_rest')!(args)).content[0].text,
+        result: async (args?: unknown) => tools.get('run_commerce_rest')!(args),
     };
 }
 
@@ -250,6 +251,26 @@ describe('refusals, each before any call', () => {
         fetchMock = answering(200, '{}', 400);
         const out = await serve().raw({ path: 'customers/43' });
         expect(out).toContain('IMS refused the credential (HTTP 400)');
+    });
+});
+
+// An answer and a refusal must differ in the ENVELOPE, not only in the prose. On
+// 2026-10-01 a script read an expired sign-in and an HTTP error from these tools as
+// successes, because the text said "Error:" and the flag said nothing.
+describe('a refusal is flagged as a failed call', () => {
+    it('no sign-in is a failed call', async () => {
+        isAuthenticated.mockResolvedValue(false);
+        expect(await serve().result({ path: 'customers/43' })).toMatchObject({ isError: true });
+    });
+
+    it('a Commerce HTTP error is a failed call', async () => {
+        fetchMock = answering(404, '{"message":"Request does not match any route."}');
+        expect(await serve().result({ path: 'categories/135' })).toMatchObject({ isError: true });
+    });
+
+    it('control: a read that worked is not flagged', async () => {
+        const out = await serve().result({ path: 'customers/43' });
+        expect(out).not.toHaveProperty('isError');
     });
 });
 

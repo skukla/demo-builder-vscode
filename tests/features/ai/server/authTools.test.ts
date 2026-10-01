@@ -417,6 +417,7 @@ describe('registerAuthTools', () => {
 
         const result = await server.rawText('sign_in', undefined);
         expect(result.content[0].text).toMatch(/requires confirm:true/);
+        expect(result).toMatchObject({ isError: true });
         expect(login).not.toHaveBeenCalled();
     });
 
@@ -426,6 +427,7 @@ describe('registerAuthTools', () => {
 
         const result = await server.rawText('sign_in', { provider: 'adobe' });
         expect(result.content[0].text).toMatch(/requires confirm:true/);
+        expect(result).toMatchObject({ isError: true });
         expect(login).not.toHaveBeenCalled();
     });
 

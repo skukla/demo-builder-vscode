@@ -50,6 +50,7 @@ describe('registerViewTools', () => {
 
         const result = await server.text('open_view', { view: 'projects_list' });
         expect(result.content[0].text).toMatch(/requires confirm:true/);
+        expect(result).toMatchObject({ isError: true });
         expect(runCommand).not.toHaveBeenCalled();
     });
 
@@ -79,6 +80,7 @@ describe('registerViewTools', () => {
 
         const result = await server.text('open_view');
         expect(result.content[0].text).toMatch(/requires confirm:true/);
+        expect(result).toMatchObject({ isError: true });
         expect(runCommand).not.toHaveBeenCalled();
     });
 
@@ -116,6 +118,7 @@ describe('reload_window', () => {
 
         const result = await server.text('reload_window', {});
         expect(result.content[0].text).toMatch(/requires confirm:true/);
+        expect(result).toMatchObject({ isError: true });
         jest.runAllTimers();
         expect(runCommand).not.toHaveBeenCalled();
     });
@@ -154,6 +157,7 @@ describe('reload_window', () => {
 
         const result = await server.text('reload_window');
         expect(result.content[0].text).toMatch(/requires confirm:true/);
+        expect(result).toMatchObject({ isError: true });
         jest.runAllTimers();
         expect(runCommand).not.toHaveBeenCalled();
     });

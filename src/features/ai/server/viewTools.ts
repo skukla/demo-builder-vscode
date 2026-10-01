@@ -67,6 +67,7 @@ export function registerViewTools(server: McpToolServer, runCommand: (commandId:
             if (args?.confirm !== true) {
                 return asRawText(
                     'open_view requires confirm:true — it opens a VS Code panel. Ask the user before opening a view.',
+                    { isError: true },
                 );
             }
             const commandId = VIEW_COMMANDS[args.view as string];
@@ -98,6 +99,7 @@ export function registerViewTools(server: McpToolServer, runCommand: (commandId:
             if (args?.confirm !== true) {
                 return asRawText(
                     'reload_window requires confirm:true — it restarts the VS Code window and discards in-flight work. Ask the user before reloading.',
+                    { isError: true },
                 );
             }
 
