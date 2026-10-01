@@ -13958,18 +13958,6 @@
         {
             "module": "src/features/dashboard/ui/components/integrations/integrationCardModel.ts",
             "anchors": [
-                "if (!iso) return undefined;"
-            ],
-            "mutants": 1,
-            "category": "branch",
-            "reason": "Removing the guard leaves `new Date(iso)` to handle the falsy cases, and it already does: `new Date(undefined)` and `new Date('')` are both Invalid Date, so getTime() is NaN and the function returns undefined by the other route. undefined and the empty string are the only falsy values a `string | undefined` can hold, so there is no input that separates the two forms. Planted alongside six siblings: 105 of 106 tests green, the one failure belonging to a different mutant.",
-            "decision": "none \u2014 the guard says 'no date' in one line instead of relying on Invalid Date",
-            "recorded": "2026-09-06",
-            "source": "PL-22 batch MUT-05"
-        },
-        {
-            "module": "src/features/dashboard/ui/components/integrations/integrationCardModel.ts",
-            "anchors": [
                 "const label = shared?.label ?? '';"
             ],
             "mutants": 1,

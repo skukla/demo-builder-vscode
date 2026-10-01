@@ -293,13 +293,6 @@ function formatSourceLine(source: { owner: string; repo: string }): string {
     return source.owner && source.repo ? `${source.owner}/${source.repo}` : '—';
 }
 
-/** ISO date → locale display string; absent/unparseable → undefined. */
-function formatLastDeployed(iso: string | undefined): string | undefined {
-    if (!iso) return undefined;
-    const date = new Date(iso);
-    return Number.isNaN(date.getTime()) ? undefined : date.toLocaleString();
-}
-
 /** The card's primary URL: the entry url, else the first deployedUrls value. */
 function resolvePrimaryUrl(entry: IdentifiedAppBuilderComponent): string | undefined {
     return entry.url ?? Object.values(entry.deployedUrls ?? {})[0];
@@ -329,7 +322,6 @@ function deriveInstallation(
     return {
         label: installationLabel(record),
         ...(failed && record.detail ? { detail: record.detail } : {}),
-        ...(record.version ? { version: record.version } : {}),
         failed,
         ...(record.needsReinstall ? { needsReinstall: true } : {}),
     };
@@ -345,7 +337,6 @@ function deriveInstallation(
 function deriveKindFacet(entry: IdentifiedAppBuilderComponent): {
     kindLabel: string;
     sourceLine: string;
-    sourceIsAi: boolean;
     apis?: string[];
     renamable: boolean;
 } {
@@ -355,7 +346,6 @@ function deriveKindFacet(entry: IdentifiedAppBuilderComponent): {
         return {
             kindLabel: 'Pre-built',
             sourceLine: formatSourceLine(entry.source),
-            sourceIsAi: false,
             apis: catalogEntry.requiredApis,
             renamable: Boolean(catalogEntry.nameFromEnvVar),
         };
@@ -368,14 +358,12 @@ function deriveKindFacet(entry: IdentifiedAppBuilderComponent): {
             // it had happened (reported 2026-07-31).
             kindLabel: 'Custom · blank starter',
             sourceLine: 'Blank starter — build it out',
-            sourceIsAi: true,
             renamable: true,
         };
     }
     return {
         kindLabel: 'Imported repo',
         sourceLine: formatSourceLine(entry.source),
-        sourceIsAi: false,
         renamable: true,
     };
 }
@@ -439,13 +427,10 @@ export function deriveIntegrationCard(
         name: override?.name ?? entry.name ?? entry.id,
         kindLabel: facet.kindLabel,
         sourceLine: facet.sourceLine,
-        sourceIsAi: facet.sourceIsAi,
         ...face,
         url: primaryUrl,
         urlLabel: 'App URL',
-        deployedUrls: entry.deployedUrls,
         apis: facet.apis,
-        lastDeployed: formatLastDeployed(entry.lastDeployed),
         installation,
         menuActions: withAddErp(
             entry,
@@ -517,12 +502,9 @@ export function deriveSystemCard(
         name: override?.name ?? entry.name ?? entry.id,
         kindLabel: type,
         sourceLine: formatSourceLine(entry.source),
-        sourceIsAi: false,
         ...face,
         url: screenUrl,
         urlLabel: 'Screen',
-        deployedUrls: entry.deployedUrls,
-        lastDeployed: formatLastDeployed(entry.lastDeployed),
         menuActions: buildSystemMenuActions(
             face.status,
             screenUrl,
@@ -695,7 +677,6 @@ export function deriveMeshCard(
         isMesh: true,
         name: 'API Mesh',
         kindLabel: 'API Mesh',
-        sourceIsAi: false,
         status: cardStatus,
         statusLabel: isTransient ? statusDisplay.text : label,
         dotVariant: dot,
@@ -704,7 +685,6 @@ export function deriveMeshCard(
         message: cardStatus === 'error' ? meshEntry?.error : undefined,
         url: meshEntry?.endpoint,
         urlLabel: 'Endpoint',
-        lastDeployed: formatLastDeployed(meshEntry?.lastDeployed),
         // The mesh has no display name to change (canRename false) and no API
         // access of its own, so the menu holds only the two verbs that apply:
         // Redeploy on a healthy idle mesh, and Remove whenever a mesh component

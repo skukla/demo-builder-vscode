@@ -94,7 +94,6 @@ export function toIntegrationCards(rows: IntegrationRow[]): IntegrationCardModel
         name: row.name,
         kindLabel: KIND_LABELS[row.kind],
         sourceLine: row.sourceLine,
-        sourceIsAi: row.kind === 'blank',
         // Shape-satisfying, never rendered by THIS surface: the wizard passes
         // `subline` to the card, which takes the status line's place entirely,
         // and it has no detail view to show a url in. `kindLabel` above is a real

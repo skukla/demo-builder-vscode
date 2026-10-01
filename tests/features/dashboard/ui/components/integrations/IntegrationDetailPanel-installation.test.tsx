@@ -1,8 +1,10 @@
 /**
- * IntegrationDetailPanel — the "Commerce install" row (AB-5).
+ * IntegrationDetailPanel — the Commerce install, on the health line (AB-5).
  *
- * One line since 2026-10-01: the label and the installed version. A failed install adds
- * its reason and "Finish install"; the Admin link lives in the kebab. Split from
+ * Since 2026-10-01 the install is part of the Status row: "Deployed · installed in
+ * Commerce" when all is well; a failed install adds its reason and "Finish install"
+ * under it. The Admin link lives in the kebab; the version is gone from the screen.
+ * Split from
  * IntegrationDetailPanel.test.tsx (615 lines); same convention: Spectrum primitives
  * mocked per-suite, real panel component.
  */
@@ -40,7 +42,6 @@ function makeModel(overrides: Partial<IntegrationCardModel> = {}): IntegrationCa
         name: 'Kit App',
         kindLabel: 'Pre-built',
         sourceLine: 'adobe/commerce-integration-starter-kit',
-        sourceIsAi: false,
         status: 'deployed',
         statusLabel: 'Deployed',
         dotVariant: 'success',
@@ -53,7 +54,7 @@ function makeModel(overrides: Partial<IntegrationCardModel> = {}): IntegrationCa
 
 function renderPanel(model: IntegrationCardModel | undefined): {
     onAction: jest.Mock;
-    installRow: () => HTMLElement;
+    statusRow: () => HTMLElement;
     detailLines: () => string[];
 } {
     const onAction = jest.fn();
@@ -68,8 +69,8 @@ function renderPanel(model: IntegrationCardModel | undefined): {
     );
     return {
         onAction,
-        installRow: () =>
-            screen.getByText('Commerce install').closest('.integration-panel-row') as HTMLElement,
+        statusRow: () =>
+            screen.getByText('Status').closest('.integration-panel-row') as HTMLElement,
         detailLines: () =>
             Array.from(view.container.querySelectorAll('.integration-panel-status-message')).map(
                 (el) => el.textContent ?? ''
@@ -77,33 +78,25 @@ function renderPanel(model: IntegrationCardModel | undefined): {
     };
 }
 
-describe('IntegrationDetailPanel — Commerce install row', () => {
-    it('renders no row when the model carries no install record', () => {
-        renderPanel(makeModel());
+describe('IntegrationDetailPanel — the Commerce install on the health line', () => {
+    it('says nothing about Commerce when the model carries no install record', () => {
+        const { statusRow } = renderPanel(makeModel());
 
+        expect(statusRow()).not.toHaveTextContent(/Commerce/);
         expect(screen.queryByText('Commerce install')).not.toBeInTheDocument();
     });
 
-    it('an installed app is ONE line: the label and its version', () => {
-        const { installRow, detailLines } = renderPanel(
-            makeModel({ installation: { label: 'Installed', version: '0.10.0', failed: false } })
-        );
-
-        expect(screen.getByText('Installed')).toBeInTheDocument();
-        // The flex gap draws the space; textContent has none, so read the aside.
-        expect(installRow().querySelector('.integration-panel-status-aside')).toHaveTextContent(
-            '· v0.10.0'
-        );
-        expect(detailLines()).toStrictEqual([]);
-        expect(screen.queryByRole('link')).not.toBeInTheDocument();
-    });
-
-    it('with no version known, the label stands alone', () => {
-        const { installRow } = renderPanel(
+    it('an installed app is a tail on the Status line, with no row and no version of its own', () => {
+        const { statusRow, detailLines } = renderPanel(
             makeModel({ installation: { label: 'Installed', failed: false } })
         );
 
-        expect(installRow()).toHaveTextContent(/^Commerce installInstalled$/);
+        expect(statusRow().querySelector('.integration-panel-status-aside')).toHaveTextContent(
+            '· installed in Commerce'
+        );
+        expect(screen.queryByText('Commerce install')).not.toBeInTheDocument();
+        expect(detailLines()).toStrictEqual([]);
+        expect(screen.queryByRole('link')).not.toBeInTheDocument();
     });
 
     // It was only in the kebab before, and the row read as a dead end (owner, 2026-10-01).
@@ -111,12 +104,21 @@ describe('IntegrationDetailPanel — Commerce install row', () => {
         const model = makeModel({
             installation: { label: 'Not installed', detail: 'hands-back line', failed: true },
         });
-        const { onAction, detailLines } = renderPanel(model);
+        const { onAction, detailLines, statusRow } = renderPanel(model);
 
         expect(detailLines()).toStrictEqual(['hands-back line']);
+        expect(statusRow().querySelector('.integration-panel-status-aside')).toBeNull();
         screen.getByText('Finish install').click();
 
         expect(onAction).toHaveBeenCalledWith(model, 'install');
+    });
+
+    it('a failed install with no reason still says what is wrong', () => {
+        const { detailLines } = renderPanel(
+            makeModel({ installation: { label: 'Not installed', failed: true } })
+        );
+
+        expect(detailLines()).toStrictEqual(['Not installed in Commerce']);
     });
 
     it('an installed app offers no "Finish install"', () => {
@@ -131,15 +133,5 @@ describe('IntegrationDetailPanel — Commerce install row', () => {
         renderPanel(makeModel({ installation: { label: 'Installed', failed: false } }));
 
         expect(screen.queryByText('Open Commerce Admin')).not.toBeInTheDocument();
-    });
-
-    it('a failed install wears the error treatment', () => {
-        renderPanel(
-            makeModel({
-                installation: { label: 'Not installed', failed: true },
-            })
-        );
-
-        expect(screen.getByText('Not installed')).toHaveClass('integration-card-status--error');
     });
 });

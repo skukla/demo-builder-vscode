@@ -42,7 +42,7 @@ describe('deriveIntegrationCard — installation facet', () => {
         expect(model.installation).toStrictEqual({ label: 'Installed', failed: false });
     });
 
-    it('upgraded IS installed, and carries the version Commerce now runs', () => {
+    it('upgraded IS installed', () => {
         const model = deriveIntegrationCard(
             integration({
                 status: 'deployed',
@@ -56,7 +56,6 @@ describe('deriveIntegrationCard — installation facet', () => {
 
         expect(model.installation).toStrictEqual({
             label: 'Installed',
-            version: '0.2.0',
             failed: false,
         });
         expect(model.menuActions).not.toContain('install');

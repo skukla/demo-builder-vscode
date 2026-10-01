@@ -50,14 +50,14 @@ export function setupChecklistOf(
 }
 
 /**
- * The one-line summary. A dismissed step is out of the count: the SC decided it does
- * not apply to this demo.
+ * The one-line summary, in the card's own words ("Setup: 4 to do" on the card, "4 to do"
+ * in the flyout's Demo setup row): one count, said one way, on both (owner, 2026-10-01).
+ * A dismissed step is out of the count: the SC decided it does not apply to this demo.
  *
  * @param items - the checklist
- * @returns e.g. "1 of 2 done", or "All done" when nothing is left open
+ * @returns e.g. "4 to do", or "All done" when nothing is left open
  */
 export function setupSummary(items: SetupChecklistItem[]): string {
     const open = items.filter((item) => item.state === 'open').length;
-    const done = items.filter((item) => item.state === 'done').length;
-    return open === 0 ? 'All done' : `${done} of ${open + done} done`;
+    return open === 0 ? 'All done' : `${open} to do`;
 }

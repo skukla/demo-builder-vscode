@@ -13,7 +13,7 @@
  *   - integration  → an operation through the screen's `operations` (deploy,
  *                    redeploy, update, install, and remove once confirmed), which
  *                    opens the progress modal; or the Manage-APIs modal
- *   - open-url     → the integration's address; open → its Developer Console workspace
+ *   - open         → an integration's Developer Console workspace, or a system's own screen
  *
  * Card models come from {@link buildIntegrationCards} / {@link deriveMeshCard}
  * and are re-derived every render, so an open drawer stays live as pushes
@@ -159,17 +159,11 @@ export function IntegrationsGrid({
                 return;
             }
             // Open: the integration's Adobe workspace in the Developer Console
-            // (owner, 2026-09-21). Its address has its own link in the flyout.
+            // (owner, 2026-09-21).
             if (action === 'open') {
                 webviewClient.postMessage('openDevConsole', {
                     componentId: model.componentId ?? model.id,
                 });
-                return;
-            }
-            if (action === 'open-url') {
-                if (model.url) {
-                    webviewClient.postMessage('openLiveSite', { url: model.url });
-                }
                 return;
             }
             // The Commerce-install row's link. Reuses the dashboard tile's own

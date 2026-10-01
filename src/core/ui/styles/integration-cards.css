@@ -235,26 +235,8 @@
     overflow-wrap: anywhere;
 }
 
-.integration-panel-row-value--mono {
-    font-family: var(--spectrum-font-family-code, monospace);
-    font-size: 12px;
-}
-
-/* The kind prefix inside a mono Source row ("Pre-built · acme/repo"). It is prose,
-   so it opts back out of the code face its container sets. */
-.integration-panel-row-prefix {
-    font-family: var(--spectrum-font-family-base, sans-serif);
-    color: var(--spectrum-global-color-gray-600);
-}
-
 /* One demo setup step in the flyout (AB-26x): title and state, why, where, what the last
    check found, then its links, stacked; steps separated like the panel's rows. */
-/* One API per line — a comma-joined run of long Adobe API names is unreadable
-   in a 352px column. */
-.integration-panel-api {
-    display: block;
-}
-
 /* Commerce scope: three sub-labelled lines inside ONE row's value column.
    Grid rather than flex so the codes align down a column no matter how the
    labels differ in width, and so a long code wraps inside its own cell instead
@@ -297,22 +279,6 @@
     color: var(--spectrum-global-color-gray-600);
 }
 
-/* Heading over a RUN of rows that share a kind (the deployed endpoints), as
-   opposed to `.integration-panel-row-key`, which labels one row's value. Without
-   it a list of N per-action URLs reads as N more metadata rows peered with Status
-   and Kind. Sits outside the row flex so it spans the full width instead of
-   taking the 88px key column. */
-.integration-panel-group-label {
-    /* NO border-top. The row above already draws a border-bottom, so a rule here
-       renders as a double line a few pixels apart. Separation is the margin. */
-    margin-top: 10px;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--spectrum-global-color-gray-600);
-}
-
 /* Copyable values inside the flyout must WRAP.
  * `.copyable-text` is nowrap by design — it is a core component sized for short
  * inline snippets. A mesh endpoint runs ~70 chars, so in this 352px panel nowrap
@@ -341,30 +307,17 @@
     color: var(--spectrum-global-color-gray-600);
 }
 
-/* The muted tail of a status line — "· 9/30/2026, 7:16 PM" after DEPLOYED, "· v0.10.0"
-   after INSTALLED. Status and Last deploy were two rows for one fact; the install row
-   was a label, a sentence, a timestamp and two links (owner, 2026-10-01). */
+/* The muted tail of the health line — "· installed in Commerce" after DEPLOYED. Deploy
+   and install are one answer to "is it working?" (owner, 2026-10-01). */
 .integration-panel-status-aside {
     font-size: 12px;
     color: var(--spectrum-global-color-gray-600);
 }
 
-/* The folded tier of the flyout: source, address, APIs and the deployed endpoints.
-   Collapsed by default; the summary is typeset as a row key so it reads as one more
-   row until opened. The rows inside keep their own dividers. */
-.integration-panel-details {
-    padding: 5px 0;
-}
-
-.integration-panel-details-summary {
-    cursor: pointer;
-    font-size: 12px;
-    color: var(--spectrum-global-color-gray-600);
-}
-
-.integration-panel-details[open] > .integration-panel-details-summary {
-    padding-bottom: 5px;
-    border-bottom: 1px solid var(--spectrum-global-color-gray-200);
+/* A system's way into its own screen, first in the flyout body: on an ERP it is the
+   thing an SC opens the flyout for. */
+.integration-panel-primary {
+    padding: 4px 0 10px;
 }
 
 /* Remove trails the row (the prototype separates it from the safe actions). */

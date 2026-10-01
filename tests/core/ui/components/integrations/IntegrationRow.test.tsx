@@ -24,7 +24,6 @@ function makeModel(overrides: Partial<IntegrationCardModel> = {}): IntegrationCa
         name: 'ERP Sync',
         kindLabel: 'Pre-built',
         sourceLine: 'acme/erp-sync',
-        sourceIsAi: false,
         status: 'deployed',
         statusLabel: 'Deployed',
         dotVariant: 'success',

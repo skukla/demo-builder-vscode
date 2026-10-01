@@ -14,7 +14,6 @@ function erpCard(needsReinstall: boolean): IntegrationCardModel {
         isMesh: false,
         name: 'ERP integration',
         kindLabel: 'Pre-built',
-        sourceIsAi: false,
         status: 'deployed',
         statusLabel: 'Deployed',
         dotVariant: 'success',

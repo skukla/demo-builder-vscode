@@ -25,7 +25,6 @@ const MODEL: IntegrationCardModel = {
     name: 'Nordwind',
     kindLabel: 'ERP',
     sourceLine: 'skukla/demo-erp',
-    sourceIsAi: false,
     status: 'deployed',
     statusLabel: 'Deployed',
     dotVariant: 'success',

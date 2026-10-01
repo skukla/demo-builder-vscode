@@ -43,8 +43,6 @@ export type CardAction =
     // An integration: its Adobe workspace in the Developer Console. A system: its
     // own screen.
     | 'open'
-    // An integration's deployed address, from the flyout's address row.
-    | 'open-url'
     // A system card's fill from Commerce, and its reset of its records (the ERP's;
     // both run through the integration that uses it).
     | 'load-demo-data'
@@ -84,17 +82,13 @@ export interface IntegrationCardModel {
      * nothing to say here renders no line at all.
      */
     sourceLine?: string;
-    sourceIsAi: boolean;
     status: CardStatus;
     statusLabel: string;
     dotVariant: StatusDotVariant;
     message?: string;
     url?: string;
     urlLabel: 'Endpoint' | 'App URL' | 'Screen';
-    deployedUrls?: Record<string, string>;
     apis?: string[];
-    /** Preformatted locale display string (already display-ready). */
-    lastDeployed?: string;
     /**
      * The card's own kebab menu. Kept OFF the face so the at-most-one-affordance
      * rule survives: the face carries the urgent verb (Deploy / Update / Retry),
@@ -130,8 +124,6 @@ export interface IntegrationCardModel {
         label: string;
         /** The hands-back line — present only when the install failed. */
         detail?: string;
-        /** The app version installed in Commerce, when the record knows it. */
-        version?: string;
         failed: boolean;
         /** Commerce refused an in-place upgrade; only a reinstall applies the new version. */
         needsReinstall?: boolean;

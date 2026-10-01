@@ -40,7 +40,6 @@ function integrationCard(): IntegrationCardModel {
         name: 'ERP integration',
         kindLabel: 'Pre-built',
         sourceLine: 'skukla/commerce-erp-integration',
-        sourceIsAi: false,
         status: 'deployed',
         statusLabel: 'Deployed',
         dotVariant: 'success',
@@ -61,7 +60,6 @@ function systemCard(): IntegrationCardModel {
         name: 'Nordwind',
         kindLabel: 'ERP',
         sourceLine: 'skukla/demo-erp',
-        sourceIsAi: false,
         status: 'deployed',
         statusLabel: 'Deployed',
         dotVariant: 'success',
@@ -110,10 +108,10 @@ describe('IntegrationsGrid — the system card verbs', () => {
         expect(getClient().postMessage).not.toHaveBeenCalledWith('openLiveSite', expect.anything());
     });
 
-    it('the Screen row opens it too', async () => {
+    it("the flyout's main button opens it too", async () => {
         const { user, panel } = await openSystem();
 
-        await user.click(within(panel).getByRole('link', { name: 'Open Nordwind' }));
+        await user.click(within(panel).getByRole('button', { name: 'Open Nordwind' }));
 
         expect(getClient().postMessage).toHaveBeenCalledWith('openErpScreen', {
             id: 'erp-integration',

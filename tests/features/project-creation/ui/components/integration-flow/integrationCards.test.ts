@@ -177,14 +177,6 @@ describe('toIntegrationCards', () => {
             expect(renamable.canRename).toBe(true);
             expect(plain.canRename).toBe(false);
         });
-
-        it('marks AI-built instances so the subline can read as prose, not a repo', () => {
-            const [ai] = toIntegrationCards([row({ kind: 'blank' })]);
-            const [imported] = toIntegrationCards([row({ kind: 'custom' })]);
-
-            expect(ai.sourceIsAi).toBe(true);
-            expect(imported.sourceIsAi).toBe(false);
-        });
     });
 });
 

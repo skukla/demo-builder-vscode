@@ -23,7 +23,6 @@ function base(over: Partial<IntegrationCardModel>): IntegrationCardModel {
         isMesh: false,
         name: 'x',
         kindLabel: 'Pre-built',
-        sourceIsAi: false,
         status: 'deployed',
         statusLabel: 'Deployed',
         dotVariant: 'success',

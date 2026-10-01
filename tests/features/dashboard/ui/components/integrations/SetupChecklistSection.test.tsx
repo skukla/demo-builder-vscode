@@ -32,7 +32,7 @@ describe('SetupChecklistSection', () => {
 
     it('shows only the summary, not the steps', () => {
         render(<SetupChecklistSection model={model([step({}), step({ id: 'b', title: 'B', state: 'done' })])} onOpenGuide={jest.fn()} />);
-        expect(screen.getByText('1 of 2 done')).toBeInTheDocument();
+        expect(screen.getByText('1 to do')).toBeInTheDocument();
         expect(screen.queryByText('Stores > Settings > Order Status')).not.toBeInTheDocument();
         expect(screen.queryByText('Mark as done')).not.toBeInTheDocument();
     });

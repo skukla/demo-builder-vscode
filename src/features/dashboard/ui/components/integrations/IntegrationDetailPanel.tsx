@@ -17,21 +17,26 @@
  * `model.canRename` — which is exactly why swapping the host back cost nothing
  * and the model and its matrices stayed untouched.
  *
- * Two tiers since 2026-10-01 (owner: "the top section … seems overloaded"). The
- * rows an SC acts on stay open: what it uses, its status with the last deploy
- * time on the same line, the Commerce install in one line, its settings and the
- * demo setup. The addresses and provenance — source repo, URL, APIs, every
- * deployed endpoint — fold under one collapsed "Details" disclosure. The
- * Destination row went: the page band above the grid already names it.
+ * What an SC needs, and nothing folded away (owner, 2026-10-01: "rather than just
+ * paper over the problem with a Details accordion, consider what items in each are
+ * truly useful for an SC"). A row stays when it answers "is this working?", "what
+ * do I do next?" or "take me there": what it uses, one health line (deploy and the
+ * Commerce install together, with the fix when either needs one), its settings, the
+ * demo setup in the card's own words, and — on an ERP — the button into its screen.
+ * The mesh keeps its endpoint, because a GraphQL endpoint is the one address an SC
+ * copies. Source repo, app URL, APIs, deployed endpoints, deploy time and install
+ * version left the screen outright: an agent reads them through the extension's tools,
+ * and support works from Diagnostics and the Debug Logs. What an ERP holds is on its
+ * own home screen, so the flyout does not repeat it.
  *
- * Asymmetries arrive pre-decided on the model: the mesh endpoint renders as mono
- * TEXT (a GraphQL POST endpoint is not browsable) while an integration URL is a
- * Link routing `onAction(model, 'open')`.
+ * Asymmetries arrive pre-decided on the model: the mesh endpoint renders as
+ * click-to-copy text (a GraphQL POST endpoint is not browsable), and a system's
+ * screen is a button routing `onAction(model, 'open')`.
  *
  * @module features/dashboard/ui/components/integrations/IntegrationDetailPanel
  */
 
-import { ActionButton, Link } from '@adobe/react-spectrum';
+import { ActionButton, Button, Link } from '@adobe/react-spectrum';
 import Close from '@spectrum-icons/workflow/Close';
 import React from 'react';
 import type { CardAction, IntegrationCardModel } from './integrationCardModel';
@@ -44,7 +49,6 @@ import { IntegrationActionsMenu } from '@/core/ui/components/integrations/Integr
 import { IntegrationStatusLabel } from '@/core/ui/components/integrations/IntegrationStatusLabel';
 import { CopyableText } from '@/core/ui/components/ui/CopyableText';
 import { Drawer } from '@/core/ui/components/ui/Drawer';
-import { cn } from '@/core/ui/utils/classNames';
 
 export interface IntegrationDetailPanelProps {
     /** The selected card's model, or undefined while no card is selected. */
@@ -65,160 +69,64 @@ interface RowsProps {
 }
 
 /**
- * The deployed endpoints worth their own rows, shortest useful label first.
- *
- * Drops the entry that merely repeats `primaryUrl`: `aio app get-url --json`
- * returns ONE flat map, and `parseGetUrlOutput` picks the primary by finding the
- * first `web/` key inside it — so the primary is ALWAYS also an entry. Verified
- * byte-identical on both live integrations. Left in, it renders a second copy
- * target for a URL already on screen.
- *
- * Labels drop to the last path segment: keys arrive as `runtime/<package>/<action>`
- * and the package is the integration id already titling the panel, so the full path
- * spends three wrapped lines of an 88px key column to restate it. The full key stays
- * the React key, so two actions that shorten alike stay distinct rows.
+ * Health in one line: the deploy status, and on an App Management app the Commerce
+ * install beside it. When either needs attention, the reason and the fix sit under
+ * it — the deploy's live message, or the failed install's hands-back line and
+ * "Finish install" (the idempotent pass that also repairs a record left "failed" by
+ * a call that timed out while the app finished, 2026-09-30).
  */
-function selectEndpoints(
-    deployedUrls: Record<string, string> | undefined,
-    primaryUrl: string | undefined,
-): { key: string; label: string; url: string }[] {
-    return Object.entries(deployedUrls ?? {})
-        .filter(([, url]) => url !== primaryUrl)
-        .map(([key, url]) => ({ key, label: key.split('/').pop() || key, url }));
-}
-
-/**
- * Status and last deploy as ONE line: the dot, the label, and — on a deployed
- * card — when. They were two rows stating one fact. `model.message` (live
- * deploy progress, failure detail) stays underneath; it exists nowhere else.
- */
-function StatusRow({ model }: { model: IntegrationCardModel }): React.ReactElement {
-    const when = model.status === 'deployed' ? model.lastDeployed : undefined;
+function HealthRow({ model, onAction }: RowsProps): React.ReactElement {
+    const install = model.installation;
     return (
         <PanelRow label="Status">
             <span className="integration-statusline">
                 <IntegrationStatusLabel model={model} />
-                {when && <span className="integration-panel-status-aside">· {when}</span>}
+                {install && !install.failed && (
+                    <span className="integration-panel-status-aside">
+                        · {install.label.toLowerCase()} in Commerce
+                    </span>
+                )}
             </span>
             {model.message && (
                 <span className="integration-panel-status-message">{model.message}</span>
             )}
-        </PanelRow>
-    );
-}
-
-/**
- * The Commerce install outcome (App Management apps only), in one line:
- * "Installed · v0.10.0". A failed install adds its reason and the remedy —
- * "Finish install", the idempotent pass that also repairs a record left
- * "failed" by a call that timed out while the app finished (2026-09-30). The
- * Admin link that used to sit here is the kebab's "Open Commerce Admin".
- */
-function InstallRow({ model, onAction }: RowsProps): React.ReactElement | null {
-    const install = model.installation;
-    if (!install) return null;
-    return (
-        <PanelRow label="Commerce install">
-            <span className="integration-statusline">
-                <span
-                    className={cn(
-                        'integration-card-status',
-                        install.failed && 'integration-card-status--error',
-                    )}
-                >
-                    {install.label}
-                </span>
-                {install.version && (
-                    <span className="integration-panel-status-aside">· v{install.version}</span>
-                )}
-            </span>
-            {install.detail && (
-                <span className="integration-panel-status-message">{install.detail}</span>
-            )}
-            {install.failed && (
-                <Link isQuiet onPress={() => onAction(model, 'install')}>
-                    Finish install
-                </Link>
-            )}
-        </PanelRow>
-    );
-}
-
-/** The address row: click-to-copy for the mesh endpoint, a link for everything else. */
-function UrlRow({ model, onAction }: RowsProps): React.ReactElement | null {
-    if (!model.url) return null;
-    if (model.isMesh) {
-        // A GraphQL endpoint answers POSTs, so it is not browsable — copying is the
-        // only way to get it out. CopyableText renders its own <code>.
-        return (
-            <PanelRow label={model.urlLabel}>
-                <CopyableText>{model.url}</CopyableText>
-            </PanelRow>
-        );
-    }
-    return (
-        <PanelRow label={model.urlLabel}>
-            {/* A system's screen URL lacks the key the extension adds, so it reads
-                as an action, not an address. */}
-            <Link isQuiet onPress={() => onAction(model, model.isSystem ? 'open' : 'open-url')}>
-                {model.isSystem ? `Open ${model.name}` : model.url}
-            </Link>
-        </PanelRow>
-    );
-}
-
-/**
- * The folded tier: source, address, APIs and the deployed endpoints. Provenance an
- * SC reads once, not state they act on, so it opens on demand. Omitted outright
- * when the model carries none of it (a disclosure over nothing).
- *
- * Source is ONE row, not the former Kind + Source pair: the kind is a muted PREFIX
- * on the identifier (`Pre-built · acme/repo`), cut when it would repeat the title.
- * `mono` only for an owner/repo — the blank starter shows its kind alone, as prose.
- *
- * The endpoints come LAST: every other row is one apiece, this group grows with
- * the app's web actions, and the drawer's own overflow absorbs the length.
- */
-function DetailsDisclosure({ model, onAction }: RowsProps): React.ReactElement | null {
-    const endpoints = selectEndpoints(model.deployedUrls, model.url);
-    const apis = model.apis ?? [];
-    if (!model.sourceLine && !model.url && apis.length === 0 && endpoints.length === 0) {
-        return null;
-    }
-    const showKind = model.kindLabel !== model.name && !model.sourceIsAi;
-    return (
-        <details className="integration-panel-details">
-            <summary className="integration-panel-details-summary">Details</summary>
-            {model.sourceLine && (
-                <PanelRow label="Source" mono={!model.sourceIsAi}>
-                    {showKind && (
-                        <span className="integration-panel-row-prefix">{model.kindLabel} · </span>
-                    )}
-                    {model.sourceIsAi ? model.kindLabel : model.sourceLine}
-                </PanelRow>
-            )}
-            <UrlRow model={model} onAction={onAction} />
-            {apis.length > 0 && (
-                <PanelRow label="APIs in use">
-                    {/* One per line — three long Adobe API names on one line are unreadable. */}
-                    {apis.map((api) => (
-                        <span key={api} className="integration-panel-api">
-                            {api}
-                        </span>
-                    ))}
-                </PanelRow>
-            )}
-            {endpoints.length > 0 && (
+            {install?.failed && (
                 <>
-                    <div className="integration-panel-group-label">Endpoints</div>
-                    {endpoints.map(({ key, label, url }) => (
-                        <PanelRow key={key} label={label}>
-                            <CopyableText>{url}</CopyableText>
-                        </PanelRow>
-                    ))}
+                    <span className="integration-panel-status-message">
+                        {install.detail ?? `${install.label} in Commerce`}
+                    </span>
+                    <Link isQuiet onPress={() => onAction(model, 'install')}>
+                        Finish install
+                    </Link>
                 </>
             )}
-        </details>
+        </PanelRow>
+    );
+}
+
+/**
+ * The mesh's endpoint, click-to-copy: a GraphQL endpoint answers POSTs, so it is
+ * not browsable, and it is the one address an SC pastes elsewhere. Other cards'
+ * addresses are in the technical details.
+ */
+function MeshEndpointRow({ model }: { model: IntegrationCardModel }): React.ReactElement | null {
+    if (!model.isMesh || !model.url) return null;
+    return (
+        <PanelRow label={model.urlLabel}>
+            <CopyableText>{model.url}</CopyableText>
+        </PanelRow>
+    );
+}
+
+/** An ERP's way in: its own screen, which already shows what it holds and its work. */
+function OpenSystemButton({ model, onAction }: RowsProps): React.ReactElement | null {
+    if (!model.isSystem || !model.url) return null;
+    return (
+        <div className="integration-panel-primary">
+            <Button variant="accent" onPress={() => onAction(model, 'open')}>
+                Open {model.name}
+            </Button>
+        </div>
     );
 }
 
@@ -256,9 +164,9 @@ function PanelContent({
             </div>
 
             <div className="db-drawer-body">
+                <OpenSystemButton model={model} onAction={onAction} />
                 <LinkedSection model={model} onOpenLinked={onOpenLinked} />
-                <StatusRow model={model} />
-                <InstallRow model={model} onAction={onAction} />
+                <HealthRow model={model} onAction={onAction} />
                 {/* The integration's Settings in one line, with the way to change
                     them (AB-21); the same item is in the header's menu. */}
                 {model.settingsSummary !== undefined && (
@@ -280,7 +188,7 @@ function PanelContent({
                         <CommerceScopeList parts={commerceScope} />
                     </PanelRow>
                 ) : null}
-                <DetailsDisclosure model={model} onAction={onAction} />
+                <MeshEndpointRow model={model} />
             </div>
         </>
     );

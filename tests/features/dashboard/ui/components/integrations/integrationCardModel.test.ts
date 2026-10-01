@@ -4,7 +4,7 @@
  * The keyed-integration half of the pure derivation module behind the dashboard
  * card grid + drawer: the full status matrix, the "at most ONE face affordance"
  * invariant, override precedence (ported from the retired list suite as pure
- * tests), kindLabel/canRename derivation, and url/lastDeployed resolution.
+ * tests), kindLabel/canRename derivation, and url resolution.
  *
  * deriveMeshCard and buildIntegrationCards live in
  * integrationCardModel-mesh.test.ts; the catalog-loader fake and the fixtures
@@ -334,7 +334,6 @@ describe('deriveIntegrationCard — kindLabel + canRename', () => {
 
         expect(model.kindLabel).toBe('Pre-built');
         expect(model.apis).toEqual(['I/O Management API', 'Campaign']);
-        expect(model.sourceIsAi).toBe(false);
         expect(model.sourceLine).toBe('adobe/sfdc-connector');
         expect(model.canRename).toBe(false);
     });
@@ -358,7 +357,6 @@ describe('deriveIntegrationCard — kindLabel + canRename', () => {
         expect(model.kindLabel).toBe('Custom · blank starter');
         // NOT "built with AI" — the shell is empty until the user builds it.
         expect(model.sourceLine).toBe('Blank starter — build it out');
-        expect(model.sourceIsAi).toBe(true);
         expect(model.canRename).toBe(true);
     });
 
@@ -369,7 +367,6 @@ describe('deriveIntegrationCard — kindLabel + canRename', () => {
 
         expect(model.kindLabel).toBe('Imported repo');
         expect(model.sourceLine).toBe('acme/app-builder-shell');
-        expect(model.sourceIsAi).toBe(false);
     });
 
     it('custom repo: "Imported repo" + mono owner/repo, renamable', () => {
@@ -377,7 +374,6 @@ describe('deriveIntegrationCard — kindLabel + canRename', () => {
 
         expect(model.kindLabel).toBe('Imported repo');
         expect(model.sourceLine).toBe('acme/erp-sync');
-        expect(model.sourceIsAi).toBe(false);
         expect(model.canRename).toBe(true);
     });
 
@@ -398,9 +394,9 @@ describe('deriveIntegrationCard — kindLabel + canRename', () => {
 });
 
 // ---------------------------------------------------------------------------
-// primaryUrl + urlLabel + lastDeployed
+// primaryUrl + urlLabel
 // ---------------------------------------------------------------------------
-describe('deriveIntegrationCard — url + lastDeployed derivation', () => {
+describe('deriveIntegrationCard — url derivation', () => {
     it('prefers the primary url over deployedUrls', () => {
         const model = deriveIntegrationCard(
             integration({
@@ -418,10 +414,6 @@ describe('deriveIntegrationCard — url + lastDeployed derivation', () => {
             })
         );
         expect(model.url).toBe('https://first.example');
-        expect(model.deployedUrls).toEqual({
-            app: 'https://first.example',
-            admin: 'https://second.example',
-        });
     });
 
     it('empty deployedUrls and no url: url is undefined, urlLabel still "App URL"', () => {
@@ -437,21 +429,6 @@ describe('deriveIntegrationCard — url + lastDeployed derivation', () => {
         expect(model.urlLabel).toBe('App URL');
     });
 
-    it('formats lastDeployed as a locale display string', () => {
-        const iso = '2026-07-15T14:04:00.000Z';
-        const model = deriveIntegrationCard(integration({ lastDeployed: iso }));
-        expect(model.lastDeployed).toBe(new Date(iso).toLocaleString());
-    });
-
-    it('lastDeployed is undefined when absent', () => {
-        const model = deriveIntegrationCard(integration());
-        expect(model.lastDeployed).toBeUndefined();
-    });
-
-    it('lastDeployed is undefined when the persisted value is unparseable', () => {
-        const model = deriveIntegrationCard(integration({ lastDeployed: 'not-a-date' }));
-        expect(model.lastDeployed).toBeUndefined();
-    });
     // The card menu, which is what makes API access reachable from the grid
     // without opening the flyout first. Rename is NOT here — it is the name's
     // own inline pencil, matching ProjectCard.

@@ -6,28 +6,18 @@
  */
 
 import React from 'react';
-import { cn } from '@/core/ui/utils/classNames';
 
 export function PanelRow({
     label,
-    mono = false,
     children,
 }: {
     label: string;
-    mono?: boolean;
     children: React.ReactNode;
 }): React.ReactElement {
     return (
         <div className="integration-panel-row">
             <span className="integration-panel-row-key">{label}</span>
-            <span
-                className={cn(
-                    'integration-panel-row-value',
-                    mono && 'integration-panel-row-value--mono',
-                )}
-            >
-                {children}
-            </span>
+            <span className="integration-panel-row-value">{children}</span>
         </div>
     );
 }

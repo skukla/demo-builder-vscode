@@ -61,7 +61,6 @@ describe('deriveSystemCard', () => {
             canRename: false,
             linked: { label: 'Used by', cards: [usedBy()] },
         });
-        expect(card.lastDeployed).toBeDefined();
     });
 
     it('offers its screen, load demo data, reset, redeploy and remove while both halves are deployed', () => {
