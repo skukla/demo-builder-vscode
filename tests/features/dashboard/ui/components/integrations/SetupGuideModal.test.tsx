@@ -119,7 +119,8 @@ describe('SetupGuideModal', () => {
             screen.getByRole('dialog', { name: 'Demo setup: Northwind ERP Integration' })
         ).toBeInTheDocument();
         expect(within(shown()).getByRole('heading', { name: 'Step B' })).toBeInTheDocument();
-        expect(within(shown()).getByText('To do')).toBeInTheDocument();
+        // No state word in the pane: the list marks done steps, the actions say the rest.
+        expect(within(shown()).queryByText('To do')).not.toBeInTheDocument();
         expect(within(shown()).getByText('Stores > Settings > Order Status')).toBeInTheDocument();
         // The reason sits under a disclosure, present but not in the way.
         const why = within(shown()).getByText('Why this matters').closest('details');
@@ -136,7 +137,8 @@ describe('SetupGuideModal', () => {
         renderGuide([...THREE, step({ id: 'd', title: 'Step D', state: 'dismissed' })]);
         const tabs = screen.getAllByRole('tab');
         // A label where the catalog gives one, the title where it does not.
-        expect(tabs.map((tab) => tab.textContent)).toEqual(['A', 'B', 'Step C', 'Step D']);
+        // A check on the done step, a dash on the skipped one, nothing on an open one.
+        expect(tabs.map((tab) => tab.textContent)).toEqual(['✓A', 'B', 'Step C', '–Step D']);
         expect(tabs[1]).toHaveAttribute('aria-selected', 'true');
         // 1 of 3 counted steps done (the skipped one is out of the count).
         expect(screen.getByRole('progressbar', { name: 'Setup progress' })).toHaveAttribute(
@@ -258,7 +260,8 @@ describe('SetupGuideModal', () => {
             <SetupGuideModal model={model(updated)} onClose={jest.fn()} onOpenAdmin={jest.fn()} />
         );
         expect(within(shown()).getByRole('heading', { name: 'Step B' })).toBeInTheDocument();
-        expect(within(shown()).getByText('Done')).toBeInTheDocument();
+        // The list now checks it off (the mark is decoration, so it is outside the tab's name).
+        expect(screen.getByRole('tab', { name: 'B' })).toHaveTextContent('✓');
         expect(screen.getByRole('progressbar')).toHaveAttribute(
             'aria-valuenow',
             String((2 / 3) * 100)

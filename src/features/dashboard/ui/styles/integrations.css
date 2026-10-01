@@ -85,45 +85,50 @@
 /* The demo setup guide's step (SetupGuideModal): state, title, why, where, actions — each
    its own paragraph, with room between them, since the SC reads one step at a time. */
 /* The demo setup guide (SetupGuideModal): a thin progress line over a two-pane body — every
-   step down the left, the chosen one on the right. The left column is fixed so the detail
-   pane does not shift as labels differ in length. */
+   step down the left, the chosen one on the right.
+
+   Type: ONE body size everywhere (the dialog's own 14px) and the step title one size up.
+   Labels are muted, not smaller. The first cut mixed 11px uppercase, 12px, 14px and a 16px
+   heading and the owner read the hierarchy as "really awful" (2026-10-01). */
 .setup-guide-progress {
-    margin-bottom: 16px;
+    margin-bottom: 20px;
 }
 
 .setup-guide-layout {
     display: grid;
-    grid-template-columns: 184px minmax(0, 1fr);
-    gap: 24px;
+    grid-template-columns: 232px minmax(0, 1fr);
+    gap: 28px;
     align-items: start;
 }
 
+/* The list is wide enough to read its labels whole, and a label may wrap: a list of cut-off
+   titles was "pointless as it is". */
 .setup-guide-rail {
     list-style: none;
     margin: 0;
-    padding: 0 12px 0 0;
+    padding: 0 16px 0 0;
     display: flex;
     flex-direction: column;
     gap: 2px;
     border-right: 1px solid var(--spectrum-global-color-gray-300);
 }
 
-/* A step in the list: a real button, so it is keyboard-reachable; the shown one carries the
-   accent bar the wizard's step strip uses for "where you are". */
+/* A step in the list: a real button, so it is keyboard-reachable. The shown one is bold with
+   the accent bar the wizard's step strip uses; the only other mark is a check on a done step. */
 .setup-guide-rail-step {
     display: grid;
-    grid-template-columns: 6px minmax(0, 1fr);
-    align-items: center;
+    grid-template-columns: 14px minmax(0, 1fr);
+    align-items: baseline;
     column-gap: 8px;
     width: 100%;
-    padding: 6px 8px 6px 10px;
+    padding: 7px 10px 7px 10px;
     border: 0;
     border-left: 2px solid transparent;
     border-radius: 4px;
     background: transparent;
-    color: var(--spectrum-global-color-gray-700);
+    color: var(--spectrum-global-color-gray-800);
     font: inherit;
-    font-size: 12px;
+    line-height: 1.35;
     text-align: left;
     cursor: pointer;
 }
@@ -139,40 +144,39 @@
     font-weight: 600;
 }
 
-.setup-guide-rail-title {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+.setup-guide-rail-step--skipped {
+    color: var(--spectrum-global-color-gray-600);
+}
+
+.setup-guide-rail-mark {
+    color: var(--spectrum-global-color-green-600);
+    text-align: center;
+}
+
+.setup-guide-rail-step--skipped .setup-guide-rail-mark {
+    color: var(--spectrum-global-color-gray-500);
 }
 
 .setup-guide-step {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 16px;
     min-width: 0;
 }
 
-.setup-guide-head {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0;
-}
-
-/* Where / Enter / Then: a label column and a value column, the labels in the panel's
-   muted prefix face so the three lines scan as one table. */
+/* Where / Enter / Then: a label column and a value column, the labels muted so the three
+   lines scan as one table. */
 .setup-guide-facts {
     display: grid;
     grid-template-columns: max-content minmax(0, 1fr);
-    column-gap: 16px;
-    row-gap: 8px;
+    column-gap: 20px;
+    row-gap: 10px;
     margin: 0;
+    line-height: 1.45;
 }
 
 .setup-guide-facts dt {
     color: var(--spectrum-global-color-gray-600);
-    font-size: 12px;
-    padding-top: 2px;
 }
 
 .setup-guide-facts dd {
@@ -183,16 +187,21 @@
 .setup-guide-path {
     display: inline-flex;
     flex-wrap: wrap;
-    align-items: center;
-    gap: 4px;
+    align-items: baseline;
+    gap: 6px;
 }
 
+/* A path segment: a quiet pill at body size, so the path reads as the Admin's own menu. */
 .setup-guide-crumb {
     padding: 1px 8px;
     border-radius: 10px;
     background: var(--spectrum-global-color-gray-200);
-    font-size: 12px;
     white-space: nowrap;
+}
+
+/* A step label may take two lines; it must never be cut off. */
+.setup-guide-rail-title {
+    overflow-wrap: anywhere;
 }
 
 .setup-guide-crumb-sep {
@@ -202,28 +211,23 @@
 .setup-guide-pills {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 8px;
 }
 
 .setup-guide-evidence {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
     color: var(--spectrum-global-color-gray-700);
 }
 
 .setup-guide-why > summary {
     cursor: pointer;
     color: var(--spectrum-global-color-gray-600);
-    font-size: 12px;
 }
 
 .setup-guide-why[open] > summary {
-    margin-bottom: 4px;
+    margin-bottom: 6px;
 }
 
-/* One row: two buttons and a quiet link, aligned on the baseline. */
+/* One row: two buttons and a quiet link, aligned on the centre line. */
 .setup-guide-actions {
     display: flex;
     flex-wrap: wrap;

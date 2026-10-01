@@ -9,9 +9,13 @@
  * titles do not fit a strip inside a dialog, and a checklist reads as a vertical list) and
  * `NumberedInstructions` (the three facts are a label column, not an ordered list).
  *
- * The first cut carried a step counter, an icon well and five buttons; the owner read it as
- * "too busy" (2026-10-01). What stayed is what answers a question: the list says where you
- * are, the title says what to do, three lines say where / what to enter / what then.
+ * Three cuts came from the owner's readings of it on 2026-10-01. "Too busy": the step
+ * counter, the icon well and five buttons went. Then "the left rail is pointless as it is /
+ * the font size hierarchy is really awful / the status badges are loud": the rail widened
+ * and its labels got short enough to read whole, everything sits at one body size with the
+ * title one size up, and the coloured dots went — a done step carries a check mark, an open
+ * one nothing, a skipped one a muted dash. Nothing here names a state in words; the actions
+ * do that.
  *
  * @module features/dashboard/ui/components/integrations/SetupGuideStep
  */
@@ -19,13 +23,11 @@
 import { Button, Heading, Link, Text } from '@adobe/react-spectrum';
 import React from 'react';
 import { CopyableText } from '@/core/ui/components/ui/CopyableText';
-import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { cn } from '@/core/ui/utils/classNames';
 import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 
-/** The dot and the word for each step state, shared by the list and the pane. */
-const DOT = { open: 'warning', done: 'success', dismissed: 'neutral' } as const;
-const WORD = { open: 'To do', done: 'Done', dismissed: 'Skipped' } as const;
+/** The one mark a step carries in the list, by state. */
+const MARK = { open: '', done: '✓', dismissed: '–' } as const;
 
 interface StepListProps {
     items: SetupChecklistItem[];
@@ -33,7 +35,7 @@ interface StepListProps {
     onSelect: (index: number) => void;
 }
 
-/** Every step down the left: its state and its short label; the shown one highlighted. */
+/** Every step down the left by its short label, done ones checked; the shown one highlighted. */
 export function StepList({ items, index, onSelect }: StepListProps): React.ReactElement {
     return (
         <ol
@@ -51,10 +53,13 @@ export function StepList({ items, index, onSelect }: StepListProps): React.React
                         className={cn(
                             'setup-guide-rail-step',
                             i === index && 'setup-guide-rail-step--active',
+                            item.state === 'dismissed' && 'setup-guide-rail-step--skipped',
                         )}
                         onClick={() => onSelect(i)}
                     >
-                        <StatusDot variant={DOT[item.state]} size={6} />
+                        <span className="setup-guide-rail-mark" aria-hidden="true">
+                            {MARK[item.state]}
+                        </span>
                         <span className="setup-guide-rail-title">{item.label ?? item.title}</span>
                     </button>
                 </li>
@@ -164,25 +169,14 @@ function StepFacts({ item }: { item: SetupChecklistItem }): React.ReactElement {
     );
 }
 
-/** One step: its state and title, where, what to enter, what then, the evidence, why. */
+/** One step: its title, where, what to enter, what then, the evidence, why, the actions. */
 export function SetupGuideStep(props: StepProps): React.ReactElement {
     const { item } = props;
     return (
         <div className="setup-guide-step" data-testid="setup-guide-step">
-            <div className="setup-guide-head">
-                <span className="integration-statusline">
-                    <StatusDot variant={DOT[item.state]} size={6} />
-                    <span>{WORD[item.state]}</span>
-                </span>
-                <Heading level={3}>{item.title}</Heading>
-            </div>
+            <Heading level={3}>{item.title}</Heading>
             <StepFacts item={item} />
-            {item.note && (
-                <span className="setup-guide-evidence">
-                    <StatusDot variant={DOT[item.state]} size={6} />
-                    <span>{item.note}</span>
-                </span>
-            )}
+            {item.note && <Text UNSAFE_className="setup-guide-evidence">{item.note}</Text>}
             <details className="setup-guide-why">
                 <summary>Why this matters</summary>
                 <Text>{item.why}</Text>

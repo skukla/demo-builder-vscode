@@ -89,7 +89,7 @@
       "setupSteps": [
         {
           "id": "confirmed-status",
-          "label": "Confirmed in ERP status",
+          "label": "Confirmed status",
           "title": "Create the \"Confirmed in ERP\" order status",
           "why": "Without it, an order the ERP confirmed looks the same as one it never saw in the Orders grid.",
           "where": "Stores > Settings > Order Status: create erp_confirmed, assign it to Pending (not as default), then pick it for \"Order status when the ERP confirms\" on the integration's Mapping tab.",
@@ -106,7 +106,7 @@
         },
         {
           "id": "company-catalogs",
-          "label": "Company shared catalogs",
+          "label": "Shared catalogs",
           "title": "Give each priced company its own shared catalog",
           "why": "The ERP publishes a company's prices into that company's shared catalog; companies sharing one would share prices.",
           "where": "Catalog > Shared Catalogs > Add Shared Catalog, then Assign Companies.",
@@ -120,7 +120,7 @@
         },
         {
           "id": "price-scope-website",
-          "label": "Price scope: Website",
+          "label": "Price scope",
           "title": "Set the catalog price scope to Website",
           "why": "The ERP publishes a company's prices per website; at the default scope, Global, every site would show the same prices. No API sets this.",
           "where": "Stores > Configuration > Catalog > Catalog > Price > Catalog Price Scope: set to Website, Save Config. Catalog > Shared Catalogs > Set Pricing and Structure then shows a Website chooser above the prices.",
@@ -139,7 +139,7 @@
         },
         {
           "id": "second-source",
-          "label": "ERP warehouse and stock",
+          "label": "ERP warehouse",
           "title": "Give the ERP a warehouse of its own, and a stock that sells it",
           "why": "The ERP keeps stock per Commerce source; the Default Stock can hold only the Default Source, so the website needs a stock of its own.",
           "where": "Stores > Inventory > Sources > Add New Source (for example Northwind Warehouse); Stores > Inventory > Stocks > Add New Stock with the website as its sales channel and the new source assigned; then move the website's products' quantities to the new source (Catalog > Products > Actions > Move stock between the ERP's warehouses) and save each product once, so the storefront's catalog reads the new stock.",
@@ -157,7 +157,7 @@
         },
         {
           "id": "erp-attributes",
-          "label": "erp_owner and brand attributes",
+          "label": "Product attributes",
           "title": "Create the erp_owner and brand product attributes",
           "why": "Each product goes to the ERP its erp_owner names (the ERP's list id: its name in lower case without the word ERP — Justrite ERP is justrite); brand is what buyers filter on.",
           "where": "Stores > Attributes > Product > Add New Attribute: erp_owner as a Text Field (a Dropdown sends a number, not the id) and brand; then Stores > Attributes > Attribute Set to add both to the set. Set both on the products you sell.",
