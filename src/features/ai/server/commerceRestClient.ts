@@ -275,11 +275,17 @@ export type RestAnswer = { ok: boolean; status: number; text: string } | { faile
  * parses the answer (the ERP fill), where `sendRest`'s cut would break the JSON.
  */
 /**
- * Where a call goes: the synchronous `/V1` API, or the asynchronous bulk API
- * (`/async/bulk/V1`), which takes an ARRAY of requests in one call and answers a
- * `bulk_uuid` to poll (`GET V1/bulk/{uuid}/status`). The bulk API is what makes a
- * catalog load one call instead of one per product (owner, 2026-09-30: 96 products
- * at 13–25 s each "doesn't bode well for a quick action for an end user").
+ * Where a call goes: the synchronous `/V1` API, or the asynchronous bulk API, which
+ * takes an ARRAY of requests in one call and answers a `bulk_uuid` to poll
+ * (`GET V1/bulk/{uuid}/status`). The bulk API is what makes a catalog load one call
+ * instead of one per product (owner, 2026-09-30: 96 products at 13–25 s each
+ * "doesn't bode well for a quick action for an end user").
+ *
+ * The prefix is the ACCS one: "In Adobe Commerce as a Cloud Service, the /async/bulk
+ * segment occurs after the V1 segment of the route" —
+ * developer.adobe.com/commerce/webapi/rest/use-rest/bulk-endpoints/. PaaS puts it
+ * before (`/rest/async/bulk/V1/…`); this client reaches ACCS only. Measured
+ * 2026-09-30: the PaaS order answered an empty 404 from the gateway on the sandbox.
  */
 export interface RestRoute {
     bulk?: boolean;
@@ -287,7 +293,7 @@ export interface RestRoute {
 
 /** The path prefix under the tenant for the route. */
 export function restPrefix(route: RestRoute | undefined): string {
-    return route?.bulk ? 'async/bulk/V1' : 'V1';
+    return route?.bulk ? 'V1/async/bulk' : 'V1';
 }
 
 export async function requestRest(

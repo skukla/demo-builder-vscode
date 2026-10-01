@@ -222,7 +222,8 @@ describe('the signed write (args pinned)', () => {
 
         const [url, init] = fetchMock.mock.calls[1];
         expect(url).toBe(
-            'https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/async/bulk/V1/products/bySku'
+            // ACCS puts /async/bulk AFTER V1 (bulk-endpoints doc); PaaS puts it before.
+            'https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/V1/async/bulk/products/bySku'
         );
         expect(init.method).toBe('PUT');
         expect(JSON.parse(init.body)).toEqual(body);
