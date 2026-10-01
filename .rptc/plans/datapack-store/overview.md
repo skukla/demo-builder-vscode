@@ -40,6 +40,19 @@ lookup service and PDP stuff."
   verification, and neither is needed by a store this plan writes from scratch.
 - **The one-registry rule stands** (owner, 2026-08-23): the org's packs must have ONE home.
   Two stores that can both hold a pack diverge.
+- **The service's source is available and current** (found 2026-10-01). Live repository
+  `Adobe-CoreTech/dsc-data-installer-api` on github.com — INTERNAL, readable with the
+  `kukla_adobe` GitHub account (`gh auth token --user kukla_adobe`), not with `skukla`. Last
+  pushed 2026-09-02; cloned beside our two repos as `dsc-data-installer-api`. A snapshot from
+  2026-03-06 also sits there as `data-installer-api-b2b` — 105 commits behind, lacking the
+  `shared` flag, `datapack_type` and the installation tracking; use the clone, not the snapshot.
+  What the live code holds: 64 processors (20 of them export: products, categories, attribute
+  sets, attributes and their assignments, sources, stocks and their links, source items,
+  companies, shared catalogs with their categories, products and company assignments, customer
+  groups, customers, cart rules, coupons, ACO), a 16-action database layer over the raw MongoDB
+  driver, IMS auth middleware, a sanitizer, ~25k lines of tests, 16 guides. **Every export
+  processor stores through one seam** — `addDataItem._internal({...rows, ...getExportStoreParams(context)})`
+  (`actions/utils/runtimeParams.js`) — which is the one function a port replaces with our store.
 
 ## Decision (step 1 measured 2026-10-01 — see `step-01.md`)
 
@@ -66,7 +79,8 @@ and watch paths stay as they are; nothing is hosted inside the extension (ruled 
 |---|---|---|---|
 | 01 | **Measure the namespace question.** DONE 2026-10-01 (`step-01.md`): 5, 100, 150 and 300 activations held open in a scratch namespace beside `render-pdp`; the PDP path's latency did not move and nothing answered 429. Decision: same workspace, as a package; one non-blocking activation per store job as the design rule. The `DatapackSpike` workspace stays as the development namespace until the build ships. | Can a long export or import share a namespace with the PDP path a shopper is waiting on? | Yes — measured |
 | 02 | **Database and schema.** DONE 2026-10-01 (`step-02.md`): the database declared and provisioned, the `datapack-store` package with `packs` / `save-pack` / `save-pack-items` / `delete-pack`, a shared caller guard, 58 tests, live round trip green in the scratch workspace. Three database-library departures from the MongoDB driver found and wrapped (connect step, findOne throws on no match, list limit 100) and one read-after-write lag designed around. | Does the shape round-trip into `create-datapack` + `add-data-item`? | Yes, from DI-3's documented item shape; the push itself is step 05 |
-| 03 | **Export action**, asynchronous: start / status / result, like `process-datapack-async`. Reads the instance over REST with the brokered credential, one data type at a time, stores rows as pack items. Selective by data type (the ERP demo captures `categories`, `b2b_shared_catalog_*`, `customer_groups`, `b2b_companies` without a whole-instance sweep). | Can we capture the Justrite setup as a pack? | Mostly — the per-type readers are the Data Installer's export processors, re-expressed over REST |
+| 02b | **Adopt the service's shapes exactly** (PROPOSED 2026-10-01, awaiting the owner's yes): rename our fields to his — `datapack_name`, `display_name`, `data_types`, items with `data` as the per-type payload — keeping `owner`, `shared`, `datapack_type` as our additions. Then a pack in our store IS a Data Installer pack and step 05's push is a copy. Add his sanitizer (MongoDB operators stripped from caller rows); keep our stricter guard. | Is the push a copy or a translation? | A rename on the branch, before anything lands on top |
+| 03 | **Export, by porting the service's export processors** (PROPOSED 2026-10-01, replaces "re-express over REST"): the 20 export processors, `BaseProcessor`, the Commerce utilities and their tests come into our service; the one store seam (`getExportStoreParams` → `addDataItem._internal`) is pointed at our store. Reverse substitutions (ids → names) come with them, which is what makes a pack move between instances. Asynchronous: start / status / result, like `process-datapack-async`. Selective by data type. | Can we capture the Justrite setup as a pack, in the format every existing pack has? | Yes, by the port; sizing: ~20 processors + base + utils |
 | 04 | **Library API**: list (shared + mine), get, promote (owner or allowlisted curator), delete own. Owner is the IMS email the guard already validates. | One registry, two visibilities | Yes |
 | 05 | **Install route**: `push-to-installer` copies a pack into the Data Installer (create, add items, promote) and the extension's existing import takes over. Direct install over the bulk REST route is the fallback, not the default. | Does install stay the proven path? | Yes |
 | 06 | **Extension**: the catalog shows library and own packs from our store beside the Data Installer's; export targets our store (`ExportDatapackModal`, `start_datapack_export`); a second `apiBaseUrl`-shaped setting for the store, read in one place like `dataInstallerConfig.ts`. Agent surface gets the same reads and the same confirm-gated writes (`mcp-tool-authoring`). | Human surface = agent surface | Partly — the settings and catalog merge need design |
