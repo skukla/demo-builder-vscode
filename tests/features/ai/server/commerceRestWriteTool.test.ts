@@ -203,6 +203,52 @@ describe('the signed write (args pinned)', () => {
         expect(out).toContain('positive number');
     });
 
+    it('bulk:true sends the ARRAY body to the asynchronous bulk API and says to poll the uuid', async () => {
+        // Owner 2026-09-30: 96 products at 13–25 s each through the per-record path
+        // "doesn't bode well for a quick action for an end user".
+        fetchMock = answering(
+            200,
+            '{"bulk_uuid":"5a0f9bd8","request_items":[{"id":0,"data_hash":"h","status":"accepted"}],"errors":false}'
+        );
+        const body = [{ product: { sku: 'A', custom_attributes: [] } }, { product: { sku: 'B' } }];
+
+        const out = await serve().raw({
+            method: 'PUT',
+            path: 'products/bySku',
+            body,
+            bulk: true,
+            confirm: true,
+        });
+
+        const [url, init] = fetchMock.mock.calls[1];
+        expect(url).toBe(
+            'https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/async/bulk/V1/products/bySku'
+        );
+        expect(init.method).toBe('PUT');
+        expect(JSON.parse(init.body)).toEqual(body);
+        expect(out).toContain('bulk/<bulk_uuid>/status');
+        expect(out).toContain('"bulk_uuid":"5a0f9bd8"');
+    });
+
+    it('bulk:true refuses a single record and a DELETE, before any call', async () => {
+        const one = await serve().raw({
+            method: 'POST',
+            path: 'products',
+            body: { product: {} },
+            bulk: true,
+            confirm: true,
+        });
+        expect(one).toContain('non-empty ARRAY');
+        const del = await serve().raw({
+            method: 'DELETE',
+            path: 'products/A',
+            bulk: true,
+            confirm: true,
+        });
+        expect(del).toContain('one at a time');
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
     it("a 403 that is Commerce's ACL refusal is explained as the credential", async () => {
         fetchMock = answering(
             403,

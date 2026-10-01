@@ -274,12 +274,29 @@ export type RestAnswer = { ok: boolean; status: number; text: string } | { faile
  * Send one signed call and answer its status and WHOLE body, uncut: for a caller that
  * parses the answer (the ERP fill), where `sendRest`'s cut would break the JSON.
  */
+/**
+ * Where a call goes: the synchronous `/V1` API, or the asynchronous bulk API
+ * (`/async/bulk/V1`), which takes an ARRAY of requests in one call and answers a
+ * `bulk_uuid` to poll (`GET V1/bulk/{uuid}/status`). The bulk API is what makes a
+ * catalog load one call instead of one per product (owner, 2026-09-30: 96 products
+ * at 13–25 s each "doesn't bode well for a quick action for an end user").
+ */
+export interface RestRoute {
+    bulk?: boolean;
+}
+
+/** The path prefix under the tenant for the route. */
+export function restPrefix(route: RestRoute | undefined): string {
+    return route?.bulk ? 'async/bulk/V1' : 'V1';
+}
+
 export async function requestRest(
     method: RestMethod,
     target: RestTarget,
     path: string,
     body: unknown,
     fetchImpl: typeof fetch,
+    route?: RestRoute,
 ): Promise<RestAnswer> {
     const controller = new AbortController();
     // Commerce on the sandbox can take far longer than 30s to answer anything:
@@ -290,7 +307,7 @@ export async function requestRest(
     // is a wasted minute. Both wait LONG; the caller's probe sets its own ceiling.
     const timer = setTimeout(() => controller.abort(), TIMEOUTS.LONG);
     try {
-        const res = await fetchImpl(`${target.base}/V1/${path}`, {
+        const res = await fetchImpl(`${target.base}/${restPrefix(route)}/${path}`, {
             method,
             headers: {
                 Authorization: `Bearer ${target.token}`,
@@ -321,13 +338,21 @@ export async function sendRest(
     path: string,
     body: unknown,
     fetchImpl: typeof fetch,
+    route?: RestRoute,
 ): Promise<string> {
     const bounded = method === 'GET' ? boundSearch(path) : { path };
-    const answer = await requestRest(method, target, bounded.path, body, fetchImpl);
+    const answer = await requestRest(method, target, bounded.path, body, fetchImpl, route);
     if ('failed' in answer) return `Error: the request failed — ${answer.failed}`;
     const { text } = answer;
     if (!answer.ok) return explainStatus(answer.status, text);
-    const prefix = bounded.note ? `${bounded.note}\n` : '';
+    const notes = [bounded.note];
+    if (route?.bulk) {
+        notes.push(
+            '[accepted, not yet applied: poll run_commerce_rest "bulk/<bulk_uuid>/status" ' +
+                'until every request_item is complete]',
+        );
+    }
+    const prefix = notes.filter(Boolean).length ? `${notes.filter(Boolean).join('\n')}\n` : '';
     if (text.length > MAX_RESPONSE_CHARS) {
         return (
             `${prefix}[truncated: ${text.length} chars, showing the first ${MAX_RESPONSE_CHARS}. ` +

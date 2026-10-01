@@ -20,12 +20,30 @@
  */
 
 import { z } from 'zod';
-import { resolveRestTarget, sendRest, validateRestPath, type RestMethod } from './commerceRestClient';
+import {
+    resolveRestTarget,
+    sendRest,
+    validateRestPath,
+    type RestMethod,
+} from './commerceRestClient';
 import { asRawText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import type { HandlerContext } from '@/types/handlers';
 
 const WRITE_METHODS = ['POST', 'PUT', 'DELETE'] as const;
+
+/**
+ * What the bulk API takes and this tool will not guess: a POST or PUT, with a
+ * non-empty array body. A single record sent "in bulk" is the per-product loop
+ * wearing a flag, so it is refused rather than wrapped.
+ */
+function refuseBadBulk(method: RestMethod, body: unknown): string | undefined {
+    if (method === 'DELETE') return 'Error: bulk takes POST or PUT; delete records one at a time.';
+    if (!Array.isArray(body) || body.length === 0) {
+        return 'Error: bulk:true needs body to be a non-empty ARRAY of request bodies, e.g. [{"product":{…}}, …].';
+    }
+    return undefined;
+}
 
 /**
  * Register `write_commerce_rest`.
@@ -51,38 +69,66 @@ export function registerCommerceRestWriteTool(
                 'companies, credit limits, orders, products, stock, or delete a record. Changes LIVE ' +
                 'store data; a DELETE cannot be undone. Requires confirm:true and raises a dialog for the ' +
                 'user. Read the record first with run_commerce_rest (with fields= to keep it small). ' +
-                'The answer is the record Commerce returns, cut at 30,000 characters. ACCS backends only for now.',
+                'The answer is the record Commerce returns, cut at 30,000 characters. ACCS backends only for now. ' +
+                'MANY records at once: bulk:true sends the body — an ARRAY of request bodies — to the ' +
+                'asynchronous bulk API (/async/bulk/V1/<path>, e.g. "products" or "products/bySku"); Commerce ' +
+                'answers a bulk_uuid to poll with run_commerce_rest "bulk/<uuid>/status". One call for a ' +
+                'whole catalog instead of one per product.',
             inputSchema: {
-                method: z.enum(WRITE_METHODS).describe('POST creates, PUT replaces or updates, DELETE removes'),
+                method: z
+                    .enum(WRITE_METHODS)
+                    .describe('POST creates, PUT replaces or updates, DELETE removes'),
                 path: z
                     .string()
                     .describe('The path under /V1, e.g. "companyCredits/12" or "customers/43"'),
                 body: z
-                    .record(z.unknown())
+                    .union([z.record(z.unknown()), z.array(z.record(z.unknown()))])
                     .optional()
-                    .describe('The JSON body, as the REST reference shows it (omit for DELETE)'),
+                    .describe(
+                        'The JSON body, as the REST reference shows it (omit for DELETE); with bulk:true, ' +
+                            'an array of such bodies',
+                    ),
+                bulk: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        'Send the array body to the asynchronous bulk API, one call for all of them',
+                    ),
                 storeView: z
                     .string()
                     .optional()
-                    .describe("The store view code for the Store header; defaults to the project's"),
+                    .describe(
+                        "The store view code for the Store header; defaults to the project's",
+                    ),
                 confirm: z.boolean().optional().describe('Must be true to proceed'),
             },
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         async (args: any) => {
             if (args?.confirm !== true) {
-                return asRawText('write_commerce_rest requires confirm:true to proceed.', { isError: true });
+                return asRawText('write_commerce_rest requires confirm:true to proceed.', {
+                    isError: true,
+                });
             }
             const method = args?.method as RestMethod | undefined;
             if (!method || !WRITE_METHODS.includes(method as (typeof WRITE_METHODS)[number])) {
-                return asRawText('Error: method must be POST, PUT or DELETE. For reads use run_commerce_rest.');
+                return asRawText(
+                    'Error: method must be POST, PUT or DELETE. For reads use run_commerce_rest.',
+                );
             }
             const checked = validateRestPath(args?.path);
             if ('error' in checked) return asRawText(`Error: ${checked.error}`);
+            const bulk = args?.bulk === true;
+            if (bulk) {
+                const refusal = refuseBadBulk(method, args?.body);
+                if (refusal) return asRawText(refusal);
+            }
             const target = await resolveRestTarget(ctxFactory(), args?.storeView, fetchImpl);
             if ('refusal' in target) return asRawText(target.refusal);
             const body = method === 'DELETE' ? undefined : args?.body;
-            return asRawText(await sendRest(method, target, checked.path, body, fetchImpl));
+            return asRawText(
+                await sendRest(method, target, checked.path, body, fetchImpl, { bulk }),
+            );
         },
     );
 }
