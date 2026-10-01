@@ -186,3 +186,5 @@ Step 2 fails today (gap 1). Steps 1 and 3 work now.
 - 2026-10-01  test(data-installer): the datapack store's live answers parse with the Data Installer parsers (`1599c8ac6`)
 - 2026-10-01  feat(data-installer): undo a library load by deleting your own library pack (`b64d25bc7`)
 - 2026-10-01  docs(backlog): DI-1 records the datapack file commits (`d1e3805ff`)
+- 2026-10-01  feat(data-installer): the datapack library's packs in the catalog (`7acd9b4d0`)
+- 2026-10-01  docs(backlog): DI-1 records the library undo commit (`c1db9c659`)
