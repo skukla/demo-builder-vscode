@@ -14,7 +14,8 @@
 import { Link } from '@adobe/react-spectrum';
 import React from 'react';
 import type { IntegrationCardModel } from './integrationCardModel';
-import { nextSetupStep, setupSummary } from '@/features/app-builder/services/setupChecklist';
+import { setupSummary } from '@/core/ui/components/integrations/SetupStatus';
+import { nextSetupStep } from '@/features/app-builder/services/setupChecklist';
 
 export interface SetupChecklistSectionProps {
     model: IntegrationCardModel;

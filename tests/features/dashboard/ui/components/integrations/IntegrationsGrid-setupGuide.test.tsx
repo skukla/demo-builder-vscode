@@ -33,6 +33,10 @@ function renderWithSteps() {
     return renderCards(cards);
 }
 
+const SETUP_LINE = 'Demo setup · 0 of 1 done';
+/** The card's accessible name: its name, status and setup line. */
+const LABEL = `Deployed, ${SETUP_LINE}`;
+
 beforeEach(() => {
     resetGridMocks();
 });
@@ -44,9 +48,9 @@ describe('IntegrationsGrid setup guide', () => {
 
         // The card says there is setup left, in its badge and in what a screen reader hears.
         expect(
-            within(card('other-app', 'Deployed, Setup: 1 to do')).getByText('Setup: 1 to do')
+            within(card('other-app', LABEL)).getByRole('button', { name: SETUP_LINE })
         ).toBeInTheDocument();
-        const panel = await openPanel(user, 'other-app', 'Deployed, Setup: 1 to do');
+        const panel = await openPanel(user, 'other-app', LABEL);
         expect(within(panel).getByText('0 of 1 done')).toBeInTheDocument();
         await user.click(within(panel).getByRole('link', { name: 'Open setup guide' }));
 
@@ -65,5 +69,18 @@ describe('IntegrationsGrid setup guide', () => {
 
         await user.click(within(guide).getByRole('button', { name: 'Close' }));
         expect(screen.queryByRole('dialog', { name: /^Demo setup:/ })).not.toBeInTheDocument();
+    });
+
+    // The tile's setup line goes straight to the guide; the flyout stays shut.
+    it("the card's setup line opens the guide without opening the flyout", async () => {
+        const user = setupUser();
+        renderWithSteps();
+
+        await user.click(
+            within(card('other-app', LABEL)).getByRole('button', { name: SETUP_LINE })
+        );
+
+        expect(screen.getByRole('dialog', { name: /^Demo setup:/ })).toBeInTheDocument();
+        expect(document.querySelector('.db-drawer.open')).toBeNull();
     });
 });

@@ -69,7 +69,7 @@ export function IntegrationRow({
                 {/* The kebab contains its own clicks; always visible in a row,
                     where there is no hover surface to reveal it from. */}
                 <IntegrationActionsMenu model={model} onAction={onAction} />
-                <SetupStatus model={model} />
+                <SetupStatus model={model} onAction={onAction} />
                 <IntegrationStatusLabel model={model} />
                 <ChevronRight size="S" UNSAFE_className="integration-row-chevron" />
             </div>

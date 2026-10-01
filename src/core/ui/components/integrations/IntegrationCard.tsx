@@ -25,7 +25,7 @@
  * A linked card (an integration and the system it uses) adds two things: a
  * neutral type badge beside a system's name ("ERP" — the SC's own name does not
  * say what the thing is), and the other card's name after the status, behind a
- * link icon. On the SAME line as the status, so a linked card is no taller than
+ * link icon — or a count ("2 ERPs") when there are several. On the SAME line as the status, so a linked card is no taller than
  * any other and the grid keeps one baseline.
  *
  * The mesh peer card is visually IDENTICAL to an integration card — it is a
@@ -39,7 +39,7 @@ import { Badge } from '@adobe/react-spectrum';
 import LinkIcon from '@spectrum-icons/workflow/Link';
 import React, { useCallback } from 'react';
 import { IntegrationActionsMenu } from './IntegrationActionsMenu';
-import type { CardAction, IntegrationCardModel } from './integrationCardModel.types';
+import type { CardAction, IntegrationCardModel, LinkedCard } from './integrationCardModel.types';
 import { IntegrationStatusLabel } from './IntegrationStatusLabel';
 import { SetupStatus, setupStatusText } from './SetupStatus';
 import { InlineRenameField } from '@/core/ui/components/forms/InlineRenameField';
@@ -73,15 +73,27 @@ export interface IntegrationCardProps {
     subline?: React.ReactNode;
 }
 
-/** The other card's name behind a link icon, or nothing for a card alone. */
+/**
+ * What the face says about several linked cards: "2 ERPs" when they share a type, else
+ * "2 connected". A count never grows with the names (owner, 2026-10-01: names in a row
+ * "won't work with long names"); the flyout's "Connected to" lists them one per line.
+ */
+function linkedCount(cards: LinkedCard[]): string {
+    const type = cards[0].typeBadge;
+    const shared = type !== undefined && cards.every((card) => card.typeBadge === type);
+    return shared ? `${cards.length} ${type}s` : `${cards.length} connected`;
+}
+
+/** The other card's name — or a count of several — behind a link icon. */
 function LinkedLine({ model }: { model: IntegrationCardModel }): React.ReactElement | null {
     const cards = model.linked?.cards ?? [];
     if (cards.length === 0) return null;
     const names = cards.map((card) => card.name).join(', ');
+    const shown = cards.length === 1 ? cards[0].name : linkedCount(cards);
     return (
         <span className="integration-card-link" title={`Connected to ${names}`}>
             <LinkIcon size="XS" aria-label="Connected to" />
-            <span className="integration-card-link-name">{names}</span>
+            <span className="integration-card-link-name">{shown}</span>
         </span>
     );
 }
@@ -161,8 +173,9 @@ export function IntegrationCard({
                     <LinkedLine model={model} />
                 </div>
             )}
-            {/* Demo setup left to do (AB-26x): its own quiet line, only while steps are open. */}
-            <SetupStatus model={model} />
+            {/* Demo setup left to do (AB-26x): its own line, a link to the guide, only
+                while steps are open. */}
+            <SetupStatus model={model} onAction={onAction} />
         </div>
     );
 }

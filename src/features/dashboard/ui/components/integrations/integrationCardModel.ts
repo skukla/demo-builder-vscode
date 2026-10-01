@@ -240,6 +240,7 @@ function toLinkedCard(model: IntegrationCardModel): LinkedCard {
     return {
         id: model.id,
         name: model.name,
+        ...(model.typeBadge ? { typeBadge: model.typeBadge } : {}),
         status: model.status,
         statusLabel: model.statusLabel,
         dotVariant: model.dotVariant,

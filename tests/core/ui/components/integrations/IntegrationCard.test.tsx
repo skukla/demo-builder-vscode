@@ -19,7 +19,7 @@ import '../../../../helpers/integrationCardSpectrumMocks';
 import React from 'react';
 import { act, render, screen, fireEvent, within } from '@testing-library/react';
 import { IntegrationCard } from '@/core/ui/components/integrations/IntegrationCard';
-import type { IntegrationCardModel } from '@/core/ui/components/integrations/integrationCardModel.types';
+import type { IntegrationCardModel, LinkedCard } from '@/core/ui/components/integrations/integrationCardModel.types';
 import '@testing-library/jest-dom';
 
 jest.mock('@/core/ui/components/ui/StatusDot', () => ({
@@ -411,6 +411,50 @@ describe('IntegrationCard', () => {
                 expect.objectContaining({ id: 'erp-sync' }),
                 'remove'
             );
+        });
+    });
+
+    // Names in a row ran out of room on long ERP names (owner, 2026-10-01). One link
+    // shows its name; several show a count, and the flyout lists them.
+    describe('linked line', () => {
+        const link = (id: string, name: string, typeBadge?: string): LinkedCard => ({
+            id,
+            name,
+            ...(typeBadge ? { typeBadge } : {}),
+            status: 'deployed',
+            statusLabel: 'Deployed',
+            dotVariant: 'success',
+        });
+        const shown = (container: HTMLElement) =>
+            container.querySelector('.integration-card-link-name')?.textContent;
+
+        it('names a single linked card', () => {
+            const { container } = renderCard(
+                makeModel({ linked: { cards: [link('erp-integration', 'ERP Integration')] } })
+            );
+
+            expect(shown(container)).toBe('ERP Integration');
+        });
+
+        it('counts several of one type by that type, and keeps every name in the title', () => {
+            const { container } = renderCard(
+                makeModel({
+                    linked: {
+                        cards: [link('a', 'Justrite ERP', 'ERP'), link('b', 'Accuform ERP', 'ERP')],
+                    },
+                })
+            );
+
+            expect(shown(container)).toBe('2 ERPs');
+            expect(screen.getByTitle('Connected to Justrite ERP, Accuform ERP')).toBeInTheDocument();
+        });
+
+        it('counts several of mixed or unknown type as connected', () => {
+            const { container } = renderCard(
+                makeModel({ linked: { cards: [link('a', 'One', 'ERP'), link('b', 'Two')] } })
+            );
+
+            expect(shown(container)).toBe('2 connected');
         });
     });
 });

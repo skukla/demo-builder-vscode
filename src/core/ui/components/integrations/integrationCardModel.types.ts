@@ -157,6 +157,8 @@ export interface IntegrationCardModel {
 export interface LinkedCard {
     id: string;
     name: string;
+    /** What the other card is ("ERP"), when it says; names a count of several on a face. */
+    typeBadge?: string;
     statusLabel: string;
     dotVariant: StatusDotVariant;
     status: CardStatus;

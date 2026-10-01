@@ -50,19 +50,6 @@ export function setupChecklistOf(
 }
 
 /**
- * The one-line summary. A dismissed step is out of the count: the SC decided it does
- * not apply to this demo.
- *
- * @param items - the checklist
- * @returns e.g. "1 of 2 done", or "All done" when nothing is left open
- */
-export function setupSummary(items: SetupChecklistItem[]): string {
-    const open = items.filter((item) => item.state === 'open').length;
-    const done = items.filter((item) => item.state === 'done').length;
-    return open === 0 ? 'All done' : `${done} of ${open + done} done`;
-}
-
-/**
  * The step to do next: the first one still open, in the guide's order. The flyout names
  * it, so the SC knows what is left without opening the guide (owner, 2026-10-01).
  *
