@@ -229,13 +229,16 @@ describe('the refresh control', () => {
 });
 
 describe('the focus trap it configures', () => {
-    // autoFocus. The dashboard is the first thing a webview shows, and Tab has
-    // to work without a click first — so something inside the container must
-    // already hold focus when it mounts.
-    it('puts focus inside itself on mount', () => {
+    // No focus on load: the screen has the search filter, and a screen with one
+    // focuses nothing (owner, 2026-10-01). Tab still has to work without a click
+    // first, so the first Tab lands on the first element inside.
+    it('focuses nothing on mount, and the first Tab enters it', () => {
         const { container } = renderDashboard();
 
-        expect(document.activeElement).not.toBe(document.body);
+        expect(document.activeElement).toBe(document.body);
+
+        fireEvent.keyDown(document, { key: 'Tab' });
+
         expect(container.contains(document.activeElement)).toBe(true);
     });
 
@@ -243,8 +246,8 @@ describe('the focus trap it configures', () => {
     // keyboard navigation from escaping the webview into the host chrome.
     //
     // The element has to be FOCUSED, not merely sent a synthetic focusin: with
-    // containment off, nothing moves focus and the assertion would pass on the
-    // auto-focused element still holding it.
+    // containment off, a focusin alone moves nothing, and the assertion on where
+    // focus ended up would not test the trap.
     it('pulls focus back when it lands outside', () => {
         const { container } = renderDashboard();
         const outside = document.createElement('button');

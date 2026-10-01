@@ -3508,7 +3508,7 @@
             "decision": "none \u2014 a fast path the following lookup already covers",
             "recorded": "2026-09-04",
             "source": "mutationLedger add",
-            "line": 233
+            "line": 224
         },
         {
             "module": "src/features/project-creation/ui/steps/WelcomeStep.tsx",
@@ -3521,7 +3521,7 @@
             "decision": "none \u2014 a fast path the following lookup already covers",
             "recorded": "2026-09-04",
             "source": "mutationLedger add",
-            "line": 257
+            "line": 248
         },
         {
             "module": "src/features/project-creation/ui/components/BrandGallery.tsx",

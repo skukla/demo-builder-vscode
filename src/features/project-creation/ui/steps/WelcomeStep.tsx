@@ -7,7 +7,6 @@ import { buildEdsConfigFromStorefront } from './edsConfigFromStorefront';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { normalizeProjectName, getProjectNameError } from '@/core/validation/normalizers';
 import { removeKeysFromComponents } from '@/features/components/services/componentConfigWrites';
 import { addedDemoId, packageFromAddedDemo } from '@/features/components/services/storefrontResolver';
@@ -78,21 +77,13 @@ export function WelcomeStep({
         return error ? 'invalid' : 'valid';
     };
 
-    // Set default project name and manually focus + select on mount
+    // Set the default project name on mount. Nothing takes focus: this step has the
+    // package filter, and a screen with a search filter focuses nothing on load
+    // (owner, 2026-10-01).
     useEffect(() => {
         if (!state.projectName) {
             updateState({ projectName: defaultProjectName });
         }
-
-        // Manually focus and select text (more reliable than autoFocus + onFocus)
-        // Delay slightly longer than WizardContainer's auto-focus (300ms + 100ms)
-        setTimeout(() => {
-            const input = document.querySelector('input[type="text"]') as HTMLInputElement;
-            if (input) {
-                input.focus();
-                input.select();
-            }
-        }, TIMEOUTS.STEP_CONTENT_FOCUS + 100); // Delay to allow Spectrum components to mount and win focus race
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Only run on mount
 
