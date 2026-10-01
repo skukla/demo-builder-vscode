@@ -165,6 +165,16 @@ function PanelContent({
                                 {model.installation.at}
                             </span>
                         )}
+                        {/* A failed install's remedy, in the row that states it: the
+                            idempotent install pass, which also repairs a record left
+                            "failed" by a call that timed out while the app finished
+                            (2026-09-30). It was only in the kebab before, and the row
+                            read as a dead end (owner, 2026-10-01). */}
+                        {model.installation.failed && (
+                            <Link isQuiet onPress={() => onAction(model, 'install')}>
+                                Finish install
+                            </Link>
+                        )}
                         {/* The hands-back destination (Apps > App Management),
                             via the SAME openAdminPanel message the dashboard's
                             Admin tile posts — the extension already derives the
@@ -185,7 +195,10 @@ function PanelContent({
                         </Link>
                     </PanelRow>
                 )}
-                <SetupChecklistSection model={model} onOpenGuide={() => onAction(model, 'setup-guide')} />
+                <SetupChecklistSection
+                    model={model}
+                    onOpenGuide={() => onAction(model, 'setup-guide')}
+                />
                 {/* ONE row, not the former Kind + Source pair. They printed the same
                     fact in two registers — worst on the blank starter, where
                     "Custom · blank starter" sat directly above "Blank starter — build
@@ -223,7 +236,12 @@ function PanelContent({
                         <PanelRow label={model.urlLabel}>
                             {/* A system's screen URL lacks the key the extension
                                 adds, so it reads as an action, not an address. */}
-                            <Link isQuiet onPress={() => onAction(model, model.isSystem ? 'open' : 'open-url')}>
+                            <Link
+                                isQuiet
+                                onPress={() =>
+                                    onAction(model, model.isSystem ? 'open' : 'open-url')
+                                }
+                            >
                                 {model.isSystem ? `Open ${model.name}` : model.url}
                             </Link>
                         </PanelRow>

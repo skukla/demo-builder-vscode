@@ -28,18 +28,23 @@
 
 import { buildAppData } from './appManagementAppData';
 import {
+    AppManagementApiError,
+    AppManagementClient,
+    type AppManagementAuth,
+    type CommerceEnv,
+    type ReconcileResult,
+} from './appManagementClient';
+import {
     CREDENTIAL_ACTIVATION_WAITS_MS,
     isCredentialNotReadyFailure,
     isRetryableInstallFailure,
 } from './appManagementInstallFailures';
 import {
-    AppManagementApiError,
-    AppManagementClient,
-    type AppManagementAuth,
-    type CommerceEnv,
-    type InstallationState,
-    type ReconcileResult,
-} from './appManagementClient';
+    isCallTimeout,
+    newPollBudget,
+    pollInstallation,
+    type PollBudget,
+} from './appManagementInstallPolling';
 import {
     followUpgrade,
     installedOutcome,
@@ -51,7 +56,6 @@ import {
     type AppManagementInstallResult,
 } from './appManagementUpgrade';
 import { sleep } from '@/core/utils/sleep';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getBackendCommerceContract } from '@/features/components/services/backendCommerce';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
@@ -60,11 +64,6 @@ import type { Logger } from '@/types/logger';
 export const IO_EVENTS_URL = 'https://api.adobe.io/events';
 export const IO_EVENTS_ENV = 'prod';
 
-/** How often to re-read a queued (202) installation's state. */
-const POLL_INTERVAL_MS = 5000;
-/** Give a queued installation this long before handing back to the user. */
-const POLL_BUDGET_MS = TIMEOUTS.LONG;
-
 /** Where the user finishes the job when the automatic path cannot. */
 export const APP_MANAGEMENT_HANDS_BACK =
     'You can finish (or verify) the installation in Commerce Admin: Apps > App Management.';
@@ -72,7 +71,10 @@ export const APP_MANAGEMENT_HANDS_BACK =
 /** The subset of {@link AppManagementClient} the installer drives (test seam). */
 export type InstallerClient = Pick<
     AppManagementClient,
-    'getInstallationState' | 'getLatestLifecycleAttempt' | 'reconcileInstallation' | 'setAssociation'
+    | 'getInstallationState'
+    | 'getLatestLifecycleAttempt'
+    | 'reconcileInstallation'
+    | 'setAssociation'
 >;
 
 export interface AppManagementInstallDeps {
@@ -178,39 +180,6 @@ function isBenignNoOp(error: unknown): boolean {
  * @param deps - wait + progress
  * @returns the final state, or undefined when the budget ran out first
  */
-/**
- * The poll allowance for ONE WHOLE install — shared across retry rounds, so
- * five racy rounds can never stack five full budgets (audit finding: the
- * per-round budget made the worst case 5 × 3 minutes).
- */
-interface PollBudget {
-    roundsLeft: number;
-}
-
-function newPollBudget(): PollBudget {
-    return { roundsLeft: Math.ceil(POLL_BUDGET_MS / POLL_INTERVAL_MS) };
-}
-
-async function pollInstallation(
-    client: InstallerClient,
-    deps: AppManagementInstallDeps,
-    budget: PollBudget,
-): Promise<InstallationState | undefined> {
-    const wait = deps.wait ?? sleep;
-    while (budget.roundsLeft > 0) {
-        budget.roundsLeft--;
-        await wait(POLL_INTERVAL_MS);
-        const state = await client.getInstallationState();
-        if (state && state.status !== 'in-progress') {
-            return state;
-        }
-        // No progress line per round: the install's own line ("Installing into
-        // Commerce (App Management)…") still describes it, and a new line every
-        // five seconds read as a new step each time.
-    }
-    return undefined;
-}
-
 /**
  * How many reconcile rounds to drive before handing back. The measured
  * convergence took 4 from a residue-laden state; a fresh install needs fewer.
@@ -379,8 +348,34 @@ export async function installAppManagementApp(
         if (isUpgradeRefusal(error)) {
             return REFUSED_UPGRADE;
         }
+        if (isCallTimeout(error)) {
+            return followAfterTimeout(client, deps, fail);
+        }
         const message = error instanceof Error ? error.message : String(error);
         deps.logger.warn(`[AppManagement] install failed: ${message}`);
         return fail(`The install call failed (${message}).`);
     }
+}
+
+/**
+ * The CALL outran the client's wait; the install did not fail. Measured 2026-09-30 on the
+ * ERP integration: the reconcile call aborted at 23:17:59, the app's own install state
+ * said succeeded at 23:18:00 — one second later — and the record read "Not installed"
+ * for two hours. So a timeout is followed like a queued (202) install: poll the app's
+ * state and answer what it says, handing back only when it is still running.
+ */
+async function followAfterTimeout(
+    client: InstallerClient,
+    deps: AppManagementInstallDeps,
+    fail: (detail: string) => AppManagementInstallResult,
+): Promise<AppManagementInstallResult> {
+    deps.onProgress?.('The install call is taking long; following the installation instead');
+    const finalState = await pollInstallation(client, deps, newPollBudget()).catch(() => undefined);
+    if (finalState?.status === 'succeeded') {
+        return installedOutcome(deps.appVersion);
+    }
+    if (finalState?.status === 'failed') {
+        return fail("The app's installer reported a failure.");
+    }
+    return fail('The install call timed out and the installation is still running.');
 }

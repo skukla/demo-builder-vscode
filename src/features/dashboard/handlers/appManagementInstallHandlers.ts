@@ -132,6 +132,27 @@ export async function resolveComponentRecord(
 }
 
 /**
+ * Repair a record that says failed over an app whose own install state says succeeded.
+ * The record's detail names why, so a reader of the file sees it was the call, not the
+ * install, that failed. Answers whether anything changed.
+ */
+function repairStaleFailure(
+    state: AppBuilderComponentState,
+    live: InstallationState | undefined,
+): boolean {
+    if (state.installation?.status !== 'failed' || live?.status !== 'succeeded') return false;
+    recordInstallation(
+        state,
+        {
+            status: 'installed',
+            detail: "Installed — the app's own install state confirmed it after an earlier call timed out.",
+        },
+        live.completedAt ?? new Date().toISOString(),
+    );
+    return true;
+}
+
+/**
  * Handle 'getAppBuilderInstallStatus' — the persisted install record plus the
  * app's LIVE installation state (its own GET /installation). Read-only: no
  * guards, no prompts — a missing sign-in comes back as a typed AUTH_REQUIRED
@@ -163,12 +184,23 @@ export const handleGetAppBuilderInstallStatus: MessageHandler<{ id?: string }> =
 
     try {
         const live = await new AppManagementClient(baseUrl, auth).getInstallationState();
+        // A record that says failed over an app that says succeeded is a stale record:
+        // the install call outran its wait and the app finished anyway (2026-09-30, one
+        // second apart, shown as "Not installed" for two hours). The live state is the
+        // truth and this read is where it is in hand, so the record is repaired here and
+        // the cards redrawn — rather than asking the SC to press Install to clear a line.
+        const repaired = repairStaleFailure(state, live);
+        if (repaired) {
+            await context.stateManager.saveProject(project);
+            await postComponentsSnapshot(context);
+        }
         return {
             success: true,
             data: {
                 id,
                 persisted: state.installation,
                 live: shapeLiveState(live),
+                ...(repaired ? { repaired: true } : {}),
             },
         };
     } catch (error) {
@@ -230,7 +262,11 @@ async function runInstallPass(
     pass: (input: InstallPass) => Promise<AppManagementInstallResult | string>,
 ): Promise<HandlerResponse> {
     const { requestedId, title, progress, check } = options;
-    const target = await resolveComponentRecord(context, requestedId, (record) => record.kind === 'integration');
+    const target = await resolveComponentRecord(
+        context,
+        requestedId,
+        (record) => record.kind === 'integration',
+    );
     if (!target.ok) return target.error;
     const { id, project, state } = target;
     const refusal = refuseInstallPass(id, state) ?? check?.(id, state);
@@ -239,7 +275,14 @@ async function runInstallPass(
     }
 
     const result = await withComponentProgress(
-        { title, id, label: state.name ?? id, noun: 'Integration', logger: context.logger, progress },
+        {
+            title,
+            id,
+            label: state.name ?? id,
+            noun: 'Integration',
+            logger: context.logger,
+            progress,
+        },
         async (report): Promise<GuardableResult & { detail?: string }> => {
             const refused = await guardOrBlock(context, project, report, progress);
             if (refused) {
@@ -248,12 +291,21 @@ async function runInstallPass(
 
             const deps = await handlerRunnerDeps(context, project, report);
             const componentPath = project.componentInstances?.[id]?.path;
-            const appVersion = componentPath ? await deps.readAppVersion?.(componentPath) : undefined;
+            const appVersion = componentPath
+                ? await deps.readAppVersion?.(componentPath)
+                : undefined;
             // The installer's messages are the STEP under the install stage, as in the
             // runner's own install pass — the stage keeps its expectation line.
             const stepReport = (message: string): void =>
                 report(OPERATION_STAGES.installingIntoCommerce.label, message);
-            const outcome = await pass({ project, id, state, deps, report: stepReport, appVersion });
+            const outcome = await pass({
+                project,
+                id,
+                state,
+                deps,
+                report: stepReport,
+                appVersion,
+            });
             if (typeof outcome === 'string') {
                 return { success: false, error: outcome };
             }

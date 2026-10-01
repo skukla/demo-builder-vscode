@@ -150,7 +150,8 @@ describe('installAppManagementApp', () => {
     it('associates then reconciles with the DERIVED bodies (the calls are the contract)', async () => {
         const client = makeInstallerClient();
         const result = await installAppManagementApp(
-            paasProject(), 'app',
+            paasProject(),
+            'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
@@ -180,7 +181,8 @@ describe('installAppManagementApp', () => {
                 .mockResolvedValueOnce({ id: 'job-1', status: 'succeeded' }),
         });
         const result = await installAppManagementApp(
-            paasProject(), 'app',
+            paasProject(),
+            'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
@@ -197,7 +199,8 @@ describe('installAppManagementApp', () => {
             getInstallationState: jest.fn().mockResolvedValue({ id: 'job-1', status: 'failed' }),
         });
         const result = await installAppManagementApp(
-            paasProject(), 'app',
+            paasProject(),
+            'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
@@ -226,7 +229,8 @@ describe('installAppManagementApp', () => {
                 .mockResolvedValueOnce({ id: 'job-3', status: 'succeeded' }),
         });
         const result = await installAppManagementApp(
-            paasProject(), 'app',
+            paasProject(),
+            'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
@@ -247,7 +251,8 @@ describe('installAppManagementApp', () => {
             }),
         });
         const result = await installAppManagementApp(
-            paasProject(), 'app',
+            paasProject(),
+            'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
@@ -269,7 +274,8 @@ describe('installAppManagementApp', () => {
             getInstallationState: jest.fn().mockResolvedValue(racy),
         });
         const result = await installAppManagementApp(
-            paasProject(), 'app',
+            paasProject(),
+            'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
@@ -305,7 +311,8 @@ describe('installAppManagementApp', () => {
                 .mockResolvedValueOnce({ id: 'job-2', status: 'succeeded' }),
         });
         const result = await installAppManagementApp(
-            paasProject(), 'app',
+            paasProject(),
+            'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client, { wait, onProgress })
         );
@@ -314,7 +321,7 @@ describe('installAppManagementApp', () => {
         expect(client.reconcileInstallation).toHaveBeenCalledTimes(2);
         expect(wait).toHaveBeenCalledWith(30_000);
         expect(onProgress.mock.calls.map((c) => c[0])).toContain(
-            'Waiting for Adobe to activate the new credential (next try in 30 seconds)',
+            'Waiting for Adobe to activate the new credential (next try in 30 seconds)'
         );
     });
 
@@ -329,7 +336,8 @@ describe('installAppManagementApp', () => {
                 .mockResolvedValue({ id: 'j', status: 'failed', error: credentialNotReady }),
         });
         const result = await installAppManagementApp(
-            paasProject(), 'app',
+            paasProject(),
+            'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client, { wait })
         );
@@ -358,7 +366,8 @@ describe('installAppManagementApp', () => {
                 .mockResolvedValue({ id: 'j', status: 'succeeded' }),
         });
         await installAppManagementApp(
-            paasProject(), 'app',
+            paasProject(),
+            'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client, { wait })
         );
@@ -375,7 +384,8 @@ describe('installAppManagementApp', () => {
                 ),
         });
         const result = await installAppManagementApp(
-            paasProject(), 'app',
+            paasProject(),
+            'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
@@ -401,12 +411,54 @@ describe('installAppManagementApp', () => {
                 ),
         });
         const result = await installAppManagementApp(
-            paasProject(), 'app',
+            paasProject(),
+            'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
 
         expect(result.status).toBe('skipped');
+    });
+
+    it('a reconcile call that times out is FOLLOWED, not failed: the app finishing is the outcome', async () => {
+        // Measured 2026-09-30: the call aborted at 23:17:59, the app's install state said
+        // succeeded at 23:18:00, and the record read "Not installed" for two hours.
+        const timeout = Object.assign(new Error('The operation was aborted due to timeout'), {
+            name: 'TimeoutError',
+        });
+        const client = makeInstallerClient({
+            reconcileInstallation: jest.fn().mockRejectedValue(timeout),
+            getInstallationState: jest.fn().mockResolvedValue({ id: 'i1', status: 'succeeded' }),
+        });
+        const result = await installAppManagementApp(
+            paasProject(),
+            'app',
+            DEPLOYED_URLS,
+            makeInstallerDeps(client)
+        );
+
+        expect(result.status).toBe('installed');
+        expect(client.getInstallationState).toHaveBeenCalled();
+    });
+
+    it('a timed-out call whose installation then FAILS hands back, naming the installer', async () => {
+        const timeout = Object.assign(new Error('The operation was aborted due to timeout'), {
+            name: 'TimeoutError',
+        });
+        const client = makeInstallerClient({
+            reconcileInstallation: jest.fn().mockRejectedValue(timeout),
+            getInstallationState: jest.fn().mockResolvedValue({ id: 'i1', status: 'failed' }),
+        });
+        const result = await installAppManagementApp(
+            paasProject(),
+            'app',
+            DEPLOYED_URLS,
+            makeInstallerDeps(client)
+        );
+
+        expect(result.status).toBe('failed');
+        expect(result.detail).toContain('installer reported a failure');
+        expect(result.detail).toContain(APP_MANAGEMENT_HANDS_BACK);
     });
 
     it('an association failure fails WITH the hands-back line, never throws', async () => {
@@ -418,7 +470,8 @@ describe('installAppManagementApp', () => {
                 ),
         });
         const result = await installAppManagementApp(
-            paasProject(), 'app',
+            paasProject(),
+            'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
@@ -441,7 +494,8 @@ describe('installAppManagementApp', () => {
     it('no app-management URL in the deploy → failed naming that, no client call', async () => {
         const client = makeInstallerClient();
         const result = await installAppManagementApp(
-            paasProject(), 'app',
+            paasProject(),
+            'app',
             { 'starter-kit/info': `${NS_BASE}/starter-kit/info` },
             makeInstallerDeps(client)
         );

@@ -25,7 +25,7 @@ jest.mock('vscode', () => {
     };
     vscode.window.withProgress = async (
         options: { title: string },
-        task: (p: { report: (value: { message?: string }) => void }) => unknown,
+        task: (p: { report: (value: { message?: string }) => void }) => unknown
     ) => {
         mockProgressTitles.push(options.title);
         return task({ report: (value) => mockProgressSteps.push(value?.message) });
@@ -172,11 +172,17 @@ beforeEach(() => {
     });
 });
 
-
-
 describe('handleGetAppBuilderInstallStatus', () => {
+    const INSTALLED = {
+        status: 'installed' as const,
+        detail: 'Installed.',
+        at: '2026-08-27T00:00:00Z',
+    };
+
     it('reads the LIVE state from the app base URL and returns it with the persisted record', async () => {
-        const { mockContext } = setupMocks(kitProject());
+        const { mockContext } = setupMocks({
+            appBuilderComponents: { 'kit-app': { ...KIT_STATE, installation: INSTALLED } },
+        });
 
         const result = (await handleGetAppBuilderInstallStatus(mockContext, {
             id: 'kit-app',
@@ -189,13 +195,44 @@ describe('handleGetAppBuilderInstallStatus', () => {
         );
         expect(result.data).toEqual({
             id: 'kit-app',
-            persisted: KIT_STATE.installation,
+            persisted: INSTALLED,
             live: {
                 status: 'succeeded',
                 startedAt: '2026-08-27T01:00:00Z',
                 completedAt: '2026-08-27T01:02:00Z',
             },
         });
+        expect(mockContext.stateManager.saveProject).not.toHaveBeenCalled();
+    });
+
+    it('repairs a record that says failed over an app that says succeeded, and redraws the cards', async () => {
+        // 2026-09-30: the install call timed out one second before the app finished, and the
+        // flyout read "Not installed" for two hours over a working install.
+        const { mockContext } = setupMocks(kitProject());
+
+        const result = (await handleGetAppBuilderInstallStatus(mockContext, {
+            id: 'kit-app',
+        })) as { success: boolean; data: Record<string, unknown> };
+
+        expect(result.data).toMatchObject({
+            repaired: true,
+            persisted: { status: 'installed', at: '2026-08-27T01:02:00Z' },
+        });
+        expect((result.data.persisted as { detail: string }).detail).toContain('timed out');
+        expect(mockContext.stateManager.saveProject).toHaveBeenCalled();
+    });
+
+    it('leaves a failed record alone while the app still says failed', async () => {
+        mockGetInstallationState.mockResolvedValue({ id: 'i-1', status: 'failed' });
+        const { mockContext } = setupMocks(kitProject());
+
+        const result = (await handleGetAppBuilderInstallStatus(mockContext, {
+            id: 'kit-app',
+        })) as { success: boolean; data: Record<string, unknown> };
+
+        expect(result.data).not.toHaveProperty('repaired');
+        expect(result.data).toMatchObject({ persisted: KIT_STATE.installation });
+        expect(mockContext.stateManager.saveProject).not.toHaveBeenCalled();
     });
 
     it('flattens the step tree to FAILED step names', async () => {
@@ -471,7 +508,7 @@ describe('the install pass and what it hands its collaborators', () => {
                 branch: 'main',
                 name: 'Kit App',
             },
-            'kit-app',
+            'kit-app'
         );
         expect(result.success).toBe(true);
     });
@@ -499,7 +536,7 @@ describe('the install pass and what it hands its collaborators', () => {
             expect.objectContaining({
                 authManager: expect.anything(),
                 commandManager: expect.anything(),
-            }),
+            })
         );
     });
 
@@ -507,7 +544,7 @@ describe('the install pass and what it hands its collaborators', () => {
         const { mockContext } = setupMocks(kitProject());
         mockDeveloperPermissions();
         mockBuildDefaultRunnerDeps.mockReturnValue(
-            {} as unknown as ReturnType<typeof mockBuildDefaultRunnerDeps>,
+            {} as unknown as ReturnType<typeof mockBuildDefaultRunnerDeps>
         );
 
         const result = await handleInstallAppBuilderComponent(mockContext, { id: 'kit-app' });
@@ -529,7 +566,7 @@ describe('the install pass and what it hands its collaborators', () => {
         await handleInstallAppBuilderComponent(mockContext, { id: 'kit-app' });
         const forward = mockBuildDefaultRunnerDeps.mock.calls[0][1] as (
             message: string,
-            subMessage?: string,
+            subMessage?: string
         ) => void;
         // The guard's own first step has already been reported by now.
         mockProgressSteps.length = 0;
@@ -576,10 +613,19 @@ describe('handleReinstallAppBuilderComponent', () => {
 
         expect(result.success).toBe(true);
         expect(order).toEqual(['uninstall', 'install']);
-        expect(mockUninstallAppManagement).toHaveBeenCalledWith(mockProject, 'kit-app', expect.any(Function));
-        expect(mockInstallAppManagement).toHaveBeenCalledWith(mockProject, 'kit-app', expect.any(Function), {
-            appVersion: undefined,
-        });
+        expect(mockUninstallAppManagement).toHaveBeenCalledWith(
+            mockProject,
+            'kit-app',
+            expect.any(Function)
+        );
+        expect(mockInstallAppManagement).toHaveBeenCalledWith(
+            mockProject,
+            'kit-app',
+            expect.any(Function),
+            {
+                appVersion: undefined,
+            }
+        );
         expect(mockProgressTitles.some((title) => title.startsWith('Reinstalling'))).toBe(true);
         const saved = (mockContext.stateManager.saveProject as jest.Mock).mock.calls.at(-1)![0];
         expect(saved.appBuilderComponents['kit-app'].installation).toMatchObject({

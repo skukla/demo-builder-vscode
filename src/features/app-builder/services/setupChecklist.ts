@@ -37,6 +37,7 @@ export function setupChecklistOf(
             title: step.title,
             why: step.why,
             where: step.where,
+            ...(step.label ? { label: step.label } : {}),
             ...(step.path ? { path: step.path } : {}),
             ...(step.enter ? { enter: step.enter } : {}),
             ...(step.then ? { then: step.then } : {}),

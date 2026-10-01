@@ -108,6 +108,22 @@ describe('IntegrationDetailPanel — Commerce install row', () => {
         expect(onAction).toHaveBeenCalledWith(model, 'open-admin');
     });
 
+    it('a failed install offers "Finish install" in its row — the idempotent install pass', () => {
+        // It was only in the kebab before, and the row read as a dead end (owner, 2026-10-01).
+        const model = makeModel({ installation: { label: 'Not installed', failed: true } });
+        const { onAction } = renderPanel(model);
+
+        screen.getByText('Finish install').click();
+
+        expect(onAction).toHaveBeenCalledWith(model, 'install');
+    });
+
+    it('an installed app offers no "Finish install"', () => {
+        renderPanel(makeModel({ installation: { label: 'Installed', failed: false } }));
+
+        expect(screen.queryByText('Finish install')).not.toBeInTheDocument();
+    });
+
     it('renders no detail lines at all for a record carrying only a label', () => {
         // Detail and timestamp are each optional. Rendering them unconditionally
         // leaves two empty lines under the label, which reads as a truncated

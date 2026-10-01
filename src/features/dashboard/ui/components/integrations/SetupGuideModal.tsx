@@ -6,14 +6,15 @@
  * progress and what is left are visible at once and any step is one click away — and the
  * chosen step on the right, answering three questions in three labelled lines: WHERE in the
  * Admin (the menu path as breadcrumbs), what to ENTER (each value a copyable pill), and what
- * to do THEN. The reason it matters folds away under "Why this matters". The actions are
- * buttons: open the Admin, mark done or check, skip. How a step is drawn lives in
- * `SetupGuideStep.tsx`; this file owns which step is shown and the dialog around it.
+ * to do THEN. The reason it matters folds away under "Why this matters". How a step is
+ * drawn lives in `SetupGuideStep.tsx`; this file owns which step is shown and the dialog.
  *
  * It read as "crowded and too verbose and thus hard to follow" when every step was three
- * paragraphs behind Back/Next with four quiet links (owner, 2026-10-01). The flyout keeps
- * only the summary and the way in (owner, 2026-09-27: the full list in the flyout read
- * badly).
+ * paragraphs behind Back/Next with four quiet links, and the first redesign as "too busy"
+ * when it said the position three times and carried two rows of buttons (owner,
+ * 2026-10-01). So: the list is the only navigation (no Back/Next), the bar is a line with no
+ * words, and the dialog's own footer holds Close alone. The flyout keeps only the summary
+ * and the way in (owner, 2026-09-27).
  *
  * Built on the house `Modal` (inside the `DialogContainer` it expects, as the Settings modal
  * is) and `SteadyHeight`; the step's requests are the existing `useSetupChecklist`. The
@@ -47,10 +48,11 @@ function firstOpen(items: SetupChecklistItem[]): number {
     return index === -1 ? 0 : index;
 }
 
-/** The progress line: done out of everything the SC has not skipped. */
-function progressOf(items: SetupChecklistItem[]): { done: number; total: number } {
+/** How far along, as a percentage of the steps the SC has not skipped. */
+function percentDone(items: SetupChecklistItem[]): number {
     const counted = items.filter((item) => item.state !== 'dismissed');
-    return { done: counted.filter((item) => item.state === 'done').length, total: counted.length };
+    if (counted.length === 0) return 0;
+    return (counted.filter((item) => item.state === 'done').length / counted.length) * 100;
 }
 
 /** The guide's body for one integration; mounted only while its guide is open. */
@@ -69,32 +71,13 @@ function Guide({
     }, [index, items.length]);
 
     const item = items[Math.min(index, items.length - 1)];
-    const progress = progressOf(items);
-    // The last step closes the guide; every other one moves on.
-    const forward =
-        index >= items.length - 1
-            ? { label: 'Done', onPress: onClose }
-            : { label: 'Next', onPress: () => setIndex(index + 1) };
     return (
-        <Modal
-            title={`Demo setup: ${model.name}`}
-            size="L"
-            wide
-            onClose={onClose}
-            actionButtons={[
-                {
-                    label: 'Back',
-                    variant: 'secondary',
-                    onPress: () => setIndex(index - 1),
-                    isDisabled: index === 0,
-                },
-                { ...forward, variant: 'accent' },
-            ]}
-        >
+        <Modal title={`Demo setup: ${model.name}`} size="L" wide onClose={onClose}>
+            {/* A line, not a sentence: the list beside it already says which steps are done. */}
             <ProgressBar
-                label="Set up in Commerce"
-                valueLabel={`${progress.done} of ${progress.total} done`}
-                value={progress.total === 0 ? 0 : (progress.done / progress.total) * 100}
+                aria-label="Setup progress"
+                value={percentDone(items)}
+                showValueLabel={false}
                 width="100%"
                 UNSAFE_className="setup-guide-progress"
             />
@@ -106,7 +89,6 @@ function Guide({
                     {item && (
                         <SetupGuideStep
                             item={item}
-                            position={`Step ${index + 1} of ${items.length}`}
                             busy={actions.busy}
                             onSet={(state) => actions.setStep(item.id, state)}
                             onCheck={actions.check}

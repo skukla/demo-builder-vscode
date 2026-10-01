@@ -61,7 +61,7 @@ describe('IntegrationsGrid setup guide', () => {
             'aria-selected',
             'true'
         );
-        expect(within(guide).getByText('Step 1 of 1')).toBeInTheDocument();
+        expect(within(guide).getByText('To do')).toBeInTheDocument();
 
         await user.click(within(guide).getByRole('button', { name: 'Close' }));
         expect(screen.queryByRole('dialog', { name: /^Demo setup:/ })).not.toBeInTheDocument();

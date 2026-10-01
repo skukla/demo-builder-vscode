@@ -5,41 +5,27 @@
  * Split from `SetupGuideModal.tsx` on 2026-10-01 when the redesign took the modal past the
  * component size limit. The modal owns which step is shown and the dialog chrome; this file
  * owns how a step is drawn — the list row, the breadcrumb path, the copyable values, the
- * folded reason and the action buttons. Considered and not used: the horizontal `StepRail`
- * (seven titles do not fit a strip inside a dialog, and a checklist reads as a vertical list)
- * and `NumberedInstructions` (the three facts are a label column, not an ordered list).
+ * folded reason and the actions. Considered and not used: the horizontal `StepRail` (seven
+ * titles do not fit a strip inside a dialog, and a checklist reads as a vertical list) and
+ * `NumberedInstructions` (the three facts are a label column, not an ordered list).
+ *
+ * The first cut carried a step counter, an icon well and five buttons; the owner read it as
+ * "too busy" (2026-10-01). What stayed is what answers a question: the list says where you
+ * are, the title says what to do, three lines say where / what to enter / what then.
  *
  * @module features/dashboard/ui/components/integrations/SetupGuideStep
  */
 
-import { Button, Heading, Text } from '@adobe/react-spectrum';
-import Attributes from '@spectrum-icons/workflow/Attributes';
-import Box from '@spectrum-icons/workflow/Box';
-import CreditCard from '@spectrum-icons/workflow/CreditCard';
-import Flag from '@spectrum-icons/workflow/Flag';
-import Money from '@spectrum-icons/workflow/Money';
-import Pause from '@spectrum-icons/workflow/Pause';
-import Shop from '@spectrum-icons/workflow/Shop';
+import { Button, Heading, Link, Text } from '@adobe/react-spectrum';
 import React from 'react';
 import { CopyableText } from '@/core/ui/components/ui/CopyableText';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { cn } from '@/core/ui/utils/classNames';
-import type { SetupChecklistItem, SetupStepIcon } from '@/types/appBuilderComponents';
+import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 
 /** The dot and the word for each step state, shared by the list and the pane. */
 const DOT = { open: 'warning', done: 'success', dismissed: 'neutral' } as const;
 const WORD = { open: 'To do', done: 'Done', dismissed: 'Skipped' } as const;
-
-/** Each step's picture: a Spectrum workflow icon per `SetupStepIcon`, the Flag for an unnamed one. */
-const ICON: Record<SetupStepIcon, React.ComponentType<{ size?: 'S' | 'M' | 'L' }>> = {
-    status: Flag,
-    catalog: Shop,
-    price: Money,
-    stock: Box,
-    attributes: Attributes,
-    hold: Pause,
-    credit: CreditCard,
-};
 
 interface StepListProps {
     items: SetupChecklistItem[];
@@ -47,7 +33,7 @@ interface StepListProps {
     onSelect: (index: number) => void;
 }
 
-/** Every step down the left: its number, its state and its title; the shown one highlighted. */
+/** Every step down the left: its state and its short label; the shown one highlighted. */
 export function StepList({ items, index, onSelect }: StepListProps): React.ReactElement {
     return (
         <ol
@@ -69,8 +55,7 @@ export function StepList({ items, index, onSelect }: StepListProps): React.React
                         onClick={() => onSelect(i)}
                     >
                         <StatusDot variant={DOT[item.state]} size={6} />
-                        <span className="setup-guide-rail-index">{i + 1}</span>
-                        <span className="setup-guide-rail-title">{item.title}</span>
+                        <span className="setup-guide-rail-title">{item.label ?? item.title}</span>
                     </button>
                 </li>
             ))}
@@ -99,48 +84,53 @@ function WhereLine({ item }: { item: SetupChecklistItem }): React.ReactElement {
 
 export interface StepProps {
     item: SetupChecklistItem;
-    position: string;
     busy: boolean;
     onSet: (state: 'done' | 'dismissed' | 'open') => void;
     onCheck: () => void;
     onOpenAdmin: () => void;
 }
 
-/** The step's buttons: open the Admin, then what can be done about the step. */
-function StepActions({
+/**
+ * The one button that settles a step: Demo Builder checks it when it can; otherwise the SC
+ * says it is done. A skipped or finished step the SC cannot check has nothing to settle.
+ */
+function settleAction({
     item,
     busy,
     onSet,
     onCheck,
-    onOpenAdmin,
-}: Omit<StepProps, 'position'>): React.ReactElement {
+}: StepProps): { label: string; onPress: () => void } | undefined {
+    if (item.checkable && item.state !== 'dismissed') {
+        return { label: busy ? 'Checking' : 'Check now', onPress: onCheck };
+    }
+    if (item.state === 'open') {
+        return { label: 'Mark as done', onPress: () => onSet('done') };
+    }
+    return undefined;
+}
+
+/** One row of actions: open the Admin, settle the step, and a quiet way to skip or reopen. */
+function StepActions(props: StepProps): React.ReactElement {
+    const { item, busy, onSet, onOpenAdmin } = props;
+    const settle = settleAction(props);
     return (
         <div className="setup-guide-actions">
             <Button variant="accent" onPress={onOpenAdmin}>
                 Open Commerce Admin
             </Button>
-            {item.checkable && item.state !== 'dismissed' && (
-                <Button variant="secondary" isDisabled={busy} onPress={onCheck}>
-                    {busy ? 'Checking' : 'Check now'}
+            {settle && (
+                <Button variant="secondary" isDisabled={busy} onPress={settle.onPress}>
+                    {settle.label}
                 </Button>
             )}
             {item.state === 'open' ? (
-                <>
-                    <Button variant="secondary" isDisabled={busy} onPress={() => onSet('done')}>
-                        Mark as done
-                    </Button>
-                    <Button
-                        variant="secondary"
-                        isDisabled={busy}
-                        onPress={() => onSet('dismissed')}
-                    >
-                        Skip
-                    </Button>
-                </>
+                <Link isQuiet onPress={() => !busy && onSet('dismissed')}>
+                    Skip
+                </Link>
             ) : (
-                <Button variant="secondary" isDisabled={busy} onPress={() => onSet('open')}>
+                <Link isQuiet onPress={() => !busy && onSet('open')}>
                     Reopen
-                </Button>
+                </Link>
             )}
         </div>
     );
@@ -174,24 +164,17 @@ function StepFacts({ item }: { item: SetupChecklistItem }): React.ReactElement {
     );
 }
 
-/** One step: its picture and state, where, what to enter, what then, the evidence, why. */
+/** One step: its state and title, where, what to enter, what then, the evidence, why. */
 export function SetupGuideStep(props: StepProps): React.ReactElement {
-    const { item, position } = props;
-    const Icon = ICON[item.icon ?? 'status'];
+    const { item } = props;
     return (
         <div className="setup-guide-step" data-testid="setup-guide-step">
             <div className="setup-guide-head">
-                <span className="setup-guide-icon" aria-hidden="true">
-                    <Icon size="L" />
+                <span className="integration-statusline">
+                    <StatusDot variant={DOT[item.state]} size={6} />
+                    <span>{WORD[item.state]}</span>
                 </span>
-                <div className="setup-guide-head-text">
-                    <span className="integration-statusline">
-                        <span className="integration-panel-row-prefix">{position}</span>
-                        <StatusDot variant={DOT[item.state]} size={6} />
-                        <span>{WORD[item.state]}</span>
-                    </span>
-                    <Heading level={3}>{item.title}</Heading>
-                </div>
+                <Heading level={3}>{item.title}</Heading>
             </div>
             <StepFacts item={item} />
             {item.note && (

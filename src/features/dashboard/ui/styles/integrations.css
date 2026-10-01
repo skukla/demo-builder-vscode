@@ -84,16 +84,16 @@
 
 /* The demo setup guide's step (SetupGuideModal): state, title, why, where, actions — each
    its own paragraph, with room between them, since the SC reads one step at a time. */
-/* The demo setup guide (SetupGuideModal): a progress bar over a two-pane body — every step
-   down the left, the chosen one on the right. The left column is fixed so the detail pane
-   does not shift as titles differ in length. */
+/* The demo setup guide (SetupGuideModal): a thin progress line over a two-pane body — every
+   step down the left, the chosen one on the right. The left column is fixed so the detail
+   pane does not shift as labels differ in length. */
 .setup-guide-progress {
     margin-bottom: 16px;
 }
 
 .setup-guide-layout {
     display: grid;
-    grid-template-columns: 220px minmax(0, 1fr);
+    grid-template-columns: 184px minmax(0, 1fr);
     gap: 24px;
     align-items: start;
 }
@@ -101,19 +101,18 @@
 .setup-guide-rail {
     list-style: none;
     margin: 0;
-    padding: 0;
+    padding: 0 12px 0 0;
     display: flex;
     flex-direction: column;
     gap: 2px;
     border-right: 1px solid var(--spectrum-global-color-gray-300);
-    padding-right: 12px;
 }
 
 /* A step in the list: a real button, so it is keyboard-reachable; the shown one carries the
    accent bar the wizard's step strip uses for "where you are". */
 .setup-guide-rail-step {
     display: grid;
-    grid-template-columns: 6px auto minmax(0, 1fr);
+    grid-template-columns: 6px minmax(0, 1fr);
     align-items: center;
     column-gap: 8px;
     width: 100%;
@@ -140,11 +139,6 @@
     font-weight: 600;
 }
 
-.setup-guide-rail-index {
-    color: var(--spectrum-global-color-gray-600);
-    font-variant-numeric: tabular-nums;
-}
-
 .setup-guide-rail-title {
     overflow: hidden;
     text-overflow: ellipsis;
@@ -159,25 +153,6 @@
 }
 
 .setup-guide-head {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-}
-
-/* The step's picture sits in a soft well so it reads as an illustration, not a control. */
-.setup-guide-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex: 0 0 auto;
-    width: 40px;
-    height: 40px;
-    border-radius: 8px;
-    background: var(--spectrum-global-color-gray-200);
-    color: var(--spectrum-global-color-blue-600);
-}
-
-.setup-guide-head-text {
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -248,10 +223,12 @@
     margin-bottom: 4px;
 }
 
+/* One row: two buttons and a quiet link, aligned on the baseline. */
 .setup-guide-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    align-items: center;
+    gap: 12px;
     padding-top: 4px;
 }
 }

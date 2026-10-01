@@ -108,6 +108,8 @@ export interface SetupStep {
     id: string;
     /** What to do, as an instruction. */
     title: string;
+    /** Two or three words for the step list, where the title would be cut off. */
+    label?: string;
     /** Why it matters, in one sentence. */
     why: string;
     /** Where in Commerce Admin it is done, as the menu path. */
@@ -131,6 +133,7 @@ export interface SetupChecklistItem {
     why: string;
     where: string;
     /** The structured form of `where`, when the catalog gives one (see `SetupStep`). */
+    label?: string;
     path?: string[];
     enter?: string[];
     then?: string;

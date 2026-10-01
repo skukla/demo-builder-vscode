@@ -12,7 +12,7 @@ import React from 'react';
 import '@testing-library/jest-dom';
 
 jest.mock('@adobe/react-spectrum', () => ({
-    Button: ({ children, onPress, isDisabled, variant: _v, style: _s, ...props }: any) => (
+    Button: ({ children, onPress, isDisabled, variant: _v, ...props }: any) => (
         <button onClick={onPress} disabled={isDisabled} {...props}>
             {children}
         </button>
@@ -25,10 +25,8 @@ jest.mock('@adobe/react-spectrum', () => ({
             {children}
         </span>
     ),
-    ProgressBar: ({ label, valueLabel, value }: any) => (
-        <div role="progressbar" aria-label={label} aria-valuenow={value}>
-            {valueLabel}
-        </div>
+    ProgressBar: ({ 'aria-label': label, value }: any) => (
+        <div role="progressbar" aria-label={label} aria-valuenow={value} />
     ),
     Text: ({ children }: any) => <span>{children}</span>,
 }));
@@ -66,19 +64,19 @@ const step = (overrides: Partial<SetupChecklistItem>): SetupChecklistItem => ({
 });
 
 const THREE = [
-    step({ id: 'a', title: 'Step A', state: 'done' }),
-    step({ id: 'b', title: 'Step B' }),
+    step({ id: 'a', title: 'Step A', label: 'A', state: 'done' }),
+    step({ id: 'b', title: 'Step B', label: 'B' }),
     step({ id: 'c', title: 'Step C', checkable: true }),
 ];
 
 /** A step as the catalog now describes it: the path, the values, the follow-up. */
 const STRUCTURED = step({
     id: 'confirmed-status',
+    label: 'Confirmed in ERP status',
     title: 'Create the "Confirmed in ERP" order status',
     path: ['Stores', 'Settings', 'Order Status'],
     enter: ['erp_confirmed', 'Confirmed in ERP'],
     then: 'Assign the status to the Pending state.',
-    icon: 'status',
 });
 
 const model = (items: SetupChecklistItem[]) =>
@@ -120,8 +118,8 @@ describe('SetupGuideModal', () => {
         expect(
             screen.getByRole('dialog', { name: 'Demo setup: Northwind ERP Integration' })
         ).toBeInTheDocument();
-        expect(screen.getByText('Step 2 of 3')).toBeInTheDocument();
         expect(within(shown()).getByRole('heading', { name: 'Step B' })).toBeInTheDocument();
+        expect(within(shown()).getByText('To do')).toBeInTheDocument();
         expect(within(shown()).getByText('Stores > Settings > Order Status')).toBeInTheDocument();
         // The reason sits under a disclosure, present but not in the way.
         const why = within(shown()).getByText('Why this matters').closest('details');
@@ -134,26 +132,25 @@ describe('SetupGuideModal', () => {
         expect(screen.getAllByTestId('setup-guide-step')).toHaveLength(1);
     });
 
-    it('lists every step down the side with its state, and counts progress over the steps not skipped', () => {
+    it('lists every step by its short label with its state, and the bar counts the steps not skipped', () => {
         renderGuide([...THREE, step({ id: 'd', title: 'Step D', state: 'dismissed' })]);
         const tabs = screen.getAllByRole('tab');
-        expect(tabs.map((tab) => tab.textContent)).toEqual([
-            '1Step A',
-            '2Step B',
-            '3Step C',
-            '4Step D',
-        ]);
+        // A label where the catalog gives one, the title where it does not.
+        expect(tabs.map((tab) => tab.textContent)).toEqual(['A', 'B', 'Step C', 'Step D']);
         expect(tabs[1]).toHaveAttribute('aria-selected', 'true');
-        expect(screen.getByRole('progressbar', { name: 'Set up in Commerce' })).toHaveTextContent(
-            '1 of 3 done'
+        // 1 of 3 counted steps done (the skipped one is out of the count).
+        expect(screen.getByRole('progressbar', { name: 'Setup progress' })).toHaveAttribute(
+            'aria-valuenow',
+            String((1 / 3) * 100)
         );
     });
 
-    it('jumps to any step from the list', () => {
+    it('the list is the only navigation: no Back or Next, and any step is one click away', () => {
         renderGuide();
-        fireEvent.click(screen.getByRole('tab', { name: /Step C/ }));
+        expect(screen.queryByText('Back')).not.toBeInTheDocument();
+        expect(screen.queryByText('Next')).not.toBeInTheDocument();
+        fireEvent.click(screen.getByRole('tab', { name: 'Step C' }));
         expect(within(shown()).getByRole('heading', { name: 'Step C' })).toBeInTheDocument();
-        expect(screen.getByText('Step 3 of 3')).toBeInTheDocument();
     });
 
     it('draws the Admin path as breadcrumbs, the values as copyable pills, and the follow-up as one line', () => {
@@ -172,8 +169,6 @@ describe('SetupGuideModal', () => {
         ).toBeInTheDocument();
         // The prose sentence is not repeated beside its structured form.
         expect(within(pane).queryByText(STRUCTURED.where)).not.toBeInTheDocument();
-        // The step's picture: the icon mock cannot name which, only that one rendered.
-        expect(pane.querySelector('.setup-guide-icon svg')).toBeInTheDocument();
     });
 
     it('shows what the last check found beside the step', () => {
@@ -191,16 +186,10 @@ describe('SetupGuideModal', () => {
         ).toBeInTheDocument();
     });
 
-    it('walks the steps with Back and Next, and ends with Done', () => {
+    it('closes from the dialog footer', () => {
         const onClose = jest.fn();
         renderGuide(THREE, { onClose });
-        fireEvent.click(screen.getByText('Back'));
-        expect(within(shown()).getByRole('heading', { name: 'Step A' })).toBeInTheDocument();
-        expect(screen.getByText('Back')).toBeDisabled();
-        fireEvent.click(screen.getByText('Next'));
-        fireEvent.click(screen.getByText('Next'));
-        expect(within(shown()).getByRole('heading', { name: 'Step C' })).toBeInTheDocument();
-        fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Close' }));
         expect(onClose).toHaveBeenCalledTimes(1);
     });
 
@@ -216,10 +205,11 @@ describe('SetupGuideModal', () => {
         });
     });
 
-    it('skips the shown step, by id', async () => {
+    it('skips the shown step, by id — a quiet link, not a third button', async () => {
         renderGuide();
+        expect(screen.queryByRole('button', { name: 'Skip' })).not.toBeInTheDocument();
         await act(async () => {
-            fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
+            fireEvent.click(screen.getByRole('link', { name: 'Skip' }));
         });
         expect(mockRequest).toHaveBeenCalledWith('setSetupStep', {
             id: 'erp-integration',
@@ -230,9 +220,9 @@ describe('SetupGuideModal', () => {
 
     it('reopens a step that is done', async () => {
         renderGuide();
-        fireEvent.click(screen.getByText('Back'));
+        fireEvent.click(screen.getByRole('tab', { name: 'A' }));
         await act(async () => {
-            fireEvent.click(screen.getByRole('button', { name: 'Reopen' }));
+            fireEvent.click(screen.getByRole('link', { name: 'Reopen' }));
         });
         expect(mockRequest).toHaveBeenCalledWith('setSetupStep', {
             id: 'erp-integration',
@@ -241,10 +231,11 @@ describe('SetupGuideModal', () => {
         });
     });
 
-    it('offers Check now only on a step Demo Builder can check, and asks the extension to run it', async () => {
+    it('offers Check now in place of Mark as done on a step Demo Builder can check, and asks the extension to run it', async () => {
         renderGuide();
         expect(screen.queryByRole('button', { name: 'Check now' })).not.toBeInTheDocument();
-        fireEvent.click(screen.getByText('Next'));
+        fireEvent.click(screen.getByRole('tab', { name: 'Step C' }));
+        expect(screen.queryByRole('button', { name: 'Mark as done' })).not.toBeInTheDocument();
         await act(async () => {
             fireEvent.click(screen.getByRole('button', { name: 'Check now' }));
         });
@@ -268,7 +259,10 @@ describe('SetupGuideModal', () => {
         );
         expect(within(shown()).getByRole('heading', { name: 'Step B' })).toBeInTheDocument();
         expect(within(shown()).getByText('Done')).toBeInTheDocument();
-        expect(screen.getByRole('progressbar')).toHaveTextContent('2 of 3 done');
+        expect(screen.getByRole('progressbar')).toHaveAttribute(
+            'aria-valuenow',
+            String((2 / 3) * 100)
+        );
     });
 
     it('says why when the extension refuses', async () => {
