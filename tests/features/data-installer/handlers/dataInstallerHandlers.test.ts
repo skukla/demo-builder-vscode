@@ -609,4 +609,72 @@ describe('dataInstallerHandlers', () => {
             expect(allLogs).not.toContain('tok');
         });
     });
+
+    /**
+     * The same guard pointed at the datapack LIBRARY: same feature switch, same
+     * sign-in, its own address. The stub answers per section, so a guard reading
+     * the wrong section gets the wrong URL and the base-URL assertion catches it.
+     */
+    describe('the library store', () => {
+        const LIBRARY = 'https://library.example.test/api/v1/web/datapack-store';
+
+        function setupLibrary(library: unknown, enabled: unknown = true): void {
+            (vscode.workspace.getConfiguration as jest.Mock).mockImplementation((section: string) => ({
+                get: jest.fn((key: string, fallback?: unknown) => {
+                    if (key === 'enabled') return enabled;
+                    if (key !== 'apiBaseUrl') return fallback;
+                    return section === 'demoBuilder.datapackStore' ? library : BASE;
+                }),
+            }));
+        }
+
+        it('builds the client on the library address when asked for the library', async () => {
+            setupLibrary(LIBRARY);
+
+            const access = await resolveDataInstallerAccess(makeHeadlessContext(), 'library');
+
+            expect(access).toMatchObject({ ok: true, baseUrl: LIBRARY });
+            expect(MockedClient).toHaveBeenCalledWith(expect.objectContaining({ baseUrl: LIBRARY }));
+        });
+
+        it('still defaults to the Data Installer — the control for the case above', async () => {
+            setupLibrary(LIBRARY);
+
+            expect(await resolveDataInstallerAccess(makeHeadlessContext())).toMatchObject({ ok: true, baseUrl: BASE });
+        });
+
+        it("refuses an unusable library address in the library setting's own name", async () => {
+            setupLibrary('http://insecure.example.test');
+
+            const access = await resolveDataInstallerAccess(makeHeadlessContext(), 'library');
+
+            expect(access).toEqual({
+                ok: false,
+                response: expect.objectContaining({
+                    success: false,
+                    code: ErrorCode.INVALID_OPERATION,
+                    error: expect.stringContaining('demoBuilder.datapackStore.apiBaseUrl'),
+                }),
+            });
+        });
+
+        it('honours the feature switch for the library too', async () => {
+            setupLibrary(LIBRARY, false);
+
+            const access = await resolveDataInstallerAccess(makeHeadlessContext(), 'library');
+
+            expect(access).toMatchObject({ ok: false, response: { code: ErrorCode.INVALID_OPERATION } });
+        });
+
+        it('reports sign-in for the library the same way, without prompting', async () => {
+            setupLibrary(LIBRARY);
+            const context = makeHeadlessContext();
+            (context.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
+
+            const access = await resolveDataInstallerAccess(context, 'library');
+
+            expect(access).toMatchObject({ ok: false, response: { code: ErrorCode.AUTH_REQUIRED, needsAuth: 'adobe' } });
+            expect(mockedEnsureAuth).not.toHaveBeenCalled();
+        });
+    });
 });

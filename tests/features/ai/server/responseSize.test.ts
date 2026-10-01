@@ -451,6 +451,13 @@ describe('rows with no output safety net are classified', () => {
         'get_setup_checklist',
         'set_setup_step',
         'check_setup_steps',
+        // Datapack files, read before listing (`datapackZipHandlers.ts`): save answers
+        // `{path, bytes, dataTypes}` (or `{cancelled}`), open answers
+        // `{path, datapackName, version, displayName, dataTypes, …}` and load answers
+        // `{datapackName, version, target, pack, stored, failed}` — fixed fields.
+        'save_datapack_zip',
+        'open_datapack_zip',
+        'load_datapack_zip',
     ];
 
     it('the set matches exactly — a new row must be classified before it ships', async () => {
@@ -488,6 +495,12 @@ describe('the ceiling table tracks the tool surface', () => {
     // which no measurement has ever found large. Listed rather than inferred,
     // so adding a tool cannot silently join them.
     const EXEMPT = new Set([
+        // Datapack files: a path, a byte count and at most one entry per data type —
+        // bounded by the 28 type codes, never by the size of the pack's rows, which
+        // go to disk or to the store and never into the response.
+        'save_datapack_zip',
+        'open_datapack_zip',
+        'load_datapack_zip',
         'regenerate_ai_files',
         'start_demo',
         'stop_demo',

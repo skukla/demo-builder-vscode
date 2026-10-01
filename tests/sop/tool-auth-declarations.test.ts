@@ -60,7 +60,9 @@ const EXPECTED: Record<string, number> = {
     // 49 -> 50 on 2026-09-27: load_erp_demo_data reads Commerce with the workspace credential
     // and calls the ERP and its integration as the signed-in user.
     // 50 -> 51 on 2026-09-28: add_erp deploys another ERP into a workspace of its own (AB-16).
-    adobe: 51,
+    // 51 -> 53 on 2026-10-01: save_datapack_zip and load_datapack_zip read or write a
+    // datapack store as the signed-in user, like the other datapack tools.
+    adobe: 53,
     // 21 -> 23 on 2026-09-30 (hotfix beta.149 merged): get_content_access and
     // set_content_reader read and write the DA.live org permissions sheet (EDS-22).
     dalive: 23,
@@ -80,7 +82,8 @@ const EXPECTED: Record<string, number> = {
     // identity itself and answers a typed AUTH_REQUIRED when there is none.
     // 52 -> 54 on 2026-09-24: run_erp_rest and write_erp_rest declare like get_erp_status.
     // 54 -> 56 on 2026-09-25: get_setup_checklist and set_setup_step touch saved state only.
-    none: 56,
+    // 56 -> 57 on 2026-10-01: open_datapack_zip reads a local file and needs no sign-in.
+    none: 57,
 };
 
 /**
@@ -94,10 +97,11 @@ const EXPECTED: Record<string, number> = {
  * files. That counts text, not declarations, and was roughly double. The CONTROL below
  * caught it — which is the argument for having one.)
  */
-const EXPECTED_TOOLS = 146; // 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x); 144 with add_erp (AB-16).
+const EXPECTED_TOOLS = 149; // 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x); 144 with add_erp (AB-16).
 // 141 -> 142 on 2026-09-27: delete_undeclared_runtime_code.
 // 142 -> 143 on 2026-09-27: load_erp_demo_data.
 // 144 -> 146 on 2026-09-30: the content-access pair (EDS-22, hotfix beta.149 merged).
+// 146 -> 149 on 2026-10-01: save_datapack_zip, open_datapack_zip, load_datapack_zip.
 
 interface Declaration {
     name: string;

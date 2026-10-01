@@ -103,3 +103,37 @@ describe('Data Installer settings schema', () => {
         expect(description).not.toMatch(/api[_-]?key|secret|token|password/i);
     });
 });
+
+/**
+ * The datapack LIBRARY's address is the opposite case, and the reason is checkable.
+ *
+ * It is the team's own store, deployed beside the PDP overlay action, and its host is
+ * already published by `demoBuilder.byom.overlayUrl`'s default. So a default here
+ * publishes no new host — only a path on one the repository already ships. That is
+ * the claim the default rests on, and the last test pins it: if the store ever moves
+ * to a host the repo does not already publish, the default fails here rather than
+ * quietly widening what a public repository advertises.
+ */
+describe('datapack library settings schema', () => {
+    const LIBRARY = 'demoBuilder.datapackStore.apiBaseUrl';
+
+    it('declares the library URL setting with a default — positive control', () => {
+        expect(loadSettingSchema(LIBRARY)?.default).toEqual(expect.stringMatching(/^https:\/\//));
+    });
+
+    it('carries no credential in its default', () => {
+        const url = new URL(String(loadSettingSchema(LIBRARY)?.default));
+        expect(url.protocol).toBe('https:');
+        expect(url.search).toBe('');
+        expect(url.hash).toBe('');
+        expect(url.username).toBe('');
+        expect(url.password).toBe('');
+    });
+
+    it('defaults to a host the repository already publishes (the PDP overlay default)', () => {
+        const library = new URL(String(loadSettingSchema(LIBRARY)?.default));
+        const overlay = new URL(String(loadSettingSchema('demoBuilder.byom.overlayUrl')?.default));
+
+        expect(library.host).toBe(overlay.host);
+    });
+});

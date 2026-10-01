@@ -275,4 +275,61 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
                       sharedCatalog: true,
                   },
     },
+
+    // ── datapack files ──────────────────────────────────────────────────────
+    // Neither store has a file form, so the zip is built and read in the
+    // extension and works the same for both (`datapackZipHandlers`).
+    {
+        tool: 'save_datapack_zip',
+        needsAuth: ['adobe'],
+        // Writes a local file and nothing else: the store is only read.
+        readOnly: false,
+        description:
+            'Save a datapack from the Data Installer or the datapack library as a zip file in the ' +
+            'project — one file to keep, send, or load into a store later.',
+        map: importHandlers,
+        type: 'save-datapack-zip',
+        inputSchema: {
+            ...DATAPACK_ID,
+            source: z.enum(['installer', 'library']).optional().describe('Which store to read it from (default installer)'),
+            path: z
+                .string()
+                .describe('Where to write the file, inside the project. A folder gets <name>-<version>.datapack.zip'),
+        },
+    },
+    {
+        tool: 'open_datapack_zip',
+        needsAuth: [],
+        readOnly: true,
+        description:
+            'Say what a datapack zip file holds — name, version, data types — without writing anything. ' +
+            'Run before load_datapack_zip.',
+        map: importHandlers,
+        type: 'open-datapack-zip',
+        inputSchema: { path: z.string().describe('The datapack file, inside the project') },
+    },
+    {
+        tool: 'load_datapack_zip',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            'Write the pack in a datapack zip file into the datapack library (default) or the Data Installer. ' +
+            'Into the Data Installer, which other teams share, it needs confirmName equal to the pack ' +
+            'name and never updates an existing pack. This does not install anything into Commerce.',
+        map: importHandlers,
+        type: 'load-datapack-zip',
+        confirm: true,
+        inputSchema: {
+            path: z.string().describe('The datapack file, inside the project'),
+            target: z.enum(['installer', 'library']).optional().describe('Which store to write it into (default library)'),
+            update: z
+                .boolean()
+                .optional()
+                .describe('Library only: replace the data types this file carries in a pack that already exists'),
+            confirmName: z
+                .string()
+                .optional()
+                .describe('Data Installer only: must equal the pack name (open_datapack_zip reports it)'),
+        },
+    },
 ];

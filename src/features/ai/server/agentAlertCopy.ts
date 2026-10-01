@@ -338,6 +338,13 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: ['datapackName', 'version', 'commerceInstance'],
         sessionGrant: false,
     },
+    load_datapack_zip: {
+        action: 'Load a datapack file into a store',
+        consequence:
+            'Adds the pack in this file to the datapack library, or to the Data Installer catalogue other teams share.',
+        target: ['path', 'target'],
+        sessionGrant: false,
+    },
 };
 
 /** Authored copy for a tool, or undefined when nobody has written it yet. */

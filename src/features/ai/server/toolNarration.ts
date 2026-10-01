@@ -234,6 +234,9 @@ export const TOOL_NARRATION: Record<string, string> = {
     start_datapack_import: 'Importing the sample data',
     start_datapack_export: 'Capturing the sample data',
     reset_datapack: 'Removing the sample data',
+    save_datapack_zip: 'Saving the datapack as a file',
+    open_datapack_zip: 'Reading the datapack file',
+    load_datapack_zip: 'Loading a datapack file',
 
     // ── Environment and session ─────────────────────────────────────────
     install_prerequisite: 'Installing the required tool',

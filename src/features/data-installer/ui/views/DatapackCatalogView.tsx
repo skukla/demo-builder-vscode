@@ -38,7 +38,7 @@
  * @module features/data-installer/ui/views/DatapackCatalogView
  */
 
-import { Flex, Link, Switch, View } from '@adobe/react-spectrum';
+import { Flex, Switch, View } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     groupDatapacks,
@@ -53,9 +53,9 @@ import type {
     InstalledDatapack,
     Page,
 } from '../../types';
+import { CatalogHeaderActions } from '../components/CatalogHeaderActions';
 import { DatapackCard } from '../components/DatapackCard';
 import { DatapackDetailPanel } from '../components/DatapackDetailPanel';
-import { ExportDatapackModal } from '../components/ExportDatapackModal';
 import { ImportDatapackModal } from '../components/ImportDatapackModal';
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
@@ -90,8 +90,6 @@ export function DatapackCatalogView(): React.JSX.Element {
     const [versions, setVersions] = useState<Record<string, string>>({});
     const [selected, setSelected] = useState<DatapackId | undefined>(undefined);
     const [importing, setImporting] = useState<DatapackId | undefined>(undefined);
-    /** Stage 3: capture a NEW pack from the connected instance. */
-    const [exporting, setExporting] = useState(false);
 
     const { load, loading, value, failure, settled } =
         useDataInstallerRequest<Page<DatapackSummary>>('find-datapacks');
@@ -274,9 +272,8 @@ export function DatapackCatalogView(): React.JSX.Element {
                                 >
                                     Include community datapacks
                                 </Switch>
-                                <Link isQuiet onPress={() => setExporting(true)}>
-                                    Export from this instance
-                                </Link>
+                                {/* Export from this instance, and Load from file. */}
+                                <CatalogHeaderActions onCatalogChanged={refresh} />
                             </Flex>
                         }
                     />
@@ -303,8 +300,6 @@ export function DatapackCatalogView(): React.JSX.Element {
                 onRetry={retryDetail}
                 onImport={openImport}
             />
-
-            {exporting ? <ExportDatapackModal onClose={() => setExporting(false)} /> : null}
 
             {/* Only what the service HOLDS is importable — the inventory, never
                 the pack's declared types. Mounted while `importing` is set, so

@@ -1187,5 +1187,15 @@
             "set_content_reader"
         ],
         "why": "EDS-22 (hotfix beta.149) tier 3: changes another person's access on the SC's DA.live org, so it never runs unattended; represented by siteTools.test + the consent gate. Listed so the tool is judged, not grandfathered."
+    },
+    {
+        "id": "t2-datapack-zip-roundtrip",
+        "prompt": "Save the Data Installer's citisignal datapack, version main, as a file in this project. Tell me what is in the file, then load it into our datapack library.",
+        "expect": [
+            "save_datapack_zip",
+            "open_datapack_zip",
+            "load_datapack_zip"
+        ],
+        "why": "Datapack files (owner, 2026-10-01: an optional export to zip from either store, import the same way). Neither store has a file form, so without these tools an agent pages every data type over curl and hand-builds a zip. Tier 2: it writes a local file and a private pack into the team library. Known gap: no tool deletes a library pack yet, so the journey cannot return to zero on its own."
     }
 ]

@@ -19,6 +19,12 @@ export interface DatapackId {
     version: string;
 }
 
+/**
+ * Which datapack catalog: the Data Installer service, or the team's own datapack
+ * library, which answers the same routes at its own address.
+ */
+export type DatapackStoreName = 'installer' | 'library';
+
 /** Cover and thumbnail art, either of which may be absent. */
 export interface DatapackArt {
     cover?: string;

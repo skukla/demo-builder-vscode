@@ -33,6 +33,7 @@ import type { DataItemInventory, DatapackDetail, DatapackId } from '../../types'
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
 import { dataTypeLabel } from '../dataTypeLabel';
 import type { DataInstallerFailure } from '../hooks/useDataInstallerRequest';
+import { SaveDatapackFileButton } from './SaveDatapackFileButton';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { Drawer } from '@/core/ui/components/ui/Drawer';
 
@@ -98,6 +99,7 @@ export function DatapackDetailPanel({
                                 <Button variant="accent" onPress={() => onImport(detail.id)}>
                                     Import
                                 </Button>
+                                <SaveDatapackFileButton id={detail.id} />
                             </div>
                         ) : null}
                     </div>

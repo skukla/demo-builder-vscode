@@ -21,6 +21,7 @@ import { validateURL } from '@/core/validation/URLValidator';
 export const DATA_INSTALLER_MAX_URL_LENGTH = 2048;
 
 const SETTINGS_SECTION = 'demoBuilder.dataInstaller';
+const STORE_SETTINGS_SECTION = 'demoBuilder.datapackStore';
 
 /**
  * Whether the Data Installer feature is switched on.
@@ -72,8 +73,22 @@ export type BaseUrlResolution =
  * @returns The validated base URL with any trailing slash removed, or why not
  */
 export function resolveDataInstallerBaseUrl(): BaseUrlResolution {
-    const raw = vscode.workspace.getConfiguration(SETTINGS_SECTION).get<string>('apiBaseUrl', '');
+    return resolveHttpsBaseUrl(vscode.workspace.getConfiguration(SETTINGS_SECTION).get<string>('apiBaseUrl', ''));
+}
 
+/**
+ * Read and validate the datapack store's base URL (`demoBuilder.datapackStore.apiBaseUrl`).
+ *
+ * Our own store, which answers the Data Installer's catalog routes. Unlike the
+ * Data Installer's setting it has a default — the team's deployment, a public
+ * action URL — so it resolves on a fresh install.
+ */
+export function resolveDatapackStoreBaseUrl(): BaseUrlResolution {
+    return resolveHttpsBaseUrl(vscode.workspace.getConfiguration(STORE_SETTINGS_SECTION).get<string>('apiBaseUrl', ''));
+}
+
+/** The shared rule for both base URLs: present, not absurdly long, https. */
+function resolveHttpsBaseUrl(raw: unknown): BaseUrlResolution {
     // VS Code's typed `get` returns the default on type mismatch, but be
     // defensive about a hand-edited settings.json.
     if (typeof raw !== 'string') {

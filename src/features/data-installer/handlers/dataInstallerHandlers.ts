@@ -19,9 +19,10 @@ import { DataInstallerClient } from '../services/dataInstallerClient';
 import {
     isDataInstallerEnabled,
     resolveDataInstallerBaseUrl,
+    resolveDatapackStoreBaseUrl,
 } from '../services/dataInstallerConfig';
 import { DataInstallerApiError, isDataInstallerAuthError } from '../services/dataInstallerErrors';
-import type { DatapackId, OperationMode } from '../types';
+import type { DatapackId, DatapackStoreName, OperationMode } from '../types';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
@@ -63,9 +64,15 @@ function refuse(
  *
  * Order matters: the cheap local checks run before anything that could prompt the
  * user or hit the network.
+ *
+ * `store` picks which catalog the client talks to: the Data Installer (the default,
+ * and every caller before the datapack library existed), or the library, which
+ * answers the same routes at its own address. The feature switch and the sign-in
+ * apply to both.
  */
 export async function resolveDataInstallerAccess(
     context: HandlerContext,
+    store: DatapackStoreName = 'installer',
 ): Promise<DataInstallerAccess> {
     // Both config refusals LOG. They used to return in silence, and a colleague's
     // 864-line debug log carried zero lines from this feature while the catalog
@@ -80,6 +87,20 @@ export async function resolveDataInstallerAccess(
             'The Data Installer is turned off. Enable demoBuilder.dataInstaller.enabled to use it.',
             ErrorCode.INVALID_OPERATION,
         );
+    }
+
+    if (store === 'library') {
+        const library = resolveDatapackStoreBaseUrl();
+        if (!library.ok) {
+            context.logger.warn(
+                `${LOG_PREFIX} Refused: demoBuilder.datapackStore.apiBaseUrl is ${library.reason === 'not-configured' ? 'not set' : `not usable (${library.fingerprint ?? 'unreadable'})`}.`,
+            );
+            return refuse(
+                'The datapack library has no usable address. Set demoBuilder.datapackStore.apiBaseUrl to an https:// URL.',
+                ErrorCode.INVALID_OPERATION,
+            );
+        }
+        return authorize(context, library.baseUrl);
     }
 
     const resolved = resolveDataInstallerBaseUrl();
@@ -97,7 +118,11 @@ export async function resolveDataInstallerAccess(
             ErrorCode.INVALID_OPERATION,
         );
     }
+    return authorize(context, resolved.baseUrl);
+}
 
+/** The sign-in half of the guard, shared by both stores: both take the SC's own Adobe token. */
+async function authorize(context: HandlerContext, baseUrl: string): Promise<DataInstallerAccess> {
     const authManager = context.authManager;
     if (!authManager) {
         return refuse('Adobe sign-in is required.', ErrorCode.AUTH_REQUIRED);
@@ -138,10 +163,10 @@ export async function resolveDataInstallerAccess(
 
     return {
         ok: true,
-        baseUrl: resolved.baseUrl,
+        baseUrl,
         getToken,
         client: new DataInstallerClient({
-            baseUrl: resolved.baseUrl,
+            baseUrl,
             getToken,
             onDrift: (endpoint, missingKeys) => {
                 context.logger.warn(

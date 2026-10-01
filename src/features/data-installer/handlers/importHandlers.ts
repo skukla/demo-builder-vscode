@@ -40,6 +40,7 @@ import { resolveInstallTarget } from '../services/sampleDataInstall';
 import { downloadWorkspaceConfigJson } from '../services/workspaceConfigDownload';
 import { IMPORT_PROGRESS_MESSAGE, type ImportJobRecord } from '../types';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
+import { datapackZipHandlers } from './datapackZipHandlers';
 import { exportHandlers } from './exportHandlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { PollingService } from '@/core/shell/pollingService';
@@ -105,6 +106,8 @@ export const importHandlers = defineHandlers({
     // Stage 3 lives in its own module; merged here so the panel and the tests
     // keep ONE handler map to reach for.
     ...exportHandlers,
+    // Datapack files (save a pack to a zip, load one back), same reason.
+    ...datapackZipHandlers,
     'start-datapack-import': async (
         context: HandlerContext,
         payload?: StartImportPayload,

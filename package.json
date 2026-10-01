@@ -442,6 +442,13 @@
                         "default": "",
                         "format": "uri",
                         "description": "Data Installer API base URL, without a trailing action segment. Required — set this to your deployment. There is no default: this repository is public, and a bundled endpoint would ship to every user. Must be https."
+                    },
+                    "demoBuilder.datapackStore.apiBaseUrl": {
+                        "scope": "machine",
+                        "type": "string",
+                        "default": "https://285361-249darkllama-stage.adobeioruntime.net/api/v1/web/datapack-store",
+                        "format": "uri",
+                        "description": "Datapack library base URL: the team's own datapack store, which answers the same catalog routes as the Data Installer. Datapack files can be saved from it and loaded into it. Defaults to the team's deployment; override to point at your own. Must be https."
                     }
                 }
             }

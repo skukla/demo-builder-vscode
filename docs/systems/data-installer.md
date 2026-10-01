@@ -9,12 +9,13 @@ date, re-probing it is cheaper than trusting it.
 
 ## Configuration
 
-Two settings, read in one place — `services/dataInstallerConfig.ts`:
+Three settings, read in one place — `services/dataInstallerConfig.ts`:
 
 | Setting | Default | |
 |---|---|---|
 | `demoBuilder.dataInstaller.enabled` | `true` | A corrupted non-boolean reads as `true` — a broken `settings.json` should not look like a deliberate opt-out |
 | `demoBuilder.dataInstaller.apiBaseUrl` | **empty** | `https` only, ≤2048 chars, trailing slash stripped |
+| `demoBuilder.datapackStore.apiBaseUrl` | the team's deployment | The datapack **library**: the team's own store, which answers the same catalog routes. Same URL rule. Its default is a path on a host the repository already publishes (the PDP overlay's), pinned by a test |
 
 **Nobody has the URL set until they set it**, and that is the whole first-run story.
 A fresh install has the feature enabled and pointed nowhere, so the wizard's
@@ -82,10 +83,13 @@ scenario expressed in terms of the *pack's* items. No type-wide wipe scenario ex
 Six read tools. Three groups are held back deliberately — the most reviewable
 judgement in this feature:
 
-- **Datapack authoring CRUD.** The catalog is shared infrastructure with 23 entries
-  other teams depend on, `delete-datapack` cascades, there is no undo and no
-  ownership guard. One agent typo removes a colleague's demo. These stay behind UI
-  actions with a named-target confirm.
+- **Changing or deleting a pack.** The catalog is shared infrastructure with 23
+  entries other teams depend on, `delete-datapack` cascades, there is no undo and no
+  ownership guard. One agent typo removes a colleague's demo. Creating a NEW pack is
+  offered in two ways, both of which only add: `start_datapack_export` and
+  `load_datapack_zip`. Each needs the pack's name typed back, and loading a file
+  never updates an existing pack in this catalog. The datapack library does have an
+  ownership check, so updating your own pack is offered there.
 - **`DELETE get-installed-datapacks`** — clears tracking without uninstalling
   anything. Its only effect is to make the tracking lie.
 - **`async-process-status`** — reports `in_progress` for jobs that finished hours
@@ -100,6 +104,35 @@ That investigation is in
 [`.rptc/research/data-installer/stage-3-export-probe-2026-08-14.md`](../../.rptc/research/data-installer/stage-3-export-probe-2026-08-14.md).
 
 A dated finding about a service we do not own — re-verify before relying on it.
+
+## Datapack files (save to a zip, load from one)
+
+Neither the service nor the datapack library has a file form, so the zip is built and
+read in the extension (`services/datapackZip.ts`) and works the same for both stores:
+
+```
+<name>-<version>.datapack.zip
+  datapack.json            name, version, display name, description, data types,
+                           which store it came from, when; plus a format marker
+  data/<data_type>.json    one per data type: the rows, as the store holds them
+```
+
+A zip whose files sit under one root folder reads the same.
+
+| | Panel | Agent tool |
+|---|---|---|
+| Save a pack from either store | "Save as file" in a pack's flyout, and after an export | `save_datapack_zip` |
+| See what a file holds, writing nothing | the first step of "Load from file" | `open_datapack_zip` |
+| Write it into a store | "Load from file", library by default | `load_datapack_zip` |
+
+Loading puts a pack in a store; installing it into Commerce is still Import. Each data
+type is one `add-data-item` request, so a type too large for one request is refused by
+name and the others still land. An agent's paths must be inside the open project; the
+panel uses VS Code's own dialogs.
+
+**Not yet reversible from the extension:** nothing deletes a library pack, so a load
+into the library cannot be undone here. That is a reversibility gap, recorded rather
+than hidden.
 
 ## Conventions that bind this
 

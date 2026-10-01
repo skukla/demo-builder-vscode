@@ -29,6 +29,7 @@ import { ActionButton, Checkbox, DialogContainer } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { dataTypeLabel } from '../dataTypeLabel';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
+import { SaveDatapackFileButton } from './SaveDatapackFileButton';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { FormField } from '@/core/ui/components/forms/FormField';
 import { Modal } from '@/core/ui/components/ui/Modal';
@@ -141,6 +142,8 @@ export function ExportDatapackModal({ onClose }: ExportDatapackModalProps): Reac
     const outcome = dismissed ? null : run.value;
     const failure = dismissed ? null : run.failure;
     const showingResult = Boolean(outcome ?? failure);
+    const captured = outcome?.perType?.some((row) => row.success);
+    const savable = captured ? { name: name.trim(), version: version.trim() } : null;
 
     return (
         <DialogContainer onDismiss={onClose}>
@@ -168,7 +171,10 @@ export function ExportDatapackModal({ onClose }: ExportDatapackModalProps): Reac
             >
                 <div className="datapack-export-body">
                     {showingResult ? (
-                        <ExportResult outcome={outcome} error={failure?.message} />
+                        <>
+                            <ExportResult outcome={outcome} error={failure?.message} />
+                            {savable ? <SaveDatapackFileButton id={savable} /> : null}
+                        </>
                     ) : (
                         <ExportForm
                             projectName={target.value?.projectName}
