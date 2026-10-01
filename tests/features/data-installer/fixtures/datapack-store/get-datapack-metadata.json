@@ -1,0 +1,19 @@
+{
+    "cover_image": "",
+    "created_at": "2026-10-01T14:41:19.940Z",
+    "data_types": [
+        "categories",
+        "customer_groups"
+    ],
+    "datapack_name": "fixture-capture",
+    "datapack_type": "accs",
+    "description": "captured from the datapack store",
+    "display_name": "Fixture capture",
+    "duration": 1,
+    "owner": "sc@example.com",
+    "shared": true,
+    "success": true,
+    "thumbnail_image": "",
+    "updated_at": "2026-10-01T14:41:20.745Z",
+    "version": "v1"
+}
