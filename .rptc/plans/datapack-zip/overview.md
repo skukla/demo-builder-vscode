@@ -67,8 +67,10 @@ than a Runtime request allows is refused per type, by name, and the rest still l
 
 ## Found while building
 
-- **Reversibility gap.** Nothing in the extension deletes a library pack, so a load into
-  the library cannot be undone from here. The library has `delete-datapack`; exposing it
-  for the caller's own packs is the follow-up.
+- **Reversibility gap — closed for the library (owner, 2026-10-01: "Add a delete for library
+  packs so loads can be undone").** `delete-library-datapack` / `delete_library_datapack`
+  delete the caller's own library pack; the panel offers it after a load that created one.
+  A load into the Data Installer still cannot be undone from the extension: deleting there
+  stays unoffered because that catalog has no ownership check.
 - **The library is not in the panel's catalog yet** (datapack-store step 06), so the panel
   saves Data Installer packs only; an agent can save from either store.

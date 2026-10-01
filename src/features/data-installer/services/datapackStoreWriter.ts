@@ -92,6 +92,32 @@ export class DatapackStoreWriter {
         await this.check(response, 'add-data-item', dataType);
     }
 
+    /**
+     * Delete a pack and every data item it holds.
+     *
+     * Meant for the datapack LIBRARY only, which lets a pack's owner delete it and
+     * answers anyone else as if the pack did not exist. The Data Installer has no such
+     * check, so nothing in the extension sends this to it.
+     *
+     * @returns `deleted`, or `not-found` when the store holds no pack of the caller's by that id
+     * @throws DataInstallerApiError for any other refusal
+     */
+    async deleteDatapack(id: DatapackId): Promise<'deleted' | 'not-found'> {
+        const url = actionUrl(this.deps.baseUrl, 'delete-datapack', {
+            datapack_name: id.name,
+            version: id.version,
+        });
+        const response = await this.fetchImpl(url, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${await this.deps.getToken()}` },
+            signal: AbortSignal.timeout(this.timeoutMs),
+        });
+        this.deps.log?.(`delete-datapack → ${response.status}`);
+        if (response.status === 404) return 'not-found';
+        await this.check(response, 'delete-datapack');
+        return 'deleted';
+    }
+
     private async post(route: string, body: Record<string, unknown>): Promise<Response> {
         const response = await this.fetchImpl(actionUrl(this.deps.baseUrl, route), {
             method: 'POST',

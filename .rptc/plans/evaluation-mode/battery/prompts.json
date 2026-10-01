@@ -1190,12 +1190,13 @@
     },
     {
         "id": "t2-datapack-zip-roundtrip",
-        "prompt": "Save the Data Installer's citisignal datapack, version main, as a file in this project. Tell me what is in the file, then load it into our datapack library.",
+        "prompt": "Save the Data Installer's citisignal datapack, version main, as a file in this project. Tell me what is in the file, load it into our datapack library, then delete it from the library again.",
         "expect": [
             "save_datapack_zip",
             "open_datapack_zip",
-            "load_datapack_zip"
+            "load_datapack_zip",
+            "delete_library_datapack"
         ],
-        "why": "Datapack files (owner, 2026-10-01: an optional export to zip from either store, import the same way). Neither store has a file form, so without these tools an agent pages every data type over curl and hand-builds a zip. Tier 2: it writes a local file and a private pack into the team library. Known gap: no tool deletes a library pack yet, so the journey cannot return to zero on its own."
+        "why": "Datapack files (owner, 2026-10-01: an optional export to zip from either store, import the same way). Neither store has a file form, so without these tools an agent pages every data type over curl and hand-builds a zip. Tier 2: it writes a local file and a private pack into the team library. The ask contains its own undo (delete_library_datapack), so the journey ends at zero."
     }
 ]

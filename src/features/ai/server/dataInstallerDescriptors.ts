@@ -332,4 +332,19 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
                 .describe('Data Installer only: must equal the pack name (open_datapack_zip reports it)'),
         },
     },
+    {
+        tool: 'delete_library_datapack',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            'Delete one of your own packs from the datapack library — the undo of ' +
+            "load_datapack_zip. Cannot be undone. The library only lets a pack's owner delete " +
+            "it; the Data Installer's shared catalog is never touched.",
+        map: importHandlers,
+        type: 'delete-library-datapack',
+        // Gated twice, as reset_datapack is: the row refuses before dispatch, and the
+        // same flag satisfies the handler's own confirm check.
+        confirm: true,
+        inputSchema: { ...DATAPACK_ID },
+    },
 ];

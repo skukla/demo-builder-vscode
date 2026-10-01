@@ -62,7 +62,8 @@ const EXPECTED: Record<string, number> = {
     // 50 -> 51 on 2026-09-28: add_erp deploys another ERP into a workspace of its own (AB-16).
     // 51 -> 53 on 2026-10-01: save_datapack_zip and load_datapack_zip read or write a
     // datapack store as the signed-in user, like the other datapack tools.
-    adobe: 53,
+    // 53 -> 54 the same day: delete_library_datapack, the undo of a library load.
+    adobe: 54,
     // 21 -> 23 on 2026-09-30 (hotfix beta.149 merged): get_content_access and
     // set_content_reader read and write the DA.live org permissions sheet (EDS-22).
     dalive: 23,
@@ -97,11 +98,12 @@ const EXPECTED: Record<string, number> = {
  * files. That counts text, not declarations, and was roughly double. The CONTROL below
  * caught it — which is the argument for having one.)
  */
-const EXPECTED_TOOLS = 149; // 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x); 144 with add_erp (AB-16).
+const EXPECTED_TOOLS = 150; // 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x); 144 with add_erp (AB-16).
 // 141 -> 142 on 2026-09-27: delete_undeclared_runtime_code.
 // 142 -> 143 on 2026-09-27: load_erp_demo_data.
 // 144 -> 146 on 2026-09-30: the content-access pair (EDS-22, hotfix beta.149 merged).
 // 146 -> 149 on 2026-10-01: save_datapack_zip, open_datapack_zip, load_datapack_zip.
+// 149 -> 150 the same day: delete_library_datapack.
 
 interface Declaration {
     name: string;

@@ -31,7 +31,20 @@ function withService(over: Record<string, unknown> = {}): void {
         if (type === 'load-datapack-zip') {
             return {
                 success: true,
-                data: { target: 'library', pack: 'created', stored: OPENED.dataTypes, failed: [] },
+                data: {
+                    datapackName: 'justrite',
+                    version: 'v1',
+                    target: 'library',
+                    pack: 'created',
+                    stored: OPENED.dataTypes,
+                    failed: [],
+                },
+            };
+        }
+        if (type === 'delete-library-datapack') {
+            return {
+                success: true,
+                data: { datapackName: 'justrite', version: 'v1', deleted: true },
             };
         }
         return { success: true, data: null };
@@ -92,7 +105,14 @@ it('into the Data Installer: warns it is shared, and sends the pack name back as
     withService({
         'load-datapack-zip': {
             success: true,
-            data: { target: 'installer', pack: 'created', stored: ['categories'], failed: [] },
+            data: {
+                datapackName: 'justrite',
+                version: 'v1',
+                target: 'installer',
+                pack: 'created',
+                stored: ['categories'],
+                failed: [],
+            },
         },
     });
     await openModal();
@@ -118,6 +138,8 @@ it('lists each refused type with its reason when only part of the file landed', 
         'load-datapack-zip': {
             success: true,
             data: {
+                datapackName: 'justrite',
+                version: 'v1',
                 target: 'library',
                 pack: 'created',
                 stored: ['categories'],
@@ -153,4 +175,43 @@ it('explains a file that cannot be opened, in the handler words', async () => {
 
     expect(screen.getByText('This zip is not a Demo Builder datapack file.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Load' })).not.toBeInTheDocument();
+});
+
+it('offers the undo after a load that created a library pack, and removes it on press', async () => {
+    await openModal();
+    await press(screen.getByRole('button', { name: 'Load' }));
+    await settle();
+
+    await press(screen.getByRole('button', { name: 'Remove it from the library' }));
+    await settle();
+
+    expect(mockRequest.mock.calls.find((c) => c[0] === 'delete-library-datapack')?.[1]).toEqual({
+        datapackName: 'justrite',
+        version: 'v1',
+        confirm: true,
+    });
+    expect(screen.getByText('Removed from the library.')).toBeInTheDocument();
+});
+
+it('does not offer the undo when the load updated a pack that was already there', async () => {
+    withService({
+        'load-datapack-zip': {
+            success: true,
+            data: {
+                datapackName: 'justrite',
+                version: 'v1',
+                target: 'library',
+                pack: 'updated',
+                stored: ['categories'],
+                failed: [],
+            },
+        },
+    });
+    await openModal();
+    await press(screen.getByRole('button', { name: 'Load' }));
+    await settle();
+
+    expect(
+        screen.queryByRole('button', { name: 'Remove it from the library' })
+    ).not.toBeInTheDocument();
 });

@@ -458,6 +458,8 @@ describe('rows with no output safety net are classified', () => {
         'save_datapack_zip',
         'open_datapack_zip',
         'load_datapack_zip',
+        // `{datapackName, version, deleted}` on success.
+        'delete_library_datapack',
     ];
 
     it('the set matches exactly — a new row must be classified before it ships', async () => {
@@ -501,6 +503,7 @@ describe('the ceiling table tracks the tool surface', () => {
         'save_datapack_zip',
         'open_datapack_zip',
         'load_datapack_zip',
+        'delete_library_datapack',
         'regenerate_ai_files',
         'start_demo',
         'stop_demo',

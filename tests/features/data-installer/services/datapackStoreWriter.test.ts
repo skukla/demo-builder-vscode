@@ -140,3 +140,40 @@ describe('addDataItem', () => {
         expect((error as DataInstallerApiError).status).toBe(404);
     });
 });
+
+describe('deleteDatapack', () => {
+    it('sends DELETE delete-datapack with the identity in the query, under the caller token', async () => {
+        const fetchImpl = jest.fn().mockResolvedValue(reply(200, { success: true }));
+
+        const result = await writer(fetchImpl).deleteDatapack({ name: 'justrite', version: 'v1' });
+
+        expect(result).toBe('deleted');
+        const [url, init] = fetchImpl.mock.calls[0] as [string, RequestInit];
+        expect(url).toBe(`${BASE}/delete-datapack?datapack_name=justrite&version=v1`);
+        expect(init.method).toBe('DELETE');
+        expect(init.headers).toEqual({ Authorization: 'Bearer sc-token' });
+        expect(init.body).toBeUndefined();
+    });
+
+    it('answers not-found on the store 404 — the library says the same for a pack the caller does not own', async () => {
+        const fetchImpl = jest
+            .fn()
+            .mockResolvedValue(reply(404, { success: false, error: 'not found' }));
+
+        await expect(writer(fetchImpl).deleteDatapack({ name: 'x', version: 'v1' })).resolves.toBe(
+            'not-found'
+        );
+    });
+
+    it('throws any other refusal with the store sentence', async () => {
+        const fetchImpl = jest
+            .fn()
+            .mockResolvedValue(
+                reply(500, { success: false, error: 'Could not delete the datapack.' })
+            );
+
+        await expect(
+            writer(fetchImpl).deleteDatapack({ name: 'x', version: 'v1' })
+        ).rejects.toThrow('Could not delete the datapack.');
+    });
+});

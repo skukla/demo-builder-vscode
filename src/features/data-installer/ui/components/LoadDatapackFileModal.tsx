@@ -24,6 +24,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import type { DatapackStoreName } from '../../types';
 import { dataTypeLabel } from '../dataTypeLabel';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
+import { UndoLibraryLoadButton } from './UndoLibraryLoadButton';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { Modal } from '@/core/ui/components/ui/Modal';
 
@@ -39,6 +40,8 @@ interface OpenedFile {
 
 /** What `load-datapack-zip` did. */
 interface LoadOutcome {
+    datapackName: string;
+    version: string;
     target: DatapackStoreName;
     pack: 'created' | 'updated';
     stored: string[];
@@ -202,11 +205,20 @@ function LoadResult({
     }
     const where = outcome?.target === 'installer' ? 'the Data Installer' : 'the datapack library';
     const total = (outcome?.stored.length ?? 0) + failed.length;
+    // Only an exact undo is offered: a pack this load CREATED in the library.
+    const undoable = outcome?.target === 'library' && outcome.pack === 'created';
     return (
-        <StatusDisplay
-            variant={failed.length === 0 ? 'success' : 'warning'}
-            title={`Loaded ${outcome?.stored.length ?? 0} of ${total} data types into ${where}`}
-            details={failed}
-        />
+        <>
+            <StatusDisplay
+                variant={failed.length === 0 ? 'success' : 'warning'}
+                title={`Loaded ${outcome?.stored.length ?? 0} of ${total} data types into ${where}`}
+                details={failed}
+            />
+            {undoable ? (
+                <UndoLibraryLoadButton
+                    id={{ name: outcome.datapackName, version: outcome.version }}
+                />
+            ) : null}
+        </>
     );
 }

@@ -124,15 +124,19 @@ A zip whose files sit under one root folder reads the same.
 | Save a pack from either store | "Save as file" in a pack's flyout, and after an export | `save_datapack_zip` |
 | See what a file holds, writing nothing | the first step of "Load from file" | `open_datapack_zip` |
 | Write it into a store | "Load from file", library by default | `load_datapack_zip` |
+| Undo a load into the library | "Remove it from the library", in the load result | `delete_library_datapack` |
 
 Loading puts a pack in a store; installing it into Commerce is still Import. Each data
 type is one `add-data-item` request, so a type too large for one request is refused by
 name and the others still land. An agent's paths must be inside the open project; the
 panel uses VS Code's own dialogs.
 
-**Not yet reversible from the extension:** nothing deletes a library pack, so a load
-into the library cannot be undone here. That is a reversibility gap, recorded rather
-than hidden.
+**Undo is library-only, by design.** `delete-library-datapack` deletes one of the
+caller's own library packs; the library refuses anyone else's as if it did not exist.
+The panel offers it only after a load that CREATED the pack, where it is an exact
+undo — after an update it would also remove what the pack held before. Deleting from
+the Data Installer stays unoffered, for the reasons under "What agents are not given".
+A load into the Data Installer therefore still cannot be undone from here.
 
 ## Conventions that bind this
 

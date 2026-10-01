@@ -338,6 +338,13 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: ['datapackName', 'version', 'commerceInstance'],
         sessionGrant: false,
     },
+    delete_library_datapack: {
+        action: 'Delete a library datapack',
+        consequence:
+            'Removes this pack and all its data from the datapack library. It cannot be brought back except by loading its file again.',
+        target: ['datapackName', 'version'],
+        sessionGrant: false,
+    },
     load_datapack_zip: {
         action: 'Load a datapack file into a store',
         consequence:

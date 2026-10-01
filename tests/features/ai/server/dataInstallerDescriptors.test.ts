@@ -24,8 +24,9 @@ import type { HandlerResponse } from '@/types/handlers';
 
 const row = (tool: string) => DATA_INSTALLER_DESCRIPTORS.find((d) => d.tool === tool);
 
-it('registers the eleven tools, and only those', () => {
+it('registers the twelve tools, and only those', () => {
     expect(DATA_INSTALLER_DESCRIPTORS.map((d) => d.tool).sort()).toEqual([
+        'delete_library_datapack',
         'get_datapack_import_status',
         'get_datapack_import_target',
         'list_datapack_export_items',
@@ -59,9 +60,10 @@ it('every row dispatches to a handler that actually exists', () => {
 
 describe('gates', () => {
     // Saving a file into the project is not gated: it changes no store and no instance.
-    it('gates exactly the four writes that reach a store or an instance', () => {
+    it('gates exactly the five writes that reach a store or an instance', () => {
         const gated = DATA_INSTALLER_DESCRIPTORS.filter((d) => d.confirm).map((d) => d.tool);
         expect(gated.sort()).toEqual([
+            'delete_library_datapack',
             'load_datapack_zip',
             'reset_datapack',
             'start_datapack_export',
@@ -184,7 +186,7 @@ describe('what each row declares', () => {
 
     // readOnly is what the write-gating machinery reads. The dry run is a read;
     // the three that touch a live instance or the shared catalog are not.
-    it('exposes six reads and five writes', () => {
+    it('exposes six reads and six writes', () => {
         const byFlag = (readOnly: boolean) =>
             DATA_INSTALLER_DESCRIPTORS.filter((d) => d.readOnly === readOnly)
                 .map((d) => d.tool)
@@ -199,6 +201,7 @@ describe('what each row declares', () => {
             'validate_datapack_import',
         ]);
         expect(byFlag(false)).toEqual([
+            'delete_library_datapack',
             'load_datapack_zip',
             'reset_datapack',
             'save_datapack_zip',
