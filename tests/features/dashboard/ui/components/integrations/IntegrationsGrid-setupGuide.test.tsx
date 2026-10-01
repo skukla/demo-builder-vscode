@@ -28,7 +28,7 @@ const STEPS: SetupChecklistItem[] = [
 
 function renderWithSteps() {
     const cards = cardsFor({ appBuilderComponents: twoDeployed() }).map((card) =>
-        card.id === 'other-app' ? { ...card, setupChecklist: STEPS } : card,
+        card.id === 'other-app' ? { ...card, setupChecklist: STEPS } : card
     );
     return renderCards(cards);
 }
@@ -43,13 +43,24 @@ describe('IntegrationsGrid setup guide', () => {
         renderWithSteps();
 
         // The card says there is setup left, in its badge and in what a screen reader hears.
-        expect(within(card('other-app', 'Deployed, Setup: 1 to do')).getByText('Setup: 1 to do')).toBeInTheDocument();
+        expect(
+            within(card('other-app', 'Deployed, Setup: 1 to do')).getByText('Setup: 1 to do')
+        ).toBeInTheDocument();
         const panel = await openPanel(user, 'other-app', 'Deployed, Setup: 1 to do');
         expect(within(panel).getByText('0 of 1 done')).toBeInTheDocument();
         await user.click(within(panel).getByRole('link', { name: 'Open setup guide' }));
 
         const guide = screen.getByRole('dialog', { name: /^Demo setup:/ });
-        expect(within(guide).getByText('Create the "Confirmed in ERP" order status')).toBeInTheDocument();
+        // The title appears twice by design — in the step list and as the shown step's heading.
+        expect(
+            within(guide).getByRole('heading', {
+                name: 'Create the "Confirmed in ERP" order status',
+            })
+        ).toBeInTheDocument();
+        expect(within(guide).getByRole('tab', { name: /Confirmed in ERP/ })).toHaveAttribute(
+            'aria-selected',
+            'true'
+        );
         expect(within(guide).getByText('Step 1 of 1')).toBeInTheDocument();
 
         await user.click(within(guide).getByRole('button', { name: 'Close' }));

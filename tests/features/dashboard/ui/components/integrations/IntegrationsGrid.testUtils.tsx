@@ -43,6 +43,12 @@ jest.mock('@adobe/react-spectrum', () => ({
     View: ({ children, ...props }: any) => <div {...props}>{children}</div>,
     // The progress modal's LoadingDisplay (PL-59).
     ProgressCircle: ({ 'aria-label': label }: any) => <div role="progressbar" aria-label={label} />,
+    // The setup guide's progress over its steps.
+    ProgressBar: ({ label, valueLabel, value }: any) => (
+        <div role="progressbar" aria-label={label} aria-valuenow={value}>
+            {valueLabel}
+        </div>
+    ),
     // Layout props are Spectrum's, not the DOM's: drop them rather than let React
     // warn about each one (the progress modal's LoadingDisplay passes several).
     Flex: ({
@@ -77,11 +83,22 @@ jest.mock('@adobe/react-spectrum', () => ({
         </span>
     ),
     Text: ({ children, UNSAFE_className, minHeight: _m, marginTop: _t, ...props }: any) => (
-        <span className={UNSAFE_className} {...props}>{children}</span>
+        <span className={UNSAFE_className} {...props}>
+            {children}
+        </span>
     ),
     // The Spectrum-only props are taken off the input; the error message renders as text,
     // as Spectrum shows it under an invalid field (the Add another ERP prompt).
-    TextField: ({ label, value, onChange, errorMessage, validationState, autoFocus: _af, width: _w, ...props }: any) => (
+    TextField: ({
+        label,
+        value,
+        onChange,
+        errorMessage,
+        validationState,
+        autoFocus: _af,
+        width: _w,
+        ...props
+    }: any) => (
         <>
             <input
                 aria-label={label}
@@ -166,7 +183,8 @@ jest.mock('@/features/dashboard/ui/components/IntegrationSettingsModal', () => (
     IntegrationSettingsModal: ({ target, onClose }: any) =>
         target ? (
             <div data-testid="settings-modal" data-component-id={target.id}>
-                settings: {target.name} ({target.settings.fields.map((f: any) => f.label).join(', ')})
+                settings: {target.name} (
+                {target.settings.fields.map((f: any) => f.label).join(', ')})
                 <button onClick={onClose}>close-settings</button>
             </div>
         ) : null,

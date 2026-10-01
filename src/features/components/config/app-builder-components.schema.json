@@ -168,6 +168,27 @@
               "title": { "type": "string", "minLength": 1 },
               "why": { "type": "string", "minLength": 1 },
               "where": { "type": "string", "minLength": 1 },
+              "path": {
+                "type": "array",
+                "description": "The Admin menu path, one segment per entry; the guide draws it as breadcrumbs.",
+                "items": { "type": "string", "minLength": 1 },
+                "minItems": 1
+              },
+              "enter": {
+                "type": "array",
+                "description": "The exact values the SC types or picks, each a copyable pill in the guide.",
+                "items": { "type": "string", "minLength": 1 },
+                "minItems": 1
+              },
+              "then": {
+                "type": "string",
+                "description": "What to do after the values are in, in one sentence.",
+                "minLength": 1
+              },
+              "icon": {
+                "type": "string",
+                "enum": ["status", "catalog", "price", "stock", "attributes", "hold", "credit"]
+              },
               "check": { "type": "string", "enum": ["companies-have-own-catalogs", "erp-source-in-website-stock", "erp-attributes-exist"] }
             }
           }

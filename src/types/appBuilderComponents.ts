@@ -85,7 +85,24 @@ export interface SystemListing {
     adapter: string;
 }
 
-/** One thing an SC prepares by hand for a demo (see `setupSteps`). */
+/** The picture a setup step carries in the guide; each names a Spectrum workflow icon. */
+export type SetupStepIcon =
+    | 'status'
+    | 'catalog'
+    | 'price'
+    | 'stock'
+    | 'attributes'
+    | 'hold'
+    | 'credit';
+
+/**
+ * One thing an SC prepares by hand for a demo (see `setupSteps`).
+ *
+ * `where` is the whole instruction in one sentence — what the MCP tool prints and what
+ * the guide falls back to. The structured fields (2026-10-01, owner: the guide read as
+ * "crowded and too verbose") let the guide draw the Admin path as breadcrumbs, the
+ * values to type as copyable pills and the follow-up as one line, with `why` folded away.
+ */
 export interface SetupStep {
     /** Stable key the project records the step's state under. */
     id: string;
@@ -95,6 +112,14 @@ export interface SetupStep {
     why: string;
     /** Where in Commerce Admin it is done, as the menu path. */
     where: string;
+    /** The Admin menu path, one segment per entry (`["Stores", "Settings", "Order Status"]`). */
+    path?: string[];
+    /** The exact values the SC types or picks, each shown as a copyable pill. */
+    enter?: string[];
+    /** What to do after the values are in, in one sentence. */
+    then?: string;
+    /** The step's picture in the guide. */
+    icon?: SetupStepIcon;
     /** A check Demo Builder can run; absent = the SC marks it done. */
     check?: SetupCheck;
 }
@@ -105,6 +130,11 @@ export interface SetupChecklistItem {
     title: string;
     why: string;
     where: string;
+    /** The structured form of `where`, when the catalog gives one (see `SetupStep`). */
+    path?: string[];
+    enter?: string[];
+    then?: string;
+    icon?: SetupStepIcon;
     state: 'open' | 'done' | 'dismissed';
     /** What the last check found, when one ran. */
     note?: string;

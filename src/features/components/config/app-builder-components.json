@@ -89,48 +89,125 @@
       "setupSteps": [
         {
           "id": "confirmed-status",
+          "icon": "status",
           "title": "Create the \"Confirmed in ERP\" order status",
           "why": "Without it, an order the ERP confirmed looks the same as one it never saw in the Orders grid.",
-          "where": "Stores > Settings > Order Status: create erp_confirmed, assign it to Pending (not as default), then pick it for \"Order status when the ERP confirms\" on the integration's Mapping tab."
+          "where": "Stores > Settings > Order Status: create erp_confirmed, assign it to Pending (not as default), then pick it for \"Order status when the ERP confirms\" on the integration's Mapping tab.",
+          "path": [
+            "Stores",
+            "Settings",
+            "Order Status"
+          ],
+          "enter": [
+            "erp_confirmed",
+            "Confirmed in ERP"
+          ],
+          "then": "Assign the status to the Pending state (not as its default), then pick it under \"Order status when the ERP confirms\" on the integration's Mapping tab."
         },
         {
           "id": "company-catalogs",
-          "title": "Give each company that gets its own prices a shared catalog of its own",
-          "why": "The company's own shared catalog is where the ERP's customer prices are published, so its buyers see them on the listing, the product page and the cart. Companies sharing a catalog would share its prices.",
+          "icon": "catalog",
+          "title": "Give each priced company its own shared catalog",
+          "why": "The ERP publishes a company's prices into that company's shared catalog; companies sharing one would share prices.",
           "where": "Catalog > Shared Catalogs > Add Shared Catalog, then Assign Companies.",
+          "path": [
+            "Catalog",
+            "Shared Catalogs",
+            "Add Shared Catalog"
+          ],
+          "then": "Assign the company to its catalog under Assign Companies.",
           "check": "companies-have-own-catalogs"
         },
         {
           "id": "price-scope-website",
+          "icon": "price",
           "title": "Set the catalog price scope to Website",
-          "why": "The ERP publishes a company's prices into its shared catalog per website, so a price or discount the ERP grants for one site lands on that site only. At Commerce's default scope, Global, a tier price's website is ignored and every site would show the same prices. No API sets this; it is a one-time Admin setting for the store.",
-          "where": "Stores > Configuration > Catalog > Catalog > Price > Catalog Price Scope: set to Website, Save Config. Catalog > Shared Catalogs > Set Pricing and Structure then shows a Website chooser above the prices."
+          "why": "The ERP publishes a company's prices per website; at the default scope, Global, every site would show the same prices. No API sets this.",
+          "where": "Stores > Configuration > Catalog > Catalog > Price > Catalog Price Scope: set to Website, Save Config. Catalog > Shared Catalogs > Set Pricing and Structure then shows a Website chooser above the prices.",
+          "path": [
+            "Stores",
+            "Configuration",
+            "Catalog",
+            "Catalog",
+            "Price",
+            "Catalog Price Scope"
+          ],
+          "enter": [
+            "Website"
+          ],
+          "then": "Save Config. Shared Catalogs > Set Pricing and Structure then shows a Website chooser above the prices."
         },
         {
           "id": "second-source",
-          "title": "Give the ERP a warehouse of its own, and a stock for the website that holds it",
-          "why": "The ERP keeps stock per warehouse, one for each Commerce source. Commerce's Default Stock can hold only the Default Source, so a website sells from the ERP's warehouse only through a stock of its own.",
+          "icon": "stock",
+          "title": "Give the ERP a warehouse of its own, and a stock that sells it",
+          "why": "The ERP keeps stock per Commerce source; the Default Stock can hold only the Default Source, so the website needs a stock of its own.",
           "where": "Stores > Inventory > Sources > Add New Source (for example Northwind Warehouse); Stores > Inventory > Stocks > Add New Stock with the website as its sales channel and the new source assigned; then move the website's products' quantities to the new source (Catalog > Products > Actions > Move stock between the ERP's warehouses) and save each product once, so the storefront's catalog reads the new stock.",
+          "path": [
+            "Stores",
+            "Inventory",
+            "Sources",
+            "Add New Source"
+          ],
+          "enter": [
+            "<erp> Warehouse"
+          ],
+          "then": "Under Inventory > Stocks, add a stock with the website as its sales channel and the new source assigned; move the website's products' quantities to that source and save each product once.",
           "check": "erp-source-in-website-stock"
         },
         {
           "id": "erp-attributes",
+          "icon": "attributes",
           "title": "Create the erp_owner and brand product attributes",
-          "why": "With several ERPs, each product goes to the ERP its erp_owner names (the ERP's list id: its name in lower case without the word ERP — Justrite ERP is justrite); brand is what buyers see and filter on.",
+          "why": "Each product goes to the ERP its erp_owner names (the ERP's list id: its name in lower case without the word ERP — Justrite ERP is justrite); brand is what buyers filter on.",
           "where": "Stores > Attributes > Product > Add New Attribute: erp_owner as a Text Field (a Dropdown sends a number, not the id) and brand; then Stores > Attributes > Attribute Set to add both to the set. Set both on the products you sell.",
+          "path": [
+            "Stores",
+            "Attributes",
+            "Product",
+            "Add New Attribute"
+          ],
+          "enter": [
+            "erp_owner",
+            "brand"
+          ],
+          "then": "erp_owner is a Text Field (a Dropdown sends a number, not the id). Add both to the products' attribute set, then set them on every product you sell.",
           "check": "erp-attributes-exist"
         },
         {
           "id": "partially-held-status",
+          "icon": "hold",
           "title": "Create the \"Partially Held\" order status",
-          "why": "When one ERP holds its part of an order and another carries on, the order says so; without the status the integration writes only a note.",
-          "where": "Stores > Settings > Order Status: create partially_held (label Partially Held), then assign it to Processing and to Pending (not as default, not visible on the storefront)."
+          "why": "When one ERP holds its part of an order and another carries on, the order says so; without it the integration writes only a note.",
+          "where": "Stores > Settings > Order Status: create partially_held (label Partially Held), then assign it to Processing and to Pending (not as default, not visible on the storefront).",
+          "path": [
+            "Stores",
+            "Settings",
+            "Order Status"
+          ],
+          "enter": [
+            "partially_held",
+            "Partially Held"
+          ],
+          "then": "Assign it to the Processing and Pending states — not as default, not visible on the storefront."
         },
         {
           "id": "payment-on-account",
+          "icon": "credit",
           "title": "Switch on Payment on Account for the website",
           "why": "Company buyers pay against the company's credit line, which the ERP credit story needs.",
-          "where": "Stores > Configuration > Sales > Payment Methods > Payment on Account, at the website's scope: untick Use Default beside Enabled, set Enabled to Yes, Save Config."
+          "where": "Stores > Configuration > Sales > Payment Methods > Payment on Account, at the website's scope: untick Use Default beside Enabled, set Enabled to Yes, Save Config.",
+          "path": [
+            "Stores",
+            "Configuration",
+            "Sales",
+            "Payment Methods",
+            "Payment on Account"
+          ],
+          "enter": [
+            "Enabled: Yes"
+          ],
+          "then": "At the website's scope, untick Use Default beside Enabled first, then Save Config."
         }
       ],
       "description": "Adobe Commerce and an ERP, on the Commerce integration starter kit: orders get an ERP number, price, stock and order-status changes in the ERP land in Commerce, contract prices apply in the cart, and a screen inside the Commerce Admin shows it all. Comes with its own ERP.",

@@ -1,27 +1,35 @@
 /**
- * The demo setup guide (AB-26x): an integration's setup checklist, one step at a time.
+ * The demo setup guide (AB-26x): an integration's setup checklist, with every step in view.
  *
- * The steps are Commerce Admin work, done in order, with the SC going back and forth to the
- * Admin between them, so each gets the whole window: what to do and why, where it lives,
- * a way to open Commerce Admin, "Check now" where Demo Builder can tell by itself, and
- * "Mark as done" or "Skip" where it cannot. The flyout keeps only the summary and the way in
- * (owner, 2026-09-27: the full list in the flyout read badly).
+ * The steps are Commerce Admin work the SC does in order, going back and forth to the Admin
+ * between them. The guide shows the whole list down the left — each step with its state, so
+ * progress and what is left are visible at once and any step is one click away — and the
+ * chosen step on the right, answering three questions in three labelled lines: WHERE in the
+ * Admin (the menu path as breadcrumbs), what to ENTER (each value a copyable pill), and what
+ * to do THEN. The reason it matters folds away under "Why this matters". The actions are
+ * buttons: open the Admin, mark done or check, skip. How a step is drawn lives in
+ * `SetupGuideStep.tsx`; this file owns which step is shown and the dialog around it.
+ *
+ * It read as "crowded and too verbose and thus hard to follow" when every step was three
+ * paragraphs behind Back/Next with four quiet links (owner, 2026-10-01). The flyout keeps
+ * only the summary and the way in (owner, 2026-09-27: the full list in the flyout read
+ * badly).
  *
  * Built on the house `Modal` (inside the `DialogContainer` it expects, as the Settings modal
- * is), `SteadyHeight` (steps differ in length) and `StatusDot`; the step's requests are the existing `useSetupChecklist`. The steps
- * come from the card model, which the extension's snapshot push redraws after each change,
- * so the modal is handed the CURRENT model on every render rather than keeping a copy.
+ * is) and `SteadyHeight`; the step's requests are the existing `useSetupChecklist`. The
+ * steps come from the card model, which the extension's snapshot push redraws after each
+ * change, so the modal is handed the CURRENT model on every render rather than keeping a copy.
  *
  * @module features/dashboard/ui/components/integrations/SetupGuideModal
  */
 
-import { DialogContainer, Heading, Link, Text } from '@adobe/react-spectrum';
+import { DialogContainer, ProgressBar } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useState } from 'react';
 import type { IntegrationCardModel } from './integrationCardModel';
+import { SetupGuideStep, StepList } from './SetupGuideStep';
 import { useSetupChecklist } from './useSetupChecklist';
 import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
 import { Modal } from '@/core/ui/components/ui/Modal';
-import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 
@@ -33,60 +41,24 @@ export interface SetupGuideModalProps {
     onOpenAdmin: () => void;
 }
 
-const DOT = { open: 'warning', done: 'success', dismissed: 'neutral' } as const;
-const WORD = { open: 'To do', done: 'Done', dismissed: 'Skipped' } as const;
-
 /** Where the guide opens: the first step still to do, else the first. */
 function firstOpen(items: SetupChecklistItem[]): number {
     const index = items.findIndex((item) => item.state === 'open');
     return index === -1 ? 0 : index;
 }
 
-interface StepProps {
-    item: SetupChecklistItem;
-    position: string;
-    busy: boolean;
-    onSet: (state: 'done' | 'dismissed' | 'open') => void;
-    onCheck: () => void;
-    onOpenAdmin: () => void;
-}
-
-/** One step: its state, what and why, where, and what can be done about it. */
-function GuideStep({ item, position, busy, onSet, onCheck, onOpenAdmin }: StepProps): React.ReactElement {
-    return (
-        <div className="setup-guide-step" data-testid="setup-guide-step">
-            <span className="integration-statusline">
-                <span className="integration-panel-row-prefix">{position}</span>
-                <StatusDot variant={DOT[item.state]} size={6} />
-                <span>{WORD[item.state]}</span>
-            </span>
-            <Heading level={3}>{item.title}</Heading>
-            <Text>{item.why}</Text>
-            <span className="setup-guide-where">
-                <span className="integration-panel-row-prefix">Where in Commerce</span>
-                <span>{item.where}</span>
-            </span>
-            {item.note && <Text>{item.note}</Text>}
-            <span className="setup-guide-actions">
-                <Link isQuiet onPress={onOpenAdmin}>Open Commerce Admin</Link>
-                {item.checkable && item.state !== 'dismissed' && (
-                    <Link isQuiet onPress={() => !busy && onCheck()}>{busy ? 'Checking' : 'Check now'}</Link>
-                )}
-                {item.state === 'open' ? (
-                    <>
-                        <Link isQuiet onPress={() => !busy && onSet('done')}>Mark as done</Link>
-                        <Link isQuiet onPress={() => !busy && onSet('dismissed')}>Skip</Link>
-                    </>
-                ) : (
-                    <Link isQuiet onPress={() => !busy && onSet('open')}>Reopen</Link>
-                )}
-            </span>
-        </div>
-    );
+/** The progress line: done out of everything the SC has not skipped. */
+function progressOf(items: SetupChecklistItem[]): { done: number; total: number } {
+    const counted = items.filter((item) => item.state !== 'dismissed');
+    return { done: counted.filter((item) => item.state === 'done').length, total: counted.length };
 }
 
 /** The guide's body for one integration; mounted only while its guide is open. */
-function Guide({ model, onClose, onOpenAdmin }: SetupGuideModalProps & { model: IntegrationCardModel }): React.ReactElement {
+function Guide({
+    model,
+    onClose,
+    onOpenAdmin,
+}: SetupGuideModalProps & { model: IntegrationCardModel }): React.ReactElement {
     const items = model.setupChecklist ?? [];
     const actions = useSetupChecklist(model.id);
     const [index, setIndex] = useState(() => firstOpen(items));
@@ -97,35 +69,53 @@ function Guide({ model, onClose, onOpenAdmin }: SetupGuideModalProps & { model: 
     }, [index, items.length]);
 
     const item = items[Math.min(index, items.length - 1)];
+    const progress = progressOf(items);
     // The last step closes the guide; every other one moves on.
-    const forward = index >= items.length - 1
-        ? { label: 'Done', onPress: onClose }
-        : { label: 'Next', onPress: () => setIndex(index + 1) };
+    const forward =
+        index >= items.length - 1
+            ? { label: 'Done', onPress: onClose }
+            : { label: 'Next', onPress: () => setIndex(index + 1) };
     return (
         <Modal
             title={`Demo setup: ${model.name}`}
-            size="M"
+            size="L"
+            wide
             onClose={onClose}
             actionButtons={[
-                { label: 'Back', variant: 'secondary', onPress: () => setIndex(index - 1), isDisabled: index === 0 },
+                {
+                    label: 'Back',
+                    variant: 'secondary',
+                    onPress: () => setIndex(index - 1),
+                    isDisabled: index === 0,
+                },
                 { ...forward, variant: 'accent' },
             ]}
         >
-            {/* Steps differ in length; the dialog holds its tallest height rather than
-                jumping as the SC pages through them. */}
-            <SteadyHeight>
-                {item && (
-                    <GuideStep
-                    item={item}
-                    position={`Step ${index + 1} of ${items.length}`}
-                    busy={actions.busy}
-                    onSet={(state) => actions.setStep(item.id, state)}
-                    onCheck={actions.check}
-                    onOpenAdmin={onOpenAdmin}
-                    />
-                )}
-                {actions.error && <span role="alert">{actions.error}</span>}
-            </SteadyHeight>
+            <ProgressBar
+                label="Set up in Commerce"
+                valueLabel={`${progress.done} of ${progress.total} done`}
+                value={progress.total === 0 ? 0 : (progress.done / progress.total) * 100}
+                width="100%"
+                UNSAFE_className="setup-guide-progress"
+            />
+            <div className="setup-guide-layout">
+                <StepList items={items} index={index} onSelect={setIndex} />
+                {/* Steps differ in length; the pane holds its tallest height rather than
+                    jumping as the SC moves between them. */}
+                <SteadyHeight>
+                    {item && (
+                        <SetupGuideStep
+                            item={item}
+                            position={`Step ${index + 1} of ${items.length}`}
+                            busy={actions.busy}
+                            onSet={(state) => actions.setStep(item.id, state)}
+                            onCheck={actions.check}
+                            onOpenAdmin={onOpenAdmin}
+                        />
+                    )}
+                    {actions.error && <span role="alert">{actions.error}</span>}
+                </SteadyHeight>
+            </div>
         </Modal>
     );
 }
@@ -136,7 +126,11 @@ function Guide({ model, onClose, onOpenAdmin }: SetupGuideModalProps & { model: 
  * @param props - the integration (or null), and the close and open-admin actions
  * @returns the dialog
  */
-export function SetupGuideModal({ model, onClose, onOpenAdmin }: SetupGuideModalProps): React.ReactElement {
+export function SetupGuideModal({
+    model,
+    onClose,
+    onOpenAdmin,
+}: SetupGuideModalProps): React.ReactElement {
     // Nothing mounted while closed, not an empty DialogContainer: the screen hosts this
     // beside its own dialogs, and a container with no child still occupies the dialog
     // slot (the OperationProgressModal rule, 2026-09-19).
@@ -167,7 +161,11 @@ export function useSetupGuide(cards: IntegrationCardModel[]): SetupGuideControls
     const openAdmin = useCallback(() => webviewClient.postMessage('openAdminPanel', {}), []);
     return {
         open: setCardId,
-        modal: { model: cards.find((card) => card.id === cardId) ?? null, onClose: close, onOpenAdmin: openAdmin },
+        modal: {
+            model: cards.find((card) => card.id === cardId) ?? null,
+            onClose: close,
+            onOpenAdmin: openAdmin,
+        },
     };
 }
 
