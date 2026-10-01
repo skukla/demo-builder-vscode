@@ -4,7 +4,7 @@ kind: feature
 area: data-installer
 needs: []
 value: med
-status: backlog
+status: active
 layer: F
 ---
 # Datapack authoring loop — export, modify, publish-your-own via project skills
@@ -179,3 +179,8 @@ Step 2 fails today (gap 1). Steps 1 and 3 work now.
 > `verbose: 'full'` against a disposable scope and check. If export works,
 > settle gap 2 (own-version semantics) with one call, then design the
 > orchestration skill per gap 3 using the Bodea acceptance test as the spec.
+
+## Shipped so far
+
+- 2026-10-01  feat(data-installer): save a datapack as a zip file, and load one into a store (`08ec30412`)
+- 2026-10-01  test(data-installer): the datapack store's live answers parse with the Data Installer parsers (`1599c8ac6`)
