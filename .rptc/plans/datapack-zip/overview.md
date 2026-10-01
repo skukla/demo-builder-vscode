@@ -69,6 +69,11 @@ than a Runtime request allows is refused per type, by name, and the rest still l
   delete the caller's own library pack; the panel offers it after a load that created one.
   A load into the Data Installer still cannot be undone from the extension: deleting there
   stays unoffered because that catalog has no ownership check.
+- **A library pack can be installed (owner, 2026-10-01: "Do Step 5").** "Copy to the Data
+  Installer" in its flyout, or `copy_library_datapack_to_installer`, reads the whole pack from
+  the library and writes it into the Data Installer with the load's guards; Import follows in
+  the same flyout. This is datapack-store step 05 (that plan lives on the ERP branch). The
+  copy into the shared catalog cannot be undone from the extension.
 - **The library is in the panel's catalog (owner, 2026-10-01: "do that next").** Both stores
   in one grid, tagged Library / Yours; a library pack's flyout offers Save as file and Remove
   (yours only), no Import. The library now answers `mine` on each pack. This is the catalog

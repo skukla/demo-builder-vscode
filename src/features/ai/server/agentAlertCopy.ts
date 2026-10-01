@@ -338,6 +338,13 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: ['datapackName', 'version', 'commerceInstance'],
         sessionGrant: false,
     },
+    copy_library_datapack_to_installer: {
+        action: 'Copy a library datapack into the Data Installer',
+        consequence:
+            "Adds this pack to the Data Installer's shared catalogue so it can be installed. Other teams will see it, and the extension cannot remove it again.",
+        target: ['datapackName', 'version'],
+        sessionGrant: false,
+    },
     delete_library_datapack: {
         action: 'Delete a library datapack',
         consequence:

@@ -347,4 +347,24 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         confirm: true,
         inputSchema: { ...DATAPACK_ID },
     },
+    {
+        tool: 'copy_library_datapack_to_installer',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            'Make a datapack library pack installable: copy it into the Data Installer, then ' +
+            'install it with start_datapack_import. **Writes into the SHARED catalog** — needs ' +
+            'confirm:true and confirmName equal to the pack name, never overwrites an existing ' +
+            'pack, and cannot be undone from the extension.',
+        map: importHandlers,
+        type: 'copy-library-datapack-to-installer',
+        confirm: true,
+        inputSchema: {
+            ...DATAPACK_ID,
+            confirmName: z
+                .string()
+                .optional()
+                .describe('Must equal datapackName — guards a write to the shared catalog'),
+        },
+    },
 ];

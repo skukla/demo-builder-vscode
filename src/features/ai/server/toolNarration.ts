@@ -238,6 +238,7 @@ export const TOOL_NARRATION: Record<string, string> = {
     open_datapack_zip: 'Reading the datapack file',
     load_datapack_zip: 'Loading a datapack file',
     delete_library_datapack: 'Deleting a library datapack',
+    copy_library_datapack_to_installer: 'Copying a pack to the installer',
 
     // ── Environment and session ─────────────────────────────────────────
     install_prerequisite: 'Installing the required tool',
@@ -307,6 +308,7 @@ const NAMED_NARRATION: Readonly<
     start_datapack_import: naming(['datapackName'], (name) => `Importing ${name}`),
     start_datapack_export: naming(['datapackName'], (name) => `Exporting ${name}`),
     delete_library_datapack: naming(['datapackName'], (name) => `Deleting ${name}`),
+    copy_library_datapack_to_installer: naming(['datapackName'], (name) => `Copying ${name}`),
     remove_block_from_library: naming(['blockId'], (block) => `Removing the ${block} block`),
     set_site_admin: naming(['email'], (email) => `Changing ${email}'s access`),
 };

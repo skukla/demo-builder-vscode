@@ -360,29 +360,39 @@ describe('DatapackDetailPanel', () => {
 describe('DatapackDetailPanel — a library pack', () => {
     const LIBRARY = makeDetail({ store: 'library', shared: false });
 
-    it('offers no Import, says how a library pack gets installed, and saves from the library', () => {
+    it('offers Copy to the Data Installer instead of Import, warns it is shared, and saves from the library', () => {
         renderPanel({ detail: LIBRARY });
 
         expect(screen.queryByRole('button', { name: 'Import' })).not.toBeInTheDocument();
-        expect(screen.getByText(/save it as a file and load that file into the Data Installer/)).toBeInTheDocument();
+        expect(
+            screen.getByRole('button', { name: 'Copy to the Data Installer' })
+        ).toBeInTheDocument();
+        expect(
+            screen.getByText(/Other teams will see bodea in the Data Installer/)
+        ).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Save as file' })).toBeInTheDocument();
         expect(screen.getByText('Library, only you')).toBeInTheDocument();
     });
 
     it('offers Remove only when the pack is the SC own', () => {
         const { unmount } = renderPanel({ detail: LIBRARY });
-        expect(screen.queryByRole('button', { name: 'Remove it from the library' })).not.toBeInTheDocument();
+        expect(
+            screen.queryByRole('button', { name: 'Remove it from the library' })
+        ).not.toBeInTheDocument();
         unmount();
 
         renderPanel({ detail: { ...LIBRARY, mine: true } });
-        expect(screen.getByRole('button', { name: 'Remove it from the library' })).toBeInTheDocument();
+        expect(
+            screen.getByRole('button', { name: 'Remove it from the library' })
+        ).toBeInTheDocument();
     });
 
     it('a Data Installer pack keeps Import and never offers Remove — the control', () => {
         renderPanel({ detail: makeDetail({ mine: true }) });
 
         expect(screen.getByRole('button', { name: 'Import' })).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Remove it from the library' })).not.toBeInTheDocument();
+        expect(
+            screen.queryByRole('button', { name: 'Remove it from the library' })
+        ).not.toBeInTheDocument();
     });
 });
-

@@ -1198,5 +1198,13 @@
             "delete_library_datapack"
         ],
         "why": "Datapack files (owner, 2026-10-01: an optional export to zip from either store, import the same way). Neither store has a file form, so without these tools an agent pages every data type over curl and hand-builds a zip. Tier 2: it writes a local file and a private pack into the team library. The ask contains its own undo (delete_library_datapack), so the journey ends at zero."
+    },
+    {
+        "id": "t3-copy-library-pack-to-installer",
+        "prompt": "Our datapack library has my justrite pack, version v1. Make it installable by copying it into the Data Installer.",
+        "expect": [
+            "copy_library_datapack_to_installer"
+        ],
+        "why": "Datapack store step 05 (owner, 2026-10-01): install runs through the Data Installer, so a library pack is copied there first. Tier 3: it writes into the catalog other teams share and the extension cannot remove it again, so it never runs unattended; represented by datapackLibraryHandlers.test and the consent gate. Listed so the tool is judged, not grandfathered."
     }
 ]

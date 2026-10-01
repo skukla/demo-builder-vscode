@@ -5,15 +5,14 @@
  * Import should follow the same approach"), so the file is built and read here and
  * works the same for the Data Installer and the datapack library.
  *
- * Four message types:
+ * Three message types:
  * - `save-datapack-zip` — read a pack from `source`, write the file.
  * - `open-datapack-zip` — read a file and say what is in it. Writes nothing; it is
  *   how the SC sees name, version and types before choosing where it goes.
  * - `load-datapack-zip` — write the file's pack into `target`.
- * - `delete-library-datapack` — the undo of a load: remove one of the caller's own
- *   packs from the datapack library. Library only, by construction: the library lets
- *   only a pack's owner delete it, and the Data Installer has no such check, so
- *   deleting there is not offered anywhere in the extension.
+ *
+ * Removing a library pack (the undo of a load) and copying one into the Data
+ * Installer act on packs, not files: `datapackLibraryHandlers.ts`.
  *
  * Where files go, by surface (the demo bundle export's rule): from the panel, VS
  * Code's own save/open dialogs; from an agent, a path that must resolve inside the
@@ -70,13 +69,6 @@ export interface OpenDatapackZipPayload {
     path?: string;
 }
 
-export interface DeleteLibraryDatapackPayload {
-    datapackName?: string;
-    version?: string;
-    /** Must be true. Nothing is deleted by default. */
-    confirm?: boolean;
-}
-
 export interface LoadDatapackZipPayload {
     path?: string;
     target?: DatapackStoreName;
@@ -86,9 +78,9 @@ export interface LoadDatapackZipPayload {
     confirmName?: string;
 }
 
-/** The Data Installer's catalog is shared: a load into it names the pack back first. */
+/** The Data Installer's catalog is shared: any write into it names the pack back first. */
 export function installerEchoRefusal(name: string): string {
-    return `Loading into the Data Installer writes "${name}" into the catalog other teams share. To proceed, send confirmName:"${name}".`;
+    return `This writes "${name}" into the Data Installer's catalog, which other teams share. To proceed, send confirmName:"${name}".`;
 }
 
 function storeLabel(store: DatapackStoreName): string {
@@ -99,7 +91,11 @@ function storeLabel(store: DatapackStoreName): string {
  * A refusal this feature explains carries its own sentence (or the store's); anything
  * else is logged in full and the person reads the fallback, never a library's words.
  */
-function failure(context: HandlerContext, error: unknown, fallback: string): HandlerResponse {
+export function failure(
+    context: HandlerContext,
+    error: unknown,
+    fallback: string,
+): HandlerResponse {
     const known =
         error instanceof DatapackZipError ||
         error instanceof DatapackTransferError ||
@@ -280,52 +276,6 @@ export const datapackZipHandlers = defineHandlers({
             };
         } catch (error) {
             return failure(context, error, 'The datapack file could not be loaded.');
-        }
-    },
-
-    'delete-library-datapack': async (
-        context: HandlerContext,
-        payload?: DeleteLibraryDatapackPayload,
-    ): Promise<HandlerResponse> => {
-        if (!payload?.datapackName || !payload.version) {
-            return {
-                success: false,
-                error: 'Name the library datapack and its version to delete.',
-            };
-        }
-        if (payload.confirm !== true) {
-            return {
-                success: false,
-                error: 'Deleting a library datapack cannot be undone. Send confirm:true to proceed.',
-                code: ErrorCode.INVALID_OPERATION,
-            };
-        }
-        const id = { name: payload.datapackName, version: payload.version };
-        const access = await resolveDataInstallerAccess(context, 'library');
-        if (!access.ok) return access.response;
-        try {
-            const writer = new DatapackStoreWriter({
-                baseUrl: access.baseUrl,
-                getToken: access.getToken,
-                log: (line) => context.debugLogger.debug(`${LOG_PREFIX} ${line}`),
-            });
-            const result = await writer.deleteDatapack(id);
-            if (result === 'not-found') {
-                return {
-                    success: false,
-                    error: `The datapack library has no pack of yours named ${id.name}@${id.version}.`,
-                    code: ErrorCode.INVALID_OPERATION,
-                };
-            }
-            context.logger.info(
-                `${LOG_PREFIX} Deleted ${id.name}@${id.version} from the datapack library`,
-            );
-            return {
-                success: true,
-                data: { datapackName: id.name, version: id.version, deleted: true },
-            };
-        } catch (error) {
-            return failure(context, error, 'The library datapack could not be deleted.');
         }
     },
 });

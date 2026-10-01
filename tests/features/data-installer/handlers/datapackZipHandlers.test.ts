@@ -91,12 +91,7 @@ beforeEach(() => {
 });
 
 it("is reachable through the panel's one handler map", () => {
-    for (const type of [
-        'save-datapack-zip',
-        'open-datapack-zip',
-        'load-datapack-zip',
-        'delete-library-datapack',
-    ]) {
+    for (const type of ['save-datapack-zip', 'open-datapack-zip', 'load-datapack-zip']) {
         expect(importHandlers).toHaveProperty([type]);
     }
 });
@@ -359,72 +354,5 @@ describe('load-datapack-zip', () => {
             success: true,
             data: { target: 'installer', pack: 'created' },
         });
-    });
-});
-
-describe('delete-library-datapack', () => {
-    const remove = datapackZipHandlers['delete-library-datapack'];
-
-    it('deletes the caller pack from the LIBRARY, never asking for any other store', async () => {
-        fetchMock.mockResolvedValue({
-            ok: true,
-            status: 200,
-            text: async () => '{"success":true}',
-        });
-
-        const result = await remove(contextFor(null, false), {
-            datapackName: 'justrite',
-            version: 'v1',
-            confirm: true,
-        });
-
-        expect(mockAccess).toHaveBeenCalledWith(expect.anything(), 'library');
-        const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-        expect(url).toBe(`${STORE}/delete-datapack?datapack_name=justrite&version=v1`);
-        expect(init.method).toBe('DELETE');
-        expect(result).toEqual({
-            success: true,
-            data: { datapackName: 'justrite', version: 'v1', deleted: true },
-        });
-    });
-
-    it('refuses without confirm:true, before calling anything', async () => {
-        const result = await remove(contextFor(null, false), {
-            datapackName: 'justrite',
-            version: 'v1',
-        });
-
-        expect(result).toMatchObject({
-            success: false,
-            error: expect.stringContaining('confirm:true'),
-        });
-        expect(mockAccess).not.toHaveBeenCalled();
-        expect(fetchMock).not.toHaveBeenCalled();
-    });
-
-    it('says plainly when the library holds no pack of the caller by that name', async () => {
-        fetchMock.mockResolvedValue({
-            ok: false,
-            status: 404,
-            text: async () => '{"success":false}',
-        });
-
-        const result = await remove(contextFor(null, false), {
-            datapackName: 'theirs',
-            version: 'v1',
-            confirm: true,
-        });
-
-        expect(result).toMatchObject({
-            success: false,
-            error: 'The datapack library has no pack of yours named theirs@v1.',
-        });
-    });
-
-    it('refuses without a name and version', async () => {
-        expect(await remove(contextFor(null, false), { confirm: true })).toMatchObject({
-            success: false,
-        });
-        expect(fetchMock).not.toHaveBeenCalled();
     });
 });

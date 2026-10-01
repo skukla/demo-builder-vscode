@@ -40,6 +40,7 @@ import { resolveInstallTarget } from '../services/sampleDataInstall';
 import { downloadWorkspaceConfigJson } from '../services/workspaceConfigDownload';
 import { IMPORT_PROGRESS_MESSAGE, type ImportJobRecord } from '../types';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
+import { datapackLibraryHandlers } from './datapackLibraryHandlers';
 import { datapackZipHandlers } from './datapackZipHandlers';
 import { exportHandlers } from './exportHandlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
@@ -108,6 +109,8 @@ export const importHandlers = defineHandlers({
     ...exportHandlers,
     // Datapack files (save a pack to a zip, load one back), same reason.
     ...datapackZipHandlers,
+    // Library pack actions: remove your own, copy one into the Data Installer.
+    ...datapackLibraryHandlers,
     'start-datapack-import': async (
         context: HandlerContext,
         payload?: StartImportPayload,

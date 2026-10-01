@@ -114,8 +114,13 @@ AND name, so a library pack never folds into a Data Installer pack of the same n
 A library card is tagged "Library", or "Yours" when the SC owns it — the library says
 so itself (`mine`), because only it knows the caller's verified email.
 
-A library pack's flyout offers Save as file and, when it is yours, Remove; it has no
-Import, because installing runs through the Data Installer, which does not hold it.
+A library pack's flyout offers Copy to the Data Installer, Save as file and, when it is
+yours, Remove. Installing runs through the Data Installer, which does not hold library
+packs, so the copy comes first (`copy-library-datapack-to-installer` /
+`copy_library_datapack_to_installer`); once every data type has landed, the same flyout
+offers Import. The copy writes into the shared catalog, so it carries the load's guards
+— the pack name sent back, an existing pack never overwritten — and it cannot be undone
+from the extension.
 If the library cannot be reached, the Data Installer's packs still show, with a line
 saying why the library's are missing. Agents get the same through `find_datapacks`
 (`store`, `includeLibrary`) and `get_datapack` (`store`).
@@ -138,6 +143,7 @@ A zip whose files sit under one root folder reads the same.
 |---|---|---|
 | Save a pack from either store | "Save as file" in a pack's flyout, and after an export | `save_datapack_zip` |
 | Remove your own library pack | "Remove it from the library" in its flyout | `delete_library_datapack` |
+| Make a library pack installable | "Copy to the Data Installer" in its flyout, then Import | `copy_library_datapack_to_installer` |
 | See what a file holds, writing nothing | the first step of "Load from file" | `open_datapack_zip` |
 | Write it into a store | "Load from file", library by default | `load_datapack_zip` |
 | Undo a load into the library | "Remove it from the library", in the load result | `delete_library_datapack` |

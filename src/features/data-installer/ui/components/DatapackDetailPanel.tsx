@@ -33,6 +33,7 @@ import type { DataItemInventory, DatapackDetail, DatapackId } from '../../types'
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
 import { dataTypeLabel } from '../dataTypeLabel';
 import type { DataInstallerFailure } from '../hooks/useDataInstallerRequest';
+import { CopyToInstallerButton } from './CopyToInstallerButton';
 import { RemoveFromLibraryButton } from './RemoveFromLibraryButton';
 import { SaveDatapackFileButton } from './SaveDatapackFileButton';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
@@ -138,9 +139,9 @@ function canImport(args: {
 /**
  * The flyout's actions, by store.
  *
- * A Data Installer pack: Import and Save as file. A library pack: Save as file, and
- * Remove when it is the SC's own. A library pack has no Import because installing
- * runs through the Data Installer, which does not hold it; the note says how.
+ * A Data Installer pack: Import and Save as file. A library pack: Copy to the Data
+ * Installer (installing runs there, and it does not hold library packs — Import is
+ * offered once the copy lands), Save as file, and Remove when it is the SC's own.
  */
 function PanelActions({
     detail,
@@ -163,10 +164,7 @@ function PanelActions({
     }
     return (
         <>
-            <p className="datapack-export-note">
-                This pack is in the datapack library. To install it, save it as a file and
-                load that file into the Data Installer.
-            </p>
+            <CopyToInstallerButton id={detail.id} onImport={onImport} />
             <div className="db-drawer-actions">
                 <SaveDatapackFileButton id={detail.id} source="library" />
                 {detail.mine ? (
