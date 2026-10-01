@@ -32,7 +32,6 @@ const MODEL: IntegrationCardModel = {
     menuActions: [],
     canRename: false,
     linked: {
-        label: 'Used by',
         cards: [
             {
                 id: 'erp-integration',
@@ -51,7 +50,7 @@ function mount(node: React.ReactElement) {
 
 describe('linked cards against real Spectrum', () => {
     // A deployed link is its name alone: the dot already says deployed (owner, 2026-10-01).
-    it('the Used by row mounts, and its link is one child', () => {
+    it('the Connected to row mounts, and its link is one child', () => {
         mount(<LinkedSection model={MODEL} onOpenLinked={jest.fn()} />);
 
         expect(screen.getByText('ERP integration')).toBeInTheDocument();
@@ -67,7 +66,7 @@ describe('linked cards against real Spectrum', () => {
         };
         mount(
             <LinkedSection
-                model={{ ...MODEL, linked: { label: 'Used by', cards: [failed] } }}
+                model={{ ...MODEL, linked: { cards: [failed] } }}
                 onOpenLinked={jest.fn()}
             />
         );
@@ -79,7 +78,7 @@ describe('linked cards against real Spectrum', () => {
         mount(<IntegrationCard model={MODEL} onAction={jest.fn()} onRename={jest.fn()} />);
 
         expect(screen.getByText('ERP')).toBeInTheDocument();
-        expect(screen.getByTitle('Used by ERP integration')).toBeInTheDocument();
+        expect(screen.getByTitle('Connected to ERP integration')).toBeInTheDocument();
     });
 
     it('renders no row for a card that stands alone', () => {

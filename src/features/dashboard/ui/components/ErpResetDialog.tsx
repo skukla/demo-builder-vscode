@@ -1,5 +1,6 @@
 /**
- * The confirm in front of "Reset ERP records" (plan step 05, decision 8).
+ * The confirm in front of "Reset ERPs" (plan step 05, decision 8). Offered on the
+ * integration's card, since a reset always covers every ERP it serves.
  *
  * Through {@link ConfirmActionDialog}: one negative action, Close does
  * nothing. The words
@@ -16,8 +17,8 @@ import { ConfirmActionDialog } from './ConfirmActionDialog';
 
 export interface ErpResetDialogProps {
     isOpen: boolean;
-    /** The ERP's display name — what the SC called it. */
-    erpName: string;
+    /** Every ERP the reset covers, by the names the SC gave them. */
+    erpNames: string[];
     onConfirm: () => void;
     onClose: () => void;
 }
@@ -28,18 +29,19 @@ export interface ErpResetDialogProps {
  * @param props - open state, the ERP's name, and the two callbacks
  * @returns the dialog container
  */
-export function ErpResetDialog({ isOpen, erpName, onConfirm, onClose }: ErpResetDialogProps): React.ReactElement {
+export function ErpResetDialog({ isOpen, erpNames, onConfirm, onClose }: ErpResetDialogProps): React.ReactElement {
+    const which = erpNames.length > 0 ? erpNames.join(' and ') : 'every ERP this integration serves';
     return (
         <ConfirmActionDialog
             isOpen={isOpen}
-            title="Reset ERP records"
+            title="Reset ERPs"
             actionLabel="Reset"
             onConfirm={onConfirm}
             onClose={onClose}
         >
             <Text>
-                Resets every ERP this integration serves, {erpName} included: wipes their records and
-                fills them from Commerce again, as Commerce stands now.
+                Resets {which}: wipes their records and fills them from Commerce again, as Commerce
+                stands now.
             </Text>
             <Text>
                 Every open order the ERPs hold is cancelled; an order already invoiced or shipped keeps

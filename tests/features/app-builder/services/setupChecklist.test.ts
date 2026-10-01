@@ -63,7 +63,7 @@ describe('setupSummary', () => {
     });
 
     it('counts done out of the steps not dismissed', () => {
-        expect(setupSummary([item('done'), item('open'), item('dismissed')])).toBe('1 to do');
+        expect(setupSummary([item('done'), item('open'), item('dismissed')])).toBe('1 of 2 done');
     });
 
     it('says all done when nothing is open', () => {

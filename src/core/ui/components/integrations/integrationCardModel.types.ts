@@ -55,11 +55,6 @@ export type CardAction =
 /** Everything a card face, drawer body, and drawer action bar render. */
 export interface IntegrationCardModel {
     id: string;
-    /**
-     * The flyout's Settings row: the current values in one line. Present only on
-     * a component that has settings (AB-21).
-     */
-    settingsSummary?: string;
     /** Why the last removal stopped, when it did; the card offers Remove anyway. */
     removalStopped?: string;
     /** The demo setup steps its catalog entry declares, with where the SC is on each. */
@@ -151,10 +146,11 @@ export interface IntegrationCardModel {
      */
     removesAlone?: boolean;
     /**
-     * The cards this one is linked to: the systems an integration uses ("Uses")
-     * or the integration a system belongs to ("Used by"). Absent when none.
+     * The cards this one is connected to: the systems an integration connects, or the
+     * integration a system belongs to. One word both ways — "Connected to" (owner,
+     * 2026-10-01) — so it carries no label of its own. Absent when none.
      */
-    linked?: { label: 'Uses' | 'Used by'; cards: LinkedCard[] };
+    linked?: { cards: LinkedCard[] };
 }
 
 /** A card this one is linked to, as the face and the flyout name it. */

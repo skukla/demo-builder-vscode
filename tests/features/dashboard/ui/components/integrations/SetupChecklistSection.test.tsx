@@ -30,9 +30,10 @@ describe('SetupChecklistSection', () => {
         expect(container).toBeEmptyDOMElement();
     });
 
-    it('shows only the summary, not the steps', () => {
+    it('shows the summary and the next step by name, not the steps', () => {
         render(<SetupChecklistSection model={model([step({}), step({ id: 'b', title: 'B', state: 'done' })])} onOpenGuide={jest.fn()} />);
-        expect(screen.getByText('1 to do')).toBeInTheDocument();
+        expect(screen.getByText('1 of 2 done')).toBeInTheDocument();
+        expect(screen.getByText('Create the "Confirmed in ERP" order status')).toBeInTheDocument();
         expect(screen.queryByText('Stores > Settings > Order Status')).not.toBeInTheDocument();
         expect(screen.queryByText('Mark as done')).not.toBeInTheDocument();
     });

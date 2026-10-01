@@ -59,13 +59,13 @@ describe('deriveSystemCard', () => {
             url: 'https://ns.adobeio-static.net/index.html',
             urlLabel: 'Screen',
             canRename: false,
-            linked: { label: 'Used by', cards: [usedBy()] },
+            linked: { cards: [usedBy()] },
         });
     });
 
-    it('offers its screen, load demo data, reset, redeploy and remove while both halves are deployed', () => {
+    it('offers its screen, fill from Commerce, redeploy and remove while both halves are deployed', () => {
         const card = deriveSystemCard(erp(), undefined, usedBy(), CATALOG);
-        expect(card.menuActions).toEqual(['open', 'load-demo-data', 'reset-records', 'redeploy', 'remove']);
+        expect(card.menuActions).toEqual(['open', 'load-demo-data', 'redeploy', 'remove']);
     });
 
     it('offers no load or reset while its integration is not deployed', () => {
@@ -114,18 +114,26 @@ describe('deriveIntegrationCard with systems', () => {
         );
 
         const erpCard = cards.find((card) => card.id === 'demo-erp');
-        expect(erpCard?.linked?.label).toBe('Used by');
+        expect(erpCard?.linked?.cards).toHaveLength(1);
         expect(erpCard?.linked?.cards.map((card) => card.name)).toEqual(['Bodea ERP Hub']);
     });
 
-    it('lists the systems it Uses, and keeps its own verbs', () => {
+    it('lists the systems it is Connected to, and keeps its own verbs', () => {
         const system: LinkedCard = { id: 'demo-erp', name: 'Nordwind', status: 'error', statusLabel: 'Deploy failed', dotVariant: 'error' };
         const card = deriveIntegrationCard(pairIntegration(), undefined, [system]);
-        expect(card.linked).toEqual({ label: 'Uses', cards: [system] });
+        expect(card.linked).toEqual({ cards: [system] });
         // Its own status: a broken system shows on the system's card, not here.
         expect(card.status).toBe('deployed');
         // Add another ERP sits just above Remove on the deployed ERP integration (AB-16).
-        expect(card.menuActions).toEqual(['open', 'redeploy', 'manage-apis', 'add-erp', 'remove']);
+        expect(card.menuActions).toEqual([
+            'open',
+            'redeploy',
+            'manage-apis',
+            'add-erp',
+            'load-demo-data',
+            'reset-records',
+            'remove',
+        ]);
     });
 
     it('offers Add another ERP only while the ERP integration is deployed, and on no other integration', () => {

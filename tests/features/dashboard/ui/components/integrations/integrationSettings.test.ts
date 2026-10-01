@@ -1,12 +1,9 @@
 /**
- * integrationSettings — where Settings goes on a card, and the flyout's summary line (AB-21).
+ * integrationSettings — where Settings goes on a card's actions (AB-21).
  */
 
 import type { IntegrationCardModel } from '@/core/ui/components/integrations/integrationCardModel.types';
-import {
-    settingsSummary,
-    withComponentSettings,
-} from '@/features/dashboard/ui/components/integrations/integrationSettings';
+import { withComponentSettings } from '@/features/dashboard/ui/components/integrations/integrationSettings';
 import type { ComponentSettings } from '@/types/appBuilderComponents';
 
 const SETTINGS: ComponentSettings = {
@@ -22,21 +19,14 @@ function cardWith(menuActions: IntegrationCardModel['menuActions'], componentId 
     return { id: `card-${componentId}`, componentId, menuActions } as unknown as IntegrationCardModel;
 }
 
-describe('settingsSummary', () => {
-    it('lists each setting with its value; a blank one and a secret say only set or not set', () => {
-        expect(settingsSummary(SETTINGS)).toBe('ERP name: Acme ERP · Region: not set · API key: set');
-    });
-});
-
 describe('withComponentSettings', () => {
-    it('puts Settings just before Manage APIs, and adds the summary', () => {
+    it('puts Settings just before Manage APIs', () => {
         const [card] = withComponentSettings(
             [cardWith(['open', 'redeploy', 'manage-apis', 'remove'])],
             { 'erp-integration': SETTINGS },
         );
 
         expect(card.menuActions).toEqual(['open', 'redeploy', 'settings', 'manage-apis', 'remove']);
-        expect(card.settingsSummary).toBe(settingsSummary(SETTINGS));
     });
 
     it('with no Manage APIs, before Remove; with neither, last', () => {

@@ -212,7 +212,8 @@ function buildSystemMenuActions(
     return [
         ...(verb ? [verb] : []),
         ...(url ? (['open'] as CardAction[]) : []),
-        ...(resettable ? (['load-demo-data', 'reset-records'] as CardAction[]) : []),
+        // Its own fill only; the reset covers every ERP, so it is the integration's.
+        ...(resettable ? (['load-demo-data'] as CardAction[]) : []),
         ...(status === 'deployed' ? (['redeploy'] as CardAction[]) : []),
         'remove',
     ];
@@ -432,23 +433,27 @@ export function deriveIntegrationCard(
         urlLabel: 'App URL',
         apis: facet.apis,
         installation,
-        menuActions: withAddErp(
+        menuActions: withErpActions(
             entry,
             face.status,
             buildMenuActions(face.status, primaryUrl, installation, Boolean(entry.updateAvailable)),
         ),
         canRename: entry.kind === 'integration' && facet.renamable,
-        ...(systems.length > 0 ? { linked: { label: 'Uses' as const, cards: systems } } : {}),
+        ...(systems.length > 0 ? { linked: { cards: systems } } : {}),
         ...withSetupChecklist(entry),
     });
 }
 
 /**
- * "Add another ERP" (AB-16), just above Remove, on a deployed integration that is added once
- * and serves a list of systems: the ERP integration. The only way to a second ERP, since the
- * gallery adds the integration once.
+ * The ERP integration's own verbs, just above Remove, on a deployed integration that is
+ * added once and serves a list of systems:
+ * - "Add another ERP" (AB-16), the only way to a second ERP, since the gallery adds the
+ *   integration once;
+ * - "Fill from Commerce" for every ERP it serves, and "Reset ERPs" — the reset always
+ *   covers every ERP (an order can span several), so it lives here, not on an ERP's card
+ *   (owner, 2026-10-01).
  */
-function withAddErp(
+function withErpActions(
     entry: IdentifiedAppBuilderComponent,
     status: IntegrationStatus,
     actions: CardAction[],
@@ -458,10 +463,9 @@ function withAddErp(
         getAppBuilderComponentEntry(kind)?.addOnce &&
         listedSystemOf(kind, getAppBuilderComponentCatalog());
     if (status !== 'deployed' || !addsErps) return actions;
+    const own: CardAction[] = ['add-erp', 'load-demo-data', 'reset-records'];
     const at = actions.indexOf('remove');
-    return at === -1
-        ? [...actions, 'add-erp']
-        : [...actions.slice(0, at), 'add-erp', ...actions.slice(at)];
+    return at === -1 ? [...actions, ...own] : [...actions.slice(0, at), ...own, ...actions.slice(at)];
 }
 
 /** The demo setup checklist, when the entry declares one (`setupChecklist.ts`). */
@@ -512,7 +516,7 @@ export function deriveSystemCard(
             Boolean(entry.updateAvailable),
         ),
         canRename: false,
-        ...(usedBy ? { linked: { label: 'Used by' as const, cards: [usedBy] } } : {}),
+        ...(usedBy ? { linked: { cards: [usedBy] } } : {}),
     });
 }
 

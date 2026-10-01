@@ -85,8 +85,8 @@ export interface ComponentOperationControls extends OperationRunnerControls {
     run: (id: string, name: string, action: CardAction) => boolean;
     /** Open the modal for an add the Add flow has just sent; Retry re-sends it. */
     started: (id: string, name: string, payload?: Record<string, unknown>) => void;
-    /** Run the ERP reset the card's confirmation dialog just agreed to. */
-    resetErp: (id: string, erpName: string) => void;
+    /** Run the ERP reset the integration card's confirmation dialog just agreed to. */
+    resetErp: (id: string) => void;
     /** Fill an ERP from Commerce; `id` is the integration it runs through, `erp` which of its ERPs. */
     loadErpData: (id: string, erpName: string, erp?: string) => void;
     /** Add another ERP to the integration `id`, named `erpName` (AB-16). */
@@ -109,21 +109,21 @@ export function useComponentOperation(): ComponentOperationControls {
     );
 
     /**
-     * The ERP reset, which the card confirms in its own dialog first.
+     * The ERP reset, which the integration card confirms in its own dialog first.
      *
      * Not in `run`: the others are card ACTIONS keyed by CardAction, and this one
-     * arrives after a confirmation with the ERP's name already resolved. It was
-     * opening a notification of its own until 2026-09-20.
+     * arrives after a confirmation. It always covers every ERP the integration serves.
+     * It was opening a notification of its own until 2026-09-20.
      */
     const resetErp = useCallback(
-        (id: string, erpName: string): void => {
+        (id: string): void => {
             start({
                 id,
-                name: erpName,
+                name: 'the ERPs',
                 message: 'resetErpRecords',
-                title: `Resetting ${erpName} records`,
-                failureTitle: `Couldn't reset ${erpName} records`,
-                successTitle: `${erpName} records reset`,
+                title: 'Resetting the ERPs',
+                failureTitle: "Couldn't reset the ERPs",
+                successTitle: 'ERPs reset',
             });
         },
         [start],
@@ -137,9 +137,9 @@ export function useComponentOperation(): ComponentOperationControls {
                 name: erpName,
                 message: 'loadErpDemoData',
                 ...(erp ? { payload: { erp } } : {}),
-                title: `Loading demo data into ${erpName}`,
-                failureTitle: `Couldn't load demo data into ${erpName}`,
-                successTitle: `Demo data loaded into ${erpName}`,
+                title: `Filling ${erpName} from Commerce`,
+                failureTitle: `Couldn't fill ${erpName} from Commerce`,
+                successTitle: `${erpName} filled from Commerce`,
             });
         },
         [start],

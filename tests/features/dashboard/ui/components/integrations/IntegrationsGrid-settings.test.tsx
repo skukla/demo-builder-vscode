@@ -36,13 +36,16 @@ beforeEach(() => {
 });
 
 describe('IntegrationsGrid settings', () => {
-    it("the flyout shows the settings in one line, and Edit settings opens that card's modal", async () => {
+    // The values are in the modal, not restated in the flyout (owner, 2026-10-01: "What
+    // is the value of the 'Settings' block to the SC?").
+    it("the flyout restates no settings, and its Settings action opens that card's modal", async () => {
         const user = setupUser();
         renderWithSettings();
 
         const panel = await openPanel(user, 'other-app', 'Deployed');
-        expect(within(panel).getByText('ERP name: Acme ERP · API key: not set')).toBeInTheDocument();
-        await user.click(within(panel).getByRole('link', { name: 'Edit settings' }));
+        expect(within(panel).queryByText(/ERP name: Acme ERP/)).not.toBeInTheDocument();
+        expect(within(panel).queryByRole('link', { name: 'Edit settings' })).not.toBeInTheDocument();
+        await user.click(within(panel).getByRole('button', { name: /^settings$/i }));
 
         const modal = screen.getByTestId('settings-modal');
         expect(modal).toHaveAttribute('data-component-id', 'other-app');

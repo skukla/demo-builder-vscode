@@ -45,9 +45,17 @@ function integrationCard(): IntegrationCardModel {
         dotVariant: 'success',
         url: 'https://ns.adobeioruntime.net/api/v1/web/erp/status',
         urlLabel: 'App URL',
-        menuActions: ['open', 'redeploy', 'manage-apis', 'remove'],
+        menuActions: [
+            'open',
+            'redeploy',
+            'manage-apis',
+            'add-erp',
+            'load-demo-data',
+            'reset-records',
+            'remove',
+        ],
         canRename: false,
-        linked: { label: 'Uses', cards: [SYSTEM_LINK] },
+        linked: { cards: [SYSTEM_LINK] },
     };
 }
 
@@ -65,9 +73,9 @@ function systemCard(): IntegrationCardModel {
         dotVariant: 'success',
         url: 'https://ns.adobeio-static.net/index.html',
         urlLabel: 'Screen',
-        menuActions: ['open', 'load-demo-data', 'reset-records', 'redeploy', 'remove'],
+        menuActions: ['open', 'load-demo-data', 'redeploy', 'remove'],
         canRename: false,
-        linked: { label: 'Used by', cards: [INTEGRATION_LINK] },
+        linked: { cards: [INTEGRATION_LINK] },
     };
 }
 
@@ -82,33 +90,28 @@ async function openSystem() {
     return { user, panel };
 }
 
+async function openIntegration() {
+    const user = setupUser();
+    renderCards([integrationCard(), systemCard()]);
+    const panel = await openPanel(user, 'ERP integration', 'Deployed');
+    return { user, panel };
+}
+
 describe('IntegrationsGrid — the card faces', () => {
     it('the system card carries its type badge; both name the other behind a link icon', () => {
         renderCards([integrationCard(), systemCard()]);
 
         const system = screen.getByRole('button', { name: 'Nordwind, Deployed' });
         expect(within(system).getByTestId('type-badge')).toHaveTextContent('ERP');
-        expect(within(system).getByTitle('Used by ERP integration')).toBeInTheDocument();
+        expect(within(system).getByTitle('Connected to ERP integration')).toBeInTheDocument();
         const integration = screen.getByRole('button', { name: 'ERP integration, Deployed' });
         expect(within(integration).queryByTestId('type-badge')).toBeNull();
-        expect(within(integration).getByTitle('Uses Nordwind')).toBeInTheDocument();
+        expect(within(integration).getByTitle('Connected to Nordwind')).toBeInTheDocument();
     });
 });
 
 describe('IntegrationsGrid — the system card verbs', () => {
-    it("Open opens the ERP screen through the integration's id", async () => {
-        const { user, panel } = await openSystem();
-
-        await user.click(within(panel).getByRole('button', { name: /^open$/i }));
-
-        expect(getClient().postMessage).toHaveBeenCalledWith('openErpScreen', {
-            id: 'erp-integration',
-            erp: 'demo-erp',
-        });
-        expect(getClient().postMessage).not.toHaveBeenCalledWith('openLiveSite', expect.anything());
-    });
-
-    it("the flyout's main button opens it too", async () => {
+    it("Open <ERP> opens the ERP screen through the integration's id", async () => {
         const { user, panel } = await openSystem();
 
         await user.click(within(panel).getByRole('button', { name: 'Open Nordwind' }));
@@ -117,6 +120,7 @@ describe('IntegrationsGrid — the system card verbs', () => {
             id: 'erp-integration',
             erp: 'demo-erp',
         });
+        expect(getClient().postMessage).not.toHaveBeenCalledWith('openLiveSite', expect.anything());
     });
 
     it("Redeploy posts the system's OWN id", async () => {
@@ -130,13 +134,13 @@ describe('IntegrationsGrid — the system card verbs', () => {
         });
     });
 
-    it("Load demo data posts loadErpDemoData with the INTEGRATION's id, straight into the modal", async () => {
+    it("Fill from Commerce fills THIS ERP, through the INTEGRATION's id, straight into the modal", async () => {
         const { user, panel } = await openSystem();
 
-        await user.click(within(panel).getByRole('button', { name: /^load demo data$/i }));
+        await user.click(within(panel).getByRole('button', { name: /^fill from commerce$/i }));
 
         // No confirm: it adds and updates records, and removes nothing.
-        expect(screen.queryByRole('dialog', { name: /reset erp records/i })).toBeNull();
+        expect(screen.queryByRole('dialog', { name: /reset erps/i })).toBeNull();
         expect(getClient().postMessage).toHaveBeenCalledWith('loadErpDemoData', {
             id: 'erp-integration',
             // This ERP, by its own id: an integration can serve several (AB-16).
@@ -145,16 +149,34 @@ describe('IntegrationsGrid — the system card verbs', () => {
         });
     });
 
-    it('Reset records opens a confirm naming the ERP, and posts NOTHING until confirmed', async () => {
-        const { user, panel } = await openSystem();
+    // The reset covers every ERP (an order can span several), so it is the
+    // integration's verb, not an ERP's (owner, 2026-10-01).
+    it('offers no reset on an ERP', async () => {
+        const { panel } = await openSystem();
 
-        await user.click(within(panel).getByRole('button', { name: /^reset records$/i }));
+        expect(within(panel).queryByRole('button', { name: /reset/i })).toBeNull();
+    });
+});
 
-        const dialog = screen.getByRole('dialog', { name: /reset erp records/i });
-        // Every ERP, and the orders it closes off (AB-16n): the dialog says both.
-        expect(dialog).toHaveTextContent(
-            'Resets every ERP this integration serves, Nordwind included'
-        );
+describe("IntegrationsGrid — the integration's ERP verbs", () => {
+    it('Fill ERPs from Commerce fills every ERP it serves — no ERP named', async () => {
+        const { user, panel } = await openIntegration();
+
+        await user.click(within(panel).getByRole('button', { name: /^fill erps from commerce$/i }));
+
+        expect(getClient().postMessage).toHaveBeenCalledWith('loadErpDemoData', {
+            id: 'erp-integration',
+            progress: 'modal',
+        });
+    });
+
+    it('Reset ERPs opens a confirm naming every ERP, and posts NOTHING until confirmed', async () => {
+        const { user, panel } = await openIntegration();
+
+        await user.click(within(panel).getByRole('button', { name: /^reset erps$/i }));
+
+        const dialog = screen.getByRole('dialog', { name: /reset erps/i });
+        expect(dialog).toHaveTextContent('Resets Nordwind: wipes their records');
         expect(dialog).toHaveTextContent('A cancelled order cannot be reopened.');
         expect(getClient().postMessage).not.toHaveBeenCalledWith(
             'resetErpRecords',
@@ -162,16 +184,15 @@ describe('IntegrationsGrid — the system card verbs', () => {
         );
     });
 
-    it("confirming posts resetErpRecords with the INTEGRATION's id (the reset runs through it)", async () => {
-        const { user, panel } = await openSystem();
-        await user.click(within(panel).getByRole('button', { name: /^reset records$/i }));
+    it("confirming posts resetErpRecords with the integration's id", async () => {
+        const { user, panel } = await openIntegration();
+        await user.click(within(panel).getByRole('button', { name: /^reset erps$/i }));
 
-        const dialog = screen.getByRole('dialog', { name: /reset erp records/i });
+        const dialog = screen.getByRole('dialog', { name: /reset erps/i });
         await user.click(within(dialog).getByRole('button', { name: /^reset$/i }));
 
-        // Through the runner now, so it carries `progress: 'modal'` and this
-        // screen's modal narrates it rather than a notification of its own
-        // (owner, 2026-09-20).
+        // Through the runner, so it carries `progress: 'modal'` and this screen's
+        // modal narrates it (owner, 2026-09-20).
         expect(getClient().postMessage).toHaveBeenCalledWith('resetErpRecords', {
             id: 'erp-integration',
             progress: 'modal',
@@ -179,10 +200,10 @@ describe('IntegrationsGrid — the system card verbs', () => {
     });
 
     it('SAFETY: closing the reset dialog posts nothing', async () => {
-        const { user, panel } = await openSystem();
-        await user.click(within(panel).getByRole('button', { name: /^reset records$/i }));
+        const { user, panel } = await openIntegration();
+        await user.click(within(panel).getByRole('button', { name: /^reset erps$/i }));
 
-        const dialog = screen.getByRole('dialog', { name: /reset erp records/i });
+        const dialog = screen.getByRole('dialog', { name: /reset erps/i });
         await user.click(within(dialog).getByRole('button', { name: /^close$/i }));
 
         expect(getClient().postMessage).not.toHaveBeenCalledWith(
@@ -193,7 +214,7 @@ describe('IntegrationsGrid — the system card verbs', () => {
 });
 
 describe('IntegrationsGrid — the link between them', () => {
-    it("the system's Used by row opens the integration's flyout", async () => {
+    it("the system's Connected to row opens the integration's flyout", async () => {
         const { user, panel } = await openSystem();
 
         await user.click(within(panel).getByRole('link', { name: 'ERP integration' }));

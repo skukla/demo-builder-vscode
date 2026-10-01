@@ -44,7 +44,7 @@ const erpCard = (id: string, name: string, over: Partial<IntegrationCardModel> =
         kindLabel: 'ERP',
         urlLabel: 'Screen',
         menuActions: ['open', 'load-demo-data', 'reset-records', 'redeploy', 'remove'],
-        linked: { label: 'Used by', cards: [INTEGRATION_LINK] },
+        linked: { cards: [INTEGRATION_LINK] },
         ...over,
     });
 

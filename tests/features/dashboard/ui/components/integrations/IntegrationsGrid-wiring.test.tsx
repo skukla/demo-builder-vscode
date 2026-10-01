@@ -183,7 +183,7 @@ describe('IntegrationsGrid wiring', () => {
             renderCards(withActions(['open'], { url: undefined }));
 
             const tile = card('custom-app', 'Deployed');
-            await user.click(within(tile).getByRole('button', { name: /^open$/i }));
+            await user.click(within(tile).getByRole('button', { name: 'Open in Developer Console' }));
 
             expect(getClient().postMessage).toHaveBeenCalledWith('openDevConsole', {
                 componentId: 'custom-app',

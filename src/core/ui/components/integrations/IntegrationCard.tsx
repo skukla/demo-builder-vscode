@@ -79,8 +79,8 @@ function LinkedLine({ model }: { model: IntegrationCardModel }): React.ReactElem
     if (cards.length === 0) return null;
     const names = cards.map((card) => card.name).join(', ');
     return (
-        <span className="integration-card-link" title={`${model.linked?.label} ${names}`}>
-            <LinkIcon size="XS" aria-label={model.linked?.label} />
+        <span className="integration-card-link" title={`Connected to ${names}`}>
+            <LinkIcon size="XS" aria-label="Connected to" />
             <span className="integration-card-link-name">{names}</span>
         </span>
     );
@@ -144,12 +144,10 @@ export function IntegrationCard({
                         {model.typeBadge}
                     </Badge>
                 )}
-                {/* CardActionsMenu contains its own clicks — no wrapper needed. */}
-                <IntegrationActionsMenu
-                    model={model}
-                    onAction={onAction}
-                    className="integration-card-menu-button"
-                />
+                {/* CardActionsMenu contains its own clicks — no wrapper needed. Always
+                    visible, never only on hover (owner, 2026-10-01: "hard to see and
+                    easy to miss"); the flyout lists the same actions in the open. */}
+                <IntegrationActionsMenu model={model} onAction={onAction} />
             </div>
             {/* The one quiet line: the host's own content when it gave us any,
                 otherwise the deploy status. Not a fallback on empty strings — an

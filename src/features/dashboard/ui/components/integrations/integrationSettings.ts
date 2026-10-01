@@ -1,6 +1,7 @@
 /**
- * Puts an integration's Settings on its card (AB-21): the "Settings" menu item,
- * and the one-line summary the flyout's Settings row shows.
+ * Puts an integration's Settings on its card (AB-21): the "Settings" item in its menu
+ * and its flyout's action list. The flyout shows no summary of the values (owner,
+ * 2026-10-01: an SC acts on settings, they do not need them read back).
  *
  * The extension decides which components have settings and sends them as
  * `componentSettings`; this only places them on the cards it already built.
@@ -9,17 +10,7 @@
  */
 
 import type { CardAction, IntegrationCardModel } from '@/core/ui/components/integrations/integrationCardModel.types';
-import type { ComponentSettings, ComponentSettingField } from '@/types/appBuilderComponents';
-
-function fieldSummary(field: ComponentSettingField): string {
-    if (field.type === 'secret') return `${field.label}: ${field.isSet ? 'set' : 'not set'}`;
-    return `${field.label}: ${field.value?.trim() ? field.value : 'not set'}`;
-}
-
-/** "ERP name: Acme ERP · API key: set" — every setting's current value in one line. */
-export function settingsSummary(settings: ComponentSettings): string {
-    return settings.fields.map(fieldSummary).join(' · ');
-}
+import type { ComponentSettings } from '@/types/appBuilderComponents';
 
 /**
  * Settings goes just before Manage APIs, else before Remove, else last. An empty
@@ -37,7 +28,7 @@ function withSettingsItem(actions: CardAction[]): CardAction[] {
  *
  * @param cards - the cards the screen derived
  * @param settings - component id → its settings, from the extension
- * @returns the same cards; those with settings gain the item and the summary
+ * @returns the same cards; those with settings gain the item
  */
 export function withComponentSettings(
     cards: IntegrationCardModel[],
@@ -46,6 +37,6 @@ export function withComponentSettings(
     return cards.map((card) => {
         const own = settings[card.componentId ?? card.id];
         if (!own || own.fields.length === 0) return card;
-        return { ...card, menuActions: withSettingsItem(card.menuActions), settingsSummary: settingsSummary(own) };
+        return { ...card, menuActions: withSettingsItem(card.menuActions) };
     });
 }

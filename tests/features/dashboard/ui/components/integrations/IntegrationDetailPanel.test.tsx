@@ -6,17 +6,14 @@
  * it stays mounted when closed so `.open` can drive the slide):
  *   - header: InlineRenameField only when `canRename` (commit → onRename,
  *     an error string stays visible inline), quiet ✕ → onClose
- *   - body: key/value rows that render ONLY when their datum exists. Two tiers
- *     since 2026-10-01: Status (with the last deploy time on the same line, and
- *     the message under it) stays open; Source, URL, APIs and the Endpoints group
- *     (LAST) fold under one collapsed "Details" disclosure. There is no
- *     Destination row — the page band names it. The integration URL is a Link →
- *     onAction(model,'open-url'), while the mesh endpoint and every deployed
- *     endpoint are click-to-copy (a GraphQL POST endpoint is not browsable, and
- *     an action URL's use is to leave the panel). Kind is NOT its own row — it is
- *     a prefix on Source.
- *   - actions: ONE kebab (model.menuActions), no face button — deploying
- *     offers nothing at all, since every item would race the runner
+ *   - a health line under the title: the status (dot + uppercase label), and the
+ *     live message under it; no "Status" key (owner, 2026-10-01)
+ *   - body: rows that render ONLY when their datum exists — Connected to, the
+ *     mesh's Commerce scope and its click-to-copy endpoint. Source, URL, APIs and
+ *     endpoints are not on screen at all. There is no Destination row.
+ *   - actions: a visible list of quiet rows (model.menuActions), removal last
+ *     behind a divider; no kebab in the flyout. Deploying offers nothing at all,
+ *     since every item would race the runner
  *
  * Uses the REAL InlineRenameField (the inline-error pin needs the
  * real field); Spectrum primitives are mocked per the directory convention.
@@ -152,11 +149,12 @@ describe('IntegrationDetailPanel', () => {
     });
 
     describe('body rows', () => {
-        it('renders Status with label and message when present', () => {
-            renderPanel(makeModel({ message: 'Deploy step 3 of 5' }));
+        it('renders the health line with label and message when present, and no Status key', () => {
+            const { panel } = renderPanel(makeModel({ message: 'Deploy step 3 of 5' }));
 
-            expect(screen.getByText('Status')).toBeInTheDocument();
-            expect(screen.getByText('Deployed')).toBeInTheDocument();
+            const health = panel.querySelector('.integration-panel-health') as HTMLElement;
+            expect(within(health).getByText('Deployed')).toBeInTheDocument();
+            expect(screen.queryByText('Status')).not.toBeInTheDocument();
             expect(screen.getByText('Deploy step 3 of 5')).toBeInTheDocument();
         });
 
@@ -262,7 +260,7 @@ describe('IntegrationDetailPanel', () => {
 
         // An ERP's flyout exists to get the SC into the ERP: its own home screen shows
         // what it holds and its work, so the flyout does not repeat any of it.
-        it("puts an ERP's screen first, as the main button, and no Screen row", () => {
+        it("puts an ERP's screen first in the actions, by the ERP's name, and no Screen row", () => {
             const model = makeModel({
                 id: 'demo-erp',
                 name: 'Justrite ERP',
@@ -270,26 +268,36 @@ describe('IntegrationDetailPanel', () => {
                 url: 'https://erp.example.com/screen',
                 urlLabel: 'Screen',
                 canRename: false,
+                menuActions: ['open', 'load-demo-data', 'redeploy', 'remove'],
             });
-            const { onAction } = renderPanel(model);
+            const { onAction, panel } = renderPanel(model);
 
+            const rows = Array.from(panel.querySelectorAll('.integration-panel-action'));
+            expect(rows.map((row) => row.textContent)).toStrictEqual([
+                'Open Justrite ERP',
+                'Fill from Commerce',
+                'Redeploy',
+                'Remove',
+            ]);
             fireEvent.click(screen.getByRole('button', { name: 'Open Justrite ERP' }));
 
             expect(onAction).toHaveBeenCalledWith(model, 'open');
             expect(screen.queryByText('Screen')).not.toBeInTheDocument();
         });
 
-        it('offers no such button on an integration — the control', () => {
-            renderPanel(makeModel());
+        it("names an integration's open by where it goes — the control", () => {
+            renderPanel(makeModel({ menuActions: ['open'] }));
 
-            expect(screen.queryByRole('button', { name: /^Open / })).not.toBeInTheDocument();
+            expect(
+                screen.getByRole('button', { name: 'Open in Developer Console' })
+            ).toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: 'Open Custom App' })).not.toBeInTheDocument();
         });
     });
 
-    // The flyout MIRRORS the card: the at-most-one attention verb as a button,
-    // everything deliberate behind the same kebab the card uses. It used to carry
-    // a row of Buttons holding those same actions — a third control for them,
-    // which is what made the three surfaces disagree.
+    // The flyout lists the card's own verbs, named by the same function the card's
+    // menu uses, so the two cannot disagree. Visible rather than behind a kebab
+    // (owner, 2026-10-01: "three dots menus are hard to see and easy to miss").
     describe('actions', () => {
         it('renders the status verb as a menu item and fires onAction', () => {
             const model = makeModel({
@@ -304,33 +312,38 @@ describe('IntegrationDetailPanel', () => {
             expect(onAction).toHaveBeenCalledWith(model, 'deploy');
         });
 
-        it('puts the deliberate actions behind the kebab, not in a button row', () => {
+        it('lists the actions visibly, with no kebab, and Remove last behind a divider', () => {
             const model = makeModel({
                 menuActions: ['open', 'redeploy', 'manage-apis', 'remove'],
             });
-            const { onAction } = renderPanel(model);
+            const { onAction, panel } = renderPanel(model);
 
-            // The kebab mock renders its items as buttons inside `card-menu`;
-            // what matters is that they are in the MENU, not loose in the panel.
-            const menu = screen.getByTestId('card-menu');
-            expect(within(menu).getByText('Redeploy')).toBeInTheDocument();
-            expect(within(menu).getByText('Manage APIs')).toBeInTheDocument();
-            expect(within(menu).getByText('Remove')).toBeInTheDocument();
+            expect(screen.queryByTestId('card-menu')).not.toBeInTheDocument();
+            const list = panel.querySelector('.integration-panel-actions') as HTMLElement;
+            const items = Array.from(list.children);
+            expect(items.map((item) => item.textContent)).toStrictEqual([
+                'Open in Developer Console',
+                'Redeploy',
+                'Manage APIs',
+                '',
+                'Remove',
+            ]);
+            expect(items[3]).toHaveClass('integration-panel-actions-divider');
+            expect(within(list).getByRole('button', { name: 'Remove' })).toHaveClass('is-danger');
 
-            fireEvent.click(within(menu).getByRole('button', { name: 'Redeploy' }));
+            fireEvent.click(within(list).getByRole('button', { name: 'Redeploy' }));
             expect(onAction).toHaveBeenCalledWith(model, 'redeploy');
         });
 
-        // A healthy card is calm — no verb. Redeploy is reachable, but only
-        // through the kebab, which is the whole point of moving it there.
+        // A healthy card is calm — no attention verb, and no divider with nothing
+        // destructive after it.
         it('shows no attention verb on a deployed integration', () => {
-            renderPanel(makeModel({ menuActions: ['redeploy'] }));
+            const { panel } = renderPanel(makeModel({ menuActions: ['redeploy'] }));
 
             expect(screen.queryByRole('button', { name: 'Deploy' })).not.toBeInTheDocument();
             expect(screen.queryByRole('button', { name: 'Update' })).not.toBeInTheDocument();
-            expect(
-                within(screen.getByTestId('card-menu')).getByText('Redeploy')
-            ).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Redeploy' })).toBeInTheDocument();
+            expect(panel.querySelector('.integration-panel-actions-divider')).toBeNull();
         });
 
         it('offers nothing at all mid-deploy — every action would race the runner', () => {
@@ -342,20 +355,23 @@ describe('IntegrationDetailPanel', () => {
                 })
             );
 
-            expect(screen.queryByTestId('card-menu')).not.toBeInTheDocument();
+            expect(screen.queryByText('Actions')).not.toBeInTheDocument();
             expect(screen.queryByRole('button', { name: 'Deploy' })).not.toBeInTheDocument();
         });
     });
 
     describe('rows that would only restate', () => {
-        // Status restates the card too but is deliberately KEPT: `model.message`
+        // The status restates the card too but is deliberately KEPT: `model.message`
         // (live deploy progress / failure detail) exists nowhere else, and the
-        // action bar's verbs read as arbitrary without it.
-        it('keeps Status, whose message has no other home', () => {
-            renderPanel(makeModel({ status: 'error', statusLabel: 'Failed', message: 'exit 1' }));
+        // actions read as arbitrary without it.
+        it('keeps the health line, whose message has no other home', () => {
+            const { panel } = renderPanel(
+                makeModel({ status: 'error', statusLabel: 'Failed', message: 'exit 1' })
+            );
 
-            expect(screen.getByText('Status')).toBeInTheDocument();
-            expect(screen.getByText('exit 1')).toBeInTheDocument();
+            const health = panel.querySelector('.integration-panel-health') as HTMLElement;
+            expect(within(health).getByText('Failed')).toBeInTheDocument();
+            expect(within(health).getByText('exit 1')).toBeInTheDocument();
         });
     });
 

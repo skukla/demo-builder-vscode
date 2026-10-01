@@ -1,9 +1,10 @@
 /**
  * IntegrationDetailPanel — the Commerce install, on the health line (AB-5).
  *
- * Since 2026-10-01 the install is part of the Status row: "Deployed · installed in
- * Commerce" when all is well; a failed install adds its reason and "Finish install"
- * under it. The Admin link lives in the kebab; the version is gone from the screen.
+ * Since 2026-10-01 the install is part of the health line under the title: "Deployed ·
+ * installed in Commerce" when all is well; a failed install adds its reason and "Finish
+ * install" under it. The Admin link is in the Actions list; the version is gone from the
+ * screen.
  * Split from
  * IntegrationDetailPanel.test.tsx (615 lines); same convention: Spectrum primitives
  * mocked per-suite, real panel component.
@@ -54,7 +55,7 @@ function makeModel(overrides: Partial<IntegrationCardModel> = {}): IntegrationCa
 
 function renderPanel(model: IntegrationCardModel | undefined): {
     onAction: jest.Mock;
-    statusRow: () => HTMLElement;
+    healthLine: () => HTMLElement;
     detailLines: () => string[];
 } {
     const onAction = jest.fn();
@@ -69,8 +70,8 @@ function renderPanel(model: IntegrationCardModel | undefined): {
     );
     return {
         onAction,
-        statusRow: () =>
-            screen.getByText('Status').closest('.integration-panel-row') as HTMLElement,
+        healthLine: () =>
+            view.container.querySelector('.integration-panel-health') as HTMLElement,
         detailLines: () =>
             Array.from(view.container.querySelectorAll('.integration-panel-status-message')).map(
                 (el) => el.textContent ?? ''
@@ -80,18 +81,18 @@ function renderPanel(model: IntegrationCardModel | undefined): {
 
 describe('IntegrationDetailPanel — the Commerce install on the health line', () => {
     it('says nothing about Commerce when the model carries no install record', () => {
-        const { statusRow } = renderPanel(makeModel());
+        const { healthLine } = renderPanel(makeModel());
 
-        expect(statusRow()).not.toHaveTextContent(/Commerce/);
+        expect(healthLine()).not.toHaveTextContent(/Commerce/);
         expect(screen.queryByText('Commerce install')).not.toBeInTheDocument();
     });
 
-    it('an installed app is a tail on the Status line, with no row and no version of its own', () => {
-        const { statusRow, detailLines } = renderPanel(
+    it('an installed app is a tail on the health line, with no row and no version of its own', () => {
+        const { healthLine, detailLines } = renderPanel(
             makeModel({ installation: { label: 'Installed', failed: false } })
         );
 
-        expect(statusRow().querySelector('.integration-panel-status-aside')).toHaveTextContent(
+        expect(healthLine().querySelector('.integration-panel-status-aside')).toHaveTextContent(
             '· installed in Commerce'
         );
         expect(screen.queryByText('Commerce install')).not.toBeInTheDocument();
@@ -104,10 +105,10 @@ describe('IntegrationDetailPanel — the Commerce install on the health line', (
         const model = makeModel({
             installation: { label: 'Not installed', detail: 'hands-back line', failed: true },
         });
-        const { onAction, detailLines, statusRow } = renderPanel(model);
+        const { onAction, detailLines, healthLine } = renderPanel(model);
 
         expect(detailLines()).toStrictEqual(['hands-back line']);
-        expect(statusRow().querySelector('.integration-panel-status-aside')).toBeNull();
+        expect(healthLine().querySelector('.integration-panel-status-aside')).toBeNull();
         screen.getByText('Finish install').click();
 
         expect(onAction).toHaveBeenCalledWith(model, 'install');
@@ -127,8 +128,8 @@ describe('IntegrationDetailPanel — the Commerce install on the health line', (
         expect(screen.queryByText('Finish install')).not.toBeInTheDocument();
     });
 
-    // The Admin is reached from the kebab's "Open Commerce Admin"; the row no longer
-    // carries a second copy of it.
+    // The Admin is reached from the Actions list's "Open Commerce Admin"; the health line
+    // carries no second copy of it.
     it('carries no Admin link of its own', () => {
         renderPanel(makeModel({ installation: { label: 'Installed', failed: false } }));
 

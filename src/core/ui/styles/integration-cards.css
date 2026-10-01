@@ -74,9 +74,8 @@
     outline-offset: 2px;
 }
 
-/* `min-height` pins the row to a Spectrum ActionButton, because otherwise the
-   row's height is set by a control you cannot see. The kebab is `opacity: 0` at
-   rest but still in flow at ~32px, so IT sizes the head — until a deploying card
+/* `min-height` pins the row to a Spectrum ActionButton. The kebab is ~32px, so IT
+   sizes the head — until a deploying card
    drops it from the DOM entirely (menuActions is [] while deploying, and
    IntegrationActionsMenu returns null on an empty list). The head then collapsed
    to the name's ~20px line box and the whole card shifted up mid-deploy
@@ -105,19 +104,6 @@
     flex: 1 1 auto;
     min-width: 0;
     overflow: hidden;
-}
-
-/* Revealed on card hover/focus like the rename pencil — a kebab on every card
-   at rest turns a calm grid into a row of controls. Always available to
-   keyboards via :focus-within. */
-.integration-card-menu-button {
-    opacity: 0;
-    transition: opacity var(--spectrum-global-animation-duration-100) ease;
-}
-
-.integration-card:hover .integration-card-menu-button,
-.integration-card:focus-within .integration-card-menu-button {
-    opacity: 1;
 }
 
 .integration-card-name {
@@ -314,10 +300,131 @@
     color: var(--spectrum-global-color-gray-600);
 }
 
-/* A system's way into its own screen, first in the flyout body: on an ERP it is the
-   thing an SC opens the flyout for. */
-.integration-panel-primary {
-    padding: 4px 0 10px;
+/* The flyout, second redesign (owner, 2026-10-01, from three mockup passes): the health
+   line under the title, then "Connected to", then two titled sections — Demo setup and
+   Actions — with room between rows. */
+.integration-panel-head {
+    align-items: flex-start;
+}
+
+.integration-panel-heading {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.integration-panel-health {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.integration-panel-rows > .integration-panel-row {
+    padding: 11px 0;
+}
+
+/* "Connected to": one name per line, so a long name never wraps into the next. */
+.integration-panel-linked {
+    display: flex;
+}
+
+.integration-panel-row-value:has(> .integration-panel-linked) {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.integration-panel-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 22px;
+}
+
+.integration-panel-section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+.integration-panel-setup {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 13px;
+}
+
+.integration-panel-setup-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.integration-panel-setup-next {
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+.integration-panel-setup-next strong {
+    font-weight: 500;
+    color: var(--spectrum-global-color-gray-800);
+}
+
+/* The actions, as quiet rows: an icon and a plain label at the weight of the panel. */
+.integration-panel-actions {
+    list-style: none;
+    margin: 0 -8px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.integration-panel-action {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--spectrum-global-color-gray-800);
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.integration-panel-action:hover {
+    background: var(--spectrum-global-color-gray-200);
+}
+
+.integration-panel-action:focus-visible {
+    outline: 2px solid var(--spectrum-global-color-blue-400);
+    outline-offset: -2px;
+}
+
+.integration-panel-action-icon {
+    display: inline-flex;
+    width: 18px;
+    justify-content: center;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+.integration-panel-action.is-danger,
+.integration-panel-action.is-danger .integration-panel-action-icon {
+    color: var(--spectrum-global-color-red-600);
+}
+
+.integration-panel-actions-divider {
+    height: 1px;
+    margin: 6px 8px;
+    background: var(--spectrum-global-color-gray-200);
 }
 
 /* Remove trails the row (the prototype separates it from the safe actions). */

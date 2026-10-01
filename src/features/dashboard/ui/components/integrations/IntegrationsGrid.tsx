@@ -33,7 +33,7 @@ import { FlaggedCardDialogs, needsReinstall, removalStopped } from './FlaggedCar
 import { type CardAction, type IntegrationCardModel } from './integrationCardModel';
 import { IntegrationDetailPanel } from './IntegrationDetailPanel';
 import { requestRename } from './requestRename';
-import { handleSystemAction } from './systemCardActions';
+import { handleIntegrationErpAction, handleSystemAction } from './systemCardActions';
 import { useFlaggedCardDialog } from './useFlaggedCardDialog';
 import { useIntegrationSettings } from './useIntegrationSettings';
 import { IntegrationCard } from '@/core/ui/components/integrations/IntegrationCard';
@@ -114,7 +114,9 @@ export function IntegrationsGrid({
     const [manageApis, setManageApis] = useState<{ id: string; name: string } | null>(null);
     // The ERP reset awaiting confirmation: the INTEGRATION's id (the reset runs
     // through it) and the ERP's name (what the dialog says).
-    const [pendingReset, setPendingReset] = useState<{ id: string; erpName: string } | null>(null);
+    const [pendingReset, setPendingReset] = useState<{ id: string; erpNames: string[] } | null>(
+        null,
+    );
     // The integration "Add another ERP" is naming a new ERP for (AB-16).
     const [addingErpTo, setAddingErpTo] = useState<IntegrationCardModel | null>(null);
     // Confirms that open by themselves when a card gains their flag, and from
@@ -149,13 +151,14 @@ export function IntegrationsGrid({
 
     const handleAction = useCallback(
         (model: IntegrationCardModel, action: CardAction): void => {
-            if (
-                model.isSystem &&
-                handleSystemAction(model, action, {
-                    confirmReset: setPendingReset,
-                    loadErpData: operations.loadErpData,
-                })
-            ) {
+            const erpHandlers = {
+                confirmReset: setPendingReset,
+                loadErpData: operations.loadErpData,
+            };
+            const routed = model.isSystem
+                ? handleSystemAction(model, action, erpHandlers)
+                : handleIntegrationErpAction(model, action, erpHandlers);
+            if (routed) {
                 return;
             }
             // Open: the integration's Adobe workspace in the Developer Console
@@ -246,7 +249,7 @@ export function IntegrationsGrid({
     // (owner, 2026-09-20).
     const confirmReset = useCallback((): void => {
         if (pendingReset) {
-            operations.resetErp(pendingReset.id, pendingReset.erpName);
+            operations.resetErp(pendingReset.id);
         }
         setPendingReset(null);
     }, [operations, pendingReset]);
@@ -325,7 +328,7 @@ export function IntegrationsGrid({
 
             <ErpResetDialog
                 isOpen={pendingReset !== null}
-                erpName={pendingReset?.erpName ?? 'the ERP'}
+                erpNames={pendingReset?.erpNames ?? []}
                 onConfirm={confirmReset}
                 onClose={closeResetDialog}
             />

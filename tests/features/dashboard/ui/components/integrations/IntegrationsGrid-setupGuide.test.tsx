@@ -47,7 +47,7 @@ describe('IntegrationsGrid setup guide', () => {
             within(card('other-app', 'Deployed, Setup: 1 to do')).getByText('Setup: 1 to do')
         ).toBeInTheDocument();
         const panel = await openPanel(user, 'other-app', 'Deployed, Setup: 1 to do');
-        expect(within(panel).getByText('1 to do')).toBeInTheDocument();
+        expect(within(panel).getByText('0 of 1 done')).toBeInTheDocument();
         await user.click(within(panel).getByRole('link', { name: 'Open setup guide' }));
 
         const guide = screen.getByRole('dialog', { name: /^Demo setup:/ });

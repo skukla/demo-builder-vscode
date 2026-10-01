@@ -148,7 +148,7 @@ describe('IntegrationCard', () => {
 
         // A menu item now, not a face link — the mock renders Menu items eagerly
         // as buttons, so query by role button.
-        fireEvent.click(screen.getByRole('button', { name: /^open$/i }));
+        fireEvent.click(screen.getByRole('button', { name: 'Open in Developer Console' }));
 
         expect(onAction).toHaveBeenCalledWith(model, 'open');
         expect(onOpen).not.toHaveBeenCalled();

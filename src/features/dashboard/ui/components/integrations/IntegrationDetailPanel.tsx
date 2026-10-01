@@ -17,35 +17,28 @@
  * `model.canRename` — which is exactly why swapping the host back cost nothing
  * and the model and its matrices stayed untouched.
  *
- * What an SC needs, and nothing folded away (owner, 2026-10-01: "rather than just
- * paper over the problem with a Details accordion, consider what items in each are
- * truly useful for an SC"). A row stays when it answers "is this working?", "what
- * do I do next?" or "take me there": what it uses, one health line (deploy and the
- * Commerce install together, with the fix when either needs one), its settings, the
- * demo setup in the card's own words, and — on an ERP — the button into its screen.
- * The mesh keeps its endpoint, because a GraphQL endpoint is the one address an SC
- * copies. Source repo, app URL, APIs, deployed endpoints, deploy time and install
- * version left the screen outright: an agent reads them through the extension's tools,
- * and support works from Diagnostics and the Debug Logs. What an ERP holds is on its
- * own home screen, so the flyout does not repeat it.
- *
- * Asymmetries arrive pre-decided on the model: the mesh endpoint renders as
- * click-to-copy text (a GraphQL POST endpoint is not browsable), and a system's
- * screen is a button routing `onAction(model, 'open')`.
+ * What an SC uses, in the order they use it (owner, 2026-10-01, after three passes on a
+ * mockup): the health line under the title, then "Connected to", then the Demo setup
+ * section, then the Actions — visible as a list, because a kebab is easy to miss. The
+ * header carries no kebab of its own; the list is the flyout's menu. The mesh keeps its
+ * Commerce scope and its endpoint, the one address an SC copies. Source repo, app URL,
+ * APIs, deployed endpoints, deploy time and install version are not on screen: an agent
+ * reads them through the extension's tools, support works from Diagnostics and the
+ * Debug Logs. What an ERP holds is on its own home screen, so its flyout is short.
  *
  * @module features/dashboard/ui/components/integrations/IntegrationDetailPanel
  */
 
-import { ActionButton, Button, Link } from '@adobe/react-spectrum';
+import { ActionButton, Link } from '@adobe/react-spectrum';
 import Close from '@spectrum-icons/workflow/Close';
 import React from 'react';
+import { FlyoutActions } from './FlyoutActions';
 import type { CardAction, IntegrationCardModel } from './integrationCardModel';
 import { LinkedSection } from './LinkedSection';
 import { PanelRow } from './PanelRow';
 import { SetupChecklistSection } from './SetupChecklistSection';
 import { InlineRenameField } from '@/core/ui/components/forms/InlineRenameField';
 import { CommerceScopeList } from '@/core/ui/components/integrations/CommerceScopeList';
-import { IntegrationActionsMenu } from '@/core/ui/components/integrations/IntegrationActionsMenu';
 import { IntegrationStatusLabel } from '@/core/ui/components/integrations/IntegrationStatusLabel';
 import { CopyableText } from '@/core/ui/components/ui/CopyableText';
 import { Drawer } from '@/core/ui/components/ui/Drawer';
@@ -69,16 +62,16 @@ interface RowsProps {
 }
 
 /**
- * Health in one line: the deploy status, and on an App Management app the Commerce
- * install beside it. When either needs attention, the reason and the fix sit under
- * it — the deploy's live message, or the failed install's hands-back line and
- * "Finish install" (the idempotent pass that also repairs a record left "failed" by
- * a call that timed out while the app finished, 2026-09-30).
+ * Health in one line under the title: the deploy status, and on an App Management app
+ * the Commerce install beside it. When either needs attention, the reason and the fix
+ * sit under it — the deploy's live message, or the failed install's hands-back line and
+ * "Finish install" (the idempotent pass that also repairs a record left "failed" by a
+ * call that timed out while the app finished, 2026-09-30).
  */
-function HealthRow({ model, onAction }: RowsProps): React.ReactElement {
+function HealthLine({ model, onAction }: RowsProps): React.ReactElement {
     const install = model.installation;
     return (
-        <PanelRow label="Status">
+        <div className="integration-panel-health">
             <span className="integration-statusline">
                 <IntegrationStatusLabel model={model} />
                 {install && !install.failed && (
@@ -100,14 +93,13 @@ function HealthRow({ model, onAction }: RowsProps): React.ReactElement {
                     </Link>
                 </>
             )}
-        </PanelRow>
+        </div>
     );
 }
 
 /**
  * The mesh's endpoint, click-to-copy: a GraphQL endpoint answers POSTs, so it is
- * not browsable, and it is the one address an SC pastes elsewhere. Other cards'
- * addresses are in the technical details.
+ * not browsable, and it is the one address an SC pastes elsewhere.
  */
 function MeshEndpointRow({ model }: { model: IntegrationCardModel }): React.ReactElement | null {
     if (!model.isMesh || !model.url) return null;
@@ -115,18 +107,6 @@ function MeshEndpointRow({ model }: { model: IntegrationCardModel }): React.Reac
         <PanelRow label={model.urlLabel}>
             <CopyableText>{model.url}</CopyableText>
         </PanelRow>
-    );
-}
-
-/** An ERP's way in: its own screen, which already shows what it holds and its work. */
-function OpenSystemButton({ model, onAction }: RowsProps): React.ReactElement | null {
-    if (!model.isSystem || !model.url) return null;
-    return (
-        <div className="integration-panel-primary">
-            <Button variant="accent" onPress={() => onAction(model, 'open')}>
-                Open {model.name}
-            </Button>
-        </div>
     );
 }
 
@@ -144,51 +124,43 @@ function PanelContent({
 
     return (
         <>
-            <div className="db-drawer-head">
-                <div className="integration-panel-title">
-                    {model.canRename ? (
-                        <InlineRenameField
-                            name={model.name}
-                            label="New integration name"
-                            onRename={(newName) => onRename(model.id, newName)}
-                        />
-                    ) : (
-                        <span>{model.name}</span>
-                    )}
+            <div className="db-drawer-head integration-panel-head">
+                <div className="integration-panel-heading">
+                    <div className="integration-panel-title">
+                        {model.canRename ? (
+                            <InlineRenameField
+                                name={model.name}
+                                label="New integration name"
+                                onRename={(newName) => onRename(model.id, newName)}
+                            />
+                        ) : (
+                            <span>{model.name}</span>
+                        )}
+                    </div>
+                    <HealthLine model={model} onAction={onAction} />
                 </div>
-                {/* The flyout mirrors the CARD: one kebab, no face button. */}
-                <IntegrationActionsMenu model={model} onAction={onAction} />
                 <ActionButton isQuiet aria-label="Close details" onPress={onClose}>
                     <Close size="S" />
                 </ActionButton>
             </div>
 
             <div className="db-drawer-body">
-                <OpenSystemButton model={model} onAction={onAction} />
-                <LinkedSection model={model} onOpenLinked={onOpenLinked} />
-                <HealthRow model={model} onAction={onAction} />
-                {/* The integration's Settings in one line, with the way to change
-                    them (AB-21); the same item is in the header's menu. */}
-                {model.settingsSummary !== undefined && (
-                    <PanelRow label="Settings">
-                        <span>{model.settingsSummary}</span>
-                        <Link isQuiet onPress={() => onAction(model, 'settings')}>
-                            Edit settings
-                        </Link>
-                    </PanelRow>
-                )}
+                <div className="integration-panel-rows">
+                    <LinkedSection model={model} onOpenLinked={onOpenLinked} />
+                    {/* What the mesh is DEPLOYED against — a permanent row, so "what is
+                        my mesh pointed at?" never needs a warning badge to be answerable. */}
+                    {commerceScope?.length ? (
+                        <PanelRow label="Commerce scope">
+                            <CommerceScopeList parts={commerceScope} />
+                        </PanelRow>
+                    ) : null}
+                    <MeshEndpointRow model={model} />
+                </div>
                 <SetupChecklistSection
                     model={model}
                     onOpenGuide={() => onAction(model, 'setup-guide')}
                 />
-                {/* What the mesh is DEPLOYED against — a permanent row, so "what is
-                    my mesh pointed at?" never needs a warning badge to be answerable. */}
-                {commerceScope?.length ? (
-                    <PanelRow label="Commerce scope">
-                        <CommerceScopeList parts={commerceScope} />
-                    </PanelRow>
-                ) : null}
-                <MeshEndpointRow model={model} />
+                <FlyoutActions model={model} onAction={onAction} />
             </div>
         </>
     );

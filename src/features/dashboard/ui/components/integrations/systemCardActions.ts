@@ -1,9 +1,10 @@
 /**
- * A system card's verbs that differ from an integration's: its screen, its fill from
- * Commerce and its reset all go through the integration that uses it — the extension
- * holds the screen key and runs the fill and the reset. The screen and the fill name
- * this ERP, since an integration can serve several (AB-16); the reset covers them all (AB-16n). Everything else (redeploy,
- * update, remove) is the ordinary keyed path with the system's own id.
+ * The ERP verbs that need more than a message: an ERP's screen and its fill go through
+ * the integration that serves it (the extension holds the screen key and runs the fill),
+ * naming this ERP since an integration can serve several (AB-16). On the INTEGRATION's
+ * card, the fill covers every ERP and the reset is offered — the reset always covers
+ * them all (AB-16n), so it is the integration's verb, not an ERP's (owner, 2026-10-01).
+ * Everything else (redeploy, update, remove) is the ordinary keyed path.
  *
  * Split from `IntegrationsGrid.tsx` when the fill joined the reset (AB-26y).
  *
@@ -15,10 +16,10 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
 /** What the grid does for the two verbs that need more than a message. */
 export interface SystemCardHandlers {
-    /** Ask before a reset: the INTEGRATION's id and the ERP's name, for the dialog. */
-    confirmReset: (pending: { id: string; erpName: string }) => void;
-    /** Fill this ERP now: the integration's id, the ERP's name for the modal, and the ERP's id. */
-    loadErpData: (id: string, erpName: string, erp: string) => void;
+    /** Ask before a reset: the INTEGRATION's id and the names of every ERP it resets. */
+    confirmReset: (pending: { id: string; erpNames: string[] }) => void;
+    /** Fill from Commerce: the integration's id, the name for the modal, and one ERP's id (or every ERP). */
+    loadErpData: (id: string, erpName: string, erp?: string) => void;
 }
 
 /**
@@ -43,8 +44,26 @@ export function handleSystemAction(
         if (integrationId) handlers.loadErpData(integrationId, model.name, model.id);
         return true;
     }
+    return false;
+}
+
+/**
+ * The integration's ERP verbs: fill every ERP it serves, or reset them all (confirmed first).
+ *
+ * @returns whether the action was handled here
+ */
+export function handleIntegrationErpAction(
+    model: IntegrationCardModel,
+    action: CardAction,
+    handlers: SystemCardHandlers,
+): boolean {
+    const erpNames = model.linked?.cards.map((card) => card.name) ?? [];
+    if (action === 'load-demo-data') {
+        handlers.loadErpData(model.id, erpNames.length === 1 ? erpNames[0] : 'the ERPs');
+        return true;
+    }
     if (action === 'reset-records') {
-        if (integrationId) handlers.confirmReset({ id: integrationId, erpName: model.name });
+        handlers.confirmReset({ id: model.id, erpNames });
         return true;
     }
     return false;
