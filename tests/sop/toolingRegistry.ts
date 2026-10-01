@@ -562,6 +562,8 @@ const PROGRAM_INSTRUMENTS: readonly Instrument[] = [
  * Same shape as every other ledger here: it may shrink, and each row says why.
  */
 export const NON_INSTRUMENT_SCRIPTS: Readonly<Record<string, string>> = {
+    '.rptc/plans/datapack-store/step02-roundtrip.sh':
+        "one-shot proof of the datapack store's step 02: a live round trip against a deployed scratch namespace",
     '.rptc/research/probe-config.mjs':
         'one-shot research probe; its question is answered in the writeup beside it',
     '.rptc/research/agent-activity-visibility/probe-server.mjs':
