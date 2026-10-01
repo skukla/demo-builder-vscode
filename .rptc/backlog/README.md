@@ -373,7 +373,7 @@ each item's own file; what has already landed against an item is in its
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
-| `DI-1` | feature | [Datapack authoring loop — export, modify, publish-your-own via project skills](2026-08-23-datapack-authoring-loop.md) | — | med | backlog |
+| `DI-1` | feature | [Datapack authoring loop — export, modify, publish-your-own via project skills](2026-08-23-datapack-authoring-loop.md) | — | med | planned |
 | `DI-2` | feature | [Instance wipe option — remove as much data as the service allows](2026-08-22-instance-wipe-option.md) | — | med | backlog |
 | `DI-3` | question | └ [Spike: export a pack to the service through the item APIs, end to end](2026-09-11-spike-export-a-pack-through-the-item-apis.md) | — | low | spiked |
 
@@ -586,7 +586,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `AB-1c` [Promote a shell-built custom app to a GitHub repo](2026-07-13-promote-app-to-repo.md) — backlog
 - `AB-2` [Move deliberately to a per-SC Adobe I/O project (Option 2)](per-sc-io-project.md) — spiked
 - `AI-4a` [Engine-aware AI launch + detection + opt-in install (Claude wired, Codex placeholders)](claude-cli-detection-and-install/overview.md) — backlog
-- `DI-1` [Datapack authoring loop — export, modify, publish-your-own via project skills](2026-08-23-datapack-authoring-loop.md) — backlog
+- `DI-1` [Datapack authoring loop — export, modify, publish-your-own via project skills](2026-08-23-datapack-authoring-loop.md) — planned
 - `DI-2` [Instance wipe option — remove as much data as the service allows](2026-08-22-instance-wipe-option.md) — backlog
 - `EDS-1` [Multi-Locale Storefront — Implementation Plan (Phase 1)](2026-05-19-multisite-multilocale.md) — backlog
 - `EDS-2` [Plan — Hybrid storefront (Tier 2) + B2B-ready prerequisite & detection](hybrid-storefront-model/overview.md) — backlog
