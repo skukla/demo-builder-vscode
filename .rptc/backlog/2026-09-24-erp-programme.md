@@ -90,3 +90,4 @@ routing integration) · AB-26r (credit memo) · AB-26s (the payment leg) · AB-2
 - 2026-09-28  feat(erp): get_erp_status reports the ERP it is asked for (`5434c0f1f`)
 - 2026-09-28  docs(erp): returns design, screen listing, and the fill ownership fix (`a7cc715df`)
 - 2026-09-28  docs(backlog): AB-26 logs tonight's B8 commits (`b8c60d0bc`)
+- 2026-10-01  2026-10-01: demo-erp price publish of 72 contract prices answers 504 'Response not yet ready' twice (Accuform ERP, AB-53); 37 prices on the sibling ERP publish fine. The prices route is a blocking web action and the publish runs past Runtime's 60 s. Fix in demo-erp: publish in batches under the limit, or return a job id and let the integration poll.
