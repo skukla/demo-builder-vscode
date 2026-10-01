@@ -91,6 +91,7 @@ jest.mock('@/features/dashboard/commands/showDashboard', () => ({
 
 import { setupMocks } from './dashboardHandlers.testUtils';
 import type { ErpFillDeps } from '@/features/app-builder/services/erpFill';
+import { ErpIntegrationApiError } from '@/features/app-builder/services/erpIntegrationClient';
 import { handleLoadErpDemoData } from '@/features/dashboard/handlers/erpFillHandler';
 import { ErrorCode } from '@/types/errorCodes';
 
@@ -110,7 +111,9 @@ function pairProject(erpStatus: AppBuilderComponentState['status'] = 'deployed')
                 status: 'deployed',
                 name: 'Northwind ERP Integration',
                 source: { owner: 'skukla', repo: 'commerce-erp-integration' },
-                deployedUrls: { 'runtime/erp/status': 'https://ns.adobeioruntime.net/api/v1/web/erp/status' },
+                deployedUrls: {
+                    'runtime/erp/status': 'https://ns.adobeioruntime.net/api/v1/web/erp/status',
+                },
             },
             'demo-erp': {
                 kind: 'system',
@@ -127,7 +130,9 @@ function pairProject(erpStatus: AppBuilderComponentState['status'] = 'deployed')
 function setup(project: Partial<Project> = pairProject()) {
     const mocks = setupMocks(project);
     const { ServiceLocator } = require('@/core/di/serviceLocator');
-    ServiceLocator.getAuthenticationService().testDeveloperPermissions = jest.fn().mockResolvedValue({ hasPermissions: true });
+    ServiceLocator.getAuthenticationService().testDeveloperPermissions = jest
+        .fn()
+        .mockResolvedValue({ hasPermissions: true });
     return mocks;
 }
 
@@ -141,7 +146,14 @@ beforeEach(() => {
     mockResolveRestTarget.mockResolvedValue(TARGET);
     mockFillErp.mockResolvedValue({ partners: 4, products: 182, skipped: 0 });
     mockPublishesPrices.mockReturnValue(true);
-    mockPublishPrices.mockResolvedValue({ erps: ['northwind'], written: 6, removed: 1, unchanged: 2, skipped: [], failed: [] });
+    mockPublishPrices.mockResolvedValue({
+        erps: ['northwind'],
+        written: 6,
+        removed: 1,
+        unchanged: 2,
+        skipped: [],
+        failed: [],
+    });
 });
 
 describe('handleLoadErpDemoData', () => {
@@ -153,7 +165,11 @@ describe('handleLoadErpDemoData', () => {
         expect(mockFillErp).toHaveBeenCalledWith(expect.any(Object), 'bodea');
         expect(result).toMatchObject({
             success: true,
-            data: { id: 'erp-integration', erp: { id: 'demo-erp', name: 'Northwind ERP' }, loaded: { partners: 4, products: 182, skipped: 0 } },
+            data: {
+                id: 'erp-integration',
+                erp: { id: 'demo-erp', name: 'Northwind ERP' },
+                loaded: { partners: 4, products: 182, skipped: 0 },
+            },
         });
     });
 
@@ -163,25 +179,51 @@ describe('handleLoadErpDemoData', () => {
         await handleLoadErpDemoData(mockContext, { id: 'erp-integration' });
 
         await handedDeps().importRecords({ products: [] });
-        expect(mockCallErpApi).toHaveBeenCalledWith(ERP_URLS, AUTH, 'POST', 'admin/import', { products: [] }, expect.any(Function));
+        expect(mockCallErpApi).toHaveBeenCalledWith(
+            ERP_URLS,
+            AUTH,
+            'POST',
+            'admin/import',
+            { products: [] },
+            expect.any(Function)
+        );
     });
 
     it("hands the fill an import that throws the ERP's own words when it refuses", async () => {
-        mockCallErpApi.mockResolvedValue({ ok: false, status: 400, body: {}, detail: 'import needs a products array' });
+        mockCallErpApi.mockResolvedValue({
+            ok: false,
+            status: 400,
+            body: {},
+            detail: 'import needs a products array',
+        });
         const { mockContext } = setup();
         await handleLoadErpDemoData(mockContext, { id: 'erp-integration' });
 
-        await expect(handedDeps().importRecords({})).rejects.toThrow("The ERP's import answered 400: import needs a products array");
+        await expect(handedDeps().importRecords({})).rejects.toThrow(
+            "The ERP's import answered 400: import needs a products array"
+        );
     });
 
     it("hands the fill a Commerce read over the signed target, and the integration's settings", async () => {
-        mockRequestRest.mockResolvedValue({ ok: true, status: 200, text: '[{"id":1,"code":"bodea","name":"Bodea"}]' });
+        mockRequestRest.mockResolvedValue({
+            ok: true,
+            status: 200,
+            text: '[{"id":1,"code":"bodea","name":"Bodea"}]',
+        });
         mockResolvedSettings.mockResolvedValue({ default: {}, websites: {} });
         const { mockContext } = setup();
         await handleLoadErpDemoData(mockContext, { id: 'erp-integration' });
 
-        await expect(handedDeps().get('store/websites')).resolves.toStrictEqual([{ id: 1, code: 'bodea', name: 'Bodea' }]);
-        expect(mockRequestRest).toHaveBeenCalledWith('GET', TARGET, 'store/websites', undefined, expect.any(Function));
+        await expect(handedDeps().get('store/websites')).resolves.toStrictEqual([
+            { id: 1, code: 'bodea', name: 'Bodea' },
+        ]);
+        expect(mockRequestRest).toHaveBeenCalledWith(
+            'GET',
+            TARGET,
+            'store/websites',
+            undefined,
+            expect.any(Function)
+        );
         await handedDeps().settings(['bodea']);
         // The integration's own ERP, by its list id (AB-16).
         expect(mockResolvedSettings).toHaveBeenCalledWith(['bodea'], 'northwind');
@@ -192,7 +234,9 @@ describe('handleLoadErpDemoData', () => {
         const { mockContext } = setup();
         await handleLoadErpDemoData(mockContext, { id: 'erp-integration' });
 
-        await expect(handedDeps().get('inventory/sources?x=1')).rejects.toMatchObject({ status: 404 });
+        await expect(handedDeps().get('inventory/sources?x=1')).rejects.toMatchObject({
+            status: 404,
+        });
     });
 
     it('refuses before any call when the ERP is not deployed', async () => {
@@ -206,7 +250,10 @@ describe('handleLoadErpDemoData', () => {
         mockResolveRestTarget.mockResolvedValue({ refusal: 'Error: Adobe sign-in required.' });
         const { mockContext } = setup();
         const result = await handleLoadErpDemoData(mockContext, { id: 'erp-integration' });
-        expect(result).toStrictEqual({ success: false, error: 'Loading demo data into Northwind ERP did not finish: Adobe sign-in required.' });
+        expect(result).toStrictEqual({
+            success: false,
+            error: 'Loading demo data into Northwind ERP did not finish: Adobe sign-in required.',
+        });
         expect(mockFillErp).not.toHaveBeenCalled();
     });
 
@@ -214,7 +261,10 @@ describe('handleLoadErpDemoData', () => {
         mockFillErp.mockRejectedValue(new Error('Commerce answered 401 for products'));
         const { mockContext } = setup();
         const result = await handleLoadErpDemoData(mockContext, { id: 'erp-integration' });
-        expect(result).toStrictEqual({ success: false, error: 'Loading demo data into Northwind ERP did not finish: Commerce answered 401 for products' });
+        expect(result).toStrictEqual({
+            success: false,
+            error: 'Loading demo data into Northwind ERP did not finish: Commerce answered 401 for products',
+        });
     });
 });
 
@@ -233,7 +283,12 @@ describe('handleLoadErpDemoData — prices', () => {
         expect(result).toStrictEqual({
             success: true,
             data: expect.objectContaining({
-                loaded: { partners: 4, products: 182, skipped: 0, prices: { written: 6, removed: 1, unchanged: 2, skipped: 0 } },
+                loaded: {
+                    partners: 4,
+                    products: 182,
+                    skipped: 0,
+                    prices: { written: 6, removed: 1, unchanged: 2, skipped: 0 },
+                },
             }),
         });
         expect(result.data).not.toHaveProperty('warning');
@@ -249,7 +304,9 @@ describe('handleLoadErpDemoData — prices', () => {
     });
 
     it('still answers the fill as done when the publish fails, and says so in plain words', async () => {
-        mockPublishPrices.mockRejectedValue(new Error('ERP prices answered 500: Commerce did not answer'));
+        mockPublishPrices.mockRejectedValue(
+            new Error('ERP prices answered 500: Commerce did not answer')
+        );
         const { mockContext } = setup();
 
         const result = await handleLoadErpDemoData(mockContext, { id: 'erp-integration' });
@@ -258,10 +315,27 @@ describe('handleLoadErpDemoData — prices', () => {
             success: true,
             data: {
                 loaded: { partners: 4, products: 182, skipped: 0 },
-                warning: 'Demo data loaded; prices were not published: ERP prices answered 500: Commerce did not answer. Load demo data again to retry.',
+                warning:
+                    'Demo data loaded; prices were not published: ERP prices answered 500: Commerce did not answer. Load demo data again to retry.',
             },
         });
         expect(result.data).not.toHaveProperty('loaded.prices');
+    });
+
+    it('a publish that outran the call is "still running", not "not published" (no retry asked)', async () => {
+        // Runtime's answer when a blocking web call passes 60 s; the action runs on and the
+        // writes land (measured 2026-10-01: 72 prices, ledger full minutes later).
+        mockPublishPrices.mockRejectedValue(
+            new ErpIntegrationApiError('prices', 504, 'Response not yet ready.')
+        );
+        const { mockContext } = setup();
+
+        const result = await handleLoadErpDemoData(mockContext, { id: 'erp-integration' });
+
+        const warning = (result.data as { warning: string }).warning;
+        expect(warning).toContain('still running in Adobe Runtime');
+        expect(warning).not.toContain('not published');
+        expect(warning).not.toContain('Load demo data again');
     });
 
     it('says which companies it could not price when some writes failed', async () => {
@@ -282,7 +356,10 @@ describe('handleLoadErpDemoData — prices', () => {
 
         expect(result).toMatchObject({
             success: true,
-            data: { warning: 'Demo data loaded; prices for 2 companies were not published: Commerce answered 400. Load demo data again to retry.' },
+            data: {
+                warning:
+                    'Demo data loaded; prices for 2 companies were not published: Commerce answered 400. Load demo data again to retry.',
+            },
         });
     });
 
@@ -312,14 +389,20 @@ describe('handleLoadErpDemoData — several ERPs', () => {
         return {
             ...base,
             appBuilderComponents: {
-                'erp-integration': { ...components['erp-integration'], systems: ['demo-erp', 'demo-erp-2'] },
+                'erp-integration': {
+                    ...components['erp-integration'],
+                    systems: ['demo-erp', 'demo-erp-2'],
+                },
                 'demo-erp': { ...components['demo-erp'], usedBy: 'erp-integration' },
                 'demo-erp-2': {
                     ...components['demo-erp'],
                     name: 'Brand B ERP',
                     catalogId: 'demo-erp',
                     usedBy: 'erp-integration',
-                    deployedUrls: { 'runtime/demo-erp-2/admin': 'https://ns.adobeioruntime.net/api/v1/web/demo-erp-2/admin' },
+                    deployedUrls: {
+                        'runtime/demo-erp-2/admin':
+                            'https://ns.adobeioruntime.net/api/v1/web/demo-erp-2/admin',
+                    },
                 },
             },
         };
@@ -355,10 +438,17 @@ describe('handleLoadErpDemoData — several ERPs', () => {
         expect(mockFillErp).toHaveBeenCalledTimes(1);
     });
 
-    it("names the ERP whose prices were not published when there are several", async () => {
+    it('names the ERP whose prices were not published when there are several', async () => {
         mockPublishPrices.mockImplementation(async (erpId?: string) => {
             if (erpId === 'brand-b') throw new Error('ERP prices answered 502: bad gateway');
-            return { erps: ['northwind'], written: 1, removed: 0, unchanged: 0, skipped: [], failed: [] };
+            return {
+                erps: ['northwind'],
+                written: 1,
+                removed: 0,
+                unchanged: 0,
+                skipped: [],
+                failed: [],
+            };
         });
         const { mockContext } = setup(twoErps());
 
@@ -366,25 +456,37 @@ describe('handleLoadErpDemoData — several ERPs', () => {
 
         expect(result).toMatchObject({
             success: true,
-            data: { warning: 'Brand B ERP: Demo data loaded; prices were not published: ERP prices answered 502: bad gateway. Load demo data again to retry.' },
+            data: {
+                warning:
+                    'Brand B ERP: Demo data loaded; prices were not published: ERP prices answered 502: bad gateway. Load demo data again to retry.',
+            },
         });
     });
 
     it("replaces only that ERP's rows in the key map the integration holds", async () => {
         const first = { kind: 'customer', commerce: '1', erp: 'C1' };
-        mockReadKeyMap.mockResolvedValue([first, { kind: 'customer', commerce: '1', erp: 'OLD', erpId: 'brand-b' }]);
+        mockReadKeyMap.mockResolvedValue([
+            first,
+            { kind: 'customer', commerce: '1', erp: 'OLD', erpId: 'brand-b' },
+        ]);
         const { mockContext } = setup(twoErps());
         await handleLoadErpDemoData(mockContext, { id: 'erp-integration', erp: 'demo-erp-2' });
 
         await handedDeps().saveKeyMap([{ kind: 'customer', commerce: '1', erp: 'B1' }]);
 
-        expect(mockReplaceKeyMap).toHaveBeenCalledWith([first, { kind: 'customer', commerce: '1', erp: 'B1', erpId: 'brand-b' }]);
+        expect(mockReplaceKeyMap).toHaveBeenCalledWith([
+            first,
+            { kind: 'customer', commerce: '1', erp: 'B1', erpId: 'brand-b' },
+        ]);
     });
 
     it('refuses an ERP the integration does not serve', async () => {
         const { mockContext } = setup(twoErps());
 
-        const result = await handleLoadErpDemoData(mockContext, { id: 'erp-integration', erp: 'demo-erp-9' });
+        const result = await handleLoadErpDemoData(mockContext, {
+            id: 'erp-integration',
+            erp: 'demo-erp-9',
+        });
 
         expect(result).toMatchObject({ success: false, code: ErrorCode.CONFIG_INVALID });
         expect(mockFillErp).not.toHaveBeenCalled();

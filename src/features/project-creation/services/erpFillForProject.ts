@@ -32,6 +32,7 @@ import {
     type CommerceGet,
 } from '@/features/app-builder/services/erpFillReaders';
 import {
+    ErpIntegrationApiError,
     ErpIntegrationClient,
     callErpApi,
 } from '@/features/app-builder/services/erpIntegrationClient';
@@ -157,6 +158,29 @@ function pricesNote(reason: string): string {
 }
 
 /**
+ * Runtime's answer when a blocking web call passes the 60 s it may wait: the action keeps
+ * running (to its own limit, 300 s here) and the body carries the activation id as `code`.
+ * Measured 2026-10-01: a publish of 72 contract prices answered this twice and landed both
+ * times — the integration's ledger held every write minutes later. Reading it as a failed
+ * publish sent the SC to "load again", which runs the whole publish a second time.
+ */
+const STILL_RUNNING = /not yet ready/iu;
+
+const STILL_RUNNING_NOTE =
+    'Demo data loaded; the price publish is still running in Adobe Runtime — it passed the ' +
+    '60 seconds a call may wait and finishes on its own within five minutes. Check the ERP ' +
+    "status's ledger before loading again.";
+
+/** The note for a publish that outran the call, which is not a publish that failed. */
+function noteFor(error: unknown): string {
+    const message = error instanceof Error ? error.message : String(error);
+    if (error instanceof ErpIntegrationApiError && STILL_RUNNING.test(message)) {
+        return STILL_RUNNING_NOTE;
+    }
+    return pricesNote(`prices were not published: ${clause(message)}`);
+}
+
+/**
  * Publish one ERP's prices after its fill. A deployment without `erp/prices` is silent; a
  * publish that fails, whole or for some companies, is a note, never a failed fill.
  */
@@ -196,11 +220,7 @@ async function publishedOrNote(
             ),
         };
     } catch (error) {
-        return {
-            note: pricesNote(
-                `prices were not published: ${clause(error instanceof Error ? error.message : String(error))}`,
-            ),
-        };
+        return { note: noteFor(error) };
     }
 }
 
