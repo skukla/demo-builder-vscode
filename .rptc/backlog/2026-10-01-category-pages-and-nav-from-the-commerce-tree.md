@@ -73,6 +73,53 @@ one caveat that matters — **a category page shows nothing until Live Search ha
 store view.** On 2026-10-01 the exact query the block sends returned 0 for `justrite_us`
 while Catalog Service returned the products; the pages would have been correct and empty.
 
+## The nav: a catalog menu the SC switches on with one line (owner, 2026-10-01)
+
+Step 3 above ("write the nav") is replaced by this. The owner wanted the Commerce menu to be
+optional, reusable, and mixable with hand-authored items, and the words an SC types to be
+plain enough for a non-technical author.
+
+**What the SC types in the nav document.** One ordinary line in the menu list, in words:
+
+```
+Custom Signs                       ← typed by hand, stays as typed
+Shop the catalog                   ← becomes one menu entry per top-level category
+Shop the catalog: Signs and Labels ← becomes "Signs and Labels" with its sub-categories
+Resources                          ← typed by hand
+```
+
+- The category is named the way Commerce names it, never by path or id. A name that matches
+  nothing renders as plain text and the browser console says which name was not found.
+- Hand-typed items keep their place; the line expands where it sits. Hiding a category is
+  Commerce's own "Include in Menu" switch, so there is one place to change it.
+- No line, no change: the nav is exactly what is authored, as today.
+
+**What makes the line work (measured in the generated header, 2026-10-01).** The header loads
+the nav as a fragment, and `loadFragment` decorates and loads the fragment's blocks BEFORE the
+header reads its list (`blocks/fragment/fragment.js`: `decorateMain`, then `await
+loadSections`). So a block inside the nav document runs first and can rewrite the list in
+place. No header change is needed.
+
+**Delivery.** Three parts, and none of them is a code patch:
+
+1. **The code is a block** (`catalog-menu`) in the Demo Team block library: it reads the
+   Commerce tree from Catalog Service with the storefront's own headers and replaces each
+   "Shop the catalog" line. It installs the way every library block does — copied into the
+   storefront repository at creation — so it reaches packages and shared demos alike.
+   A code patch was considered and rejected: patches rewrite a canonical file against an
+   exact-match precondition, and header code differs per storefront (Khalil's is custom), so
+   the patch would fail silently on exactly the sites that need it.
+2. **The switch is content**: the block's one-cell table at the end of the nav document plus
+   the line(s) above. The builder writes both when the SC asks for a catalog menu (wizard
+   Storefront area: "Build the menu from the Commerce catalog", default on for a catalog the
+   project loaded; and the same action on the dashboard and as an agent tool), and removing the
+   block and lines is the undo.
+3. **The pages behind the links** are steps 1–2 above: one page per category.
+
+**To prove before building:** whether Catalog Service's `categories` read honours the B2B
+grants per customer group. If it does not, the block must filter by what `productSearch`
+can see for the shopper's group, or a guest gets menu entries whose pages are empty.
+
 ## A category is invisible until a shared catalog grants it (B2B), measured 2026-10-01
 
 The empty Live Search index on `justrite_us` was never an index problem. Adobe's answer
