@@ -316,7 +316,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-16p` | feature | └ [The ERP sends the price it would charge, whatever set it](2026-09-28-erp-net-price-in-force.md) | — | high | built |
 | `AB-16q` | feature | └ [The ERP's maintenance mode: take an ERP down on purpose, and bring it back](2026-09-28-erp-maintenance-mode.md) | — | high | built |
 | `AB-48` | fix | └ [The key-map State lock is not exact, and its commit message says more than it does](2026-09-30-erp-key-map-lock-not-exact.md) | — | med | built |
-| `AB-51` | feature | └ [An ERP's list id is named for the ERP, not `erp` or a component id](2026-09-30-erp-list-ids-named-for-the-erp.md) | — | med | active |
+| `AB-51` | feature | └ [An ERP's list id is named for the ERP, not `erp` or a component id](2026-09-30-erp-list-ids-named-for-the-erp.md) | — | med | built |
 | `AB-52` | feature | └ [Bodea's demo data reflects the JustRite picture: two brands, two ERPs, one cart](2026-09-30-justrite-demo-data-two-brands-two-erps.md) | AB-51 | high | active |
 | `AB-21` | feature | [An integration's settings live on its tile, not on Configure Project](2026-09-18-integration-settings-on-tile.md) | — | med | active |
 | `AB-22` | feature | [Import a colleague's integration, and ask only for what it really needs](2026-09-18-import-colleague-integration.md) | AB-21 | med | backlog |

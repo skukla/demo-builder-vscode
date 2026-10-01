@@ -58,3 +58,4 @@ ids are recorded? Recommended yes — the ids then read `justrite` / `accuform`,
 "Cabinet ERP / Signage ERP" do. Northwind/Contoso stay available for a generic demo.
 
 ## Shipped so far
+- 2026-10-01  Steps 1-4 done live on the justrite project 2026-09-30/10-01 (see AB-53): brand options Justrite/AccuformNMC, 43 Justrite products tagged, 96 AccuformNMC products (24 configurables x 3 formats) on the Justrite website stocked in source accuform, ERPs renamed and refilled, contract prices in shared catalogs 15/16. Not done: images (the gallery API is closed by the AEM Assets integration; owner decision) and step 5, the walk (AB-16f). 2026-10-01: the 24 Accuform configurable parents read out of stock in Catalog Service because their own stock flag was false; set true in one bulk call.
