@@ -179,3 +179,7 @@ Step 2 fails today (gap 1). Steps 1 and 3 work now.
 > `verbose: 'full'` against a disposable scope and check. If export works,
 > settle gap 2 (own-version semantics) with one call, then design the
 > orchestration skill per gap 3 using the Bodea acceptance test as the spec.
+
+## Shipped so far
+
+- 2026-10-01  2026-10-01, from AB-53: the owner separates SHARING finished work (this item) from an agent working Commerce data (AI-10). The rebuilt Justrite setup — category tree, the 13 categories granted to shared catalogs 1/15/16, companies Northgate and Harbor with contract prices — is a real first candidate pack once export works. Caveats measured elsewhere: packs bring their own root and do not merge into an existing tree, and whether an import grants new categories to the PUBLIC shared catalog is unverified (if not, guests see an empty store — the EDS-24 B2B finding).
