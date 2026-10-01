@@ -76,6 +76,10 @@ import {
     handleReinstallAppBuilderComponent,
 } from '@/features/dashboard/handlers/appManagementInstallHandlers';
 import {
+    handleGenerateCategoryPages,
+    handleRemoveCategoryPages,
+} from '@/features/dashboard/handlers/categoryPagesHandlers';
+import {
     handleGetIntegrationSettings,
     handleSaveIntegrationSettings,
 } from '@/features/dashboard/handlers/componentSettingsHandlers';
@@ -408,6 +412,10 @@ export const dashboardHandlers = defineHandlers({
 
     // EDS content republish (re-push DA.live content to CDN)
     republishContent: handleRepublishContent,
+
+    // One storefront page per Commerce category, and the undo (EDS-24).
+    generateCategoryPages: handleGenerateCategoryPages,
+    removeCategoryPages: handleRemoveCategoryPages,
 
     // Project reset handler
     resetProject: handleResetProject,

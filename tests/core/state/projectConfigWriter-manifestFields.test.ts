@@ -173,6 +173,37 @@ describe('ProjectConfigWriter manifest fields', () => {
         });
     });
 
+    // The two authorship records. Each is the proof that something in the SC's
+    // storefront is ours, and `getCurrentProject` re-reads the manifest on every
+    // call — so a record the writer drops is gone by the next call, and the undo
+    // it exists for can never tell its own work from a hand edit.
+    describe('authorship records', () => {
+        const categoryPages = {
+            pages: { '/safety-signs': { categoryId: '10', hash: 'a'.repeat(64) } },
+            updatedAt: '2026-10-01T00:00:00.000Z',
+        };
+        const demoPackage = { fileSha: 'blob-1', savedAt: '2026-10-01T00:00:00.000Z' };
+
+        it('writes the category-page record verbatim', async () => {
+            expect((await save({ categoryPages })).categoryPages).toEqual(categoryPages);
+        });
+
+        it('omits the category-page record once it holds no pages', async () => {
+            const empty = { pages: {}, updatedAt: '2026-10-01T00:00:00.000Z' };
+            expect('categoryPages' in (await save({ categoryPages: empty }))).toBe(false);
+        });
+
+        it('writes the demo-package record verbatim', async () => {
+            expect((await save({ demoPackage })).demoPackage).toEqual(demoPackage);
+        });
+
+        it('omits both when the project has neither', async () => {
+            const manifest = await save({});
+            expect('categoryPages' in manifest).toBe(false);
+            expect('demoPackage' in manifest).toBe(false);
+        });
+    });
+
     describe('pinned', () => {
         it('is written as literal true for a pinned project', async () => {
             expect((await save({ pinned: true })).pinned).toBe(true);

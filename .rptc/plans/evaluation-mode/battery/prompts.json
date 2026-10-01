@@ -1187,5 +1187,23 @@
             "set_content_reader"
         ],
         "why": "EDS-22 (hotfix beta.149) tier 3: changes another person's access on the SC's DA.live org, so it never runs unattended; represented by siteTools.test + the consent gate. Listed so the tool is judged, not grandfathered."
+    },
+    {
+        "id": "t2-category-pages",
+        "prompt": "My storefront's nav links all go nowhere and none of the Commerce categories have a page. Give every category in the catalog a page on the storefront.",
+        "expect": [
+            "generate_category_pages"
+        ],
+        "why": "EDS-24 steps 1-2: without the tool an agent reads the tree with run_commerce_query and loops write_page by hand, with no record of what it wrote, so a re-run overwrites hand edits and nothing can undo it exactly. Tier 2: it writes and publishes pages on the SC's live storefront, so it runs only under --tier2.",
+        "tier": 2
+    },
+    {
+        "id": "t2-remove-category-pages",
+        "prompt": "Take the category pages you generated back off my storefront, but leave any page I've edited.",
+        "expect": [
+            "remove_category_pages"
+        ],
+        "why": "EDS-24: the undo. Without the tool an agent deletes pages by path from memory and cannot tell its own pages from ones the SC edited. Tier 2: it unpublishes pages from the SC's live storefront, so it runs only under --tier2.",
+        "tier": 2
     }
 ]

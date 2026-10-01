@@ -91,6 +91,24 @@ function addOptionalManifestFields(manifest: Record<string, unknown>, project: P
     if (project.pinned) {
         manifest.pinned = true;
     }
+    addAuthorshipRecords(manifest, project);
+}
+
+/**
+ * The proofs that something in the SC's storefront is OURS: the demo-package
+ * description file's blob sha and the generated category pages' hashes. Each
+ * exists so an undo removes only what Demo Builder wrote. `getCurrentProject`
+ * re-reads the manifest on every call, so a record not written here does not
+ * survive to the next call — the demo-package one was lost that way until
+ * 2026-10-01.
+ */
+function addAuthorshipRecords(manifest: Record<string, unknown>, project: Project): void {
+    if (project.demoPackage) {
+        manifest.demoPackage = project.demoPackage;
+    }
+    if (project.categoryPages && Object.keys(project.categoryPages.pages).length > 0) {
+        manifest.categoryPages = project.categoryPages;
+    }
 }
 
 /**

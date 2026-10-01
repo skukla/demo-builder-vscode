@@ -180,6 +180,20 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: ['path'],
         sessionGrant: false,
     },
+    generate_category_pages: {
+        action: 'Write a page for every catalog category',
+        consequence:
+            'Writes and publishes one page per Commerce category on your live storefront; pages you have edited by hand are left alone.',
+        target: [],
+        sessionGrant: false,
+    },
+    remove_category_pages: {
+        action: 'Remove the category pages',
+        consequence:
+            'Unpublishes and deletes the category pages Demo Builder wrote; visitors stop seeing them at once.',
+        target: [],
+        sessionGrant: false,
+    },
     forget_added_demo: {
         action: 'Forget an added demo',
         consequence:

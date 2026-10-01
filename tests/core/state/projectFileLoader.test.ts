@@ -120,6 +120,23 @@ describe('ProjectFileLoader — legacy appBuilderComponent migration', () => {
         expect(project!.publishKeyRegisteredAt).toBe('2026-08-15T12:00:00.000Z');
     });
 
+    it('loads both authorship records — the category pages and the demo package', async () => {
+        // getCurrentProject re-reads the manifest on every call, so a record the
+        // loader drops is lost before the undo that needs it can run.
+        const categoryPages = {
+            pages: { '/safety-signs': { categoryId: '10', hash: 'a'.repeat(64) } },
+            updatedAt: '2026-10-01T00:00:00.000Z',
+        };
+        const demoPackage = { fileSha: 'blob-1', savedAt: '2026-10-01T00:00:00.000Z' };
+        primeFsWithManifest({ name: 'recorded-demo', categoryPages, demoPackage });
+
+        const loader = new ProjectFileLoader(makeLogger());
+        const project = await loader.loadProject(PROJECT_PATH, () => []);
+
+        expect(project!.categoryPages).toEqual(categoryPages);
+        expect(project!.demoPackage).toEqual(demoPackage);
+    });
+
     it('leaves publishKeyRegisteredAt undefined for a storefront created before the sweep', async () => {
         // The renewal sweep reads absence as "due", which is how every existing
         // storefront gets its first key refresh after upgrading.

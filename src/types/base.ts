@@ -50,6 +50,22 @@ export interface SavedDemoPackage {
     savedAt: string;
 }
 
+/**
+ * The category pages Demo Builder wrote into the storefront (EDS-24): the proof
+ * each one is ours, so a re-run never clobbers a hand edit and the removal takes
+ * out only what was written.
+ */
+export interface GeneratedCategoryPages {
+    /**
+     * By web path (`/safety-signs`): the category the page is for, and the hash of
+     * the HTML as written (`pageHash`). A page whose current source hashes
+     * differently was edited by hand and is left alone.
+     */
+    pages: Record<string, { categoryId: string; hash: string }>;
+    /** ISO date of the last change to the record. */
+    updatedAt: string;
+}
+
 export interface Project {
     /**
      * The SLUG. Folder name under `~/.demo-builder/projects/`, the key
@@ -131,6 +147,8 @@ export interface Project {
      * wrote). Absent when the storefront is not a demo package.
      */
     demoPackage?: SavedDemoPackage;
+    /** Category pages generated from the Commerce tree; absent until generated. */
+    categoryPages?: GeneratedCategoryPages;
     /** Block library IDs selected during project creation (e.g., ['isle5', 'demo-team-blocks']) */
     selectedBlockLibraries?: string[];
     /** Custom block libraries added by URL */

@@ -197,6 +197,17 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
         why: 'what happened to the file, the card and the flag; or the refusal with the save date',
     },
     cleanup_dalive_site: { bytes: 1_000, why: 'delete outcome or refusal' },
+    generate_category_pages: {
+        bytes: 60_000,
+        why:
+            'BOUNDED by the tree walk: at most 500 categories, each landing on one list as a path ' +
+            '(~40 bytes) or a skipped row with its reason (~100 bytes). A demo catalog of tens of ' +
+            'categories answers in a few KB.',
+    },
+    remove_category_pages: {
+        bytes: 30_000,
+        why: 'one path per recorded page (at most the 500 generate can write, ~40 bytes each), or the refusal',
+    },
 
     // ── Diagnostics ─────────────────────────────────────────────────────────
     read_debug_logs: {

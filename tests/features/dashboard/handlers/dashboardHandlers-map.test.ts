@@ -270,7 +270,10 @@ describe('dashboardHandlers', () => {
             //
             // addErp (72 → 73, 2026-09-28): "Add another ERP" on the ERP integration's
             // card, and the add_erp tool (AB-16).
-            expect(types).toHaveLength(73);
+            //
+            // generateCategoryPages + removeCategoryPages (73 → 75, EDS-24, 2026-10-01):
+            // one storefront page per Commerce category, and the undo.
+            expect(types).toHaveLength(75);
         });
 
         it('should have handlers as functions', () => {

@@ -227,6 +227,14 @@
         },
         "pinned": {
           "type": "boolean"
+        },
+        "demoPackage": {
+          "$ref": "#/definitions/SavedDemoPackage",
+          "description": "\"Save as demo package\" wrote the description file into this project's storefront repository: the blob sha GitHub answered (the proof the file is ours, so a hand edit is never clobbered and Remove takes out only what we wrote). Absent when the storefront is not a demo package."
+        },
+        "categoryPages": {
+          "$ref": "#/definitions/GeneratedCategoryPages",
+          "description": "Category pages generated from the Commerce tree; absent until generated."
         }
       }
     },
@@ -1111,6 +1119,57 @@
         "prompt"
       ],
       "description": "AiPrompt - A user-saved AI prompt\n\nStorage is scope-routed by the `pinned` field. Pinned prompts persist in VS Code globalState under `demoBuilder.ai.globalPrompts` and appear in every project. Unpinned prompts persist in the current project's `.demo-builder.json` manifest under `Project.aiPrompts` and stay project-specific. Toggling pin moves the prompt across stores.\n\nLegacy data: prompts pinned before the global-pin feature shipped remain in their project's manifest until the user manually unpins then re-pins them — no automatic migration.\n\nArray order within either store is preserved; render-time pinned-first sort happens in the UI layer."
+    },
+    "SavedDemoPackage": {
+      "type": "object",
+      "properties": {
+        "fileSha": {
+          "type": "string",
+          "description": "Blob sha of the description file as we last wrote it."
+        },
+        "savedAt": {
+          "type": "string",
+          "description": "ISO date of the last save."
+        }
+      },
+      "required": [
+        "fileSha",
+        "savedAt"
+      ],
+      "description": "What \"Save as demo package\" left behind, so it can be undone exactly."
+    },
+    "GeneratedCategoryPages": {
+      "type": "object",
+      "properties": {
+        "pages": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "categoryId": {
+                "type": "string"
+              },
+              "hash": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "categoryId",
+              "hash"
+            ]
+          },
+          "description": "By web path (`/safety-signs`): the category the page is for, and the hash of the HTML as written (`pageHash`). A page whose current source hashes differently was edited by hand and is left alone."
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO date of the last change to the record."
+        }
+      },
+      "required": [
+        "pages",
+        "updatedAt"
+      ],
+      "description": "The category pages Demo Builder wrote into the storefront (EDS-24): the proof each one is ours, so a re-run never clobbers a hand edit and the removal takes out only what was written."
     }
   }
 }

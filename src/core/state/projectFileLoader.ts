@@ -104,6 +104,8 @@ export interface ProjectManifest {
     aiFileHashes?: Record<string, string>;
     publishKeyRegisteredAt?: string;
     pinned?: boolean;
+    demoPackage?: Project['demoPackage'];
+    categoryPages?: Project['categoryPages'];
 }
 
 export class ProjectFileLoader {
@@ -208,6 +210,9 @@ export class ProjectFileLoader {
                 aiFileHashes: manifest.aiFileHashes,
                 publishKeyRegisteredAt: manifest.publishKeyRegisteredAt,
                 pinned: manifest.pinned,
+                // Authorship records: what an undo may remove (see the writer).
+                demoPackage: manifest.demoPackage,
+                categoryPages: manifest.categoryPages,
             };
 
             // Keyed appBuilderComponents (ADR-011 D3 Step 01): prefer the persisted

@@ -8815,7 +8815,7 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 758,
+            "line": 760,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here the step is starting the in-extension MCP server, whose failure must never abort activation.",
@@ -8840,7 +8840,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 496,
+            "line": 497,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a logger.error plus a showErrorMessage whose text is built from the error. Activation's own tests assert showErrorMessage was NOT called on every success path, which is the observable half; the wording of the message when it IS called is the rest.",
@@ -8853,7 +8853,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 849,
+            "line": 851,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here it is the manifest-format sweep.",
@@ -9071,13 +9071,13 @@
             "source": "PL-22 batch MUT-02"
         },
         {
-            "module": "src/features/ai/server/contentAuthoringTools.ts",
+            "module": "src/features/eds/services/daLive/storefrontPages.ts",
             "anchors": [
                 "if (p.length > 1 && p.endsWith('/')) p = p.slice(0, -1);"
             ],
             "mutants": 2,
             "category": "branch",
-            "reason": "These two mutants both weaken the length half of the guard so the slice also runs for a path of length one. The only such path reaching this line is the bare root, and slicing it yields the empty string, which the very next statement turns back into the root through its own fallback. No input can tell the mutated guard from the original; the trailing-slash and root cases are both pinned by the path-normalisation suite.",
+            "reason": "These two mutants both weaken the length half of the guard so the slice also runs for a path of length one. The only such path reaching this line is the bare root, and slicing it yields the empty string, which the very next statement turns back into the root through its own fallback. No input can tell the mutated guard from the original; the trailing-slash and root cases are both pinned by the path-normalisation suite. (Moved verbatim with toWebPath into storefrontPages.ts on 2026-10-01.)",
             "decision": "none - the root fallback on the following line absorbs the mutated branch.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-02"
@@ -9087,7 +9087,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 187,
+            "line": 103,
             "mutants": 1,
             "category": "block",
             "reason": "This catch fires only when the URL constructor rejects the string this module just built from a base host that passed SAFE_COORDINATE and a path that passed toWebPath. Both validators run before it, so no reachable input produces a URL the parser refuses, and the guard exists as the assertion that survives someone loosening those rules rather than as a live branch.",
@@ -9100,7 +9100,7 @@
             "anchors": [
                 "return false;"
             ],
-            "line": 188,
+            "line": 104,
             "mutants": 1,
             "category": "branch",
             "reason": "The value returned from the unreachable catch above it. Reaching this line at all requires a malformed URL, which cannot be produced downstream of SAFE_COORDINATE and toWebPath, so flipping the answer from false to true changes nothing any test or caller can observe.",
@@ -9138,7 +9138,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 249,
+            "line": 156,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this catch leaves githubOk holding the false its initialiser gave it, so a throwing token check is still treated as unauthenticated - which is what the GitHub pre-flight suite asserts. The assignment inside the catch restates the initialiser rather than changing it, so removing it is unobservable.",
@@ -9177,7 +9177,7 @@
             "anchors": [
                 "bytes > MAX_PUBLISHED_READ_BYTES"
             ],
-            "line": 690,
+            "line": 524,
             "mutants": 2,
             "category": "branch",
             "reason": "This condition chooses between the whole body and a slice of it at the cap. Slicing a body that is at or under the cap returns that body unchanged, so both mutants - always slicing, and slicing at the boundary - produce a byte-identical content field. The sibling condition two lines down decides the truncated flag, which IS observable and is pinned at both the ordinary and the exact-cap sizes.",
@@ -12452,12 +12452,12 @@
         {
             "module": "src/features/ai/server/commerceQueryTool.ts",
             "anchors": [
-                "const requested: EndpointKey | undefined = args?.endpoint;",
-                "...(args?.variables ? { variables: args.variables } : {}),"
+                "...(args?.variables ? { variables: args.variables } : {}),",
+                "endpoint: args?.endpoint,"
             ],
             "mutants": 2,
             "category": "optionalChain",
-            "reason": "Both `?.` guards sit AFTER the handler's own required-argument check: `String(args?.query ?? '')` yields '' for a nullish `args`, and the next line returns 'Error: `query` is required.' So neither line is reachable with `args` nullish and dropping the `?.` cannot throw. Planted both and re-run: all 29 tests pass.",
+            "reason": "Both `?.` guards sit AFTER the handler's own required-argument check: `String(args?.query ?? '')` yields '' for a nullish `args`, and the next line returns 'Error: `query` is required.' So neither line is reachable with `args` nullish and dropping the `?.` cannot throw. Planted both and re-run: all 29 tests pass. Re-anchored 2026-10-01: the endpoint choice moved to commerceGraphQlClient.ts, and the endpoint `?.` is now `endpoint: args?.endpoint,` in the same handler, after the same required-query check.",
             "decision": "none \u2014 `args` is the SDK's untyped `any`, and the guards keep correctness from depending on statement order in the handler",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-05"

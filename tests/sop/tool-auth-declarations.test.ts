@@ -63,14 +63,18 @@ const EXPECTED: Record<string, number> = {
     adobe: 51,
     // 21 -> 23 on 2026-09-30 (hotfix beta.149 merged): get_content_access and
     // set_content_reader read and write the DA.live org permissions sheet (EDS-22).
-    dalive: 23,
+    // 23 -> 25 on 2026-10-01: generate_category_pages and remove_category_pages write
+    // and remove storefront pages in DA.live (EDS-24).
+    dalive: 25,
     // 10 -> 12 on 2026-09-12: forget_added_demo and change_demo_source (step 06
     // of the shareable-demo program) both read and write GitHub; 12 -> 14 the
     // same day for probe_shared_demo and add_shared_demo (step 07).
     // 14 -> 17 on 2026-09-13: get_demo_package_preview, save_demo_package and
     // remove_demo_package (step 09) read and write the SC's own storefront repository.
     // 17 -> 18 on 2026-09-13: export_demo_bundle reads the SC's own repository archive.
-    github: 18,
+    // 18 -> 20 on 2026-10-01: the same two publish and unpublish through Helix, which
+    // takes the GitHub token (EDS-24).
+    github: 20,
     commerce: 2,
     // 45 -> 46 on 2026-09-14: edit_added_demo renames a card in a user setting,
     // and needs no sign-in.
@@ -94,10 +98,11 @@ const EXPECTED: Record<string, number> = {
  * files. That counts text, not declarations, and was roughly double. The CONTROL below
  * caught it — which is the argument for having one.)
  */
-const EXPECTED_TOOLS = 146; // 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x); 144 with add_erp (AB-16).
+const EXPECTED_TOOLS = 148; // 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x); 144 with add_erp (AB-16).
 // 141 -> 142 on 2026-09-27: delete_undeclared_runtime_code.
 // 142 -> 143 on 2026-09-27: load_erp_demo_data.
 // 144 -> 146 on 2026-09-30: the content-access pair (EDS-22, hotfix beta.149 merged).
+// 146 -> 148 on 2026-10-01: generate_category_pages and remove_category_pages (EDS-24).
 
 interface Declaration {
     name: string;
