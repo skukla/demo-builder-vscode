@@ -172,3 +172,7 @@ before anyone can see it.
   filterable.
 - Related: [[AI-10]] (the datapack/bulk loader should end with the storefront reaching what
   it loaded, not with the REST writes), [[EDS-22]].
+
+## Shipped so far
+
+- 2026-10-01  3f7de826e (feature/catalog-pages): steps 1-2 built — category tree read, one page per menu category with publish, hash-recorded hand-edit guard, remove_category_pages undo; generate_category_pages/remove_category_pages tools. Not yet run live. Nav (step 3) not started.
