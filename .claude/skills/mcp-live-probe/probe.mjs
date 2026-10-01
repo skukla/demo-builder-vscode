@@ -43,6 +43,19 @@ function isReadOnly(name) {
     return READ_ONLY.test(name) || READ_ONLY_EXACT.test(name);
 }
 
+/**
+ * What the SERVER declares, when it declares anything: `annotations.readOnlyHint` is
+ * the same flag the Evaluation Mode dry run trusts, and it is authored per tool
+ * (`mcp-tool-authoring`). The name regex is only the fallback for a tool without
+ * annotations. Until 2026-09-30 the regex was the whole rule, and it gated
+ * `run_commerce_rest` — a GET that declares itself read-only — behind --force on
+ * every call, while the name-derived verdicts it was built to remove came back here.
+ */
+function isReadOnlyTool(t) {
+    const hint = t?.annotations?.readOnlyHint;
+    return typeof hint === 'boolean' ? hint : isReadOnly(t?.name ?? '');
+}
+
 const argv = process.argv.slice(2);
 /** Boolean flag: present or absent, never consumes the following token. */
 const boolFlag = (name) => {
@@ -218,7 +231,7 @@ const commands = {
                     ? `data-installer merged (${datapack.length} datapack tools)`
                     : 'no datapack tools — develop baseline',
             );
-            const gated = names.filter((n) => !isReadOnly(n));
+            const gated = tools.filter((t) => !isReadOnlyTool(t)).map((t) => t.name);
             console.log(`callable without --force: ${names.length - gated.length} of ${names.length}`);
             console.log('need --force:', gated.join(', ') || '(none)');
         });
@@ -233,7 +246,7 @@ const commands = {
             }
             tools.sort((a, b) => a.name.localeCompare(b.name));
             for (const t of tools) {
-                const mark = isReadOnly(t.name) ? '' : ' [needs --force]';
+                const mark = isReadOnlyTool(t) ? '' : ' [needs --force]';
                 console.log(`${t.name}${mark}\n    ${t.description ?? ''}`);
             }
             console.log(`\n${tools.length} tool(s)${pattern ? ` matching /${pattern}/i` : ''}`);
@@ -251,16 +264,6 @@ const commands = {
 
     async call([tool, argsJson]) {
         if (!tool) die("usage: probe.mjs call <tool> ['<json args>']");
-        if (!isReadOnly(tool) && forceTool !== tool) {
-            die(
-                `"${tool}" is not a read-only tool and was NOT called.\n` +
-                    `  To run it anyway: --force ${tool}\n` +
-                    `  --force NAMES its tool on purpose. A bare --force once let a loop over 17\n` +
-                    `  "gated" tools run republish against a live storefront — two of the 17 had no\n` +
-                    `  gate, and a blanket override could not tell.\n` +
-                    `  Standing rule: never call a state-changing tool merely to measure it.`,
-            );
-        }
         let args = {};
         if (argsJson) {
             try {
@@ -270,6 +273,18 @@ const commands = {
             }
         }
         await session(async (rpc) => {
+            // The gate reads the server's own declaration, so it needs the session.
+            const declared = toolsOf(await rpc('tools/list', {})).find((t) => t.name === tool);
+            if (!isReadOnlyTool(declared ?? { name: tool }) && forceTool !== tool) {
+                die(
+                    `"${tool}" is not a read-only tool and was NOT called.\n` +
+                        `  To run it anyway: --force ${tool}\n` +
+                        `  --force NAMES its tool on purpose. A bare --force once let a loop over 17\n` +
+                        `  "gated" tools run republish against a live storefront — two of the 17 had no\n` +
+                        `  gate, and a blanket override could not tell.\n` +
+                        `  Standing rule: never call a state-changing tool merely to measure it.`,
+                );
+            }
             const m = await rpc('tools/call', { name: tool, arguments: args });
             if (m.error) {
                 console.log('RPC ERROR:', JSON.stringify(m.error));
