@@ -83,12 +83,16 @@ deployment's configuration. It is one function in the code:
   redeploy from a patched checkout is technically possible — a governance choice, not a
   technical one.
 
-**What this does to the plan.** Export was the only broken half, and it is one line away in
-the service that already holds the one registry, `shared`/`owner`, promote, installation
-tracking and 64 processors. The datapack store built in step 02 (deployed only to the
-scratch workspace) becomes optional: a second registry the one-registry rule argues against.
-The owner decides: (a) fix the service and route every Share/export through it, dropping our
-store; or (b) keep our store for a reason the service cannot serve. Recommendation: (a).
+**What this does to the plan (owner, 2026-10-01: "I can't deploy his code or fix his code. I
+do not own it.").** The fix goes to the service's maintainers as a patch and a note (handed to
+the owner the same day; the patch lives in the clone's local branch
+`fix/export-context-carries-mongo-params`, never in this public repo). Its timeline is theirs.
+So the build here continues as planned, because it is the half we control: our service holds
+the export engine and each SC's own packs; step 05 pushes a finished pack into THEIR registry
+through the write endpoints that already work, which keeps one library. If their export is
+fixed first, the only part of ours that becomes redundant is the export engine (step 03); the
+store, the visibility rule and the push remain the SC's workspace in front of the shared
+registry — the hybrid the owner asked for.
 
 ## Decision (step 1 measured 2026-10-01 — see `step-01.md`)
 
