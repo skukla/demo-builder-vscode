@@ -71,7 +71,7 @@ export function registerCommerceRestWriteTool(
                 'user. Read the record first with run_commerce_rest (with fields= to keep it small). ' +
                 'The answer is the record Commerce returns, cut at 30,000 characters. ACCS backends only for now. ' +
                 'MANY records at once: bulk:true sends the body — an ARRAY of request bodies — to the ' +
-                'asynchronous bulk API (/async/bulk/V1/<path>, e.g. "products" or "products/bySku"); Commerce ' +
+                'asynchronous bulk API (V1/async/bulk/<path>, e.g. "products" or "products/bySku"); Commerce ' +
                 'answers a bulk_uuid to poll with run_commerce_rest "bulk/<uuid>/status". One call for a ' +
                 'whole catalog instead of one per product.',
             inputSchema: {
