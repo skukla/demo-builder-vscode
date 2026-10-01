@@ -56,6 +56,7 @@ function renderPanel(over: Partial<React.ComponentProps<typeof DatapackDetailPan
             onClose={onClose}
             onRetry={jest.fn()}
             onImport={jest.fn()}
+            onRemoved={jest.fn()}
             {...over}
         />
     );
@@ -355,3 +356,33 @@ describe('DatapackDetailPanel', () => {
         });
     });
 });
+
+describe('DatapackDetailPanel — a library pack', () => {
+    const LIBRARY = makeDetail({ store: 'library', shared: false });
+
+    it('offers no Import, says how a library pack gets installed, and saves from the library', () => {
+        renderPanel({ detail: LIBRARY });
+
+        expect(screen.queryByRole('button', { name: 'Import' })).not.toBeInTheDocument();
+        expect(screen.getByText(/save it as a file and load that file into the Data Installer/)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Save as file' })).toBeInTheDocument();
+        expect(screen.getByText('Library, only you')).toBeInTheDocument();
+    });
+
+    it('offers Remove only when the pack is the SC own', () => {
+        const { unmount } = renderPanel({ detail: LIBRARY });
+        expect(screen.queryByRole('button', { name: 'Remove it from the library' })).not.toBeInTheDocument();
+        unmount();
+
+        renderPanel({ detail: { ...LIBRARY, mine: true } });
+        expect(screen.getByRole('button', { name: 'Remove it from the library' })).toBeInTheDocument();
+    });
+
+    it('a Data Installer pack keeps Import and never offers Remove — the control', () => {
+        renderPanel({ detail: makeDetail({ mine: true }) });
+
+        expect(screen.getByRole('button', { name: 'Import' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Remove it from the library' })).not.toBeInTheDocument();
+    });
+});
+

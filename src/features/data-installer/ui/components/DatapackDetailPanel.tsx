@@ -33,6 +33,7 @@ import type { DataItemInventory, DatapackDetail, DatapackId } from '../../types'
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
 import { dataTypeLabel } from '../dataTypeLabel';
 import type { DataInstallerFailure } from '../hooks/useDataInstallerRequest';
+import { RemoveFromLibraryButton } from './RemoveFromLibraryButton';
 import { SaveDatapackFileButton } from './SaveDatapackFileButton';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { Drawer } from '@/core/ui/components/ui/Drawer';
@@ -61,6 +62,8 @@ export interface DatapackDetailPanelProps {
      * list and keeps its detail flyout view-only; this now matches.
      */
     onImport: (id: DatapackId) => void;
+    /** A library pack the SC owned was removed. Stable — an effect depends on it. */
+    onRemoved: () => void;
 }
 
 export function DatapackDetailPanel({
@@ -72,6 +75,7 @@ export function DatapackDetailPanel({
     onClose,
     onRetry,
     onImport,
+    onRemoved,
 }: DatapackDetailPanelProps): React.JSX.Element {
     const title = detail?.displayName ?? selected?.name ?? 'Datapack';
 
@@ -95,12 +99,7 @@ export function DatapackDetailPanel({
                     <div className="db-drawer-body">
                         {renderPanelBody({ detail, inventory, loading, failure, onRetry })}
                         {canImport({ importable, loading, failure }) && detail ? (
-                            <div className="db-drawer-actions">
-                                <Button variant="accent" onPress={() => onImport(detail.id)}>
-                                    Import
-                                </Button>
-                                <SaveDatapackFileButton id={detail.id} />
-                            </div>
+                            <PanelActions detail={detail} onImport={onImport} onRemoved={onRemoved} />
                         ) : null}
                     </div>
                 </>
@@ -134,6 +133,48 @@ function canImport(args: {
 }): boolean {
     const { importable, loading, failure } = args;
     return !loading && !failure && importable.length > 0;
+}
+
+/**
+ * The flyout's actions, by store.
+ *
+ * A Data Installer pack: Import and Save as file. A library pack: Save as file, and
+ * Remove when it is the SC's own. A library pack has no Import because installing
+ * runs through the Data Installer, which does not hold it; the note says how.
+ */
+function PanelActions({
+    detail,
+    onImport,
+    onRemoved,
+}: {
+    detail: DatapackDetail;
+    onImport: (id: DatapackId) => void;
+    onRemoved: () => void;
+}): React.JSX.Element {
+    if (detail.store !== 'library') {
+        return (
+            <div className="db-drawer-actions">
+                <Button variant="accent" onPress={() => onImport(detail.id)}>
+                    Import
+                </Button>
+                <SaveDatapackFileButton id={detail.id} />
+            </div>
+        );
+    }
+    return (
+        <>
+            <p className="datapack-export-note">
+                This pack is in the datapack library. To install it, save it as a file and
+                load that file into the Data Installer.
+            </p>
+            <div className="db-drawer-actions">
+                <SaveDatapackFileButton id={detail.id} source="library" />
+                {detail.mine ? (
+                    <RemoveFromLibraryButton id={detail.id} onRemoved={onRemoved} />
+                ) : null}
+            </div>
+        </>
+    );
 }
 
 /** Pick the one body state to show. */
@@ -183,7 +224,7 @@ function DetailRows({
                 <PanelRow label="Description">{detail.description}</PanelRow>
             ) : null}
             {detail.owner ? <PanelRow label="Owner">{detail.owner}</PanelRow> : null}
-            <PanelRow label="Curation">{detail.shared ? 'Shared' : 'Community'}</PanelRow>
+            <PanelRow label="Curation">{curationLabel(detail)}</PanelRow>
             {detail.updatedAt ? (
                 <PanelRow label="Updated">{formatDate(detail.updatedAt)}</PanelRow>
             ) : null}
@@ -209,6 +250,14 @@ function DetailRows({
             ) : null}
         </>
     );
+}
+
+/** Who can see it. In the library, "shared" means every SC sees it; otherwise only its owner. */
+function curationLabel(detail: DatapackDetail): string {
+    if (detail.store === 'library') {
+        return detail.shared ? 'Library, shared with everyone' : 'Library, only you';
+    }
+    return detail.shared ? 'Shared' : 'Community';
 }
 
 /** One key/value detail row. */

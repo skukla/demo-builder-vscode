@@ -59,9 +59,6 @@ than a Runtime request allows is refused per type, by name, and the rest still l
 
 ## Not in scope
 
-- Showing library packs in the panel's catalog (datapack-store plan step 06). Until then the
-  human surface saves Data Installer packs and imports into either store; the agent surface
-  reaches both for both.
 - Non-standard pack types (ACO). The extension treats every pack as the standard type today;
   so does the file.
 
@@ -72,5 +69,7 @@ than a Runtime request allows is refused per type, by name, and the rest still l
   delete the caller's own library pack; the panel offers it after a load that created one.
   A load into the Data Installer still cannot be undone from the extension: deleting there
   stays unoffered because that catalog has no ownership check.
-- **The library is not in the panel's catalog yet** (datapack-store step 06), so the panel
-  saves Data Installer packs only; an agent can save from either store.
+- **The library is in the panel's catalog (owner, 2026-10-01: "do that next").** Both stores
+  in one grid, tagged Library / Yours; a library pack's flyout offers Save as file and Remove
+  (yours only), no Import. The library now answers `mine` on each pack. This is the catalog
+  half of datapack-store step 06; that plan lives on the ERP branch and is updated there.

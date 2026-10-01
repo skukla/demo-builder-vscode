@@ -105,6 +105,21 @@ That investigation is in
 
 A dated finding about a service we do not own — re-verify before relying on it.
 
+## The library in the catalog
+
+The Data Installer screen's catalog shows both stores: one request
+(`find-datapacks` with `includeLibrary`) returns the Data Installer's packs and then
+the library's, each library row tagged `store: 'library'`. Cards are grouped by store
+AND name, so a library pack never folds into a Data Installer pack of the same name.
+A library card is tagged "Library", or "Yours" when the SC owns it — the library says
+so itself (`mine`), because only it knows the caller's verified email.
+
+A library pack's flyout offers Save as file and, when it is yours, Remove; it has no
+Import, because installing runs through the Data Installer, which does not hold it.
+If the library cannot be reached, the Data Installer's packs still show, with a line
+saying why the library's are missing. Agents get the same through `find_datapacks`
+(`store`, `includeLibrary`) and `get_datapack` (`store`).
+
 ## Datapack files (save to a zip, load from one)
 
 Neither the service nor the datapack library has a file form, so the zip is built and
@@ -122,6 +137,7 @@ A zip whose files sit under one root folder reads the same.
 | | Panel | Agent tool |
 |---|---|---|
 | Save a pack from either store | "Save as file" in a pack's flyout, and after an export | `save_datapack_zip` |
+| Remove your own library pack | "Remove it from the library" in its flyout | `delete_library_datapack` |
 | See what a file holds, writing nothing | the first step of "Load from file" | `open_datapack_zip` |
 | Write it into a store | "Load from file", library by default | `load_datapack_zip` |
 | Undo a load into the library | "Remove it from the library", in the load result | `delete_library_datapack` |

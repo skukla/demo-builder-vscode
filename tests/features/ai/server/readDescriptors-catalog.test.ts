@@ -165,14 +165,14 @@ const CATALOG: Row[] = [
         map: dataInstallerHandlers,
         type: 'find-datapacks',
         needsAuth: ['adobe'],
-        args: ['includeCommunity', 'limit', 'skip'],
+        args: ['includeCommunity', 'store', 'includeLibrary', 'limit', 'skip'],
     },
     {
         tool: 'get_datapack',
         map: dataInstallerHandlers,
         type: 'get-datapack-detail',
         needsAuth: ['adobe'],
-        args: ['datapackName', 'version'],
+        args: ['datapackName', 'version', 'store'],
     },
     {
         tool: 'list_datapack_data_types',

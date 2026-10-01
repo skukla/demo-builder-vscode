@@ -22,7 +22,14 @@ import {
     resolveDatapackStoreBaseUrl,
 } from '../services/dataInstallerConfig';
 import { DataInstallerApiError, isDataInstallerAuthError } from '../services/dataInstallerErrors';
-import type { DatapackId, DatapackStoreName, OperationMode } from '../types';
+import type {
+    CatalogPage,
+    DatapackId,
+    DatapackStoreName,
+    DatapackSummary,
+    OperationMode,
+    Page,
+} from '../types';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
@@ -199,12 +206,60 @@ function toFailure(error: unknown, fallback: string): HandlerResponse {
 }
 
 /** Run one client call behind the guard, mapping both failure kinds. */
+const LIBRARY_LIST_FAILED = 'Could not list the datapack library.';
+
+/**
+ * The library's catalog, each row tagged `library`.
+ *
+ * No curation filter: the library already answers each SC with the shared packs
+ * plus their own, and their own are exactly what they came to find.
+ */
+async function listLibrary(
+    client: DataInstallerClient,
+    paging: { limit?: number; skip?: number },
+): Promise<Page<DatapackSummary>> {
+    const listed = await client.findDatapacks(paging);
+    return { ...listed, items: listed.items.map((item) => ({ ...item, store: 'library' as const })) };
+}
+
+/**
+ * The Data Installer's page with the library's rows added.
+ *
+ * A library that cannot be reached costs only its own rows: the Data Installer's
+ * catalog still shows, and the reason travels as `libraryError` so the panel can
+ * say why the library is missing rather than silently showing less.
+ */
+async function withLibraryRows(
+    context: HandlerContext,
+    installer: Page<DatapackSummary>,
+    paging: { limit?: number; skip?: number },
+): Promise<HandlerResponse> {
+    const library = await withClient(
+        context,
+        LIBRARY_LIST_FAILED,
+        (client) => listLibrary(client, paging),
+        'library',
+    );
+    if (!library.success) {
+        const libraryError = library.error ?? LIBRARY_LIST_FAILED;
+        return { success: true, data: { ...installer, libraryError } satisfies CatalogPage };
+    }
+    const extra = (library.data as Page<DatapackSummary>).items;
+    // No `total`: the two stores' totals do not add up to anything a caller can use.
+    const merged: CatalogPage = {
+        items: [...installer.items, ...extra],
+        count: installer.count + extra.length,
+    };
+    return { success: true, data: merged };
+}
+
 async function withClient(
     context: HandlerContext,
     fallback: string,
     run: (client: DataInstallerClient) => Promise<unknown>,
+    store: DatapackStoreName = 'installer',
 ): Promise<HandlerResponse> {
-    const access = await resolveDataInstallerAccess(context);
+    const access = await resolveDataInstallerAccess(context, store);
     if (!access.ok) {
         return access.response;
     }
@@ -231,6 +286,10 @@ async function withClient(
 // Exported because the wizard's composite map registers `find-datapacks`, and
 // TypeScript cannot NAME the map's inferred type while this stays local.
 export interface FindDatapacksPayload {
+    /** Which catalog to list. Defaults to the Data Installer. */
+    store?: DatapackStoreName;
+    /** With the Data Installer's list: add the library's packs to it. */
+    includeLibrary?: boolean;
     includeCommunity?: boolean;
     limit?: number;
     skip?: number;
@@ -240,6 +299,8 @@ export interface FindDatapacksPayload {
 interface DatapackRefPayload {
     datapackName?: string;
     version?: string;
+    /** Which catalog holds it. Defaults to the Data Installer. */
+    store?: DatapackStoreName;
 }
 
 export const dataInstallerHandlers = defineHandlers({
@@ -251,16 +312,32 @@ export const dataInstallerHandlers = defineHandlers({
     'find-datapacks': async (
         context: HandlerContext,
         payload?: FindDatapacksPayload,
-    ): Promise<HandlerResponse> =>
-        withClient(context, 'Could not list datapacks.', (client) =>
+    ): Promise<HandlerResponse> => {
+        const paging = {
+            ...(payload?.limit !== undefined ? { limit: payload.limit } : {}),
+            ...(payload?.skip !== undefined ? { skip: payload.skip } : {}),
+        };
+        if (payload?.store === 'library') {
+            return withClient(
+                context,
+                LIBRARY_LIST_FAILED,
+                (client) => listLibrary(client, paging),
+                'library',
+            );
+        }
+        const installer = await withClient(context, 'Could not list datapacks.', (client) =>
             client.findDatapacks({
                 // Curated by default: 23 of 40 live entries are shared, and the
                 // rest is developer scratch nobody wants to browse.
                 ...(payload?.includeCommunity ? {} : { shared: true }),
-                ...(payload?.limit !== undefined ? { limit: payload.limit } : {}),
-                ...(payload?.skip !== undefined ? { skip: payload.skip } : {}),
+                ...paging,
             }),
-        ),
+        );
+        if (!payload?.includeLibrary || !installer.success) {
+            return installer;
+        }
+        return withLibraryRows(context, installer.data as Page<DatapackSummary>, paging);
+    },
 
     'get-datapack-detail': async (
         context: HandlerContext,
@@ -270,8 +347,10 @@ export const dataInstallerHandlers = defineHandlers({
         if (!id) {
             return { success: false, error: 'A datapack name and version are required.' };
         }
+        const store = payload?.store ?? 'installer';
         return withClient(context, 'Could not load the datapack.', async (client) => {
-            const detail = await client.getDatapackDetail(id);
+            const fetched = await client.getDatapackDetail(id);
+            const detail = store === 'library' ? { ...fetched, store } : fetched;
             // Explicit types only — omitting them returns a 400 from the service.
             const inventory =
                 detail.dataTypes.length > 0
@@ -284,7 +363,7 @@ export const dataInstallerHandlers = defineHandlers({
                           requestedCount: 0,
                       };
             return { detail, inventory };
-        });
+        }, store);
     },
 
     'list-datapack-data-types': async (

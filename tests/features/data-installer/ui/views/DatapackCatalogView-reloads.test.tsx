@@ -55,7 +55,7 @@ describe('refresh re-asks with the toggle as it stands now', () => {
         await waitFor(() =>
             expect(requestOfType('find-datapacks')).toEqual({
                 type: 'find-datapacks',
-                payload: { includeCommunity: true },
+                payload: { includeCommunity: true, includeLibrary: true },
             }),
         );
     });
@@ -160,7 +160,7 @@ describe('the flyout’s Try Again', () => {
         expect(countOf('get-datapack-detail')).toBeGreaterThan(before);
         expect(requestOfType('get-datapack-detail')).toEqual({
             type: 'get-datapack-detail',
-            payload: { datapackName: 'bodea', version: 'main' },
+            payload: { datapackName: 'bodea', version: 'main', store: 'installer' },
         });
     });
 });

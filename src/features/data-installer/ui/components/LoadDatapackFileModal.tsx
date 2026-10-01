@@ -24,7 +24,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import type { DatapackStoreName } from '../../types';
 import { dataTypeLabel } from '../dataTypeLabel';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
-import { UndoLibraryLoadButton } from './UndoLibraryLoadButton';
+import { RemoveFromLibraryButton } from './RemoveFromLibraryButton';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { Modal } from '@/core/ui/components/ui/Modal';
 
@@ -215,7 +215,7 @@ function LoadResult({
                 details={failed}
             />
             {undoable ? (
-                <UndoLibraryLoadButton
+                <RemoveFromLibraryButton
                     id={{ name: outcome.datapackName, version: outcome.version }}
                 />
             ) : null}

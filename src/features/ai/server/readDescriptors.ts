@@ -576,8 +576,10 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         description:
             'List Adobe Commerce sample-data datapacks the Data Installer holds. Returns one row ' +
             'per (name, version) pair — the same pack appears once per version. Curated packs ' +
-            'only unless includeCommunity is set. This endpoint reports no total, so ' +
-            'count === limit means there may be more — page with skip.',
+            'only unless includeCommunity is set. store:"library" lists the team datapack ' +
+            'library instead (shared packs plus your own, mine:true on yours); includeLibrary ' +
+            'adds those rows after the Data Installer ones, each tagged store:"library". This ' +
+            'endpoint reports no total, so count === limit means there may be more — page with skip.',
         map: dataInstallerHandlers,
         type: 'find-datapacks',
         shape: (res) => shapeRows(res, leanDatapackRow),
@@ -586,6 +588,14 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
                 .boolean()
                 .optional()
                 .describe('Include non-shared developer packs (default: curated only)'),
+            store: z
+                .enum(['installer', 'library'])
+                .optional()
+                .describe('Which catalog to list (default: the Data Installer)'),
+            includeLibrary: z
+                .boolean()
+                .optional()
+                .describe('With the Data Installer list, add the library rows too'),
             ...PAGING,
         },
     },
@@ -603,6 +613,10 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
             // on, so a lookup by name alone has no answer.
             datapackName: z.string().describe('Datapack name, e.g. "bodea"'),
             version: z.string().describe('Version, e.g. "main" or "eds-compatible"'),
+            store: z
+                .enum(['installer', 'library'])
+                .optional()
+                .describe('The catalog holding it, as find_datapacks names it (default installer)'),
         },
     },
     {

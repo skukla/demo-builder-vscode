@@ -364,3 +364,22 @@ describe('paged envelope — total is reported, never fabricated', () => {
         expect(parseDatapackList(load('find-datapacks.json')).total).toBeUndefined();
     });
 });
+
+/**
+ * `mine` — the one field only the datapack library sends. Read only when it is
+ * literally true, so a row that does not say is never offered as the caller's.
+ */
+describe('mine — whether the signed-in SC owns the pack', () => {
+    const row = { datapack_name: 'justrite', version: 'v1' };
+
+    it('is carried when the library says true, on a list row and on a detail', () => {
+        expect(parseDatapackList({ datapacks: [{ ...row, mine: true }] }).items[0].mine).toBe(true);
+        expect(parseDatapackDetail({ ...row, mine: true }).mine).toBe(true);
+    });
+
+    it('is absent when the row says false, says nothing (the Data Installer), or says something else', () => {
+        for (const mine of [false, undefined, 'true', 1]) {
+            expect(parseDatapackList({ datapacks: [{ ...row, mine }] }).items[0]).not.toHaveProperty('mine');
+        }
+    });
+});

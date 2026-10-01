@@ -26,6 +26,7 @@ import {
     lastRequest,
     resolveWith,
     resolveCatalogThenDetail,
+    makeSummary,
     CATALOG,
     INVENTORY_COMPLETE,
     INVENTORY_WITH_GAP,
@@ -58,7 +59,7 @@ describe('DatapackCatalogView', () => {
         await waitFor(() =>
             expect(requestOfType('find-datapacks')).toEqual({
                 type: 'find-datapacks',
-                payload: { includeCommunity: false },
+                payload: { includeCommunity: false, includeLibrary: true },
             })
         );
     });
@@ -119,7 +120,7 @@ describe('DatapackCatalogView', () => {
             await waitFor(() =>
                 expect(lastRequest()).toEqual({
                     type: 'find-datapacks',
-                    payload: { includeCommunity: true },
+                    payload: { includeCommunity: true, includeLibrary: true },
                 })
             );
         });
@@ -198,7 +199,7 @@ describe('DatapackCatalogView', () => {
             await waitFor(() =>
                 expect(lastRequest()).toEqual({
                     type: 'get-datapack-detail',
-                    payload: { datapackName: 'bodea', version: 'main' },
+                    payload: { datapackName: 'bodea', version: 'main', store: 'installer' },
                 })
             );
         });
@@ -235,7 +236,7 @@ describe('DatapackCatalogView', () => {
             await waitFor(() =>
                 expect(lastRequest()).toEqual({
                     type: 'get-datapack-detail',
-                    payload: { datapackName: 'bodea', version: 'tierpricingfix' },
+                    payload: { datapackName: 'bodea', version: 'tierpricingfix', store: 'installer' },
                 })
             );
         });
@@ -419,3 +420,38 @@ describe('DatapackCatalogView', () => {
  * "this is the one" surface in the app uses. These assert the check rather than
  * prose, which is also what makes them survive the next wording change.
  */
+
+describe('DatapackCatalogView — the datapack library beside the Data Installer', () => {
+    beforeEach(() => {
+        mockRequest.mockReset();
+    });
+
+    it('shows a library pack on its own card even when the Data Installer has one of the same name', async () => {
+        resolveWith([
+            makeSummary('bodea', 'main'),
+            makeSummary('bodea', 'v1', { store: 'library', shared: false, mine: true }),
+        ]);
+
+        render(<DatapackCatalogView />);
+        await settle();
+
+        await waitFor(() => expect(screen.getAllByTestId('datapack-card')).toHaveLength(2));
+        expect(screen.getByText('Yours')).toBeInTheDocument();
+    });
+
+    it('still shows the Data Installer catalog when the library cannot be listed, and says why', async () => {
+        mockRequest.mockResolvedValue({
+            success: true,
+            data: { items: [makeSummary('bodea', 'main')], count: 1, libraryError: 'Adobe sign-in is required.' },
+        });
+
+        render(<DatapackCatalogView />);
+        await settle();
+
+        await waitFor(() => expect(screen.getAllByTestId('datapack-card')).toHaveLength(1));
+        expect(
+            screen.getByText('The datapack library could not be listed: Adobe sign-in is required.'),
+        ).toBeInTheDocument();
+    });
+});
+
