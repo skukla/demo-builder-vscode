@@ -9822,7 +9822,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 157,
+            "line": 179,
             "mutants": 1,
             "category": "block",
             "reason": "Stryker empties the catch, so a throwing validateToken leaves githubOk unassigned instead of false. Both readings are falsy at the 'if (!githubOk)' below, so the tool returns the same needsAuth:'github' handoff and calls the same collaborators either way. The only difference is the variable's binding, which nothing observes; a test asserting it would have to reach inside the function.",
@@ -9835,7 +9835,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 172,
+            "line": 194,
             "mutants": 1,
             "category": "block",
             "reason": "Stryker empties the catch, so a throwing isAuthenticated leaves daLiveOk unassigned instead of false. Both readings are falsy at the 'if (!daLiveOk)' below, so the tool returns the same needsAuth:'dalive' handoff and calls the same collaborators either way. The only difference is the variable's binding, which nothing observes; a test asserting it would have to reach inside the function.",
@@ -11946,18 +11946,6 @@
             "category": "branch",
             "reason": "familiesOf's result is read in exactly one place \u2014 familiesOf(api).includes(family) \u2014 where family is a chip code, and every chip code comes from API_FAMILIES or a cloud group. Seeding the array with an extra string, or pushing undefined when there is no curated family, therefore adds a member that can never equal the value being looked for: both mutants leave every membership answer unchanged. Verified by planting both together and running all six suites that render this picker (148 tests, all pass).",
             "decision": "none \u2014 the array is local and its only reader compares against a closed set of chip codes",
-            "recorded": "2026-09-06",
-            "source": "PL-22 batch MUT-02"
-        },
-        {
-            "module": "src/features/dashboard/handlers/destinationHandlers.ts",
-            "anchors": [
-                "project.adobe?.workspace === nextWorkspace.id"
-            ],
-            "mutants": 1,
-            "category": "optionalChain",
-            "reason": "This line is only evaluated when the line above it was true, and that requires project.adobe?.projectId to equal nextProject.id \u2014 a string the caller has already proved non-empty. So project.adobe is guaranteed to exist by the time this optional chain runs, and removing the ?. cannot throw. Verified by planting project.adobe.workspace: all 40 tests pass, including the one that drives a project carrying no adobe at all (which short-circuits on the line above).",
-            "decision": "none \u2014 the ?. mirrors the line above it and reads as one condition; splitting the two spellings would be worse",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-02"
         },
