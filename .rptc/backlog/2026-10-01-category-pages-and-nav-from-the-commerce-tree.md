@@ -102,10 +102,14 @@ place. No header change is needed.
 
 **Delivery.** Three parts, and none of them is a code patch:
 
-1. **The code is a block** (`catalog-menu`) in the Demo Team block library: it reads the
-   Commerce tree from Catalog Service with the storefront's own headers and replaces each
-   "Shop the catalog" line. It installs the way every library block does — copied into the
-   storefront repository at creation — so it reaches packages and shared demos alike.
+1. **The code is a block** (`catalog-menu`) in a **Demo Builder block library — ours, and
+   optional** (owner, 2026-10-01: "we don't own the demo team block library … the demo builder
+   needs to create its own block library that can optionally be added"). It reads the Commerce
+   tree from Catalog Service with the storefront's own headers and replaces each "Shop the
+   catalog" line. The library is a new `block-libraries.json` entry pointing at a repository we
+   own, offered as a checkbox in the Storefront area like the others; it installs the way every
+   library block does — copied into the storefront repository at creation — so it reaches
+   packages and shared demos alike. The catalog menu is its first block, not its only reason.
    A code patch was considered and rejected: patches rewrite a canonical file against an
    exact-match precondition, and header code differs per storefront (Khalil's is custom), so
    the patch would fail silently on exactly the sites that need it.
