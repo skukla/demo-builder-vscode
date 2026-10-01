@@ -107,3 +107,4 @@ Granting on the colleague's behalf (DA permissions are theirs), and writing to t
 - 2026-09-30  chore(release): bump version to 1.0.0-beta.149 (`52253d19f`)
 - 2026-09-30  feat(eds): let a colleague read your storefront's authored content on DA.live (EDS-22) (`79612742f`)
 - 2026-09-30  docs(backlog): EDS-22 design — a read grant on the sharer's DA.live org config, and an intake in Save as demo package (`137b4a176`)
+- 2026-10-01  2026-10-01, from AB-53: a shared demo's intake should also record whether the target website runs B2B and which shared catalogs it has. On a B2B website a category no catalog grants is invisible to search (guests saw 0 of 49 Justrite products). The category rule itself lives in EDS-24.
