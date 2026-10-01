@@ -1,7 +1,8 @@
 # Step 02 — the database and the store's first four actions
 
-Status: code and tests done, deploy BLOCKED on one permission (2026-10-01). Branch
-`feature/datapack-store` in `accs-discovery-service`, commit `11acaae`.
+Status: DONE 2026-10-01 — deployed to the scratch workspace, round trip green, 58 tests.
+Branch `feature/datapack-store` in `accs-discovery-service` (`11acaae` the store, `4d4f620`
+the database-library wrapper, then the save-pack echo fix).
 
 ## What exists
 
@@ -45,6 +46,26 @@ the Data Installer is therefore `create-datapack` + one `add-data-item` per stor
 3. **Then the round trip** (`curl` with the owner's CLI token as Bearer; the script is
    `step02-roundtrip.sh` beside the plan): save-pack → save-pack-items (one type, two rows) →
    packs (list shows it; one shows the type with rowCount 2) → delete-pack → packs (gone).
+
+## What the live round trip taught (2026-10-01, scratch namespace, all fixed on the branch)
+
+The owner approved the deploy and the round trip ran. Every store call answered 500 at
+first, and getting to the reasons cost more than the fixes. For the next person:
+
+| Finding | Consequence |
+|---|---|
+| `libDb.init()` answers a HANDLE; `connect()` yields the client with collections. The docs' sample elides the step | `openStore` connects; pinned in `openStore.test.js` |
+| `findOne` with no match THROWS a `DbError` ("Document not found", `httpStatusCode` 200) instead of answering null | a wrapper restores null; every action's "does this pack exist?" depended on it |
+| `findArray` refuses `limit` above 100 ("Limit cannot exceed 100") | the wrapper caps at `MAX_PAGE`; a list past 100 pages |
+| A read in the same activation right after a write still sees the previous document (`shared: true` written, `false` echoed, correct one second later) | `save-pack` answers with what it wrote, never a re-read; the extension must not rely on an immediate read-after-write either |
+| A handled error inside a web action (we return 500) leaves NO activation record and no log lines — the activation counts as a success | send `X-OW-EXTRA-LOGGING: on` on the request to keep the activation; or, as done here, a throwaway probe action that returns each step's outcome in its body |
+| `aio app deploy` with a database stanza REWRITES `app.config.yaml` and strips every comment (the library's `writeRegionToAppConfig`) | `git checkout -- app.config.yaml` after every deploy; the committed file is the truth |
+| A fresh workspace has no credential; the database needs an OAuth S2S credential subscribed to App Builder Data Services (`AppBuilderDataServicesSDK`), and `getServicesForOrg` rows carry the code as `code`, not `sdkCode` | done for `DatapackSpike`; Stage needs the same before its first deploy of the package |
+
+Round trip, final (`step02-roundtrip.sh`): create 201 → items 200 (rowCount 2) → list 200
+(1 pack, `dataTypes: ["categories"]`) → one 200 (the type with rowCount 2) → update 200 →
+delete 200 (1 type removed) → one 404 → no token 401. Database: 2 collections, both empty
+after the run.
 
 ## For the Stage deploy, later
 
