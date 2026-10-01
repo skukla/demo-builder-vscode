@@ -41,10 +41,12 @@ lookup service and PDP stuff."
 - **The one-registry rule stands** (owner, 2026-08-23): the org's packs must have ONE home.
   Two stores that can both hold a pack diverge.
 
-## Decision (preferred shape, pending step 1)
+## Decision (step 1 measured 2026-10-01 — see `step-01.md`)
 
-**The datapack store is a new package inside `accs-discovery-service`, on the App Builder
-Database, behind the service's existing guard.** The library is the set of packs marked
+**The datapack store is a new package inside `accs-discovery-service`, in the SAME Stage
+workspace, on the App Builder Database, behind the service's existing guard.** Step 1 held
+300 activations open beside `render-pdp` in a scratch namespace and the PDP path did not move
+(p50 66–67 ms throughout, no 429 anywhere), so the second-workspace shape is not needed. The library is the set of packs marked
 `shared`; an SC's own packs are theirs until promoted. Export runs in our service and reads the
 instance over REST with the credential `get-commerce-credentials` already dispenses. Install
 keeps using the Data Installer: our service pushes the pack through the Data Installer's working
@@ -62,7 +64,7 @@ and watch paths stay as they are; nothing is hosted inside the extension (ruled 
 
 | # | Step | Gate it answers | Design settled? |
 |---|---|---|---|
-| 01 | **Measure the namespace question.** Run a deliberately slow action in the service's namespace while probing `render-pdp` latency on a live storefront, at the namespace's concurrency limit. Decide: same workspace (a package) or a second workspace in the same I/O project. | Can a long export or import share a namespace with the PDP path a shopper is waiting on? | No — the measurement decides |
+| 01 | **Measure the namespace question.** DONE 2026-10-01 (`step-01.md`): 5, 100, 150 and 300 activations held open in a scratch namespace beside `render-pdp`; the PDP path's latency did not move and nothing answered 429. Decision: same workspace, as a package; one non-blocking activation per store job as the design rule. The `DatapackSpike` workspace stays as the development namespace until the build ships. | Can a long export or import share a namespace with the PDP path a shopper is waiting on? | Yes — measured |
 | 02 | **Database and schema.** Declare the database in `app.config.yaml`; collections `packs` (name, version, owner email, `shared`, created, data types, counts) and `pack_items` (pack, version, data type, row) in the Data Installer's own item shape, so a pack can be pushed to it unchanged. | Does the shape round-trip into `create-datapack` + `add-data-item`? | Yes, from DI-3's documented item shape |
 | 03 | **Export action**, asynchronous: start / status / result, like `process-datapack-async`. Reads the instance over REST with the brokered credential, one data type at a time, stores rows as pack items. Selective by data type (the ERP demo captures `categories`, `b2b_shared_catalog_*`, `customer_groups`, `b2b_companies` without a whole-instance sweep). | Can we capture the Justrite setup as a pack? | Mostly — the per-type readers are the Data Installer's export processors, re-expressed over REST |
 | 04 | **Library API**: list (shared + mine), get, promote (owner or allowlisted curator), delete own. Owner is the IMS email the guard already validates. | One registry, two visibilities | Yes |
