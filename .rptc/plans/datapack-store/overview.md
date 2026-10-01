@@ -54,6 +54,42 @@ lookup service and PDP stuff."
   processor stores through one seam** — `addDataItem._internal({...rows, ...getExportStoreParams(context)})`
   (`actions/utils/runtimeParams.js`) — which is the one function a port replaces with our store.
 
+## The existing deployment CAN export — after a one-function fix (found 2026-10-01)
+
+Owner's question: can we use Jeff's service for export WITHOUT a service of ours? Yes. The
+export failure every attempt since August hit ("MongoDB connection URI required") is not the
+deployment's configuration. It is one function in the code:
+
+- The deployed `process-datapack` (v0.0.76, deployed 2026-08-04, in the Adobe Demo System org's
+  `DataInstallerAPI` project, Stage workspace) **carries a non-empty `MONGO_URI`** and every
+  other `MONGO_*` input — read from the action's default parameters with the owner's own access
+  to that workspace (values never printed).
+- Every one of the 23 export processors stores through `getExportStoreParams(context)`, and
+  `context` is built by `buildContext()` in `actions/processor/contextBuilder.js` from a FIXED
+  list of fields that **contains no `MONGO_*`**. So the store step asks the context for a
+  database address the action had and the context never carried.
+- **Proven in the service's own suite** (`npm install` in the clone, then a one-test file):
+  `buildContext({ MONGO_URI: 'x', … })` → `getExportStoreParams(context).MONGO_URI` is
+  `undefined`. The shipped `CategoryExportProcessor.test.js` passes because it MOCKS
+  `getExportStoreParams` to answer from the context it hands in — the mock answers the same
+  whatever the real context holds, which is exactly how the bug shipped (the rule in our root
+  CLAUDE.md, "a mock cannot see a malformed call", in someone else's repo).
+- The fix is spreading `getMongoParams(params)` into the context (one line plus a test).
+  Prepared as a local branch in the clone, never pushed: the `kukla_adobe` account has
+  pull-only access, forking is disabled, `main` is protected.
+- **"The service is locked" is no longer true.** PR #12 was merged 2026-09-02 by
+  `afreens_adobe`; #10 (Node 22) on 2026-07-09 by `abhisin_adobe`. There are maintainers to
+  hand the patch to. The owner also holds developer access to the Stage workspace, so a
+  redeploy from a patched checkout is technically possible — a governance choice, not a
+  technical one.
+
+**What this does to the plan.** Export was the only broken half, and it is one line away in
+the service that already holds the one registry, `shared`/`owner`, promote, installation
+tracking and 64 processors. The datapack store built in step 02 (deployed only to the
+scratch workspace) becomes optional: a second registry the one-registry rule argues against.
+The owner decides: (a) fix the service and route every Share/export through it, dropping our
+store; or (b) keep our store for a reason the service cannot serve. Recommendation: (a).
+
 ## Decision (step 1 measured 2026-10-01 — see `step-01.md`)
 
 **The datapack store is a new package inside `accs-discovery-service`, in the SAME Stage

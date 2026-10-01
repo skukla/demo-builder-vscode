@@ -94,10 +94,18 @@ judgement in this feature:
 ## Stage 3 (export)
 
 Implemented (`handlers/exportHandlers.ts`, `services/dataInstallerWriteClient.ts`). A
-probe on 2026-08-14 found it authenticating and connecting but returning nothing,
-with a root cause in the service's own infrastructure rather than in this extension.
-That investigation is in
-[`.rptc/research/data-installer/stage-3-export-probe-2026-08-14.md`](../../.rptc/research/data-installer/stage-3-export-probe-2026-08-14.md).
+probe on 2026-08-14 found it authenticating and connecting but storing nothing
+("MongoDB connection URI required"). That investigation is in
+[`.rptc/research/data-installer/stage-3-export-probe-2026-08-14.md`](../../.rptc/research/data-installer/stage-3-export-probe-2026-08-14.md),
+and it read the cause as the deployment's configuration.
+
+**Corrected 2026-10-01, with the service's source in hand**
+(`Adobe-CoreTech/dsc-data-installer-api`, internal): the deployed export action DOES carry
+its database address. The service's `buildContext()` builds the processor context from a
+fixed field list that omits every `MONGO_*` input, and every export processor asks that
+context for the address. One line fixes it; the proof and the prepared patch are recorded in
+`.rptc/plans/datapack-store/overview.md`. The service also has active maintainers (merges in
+July and September 2026), so "blocked indefinitely" in older notes is out of date.
 
 A dated finding about a service we do not own — re-verify before relying on it.
 
