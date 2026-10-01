@@ -128,10 +128,10 @@ export interface IntegrationCardModel {
     installation?: {
         /** Display label: 'Installed' or 'Not installed'. */
         label: string;
-        /** The no-op reason on skip, or the hands-back line on failure. */
+        /** The hands-back line — present only when the install failed. */
         detail?: string;
-        /** Preformatted locale display string of the attempt. */
-        at?: string;
+        /** The app version installed in Commerce, when the record knows it. */
+        version?: string;
         failed: boolean;
         /** Commerce refused an in-place upgrade; only a reinstall applies the new version. */
         needsReinstall?: boolean;

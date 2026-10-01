@@ -28,7 +28,10 @@ export interface LinkedSectionProps {
  * @param props - the card model and the grid's selection setter
  * @returns the row, or null
  */
-export function LinkedSection({ model, onOpenLinked }: LinkedSectionProps): React.ReactElement | null {
+export function LinkedSection({
+    model,
+    onOpenLinked,
+}: LinkedSectionProps): React.ReactElement | null {
     const linked = model.linked;
     if (!linked?.cards.length) return null;
     return (
@@ -40,8 +43,12 @@ export function LinkedSection({ model, onOpenLinked }: LinkedSectionProps): Reac
                         React.Children.only. A two-child label threw at render and
                         blanked the whole surface on 2026-09-16; the suites mock
                         @adobe/react-spectrum and never saw it. */}
+                    {/* The dot already says "deployed"; the word is spelled out only
+                        when the state is the news (owner, 2026-10-01). */}
                     <Link isQuiet onPress={() => onOpenLinked(card.id)}>
-                        {`${card.name} · ${card.statusLabel}`}
+                        {card.status === 'deployed'
+                            ? card.name
+                            : `${card.name} · ${card.statusLabel}`}
                     </Link>
                 </span>
             ))}

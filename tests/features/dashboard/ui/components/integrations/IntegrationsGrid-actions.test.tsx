@@ -71,7 +71,7 @@ describe('IntegrationsGrid actions', () => {
             // The flyout stays shut. The progress modal opening is the point of
             // the Deploy (PL-59), so the check names the flyout, not any dialog.
             expect(
-                screen.queryByRole('dialog', { name: 'custom-app details' }),
+                screen.queryByRole('dialog', { name: 'custom-app details' })
             ).not.toBeInTheDocument();
             expect(getClient().postMessage).toHaveBeenCalledWith('deployAppBuilderComponent', {
                 progress: 'modal',
@@ -146,7 +146,10 @@ describe('IntegrationsGrid actions', () => {
                 progress: 'modal',
                 id: 'custom-app',
             });
-            expect(getClient().postMessage).not.toHaveBeenCalledWith('redeployAppBuilderComponent', expect.anything());
+            expect(getClient().postMessage).not.toHaveBeenCalledWith(
+                'redeployAppBuilderComponent',
+                expect.anything()
+            );
         });
 
         it('routes Install into Commerce to installAppBuilderComponent (AB-5)', async () => {
@@ -171,7 +174,7 @@ describe('IntegrationsGrid actions', () => {
             });
         });
 
-        it("routes the drawer's Open Commerce Admin to the dashboard tile's openAdminPanel", async () => {
+        it("routes the kebab's Open Commerce Admin to the dashboard tile's openAdminPanel", async () => {
             const user = setupUser();
             renderGrid({
                 appBuilderComponents: {
@@ -182,10 +185,10 @@ describe('IntegrationsGrid actions', () => {
                 },
             });
 
-            // The link lives on the drawer's Commerce-install row. The card's kebab
-            // carries the same label (owner, 2026-09-22), so this asks for the LINK.
-            await user.click(card('custom-app', 'Deployed'));
-            await user.click(screen.getByRole('link', { name: 'Open Commerce Admin' }));
+            // The kebab is the ONE home of this verb since the flyout's install row
+            // shrank to a line (2026-10-01); it used to be a link there too.
+            const tile = card('custom-app', 'Deployed');
+            await user.click(within(tile).getByRole('button', { name: /^open commerce admin$/i }));
 
             expect(getClient().postMessage).toHaveBeenCalledWith('openAdminPanel', {});
         });
@@ -360,9 +363,7 @@ describe('IntegrationsGrid actions', () => {
 
             await openRemove(user);
 
-            expect(
-                screen.getByRole('dialog', { name: 'Remove custom-app' })
-            ).toBeInTheDocument();
+            expect(screen.getByRole('dialog', { name: 'Remove custom-app' })).toBeInTheDocument();
             expect(getClient().postMessage).not.toHaveBeenCalledWith(
                 'removeAppBuilderComponent',
                 expect.anything()

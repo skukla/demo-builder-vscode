@@ -34,7 +34,15 @@ const MODEL: IntegrationCardModel = {
     canRename: false,
     linked: {
         label: 'Used by',
-        cards: [{ id: 'erp-integration', name: 'ERP integration', status: 'deployed', statusLabel: 'Deployed', dotVariant: 'success' }],
+        cards: [
+            {
+                id: 'erp-integration',
+                name: 'ERP integration',
+                status: 'deployed',
+                statusLabel: 'Deployed',
+                dotVariant: 'success',
+            },
+        ],
     },
 };
 
@@ -43,10 +51,29 @@ function mount(node: React.ReactElement) {
 }
 
 describe('linked cards against real Spectrum', () => {
+    // A deployed link is its name alone: the dot already says deployed (owner, 2026-10-01).
     it('the Used by row mounts, and its link is one child', () => {
         mount(<LinkedSection model={MODEL} onOpenLinked={jest.fn()} />);
 
-        expect(screen.getByText('ERP integration · Deployed')).toBeInTheDocument();
+        expect(screen.getByText('ERP integration')).toBeInTheDocument();
+        expect(screen.queryByText(/· Deployed/)).not.toBeInTheDocument();
+    });
+
+    it('a link in any other state spells the state out', () => {
+        const failed = {
+            ...MODEL.linked!.cards[0],
+            status: 'error' as const,
+            statusLabel: 'Deploy failed',
+            dotVariant: 'error' as const,
+        };
+        mount(
+            <LinkedSection
+                model={{ ...MODEL, linked: { label: 'Used by', cards: [failed] } }}
+                onOpenLinked={jest.fn()}
+            />
+        );
+
+        expect(screen.getByText('ERP integration · Deploy failed')).toBeInTheDocument();
     });
 
     it('the card face mounts with its badge and link line', () => {
@@ -57,7 +84,9 @@ describe('linked cards against real Spectrum', () => {
     });
 
     it('renders no row for a card that stands alone', () => {
-        const { container } = mount(<LinkedSection model={{ ...MODEL, linked: undefined }} onOpenLinked={jest.fn()} />);
+        const { container } = mount(
+            <LinkedSection model={{ ...MODEL, linked: undefined }} onOpenLinked={jest.fn()} />
+        );
 
         expect(container.querySelector('[data-testid="linked-card"]')).toBeNull();
     });

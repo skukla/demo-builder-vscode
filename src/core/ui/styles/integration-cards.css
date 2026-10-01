@@ -341,6 +341,32 @@
     color: var(--spectrum-global-color-gray-600);
 }
 
+/* The muted tail of a status line — "· 9/30/2026, 7:16 PM" after DEPLOYED, "· v0.10.0"
+   after INSTALLED. Status and Last deploy were two rows for one fact; the install row
+   was a label, a sentence, a timestamp and two links (owner, 2026-10-01). */
+.integration-panel-status-aside {
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+/* The folded tier of the flyout: source, address, APIs and the deployed endpoints.
+   Collapsed by default; the summary is typeset as a row key so it reads as one more
+   row until opened. The rows inside keep their own dividers. */
+.integration-panel-details {
+    padding: 5px 0;
+}
+
+.integration-panel-details-summary {
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+.integration-panel-details[open] > .integration-panel-details-summary {
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--spectrum-global-color-gray-200);
+}
+
 /* Remove trails the row (the prototype separates it from the safe actions). */
 .integration-panel-danger {
     margin-left: auto;

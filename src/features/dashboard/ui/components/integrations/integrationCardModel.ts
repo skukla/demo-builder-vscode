@@ -48,7 +48,11 @@ import {
     getAppBuilderComponentEntry,
     isBlankSource,
 } from '@/features/components/services/appBuilderComponentCatalogLoader';
-import { isAddedSystem, listedSystemOf, systemsUsedBy } from '@/features/components/services/appBuilderComponentLinks';
+import {
+    isAddedSystem,
+    listedSystemOf,
+    systemsUsedBy,
+} from '@/features/components/services/appBuilderComponentLinks';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState } from '@/types/base';
 import type { CommerceStoreStructure } from '@/types/commerceStore';
@@ -156,7 +160,9 @@ function buildMenuActions(
     // upgrade needs the reinstall instead, and only then is it offered: it
     // removes what the app set up in Commerce.
     const install: CardAction[] =
-        status === 'deployed' && installation?.failed ? [installation.needsReinstall ? 'reinstall' : 'install'] : [];
+        status === 'deployed' && installation?.failed
+            ? [installation.needsReinstall ? 'reinstall' : 'install']
+            : [];
     // The REPAIR, below Redeploy rather than leading: Commerce can lose what the app
     // registered while the app still reports itself installed — measured live
     // 2026-09-22, when another copy of the same app uninstalled and took this one's
@@ -164,7 +170,9 @@ function buildMenuActions(
     // back, so the reinstall (the one pass that starts from nothing) must be
     // reachable on any installed card, not only on a refused upgrade.
     const repair: CardAction[] =
-        status === 'deployed' && installation && !install.includes('reinstall') ? ['reinstall'] : [];
+        status === 'deployed' && installation && !install.includes('reinstall')
+            ? ['reinstall']
+            : [];
     // Where an installed app is SEEN: its own entry under Apps in the Commerce
     // Admin. The drawer already links there; this is the same message from the menu,
     // so the SC need not open the card first (owner, 2026-09-22). It lands on the
@@ -219,7 +227,10 @@ function buildSystemMenuActions(
  * @param entry - the persisted component
  * @returns 'stale' for a deployed component with an update, else `status`
  */
-export function withUpdateStatus(status: string, entry: Pick<IdentifiedAppBuilderComponent, 'updateAvailable'>): string {
+export function withUpdateStatus(
+    status: string,
+    entry: Pick<IdentifiedAppBuilderComponent, 'updateAvailable'>,
+): string {
     return status === 'deployed' && entry.updateAvailable ? 'stale' : status;
 }
 
@@ -238,8 +249,15 @@ function toLinkedCard(model: IntegrationCardModel): LinkedCard {
 function deriveFace(
     entry: IdentifiedAppBuilderComponent,
     override: RowStatusOverride | undefined,
-): { status: IntegrationStatus; statusLabel: string; dotVariant: IntegrationCardModel['dotVariant']; message?: string } {
-    const status = normalizeIntegrationStatus(withUpdateStatus(override?.status ?? entry.status, entry));
+): {
+    status: IntegrationStatus;
+    statusLabel: string;
+    dotVariant: IntegrationCardModel['dotVariant'];
+    message?: string;
+} {
+    const status = normalizeIntegrationStatus(
+        withUpdateStatus(override?.status ?? entry.status, entry),
+    );
     const shared = getStatusDisplay(status);
     // While deploying, the live step IS the label — because the card FACE renders
     // `statusLabel` and nothing else (IntegrationCard.tsx). Putting the step on
@@ -293,7 +311,9 @@ function resolvePrimaryUrl(entry: IdentifiedAppBuilderComponent): string | undef
  * moved to the deployed version — both ARE installed, and rendering either as
  * anything else would read as a problem.
  */
-function installationLabel(record: NonNullable<IdentifiedAppBuilderComponent['installation']>): string {
+function installationLabel(
+    record: NonNullable<IdentifiedAppBuilderComponent['installation']>,
+): string {
     if (record.needsReinstall) return 'Needs reinstall';
     return record.status === 'failed' ? 'Not installed' : 'Installed';
 }
@@ -304,10 +324,12 @@ function deriveInstallation(
     const record = entry.installation;
     if (!record) return undefined;
     const failed = record.status === 'failed';
+    // Only a failure's detail renders (the flyout shows an installed app as one
+    // line, 2026-10-01), so only a failure's detail travels.
     return {
         label: installationLabel(record),
-        detail: record.detail,
-        at: formatLastDeployed(record.at),
+        ...(failed && record.detail ? { detail: record.detail } : {}),
+        ...(record.version ? { version: record.version } : {}),
         failed,
         ...(record.needsReinstall ? { needsReinstall: true } : {}),
     };
@@ -425,7 +447,11 @@ export function deriveIntegrationCard(
         apis: facet.apis,
         lastDeployed: formatLastDeployed(entry.lastDeployed),
         installation,
-        menuActions: withAddErp(entry, face.status, buildMenuActions(face.status, primaryUrl, installation, Boolean(entry.updateAvailable))),
+        menuActions: withAddErp(
+            entry,
+            face.status,
+            buildMenuActions(face.status, primaryUrl, installation, Boolean(entry.updateAvailable)),
+        ),
         canRename: entry.kind === 'integration' && facet.renamable,
         ...(systems.length > 0 ? { linked: { label: 'Uses' as const, cards: systems } } : {}),
         ...withSetupChecklist(entry),
@@ -437,16 +463,26 @@ export function deriveIntegrationCard(
  * and serves a list of systems: the ERP integration. The only way to a second ERP, since the
  * gallery adds the integration once.
  */
-function withAddErp(entry: IdentifiedAppBuilderComponent, status: IntegrationStatus, actions: CardAction[]): CardAction[] {
+function withAddErp(
+    entry: IdentifiedAppBuilderComponent,
+    status: IntegrationStatus,
+    actions: CardAction[],
+): CardAction[] {
     const kind = entry.catalogId ?? entry.id;
-    const addsErps = getAppBuilderComponentEntry(kind)?.addOnce && listedSystemOf(kind, getAppBuilderComponentCatalog());
+    const addsErps =
+        getAppBuilderComponentEntry(kind)?.addOnce &&
+        listedSystemOf(kind, getAppBuilderComponentCatalog());
     if (status !== 'deployed' || !addsErps) return actions;
     const at = actions.indexOf('remove');
-    return at === -1 ? [...actions, 'add-erp'] : [...actions.slice(0, at), 'add-erp', ...actions.slice(at)];
+    return at === -1
+        ? [...actions, 'add-erp']
+        : [...actions.slice(0, at), 'add-erp', ...actions.slice(at)];
 }
 
 /** The demo setup checklist, when the entry declares one (`setupChecklist.ts`). */
-function withSetupChecklist(entry: IdentifiedAppBuilderComponent): Pick<IntegrationCardModel, 'setupChecklist'> {
+function withSetupChecklist(
+    entry: IdentifiedAppBuilderComponent,
+): Pick<IntegrationCardModel, 'setupChecklist'> {
     const setupChecklist = setupChecklistOf(entry.id, entry);
     return setupChecklist ? { setupChecklist } : {};
 }
@@ -487,7 +523,12 @@ export function deriveSystemCard(
         urlLabel: 'Screen',
         deployedUrls: entry.deployedUrls,
         lastDeployed: formatLastDeployed(entry.lastDeployed),
-        menuActions: buildSystemMenuActions(face.status, screenUrl, usedBy, Boolean(entry.updateAvailable)),
+        menuActions: buildSystemMenuActions(
+            face.status,
+            screenUrl,
+            usedBy,
+            Boolean(entry.updateAvailable),
+        ),
         canRename: false,
         ...(usedBy ? { linked: { label: 'Used by' as const, cards: [usedBy] } } : {}),
     });
@@ -498,7 +539,10 @@ export function deriveSystemCard(
  * the drawer says why, and the menu offers to go ahead. While a deploy or a
  * retried removal runs, the live status shows instead.
  */
-function withRemovalStopped(entry: IdentifiedAppBuilderComponent, card: IntegrationCardModel): IntegrationCardModel {
+function withRemovalStopped(
+    entry: IdentifiedAppBuilderComponent,
+    card: IntegrationCardModel,
+): IntegrationCardModel {
     if (!entry.removalStopped || card.status === 'deploying') return card;
     return {
         ...card,
@@ -720,7 +764,9 @@ export function buildIntegrationCards(
     // are no pairs: the bundled catalog is what the per-entry lookups already
     // fall back to, so the links agree with the badges either way.
     const links = catalog?.length ? catalog : getAppBuilderComponentCatalog();
-    const project = { appBuilderComponents: Object.fromEntries(components.map(({ id, ...state }) => [id, state])) };
+    const project = {
+        appBuilderComponents: Object.fromEntries(components.map(({ id, ...state }) => [id, state])),
+    };
     const byId = new Map(components.map((component) => [component.id, component]));
     const placed = new Set<string>();
     const cards: IntegrationCardModel[] = [];
@@ -734,13 +780,26 @@ export function buildIntegrationCards(
             if (!system) return [];
             const card = deriveSystemCard(system, overrides[systemId], toLinkedCard(own), links);
             // An ERP added from the integration's card is removed on its own (AB-16).
-            return [isAddedSystem(project, systemId, integration.id) ? { ...card, removesAlone: true } : card];
+            return [
+                isAddedSystem(project, systemId, integration.id)
+                    ? { ...card, removesAlone: true }
+                    : card,
+            ];
         });
-        cards.push(deriveIntegrationCard(integration, overrides[integration.id], systems.map(toLinkedCard)), ...systems);
+        cards.push(
+            deriveIntegrationCard(
+                integration,
+                overrides[integration.id],
+                systems.map(toLinkedCard),
+            ),
+            ...systems,
+        );
         placed.add(integration.id);
         for (const system of systems) placed.add(system.id);
     }
-    for (const system of components.filter((component) => component.kind === 'system' && !placed.has(component.id))) {
+    for (const system of components.filter(
+        (component) => component.kind === 'system' && !placed.has(component.id),
+    )) {
         cards.push(deriveSystemCard(system, overrides[system.id], undefined, links));
         placed.add(system.id);
     }

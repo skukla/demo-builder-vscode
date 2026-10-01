@@ -6,8 +6,17 @@
  */
 
 import { screen, within } from '@testing-library/react';
-import { getClient, openPanel, renderCards, resetGridMocks, setupUser } from './IntegrationsGrid.testUtils';
-import type { IntegrationCardModel, LinkedCard } from '@/core/ui/components/integrations/integrationCardModel.types';
+import {
+    getClient,
+    openPanel,
+    renderCards,
+    resetGridMocks,
+    setupUser,
+} from './IntegrationsGrid.testUtils';
+import type {
+    IntegrationCardModel,
+    LinkedCard,
+} from '@/core/ui/components/integrations/integrationCardModel.types';
 
 const INTEGRATION_LINK: LinkedCard = {
     id: 'erp-integration',
@@ -16,7 +25,13 @@ const INTEGRATION_LINK: LinkedCard = {
     statusLabel: 'Deployed',
     dotVariant: 'success',
 };
-const SYSTEM_LINK: LinkedCard = { id: 'demo-erp', name: 'Nordwind', status: 'deployed', statusLabel: 'Deployed', dotVariant: 'success' };
+const SYSTEM_LINK: LinkedCard = {
+    id: 'demo-erp',
+    name: 'Nordwind',
+    status: 'deployed',
+    statusLabel: 'Deployed',
+    dotVariant: 'success',
+};
 
 function integrationCard(): IntegrationCardModel {
     return {
@@ -88,7 +103,10 @@ describe('IntegrationsGrid — the system card verbs', () => {
 
         await user.click(within(panel).getByRole('button', { name: /^open$/i }));
 
-        expect(getClient().postMessage).toHaveBeenCalledWith('openErpScreen', { id: 'erp-integration', erp: 'demo-erp' });
+        expect(getClient().postMessage).toHaveBeenCalledWith('openErpScreen', {
+            id: 'erp-integration',
+            erp: 'demo-erp',
+        });
         expect(getClient().postMessage).not.toHaveBeenCalledWith('openLiveSite', expect.anything());
     });
 
@@ -97,7 +115,10 @@ describe('IntegrationsGrid — the system card verbs', () => {
 
         await user.click(within(panel).getByRole('link', { name: 'Open Nordwind' }));
 
-        expect(getClient().postMessage).toHaveBeenCalledWith('openErpScreen', { id: 'erp-integration', erp: 'demo-erp' });
+        expect(getClient().postMessage).toHaveBeenCalledWith('openErpScreen', {
+            id: 'erp-integration',
+            erp: 'demo-erp',
+        });
     });
 
     it("Redeploy posts the system's OWN id", async () => {
@@ -133,9 +154,14 @@ describe('IntegrationsGrid — the system card verbs', () => {
 
         const dialog = screen.getByRole('dialog', { name: /reset erp records/i });
         // Every ERP, and the orders it closes off (AB-16n): the dialog says both.
-        expect(dialog).toHaveTextContent('Resets every ERP this integration serves, Nordwind included');
+        expect(dialog).toHaveTextContent(
+            'Resets every ERP this integration serves, Nordwind included'
+        );
         expect(dialog).toHaveTextContent('A cancelled order cannot be reopened.');
-        expect(getClient().postMessage).not.toHaveBeenCalledWith('resetErpRecords', expect.anything());
+        expect(getClient().postMessage).not.toHaveBeenCalledWith(
+            'resetErpRecords',
+            expect.anything()
+        );
     });
 
     it("confirming posts resetErpRecords with the INTEGRATION's id (the reset runs through it)", async () => {
@@ -161,7 +187,10 @@ describe('IntegrationsGrid — the system card verbs', () => {
         const dialog = screen.getByRole('dialog', { name: /reset erp records/i });
         await user.click(within(dialog).getByRole('button', { name: /^close$/i }));
 
-        expect(getClient().postMessage).not.toHaveBeenCalledWith('resetErpRecords', expect.anything());
+        expect(getClient().postMessage).not.toHaveBeenCalledWith(
+            'resetErpRecords',
+            expect.anything()
+        );
     });
 });
 
@@ -169,7 +198,7 @@ describe('IntegrationsGrid — the link between them', () => {
     it("the system's Used by row opens the integration's flyout", async () => {
         const { user, panel } = await openSystem();
 
-        await user.click(within(panel).getByRole('link', { name: 'ERP integration · Deployed' }));
+        await user.click(within(panel).getByRole('link', { name: 'ERP integration' }));
 
         expect(screen.getByLabelText('ERP integration details')).toBeInTheDocument();
     });
@@ -191,6 +220,8 @@ describe('IntegrationsGrid — the link between them', () => {
         await user.click(within(panel).getByRole('button', { name: /^remove$/i }));
 
         const dialog = screen.getByRole('dialog', { name: 'Remove Nordwind' });
-        expect(dialog).toHaveTextContent('Its records will be deleted, and ERP integration will be removed too.');
+        expect(dialog).toHaveTextContent(
+            'Its records will be deleted, and ERP integration will be removed too.'
+        );
     });
 });

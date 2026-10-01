@@ -17,7 +17,9 @@ describe('deriveIntegrationCard — installation facet', () => {
         expect(model.menuActions).not.toContain('install');
     });
 
-    it('installed: label Installed, no install action', () => {
+    // The flyout shows an installed app as ONE line (2026-10-01), so the timestamp and
+    // the no-op sentence do not travel: the model carries only what renders.
+    it('installed: label Installed and nothing else, no install action', () => {
         const model = deriveIntegrationCard(
             integration({
                 status: 'deployed',
@@ -25,8 +27,7 @@ describe('deriveIntegrationCard — installation facet', () => {
             })
         );
 
-        expect(model.installation).toMatchObject({ label: 'Installed', failed: false });
-        expect(model.installation?.at).toBeDefined();
+        expect(model.installation).toStrictEqual({ label: 'Installed', failed: false });
         expect(model.menuActions).not.toContain('install');
     });
 
@@ -38,14 +39,10 @@ describe('deriveIntegrationCard — installation facet', () => {
             })
         );
 
-        expect(model.installation).toMatchObject({
-            label: 'Installed',
-            detail: 'Already installed and current.',
-            failed: false,
-        });
+        expect(model.installation).toStrictEqual({ label: 'Installed', failed: false });
     });
 
-    it('upgraded IS installed — the installer moved the app to the deployed version', () => {
+    it('upgraded IS installed, and carries the version Commerce now runs', () => {
         const model = deriveIntegrationCard(
             integration({
                 status: 'deployed',
@@ -57,9 +54,9 @@ describe('deriveIntegrationCard — installation facet', () => {
             })
         );
 
-        expect(model.installation).toMatchObject({
+        expect(model.installation).toStrictEqual({
             label: 'Installed',
-            detail: 'Upgraded in Commerce to version 0.2.0.',
+            version: '0.2.0',
             failed: false,
         });
         expect(model.menuActions).not.toContain('install');
@@ -152,7 +149,10 @@ describe('deriveIntegrationCard — installation facet', () => {
 
     it('no Reinstall where there is nothing installed to redo', () => {
         const deploying = deriveIntegrationCard(
-            integration({ status: 'deploying', installation: { status: 'failed', needsReinstall: true } })
+            integration({
+                status: 'deploying',
+                installation: { status: 'failed', needsReinstall: true },
+            })
         );
         const errored = deriveIntegrationCard(
             integration({ status: 'error', installation: { status: 'installed' } })

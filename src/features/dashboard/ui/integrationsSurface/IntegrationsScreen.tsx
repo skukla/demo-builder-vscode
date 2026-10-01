@@ -27,7 +27,11 @@ import {
     type IntegrationCardModel,
 } from '../components/integrations/integrationCardModel';
 import { IntegrationsGrid } from '../components/integrations/IntegrationsGrid';
-import { SetupGuideModal, setupNextStep, useSetupGuide } from '../components/integrations/SetupGuideModal';
+import {
+    SetupGuideModal,
+    setupNextStep,
+    useSetupGuide,
+} from '../components/integrations/SetupGuideModal';
 import { type ComponentOperation, useComponentOperation } from '../hooks/useComponentOperation';
 import { isMeshBusy, useDashboardStatus } from '../hooks/useDashboardStatus';
 import { useLiveAppBuilderComponents } from '../hooks/useLiveAppBuilderComponents';
@@ -275,7 +279,6 @@ export function IntegrationsScreen({
         [startOperation, closeDestination],
     );
 
-
     // Status has not resolved yet — the mesh card would otherwise pop in a beat
     // after the integration cards. Same LoadingDisplay as ProjectsDashboard's gate.
     // The Flex stays: CenteredFeedbackContainer takes a FIXED DimensionValue (it
@@ -397,7 +400,6 @@ export function IntegrationsScreen({
                         viewMode={viewMode}
                         onDeployMesh={handleDeployMesh}
                         onReAuthenticate={handleReAuthenticate}
-                        destinationLabel={destinationLabel}
                         componentSettings={componentSettings}
                         operations={operations}
                         onOpenGuide={openGuide}

@@ -1,9 +1,7 @@
 /**
- * IntegrationsGrid — the dashboard integrations surface (integrations grid,
- * Step 7). Supersedes AppBuilderComponentsList + AppBuilderComponentRow +
- * MeshComponentRow: a calm card per integration with the mesh as a peer card
- * FIRST, the add tile as the last cell (it IS the empty state), and all detail
- * plus every non-face action in the slide-in detail drawer.
+ * IntegrationsGrid — the dashboard integrations surface: a calm card per
+ * integration, the mesh as a peer card FIRST, the add tile as the last cell (it IS
+ * the empty state), and all detail plus every non-face action in the detail drawer.
  *
  * The grid owns exactly one instance each of the drawer, the add modal, the
  * remove, reset, reinstall and remove-anyway confirms, the Manage-APIs modal and
@@ -15,7 +13,7 @@
  *   - integration  → an operation through the screen's `operations` (deploy,
  *                    redeploy, update, install, and remove once confirmed), which
  *                    opens the progress modal; or the Manage-APIs modal
- *   - open         → openLiveSite {url} (both card face and drawer link)
+ *   - open-url     → the integration's address; open → its Developer Console workspace
  *
  * Card models come from {@link buildIntegrationCards} / {@link deriveMeshCard}
  * and are re-derived every render, so an open drawer stays live as pushes
@@ -58,11 +56,6 @@ export interface IntegrationsGridProps {
     onDeployMesh?: () => void;
     /** User-initiated re-auth for the mesh needs-auth state. */
     onReAuthenticate?: () => void;
-    /**
-     * Shared deploy destination ("<project> · <workspace>"), shown as a row in
-     * the detail panel. The page header names it once above the grid.
-     */
-    destinationLabel?: string;
     /** Each component's Settings (AB-21), from the init payload. */
     componentSettings?: Record<string, ComponentSettings>;
     /**
@@ -92,7 +85,8 @@ function removalConsequence(target: IntegrationCardModel | undefined): string | 
 function linkedRemovalConsequence(target: IntegrationCardModel): string {
     const names = (target.linked?.cards ?? []).map((card) => card.name).join(' and ');
     // An ERP added from the integration's card goes alone (AB-16).
-    if (target.removesAlone) return `Its records will be deleted, and ${names} stops sending it orders.`;
+    if (target.removesAlone)
+        return `Its records will be deleted, and ${names} stops sending it orders.`;
     return target.isSystem
         ? `Its records will be deleted, and ${names} will be removed too.`
         : `${names} will be removed too, with its records.`;
@@ -104,7 +98,6 @@ export function IntegrationsGrid({
     viewMode = 'cards',
     onDeployMesh,
     onReAuthenticate,
-    destinationLabel,
     componentSettings = NO_SETTINGS,
     operations,
     onOpenGuide,
@@ -156,13 +149,21 @@ export function IntegrationsGrid({
 
     const handleAction = useCallback(
         (model: IntegrationCardModel, action: CardAction): void => {
-            if (model.isSystem && handleSystemAction(model, action, { confirmReset: setPendingReset, loadErpData: operations.loadErpData })) {
+            if (
+                model.isSystem &&
+                handleSystemAction(model, action, {
+                    confirmReset: setPendingReset,
+                    loadErpData: operations.loadErpData,
+                })
+            ) {
                 return;
             }
             // Open: the integration's Adobe workspace in the Developer Console
             // (owner, 2026-09-21). Its address has its own link in the flyout.
             if (action === 'open') {
-                webviewClient.postMessage('openDevConsole', { componentId: model.componentId ?? model.id });
+                webviewClient.postMessage('openDevConsole', {
+                    componentId: model.componentId ?? model.id,
+                });
                 return;
             }
             if (action === 'open-url') {
@@ -235,7 +236,6 @@ export function IntegrationsGrid({
         [cards, operations],
     );
 
-
     // The mesh's teardown reaches past itself: removeAppBuilderComponent
     // regenerates the storefront config WITHOUT the MESH_ENDPOINT it provided, so
     // the storefront has no data layer until a mesh is deployed again. That is the
@@ -265,7 +265,10 @@ export function IntegrationsGrid({
         },
         [addingErpTo, operations],
     );
-    const systemNames = useMemo(() => cards.filter((card) => card.isSystem).map((card) => card.name), [cards]);
+    const systemNames = useMemo(
+        () => cards.filter((card) => card.isSystem).map((card) => card.name),
+        [cards],
+    );
 
     const Item = viewMode === 'rows' ? IntegrationRow : IntegrationCard;
     const closeRemoveDialog = useCallback((): void => setPendingRemoveId(null), []);
@@ -303,7 +306,6 @@ export function IntegrationsGrid({
                 onOpenLinked={setSelectedId}
                 onAction={handleAction}
                 onRename={requestRename}
-                destinationLabel={destinationLabel}
             />
 
             <AppBuilderComponentRemoveDialog
@@ -326,7 +328,6 @@ export function IntegrationsGrid({
                 onClose={settings.close}
                 onSaved={settings.saved}
             />
-
 
             <ErpResetDialog
                 isOpen={pendingReset !== null}

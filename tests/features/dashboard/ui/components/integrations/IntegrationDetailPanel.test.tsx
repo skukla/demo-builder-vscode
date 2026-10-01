@@ -6,12 +6,15 @@
  * it stays mounted when closed so `.open` can drive the slide):
  *   - header: InlineRenameField only when `canRename` (commit → onRename,
  *     an error string stays visible inline), quiet ✕ → onClose
- *   - body: key/value rows that render ONLY when their datum exists
- *     (Status + message, Source, Destination, URL, APIs, Last deploy, then the
- *     Endpoints group LAST); the integration URL is a Link → onAction(model,'open'),
- *     while the mesh endpoint and every deployed endpoint are click-to-copy
- *     (a GraphQL POST endpoint is not browsable, and an action URL's use is to
- *     leave the panel). Kind is NOT its own row — it is a prefix on Source.
+ *   - body: key/value rows that render ONLY when their datum exists. Two tiers
+ *     since 2026-10-01: Status (with the last deploy time on the same line, and
+ *     the message under it) stays open; Source, URL, APIs and the Endpoints group
+ *     (LAST) fold under one collapsed "Details" disclosure. There is no
+ *     Destination row — the page band names it. The integration URL is a Link →
+ *     onAction(model,'open-url'), while the mesh endpoint and every deployed
+ *     endpoint are click-to-copy (a GraphQL POST endpoint is not browsable, and
+ *     an action URL's use is to leave the panel). Kind is NOT its own row — it is
+ *     a prefix on Source.
  *   - actions: ONE kebab (model.menuActions), no face button — deploying
  *     offers nothing at all, since every item would race the runner
  *
@@ -76,10 +79,7 @@ function rowValue(panel: HTMLElement, key: string): HTMLElement | null {
     return keyNode?.parentElement?.querySelector('.integration-panel-row-value') ?? null;
 }
 
-function renderPanel(
-    model: IntegrationCardModel | undefined,
-    extra: { destinationLabel?: string } = {}
-) {
+function renderPanel(model: IntegrationCardModel | undefined) {
     const onClose = jest.fn();
     const onAction = jest.fn();
     const onRename = jest.fn<Promise<string | null>, [string, string]>(() => Promise.resolve(null));
@@ -90,7 +90,6 @@ function renderPanel(
             onOpenLinked={jest.fn()}
             onAction={onAction}
             onRename={onRename}
-            {...extra}
         />
     );
     const panel = view.container.querySelector('.db-drawer') as HTMLElement;
@@ -186,13 +185,37 @@ describe('IntegrationDetailPanel', () => {
 
             const statusline = label.closest('.integration-statusline');
             expect(statusline).not.toBeNull();
-            // Dot and label are the two children of one flex row (6px gap), not two
-            // nodes separated by a bare JSX space. `rounded-full` is what StatusDot
-            // actually emits — there is no `.status-dot` class.
+            // Dot, label and the muted deploy time are the children of one flex row
+            // (6px gap), not nodes separated by a bare JSX space. `rounded-full` is
+            // what StatusDot actually emits — there is no `.status-dot` class.
             const children = Array.from(statusline?.children ?? []);
-            expect(children).toHaveLength(2);
+            expect(children).toHaveLength(3);
             expect(children[0]).toHaveClass('rounded-full');
             expect(children[1]).toBe(label);
+            expect(children[2]).toHaveClass('integration-panel-status-aside');
+        });
+
+        // Status and Last deploy were two rows stating one fact (owner, 2026-10-01:
+        // "overloaded"). The time now trails the label, and ONLY on a deployed card —
+        // beside "Deploy failed" an old success time would read as a contradiction.
+        it('puts the last deploy time on the Status line, and has no Last deploy row', () => {
+            const { panel } = renderPanel(makeModel());
+
+            // The flex gap draws the space; textContent has none, so read the parts.
+            expect(rowValue(panel!, 'Status')).toHaveTextContent('Deployed');
+            expect(panel!.querySelector('.integration-panel-status-aside')).toHaveTextContent(
+                '· 6/1/2026, 10:00:00 AM'
+            );
+            expect(screen.queryByText('Last deploy')).not.toBeInTheDocument();
+        });
+
+        it('shows no deploy time beside a status other than Deployed', () => {
+            const { panel } = renderPanel(
+                makeModel({ status: 'error', statusLabel: 'Deploy failed', dotVariant: 'error' })
+            );
+
+            expect(rowValue(panel!, 'Status')).not.toHaveTextContent('6/1/2026');
+            expect(panel!.querySelector('.integration-panel-status-aside')).toBeNull();
         });
 
         it('marks a failed Status with the error colour, as the card does', () => {
@@ -214,26 +237,10 @@ describe('IntegrationDetailPanel', () => {
             expect(screen.getByText('acme/custom-app')).toBeInTheDocument();
         });
 
-        // The Source row's mono-modifier pin retired with the row itself; the
-        // modifier is still exercised by Destination and the deployed-URL rows
-        // below. See "rows that would only restate".
-
-        // The Destination row was described in this suite's own header and in
-        // the "rows that would only restate" reasoning, but never asserted. It
-        // needs a pin now that the same destination ALSO appears in the page's
-        // action band: the two are deliberately allowed to coexist (the band is
-        // far top-left and dimmed to 42% behind the scrim, unlike the card
-        // sitting directly behind this flyout, which is why the Source row went).
-        // Without this test, de-duplicating them later would be a silent
-        // regression rather than a decision.
-        it('renders Destination when the host supplies one', () => {
-            renderPanel(makeModel(), { destinationLabel: 'Kukla Mesh · Stage' });
-
-            expect(screen.getByText('Destination')).toBeInTheDocument();
-            expect(screen.getByText('Kukla Mesh · Stage')).toBeInTheDocument();
-        });
-
-        it('omits Destination when the project has no Adobe target', () => {
+        // The Destination row went on 2026-10-01: the page's action band already
+        // names the destination once, above the grid, and the flyout was the
+        // overloaded surface. This pin is the decision, so a return is deliberate.
+        it('has no Destination row', () => {
             renderPanel(makeModel());
 
             expect(screen.queryByText('Destination')).not.toBeInTheDocument();
@@ -333,10 +340,10 @@ describe('IntegrationDetailPanel', () => {
 
         // The Endpoints group is the only unbounded thing in the panel — it grows
         // with the app's web actions while every other row is fixed at one. Placed
-        // above the metadata it strands `APIs in use` and `Last deploy` below a
-        // scroll; placed last, the drawer's own overflow absorbs the length. That
-        // ordering is what makes a nested scroll container unnecessary, so a later
-        // move back up would quietly reintroduce the problem it solves.
+        // above the metadata it strands `APIs in use` below a scroll; placed last,
+        // the drawer's own overflow absorbs the length. That ordering is what makes
+        // a nested scroll container unnecessary, so a later move back up would
+        // quietly reintroduce the problem it solves.
         it('renders the unbounded Endpoints group AFTER the fixed-size rows', () => {
             const { panel } = renderPanel(
                 makeModel({
@@ -352,7 +359,7 @@ describe('IntegrationDetailPanel', () => {
             ).map((n) => n.textContent);
 
             expect(labels.indexOf('Endpoints')).toBeGreaterThan(labels.indexOf('APIs in use'));
-            expect(labels.indexOf('Endpoints')).toBeGreaterThan(labels.indexOf('Last deploy'));
+            expect(labels.indexOf('Endpoints')).toBeGreaterThan(labels.indexOf('Source'));
             expect(labels[labels.length - 1]).toBe('sync');
         });
 
@@ -378,7 +385,7 @@ describe('IntegrationDetailPanel', () => {
             expect(screen.queryByText('runtime/crm-integration/hello')).not.toBeInTheDocument();
         });
 
-        it('renders APIs ONE PER LINE and the Last deploy row', () => {
+        it('renders APIs ONE PER LINE', () => {
             const { panel } = renderPanel(makeModel());
 
             expect(screen.getByText('APIs in use')).toBeInTheDocument();
@@ -389,19 +396,15 @@ describe('IntegrationDetailPanel', () => {
                 'I/O Events',
                 'I/O Management',
             ]);
-            expect(screen.getByText('Last deploy')).toBeInTheDocument();
-            expect(screen.getByText('6/1/2026, 10:00:00 AM')).toBeInTheDocument();
         });
 
         // The mono modifier is per-row, not a panel-wide default: an owner/repo
         // identifier is typeset as code, a status label is prose. A default of
         // `true`, or a modifier that ignored its argument, would monospace both.
         it('monospaces only the rows that asked for it', () => {
-            const { panel } = renderPanel(makeModel(), { destinationLabel: 'Kukla Mesh · Stage' });
+            const { panel } = renderPanel(makeModel());
 
-            expect(rowValue(panel!, 'Destination')).toHaveClass(
-                'integration-panel-row-value--mono'
-            );
+            expect(rowValue(panel!, 'Source')).toHaveClass('integration-panel-row-value--mono');
             expect(rowValue(panel!, 'Status')).not.toHaveClass('integration-panel-row-value--mono');
         });
 
@@ -449,11 +452,72 @@ describe('IntegrationDetailPanel', () => {
 
             expect(screen.queryByText('App URL')).not.toBeInTheDocument();
             expect(screen.queryByText('APIs in use')).not.toBeInTheDocument();
-            expect(screen.queryByText('Last deploy')).not.toBeInTheDocument();
             expect(screen.queryByText('Frontend')).not.toBeInTheDocument();
             // The heading is part of the group, so it goes with it — an "Endpoints"
             // label over nothing is the empty-label case the row guards prevent.
             expect(screen.queryByText('Endpoints')).not.toBeInTheDocument();
+        });
+    });
+
+    // "The top section of this flyout before the actions seems overloaded with
+    // information" (owner, 2026-10-01). What an SC ACTS on stays open; what they
+    // read once — where the code came from, its addresses, the APIs — folds under
+    // one disclosure, collapsed until asked for.
+    describe('the Details disclosure', () => {
+        it('folds Source, the URL, the APIs and the Endpoints under one collapsed "Details"', () => {
+            const { panel } = renderPanel(makeModel());
+
+            const details = panel!.querySelector('details.integration-panel-details');
+            expect(details).not.toBeNull();
+            expect(details).not.toHaveAttribute('open');
+            expect(within(details as HTMLElement).getByText('Details')).toBeInTheDocument();
+
+            const folded = Array.from(
+                details!.querySelectorAll(
+                    '.integration-panel-row-key, .integration-panel-group-label'
+                )
+            ).map((n) => n.textContent);
+            expect(folded).toEqual(['Source', 'App URL', 'APIs in use', 'Endpoints', 'Frontend']);
+        });
+
+        it('keeps Status and the linked cards OUT of it', () => {
+            const { panel } = renderPanel(
+                makeModel({
+                    linked: {
+                        label: 'Uses',
+                        cards: [
+                            {
+                                id: 'erp',
+                                name: 'Nordwind',
+                                status: 'deployed',
+                                statusLabel: 'Deployed',
+                                dotVariant: 'success',
+                            },
+                        ],
+                    },
+                })
+            );
+
+            const details = panel!.querySelector('details.integration-panel-details')!;
+            expect(within(details as HTMLElement).queryByText('Status')).toBeNull();
+            expect(within(details as HTMLElement).queryByText('Uses')).toBeNull();
+            expect(screen.getByText('Status')).toBeInTheDocument();
+            expect(screen.getByText('Uses')).toBeInTheDocument();
+        });
+
+        // A disclosure over nothing is the empty-label case the row guards prevent.
+        it('renders no disclosure at all when there is nothing to fold', () => {
+            const { panel } = renderPanel(
+                makeModel({
+                    sourceLine: undefined,
+                    url: undefined,
+                    deployedUrls: undefined,
+                    apis: undefined,
+                })
+            );
+
+            expect(panel!.querySelector('details')).toBeNull();
+            expect(screen.queryByText('Details')).not.toBeInTheDocument();
         });
     });
 
