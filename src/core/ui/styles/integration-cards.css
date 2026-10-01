@@ -181,7 +181,15 @@
     border-top: none;
 }
 
+/* One height whether or not the name can be edited. A renamable title carries the
+   rename pencil, which is hidden by width only, so it still makes the line as tall as
+   an action button (Spectrum sizes it from --spectrum-alias-single-line-height). A
+   plain title was shorter, so switching between an integration and its ERP moved the
+   whole flyout up and down (owner, 2026-10-01). */
 .integration-panel-title {
+    display: flex;
+    align-items: center;
+    min-height: var(--spectrum-alias-single-line-height);
     font-size: 15px;
     font-weight: 600;
     min-width: 0;
