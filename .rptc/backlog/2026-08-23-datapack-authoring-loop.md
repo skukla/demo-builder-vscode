@@ -184,3 +184,5 @@ Step 2 fails today (gap 1). Steps 1 and 3 work now.
 
 - 2026-10-01  feat(data-installer): save a datapack as a zip file, and load one into a store (`08ec30412`)
 - 2026-10-01  test(data-installer): the datapack store's live answers parse with the Data Installer parsers (`1599c8ac6`)
+- 2026-10-01  feat(data-installer): undo a library load by deleting your own library pack (`b64d25bc7`)
+- 2026-10-01  docs(backlog): DI-1 records the datapack file commits (`d1e3805ff`)
