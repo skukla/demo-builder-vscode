@@ -39,6 +39,10 @@ const NEEDS_AUTH: Record<string, AuthProvider[] | false> = {
     set_integration_settings: ['adobe'],
     // Writes an ERP's own settings to the deployed integration (AB-16j).
     set_erp_settings: ['adobe'],
+    // The demo ERP's look and simulated downtime (AB-59), through the Adobe sign-in.
+    set_erp_appearance: ['adobe'],
+    start_erp_downtime: ['adobe'],
+    end_erp_downtime: ['adobe'],
     // The demo setup checklist (AB-26x): marking a step is saved state only; checking reads Commerce.
     set_setup_step: false,
     check_setup_steps: ['adobe'],
@@ -82,6 +86,9 @@ const INPUT_KEYS: Record<string, string[]> = {
     // No `secrets`: a secret must never be a tool argument (AB-21).
     set_integration_settings: ['id', 'values'],
     set_erp_settings: ['erp', 'id', 'values', 'website'],
+    set_erp_appearance: ['erp', 'id', 'palette', 'theme'],
+    start_erp_downtime: ['erp', 'id', 'minutes'],
+    end_erp_downtime: ['erp', 'id'],
     set_setup_step: ['id', 'state', 'stepId'],
     check_setup_steps: ['id'],
     set_console_apis: ['apis', 'componentId'],

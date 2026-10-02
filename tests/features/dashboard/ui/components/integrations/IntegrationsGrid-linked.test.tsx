@@ -73,7 +73,14 @@ function systemCard(): IntegrationCardModel {
         dotVariant: 'success',
         url: 'https://ns.adobeio-static.net/index.html',
         urlLabel: 'Screen',
-        menuActions: ['open', 'load-demo-data', 'redeploy', 'remove'],
+        menuActions: [
+            'open',
+            'load-demo-data',
+            'appearance',
+            'simulate-downtime',
+            'redeploy',
+            'remove',
+        ],
         canRename: false,
         linked: { cards: [INTEGRATION_LINK] },
     };
@@ -146,6 +153,23 @@ describe('IntegrationsGrid — the system card verbs', () => {
             // This ERP, by its own id: an integration can serve several (AB-16).
             erp: 'demo-erp',
             progress: 'modal',
+        });
+    });
+
+    // The demo controls (AB-59): through the INTEGRATION's id, naming THIS ERP, in a modal
+    // that reads the ERP as it opens.
+    it.each([
+        ['Appearance', 'Nordwind: demo appearance'],
+        ['Simulate downtime', 'Nordwind: simulate downtime'],
+    ])('%s opens its modal on THIS ERP', async (label, title) => {
+        const { user, panel } = await openSystem();
+
+        await user.click(within(panel).getByRole('button', { name: label }));
+
+        expect(await screen.findByText(title)).toBeInTheDocument();
+        expect(getClient().request).toHaveBeenCalledWith('getErpDemoControls', {
+            id: 'erp-integration',
+            erp: 'demo-erp',
         });
     });
 

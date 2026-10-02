@@ -62,7 +62,9 @@ const EXPECTED: Record<string, number> = {
     // 50 -> 51 on 2026-09-28: add_erp deploys another ERP into a workspace of its own (AB-16).
     // 51 -> 52 on 2026-09-29: set_erp_settings writes an ERP's own settings to the deployed
     // integration through the Adobe sign-in (AB-16j).
-    adobe: 52,
+    // 52 -> 55 on 2026-10-02: set_erp_appearance, start_erp_downtime and end_erp_downtime
+    // change the demo ERP through the Adobe sign-in, like set_erp_settings (AB-59).
+    adobe: 55,
     // 21 -> 23 on 2026-09-30 (hotfix beta.149 merged): get_content_access and
     // set_content_reader read and write the DA.live org permissions sheet (EDS-22).
     dalive: 23,
@@ -97,11 +99,12 @@ const EXPECTED: Record<string, number> = {
  * files. That counts text, not declarations, and was roughly double. The CONTROL below
  * caught it — which is the argument for having one.)
  */
-const EXPECTED_TOOLS = 148; // 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x); 144 with add_erp (AB-16).
+const EXPECTED_TOOLS = 151; // 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x); 144 with add_erp (AB-16).
 // 141 -> 142 on 2026-09-27: delete_undeclared_runtime_code.
 // 142 -> 143 on 2026-09-27: load_erp_demo_data.
 // 144 -> 146 on 2026-09-29: get_erp_settings and set_erp_settings (AB-16j).
 // 144 -> 146 on 2026-09-30: the content-access pair (EDS-22, hotfix beta.149 merged).
+// 148 -> 151 on 2026-10-02: the demo ERP's look and simulated downtime (AB-59).
 
 interface Declaration {
     name: string;

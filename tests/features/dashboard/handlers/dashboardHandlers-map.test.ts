@@ -279,7 +279,10 @@ describe('dashboardHandlers', () => {
             // the bound AEM author's Assets console (demoBuilder.daLive.aemAuthorUrl).
             // prepareSetupChecks (76 → 77, AB-53, 2026-10-01): the setup guide signs in to
             // Commerce as it opens, so a check does not wait on Adobe Console.
-            expect(types).toHaveLength(77);
+            // getErpDemoControls + setErpAppearance + startErpDowntime + endErpDowntime
+            // (77 → 81, AB-59, 2026-10-02): the mock ERP's look and simulated downtime,
+            // moved off its own Settings screen onto its card, and the agent tools for them.
+            expect(types).toHaveLength(81);
         });
 
         it('should have handlers as functions', () => {

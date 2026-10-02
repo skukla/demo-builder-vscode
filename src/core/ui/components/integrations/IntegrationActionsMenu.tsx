@@ -55,6 +55,9 @@ const MENU_ROWS: Partial<Record<CardAction, { label: string; icon: string }>> = 
     'remove-anyway': { label: 'Remove anyway', icon: 'delete' },
     // A system card's own verbs.
     'load-demo-data': { label: 'Fill from Commerce', icon: 'loadData' },
+    // Its demo controls (AB-59): each opens a modal.
+    appearance: { label: 'Appearance', icon: 'appearance' },
+    'simulate-downtime': { label: 'Simulate downtime', icon: 'downtime' },
     // The integration's alone: a reset covers every ERP it serves (owner, 2026-10-01).
     'reset-records': { label: 'Reset ERPs', icon: 'reset' },
 };

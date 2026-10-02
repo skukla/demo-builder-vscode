@@ -20,13 +20,19 @@
  */
 
 import { resolveComponentTarget } from './appBuilderComponentHandlers';
-import { erpsOf, errorText, openErpCall, shapeErpRow, type ErpCallPayload } from './erpCall';
+import {
+    callOwnErp,
+    erpsOf,
+    errorText,
+    openErpCall,
+    shapeErpRow,
+    type ErpCallPayload,
+} from './erpCall';
 import { openInIncognito } from '@/core/utils/browserUtils';
 import { validateURL } from '@/core/validation/URLValidator';
 import { catalogEntryFor } from '@/features/app-builder/services/componentEntry';
 import {
     ErpIntegrationClient,
-    callErpApi,
     type ImsCallMethod,
 } from '@/features/app-builder/services/erpIntegrationClient';
 import { erpListIdOf } from '@/features/app-builder/services/erpList';
@@ -255,45 +261,23 @@ async function callErpRoute(
             code: ErrorCode.CONFIG_INVALID,
         };
     }
-    const call = await openErpCall(context, payload, verb);
-    if ('error' in call) return call.error;
-    if (!call.erp) {
-        return {
-            success: false,
-            error: `"${call.id}" has no ERP in this project.`,
-            code: ErrorCode.INVALID_OPERATION,
-        };
-    }
-    try {
-        const answer = await callErpApi(
-            call.erp.deployedUrls,
-            call.auth,
+    const reached = await callOwnErp(
+        context,
+        payload,
+        { method, route, body: payload?.body },
+        verb,
+    );
+    if ('error' in reached) return reached.error;
+    return {
+        success: true,
+        data: {
+            id: reached.call.id,
+            erp: shapeErpRow(reached.erp),
             method,
-            route,
-            payload?.body,
-        );
-        if ('refusal' in answer) {
-            return { success: false, error: answer.refusal, code: ErrorCode.CONFIG_INVALID };
-        }
-        if (!answer.ok) {
-            return {
-                success: false,
-                error: `The ERP answered ${answer.status} for ${method} ${route}: ${answer.detail}`,
-            };
-        }
-        return {
-            success: true,
-            data: {
-                id: call.id,
-                erp: shapeErpRow(call.erp),
-                method,
-                path: route,
-                answer: shapeErpAnswer(answer.body),
-            },
-        };
-    } catch (error) {
-        return { success: false, error: `Could not reach the ERP: ${errorText(error)}` };
-    }
+            path: route,
+            answer: shapeErpAnswer(reached.body),
+        },
+    };
 }
 
 /**

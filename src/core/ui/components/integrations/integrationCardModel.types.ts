@@ -47,6 +47,10 @@ export type CardAction =
     // both run through the integration that uses it).
     | 'load-demo-data'
     | 'reset-records'
+    // A system card's demo controls (AB-59): the mock ERP's look and a simulated downtime,
+    // moved off its own Settings screen so they never sit beside a real ERP setting.
+    | 'appearance'
+    | 'simulate-downtime'
     // The ERP integration's: add another ERP beside the ones it serves (AB-16).
     | 'add-erp'
     // After a removal stopped on a clean-up that did not finish: go ahead.

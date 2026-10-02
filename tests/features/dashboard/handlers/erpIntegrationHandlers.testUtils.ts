@@ -109,6 +109,12 @@ export {
     handleGetErpSettings,
     handleSetErpSettings,
 } from '@/features/dashboard/handlers/erpSettingsHandlers';
+export {
+    handleEndErpDowntime,
+    handleGetErpDemoControls,
+    handleSetErpAppearance,
+    handleStartErpDowntime,
+} from '@/features/dashboard/handlers/erpDemoControlHandlers';
 
 export const INT_URLS = {
     'runtime/erp/status': 'https://ns.adobeioruntime.net/api/v1/web/erp/status',

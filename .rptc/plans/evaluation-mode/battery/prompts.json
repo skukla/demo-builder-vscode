@@ -1197,5 +1197,32 @@
             "set_content_reader"
         ],
         "why": "EDS-22 (hotfix beta.149) tier 3: changes another person's access on the SC's DA.live org, so it never runs unattended; represented by siteTools.test + the consent gate. Listed so the tool is judged, not grandfathered."
+    },
+    {
+        "id": "erp-demo-look",
+        "prompt": "Make my demo ERP's screen use the Foundry theme, but in plum.",
+        "expect": [
+            "set_erp_appearance"
+        ],
+        "cwd": "project",
+        "why": "AB-59 (2026-10-02): the mock ERP's demo controls left its own Settings screen for its card in Demo Builder, so an SC changing a real ERP setting never meets them. The agent reaches them through the same handlers the card uses. The prompt names a theme and a colour, which only this tool takes by name."
+    },
+    {
+        "id": "erp-demo-downtime-start",
+        "prompt": "Take the ERP behind my ERP integration down for 15 minutes so I can show what happens to orders while it is in maintenance.",
+        "expect": [
+            "start_erp_downtime"
+        ],
+        "cwd": "project",
+        "why": "AB-59 (2026-10-02): the mock ERP's demo controls left its own Settings screen for its card in Demo Builder, so an SC changing a real ERP setting never meets them. The agent reaches them through the same handlers the card uses. Downtime is gated by consent: the ERP refuses the integration's calls while it lasts."
+    },
+    {
+        "id": "erp-demo-downtime-end",
+        "prompt": "End the simulated downtime on my demo ERP now; I'm done showing the outage.",
+        "expect": [
+            "end_erp_downtime"
+        ],
+        "cwd": "project",
+        "why": "AB-59 (2026-10-02): the mock ERP's demo controls left its own Settings screen for its card in Demo Builder, so an SC changing a real ERP setting never meets them. The agent reaches them through the same handlers the card uses. The undo of start_erp_downtime, so the window can be ended before its time is up."
     }
 ]

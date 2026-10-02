@@ -90,6 +90,12 @@ import {
     handleSetConsoleApis,
 } from '@/features/dashboard/handlers/consoleApiHandlers';
 import { handleAddErp } from '@/features/dashboard/handlers/erpAddHandler';
+import {
+    handleEndErpDowntime,
+    handleGetErpDemoControls,
+    handleSetErpAppearance,
+    handleStartErpDowntime,
+} from '@/features/dashboard/handlers/erpDemoControlHandlers';
 import { handleLoadErpDemoData } from '@/features/dashboard/handlers/erpFillHandler';
 import {
     handleFollowErpOrder,
@@ -369,6 +375,11 @@ export const dashboardHandlers = defineHandlers({
     // "Add another ERP" on the integration's card (AB-16); an added ERP is removed from its own card.
     addErp: handleAddErp,
     openErpScreen: handleOpenErpScreen,
+    // The mock ERP's demo controls on its card (AB-59): its look and a simulated downtime.
+    getErpDemoControls: handleGetErpDemoControls,
+    setErpAppearance: handleSetErpAppearance,
+    startErpDowntime: handleStartErpDowntime,
+    endErpDowntime: handleEndErpDowntime,
     // The Admin page's two reads, for agents (2026-09-24): one record as both
     // systems hold it, and one order's whole life across both.
     lookupErpRecord: handleLookupErpRecord,

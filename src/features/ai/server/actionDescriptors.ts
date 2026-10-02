@@ -14,6 +14,7 @@ import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
 import { prerequisitesHandlers } from '@/features/prerequisites/handlers/prerequisitesHandlers';
 import { projectsListHandlers } from '@/features/projects-dashboard/handlers/projectsListHandlers';
+import { ERP_DOWNTIME_MINUTES, ERP_PALETTES, ERP_THEMES } from '@/types/erpDemoControls';
 
 /** The add payload, as `handleAddAppBuilderComponent` reads it. */
 const addIntegrationSchema = {
@@ -256,6 +257,87 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             values: z
                 .record(z.string(), z.union([z.string(), z.null()]))
                 .describe('Per-ERP settings to change, by name; null clears an override'),
+        },
+    },
+    // The demo ERP's demo controls, as its card offers them (AB-59). Demo tools, not ERP
+    // settings: they left the ERP's own Settings screen (owner, 2026-10-02).
+    {
+        tool: 'set_erp_appearance',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            "Change how the demo ERP's own screen looks, for a demo: a theme (its colour, logo " +
+            'and menu position together), a colour, or both (the colour wins). Changes no records. ' +
+            "Read the look it has now with run_erp_rest on 'health' (its appearance). Takes the " +
+            "integration id and `erp` (an ERP's component id; default the first).",
+        map: dashboardHandlers,
+        type: 'setErpAppearance',
+        inputSchema: {
+            id: z.string().describe('The ERP integration id (from get_project)'),
+            erp: z
+                .string()
+                .optional()
+                .describe(
+                    "Which ERP, by its component id (from get_erp_status's erps); default the first",
+                ),
+            theme: z
+                .enum(ERP_THEMES.map((theme) => theme.id) as [string, ...string[]])
+                .optional()
+                .describe(
+                    'A theme: harbour (teal), meridian (indigo), granite (slate), foundry (bronze)',
+                ),
+            palette: z
+                .enum(ERP_PALETTES.map((palette) => palette.id) as [string, ...string[]])
+                .optional()
+                .describe('A colour: teal, indigo, slate, bronze or plum'),
+        },
+    },
+    {
+        tool: 'start_erp_downtime',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        confirm: true,
+        description:
+            'Simulate downtime on the demo ERP: for `minutes` (default 30, up to 1440) it ' +
+            'answers every call as a real ERP does during maintenance, so the demo can show ' +
+            'orders waiting and being sent again once it is back. It comes back by itself; ' +
+            "end_erp_downtime ends it sooner. Whether one is running: run_erp_rest on 'health' " +
+            '(maintenance). Confirm with the user first.',
+        map: dashboardHandlers,
+        type: 'startErpDowntime',
+        inputSchema: {
+            id: z.string().describe('The ERP integration id (from get_project)'),
+            erp: z
+                .string()
+                .optional()
+                .describe(
+                    "Which ERP, by its component id (from get_erp_status's erps); default the first",
+                ),
+            minutes: z
+                .number()
+                .int()
+                .min(ERP_DOWNTIME_MINUTES.min)
+                .max(ERP_DOWNTIME_MINUTES.max)
+                .optional()
+                .describe('How long, in whole minutes (default 30)'),
+        },
+    },
+    {
+        tool: 'end_erp_downtime',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            "End the demo ERP's simulated downtime now (start_erp_downtime), so it answers again.",
+        map: dashboardHandlers,
+        type: 'endErpDowntime',
+        inputSchema: {
+            id: z.string().describe('The ERP integration id (from get_project)'),
+            erp: z
+                .string()
+                .optional()
+                .describe(
+                    "Which ERP, by its component id (from get_erp_status's erps); default the first",
+                ),
         },
     },
     {

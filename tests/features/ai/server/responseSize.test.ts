@@ -457,6 +457,11 @@ describe('rows with no output safety net are classified', () => {
         // `{id, erp, website, entry}` — bounded, fixed shapes.
         'get_erp_settings',
         'set_erp_settings',
+        // The demo ERP's controls (AB-59): each returns `{id, erp}` and the ERP's
+        // `appearance` (three ids) or its `maintenance` (an end time and a sentence).
+        'set_erp_appearance',
+        'start_erp_downtime',
+        'end_erp_downtime',
         // The demo setup checklist (AB-26x): each returns `{items}`, one row per step the
         // catalog entry declares, with fixed fields.
         'get_setup_checklist',
@@ -597,6 +602,10 @@ describe('the ceiling table tracks the tool surface', () => {
         // An ERP's own settings (AB-16j): fixed shapes, bounded by the ERP entry.
         'get_erp_settings',
         'set_erp_settings',
+        // The demo ERP's look or its downtime window (AB-59): a few short strings.
+        'set_erp_appearance',
+        'start_erp_downtime',
+        'end_erp_downtime',
         // One row per setup step the catalog entry declares (two for the ERP integration),
         // bounded by the entry, not by the project or the instance.
         'get_setup_checklist',

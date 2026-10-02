@@ -156,6 +156,13 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: ['erp', 'website'],
         sessionGrant: false,
     },
+    start_erp_downtime: {
+        action: 'Simulate downtime on the demo ERP',
+        consequence:
+            'The demo ERP refuses every call until the time is up or the downtime is ended, so orders sent to it meanwhile wait and are sent again once it is back.',
+        target: ['erp', 'minutes'],
+        sessionGrant: false,
+    },
     write_commerce_rest: {
         action: 'Change data in the Commerce store',
         consequence:

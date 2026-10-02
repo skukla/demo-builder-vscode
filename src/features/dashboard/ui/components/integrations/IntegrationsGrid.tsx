@@ -4,8 +4,8 @@
  * the empty state), and all detail plus every non-face action in the detail drawer.
  *
  * The grid owns exactly one instance each of the drawer, the add modal, the
- * remove, reset, reinstall and remove-anyway confirms, the Manage-APIs modal and
- * the Settings modal (no per-card dialogs, no cross-card state leak), and ONE
+ * remove, reset, reinstall and remove-anyway confirms, the Manage-APIs, Settings and
+ * ERP demo-control modals (no per-card dialogs, no cross-card state leak), and ONE
  * `handleAction` switch — the single place a card model turns into an operation
  * or a mesh callback. The operation progress modal is the SCREEN's, because it
  * must also open for an Add on a screen with no grid yet:
@@ -26,6 +26,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ComponentOperationControls } from '../../hooks/useComponentOperation';
 import { AddErpDialog } from '../AddErpDialog';
 import { AppBuilderComponentRemoveDialog } from '../AppBuilderComponentRemoveDialog';
+import { ErpDemoControlsDialog, type ErpDemoControlTarget } from '../ErpDemoControlsDialog';
 import { ErpResetDialog } from '../ErpResetDialog';
 import { IntegrationSettingsModal } from '../IntegrationSettingsModal';
 import { ManageApisModal } from '../ManageApisModal';
@@ -112,13 +113,13 @@ export function IntegrationsGrid({
     // used to hold the id alone and pass it as `componentName`, so the modal read
     // "Manage Adobe API access for erp-sync".
     const [manageApis, setManageApis] = useState<{ id: string; name: string } | null>(null);
-    // The ERP reset awaiting confirmation: the INTEGRATION's id (the reset runs
-    // through it) and the ERP's name (what the dialog says).
+    // The ERP reset awaiting confirmation: the INTEGRATION's id (it runs through it), the names.
     const [pendingReset, setPendingReset] = useState<{ id: string; erpNames: string[] } | null>(
         null,
     );
-    // The integration "Add another ERP" is naming a new ERP for (AB-16).
+    // The integration "Add another ERP" names a new ERP for (AB-16); an ERP's demo control (AB-59).
     const [addingErpTo, setAddingErpTo] = useState<IntegrationCardModel | null>(null);
+    const [demoControl, setDemoControl] = useState<ErpDemoControlTarget | null>(null);
     // Confirms that open by themselves when a card gains their flag, and from
     // the card's menu: an upgrade Commerce refused, a removal that stopped.
     const reinstall = useFlaggedCardDialog(cards, needsReinstall);
@@ -154,6 +155,7 @@ export function IntegrationsGrid({
             const erpHandlers = {
                 confirmReset: setPendingReset,
                 loadErpData: operations.loadErpData,
+                openDemoControl: setDemoControl,
             };
             const routed = model.isSystem
                 ? handleSystemAction(model, action, erpHandlers)
@@ -340,6 +342,7 @@ export function IntegrationsGrid({
                 onClose={closeAddErp}
             />
 
+            <ErpDemoControlsDialog target={demoControl} onClose={() => setDemoControl(null)} />
             <FlaggedCardDialogs reinstall={reinstall} removeAnyway={removeAnyway} />
         </div>
     );

@@ -64,6 +64,37 @@ describe('ACTION_DESCRIPTORS', () => {
         expect(Object.keys(d!.inputSchema ?? {})).toContain('workspaceId');
     });
 
+    it("exposes the demo ERP's look and downtime as the card's own handlers (AB-59)", () => {
+        const look = row('set_erp_appearance');
+        const start = row('start_erp_downtime');
+        const end = row('end_erp_downtime');
+        expect([look?.map, look?.type, look?.confirm]).toEqual([
+            dashboardHandlers,
+            'setErpAppearance',
+            undefined,
+        ]);
+        expect([start?.map, start?.type, start?.confirm]).toEqual([
+            dashboardHandlers,
+            'startErpDowntime',
+            true,
+        ]);
+        expect([end?.map, end?.type, end?.confirm]).toEqual([
+            dashboardHandlers,
+            'endErpDowntime',
+            undefined,
+        ]);
+        // Only the ERP's own ids, and a window of whole minutes up to a day.
+        expect(look!.inputSchema!.theme.safeParse('foundry').success).toBe(true);
+        expect(look!.inputSchema!.theme.safeParse('neon').success).toBe(false);
+        expect(look!.inputSchema!.palette.safeParse('plum').success).toBe(true);
+        expect(look!.inputSchema!.palette.safeParse('pink').success).toBe(false);
+        expect(start!.inputSchema!.minutes.safeParse(undefined).success).toBe(true);
+        expect(start!.inputSchema!.minutes.safeParse(1440).success).toBe(true);
+        for (const minutes of [0, 1441, 2.5]) {
+            expect(start!.inputSchema!.minutes.safeParse(minutes).success).toBe(false);
+        }
+    });
+
     it('gates every destructive row (delete_*) on confirm', () => {
         for (const d of actionRows().filter((r) => r.tool.startsWith('delete_'))) {
             expect(d.confirm).toBe(true);
@@ -108,6 +139,9 @@ describe('ACTION_DESCRIPTORS', () => {
             'set_console_apis',
             // Changes an ERP's own settings on the deployed integration (AB-16j).
             'set_erp_settings',
+            // The demo ERP answers as if down until it is ended: the integration's orders
+            // wait meanwhile (AB-59).
+            'start_erp_downtime',
             // Acts on the ERP as its screens do; the ERP then writes into Commerce.
             'write_erp_rest',
         ]);

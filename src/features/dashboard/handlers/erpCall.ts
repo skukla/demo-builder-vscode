@@ -15,7 +15,11 @@ import { resolveComponentTarget } from './appBuilderComponentHandlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import type { AppManagementAuth } from '@/features/app-builder/services/appManagementClient';
-import { deriveErpActionUrl } from '@/features/app-builder/services/erpIntegrationClient';
+import {
+    callErpApi,
+    deriveErpActionUrl,
+    type ImsCallMethod,
+} from '@/features/app-builder/services/erpIntegrationClient';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { systemsUsedBy } from '@/features/components/services/appBuilderComponentLinks';
 import { resolveAppManagementAuth } from '@/features/project-creation/services/appBuilderComponentRunnerDeps';
@@ -92,6 +96,53 @@ export async function openErpCall(
         return { error: { success: false, error, code: ErrorCode.CONFIG_INVALID } };
     }
     return { id, project, integration, auth, erp, erps };
+}
+
+/** One call to the ERP's own route: the verb, the route under its action, and the JSON body. */
+export interface ErpRouteRequest {
+    method: ImsCallMethod;
+    route: string;
+    body?: unknown;
+}
+
+/**
+ * Call one of the ERP's own routes as the named ERP (else the integration's first), with the
+ * sign-in: its parsed answer, or the refusal in words. Never throws. Shared by the agent's
+ * ERP API verbs and the card's demo controls, so both reach an ERP the same way.
+ *
+ * @param verb - what the sign-in is needed for, in the refusal's words
+ */
+export async function callOwnErp(
+    context: HandlerContext,
+    payload: ErpCallPayload | undefined,
+    request: ErpRouteRequest,
+    verb: string,
+): Promise<{ call: ErpCall; erp: ErpRow; body: unknown } | { error: HandlerResponse }> {
+    const call = await openErpCall(context, payload, verb);
+    if ('error' in call) return call;
+    const erp = call.erp;
+    if (!erp) {
+        const error = `"${call.id}" has no ERP in this project.`;
+        return { error: { success: false, error, code: ErrorCode.INVALID_OPERATION } };
+    }
+    const { method, route, body } = request;
+    try {
+        const answer = await callErpApi(erp.deployedUrls, call.auth, method, route, body);
+        if ('refusal' in answer) {
+            return {
+                error: { success: false, error: answer.refusal, code: ErrorCode.CONFIG_INVALID },
+            };
+        }
+        if (!answer.ok) {
+            const said = `${answer.status} for ${method} ${route}: ${answer.detail}`;
+            return { error: { success: false, error: `The ERP answered ${said}` } };
+        }
+        return { call, erp, body: answer.body };
+    } catch (error) {
+        return {
+            error: { success: false, error: `Could not reach the ERP: ${errorText(error)}` },
+        };
+    }
 }
 
 /** The ERPs this integration serves in the project, in link order: its own first, then any added (AB-16). */
