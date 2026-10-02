@@ -66,6 +66,27 @@ async function readJson<T>(read: Read, path: string, what: string): Promise<T | 
     return `Error: Commerce answered something that is not ${what}.`;
 }
 
+interface WebsiteRow {
+    code?: string;
+    name?: string;
+}
+
+/**
+ * The name Commerce shows for a website code ("Justrite Website" for `justrite`), for a
+ * check's note: an SC knows the website by the name the Admin shows, not its code
+ * (owner, 2026-10-01). `GET store/websites`, read live on the sandbox that day. A read that
+ * fails falls back to the code, which is still true, rather than failing the check.
+ */
+export async function websiteNamer(read: Read): Promise<(code: string) => string> {
+    const answer = await readJson<WebsiteRow[]>(read, 'store/websites', 'a website list');
+    const rows = Array.isArray(answer) ? answer : [];
+    const names = new Map<string, string>();
+    for (const row of rows) {
+        if (row.code && row.name) names.set(row.code, row.name);
+    }
+    return (code) => names.get(code) ?? code;
+}
+
 /** The path a config read filters on, at a scope or at the default. */
 function configPath(setting: string, websiteCode?: string): string {
     const filter = 'searchCriteria[filterGroups][0][filters][0]';
@@ -135,6 +156,7 @@ export async function paymentOnAccountEnabled(read: Read, scope: { websiteCode?:
     if (own instanceof Error) return couldNot(own.message);
     const value = own ?? (await readConfig(read, 'payment/companycredit/active'));
     if (value instanceof Error) return couldNot(value.message);
-    if (value === ENABLED) return { done: true, note: `Payment on Account is on for the ${website} website.` };
-    return { done: false, note: `Payment on Account is off for the ${website} website.` };
+    const name = (await websiteNamer(read))(website);
+    if (value === ENABLED) return { done: true, note: `Payment on Account is on for ${name}.` };
+    return { done: false, note: `Payment on Account is off for ${name}.` };
 }

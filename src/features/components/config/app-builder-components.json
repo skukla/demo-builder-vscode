@@ -142,9 +142,9 @@
         {
           "id": "second-source",
           "label": "ERP warehouse",
-          "title": "Give the ERP a warehouse of its own, and a stock that sells it",
-          "why": "The ERP keeps stock per Commerce source; the Default Stock can hold only the Default Source, so the website needs a stock of its own.",
-          "where": "Stores > Inventory > Sources > Add New Source (for example Northwind Warehouse); Stores > Inventory > Stocks > Add New Stock with the website as its sales channel and the new source assigned; then move the website's products' quantities to the new source (Catalog > Products > Actions > Move stock between the ERP's warehouses) and save each product once, so the storefront's catalog reads the new stock.",
+          "title": "Give each ERP a warehouse, and assign it to the website's stock",
+          "why": "Each ERP keeps stock per Commerce source (a warehouse). The Default Stock can hold only the Default Source, so the website needs a stock of its own.",
+          "where": "Stores > Inventory > Sources > Add New Source, one per ERP (for example Northwind Warehouse); Stores > Inventory > Stocks > Add New Stock with the website as its sales channel and the warehouses assigned; then move the website's products' quantities to the new source (Catalog > Products > Actions > Move stock between the ERP's warehouses) and save each product once, so the storefront's catalog reads the new stock.",
           "path": [
             "Stores",
             "Inventory",
@@ -154,7 +154,7 @@
           "enter": [
             "<ERP name> Warehouse"
           ],
-          "then": "Add a stock for the website with that source, move the products' quantities to it, and save each product once.",
+          "then": "Add a stock for the website and assign the warehouses to it, move the products' quantities to them, and save each product once.",
           "check": "erp-source-in-website-stock"
         },
         {

@@ -441,7 +441,7 @@ export function deriveIntegrationCard(
         ),
         canRename: entry.kind === 'integration' && facet.renamable,
         ...(systems.length > 0 ? { linked: { cards: systems } } : {}),
-        ...withSetupChecklist(entry),
+        ...withSetupChecklist(entry, systems.map((system) => system.name)),
     });
 }
 
@@ -472,8 +472,9 @@ function withErpActions(
 /** The demo setup checklist, when the entry declares one (`setupChecklist.ts`). */
 function withSetupChecklist(
     entry: IdentifiedAppBuilderComponent,
+    erpNames: string[],
 ): Pick<IntegrationCardModel, 'setupChecklist'> {
-    const setupChecklist = setupChecklistOf(entry.id, entry);
+    const setupChecklist = setupChecklistOf(entry.id, entry, erpNames);
     return setupChecklist ? { setupChecklist } : {};
 }
 

@@ -18,9 +18,14 @@ import { postComponentsSnapshot, resolveComponentTarget } from './appBuilderComp
 import { getAppBuilderComponent, setAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { buildCommerceEndpoints } from '@/features/ai/server/commerceEndpointsTool';
 import { resolveRestTarget, sendRest } from '@/features/ai/server/commerceRestClient';
+import { catalogEntryFor } from '@/features/app-builder/services/componentEntry';
 import { setupChecklistOf } from '@/features/app-builder/services/setupChecklist';
 import { runSetupCheck } from '@/features/app-builder/services/setupChecks';
-import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
+import {
+    getAppBuilderComponentCatalog,
+    getAppBuilderComponentEntry,
+} from '@/features/components/services/appBuilderComponentCatalogLoader';
+import { systemsUsedBy } from '@/features/components/services/appBuilderComponentLinks';
 import type { SetupStep } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState, Project, SetupCheckOutcome, SetupStepRecord } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
@@ -45,6 +50,17 @@ async function openChecklist(context: HandlerContext, idArg: unknown): Promise<O
     return { project, id, state, steps };
 }
 
+/**
+ * The names of the ERPs the integration uses, as their cards show them, for a step value
+ * entered once per ERP (`setupChecklistOf`). The same lookups the ERP list is built from.
+ */
+function erpNamesOf(project: Project, integrationId: string): string[] {
+    const catalog = getAppBuilderComponentCatalog();
+    return systemsUsedBy(project, integrationId, catalog).map(
+        (id) => project.appBuilderComponents?.[id]?.name ?? catalogEntryFor(project, id, catalog)?.name ?? id,
+    );
+}
+
 /** Save the component's step records and push the grid's snapshot. */
 async function saveSteps(
     context: HandlerContext,
@@ -54,7 +70,7 @@ async function saveSteps(
     const next = { ...opened.state, setupSteps };
     await context.stateManager.saveProject(setAppBuilderComponent(opened.project, opened.id, next));
     await postComponentsSnapshot(context);
-    return { success: true, data: { items: setupChecklistOf(opened.id, next) } };
+    return { success: true, data: { items: setupChecklistOf(opened.id, next, erpNamesOf(opened.project, opened.id)) } };
 }
 
 /**
@@ -64,7 +80,7 @@ async function saveSteps(
 export const handleGetSetupChecklist: MessageHandler<{ id?: string }> = async (context, payload) => {
     const opened = await openChecklist(context, payload?.id);
     if ('error' in opened) return opened.error;
-    return { success: true, data: { items: setupChecklistOf(opened.id, opened.state) } };
+    return { success: true, data: { items: setupChecklistOf(opened.id, opened.state, erpNamesOf(opened.project, opened.id)) } };
 };
 
 const STATES = new Set(['done', 'dismissed', 'open']);

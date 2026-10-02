@@ -136,15 +136,22 @@ describe('payment-on-account-enabled', () => {
         expect(read).toHaveBeenCalledWith(configAt(SETTING, 'acme'));
     });
 
-    it('is done when on for the website, not done when off, and names the website', async () => {
-        expect(await check(config({ [configAt(SETTING, 'acme')]: '1' }), 'acme')).toStrictEqual({
-            done: true,
-            note: 'Payment on Account is on for the acme website.',
-        });
-        expect(await check(config({ [configAt(SETTING, 'acme')]: '0' }), 'acme')).toStrictEqual({
-            done: false,
-            note: 'Payment on Account is off for the acme website.',
-        });
+    it('is done when on for the website, not done when off, and names the website as the Admin does', async () => {
+        const named = (value: string) => {
+            const read = config({ [configAt(SETTING, 'acme')]: value });
+            return jest.fn(async (path: string) =>
+                // GET store/websites, shaped as the sandbox answered it on 2026-10-01.
+                path === 'store/websites' ? JSON.stringify([{ id: 5, code: 'acme', name: 'Acme Website' }]) : read(path),
+            );
+        };
+        expect(await check(named('1'), 'acme')).toStrictEqual({ done: true, note: 'Payment on Account is on for Acme Website.' });
+        expect(await check(named('0'), 'acme')).toStrictEqual({ done: false, note: 'Payment on Account is off for Acme Website.' });
+    });
+
+    it('names the website by its code when the website list cannot be read', async () => {
+        expect((await check(config({ [configAt(SETTING, 'acme')]: '1' }), 'acme')).note).toBe(
+            'Payment on Account is on for acme.',
+        );
     });
 
     it('uses the default when the website stores no value of its own', async () => {

@@ -31,16 +31,33 @@ function lastCheckOf(saved: SetupStepRecord | undefined): SetupCheckOutcome | un
     return saved.lastCheck ?? inferredOutcome(saved);
 }
 
+/** The placeholder a step's `enter` value carries for the ERP it is entered for. */
+const ERP_NAME = '<ERP name>';
+
+/**
+ * A step's values with each ERP's own name filled in: one value per ERP for a value naming
+ * the placeholder ("<ERP name> Warehouse" -> "Justrite Warehouse", "Accuform Warehouse"),
+ * the trailing "ERP" dropped as the ERP's list id drops it. The placeholder stays when the
+ * integration has no ERP yet, which is still the instruction (owner, 2026-10-01).
+ */
+function withErpNames(values: string[], erpNames: readonly string[]): string[] {
+    if (erpNames.length === 0) return values;
+    const short = erpNames.map((name) => name.replace(/\s+ERP$/iu, '').trim() || name);
+    return values.flatMap((value) => (value.includes(ERP_NAME) ? short.map((name) => value.replace(ERP_NAME, name)) : [value]));
+}
+
 /**
  * The checklist for one component, or undefined when its entry declares no steps.
  *
  * @param id - the component's id
  * @param state - its saved record (the catalog id, and where the SC is on each step)
+ * @param erpNames - the names of the ERPs it uses, for a value entered once per ERP
  * @returns the steps with their state
  */
 export function setupChecklistOf(
     id: string,
     state: Pick<AppBuilderComponentState, 'catalogId' | 'setupSteps'>,
+    erpNames: readonly string[] = [],
 ): SetupChecklistItem[] | undefined {
     const steps = getAppBuilderComponentEntry(state.catalogId ?? id)?.setupSteps;
     if (!steps || steps.length === 0) return undefined;
@@ -54,7 +71,7 @@ export function setupChecklistOf(
             where: step.where,
             ...(step.label ? { label: step.label } : {}),
             ...(step.path ? { path: step.path } : {}),
-            ...(step.enter ? { enter: step.enter } : {}),
+            ...(step.enter ? { enter: withErpNames(step.enter, erpNames) } : {}),
             ...(step.then ? { then: step.then } : {}),
             ...(step.icon ? { icon: step.icon } : {}),
             state: saved?.state ?? 'open',

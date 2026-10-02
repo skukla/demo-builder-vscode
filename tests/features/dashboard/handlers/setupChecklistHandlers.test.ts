@@ -157,7 +157,7 @@ describe('checkSetupSteps', () => {
             saved()?.appBuilderComponents?.['erp-integration'].setupSteps?.['company-catalogs'];
         expect(step).toMatchObject({
             state: 'done',
-            note: expect.stringMatching(/1 with their own/),
+            note: 'Acme has its own shared catalog.',
         });
         expect(step?.checkedAt).toEqual(expect.any(String));
     });

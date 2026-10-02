@@ -13,6 +13,7 @@ import {
     partiallyHeldStatus,
     paymentOnAccountEnabled,
     priceScopeWebsite,
+    websiteNamer,
 } from './setupConfigChecks';
 import type { SetupCheck } from '@/types/appBuilderComponents';
 
@@ -105,11 +106,29 @@ async function companiesHaveOwnCatalogs(read: CommerceRead): Promise<SetupCheckR
     const problems = catalogProblems(companies, catalogs);
     if (problems.length > 0) return { done: false, note: `${problems.join('; ')}.` };
     const publicGroups = new Set(catalogs.filter((c) => c.type === PUBLIC_CATALOG).map((c) => c.customer_group_id));
-    const onPublic = companies.filter((c) => publicGroups.has(c.customer_group_id)).length;
-    return {
-        done: true,
-        note: `Every company is in a shared catalog: ${onPublic} on the public one, ${companies.length - onPublic} with their own.`,
-    };
+    const onPublic = companies.filter((c) => publicGroups.has(c.customer_group_id));
+    const withOwn = companies.filter((c) => !publicGroups.has(c.customer_group_id));
+    return { done: true, note: catalogsInWords(withOwn, onPublic) };
+}
+
+/** "Northgate and Harbor each have their own shared catalog. Altura uses the public one." */
+function catalogsInWords(withOwn: CompanyRow[], onPublic: CompanyRow[]): string {
+    const parts: string[] = [];
+    if (withOwn.length > 0) {
+        const names = andList(withOwn.map(nameOf));
+        parts.push(withOwn.length === 1 ? `${names} has its own shared catalog.` : `${names} each have their own shared catalog.`);
+    }
+    if (onPublic.length > 0) {
+        const names = andList(onPublic.map(nameOf));
+        const catalog = withOwn.length > 0 ? 'the public one' : 'the public shared catalog';
+        parts.push(onPublic.length === 1 ? `${names} uses ${catalog}.` : `${names} use ${catalog}.`);
+    }
+    return parts.join(' ');
+}
+
+/** "A", "A and B", "A, B and C". */
+function andList(names: string[]): string {
+    return names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }
 
 interface SourceRow {
@@ -164,13 +183,18 @@ async function erpSourceInWebsiteStock(read: CommerceRead): Promise<SetupCheckRe
     );
     if (sold.length > 0) {
         const { source, stock } = sold[0];
-        return { done: true, note: `${sourceName(source)} is in ${stock.name}, which ${websitesOf(stock).join(', ')} sells from.` };
+        const websiteName = await websiteNamer(read);
+        const sellers = andList(websitesOf(stock).map(websiteName));
+        return { done: true, note: `${sourceName(source)} is assigned to ${stock.name}, which ${sellers} sells from.` };
     }
     const linked = others.filter((source) => links.some((link) => link.source_code === source.source_code));
     if (linked.length > 0) {
-        return { done: false, note: `${listed(linked)} in a stock no website sells from.` };
+        return { done: false, note: `${listed(linked)} assigned to a stock no website sells from.` };
     }
-    return { done: false, note: `${listed(others)} in no stock, so no website sells from ${plural(others, 'them', 'it')}.` };
+    return {
+        done: false,
+        note: `${listed(others)} assigned to no stock, so no website sells from ${plural(others, 'them', 'it')}.`,
+    };
 }
 
 const plural = (rows: unknown[], many: string, one: string): string => (rows.length > 1 ? many : one);

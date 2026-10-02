@@ -58,6 +58,15 @@ describe('setupChecklistOf', () => {
         ]);
     });
 
+    it("fills each ERP's own name into a value entered once per ERP, and keeps the placeholder with none", () => {
+        const warehouse = (erpNames?: string[]) =>
+            setupChecklistOf('erp-integration', {}, erpNames)?.find((item) => item.id === 'second-source')?.enter;
+        expect(warehouse(['Justrite ERP', 'Accuform ERP'])).toStrictEqual(['Justrite Warehouse', 'Accuform Warehouse']);
+        // A name without a trailing "ERP" is used whole.
+        expect(warehouse(['Northwind'])).toStrictEqual(['Northwind Warehouse']);
+        expect(warehouse()).toStrictEqual(['<ERP name> Warehouse']);
+    });
+
     it('reads a second copy through the entry it was made from', () => {
         expect(
             setupChecklistOf('erp-integration-2', { catalogId: 'erp-integration' })

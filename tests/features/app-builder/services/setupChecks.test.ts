@@ -46,8 +46,17 @@ describe('companies-have-own-catalogs', () => {
         ]));
         expect(result).toStrictEqual({
             done: true,
-            note: 'Every company is in a shared catalog: 2 on the public one, 2 with their own.',
+            note: 'ServerSavvy Solutions and Kukla Studios each have their own shared catalog. Altura and RackMaster use the public one.',
         });
+    });
+
+    it('says it in words when every company has its own, or one is on the public catalog', async () => {
+        expect((await check(commerce([{ id: 21, company_name: 'Kukla Studios', customer_group_id: 19 }]))).note).toBe(
+            'Kukla Studios has its own shared catalog.',
+        );
+        expect((await check(commerce([{ id: 18, company_name: 'Altura', customer_group_id: 1 }]))).note).toBe(
+            'Altura uses the public shared catalog.',
+        );
     });
 
     it('is not done when a company is in a customer group no shared catalog uses', async () => {
@@ -141,6 +150,8 @@ describe('erp-source-in-website-stock', () => {
 
     function inventory(sources: object[], links: object[], stocks: object[] = [DEFAULT_STOCK, BODEA_STOCK]) {
         return jest.fn(async (path: string) => {
+            // GET store/websites, as the sandbox answered it: the name the Admin shows.
+            if (path === 'store/websites') return JSON.stringify([{ id: 3, code: 'bodea', name: 'Bodea Website' }]);
             if (path.startsWith('inventory/sources')) return JSON.stringify({ items: sources });
             if (path.startsWith('inventory/stock-source-links')) return JSON.stringify({ items: links });
             return JSON.stringify({ items: stocks });
@@ -166,7 +177,7 @@ describe('erp-source-in-website-stock', () => {
     it('is not done when the ERP source is in no stock', async () => {
         expect(await sourceCheck(inventory([DEFAULT, NORTHWIND], [DEFAULT_LINK]))).toStrictEqual({
             done: false,
-            note: 'Northwind Warehouse is in no stock, so no website sells from it.',
+            note: 'Northwind Warehouse is assigned to no stock, so no website sells from it.',
         });
     });
 
@@ -174,7 +185,7 @@ describe('erp-source-in-website-stock', () => {
         const unsold = { ...BODEA_STOCK, extension_attributes: { sales_channels: [] } };
         expect(
             await sourceCheck(inventory([DEFAULT, NORTHWIND], [DEFAULT_LINK, NORTHWIND_LINK], [DEFAULT_STOCK, unsold])),
-        ).toStrictEqual({ done: false, note: 'Northwind Warehouse is in a stock no website sells from.' });
+        ).toStrictEqual({ done: false, note: 'Northwind Warehouse is assigned to a stock no website sells from.' });
     });
 
     it('does not count a disabled source', async () => {
@@ -185,7 +196,7 @@ describe('erp-source-in-website-stock', () => {
     it('is done when the ERP source is in a stock a website sells from, as Bodea is now', async () => {
         expect(await sourceCheck(inventory([DEFAULT, NORTHWIND], [DEFAULT_LINK, NORTHWIND_LINK]))).toStrictEqual({
             done: true,
-            note: 'Northwind Warehouse is in Bodea Stock, which bodea sells from.',
+            note: 'Northwind Warehouse is assigned to Bodea Stock, which Bodea Website sells from.',
         });
     });
 
