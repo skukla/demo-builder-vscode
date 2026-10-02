@@ -47,3 +47,4 @@ order section and from the routing research, once AB-26r has shipped its full-cr
 - 2026-09-28  2026-09-28 freeze lifted (owner: 'yes'; several ERPs landed and proven live on Bodea).
 - 2026-10-02  Stale waiting-on removed 2026-10-02: the freeze it named was lifted 2026-09-28 (AB-26r log); several ERPs are live on Justrite
 - 2026-10-02  commerce-erp-integration docs/partial-invoicing.md (4c7e83a), linked from the walk-through. The premise moved: split orders already get one Commerce invoice per ERP part, and the integration invoices by quantity per line; what per-delivery billing still needs is the ERP side and an invoice-level join. Not linked from the routing research (not located in this pass)
+- 2026-10-02  docs(backlog): AB-26v built — partial invoicing written up from today's facts (`669999ce6`)

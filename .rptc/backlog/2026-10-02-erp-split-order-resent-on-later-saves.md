@@ -44,3 +44,4 @@ compare-before-write.
 
 ## Shipped so far
 - 2026-10-02  commerce-erp-integration 83cb0a0 (a part the ERP holds is never resent) + ce2cde4 (confirmation names the ERP); deployed; order 5000000007 history clean
+- 2026-10-02  docs(backlog): AB-56 built — a split order is no longer re-sent on later saves; proved live (`9cb558198`)
