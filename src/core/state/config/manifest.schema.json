@@ -866,12 +866,25 @@
           "type": "string",
           "description": "What the last automatic check found, in words (e.g. which companies share a group)."
         },
+        "lastCheck": {
+          "$ref": "#/definitions/SetupCheckOutcome",
+          "description": "What that check concluded: set up, not set up, or it could not tell (the state is then left as it was, so the state alone cannot say). Absent on records saved before 2026-10-01; `setupChecklistOf` infers it from the state for those."
+        },
         "checkedAt": {
           "type": "string",
           "description": "When that check ran (ISO)."
         }
       },
       "description": "One setup step's saved state: marked done or dismissed, and what its last check said."
+    },
+    "SetupCheckOutcome": {
+      "type": "string",
+      "enum": [
+        "passed",
+        "failed",
+        "unknown"
+      ],
+      "description": "What a setup check concluded."
     },
     "AddedDemo": {
       "type": "object",

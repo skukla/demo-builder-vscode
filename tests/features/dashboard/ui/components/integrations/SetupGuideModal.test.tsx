@@ -85,35 +85,51 @@ const model = (items: SetupChecklistItem[]) =>
         setupChecklist: items,
     }) as IntegrationCardModel;
 
-function renderGuide(
+/** Render the guide and let its sign-in ahead of the checks settle, as it does on open. */
+async function renderGuide(
     items: SetupChecklistItem[] = THREE,
     props: { onClose?: () => void; onOpenAdmin?: () => void } = {}
 ) {
-    return render(
+    const rendered = render(
         <SetupGuideModal
             model={model(items)}
             onClose={props.onClose ?? jest.fn()}
             onOpenAdmin={props.onOpenAdmin ?? jest.fn()}
         />
     );
+    await act(async () => {});
+    return rendered;
 }
+
+/** The guide's sign-in ahead of the checks, answered at once unless a test holds it. */
+const PREPARED = { success: true, data: { ready: true } };
+
+/** Answer check (and save) requests with `answer`; the sign-in ahead of them answers at once. */
+function answerChecks(answer: (type: string, payload: unknown) => Promise<unknown>): void {
+    mockRequest.mockImplementation((type: string, payload: unknown) =>
+        type === 'prepareSetupChecks' ? Promise.resolve(PREPARED) : answer(type, payload),
+    );
+}
+
+/** The check requests sent, without the sign-in ahead of them. */
+const checkCalls = () => mockRequest.mock.calls.filter(([type]) => type === 'checkSetupSteps');
 
 /** The detail pane: the one shown step. */
 const shown = () => screen.getByTestId('setup-guide-step');
 
 beforeEach(() => {
     jest.clearAllMocks();
-    mockRequest.mockResolvedValue({ success: true });
+    answerChecks(async () => ({ success: true }));
 });
 
 describe('SetupGuideModal', () => {
-    it('shows nothing when no guide is open', () => {
+    it('shows nothing when no guide is open', async () => {
         render(<SetupGuideModal model={null} onClose={jest.fn()} onOpenAdmin={jest.fn()} />);
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
 
-    it('opens on the first step still to do, with what, where and why all in view', () => {
-        renderGuide();
+    it('opens on the first step still to do, with what, where and why all in view', async () => {
+        await renderGuide();
         expect(
             screen.getByRole('dialog', { name: 'Demo setup: Northwind ERP Integration' })
         ).toBeInTheDocument();
@@ -132,8 +148,8 @@ describe('SetupGuideModal', () => {
         expect(screen.getAllByTestId('setup-guide-step')).toHaveLength(1);
     });
 
-    it('lists every step by its short label with its state, and the list is the only progress', () => {
-        renderGuide([...THREE, step({ id: 'd', title: 'Step D', state: 'dismissed' })]);
+    it('lists every step by its short label with its state, and the list is the only progress', async () => {
+        await renderGuide([...THREE, step({ id: 'd', title: 'Step D', state: 'dismissed' })]);
         const tabs = screen.getAllByRole('tab');
         // A label where the catalog gives one, the title where it does not.
         // A check on the done step, a dash on the skipped one, nothing on an open one.
@@ -142,16 +158,16 @@ describe('SetupGuideModal', () => {
         expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
     });
 
-    it('the list is the only navigation: no Back or Next, and any step is one click away', () => {
-        renderGuide();
+    it('the list is the only navigation: no Back or Next, and any step is one click away', async () => {
+        await renderGuide();
         expect(screen.queryByText('Back')).not.toBeInTheDocument();
         expect(screen.queryByText('Next')).not.toBeInTheDocument();
         fireEvent.click(screen.getByRole('tab', { name: 'Step C' }));
         expect(within(shown()).getByRole('heading', { name: 'Step C' })).toBeInTheDocument();
     });
 
-    it('draws the Admin path as breadcrumbs, the values as copyable pills, and the follow-up as one line', () => {
-        renderGuide([STRUCTURED]);
+    it('draws the Admin path as breadcrumbs, the values as copyable pills, and the follow-up as one line', async () => {
+        await renderGuide([STRUCTURED]);
         const pane = shown();
         expect(within(pane).getByLabelText('Stores > Settings > Order Status')).toBeInTheDocument();
         expect(within(pane).getAllByText(/^(Stores|Settings|Order Status)$/)).toHaveLength(3);
@@ -168,30 +184,79 @@ describe('SetupGuideModal', () => {
         expect(within(pane).queryByText(STRUCTURED.where)).not.toBeInTheDocument();
     });
 
-    it('shows what the last check found beside the step', () => {
-        renderGuide([
+    it('shows a passed check as a blue notice under the title, with what it found', async () => {
+        await renderGuide([
             step({
                 id: 'c',
                 title: 'Step C',
                 checkable: true,
                 state: 'done',
                 note: '2 companies, each with its own catalog.',
+                lastCheck: 'passed',
             }),
         ]);
-        expect(
-            within(shown()).getByText('2 companies, each with its own catalog.')
-        ).toBeInTheDocument();
+        const result = within(shown()).getByTestId('setup-guide-check-result');
+        expect(result).toHaveClass('inline-notice--info');
+        expect(result).toHaveTextContent('Checked: set up correctly');
+        expect(result).toHaveTextContent('2 companies, each with its own catalog.');
     });
 
-    it('closes from the dialog footer', () => {
+    it('shows a failed check, and one that could not tell, as amber notices', async () => {
+        await renderGuide([
+            step({ id: 'p', title: 'Step P', checkable: true, note: 'Payment on Account is off for the acme website.', lastCheck: 'failed' }),
+            step({ id: 'q', title: 'Step Q', checkable: true, note: 'Could not check: Commerce REST answered HTTP 503.', lastCheck: 'unknown' }),
+        ]);
+        const failed = within(shown()).getByTestId('setup-guide-check-result');
+        expect(failed).not.toHaveClass('inline-notice--info');
+        expect(failed).toHaveTextContent('Not set up yetPayment on Account is off for the acme website.');
+        fireEvent.click(screen.getByRole('tab', { name: 'Step Q' }));
+        // The check's own "Could not check:" lead is not repeated under the same title.
+        expect(within(shown()).getByTestId('setup-guide-check-result')).toHaveTextContent(
+            "Couldn't check this stepCommerce REST answered HTTP 503.",
+        );
+    });
+
+    it('shows no result before a check has run, or on a skipped step', async () => {
+        await renderGuide([
+            step({ id: 'a', title: 'Step A', checkable: true }),
+            step({ id: 'b', title: 'Step B', checkable: true, state: 'dismissed', note: 'x', lastCheck: 'failed' }),
+        ]);
+        expect(within(shown()).queryByTestId('setup-guide-check-result')).not.toBeInTheDocument();
+        fireEvent.click(screen.getByRole('tab', { name: 'Step B' }));
+        expect(within(shown()).queryByTestId('setup-guide-check-result')).not.toBeInTheDocument();
+    });
+
+    it('signs in to Commerce as it opens, ahead of any check', async () => {
+        await renderGuide();
+        expect(mockRequest).toHaveBeenCalledWith('prepareSetupChecks', { id: 'erp-integration' });
+        expect(checkCalls()).toHaveLength(0);
+    });
+
+    it('says Connecting to Commerce while a run waits on that sign-in', async () => {
+        let signedIn: (answer: unknown) => void = () => undefined;
+        mockRequest.mockImplementation((type: string) =>
+            type === 'prepareSetupChecks'
+                ? new Promise((resolve) => (signedIn = resolve))
+                : new Promise(() => undefined),
+        );
+        render(<SetupGuideModal model={model([step({ id: 'a', title: 'Step A', checkable: true })])} onClose={jest.fn()} onOpenAdmin={jest.fn()} />);
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: 'Check all steps' }));
+        });
+        expect(screen.getByRole('button', { name: 'Connecting to Commerce' })).toBeDisabled();
+        await act(async () => signedIn(PREPARED));
+        expect(screen.getByRole('button', { name: 'Checking 1 of 1' })).toBeDisabled();
+    });
+
+    it('closes from the dialog footer', async () => {
         const onClose = jest.fn();
-        renderGuide(THREE, { onClose });
+        await renderGuide(THREE, { onClose });
         fireEvent.click(screen.getByRole('button', { name: 'Close' }));
         expect(onClose).toHaveBeenCalledTimes(1);
     });
 
     it('marks the shown step done, by id, from the dialog footer', async () => {
-        renderGuide();
+        await renderGuide();
         // The footer holds the step's buttons after Close, the way every modal does.
         expect(
             screen.getAllByRole('button').slice(-3).map((button) => button.textContent)
@@ -207,7 +272,7 @@ describe('SetupGuideModal', () => {
     });
 
     it('skips the shown step, by id — a quiet link in the step, not a footer button', async () => {
-        renderGuide();
+        await renderGuide();
         expect(screen.queryByRole('button', { name: /Skip/ })).not.toBeInTheDocument();
         await act(async () => {
             fireEvent.click(within(shown()).getByRole('link', { name: 'Skip this step' }));
@@ -220,7 +285,7 @@ describe('SetupGuideModal', () => {
     });
 
     it('reopens a step that is done, and offers only Open Commerce Admin beside Close', async () => {
-        renderGuide();
+        await renderGuide();
         fireEvent.click(screen.getByRole('tab', { name: 'A' }));
         expect(screen.queryByRole('button', { name: 'Mark as done' })).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Open Commerce Admin' })).toBeInTheDocument();
@@ -234,8 +299,8 @@ describe('SetupGuideModal', () => {
         });
     });
 
-    it('offers Check all steps in place of Mark as done on a step Demo Builder can check', () => {
-        renderGuide();
+    it('offers Check all steps in place of Mark as done on a step Demo Builder can check', async () => {
+        await renderGuide();
         expect(screen.queryByRole('button', { name: 'Check all steps' })).not.toBeInTheDocument();
         fireEvent.click(screen.getByRole('tab', { name: 'Step C' }));
         expect(screen.queryByRole('button', { name: 'Mark as done' })).not.toBeInTheDocument();
@@ -250,8 +315,8 @@ describe('SetupGuideModal', () => {
             step({ id: 'd', title: 'Step D' }),
         ];
         const pending: Array<(answer: unknown) => void> = [];
-        mockRequest.mockImplementation(() => new Promise((resolve) => pending.push(resolve)));
-        renderGuide(checkable);
+        answerChecks(() => new Promise((resolve) => pending.push(resolve)));
+        await renderGuide(checkable);
         fireEvent.click(screen.getByRole('button', { name: 'Check all steps' }));
 
         // The first step is being checked: its mark is a spinner and the button counts.
@@ -267,7 +332,7 @@ describe('SetupGuideModal', () => {
         expect(mockRequest).toHaveBeenLastCalledWith('checkSetupSteps', { id: 'erp-integration', stepId: 'b' });
 
         await act(async () => pending[1]({ success: true, data: { items: afterA } }));
-        expect(mockRequest).toHaveBeenCalledTimes(2);
+        expect(checkCalls()).toHaveLength(2);
         expect(screen.getByRole('button', { name: 'Check all steps' })).toBeEnabled();
         // Step B is still open, so the guide lands there with its reason in view.
         expect(within(shown()).getByRole('heading', { name: 'Step B' })).toBeInTheDocument();
@@ -275,17 +340,20 @@ describe('SetupGuideModal', () => {
 
     it('carries on past a step it cannot check, then names it in the house notice', async () => {
         // The guide's request limit ran out on step A (2026-10-01); B must still be checked.
-        mockRequest
-            .mockRejectedValueOnce(new Error('Request timeout: checkSetupSteps'))
-            .mockResolvedValueOnce({ success: true, data: { items: [] } });
-        renderGuide([
+        let asked = 0;
+        answerChecks(async () => {
+            asked += 1;
+            if (asked === 1) throw new Error('Request timeout: checkSetupSteps');
+            return { success: true, data: { items: [] } };
+        });
+        await renderGuide([
             step({ id: 'a', title: 'Step A', label: 'Price scope', checkable: true }),
             step({ id: 'b', title: 'Step B', checkable: true }),
         ]);
         await act(async () => {
             fireEvent.click(screen.getByRole('button', { name: 'Check all steps' }));
         });
-        expect(mockRequest).toHaveBeenCalledTimes(2);
+        expect(checkCalls()).toHaveLength(2);
         const notice = await screen.findByTestId('setup-guide-notice');
         expect(notice).toHaveTextContent("Couldn't check Price scope");
         expect(notice).toHaveTextContent(NO_ANSWER);
@@ -295,8 +363,8 @@ describe('SetupGuideModal', () => {
     });
 
     it("passes on the extension's own sentence when it refuses a check", async () => {
-        mockRequest.mockResolvedValue({ success: false, error: 'Adobe sign-in required.' });
-        renderGuide([step({ id: 'a', title: 'Step A', checkable: true })]);
+        answerChecks(async () => ({ success: false, error: 'Adobe sign-in required.' }));
+        await renderGuide([step({ id: 'a', title: 'Step A', checkable: true })]);
         await act(async () => {
             fireEvent.click(screen.getByRole('button', { name: 'Check all steps' }));
         });
@@ -305,15 +373,15 @@ describe('SetupGuideModal', () => {
         );
     });
 
-    it('opens Commerce Admin', () => {
+    it('opens Commerce Admin', async () => {
         const onOpenAdmin = jest.fn();
-        renderGuide(THREE, { onOpenAdmin });
+        await renderGuide(THREE, { onOpenAdmin });
         fireEvent.click(screen.getByRole('button', { name: 'Open Commerce Admin' }));
         expect(onOpenAdmin).toHaveBeenCalledTimes(1);
     });
 
-    it('stays on the step when the pushed-back model marks it done', () => {
-        const { rerender } = renderGuide();
+    it('stays on the step when the pushed-back model marks it done', async () => {
+        const { rerender } = await renderGuide();
         const updated = THREE.map((item) =>
             item.id === 'b' ? { ...item, state: 'done' as const } : item
         );
@@ -327,7 +395,7 @@ describe('SetupGuideModal', () => {
 
     it('says why when the extension refuses', async () => {
         mockRequest.mockResolvedValue({ success: false, error: 'Adobe sign-in required.' });
-        renderGuide();
+        await renderGuide();
         await act(async () => {
             fireEvent.click(screen.getByRole('button', { name: 'Mark as done' }));
         });
@@ -338,7 +406,7 @@ describe('SetupGuideModal', () => {
 
     it('words a save that got no answer for a person, not with the transport error', async () => {
         mockRequest.mockRejectedValue(new Error('Request timeout: setSetupStep'));
-        renderGuide();
+        await renderGuide();
         await act(async () => {
             fireEvent.click(screen.getByRole('button', { name: 'Mark as done' }));
         });
@@ -354,7 +422,7 @@ describe('setupNextStep', () => {
         { id: 'mesh', componentId: 'eds-accs-mesh' },
     ] as IntegrationCardModel[];
 
-    it('offers the guide of the card the operation was for, counting the steps left', () => {
+    it('offers the guide of the card the operation was for, counting the steps left', async () => {
         const openGuide = jest.fn();
         const next = setupNextStep(cards, 'erp-integration', openGuide);
 
@@ -364,7 +432,7 @@ describe('setupNextStep', () => {
         expect(openGuide).toHaveBeenCalledWith('erp-integration');
     });
 
-    it('offers nothing for a card with no steps left, or no operation', () => {
+    it('offers nothing for a card with no steps left, or no operation', async () => {
         expect(setupNextStep(cards, 'eds-accs-mesh', jest.fn())).toBeUndefined();
         expect(setupNextStep(cards, undefined, jest.fn())).toBeUndefined();
         const done = [

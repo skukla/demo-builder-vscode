@@ -269,9 +269,18 @@ export interface SetupStepRecord {
     state?: 'done' | 'dismissed';
     /** What the last automatic check found, in words (e.g. which companies share a group). */
     note?: string;
+    /**
+     * What that check concluded: set up, not set up, or it could not tell (the state is
+     * then left as it was, so the state alone cannot say). Absent on records saved before
+     * 2026-10-01; `setupChecklistOf` infers it from the state for those.
+     */
+    lastCheck?: SetupCheckOutcome;
     /** When that check ran (ISO). */
     checkedAt?: string;
 }
+
+/** What a setup check concluded. */
+export type SetupCheckOutcome = 'passed' | 'failed' | 'unknown';
 
 /**
  * Keyed appBuilderComponent state (Model B). One concept replaces the singular

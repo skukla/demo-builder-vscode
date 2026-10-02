@@ -106,6 +106,7 @@ const tokens = new Map<string, MintedToken>();
 /** Test seam. */
 export function resetCommerceRestTokens(): void {
     tokens.clear();
+    signing.clear();
 }
 
 /** A path that reaches only the REST API under the tenant, or why not. */
@@ -239,29 +240,37 @@ export async function resolveRestTargetFor(
     }
     const storeView =
         typeof storeViewArg === 'string' && storeViewArg ? storeViewArg : facts.headers.all?.Store;
-    const cached = cachedToken(workspaceId);
-    if (cached) {
-        return { base, token: cached.token, clientId: cached.clientId, imsOrgCode: cached.imsOrgCode, storeView };
-    }
     try {
-        const credentials = await authManager.getS2SDeployCredentials(
-            organization,
-            projectId,
-            workspaceId,
-        );
-        const token = await mintToken(workspaceId, credentials, fetchImpl);
-        return {
-            base,
-            token,
-            clientId: credentials.clientId,
-            imsOrgCode: credentials.imsOrgCode,
-            storeView,
-        };
+        const signed = cachedToken(workspaceId) ?? (await signOnce(workspaceId, () => authManager
+            .getS2SDeployCredentials(organization, projectId, workspaceId)
+            .then((credentials) => mintToken(workspaceId, credentials, fetchImpl))));
+        return { base, token: signed.token, clientId: signed.clientId, imsOrgCode: signed.imsOrgCode, storeView };
     } catch (error) {
         return {
             refusal: `Error: could not sign the request — ${error instanceof Error ? error.message : String(error)}`,
         };
     }
+}
+
+/**
+ * Mints in flight, by workspace. Two callers that find no token at once share one
+ * credential read and mint rather than starting two: the setup guide warms the token when
+ * it opens, and a check pressed during that wait joins it (2026-10-01).
+ */
+const signing = new Map<string, Promise<MintedToken>>();
+
+async function signOnce(workspaceId: string, mint: () => Promise<string>): Promise<MintedToken> {
+    const inFlight = signing.get(workspaceId);
+    if (inFlight) return inFlight;
+    const started = mint()
+        .then(() => {
+            const minted = tokens.get(workspaceId);
+            if (!minted) throw new Error('IMS answered without a token for this workspace.');
+            return minted;
+        })
+        .finally(() => signing.delete(workspaceId));
+    signing.set(workspaceId, started);
+    return started;
 }
 
 /** Commerce's ACL refusal — the one 403 that IS about the credential. */

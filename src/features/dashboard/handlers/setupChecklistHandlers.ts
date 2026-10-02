@@ -22,7 +22,7 @@ import { setupChecklistOf } from '@/features/app-builder/services/setupChecklist
 import { runSetupCheck } from '@/features/app-builder/services/setupChecks';
 import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { SetupStep } from '@/types/appBuilderComponents';
-import type { AppBuilderComponentState, Project, SetupStepRecord } from '@/types/base';
+import type { AppBuilderComponentState, Project, SetupCheckOutcome, SetupStepRecord } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
 
@@ -68,6 +68,12 @@ export const handleGetSetupChecklist: MessageHandler<{ id?: string }> = async (c
 };
 
 const STATES = new Set(['done', 'dismissed', 'open']);
+
+/** What a check concluded: set up, not set up, or it could not tell. */
+function outcomeOf(done: boolean | undefined): SetupCheckOutcome {
+    if (done === undefined) return 'unknown';
+    return done ? 'passed' : 'failed';
+}
 
 /** A passing check marks the step done, a failing one opens it, one that could not tell leaves it. */
 function stateAfterCheck(previous: SetupStepRecord['state'], done: boolean | undefined): SetupStepRecord['state'] {
@@ -137,7 +143,27 @@ export const handleCheckSetupSteps: MessageHandler<{ id?: string; stepId?: strin
         const result = await runSetupCheck(step.check, read, scope);
         const { state: previous, ...kept } = records[step.id] ?? {};
         const state = stateAfterCheck(previous, result.done);
-        records[step.id] = { ...kept, ...(state ? { state } : {}), note: result.note, checkedAt };
+        records[step.id] = {
+            ...kept,
+            ...(state ? { state } : {}),
+            note: result.note,
+            lastCheck: outcomeOf(result.done),
+            checkedAt,
+        };
     }
     return saveSteps(context, opened, records);
+};
+
+/**
+ * Handle 'prepareSetupChecks' — sign in to Commerce ahead of a check, so the slow part (the
+ * workspace credential, read from Adobe Console) is done before the SC presses Check all
+ * steps. The setup guide sends it when it opens; a check pressed meanwhile joins the same
+ * sign-in rather than starting another (`commerceRestClient`). Reads nothing from Commerce
+ * and saves nothing. Answers whether a check could sign in now.
+ */
+export const handlePrepareSetupChecks: MessageHandler<{ id?: string }> = async (context, payload) => {
+    const opened = await openChecklist(context, payload?.id);
+    if ('error' in opened) return opened.error;
+    const target = await resolveRestTarget(context, undefined, fetch);
+    return { success: true, data: { ready: !('refusal' in target) } };
 };

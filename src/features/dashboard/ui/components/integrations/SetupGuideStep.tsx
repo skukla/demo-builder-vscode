@@ -22,8 +22,9 @@
  * @module features/dashboard/ui/components/integrations/SetupGuideStep
  */
 
-import { Heading, Link, ProgressCircle, Text } from '@adobe/react-spectrum';
+import { Heading, Link, ProgressCircle } from '@adobe/react-spectrum';
 import React from 'react';
+import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { CopyableText } from '@/core/ui/components/ui/CopyableText';
 import { cn } from '@/core/ui/utils/classNames';
 import type { SetupChecklistItem } from '@/types/appBuilderComponents';
@@ -138,6 +139,34 @@ function SkipOrReopen({ item, busy, onSet }: StepProps): React.ReactElement {
     );
 }
 
+/** What a check's outcome is called, as the notice's title. */
+const RESULT_TITLE = {
+    passed: 'Checked: set up correctly',
+    failed: 'Not set up yet',
+    unknown: "Couldn't check this step",
+} as const;
+
+/**
+ * What the last check found, first thing under the title, in the house notice: blue when
+ * it is set up, amber when it is not or could not be told. Drawn as plain text under the
+ * instructions it read as more instructions (owner, 2026-10-01). Nothing before a check
+ * has run, or on a skipped step.
+ */
+function CheckResult({ item }: { item: SetupChecklistItem }): React.ReactElement | null {
+    if (!item.note || !item.lastCheck || item.state === 'dismissed') return null;
+    // The check's own "Could not check:" lead repeats the title, so it goes.
+    const finding = item.note.replace(/^Could not check: /u, '');
+    return (
+        <InlineNotice
+            tone={item.lastCheck === 'passed' ? 'info' : 'warning'}
+            title={RESULT_TITLE[item.lastCheck]}
+            testId="setup-guide-check-result"
+        >
+            {finding}
+        </InlineNotice>
+    );
+}
+
 /** Where / Enter / Then / Why: labelled lines that scan as one small table. */
 function StepFacts({ item }: { item: SetupChecklistItem }): React.ReactElement {
     return (
@@ -178,8 +207,8 @@ export function SetupGuideStep(props: StepProps): React.ReactElement {
     return (
         <div className="setup-guide-step" data-testid="setup-guide-step">
             <Heading level={3}>{item.title}</Heading>
+            <CheckResult item={item} />
             <StepFacts item={item} />
-            {item.note && <Text UNSAFE_className="setup-guide-evidence">{item.note}</Text>}
             <SkipOrReopen {...props} />
         </div>
     );

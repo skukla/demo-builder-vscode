@@ -56,6 +56,7 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
     // Adobe Console calls, ~12s, each with one retry — a retried read took the setup guide's
     // first check past the 30s default on 2026-10-01) before its Commerce reads.
     checkSetupSteps: TIMEOUTS.LONG, // 180s - credential read + up to three Commerce reads
+    prepareSetupChecks: TIMEOUTS.LONG, // 180s - the same credential read, done ahead of a check
 
     addConsoleApis: TIMEOUTS.LONG, // 180s - catalog fetch + union subscribe PUT
     setConsoleApis: TIMEOUTS.LONG, // 180s - catalog fetch + reconcile subscribe PUT

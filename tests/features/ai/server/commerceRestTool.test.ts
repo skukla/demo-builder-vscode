@@ -220,6 +220,24 @@ describe('the signed GET (args pinned)', () => {
         });
     });
 
+    it('two requests that find no token at once share one credential read and one mint', async () => {
+        // The setup guide signs in as it opens; a check pressed during that wait joins it.
+        const s = serve();
+        await Promise.all([s.raw({ path: 'customers/43' }), s.raw({ path: 'customers/43' })]);
+
+        expect(getS2SDeployCredentials).toHaveBeenCalledTimes(1);
+        const imsCalls = fetchMock.mock.calls.filter(([url]) => String(url).includes('ims/token'));
+        expect(imsCalls).toHaveLength(1);
+    });
+
+    it('a failed sign-in is not shared with the next request, which tries again', async () => {
+        getS2SDeployCredentials.mockRejectedValueOnce(new Error('Console 504'));
+        const s = serve();
+        expect(await s.raw({ path: 'customers/43' })).toMatch(/could not sign the request — Console 504/);
+        await s.raw({ path: 'customers/43' });
+        expect(getS2SDeployCredentials).toHaveBeenCalledTimes(2);
+    });
+
     it('a storeView argument replaces the Store header', async () => {
         await serve().raw({ path: 'store/websites', storeView: 'default' });
         expect(fetchMock.mock.calls[1][1].headers.Store).toBe('default');

@@ -53,9 +53,19 @@ interface FooterInput {
     item: SetupChecklistItem | undefined;
     busy: boolean;
     progress: CheckProgress | undefined;
+    connecting: boolean;
     setDone: () => void;
     checkAll: () => void;
     openAdmin: () => void;
+}
+
+/**
+ * The check button's words: idle, connecting (a run waiting on the Commerce sign-in the
+ * guide started as it opened), or how far a run is.
+ */
+function checkLabel(progress: CheckProgress | undefined, connecting: boolean): string {
+    if (!progress) return 'Check all steps';
+    return connecting ? 'Connecting to Commerce' : `Checking ${progress.position} of ${progress.total}`;
 }
 
 /** The steps a check run covers, in list order: every checkable one not skipped. */
@@ -69,11 +79,19 @@ function checkableIds(items: SetupChecklistItem[]): string[] {
  * all, which the button says, since the list beside it shows each one land; otherwise the SC
  * says it is done. A skipped or finished step the SC cannot check has nothing to settle.
  */
-function footerButtons({ item, busy, progress, setDone, checkAll, openAdmin }: FooterInput): ActionButton[] {
+function footerButtons({
+    item,
+    busy,
+    progress,
+    connecting,
+    setDone,
+    checkAll,
+    openAdmin,
+}: FooterInput): ActionButton[] {
     const open: ActionButton = { label: 'Open Commerce Admin', variant: 'accent', onPress: openAdmin };
     if (!item) return [open];
     if (item.checkable && item.state !== 'dismissed') {
-        const label = progress ? `Checking ${progress.position} of ${progress.total}` : 'Check all steps';
+        const label = checkLabel(progress, connecting);
         return [{ label, variant: 'secondary', onPress: checkAll, isDisabled: busy }, open];
     }
     if (item.state === 'open') {
@@ -132,6 +150,12 @@ function Guide({
     useEffect(() => {
         if (index > items.length - 1) setIndex(Math.max(0, items.length - 1));
     }, [index, items.length]);
+    // Sign in to Commerce while the SC reads, so a check does not wait on Adobe Console.
+    const { prepare } = actions;
+    const hasCheckable = items.some((step) => step.checkable);
+    useEffect(() => {
+        if (hasCheckable) prepare();
+    }, [hasCheckable, prepare]);
 
     // Set by the first check run, so only marks a run changes animate in, not the ones the
     // guide opened with.
@@ -149,6 +173,7 @@ function Guide({
         item,
         busy: actions.busy,
         progress: actions.progress,
+        connecting: actions.connecting,
         setDone: () => item && actions.setStep(item.id, 'done'),
         checkAll: () => void checkAll(),
         openAdmin: onOpenAdmin,

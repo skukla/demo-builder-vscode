@@ -119,6 +119,7 @@ import {
 } from '@/features/dashboard/handlers/runtimePackageHandlers';
 import {
     handleCheckSetupSteps,
+    handlePrepareSetupChecks,
     handleGetSetupChecklist,
     handleSetSetupStep,
 } from '@/features/dashboard/handlers/setupChecklistHandlers';
@@ -390,6 +391,7 @@ export const dashboardHandlers = defineHandlers({
     getSetupChecklist: handleGetSetupChecklist,
     setSetupStep: handleSetSetupStep,
     checkSetupSteps: handleCheckSetupSteps,
+    prepareSetupChecks: handlePrepareSetupChecks,
     // The latest progress of an operation the SC started here, for its modal (PL-59).
     getOperationProgress: handleGetOperationProgress,
     // "Run in background": the operation carries on in a progress notification (PL-59).

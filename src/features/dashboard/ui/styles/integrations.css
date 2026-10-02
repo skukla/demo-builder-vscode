@@ -228,10 +228,6 @@
     gap: 12px;
 }
 
-.setup-guide-evidence {
-    color: var(--spectrum-global-color-gray-700);
-}
-
 /* The reason reads a step quieter than the instructions above it. */
 .setup-guide-why {
     color: var(--spectrum-global-color-gray-700);

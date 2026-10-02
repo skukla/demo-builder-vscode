@@ -23,6 +23,7 @@ jest.mock('@/features/dashboard/handlers/appBuilderComponentHandlers', () => ({
 
 import {
     handleCheckSetupSteps,
+    handlePrepareSetupChecks,
     handleGetSetupChecklist,
     handleSetSetupStep,
 } from '@/features/dashboard/handlers/setupChecklistHandlers';
@@ -211,6 +212,16 @@ describe('checkSetupSteps', () => {
         );
     });
 
+    it('saves what each check concluded beside its note', async () => {
+        answerByPath([{ id: 1, company_name: 'Acme', customer_group_id: 4 }], [{ id: 7, name: 'Acme', customer_group_id: 4, type: 0 }]);
+        const { context, saved } = setup();
+        await handleCheckSetupSteps(context, { id: 'erp-integration', stepId: 'company-catalogs' });
+        expect(saved()?.appBuilderComponents?.['erp-integration'].setupSteps?.['company-catalogs']).toMatchObject({
+            state: 'done',
+            lastCheck: 'passed',
+        });
+    });
+
     it('checks only the step asked for, which is how the setup guide asks', async () => {
         answerByPath([{ id: 1, company_name: 'Acme', customer_group_id: 4 }], []);
         const { context, saved } = setup();
@@ -244,5 +255,25 @@ describe('checkSetupSteps', () => {
         });
         await handleCheckSetupSteps(context, { id: 'erp-integration' });
         expect(mockSendRest).not.toHaveBeenCalled();
+    });
+});
+
+describe('prepareSetupChecks', () => {
+    it('signs in to Commerce ahead of a check, reading and saving nothing', async () => {
+        const { context, saved } = setup();
+        const result = await handlePrepareSetupChecks(context, { id: 'erp-integration' });
+        expect(result).toStrictEqual({ success: true, data: { ready: true } });
+        expect(mockResolveRestTarget).toHaveBeenCalledTimes(1);
+        expect(mockSendRest).not.toHaveBeenCalled();
+        expect(saved()).toBeUndefined();
+    });
+
+    it('says not ready when the sign-in is refused, without failing', async () => {
+        mockResolveRestTarget.mockResolvedValue({ refusal: 'Error: Adobe sign-in required.' });
+        const { context } = setup();
+        expect(await handlePrepareSetupChecks(context, { id: 'erp-integration' })).toStrictEqual({
+            success: true,
+            data: { ready: false },
+        });
     });
 });

@@ -61,6 +61,13 @@ export interface SetupChecklistActions {
     progress?: CheckProgress;
     /** The steps the last run could not check. */
     failures: CheckFailure[];
+    /**
+     * Sign in to Commerce ahead of a check (the guide calls it as it opens), so the slow
+     * credential read is done before the SC presses Check all steps.
+     */
+    prepare: () => void;
+    /** That sign-in is still under way: a run waiting on it is connecting, not checking. */
+    connecting: boolean;
     /** A request is in flight; the buttons wait. */
     busy: boolean;
     /** Why the last request failed, if it did. */
@@ -118,7 +125,17 @@ export function useSetupChecklist(componentId: string): SetupChecklistActions {
         [componentId],
     );
 
-    return { setStep, checkAll, progress, failures, busy, error };
+    const [connecting, setConnecting] = useState(false);
+    const prepare = useCallback(() => {
+        setConnecting(true);
+        // Its failure is not the SC's to read here: a check that cannot sign in says so.
+        webviewClient
+            .request('prepareSetupChecks', { id: componentId })
+            .catch((thrown: unknown) => log.warn('sign-in ahead of the checks did not answer', thrown))
+            .finally(() => setConnecting(false));
+    }, [componentId]);
+
+    return { setStep, checkAll, progress, failures, prepare, connecting, busy, error };
 }
 
 /**

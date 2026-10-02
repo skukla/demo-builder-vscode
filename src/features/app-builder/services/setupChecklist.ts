@@ -15,7 +15,21 @@
 
 import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { SetupChecklistItem } from '@/types/appBuilderComponents';
-import type { AppBuilderComponentState } from '@/types/base';
+import type { AppBuilderComponentState, SetupCheckOutcome, SetupStepRecord } from '@/types/base';
+
+/**
+ * What a check concluded, for a record saved before the outcome was kept (2026-10-01): a
+ * passing check marked the step done and a failing one opened it, so the state says which.
+ */
+function inferredOutcome(saved: SetupStepRecord): SetupCheckOutcome {
+    return saved.state === 'done' ? 'passed' : 'failed';
+}
+
+/** What the step's last check concluded, or undefined when no check has run. */
+function lastCheckOf(saved: SetupStepRecord | undefined): SetupCheckOutcome | undefined {
+    if (!saved?.note) return undefined;
+    return saved.lastCheck ?? inferredOutcome(saved);
+}
 
 /**
  * The checklist for one component, or undefined when its entry declares no steps.
@@ -32,6 +46,7 @@ export function setupChecklistOf(
     if (!steps || steps.length === 0) return undefined;
     return steps.map((step) => {
         const saved = state.setupSteps?.[step.id];
+        const lastCheck = lastCheckOf(saved);
         return {
             id: step.id,
             title: step.title,
@@ -44,6 +59,7 @@ export function setupChecklistOf(
             ...(step.icon ? { icon: step.icon } : {}),
             state: saved?.state ?? 'open',
             ...(saved?.note ? { note: saved.note } : {}),
+            ...(lastCheck ? { lastCheck } : {}),
             checkable: step.check !== undefined,
         };
     });

@@ -7,7 +7,7 @@
  * its OWN env schema (the data backbone for D2's selection/config UX).
  */
 
-import type { AppBuilderComponentKind } from './base';
+import type { AppBuilderComponentKind, SetupCheckOutcome } from './base';
 import type { AddonSource } from './demoPackages';
 
 /** A single env-var an App Builder component needs or provides, with collection metadata. */
@@ -145,6 +145,8 @@ export interface SetupChecklistItem {
     state: 'open' | 'done' | 'dismissed';
     /** What the last check found, when one ran. */
     note?: string;
+    /** What that check concluded, when one ran. */
+    lastCheck?: SetupCheckOutcome;
     /** Demo Builder can check this one itself. */
     checkable: boolean;
 }

@@ -277,7 +277,9 @@ describe('dashboardHandlers', () => {
             //
             // openAemAssets (75 → 76, EDS-21, 2026-09-30): the More menu's "AEM Assets" —
             // the bound AEM author's Assets console (demoBuilder.daLive.aemAuthorUrl).
-            expect(types).toHaveLength(76);
+            // prepareSetupChecks (76 → 77, AB-53, 2026-10-01): the setup guide signs in to
+            // Commerce as it opens, so a check does not wait on Adobe Console.
+            expect(types).toHaveLength(77);
         });
 
         it('should have handlers as functions', () => {

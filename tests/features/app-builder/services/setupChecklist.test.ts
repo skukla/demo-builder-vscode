@@ -41,6 +41,23 @@ describe('setupChecklistOf', () => {
         expect(items?.[1].note).toMatch(/customer group of its own/);
     });
 
+    it("carries what the last check concluded, and infers it for a record saved before it was kept", () => {
+        const items = setupChecklistOf('erp-integration', {
+            setupSteps: {
+                'confirmed-status': { note: 'Could not check: busy', lastCheck: 'unknown', state: 'done' },
+                // Saved before 2026-10-01: a note and a state, no outcome.
+                'company-catalogs': { state: 'done', note: 'Every company is in a shared catalog.' },
+                'price-scope-website': { note: 'Catalog Price Scope is Global; it must be Website.' },
+            },
+        });
+        expect(items?.slice(0, 4).map((item) => item.lastCheck)).toStrictEqual([
+            'unknown',
+            'passed',
+            'failed',
+            undefined,
+        ]);
+    });
+
     it('reads a second copy through the entry it was made from', () => {
         expect(
             setupChecklistOf('erp-integration-2', { catalogId: 'erp-integration' })
