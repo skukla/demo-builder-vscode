@@ -195,8 +195,8 @@ function buildMenuActions(
 }
 
 /**
- * A system card's kebab items: its screen, its fill from Commerce and its demo controls (its
- * look and a simulated downtime, AB-59) (only while it and the integration they run through are
+ * A system card's kebab items: its screen, its fill from Commerce and its simulated
+ * downtime (AB-59) (only while it and the integration they run through are
  * both deployed), its redeploy, its removal
  * (which takes its integration too). No Manage APIs: a system's APIs are part
  * of the project's set, not its own choice.
@@ -214,10 +214,9 @@ function buildSystemMenuActions(
         ...(verb ? [verb] : []),
         ...(url ? (['open'] as CardAction[]) : []),
         // Its own fill only; the reset covers every ERP, so it is the integration's. Then its
-        // demo controls (AB-59), which reach the ERP through the same integration.
-        ...(resettable
-            ? (['load-demo-data', 'appearance', 'simulate-downtime'] as CardAction[])
-            : []),
+        // simulated downtime (AB-59), which reaches the ERP through the same integration. Its
+        // look is set on the ERP's own screen, not here (owner, 2026-10-02).
+        ...(resettable ? (['load-demo-data', 'simulate-downtime'] as CardAction[]) : []),
         ...(status === 'deployed' ? (['redeploy'] as CardAction[]) : []),
         'remove',
     ];

@@ -412,9 +412,10 @@ every ERP the ERP integration serves, cancels the open orders they hold (a cance
 cannot be reopened) and undoes what those ERPs wrote into Commerce companies. Its read, `get_erp_status`, is not. `open_erp_screen` (2026-09-16) is gated for
 `open_url`'s reason: it opens a browser window.
 
-The demo ERP's demo controls (2026-10-02, AB-59) are the card's "Appearance" and "Simulate
-downtime", dispatched into the same handlers: `set_erp_appearance` (a theme and/or a colour,
-`PATCH settings`), `start_erp_downtime` (`POST settings/maintenance`, 1–1440 minutes, default
+The demo ERP's demo controls (2026-10-02, AB-59): `set_erp_appearance` (a theme and/or a colour,
+`PATCH settings`) is agent-only, since people set the ERP's look on its own screen; the
+downtime pair dispatches into the same handlers as the card's "Simulate downtime":
+`start_erp_downtime` (`POST settings/maintenance`, 1–1440 minutes, default
 30) and `end_erp_downtime` (`DELETE settings/maintenance`). Only `start_erp_downtime` is gated,
 with a consent dialog: while it lasts the ERP refuses every call, so the integration's orders
 wait. The look is cosmetic and ending the downtime restores the ERP, so neither is gated. Whether

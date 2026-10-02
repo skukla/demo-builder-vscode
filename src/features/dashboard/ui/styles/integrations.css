@@ -251,23 +251,4 @@
 .setup-guide-skip-link {
     color: var(--spectrum-global-color-gray-600);
 }
-
-/* ---- A demo ERP's appearance modal (AB-59) ----
- * Each theme and colour choice leads with a swatch of its colour. The colour arrives as
- * --erp-demo-swatch (ErpAppearanceDialog); everything else about the swatch is here. */
-.erp-demo-swatch {
-    display: inline-block;
-    width: 14px;
-    height: 14px;
-    margin-right: 8px;
-    border-radius: 3px;
-    vertical-align: -2px;
-    background: var(--erp-demo-swatch);
-    box-shadow: inset 0 0 0 1px var(--spectrum-global-color-gray-400);
-}
-
-/* A theme's colour and menu position read quieter than its name. */
-.erp-demo-detail {
-    color: var(--spectrum-global-color-gray-700);
-}
 }

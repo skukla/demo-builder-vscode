@@ -22,6 +22,8 @@ import {
 } from '@/features/dashboard/ui/hooks/useErpDemoControls';
 import { ERP_DOWNTIME_MINUTES } from '@/types/erpDemoControls';
 
+export type { ErpDemoControlTarget };
+
 const { min: MIN, max: MAX } = ERP_DOWNTIME_MINUTES;
 
 function isWindowLength(minutes: number): boolean {
@@ -29,9 +31,9 @@ function isWindowLength(minutes: number): boolean {
 }
 
 /**
- * Host the downtime modal while the open control is the ERP's simulated downtime.
+ * Host the downtime modal while it is open on an ERP.
  *
- * @param props - the open control (or none) and the close callback
+ * @param props - the ERP it is open on (or none) and the close callback
  * @returns the dialog container
  */
 export function ErpDowntimeDialog({ target, onClose }: {
@@ -40,7 +42,7 @@ export function ErpDowntimeDialog({ target, onClose }: {
 }): React.ReactElement {
     return (
         <DialogContainer onDismiss={onClose}>
-            {target?.control === 'downtime' && <DowntimeModal target={target} onClose={onClose} />}
+            {target && <DowntimeModal target={target} onClose={onClose} />}
         </DialogContainer>
     );
 }

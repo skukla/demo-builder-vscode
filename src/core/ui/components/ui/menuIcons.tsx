@@ -17,7 +17,6 @@
 import Add from '@spectrum-icons/workflow/Add';
 import Beaker from '@spectrum-icons/workflow/Beaker';
 import Clock from '@spectrum-icons/workflow/Clock';
-import ColorPalette from '@spectrum-icons/workflow/ColorPalette';
 import Copy from '@spectrum-icons/workflow/Copy';
 import DataAdd from '@spectrum-icons/workflow/DataAdd';
 import Delete from '@spectrum-icons/workflow/Delete';
@@ -67,8 +66,6 @@ const MENU_ICONS: Record<string, React.ReactElement> = {
     loadData: <DataAdd size="S" />,
     /** Add another of something beside what is there (another ERP for an integration). */
     add: <Add size="S" />,
-    /** How something looks, not what it holds (a demo ERP's theme and colour). */
-    appearance: <ColorPalette size="S" />,
     /** Something unavailable for a while (a demo ERP's simulated downtime). */
     downtime: <Clock size="S" />,
 };

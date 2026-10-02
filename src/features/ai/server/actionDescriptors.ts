@@ -14,7 +14,7 @@ import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
 import { prerequisitesHandlers } from '@/features/prerequisites/handlers/prerequisitesHandlers';
 import { projectsListHandlers } from '@/features/projects-dashboard/handlers/projectsListHandlers';
-import { ERP_DOWNTIME_MINUTES, ERP_PALETTES, ERP_THEMES } from '@/types/erpDemoControls';
+import { ERP_DOWNTIME_MINUTES, ERP_PALETTE_IDS, ERP_THEME_IDS } from '@/types/erpDemoControls';
 
 /** The add payload, as `handleAddAppBuilderComponent` reads it. */
 const addIntegrationSchema = {
@@ -259,8 +259,8 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
                 .describe('Per-ERP settings to change, by name; null clears an override'),
         },
     },
-    // The demo ERP's demo controls, as its card offers them (AB-59). Demo tools, not ERP
-    // settings: they left the ERP's own Settings screen (owner, 2026-10-02).
+    // The demo ERP's demo controls (AB-59). Demo tools, not ERP settings. Its card offers the
+    // downtime; its look is set by people on the ERP's own screen (owner, 2026-10-02).
     {
         tool: 'set_erp_appearance',
         needsAuth: ['adobe'],
@@ -281,13 +281,13 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
                     "Which ERP, by its component id (from get_erp_status's erps); default the first",
                 ),
             theme: z
-                .enum(ERP_THEMES.map((theme) => theme.id) as [string, ...string[]])
+                .enum(ERP_THEME_IDS)
                 .optional()
                 .describe(
                     'A theme: harbour (teal), meridian (indigo), granite (slate), foundry (bronze)',
                 ),
             palette: z
-                .enum(ERP_PALETTES.map((palette) => palette.id) as [string, ...string[]])
+                .enum(ERP_PALETTE_IDS)
                 .optional()
                 .describe('A colour: teal, indigo, slate, bronze or plum'),
         },

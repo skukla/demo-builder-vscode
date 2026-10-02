@@ -76,7 +76,6 @@ function systemCard(): IntegrationCardModel {
         menuActions: [
             'open',
             'load-demo-data',
-            'appearance',
             'simulate-downtime',
             'redeploy',
             'remove',
@@ -156,17 +155,14 @@ describe('IntegrationsGrid — the system card verbs', () => {
         });
     });
 
-    // The demo controls (AB-59): through the INTEGRATION's id, naming THIS ERP, in a modal
+    // Simulated downtime (AB-59): through the INTEGRATION's id, naming THIS ERP, in a modal
     // that reads the ERP as it opens.
-    it.each([
-        ['Appearance', 'Nordwind: demo appearance'],
-        ['Simulate downtime', 'Nordwind: simulate downtime'],
-    ])('%s opens its modal on THIS ERP', async (label, title) => {
+    it('Simulate downtime opens its modal on THIS ERP', async () => {
         const { user, panel } = await openSystem();
 
-        await user.click(within(panel).getByRole('button', { name: label }));
+        await user.click(within(panel).getByRole('button', { name: 'Simulate downtime' }));
 
-        expect(await screen.findByText(title)).toBeInTheDocument();
+        expect(await screen.findByText('Nordwind: simulate downtime')).toBeInTheDocument();
         expect(getClient().request).toHaveBeenCalledWith('getErpDemoControls', {
             id: 'erp-integration',
             erp: 'demo-erp',

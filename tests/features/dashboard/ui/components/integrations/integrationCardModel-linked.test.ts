@@ -63,13 +63,13 @@ describe('deriveSystemCard', () => {
         });
     });
 
-    it('offers its screen, fill from Commerce, its demo controls, redeploy and remove while both halves are deployed', () => {
+    it('offers its screen, fill from Commerce, simulated downtime, redeploy and remove while both halves are deployed', () => {
         const card = deriveSystemCard(erp(), undefined, usedBy(), CATALOG);
-        // The demo controls (AB-59): its look and a simulated downtime, beside its fill.
+        // Simulated downtime (AB-59) sits beside its fill. Its look is not offered here: it is set
+        // on the ERP's own screen (owner, 2026-10-02).
         expect(card.menuActions).toEqual([
             'open',
             'load-demo-data',
-            'appearance',
             'simulate-downtime',
             'redeploy',
             'remove',
@@ -88,7 +88,6 @@ describe('deriveSystemCard', () => {
         expect(card.message).toBe('database not provisioned');
         expect(card.menuActions).not.toContain('reset-records');
         expect(card.menuActions).not.toContain('load-demo-data');
-        expect(card.menuActions).not.toContain('appearance');
         expect(card.menuActions).not.toContain('simulate-downtime');
     });
 

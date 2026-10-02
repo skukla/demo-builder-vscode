@@ -1,8 +1,8 @@
 /**
- * The mock ERP's demo controls, on its card in Demo Builder (AB-59): how its screen looks, and a
- * simulated downtime (its maintenance window, during which it answers as a real ERP does when
- * down, so the integration's handling of that can be shown). They left the ERP's own Settings
- * screen so an SC changing a real ERP setting mid-demo never meets them (owner, 2026-10-02).
+ * The mock ERP's demo controls (AB-59): how its screen looks, and a simulated downtime (its
+ * maintenance window, during which it answers as a real ERP does when down, so the integration's
+ * handling of that can be shown). The downtime is on the ERP's card in Demo Builder; the look is
+ * for agents (`set_erp_appearance`), as people set it on the ERP's own screen (owner, 2026-10-02).
  *
  * - `getErpDemoControls` — the ERP's look and any window in force (`GET health`).
  * - `setErpAppearance` — a theme and/or a colour (`PATCH settings { appearance }`).
@@ -19,8 +19,8 @@
 import { callOwnErp, shapeErpRow, type ErpRouteRequest } from './erpCall';
 import {
     ERP_DOWNTIME_MINUTES,
-    ERP_PALETTES,
-    ERP_THEMES,
+    ERP_PALETTE_IDS,
+    ERP_THEME_IDS,
     type ErpAppearance,
     type ErpDemoControlsPayload,
     type ErpMaintenance,
@@ -69,8 +69,8 @@ export const handleGetErpDemoControls: MessageHandler<ErpDemoControlsPayload> = 
         maintenance: answer.maintenance ?? null,
     }));
 
-const THEME_IDS: readonly string[] = ERP_THEMES.map((theme) => theme.id);
-const PALETTE_IDS: readonly string[] = ERP_PALETTES.map((palette) => palette.id);
+const THEME_IDS: readonly string[] = ERP_THEME_IDS;
+const PALETTE_IDS: readonly string[] = ERP_PALETTE_IDS;
 
 /**
  * Handle 'setErpAppearance' — dress the ERP in a theme, a colour, or both (the colour wins over

@@ -1,8 +1,8 @@
 /**
  * The ERP verbs that need more than a message: an ERP's screen and its fill go through
  * the integration that serves it (the extension holds the screen key and runs the fill),
- * naming this ERP since an integration can serve several (AB-16); so do its demo controls,
- * its look and a simulated downtime, each opening a modal (AB-59). On the INTEGRATION's
+ * naming this ERP since an integration can serve several (AB-16); so does its simulated
+ * downtime, which opens a modal (AB-59). On the INTEGRATION's
  * card, the fill covers every ERP and the reset is offered — the reset always covers
  * them all (AB-16n), so it is the integration's verb, not an ERP's (owner, 2026-10-01).
  * Everything else (redeploy, update, remove) is the ordinary keyed path.
@@ -22,15 +22,9 @@ export interface SystemCardHandlers {
     confirmReset: (pending: { id: string; erpNames: string[] }) => void;
     /** Fill from Commerce: the integration's id, the name for the modal, and one ERP's id (or every ERP). */
     loadErpData: (id: string, erpName: string, erp?: string) => void;
-    /** Open one of an ERP's demo controls (AB-59): its look, or a simulated downtime. */
-    openDemoControl: (target: ErpDemoControlTarget) => void;
+    /** Open an ERP's simulated-downtime modal (AB-59). */
+    openDowntime: (target: ErpDemoControlTarget) => void;
 }
-
-/** A system card's demo controls, and the modal each opens (AB-59). */
-const DEMO_CONTROLS: Partial<Record<CardAction, ErpDemoControlTarget['control']>> = {
-    appearance: 'appearance',
-    'simulate-downtime': 'downtime',
-};
 
 /**
  * Route a system card's own verb.
@@ -54,11 +48,9 @@ export function handleSystemAction(
         if (integrationId) handlers.loadErpData(integrationId, model.name, model.id);
         return true;
     }
-    const control = DEMO_CONTROLS[action];
-    if (control) {
+    if (action === 'simulate-downtime') {
         if (integrationId) {
-            const { id: erp, name } = model;
-            handlers.openDemoControl({ id: integrationId, erp, name, control });
+            handlers.openDowntime({ id: integrationId, erp: model.id, name: model.name });
         }
         return true;
     }
