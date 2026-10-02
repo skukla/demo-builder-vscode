@@ -227,9 +227,9 @@ possible on the ERP side and for the integration's return records.
 | R-T1 | **Yes.** `observer.rma_save_after` and `observer.rma_save_commit_after` are in the store's supported events, beside `observer.sales_order_creditmemo_save_after`. So the "Send to ERPs" button fallback is not needed; the return's save event can start the split | `GET /V1/eventing/supportedList` (43 events) |
 | Returns REST | **Answers.** `GET /V1/returns` lists none yet; `GET /V1/returnsAttributeMetadata` answers the line fields (Resolution: Exchange 4, Refund 5, Store Credit 6). §1's [Ref] row is now read live, not only listed | those two GETs |
 | Returns switched on | **Off for the storefront, on for products.** `sales/magento_rma/enabled` has no value at default or on the `justrite` website (Commerce's default is No); `sales/magento_rma/enabled_on_product` is 1. Staff can enter a return in the Admin; a buyer cannot ask on the storefront until the setting is on. A setup-guide step (§5.2) | `GET /V1/system/config` with a `path` filter, both scopes; control: `catalog/price/scope` reads 1 the same way |
-| Credit memos | None on the store yet (`GET /V1/creditmemos` total 0), so R-T3 and R-T4 still need a first one | that GET |
+| R-T3 | **Yes, both.** `POST /V1/order/31/refund` with `items` = only the Accuform ERP's line (order item 38, qty 2), `shipping_amount` 0, `return_to_stock_items` empty, on an order paid on account (5000000002): credit memo 1, `total_refunded` 42.42, `qty_refunded` 2 on that line and 0 on the Justrite line, order still Complete; Northgate's company credit balance went from -664.56 to -622.14 (+42.42), so an offline refund on a Payment on Account order goes back to company credit. One credit memo per ERP on one order works | the POST, then `orders/31`, `companyCredits?company_id=22` before and after |
 
-R-T2 to R-T7 write to the store and are run inside the slices that need them (R1 onward),
+R-T2 and R-T4 to R-T7 write to the store and are run inside the slices that need them (R1 onward),
 under the owner's 2026-10-02 authorization to place, ship, invoice, credit and return orders
 on Justrite.
 
@@ -273,3 +273,4 @@ Sized like the B-slices. All come after B8.
   §3.4's "no REST endpoint found"); the RMA event is not verified.
 - 2026-09-28: r1 APPROVED by the owner: the integrated flow (ERP policy authorizes, the integration moves the return's status, carrier label on authorization, shipping refunded by rule, an ERP refusal denies its lines). Live tests R-T6, R-T7 added.
 - 2026-10-02: R-T1 answered live on Justrite (the return save event exists), returns REST read live, storefront returns found off (§6.1).
+- 2026-10-02: R-T3 answered live (one credit memo per ERP, refunded to company credit), on order 5000000002 after the baseline split order shipped and invoiced per ERP.
