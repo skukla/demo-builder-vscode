@@ -34,3 +34,4 @@ credit memo per ERP. A refusing ERP's piece stays open with Re-send.
 - 2026-09-28  2026-09-28 the JustRite deck carries r1 as journey step 7 (slide 42, 'Return one order, two brands'; notes say designed, not built; the tech case's question #18 carries the five client questions). When returns change, tell the case agent so the slide stays true.
 - 2026-10-02  R0 reads on Justrite: the return save event exists (observer.rma_save_after), returns REST answers, storefront returns are off; recorded in returns-design.md 6.1
 - 2026-10-02  Baseline live on Justrite: order 5000000002 split, confirmed, shipped from each ERP warehouse and invoiced per ERP (invoices 5000000001/2). R-T3 answered: one credit memo per ERP works, offline refund goes to company credit (credit memo 1)
+- 2026-10-02  demo-erp loop/2026-10-02-order-to-return 59d7200: return orders (create, receive, credit) + contract v13; 423 tests; not yet on main or deployed
