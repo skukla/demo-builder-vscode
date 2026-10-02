@@ -30,7 +30,8 @@ jest.mock('@/features/app-builder/services/erpIntegrationClient', () => ({
             mockClientCtor(...args);
         }
         status = (erpId?: string) => mockStatus(erpId);
-        detach = (options?: { closeOrders?: boolean }) => mockDetach(options);
+        detach = (options?: { closeOrders?: boolean }, onProgress?: (message: string) => void) =>
+            mockDetach(options, onProgress);
         lookup = (query: unknown) => mockLookup(query);
         traceOrder = (orderNumber: string) => mockTraceOrder(orderNumber);
         resolvedSettings = (websites: string[], erpId?: string) =>

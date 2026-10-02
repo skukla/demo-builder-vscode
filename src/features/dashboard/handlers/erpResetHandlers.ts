@@ -61,6 +61,7 @@ async function resetErp(
     const undone = await closeOffAndDetach(
         new ErpIntegrationClient(call.integration.deployedUrls, call.auth),
         call,
+        (step) => report(stage, step),
     );
     if (!context.authManager) throw new Error('Adobe sign-in required.');
     const authManager = context.authManager;
@@ -105,17 +106,20 @@ async function resetErp(
  * that closed SOME orders and failed on others (Commerce timed out cancelling one, say):
  * wiping then would leave exactly the half-an-order this step exists to prevent, under a
  * green toast (review, 2026-09-30). Nothing is wiped on a refusal, so the reset is simply
- * run again once the named orders are dealt with.
+ * run again once the named orders are dealt with. An undo that outlives its 60-second
+ * answer is followed by the client to its end (`erpDetachRun`, AB-61); `onProgress` gets
+ * the one line it says while it does.
  */
 async function closeOffAndDetach(
     client: ErpIntegrationClient,
     call: ErpCall,
+    onProgress: (step: string) => void,
 ): Promise<ErpDetachReport> {
     const name = call.integration.name ?? call.id;
     if ((await client.status()).closesOrdersOnReset !== true) {
         throw new Error(`${name} cannot close off orders on a reset. Update it, then reset again.`);
     }
-    const undone = await client.detach({ closeOrders: true });
+    const undone = await client.detach({ closeOrders: true }, onProgress);
     if (!undone.closed) {
         throw new Error(
             `${name} did not close off the orders; nothing was wiped. Update it, then reset again.`,

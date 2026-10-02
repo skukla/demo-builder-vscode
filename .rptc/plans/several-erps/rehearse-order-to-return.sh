@@ -24,10 +24,13 @@ echo "  order entity $O, number $INC"
 step "2. Both ERPs receive their part"
 for i in $(seq 1 30); do T=$(node $P call get_erp_order_trace "{\"id\":\"erp-integration\",\"orderNumber\":\"$INC\"}" --full 2>&1); n=$(echo "$T" | grep -oE '"part":"sent"' | wc -l | tr -d ' '); [ "$n" -ge 2 ] && break; sleep 10; done
 echo "$T" | grep -oE '"name":"[A-Za-z ]+ ERP","number":"[0-9]+","part":"[a-z]+"'
-ERPNO=$(echo "$T" | grep -oE '"name":"Justrite ERP","number":"[0-9]+"' | grep -oE '[0-9]{10}')
+# Each ERP numbers its own sales order: after a reset the two counters need not agree.
+NO_demo_erp=$(echo "$T" | grep -oE '"name":"Justrite ERP","number":"[0-9]+"' | grep -oE '[0-9]{10}')
+NO_demo_erp_2=$(echo "$T" | grep -oE '"name":"Accuform ERP","number":"[0-9]+"' | grep -oE '[0-9]{10}')
 
 step "3. Each ERP confirms, ships and posts its part"
 for pair in demo-erp:1 demo-erp-2:2; do e=${pair%%:*}; q=${pair##*:}
+  v="NO_${e//-/_}"; ERPNO=${!v}
   E $e "orders/$ERPNO/confirm" '{}' > /dev/null
   S=$(E $e "orders/$ERPNO/shipments" "{\"lines\":[{\"item\":10,\"qty\":$q}]}" | grep -oE '"number":"8[0-9]{9}"' | tail -1 | grep -oE '[0-9]{10}')
   echo "  $e shipment $S: $(E $e "orders/$ERPNO/shipments/$S/post" '{}' | grep -oE '"status":"posted"' | head -1)"

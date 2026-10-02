@@ -24,6 +24,8 @@ export interface ErpDetachDeps {
     getAuth: () => Promise<AppManagementAuth | undefined>;
     onProgress?: (message: string) => void;
     fetchImpl?: typeof fetch;
+    /** How following a cut-off undo pauses (erpDetachRun); a real sleep when absent. */
+    wait?: (ms: number) => Promise<void>;
 }
 
 const count = (n: number, one: string, many: string): string => `${n} ${n === 1 ? one : many}`;
@@ -66,7 +68,8 @@ export async function detachErpWrites(
         };
     }
     try {
-        return describe(await new ErpIntegrationClient(deployedUrls, auth, deps.fetchImpl).detach());
+        const client = new ErpIntegrationClient(deployedUrls, auth, deps.fetchImpl, deps.wait);
+        return describe(await client.detach({}, deps.onProgress));
     } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         return { status: 'failed', detail: `The ERP's changes in Commerce were not undone: ${reason}` };

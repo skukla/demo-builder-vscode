@@ -38,3 +38,4 @@ Harness journeys both legs; ledger revert of the reimbursement on reset; headles
 - 2026-10-02  docs(backlog): AB-26s — the owner chose flow 1 for card payments (Commerce captures, the ERP records the payment) (`90aa76c8f`)
 - 2026-10-02  docs(research): how a real ERP handles a web order paid by card (AB-26s) (`033c5e324`)
 - 2026-10-02  docs(plans): payment leg live tests answered — reimburse and its undo work on Justrite; owner decisions (`2102df9a5`)
+- 2026-10-02  feat(setup): an optional card payments step (AB-26s) (`07edf17c4`)

@@ -45,9 +45,52 @@ describe('detachErpWrites', () => {
                 Authorization: 'Bearer fake-test-pw-not-a-secret',
                 'x-gw-ims-org-id': 'ABC@AdobeOrg',
                 Accept: 'application/json',
+                'Content-Type': 'application/json',
             },
+            // Every detach is named with a run id, so one cut off at 60 s can be followed (AB-61).
+            body: expect.stringMatching(/^\{"run":"[A-Za-z0-9_-]{8,64}"\}$/),
         });
         expect(d.onProgress).toHaveBeenCalledWith("Undoing the ERP's changes in Commerce");
+    });
+
+    it('follows an undo cut off at 60 seconds, saying so, and reports what it undid (AB-61)', async () => {
+        // The run record is the integration's contract as handed over on 2026-10-02.
+        const fetchImpl = jest.fn(async (url: string, init: RequestInit) => {
+            let answer: { status: number; body: unknown } = {
+                status: 504,
+                body: { error: 'Response not yet ready' },
+            };
+            if (url === URLS['runtime/erp/status']) {
+                answer = { status: 200, body: { detachRuns: true } };
+            } else if (init.method === 'GET') {
+                const result = {
+                    reverted: { reverted: 3, failed: [] },
+                    orders: { cleared: 1, failed: [] },
+                };
+                answer = {
+                    status: 200,
+                    body: { run: 'r', status: 'done', startedAt: 'x', result },
+                };
+            }
+            return {
+                ok: answer.status === 200,
+                status: answer.status,
+                text: async () => JSON.stringify(answer.body),
+            };
+        }) as unknown as jest.MockedFunction<typeof fetch>;
+        const d = { ...deps(fetchImpl), wait: jest.fn(async () => undefined) };
+
+        const result = await detachErpWrites(URLS, d);
+
+        expect(result).toEqual({
+            status: 'detached',
+            detail: 'Undid 3 company changes and cleared 1 ERP order number in Commerce.',
+        });
+        expect(d.wait).toHaveBeenCalledTimes(1);
+        expect(d.onProgress.mock.calls).toEqual([
+            ["Undoing the ERP's changes in Commerce"],
+            ["Still undoing the ERP's changes in Commerce"],
+        ]);
     });
 
     it('skips, silently and without signing in, a component that deploys no detach', async () => {

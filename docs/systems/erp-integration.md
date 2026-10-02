@@ -189,6 +189,18 @@ agent tools without `erp`, cover every ERP: the reset undoes the integration's C
 writes once, then wipes and fills each ERP. Load demo data and Open on one ERP's card reach
 that ERP only.
 
+**An undo that takes longer than a minute** (AB-61). The undo is the integration's
+`erp/detach`, a web action: its answer is cut off at 60 seconds with a 504 while the action
+itself runs on, up to 300 seconds. So Demo Builder sends every `POST erp/detach` with a `run`
+id of its own. When the answer is cut off and `erp/status` says `detachRuns: true`, it shows
+"Still undoing the ERP's changes in Commerce" and reads `GET erp/detach?run=<id>` every five
+seconds until the run is `done` (its `result` is the report the POST would have answered) or
+`failed` (its `error` is the reason). After 330 seconds it stops and says the integration is
+still undoing and to try again in a few minutes; nothing has been wiped at that point. An
+integration that does not answer `detachRuns` is never read this way, because one deployed
+before it would run a second detach on the GET; there the 504 is reported as it is. Removing
+the integration follows its undo the same way (`erpDetachRun.ts`).
+
 **Removing one.** Remove on an added ERP's card takes it off the integration's list first
 (the list without it), then wipes its records, undeploys it and deletes its workspace. If the
 list cannot be sent, nothing is removed, and Remove anyway goes on without it. The

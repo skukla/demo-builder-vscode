@@ -29,6 +29,9 @@ function answering(status: number, body: unknown) {
     })) as unknown as jest.MockedFunction<typeof fetch>;
 }
 
+/** A run id as the integration's `erp/detach` accepts one (its contract, AB-61). */
+const RUN_ID = /^[A-Za-z0-9_-]{8,64}$/;
+
 describe('deriveErpActionUrl', () => {
     it('finds the action by its path suffix and nothing else', () => {
         expect(deriveErpActionUrl(URLS, 'status')).toBe(URLS['runtime/erp/status']);
@@ -85,7 +88,10 @@ describe('ErpIntegrationClient', () => {
         const report = await new ErpIntegrationClient(URLS, AUTH, fetchImpl).detach();
 
         expect(fetchImpl.mock.calls[0][0]).toBe(URLS['runtime/erp/detach']);
-        expect((fetchImpl.mock.calls[0][1] as RequestInit).method).toBe('POST');
+        const init = fetchImpl.mock.calls[0][1] as RequestInit;
+        expect(init.method).toBe('POST');
+        // Always a run id, and nothing else unless asked (AB-61).
+        expect(JSON.parse(String(init.body))).toEqual({ run: expect.stringMatching(RUN_ID) });
         expect(report).toEqual(body);
     });
 
@@ -97,7 +103,10 @@ describe('ErpIntegrationClient', () => {
         expect(fetchImpl.mock.calls[0][0]).toBe(URLS['runtime/erp/detach']);
         const init = fetchImpl.mock.calls[0][1] as RequestInit;
         expect(init.method).toBe('POST');
-        expect(JSON.parse(String(init.body))).toEqual({ closeOrders: true });
+        expect(JSON.parse(String(init.body))).toEqual({
+            run: expect.stringMatching(RUN_ID),
+            closeOrders: true,
+        });
         expect(report.closed?.cancelled).toBe(1);
     });
 
@@ -319,6 +328,206 @@ describe('ErpIntegrationClient', () => {
             /deployed no erp\/status action/
         );
         expect(fetchImpl).not.toHaveBeenCalled();
+    });
+});
+
+/*
+ * A detach that outlives its answer (AB-61). A web action's HTTP answer is cut off at 60 s
+ * with a 504 while the action runs on, so the client names every detach with a run id and,
+ * when the integration records runs (`detachRuns` on erp/status), reads the run's record
+ * until it ends. The record's shape is the integration's contract as handed over on
+ * 2026-10-02: `{ run, status, startedAt, finishedAt?, result?, error? }`. The 504's body
+ * here is a stand-in: only its status is read.
+ */
+describe('ErpIntegrationClient.detach, when the answer is cut off at 60 seconds (AB-61)', () => {
+    const DETACH = URLS['runtime/erp/detach'];
+    const STATUS = URLS['runtime/erp/status'];
+    const LIVE = {
+        app: { id: 'erp', version: '1' },
+        erp: { reachable: true, ok: true },
+        erpBaseUrl: 'x',
+        ledger: { entries: 103 },
+        closesOrdersOnReset: true,
+    };
+    const CUT_OFF = { status: 504, body: { error: 'Response not yet ready' } };
+    const CUT_OFF_ERROR = new ErpIntegrationApiError('detach', 504, 'Response not yet ready');
+    const RESULT = {
+        reverted: { reverted: 103, failed: [] },
+        orders: { cleared: 2, failed: [] },
+        closed: { cancelled: 2, commented: 0, alreadyClosed: 0, partsRemoved: 2, failed: [] },
+    };
+    const STARTED = '2026-10-02T14:33:10Z';
+
+    interface Answer {
+        status: number;
+        body: unknown;
+    }
+
+    /**
+     * A fetch that cuts the POST off, answers erp/status with `status`, and answers each
+     * read of the run with the next of `reads` (the last one repeats).
+     */
+    function cutOffThen(status: Answer, reads: Answer[] = []) {
+        let read = 0;
+        return jest.fn(async (url: string, init: RequestInit) => {
+            let answer: Answer = CUT_OFF;
+            if (url.startsWith(STATUS)) answer = status;
+            else if (init.method === 'GET') answer = reads[Math.min(read++, reads.length - 1)];
+            return {
+                ok: answer.status >= 200 && answer.status < 300,
+                status: answer.status,
+                text: async () => JSON.stringify(answer.body),
+            };
+        }) as unknown as jest.MockedFunction<typeof fetch>;
+    }
+
+    /** Every call made to erp/detach, as `<METHOD> <url>`, in order. */
+    function detachCalls(fetchImpl: jest.MockedFunction<typeof fetch>): string[] {
+        return fetchImpl.mock.calls
+            .filter(([url]) => String(url).startsWith(DETACH))
+            .map(([url, init]) => `${init?.method} ${String(url)}`);
+    }
+
+    /** The run id the POST carried. */
+    function sentRun(fetchImpl: jest.MockedFunction<typeof fetch>): string {
+        const post = fetchImpl.mock.calls.find(([, init]) => init?.method === 'POST');
+        return (JSON.parse(String(post?.[1]?.body)) as { run: string }).run;
+    }
+
+    const record = (status: string, more: Record<string, unknown> = {}): Answer => ({
+        status: 200,
+        body: { run: 'echoed', status, startedAt: STARTED, ...more },
+    });
+    const RECORDS = { status: 200, body: { ...LIVE, detachRuns: true } };
+    const NO_RECORD = { status: 404, body: { error: 'No such run' } };
+    const noWait = () => jest.fn(async (_ms: number) => undefined);
+
+    it('names each detach with a fresh run id', async () => {
+        const fetchImpl = answering(200, RESULT);
+        const client = new ErpIntegrationClient(URLS, AUTH, fetchImpl);
+
+        await client.detach({ closeOrders: true });
+        await client.detach({ closeOrders: true });
+
+        const runs = fetchImpl.mock.calls.map(
+            ([, init]) => (JSON.parse(String(init?.body)) as { run: string }).run
+        );
+        expect(runs[0]).toMatch(RUN_ID);
+        expect(runs[1]).toMatch(RUN_ID);
+        expect(runs[0]).not.toBe(runs[1]);
+    });
+
+    it("reads the run's record by the same id until it is done, and answers its result", async () => {
+        const fetchImpl = cutOffThen(RECORDS, [
+            record('running'),
+            record('done', { finishedAt: '2026-10-02T14:34:20Z', result: RESULT }),
+        ]);
+        const wait = noWait();
+        const onProgress = jest.fn();
+
+        const report = await new ErpIntegrationClient(URLS, AUTH, fetchImpl, wait).detach(
+            { closeOrders: true },
+            onProgress
+        );
+
+        expect(report).toEqual(RESULT);
+        const run = sentRun(fetchImpl);
+        expect(run).toMatch(RUN_ID);
+        expect(detachCalls(fetchImpl)).toEqual([
+            `POST ${DETACH}`,
+            `GET ${DETACH}?run=${run}`,
+            `GET ${DETACH}?run=${run}`,
+        ]);
+        // It pauses before each read, and says once that the undo is still going.
+        expect(wait).toHaveBeenCalledTimes(2);
+        expect(onProgress.mock.calls).toEqual([["Still undoing the ERP's changes in Commerce"]]);
+    });
+
+    it("throws the run's own error when the run failed", async () => {
+        const fetchImpl = cutOffThen(RECORDS, [
+            record('failed', { error: 'Commerce answered 503: unavailable' }),
+        ]);
+
+        await expect(
+            new ErpIntegrationClient(URLS, AUTH, fetchImpl, noWait()).detach({ closeOrders: true })
+        ).rejects.toThrow('ERP detach failed: Commerce answered 503: unavailable');
+    });
+
+    it('never reads a run from an integration that does not record them: it would run a detach', async () => {
+        const fetchImpl = cutOffThen({ status: 200, body: LIVE }, [record('done')]);
+        const wait = noWait();
+        const onProgress = jest.fn();
+
+        const detaching = new ErpIntegrationClient(URLS, AUTH, fetchImpl, wait).detach(
+            { closeOrders: true },
+            onProgress
+        );
+
+        await expect(detaching).rejects.toThrow(CUT_OFF_ERROR);
+        await expect(detaching).rejects.toBeInstanceOf(ErpIntegrationApiError);
+        // The POST and nothing else: a GET to an older erp/detach starts another detach.
+        expect(detachCalls(fetchImpl)).toEqual([`POST ${DETACH}`]);
+        expect(wait).not.toHaveBeenCalled();
+        expect(onProgress).not.toHaveBeenCalled();
+    });
+
+    it('treats a status it could not read as an integration that records no runs', async () => {
+        const fetchImpl = cutOffThen({ status: 500, body: { error: 'ledger unreadable' } });
+
+        await expect(
+            new ErpIntegrationClient(URLS, AUTH, fetchImpl, noWait()).detach()
+        ).rejects.toThrow(CUT_OFF_ERROR);
+        expect(detachCalls(fetchImpl)).toEqual([`POST ${DETACH}`]);
+    });
+
+    it("stops a little past the action's 300-second limit and says the undo is still running", async () => {
+        const fetchImpl = cutOffThen(RECORDS, [record('running')]);
+        const wait = noWait();
+
+        await expect(
+            new ErpIntegrationClient(URLS, AUTH, fetchImpl, wait).detach({ closeOrders: true })
+        ).rejects.toThrow(
+            "The integration is still undoing the ERP's changes in Commerce. Try again in a few minutes."
+        );
+
+        const waited = wait.mock.calls.reduce((total, [ms]) => total + ms, 0);
+        expect(waited).toBeGreaterThan(300_000);
+        expect(waited).toBeLessThanOrEqual(360_000);
+    });
+
+    it('takes a 404 on the first reads as "no record yet"', async () => {
+        const fetchImpl = cutOffThen(RECORDS, [
+            NO_RECORD,
+            NO_RECORD,
+            record('done', { result: RESULT }),
+        ]);
+
+        const report = await new ErpIntegrationClient(URLS, AUTH, fetchImpl, noWait()).detach();
+
+        expect(report).toEqual(RESULT);
+    });
+
+    it('gives up on a run that never gets a record, with the failure it started from', async () => {
+        const fetchImpl = cutOffThen(RECORDS, [NO_RECORD]);
+
+        await expect(
+            new ErpIntegrationClient(URLS, AUTH, fetchImpl, noWait()).detach()
+        ).rejects.toThrow(CUT_OFF_ERROR);
+
+        const reads = detachCalls(fetchImpl).filter((call) => call.startsWith('GET')).length;
+        expect(reads).toBeGreaterThan(2);
+        expect(reads).toBeLessThan(10);
+    });
+
+    it('follows nothing after any other failure', async () => {
+        const fetchImpl = answering(500, { error: 'Commerce answered 503: unavailable' });
+        const wait = noWait();
+
+        await expect(new ErpIntegrationClient(URLS, AUTH, fetchImpl, wait).detach()).rejects.toThrow(
+            new ErpIntegrationApiError('detach', 500, 'Commerce answered 503: unavailable')
+        );
+        expect(fetchImpl).toHaveBeenCalledTimes(1);
+        expect(wait).not.toHaveBeenCalled();
     });
 });
 

@@ -45,9 +45,28 @@ describe('handleResetErpRecords', () => {
 
         await handleResetErpRecords(mockContext, { id: 'erp-integration' });
 
-        expect(mockDetach).toHaveBeenCalledWith({ closeOrders: true });
+        expect(mockDetach).toHaveBeenCalledWith({ closeOrders: true }, expect.any(Function));
         expect(mockDetach.mock.invocationCallOrder[0]).toBeLessThan(
             mockCallErpApi.mock.invocationCallOrder[0]
+        );
+    });
+
+    it('shows the line the client reports while it follows an undo cut off at 60 seconds (AB-61)', async () => {
+        const { mockContext } = setupMocks(pairProject());
+        allowDeveloperRole();
+        const line = "Still undoing the ERP's changes in Commerce";
+        mockDetach.mockImplementation(
+            async (_options: unknown, onProgress: (message: string) => void) => {
+                onProgress(line);
+                return UNDONE;
+            }
+        );
+
+        await handleResetErpRecords(mockContext, { id: 'erp-integration', progress: 'modal' });
+
+        expect(mockContext.sendMessage).toHaveBeenCalledWith(
+            'operationProgress',
+            expect.objectContaining({ id: 'erp-integration', state: 'running', step: line })
         );
     });
 

@@ -17,6 +17,7 @@
  */
 
 import type { AppManagementAuth } from './appManagementClient';
+import { detachReportOf, newDetachRunId, type ErpDetachRun } from './erpDetachRun';
 import type { ErpKeyMapEntry, ResolvedErpSettings } from './erpFill';
 import type { ErpListEntry } from './erpList';
 
@@ -34,6 +35,8 @@ export interface ErpIntegrationStatus {
     ledger: { entries: number };
     /** Whether `erp/detach` closes off the ERPs' orders when asked (`closeOrders`, AB-16n). */
     closesOrdersOnReset?: boolean;
+    /** Whether `erp/detach` records each run for `GET erp/detach?run=` to read back (AB-61). */
+    detachRuns?: boolean;
 }
 
 /**
@@ -156,6 +159,7 @@ export class ErpIntegrationClient {
         private readonly deployedUrls: Record<string, string> | undefined,
         private readonly auth: AppManagementAuth,
         fetchImpl?: typeof fetch,
+        private readonly wait?: (ms: number) => Promise<void>,
     ) {
         this.fetchImpl = fetchImpl ?? globalThis.fetch;
     }
@@ -176,11 +180,22 @@ export class ErpIntegrationClient {
      * Undo what the integration wrote onto Commerce, leaving the ERP as it is. With
      * `closeOrders` (a reset, AB-16n), it first closes off every order the ERPs hold: cancelled
      * when Commerce still can, noted when not, and forgotten by the integration. Ask
-     * `status().closesOrdersOnReset` first: a deployment before it ignores the option.
+     * `status().closesOrdersOnReset` first: a deployment before it ignores the option. An
+     * answer cut off at 60 s is followed by its run id (`erpDetachRun`, AB-61).
      */
-    async detach(options: { closeOrders?: boolean } = {}): Promise<ErpDetachReport> {
-        const body = options.closeOrders ? { closeOrders: true } : undefined;
-        return (await this.call('detach', 'POST', undefined, body)) as ErpDetachReport;
+    async detach(
+        options: { closeOrders?: boolean } = {},
+        onProgress?: (message: string) => void,
+    ): Promise<ErpDetachReport> {
+        const run = newDetachRunId();
+        const body = { run, ...(options.closeOrders ? { closeOrders: true } : {}) };
+        const post = this.call('detach', 'POST', undefined, body) as Promise<ErpDetachReport>;
+        return detachReportOf(post, this, run, { wait: this.wait, onProgress });
+    }
+
+    /** One detach run's record (`GET erp/detach?run=`); a 404 when the integration has none. */
+    async detachRun(run: string): Promise<ErpDetachRun> {
+        return (await this.call('detach', 'GET', { run })) as ErpDetachRun;
     }
 
     /** One product (by SKU) or one company (by Commerce id) as both systems hold it. */
