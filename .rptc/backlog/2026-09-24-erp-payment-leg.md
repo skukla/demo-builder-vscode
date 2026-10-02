@@ -6,7 +6,6 @@ parent: AB-26
 needs: [AB-26b, AB-26r]
 value: med
 status: backlog
-waiting-on: the several-ERPs build (owner froze ERP feature growth after contracts, 2026-09-26)
 ---
 
 # Order to cash — the payment leg (incoming payment, open items, company balance)
@@ -26,3 +25,4 @@ Harness journeys both legs; ledger revert of the reimbursement on reset; headles
 - 2026-09-26  Frozen (owner, 2026-09-26): ERP feature growth stops after contracts (AB-26z) until several ERPs land; every ERP will run the same baseline code. See .rptc/plans/several-erps/overview.md §4.
 - 2026-09-27  2026-09-27  Owner: yes, count unpaid invoices in credit exposure. Measured on Bodea: Kukla Studios owes 180 on invoice 9000000001 and the ERP shows exposure 0, because demo-erp lib/partners.js counts only orders not yet invoiced (created/confirmed/shipped), while its own comment says open receivables plus open orders. With this slice, exposure = open orders + open (unpaid) invoices, and an incoming payment clearing the open item is what brings it down
 - 2026-09-28  2026-09-28 freeze lifted (owner: 'yes'; several ERPs landed and proven live on Bodea).
+- 2026-10-02  Stale waiting-on removed 2026-10-02: the freeze it named was lifted 2026-09-28 (AB-26r log); several ERPs are live on Justrite

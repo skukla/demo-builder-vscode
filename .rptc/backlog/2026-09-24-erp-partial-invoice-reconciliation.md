@@ -6,7 +6,6 @@ parent: AB-26
 needs: []
 value: med
 status: backlog
-waiting-on: the several-ERPs build (owner froze ERP feature growth after contracts, 2026-09-26)
 ---
 
 # Reconciling partial invoices against one Commerce order — a customization opportunity
@@ -46,3 +45,4 @@ order section and from the routing research, once AB-26r has shipped its full-cr
 
 - 2026-09-26  Frozen (owner, 2026-09-26): ERP feature growth stops after contracts (AB-26z) until several ERPs land; every ERP will run the same baseline code. See .rptc/plans/several-erps/overview.md §4.
 - 2026-09-28  2026-09-28 freeze lifted (owner: 'yes'; several ERPs landed and proven live on Bodea).
+- 2026-10-02  Stale waiting-on removed 2026-10-02: the freeze it named was lifted 2026-09-28 (AB-26r log); several ERPs are live on Justrite

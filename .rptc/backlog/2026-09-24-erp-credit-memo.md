@@ -6,7 +6,6 @@ parent: AB-26
 needs: [AB-26g]
 value: med
 status: active
-waiting-on: the several-ERPs build (owner froze ERP feature growth after contracts, 2026-09-26)
 ---
 
 # Credit memo and Repeat order — the way back from invoiced and cancelled
@@ -27,3 +26,4 @@ Harness journey credit → Commerce credit memo recorded → statuses; refusal t
 - 2026-09-28  2026-09-28 freeze lifted (owner: 'yes'; several ERPs landed and proven live on Bodea).
 - 2026-10-02  demo-erp 59d7200: POST orders/:n/credit-memo credits a whole invoice (O5 full credit only), creditmemo.created event; Repeat order not built
 - 2026-10-02  Live: ERP whole-invoice credit memo on order 5000000003 became a Commerce credit memo of only the Accuform line. Repeat order not built
+- 2026-10-02  Stale waiting-on removed 2026-10-02: the freeze it named was lifted 2026-09-28 (AB-26r log); several ERPs are live on Justrite

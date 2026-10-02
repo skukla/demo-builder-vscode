@@ -6,7 +6,6 @@ needs: []
 value: high
 status: backlog
 parent: AB-26
-waiting-on: the several-ERPs build (owner froze ERP feature growth after contracts, 2026-09-26)
 ---
 
 # Business-user settings for the ERP pair — which behaviours a merchant chooses, and where
@@ -90,3 +89,4 @@ preparation) in the setup guide.
 - 2026-09-25  D1 applied (commerce-erp-integration 388f116): every ERP note on a Commerce order is staff-only (is_visible_on_front 0). The notify change waits on the sandbox check that disabled Sales Emails suppress an API notify.
 - 2026-09-26  Frozen (owner, 2026-09-26): ERP feature growth stops after contracts (AB-26z) until several ERPs land; every ERP will run the same baseline code. See .rptc/plans/several-erps/overview.md §4.
 - 2026-09-28  2026-09-28 freeze lifted (owner: 'yes'; several ERPs landed and proven live on Bodea).
+- 2026-10-02  Stale waiting-on removed 2026-10-02: the freeze it named was lifted 2026-09-28 (AB-26r log); several ERPs are live on Justrite
