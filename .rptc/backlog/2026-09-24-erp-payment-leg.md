@@ -27,3 +27,6 @@ Harness journeys both legs; ledger revert of the reimbursement on reset; headles
 - 2026-09-28  2026-09-28 freeze lifted (owner: 'yes'; several ERPs landed and proven live on Bodea).
 - 2026-10-02  Stale waiting-on removed 2026-10-02: the freeze it named was lifted 2026-09-28 (AB-26r log); several ERPs are live on Justrite
 - 2026-10-02  Design written for the owner (2026-10-02): .rptc/plans/several-erps/payment-leg-design.md. Verified: Commerce reimburses company credit with POST companyCredits/:id/increaseBalance operationType 4 (developer.adobe.com credit-manage); the ERP drops an invoiced order from exposure though unpaid (demo-erp lib/partners.js OPEN); the integration sends no payment info; Justrite offers no card method, so the paid-at-checkout half cannot be shown there. Three product questions and two live tests listed before S1
+- 2026-10-02  docs(handoff): order the queue (`2b36c7d5f`)
+- 2026-10-02  docs(handoff): AB-26s and AB-26w join the owner's queue (`337e11683`)
+- 2026-10-02  docs(plans): the payment leg designed for review (AB-26s); AB-26w's notify check is not provable on Justrite (`c0d925289`)

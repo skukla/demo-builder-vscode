@@ -33,3 +33,5 @@ with the ERP's reason on the Admin page's Activity; a down ERP is still asked ag
 
 ## Shipped so far
 - 2026-10-02  commerce-erp-integration c84a116, deployed to Justrite 07:34Z
+- 2026-10-02  docs(handoff): the loop report gains AB-38, AB-57 and the deploy at c84a116 (`38f16e9b8`)
+- 2026-10-02  docs(backlog): AB-38 built with two checks open; AB-57 filed and fixed (shipment echoes refused for hours) (`624ee3379`)
