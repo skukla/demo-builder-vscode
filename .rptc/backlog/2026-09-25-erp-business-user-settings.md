@@ -90,3 +90,4 @@ preparation) in the setup guide.
 - 2026-09-26  Frozen (owner, 2026-09-26): ERP feature growth stops after contracts (AB-26z) until several ERPs land; every ERP will run the same baseline code. See .rptc/plans/several-erps/overview.md §4.
 - 2026-09-28  2026-09-28 freeze lifted (owner: 'yes'; several ERPs landed and proven live on Bodea).
 - 2026-10-02  Stale waiting-on removed 2026-10-02: the freeze it named was lifted 2026-09-28 (AB-26r log); several ERPs are live on Justrite
+- 2026-10-02  Loop 2026-10-02: what is left is the notify change, which waits on proving that disabled Sales Emails suppress an API notify. Not provable on Justrite: the sandbox delivers no email (AB-29), so neither outcome is observable here. Needs a store that sends mail, or an Adobe source stating it; the Admin notification-inbox question is still unverified too
