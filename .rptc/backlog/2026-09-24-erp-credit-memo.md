@@ -26,3 +26,4 @@ Harness journey credit → Commerce credit memo recorded → statuses; refusal t
 - 2026-09-26  Frozen (owner, 2026-09-26): ERP feature growth stops after contracts (AB-26z) until several ERPs land; every ERP will run the same baseline code. See .rptc/plans/several-erps/overview.md §4.
 - 2026-09-28  2026-09-28 freeze lifted (owner: 'yes'; several ERPs landed and proven live on Bodea).
 - 2026-10-02  demo-erp 59d7200: POST orders/:n/credit-memo credits a whole invoice (O5 full credit only), creditmemo.created event; Repeat order not built
+- 2026-10-02  Live: ERP whole-invoice credit memo on order 5000000003 became a Commerce credit memo of only the Accuform line. Repeat order not built

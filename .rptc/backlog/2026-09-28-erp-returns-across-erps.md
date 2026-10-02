@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-16
 needs: []
 value: med
-status: active
+status: built
 ---
 
 # Returns across several ERPs
@@ -36,3 +36,4 @@ credit memo per ERP. A refusing ERP's piece stays open with Re-send.
 - 2026-10-02  Baseline live on Justrite: order 5000000002 split, confirmed, shipped from each ERP warehouse and invoiced per ERP (invoices 5000000001/2). R-T3 answered: one credit memo per ERP works, offline refund goes to company credit (credit memo 1)
 - 2026-10-02  demo-erp loop/2026-10-02-order-to-return 59d7200: return orders (create, receive, credit) + contract v13; 423 tests; not yet on main or deployed
 - 2026-10-02  commerce-erp-integration loop branch b74445f + a2eddfb: returns and credit memos synced both ways (1061 tests); return comment fields, partial statuses and reason labels read live and fixed; returns cannot be deleted over REST (retire by closing). Not yet on main or deployed
+- 2026-10-02  Live on Justrite 2026-10-02: deployed (integration d32060e, ERPs 7f40389, app 0.11.0); order 5000000005 placed, split, shipped, invoiced, returned (one return, two ERP return orders), received and credited (two Commerce credit memos, return Processed and Closed) with no hand step. Status-write bug found live (approved item refused) and fixed (d32060e). Walkthrough steps in commerce-erp-integration docs/walkthrough.md (8a52e01)
