@@ -38,3 +38,4 @@ deletes left-behind actions, not triggers or rules.
 ## Shipped so far
 - 2026-10-02  docs(handoff): order the queue (`a9c9a9df0`)
 - 2026-10-02  docs(backlog): AB-58 — the removed hourly alarm survived the deploy and fires into nothing (`57c517e67`)
+- 2026-10-02  Owner asked 2026-10-02: deleted in namespace 285361-kuklajustritexjap-justriteerp (JustriteERP workspace) with aio rt rule delete erp-prices-hourly-on-timer and aio rt trigger delete erp-prices-hourly-timer; re-listed: only erp-schedule-heartbeat and events-retry-timer (and their rules) remain. Open: Demo Builder tools to list and delete undeclared triggers and rules
