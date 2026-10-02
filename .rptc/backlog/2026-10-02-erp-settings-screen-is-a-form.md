@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: []
 value: med
-status: open
+status: planned
 ---
 
 # The ERP's Settings screen should be settings: a form an ERP user edits, not panels of text
@@ -51,3 +51,4 @@ Five cards, almost none of them a setting:
 - Which fields are editable on day one (a field the ERP does not act on is not a setting).
 
 ## Shipped so far
+- 2026-10-02  Owner 2026-10-02: YES to the four sections (Company; Sales & receivables; Number series; Sales organizations), only fields the ERP acts on. Plus: gate the demo-only settings (appearance) away from the ERP settings, so an SC changing a real ERP setting mid-demo never meets demo controls. Direction: appearance, wipe and simulated downtime leave the ERP screen entirely and live on the ERP card in Demo Builder
