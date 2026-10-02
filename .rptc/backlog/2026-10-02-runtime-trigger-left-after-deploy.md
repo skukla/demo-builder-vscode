@@ -36,3 +36,5 @@ deletes left-behind actions, not triggers or rules.
   refused alarm delete.
 
 ## Shipped so far
+- 2026-10-02  docs(handoff): order the queue (`a9c9a9df0`)
+- 2026-10-02  docs(backlog): AB-58 — the removed hourly alarm survived the deploy and fires into nothing (`57c517e67`)
