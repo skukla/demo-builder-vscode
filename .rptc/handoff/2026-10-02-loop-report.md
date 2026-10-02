@@ -105,6 +105,9 @@ contract version 13. Rehearsal script: `.rptc/plans/several-erps/rehearse-order-
    nothing in the Justrite demo reads them).
 5. **AB-29**: mark built for Commerce as a Cloud Service and file the PaaS admin-token path
    when a PaaS demo needs it.
+6. **Shopper returns**: switch on "Enable RMA on Storefront" for Justrite if you want the buyer
+   to start the return in the demo (a Commerce Admin setting; the loop does not change store
+   configuration).
 7. **AB-26s, the payment leg:** designed, not built
    (`.rptc/plans/several-erps/payment-leg-design.md`). Three questions there; the on-account
    half (pay in the ERP, the company's credit back in Commerce) is buildable on Justrite, the
@@ -112,6 +115,3 @@ contract version 13. Rehearsal script: `.rptc/plans/several-erps/rehearse-order-
 8. **AB-26w:** what remains (always asking Commerce to email the customer) waits on proving
    that disabled Sales Emails suppress an API notify, which the sandbox cannot show (it sends
    no email). Needs a store that sends mail or an Adobe source.
-6. **Shopper returns**: switch on "Enable RMA on Storefront" for Justrite if you want the buyer
-   to start the return in the demo (a Commerce Admin setting; the loop does not change store
-   configuration).
