@@ -146,8 +146,6 @@ export const mockSleep = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/core/utils/sleep', () => ({ sleep: (...a: unknown[]) => mockSleep(...a) }));
 
 // Below the mocks on purpose — see the note above about hoisting.
-export {
-    deleteProject,
-    deleteProjectFiles,
-} from '@/features/projects-dashboard/services/projectDeletionService';
+export { deleteProject } from '@/features/projects-dashboard/services/projectDeletionService';
+export { deleteProjectFiles } from '@/features/projects-dashboard/services/projectFilesDeletion';
 export type { DeletionServices } from '@/features/projects-dashboard/services/projectDeletionService';

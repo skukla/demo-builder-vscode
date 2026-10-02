@@ -275,3 +275,25 @@ export async function migrateDeclaredSecrets(
     }
     return { sanitizedConfigs: sanitized, moved, retained, cleared };
 }
+
+/**
+ * Delete a project's Commerce secrets, under every component it configured. Run when the
+ * project is deleted (owner, 2026-10-01); the counterpart of {@link reKeyProjectSecrets},
+ * which moves the same keys when the project's path changes. Never logs a value.
+ *
+ * @returns how many keys were asked to be deleted
+ */
+export async function forgetProjectCommerceSecrets(
+    projectId: string,
+    componentIds: string[],
+    secrets: Pick<SecretWriter, 'delete'>,
+): Promise<number> {
+    let asked = 0;
+    for (const componentId of componentIds) {
+        for (const varName of declaredSecretKeys()) {
+            await secrets.delete(commerceSecretKey(projectId, componentId, varName));
+            asked += 1;
+        }
+    }
+    return asked;
+}

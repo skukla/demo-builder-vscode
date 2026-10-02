@@ -17,7 +17,7 @@ import { cleanUpProjectCloud, resolveCloudCleanup } from './agentProjectCleanup'
 import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
-import { deleteProjectFiles } from '@/features/projects-dashboard/services/projectDeletionService';
+import { deleteProjectFiles } from '@/features/projects-dashboard/services/projectFilesDeletion';
 import type { HandlerContext } from '@/types/handlers';
 
 /**

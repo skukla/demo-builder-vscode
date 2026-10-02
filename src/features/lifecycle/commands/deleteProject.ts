@@ -5,6 +5,7 @@ import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { ExecutionLock } from '@/core/utils/executionLock';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { forgetProjectSecrets } from '@/features/projects-dashboard/services/projectSecretCleanup';
 import { toError } from '@/types/typeGuards';
 
 export class DeleteProjectCommand extends BaseCommand {
@@ -65,9 +66,10 @@ export class DeleteProjectCommand extends BaseCommand {
                         await this.deleteWithRetry(projectPath);
                     }
 
-                    // STEP 3: Remove from recent projects list
+                    // STEP 3: Remove from recent projects list, and the project's secrets with it
                     if (projectPath) {
                         await this.stateManager.removeFromRecentProjects(projectPath);
+                        await forgetProjectSecrets(project, this.context.secrets, (line) => this.logger.warn(line));
                     }
 
                     // STEP 4: Clear state

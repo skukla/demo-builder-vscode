@@ -5,7 +5,7 @@
  * mocked.
  */
 
-jest.mock('@/features/projects-dashboard/services/projectDeletionService', () => ({
+jest.mock('@/features/projects-dashboard/services/projectFilesDeletion', () => ({
     deleteProjectFiles: jest.fn(),
 }));
 
@@ -14,7 +14,7 @@ import { z } from 'zod';
 import { registerDeleteProjectTool } from '@/features/ai/server/deleteProjectTool';
 import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
 import type { McpToolSchema } from '@/features/ai/server/mcpToolServer';
-import { deleteProjectFiles } from '@/features/projects-dashboard/services/projectDeletionService';
+import { deleteProjectFiles } from '@/features/projects-dashboard/services/projectFilesDeletion';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';

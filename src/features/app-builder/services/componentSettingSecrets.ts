@@ -180,3 +180,36 @@ export async function loadProjectComponentSettings(
     return Object.fromEntries(withSettings.map((entry) =>
         [entry.id, buildComponentSettings(entry, catalog, project, flags[entry.id] ?? {})]));
 }
+
+/** The SecretStorage delete surface (matches vscode.SecretStorage). */
+export interface SecretDeleter {
+    delete(key: string): Thenable<void> | Promise<void>;
+}
+
+/**
+ * Delete every secret a project's App Builder components keep under this module's key
+ * scheme: each secret setting, and the key that opens a system's screen (`systemScreen`,
+ * same scheme). Run when the project is deleted, so its secrets do not outlive it in the
+ * keychain (owner, 2026-10-01). A key never stored deletes as a no-op. Never logs a value.
+ *
+ * @param entries - the project's components as catalog entries (instance ids)
+ * @param projectPath - the project's path, the key scheme's first part
+ * @param secretStorage - VS Code SecretStorage
+ * @returns how many keys were asked to be deleted
+ */
+export async function forgetAppBuilderComponentSecrets(
+    entries: AppBuilderComponentCatalogEntry[],
+    projectPath: string,
+    secretStorage: SecretDeleter,
+): Promise<number> {
+    const secretVars = secretVarsByAppBuilderComponent(entries);
+    let asked = 0;
+    for (const entry of entries) {
+        const names = [...(secretVars.get(entry.id) ?? []), ...(entry.screen ? [entry.screen.keyEnvVar] : [])];
+        for (const varName of names) {
+            await secretStorage.delete(secretKey(projectPath, entry.id, varName));
+            asked += 1;
+        }
+    }
+    return asked;
+}

@@ -406,3 +406,27 @@ describe('CDN unpublish before the site is deleted', () => {
         expect(mockRm).toHaveBeenCalled();
     });
 });
+
+describe("a confirmed delete takes the project's secrets with it", () => {
+    it("deletes the project's kept secrets from SecretStorage once the folder is gone", async () => {
+        mockShowWarningMessage.mockResolvedValue('Delete');
+        const ctx = context();
+        const remove = jest.fn(async () => undefined);
+        Object.assign(ctx.context as object, { secrets: { delete: remove } });
+        await deleteProject(ctx, plainProject({ adobe: { workspace: 'ws-1' } }), SERVICES);
+        expect(mockRm).toHaveBeenCalled();
+        expect(remove).toHaveBeenCalledWith('demoBuilder.commerceRest.credential.ws-1');
+    });
+
+    it('keeps them when the folder could not be deleted', async () => {
+        mockShowWarningMessage.mockResolvedValue('Delete');
+        mockRm.mockRejectedValue(Object.assign(new Error('denied'), { code: 'EACCES' }));
+        const ctx = context();
+        const remove = jest.fn(async () => undefined);
+        Object.assign(ctx.context as object, { secrets: { delete: remove } });
+        await expect(
+            deleteProject(ctx, plainProject({ adobe: { workspace: 'ws-1' } }), SERVICES),
+        ).rejects.toThrow('Failed to delete project: denied');
+        expect(remove).not.toHaveBeenCalled();
+    });
+});

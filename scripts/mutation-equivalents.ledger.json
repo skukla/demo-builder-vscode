@@ -1425,7 +1425,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 101,
+            "line": 103,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying the catch after showProjectsList removes only a debug log line. The catch exists to swallow a navigation failure so a completed deletion is not reported as an error, and the swallowing is the catch clause itself, not its body: the transition is still ended by the finally, no error surfaces, and the navigation suite already asserts execute resolves. The only observable difference is whether the debug line prints, which the ratchet refuses to reward.",
@@ -8411,7 +8411,7 @@
             "anchors": [
                 "if (resolved) return;"
             ],
-            "line": 397,
+            "line": 346,
             "mutants": 1,
             "category": "branch",
             "reason": "A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. The guard's FORCED-TRUE half IS killed (a gesture that returns early never settles, and the test hangs); the forced-false and 'resolved = false' halves leave behaviour identical because the extra resolve is discarded.",
@@ -8424,7 +8424,7 @@
             "anchors": [
                 "resolved = true;"
             ],
-            "line": 398,
+            "line": 347,
             "mutants": 1,
             "category": "branch",
             "reason": "A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. The guard's FORCED-TRUE half IS killed (a gesture that returns early never settles, and the test hangs); the forced-false and 'resolved = false' halves leave behaviour identical because the extra resolve is discarded.",
@@ -8473,7 +8473,7 @@
             "anchors": [
                 "return { deleteGitHubRepo: false, deleteDaLiveSite: false };"
             ],
-            "line": 353,
+            "line": 302,
             "mutants": 3,
             "category": "other",
             "reason": "Emptying the returned object leaves both flags undefined, which is falsy exactly where false was: performEdsCleanup skips the repo on a falsy deleteGitHubRepo and performDaLiveCleanup returns on a falsy deleteDaLiveSite. The same is true of flipping either literal to true on this path, because the project reaching it has neither a repo nor a complete DA.live pair to act on. The suite asserts the CALLS made, which do not move.",
@@ -8506,7 +8506,7 @@
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "module": "src/features/projects-dashboard/services/projectFilesDeletion.ts",
             "anchors": [
                 "for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {"
             ],
@@ -8518,7 +8518,7 @@
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "module": "src/features/projects-dashboard/services/projectFilesDeletion.ts",
             "anchors": [
                 "const isRetryable = code !== undefined && RETRYABLE_CODES.includes(code);"
             ],
