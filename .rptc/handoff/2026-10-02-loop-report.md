@@ -112,6 +112,10 @@ contract version 13. Rehearsal script: `.rptc/plans/several-erps/rehearse-order-
    (`.rptc/plans/several-erps/payment-leg-design.md`). Three questions there; the on-account
    half (pay in the ERP, the company's credit back in Commerce) is buildable on Justrite, the
    card half needs a card payment method the store does not have.
+9. **AB-58, one command:** the old hourly price alarm survived the AB-38 deploy (Adobe's
+   alarm service refused its delete) and fires into nothing each hour. Delete it from the
+   integration's workspace: `aio rt trigger delete erp-prices-hourly-timer` (check
+   `aio rt rule list` for a rule of the same name). The new five-minute heartbeat is running.
 8. **AB-26w:** what remains (always asking Commerce to email the customer) waits on proving
    that disabled Sales Emails suppress an API notify, which the sandbox cannot show (it sends
    no email). Needs a store that sends mail or an Adobe source.
