@@ -46,3 +46,4 @@ credit memo per ERP. A refusing ERP's piece stays open with Re-send.
 - 2026-10-02  docs(returns): R-T3 answered live — one credit memo per ERP, refunded to company credit (`f0cf2780a`)
 - 2026-10-02  docs(returns): R-T1 answered live — Commerce has a return save event; storefront returns are off on Justrite (`8d94bf06a`)
 - 2026-10-02  chore(sop): register the order-to-return rehearsal as a manual, non-scheduled script (`8a662c3fa`)
+- 2026-10-02  feat(setup): the ERP integration's demo setup guide switches on storefront returns, and checks it (`f04395ef9`)
