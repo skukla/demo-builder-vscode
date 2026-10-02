@@ -48,11 +48,18 @@ the parts' statuses reset). Fixed, and confirmations now name their ERP (AB-56).
 | AB-26v | Partial invoicing written up as a customization | commerce-erp-integration docs/partial-invoicing.md |
 | AB-53 (part) | All 24 AccuformNMC signs read in stock on the storefront | live data fix, cause recorded |
 | — | Demo Builder's Commerce write tool sends a DELETE body | this repo 502bec122 |
+| AB-38 | A business user sets when the price publish runs (heartbeat + six settings) | commerce-erp-integration 3c55ebf, app 0.12.0 |
+| AB-57 | An ERP's own shipment echoed from Commerce is no longer refused and re-delivered for hours | commerce-erp-integration c84a116 |
 
-Deployed: integration ce2cde4 (app version 0.11.0 upgraded in Commerce), both ERPs 7f40389,
+Deployed: integration c84a116 (app version 0.12.0 upgraded in Commerce), both ERPs 7f40389,
 contract version 13. Rehearsal script: `.rptc/plans/several-erps/rehearse-order-to-return.sh`.
 
 ## Filed / found
+
+- After the goal was met, the integration's failed runs showed about a hundred re-deliveries
+  of Commerce shipment events from 05:24 to 07:25: every shipment an ERP made came back from
+  Commerce with the configurable's child line, which the ERP refused, and the integration
+  asked for it again forever. Fixed and deployed (AB-57); none since.
 
 - A return cannot be deleted over REST on this store, even with the return in the body; a
   credit memo cannot be deleted at all. Rehearsals leave credited orders behind; retire a
@@ -80,6 +87,10 @@ contract version 13. Rehearsal script: `.rptc/plans/several-erps/rehearse-order-
 - The permission system did not block the Justrite deploys after your authorization.
 
 ## Your decisions (walkthrough queue)
+
+0. **AB-38, one look:** in Commerce Admin, the ERP integration's App Management configuration
+   now has six schedule settings (store timezone; price publish on/off, how often, minute,
+   time, weekday). Open it, check they render, and save once.
 
 1. **Merge?** Demo Builder's loop branch `loop/2026-10-02-order-to-return` (the DELETE-body
    fix, backlog and design records). Recommendation: merge into feature/erp-integration.
