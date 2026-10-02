@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: [AB-26b, AB-26r]
 value: med
-status: backlog
+status: active
 ---
 
 # Order to cash — the payment leg (incoming payment, open items, company balance)
@@ -30,3 +30,4 @@ Harness journeys both legs; ledger revert of the reimbursement on reset; headles
 - 2026-10-02  docs(handoff): order the queue (`2b36c7d5f`)
 - 2026-10-02  docs(handoff): AB-26s and AB-26w join the owner's queue (`337e11683`)
 - 2026-10-02  docs(plans): the payment leg designed for review (AB-26s); AB-26w's notify check is not provable on Justrite (`c0d925289`)
+- 2026-10-02  Owner 2026-10-02: question 1 — the next Reset ERPs starts clean (no invoice seeded unpaid); question 2 — build the on-account half first (S1-S3, S5), then add a card method after research into how real ERPs handle card payments (in progress). Question 3 (partial payments) not answered; building with the recommendation (allowed, reimbursed for the amount paid) unless the owner says otherwise
