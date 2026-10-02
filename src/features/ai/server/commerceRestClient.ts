@@ -90,9 +90,17 @@ export interface RestTarget {
 interface MintedToken {
     token: string;
     expiresAt: number;
+    /** The credential's public half, which every request's headers carry. */
+    clientId: string;
+    imsOrgCode: string;
 }
 
-/** Tokens by workspace id; a workspace has one credential, so one token serves it. */
+/**
+ * Tokens by workspace id; a workspace has one credential, so one token serves it. Checked
+ * BEFORE the credential is read: reading it is three Adobe Console calls (about 12s, measured
+ * 2026-10-01), and doing that on every request made each Commerce call take 12s while the
+ * cached token it then found was all the request needed.
+ */
 const tokens = new Map<string, MintedToken>();
 
 /** Test seam. */
@@ -136,13 +144,17 @@ export function restWorkspaceId(
     return project.adobe?.workspace;
 }
 
+/** The workspace's minted token, while it has a minute left; undefined otherwise. */
+function cachedToken(workspaceId: string): MintedToken | undefined {
+    const cached = tokens.get(workspaceId);
+    return cached && cached.expiresAt - TOKEN_MARGIN_MS > Date.now() ? cached : undefined;
+}
+
 async function mintToken(
     workspaceId: string,
     credentials: { clientId: string; clientSecret: string; imsOrgCode: string },
     fetchImpl: typeof fetch,
 ): Promise<string> {
-    const cached = tokens.get(workspaceId);
-    if (cached && cached.expiresAt - TOKEN_MARGIN_MS > Date.now()) return cached.token;
     const body = new URLSearchParams({
         grant_type: 'client_credentials',
         client_id: credentials.clientId,
@@ -163,6 +175,8 @@ async function mintToken(
     tokens.set(workspaceId, {
         token: answer.access_token,
         expiresAt: Date.now() + (answer.expires_in ?? 0) * 1000,
+        clientId: credentials.clientId,
+        imsOrgCode: credentials.imsOrgCode,
     });
     return answer.access_token;
 }
@@ -223,6 +237,12 @@ export async function resolveRestTargetFor(
                 'Error: the project has no Adobe org, project and workspace to take a credential from.',
         };
     }
+    const storeView =
+        typeof storeViewArg === 'string' && storeViewArg ? storeViewArg : facts.headers.all?.Store;
+    const cached = cachedToken(workspaceId);
+    if (cached) {
+        return { base, token: cached.token, clientId: cached.clientId, imsOrgCode: cached.imsOrgCode, storeView };
+    }
     try {
         const credentials = await authManager.getS2SDeployCredentials(
             organization,
@@ -230,10 +250,6 @@ export async function resolveRestTargetFor(
             workspaceId,
         );
         const token = await mintToken(workspaceId, credentials, fetchImpl);
-        const storeView =
-            typeof storeViewArg === 'string' && storeViewArg
-                ? storeViewArg
-                : facts.headers.all?.Store;
         return {
             base,
             token,

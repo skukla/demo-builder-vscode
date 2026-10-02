@@ -203,6 +203,23 @@ describe('the signed GET (args pinned)', () => {
         expect(imsCalls).toHaveLength(1);
     });
 
+    it('reads the workspace credential only to mint, not on every request while the token is good', async () => {
+        // Reading it is three Adobe Console calls, about 12s; every request paid that before.
+        const s = serve();
+        await s.raw({ path: 'customers/43' });
+        fetchMock.mockResolvedValueOnce({ ok: true, status: 200, text: async () => '{"id":43}' });
+        await s.raw({ path: 'customers/43' });
+
+        expect(getS2SDeployCredentials).toHaveBeenCalledTimes(1);
+        const restCalls = fetchMock.mock.calls.filter(([url]) => !String(url).includes('ims/token'));
+        // The second request still carries the credential's public half in its headers.
+        expect(restCalls.at(-1)?.[1]?.headers).toMatchObject({
+            Authorization: 'Bearer minted-token',
+            'x-api-key': CREDENTIALS.clientId,
+            'x-gw-ims-org-id': CREDENTIALS.imsOrgCode,
+        });
+    });
+
     it('a storeView argument replaces the Store header', async () => {
         await serve().raw({ path: 'store/websites', storeView: 'default' });
         expect(fetchMock.mock.calls[1][1].headers.Store).toBe('default');
