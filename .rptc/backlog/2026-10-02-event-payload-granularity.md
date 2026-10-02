@@ -54,3 +54,4 @@ it is cheap: the ERP names what changed (AB-26y); Commerce sends `_origData` or 
 `onChange` child events only if checks 1–3 pass, and only for the fields a demo story needs.
 
 ## Shipped so far
+- 2026-10-02  Checks 2026-10-02. (2) YES: aio-commerce-lib-app 2.0.0 config schema accepts per-event rules with operators regex, greaterThan, lessThan, equal, in, onChange; it has no parent field, so a rule filters the app subscription to a native event rather than defining a named child event. (1) Largely yes: GET eventing/getEventSubscriptions on Justrite shows each app subscription stored as a named child (commerce_erp_integration.observer.catalog_product_save_commit_after, parent observer.catalog_product_save_commit_after) with fields and an empty rules list. Not yet proved: that a rule filters live, and (3) whether the product save payload carries _origData; both need a test subscription deployed, so they belong to the build
