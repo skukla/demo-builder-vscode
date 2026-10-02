@@ -2,12 +2,10 @@
  * What SearchableList hands DOWN, which is most of what it decides.
  *
  * The three sibling suites read the rendered list, and that is the wrong end
- * for four of this component's five decisions: the search header's autofocus
- * rule, the row's `textValue`, the scroll hook's arguments and the refresh
- * state all leave through a collaborator's props. Two of them (`autoFocus`,
- * `textValue`) are stripped before they reach the DOM by the shared Spectrum
- * mock, so reading the markup could never have seen them — every mutation of
- * the autofocus rule survived a suite that renders the search box.
+ * for most of this component's decisions: the row's `textValue`, the scroll
+ * hook's arguments and the refresh state all leave through a collaborator's
+ * props. `textValue` is stripped before it reaches the DOM by the shared
+ * Spectrum mock, so reading the markup could never have seen it.
  *
  * So this suite asserts the ARGUMENTS the collaborators receive: a mock cannot
  * see a malformed call, but it can record one.
@@ -55,24 +53,12 @@ beforeEach(() => {
 });
 
 describe('the search header it builds', () => {
-    it('autofocuses the search when there is nothing selected to look at', () => {
-        render(<SearchableList {...defaultProps} autoFocus />);
-
-        expect(headerProps[0].autoFocus).toBe(true);
-    });
-
-    it('does NOT autofocus when a row is already selected', () => {
-        // Stealing focus to the filter would scroll the chosen row out of view,
-        // which is the one thing the person came back to see.
-        render(<SearchableList {...defaultProps} autoFocus selectedKeys={['2']} />);
-
-        expect(headerProps[0].autoFocus).toBe(false);
-    });
-
-    it('does not autofocus unless asked, even with no selection', () => {
+    // A screen with a search filter focuses nothing on load (owner, 2026-10-01), so
+    // the header is never asked to.
+    it('never asks the header to take focus', () => {
         render(<SearchableList {...defaultProps} />);
 
-        expect(headerProps[0].autoFocus).toBe(false);
+        expect(headerProps[0]).not.toHaveProperty('autoFocus');
     });
 
     it('offers a placeholder that says what the field does', () => {

@@ -83,7 +83,7 @@ describe('WelcomeStep — the gallery gate', () => {
     });
 });
 
-describe('WelcomeStep — the default name and the mount focus', () => {
+describe('WelcomeStep — the default name, and no focus on load', () => {
     it('seeds the default name only when the field is empty', () => {
         const { updateState } = renderWelcome({ state: { projectName: '' } });
 
@@ -96,33 +96,17 @@ describe('WelcomeStep — the default name and the mount focus', () => {
         expect(updateState).not.toHaveBeenCalledWith({ projectName: 'my-commerce-demo' });
     });
 
-    it('focuses and selects the field only after the focus delay has fully elapsed', () => {
+    // The step has the package filter, and a screen with a search filter focuses
+    // nothing on load (owner, 2026-10-01). It used to focus and select the name.
+    it('focuses nothing on load, even after the old focus delay', () => {
         renderWelcome({ state: { projectName: 'my-demo-project' } });
-        const input = nameInput();
 
         act(() => {
-            jest.advanceTimersByTime(FOCUS_DELAY - 1);
+            jest.advanceTimersByTime(FOCUS_DELAY);
         });
-        expect(document.activeElement).not.toBe(input);
 
-        act(() => {
-            jest.advanceTimersByTime(1);
-        });
-        expect(document.activeElement).toBe(input);
-        expect(input.selectionStart).toBe(0);
-        expect(input.selectionEnd).toBe('my-demo-project'.length);
-    });
-
-    it('does nothing when the step unmounted before the delay elapsed', () => {
-        const { unmount } = renderWelcome({ state: { projectName: 'my-demo-project' } });
-
-        unmount();
-
-        expect(() =>
-            act(() => {
-                jest.advanceTimersByTime(FOCUS_DELAY);
-            }),
-        ).not.toThrow();
+        expect(document.activeElement).not.toBe(nameInput());
+        expect(document.activeElement).toBe(document.body);
     });
 });
 

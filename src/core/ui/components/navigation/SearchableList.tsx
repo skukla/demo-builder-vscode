@@ -38,8 +38,6 @@ export interface SearchableListProps<T extends SearchableListItem> {
     searchThreshold?: number;
     /** Aria label for the list */
     ariaLabel: string;
-    /** Whether to autofocus search field */
-    autoFocus?: boolean;
     /** Custom item renderer */
     renderItem?: (item: T) => React.ReactNode;
     /** Singular noun for item type (default: "item") */
@@ -97,7 +95,6 @@ export function SearchableList<T extends SearchableListItem>({
     hasLoadedOnce,
     searchThreshold = 5,
     ariaLabel,
-    autoFocus = false,
     renderItem,
     itemNoun = 'item',
     itemNounPlural,
@@ -152,7 +149,6 @@ export function SearchableList<T extends SearchableListItem>({
                 isRefreshing={isLoading}
                 refreshAriaLabel={refreshAriaLabel}
                 hasLoadedOnce={hasLoadedOnce}
-                autoFocus={autoFocus && !selectedKeys.length}
                 alwaysShowCount={true}
                 action={action}
             />

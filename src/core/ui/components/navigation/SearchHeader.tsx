@@ -77,8 +77,6 @@ export interface SearchHeaderProps {
 
     /** Whether data has loaded at least once (shows count when true) */
     hasLoadedOnce: boolean;
-    /** Whether to auto-focus search field */
-    autoFocus?: boolean;
     /** Always show count even below threshold (default: false) */
     alwaysShowCount?: boolean;
 
@@ -238,7 +236,6 @@ export function SearchHeader(props: SearchHeaderProps) {
     const searchPlaceholder = props.searchPlaceholder ?? 'Type to filter';
     const isRefreshing = props.isRefreshing ?? false;
     const refreshAriaLabel = props.refreshAriaLabel ?? 'Refresh list';
-    const autoFocus = props.autoFocus ?? false;
 
     const { showSearch, showCount, nounPlural, displayNoun, isFiltering } =
         computeDisplayValues(props);
@@ -259,7 +256,6 @@ export function SearchHeader(props: SearchHeaderProps) {
                         onChange={onSearchQueryChange}
                         width="100%"
                         isQuiet
-                        autoFocus={autoFocus}
                         aria-label={`Filter ${nounPlural}`}
                         UNSAFE_className="flex-1"
                     />

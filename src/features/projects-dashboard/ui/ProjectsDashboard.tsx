@@ -91,7 +91,9 @@ export function ProjectsDashboard({
     // Focus trap for keyboard navigation (WCAG 2.1 AA)
     const containerRef = useFocusTrap<HTMLDivElement>({
         enabled: true,
-        autoFocus: true, // Focus first element on mount so Tab works immediately
+        // No focus on load (owner, 2026-10-01): a screen with a search filter takes
+        // none. The first Tab still lands on the first element — the trap sends a Tab
+        // pressed from outside it there.
         containFocus: true, // Prevent focus escape
     });
 

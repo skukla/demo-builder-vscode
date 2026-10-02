@@ -10,6 +10,9 @@ import type { GetComponentsDataResponse, GetComponentsDataResult } from '@/types
 
 const log = webviewLogger('useWizardEffects');
 
+/** What Spectrum's SearchField renders — the filter on every searchable list. */
+const SEARCH_FILTER_SELECTOR = 'input[type="search"]';
+
 interface UseWizardEffectsProps {
     state: WizardState;
     setState: React.Dispatch<React.SetStateAction<WizardState>>;
@@ -53,6 +56,10 @@ export function useWizardEffects({
 
         const timer = setTimeout(() => {
             if (!stepContentRef.current) return;
+            // A step with a search filter focuses nothing on load (owner, 2026-10-01).
+            // Read from the DOM, not a step list: the filter shows only once a list is
+            // long enough, and areas inside a step carry their own.
+            if (stepContentRef.current.querySelector(SEARCH_FILTER_SELECTOR)) return;
 
             const focusableElements = stepContentRef.current.querySelectorAll(FOCUSABLE_SELECTOR);
 
