@@ -2,7 +2,7 @@
  * write_commerce_rest — POST, PUT and DELETE against the project's Commerce REST
  * API, gated on confirm:true and signed by the shared client. Argument-pinned,
  * because a mocked fetch cannot see a malformed call: the method, the JSON body
- * and its Content-Type, and DELETE sending no body.
+ * and its Content-Type, and DELETE sending a body only when given one.
  */
 
 import { resetCommerceRestTokens } from '@/features/ai/server/commerceRestClient';
@@ -166,20 +166,32 @@ describe('the signed write (args pinned)', () => {
         expect(JSON.parse(out)).toEqual({ id: 12, credit_limit: 50000 });
     });
 
-    it('DELETE sends no body and no Content-Type, and a bare `true` answer is passed through', async () => {
+    it('DELETE without a body sends none and no Content-Type, and a bare `true` answer is passed through', async () => {
         fetchMock = answering(200, 'true');
-        const out = await serve().raw({
-            method: 'DELETE',
-            path: 'customers/43',
-            body: { ignored: 1 },
-            confirm: true,
-        });
+        const out = await serve().raw({ method: 'DELETE', path: 'customers/43', confirm: true });
 
         const [, init] = fetchMock.mock.calls[1];
         expect(init.method).toBe('DELETE');
         expect(init.body).toBeUndefined();
         expect(init.headers['Content-Type']).toBeUndefined();
         expect(out).toBe('true');
+    });
+
+    // Commerce's DELETE /V1/returns/{id} refuses a bare delete: '"rmaDataObject" is required'
+    // (measured on the Justrite sandbox 2026-10-02). A body the caller gives is sent.
+    it('DELETE sends the body the caller gives, for a route that requires one', async () => {
+        fetchMock = answering(200, 'true');
+        await serve().raw({
+            method: 'DELETE',
+            path: 'returns/1',
+            body: { rmaDataObject: { entity_id: 1 } },
+            confirm: true,
+        });
+
+        const [, init] = fetchMock.mock.calls[1];
+        expect(init.method).toBe('DELETE');
+        expect(JSON.parse(init.body)).toEqual({ rmaDataObject: { entity_id: 1 } });
+        expect(init.headers['Content-Type']).toBe('application/json');
     });
 
     it('an empty 2xx body still answers something parseable', async () => {

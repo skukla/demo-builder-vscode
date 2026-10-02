@@ -85,8 +85,9 @@ export function registerCommerceRestWriteTool(
                     .union([z.record(z.unknown()), z.array(z.record(z.unknown()))])
                     .optional()
                     .describe(
-                        'The JSON body, as the REST reference shows it (omit for DELETE); with bulk:true, ' +
-                            'an array of such bodies',
+                        'The JSON body, as the REST reference shows it; a DELETE usually takes none, ' +
+                            'but some do (DELETE returns/{id} needs the return as rmaDataObject); ' +
+                            'with bulk:true, an array of such bodies',
                     ),
                 bulk: z
                     .boolean()
@@ -125,9 +126,8 @@ export function registerCommerceRestWriteTool(
             }
             const target = await resolveRestTarget(ctxFactory(), args?.storeView, fetchImpl);
             if ('refusal' in target) return asRawText(target.refusal);
-            const body = method === 'DELETE' ? undefined : args?.body;
             return asRawText(
-                await sendRest(method, target, checked.path, body, fetchImpl, { bulk }),
+                await sendRest(method, target, checked.path, args?.body, fetchImpl, { bulk }),
             );
         },
     );
