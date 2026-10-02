@@ -265,7 +265,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-23` | fix | [An inner code status 400 can mean "the App is not on this repository", and the check calls it installed](2026-09-30-eds-code-status-400-is-not-installed.md) | — | high | backlog |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | backlog |
 
-### app-builder  (104)
+### app-builder  (105)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -364,7 +364,8 @@ each item's own file; what has already landed against an item is in its
 | `AB-56` | fix | └ [A split order is sent to its ERPs again on later saves](2026-10-02-erp-split-order-resent-on-later-saves.md) | — | med | built |
 | `AB-57` | fix | └ [An ERP's own shipment, echoed back from Commerce, was refused and re-delivered for hours](2026-10-02-erp-shipment-echo-child-line.md) | — | high | built |
 | `AB-58` | fix | └ [A removed alarm survives the deploy, and Demo Builder cannot see or delete it](2026-10-02-runtime-trigger-left-after-deploy.md) | — | low | open |
-| `AB-59` | feature | └ [The ERP's Settings screen should be settings: a form an ERP user edits, not panels of text](2026-10-02-erp-settings-screen-is-a-form.md) | — | med | open |
+| `AB-59` | feature | └ [The ERP's Settings screen should be settings: a form an ERP user edits, not panels of text](2026-10-02-erp-settings-screen-is-a-form.md) | — | med | planned |
+| `AB-60` | question | └ [How fine-grained can events be, in each direction?](2026-10-02-event-payload-granularity.md) | — | med | open |
 | `AB-29` | feature | [Commerce test data cleanup tools](2026-09-24-commerce-test-data-cleanup-tools.md) | — | med | built |
 | `AB-30` | feature | [The ERP integration's Commerce Admin page uses the Commerce back-office design system](2026-09-24-erp-admin-page-commerce-design-system.md) | — | med | active |
 | `AB-33` | fix | [Removing an integration reports Runtime packages left behind in a workspace it then deletes](2026-09-26-remove-integration-leaves-runtime-packages.md) | — | med | built |
@@ -610,7 +611,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — backlog
 
-*210 item(s) sit outside the A–G chain.*
+*211 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 
