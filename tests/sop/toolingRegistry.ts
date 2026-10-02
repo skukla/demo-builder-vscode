@@ -570,6 +570,10 @@ export const NON_INSTRUMENT_SCRIPTS: Readonly<Record<string, string>> = {
         'one-shot MCP elicitation probe; answered in AI-7',
     '.rptc/research/consent-in-the-chat/probe-capabilities.mjs':
         'one-shot MCP capability probe; answered in AI-7',
+    '.rptc/plans/several-erps/rehearse-order-to-return.sh':
+        'a manual live rehearsal of the order-to-return journey on Justrite: it places, ' +
+        'ships, returns and credits real orders, so it is run by a person before a showing, ' +
+        'never on a schedule',
     '.rptc/complete/frontend-architecture-cleanup/update-imports.sh':
         'migration script for completed work',
     '.rptc/complete/frontend-architecture-cleanup/update-test-imports.sh':
