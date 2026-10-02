@@ -49,3 +49,7 @@ with six at a time the undo answered inside the 60 seconds.
 Commerce's bulk tier-price routes (`products/tier-prices-delete` takes a list). One call per row
 is what lets a refused row stay on the ledger alone; a bulk call answers refusals without saying
 which entry each belongs to.
+
+## Shipped so far
+
+- 2026-10-02  fix(erp): a reset follows an undo that outruns 60 seconds (AB-61) (`4aa7df983`)
