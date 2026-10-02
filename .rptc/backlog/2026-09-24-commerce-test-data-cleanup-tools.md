@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: med
-status: active
+status: built
 ---
 
 # Commerce test data cleanup tools
@@ -97,3 +97,4 @@ So the shape is TWO generic tools over the whole REST surface, not per-entity to
 - 2026-09-24  fix(ai): Commerce REST reads wait as long as writes; the sandbox aborted plain GETs at 30s three times (`c4474bc22`)
 - 2026-10-02  Used for real 2026-10-02 (order-to-return loop): run_commerce_rest / write_commerce_rest created and deleted test products, built carts and placed orders for a real buyer, created, moved and closed returns, and refunded. Found and fixed: a DELETE dropped its body (502bec122). Found: returns cannot be deleted over REST on ACCS even with the body (close them instead). Left for the owner: the PaaS admin-token path (ACCS needs none) and whether export-before-delete belongs on the write tool; recommendation: mark this built for ACCS and file the PaaS path as its own item when a PaaS demo needs it
 - 2026-10-02  docs(backlog): AB-29 — the REST tools used end to end; what is left is owner choices (`65e3ca268`)
+- 2026-10-02  Owner 2026-10-02: marked built (ACCS); the PaaS admin-token path is filed when a PaaS demo needs it

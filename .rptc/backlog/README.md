@@ -332,7 +332,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-26j` | feature | └ [Business structure — sales organisation per website, prefix and ownership per pair, legal identity, warehouse names, the Organisation card](2026-09-24-erp-business-structure.md) | AB-26g, AB-26h | high | built |
 | `AB-26k` | feature | └ [The product as a master record — available, open orders, sales status](2026-09-24-erp-product-master.md) | AB-26j | med | built |
 | `AB-26l` | feature | └ [Home as a work list, rail counts, the journal naming documents, global search](2026-09-24-erp-home-and-search.md) | AB-26i | med | built |
-| `AB-26m` | feature | └ [The entity map — the Commerce Admin page where the settings are the mapping](2026-09-24-erp-entity-map.md) | AB-26j, AB-26g | high | backlog |
+| `AB-26m` | feature | └ [The entity map — the Commerce Admin page where the settings are the mapping](2026-09-24-erp-entity-map.md) | AB-26j, AB-26g | high | superseded |
 | `AB-26n` | feature | └ [Screen redesign 1 — shell and navigation](2026-09-24-erp-ui-shell.md) | AB-26l | med | built |
 | `AB-26o` | feature | └ [Screen redesign 2 — lists](2026-09-24-erp-ui-lists.md) | AB-26k | med | built |
 | `AB-26p` | feature | └ [Screen redesign 3 — documents](2026-09-24-erp-ui-documents.md) | AB-26j, AB-26k | med | built |
@@ -364,7 +364,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-56` | fix | └ [A split order is sent to its ERPs again on later saves](2026-10-02-erp-split-order-resent-on-later-saves.md) | — | med | built |
 | `AB-57` | fix | └ [An ERP's own shipment, echoed back from Commerce, was refused and re-delivered for hours](2026-10-02-erp-shipment-echo-child-line.md) | — | high | built |
 | `AB-58` | fix | └ [A removed alarm survives the deploy, and Demo Builder cannot see or delete it](2026-10-02-runtime-trigger-left-after-deploy.md) | — | low | open |
-| `AB-29` | feature | [Commerce test data cleanup tools](2026-09-24-commerce-test-data-cleanup-tools.md) | — | med | active |
+| `AB-29` | feature | [Commerce test data cleanup tools](2026-09-24-commerce-test-data-cleanup-tools.md) | — | med | built |
 | `AB-30` | feature | [The ERP integration's Commerce Admin page uses the Commerce back-office design system](2026-09-24-erp-admin-page-commerce-design-system.md) | — | med | active |
 | `AB-33` | fix | [Removing an integration reports Runtime packages left behind in a workspace it then deletes](2026-09-26-remove-integration-leaves-runtime-packages.md) | — | med | built |
 | `AB-34` | fix | [add_integration's answer names the catalog entry, not the name the SC gave](2026-09-26-add-integration-answer-names-catalog-entry.md) | — | low | built |
