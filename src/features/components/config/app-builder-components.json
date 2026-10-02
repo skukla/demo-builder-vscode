@@ -89,6 +89,7 @@
       "setupSteps": [
         {
           "id": "confirmed-status",
+          "check": "erp-confirmed-status",
           "label": "Confirmed status",
           "title": "Create the \"Confirmed in ERP\" order status",
           "why": "Without it, an order the ERP confirmed looks the same as one it never saw in the Orders grid.",
@@ -120,6 +121,7 @@
         },
         {
           "id": "price-scope-website",
+          "check": "price-scope-website",
           "label": "Price scope",
           "title": "Set the catalog price scope to Website",
           "why": "The ERP publishes a company's prices per website; at the default scope, Global, every site would show the same prices. No API sets this.",
@@ -176,6 +178,7 @@
         },
         {
           "id": "partially-held-status",
+          "check": "partially-held-status",
           "label": "Partially Held status",
           "title": "Create the \"Partially Held\" order status",
           "why": "When one ERP holds its part of an order and another carries on, the order says so; without it the integration writes only a note.",
@@ -193,6 +196,7 @@
         },
         {
           "id": "payment-on-account",
+          "check": "payment-on-account-enabled",
           "label": "Payment on Account",
           "title": "Switch on Payment on Account for the website",
           "why": "Company buyers pay against the company's credit line, which the ERP credit story needs.",

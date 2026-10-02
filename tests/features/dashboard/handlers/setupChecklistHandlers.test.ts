@@ -10,6 +10,11 @@ jest.mock('@/features/ai/server/commerceRestClient', () => ({
     resolveRestTarget: (...a: unknown[]) => mockResolveRestTarget(...a),
     sendRest: (...a: unknown[]) => mockSendRest(...a),
 }));
+const mockScope = jest.fn((): { websiteCode?: string } => ({}));
+jest.mock('@/features/ai/server/commerceEndpointsTool', () => ({
+    ...jest.requireActual('@/features/ai/server/commerceEndpointsTool'),
+    buildCommerceEndpoints: () => ({ scope: mockScope() }),
+}));
 const mockSnapshot = jest.fn();
 jest.mock('@/features/dashboard/handlers/appBuilderComponentHandlers', () => ({
     ...jest.requireActual('@/features/dashboard/handlers/appBuilderComponentHandlers'),
@@ -50,6 +55,7 @@ function setup(setupSteps?: Record<string, SetupStepRecord>) {
 
 beforeEach(() => {
     jest.clearAllMocks();
+    mockScope.mockReturnValue({});
     mockResolveRestTarget.mockResolvedValue(TARGET);
 });
 
@@ -193,11 +199,48 @@ describe('checkSetupSteps', () => {
         expect(paths).toContain('inventory/sources?searchCriteria[pageSize]=200');
     });
 
+    it("hands the project's website to the check that reads one website's setting", async () => {
+        mockScope.mockReturnValue({ websiteCode: 'acme' });
+        mockSendRest.mockResolvedValue(JSON.stringify({ items: [] }));
+        const { context } = setup();
+        await handleCheckSetupSteps(context, { id: 'erp-integration' });
+        const paths = mockSendRest.mock.calls.map((call) => call[2] as string);
+        expect(paths).toContain(
+            'system/config?scope=websites&scopeCode=acme&searchCriteria[filterGroups][0][filters][0][field]=path' +
+                '&searchCriteria[filterGroups][0][filters][0][value]=payment/companycredit/active',
+        );
+    });
+
+    it('checks only the step asked for, which is how the setup guide asks', async () => {
+        answerByPath([{ id: 1, company_name: 'Acme', customer_group_id: 4 }], []);
+        const { context, saved } = setup();
+        await handleCheckSetupSteps(context, { id: 'erp-integration', stepId: 'company-catalogs' });
+        const paths = mockSendRest.mock.calls.map((call) => call[2] as string);
+        expect(paths.every((path) => path.startsWith('company/') || path.startsWith('sharedCatalog/'))).toBe(true);
+        const steps = saved()?.appBuilderComponents?.['erp-integration'].setupSteps ?? {};
+        expect(Object.keys(steps)).toStrictEqual(['company-catalogs']);
+    });
+
+    it('refuses a step that does not exist or has no check, reading nothing', async () => {
+        const { context } = setup();
+        const result = await handleCheckSetupSteps(context, { id: 'erp-integration', stepId: 'no-such-step' });
+        expect(result).toStrictEqual({
+            success: false,
+            error: 'There is no setup step "no-such-step" Demo Builder can check.',
+            code: ErrorCode.CONFIG_INVALID,
+        });
+        expect(mockSendRest).not.toHaveBeenCalled();
+    });
+
     it('checks nothing once every checkable step is dismissed', async () => {
         const { context } = setup({
+            'confirmed-status': { state: 'dismissed' },
             'company-catalogs': { state: 'dismissed' },
+            'price-scope-website': { state: 'dismissed' },
             'second-source': { state: 'dismissed' },
             'erp-attributes': { state: 'dismissed' },
+            'partially-held-status': { state: 'dismissed' },
+            'payment-on-account': { state: 'dismissed' },
         });
         await handleCheckSetupSteps(context, { id: 'erp-integration' });
         expect(mockSendRest).not.toHaveBeenCalled();

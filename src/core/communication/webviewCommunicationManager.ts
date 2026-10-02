@@ -52,6 +52,11 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
     // while the extension logged a successful 96-service result (2026-07-31).
     listConsoleApis: TIMEOUTS.LONG, // 180s - same catalog fetch as list-org-console-apis
 
+    // A demo setup check: the first one in a session reads the workspace credential (three
+    // Adobe Console calls, ~12s, each with one retry — a retried read took the setup guide's
+    // first check past the 30s default on 2026-10-01) before its Commerce reads.
+    checkSetupSteps: TIMEOUTS.LONG, // 180s - credential read + up to three Commerce reads
+
     addConsoleApis: TIMEOUTS.LONG, // 180s - catalog fetch + union subscribe PUT
     setConsoleApis: TIMEOUTS.LONG, // 180s - catalog fetch + reconcile subscribe PUT
 

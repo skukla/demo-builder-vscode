@@ -8,10 +8,21 @@
  * @module features/app-builder/services/setupChecks
  */
 
+import {
+    erpConfirmedStatus,
+    partiallyHeldStatus,
+    paymentOnAccountEnabled,
+    priceScopeWebsite,
+} from './setupConfigChecks';
 import type { SetupCheck } from '@/types/appBuilderComponents';
 
 /** A signed Commerce REST GET, answering the body as text or an "Error: " line. */
 export type CommerceRead = (path: string) => Promise<string>;
+
+/** Where the project's store is, for a check that reads a website's own setting. */
+export interface SetupCheckScope {
+    websiteCode?: string;
+}
 
 /** How a check came out. `done` undefined = the check could not tell. */
 export interface SetupCheckResult {
@@ -214,10 +225,14 @@ async function erpAttributesExist(read: CommerceRead): Promise<SetupCheckResult>
     return { done: true, note: 'erp_owner (Text Field) and brand both exist.' };
 }
 
-const CHECKS: Record<SetupCheck, (read: CommerceRead) => Promise<SetupCheckResult>> = {
+const CHECKS: Record<SetupCheck, (read: CommerceRead, scope: SetupCheckScope) => Promise<SetupCheckResult>> = {
     'companies-have-own-catalogs': companiesHaveOwnCatalogs,
     'erp-source-in-website-stock': erpSourceInWebsiteStock,
     'erp-attributes-exist': erpAttributesExist,
+    'erp-confirmed-status': erpConfirmedStatus,
+    'partially-held-status': partiallyHeldStatus,
+    'price-scope-website': priceScopeWebsite,
+    'payment-on-account-enabled': paymentOnAccountEnabled,
 };
 
 /**
@@ -225,8 +240,13 @@ const CHECKS: Record<SetupCheck, (read: CommerceRead) => Promise<SetupCheckResul
  *
  * @param check - the check the step names
  * @param read - a signed Commerce REST GET
+ * @param scope - the project's store, for a check of a website's own setting
  * @returns whether the step is done, and why
  */
-export function runSetupCheck(check: SetupCheck, read: CommerceRead): Promise<SetupCheckResult> {
-    return CHECKS[check](read);
+export function runSetupCheck(
+    check: SetupCheck,
+    read: CommerceRead,
+    scope: SetupCheckScope = {},
+): Promise<SetupCheckResult> {
+    return CHECKS[check](read, scope);
 }

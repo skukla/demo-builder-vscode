@@ -16,6 +16,7 @@
 
 import { postComponentsSnapshot, resolveComponentTarget } from './appBuilderComponentHandlers';
 import { getAppBuilderComponent, setAppBuilderComponent } from '@/core/state/appBuilderComponentState';
+import { buildCommerceEndpoints } from '@/features/ai/server/commerceEndpointsTool';
 import { resolveRestTarget, sendRest } from '@/features/ai/server/commerceRestClient';
 import { setupChecklistOf } from '@/features/app-builder/services/setupChecklist';
 import { runSetupCheck } from '@/features/app-builder/services/setupChecks';
@@ -93,24 +94,48 @@ export const handleSetSetupStep: MessageHandler<{ id?: string; stepId?: string; 
     return saveSteps(context, opened, { ...opened.state.setupSteps, [step.id]: record });
 };
 
+/** The steps a check request covers: the one asked for, or every checkable one not dismissed. */
+function stepsToCheck(
+    opened: Extract<Opened, { project: Project }>,
+    stepId: unknown,
+): SetupStep[] | HandlerResponse {
+    if (stepId === undefined) {
+        return opened.steps.filter((step) => step.check && opened.state.setupSteps?.[step.id]?.state !== 'dismissed');
+    }
+    const step = opened.steps.find((candidate) => candidate.id === stepId);
+    if (!step?.check) {
+        return {
+            success: false,
+            error: `There is no setup step "${String(stepId)}" Demo Builder can check.`,
+            code: ErrorCode.CONFIG_INVALID,
+        };
+    }
+    return [step];
+}
+
 /**
- * Handle 'checkSetupSteps' — run every check the steps declare (a dismissed step is
- * skipped), save what each found, and answer the checklist. A check that passes marks its
- * step done; one that fails opens it again; one that cannot tell leaves the state alone.
+ * Handle 'checkSetupSteps' — run the checks the steps declare (a dismissed step is skipped),
+ * save what each found, and answer the checklist. A check that passes marks its step done;
+ * one that fails opens it again; one that cannot tell leaves the state alone. With a
+ * `stepId`, only that step is checked: the setup guide asks one step at a time so the SC
+ * watches each one land (owner, 2026-10-01); the agent tool asks for all at once.
  */
-export const handleCheckSetupSteps: MessageHandler<{ id?: string }> = async (context, payload) => {
+export const handleCheckSetupSteps: MessageHandler<{ id?: string; stepId?: string }> = async (context, payload) => {
     const opened = await openChecklist(context, payload?.id);
     if ('error' in opened) return opened.error;
+    const steps = stepsToCheck(opened, payload?.stepId);
+    if (!Array.isArray(steps)) return steps;
     const target = await resolveRestTarget(context, undefined, fetch);
     const read = (path: string): Promise<string> =>
         'refusal' in target ? Promise.resolve(target.refusal) : sendRest('GET', target, path, undefined, fetch);
+    // The project's store, for a check of one website's own setting (Payment on Account).
+    const scope = { websiteCode: buildCommerceEndpoints(opened.project).scope.websiteCode };
     const records: Record<string, SetupStepRecord> = { ...opened.state.setupSteps };
     const checkedAt = new Date().toISOString();
-    for (const step of opened.steps) {
-        const saved = records[step.id] ?? {};
-        if (!step.check || saved.state === 'dismissed') continue;
-        const result = await runSetupCheck(step.check, read);
-        const { state: previous, ...kept } = saved;
+    for (const step of steps) {
+        if (!step.check) continue;
+        const result = await runSetupCheck(step.check, read, scope);
+        const { state: previous, ...kept } = records[step.id] ?? {};
         const state = stateAfterCheck(previous, result.done);
         records[step.id] = { ...kept, ...(state ? { state } : {}), note: result.note, checkedAt };
     }

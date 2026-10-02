@@ -6,16 +6,16 @@
 import { setupChecklistOf } from '@/features/app-builder/services/setupChecklist';
 
 describe('setupChecklistOf', () => {
-    it("lists the ERP integration's steps, open until marked, the checkable one flagged", () => {
+    it("lists the ERP integration's steps, open until marked, every one checkable", () => {
         const items = setupChecklistOf('erp-integration', {});
-        expect(items?.map((item) => [item.id, item.state, item.checkable])).toEqual([
-            ['confirmed-status', 'open', false],
+        expect(items?.map((item) => [item.id, item.state, item.checkable])).toStrictEqual([
+            ['confirmed-status', 'open', true],
             ['company-catalogs', 'open', true],
-            ['price-scope-website', 'open', false],
+            ['price-scope-website', 'open', true],
             ['second-source', 'open', true],
             ['erp-attributes', 'open', true],
-            ['partially-held-status', 'open', false],
-            ['payment-on-account', 'open', false],
+            ['partially-held-status', 'open', true],
+            ['payment-on-account', 'open', true],
         ]);
     });
 

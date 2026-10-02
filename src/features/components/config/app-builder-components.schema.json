@@ -194,7 +194,18 @@
                 "type": "string",
                 "enum": ["status", "catalog", "price", "stock", "attributes", "hold", "credit"]
               },
-              "check": { "type": "string", "enum": ["companies-have-own-catalogs", "erp-source-in-website-stock", "erp-attributes-exist"] }
+              "check": {
+                "type": "string",
+                "enum": [
+                  "companies-have-own-catalogs",
+                  "erp-source-in-website-stock",
+                  "erp-attributes-exist",
+                  "erp-confirmed-status",
+                  "partially-held-status",
+                  "price-scope-website",
+                  "payment-on-account-enabled"
+                ]
+              }
             }
           }
         },
