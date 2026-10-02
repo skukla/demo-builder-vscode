@@ -288,6 +288,81 @@ describe('refusals, each before any call', () => {
     });
 });
 
+/*
+ * The workspace credential kept across window reloads (savedRestCredential): reading it from
+ * Console has been taking a minute after a reload (2026-10-01), minting from a kept copy does
+ * not. A Map stands in for VS Code SecretStorage.
+ */
+describe('the workspace credential kept across reloads', () => {
+    const KEY = 'demoBuilder.commerceRest.credential.ws-erp';
+
+    function storeOf(entries: Record<string, string> = {}) {
+        const map = new Map(Object.entries(entries));
+        return {
+            map,
+            get: jest.fn(async (key: string) => map.get(key)),
+            store: jest.fn(async (key: string, value: string) => void map.set(key, value)),
+            delete: jest.fn(async (key: string) => void map.delete(key)),
+        };
+    }
+
+    function serveWith(store: ReturnType<typeof storeOf>) {
+        const s = fakeServer();
+        registerCommerceRestTool(
+            s,
+            () => {
+                const context = ctx();
+                Object.assign(context.context as object, { secrets: store });
+                return context;
+            },
+            fetchMock as unknown as typeof fetch,
+        );
+        return s;
+    }
+
+    /** IMS answers a token for the client ids it accepts, a 401 for the rest; REST answers {}. */
+    function imsAccepting(...clientIds: string[]) {
+        return jest.fn(async (url: string, init?: { body?: string }) => {
+            if (!String(url).includes('ims/token')) return { ok: true, status: 200, text: async () => '{"id":43}' };
+            const accepted = clientIds.some((id) => String(init?.body ?? '').includes(`client_id=${id}`));
+            return accepted
+                ? { ok: true, status: 200, text: async () => JSON.stringify({ access_token: 'minted-token', expires_in: 86399 }) }
+                : { ok: false, status: 401, text: async () => '{"error":"invalid_client"}' };
+        });
+    }
+
+    it('keeps the credential Console answered, only the three fields the mint needs', async () => {
+        fetchMock = imsAccepting(CREDENTIALS.clientId);
+        const store = storeOf();
+        await serveWith(store).raw({ path: 'customers/43' });
+        expect(getS2SDeployCredentials).toHaveBeenCalledTimes(1);
+        expect(JSON.parse(store.map.get(KEY) ?? '{}')).toStrictEqual({
+            clientId: CREDENTIALS.clientId,
+            clientSecret: CREDENTIALS.clientSecret,
+            imsOrgCode: CREDENTIALS.imsOrgCode,
+        });
+    });
+
+    it('after a reload, signs with the kept credential and never asks Console', async () => {
+        fetchMock = imsAccepting('kept-client');
+        const kept = { clientId: 'kept-client', clientSecret: 'fake-test-pw-not-a-secret', imsOrgCode: 'ABC@AdobeOrg' };
+        const out = await serveWith(storeOf({ [KEY]: JSON.stringify(kept) })).raw({ path: 'customers/43' });
+        expect(out).toContain('"id":43');
+        expect(getS2SDeployCredentials).not.toHaveBeenCalled();
+    });
+
+    it('drops a kept credential IMS refuses, reads Console again, and keeps the new one', async () => {
+        fetchMock = imsAccepting(CREDENTIALS.clientId);
+        const stale = { clientId: 'rotated-away', clientSecret: 'fake-test-pw-not-a-secret', imsOrgCode: 'ABC@AdobeOrg' };
+        const store = storeOf({ [KEY]: JSON.stringify(stale) });
+        const out = await serveWith(store).raw({ path: 'customers/43' });
+        expect(out).toContain('"id":43');
+        expect(store.delete).toHaveBeenCalledWith(KEY);
+        expect(getS2SDeployCredentials).toHaveBeenCalledTimes(1);
+        expect(JSON.parse(store.map.get(KEY) ?? '{}').clientId).toBe(CREDENTIALS.clientId);
+    });
+});
+
 describe('validateRestPath', () => {
     it('accepts the search syntax Commerce uses and rejects hosts, roots and parent hops', () => {
         expect(validateRestPath('customers/search?searchCriteria[filter_groups][0][filters][0][field]=email')).toEqual({

@@ -27,6 +27,13 @@
  */
 
 import { buildCommerceEndpoints } from './commerceEndpointsTool';
+import {
+    type CredentialStore,
+    forgetCredential,
+    readSavedCredential,
+    type RestCredential,
+    saveCredential,
+} from './savedRestCredential';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { deriveAccsTenantId } from '@/features/components/services/envVarHelpers';
@@ -205,7 +212,7 @@ export async function resolveRestTarget(
         return {
             refusal: 'Error: no current project. Use list_projects then set the current project.',
         };
-    return resolveRestTargetFor(project, ctx.authManager, storeViewArg, fetchImpl);
+    return resolveRestTargetFor(project, ctx.authManager, storeViewArg, fetchImpl, ctx.context?.secrets);
 }
 
 /**
@@ -217,6 +224,7 @@ export async function resolveRestTargetFor(
     authManager: HandlerContext['authManager'],
     storeViewArg: unknown,
     fetchImpl: typeof fetch,
+    credentials?: CredentialStore,
 ): Promise<RestTarget | { refusal: string }> {
     const facts = buildCommerceEndpoints(project);
     if (facts.backend !== 'accs') {
@@ -241,15 +249,42 @@ export async function resolveRestTargetFor(
     const storeView =
         typeof storeViewArg === 'string' && storeViewArg ? storeViewArg : facts.headers.all?.Store;
     try {
-        const signed = cachedToken(workspaceId) ?? (await signOnce(workspaceId, () => authManager
-            .getS2SDeployCredentials(organization, projectId, workspaceId)
-            .then((credentials) => mintToken(workspaceId, credentials, fetchImpl))));
+        const fromConsole = (): Promise<RestCredential> =>
+            authManager.getS2SDeployCredentials(organization, projectId, workspaceId);
+        const signed =
+            cachedToken(workspaceId) ??
+            (await signOnce(workspaceId, () => mintWithSaved(workspaceId, credentials, fromConsole, fetchImpl)));
         return { base, token: signed.token, clientId: signed.clientId, imsOrgCode: signed.imsOrgCode, storeView };
     } catch (error) {
         return {
             refusal: `Error: could not sign the request — ${error instanceof Error ? error.message : String(error)}`,
         };
     }
+}
+
+/**
+ * Mint from the credential kept across reloads when there is one, else from Console, keeping
+ * what Console answers (`savedRestCredential`). A saved credential IMS refuses is dropped and
+ * Console asked again, so a rotation costs one slow read, not a failure.
+ */
+async function mintWithSaved(
+    workspaceId: string,
+    store: CredentialStore | undefined,
+    fromConsole: () => Promise<RestCredential>,
+    fetchImpl: typeof fetch,
+): Promise<string> {
+    const saved = await readSavedCredential(store, workspaceId);
+    if (saved) {
+        try {
+            return await mintToken(workspaceId, saved, fetchImpl);
+        } catch {
+            await forgetCredential(store, workspaceId);
+        }
+    }
+    const credential = await fromConsole();
+    const token = await mintToken(workspaceId, credential, fetchImpl);
+    await saveCredential(store, workspaceId, credential);
+    return token;
 }
 
 /**
