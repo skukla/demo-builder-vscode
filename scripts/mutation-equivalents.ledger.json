@@ -1421,67 +1421,6 @@
             "source": "PL-22 batch MUT-08, stopDemo focus run"
         },
         {
-            "module": "src/features/lifecycle/commands/deleteProject.ts",
-            "anchors": [
-                "} catch {"
-            ],
-            "line": 103,
-            "mutants": 1,
-            "category": "block",
-            "reason": "Emptying the catch after showProjectsList removes only a debug log line. The catch exists to swallow a navigation failure so a completed deletion is not reported as an error, and the swallowing is the catch clause itself, not its body: the transition is still ended by the finally, no error surfaces, and the navigation suite already asserts execute resolves. The only observable difference is whether the debug line prints, which the ratchet refuses to reward.",
-            "decision": "none \u2014 the body is a log line; the clause is what matters",
-            "recorded": "2026-09-04",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/lifecycle/commands/deleteProject.ts",
-            "anchors": [
-                "if (panel) {"
-            ],
-            "mutants": 1,
-            "category": "branch",
-            "reason": "Forcing the guard to true makes closeProjectPanels call dispose on undefined when a panel is not open, which throws a TypeError inside the try that wraps each panel and is swallowed by its empty catch. The loop then continues to the next id exactly as it does when the guard is honest, nothing surfaces, and the only difference is that the closed-panel debug line is not printed. The false mutant, which skips dispose on open panels, is killed by the decisions suite.",
-            "decision": "none \u2014 the guard avoids a swallowed throw; the try makes the two paths indistinguishable",
-            "recorded": "2026-09-04",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/lifecycle/commands/deleteProject.ts",
-            "anchors": [
-                "for (let attempt = 0; attempt < this.MAX_RETRIES; attempt++) {"
-            ],
-            "mutants": 1,
-            "category": "branch",
-            "reason": "Loosening the loop bound to <= never adds a sixth attempt: every iteration exits from inside the body, by return on success, by throw on a non-retryable error, or by throw on the last retryable one, because the body's own attempt < MAX_RETRIES - 1 test decides when to stop sleeping and throw. The loop condition is only ever evaluated for attempts 0 to 4 and is true under both operators. The retry and decisions suites pin the attempt count at five.",
-            "decision": "none \u2014 the bound documents the attempt count; the body's last-retry test is the real terminator",
-            "recorded": "2026-09-04",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/lifecycle/commands/deleteProject.ts",
-            "anchors": [
-                "const isRetryable = code !== undefined && RETRYABLE_CODES.includes(code);"
-            ],
-            "mutants": 1,
-            "category": "branch",
-            "reason": "Replacing the left operand with true leaves isRetryable equal to RETRYABLE_CODES.includes(code), and Array.prototype.includes returns false for undefined because no retryable code is undefined. The comparison exists only so TypeScript narrows code to string for the includes call; at runtime both forms classify every error identically. The other mutants on this line, which flip the whole expression or the operator, are killed.",
-            "decision": "none \u2014 the guard is a type narrowing with no runtime effect",
-            "recorded": "2026-09-04",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/lifecycle/commands/deleteProject.ts",
-            "anchors": [
-                "} else if (isRetryable) {"
-            ],
-            "mutants": 1,
-            "category": "branch",
-            "reason": "Forcing the branch to true sends a non-retryable error down the after-all-retries throw instead of the plain one. Both branches throw an Error that execute catches and hands to showError, which shows the fixed message 'Failed to delete project' and passes the thrown text only to the logger. deleteWithRetry is private, so the thrown message is observable nowhere but the log line, and asserting log wording is what the ratchet refuses to reward. Retry count, state and navigation are identical on both paths.",
-            "decision": "none \u2014 the two throws differ only in the text that reaches the log",
-            "recorded": "2026-09-04",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
             "module": "src/features/prerequisites/handlers/shared.ts",
             "anchors": [
                 "if (allPluginRequired.length > 0) {"
@@ -7978,7 +7917,7 @@
             "anchors": [
                 "const panel = BaseWebviewCommand.getActivePanel('demoBuilder.configureProject');"
             ],
-            "line": 87,
+            "line": 86,
             "mutants": 1,
             "category": "branch",
             "reason": "Stryker forces the following 'if (panel)' true. With no panel open the body then calls panel.dispose() on undefined, and the TypeError lands in the try/catch that already exists for the already-disposed case \u2014 so the mutant takes the same path to the same no-op. The false variant IS killed (a test asserts the open panel is disposed); only the always-true one is unobservable.",
@@ -9049,7 +8988,7 @@
             "anchors": [
                 "if (cleared.componentApiPicks) {"
             ],
-            "line": 1841,
+            "line": 1842,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true assigns cleared.componentApiPicks onto the caller's project when it is undefined. cleared is spread from that same project, so an undefined value there means the caller's field was already undefined and the assignment writes back exactly what was there. The mutation is a no-op for every input on which the guard was false.",
@@ -9062,7 +9001,7 @@
             "anchors": [
                 "if (cleared.componentConfigs) {"
             ],
-            "line": 1844,
+            "line": 1845,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true assigns cleared.componentConfigs onto the caller's project when it is undefined. cleared is spread from that same project, so an undefined value there means the caller's field was already undefined and the assignment writes back exactly what was there. The mutation is a no-op for every input on which the guard was false.",
@@ -9202,7 +9141,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 599,
+            "line": 590,
             "mutants": 1,
             "category": "block",
             "reason": "This is the inner fallback in openComponent: the README open already failed, the package.json open has now failed too, and the body is a single logger.debug. Emptying it leaves the catch in place, so the folder is still revealed and the command still reports success - which the flows suite asserts by driving both file probes to reject. The only difference is whether one debug line prints.",
@@ -12661,7 +12600,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 258,
+            "line": 266,
             "mutants": 1,
             "category": "block",
             "reason": "The else branch contains a single logger.warn and nothing else \u2014 no state change, no return, no call the caller can observe. Emptying it leaves the rename result, the project object and every collaborator call identical.",
@@ -12674,7 +12613,7 @@
             "anchors": [
                 "} catch (rollbackError) {"
             ],
-            "line": 314,
+            "line": 322,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying the catch drops a logger.error and a 'return false'; falling off the end returns undefined instead, and the caller's guard is 'if (!undone)' \u2014 falsy either way. Same branch, same message, same result.",
@@ -12778,7 +12717,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 264,
+            "line": 272,
             "mutants": 1,
             "category": "block",
             "reason": "The remote-sync catch body is a single logger.warn. Emptying it still swallows the Console failure, still leaves the local rename successful and its result unchanged, and still leaves adobe.projectTitle recording the title that was never applied \u2014 the only difference is whether a line reaches the log channel.",

@@ -292,6 +292,8 @@ export interface WorkspaceReleaseDeps {
     ) => Promise<RuntimeNamespaceEnv | undefined>;
     /** Confirm, in the background, that a deleted workspace's namespace is gone. */
     watchNamespaceRemoval?: (key: RuntimeNamespaceEnv, label: string) => void;
+    /** Delete the Commerce REST credential kept for a workspace that is gone. */
+    forgetWorkspaceCredential?: (workspaceId: string) => Promise<void>;
     onProgress?: (message: string, subMessage?: string) => void;
     progressLabel: string;
     logger: Logger;
@@ -330,6 +332,11 @@ export async function releaseWorkspaces(
             continue;
         }
         release.deleted.push(label);
+        await deps.forgetWorkspaceCredential?.(workspace.id).catch(() => {
+            deps.logger.warn(
+                `[AppBuilderComponent Runner] ${label}: its kept credential could not be deleted`,
+            );
+        });
         if (key && deps.watchNamespaceRemoval) {
             deps.watchNamespaceRemoval(key, label);
         } else {

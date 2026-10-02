@@ -23,7 +23,6 @@ import { ShowIntegrationsCommand } from '@/features/dashboard/commands/showInteg
 import { ShowDataInstallerCommand } from '@/features/data-installer/commands/showDataInstaller';
 import { getBookmarkletSetupPageUrl } from '@/features/eds/ui/helpers/bookmarkletSetupPage';
 import { getBookmarkletUrl } from '@/features/eds/utils/daLiveTokenBookmarklet';
-import { DeleteProjectCommand } from '@/features/lifecycle/commands/deleteProject';
 import { StartDemoCommand } from '@/features/lifecycle/commands/startDemo';
 import { StopDemoCommand } from '@/features/lifecycle/commands/stopDemo';
 import { SyncStorefrontCommand } from '@/features/lifecycle/commands/syncStorefront';
@@ -173,14 +172,6 @@ export class CommandManager {
         // Stop Demo
         const stopDemo = new StopDemoCommand(this.context, this.stateManager, this.logger);
         this.registerCommand('demoBuilder.stopDemo', () => stopDemo.execute());
-
-        // Delete Project
-        const deleteProject = new DeleteProjectCommand(
-            this.context,
-            this.stateManager,
-            this.logger,
-        );
-        this.registerCommand('demoBuilder.deleteProject', () => deleteProject.execute());
 
         // View Status
         const viewStatus = new ViewStatusCommand(this.context, this.stateManager, this.logger);

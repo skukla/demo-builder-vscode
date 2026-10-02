@@ -23,8 +23,10 @@ import {
     deployAppBuilderComponent,
     removeAppBuilderComponent,
 } from '@/features/app-builder/services/appBuilderComponentRunner';
-import { resolveSecretDeployEnv } from '@/features/app-builder/services/componentSettingSecrets';
-import { forgetScreenKey } from '@/features/app-builder/services/systemScreen';
+import {
+    forgetAppBuilderComponentSecrets,
+    resolveSecretDeployEnv,
+} from '@/features/app-builder/services/componentSettingSecrets';
 import { secretKey } from '@/features/app-builder/services/secretKey';
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 import { createDeps, createProject } from './appBuilderComponentRunner.testUtils';
@@ -75,7 +77,7 @@ function wired() {
         deployApp,
         catalog: [SYSTEM, INTEGRATION],
         resolveSecretEnv: (project, entry) => resolveSecretDeployEnv(secrets, project.path, entry),
-        forgetScreenKey: (project, entry) => forgetScreenKey(secrets, project.path, entry),
+        forgetSecrets: (project, entry) => forgetAppBuilderComponentSecrets([entry], project.path, secrets),
     });
     return { deps, deployApp, store };
 }
@@ -150,11 +152,12 @@ describe('a component with its own screen', () => {
         expect(erpEnvs[1]).toBe(erpEnvs[0]);
     });
 
-    it('removing the pair forgets the key', async () => {
+    it('removing the pair forgets the key and the secret settings', async () => {
         const project = createProject();
         const { deps, store } = wired();
+        store.set(secretKey(project.path, 'erp-integration', 'ERP_API_KEY'), 'fake-test-pw-not-a-secret');
         await addAppBuilderComponent(project, INTEGRATION, deps);
-        expect(store.size).toBe(1);
+        expect(store.size).toBe(2);
 
         const result = await removeAppBuilderComponent(project, 'erp-integration', deps);
 

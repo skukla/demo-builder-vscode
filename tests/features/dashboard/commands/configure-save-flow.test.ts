@@ -16,7 +16,6 @@ import { ConfigureProjectWebviewCommand } from './configure.testUtils';
 import * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { COMPONENT_IDS } from '@/core/constants';
-import { reKeyProjectSecrets } from '@/features/components/services/commerceSecretMigration';
 import { handleRenameProject } from '@/features/projects-dashboard/handlers/dashboardHandlers';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { detectStorefrontChanges } from '@/features/eds/services/storefront/storefrontStalenessDetector';
@@ -47,7 +46,6 @@ jest.mock('@/features/components/services/commerceSecretMigration', () => ({
         retained: [],
         cleared: [],
     })),
-    reKeyProjectSecrets: jest.fn(async () => undefined),
 }));
 
 jest.mock('@/features/mesh/services/stalenessDetector', () => ({
@@ -392,12 +390,8 @@ describe('ConfigureProjectWebviewCommand - save spine', () => {
             expect(handleRenameProject).not.toHaveBeenCalled();
         });
 
-        it('renames by PATH, then re-keys the secrets from the old path to the new one', async () => {
-            const renamed = createMockProject({
-                name: 'Renamed',
-                path: '/test/renamed',
-                componentConfigs: { 'commerce-accs': {}, mesh: {} },
-            });
+        it('renames by PATH and answers the project read back at its new path', async () => {
+            const renamed = createMockProject({ name: 'Renamed', path: '/test/renamed' });
             stateManager.getCurrentProject.mockResolvedValue(renamed);
 
             const result = await save(command).renameProjectIfRequested(edsProject(), 'Renamed');
@@ -407,31 +401,6 @@ describe('ConfigureProjectWebviewCommand - save spine', () => {
                 projectPath: '/test/project',
                 newName: 'Renamed',
             });
-            // The path BEFORE the rename first — reversing these silently orphans
-            // every already-migrated secret, and the field then just reads blank.
-            expect(reKeyProjectSecrets).toHaveBeenCalledWith(
-                '/test/project',
-                '/test/renamed',
-                ['commerce-accs', 'mesh'],
-                expect.anything(),
-                expect.any(Function)
-            );
-        });
-
-        it('re-keys nothing when the renamed project has no componentConfigs', async () => {
-            stateManager.getCurrentProject.mockResolvedValue(
-                createMockProject({ path: '/test/renamed', componentConfigs: undefined })
-            );
-
-            await save(command).renameProjectIfRequested(edsProject(), 'Renamed');
-
-            expect(reKeyProjectSecrets).toHaveBeenCalledWith(
-                expect.anything(),
-                expect.anything(),
-                [],
-                expect.anything(),
-                expect.any(Function)
-            );
         });
 
         it('aborts the save with the rename error the handler reported', async () => {
@@ -443,7 +412,6 @@ describe('ConfigureProjectWebviewCommand - save spine', () => {
             await expect(
                 save(command).renameProjectIfRequested(edsProject(), 'Renamed')
             ).rejects.toThrow('A project called Renamed already exists');
-            expect(reKeyProjectSecrets).not.toHaveBeenCalled();
         });
 
         it('aborts with a generic message when the rename failed without saying why', async () => {
@@ -460,7 +428,6 @@ describe('ConfigureProjectWebviewCommand - save spine', () => {
             await expect(
                 save(command).renameProjectIfRequested(edsProject(), 'Renamed')
             ).rejects.toThrow('Project not found after rename');
-            expect(reKeyProjectSecrets).not.toHaveBeenCalled();
         });
     });
 

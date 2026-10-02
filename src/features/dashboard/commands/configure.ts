@@ -18,7 +18,6 @@ import { keepIntegrationSettings } from '@/features/app-builder/services/compone
 import {
     loadDeclaredSecretFlags,
     migrateDeclaredSecrets,
-    reKeyProjectSecrets,
 } from '@/features/components/services/commerceSecretMigration';
 import { getComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
 import { withEnvVarKeys } from '@/features/components/services/componentTransforms';
@@ -242,7 +241,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
                 throw new Error('No project found');
             }
 
-            // Handle project rename if name changed (re-keys path-keyed secrets)
+            // Handle project rename if name changed (renameProjectCore moves path-keyed secrets)
             project = await this.renameProjectIfRequested(project, data.newProjectName);
 
             // An integration's settings are set on its tile (AB-21), not here. This
@@ -398,7 +397,6 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
         project: Project,
         newProjectName: string | undefined,
     ): Promise<Project> {
-        const pathBeforeRename = project.path;
         if (!newProjectName || newProjectName === project.name) {
             return project;
         }
@@ -414,13 +412,6 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
         if (!reloaded) {
             throw new Error('Project not found after rename');
         }
-        await reKeyProjectSecrets(
-            pathBeforeRename,
-            reloaded.path,
-            Object.keys(reloaded.componentConfigs ?? {}),
-            this.context.secrets,
-            (line) => this.logger.info(`[Configure] ${line}`),
-        );
         return reloaded;
     }
 

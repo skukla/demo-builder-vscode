@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: med
-status: active
+status: built
 ---
 
 # Deleting a project leaves its secrets in SecretStorage
@@ -27,21 +27,30 @@ gap now".
 
 `forgetProjectSecrets` (`projects-dashboard/services/projectSecretCleanup.ts`) runs all
 three, after the folder is gone (a delete that failed keeps the project and its secrets),
-never throws, and logs a kind that would not delete by name only. It is called from both
-delete paths: `deleteProjectFiles` (the projects grid, the dashboard, and the agents'
-`delete_project`) and the older `demoBuilder.deleteProject` command.
+never throws, and logs a kind that would not delete by name only. It runs from
+`deleteProjectFiles`, which the projects grid, the dashboard and the agents'
+`delete_project` all go through.
 
-## Still open
+## The rest of the lifecycle (finished 2026-10-02)
 
-- **Two delete paths do one job.** `DeleteProjectCommand` keeps its own copy of the
-  stop / delete-with-retry / forget-recent steps that `deleteProjectFiles` also has. Both
-  now forget secrets, but a third step added to one will be missed by the other. The card
-  menu goes through `projectDeletionService`, not the command, though
-  `docs/troubleshooting/cleanup.md` says the reverse.
-- **Rename strands integration secrets.** `reKeyProjectSecrets` moves the Commerce secrets
-  to the new path on rename, but nothing moves the `secretKey(path, …)` ones, so a renamed
-  project loses its integration secret settings and screen key to the old path.
-- **Removing one integration** leaves that integration's secret settings behind too.
+- **One delete path.** The old `demoBuilder.deleteProject` command kept its own copy of
+  the stop / delete-with-retry / forget-recent steps. Nothing called it (not in
+  `package.json`, no `executeCommand` anywhere), so it was deleted with its six test
+  files, its ledger rows and its mutation baseline row. `docs/troubleshooting/cleanup.md`
+  no longer names it.
+- **Rename moves the secrets, from every door.** Every key scheme above starts with the
+  project's path. Only the Commerce secrets were moved on rename, and only from Configure;
+  the projects list, the dashboard and the agents' `rename_project` stranded them, and
+  nothing moved the integration secret settings or the screen key from anywhere.
+  `moveProjectSecrets` now runs inside `renameProjectCore`, which all four go through,
+  after the save (a rename that rolls back moves nothing). Both re-keys share one
+  copy-verify-delete step, `moveSecret`, so a failed move leaves the value at the old key.
+  The REST credential is keyed by workspace, so it does not move.
+- **Removing one integration** now deletes its secret settings as well as its screen key
+  (the runner's `forgetSecrets` dep; the screen-key-only `forgetScreenKey` was removed).
+  When the removal deletes the integration's Adobe workspace, the REST credential kept
+  for that workspace goes too (`releaseWorkspaces` → `forgetWorkspaceCredential`); a
+  workspace Adobe refused to delete keeps it.
 
 ## Shipped so far
 - 2026-10-01  fix(projects): deleting a project deletes its secrets from SecretStorage (`252484b7b`)

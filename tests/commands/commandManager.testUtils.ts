@@ -43,7 +43,6 @@ jest.mock('@/features/dashboard/commands/openAi');
 jest.mock('@/features/dashboard/commands/showDashboard');
 jest.mock('@/features/dashboard/commands/showIntegrations');
 jest.mock('@/features/data-installer/commands/showDataInstaller');
-jest.mock('@/features/lifecycle/commands/deleteProject');
 jest.mock('@/features/lifecycle/commands/startDemo');
 jest.mock('@/features/lifecycle/commands/stopDemo');
 jest.mock('@/features/lifecycle/commands/syncStorefront');

@@ -305,8 +305,8 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
         project: Project,
         entry: AppBuilderComponentCatalogEntry
     ) => Promise<ErpEventsEnv>;
-    /** Delete an entry's screen key when the component is removed. */
-    forgetScreenKey?: (project: Project, entry: AppBuilderComponentCatalogEntry) => Promise<void>;
+    /** Delete an entry's secrets (secret settings, screen key) when the component is removed. */
+    forgetSecrets?: (project: Project, entry: AppBuilderComponentCatalogEntry) => Promise<void>;
     /**
      * Install + associate an app-management lifecycle app after its deploy
      * (appManagementInstaller). Deploy stays green when this fails — the app is
@@ -1647,8 +1647,9 @@ async function readDeclaredRuntime(componentPath: string): Promise<DeclaredRunti
 }
 
 /**
- * After the records are cleared: the screen key goes with the component (nothing reads it
- * again, and a secret left in SecretStorage is one nobody owns); the AI bundle drops what
+ * After the records are cleared: the component's secrets go with it, its screen key and its
+ * secret settings (nothing reads them again, and a secret left in SecretStorage is one
+ * nobody owns, PL-64); the AI bundle drops what
  * it no longer needs (remove the last App Builder component and its skills used to stay
  * forever); and a component that provided the storefront's var earns a republish.
  */
@@ -1659,8 +1660,8 @@ async function tidyAfterClear(
     provided: boolean,
     deps: AppBuilderComponentRunnerDeps,
 ): Promise<void> {
-    if (removedEntry && deps.forgetScreenKey) {
-        await deps.forgetScreenKey(project, removedEntry);
+    if (removedEntry && deps.forgetSecrets) {
+        await deps.forgetSecrets(project, removedEntry);
     }
     await refreshBundleQuietly(cleared, deps, 'remove');
     if (provided) {

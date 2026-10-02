@@ -40,7 +40,6 @@ import { ShowAiCommand } from '@/features/dashboard/commands/openAi';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
 import { ShowIntegrationsCommand } from '@/features/dashboard/commands/showIntegrations';
 import { ShowDataInstallerCommand } from '@/features/data-installer/commands/showDataInstaller';
-import { DeleteProjectCommand } from '@/features/lifecycle/commands/deleteProject';
 import { StartDemoCommand } from '@/features/lifecycle/commands/startDemo';
 import { StopDemoCommand } from '@/features/lifecycle/commands/stopDemo';
 import { SyncStorefrontCommand } from '@/features/lifecycle/commands/syncStorefront';
@@ -67,7 +66,6 @@ describe('a command id runs the command object it was built for', () => {
     it.each([
         ['demoBuilder.startDemo', StartDemoCommand],
         ['demoBuilder.stopDemo', StopDemoCommand],
-        ['demoBuilder.deleteProject', DeleteProjectCommand],
         ['demoBuilder.viewStatus', ViewStatusCommand],
         ['demoBuilder.configure', ConfigureCommand],
         ['demoBuilder.configureProject', ConfigureProjectWebviewCommand],

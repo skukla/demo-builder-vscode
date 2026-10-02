@@ -75,22 +75,14 @@ export async function reKeyProjectSecrets(
 
     for (const componentId of componentIds) {
         for (const varName of declaredSecretKeys()) {
-            const from = commerceSecretKey(oldProjectId, componentId, varName);
-            try {
-                const value = await secrets.get(from);
-                if (!value) continue;
-
-                const to = commerceSecretKey(newProjectId, componentId, varName);
-                await secrets.store(to, value);
-                if ((await secrets.get(to)) !== value) {
-                    log?.(`secret ${varName}: re-key not verified, left at the old key`);
-                    continue;
-                }
-                await secrets.delete(from);
-                rekeyed.push(varName);
-            } catch {
-                log?.(`secret ${varName}: re-key failed, left at the old key`);
-            }
+            const moved = await moveSecret(
+                secrets,
+                commerceSecretKey(oldProjectId, componentId, varName),
+                commerceSecretKey(newProjectId, componentId, varName),
+                varName,
+                log,
+            );
+            if (moved) rekeyed.push(varName);
         }
     }
 
@@ -98,6 +90,38 @@ export async function reKeyProjectSecrets(
         log?.(`re-keyed ${rekeyed.length} secret(s) after a path change`);
     }
     return rekeyed;
+}
+
+/**
+ * Move one secret to a new key: copy, verify, then delete the old one. An interrupted or
+ * unverified move leaves the value at the old key, never nowhere. Shared by every re-key
+ * a project rename runs (this module's and `componentSettingSecrets`'). Logs the var name
+ * only, never the value.
+ *
+ * @returns true when the value now lives at `to` alone; false when there was nothing to
+ *   move, or it stayed at `from`
+ */
+export async function moveSecret(
+    secrets: SecretWriter,
+    from: string,
+    to: string,
+    varName: string,
+    log?: (line: string) => void,
+): Promise<boolean> {
+    try {
+        const value = await secrets.get(from);
+        if (!value) return false;
+        await secrets.store(to, value);
+        if ((await secrets.get(to)) !== value) {
+            log?.(`secret ${varName}: re-key not verified, left at the old key`);
+            return false;
+        }
+        await secrets.delete(from);
+        return true;
+    } catch {
+        log?.(`secret ${varName}: re-key failed, left at the old key`);
+        return false;
+    }
 }
 
 /**

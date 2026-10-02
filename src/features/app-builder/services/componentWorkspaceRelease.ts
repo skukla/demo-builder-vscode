@@ -25,6 +25,7 @@ import {
 } from './runtimeNamespace';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
 import { sleep } from '@/core/utils/sleep';
+import { forgetCredential, type CredentialStore } from '@/features/ai/server/savedRestCredential';
 import type { AppBuilderComponentState, Project } from '@/types/base';
 import { toError } from '@/types/typeGuards';
 
@@ -84,14 +85,20 @@ export async function watchNamespaceRemoval(
 }
 
 /**
- * The key read and background watch a removal is wired with. The watch reports only its
- * end: a line in the log when the namespace is gone, `warn` (a notification) when it is not.
+ * The key read, background watch and credential cleanup a removal is wired with. The watch
+ * reports only its end: a line in the log when the namespace is gone, `warn` (a
+ * notification) when it is not. A deleted workspace's kept Commerce REST credential
+ * (`savedRestCredential`) is deleted with it: nothing can sign with it again (PL-64).
  */
 export function buildWorkspaceReleaseDeps(
-    deps: RuntimeNamespaceDeps,
+    deps: RuntimeNamespaceDeps & { secrets?: Pick<CredentialStore, 'delete'> },
     warn: (message: string) => void,
-): Pick<WorkspaceReleaseDeps, 'namespaceKeyOf' | 'watchNamespaceRemoval'> {
+): Pick<
+    WorkspaceReleaseDeps,
+    'namespaceKeyOf' | 'watchNamespaceRemoval' | 'forgetWorkspaceCredential'
+> {
     return {
+        forgetWorkspaceCredential: (workspaceId) => forgetCredential(deps.secrets, workspaceId),
         namespaceKeyOf: (project, workspace) => readNamespaceKey(deps, project, workspace),
         watchNamespaceRemoval: (key, label) => {
             void watchNamespaceRemoval(deps, key).then((outcome) => {

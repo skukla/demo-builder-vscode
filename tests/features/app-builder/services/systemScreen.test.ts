@@ -6,7 +6,6 @@
 import {
     deriveScreenUrl,
     ensureScreenKeyEnv,
-    forgetScreenKey,
     readScreenKey,
     screenLink,
 } from '@/features/app-builder/services/systemScreen';
@@ -52,19 +51,13 @@ describe('the screen key', () => {
 
         expect(await ensureScreenKeyEnv(secrets, '/proj', PLAIN)).toStrictEqual({});
         expect(await readScreenKey(secrets, '/proj', PLAIN)).toBeUndefined();
-        await forgetScreenKey(secrets, '/proj', PLAIN);
         expect(store.size).toBe(0);
-        expect(secrets.delete).not.toHaveBeenCalled();
     });
 
-    it('reads back what was stored, and nothing after it is forgotten', async () => {
-        const { secrets, store } = createMockSecretStorage({ [KEY_NAME]: 'stored-key' });
+    it('reads back what was stored', async () => {
+        const { secrets } = createMockSecretStorage({ [KEY_NAME]: 'stored-key' });
 
         expect(await readScreenKey(secrets, '/proj', ERP)).toBe('stored-key');
-        await forgetScreenKey(secrets, '/proj', ERP);
-
-        expect(store.size).toBe(0);
-        expect(await readScreenKey(secrets, '/proj', ERP)).toBeUndefined();
     });
 });
 

@@ -13,6 +13,7 @@
  * declared here would not apply to a module that imports it.
  */
 
+import type * as vscode from 'vscode';
 import type { HandlerContext } from '@/types/handlers';
 import type { Project } from '@/types/base';
 
@@ -66,7 +67,8 @@ export function projectToRename(overrides?: Partial<Project>): Project {
     });
 }
 
-export function renameHandlerContext(): HandlerContext {
+/** @param secrets - a SecretStorage fake, for a suite asserting the secrets move */
+export function renameHandlerContext(secrets?: vscode.SecretStorage): HandlerContext {
     return createMockHandlerContext({
         stateManager: createMockStateManager({
             saveProject: jest.fn().mockResolvedValue(undefined),
@@ -74,7 +76,7 @@ export function renameHandlerContext(): HandlerContext {
             removeFromRecentProjects: jest.fn().mockResolvedValue(undefined),
         }),
         logger: createMockLogger() as unknown as HandlerContext['logger'],
-        context: { extensionPath: '/ext' } as unknown as HandlerContext['context'],
+        context: { extensionPath: '/ext', secrets } as unknown as HandlerContext['context'],
     });
 }
 

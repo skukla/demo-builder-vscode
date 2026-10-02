@@ -9,12 +9,16 @@
  */
 
 import { releaseWorkspaces, workspaceTakesLeftovers } from '@/features/app-builder/services/componentWorkspace';
-import { watchNamespaceRemoval } from '@/features/app-builder/services/componentWorkspaceRelease';
+import {
+    buildWorkspaceReleaseDeps,
+    watchNamespaceRemoval,
+} from '@/features/app-builder/services/componentWorkspaceRelease';
 import type { Project } from '@/types/base';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 import { createFailureResult, createSuccessResult } from '../../../helpers/commandResultFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 
 const SOURCE = { owner: 'acme', repo: 'app', branch: 'main' };
 const NORTHWIND = { id: 'ws-nw', name: 'NorthwindERP', title: 'Northwind ERP' };
@@ -96,6 +100,36 @@ describe('releaseWorkspaces', () => {
 
         expect(release.deleted).toStrictEqual(['Northwind ERP']);
         expect(deps.watchNamespaceRemoval).not.toHaveBeenCalled();
+    });
+
+    describe("the Commerce REST credential kept for the workspace (PL-64)", () => {
+        const KEPT = 'demoBuilder.commerceRest.credential.ws-nw';
+
+        function withCredential() {
+            const { secrets, store } = createMockSecretStorage({ [KEPT]: '{}' });
+            const { forgetWorkspaceCredential } = buildWorkspaceReleaseDeps(
+                { commandManager: createMockCommandExecutor(), logger: createMockLogger(), secrets },
+                jest.fn(),
+            );
+            return { deps: { ...makeDeps(), forgetWorkspaceCredential }, store };
+        }
+
+        it('goes when the workspace is deleted', async () => {
+            const { deps, store } = withCredential();
+
+            await releaseWorkspaces(pairProject(), [NORTHWIND], deps);
+
+            expect(store.has(KEPT)).toBe(false);
+        });
+
+        it('stays while the workspace does', async () => {
+            const { deps, store } = withCredential();
+            deps.deleteComponentWorkspace.mockResolvedValueOnce({ error: 'Conflict (409)' });
+
+            await releaseWorkspaces(pairProject(), [NORTHWIND], deps);
+
+            expect(store.has(KEPT)).toBe(true);
+        });
     });
 });
 

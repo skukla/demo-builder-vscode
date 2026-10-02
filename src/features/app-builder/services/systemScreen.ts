@@ -22,7 +22,6 @@ import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponen
 export interface ScreenKeyStore {
     get(key: string): Thenable<string | undefined> | Promise<string | undefined>;
     store(key: string, value: string): Thenable<void> | Promise<void>;
-    delete(key: string): Thenable<void> | Promise<void>;
 }
 
 /** An entry that declares a screen. */
@@ -68,16 +67,6 @@ export async function readScreenKey(
 ): Promise<string | undefined> {
     if (!hasScreen(entry)) return undefined;
     return (await store.get(storageKey(projectPath, entry))) || undefined;
-}
-
-/** Forget the key when the component is removed. A no-op for an entry with no screen. */
-export async function forgetScreenKey(
-    store: ScreenKeyStore,
-    projectPath: string,
-    entry: AppBuilderComponentCatalogEntry,
-): Promise<void> {
-    if (!hasScreen(entry)) return;
-    await store.delete(storageKey(projectPath, entry));
 }
 
 /**

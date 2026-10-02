@@ -7112,23 +7112,6 @@
             "equivalent": 14,
             "openGaps": 0
         },
-        "src/features/lifecycle/commands/deleteProject.ts": {
-            "score": 83.17,
-            "killed": 82,
-            "survived": 17,
-            "noCoverage": 0,
-            "timeout": 2,
-            "survivorCategories": {
-                "string": 3,
-                "logPresentation": 9,
-                "block": 1,
-                "branch": 4
-            },
-            "uncoveredCategories": {},
-            "highValueSurvivors": 5,
-            "equivalent": 5,
-            "openGaps": 0
-        },
         "src/features/lifecycle/commands/managedStorefrontFiles.ts": {
             "score": 100,
             "killed": 8,

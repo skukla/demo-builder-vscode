@@ -32,7 +32,7 @@ import type { AppManagementAuth } from '@/features/app-builder/services/appManag
 import { installAppManagementApp } from '@/features/app-builder/services/appManagementInstaller';
 import { uninstallAppManagementApp } from '@/features/app-builder/services/appManagementUninstaller';
 import { readAppManifestVersion } from '@/features/app-builder/services/appManifestVersion';
-import { resolveSecretDeployEnv } from '@/features/app-builder/services/componentSettingSecrets';
+import { forgetAppBuilderComponentSecrets, resolveSecretDeployEnv } from '@/features/app-builder/services/componentSettingSecrets';
 import {
     deployWorkspaceId,
     ensureComponentWorkspace,
@@ -48,7 +48,6 @@ import {
 } from '@/features/app-builder/services/integrationSourceUpdate';
 import { deleteUndeclaredActions } from '@/features/app-builder/services/runtimeUndeclaredActions';
 import { buildS2SDeployEnv } from '@/features/app-builder/services/s2sDeployEnv';
-import { forgetScreenKey } from '@/features/app-builder/services/systemScreen';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { ComponentManager } from '@/features/components/services/componentManager';
@@ -229,7 +228,7 @@ export function buildDefaultRunnerDeps(
             }),
         resolveSecretEnv: (project, entry) =>
             resolveSecretDeployEnv(ctx.secrets, project.path, entry),
-        forgetScreenKey: (project, entry) => forgetScreenKey(ctx.secrets, project.path, entry),
+        forgetSecrets: (project, entry) => forgetAppBuilderComponentSecrets([entry], project.path, ctx.secrets),
         // The AIO_COMMERCE_AUTH_IMS_* deploy env for app-management entries:
         // the workspace S2S credential's full identity (ensured + read via the
         // Console SDK), mapped by s2sDeployEnv. The secret rides the

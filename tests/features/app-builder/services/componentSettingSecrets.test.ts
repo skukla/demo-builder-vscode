@@ -10,6 +10,7 @@
  */
 
 import {
+    forgetAppBuilderComponentSecrets,
     persistAppBuilderComponentSecrets,
     loadAppBuilderComponentSecretFlags,
     resolveSecretInputs,
@@ -17,6 +18,7 @@ import {
 import { secretKey } from '@/features/app-builder/services/secretKey';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 
 const FAKE_SECRET = 'fake-test-pw-not-a-secret';
 
@@ -180,5 +182,36 @@ describe('resolveSecretInputs — secrets reach the deploy', () => {
 
         expect(await resolveSecretInputs(meshEntry, '/p', store)).toStrictEqual({});
         expect(store.get).not.toHaveBeenCalled();
+    });
+});
+
+describe('forgetAppBuilderComponentSecrets — removal takes the secrets with it (PL-64)', () => {
+    const screenEntry: AppBuilderComponentCatalogEntry = {
+        ...erpEntry,
+        id: 'demo-erp',
+        kind: 'system',
+        envSchema: [],
+        screen: { action: 'screen', keyEnvVar: 'ERP_SCREEN_KEY' },
+    };
+
+    it("deletes each entry's secret settings and screen key, and nothing of another project", async () => {
+        const other = secretKey('/other', 'erp-integration', 'ERP_API_KEY');
+        const { secrets, store } = createMockSecretStorage({
+            [secretKey('/p', 'erp-integration', 'ERP_API_KEY')]: FAKE_SECRET,
+            [secretKey('/p', 'demo-erp', 'ERP_SCREEN_KEY')]: FAKE_SECRET,
+            [other]: FAKE_SECRET,
+        });
+
+        await forgetAppBuilderComponentSecrets([erpEntry, screenEntry], '/p', secrets);
+
+        expect([...store.keys()]).toStrictEqual([other]);
+    });
+
+    it('asks nothing of the store for an entry with no secrets', async () => {
+        const { secrets } = createMockSecretStorage();
+
+        await forgetAppBuilderComponentSecrets([meshEntry], '/p', secrets);
+
+        expect(secrets.delete).not.toHaveBeenCalled();
     });
 });

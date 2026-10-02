@@ -15,6 +15,7 @@ import { buildComponentSettings, hasSettings } from './componentSettings';
 import { secretKey } from './secretKey';
 import { ensureScreenKeyEnv, type ScreenKeyStore } from './systemScreen';
 import { pairedInstanceId } from '@/features/components/services/appBuilderComponentLinks';
+import { moveSecret, type SecretWriter as SecretMover } from '@/features/components/services/commerceSecretMigration';
 import type { AppBuilderComponentCatalogEntry, ComponentSettings } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
@@ -189,27 +190,61 @@ export interface SecretDeleter {
 /**
  * Delete every secret a project's App Builder components keep under this module's key
  * scheme: each secret setting, and the key that opens a system's screen (`systemScreen`,
- * same scheme). Run when the project is deleted, so its secrets do not outlive it in the
- * keychain (owner, 2026-10-01). A key never stored deletes as a no-op. Never logs a value.
+ * same scheme). Run when the project is deleted and when one component is removed, so
+ * its secrets do not outlive it in the keychain (owner, 2026-10-01; PL-64). A key never
+ * stored deletes as a no-op. Never logs a value.
  *
  * @param entries - the project's components as catalog entries (instance ids)
  * @param projectPath - the project's path, the key scheme's first part
  * @param secretStorage - VS Code SecretStorage
- * @returns how many keys were asked to be deleted
  */
 export async function forgetAppBuilderComponentSecrets(
     entries: AppBuilderComponentCatalogEntry[],
     projectPath: string,
     secretStorage: SecretDeleter,
-): Promise<number> {
-    const secretVars = secretVarsByAppBuilderComponent(entries);
-    let asked = 0;
+): Promise<void> {
     for (const entry of entries) {
-        const names = [...(secretVars.get(entry.id) ?? []), ...(entry.screen ? [entry.screen.keyEnvVar] : [])];
-        for (const varName of names) {
+        for (const varName of secretVarNamesOf(entry)) {
             await secretStorage.delete(secretKey(projectPath, entry.id, varName));
-            asked += 1;
         }
     }
-    return asked;
+}
+
+/**
+ * Move every secret a project's App Builder components keep (secret settings, screen keys)
+ * to the project's new path after a rename: the path is the key scheme's first part, so
+ * without this a renamed project's integrations lost them to the old path (PL-64).
+ * Copy-verify-delete per key (`moveSecret`): a move that fails leaves the value at the old
+ * key. Never logs a value.
+ *
+ * @param entries - the project's components as catalog entries (instance ids)
+ * @param oldPath - the project's path before the rename
+ * @param newPath - its path now
+ * @param secretStorage - VS Code SecretStorage
+ * @param log - where a key that did not move is reported, by var name only
+ * @returns the var names moved
+ */
+export async function reKeyAppBuilderComponentSecrets(
+    entries: AppBuilderComponentCatalogEntry[],
+    oldPath: string,
+    newPath: string,
+    secretStorage: SecretMover,
+    log?: (line: string) => void,
+): Promise<string[]> {
+    const moved: string[] = [];
+    if (oldPath === newPath) return moved;
+    for (const entry of entries) {
+        for (const varName of secretVarNamesOf(entry)) {
+            const from = secretKey(oldPath, entry.id, varName);
+            const to = secretKey(newPath, entry.id, varName);
+            if (await moveSecret(secretStorage, from, to, varName, log)) moved.push(varName);
+        }
+    }
+    return moved;
+}
+
+/** Every var an entry keeps under this module's key scheme: secret settings and screen key. */
+function secretVarNamesOf(entry: AppBuilderComponentCatalogEntry): string[] {
+    const settings = secretVarsByAppBuilderComponent([entry]).get(entry.id) ?? [];
+    return entry.screen ? [...settings, entry.screen.keyEnvVar] : settings;
 }

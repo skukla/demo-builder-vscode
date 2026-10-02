@@ -76,8 +76,6 @@
         "tests/features/eds/services/reset/edsResetUI-removalReporting.test.ts": 3,
         "tests/features/eds/services/storefront/storefrontNameMigration.test.ts": 1,
         "tests/features/eds/services/storefrontRepublishContent.test.ts": 1,
-        "tests/features/lifecycle/commands/deleteProject.error.test.ts": 1,
-        "tests/features/lifecycle/commands/deleteProject.retry.test.ts": 1,
         "tests/features/lifecycle/commands/stopDemo.error.test.ts": 1,
         "tests/features/mesh/handlers/shared.test.ts": 1,
         "tests/features/mesh/services/meshEndpoint.test.ts": 6,
