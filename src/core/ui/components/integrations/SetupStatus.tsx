@@ -15,17 +15,19 @@
 
 import React from 'react';
 import type { CardAction, IntegrationCardModel } from './integrationCardModel.types';
+import { isLeftToDo } from './setupLeftToDo';
 import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 
 /**
  * The one-line summary, shared with the flyout's Demo setup section. A dismissed step is
- * out of the count: the SC decided it does not apply to this demo.
+ * out of the count: the SC decided it does not apply to this demo. So is an optional step
+ * until it is done (`isLeftToDo`).
  *
  * @param items - the checklist
  * @returns e.g. "1 of 2 done", or "All done" when nothing is left open
  */
 export function setupSummary(items: SetupChecklistItem[]): string {
-    const open = items.filter((item) => item.state === 'open').length;
+    const open = items.filter(isLeftToDo).length;
     const done = items.filter((item) => item.state === 'done').length;
     return open === 0 ? 'All done' : `${done} of ${open + done} done`;
 }
@@ -33,7 +35,7 @@ export function setupSummary(items: SetupChecklistItem[]): string {
 /** "Demo setup · N of M done", or undefined when nothing is left. */
 export function setupStatusText(model: IntegrationCardModel): string | undefined {
     const items = model.setupChecklist ?? [];
-    if (!items.some((item) => item.state === 'open')) return undefined;
+    if (!items.some(isLeftToDo)) return undefined;
     return `Demo setup · ${setupSummary(items)}`;
 }
 

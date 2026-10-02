@@ -22,7 +22,7 @@
  * @module features/dashboard/ui/components/integrations/SetupGuideStep
  */
 
-import { Heading, Link, ProgressCircle } from '@adobe/react-spectrum';
+import { Badge, Heading, Link, ProgressCircle } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React from 'react';
 import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
@@ -224,6 +224,9 @@ export function SetupGuideStep(props: StepProps): React.ReactElement {
             aria-hidden={shown ? undefined : true}
         >
             <Heading level={3}>{item.title}</Heading>
+            {/* Spectrum's neutral Badge, as the integration card shows its type: only some
+                demos need this step, so it is not counted as left to do (`isLeftToDo`). */}
+            {item.optional && <Badge variant="neutral">Optional</Badge>}
             <CheckResult item={item} />
             <StepFacts item={item} />
             <SkipOrReopen {...props} />

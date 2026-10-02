@@ -31,6 +31,13 @@ describe('setupSummary', () => {
         expect(setupSummary([step('a', 'done'), step('b', 'open'), step('c', 'dismissed')])).toBe('1 of 2 done');
     });
 
+    it('leaves an open optional step out of the count, and counts it once done', () => {
+        const optional = (state: SetupChecklistItem['state']) => ({ ...step('o', state), optional: true });
+        expect(setupSummary([step('a', 'done'), step('b', 'open'), optional('open')])).toBe('1 of 2 done');
+        expect(setupSummary([step('a', 'done'), step('b', 'open'), optional('done')])).toBe('2 of 3 done');
+        expect(setupSummary([step('a', 'done'), optional('open')])).toBe('All done');
+    });
+
     it('says all done when nothing is open', () => {
         expect(setupSummary([step('a', 'done'), step('b', 'dismissed')])).toBe('All done');
     });
@@ -45,6 +52,10 @@ describe('setupStatusText', () => {
 
     it('says nothing once every step is done or skipped', () => {
         expect(setupStatusText(model([step('a', 'done'), step('b', 'dismissed')]))).toBeUndefined();
+    });
+
+    it('says nothing when only optional steps are open', () => {
+        expect(setupStatusText(model([step('a', 'done'), { ...step('o', 'open'), optional: true }]))).toBeUndefined();
     });
 
     it('says nothing for an integration without steps', () => {

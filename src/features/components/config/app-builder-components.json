@@ -231,6 +231,24 @@
             "Enable RMA on Storefront: Yes"
           ],
           "then": "Leave Enable RMA on Product Level at Yes so every product can be returned, and Save Config."
+        },
+        {
+          "id": "card-payments",
+          "check": "card-payments-enabled",
+          "optional": true,
+          "label": "Card payments",
+          "title": "Switch on card payments for the storefront",
+          "why": "Only for a demo where the buyer pays by card. Payment Services is Commerce's own card payments, powered by PayPal, and needs its own sandbox onboarding with a PayPal sandbox business account before it can be switched on.",
+          "where": "Sales > Payment Services: click Sandbox onboarding and connect a PayPal sandbox business account, then under Settings > General Configuration, for the website, set Enable to Yes and Save.",
+          "path": [
+            "Sales",
+            "Payment Services",
+            "Settings"
+          ],
+          "enter": [
+            "Enable: Yes"
+          ],
+          "then": "Finish Sandbox onboarding first, and keep Payment mode at Sandbox so no real card is charged."
         }
       ],
       "description": "Adobe Commerce and an ERP, on the Commerce integration starter kit: orders get an ERP number, price, stock and order-status changes in the ERP land in Commerce, contract prices apply in the cart, and a screen inside the Commerce Admin shows it all. Comes with its own ERP.",

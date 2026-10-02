@@ -3,7 +3,8 @@
  * where the SC is on each (AB-26x).
  */
 
-import { setupChecklistOf } from '@/features/app-builder/services/setupChecklist';
+import { nextSetupStep, setupChecklistOf } from '@/features/app-builder/services/setupChecklist';
+import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 
 describe('setupChecklistOf', () => {
     it("lists the ERP integration's steps, open until marked, every one checkable", () => {
@@ -17,7 +18,15 @@ describe('setupChecklistOf', () => {
             ['partially-held-status', 'open', true],
             ['payment-on-account', 'open', true],
             ['storefront-returns', 'open', true],
+            ['card-payments', 'open', true],
         ]);
+    });
+
+    it('marks card payments optional, and no other step', () => {
+        const items = setupChecklistOf('erp-integration', {});
+        expect(items?.filter((item) => item.optional).map((item) => item.id)).toStrictEqual(['card-payments']);
+        // Absent rather than false on a required step, as the other optional fields are.
+        expect(items?.[0]).not.toHaveProperty('optional');
     });
 
     it('carries the saved state and the last check note', () => {
@@ -33,6 +42,7 @@ describe('setupChecklistOf', () => {
         expect(items?.map((item) => item.state)).toEqual([
             'dismissed',
             'done',
+            'open',
             'open',
             'open',
             'open',
@@ -72,10 +82,30 @@ describe('setupChecklistOf', () => {
     it('reads a second copy through the entry it was made from', () => {
         expect(
             setupChecklistOf('erp-integration-2', { catalogId: 'erp-integration' })
-        ).toHaveLength(8);
+        ).toHaveLength(9);
     });
 
     it('is undefined for an entry that declares no steps', () => {
         expect(setupChecklistOf('demo-erp', {})).toBeUndefined();
+    });
+});
+
+describe('nextSetupStep', () => {
+    const item = (id: string, state: SetupChecklistItem['state'], optional?: boolean): SetupChecklistItem => ({
+        id,
+        title: `Step ${id}`,
+        why: 'why',
+        where: 'where',
+        state,
+        checkable: false,
+        ...(optional ? { optional } : {}),
+    });
+
+    it('names the first open step that is not optional', () => {
+        expect(nextSetupStep([item('a', 'done'), item('b', 'open', true), item('c', 'open')])).toBe('Step c');
+    });
+
+    it('names nothing when only optional steps are open', () => {
+        expect(nextSetupStep([item('a', 'done'), item('b', 'open', true)])).toBeUndefined();
     });
 });

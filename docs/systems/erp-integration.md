@@ -195,17 +195,26 @@ list cannot be sent, nothing is removed, and Remove anyway goes on without it. T
 integration's own ERP still goes only with the integration.
 
 **Before several ERPs can be shown**, the integration's setup checklist asks for the
-`erp_owner` (a Text Field) and `brand` product attributes, which Demo Builder checks, the
-"Partially Held" order status (`partially_held`, on Processing and Pending) and Payment on
-Account for the website, which the SC marks done: Commerce's REST API lists neither order
-statuses by state nor payment settings.
+`erp_owner` (a Text Field) and `brand` product attributes, the "Partially Held" order status
+(`partially_held`, on Processing and Pending) and Payment on Account for the website. Demo
+Builder checks all of them: the statuses through `GET /V1/order-statuses`, the payment setting
+through `GET /V1/system/config` at the website (`setupConfigChecks.ts`). The same read checks
+the storefront returns switch (`sales/magento_rma/enabled`).
 
 **Before a price the ERP grants for one website can show on that website only** (AB-46), the
 checklist asks for Commerce's Catalog Price Scope to be Website (Stores > Configuration >
 Catalog > Catalog > Price). The ERP publishes a company's prices into its shared catalog per
 website — each tier price carries a website — and at the default scope, Global, Commerce
-ignores that website and every site shows the same prices. No API reads or sets the scope, so
-the SC sets it once and marks the step done.
+ignores that website and every site shows the same prices. The SC sets it once in the Admin;
+Demo Builder checks it by reading the setting through `GET /V1/system/config`.
+
+**For a demo where the buyer pays by card**, the checklist has an optional step: switch on
+Payment Services, Commerce's own card payments (powered by PayPal), for the project's website.
+Demo Builder checks it by reading `payment/payment_services/active` at the website. Payment
+Services needs its own sandbox onboarding (Sales > Payment Services > Sandbox onboarding, with a
+PayPal sandbox business account) before it can be switched on. An optional step is still listed,
+checked and marked like any other, but while it is open it is not counted as left to do: the
+card's "Demo setup" line, the flyout's Next step and the guide's opening step all pass over it.
 
 ## Filling the ERP
 

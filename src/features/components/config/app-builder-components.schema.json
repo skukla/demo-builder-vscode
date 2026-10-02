@@ -204,8 +204,13 @@
                   "partially-held-status",
                   "price-scope-website",
                   "payment-on-account-enabled",
-                  "storefront-returns-enabled"
+                  "storefront-returns-enabled",
+                  "card-payments-enabled"
                 ]
+              },
+              "optional": {
+                "type": "boolean",
+                "description": "Only some demos need this step: listed and checkable, but an open optional step is not left to do."
               }
             }
           }

@@ -30,6 +30,7 @@ import type { IntegrationCardModel } from './integrationCardModel';
 import { SetupGuideStep, StepList } from './SetupGuideStep';
 import { type CheckFailure, type CheckProgress, useSetupChecklist } from './useSetupChecklist';
 import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
+import { isLeftToDo } from '@/core/ui/components/integrations/setupLeftToDo';
 import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
 import { Modal, type ActionButton } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
@@ -43,9 +44,9 @@ export interface SetupGuideModalProps {
     onOpenAdmin: () => void;
 }
 
-/** Where the guide opens: the first step still to do, else the first. */
+/** Where the guide opens: the first step still to do (not an optional one), else the first. */
 function firstOpen(items: SetupChecklistItem[]): number {
-    const index = items.findIndex((item) => item.state === 'open');
+    const index = items.findIndex(isLeftToDo);
     return index === -1 ? 0 : index;
 }
 
@@ -164,7 +165,7 @@ function Guide({
         setHasChecked(true);
         const checked = await actions.checkAll(checkableIds(items));
         // Land on what is left to do, with the check's reason in view.
-        const next = checked?.findIndex((step) => step.state === 'open') ?? -1;
+        const next = checked?.findIndex(isLeftToDo) ?? -1;
         if (next !== -1) setIndex(next);
     };
 
@@ -282,7 +283,7 @@ export function setupNextStep(
 ): { message: string; action: string; onPress: () => void } | undefined {
     if (!operationId) return undefined;
     const card = cards.find((candidate) => (candidate.componentId ?? candidate.id) === operationId);
-    const open = (card?.setupChecklist ?? []).filter((item) => item.state === 'open').length;
+    const open = (card?.setupChecklist ?? []).filter(isLeftToDo).length;
     if (!card || open === 0) return undefined;
     return {
         message: `Next: ${open} setup step${open > 1 ? 's' : ''} in Commerce for the demo.`,

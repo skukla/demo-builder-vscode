@@ -74,6 +74,7 @@ describe('getSetupChecklist', () => {
             'partially-held-status',
             'payment-on-account',
             'storefront-returns',
+            'card-payments',
         ]);
         expect(mockSendRest).not.toHaveBeenCalled();
     });
@@ -254,6 +255,7 @@ describe('checkSetupSteps', () => {
             'partially-held-status': { state: 'dismissed' },
             'payment-on-account': { state: 'dismissed' },
             'storefront-returns': { state: 'dismissed' },
+            'card-payments': { state: 'dismissed' },
         });
         await handleCheckSetupSteps(context, { id: 'erp-integration' });
         expect(mockSendRest).not.toHaveBeenCalled();

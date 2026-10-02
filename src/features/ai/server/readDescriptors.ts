@@ -432,7 +432,9 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
             "Read an integration's demo setup checklist: what the SC prepares by hand in Commerce " +
             'Admin for its demo (e.g. the "Confirmed in ERP" order status, a shared catalog per ' +
             'priced company), where, why, and whether each is done, dismissed or still to do. As ' +
-            'saved: runs no check (check_setup_steps does). Only integrations that declare steps have one.',
+            'saved: runs no check (check_setup_steps does). Only integrations that declare steps have one. ' +
+            'A step with optional: true is only for some demos (e.g. card payments): while open it is ' +
+            'not left to do.',
         map: dashboardHandlers,
         type: 'getSetupChecklist',
         inputSchema: {

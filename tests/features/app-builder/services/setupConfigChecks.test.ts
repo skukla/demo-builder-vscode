@@ -212,3 +212,53 @@ describe('storefront-returns-enabled', () => {
         expect(await check(jest.fn(async () => BUSY), 'acme')).toStrictEqual(COULD_NOT);
     });
 });
+
+// Read live on Justrite 2026-10-02: payment/payment_services/active stored "0" on the website.
+// Payment Services is Commerce as a Cloud Service's own card payments, powered by PayPal.
+describe('card-payments-enabled', () => {
+    const SETTING = 'payment/payment_services/active';
+    const check = (read: Read, websiteCode?: string) =>
+        runSetupCheck('card-payments-enabled', read, { websiteCode });
+    const named = (values: Record<string, string>) => {
+        const read = config(values);
+        return jest.fn(async (path: string) =>
+            path === 'store/websites' ? JSON.stringify([{ id: 5, code: 'acme', name: 'Acme Website' }]) : read(path),
+        );
+    };
+
+    it("reads Payment Services' switch at the project's website", async () => {
+        const read = named({ [configAt(SETTING, 'acme')]: '1' });
+        await check(read, 'acme');
+        expect(read).toHaveBeenCalledWith(configAt(SETTING, 'acme'));
+    });
+
+    it('is done when Payment Services is on for the website, not done when off, and names it', async () => {
+        expect(await check(named({ [configAt(SETTING, 'acme')]: '1' }), 'acme')).toStrictEqual({
+            done: true,
+            note: 'Payment Services is on for the Acme Website storefront.',
+        });
+        expect(await check(named({ [configAt(SETTING, 'acme')]: '0' }), 'acme')).toStrictEqual({
+            done: false,
+            note: 'Payment Services is off for the Acme Website storefront.',
+        });
+    });
+
+    it('uses the default when the website stores no value, and unset everywhere is off', async () => {
+        const inherited = named({ [configAt(SETTING)]: '1' });
+        expect((await check(inherited, 'acme')).done).toBe(true);
+        expect(inherited).toHaveBeenCalledWith(configAt(SETTING));
+        expect(await check(named({}), 'acme')).toStrictEqual({
+            done: false,
+            note: 'Payment Services is off for the Acme Website storefront.',
+        });
+    });
+
+    it('cannot tell without a website, or when the read failed', async () => {
+        const read = config({});
+        expect(await check(read)).toStrictEqual({
+            note: 'Could not check: the project names no Commerce website.',
+        });
+        expect(read).not.toHaveBeenCalled();
+        expect(await check(jest.fn(async () => BUSY), 'acme')).toStrictEqual(COULD_NOT);
+    });
+});

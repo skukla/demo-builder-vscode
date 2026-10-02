@@ -13,6 +13,7 @@
  * @module features/app-builder/services/setupChecklist
  */
 
+import { isLeftToDo } from '@/core/ui/components/integrations/setupLeftToDo';
 import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState, SetupCheckOutcome, SetupStepRecord } from '@/types/base';
@@ -74,6 +75,7 @@ export function setupChecklistOf(
             ...(step.enter ? { enter: withErpNames(step.enter, erpNames) } : {}),
             ...(step.then ? { then: step.then } : {}),
             ...(step.icon ? { icon: step.icon } : {}),
+            ...(step.optional ? { optional: true } : {}),
             state: saved?.state ?? 'open',
             ...(saved?.note ? { note: saved.note } : {}),
             ...(lastCheck ? { lastCheck } : {}),
@@ -83,12 +85,13 @@ export function setupChecklistOf(
 }
 
 /**
- * The step to do next: the first one still open, in the guide's order. The flyout names
+ * The step to do next: the first one still to do (open, not optional), in the guide's
+ * order. The flyout names
  * it, so the SC knows what is left without opening the guide (owner, 2026-10-01).
  *
  * @param items - the checklist
  * @returns that step's title, or undefined when none is open
  */
 export function nextSetupStep(items: SetupChecklistItem[]): string | undefined {
-    return items.find((item) => item.state === 'open')?.title;
+    return items.find(isLeftToDo)?.title;
 }

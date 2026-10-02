@@ -1,8 +1,8 @@
 /**
  * The demo setup checks that read Commerce's own settings rather than its data (AB-26x): the
- * two custom order statuses, Catalog Price Scope, and Payment on Account and storefront returns
- * on the project's website. Until 2026-10-01 these four were "Mark as done" only, because no read for them had
- * been tried. Both routes come from Adobe's Commerce as a Cloud Service REST reference and
+ * two custom order statuses, Catalog Price Scope, and Payment on Account, storefront returns
+ * and card payments on the project's website. Until 2026-10-01 the first four were "Mark as
+ * done" only, because no read for them had been tried. Both routes come from Adobe's Commerce as a Cloud Service REST reference and
  * were read live on the Justrite sandbox that day:
  *
  * - `GET /V1/order-statuses` answers every status with its state assignments, one row per
@@ -179,4 +179,13 @@ export function paymentOnAccountEnabled(read: Read, scope: { websiteCode?: strin
 export function storefrontReturnsEnabled(read: Read, scope: { websiteCode?: string }): Promise<Result> {
     return websiteSwitch(read, scope, 'sales/magento_rma/enabled', (on, name) =>
         `Returns are ${on ? 'on' : 'off'} for the ${name} storefront.`);
+}
+
+/**
+ * Card payments are on for the project's storefront: Payment Services, Commerce's own card
+ * payments, powered by PayPal. An optional step. Stored "0" on Justrite on 2026-10-02.
+ */
+export function cardPaymentsEnabled(read: Read, scope: { websiteCode?: string }): Promise<Result> {
+    return websiteSwitch(read, scope, 'payment/payment_services/active', (on, name) =>
+        `Payment Services is ${on ? 'on' : 'off'} for the ${name} storefront.`);
 }

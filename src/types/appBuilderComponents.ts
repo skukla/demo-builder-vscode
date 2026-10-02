@@ -80,7 +80,8 @@ export type SetupCheck =
     | 'partially-held-status'
     | 'price-scope-website'
     | 'payment-on-account-enabled'
-    | 'storefront-returns-enabled';
+    | 'storefront-returns-enabled'
+    | 'card-payments-enabled';
 
 /** How a system is known in its integration's list of systems (see `listedAs`). */
 export interface SystemListing {
@@ -129,6 +130,11 @@ export interface SetupStep {
     icon?: SetupStepIcon;
     /** A check Demo Builder can run; absent = the SC marks it done. */
     check?: SetupCheck;
+    /**
+     * Only some demos need it (card payments, 2026-10-02). Still listed, checked and marked,
+     * but an open optional step is not left to do: it counts in no "steps left" (`isLeftToDo`).
+     */
+    optional?: boolean;
 }
 
 /** One demo setup step as the flyout shows it (AB-26x). */
@@ -143,6 +149,8 @@ export interface SetupChecklistItem {
     enter?: string[];
     then?: string;
     icon?: SetupStepIcon;
+    /** Only some demos need it (see `SetupStep`); absent on a step every demo needs. */
+    optional?: boolean;
     state: 'open' | 'done' | 'dismissed';
     /** What the last check found, when one ran. */
     note?: string;

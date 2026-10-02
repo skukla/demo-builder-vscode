@@ -9,6 +9,7 @@
  */
 
 import {
+    cardPaymentsEnabled,
     erpConfirmedStatus,
     partiallyHeldStatus,
     paymentOnAccountEnabled,
@@ -259,6 +260,7 @@ const CHECKS: Record<SetupCheck, (read: CommerceRead, scope: SetupCheckScope) =>
     'price-scope-website': priceScopeWebsite,
     'payment-on-account-enabled': paymentOnAccountEnabled,
     'storefront-returns-enabled': storefrontReturnsEnabled,
+    'card-payments-enabled': cardPaymentsEnabled,
 };
 
 /**

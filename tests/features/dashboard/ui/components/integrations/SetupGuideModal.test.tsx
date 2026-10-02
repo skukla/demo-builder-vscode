@@ -12,6 +12,7 @@ import React from 'react';
 import '@testing-library/jest-dom';
 
 jest.mock('@adobe/react-spectrum', () => ({
+    Badge: ({ children }: any) => <span data-testid="badge">{children}</span>,
     Button: ({ children, onPress, isDisabled, variant: _v, ...props }: any) => (
         <button onClick={onPress} disabled={isDisabled} {...props}>
             {children}
@@ -146,6 +147,24 @@ describe('SetupGuideModal', () => {
             )
         ).toBeInTheDocument();
         expect(screen.getAllByTestId('setup-guide-step')).toHaveLength(1);
+    });
+
+    it('opens past an optional step to the first one that must be done', async () => {
+        await renderGuide([
+            step({ id: 'a', title: 'Step A', state: 'done' }),
+            step({ id: 'o', title: 'Step O', optional: true }),
+            step({ id: 'b', title: 'Step B' }),
+        ]);
+        expect(within(shown()).getByRole('heading', { name: 'Step B' })).toBeInTheDocument();
+    });
+
+    it('labels an optional step Optional, and only that step', async () => {
+        await renderGuide([step({ id: 'o', title: 'Step O', optional: true }), step({ id: 'b', title: 'Step B' })]);
+        // The guide opens on Step B, the one every demo needs; it carries no label.
+        expect(within(shown()).getByRole('heading', { name: 'Step B' })).toBeInTheDocument();
+        expect(within(shown()).queryByTestId('badge')).not.toBeInTheDocument();
+        fireEvent.click(screen.getByRole('tab', { name: /Step O/ }));
+        expect(within(shown()).getByTestId('badge')).toHaveTextContent('Optional');
     });
 
     it('lists every step by its short label with its state, and the list is the only progress', async () => {
@@ -447,6 +466,20 @@ describe('setupNextStep', () => {
         expect(next?.action).toBe('Start setup guide');
         next?.onPress();
         expect(openGuide).toHaveBeenCalledWith('erp-integration');
+    });
+
+    it('does not count an open optional step as left', async () => {
+        const withOptional = [
+            {
+                ...cards[0],
+                setupChecklist: [...THREE, step({ id: 'o', title: 'Step O', optional: true })],
+            },
+        ];
+        expect(setupNextStep(withOptional, 'erp-integration', jest.fn())?.message).toBe(
+            'Next: 2 setup steps in Commerce for the demo.',
+        );
+        const onlyOptional = [{ ...cards[0], setupChecklist: [step({ id: 'o', optional: true })] }];
+        expect(setupNextStep(onlyOptional, 'erp-integration', jest.fn())).toBeUndefined();
     });
 
     it('offers nothing for a card with no steps left, or no operation', async () => {
