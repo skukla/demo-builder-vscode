@@ -152,10 +152,27 @@ describe('SetupGuideModal', () => {
         await renderGuide([...THREE, step({ id: 'd', title: 'Step D', state: 'dismissed' })]);
         const tabs = screen.getAllByRole('tab');
         // A label where the catalog gives one, the title where it does not.
-        // A check on the done step, a dash on the skipped one, nothing on an open one.
-        expect(tabs.map((tab) => tab.textContent)).toEqual(['✓A', 'B', 'Step C', '–Step D']);
+        // The extension's done mark on the done step, a dash on the skipped one, nothing on an open one.
+        const part = (tab: HTMLElement, cls: string) => tab.querySelector(cls)?.textContent;
+        expect(tabs.map((tab) => part(tab, '.setup-guide-rail-title'))).toStrictEqual(['A', 'B', 'Step C', 'Step D']);
+        const done = (tab: HTMLElement) => tab.querySelector('.setup-guide-rail-mark .text-green-600') !== null;
+        expect(tabs.map(done)).toStrictEqual([true, false, false, false]);
+        expect(part(tabs[3], '.setup-guide-rail-mark')).toBe('–');
         expect(tabs[1]).toHaveAttribute('aria-selected', 'true');
         expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    });
+
+    it('draws every step in one place so the pane is as tall as the tallest, showing only the chosen one', async () => {
+        // A guide opening on a short step jumped when a taller one was chosen (2026-10-01).
+        const { container } = await renderGuide();
+        const panes = container.querySelectorAll('.setup-guide-panes > .setup-guide-step');
+        expect(panes).toHaveLength(THREE.length);
+        const hidden = Array.from(panes).filter((pane) => pane.classList.contains('setup-guide-step--hidden'));
+        expect(hidden).toHaveLength(THREE.length - 1);
+        // The hidden ones are out of the accessibility tree; one step answers to the test id.
+        expect(hidden.every((pane) => pane.getAttribute('aria-hidden') === 'true')).toBe(true);
+        expect(screen.getAllByTestId('setup-guide-step')).toHaveLength(1);
+        expect(screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toStrictEqual(['Step B']);
     });
 
     it('the list is the only navigation: no Back or Next, and any step is one click away', async () => {
@@ -390,7 +407,7 @@ describe('SetupGuideModal', () => {
         );
         expect(within(shown()).getByRole('heading', { name: 'Step B' })).toBeInTheDocument();
         // The list now checks it off (the mark is decoration, so it is outside the tab's name).
-        expect(screen.getByRole('tab', { name: 'B' })).toHaveTextContent('✓');
+        expect(screen.getByRole('tab', { name: 'B' }).querySelector('.text-green-600')).not.toBeNull();
     });
 
     it('says why when the extension refuses', async () => {

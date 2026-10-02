@@ -23,14 +23,15 @@
  */
 
 import { Heading, Link, ProgressCircle } from '@adobe/react-spectrum';
+import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React from 'react';
 import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { CopyableText } from '@/core/ui/components/ui/CopyableText';
 import { cn } from '@/core/ui/utils/classNames';
 import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 
-/** The one mark a step carries in the list, by state. */
-const MARK = { open: '', done: '✓', dismissed: '–' } as const;
+/** The text mark a step carries in the list when it is not done: nothing open, a dash skipped. */
+const MARK = { open: '', dismissed: '–' } as const;
 
 interface StepListProps {
     items: SetupChecklistItem[];
@@ -53,10 +54,16 @@ function RailMark({ item, checking }: { item: SetupChecklistItem; checking: bool
             </span>
         );
     }
-    // Keyed by state, so a mark that changes is a new element and its fade-in plays.
+    // Keyed by state, so a mark that changes is a new element and its fade-in plays. A done
+    // step carries the extension's own done mark, Spectrum's CheckmarkCircle in green, as
+    // the project summary and the prerequisites list draw it; not a text check of its own.
     return (
         <span key={item.state} className="setup-guide-rail-mark" aria-hidden="true">
-            {MARK[item.state]}
+            {item.state === 'done' ? (
+                <CheckmarkCircle size="XS" UNSAFE_className="text-green-600" />
+            ) : (
+                MARK[item.state]
+            )}
         </span>
     );
 }
@@ -117,6 +124,12 @@ export interface StepProps {
     item: SetupChecklistItem;
     busy: boolean;
     onSet: (state: 'done' | 'dismissed' | 'open') => void;
+    /**
+     * This is the step on view. The others are drawn too, invisible in the same place, so
+     * the pane holds the tallest step's height (SetupGuideModal); hidden from assistive
+     * tech, and `visibility: hidden` takes them out of the tab order.
+     */
+    shown?: boolean;
 }
 
 /**
@@ -203,9 +216,13 @@ function StepFacts({ item }: { item: SetupChecklistItem }): React.ReactElement {
  * every other modal keeps its actions.
  */
 export function SetupGuideStep(props: StepProps): React.ReactElement {
-    const { item } = props;
+    const { item, shown = true } = props;
     return (
-        <div className="setup-guide-step" data-testid="setup-guide-step">
+        <div
+            className={cn('setup-guide-step', !shown && 'setup-guide-step--hidden')}
+            data-testid={shown ? 'setup-guide-step' : undefined}
+            aria-hidden={shown ? undefined : true}
+        >
             <Heading level={3}>{item.title}</Heading>
             <CheckResult item={item} />
             <StepFacts item={item} />

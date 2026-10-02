@@ -150,7 +150,6 @@
 .setup-guide-rail-mark {
     display: inline-flex;
     justify-content: center;
-    color: var(--spectrum-global-color-green-600);
 }
 
 .setup-guide-rail-step--skipped .setup-guide-rail-mark {
@@ -169,6 +168,20 @@
 @keyframes setup-guide-mark-in {
     from { opacity: 0; transform: scale(0.6); }
     to { opacity: 1; transform: scale(1); }
+}
+
+/* Every step in one grid cell: the cell is as tall as the tallest, and only the shown step
+   is visible (SetupGuideModal). */
+.setup-guide-panes {
+    display: grid;
+}
+
+.setup-guide-panes > .setup-guide-step {
+    grid-area: 1 / 1;
+}
+
+.setup-guide-step--hidden {
+    visibility: hidden;
 }
 
 .setup-guide-step {

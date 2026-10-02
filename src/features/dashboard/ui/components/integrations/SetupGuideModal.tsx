@@ -195,16 +195,23 @@ function Guide({
                     checkingId={actions.progress?.stepId}
                     animateMarks={hasChecked}
                 />
-                {/* Steps differ in length; the pane holds its tallest height rather than
-                    jumping as the SC moves between them. */}
+                {/* Steps differ in length. Every step is laid in the same cell and only the
+                    shown one is visible, so the pane is as tall as the TALLEST step from the
+                    moment it opens. SteadyHeight alone grew only on a step's first visit, so
+                    a guide opening on a short step jumped when a taller one was chosen
+                    (owner, 2026-10-01); it stays for a result notice that arrives later. */}
                 <SteadyHeight>
-                    {item && (
-                        <SetupGuideStep
-                            item={item}
-                            busy={actions.busy}
-                            onSet={(state) => actions.setStep(item.id, state)}
-                        />
-                    )}
+                    <div className="setup-guide-panes">
+                        {items.map((step) => (
+                            <SetupGuideStep
+                                key={step.id}
+                                item={step}
+                                shown={step.id === item?.id}
+                                busy={actions.busy}
+                                onSet={(state) => actions.setStep(step.id, state)}
+                            />
+                        ))}
+                    </div>
                 </SteadyHeight>
             </div>
         </Modal>
