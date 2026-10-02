@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: []
 value: med
-status: open
+status: built
 ---
 
 # A split order is sent to its ERPs again on later saves
@@ -19,7 +19,18 @@ create is idempotent on the Commerce order id), so no ERP holds a duplicate orde
 a Complete order whose history says "waiting for confirmation", and ERP calls that should not
 happen.
 
-## Lead (not yet verified)
+## Cause (verified in code, then live)
+
+Not the race the lead below guessed. `routeToSeveral` skipped a part only when its status was
+in `FINAL_OUTCOMES` (sent, skipped, dropped), and every ERP message sets a part's status to
+the message's outcome (confirmed, shipped, invoiced, held, cancelled; demo-erp adapter
+`readOutcome`). So every later save of the order sent each part again, and set its status
+back to sending then sent, losing invoiced. Fixed in commerce-erp-integration `83cb0a0`: a
+part with the ERP's sales order number is never sent again. Also `ce2cde4`: the
+confirmation comment names the ERP. Proved live on order 5000000007: every comment once,
+each confirmation naming its ERP.
+
+## Lead as filed (disproved)
 
 The order's later saves (confirmation status, invoices) each raise
 `observer.sales_order_save_commit_after`, and the router decides per part whether it was
@@ -32,3 +43,4 @@ both sent (does the router skip?). Only then decide between locking every writer
 compare-before-write.
 
 ## Shipped so far
+- 2026-10-02  commerce-erp-integration 83cb0a0 (a part the ERP holds is never resent) + ce2cde4 (confirmation names the ERP); deployed; order 5000000007 history clean

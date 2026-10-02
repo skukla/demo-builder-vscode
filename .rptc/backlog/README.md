@@ -361,7 +361,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-49` | fix | └ [A shipment with no warehouse still fails when a product sits in several warehouses](2026-09-30-erp-shipment-warehouse-default-several.md) | — | med | built |
 | `AB-54` | fix | └ [The ERP lookup fails on a SKU Commerce does not have](2026-10-02-erp-lookup-sku-missing-from-commerce.md) | — | low | active |
 | `AB-55` | fix | └ [Every order on Justrite is refused: the placement check outruns Commerce](2026-10-02-erp-placement-check-outruns-commerce.md) | — | high | built |
-| `AB-56` | fix | └ [A split order is sent to its ERPs again on later saves](2026-10-02-erp-split-order-resent-on-later-saves.md) | — | med | open |
+| `AB-56` | fix | └ [A split order is sent to its ERPs again on later saves](2026-10-02-erp-split-order-resent-on-later-saves.md) | — | med | built |
 | `AB-29` | feature | [Commerce test data cleanup tools](2026-09-24-commerce-test-data-cleanup-tools.md) | — | med | active |
 | `AB-30` | feature | [The ERP integration's Commerce Admin page uses the Commerce back-office design system](2026-09-24-erp-admin-page-commerce-design-system.md) | — | med | active |
 | `AB-33` | fix | [Removing an integration reports Runtime packages left behind in a workspace it then deletes](2026-09-26-remove-integration-leaves-runtime-packages.md) | — | med | built |
