@@ -1,7 +1,7 @@
 /**
  * The demo setup checks that read Commerce's own settings rather than its data (AB-26x): the
- * two custom order statuses, Catalog Price Scope, and Payment on Account on the project's
- * website. Until 2026-10-01 these four were "Mark as done" only, because no read for them had
+ * two custom order statuses, Catalog Price Scope, and Payment on Account and storefront returns
+ * on the project's website. Until 2026-10-01 these four were "Mark as done" only, because no read for them had
  * been tried. Both routes come from Adobe's Commerce as a Cloud Service REST reference and
  * were read live on the Justrite sandbox that day:
  *
@@ -146,17 +146,37 @@ export async function priceScopeWebsite(read: Read): Promise<Result> {
 }
 
 /**
- * Payment on Account is on for the project's website. Read at that website, then at the
- * default when the website stores no value of its own (it inherits).
+ * A Yes/No setting is on for the project's website. Read at that website, then at the default
+ * when the website stores no value of its own (it inherits); unset everywhere is Commerce's
+ * default, No. The note names the website as the Admin does.
  */
-export async function paymentOnAccountEnabled(read: Read, scope: { websiteCode?: string }): Promise<Result> {
+async function websiteSwitch(
+    read: Read,
+    scope: { websiteCode?: string },
+    setting: string,
+    words: (on: boolean, website: string) => string,
+): Promise<Result> {
     const website = scope.websiteCode;
     if (!website) return { note: 'Could not check: the project names no Commerce website.' };
-    const own = await readConfig(read, 'payment/companycredit/active', website);
+    const own = await readConfig(read, setting, website);
     if (own instanceof Error) return couldNot(own.message);
-    const value = own ?? (await readConfig(read, 'payment/companycredit/active'));
+    const value = own ?? (await readConfig(read, setting));
     if (value instanceof Error) return couldNot(value.message);
-    const name = (await websiteNamer(read))(website);
-    if (value === ENABLED) return { done: true, note: `Payment on Account is on for ${name}.` };
-    return { done: false, note: `Payment on Account is off for ${name}.` };
+    const on = value === ENABLED;
+    return { done: on, note: words(on, (await websiteNamer(read))(website)) };
+}
+
+/** Payment on Account is on for the project's website. */
+export function paymentOnAccountEnabled(read: Read, scope: { websiteCode?: string }): Promise<Result> {
+    return websiteSwitch(read, scope, 'payment/companycredit/active', (on, name) =>
+        `Payment on Account is ${on ? 'on' : 'off'} for ${name}.`);
+}
+
+/**
+ * Returns are on for the project's storefront (Enable RMA on Storefront), so a buyer can ask
+ * for one; staff can enter a return in the Admin either way. Unset on Justrite on 2026-10-02.
+ */
+export function storefrontReturnsEnabled(read: Read, scope: { websiteCode?: string }): Promise<Result> {
+    return websiteSwitch(read, scope, 'sales/magento_rma/enabled', (on, name) =>
+        `Returns are ${on ? 'on' : 'off'} for the ${name} storefront.`);
 }

@@ -16,6 +16,7 @@ describe('setupChecklistOf', () => {
             ['erp-attributes', 'open', true],
             ['partially-held-status', 'open', true],
             ['payment-on-account', 'open', true],
+            ['storefront-returns', 'open', true],
         ]);
     });
 
@@ -32,6 +33,7 @@ describe('setupChecklistOf', () => {
         expect(items?.map((item) => item.state)).toEqual([
             'dismissed',
             'done',
+            'open',
             'open',
             'open',
             'open',
@@ -70,7 +72,7 @@ describe('setupChecklistOf', () => {
     it('reads a second copy through the entry it was made from', () => {
         expect(
             setupChecklistOf('erp-integration-2', { catalogId: 'erp-integration' })
-        ).toHaveLength(7);
+        ).toHaveLength(8);
     });
 
     it('is undefined for an entry that declares no steps', () => {

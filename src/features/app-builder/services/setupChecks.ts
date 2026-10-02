@@ -13,6 +13,7 @@ import {
     partiallyHeldStatus,
     paymentOnAccountEnabled,
     priceScopeWebsite,
+    storefrontReturnsEnabled,
     websiteNamer,
 } from './setupConfigChecks';
 import type { SetupCheck } from '@/types/appBuilderComponents';
@@ -257,6 +258,7 @@ const CHECKS: Record<SetupCheck, (read: CommerceRead, scope: SetupCheckScope) =>
     'partially-held-status': partiallyHeldStatus,
     'price-scope-website': priceScopeWebsite,
     'payment-on-account-enabled': paymentOnAccountEnabled,
+    'storefront-returns-enabled': storefrontReturnsEnabled,
 };
 
 /**

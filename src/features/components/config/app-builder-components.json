@@ -212,6 +212,25 @@
             "Enabled: Yes"
           ],
           "then": "At the website's scope, untick Use Default first, then Save Config."
+        },
+        {
+          "id": "storefront-returns",
+          "check": "storefront-returns-enabled",
+          "label": "Returns",
+          "title": "Switch on returns for the storefront",
+          "why": "A buyer asks for a return on the storefront, and the integration sends each ERP its lines of it. With returns off, staff can still enter a return in the Admin, but the buyer cannot ask for one.",
+          "where": "Stores > Settings > Configuration > Sales > Sales > RMA Settings: set Enable RMA on Storefront to Yes, Save Config.",
+          "path": [
+            "Stores",
+            "Configuration",
+            "Sales",
+            "Sales",
+            "RMA Settings"
+          ],
+          "enter": [
+            "Enable RMA on Storefront: Yes"
+          ],
+          "then": "Leave Enable RMA on Product Level at Yes so every product can be returned, and Save Config."
         }
       ],
       "description": "Adobe Commerce and an ERP, on the Commerce integration starter kit: orders get an ERP number, price, stock and order-status changes in the ERP land in Commerce, contract prices apply in the cart, and a screen inside the Commerce Admin shows it all. Comes with its own ERP.",

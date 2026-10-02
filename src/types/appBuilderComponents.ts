@@ -79,7 +79,8 @@ export type SetupCheck =
     | 'erp-confirmed-status'
     | 'partially-held-status'
     | 'price-scope-website'
-    | 'payment-on-account-enabled';
+    | 'payment-on-account-enabled'
+    | 'storefront-returns-enabled';
 
 /** How a system is known in its integration's list of systems (see `listedAs`). */
 export interface SystemListing {

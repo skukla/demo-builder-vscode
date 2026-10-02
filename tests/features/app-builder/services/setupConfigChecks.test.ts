@@ -172,3 +172,43 @@ describe('payment-on-account-enabled', () => {
         expect(await check(jest.fn(async () => BUSY), 'acme')).toStrictEqual(COULD_NOT);
     });
 });
+
+// Read live on Justrite 2026-10-02: sales/magento_rma/enabled had no value at the default or on
+// the website (Commerce's default is No), so a buyer could not ask for a return on the
+// storefront; staff could still enter one in the Admin.
+describe('storefront-returns-enabled', () => {
+    const SETTING = 'sales/magento_rma/enabled';
+    const check = (read: Read, websiteCode?: string) =>
+        runSetupCheck('storefront-returns-enabled', read, { websiteCode });
+
+    it("is done when Enable RMA on Storefront is Yes for the project's website, and names it", async () => {
+        const named = (value: string) => {
+            const read = config({ [configAt(SETTING, 'acme')]: value });
+            return jest.fn(async (path: string) =>
+                path === 'store/websites' ? JSON.stringify([{ id: 5, code: 'acme', name: 'Acme Website' }]) : read(path),
+            );
+        };
+        expect(await check(named('1'), 'acme')).toStrictEqual({
+            done: true,
+            note: 'Returns are on for the Acme Website storefront.',
+        });
+        expect(await check(named('0'), 'acme')).toStrictEqual({
+            done: false,
+            note: 'Returns are off for the Acme Website storefront.',
+        });
+    });
+
+    it('uses the default when the website stores no value, and an unset default is off', async () => {
+        const on = config({ [configAt(SETTING)]: '1' });
+        expect((await check(on, 'acme')).done).toBe(true);
+        expect(on).toHaveBeenCalledWith(configAt(SETTING, 'acme'));
+        expect((await check(config({}), 'acme')).done).toBe(false);
+    });
+
+    it('cannot tell without a website, or when the read failed', async () => {
+        expect(await check(config({}))).toStrictEqual({
+            note: 'Could not check: the project names no Commerce website.',
+        });
+        expect(await check(jest.fn(async () => BUSY), 'acme')).toStrictEqual(COULD_NOT);
+    });
+});
