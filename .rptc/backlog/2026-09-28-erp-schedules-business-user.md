@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: [AB-26z]
 value: med
-status: backlog
+status: built
 ---
 
 # A business user edits the integration's schedules
@@ -39,3 +39,7 @@ needs a redeploy or a Runtime API call. Neither is a business user's tool.
 
 The mock ERP decides "today" in UTC, so a dated price starts at UTC midnight whatever the
 schedule (AB-26z follow-up: a timezone on the ERP's company code).
+
+## Shipped so far
+
+- 2026-10-02  commerce-erp-integration 3c55ebf: heartbeat alarm erp-schedule-heartbeat every 5 min + six schedule settings at Default Config (store timezone; price publish on/off, hourly/daily/weekly, minute, time, weekday; defaults hourly at :05 UTC); app 0.12.0 upgraded in Commerce. Open: (1) owner checks the six settings render and save in the App Management form; (2) confirm the old erp-prices-hourly-timer is gone (the deploy logged a failed alarm DELETE from Adobe alarms service)
