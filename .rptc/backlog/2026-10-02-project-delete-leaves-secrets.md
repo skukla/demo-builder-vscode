@@ -44,3 +44,4 @@ delete paths: `deleteProjectFiles` (the projects grid, the dashboard, and the ag
 - **Removing one integration** leaves that integration's secret settings behind too.
 
 ## Shipped so far
+- 2026-10-01  fix(projects): deleting a project deletes its secrets from SecretStorage (`252484b7b`)
