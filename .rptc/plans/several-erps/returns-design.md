@@ -220,6 +220,19 @@ possible on the ERP side and for the integration's return records.
 | R-T4 | The credit memo event payload (design v1 test 8) | Staff-made credit memos reaching each ERP |
 | R-T5 | Does the storefront used in the demo offer a return request screen? | If not, staff enter the return in the Admin during the demo |
 
+### 6.1 Answers read live on Justrite, 2026-10-02 (reads only)
+
+| Test | Answer | How it was read |
+|---|---|---|
+| R-T1 | **Yes.** `observer.rma_save_after` and `observer.rma_save_commit_after` are in the store's supported events, beside `observer.sales_order_creditmemo_save_after`. So the "Send to ERPs" button fallback is not needed; the return's save event can start the split | `GET /V1/eventing/supportedList` (43 events) |
+| Returns REST | **Answers.** `GET /V1/returns` lists none yet; `GET /V1/returnsAttributeMetadata` answers the line fields (Resolution: Exchange 4, Refund 5, Store Credit 6). §1's [Ref] row is now read live, not only listed | those two GETs |
+| Returns switched on | **Off for the storefront, on for products.** `sales/magento_rma/enabled` has no value at default or on the `justrite` website (Commerce's default is No); `sales/magento_rma/enabled_on_product` is 1. Staff can enter a return in the Admin; a buyer cannot ask on the storefront until the setting is on. A setup-guide step (§5.2) | `GET /V1/system/config` with a `path` filter, both scopes; control: `catalog/price/scope` reads 1 the same way |
+| Credit memos | None on the store yet (`GET /V1/creditmemos` total 0), so R-T3 and R-T4 still need a first one | that GET |
+
+R-T2 to R-T7 write to the store and are run inside the slices that need them (R1 onward),
+under the owner's 2026-10-02 authorization to place, ship, invoice, credit and return orders
+on Justrite.
+
 ## 7. Open questions
 
 **For the client (to the tech case register):**
@@ -259,3 +272,4 @@ Sized like the B-slices. All come after B8.
 - 2026-09-28: r0 draft. Returns REST found in the Cloud Service reference (corrects design v1
   §3.4's "no REST endpoint found"); the RMA event is not verified.
 - 2026-09-28: r1 APPROVED by the owner: the integrated flow (ERP policy authorizes, the integration moves the return's status, carrier label on authorization, shipping refunded by rule, an ERP refusal denies its lines). Live tests R-T6, R-T7 added.
+- 2026-10-02: R-T1 answered live on Justrite (the return save event exists), returns REST read live, storefront returns found off (§6.1).
