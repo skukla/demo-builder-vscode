@@ -57,12 +57,18 @@ own document; the payment belongs on the ERP's screen).
 3. **Partial payments** (paying half an invoice). Recommended: allowed in the ERP (standard),
    reimbursed in Commerce for the amount paid.
 
-## Live tests before building
+## Live tests (answered on Justrite, 2026-10-02)
 
-| Test | Question |
+| Test | Answer |
 |---|---|
-| P-T1 | `increaseBalance` with `operationType` 4 on Justrite: accepted, and visible in Customers → Companies → the company's credit history as Reimbursed; then `decreaseBalance` 4 takes it back (the reset's undo) |
-| P-T2 | The credit history row's `options.order_increment` and comment: shown in Admin? |
+| P-T1 | **Yes.** `POST companyCredits/22/increaseBalance` `{value:1, currency:"USD", operationType:4, comment, options:{order_increment, purchase_order}}` answered true and raised Northgate's available credit by 1.00; `decreaseBalance` with `operationType` 4 took it back to the cent. That is the reset's undo |
+| P-T2 | **Yes, over REST.** `GET companyCredits/history` shows the row as type 4 (Reimbursed), amount 1, `purchase_order` as sent, and the comment with `system.order` = the order number. Today's credit memos already show there as type 5 (Refunded) against their orders, so the credit history reads as the order's whole money story. How the Admin grid renders it was not looked at |
+
+## Owner decisions (2026-10-02)
+
+Question 1: the next Reset ERPs starts clean. Question 2: build the on-account half first,
+a card method after research. Question 3 (partial payments) not answered; built as
+recommended (allowed).
 
 ## Slices
 
