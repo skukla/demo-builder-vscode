@@ -84,20 +84,19 @@
 
 /* The demo setup guide's step (SetupGuideModal): state, title, why, where, actions — each
    its own paragraph, with room between them, since the SC reads one step at a time. */
-/* The demo setup guide (SetupGuideModal): a thin progress line over a two-pane body — every
-   step down the left, the chosen one on the right.
+/* The demo setup guide (SetupGuideModal): a two-pane body — every step down the left, the
+   chosen one on the right. The step's buttons live in the dialog footer.
 
    Type: ONE body size everywhere (the dialog's own 14px) and the step title one size up.
    Labels are muted, not smaller. The first cut mixed 11px uppercase, 12px, 14px and a 16px
-   heading and the owner read the hierarchy as "really awful" (2026-10-01). */
-.setup-guide-progress {
-    margin-bottom: 20px;
-}
+   heading and the owner read the hierarchy as "really awful" (2026-10-01).
 
+   Spacing is generous on purpose: the SC reads a step, switches to the Admin and comes
+   back, and the tighter cut read as cramped (owner, 2026-10-01). */
 .setup-guide-layout {
     display: grid;
     grid-template-columns: 232px minmax(0, 1fr);
-    gap: 28px;
+    gap: 40px;
     align-items: start;
 }
 
@@ -106,10 +105,10 @@
 .setup-guide-rail {
     list-style: none;
     margin: 0;
-    padding: 0 16px 0 0;
+    padding: 0 24px 0 0;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
     border-right: 1px solid var(--spectrum-global-color-gray-300);
 }
 
@@ -117,18 +116,18 @@
    the accent bar the wizard's step strip uses; the only other mark is a check on a done step. */
 .setup-guide-rail-step {
     display: grid;
-    grid-template-columns: 14px minmax(0, 1fr);
-    align-items: baseline;
+    grid-template-columns: 16px minmax(0, 1fr);
+    align-items: center;
     column-gap: 8px;
     width: 100%;
-    padding: 7px 10px 7px 10px;
+    padding: 10px 12px;
     border: 0;
     border-left: 2px solid transparent;
     border-radius: 4px;
     background: transparent;
     color: var(--spectrum-global-color-gray-800);
     font: inherit;
-    line-height: 1.35;
+    line-height: 1.4;
     text-align: left;
     cursor: pointer;
 }
@@ -149,18 +148,33 @@
 }
 
 .setup-guide-rail-mark {
+    display: inline-flex;
+    justify-content: center;
     color: var(--spectrum-global-color-green-600);
-    text-align: center;
 }
 
 .setup-guide-rail-step--skipped .setup-guide-rail-mark {
     color: var(--spectrum-global-color-gray-500);
 }
 
+/* A check run: the step being checked shows Spectrum's small progress circle in its mark
+   slot, and a mark the run changes fades in, so the SC watches each step land rather than
+   the whole list jumping at the end (owner, 2026-10-01). The fade is on only once a run has
+   started, so opening the guide does not animate every existing check. Reduced motion
+   switches it off (reset.css). */
+.setup-guide-rail[data-animate] .setup-guide-rail-mark {
+    animation: setup-guide-mark-in var(--spectrum-global-animation-duration-300) ease-out;
+}
+
+@keyframes setup-guide-mark-in {
+    from { opacity: 0; transform: scale(0.6); }
+    to { opacity: 1; transform: scale(1); }
+}
+
 .setup-guide-step {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 28px;
     min-width: 0;
 }
 
@@ -169,10 +183,10 @@
 .setup-guide-facts {
     display: grid;
     grid-template-columns: max-content minmax(0, 1fr);
-    column-gap: 20px;
-    row-gap: 10px;
+    column-gap: 32px;
+    row-gap: 20px;
     margin: 0;
-    line-height: 1.45;
+    line-height: 1.6;
 }
 
 .setup-guide-facts dt {
@@ -188,12 +202,12 @@
     display: inline-flex;
     flex-wrap: wrap;
     align-items: baseline;
-    gap: 6px;
+    gap: 8px;
 }
 
 /* A path segment: a quiet pill at body size, so the path reads as the Admin's own menu. */
 .setup-guide-crumb {
-    padding: 1px 8px;
+    padding: 2px 10px;
     border-radius: 10px;
     background: var(--spectrum-global-color-gray-200);
     white-space: nowrap;
@@ -211,28 +225,21 @@
 .setup-guide-pills {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 12px;
 }
 
 .setup-guide-evidence {
     color: var(--spectrum-global-color-gray-700);
 }
 
-.setup-guide-why > summary {
-    cursor: pointer;
+/* The reason reads a step quieter than the instructions above it. */
+.setup-guide-why {
+    color: var(--spectrum-global-color-gray-700);
+}
+
+/* Skip (or Reopen) is the rare action, so it is a quiet link under the step rather than a
+   third footer button. */
+.setup-guide-skip-link {
     color: var(--spectrum-global-color-gray-600);
-}
-
-.setup-guide-why[open] > summary {
-    margin-bottom: 6px;
-}
-
-/* One row: two buttons and a quiet link, aligned on the centre line. */
-.setup-guide-actions {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 12px;
-    padding-top: 4px;
 }
 }

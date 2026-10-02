@@ -77,8 +77,15 @@ jest.mock('@adobe/react-spectrum', () => ({
             {children}
         </button>
     ),
-    Link: ({ children, onPress, isQuiet, ...props }: any) => (
-        <span role="link" tabIndex={0} data-quiet={isQuiet} onClick={onPress} {...props}>
+    Link: ({ children, onPress, isQuiet, UNSAFE_className, ...props }: any) => (
+        <span
+            role="link"
+            tabIndex={0}
+            data-quiet={isQuiet}
+            className={UNSAFE_className}
+            onClick={onPress}
+            {...props}
+        >
             {children}
         </span>
     ),

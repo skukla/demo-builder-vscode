@@ -24,6 +24,7 @@ import { Text } from '@adobe/react-spectrum';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import InfoOutline from '@spectrum-icons/workflow/InfoOutline';
 import React from 'react';
+import { cn } from '@/core/ui/utils/classNames';
 
 export interface InlineNoticeProps {
     /** Bold first line — name the condition, not the remedy. */
@@ -56,7 +57,11 @@ export function InlineNotice({
 }: InlineNoticeProps): React.ReactElement {
     const Icon = tone === 'info' ? InfoOutline : AlertCircle;
     return (
-        <div className={`inline-notice inline-notice--${tone}`} data-testid={testId}>
+        // The modifier spelled out, not built from `tone`: the bundle-stylesheet scan reads
+        // literal class names and counts a template as a blind spot in every bundle that
+        // renders this. Reading it showed `inline-notice--warning` was styled nowhere —
+        // warning is the base look — so only the info modifier exists (ADR-017 §6, 2026-10-01).
+        <div className={cn('inline-notice', tone === 'info' && 'inline-notice--info')} data-testid={testId}>
             <Icon size="S" UNSAFE_className="inline-notice-icon" />
             <div className="inline-notice-body">
                 <Text UNSAFE_className="inline-notice-title">{title}</Text>

@@ -5,9 +5,9 @@
  * Split from `SetupGuideModal.tsx` on 2026-10-01 when the redesign took the modal past the
  * component size limit. The modal owns which step is shown and the dialog chrome; this file
  * owns how a step is drawn — the list row, the breadcrumb path, the copyable values, the
- * folded reason and the actions. Considered and not used: the horizontal `StepRail` (seven
+ * reason and the quiet skip. Considered and not used: the horizontal `StepRail` (seven
  * titles do not fit a strip inside a dialog, and a checklist reads as a vertical list) and
- * `NumberedInstructions` (the three facts are a label column, not an ordered list).
+ * `NumberedInstructions` (the facts are a label column, not an ordered list).
  *
  * Three cuts came from the owner's readings of it on 2026-10-01. "Too busy": the step
  * counter, the icon well and five buttons went. Then "the left rail is pointless as it is /
@@ -15,12 +15,14 @@
  * and its labels got short enough to read whole, everything sits at one body size with the
  * title one size up, and the coloured dots went — a done step carries a check mark, an open
  * one nothing, a skipped one a muted dash. Nothing here names a state in words; the actions
- * do that.
+ * do that. A fourth reading, "not wild about the buttons", moved them into the dialog footer
+ * where every other modal keeps its actions, and the reason, one or two sentences on every
+ * step, stopped folding away.
  *
  * @module features/dashboard/ui/components/integrations/SetupGuideStep
  */
 
-import { Button, Heading, Link, Text } from '@adobe/react-spectrum';
+import { Heading, Link, ProgressCircle, Text } from '@adobe/react-spectrum';
 import React from 'react';
 import { CopyableText } from '@/core/ui/components/ui/CopyableText';
 import { cn } from '@/core/ui/utils/classNames';
@@ -33,13 +35,37 @@ interface StepListProps {
     items: SetupChecklistItem[];
     index: number;
     onSelect: (index: number) => void;
+    /** The step a check run is on: its mark is a spinner until the answer lands. */
+    checkingId?: string;
+    /** Fade a mark in as it changes; off until a check has run, so opening does not animate. */
+    animateMarks?: boolean;
+}
+
+/** A step's mark: a spinner while it is being checked, else its state's glyph. */
+function RailMark({ item, checking }: { item: SetupChecklistItem; checking: boolean }): React.ReactElement {
+    if (checking) {
+        return (
+            <span className="setup-guide-rail-mark">
+                {/* Spectrum's circle itself, as VerifiedField's in-row check uses it: the
+                    Spinner wrapper passes a class through, which the bundle scan cannot read. */}
+                <ProgressCircle size="S" isIndeterminate aria-label={`Checking ${item.label ?? item.title}`} />
+            </span>
+        );
+    }
+    // Keyed by state, so a mark that changes is a new element and its fade-in plays.
+    return (
+        <span key={item.state} className="setup-guide-rail-mark" aria-hidden="true">
+            {MARK[item.state]}
+        </span>
+    );
 }
 
 /** Every step down the left by its short label, done ones checked; the shown one highlighted. */
-export function StepList({ items, index, onSelect }: StepListProps): React.ReactElement {
+export function StepList({ items, index, onSelect, checkingId, animateMarks }: StepListProps): React.ReactElement {
     return (
         <ol
             className="setup-guide-rail"
+            data-animate={animateMarks || undefined}
             role="tablist"
             aria-orientation="vertical"
             aria-label="Setup steps"
@@ -50,6 +76,7 @@ export function StepList({ items, index, onSelect }: StepListProps): React.React
                         type="button"
                         role="tab"
                         aria-selected={i === index}
+                        aria-busy={item.id === checkingId || undefined}
                         className={cn(
                             'setup-guide-rail-step',
                             i === index && 'setup-guide-rail-step--active',
@@ -57,9 +84,7 @@ export function StepList({ items, index, onSelect }: StepListProps): React.React
                         )}
                         onClick={() => onSelect(i)}
                     >
-                        <span className="setup-guide-rail-mark" aria-hidden="true">
-                            {MARK[item.state]}
-                        </span>
+                        <RailMark item={item} checking={item.id === checkingId} />
                         <span className="setup-guide-rail-title">{item.label ?? item.title}</span>
                     </button>
                 </li>
@@ -91,57 +116,29 @@ export interface StepProps {
     item: SetupChecklistItem;
     busy: boolean;
     onSet: (state: 'done' | 'dismissed' | 'open') => void;
-    onCheck: () => void;
-    onOpenAdmin: () => void;
 }
 
 /**
- * The one button that settles a step: Demo Builder checks it when it can; otherwise the SC
- * says it is done. A skipped or finished step the SC cannot check has nothing to settle.
+ * The quiet way to skip a step, or to reopen one that is finished or skipped. It stays in
+ * the step rather than the footer: it is the rare action, and the footer takes only full
+ * buttons.
  */
-function settleAction({
-    item,
-    busy,
-    onSet,
-    onCheck,
-}: StepProps): { label: string; onPress: () => void } | undefined {
-    if (item.checkable && item.state !== 'dismissed') {
-        return { label: busy ? 'Checking' : 'Check now', onPress: onCheck };
-    }
-    if (item.state === 'open') {
-        return { label: 'Mark as done', onPress: () => onSet('done') };
-    }
-    return undefined;
-}
-
-/** One row of actions: open the Admin, settle the step, and a quiet way to skip or reopen. */
-function StepActions(props: StepProps): React.ReactElement {
-    const { item, busy, onSet, onOpenAdmin } = props;
-    const settle = settleAction(props);
+function SkipOrReopen({ item, busy, onSet }: StepProps): React.ReactElement {
+    const skip = item.state === 'open';
     return (
-        <div className="setup-guide-actions">
-            <Button variant="accent" onPress={onOpenAdmin}>
-                Open Commerce Admin
-            </Button>
-            {settle && (
-                <Button variant="secondary" isDisabled={busy} onPress={settle.onPress}>
-                    {settle.label}
-                </Button>
-            )}
-            {item.state === 'open' ? (
-                <Link isQuiet onPress={() => !busy && onSet('dismissed')}>
-                    Skip
-                </Link>
-            ) : (
-                <Link isQuiet onPress={() => !busy && onSet('open')}>
-                    Reopen
-                </Link>
-            )}
+        <div>
+            <Link
+                isQuiet
+                UNSAFE_className="setup-guide-skip-link"
+                onPress={() => !busy && onSet(skip ? 'dismissed' : 'open')}
+            >
+                {skip ? 'Skip this step' : 'Reopen'}
+            </Link>
         </div>
     );
 }
 
-/** Where / Enter / Then: three labelled lines that scan as one small table. */
+/** Where / Enter / Then / Why: labelled lines that scan as one small table. */
 function StepFacts({ item }: { item: SetupChecklistItem }): React.ReactElement {
     return (
         <dl className="setup-guide-facts">
@@ -165,11 +162,17 @@ function StepFacts({ item }: { item: SetupChecklistItem }): React.ReactElement {
                     <dd>{item.then}</dd>
                 </>
             )}
+            <dt>Why</dt>
+            <dd className="setup-guide-why">{item.why}</dd>
         </dl>
     );
 }
 
-/** One step: its title, where, what to enter, what then, the evidence, why, the actions. */
+/**
+ * One step: its title, where, what to enter, what then, why, the evidence, and the quiet
+ * skip. The buttons that act on it sit in the dialog's footer (SetupGuideModal), where
+ * every other modal keeps its actions.
+ */
 export function SetupGuideStep(props: StepProps): React.ReactElement {
     const { item } = props;
     return (
@@ -177,11 +180,7 @@ export function SetupGuideStep(props: StepProps): React.ReactElement {
             <Heading level={3}>{item.title}</Heading>
             <StepFacts item={item} />
             {item.note && <Text UNSAFE_className="setup-guide-evidence">{item.note}</Text>}
-            <details className="setup-guide-why">
-                <summary>Why this matters</summary>
-                <Text>{item.why}</Text>
-            </details>
-            <StepActions {...props} />
+            <SkipOrReopen {...props} />
         </div>
     );
 }
