@@ -4,7 +4,7 @@ kind: feature
 area: eds
 needs: []
 value: high
-status: backlog
+status: active
 ---
 
 # Category pages and the nav are generated from the Commerce category tree
@@ -176,3 +176,4 @@ before anyone can see it.
 ## Shipped so far
 
 - 2026-10-03  catalog-menu block built in a new local repo (demo-builder-block-library, no remote, uncommitted; 15 node tests); Demo Builder service that writes one page per category + the nav switch and undoes both, hand-edit guarded, tested with stubs (src/features/eds/services/catalogMenu/, 30 tests), not yet wired to a surface. block-libraries.json entry withheld: a missing source repo fails every library install it is selected with. Live B2B read not run (no extension answering the probe). Owner steps: .rptc/plans/category-pages/overview.md
+- 2026-10-03  feat(eds): category pages and the catalog-menu nav switch, as a service built to the cloud edge (EDS-24) (`5249890a4`)

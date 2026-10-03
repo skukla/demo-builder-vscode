@@ -4,7 +4,7 @@ kind: chore
 area: platform
 needs: []
 value: high
-status: backlog
+status: active
 layer: G
 ---
 # Files over the god-file threshold
@@ -324,3 +324,4 @@ section above, which is the same argument and was right the first time.
 - 2026-09-10  chore(backlog): log the account-chrome cut to EDS-8 (`9c3ac64a4`)
 - 2026-09-10  refactor(eds): account chrome out of daLiveContentCopy — 1081 to 981 (`b590a8993`)
 - 2026-10-03  Third cut of daLiveContentCopy (981 -> 386): daLiveFileCopy 256, daLiveBatchCopy 185, daLiveCopyPaths 149, daLiveContentReferences 147, daLiveSiteCopy 82. Fourth cut of helixService (834 -> 369): helixPageContent, helixPageDeletion, helixCodeOperations. Public API unchanged; every existing suite passed untouched (31,136 tests). Pins lowered: godFileCandidates 68 -> 66, godFileCoupled 31 -> 29, cloneCeiling 42 (was 43). Ledger rows moved with the code (mutation equivalents, user-facing errors); the ratchet's known-over CONTROL now names daLiveConfigService.ts. Not done: helixService still forwards every public method (retiring the facade means moving ~25 test files onto the units).
+- 2026-10-03  refactor: 41 suites use their family's mocks; the two largest EDS files split by job (PL-51, EDS-8) (`57923a158`)
