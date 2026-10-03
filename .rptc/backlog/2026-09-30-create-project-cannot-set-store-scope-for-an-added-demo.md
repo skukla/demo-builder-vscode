@@ -4,7 +4,7 @@ kind: feature
 area: ai
 needs: []
 value: med
-status: backlog
+status: built
 ---
 
 # Create project cannot set store scope for an added demo

@@ -227,7 +227,7 @@ each item's own file; what has already landed against an item is in its
 | `AI-8` | question | [Audit our context files against what the research actually says](2026-08-29-context-file-audit-against-evidence.md) | — | high | open |
 | `AI-9` | question | [Should an agent's project delete also clean up the cloud, as a person's does?](2026-09-19-agent-project-delete-leaves-cloud.md) | — | med | built |
 | `AI-10` | feature | [A demo-data authoring skill: an SC's agent builds and loads the demo data from a brief](2026-09-30-demo-data-authoring-skill-for-agents.md) | — | high | active |
-| `AI-11` | feature | [Create project cannot set store scope for an added demo](2026-09-30-create-project-cannot-set-store-scope-for-an-added-demo.md) | — | med | backlog |
+| `AI-11` | feature | [Create project cannot set store scope for an added demo](2026-09-30-create-project-cannot-set-store-scope-for-an-added-demo.md) | — | med | built |
 
 ### eds  (32)
 
@@ -262,7 +262,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-20` | fix | [Setup resumes when the install dialog detects AEM Code Sync, instead of demanding a Retry](2026-09-25-eds-setup-resumes-after-code-sync-install.md) | — | high | built |
 | `EDS-21` | feature | [A project tile that opens AEM Assets](2026-09-30-aem-assets-project-tile.md) | — | med | built |
 | `EDS-22` | feature | [Shared storefront: read access to the colleague's DA.live site is the missing piece](2026-09-30-shared-storefront-read-access-to-the-source-dalive-site.md) | — | high | active |
-| `EDS-23` | fix | [An inner code status 400 can mean "the App is not on this repository", and the check calls it installed](2026-09-30-eds-code-status-400-is-not-installed.md) | — | high | backlog |
+| `EDS-23` | fix | [An inner code status 400 can mean "the App is not on this repository", and the check calls it installed](2026-09-30-eds-code-status-400-is-not-installed.md) | — | high | built |
 | `EDS-24` | feature | [Category pages and the nav are generated from the Commerce category tree](2026-10-01-category-pages-and-nav-from-the-commerce-tree.md) | — | high | backlog |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | built |
 
@@ -291,7 +291,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-15` | fix | └ [Refuse an ERP integration that would collide with another project's](2026-09-17-erp-integration-conflicting-setups.md) | AB-23 | med | dropped |
 | `AB-16` | feature | └ [One integration, several ERPs](2026-09-17-erp-integration-several-erps.md) | AB-23 | med | built |
 | `AB-17` | question | └ [Should each system and integration get its own Adobe workspace?](2026-09-17-workspace-per-system.md) | — | high | shipped |
-| `AB-18` | fix | └ [A Commerce product profile the SC is not a developer on locks them out of their own project](2026-09-17-accs-subscription-makes-project-read-only.md) | — | high | backlog |
+| `AB-18` | fix | └ [A Commerce product profile the SC is not a developer on locks them out of their own project](2026-09-17-accs-subscription-makes-project-read-only.md) | — | high | built |
 | `AB-19` | feature | └ [Ask the ERP live whether it can ship this, and when](2026-09-18-live-availability-check.md) | — | med | shipped |
 | `AB-20` | feature | └ [Ask the ERP live whether the account has the credit, as the order is placed](2026-09-18-live-credit-check.md) | — | med | shipped |
 | `AB-23` | feature | └ [Every integration and system gets its own Adobe workspace](2026-09-20-workspace-per-integration.md) | — | high | built |

@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: high
-status: backlog
+status: built
 ---
 
 # An inner code status 400 can mean "the App is not on this repository", and the check calls it installed

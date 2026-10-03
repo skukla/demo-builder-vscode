@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-9
 needs: []
 value: high
-status: backlog
+status: built
 ---
 
 # A Commerce product profile the SC is not a developer on locks them out of their own project
