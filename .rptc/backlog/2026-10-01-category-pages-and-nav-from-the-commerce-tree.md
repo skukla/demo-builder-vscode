@@ -172,3 +172,7 @@ before anyone can see it.
   filterable.
 - Related: [[AI-10]] (the datapack/bulk loader should end with the storefront reaching what
   it loaded, not with the REST writes), [[EDS-22]].
+
+## Shipped so far
+
+- 2026-10-03  catalog-menu block built in a new local repo (demo-builder-block-library, no remote, uncommitted; 15 node tests); Demo Builder service that writes one page per category + the nav switch and undoes both, hand-edit guarded, tested with stubs (src/features/eds/services/catalogMenu/, 30 tests), not yet wired to a surface. block-libraries.json entry withheld: a missing source repo fails every library install it is selected with. Live B2B read not run (no extension answering the probe). Owner steps: .rptc/plans/category-pages/overview.md
