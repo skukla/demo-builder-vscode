@@ -4,7 +4,7 @@ kind: question
 area: ai
 needs: []
 value: high
-status: backlog
+status: open
 title: Audit every CLAUDE.md and the shipped AGENTS.md against the evidence — the answer may be "delete most of it"
 ---
 

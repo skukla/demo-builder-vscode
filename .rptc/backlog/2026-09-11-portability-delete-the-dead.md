@@ -3,9 +3,9 @@ id: PL-56b
 kind: chore
 area: platform
 parent: PL-56
-needs: []
+needs: [PL-56d]
 value: low
-status: backlog
+status: gated
 ---
 
 # Portability: delete what is already dead
@@ -25,3 +25,4 @@ first and alone; nothing waits on it, and nothing here is soft-deprecated afterw
 ## Shipped so far
 
 - 2026-10-03  Done 2026-10-03 in part: ImportResult deleted, installedBlockLibraries no longer exported or typed on SettingsFile (two emission tests replaced by one asserting absence); additionalConsoleApis STAYS — the compiler shows the v1 reader and the wizard's edit/import fallback still read it, and import-from-file still hands v1 files straight to the wizard (readProjectFile has no production caller yet).
+- 2026-10-03  Reconciled 2026-10-03 (second pass): 6817f5486 deleted ImportResult and installedBlockLibraries; additionalConsoleApis stays while the version-1 reader still reads it, so the rest waits on PL-56d.

@@ -5,7 +5,7 @@ area: ai
 parent: AI-1
 needs: AI-1c
 value: high
-status: backlog
+status: open
 layer: A
 ---
 # AI-surface coverage: do the MCP tools, skills and agents empower an agent to USE the extension?

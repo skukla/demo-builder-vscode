@@ -63,3 +63,4 @@ Not a hook or a scan: it is one code path, and the fix is the phase-3 classifica
 
 ## Shipped so far
 - 2026-10-01  2026-09-30 21:1xZ: after the owner added the repo to the AEM Code Sync installation, republish published config.json and scripts.js served 200 — and check_github_app STILL answered code.status 400. So the inner 400 is not 'initializing' either; it says nothing about whether code is syncing. The only honest classification for 400 is 'unknown — ask the code endpoint' (recommendation 1 stands).
+- 2026-10-03  Reconciled 2026-10-03 (second pass): the comment at githubAppService.ts (inner 200 and 400 'mean installed') is still wrong and will mislead until the fix lands.

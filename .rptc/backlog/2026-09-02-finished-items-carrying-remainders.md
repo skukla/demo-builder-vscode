@@ -63,3 +63,4 @@ trade a visible gap for an invisible one.
 
 - 2026-09-02  docs: every leftover in one place, and the reason one class of them was invisible (PL-39) (`687dcd4a9`)
 - 2026-10-03  Built, uncommitted on loop/2026-10-03-overnight: backlog.mjs leftovers (advisory, exit 0) names shipped or built items whose prose still names work and that have no child or superseded-by, skipping remainders told as history; self-tested in dogfood.sh with a positive and a negative control; run by rptc-hygiene-scan as section 7. First real run: 44 of 163 finished items.
+- 2026-10-03  Reconciled 2026-10-03 (second pass): the 'uncommitted / staged' wording above is stale: the work is committed (6817f5486, f0b4705e3, b7bc129d2, 844afae69) and on feature/erp-integration.

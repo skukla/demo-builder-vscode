@@ -5,7 +5,7 @@ area: ai
 parent: AI-1
 needs: []
 value: med
-status: open
+status: shipped
 layer: B
 ---
 
@@ -109,3 +109,4 @@ scan in context via `npm run sweep`.
 
 - 2026-08-29  docs(backlog): AI-1r — is the 34% agent-surface gap real? (`c55a8d44b`)
 - 2026-10-03  Answered, uncommitted on loop/2026-10-03-overnight: all 48 uncovered handlers read (172 on this tree); 2 are dispatched by a tool, 23 are reachable under another name, 17 are not for an agent, 6 are real gaps (3 percent): importFromFile, resetProject (headless), check-credential-service, clear-dalive-auth, github-change-account, getErpOwnershipOptions. The scan now reads triage.json (a reason per row, stale rows fail it) and reports untriaged handlers separately. Correction to this item: republishContent is sync_content, not republish.
+- 2026-10-03  Reconciled 2026-10-03 (second pass): answered: six real gaps, not 48 (b7bc129d2, triage.json with a reason per row); 59a915952 closed two of the six (headless reset, create from file).

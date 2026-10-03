@@ -4,7 +4,7 @@ kind: feature
 area: ai
 needs: []
 value: high
-status: backlog
+status: active
 ---
 
 # A demo-data authoring skill: an SC's agent builds and loads the demo data from a brief

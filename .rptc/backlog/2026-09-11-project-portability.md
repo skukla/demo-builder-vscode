@@ -5,7 +5,7 @@ area: platform
 parent: EDS-13
 needs: []
 value: high
-status: planned
+status: active
 ---
 
 # Project portability: export, import and copy carry the whole project

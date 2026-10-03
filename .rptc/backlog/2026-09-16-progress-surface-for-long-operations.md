@@ -128,3 +128,4 @@ because it holds the credential-APIs fix that develop does not have.
 - 2026-09-20  fix(ui): Retry on a failed add re-runs the ADD (`c042b6520`)
 - 2026-09-20  feat(auth): retry a transient Developer Console failure once (`69abb06ab`)
 - 2026-09-23  docs(backlog): the wording rule for merging develop into the ERP branch (`65a804404`)
+- 2026-10-03  Reconciled 2026-10-03 (second pass): the 'Open: the shape' section is answered: the progress modal is built and phase 1 shipped in beta.148.

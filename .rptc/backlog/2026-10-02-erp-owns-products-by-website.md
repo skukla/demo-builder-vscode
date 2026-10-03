@@ -40,3 +40,4 @@ this with attribute ownership.
 ## Shipped so far
 
 - 2026-10-03  feat(erp): "Add another ERP" asks which products it owns, with counts and a default (AB-64) (`5345df62f`)
+- 2026-10-03  Reconciled 2026-10-03 (second pass): the body's 'Open for the owner: confirm rule 2' is answered and built: an order goes to the ERP owning its website, and a product rule beats a website rule (integration 61d5dd1, Demo Builder 5345df62f).

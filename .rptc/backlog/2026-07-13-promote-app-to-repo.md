@@ -101,3 +101,7 @@ the dashboard action first; add the MCP tool later (see the `mcp-tool-authoring`
 > and pushes the app's local dir (fresh history, `.env`/secrets excluded), recording the repo on the
 > component. Decide public-vs-private first. Reuse GitHubRepoOperations / GitHubTokenService / the
 > deploy-action pattern. TDD.
+
+## Shipped so far
+
+- 2026-10-03  Reconciled 2026-10-03 (second pass): createEmptyRepository already exists (src/features/eds/services/github/githubRepoOperations.ts); the item's 'add a create-empty-repo method' step is done.

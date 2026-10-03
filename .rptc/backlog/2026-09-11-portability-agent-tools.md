@@ -5,7 +5,7 @@ area: platform
 parent: PL-56
 needs: [PL-56d]
 value: med
-status: backlog
+status: active
 ---
 
 # Agent tools for import and copy
@@ -17,3 +17,7 @@ import action and a copy action, headless (no dialog on the happy path), the thr
 declarations, `.strict()` schemas from the handler payload types, registered in
 `realSdkRegistration.test.ts`, `docs/systems/mcp-server.md` updated. The export tool loses
 its `includeSecrets` flag with [[PL-56c]].
+
+## Shipped so far
+
+- 2026-10-03  Reconciled 2026-10-03 (second pass): the import half landed as create_project_from_file in 59a915952 (logged on PL-56d at the time); no copy tool yet.
