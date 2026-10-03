@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: [AB-26g]
 value: med
-status: active
+status: built
 ---
 
 # Credit memo and Repeat order — the way back from invoiced and cancelled
@@ -27,3 +27,4 @@ Harness journey credit → Commerce credit memo recorded → statuses; refusal t
 - 2026-10-02  demo-erp 59d7200: POST orders/:n/credit-memo credits a whole invoice (O5 full credit only), creditmemo.created event; Repeat order not built
 - 2026-10-02  Live: ERP whole-invoice credit memo on order 5000000003 became a Commerce credit memo of only the Accuform line. Repeat order not built
 - 2026-10-02  Stale waiting-on removed 2026-10-02: the freeze it named was lifted 2026-09-28 (AB-26r log); several ERPs are live on Justrite
+- 2026-10-03  Repeat order built 2026-10-03: a canceled order gets 'Repeat order', a new ERP sales order with the same lines, customer and prices, linked both ways; it stays in the ERP (the web shop never had it, so the integration publishes nothing for it); once per order (demo-erp c7c0837, integration 812cf10; on main). Owner decisions taken as recommended: ERP only, prices copied, once.

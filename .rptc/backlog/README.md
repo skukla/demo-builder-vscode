@@ -266,7 +266,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-24` | feature | [Category pages and the nav are generated from the Commerce category tree](2026-10-01-category-pages-and-nav-from-the-commerce-tree.md) | — | high | backlog |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | built |
 
-### app-builder  (110)
+### app-builder  (111)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -338,14 +338,14 @@ each item's own file; what has already landed against an item is in its
 | `AB-26o` | feature | └ [Screen redesign 2 — lists](2026-09-24-erp-ui-lists.md) | AB-26k | med | shipped |
 | `AB-26p` | feature | └ [Screen redesign 3 — documents](2026-09-24-erp-ui-documents.md) | AB-26j, AB-26k | med | shipped |
 | `AB-26q` | feature | └ [Screen redesign 4 — settings and journal](2026-09-24-erp-ui-settings-journal.md) | AB-26j | med | shipped |
-| `AB-26r` | feature | └ [Credit memo and Repeat order — the way back from invoiced and cancelled](2026-09-24-erp-credit-memo.md) | AB-26g | med | active |
+| `AB-26r` | feature | └ [Credit memo and Repeat order — the way back from invoiced and cancelled](2026-09-24-erp-credit-memo.md) | AB-26g | med | built |
 | `AB-26s` | feature | └ [Order to cash — the payment leg (incoming payment, open items, company balance)](2026-09-24-erp-payment-leg.md) | AB-26b, AB-26r | med | built |
 | `AB-26t` | feature | └ [The routing integration — one Commerce order split across ERP pairs](2026-09-24-erp-routing-integration.md) | AB-16, AB-26j | high | superseded |
 | `AB-26u` | feature | └ [The walk-through — what to look at in the ERP, what to look at in Commerce, and how each relates](2026-09-24-erp-walkthrough.md) | AB-26e, AB-26m, AB-26l | high | shipped |
 | `AB-26v` | feature | └ [Reconciling partial invoices against one Commerce order — a customization opportunity](2026-09-24-erp-partial-invoice-reconciliation.md) | — | med | shipped |
 | `AB-26w` | feature | └ [Business-user settings for the ERP pair — which behaviours a merchant chooses, and where](2026-09-25-erp-business-user-settings.md) | _a Commerce store that sends mail, or an Adobe source saying what the notify flag does_ | high | gated |
 | `AB-26x` | feature | └ [Manual Commerce steps the pair depends on — are they required, and how does the SC learn?](2026-09-25-erp-manual-commerce-steps.md) | — | high | built |
-| `AB-26y` | feature | └ [The mock ERP knows nothing about Commerce: filling at reset, running as if the ERP were the source](2026-09-25-erp-standard-features.md) | — | high | active |
+| `AB-26y` | feature | └ [The mock ERP knows nothing about Commerce: filling at reset, running as if the ERP were the source](2026-09-25-erp-standard-features.md) | — | high | built |
 | `AB-26z` | feature | └ [ERP contract prices live in each company's shared catalog, not in a cart webhook](2026-09-26-erp-contract-prices-in-shared-catalogs.md) | — | high | built |
 | `AB-35` | fix | └ [The Commerce stock handler fails on a stock event with no product_id](2026-09-26-stock-event-without-product-id.md) | — | med | shipped |
 | `AB-36` | fix | └ [The integration's Admin page lists no websites to set things for](2026-09-26-erp-admin-website-scope.md) | — | high | shipped |
@@ -372,6 +372,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-63` | fix | └ [The ERP's on-hand stock does not drop when it posts a shipment](2026-10-02-erp-stock-does-not-drop-at-goods-issue.md) | — | med | built |
 | `AB-64` | feature | └ [An ERP can own the products sold on named websites](2026-10-02-erp-owns-products-by-website.md) | — | med | built |
 | `AB-65` | fix | └ [A stray dot after the first editable number in the ERP's Number Series table](2026-10-03-erp-number-series-stray-dot.md) | — | low | built |
+| `AB-66` | fix | └ [A checkout invoice's event arriving late could tell an ERP to invoice an order it has not confirmed](2026-10-03-checkout-invoice-event-race.md) | — | med | backlog |
 | `AB-29` | feature | [Commerce test data cleanup tools](2026-09-24-commerce-test-data-cleanup-tools.md) | — | med | built |
 | `AB-30` | feature | [The ERP integration's Commerce Admin page uses the Commerce back-office design system](2026-09-24-erp-admin-page-commerce-design-system.md) | — | med | built |
 | `AB-33` | fix | [Removing an integration reports Runtime packages left behind in a workspace it then deletes](2026-09-26-remove-integration-leaves-runtime-packages.md) | — | med | built |
@@ -620,7 +621,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — built
 
-*220 item(s) sit outside the A–G chain.*
+*221 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 
