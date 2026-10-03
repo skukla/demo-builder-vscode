@@ -7,8 +7,10 @@
  *
  * Guards → progress → the fill, the shape `resetErpRecords` has. Adding records never
  * removes any: a record already in the ERP is updated in place. Each fill ends with the
- * ERP's prices published into the companies' shared catalogs (AB-26z); prices that were not
- * are the answer's `warning`, and the fill still stands.
+ * integration's unset website mappings filled from the ERP's own sales organizations (the
+ * answer's `mapping`, AB-26y) and the ERP's prices published into the companies' shared
+ * catalogs (AB-26z); a mapping not saved or prices not published are the answer's `warning`,
+ * and the fill still stands.
  *
  * @module features/dashboard/handlers/erpFillHandler
  */
@@ -18,6 +20,7 @@ import { openErpCall, shapeErpRow, type ErpCallPayload } from './erpCall';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
+import { mergeMappings, type ErpMappingReport } from '@/features/app-builder/services/erpFillMapping';
 import {
     fillErpForProject,
     fillNotes,
@@ -30,6 +33,8 @@ type FillOutcome = GuardableResult & {
     /** Prices a fill could not publish: the progress window's last word (AB-26z). */
     warning?: string;
     loaded?: Array<{ erp: string; name: string; result: ErpFillForProjectResult; note?: string }>;
+    /** The website mappings the fills filled and kept (AB-26y); absent when none ran the step. */
+    mapping?: ErpMappingReport;
 };
 
 /**
@@ -73,6 +78,7 @@ export const handleLoadErpDemoData: MessageHandler<ErpCallPayload & { progress?:
                     );
                     if (refused) return refused;
                     const loaded: NonNullable<FillOutcome['loaded']> = [];
+                    const mappings: Array<ErpMappingReport | undefined> = [];
                     for (const erp of erps) {
                         const name = erp.name ?? erp.id;
                         const onProgress = (step: string) =>
@@ -98,22 +104,31 @@ export const handleLoadErpDemoData: MessageHandler<ErpCallPayload & { progress?:
                             result: filled.result,
                             ...(filled.note ? { note: filled.note } : {}),
                         });
+                        mappings.push(filled.mapping);
                     }
-                    // Prices not published after a fill that stood: said, never a failure (AB-26z).
+                    // A mapping not saved, prices not published, after a fill that stood: said,
+                    // never a failure (AB-26y, AB-26z).
                     const warning = fillNotes(loaded);
-                    return { success: true, loaded, ...(warning ? { warning } : {}) };
+                    const mapping = mergeMappings(mappings);
+                    return {
+                        success: true,
+                        loaded,
+                        ...(mapping ? { mapping } : {}),
+                        ...(warning ? { warning } : {}),
+                    };
                 },
             );
             if (outcome.blocked || !outcome.success)
                 return { success: false, error: outcome.error };
             const loaded = outcome.loaded ?? [];
-            const { warning } = outcome;
+            const { warning, mapping } = outcome;
             return {
                 success: true,
                 data: {
                     id: call.id,
                     erp: shapeErpRow(erps[0]),
                     loaded: loadedAnswer(loaded),
+                    ...(mapping ? { mapping } : {}),
                     ...(warning ? { warning } : {}),
                 },
             };

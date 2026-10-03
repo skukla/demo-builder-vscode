@@ -20,6 +20,7 @@ import { errorText, openErpCall, shapeErpRow, type ErpCall, type ErpCallPayload 
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
+import { mergeMappings, type ErpMappingReport } from '@/features/app-builder/services/erpFillMapping';
 import {
     ErpIntegrationClient,
     callErpApi,
@@ -35,11 +36,13 @@ import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/ha
 
 /**
  * What a reset did: the integration's Commerce writes undone, then each ERP wiped and filled
- * again, its prices published. `warning`: prices a fill could not publish (AB-26z).
+ * again, its prices published. `mapping`: the website mappings the fills filled and kept
+ * (AB-26y). `warning`: a mapping a fill could not save, prices it could not publish (AB-26z).
  */
 interface ErpResetReport {
     undone: ErpDetachReport;
     erps: Array<{ id: string; name: string; wiped: unknown; loaded: ErpFillForProjectResult }>;
+    mapping?: ErpMappingReport;
     warning?: string;
 }
 
@@ -67,6 +70,7 @@ async function resetErp(
     const authManager = context.authManager;
     const erps: ErpResetReport['erps'] = [];
     const notes: Array<{ name: string; note?: string }> = [];
+    const mappings: Array<ErpMappingReport | undefined> = [];
     for (const erp of call.erps) {
         const name = erp.name ?? erp.id;
         report(stage, `Wiping ${name}`);
@@ -93,9 +97,11 @@ async function resetErp(
             loaded: filled.result,
         });
         notes.push({ name, note: filled.note });
+        mappings.push(filled.mapping);
     }
     const warning = fillNotes(notes);
-    return warning ? { undone, erps, warning } : { undone, erps };
+    const mapping = mergeMappings(mappings);
+    return { undone, erps, ...(mapping ? { mapping } : {}), ...(warning ? { warning } : {}) };
 }
 
 /**
@@ -188,6 +194,7 @@ export const handleResetErpRecords: MessageHandler<ErpCallPayload & { progress?:
             }
             // Prices a fill could not publish: said beside the report, never a failed reset (AB-26z).
             const warning = result.report?.warning;
+            const mapping = result.report?.mapping;
             const report = result.report && {
                 undone: result.report.undone,
                 erps: result.report.erps,
@@ -198,6 +205,7 @@ export const handleResetErpRecords: MessageHandler<ErpCallPayload & { progress?:
                     id: call.id,
                     erp: shapeErpRow(call.erp),
                     report,
+                    ...(mapping ? { mapping } : {}),
                     ...(warning ? { warning } : {}),
                 },
             };

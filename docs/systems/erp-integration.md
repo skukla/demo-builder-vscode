@@ -261,7 +261,18 @@ the integration for its resolved settings per website (`GET erp/settings?website
 sends the records to the ERP's `POST admin/import` in batches of 25 products
 (`erpFill.ts`, wired for a project by `erpFillForProject.ts`). It runs in three places, all
 the same call: after the add, inside **Reset records** (undo the ERP's writes in Commerce,
-then the ERP's `admin/wipe`, then the fill), and as `load_erp_demo_data`. Every fill ends by
+then the ERP's `admin/wipe`, then the fill), and as `load_erp_demo_data`. After the records
+are in, the fill pre-fills the integration's mapping (AB-26y, `erpFillMapping.ts`, wired by
+`erpMappingAfterFill.ts`): it reads the ERP's own sales organizations (`GET settings/setup`
+on the ERP, each naming the website it serves) and saves each website's sales organization
+and its name onto that ERP's entry in the integration's list (`PATCH erp/erps` with
+`website`), **only where none is set** for that ERP, at the website or on the entry itself.
+A value set on the Admin page is never replaced. The answer's `mapping` block says what
+happened: `filled` and `kept` (rows of `{ erp, website, salesOrg }`; a kept row adds
+`erpSalesOrg` when the ERP names a different one), `skipped` (the ERP names a website
+Commerce does not have) and `failed` (a save the integration refused, also said in
+`warning`; the fill still stands). An integration deployed before `erp/erps` is skipped
+with a progress step and no block. Every fill then ends by
 asking the integration to publish that ERP's prices into the companies' shared catalogs
 (`POST erp/prices` with the ERP's list id); the answer carries the counts (`prices`:
 written, removed, unchanged, skipped). A publish that fails does not fail the fill: the

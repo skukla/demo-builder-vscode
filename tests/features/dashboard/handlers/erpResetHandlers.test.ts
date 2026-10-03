@@ -259,6 +259,33 @@ describe('handleResetErpRecords', () => {
         });
     });
 
+    it("answers the website mappings each fill filled and kept, as one block (AB-26y)", async () => {
+        const { mockContext } = setupMocks(pairProject());
+        allowDeveloperRole();
+        mockFillErpForProject.mockResolvedValue({
+            status: 'filled',
+            erpId: 'demo-erp',
+            result: { partners: 3, products: 40, skipped: 0 },
+            mapping: {
+                filled: [{ erp: 'demo-erp', website: 'base', salesOrg: '1000' }],
+                kept: [{ erp: 'demo-erp', website: 'eu', salesOrg: '3000', erpSalesOrg: '2000' }],
+            },
+        });
+
+        const result = await handleResetErpRecords(mockContext, { id: 'erp-integration' });
+
+        expect(result).toMatchObject({
+            success: true,
+            data: {
+                mapping: {
+                    filled: [{ erp: 'demo-erp', website: 'base', salesOrg: '1000' }],
+                    kept: [{ erp: 'demo-erp', website: 'eu', salesOrg: '3000', erpSalesOrg: '2000' }],
+                },
+            },
+        });
+        expect(result.data).not.toHaveProperty('warning');
+    });
+
     it('needs an id, even with no payload at all', async () => {
         const { mockContext } = setupMocks(pairProject());
         const result = await handleResetErpRecords(mockContext, undefined);

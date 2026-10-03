@@ -527,7 +527,11 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             'products, B2B companies (with credit limits) and websites into each as they stand, sorted ' +
             "by the integration's settings (each website's sales organisation, which products this ERP " +
             'owns). Adds and updates; removes nothing, but a value changed by hand in the ERP is set ' +
-            "back to Commerce's. Then publishes each filled ERP's customer prices into the companies' " +
+            "back to Commerce's. Then fills the integration's mapping from each ERP's own sales " +
+            'organizations: a website with no sales organization set for that ERP gets the one the ' +
+            'ERP names for it; one already set is never replaced (data.mapping: filled, kept, each ' +
+            "row { erp, website, salesOrg }). Then publishes each filled ERP's customer prices into " +
+            "the companies' " +
             'shared catalogs (data.loaded.prices counts them; data.warning says when they were not ' +
             'published, and the load still stands). Use on a fresh or empty ERP. Confirm with the user ' +
             "first. Takes the integration id, and `erp` (an ERP's component id) to fill only that one; " +
@@ -561,7 +565,8 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             'existing ERP still owning everything is given a rule too (the websites left over, else ' +
             'its attribute), saved with the new one; it is NOT refilled, and data.warning says its ' +
             'products change at its next reset or Load demo data. The answer says the rule applied ' +
-            '(data.owns, data.existingOwns, each with the rule in words). Ask the user which rule ' +
+            '(data.owns, data.existingOwns, each with the rule in words) and which website mappings ' +
+            'its fill filled and kept (data.mapping). Ask the user which rule ' +
             'before running it. The ERP integration is added once; add_integration refuses a ' +
             'second. Remove one ERP with remove_integration on its id. Takes a few minutes. ' +
             'Requires confirm:true.',
@@ -595,7 +600,8 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             'integration forgets them all), undo the credit limits and company blocks the ERPs wrote into ' +
             'Commerce, wipe every ERP record, then fill each again from the Commerce products, companies ' +
             "and customers as they stand, and publish each ERP's customer prices into the companies' " +
-            'shared catalogs (data.warning says when they were not). A cancelled order cannot be ' +
+            'shared catalogs (data.warning says when they were not). data.mapping says which website ' +
+            'mappings each fill filled from the ERP and which it kept. A cancelled order cannot be ' +
             'reopened. Always every ERP: a split order spans ERPs. Confirm with the user first. Takes the ' +
             'integration id.',
         map: dashboardHandlers,

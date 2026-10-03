@@ -13,6 +13,7 @@
  * @module features/project-creation/services/erpFillForProject
  */
 
+import { mapAfterFill } from './erpMappingAfterFill';
 import {
     requestRest,
     resolveRestTargetFor,
@@ -26,6 +27,7 @@ import {
     type ErpFillDeps,
     type ErpFillResult,
 } from '@/features/app-builder/services/erpFill';
+import { clause, type ErpMappingReport } from '@/features/app-builder/services/erpFillMapping';
 import type { CommercePost } from '@/features/app-builder/services/erpFillPricing';
 import {
     CommerceReadError,
@@ -63,10 +65,16 @@ export type ErpFillForProjectResult = ErpFillResult & { prices?: ErpPricesPublis
 
 export type ErpFillOutcome =
     /**
-     * `erpId`: the filled ERP's component id. `note`: what did not go right after the fill,
-     * in the SC's words (prices not published); the fill itself stands.
+     * `erpId`: the filled ERP's component id. `note`: what did not go right after the fill (mapping
+     * not saved, prices not published); it stands. `mapping`: absent when the step was skipped.
      */
-    | { status: 'filled'; result: ErpFillForProjectResult; erpId: string; note?: string }
+    | {
+          status: 'filled';
+          result: ErpFillForProjectResult;
+          erpId: string;
+          note?: string;
+          mapping?: ErpMappingReport;
+      }
     | { status: 'failed'; detail: string };
 
 /** One Commerce REST call over the project's signed client; parsed body, or CommerceReadError. */
@@ -162,11 +170,6 @@ function fillTarget(
     return { componentId, listId: listIdOf(project, entry) };
 }
 
-/** A reason without its closing full stop, so it can sit inside a sentence. */
-function clause(text: string): string {
-    return text.replace(/[.!?\s]+$/u, '');
-}
-
 /** The note for prices that did not get published after a fill that did. */
 function pricesNote(reason: string): string {
     return `Demo data loaded; ${reason}. Load demo data again to retry.`;
@@ -246,8 +249,8 @@ async function publishedOrNote(
  * The key map the integration keeps covers every ERP it serves, and a PUT replaces it whole,
  * so this ERP's pairs are merged into the map the integration holds (`mergeKeyMap`).
  *
- * Then the ERP's prices are published (`publishPricesAfterFill`); one that fails is the
- * outcome's `note`, and the fill still stands.
+ * Then the unset website mappings are filled (`mapAfterFill`, AB-26y) and the ERP's prices
+ * published (`publishPricesAfterFill`); either failing is the `note`, and the fill stands.
  *
  * @param project - the project the integration is in
  * @param integrationId - the integration whose ERP is filled
@@ -298,16 +301,22 @@ export async function fillErpForProject(
     } catch (error) {
         return { status: 'failed', detail: error instanceof Error ? error.message : String(error) };
     }
-    const { prices, note } = await publishPricesAfterFill(
-        integrationClient,
-        target.listId,
-        deps.onProgress,
-    );
-    const filled: ErpFillForProjectResult = prices ? { ...result, prices } : result;
+    // Before the prices: the integration publishes a price to the websites its mapping names.
+    const mapped = await mapAfterFill({
+        erp: { ...target, deployedUrls: erp.deployedUrls },
+        client: integrationClient,
+        get: fillDeps.get,
+        auth,
+        fetchImpl,
+        onProgress: deps.onProgress,
+    });
+    const priced = await publishPricesAfterFill(integrationClient, target.listId, deps.onProgress);
+    const note = [mapped.note, priced.note].filter(Boolean).join(' ');
     return {
         status: 'filled',
-        result: filled,
+        result: priced.prices ? { ...result, prices: priced.prices } : result,
         erpId: target.componentId,
+        ...(mapped.mapping ? { mapping: mapped.mapping } : {}),
         ...(note ? { note } : {}),
     };
 }

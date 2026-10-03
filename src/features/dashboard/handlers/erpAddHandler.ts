@@ -38,6 +38,7 @@ import { addAppBuilderComponent } from '@/features/app-builder/services/appBuild
 import type { AppManagementAuth } from '@/features/app-builder/services/appManagementClient';
 import { catalogEntryFor } from '@/features/app-builder/services/componentEntry';
 import { erpCredentialReader } from '@/features/app-builder/services/erpCredential';
+import type { ErpMappingReport } from '@/features/app-builder/services/erpFillMapping';
 import { ErpIntegrationClient } from '@/features/app-builder/services/erpIntegrationClient';
 import { erpListIdOf, erpNameProblem, nextListedSystemId } from '@/features/app-builder/services/erpList';
 import {
@@ -98,6 +99,8 @@ type AddOutcome = GuardableResult & {
     filled?: boolean;
     /** What the add could not do though it stood: the answer's warning, and the progress window's. */
     warning?: string;
+    /** The website mappings the new ERP's fill filled and kept (AB-26y). */
+    mapping?: ErpMappingReport;
     owns?: OwnsSaid;
     existingOwns?: OwnsSaid[];
 };
@@ -310,7 +313,8 @@ async function listAndFill(
     if (filled.status === 'filled' && filled.note) notes.push(filled.note);
     if (filled.status !== 'filled') notes.push(`Demo data did not load: ${sentence(filled.detail)} Use Load demo data on its card.`);
     const warning = notes.length ? { warning: notes.join(' ') } : {};
-    return { success: true, listed: listed.ids, filled: filled.status === 'filled', owns, existingOwns, ...warning };
+    const mapping = filled.status === 'filled' && filled.mapping ? { mapping: filled.mapping } : {};
+    return { success: true, listed: listed.ids, filled: filled.status === 'filled', owns, existingOwns, ...mapping, ...warning };
 }
 
 /** A reason as a sentence: ending in a full stop, whether or not it came with one. */
@@ -371,6 +375,7 @@ export const handleAddErp: MessageHandler<AddErpRequestPayload> = narrateOutcome
                 erpList: outcome.listed,
                 owns: outcome.owns,
                 existingOwns: outcome.existingOwns,
+                ...(outcome.mapping ? { mapping: outcome.mapping } : {}),
                 ...(outcome.warning ? { warning: outcome.warning } : {}),
             },
         };

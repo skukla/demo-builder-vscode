@@ -27,8 +27,16 @@ jest.mock('@/features/app-builder/services/erpIntegrationClient', () => ({
         replaceKeyMap = (entries: unknown) => mockReplaceKeyMap(entries);
         publishesPrices = () => mockPublishesPrices();
         publishPrices = (erpId?: string) => mockPublishPrices(erpId);
+        keepsErpList = () => mockKeepsErpList();
+        listErps = () => mockListErps();
+        updateErpSettings = (id: string, website: string | undefined, values: unknown) =>
+            mockUpdateErpSettings(id, website, values);
     },
 }));
+// Unset (a deployment before `erp/erps`), the mapping step is skipped: the suites above run as before.
+const mockKeepsErpList = jest.fn();
+const mockListErps = jest.fn();
+const mockUpdateErpSettings = jest.fn();
 const mockReadKeyMap = jest.fn();
 const mockReplaceKeyMap = jest.fn();
 const mockPublishesPrices = jest.fn();
@@ -507,5 +515,161 @@ describe('handleLoadErpDemoData — several ERPs', () => {
 
         expect(result).toMatchObject({ success: false, code: ErrorCode.CONFIG_INVALID });
         expect(mockFillErp).not.toHaveBeenCalled();
+    });
+});
+
+/**
+ * The mapping (AB-26y): once an ERP is filled, each website the ERP's own sales
+ * organizations name gets that sales organization on the ERP's entry in the integration's
+ * list, where none is set, before the prices are published.
+ */
+describe('handleLoadErpDemoData — mapping', () => {
+    const SETUP = {
+        salesOrganizations: [
+            { code: '1000', name: 'Online US', currency: 'USD', websiteCode: 'bodea' },
+        ],
+    };
+
+    beforeEach(() => {
+        mockKeepsErpList.mockReturnValue(true);
+        mockCallErpApi.mockResolvedValue({ ok: true, status: 200, body: SETUP, detail: '' });
+        mockRequestRest.mockResolvedValue({
+            ok: true,
+            status: 200,
+            text: '[{"id":1,"code":"bodea","name":"Bodea"}]',
+        });
+        mockListErps.mockResolvedValue([{ id: 'northwind', name: 'Northwind ERP' }]);
+        mockUpdateErpSettings.mockResolvedValue({ entry: {} });
+    });
+
+    it("fills the unset website from the ERP's own sales organizations and answers what it did", async () => {
+        const { mockContext } = setup();
+
+        const result = await handleLoadErpDemoData(mockContext, { id: 'erp-integration' });
+
+        expect(mockCallErpApi).toHaveBeenCalledWith(
+            ERP_URLS,
+            AUTH,
+            'GET',
+            'settings/setup',
+            undefined,
+            expect.any(Function),
+        );
+        expect(mockUpdateErpSettings.mock.calls).toStrictEqual([
+            [
+                'northwind',
+                'bodea',
+                { structure_sales_org: '1000', structure_sales_org_name: 'Online US' },
+            ],
+        ]);
+        expect(result).toMatchObject({
+            success: true,
+            data: {
+                loaded: { partners: 4, products: 182 },
+                mapping: {
+                    filled: [{ erp: 'demo-erp', website: 'bodea', salesOrg: '1000' }],
+                    kept: [],
+                },
+            },
+        });
+        expect(result.data).not.toHaveProperty('warning');
+        expect(result.data).not.toHaveProperty('loaded.mapping');
+    });
+
+    it('saves the mapping before the prices are published', async () => {
+        const { mockContext } = setup();
+
+        await handleLoadErpDemoData(mockContext, { id: 'erp-integration' });
+
+        expect(mockUpdateErpSettings.mock.invocationCallOrder[0]).toBeLessThan(
+            mockPublishPrices.mock.invocationCallOrder[0],
+        );
+    });
+
+    it('leaves a website someone already mapped, and reports it kept', async () => {
+        mockListErps.mockResolvedValue([
+            { id: 'northwind', settings: { websites: { bodea: { structure_sales_org: '3000' } } } },
+        ]);
+        const { mockContext } = setup();
+
+        const result = await handleLoadErpDemoData(mockContext, { id: 'erp-integration' });
+
+        expect(mockUpdateErpSettings).not.toHaveBeenCalled();
+        expect(result.data).toMatchObject({
+            mapping: {
+                filled: [],
+                kept: [{ erp: 'demo-erp', website: 'bodea', salesOrg: '3000', erpSalesOrg: '1000' }],
+            },
+        });
+    });
+
+    it('still answers the fill as done when the mapping is not saved, beside any prices warning', async () => {
+        mockUpdateErpSettings.mockRejectedValue(new Error('ERP erps answered 500: store unavailable'));
+        mockPublishPrices.mockRejectedValue(new Error('ERP prices answered 500: down'));
+        const { mockContext } = setup();
+
+        const result = await handleLoadErpDemoData(mockContext, {
+            id: 'erp-integration',
+            progress: 'modal',
+        });
+
+        const warning =
+            'Demo data loaded; the mapping for website bodea was not saved: ERP erps answered 500: store unavailable. Load demo data again to retry. ' +
+            'Demo data loaded; prices were not published: ERP prices answered 500: down. Load demo data again to retry.';
+        expect(result).toMatchObject({ success: true, data: { warning } });
+        expect(mockContext.sendMessage).toHaveBeenLastCalledWith('operationProgress', {
+            id: 'erp-integration',
+            state: 'succeeded',
+            warning,
+        });
+    });
+
+    it('answers no mapping for an integration deployed before it kept per-ERP settings', async () => {
+        mockKeepsErpList.mockReturnValue(false);
+        const { mockContext } = setup();
+
+        const result = await handleLoadErpDemoData(mockContext, { id: 'erp-integration' });
+
+        expect(result.success).toBe(true);
+        expect(result.data).not.toHaveProperty('mapping');
+        expect(result.data).not.toHaveProperty('warning');
+        expect(mockUpdateErpSettings).not.toHaveBeenCalled();
+    });
+
+    it("answers each ERP's rows in one block when there are two", async () => {
+        mockListErps.mockResolvedValue([
+            { id: 'northwind' },
+            { id: 'brand-b', settings: { websites: { bodea: { structure_sales_org: '2000' } } } },
+        ]);
+        const base = pairProject();
+        const components = base.appBuilderComponents!;
+        const { mockContext } = setup({
+            ...base,
+            appBuilderComponents: {
+                'erp-integration': {
+                    ...components['erp-integration'],
+                    systems: ['demo-erp', 'demo-erp-2'],
+                },
+                'demo-erp': { ...components['demo-erp'], usedBy: 'erp-integration' },
+                'demo-erp-2': {
+                    ...components['demo-erp'],
+                    name: 'Brand B ERP',
+                    catalogId: 'demo-erp',
+                    usedBy: 'erp-integration',
+                },
+            },
+        });
+
+        const result = await handleLoadErpDemoData(mockContext, { id: 'erp-integration' });
+
+        expect(mockUpdateErpSettings).toHaveBeenCalledTimes(1);
+        expect(result.data).toMatchObject({
+            mapping: {
+                filled: [{ erp: 'demo-erp', website: 'bodea', salesOrg: '1000' }],
+                kept: [
+                    { erp: 'demo-erp-2', website: 'bodea', salesOrg: '2000', erpSalesOrg: '1000' },
+                ],
+            },
+        });
     });
 });

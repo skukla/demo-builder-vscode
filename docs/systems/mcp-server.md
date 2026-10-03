@@ -395,7 +395,9 @@ above, not against this list.
 `load_erp_demo_data` (2026-09-27) is gated because it sets any ERP value changed by hand
 back to Commerce's; it removes nothing. Like `reset_erp_records`, it ends by publishing each
 filled ERP's customer prices into the companies' shared catalogs (AB-26z); prices not
-published are the answer's `warning`, not a failure.
+published are the answer's `warning`, not a failure. Both, and `add_erp`, also answer
+`data.mapping` (AB-26y): the website-to-sales-organization mappings the fill filled from the
+ERP's own sales organizations and the ones it kept because they were already set.
 
 `add_erp` (2026-09-28, AB-16) is gated although it only adds: it creates an Adobe workspace
 and deploys a new ERP into it, which takes minutes and is undone only by `remove_integration`

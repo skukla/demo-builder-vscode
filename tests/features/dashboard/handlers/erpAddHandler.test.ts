@@ -382,6 +382,16 @@ describe('handleAddErp', () => {
         expect(result).toMatchObject({ success: true, data: { added: { id: 'demo-erp-2' }, warning: note } });
     });
 
+    it("answers the website mappings the new ERP's fill filled and kept (AB-26y)", async () => {
+        const mapping = { filled: [{ erp: 'demo-erp-2', website: 'eu', salesOrg: '2000' }], kept: [] };
+        mockFill.mockResolvedValue({ status: 'filled', result: { partners: 2, products: 10, skipped: 0 }, erpId: 'demo-erp-2', mapping });
+        const { mockContext } = setup();
+
+        const result = await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP', owns: OWN_ATTRIBUTE });
+
+        expect(result).toMatchObject({ success: true, data: { added: { id: 'demo-erp-2' }, mapping } });
+    });
+
     it('ends the progress window on that note when the add was started from a screen', async () => {
         const note = 'Demo data loaded; prices were not published: ERP prices answered 500: boom. Load demo data again to retry.';
         mockFill.mockResolvedValue({ status: 'filled', result: { partners: 2, products: 10, skipped: 0 }, erpId: 'demo-erp-2', note });
