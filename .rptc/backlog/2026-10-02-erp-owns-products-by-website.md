@@ -36,3 +36,7 @@ codes), in three places that must agree:
 
 Open for the owner: confirm rule 2 (route by the order's website), and whether one ERP may mix
 this with attribute ownership.
+
+## Shipped so far
+
+- 2026-10-03  feat(erp): "Add another ERP" asks which products it owns, with counts and a default (AB-64) (`5345df62f`)
