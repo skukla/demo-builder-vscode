@@ -51,6 +51,7 @@ keying on `confirm` alone put a modal on `open_url` (opens a browser tab) while
 Deleting things
 - `delete_project` · `delete_github_repo` · `delete_adobe_project` · `delete_page`
 - `cleanup_dalive_site` · `remove_block_from_library` · `remove_integration`
+- `remove_catalog_menu` (unpublishes and deletes the category pages Demo Builder wrote, and takes the menu out of the nav)
 
 Replacing or wiping
 - `reset_project` · `reset_datapack` · `migrate_storefront_name` · `reset_erp_records`
@@ -59,6 +60,7 @@ Replacing or wiping
 
 Reaching other people
 - `set_site_admin` · `republish` · `sync_content` · `rename_adobe_project`
+- `build_catalog_menu` (publishes a page per menu category and the nav change to the live storefront)
 - `start_datapack_import` · `start_datapack_export`
 
 ### Deliberately NOT on it

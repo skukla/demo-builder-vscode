@@ -284,7 +284,9 @@ describe('dashboardHandlers', () => {
             // moved off its own Settings screen onto its card, and the agent tools for them.
             // getErpOwnershipOptions (81 → 82, AB-64, 2026-10-02): what "Add another ERP"
             // offers for "Which products belong to this ERP?" — websites, sources, products, rules.
-            expect(types).toHaveLength(82);
+            // buildCatalogMenu + removeCatalogMenu (82 → 84, EDS-24, 2026-10-04): the catalog
+            // menu from the Commerce tree and its undo, shared with the agent's two tools.
+            expect(types).toHaveLength(84);
         });
 
         it('should have handlers as functions', () => {

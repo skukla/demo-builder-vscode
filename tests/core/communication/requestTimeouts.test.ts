@@ -109,4 +109,11 @@ describe('REQUEST_TIMEOUTS', () => {
     ])('budgets the shareable-demo message %s past 30s', (type) => {
         expect([...budgetedTypes()]).toContain(type);
     });
+
+    // The catalog menu (EDS-24) writes, previews and publishes one page per Commerce
+    // category, one after another — a tree of dozens of categories is minutes of work,
+    // and the undo unpublishes and deletes each again.
+    it.each(['buildCatalogMenu', 'removeCatalogMenu'])('budgets the catalog menu message %s past 30s', (type) => {
+        expect([...budgetedTypes()]).toContain(type);
+    });
 });

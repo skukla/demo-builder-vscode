@@ -20,9 +20,14 @@ anywhere in the menu. Undo removes the pages Demo Builder wrote and the switch.
 | `catalog-menu` block | `../demo-builder-block-library/` (local git repo, branch `main`, no remote, nothing committed) | built, 15 node tests (`npm test`), airbnb lint clean |
 | Category page HTML + plan | `src/features/eds/services/catalogMenu/categoryPages.ts` | built, tested |
 | Nav switch add / remove | `src/features/eds/services/catalogMenu/navSwitch.ts` | built, tested |
-| Write pages + switch, undo | `src/features/eds/services/catalogMenu/catalogMenuService.ts` | built, tested with an in-memory DA.live site; **no caller yet** |
+| Write pages + switch, undo | `src/features/eds/services/catalogMenu/catalogMenuService.ts` | built, tested with an in-memory DA.live site |
 | `block-libraries.json` entry | added 2026-10-04, off by default | see step 3 |
-| Human surface, agent tool | — | not built, see step 6 |
+| Handlers (one path for both surfaces) | `src/features/dashboard/handlers/catalogMenuHandlers.ts` | built 2026-10-04 (step 6), tested; not run live |
+| Category reader, record, summary | `src/features/eds/services/catalogMenu/{categoryReader,catalogMenuRecord,catalogMenuSummary}.ts` | built 2026-10-04 |
+| Page adapter | `src/features/ai/server/storefrontPages.ts` | built 2026-10-04 |
+| Dashboard: Catalog Menu tile + dialog | storefront zone, `ui/components/catalog-menu/` | built 2026-10-04 |
+| Agent tools | `build_catalog_menu`, `remove_catalog_menu` (`catalogMenuTools.ts`) | built 2026-10-04 |
+| Wizard checkbox | — | not built: the creation path needs its own phase after the storefront exists |
 
 ## The owner's steps, in order
 

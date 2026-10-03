@@ -72,7 +72,9 @@ const EXPECTED: Record<string, number> = {
     // 21 -> 23 on 2026-09-30 (hotfix beta.149 merged): get_content_access and
     // set_content_reader read and write the DA.live org permissions sheet (EDS-22).
     // 23 -> 24 on 2026-10-03: create_project_from_file, the same creation as create_project.
-    dalive: 24,
+    // 24 -> 26 on 2026-10-04: build_catalog_menu and remove_catalog_menu write, publish and
+    // delete DA.live pages (EDS-24).
+    dalive: 26,
     // 10 -> 12 on 2026-09-12: forget_added_demo and change_demo_source (step 06
     // of the shareable-demo program) both read and write GitHub; 12 -> 14 the
     // same day for probe_shared_demo and add_shared_demo (step 07).
@@ -80,7 +82,9 @@ const EXPECTED: Record<string, number> = {
     // remove_demo_package (step 09) read and write the SC's own storefront repository.
     // 17 -> 18 on 2026-09-13: export_demo_bundle reads the SC's own repository archive.
     // 18 -> 19 on 2026-10-03: create_project_from_file, likewise.
-    github: 20,
+    // 20 -> 22 on 2026-10-04: build_catalog_menu and remove_catalog_menu publish through
+    // Helix, which sends the GitHub token, and the build reads the repository for its block.
+    github: 22,
     commerce: 2,
     // 45 -> 46 on 2026-09-14: edit_added_demo renames a card in a user setting,
     // and needs no sign-in.
@@ -105,7 +109,7 @@ const EXPECTED: Record<string, number> = {
  * files. That counts text, not declarations, and was roughly double. The CONTROL below
  * caught it — which is the argument for having one.)
  */
-const EXPECTED_TOOLS = 155; // 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x); 144 with add_erp (AB-16).
+const EXPECTED_TOOLS = 157; // 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x); 144 with add_erp (AB-16).
 // 141 -> 142 on 2026-09-27: delete_undeclared_runtime_code.
 // 142 -> 143 on 2026-09-27: load_erp_demo_data.
 // 144 -> 146 on 2026-09-29: get_erp_settings and set_erp_settings (AB-16j).
@@ -115,6 +119,7 @@ const EXPECTED_TOOLS = 155; // 138 -> 141 on 2026-09-25: the three demo setup ch
 // reset_project, which does not change the count).
 // 152 -> 154 on 2026-10-03: list_event_providers and delete_event_provider (AB-6).
 // 154 -> 155 on 2026-10-03: get_storefront_report (EDS-13f), which needs GitHub.
+// 155 -> 157 on 2026-10-04: build_catalog_menu and remove_catalog_menu (EDS-24).
 
 interface Declaration {
     name: string;

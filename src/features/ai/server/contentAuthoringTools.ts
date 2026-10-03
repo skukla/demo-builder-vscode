@@ -39,18 +39,14 @@ import { z } from 'zod';
 import { runWithAdobeTarget } from './adobeTargetStore';
 import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
+import { daLiveOps, helixFor, storefrontTarget, type StorefrontTarget } from './storefrontPages';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { buildSourceUrl, resolveDaPath } from '@/features/eds/services/daLive/daLiveContentHelpers';
-import {
-    DaLiveContentOperations,
-    createDaLiveServiceTokenProvider,
-} from '@/features/eds/services/daLive/daLiveContentOperations';
-import { HelixService } from '@/features/eds/services/helix/helixService';
+import type { HelixService } from '@/features/eds/services/helix/helixService';
 import { aemLiveBaseUrl } from '@/features/eds/services/storefront/storefrontProbe';
-import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
-import { getEdsDaLiveTarget, getEdsRepoParts, isEdsProject } from '@/types/typeGuards';
+import { isEdsProject } from '@/types/typeGuards';
 
 /**
  * Cap for the published-CDN read. Same reasoning as the DA source cap: the body
@@ -78,52 +74,6 @@ const NEEDS_GITHUB = {
     message:
         'GitHub sign-in required to publish. Check get_auth_status, then sign_in(provider:"github", confirm:true) once the user agrees.',
 };
-
-/** Where a page lives, in all the spellings the three surfaces need. */
-interface StorefrontTarget {
-    daLiveOrg: string;
-    daLiveSite: string;
-    repoOwner: string;
-    repoName: string;
-}
-
-/**
- * Coordinate segments are interpolated into a URL AUTHORITY
- * (`main--{repo}--{owner}.aem.live`) and into admin API paths, so they are
- * restricted to characters that cannot restructure a URL.
- *
- * Without this, `githubRepo: "a@internal.example?/b"` yields
- * `https://main--b--a@internal.example?.aem.live`, which parses as userinfo
- * `main--b--a` and host `internal.example` — turning read_published_page into an
- * SSRF probe fired from the extension host. The manifest is writable through
- * `update_project_config`, which validates content only for `.env`, and
- * `getCurrentProject()` re-reads it from disk on every call.
- *
- * Must START alphanumeric, which is what rules out `..` — `githubRepo: "../../x/y"`
- * splits to owner `..` / repo `..`, and a dots-anywhere class accepts both,
- * putting the traversal back into the DA source path. Caught by its own test.
- */
-const SAFE_COORDINATE = /^[A-Za-z0-9][A-Za-z0-9_.-]*$/;
-
-/**
- * Pull the DA.live + GitHub coordinates off the project's storefront metadata,
- * reusing the shared getters rather than re-splitting `githubRepo` — that split
- * already had four hand-rolled copies before `getEdsRepoParts` existed.
- *
- * Returns null when anything is missing OR fails {@link SAFE_COORDINATE}.
- */
-function storefrontTarget(project: Project): StorefrontTarget | null {
-    const repo = getEdsRepoParts(project);
-    if (!repo) return null;
-    const da = getEdsDaLiveTarget(project);
-    const target = {
-        repoOwner: repo.owner,
-        repoName: repo.repo,
-        daLiveOrg: da?.org || repo.owner,
-        daLiveSite: da?.site || repo.repo,
-    };
-    return Object.values(target).every((v) => SAFE_COORDINATE.test(v)) ? target : null;
-}
 
 /**
  * Canonical WEB path, or `null` when the input is not a safe page path.
@@ -282,23 +232,6 @@ async function openPathCall(
     return { ok: true, webPath, target: r.target, ctx: r.ctx };
 }
 
-
-/** DA.live content operations bound to the DA.live (not Adobe) token. */
-function daLiveOps(ctx: HandlerContext): DaLiveContentOperations {
-    return new DaLiveContentOperations(
-        createDaLiveServiceTokenProvider(getDaLiveAuthService(ctx.context)),
-        ctx.logger,
-    );
-}
-
-/** Helix service carrying both credentials preview/publish sends on one request. */
-function helixFor(ctx: HandlerContext): HelixService {
-    return new HelixService(
-        ctx.logger,
-        getGitHubServices(ctx.context.secrets).tokenService,
-        createDaLiveServiceTokenProvider(getDaLiveAuthService(ctx.context)),
-    );
-}
 
 const message = (err: unknown): string => (err instanceof Error ? err.message : String(err));
 
@@ -658,7 +591,7 @@ export function registerContentAuthoringTools(
             const base = aemLiveBaseUrl(r.target.repoOwner, r.target.repoName);
             const url = buildSourceUrl(base, webPath, true);
             // The host is built from project metadata, so re-assert where the
-            // request is going before it leaves (see SAFE_COORDINATE).
+            // request is going before it leaves (see SAFE_COORDINATE in storefrontPages.ts).
             if (!urlStaysWithin(url, `${base}/`)) {
                 return asText({ path: webPath, error: 'Refusing to fetch outside the storefront host' });
             }

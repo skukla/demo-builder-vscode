@@ -525,6 +525,23 @@ the offer (`fixes.offered`, `caveats`) and write none. A saved package's own fix
 applied on create and reset without asking, because both ends are the SC's; a storefront
 with no tie to our templates gets the check only.
 
+### The catalog menu (EDS-24, 2026-10-04)
+
+`build_catalog_menu` and `remove_catalog_menu` are the dashboard's catalog menu action
+(storefront zone) without its dialog: both call the same two handlers,
+`catalogMenuHandlers.ts`. The build reads the categories marked Include in Menu from
+Catalog Service with the request `run_commerce_query` sends (`resolveCommerceRequest`),
+writes and publishes one page per category through the same DA.live and Helix calls
+`write_page` makes (`storefrontPages.ts`), adds the menu line and the `catalog-menu`
+block to the nav, and keeps the record of what it wrote on the storefront instance
+(`metadata.catalogMenu`). It refuses, and changes nothing, when the storefront has no
+`blocks/catalog-menu/` from the Demo Builder Blocks library, and says how to add it.
+Both are confirm-gated and raise the consent dialog, because both change a live site
+(property 5): the build's refusal first READS the tree (`previewCatalogMenu`) and names
+the site and how many pages would go live; the dashboard's Build and Remove each ask
+first too. The removal takes out only pages whose content still matches the recorded
+hash. Both need the DA.live and GitHub sign-ins.
+
 ### Integrations live in Adobe workspaces of their own (AB-23)
 
 Since 2026-09-21 every integration an SC adds gets an Adobe workspace of its own,

@@ -103,6 +103,11 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
     getDemoPackagePreview: TIMEOUTS.LONG, // 180s - repository reads + published-page index
     saveDemoPackage: TIMEOUTS.LONG, // 180s - description file write + card
     removeDemoPackage: TIMEOUTS.LONG, // 180s - description file delete + card
+
+    // The catalog menu (EDS-24): one page per Commerce category, each written,
+    // previewed and published in turn (and unpublished + deleted by the undo).
+    buildCatalogMenu: TIMEOUTS.EXTENDED, // 10min - category read + a page per category + nav
+    removeCatalogMenu: TIMEOUTS.EXTENDED, // 10min - unpublish + delete per page + nav
 };
 
 /**

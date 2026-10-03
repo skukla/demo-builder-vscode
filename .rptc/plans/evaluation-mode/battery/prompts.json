@@ -1266,5 +1266,25 @@
         ],
         "cwd": "project",
         "why": "Added 2026-10-03 with the tool (EDS-13f): the storefront report is the one place that says what a storefront was built on and which of Demo Builder's fixes fit. Read-only, so a reach is safe; a MISS means agents cannot find the report from a plain question, and would read package.json by hand instead."
+        },
+    {
+        "id": "t2-build-catalog-menu",
+        "prompt": "Make the storefront's menu come from the Commerce category tree, with a page for each category.",
+        "expect": [
+            "build_catalog_menu"
+        ],
+        "cwd": "project",
+        "why": "Added with the tool (2026-10-04, EDS-24). Without it an agent writes category pages one write_page at a time from a hand-run run_commerce_query and edits the nav by hand, with no record of what it wrote, so nothing can undo it safely. Confirm-gated (it publishes to a live site, CLAUDE.md property 5), so what this judges is whether the tool is findable and its refusal names the pages and the site. Tier 2: it writes and publishes pages on a live storefront, so it runs only under --tier2.",
+        "tier": 2
+    },
+    {
+        "id": "t2-remove-catalog-menu",
+        "prompt": "Take the catalog menu back off the storefront and remove the category pages Demo Builder made.",
+        "expect": [
+            "remove_catalog_menu"
+        ],
+        "cwd": "project",
+        "why": "Added with the tool (2026-10-04, EDS-24): the undo. Without it an agent deletes pages by name with delete_page and edits the nav by hand, which takes out pages the SC edited too. Tier 2: it unpublishes and deletes pages on a live storefront, so it runs only under --tier2.",
+        "tier": 2
     }
 ]

@@ -18,9 +18,11 @@
  *   - projectManagementHandlers.ts edit/delete/reset/rename/export
  *   - edsContentHandlers.ts        syncStorefront/refreshBlockLibrary/
  *                                  republishContent
+ *   - catalogMenuHandlers.ts       buildCatalogMenu/removeCatalogMenu
  */
 
 import * as vscode from 'vscode';
+import { handleBuildCatalogMenu, handleRemoveCatalogMenu } from './catalogMenuHandlers';
 import {
     handleGetDemoPackagePreview,
     handleSaveDemoPackage,
@@ -442,6 +444,11 @@ export const dashboardHandlers = defineHandlers({
 
     // EDS content republish (re-push DA.live content to CDN)
     republishContent: handleRepublishContent,
+
+    // The catalog menu (EDS-24): category pages + the nav switch from the Commerce tree,
+    // and the undo. The agent's build_catalog_menu / remove_catalog_menu call the same two.
+    buildCatalogMenu: handleBuildCatalogMenu,
+    removeCatalogMenu: handleRemoveCatalogMenu,
 
     // Project reset handler
     resetProject: handleResetProject,

@@ -66,7 +66,7 @@ function isReadOnlyQuery(query: string): boolean {
     return !/^\s*(mutation|subscription)\b/i.test(stripped);
 }
 
-type EndpointKey = 'commerceGraphQl' | 'catalogService' | 'mesh';
+export type EndpointKey = 'commerceGraphQl' | 'catalogService' | 'mesh';
 
 /**
  * The `Magento-Customer-Group` value for a customer group: the SHA-1 of its numeric id.
@@ -111,6 +111,65 @@ function requestHeaders(
         ...(needsCatalogHeaders ? (facts.headers.cs ?? {}) : {}),
         ...(groupId !== undefined ? { 'Magento-Customer-Group': customerGroupHeader(groupId) } : {}),
     };
+}
+
+/** Where one Commerce query goes and what it carries, or the refusal to answer instead. */
+export interface CommerceRequest {
+    url: string;
+    headers: Record<string, string>;
+    chosen: EndpointKey;
+}
+
+/**
+ * Pick the endpoint and build the headers for one query — `run_commerce_query`'s rule,
+ * shared so another caller (the catalog menu's category reader) cannot assemble a
+ * second, different request for the same store.
+ *
+ * @param facts - `buildCommerceEndpoints(project)`
+ * @param requested - the endpoint asked for; defaults to the one the storefront uses
+ * @param groupId - a customer group to ask Catalog Service as
+ * @returns the request, or a refusal sentence beginning "Error:"
+ */
+export function resolveCommerceRequest(
+    facts: ReturnType<typeof buildCommerceEndpoints>,
+    requested: EndpointKey | undefined,
+    groupId: number | undefined,
+): CommerceRequest | string {
+    // Default to what the storefront queries: an agent reproducing what the
+    // site does must hit the same endpoint, and `storefrontUses` is already
+    // the answer to that.
+    let chosen: EndpointKey =
+        requested ?? (facts.storefrontUses === 'none' ? 'commerceGraphQl' : facts.storefrontUses);
+
+    // Asking for `catalogService` on ACCS is CORRECT, not a mistake.
+    //
+    // ACCS serves Commerce Core and Catalog Service from one endpoint, so
+    // there is no separate `catalogService` to name — and the first version
+    // answered "this project has no catalogService endpoint", which is true
+    // of the NAME and false of the capability. Measured 2026-08-26: an agent
+    // asked for the catalog service (the obvious read of "how many products
+    // are in the catalog"), was refused, and spent a round trip recovering
+    // from an error that should never have been one.
+    //
+    // Same shape as the header rule, and I fixed that one and not this one:
+    // route by what an endpoint SERVES, not by what it is called.
+    if (chosen === 'catalogService' && !facts.endpoints.catalogService && facts.endpoints.commerceGraphQl) {
+        chosen = 'commerceGraphQl';
+    }
+
+    const url = facts.endpoints[chosen];
+    if (!url) {
+        const have = Object.keys(facts.endpoints);
+        return (
+            `Error: this project has no \`${chosen}\` endpoint. ` +
+            (have.length ? `Available: ${have.join(', ')}.` : 'It has no Commerce endpoints configured at all.')
+        );
+    }
+
+    // Which headers: see requestHeaders.
+    const headers = requestHeaders(facts, chosen, groupId);
+    if (typeof headers === 'string') return headers;
+    return { url, headers, chosen };
 }
 
 /**
@@ -180,47 +239,14 @@ export function registerCommerceQueryTool(
             // The SAME assembly `get_commerce_endpoints` reports, so the endpoint an
             // agent is told about and the one queried cannot disagree. If they ever
             // do, that is one bug rather than two.
-            const facts = buildCommerceEndpoints(project);
-
-            // Default to what the storefront queries: an agent reproducing what the
-            // site does must hit the same endpoint, and `storefrontUses` is already
-            // the answer to that.
             const requested: EndpointKey | undefined = args?.endpoint;
-            let chosen: EndpointKey =
-                requested ??
-                (facts.storefrontUses === 'none' ? 'commerceGraphQl' : facts.storefrontUses);
-
-            // Asking for `catalogService` on ACCS is CORRECT, not a mistake.
-            //
-            // ACCS serves Commerce Core and Catalog Service from one endpoint, so
-            // there is no separate `catalogService` to name — and the first version
-            // answered "this project has no catalogService endpoint", which is true
-            // of the NAME and false of the capability. Measured 2026-08-26: an agent
-            // asked for the catalog service (the obvious read of "how many products
-            // are in the catalog"), was refused, and spent a round trip recovering
-            // from an error that should never have been one.
-            //
-            // Same shape as the header rule, and I fixed that one and not this one:
-            // route by what an endpoint SERVES, not by what it is called.
-            if (chosen === 'catalogService' && !facts.endpoints.catalogService
-                && facts.endpoints.commerceGraphQl) {
-                chosen = 'commerceGraphQl';
-            }
-
-            const url = facts.endpoints[chosen];
-            if (!url) {
-                const have = Object.keys(facts.endpoints);
-                return asRawText(
-                    `Error: this project has no \`${chosen}\` endpoint. ` +
-                        (have.length
-                            ? `Available: ${have.join(', ')}.`
-                            : 'It has no Commerce endpoints configured at all.'),
-                );
-            }
-
-            // Which headers: see requestHeaders.
-            const headers = requestHeaders(facts, chosen, args?.customerGroupId);
-            if (typeof headers === 'string') return asRawText(headers);
+            const request = resolveCommerceRequest(
+                buildCommerceEndpoints(project),
+                requested,
+                args?.customerGroupId,
+            );
+            if (typeof request === 'string') return asRawText(request);
+            const { url, headers, chosen } = request;
 
             const controller = new AbortController();
             const timer = setTimeout(() => controller.abort(), QUERY_TIMEOUT_MS);

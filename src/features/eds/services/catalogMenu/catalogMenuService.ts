@@ -91,6 +91,10 @@ export interface RemoveReport {
 
 const NAV_PATH = '/nav';
 
+/** Why nothing is written: a menu switched on over an empty tree would only hide the SC's items. */
+export const NO_MENU_CATEGORIES =
+    'Catalog Service returned no categories marked "Include in Menu" for this store view';
+
 const EMPTY_RECORD: CatalogMenuRecord = { pages: [], navSwitch: false };
 
 function hashOf(content: string): string {
@@ -150,7 +154,7 @@ export async function applyCatalogMenu(
 ): Promise<ApplyReport> {
     const categories = await deps.readCategories();
     if (categories.length === 0) {
-        throw new Error('Catalog Service returned no categories marked "Include in Menu" for this store view');
+        throw new Error(NO_MENU_CATEGORIES);
     }
     const plan = planCategoryPages(categories);
     const recorded = new Map(previous.pages.map((p) => [p.path, p.hash]));

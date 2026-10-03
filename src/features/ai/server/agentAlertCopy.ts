@@ -194,6 +194,20 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: ['path'],
         sessionGrant: false,
     },
+    build_catalog_menu: {
+        action: 'Build the catalog menu',
+        consequence:
+            'Writes and publishes a page for every menu category in Commerce and adds the menu to the nav of the live storefront; visitors see it at once.',
+        target: [],
+        sessionGrant: false,
+    },
+    remove_catalog_menu: {
+        action: 'Remove the catalog menu',
+        consequence:
+            'Unpublishes and deletes the category pages Demo Builder wrote and takes the menu out of the nav; visitors stop seeing them at once. Pages edited by hand stay.',
+        target: [],
+        sessionGrant: false,
+    },
     forget_added_demo: {
         action: 'Forget an added demo',
         consequence:
