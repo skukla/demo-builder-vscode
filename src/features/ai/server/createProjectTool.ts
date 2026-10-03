@@ -39,6 +39,12 @@ import {
     withCapturedProgress,
     type CapturedEvent,
 } from './progressCapture';
+import {
+    NO_BACKEND_FOR_SCOPE,
+    storeScopeEnv,
+    storeScopeSchema,
+    type StoreScope,
+} from './storeScope';
 import { ACCS_GRAPHQL_ENDPOINT } from '@/core/config/envVarKeys';
 import { isMeshComponentId } from '@/core/constants';
 import { dispatchHandler } from '@/core/handlers/dispatchHandler';
@@ -60,6 +66,7 @@ import type { DemoPackage, Storefront } from '@/types/demoPackages';
 import type { HandlerContext } from '@/types/handlers';
 import type { AddedDemo } from '@/types/projectFile';
 import type { WizardState } from '@/types/webview';
+import type { StorefrontSetupCompletePayload } from '@/types/webviewPayloads';
 
 /** Project a possibly-undefined org down to the lean `{ id, name }` surfaced on a mismatch. */
 function leanOrg(
@@ -84,10 +91,37 @@ function projectsDir(): string {
 function backendEndpointConfig(
     stackId: string,
     accsEndpoint: string | undefined,
+    storeScope?: StoreScope,
 ): ProjectConfigSource['componentConfigs'] {
     const backend = getStackById(stackId)?.backend;
-    if (!backend || !accsEndpoint) return {};
-    return { [backend]: { [ACCS_GRAPHQL_ENDPOINT]: accsEndpoint } };
+    if (!backend || (!accsEndpoint && !storeScope)) return {};
+    return {
+        [backend]: {
+            ...(accsEndpoint ? { [ACCS_GRAPHQL_ENDPOINT]: accsEndpoint } : {}),
+            // The scope the caller chose (AI-11), where configure_project writes it,
+            // so the config.json creation generates names it from the start.
+            ...(storeScope ? storeScopeEnv(storeScope) : {}),
+        },
+    };
+}
+
+/**
+ * Check a `storeScope` argument the way `configure_project`'s schema does, before
+ * anything is created: all three codes, as text, and a backend to hold them.
+ *
+ * @returns the scope (undefined when none was given), or the refusal
+ */
+export function parseStoreScope(
+    stackId: string,
+    raw: unknown,
+): { storeScope?: StoreScope } | { error: string } {
+    if (raw === undefined) return {};
+    const parsed = storeScopeSchema.safeParse(raw);
+    if (!parsed.success) {
+        return { error: 'storeScope needs all three codes as text: website, store and storeView.' };
+    }
+    if (!getStackById(stackId)?.backend) return { error: NO_BACKEND_FOR_SCOPE };
+    return { storeScope: parsed.data };
 }
 
 const NEEDS_ADOBE = {
@@ -234,6 +268,10 @@ interface CreateArgs {
     stackId: string;
     demo?: AddedDemo;
     seed?: CreationSeed;
+    /** The store scope the caller chose, already checked by `parseStoreScope` (AI-11). */
+    storeScope?: StoreScope;
+    /** The user accepted Demo Builder's fixes for an added demo (EDS-13f). */
+    applyFixes?: boolean;
     /** Added to a successful answer (what a file brought, what is still needed). */
     report?: Record<string, unknown>;
 }
@@ -319,7 +357,7 @@ async function createHeadless(
         adobeOrg: adobe?.org,
         adobeProject: adobe?.project,
         adobeWorkspace: adobe?.workspace,
-        componentConfigs: {},
+        componentConfigs: backendEndpointConfig(args.stackId, undefined, args.storeScope),
         selectedAddons: [],
         selectedBlockLibraries: [],
         customBlockLibraries: [],
@@ -351,7 +389,7 @@ function seededSetup(args: CreateArgs & { accsEndpoint?: string }): Record<strin
     return {
         componentConfigs: mergedConfigs(
             seed.componentConfigs,
-            backendEndpointConfig(args.stackId, args.accsEndpoint),
+            backendEndpointConfig(args.stackId, args.accsEndpoint, args.storeScope),
         ),
         selectedAddons: seed.selectedAddons,
         selectedBlockLibraries: seed.selectedBlockLibraries,
@@ -439,6 +477,7 @@ async function createEds(
             // The row rides too: the phases read it for the repo branch, the
             // pages and the dry check, exactly as the wizard sends it.
             demo: args.demo,
+            ...(args.applyFixes === true ? { applyDemoFixes: true } : {}),
             edsConfig: edsConfigInput,
         }),
     );
@@ -457,6 +496,10 @@ async function createEds(
     // undefined for every agent creation until 2026-09-12, so the project was
     // saved without its repository and reset refused it.
     const repoUrl = lastCompleteData(events)?.githubRepo as string | undefined;
+    // What the setup said about the storefront, in the words the wizard's card shows:
+    // an added demo's caveats and the offer of Demo Builder's fixes (EDS-13f). The
+    // agent never heard them before; the card was the only reader.
+    const caveats = lastCompleteData(events)?.warnings as StorefrontSetupCompletePayload['warnings'];
 
     // Phase 2: create the project, with preflight results threaded in.
     const wizardState: ProjectConfigSource = {
@@ -473,7 +516,7 @@ async function createEds(
         adobeOrg: adobe?.org,
         adobeProject: adobe?.project,
         adobeWorkspace: adobe?.workspace,
-        componentConfigs: backendEndpointConfig(args.stackId, args.accsEndpoint),
+        componentConfigs: backendEndpointConfig(args.stackId, args.accsEndpoint, args.storeScope),
         selectedAddons: [],
         selectedBlockLibraries: [],
         customBlockLibraries: [],
@@ -506,6 +549,7 @@ async function createEds(
         name: args.projectName,
         path: path.join(projectsDir(), args.projectName),
         repoUrl,
+        ...(caveats?.length ? { caveats } : {}),
         phases: toPhaseTimeline(events),
         hint: 'Operate on it by name (list_blocks, sync_storefront, …).',
         ...args.report,
@@ -523,6 +567,10 @@ interface CreationRequest {
     daLiveOrg?: string;
     daLiveSite?: string;
     accsEndpoint?: string;
+    /** Already checked by `parseStoreScope`. */
+    storeScope?: StoreScope;
+    /** The user accepted Demo Builder's fixes for an added demo (EDS-13f); never defaulted on. */
+    applyFixes?: boolean;
     seed?: CreationSeed;
     report?: Record<string, unknown>;
 }
@@ -565,7 +613,7 @@ export function registerCreateProjectTool(
             annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Create Project',
             description:
-                "Create a new Demo Builder project headlessly from a package + stack. The package is a shipped brand id, an added demo's id (added:owner/repo, from list_demo_packages), or a colleague's demo given as link (probed and added first). EDS stacks also provision a GitHub repo + DA.live content. Requires confirm:true",
+                "Create a new Demo Builder project headlessly from a package + stack. The package is a shipped brand id, an added demo's id (added:owner/repo, from list_demo_packages), or a colleague's demo given as link (probed and added first). EDS stacks also provision a GitHub repo + DA.live content. storeScope sets the store codes at creation, as configure_project does. Requires confirm:true",
             inputSchema: {
                 projectName: z.string().describe('Name for the new project'),
                 package: z
@@ -597,6 +645,16 @@ export function registerCreateProjectTool(
                     .string()
                     .optional()
                     .describe('EDS + ACCS only: Adobe Commerce Cloud GraphQL endpoint'),
+                // The same input configure_project takes (AI-11), so the demo's codes
+                // need not be published first and corrected after.
+                storeScope: storeScopeSchema.optional(),
+                applyFixes: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Added demos only: apply the Demo Builder fixes that fit the demo's code (one commit to the new repo). " +
+                            'Only when the user said yes to them; the default offers them and writes none',
+                    ),
                 confirm: z
                     .boolean()
                     .optional()
@@ -616,6 +674,8 @@ export function registerCreateProjectTool(
                     error: 'projectName, package (or link), and stack are all required.',
                 });
             }
+            const scope = parseStoreScope(stackId, args?.storeScope);
+            if ('error' in scope) return asText(scope);
             if (args?.confirm !== true) {
                 return asText({
                     error: 'create_project requires confirm:true — it installs dependencies and, for EDS, creates a real GitHub repo + DA.live content. Ask the user to confirm.',
@@ -632,6 +692,8 @@ export function registerCreateProjectTool(
                 daLiveOrg: args.daLiveOrg ? String(args.daLiveOrg) : undefined,
                 daLiveSite: args.daLiveSite ? String(args.daLiveSite) : undefined,
                 accsEndpoint: args.accsEndpoint ? String(args.accsEndpoint) : undefined,
+                storeScope: scope.storeScope,
+                ...(args.applyFixes === true ? { applyFixes: true } : {}),
             });
         },
     );

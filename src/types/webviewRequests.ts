@@ -26,7 +26,9 @@ import type {
     ProjectFile,
     RememberedDemo,
     SharedDemoDescription,
+    StorefrontBoilerplate,
     StorefrontKind,
+    StorefrontLineage,
 } from './projectFile';
 import type { ViewMode, ViewModeList } from './viewMode';
 import type { GitHubRepoItem } from './webview';
@@ -118,6 +120,10 @@ export interface SharedDemoRead {
     b2bSource?: SharedDemoValueSource;
     /** The description file's content, when the repository carries one that validates. */
     description?: SharedDemoDescription;
+    /** The `package.json` name and version the storefront's code was built on (EDS-13f). */
+    boilerplate?: StorefrontBoilerplate;
+    /** The template or fork parent GitHub records for the repository; absent when it records none (EDS-13f). */
+    lineage?: StorefrontLineage;
     /** Which read values the description file replaced, in the result's field names. */
     overrides: string[];
     /** Things the SC should hear, in plain words. */
@@ -506,6 +512,8 @@ export interface StorefrontSetupStartPayload {
     selectedStack?: string;
     /** The storefront row when the project is built on an added demo: the phases read it for the repo branch, the pages and the dry check. */
     demo?: AddedDemo;
+    /** Apply the fixes that fit an added demo that shows our lineage (EDS-13f); the agent's `applyFixes`. */
+    applyDemoFixes?: boolean;
     edsConfig: {
         repoName: string;
         repoMode?: 'new' | 'existing';
@@ -546,6 +554,12 @@ export interface StorefrontSetupStartPayload {
          * the phases read one config. Absent for a shipped brand.
          */
         demo?: AddedDemo;
+        /**
+         * The SC accepted Demo Builder's fixes for an added demo that shows our
+         * lineage (EDS-13f step 03), copied from the payload like `demo`. Never
+         * defaulted on: without it the fixes that fit are offered, not written.
+         */
+        applyDemoFixes?: boolean;
         // Selected existing repository — the wizard's own repo-list item type
         // (ONE declaration; this used to be an inline four-field twin).
         selectedRepo?: GitHubRepoItem;

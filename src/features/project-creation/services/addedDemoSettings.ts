@@ -12,6 +12,7 @@
 
 import * as vscode from 'vscode';
 import { readSharedDemoDescription } from '@/core/state/projectFileReader';
+import { asBoilerplate, asLineage } from '@/features/eds/services/storefront/storefrontProvenance';
 import type { AddedDemo, RememberedDemo, SharedDemoDescription, StorefrontKind } from '@/types/projectFile';
 
 /** The setting's key under `demoBuilder`. Cited by name in `SETTING_KEYS` and package.json. */
@@ -51,10 +52,14 @@ function toAddedDemo(entry: unknown): RememberedDemo | undefined {
     }
     const read = readSharedDemoDescription(JSON.stringify(entry));
     if (!read.ok) return undefined;
-    // The description reader keeps fields it does not know, so the zip record is
-    // taken off what it answers and put back only when it is exactly `true`.
-    const read_: SharedDemoDescription & { createdFromZip?: unknown } = read.description;
-    const { createdFromZip: _read, ...description } = read_;
+    // The description reader keeps fields it does not know, so the zip record and
+    // what was read from the repository are taken off what it answers and put
+    // back only when they are that shape.
+    const read_: SharedDemoDescription & { createdFromZip?: unknown; boilerplate?: unknown; lineage?: unknown } =
+        read.description;
+    const { createdFromZip: _read, boilerplate: rawBoilerplate, lineage: rawLineage, ...description } = read_;
+    const boilerplate = asBoilerplate(rawBoilerplate);
+    const lineage = asLineage(rawLineage);
     return {
         ...description,
         source: {
@@ -63,6 +68,8 @@ function toAddedDemo(entry: unknown): RememberedDemo | undefined {
             ...(typeof source.branch === 'string' ? { branch: source.branch } : {}),
         },
         storefrontKind: candidate.storefrontKind as StorefrontKind,
+        ...(boilerplate ? { boilerplate } : {}),
+        ...(lineage ? { lineage } : {}),
         ...((entry as { createdFromZip?: unknown }).createdFromZip === true ? { createdFromZip: true } : {}),
     };
 }

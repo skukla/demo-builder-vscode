@@ -130,35 +130,53 @@ export class AuthenticationErrorFormatter {
     }
 }
 
+/** Why Adobe refuses an SC their own project's credential, and who can fix it. */
+const MISSING_DEVELOPER_ACCESS =
+    'Adobe refused this because your login is not a developer on every product ' +
+    "profile this project's credential uses. An admin of this Adobe organization " +
+    'can fix it in Admin Console by adding you as a developer on those product ' +
+    'profiles. Details are in Debug Logs.';
+
 /**
- * A sentence an SC can act on for the two Adobe refusals that reach a deploy with no
- * explanation of their own, or `undefined` when the text is neither.
+ * A sentence an SC can act on for the Adobe refusals that reach a deploy or a teardown
+ * with no explanation of their own, or `undefined` when the text is none of them.
  *
- * Both were read off real failures on 2026-09-17/18:
+ * Each was read off a real failure on 2026-09-17/18:
  *
  * - **Missing licence.** Console and Runtime answer `403 … doesn't have the matching
  *   licenses` (template `ERR_MSG_OPERATION_NOT_ALLOWED`) when the signed-in person is
- *   not a developer on every product profile the project's credential uses. The
- *   project then also reads as read-only in Developer Console. Only an org admin can
- *   change profile membership, so the sentence says who.
+ *   not a developer on every product profile the project's credential uses. Only an
+ *   org admin can change profile membership, so the sentence says who.
+ * - **Read-only project.** The same missing access makes the project read-only for that
+ *   person ("read only due to missing developer permissions", per Developer Console),
+ *   and a workspace delete answers `400 "Read-only project cannot be deleted"` (AB-18).
  * - **Licence service down.** Console answers `504 Gateway Timeout` when its own call
  *   to Adobe's licence service times out. Nothing the SC does fixes that; waiting does.
  */
 export function explainAdobeAccessFailure(text: string): string | undefined {
-    if (/matching licenses|ERR_MSG_OPERATION_NOT_ALLOWED/i.test(text)) {
-        return (
-            'Adobe refused this because your login is not a developer on every product ' +
-            "profile this project's credential uses. An admin of this Adobe organization " +
-            'can fix it in Admin Console by adding you as a developer on those product ' +
-            'profiles. Details are in Debug Logs.'
-        );
-    }
+    const refused = explainMissingDeveloperAccess(text);
+    if (refused) return refused;
     const timedOut = /504/.test(text) && /Gateway Timeout|timed out/i.test(text);
     if (timedOut && /CoreConsoleAPISDK|licenses/i.test(text)) {
         return (
             "Adobe's Developer Console did not answer in time. This is on Adobe's side — " +
             'try again in a few minutes. Details are in Debug Logs.'
         );
+    }
+    return undefined;
+}
+
+/**
+ * The missing-developer-access half of {@link explainAdobeAccessFailure} alone: the
+ * licence refusal and the read-only project it causes. For teardown paths, where a
+ * timeout already has its own handling (a delete can finish after the 504).
+ */
+export function explainMissingDeveloperAccess(text: string): string | undefined {
+    if (/matching licenses|ERR_MSG_OPERATION_NOT_ALLOWED/i.test(text)) {
+        return MISSING_DEVELOPER_ACCESS;
+    }
+    if (/Read-only project/i.test(text)) {
+        return `Adobe treats this project as read-only for you. ${MISSING_DEVELOPER_ACCESS}`;
     }
     return undefined;
 }

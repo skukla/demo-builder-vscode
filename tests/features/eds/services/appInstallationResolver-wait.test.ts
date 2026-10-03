@@ -53,9 +53,13 @@ describe('installed', () => {
         expect(svc.isAppInstalled).toHaveBeenCalledWith('acme-demos', 'aircraft-demo');
     });
 
-    it('counts an initializing sync (code.status 400) as installed — Helix reports it installed', async () => {
-        const svc = service({ isInstalled: true, codeStatus: 400 });
+    it('counts a move off the inner 404 to an inner 400 as the install — the move is the evidence', async () => {
+        // An inner 400 alone proves nothing (EDS-23), but this wait only runs after
+        // Helix said 404 — leaving 404 is what the install changes. Storefront
+        // setup re-checks by the code endpoint afterwards.
+        const svc = service(NOT_YET, { isInstalled: false, codeStatus: 400, transient: true });
         expect(await waitForAppInstallation(svc, REPO, createMockLogger())).toBe('installed');
+        expect(svc.isAppInstalled).toHaveBeenCalledTimes(2);
     });
 
     it('does not take a refused credential as an install', async () => {
@@ -128,5 +132,27 @@ describe('timed out', () => {
         });
         expect(verdict).toBe('installed');
         expect(svc.isAppInstalled).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('a caller-supplied probe', () => {
+    it('asks the probe instead of the status endpoint, until it says yes', async () => {
+        const svc = service(INSTALLED);
+        const probe = jest.fn().mockResolvedValueOnce(false).mockResolvedValue(true);
+        const verdict = await waitForAppInstallation(svc, REPO, createMockLogger(), { probe });
+        expect(verdict).toBe('installed');
+        expect(probe).toHaveBeenCalledTimes(2);
+        expect(svc.isAppInstalled).not.toHaveBeenCalled();
+    });
+
+    it('times out on a probe that never says yes', async () => {
+        const probe = jest.fn().mockResolvedValue(false);
+        const verdict = await waitForAppInstallation(service(INSTALLED), REPO, createMockLogger(), {
+            probe,
+            pollMs: 1000,
+            maxWaitMs: 3000,
+        });
+        expect(verdict).toBe('timed-out');
+        expect(probe).toHaveBeenCalledTimes(3);
     });
 });

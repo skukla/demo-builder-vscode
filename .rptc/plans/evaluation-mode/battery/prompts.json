@@ -1257,5 +1257,14 @@
             "delete_event_provider"
         ],
         "why": "Added with the tool (2026-10-03, AB-6): the teardown an ERP-class journey needs to end at zero. Confirm-gated and label-checked, so an agent that reaches it without consent still gets a refusal -- what this judges is whether the tool is findable at all."
+    },
+    {
+        "id": "storefront-report",
+        "prompt": "This storefront came from a colleague's demo. How old is its boilerplate compared to ours, and do any of Demo Builder's fixes fit its code?",
+        "expect": [
+            "get_storefront_report"
+        ],
+        "cwd": "project",
+        "why": "Added 2026-10-03 with the tool (EDS-13f): the storefront report is the one place that says what a storefront was built on and which of Demo Builder's fixes fit. Read-only, so a reach is safe; a MISS means agents cannot find the report from a plain question, and would read package.json by hand instead."
     }
 ]

@@ -18,6 +18,7 @@ jest.mock('@/features/eds/handlers/addSharedDemoHandler', () => ({
 import { readDemoRow } from '@/features/ai/server/addedDemoTools';
 import { handleAddSharedDemo } from '@/features/eds/handlers/addSharedDemoHandler';
 import { readAddedDemos } from '@/features/project-creation/services/addedDemoSettings';
+import type { StorefrontSetupCompletePayload } from '@/types/webviewPayloads';
 import { makeAddedDemo } from '../../../helpers/demoPackageFixtures';
 import {
     EDS,
@@ -63,6 +64,31 @@ describe('create_project — an added demo by id', () => {
         const catalog = (buildProjectConfig as jest.Mock).mock.calls[0][2] as Array<{ id: string }>;
         expect(catalog.map((p) => p.id)).toEqual(['citisignal', 'added:jen/isle5-demo']);
         expect(executeProjectCreation).toHaveBeenCalled();
+    });
+
+    it("passes the user's yes to Demo Builder's fixes into storefront setup, and never on its own (EDS-13f)", async () => {
+        await toolServer().call({ ...EDS, package: 'added:jen/isle5-demo' });
+        await toolServer().call({ ...EDS, package: 'added:jen/isle5-demo', applyFixes: true });
+
+        expect(storefrontSetup.mock.calls[0][1]).not.toHaveProperty('applyDemoFixes');
+        expect(storefrontSetup.mock.calls[1][1]).toMatchObject({ applyDemoFixes: true });
+    });
+
+    it("says what the storefront setup said about the demo: the caveats and the offer (EDS-13f)", async () => {
+        const offer = "1 of Demo Builder's fixes fits this storefront's code: empty product pages.";
+        storefrontSetup.mockImplementationOnce(async (ctx: { sendMessage: (t: string, d?: unknown) => Promise<void> }) => {
+            await ctx.sendMessage('storefront-setup-complete', {
+                message: 'Done',
+                githubRepo: 'https://github.com/o/r',
+                warnings: [offer],
+            } satisfies StorefrontSetupCompletePayload);
+            return { success: true };
+        });
+
+        const res = await toolServer().call({ ...EDS, package: 'added:jen/isle5-demo' });
+
+        expect(res).toMatchObject({ created: true, caveats: [offer] });
+        expect('caveats' in (await toolServer().call({ ...EDS, package: 'added:jen/isle5-demo' }))).toBe(false);
     });
 
     it("leaves a zip card's record behind: neither payload's row carries it", async () => {

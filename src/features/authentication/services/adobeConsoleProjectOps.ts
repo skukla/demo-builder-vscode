@@ -19,6 +19,7 @@
 import { deriveAdobeEntityName, deriveFreeAdobeEntityName } from './adobeEntityName';
 import type { AdobeSDKClient } from './adobeSDKClient';
 import type { AuthCacheManager } from './authCacheManager';
+import { explainMissingDeveloperAccess } from './authenticationErrorFormatter';
 import type {
     AdobeProject,
     AdobeWorkspace,
@@ -488,7 +489,13 @@ export class AdobeConsoleProjectOps {
                     note: 'Adobe answered with an error, but the workspace is no longer in the project.',
                 };
             }
-            return { error: message || 'Console rejected the delete with no error message.' };
+            // A refusal for missing developer access (a read-only project, AB-18) gets
+            // its cause in plain words; Adobe's own are in the error logged above.
+            return {
+                error:
+                    explainMissingDeveloperAccess(message) ??
+                    (message || 'Console rejected the delete with no error message.'),
+            };
         }
     }
 

@@ -8,7 +8,9 @@
  */
 
 import {
+    buildAppNotOnRepositoryMessage,
     formatAdminDiagnostics,
+    isAppNotOnRepositoryError,
     resolveAppInstallation,
 } from '../../services/appInstallationResolver';
 import { registerConfigurationService } from '../configServiceRegistration';
@@ -30,7 +32,7 @@ export async function executePhaseCodeSync(
     signal?: AbortSignal,
 ): Promise<StorefrontSetupResult | null> {
     const logger = context.logger;
-    const { helixService, daLiveAuthService, daLiveTokenProvider } = services;
+    const { daLiveAuthService, daLiveTokenProvider } = services;
 
     await context.sendMessage('storefront-setup-progress', {
         phase: 'code-sync',
@@ -46,22 +48,11 @@ export async function executePhaseCodeSync(
         progress: 43,
     } satisfies StorefrontSetupProgressPayload);
 
-    // The setup carries on either way — the code is on GitHub — but the message
-    // says what happened. It read "Code synchronized" after a failed publish
-    // until 2026-09-30, when a repo whose code never reached the CDN was
-    // reported synchronized and the storefront 404'd on every script.
-    let codeMessage = 'Code synchronized';
-    try {
-        await helixService.previewCode(repoInfo.repoOwner, repoInfo.repoName, '/*', 'main');
-        logger.info('[Storefront Setup] Code published to CDN');
-    } catch (error) {
-        logger.warn(`[Storefront Setup] Code preview warning: ${(error as Error).message}`);
-        codeMessage = `⚠️ Code not published to the CDN: ${(error as Error).message}`;
-    }
+    const codeError = await publishCode(services, repoInfo, logger);
 
     await context.sendMessage('storefront-setup-progress', {
         phase: 'code-sync',
-        message: codeMessage,
+        message: describeCodePublish(repoInfo, codeError),
         progress: 45,
     } satisfies StorefrontSetupProgressPayload);
 
@@ -98,7 +89,10 @@ export async function executePhaseCodeSync(
 
     // NOW the App can be verified, and this is the only place in the whole flow
     // where that is true. See `confirmCodeSync`.
-    const codeSyncVerdict = await confirmCodeSync(context, services, repoInfo, edsConfig, signal);
+    const codeSyncVerdict = await confirmCodeSync(context, services, repoInfo, edsConfig, {
+        signal,
+        codeError,
+    });
     if (codeSyncVerdict) return codeSyncVerdict;
 
     await context.sendMessage('storefront-setup-progress', {
@@ -108,6 +102,69 @@ export async function executePhaseCodeSync(
     } satisfies StorefrontSetupProgressPayload);
 
     return null;
+}
+
+/**
+ * Publish the repository's code to the CDN (`POST admin.hlx.page/code/.../*`).
+ *
+ * @returns undefined when it published, else the error message — whose x-error is
+ *   the only place that says whether the AEM Code Sync App covers the repository
+ */
+async function publishCode(
+    services: SetupServices,
+    repoInfo: RepoInfo,
+    logger: HandlerContext['logger'],
+): Promise<string | undefined> {
+    try {
+        await services.helixService.previewCode(repoInfo.repoOwner, repoInfo.repoName, '/*', 'main');
+        logger.info('[Storefront Setup] Code published to CDN');
+        return undefined;
+    } catch (error) {
+        const message = (error as Error).message;
+        logger.warn(`[Storefront Setup] Code preview warning: ${message}`);
+        return message;
+    }
+}
+
+/**
+ * The code line of the progress feed. It read "Code synchronized" after a failed
+ * publish until 2026-09-30, when a repo whose code never reached the CDN was
+ * reported synchronized and the storefront 404'd on every script. The setup
+ * carries on either way — the code is on GitHub — but the line says what happened.
+ */
+function describeCodePublish(repoInfo: RepoInfo, codeError: string | undefined): string {
+    if (codeError === undefined) return 'Code synchronized';
+    if (isAppNotOnRepositoryError(codeError)) {
+        return (
+            `⚠️ Code not published to the CDN — the AEM Code Sync GitHub App is not on ` +
+            `${repoInfo.repoOwner}/${repoInfo.repoName}`
+        );
+    }
+    return `⚠️ Code not published to the CDN: ${codeError}`;
+}
+
+/**
+ * Wait-probe for a pause the code endpoint started: publish the code again. Ends
+ * the wait when the publish succeeds, or fails for a reason other than the App —
+ * then the App is no longer what blocks it, and the run reports the rest.
+ * `/status` cannot end this wait: it reads an inner 400 before and after (EDS-23).
+ */
+function codePublishProbe(
+    services: SetupServices,
+    repoInfo: RepoInfo,
+    logger: HandlerContext['logger'],
+): () => Promise<boolean> {
+    return async () => {
+        const error = await publishCode(services, repoInfo, logger);
+        return error === undefined || !isAppNotOnRepositoryError(error);
+    };
+}
+
+/** Options for {@link confirmCodeSync}. */
+interface ConfirmCodeSyncOptions {
+    signal?: AbortSignal;
+    /** The code publish's error, or undefined when it published. */
+    codeError?: string;
 }
 
 /**
@@ -146,10 +203,11 @@ async function confirmCodeSync(
     services: SetupServices,
     repoInfo: RepoInfo,
     edsConfig: StorefrontSetupStartPayload['edsConfig'],
-    signal?: AbortSignal,
+    options: ConfirmCodeSyncOptions,
 ): Promise<StorefrontSetupResult | null> {
     const logger = context.logger;
     const { githubAppService } = services;
+    const { signal, codeError } = options;
 
     await context.sendMessage('storefront-setup-progress', {
         phase: 'site-config',
@@ -158,6 +216,33 @@ async function confirmCodeSync(
         progress: 48,
     } satisfies StorefrontSetupProgressPayload);
 
+    // The code endpoint has ALREADY said the App does not cover the repository.
+    // `/status` cannot add to that — it reads an inner 400 either way (EDS-23) —
+    // so pause for the App, and let the same publish say when it is there.
+    if (codeError !== undefined && isAppNotOnRepositoryError(codeError)) {
+        logger.info(
+            `[Storefront Setup] AEM Code Sync is not on ${repoInfo.repoOwner}/${repoInfo.repoName} ` +
+                `— the code endpoint said: ${codeError}`,
+        );
+        return pauseForGitHubApp(
+            context,
+            services,
+            repoInfo,
+            {
+                owner: repoInfo.repoOwner,
+                repo: repoInfo.repoName,
+                installUrl: githubAppService.getInstallUrl(repoInfo.repoOwner, repoInfo.repoName),
+                message: buildAppNotOnRepositoryMessage(repoInfo.repoOwner, repoInfo.repoName),
+            },
+            {
+                signal,
+                phase: 'site-config',
+                progress: 48,
+                probe: codePublishProbe(services, repoInfo, logger),
+            },
+        );
+    }
+
     // The site was created seconds ago; code sync can lag it slightly. This is a
     // legitimate wait — unlike every earlier one, the thing being waited for is
     // genuinely on its way.
@@ -165,10 +250,15 @@ async function confirmCodeSync(
         awaitRegistration: true,
     });
 
-    if (outcome.kind === 'installed') {
+    // An inner 400 says nothing (EDS-23); a code publish that SUCCEEDED does —
+    // Helix fetched the code from GitHub, which needs the App on the repository.
+    const publishProvesApp = outcome.kind === 'undetermined' && outcome.codeStatus === 400
+        && codeError === undefined;
+    if (outcome.kind === 'installed' || publishProvesApp) {
         logger.info(
             `[Storefront Setup] AEM Code Sync verified for ${repoInfo.repoOwner}/${repoInfo.repoName} ` +
-                `(code.status ${outcome.codeStatus ?? 'none'})`,
+                `(code.status ${outcome.codeStatus ?? 'none'}` +
+                `${publishProvesApp ? ', and the code published' : ''})`,
         );
         await context.sendMessage('storefront-setup-progress', {
             phase: 'site-config',

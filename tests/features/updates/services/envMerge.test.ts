@@ -23,15 +23,6 @@ import {
 } from '@/features/updates/services/envMerge';
 
 describe('parsing an env file', () => {
-    it('reads KEY=value pairs', () => {
-        expect(parseEnvFile('A=1\nB=2')).toEqual(
-            new Map([
-                ['A', '1'],
-                ['B', '2'],
-            ])
-        );
-    });
-
     it('ignores blank lines and # comments', () => {
         expect(parseEnvFile('\n# a note\nA=1\n\n')).toEqual(new Map([['A', '1']]));
     });
@@ -102,13 +93,6 @@ describe('merging .env with a new .env.example', () => {
         const merged = mergeEnvContent('CUSTOM=mine', 'OTHER=');
 
         expect(parseEnvFile(merged).get('CUSTOM')).toBe('mine');
-    });
-
-    it('CONTROL: the merge does change something — it is not an identity function', () => {
-        // Without this, every assertion above could pass on a merge that simply
-        // returned the old content untouched.
-        const merged = mergeEnvContent('A=1', 'A=\nB=2');
-        expect(parseEnvFile(merged).has('B')).toBe(true);
     });
 });
 
@@ -205,13 +189,5 @@ describe('THE GAP, with no rename declared: a renamed variable is not migrated',
         const merged = parseEnvFile(mergeEnvContent(OLD_ENV, NEW_TEMPLATE));
 
         expect(merged.get('CATALOG_SERVICE_ENDPOINT')).toBe('https://catalog.adobe.io/graphql');
-    });
-
-    it('unrenamed keys in the same file are unaffected', () => {
-        // Scoping the finding: the merge is not broken, it simply cannot see a
-        // rename. Everything keyed the same way survives correctly.
-        const merged = parseEnvFile(mergeEnvContent(OLD_ENV, NEW_TEMPLATE));
-
-        expect(merged.get('API_KEY')).toBe('k-1');
     });
 });

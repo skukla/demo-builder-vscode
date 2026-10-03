@@ -60,6 +60,8 @@ import {
     probeStorefrontDelivery,
     type StorefrontProbeResult,
 } from '@/features/eds/services/storefront/storefrontProbe';
+import { readStorefrontReport, type StorefrontReport } from '@/features/eds/services/storefront/storefrontReport';
+import { createStorefrontReportDeps } from '@/features/eds/services/storefront/storefrontReportDeps';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
 import { getEdsGithubRepo } from '@/types/typeGuards';
@@ -214,11 +216,11 @@ export class DiagnosticsCommand extends BaseCommand {
             this.logger.debug('Measuring Claude Code storage footprint');
             report.claudeCode = await collectClaudeCodeFootprint();
 
-            // The four remote probes run CONCURRENTLY: each is pure HTTP against
-            // a different service (GitHub/AEM, the Config Service, aem.live, and
-            // the shared credential service), they share no state, and none reads
-            // another's result — so serialising them only added their latencies
-            // together.
+            // The remote probes run CONCURRENTLY: each is pure HTTP against
+            // a different service (GitHub/AEM, the Config Service, aem.live, the
+            // shared credential service, and GitHub again for the storefront's
+            // origin), they share no state, and none reads another's result — so
+            // serialising them only added their latencies together.
             //
             // The `aio` checks above stay sequential on purpose. The first aio
             // command in a session triggers `aio config set
@@ -226,18 +228,20 @@ export class DiagnosticsCommand extends BaseCommand {
             // only by in-process flags — so running those concurrently would race
             // that write for a saving these three already cover.
             this.logger.debug('Probing GitHub, Config Service and storefront');
-            const [githubCredential, configService, storefront, credentialService] =
+            const [githubCredential, configService, storefront, credentialService, storefrontOrigin] =
                 await Promise.all([
                     this.checkGitHubCredential(),
                     this.checkConfigService(),
                     this.checkStorefront(),
                     this.checkCredentialService(),
+                    this.checkStorefrontOrigin(),
                 ]);
             report.githubCredential = githubCredential;
             report.configService = configService;
             report.credentialService = credentialService;
             report.storefront = storefront?.probe;
             report.storefrontScope = storefront?.scope;
+            report.storefrontOrigin = storefrontOrigin;
 
             // Log the full report, with admin addresses redacted. This buffer is
             // exportable, so dumping the object verbatim would put colleague PII
@@ -352,6 +356,24 @@ export class DiagnosticsCommand extends BaseCommand {
                 divergence: pdpTarget.scopeDivergence,
             },
         };
+    }
+
+    /**
+     * Where the storefront comes from, what Demo Builder wrote into it, and each
+     * of its fixes (EDS-13f): the storefront report's own computation, so this
+     * section and `Demo Builder: Storefront Report` cannot disagree. Read-only.
+     * Undefined without an EDS project, and when the read fails outright (each
+     * leg already says "could not read" on its own; a throw is not a finding).
+     */
+    private async checkStorefrontOrigin(): Promise<StorefrontReport | undefined> {
+        const project = await this.stateManager.getCurrentProject();
+        if (!project || !getEdsGithubRepo(project)) return undefined;
+        try {
+            return await readStorefrontReport(project, createStorefrontReportDeps(this.context.secrets, this.logger));
+        } catch (error) {
+            this.logger.debug(`Storefront origin not read: ${(error as Error).message}`);
+            return undefined;
+        }
     }
 
     /**

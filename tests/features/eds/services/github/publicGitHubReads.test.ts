@@ -51,6 +51,45 @@ describe('publicRepoReaders — the repository', () => {
         expect((init.headers as Record<string, string>).Authorization).toBeUndefined();
     });
 
+    it('keeps the template a repository was generated from (EDS-13f lineage)', async () => {
+        // GitHub answers `template_repository` as a full repository object; only
+        // its owner login and name are kept. The research read aistore's on
+        // 2026-09-14: generated from adobe-commerce/boilerplate-b2b-template.
+        const body = {
+            ...REPO_JSON,
+            template_repository: {
+                name: 'boilerplate-b2b-template',
+                full_name: 'adobe-commerce/boilerplate-b2b-template',
+                owner: { login: 'adobe-commerce' },
+            },
+        };
+        const fetchImpl = answering({ '/repos/sayurihanki/aistore': { status: 200, body } });
+
+        const repo = await publicRepoReaders(fetchImpl).repoOps.getRepository('sayurihanki', 'aistore');
+
+        expect(repo.templateRepository).toEqual({ owner: 'adobe-commerce', repo: 'boilerplate-b2b-template' });
+        expect(repo.forkParent).toBeUndefined();
+    });
+
+    it("keeps a fork's parent, and nothing when GitHub records no origin", async () => {
+        const fork = {
+            ...REPO_JSON,
+            template_repository: null,
+            parent: { name: 'aem-boilerplate-commerce', owner: { login: 'hlxsites' } },
+        };
+        const forked = await publicRepoReaders(
+            answering({ '/repos/sayurihanki/aistore': { status: 200, body: fork } }),
+        ).repoOps.getRepository('sayurihanki', 'aistore');
+        const plain = await publicRepoReaders(
+            answering({ '/repos/sayurihanki/aistore': { status: 200, body: REPO_JSON } }),
+        ).repoOps.getRepository('sayurihanki', 'aistore');
+
+        expect(forked.forkParent).toEqual({ owner: 'hlxsites', repo: 'aem-boilerplate-commerce' });
+        expect(forked.templateRepository).toBeUndefined();
+        expect(plain).not.toHaveProperty('templateRepository');
+        expect(plain).not.toHaveProperty('forkParent');
+    });
+
     it("throws with GitHub's status, so the caller can tell a 404 from a rate limit", async () => {
         const fetchImpl = answering({ '/repos/jen/private-one': { status: 404 } });
 

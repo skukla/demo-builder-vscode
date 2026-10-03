@@ -254,9 +254,13 @@ async function checkGitHubAppInstallation(
     // user reinstall a working App eleven times. Report the real cause and let
     // the reset continue; the check is advisory here, not a gate.
     if (outcome.kind === 'undetermined') {
+        // An inner 400 is an answer that cannot say (EDS-23), not a missing response.
+        const answered = outcome.codeStatus !== undefined
+            ? `code.status ${outcome.codeStatus}`
+            : `HTTP ${outcome.httpStatus ?? 'no response'}`;
         context.logger.warn(
             `${logPrefix} Could not verify AEM Code Sync on ${repoOwner}/${repoName} ` +
-                `(HTTP ${outcome.httpStatus ?? 'no response'}) — continuing; this is a failed ` +
+                `(${answered}) — continuing; this is a failed ` +
                 `check, not a missing App.`,
         );
         return null;
@@ -299,6 +303,9 @@ async function checkGitHubAppInstallation(
 // Notifications
 // ==========================================================
 
+/** The reset result's button to the storefront report, where the fixes that fit are offered. */
+const SEE_REPORT = 'See the storefront report';
+
 /** Show result notifications after reset completes. */
 async function showResetResultNotifications(
     vscode: typeof import('vscode'),
@@ -324,12 +331,18 @@ async function showResetResultNotifications(
             );
         }
 
-        // The dry check's caveats for an added demo (D23): the same sentences the
-        // wizard's completion card shows, on the reset's own surface.
+        // The fix pass's lines for an added demo (D23, EDS-13f): the same sentences
+        // the wizard's completion card shows, on the reset's own surface. When fixes
+        // fit, the one door to accept them is the storefront report.
         if (result.demoCaveats?.length) {
-            vscode.window.showWarningMessage(
-                `A few things to know about this demo: ${result.demoCaveats.join(' ')}`,
-            );
+            const message = `A few things to know about this demo: ${result.demoCaveats.join(' ')}`;
+            if (result.demoFixes?.offered?.length) {
+                void vscode.window.showWarningMessage(message, SEE_REPORT).then((choice) => {
+                    if (choice === SEE_REPORT) void vscode.commands.executeCommand('demoBuilder.storefrontReport');
+                });
+            } else {
+                vscode.window.showWarningMessage(message);
+            }
         }
     } else if (result.errorType === 'GITHUB_APP_NOT_INSTALLED') {
         const selection = await vscode.window.showErrorMessage(

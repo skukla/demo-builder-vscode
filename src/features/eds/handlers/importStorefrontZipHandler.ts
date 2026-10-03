@@ -13,6 +13,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import {
+    boilerplateOfZip,
     cardFromZip,
     classifyZipStorefront,
     createRepositoryFromZip,
@@ -199,6 +200,7 @@ export async function importDemoBundle(context: HandlerContext, zipPath: string)
                 name: created.repo,
                 source: { owner: created.owner, repo: created.repo, branch: created.defaultBranch },
                 storefrontKind: 'eds',
+                ...boilerplateOfZip(unpacked.files),
                 createdFromZip: true,
             };
             await rememberAddedDemo(card);

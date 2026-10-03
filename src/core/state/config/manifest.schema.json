@@ -947,6 +947,10 @@
         "contentSource": {
           "$ref": "#/definitions/DaLiveContentSource"
         },
+        "builtWith": {
+          "$ref": "#/definitions/SharedDemoBuiltWith",
+          "description": "What the storefront was built from, written by \"Save as demo package\" (EDS-13f decision 2). Present means a Demo Builder storefront: starting a project from it applies the ledger's fixes where they fit. Absent (a colleague who did not build with Demo Builder, or a version-1 file) behaves as before."
+        },
         "source": {
           "type": "object",
           "properties": {
@@ -968,6 +972,14 @@
         "storefrontKind": {
           "$ref": "#/definitions/StorefrontKind",
           "description": "Read from the repository when the demo was added, never from the description file."
+        },
+        "boilerplate": {
+          "$ref": "#/definitions/StorefrontBoilerplate",
+          "description": "The `package.json` name and version read when the demo was added (EDS-13f). Absent on older rows."
+        },
+        "lineage": {
+          "$ref": "#/definitions/StorefrontLineage",
+          "description": "The template or fork parent GitHub recorded when the demo was added (EDS-13f). Absent when none."
         }
       },
       "required": [
@@ -1056,6 +1068,105 @@
         "indexPath"
       ]
     },
+    "SharedDemoBuiltWith": {
+      "type": "object",
+      "properties": {
+        "package": {
+          "type": "string",
+          "description": "The shipped package id, when the storefront was a shipped brand."
+        },
+        "template": {
+          "$ref": "#/definitions/RepositoryRef",
+          "description": "The template the storefront was generated from and pinned to."
+        },
+        "lkg": {
+          "type": "string",
+          "description": "The last-known-good commit of that template the storefront was pinned to."
+        },
+        "codePatchSource": {
+          "$ref": "#/definitions/CodePatchSource",
+          "description": "The patch ledger the storefront was patched from."
+        },
+        "codePatches": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The ledger's patch ids the storefront carries."
+        },
+        "boilerplate": {
+          "$ref": "#/definitions/StorefrontBoilerplate",
+          "description": "Its `package.json` name and version when it was saved."
+        },
+        "extension": {
+          "type": "string",
+          "description": "The Demo Builder version that saved it."
+        }
+      },
+      "required": [
+        "extension"
+      ],
+      "description": "A saved package's record of what its storefront was built from (EDS-13f decision 2)."
+    },
+    "RepositoryRef": {
+      "type": "object",
+      "properties": {
+        "owner": {
+          "type": "string"
+        },
+        "repo": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "owner",
+        "repo"
+      ],
+      "description": "A GitHub repository by its coordinates."
+    },
+    "CodePatchSource": {
+      "type": "object",
+      "properties": {
+        "owner": {
+          "type": "string",
+          "description": "GitHub owner/organization of the patch repository"
+        },
+        "repo": {
+          "type": "string",
+          "description": "GitHub repository name"
+        },
+        "path": {
+          "type": "string",
+          "description": "Path within repo to the patch family directory (contains code-patches.json)"
+        },
+        "lkgFile": {
+          "type": "string",
+          "description": "Repo-relative path to the LKG file when this ledger tracks a non-default canonical (multi-canonical patches repos). Omitted = the default root `last-known-good`. Every current package entry (citisignal-b2b, b2b, bodea) tracks adobe-commerce/boilerplate-b2b-template and sets `lkgFile: \"b2b/last-known-good\"`; the root default is presently unused."
+        }
+      },
+      "required": [
+        "owner",
+        "repo",
+        "path"
+      ],
+      "description": "CodePatchSource - External repository for code patches.\n\nSibling of  {@link  ContentPatchSource } . Code patches are file-level edits applied to a cloned storefront repo during create/reset, after reset-to-template and after block install. The engine knows no canonical file by name; everything comes from the external ledger fetched here.\n\nPer ADR-006 D3 the canonical home is `skukla/eds-demo-patches` (the generalized successor to `eds-demo-content-patches`); a path of e.g. `citisignal` selects the patch family for a storefront."
+    },
+    "StorefrontBoilerplate": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "description": "What a storefront's code was built on (EDS-13f decision 1): the `name` and `version` of its `package.json`. Both Adobe Commerce canonicals call themselves `@adobe/aem-boilerplate-commerce`; the B2B line is 6.x, the B2C line 10.x."
+    },
     "StorefrontKind": {
       "type": "string",
       "enum": [
@@ -1063,6 +1174,20 @@
         "headless"
       ],
       "description": "The two kinds of storefront a repository can hold."
+    },
+    "StorefrontLineage": {
+      "type": "object",
+      "properties": {
+        "templateRepository": {
+          "$ref": "#/definitions/RepositoryRef",
+          "description": "GitHub's `template_repository`: the template it was generated from."
+        },
+        "forkParent": {
+          "$ref": "#/definitions/RepositoryRef",
+          "description": "GitHub's `parent`: the repository it is a fork of."
+        }
+      },
+      "description": "Where a storefront's repository came from, as GitHub records it (EDS-13f decision 1). Both absent is the common case: a repository created empty and pushed, or reset onto a source, carries no record."
     },
     "CustomBlockLibrary": {
       "type": "object",

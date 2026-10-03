@@ -51,7 +51,7 @@ the repository. With it, you choose the name and say the things a repository can
 | Field | What it says |
 |---|---|
 | `kind` | Always `"demo"`, so a reader knows which Demo Builder file it holds |
-| `version` | The file format's version; `1` today |
+| `version` | The file format's version; `2` today. A version-1 file is still read, as before |
 | `name` | The name on the Welcome grid |
 | `description` | The line under the name |
 | `configDefaults` | Store codes and other config values the project starts with |
@@ -61,6 +61,7 @@ the repository. With it, you choose the name and say the things a repository can
 | `integrations` | The integrations the demo depends on: catalog ids, and custom apps by repository |
 | `blockLibraries` | Shipped block libraries to pre-tick |
 | `contentSource` | The content site, when it is not the one `fstab.yaml` names, or to name its index path |
+| `builtWith` | Written by Save as demo package, never by hand: the shipped package, template, pin, fix list and boilerplate the storefront was built from, and the Demo Builder version that saved it |
 
 A file that names a content site names its index path; the `indexPath` field is required
 inside `contentSource`. Only the SC's own actions guess a path, and only for a repository
@@ -78,7 +79,7 @@ A complete example:
 ```json
 {
   "kind": "demo",
-  "version": 1,
+  "version": 2,
   "name": "Isle5 by Jen",
   "description": "A B2B outdoor-equipment demo with company accounts and quotes",
   "configDefaults": {
@@ -115,20 +116,53 @@ When neither file says whether the demo uses company features, the dialog asks t
 says what an empty account menu would mean if they answer wrong. The agent's tools do not
 ask; they treat it as off and say so.
 
-## What is yours, and what Demo Builder writes
+## What Demo Builder writes, and what it never touches
 
-The code is yours. No Demo Builder patch is applied to a storefront built from your demo,
-and reset never applies one either. Five behaviours the shipped brands get from patches are
-checked against your code instead, and what is missing is said to the SC in three sentences
-at most: product links may open an empty page, a product page with no product may be blank,
-and product images from AEM Assets may not load for some SKUs. Those are yours to fix in
-your code, and the sentence says so.
+Into every project built from your demo, Demo Builder writes what connects it to that
+project: `fstab.yaml` pointing at the project's own content site, `config.json` and
+`demo-config.json` with the project's own store and endpoint, the product-page fallback
+(the smart-404 snippet in `scripts/delayed.js`), the block library, the inspector tagging,
+the quick-edit hooks and the description file. Your files are the starting point; those are
+the ones the project owns afterwards.
 
-Into every project built from your demo, Demo Builder writes what makes it that project's:
-`fstab.yaml` pointing at the project's own content site, `config.json` and
-`demo-config.json` with the project's own store and endpoint, the block library, the
-inspector tagging and the quick-edit hooks. Your files are the starting point; those are the
-ones the project owns afterwards.
+Your storefront's own code is left alone, with one exception the SC chooses: Demo Builder's
+fixes, below. Every write goes to the SC's own copy, never to your repository.
+
+## Fixes offered to a colleague's storefront
+
+The shipped brands carry a handful of fixes to Adobe's boilerplate (code patches, ADR-006).
+Five matter to what Demo Builder does around a storefront (product links, the empty product
+page, AEM Assets images) and two are general robustness fixes (the header and the account
+sidebar). What happens to them on a storefront built from your demo depends on what the demo
+shows:
+
+- **A demo saved with Save as demo package** carries `builtWith`, naming the template and the
+  fix list it was built with. A project started from it gets those fixes back on creation and
+  on every reset, applied where they fit, because both ends are the SC's own.
+- **A demo whose repository GitHub records as made from (or a fork of) one of Demo Builder's
+  templates** is offered the fixes that fit, opt-in, never by default: the reset message and
+  the storefront report (**Demo Builder: Storefront Report**) say how many fit and what they
+  fix, and the report asks before applying them, as one commit. A demo that only names Adobe's
+  boilerplate in its `package.json` gets the same offer, and the sentence says the match is by
+  name only.
+- **Anything else** gets the check only: what is missing is said to the SC in three
+  sentences at most (product links may open an empty page, a product page with no product may
+  be blank, product images from AEM Assets may not load for some SKUs).
+
+A fix **fits** only when the exact code it was written for appears once in the file. Code
+you changed does not match, so a fix never lands on it; that is what makes applying one to a
+storefront Demo Builder did not write safe. Nothing is ever pinned or reset onto Demo
+Builder's template for a storefront that is not the SC's own.
+
+## Boilerplate versions
+
+Demo Builder records what every storefront it touches was built on: the `name` and `version`
+in its `package.json` (both Adobe Commerce boilerplates call themselves
+`@adobe/aem-boilerplate-commerce`) and, from GitHub, the template it was generated from or the
+repository it is a fork of. The add dialog shows it as one row, **Built on**; the storefront
+report compares it with Demo Builder's current boilerplate, the template at the patches
+repository's last-known-good commit. An older storefront is still added: age alone never
+refuses one.
 
 ## Where a colleague's projects read from
 
@@ -234,6 +268,10 @@ is a local clone with no repository of the SC's own: share one by pushing your c
 repository and sending the link.
 
 ## For agents
+
+`get_storefront_report` answers the storefront report for the open project, as data and in
+the SC's words, including `offer`, the fixes that fit an added demo. `reset_project` and
+`create_project` take `applyFixes:true` to apply them, only when the user said yes.
 
 The same doors exist as tools, in [mcp-tools.md](mcp-tools.md): `probe_shared_demo` reads
 a demo from a link, `add_shared_demo` adds it, `create_project` takes an added demo's id or

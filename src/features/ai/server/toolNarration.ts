@@ -208,6 +208,7 @@ export const TOOL_NARRATION: Record<string, string> = {
     // ── Storefront and content ──────────────────────────────────────────
     republish: 'Republishing the storefront',
     sync_content: 'Publishing the content',
+    get_storefront_report: 'Reading the storefront report',
     sync_storefront: 'Pushing the storefront to GitHub',
     write_page: 'Writing the page',
     publish_page: 'Publishing the page',

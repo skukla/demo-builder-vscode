@@ -14,6 +14,7 @@ jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(unde
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { TARGET, opsWith as buildOps, workspace } from './adobeConsoleProjectOps.testUtils';
+import { READ_ONLY_PROJECT_REFUSAL } from '../../../helpers/adobeConsoleRefusals';
 
 const GATEWAY_TIMEOUT = new Error(
     '[CoreConsoleAPISDK:ERROR_DELETE_WORKSPACE] 504 - Gateway Timeout ("upstream request timeout")',
@@ -74,5 +75,19 @@ describe('AdobeConsoleProjectOps.deleteWorkspace', () => {
         await expect(ops.deleteWorkspace('ws-1', TARGET)).resolves.toEqual({
             error: GATEWAY_TIMEOUT.message,
         });
+    });
+
+    // AB-18: every workspace delete goes through here — removing an integration, moving
+    // one, and the delete_workspace tool — so this is where the refusal gets its words.
+    it('says in plain words why Adobe refused a delete in a read-only project', async () => {
+        const list = jest.fn().mockResolvedValue([workspace('ws-1')]);
+        const ops = opsWith(jest.fn().mockRejectedValue(new Error(READ_ONLY_PROJECT_REFUSAL)), list);
+
+        const result = await ops.deleteWorkspace('ws-1', TARGET);
+
+        expect(result).toEqual({
+            error: expect.stringContaining('not a developer on every product profile'),
+        });
+        expect(JSON.stringify(result)).toMatch(/read-only for you/);
     });
 });

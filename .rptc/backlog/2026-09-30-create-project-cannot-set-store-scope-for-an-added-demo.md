@@ -4,7 +4,7 @@ kind: feature
 area: ai
 needs: []
 value: med
-status: backlog
+status: built
 ---
 
 # Create project cannot set store scope for an added demo
@@ -39,3 +39,4 @@ stack is ACCS and the demo's codes are not among what `discover_store_structure`
 endpoint, say so and name the found codes, rather than publishing a storefront that cannot load.
 
 ## Shipped so far
+- 2026-10-03  2026-10-03 (worktree night2-b, uncommitted): create_project and create_project_from_file take storeScope {website, store, storeView} from configure_project's one schema (storeScope.ts), checked before anything is created and written to the backend's config that generates config.json; live ACCS proof left for the owner.

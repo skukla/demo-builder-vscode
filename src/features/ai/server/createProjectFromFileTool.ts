@@ -31,9 +31,10 @@ import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { z } from 'zod';
 import { declaredEnvVarKeys } from './componentRequirementsTool';
-import { runProjectCreation, type CreationSeed } from './createProjectTool';
+import { parseStoreScope, runProjectCreation, type CreationSeed } from './createProjectTool';
 import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
+import { storeScopeSchema } from './storeScope';
 import { ACCS_GRAPHQL_ENDPOINT, SECRET_ENV_KEYS } from '@/core/config/envVarKeys';
 import { readProjectFile, type ReadProjectFileResult } from '@/core/state/projectFileReader';
 import { getStackById } from '@/features/components/services/demoPackageLoader';
@@ -194,6 +195,9 @@ export function registerCreateProjectFromFileTool(
                     .describe(
                         'EDS + ACCS only: Adobe Commerce Cloud GraphQL endpoint (default: the one the file recorded)',
                     ),
+                // The file records its sender's codes; a store other than theirs has its
+                // own. Same input as configure_project; the file's codes when omitted.
+                storeScope: storeScopeSchema.optional(),
                 confirm: z
                     .boolean()
                     .optional()
@@ -221,6 +225,8 @@ export function registerCreateProjectFromFileTool(
                 });
             }
 
+            const scope = parseStoreScope(file.selectedStack, args?.storeScope);
+            if ('error' in scope) return asText(scope);
             const seed = seedFrom(file);
             if (args?.confirm !== true) {
                 return asText({
@@ -243,6 +249,7 @@ export function registerCreateProjectFromFileTool(
                 daLiveOrg: text(args.daLiveOrg),
                 daLiveSite: text(args.daLiveSite),
                 accsEndpoint: text(args.accsEndpoint) ?? endpointFrom(file, file.selectedStack),
+                storeScope: scope.storeScope,
                 seed,
                 report: {
                     fromFile: {

@@ -24,6 +24,7 @@ import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
 import { withOrgContext, type OrgContextTarget } from '@/core/shell/orgContextEnv';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { explainMissingDeveloperAccess } from '@/features/authentication/services/authenticationErrorFormatter';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState, Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
@@ -151,6 +152,17 @@ async function wipeIfSystem({ project, state, entry }: TeardownTarget, deps: Tea
 }
 
 /**
+ * A clean-up's reason as the SC reads it: Adobe refusing the workspace credential
+ * because they are not a developer on every product profile it uses (a read-only
+ * project, AB-18) in plain words; anything else as written. The caller has already
+ * logged Adobe's own words.
+ */
+function inPlainWords(reason: string): string {
+    const plain = explainMissingDeveloperAccess(reason);
+    return plain ? plain.replace(/\.$/u, '') : reason;
+}
+
+/**
  * Everything only the deployed code can clean up, run before the undeploy
  * takes that code away. Each step is attempted even when an earlier one
  * failed, so a retry has less to do and the SC hears every reason at once.
@@ -173,7 +185,7 @@ export async function cleanUpBeforeUndeploy(target: TeardownTarget, deps: Teardo
     if (uninstall) {
         deps.logger.warn(`[AppBuilderComponent Runner] ${target.id} Commerce uninstall did not finish: ${uninstall}`);
         unfinished.push({
-            what: `${name} could not be uninstalled from Commerce (${uninstall})`,
+            what: `${name} could not be uninstalled from Commerce (${inPlainWords(uninstall)})`,
             leaves: 'its webhooks and event subscriptions in Commerce',
         });
     }
@@ -181,7 +193,7 @@ export async function cleanUpBeforeUndeploy(target: TeardownTarget, deps: Teardo
     if (wipe) {
         deps.logger.warn(`[AppBuilderComponent Runner] ${target.id} records wipe did not finish: ${wipe}`);
         unfinished.push({
-            what: `${name}'s records could not be deleted (${wipe})`,
+            what: `${name}'s records could not be deleted (${inPlainWords(wipe)})`,
             leaves: `its records in the workspace's database, and they come back if ${name} is added again`,
         });
     }

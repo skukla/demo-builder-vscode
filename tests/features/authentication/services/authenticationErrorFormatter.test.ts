@@ -13,6 +13,10 @@ import {
     explainAdobeAccessFailure,
 } from '@/features/authentication/services/authenticationErrorFormatter';
 import { ErrorCode } from '@/types/errorCodes';
+import {
+    MISSING_LICENCE_REFUSAL,
+    READ_ONLY_PROJECT_REFUSAL,
+} from '../../../helpers/adobeConsoleRefusals';
 
 describe('AuthenticationErrorFormatter', () => {
     describe('formatError', () => {
@@ -252,10 +256,7 @@ describe('AuthenticationErrorFormatter', () => {
 
 // The two Adobe refusals a deploy reaches with no sentence of its own. Inputs are the
 // shapes read off real failures on 2026-09-17/18, with the user id replaced.
-const LICENCE_403 =
-    'App deployment failed: [CoreConsoleAPISDK:ERROR_GET_INTEGRATION_SECRETS] 403 - Forbidden ' +
-    '({"messages":[{"template":"ERR_MSG_OPERATION_NOT_ALLOWED","message":"The user ' +
-    "USER@AdobeID doesn't have the matching licenses for this application\"}]})";
+const LICENCE_403 = MISSING_LICENCE_REFUSAL;
 
 const LICENCE_504 =
     '[CoreConsoleAPISDK:ERROR_GET_INTEGRATION] 504 - Gateway Timeout ({"messages":[{"message":' +
@@ -288,5 +289,15 @@ describe('explainAdobeAccessFailure', () => {
 
     it('leaves every other failure alone', () => {
         expect(explainAdobeAccessFailure('Build failed (exit 1): tsc: 3 errors')).toBeUndefined();
+    });
+
+    // AB-18: the same missing access makes the whole project read-only, and a teardown
+    // then meets "Read-only project cannot be deleted" — which said nothing about why.
+    it('explains a read-only project refusal as the same missing developer access', () => {
+        const message = explainAdobeAccessFailure(READ_ONLY_PROJECT_REFUSAL);
+
+        expect(message).toMatch(/read-only for you/);
+        expect(message).toContain('not a developer on every product profile');
+        expect(message).toContain('Admin Console');
     });
 });

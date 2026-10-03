@@ -13,7 +13,7 @@
  */
 
 import type { RepoInfo } from '../handlers/storefrontSetup/storefrontSetupTypes';
-import type { GitHubAppService } from './github/githubAppService';
+import { GITHUB_APP_INSTALL_URL, type GitHubAppService } from './github/githubAppService';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
@@ -79,7 +79,50 @@ function isSiteNotRegistered(check: { httpStatus?: number; codeStatus?: number }
 export type AppInstallationOutcome =
     | { kind: 'installed'; codeStatus?: number }
     | { kind: 'not-installed'; codeStatus?: number; httpStatus?: number; helixError?: string }
-    | { kind: 'undetermined'; httpStatus?: number; helixError?: string; noCredential?: boolean };
+    | {
+          kind: 'undetermined';
+          /** Set when Helix answered with an inner status that says nothing (400, 403…). */
+          codeStatus?: number;
+          httpStatus?: number;
+          helixError?: string;
+          noCredential?: boolean;
+      };
+
+/**
+ * The reason the code endpoint (`POST admin.hlx.page/code/...`) gives in its
+ * `x-error` when the AEM Code Sync App does not cover the repository. Read from a
+ * live 400 on skukla/kukla-justrite, 2026-09-30 (EDS-23): the full header is
+ * `[admin] github bot not installed on repository.` — matched without the prefix
+ * and the full stop so a re-worded wrapper around it still counts.
+ */
+const APP_NOT_ON_REPOSITORY_REASON = 'github bot not installed on repository';
+
+/**
+ * Does this code-endpoint failure say the AEM Code Sync App does not cover the
+ * repository? The ONLY reliable signal for that: `/status` answers an inner 400
+ * both before and after the App is added (EDS-23).
+ *
+ * @param message - the error message (`HelixService.previewCode` carries the x-error in it)
+ * @returns true when the reason is the App missing from the repository
+ */
+export function isAppNotOnRepositoryError(message: string): boolean {
+    return message.includes(APP_NOT_ON_REPOSITORY_REASON);
+}
+
+/**
+ * Plain-words answer for an SC whose code could not be published because the App
+ * does not cover the repository: what happened, and the one thing to do.
+ *
+ * @param owner - repository owner
+ * @param repo - repository name
+ * @returns the message, with the install page linked
+ */
+export function buildAppNotOnRepositoryMessage(owner: string, repo: string): string {
+    return (
+        `The AEM Code Sync GitHub App is not on ${owner}/${repo}, so its code cannot reach ` +
+        `the CDN. Add the repository to the App at ${GITHUB_APP_INSTALL_URL}, then publish again.`
+    );
+}
 
 /**
  * Render whatever the AEM admin API actually told us, omitting anything it
@@ -165,6 +208,7 @@ export async function resolveAppInstallation(
         );
         return {
             kind: 'undetermined',
+            codeStatus: check.codeStatus,
             httpStatus: check.httpStatus,
             helixError: check.helixError,
             noCredential: check.noCredential,
@@ -190,6 +234,12 @@ export interface WaitForAppInstallationOptions {
     pollMs?: number;
     /** The longest wait before giving up. Defaults to `TIMEOUTS.EDS_CODE_SYNC_INSTALL_WAIT`. */
     maxWaitMs?: number;
+    /**
+     * Ask this instead of `/status`. For a wait that `/status` cannot end: when the
+     * App was found missing by the code endpoint, `/status` reads the same inner 400
+     * before and after the install (EDS-23), so only the code endpoint can say.
+     */
+    probe?: () => Promise<boolean>;
 }
 
 /** How a wait for the App ended. */
@@ -204,11 +254,10 @@ export type AppInstallationWaitVerdict = 'installed' | 'timed-out' | 'aborted';
  * at the install dialog and continue from the same line instead of ending there
  * (EDS-20, 2026-09-25).
  *
- * Strict mode on purpose. After an install the App syncs the repo and Helix
- * reports `code.status` 400 (initializing) then 200 — both count as installed.
- * A 401 or a network blip does not, because the run is about to build on the
- * answer; the dialog's own lenient check is for reassuring a person, not for
- * deciding whether to write.
+ * Strict mode on purpose (see `statusProbe`): a 401 or a network blip is not
+ * an install, because the run is about to build on the answer; the dialog's own
+ * lenient check is for reassuring a person, not for deciding whether to write.
+ * A caller whose question `/status` cannot answer passes its own `probe`.
  *
  * Attempts are counted, not clocked, so a suite that mocks `sleep` can drive the
  * timeout without a real clock.
@@ -232,21 +281,21 @@ export async function waitForAppInstallation(
     } = options;
     const { repoOwner, repoName } = repoInfo;
     const attempts = Math.max(1, Math.ceil(maxWaitMs / pollMs));
+    const probe = options.probe ?? statusProbe(githubAppService, repoInfo, logger);
     for (let attempt = 1; attempt <= attempts; attempt++) {
         if (signal?.aborted) return 'aborted';
         await sleep(pollMs);
         if (signal?.aborted) return 'aborted';
-        const check = await githubAppService.isAppInstalled(repoOwner, repoName);
-        if (check.isInstalled) {
+        if (await probe()) {
             logger.info(
                 `[Storefront Setup] AEM Code Sync detected on ${repoOwner}/${repoName} ` +
-                    `after ${attempt} check(s) (${formatAdminDiagnostics(check)})`,
+                    `after ${attempt} check(s)`,
             );
             return 'installed';
         }
         logger.debug(
             `[Storefront Setup] Still waiting for AEM Code Sync on ${repoOwner}/${repoName} ` +
-                `(${attempt}/${attempts}, ${formatAdminDiagnostics(check)})`,
+                `(${attempt}/${attempts})`,
         );
     }
     logger.warn(
@@ -254,6 +303,26 @@ export async function waitForAppInstallation(
             `after ${attempts} checks`,
     );
     return 'timed-out';
+}
+
+/**
+ * The default wait probe: ask `/status` (strict).
+ *
+ * This wait starts from an inner `code.status: 404`, so an inner 400 counts as the
+ * install: on its own a 400 proves nothing (EDS-23), but LEAVING 404 for it is the
+ * change an install makes. A 401 or a network blip still does not count — the run
+ * is about to build on the answer. Phase 3 re-checks by the code endpoint.
+ */
+function statusProbe(
+    githubAppService: Pick<GitHubAppService, 'isAppInstalled'>,
+    repoInfo: RepoInfo,
+    logger: Logger,
+): () => Promise<boolean> {
+    return async () => {
+        const check = await githubAppService.isAppInstalled(repoInfo.repoOwner, repoInfo.repoName);
+        logger.debug(`[Storefront Setup] AEM Code Sync poll: ${formatAdminDiagnostics(check)}`);
+        return check.isInstalled || check.codeStatus === 400;
+    };
 }
 
 /**
@@ -271,8 +340,18 @@ export function buildUndeterminedAppCheckError(
     repoInfo: RepoInfo,
     httpStatus?: number,
     noCredential?: boolean,
+    codeStatus?: number,
 ): string {
     const repo = `${repoInfo.repoOwner}/${repoInfo.repoName}`;
+
+    // AEM DID answer — with an inner 400, which reads the same whether or not the
+    // App covers the repository (EDS-23). Not a connection problem.
+    if (codeStatus === 400) {
+        return (
+            `AEM's status check cannot tell whether AEM Code Sync is on ${repo} (code status ` +
+            `400). Storefront setup confirms it when it publishes the code.`
+        );
+    }
 
     if (noCredential) {
         return `Couldn't verify AEM Code Sync for ${repo} — you're not signed in to GitHub. `

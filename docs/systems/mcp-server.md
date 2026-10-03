@@ -500,6 +500,31 @@ credentials the new project still needs (`stillNeeded.credentials`, read from th
 components' declared env vars against `SECRET_ENV_KEYS`). Like `create_project` it is
 gated by `confirm:true` and is not on the consent-dialog list.
 
+### Store scope at creation (AI-11, 2026-10-03)
+
+`create_project` and `create_project_from_file` take an optional `storeScope
+{ website, store, storeView }` — the input `configure_project` takes, from the one
+schema in `storeScope.ts`, so all three agree on what a valid scope is (all three
+codes, as text) and where it is stored (the backend's `ACCS_WEBSITE_CODE`,
+`ACCS_STORE_CODE`, `ACCS_STORE_VIEW_CODE`). It is checked before anything is created,
+and refused when the stack has no backend to hold it. It reaches the creation that
+generates `config.json`, so a storefront built on a store other than the demo's is not
+published with the wrong codes first and corrected after. On the file path the call's
+codes win over the file's; omitted, the file's codes stand.
+
+### Demo Builder's fixes on an added demo (EDS-13f, 2026-10-03)
+
+`get_storefront_report` (read-only, GitHub sign-in) answers the same report as **Demo
+Builder: Storefront Report** and the Diagnostics section: the storefront's boilerplate
+against Demo Builder's current one, its lineage, what Demo Builder wrote, and each fix's
+state, plus `offer`, the fixes that fit an added demo tied to our templates, and `summary`,
+the words the SC reads. Accepting the offer is a write with its own consent:
+`reset_project` and `create_project` take `applyFixes:true`, never defaulted, which
+applies the fits as one commit to the SC's own repository. Without it, both tools answer
+the offer (`fixes.offered`, `caveats`) and write none. A saved package's own fix list is
+applied on create and reset without asking, because both ends are the SC's; a storefront
+with no tie to our templates gets the check only.
+
 ### Integrations live in Adobe workspaces of their own (AB-23)
 
 Since 2026-09-21 every integration an SC adds gets an Adobe workspace of its own,

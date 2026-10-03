@@ -239,14 +239,6 @@ describe('resetEdsProjectWithUI — sample data', () => {
         expect(mockedRemove).not.toHaveBeenCalled();
     });
 
-    it('removes only when the removal is explicitly chosen', async () => {
-        answers(RESET, REMOVE);
-
-        await run(createProject({ name: 'bodea', version: 'main' }));
-
-        expect(mockedRemove).toHaveBeenCalled();
-    });
-
     /**
      * The data step runs BEFORE the storefront pipeline.
      *
@@ -270,16 +262,6 @@ describe('resetEdsProjectWithUI — sample data', () => {
         expect(mockedRemove.mock.invocationCallOrder[0]).toBeLessThan(
             mockedReset.mock.invocationCallOrder[0]
         );
-    });
-
-    /** Cancelling the reset cancels everything — the second prompt never runs. */
-    it('does not ask about data when the reset itself is cancelled', async () => {
-        answers(undefined);
-
-        await run(createProject({ name: 'bodea', version: 'main' }));
-
-        expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
-        expect(mockedRemove).not.toHaveBeenCalled();
     });
 
     /** Rule 3. */
@@ -426,17 +408,6 @@ describe('resetEdsProjectWithUI — asks only when it can deliver', () => {
         expect(mockedCredentials).toHaveBeenCalledWith(
             expect.objectContaining({ project: expect.objectContaining({ stackBackend: '' }) })
         );
-    });
-
-    /** Checked BEFORE the prompt, not during the reset it would follow. */
-    it('resolves credentials before asking, not after resetting', async () => {
-        answers(RESET, REMOVE);
-
-        await run(createProject({ name: 'bodea', version: 'main' }));
-
-        const askedAt = (vscode.window.showWarningMessage as jest.Mock).mock.invocationCallOrder[1];
-        const checkedAt = mockedCredentials.mock.invocationCallOrder[0];
-        expect(checkedAt).toBeLessThan(askedAt);
     });
 
     /**

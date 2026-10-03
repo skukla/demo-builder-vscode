@@ -31,7 +31,7 @@ import {
     type PatchReport,
 } from '../../services/patches/patchReportHelper';
 import { getDaLiveAuthService } from '../edsHelpers';
-import { dryCheckDemo, withDemoContentSource } from './storefrontSetupDemo';
+import { runDemoFixes, withDemoContentSource } from './storefrontSetupDemo';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import { executePhaseGitHubRepo } from './storefrontSetupPhase1';
 import { executePhaseHelixConfig, type BlockLibraryOptions } from './storefrontSetupPhase2';
@@ -447,10 +447,8 @@ export async function executeStorefrontSetupPhases(
         );
         if (phase1Result) return phase1Result;
 
-        // An added demo's code is never patched (D4); the dry check says what may not work.
-        if (edsConfig.demo) {
-            await dryCheckDemo(edsConfig.demo, repoInfo, { owner: templateOwner, repo: templateRepo }, logger);
-        }
+        // An added demo: its fixes applied, offered, or only checked (D23, EDS-13f).
+        await runDemoFixes(edsConfig, repoInfo, services.githubFileOps, logger);
 
         const { blockCollectionIds, earlyReturn } = await runConfigCodeSyncPhases(
             context,

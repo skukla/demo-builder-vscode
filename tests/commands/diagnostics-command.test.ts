@@ -59,6 +59,13 @@ jest.mock('@/features/eds/services/github/githubCredentialProbe', () => ({
 jest.mock('@/features/eds/services/storefront/storefrontProbe', () => ({
     probeStorefrontDelivery: jest.fn(),
 }));
+jest.mock('@/features/eds/services/storefront/storefrontReport', () => ({
+    ...jest.requireActual('@/features/eds/services/storefront/storefrontReport'),
+    readStorefrontReport: jest.fn(),
+}));
+jest.mock('@/features/eds/services/storefront/storefrontReportDeps', () => ({
+    createStorefrontReportDeps: jest.fn(() => ({ marker: 'report-deps' })),
+}));
 
 import * as vscode from 'vscode';
 import { collectClaudeCodeFootprint } from '@/commands/claudeCodeFootprint';
@@ -91,6 +98,7 @@ import type { CredentialServiceProbeResult } from '@/features/eds/services/crede
 import { probeGitHubCredential } from '@/features/eds/services/github/githubCredentialProbe';
 import type { CredentialProbeResult } from '@/features/eds/services/github/githubCredentialProbe';
 import { probeStorefrontDelivery } from '@/features/eds/services/storefront/storefrontProbe';
+import { readStorefrontReport, type StorefrontReport } from '@/features/eds/services/storefront/storefrontReport';
 import type { StorefrontProbeResult } from '@/features/eds/services/storefront/storefrontProbe';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
@@ -306,6 +314,37 @@ describe('the four remote probes', () => {
         await command.execute();
 
         expect(probeCredentialService).toHaveBeenCalledWith({ auth: mockAuthService });
+    });
+});
+
+describe('the storefront origin section (EDS-13f)', () => {
+    it("reads the open EDS project's storefront report and carries it on the report", async () => {
+        const origin: StorefrontReport = {
+            repository: { owner: 'acme', repo: 'demo-storefront' },
+            boilerplate: { status: 'absent' },
+            origin: { kind: 'shipped', package: 'citisignal' },
+            written: { smart404: 'present', fstab: 'present', config: 'present', description: 'absent' },
+            fixes: [],
+        };
+        jest.mocked(readStorefrontReport).mockResolvedValue(origin);
+        const project = edsProject();
+        const { command, logger } = setup(project);
+
+        await command.execute();
+
+        expect(readStorefrontReport).toHaveBeenCalledWith(project, { marker: 'report-deps' });
+        expect(reportFrom(logger).storefrontOrigin).toEqual(origin);
+    });
+
+    it('reads nothing without an EDS project, and leaves the section out when the read throws', async () => {
+        const { command } = setup(null);
+        await command.execute();
+        expect(readStorefrontReport).not.toHaveBeenCalled();
+
+        jest.mocked(readStorefrontReport).mockRejectedValue(new Error('GitHub down'));
+        const failing = setup(edsProject());
+        await failing.command.execute();
+        expect(reportFrom(failing.logger).storefrontOrigin).toBeUndefined();
     });
 });
 

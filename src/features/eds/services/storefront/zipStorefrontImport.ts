@@ -20,6 +20,7 @@ import {
     classifyRepoForStorefront,
     type RepoReadiness,
 } from './repoStorefrontReadiness';
+import { readBoilerplate } from './storefrontProvenance';
 import { ZIP_COMMIT_MESSAGE } from './zipImportCommit';
 import { readProjectFile, readSharedDemoDescription } from '@/core/state/projectFileReader';
 import { normalizeRepositoryName } from '@/core/validation/normalizers';
@@ -30,6 +31,7 @@ import {
     type AddedDemo,
     type ProjectFile,
     type RememberedDemo,
+    type StorefrontBoilerplate,
 } from '@/types/projectFile';
 
 /** Dropped whatever the zip's own ignore file says: never part of a storefront's code. */
@@ -289,8 +291,19 @@ export function cardFromZip(
         ...read.description,
         source: { owner: created.owner, repo: created.repo, branch: created.defaultBranch },
         storefrontKind: 'eds',
+        ...boilerplateOfZip(files),
         createdFromZip: true,
     };
+}
+
+/**
+ * What a zip's storefront was built on, from its own `package.json` (EDS-13f
+ * decision 4: a zip has no GitHub record, so its files are the only witness).
+ * A spreadable field: nothing when the zip names no boilerplate.
+ */
+export function boilerplateOfZip(files: Map<string, Buffer>): { boilerplate?: StorefrontBoilerplate } {
+    const boilerplate = readBoilerplate(files.get('package.json')?.toString('utf-8'));
+    return boilerplate ? { boilerplate } : {};
 }
 
 /**

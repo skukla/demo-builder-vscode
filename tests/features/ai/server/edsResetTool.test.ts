@@ -189,6 +189,23 @@ describe('reset_project on an Edge Delivery project', () => {
         expect(res).toMatchObject({ reset: true, caveats: ['Product links may not work.'] });
     });
 
+    it("passes the SC's yes to Demo Builder's fixes, and says what was applied and what was offered (EDS-13f)", async () => {
+        const s = fakeServer();
+        registerResetProjectTool(s, ctxFactory);
+        executeEdsResetMock.mockResolvedValueOnce({
+            success: true,
+            filesReset: 12,
+            contentCopied: 5,
+            meshRedeployed: false,
+            demoFixes: { applied: ['pdp-empty-data-redirect'] },
+        });
+
+        const res = await s.call({ confirm: true, applyFixes: true });
+
+        expect(executeEdsResetMock.mock.calls[0][0]).toMatchObject({ applyDemoFixes: true });
+        expect(res).toMatchObject({ reset: true, fixes: { applied: ['pdp-empty-data-redirect'] } });
+    });
+
     it('sends a headless project to the component reset, never the storefront one', async () => {
         // One tool, two kinds of project: the kind decides the path. The storefront
         // reset must not run against a project that has no storefront repository.
@@ -268,6 +285,7 @@ describe('reset_project on an Edge Delivery project', () => {
         expect(Object.keys(def.inputSchema!)).toEqual([
             'includeBlockLibrary',
             'verifyCdn',
+            'applyFixes',
             'confirm',
         ]);
     });
@@ -312,14 +330,14 @@ describe('reset_project on an Edge Delivery project', () => {
         expect(executeEdsResetMock).not.toHaveBeenCalled();
     });
 
-    it('defaults both optional flags OFF when the caller omits them', async () => {
+    it('defaults every optional flag OFF when the caller omits them, applying fixes included', async () => {
         const s = fakeServer();
         registerResetProjectTool(s, ctxFactory);
 
         await s.call({ confirm: true });
 
         expect(executeEdsResetMock).toHaveBeenCalledWith(
-            expect.objectContaining({ includeBlockLibrary: false, verifyCdn: false }),
+            expect.objectContaining({ includeBlockLibrary: false, verifyCdn: false, applyDemoFixes: false }),
             expect.anything(),
             expect.anything(),
             expect.anything(),

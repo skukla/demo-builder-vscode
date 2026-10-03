@@ -474,6 +474,44 @@ describe('checkGitHubAppForExistingRepo', () => {
  * the 401 case. Signing out of GitHub should never produce an install prompt:
  * installing the App cannot supply a credential.
  */
+/**
+ * EDS-23. `/status` answered an inner 400 for skukla/kukla-justrite both before the
+ * App covered the repository and after. It cannot decide this gate, and failing
+ * setup on it would block every repository stuck at 400 — working ones included.
+ * Phase 3 decides by the code endpoint's x-error, which does say.
+ */
+describe('checkGitHubAppForExistingRepo — an inner 400 that says nothing', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    it('continues without a dialog and says the check moves to the code publish', async () => {
+        const context = makeContext();
+        const services = makeServices({ isInstalled: false, codeStatus: 400, transient: true });
+
+        const result = await checkGitHubAppForExistingRepo(context, services, REPO_INFO);
+
+        expect(result).toBeNull();
+        expect(sentMessageTypes(context)).not.toContain('storefront-setup-github-app-required');
+        expect(sentPayload(context, 'storefront-setup-progress')).toBeDefined();
+        const progress = (context.sendMessage as jest.Mock).mock.calls
+            .filter((c) => c[0] === 'storefront-setup-progress')
+            .map((c) => c[1] as { phase: string; message: string; progress: number });
+        expect(progress[progress.length - 1]).toEqual({
+            phase: 'storefront-code',
+            message: expect.stringMatching(/checked again when the code is published/i),
+            progress: 28,
+        });
+    });
+
+    it('CONTROL — an undetermined answer with no inner 400 still fails as before', async () => {
+        const context = makeContext();
+        const services = makeServices({ isInstalled: false, transient: true, httpStatus: 401 });
+
+        const result = await checkGitHubAppForExistingRepo(context, services, REPO_INFO);
+
+        expect(result).toMatchObject({ success: false });
+    });
+});
+
 describe('checkGitHubAppForExistingRepo — no GitHub credential', () => {
     beforeEach(() => jest.clearAllMocks());
 

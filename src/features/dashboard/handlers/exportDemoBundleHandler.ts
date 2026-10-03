@@ -102,7 +102,9 @@ export const handleExportDemoBundle: MessageHandler<ExportDemoBundleRequest> = a
     try {
         const { fileOperations, repoOperations } = getGitHubServices(context.context.secrets);
         const own = await resolveOwnContentSource(storefront, { logger: context.logger });
-        const description = describeProject(project, packageDraftFor(project), own.contentSource);
+        const description = describeProject(project, packageDraftFor(project), own.contentSource, {
+            extension: extensionVersion(),
+        });
         const repository = await repoOperations.getRepository(storefront.owner, storefront.repo);
         const archive = await fileOperations.downloadRepoArchive(storefront.owner, storefront.repo, repository.defaultBranch);
         const parts: DemoBundleParts = {

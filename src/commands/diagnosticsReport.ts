@@ -18,6 +18,10 @@ import { type CredentialServiceProbeResult } from '@/features/eds/services/crede
 import type { CredentialProbeResult } from '@/features/eds/services/github/githubCredentialProbe';
 import { describeScope } from '@/features/eds/services/storefront/servedStorefrontConfig';
 import type { StorefrontProbeResult } from '@/features/eds/services/storefront/storefrontProbe';
+import {
+    storefrontReportLines,
+    type StorefrontReport,
+} from '@/features/eds/services/storefront/storefrontReport';
 
 // Diagnostic Type Definitions
 export interface SystemInfo {
@@ -163,6 +167,12 @@ export interface DiagnosticsReport {
      */
     storefrontScope?: StorefrontScopeReport;
     /**
+     * Where the storefront comes from, what Demo Builder wrote into it, and each
+     * of its fixes (EDS-13f): the storefront report's own computation. Absent when
+     * no EDS project is open.
+     */
+    storefrontOrigin?: StorefrontReport;
+    /**
      * Claude Code's own `~/.claude` disk footprint — measured on demand because
      * it grows ~4 GB/year with nothing reporting it, and it sits beside our
      * storage where a producer cannot tell whose is whose. Report-only by
@@ -306,6 +316,19 @@ function storefrontLines(probe: StorefrontProbeResult, scope?: StorefrontScopeRe
     }
     lines.push(`  \u2192 ${probe.verdict}`);
     return lines;
+}
+
+/**
+ * The storefront report as a Diagnostics section: its own lines under its own
+ * headings (one computation, decision 8), then each fix by id, which a ticket
+ * needs and an SC-facing surface never shows.
+ */
+function storefrontOriginLines(report: StorefrontReport): string[] {
+    const body = storefrontReportLines(report).map((line) =>
+        line.startsWith('## ') ? `  ${line.slice(3)}` : `    ${line}`,
+    );
+    const ids = report.fixes.map((fix) => `    ${fix.patchId}: ${fix.state}`);
+    return ['', "Storefront origin and Demo Builder's fixes:", ...body, ...ids];
 }
 
 /**
@@ -569,6 +592,7 @@ export function buildSummaryLines(report: DiagnosticsReport): string[] {
     if (report.storefront) {
         lines.push(...storefrontLines(report.storefront, report.storefrontScope));
     }
+    if (report.storefrontOrigin) lines.push(...storefrontOriginLines(report.storefrontOrigin));
     if (report.claudeCode) lines.push(...claudeFootprintLines(report.claudeCode));
     lines.push('', 'Use VS Code\'s "Set Log Level..." command to see debug/trace details');
     return lines;

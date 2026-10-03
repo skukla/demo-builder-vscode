@@ -42,7 +42,27 @@ export const REPOS: Record<string, GitHubRepo> = {
         defaultBranch: 'master',
         isTemplate: false,
     },
+    // EDS-13f: NOT captured live tonight (no cloud reads in the unattended run).
+    // The lineage and version are the ones the 2026-09-14 research read off
+    // `sayurihanki/aistore`; re-capture when the live acceptance runs.
+    'sayurihanki/aistore': {
+        id: 4,
+        name: 'aistore',
+        fullName: 'sayurihanki/aistore',
+        htmlUrl: 'https://github.com/sayurihanki/aistore',
+        cloneUrl: 'https://github.com/sayurihanki/aistore.git',
+        defaultBranch: 'main',
+        isTemplate: false,
+        templateRepository: { owner: 'adobe-commerce', repo: 'boilerplate-b2b-template' },
+    },
 };
+
+/** aistore's package.json head (research 2026-09-14): Adobe's boilerplate, two versions behind. */
+export const AISTORE_PACKAGE_JSON = JSON.stringify({
+    name: '@adobe/aem-boilerplate-commerce',
+    version: '4.0.1',
+    dependencies: { '@dropins/storefront-company-management': '1.0.0' },
+});
 
 /** The B2B boilerplate's dependency names (kukla-bodea carries the same list). */
 export const B2B_TEMPLATE_DEPENDENCIES = [

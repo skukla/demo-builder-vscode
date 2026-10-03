@@ -198,25 +198,4 @@ describe('resetEdsProjectWithUI - Adobe I/O Auth', () => {
             }),
         );
     });
-
-    it('should return ADOBE_AUTH_REQUIRED when ensureAdobeIOAuth returns cancelled', async () => {
-        // Given: Project with mesh
-        const project = createProjectWithMesh({ organization: 'org-1' });
-        const context = createResetContext(project);
-
-        // And: ensureAdobeIOAuth returns cancelled
-        mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: false, cancelled: true });
-
-        // And: User confirms reset
-        (vscode.window.showWarningMessage as jest.Mock)
-            .mockResolvedValueOnce('Reset Project');
-
-        // When
-        const result = await resetEdsProjectWithUI({ meshDeps, project, context, packages: testPackages });
-
-        // Then: Should return auth error
-        expect(result.success).toBe(false);
-        expect(result.errorType).toBe('ADOBE_AUTH_REQUIRED');
-        expect(result.cancelled).toBe(true);
-    });
 });

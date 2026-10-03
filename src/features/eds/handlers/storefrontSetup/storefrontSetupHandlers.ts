@@ -272,6 +272,7 @@ export async function handleStartStorefrontSetup(
         ...(resolvedOverlayUrl ? {} : { byomAbsentReason: explainAbsentOverlay() }),
         // The added demo's row rides the one config the phases read (D2).
         ...(payload.demo ? { demo: payload.demo } : {}),
+        ...(payload.applyDemoFixes === true ? { applyDemoFixes: true } : {}),
     };
 
     try {

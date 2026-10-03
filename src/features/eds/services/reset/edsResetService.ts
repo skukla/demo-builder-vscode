@@ -57,6 +57,7 @@ import { COMPONENT_IDS } from '@/core/constants';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
+import type { StorefrontBoilerplate } from '@/types/projectFile';
 
 // ==========================================================
 // Re-exports for backward compatibility
@@ -276,6 +277,15 @@ function recordSyncedCommit(project: Project, commitSha: string | undefined, log
 }
 
 /**
+ * Record what the repository is built on now (EDS-13f), read back after the
+ * reset wrote it. Unread leaves the old record: a failed read is not news.
+ */
+function recordBoilerplate(project: Project, boilerplate: StorefrontBoilerplate | undefined): void {
+    const metadata = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata;
+    if (boilerplate && metadata) metadata.boilerplate = boilerplate;
+}
+
+/**
  * Final steps: optional CDN verification, optional mesh redeploy, and state persistence.
  */
 async function finalizeReset(
@@ -287,9 +297,10 @@ async function finalizeReset(
     deps: MeshRedeployDeps,
     /** False when step 7 could not write the site config — see below. */
     configWritten: boolean,
-    /** The dry check's caveats for an added demo, from the repo reset. */
-    demoCaveats?: string[],
+    /** What the fix pass said about an added demo, from the repo reset (D23, EDS-13f). */
+    demo: Pick<EdsResetResult, 'demoCaveats' | 'demoFixes'> = {},
 ): Promise<EdsResetResult> {
+    const { demoCaveats, demoFixes } = demo;
     const { repoOwner, repoName, project, verifyCdn = false, redeployMesh = false } = params;
 
     if (verifyCdn) {
@@ -339,6 +350,7 @@ async function finalizeReset(
         contentCopied,
         meshRedeployed: redeployMesh,
         ...(demoCaveats?.length ? { demoCaveats } : {}),
+        ...(demoFixes ? { demoFixes } : {}),
         ...(configWritten
             ? {}
             : {
@@ -465,6 +477,7 @@ export async function executeEdsReset(
             report,
         );
         recordSyncedCommit(params.project, repoResetResult.templateCommitSha, context.logger);
+        recordBoilerplate(params.project, repoResetResult.boilerplate);
 
         // Steps 11-12: CDN verification + optional mesh redeploy + state persistence
         return await finalizeReset(
@@ -475,7 +488,7 @@ export async function executeEdsReset(
             contentCopied,
             deps,
             configWritten,
-            repoResetResult.demoCaveats,
+            { demoCaveats: repoResetResult.demoCaveats, demoFixes: repoResetResult.demoFixes },
         );
     } catch (error) {
         return handleResetError(error, context.logger);

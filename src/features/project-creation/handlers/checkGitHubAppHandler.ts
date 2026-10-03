@@ -4,7 +4,8 @@
  * Checks if the AEM Code Sync GitHub app is installed on a repository.
  *
  * Two modes:
- * - Strict (default): Accepts code.status 200 or 400 (app installed, possibly initializing)
+ * - Strict (default): Accepts only code.status 200. An inner 400 is reported as
+ *   undetermined — it reads the same with and without the App (EDS-23).
  *   Used for initial detection when selecting a repository.
  * - Lenient: Accepts any status except 404 (for post-install verification)
  *   Used when user clicks "Check Again" after installing the app.
@@ -287,6 +288,7 @@ export async function checkGitHubApp(
                 { repoOwner: request.owner, repoName: request.repo, repoUrl: '' },
                 result.httpStatus,
                 result.noCredential,
+                result.codeStatus,
             );
         } else if (!result.isInstalled) {
             response.installUrl = githubAppService.getInstallUrl(request.owner, request.repo);
