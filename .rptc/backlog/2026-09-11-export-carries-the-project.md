@@ -5,7 +5,7 @@ area: platform
 parent: PL-56
 needs: [PL-56a]
 value: high
-status: backlog
+status: active
 ---
 
 # Export carries the whole project, and never a credential
@@ -44,3 +44,4 @@ fixture; the secret-strip battery becomes "no `SECRET_ENV_KEYS` key is ever pres
 ## Shipped so far
 
 - 2026-10-03  Credential half done, uncommitted on loop/2026-10-03-overnight: every export door writes through createExportSettings with no credential, the includeSecrets option and includesSecrets stamp are deleted (tool, handler, service, type, tests, docs), the file is named <name>.project.demo-builder.json and the dialog says Demo Builder project. NOT done: the version-2 file shape (import still reads version 1, so the writer and PL-56d have to move together) and the D32 reachability checks.
+- 2026-10-03  chore(platform): the export never carries a credential; a leftovers check; the agent-surface gap triaged (PL-35, PL-56c, PL-39, AI-1r) (`b7bc129d2`)

@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: med
-status: backlog
+status: built
 parent: AB-16
 ---
 
@@ -39,3 +39,4 @@ the web store. The ERP takes the web order's prices as sold and does not reprice
 ## Shipped so far
 
 - 2026-09-28  2026-09-28 correction (case agent, confirmed on Experience League 'Tier pricing'): 'lowest wins' is Commerce's DEFAULT. With 'Apply Catalog Price Rule on Grouped Price' on (SaaS only; Sales > Promotions), a catalog rule discounts the group's quantity-1 tier price instead (90 with 10% = 81). Recommended for the demo: on, with a quantity-1 line on every ERP price list line shown. The demo store's setting has not been read yet. Written into pricing-strategy.md.
+- 2026-10-03  Built 2026-10-03 (overnight loop): each order line carries the web shop's discount; the ERP stores and shows it on orders, invoices and credit memos, returns take their share to the cent (demo-erp 4457097, contract v17; integration 030bc88 adds items[].base_discount_amount to the Order Saved subscription — a redeploy and reinstall are owed). Owner decisions listed in .rptc/handoff/2026-10-03-loop-report.md.
