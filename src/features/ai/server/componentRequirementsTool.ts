@@ -89,6 +89,27 @@ function describeEnvVars(catalog: ComponentCatalog, keys: string[]): unknown[] {
     });
 }
 
+/**
+ * Every env-var key a component declares, required then optional.
+ *
+ * @param componentId - a catalog id from any section `list_components` reads
+ * @param catalog - the component catalog; the bundled one unless a test hands in another
+ * @returns the keys, or an empty list for an id the catalog does not have
+ */
+export function declaredEnvVarKeys(
+    componentId: string,
+    catalog: ComponentCatalog = BUNDLED_CATALOG,
+): string[] {
+    for (const section of COMPONENT_SECTIONS) {
+        for (const [id, def] of sectionEntries(catalog, section)) {
+            if (id !== componentId) continue;
+            const config = def.configuration ?? {};
+            return [...stringList(config.requiredEnvVars), ...stringList(config.optionalEnvVars)];
+        }
+    }
+    return [];
+}
+
 export function registerComponentRequirementsTool(
     server: McpToolServer,
     catalog: ComponentCatalog = BUNDLED_CATALOG,

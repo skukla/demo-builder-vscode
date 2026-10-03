@@ -80,7 +80,7 @@ jest.mock('@/types/typeGuards', () => ({
 // Imports (after mocks)
 // =============================================================================
 
-import { handleMeshRedeployment } from '@/features/lifecycle/services/projectResetService';
+import { handleMeshRedeployment } from '@/features/lifecycle/services/projectResetMesh';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';

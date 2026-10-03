@@ -59,7 +59,7 @@ export interface AgentAlertCopy {
      * attention and none of them can be checked.
      *
      * An EMPTY array means the tool acts on the current project and takes no
-     * argument naming it — `republish`, `sync_content`, `reset_eds_project`.
+     * argument naming it — `republish`, `sync_content`, `reset_project`.
      * The dialog names the open project instead, so the reader is never asked
      * to approve an unnamed target.
      *
@@ -208,10 +208,10 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: [],
         sessionGrant: false,
     },
-    reset_eds_project: {
-        action: 'Reset this storefront',
+    reset_project: {
+        action: 'Reset this project',
         consequence:
-            "Replaces the storefront's code and content with the original template. Anything customised here is lost.",
+            "Puts the project back to its starting point: a storefront's code and content return to the original template, a headless project's components are deleted and installed again. Anything customised there is lost.",
         target: [],
         sessionGrant: false,
     },

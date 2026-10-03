@@ -327,7 +327,7 @@ describe('createAgentConsentGate', () => {
     });
 
     it('names the open project when the tool takes no argument naming it', async () => {
-        // `republish`, `sync_content` and `reset_eds_project` act on whatever is
+        // `republish`, `sync_content` and `reset_project` act on whatever is
         // open and declare no target argument. Without this the dialog would ask
         // someone to approve an unnamed thing.
         settingIs(true);
@@ -349,13 +349,13 @@ describe('createAgentConsentGate', () => {
         mockShowWarningMessage.mockResolvedValue(undefined);
         const gate = createAgentConsentGate(logger);
 
-        const verdict = await gate('reset_eds_project', { projectName: 'demo', confirm: true });
+        const verdict = await gate('reset_project', { projectName: 'demo', confirm: true });
 
         expect(verdict.allowed).toBe(false);
         const text = (verdict as { refusal: { content: Array<{ text: string }> } }).refusal
             .content[0].text;
         expect(text).toContain('declined');
-        expect(text).toContain('reset_eds_project');
+        expect(text).toContain('reset_project');
         expect(text).toContain('demoBuilder.ai.requireAgentConsent');
     });
 
@@ -369,7 +369,7 @@ describe('createAgentConsentGate', () => {
             mockShowWarningMessage.mockReturnValue(new Promise(() => undefined)); // never answered
             const gate = createAgentConsentGate(logger);
 
-            const pending = gate('reset_eds_project', { projectName: 'demo', confirm: true });
+            const pending = gate('reset_project', { projectName: 'demo', confirm: true });
             await jest.advanceTimersByTimeAsync(TIMEOUTS.LONG);
             const verdict = await pending;
 

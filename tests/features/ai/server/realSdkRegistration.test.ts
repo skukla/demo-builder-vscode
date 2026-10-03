@@ -29,6 +29,7 @@ import { registerCloudResourceTools } from '@/features/ai/server/cloudResourceTo
 import { registerComponentRequirementsTool } from '@/features/ai/server/componentRequirementsTool';
 import { registerConfigureProjectTool } from '@/features/ai/server/configureProjectTool';
 import { registerContentAuthoringTools } from '@/features/ai/server/contentAuthoringTools';
+import { registerCreateProjectFromFileTool } from '@/features/ai/server/createProjectFromFileTool';
 import { registerCreateProjectTool } from '@/features/ai/server/createProjectTool';
 import { registerAgentTraceTool } from '@/features/ai/server/agentTraceTool';
 import { registerCurrentProjectTool } from '@/features/ai/server/currentProjectTool';
@@ -37,7 +38,7 @@ import { registerDiagnosticsTools } from '@/features/ai/server/diagnosticsTools'
 import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
 import { registerAddedDemoTools } from '@/features/ai/server/addedDemoTools';
 import { registerDemoPackageTools } from '@/features/ai/server/demoPackageTools';
-import { registerEdsResetTool } from '@/features/ai/server/edsResetTool';
+import { registerResetProjectTool } from '@/features/ai/server/resetProjectTool';
 import { registerLifecycleTools } from '@/features/ai/server/lifecycleTools';
 import { registerCommerceEndpointsTool } from '@/features/ai/server/commerceEndpointsTool';
 import { registerCommerceQueryTool } from '@/features/ai/server/commerceQueryTool';
@@ -128,6 +129,7 @@ describe('registration against the real MCP SDK', () => {
             registerAuthTools(s, ctxFactory);
             registerAdobeTools(s, ctxFactory);
             registerCreateProjectTool(s, ctxFactory);
+            registerCreateProjectFromFileTool(s, ctxFactory);
             registerCurrentProjectTool(s, ctxFactory);
             registerAgentTraceTool(s, new ToolTraceRecorder(), '/nonexistent-trace-dir');
             registerProjectStatusTool(s, stateManager);
@@ -144,7 +146,7 @@ describe('registration against the real MCP SDK', () => {
             registerSiteTools(s, ctxFactory);
             registerSettingsTools(s, () => undefined);
             registerContentAuthoringTools(s, ctxFactory);
-            registerEdsResetTool(s, ctxFactory);
+            registerResetProjectTool(s, ctxFactory);
             registerAddedDemoTools(s, ctxFactory);
             registerDemoPackageTools(s, ctxFactory);
             registerDeleteProjectTool(s, ctxFactory);

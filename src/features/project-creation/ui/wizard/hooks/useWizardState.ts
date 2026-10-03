@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { integrationStateFromSettings } from '../integrationStateFromSettings';
 import { filterStepsForStack, WizardStepWithCondition } from '../stepFiltering';
 import {
     getEnabledWizardSteps,
@@ -7,9 +8,7 @@ import {
     initializeProjectName,
     getFirstEnabledStep,
 } from '../wizardHelpers';
-import { isMeshComponentId } from '@/core/constants';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
-import { RESERVED_EXISTING_KEY } from '@/features/project-creation/ui/components/integration-flow/flowStages';
 import type { Stack } from '@/types/stacks';
 import type { WizardState, WizardStep, ComponentSelection } from '@/types/webview';
 import type { GetComponentsDataResponse } from '@/types/webviewRequests';
@@ -192,46 +191,6 @@ function buildEditModeAdobeContext(adobe: ImportedSettings['adobe']) {
     };
 }
 
-/**
- * Seed the wizard's App Builder integration state from a project's extracted
- * settings so integration rows survive an edit rebuild:
- * - `selections.appBuilder` ∪ mesh ids from `selections.dependencies` →
- *   `selectedAppBuilderComponents` (the row ids). The executor deliberately
- *   excludes mesh-kind from `appBuilder` and persists the mesh as a dep id
- *   (ADR-011), while the wizard's single mesh authority is
- *   `selectedAppBuilderComponents` (D3) — without the union the mesh row
- *   vanishes in edit mode AND an edit Finish (which derives the wire's
- *   dependencies from the mesh ids in selectedAppBuilderComponents) silently
- *   drops the mesh. Non-mesh base deps are filtered — seeding them would
- *   falsely trip anyDeployableSelected and force the destination gate.
- * - `appBuilderComponentSources` → custom-URL sources (else custom rows vanish)
- * - `componentApiPicks` → `selectedConsoleApis` per integration, PREFERRED: it is
- *   the attributed form, and the only one that survives step 07. Seeding from the
- *   flat field instead collapsed every pick into one anonymous bucket, so reopening
- *   a project forgot which integration wanted what.
- * - flat `additionalConsoleApis` → `selectedConsoleApis['__existing__']`, the
- *   fallback for a settings file written before the keyed form existed
- *   (reserved key: joins the serialization union, never shown per-row)
- */
-function buildEditModeIntegrationState(editSettings: ImportedSettings): Partial<WizardState> {
-    const keyedPicks = editSettings.componentApiPicks;
-    const hasKeyedPicks = keyedPicks && Object.keys(keyedPicks).length > 0;
-    const existingApis = editSettings.additionalConsoleApis;
-    const meshDeps = editSettings.selections?.dependencies?.filter(isMeshComponentId);
-    const appBuilderWithMesh = [
-        ...new Set([...(editSettings.selections?.appBuilder ?? []), ...(meshDeps ?? [])]),
-    ];
-    return {
-        selectedAppBuilderComponents: appBuilderWithMesh.length ? appBuilderWithMesh : undefined,
-        appBuilderComponentSources: editSettings.appBuilderComponentSources,
-        selectedConsoleApis: hasKeyedPicks
-            ? keyedPicks
-            : existingApis?.length
-              ? { [RESERVED_EXISTING_KEY]: existingApis }
-              : undefined,
-    };
-}
-
 /** Build component selection from edit settings */
 function buildEditModeComponents(
     selections: ImportedSettings['selections'],
@@ -296,7 +255,7 @@ function buildEditModeState(firstStep: WizardStep, editProject: EditProjectConfi
         selectedAddons: editSettings.selectedAddons,
         selectedBlockLibraries: editSettings.selectedBlockLibraries,
         customBlockLibraries: editSettings.customBlockLibraries,
-        ...buildEditModeIntegrationState(editSettings),
+        ...integrationStateFromSettings(editSettings),
         edsConfig: editSettings.edsConfig
             ? buildEditModeEdsConfig(editSettings.edsConfig)
             : undefined,
@@ -352,6 +311,9 @@ function computeInitialState(
         selectedAddons: importedSettings?.selectedAddons,
         selectedBlockLibraries: importedSettings?.selectedBlockLibraries,
         customBlockLibraries: importedSettings?.customBlockLibraries,
+        // The same seeding edit mode runs (PL-56d): an import used to open with
+        // no integrations and no mesh whatever the file said.
+        ...(importedSettings ? integrationStateFromSettings(importedSettings) : {}),
         edsConfig: importedSettings?.edsConfig
             ? buildImportModeEdsConfig(importedSettings.edsConfig)
             : undefined,

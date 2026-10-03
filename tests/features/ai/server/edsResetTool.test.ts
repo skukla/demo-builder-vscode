@@ -1,8 +1,14 @@
 /**
- * reset_eds_project tests — confirm gate, auth handoffs (github/dalive/adobe),
- * param-extraction failure, the captured per-step timeline, and the re-runnable
- * failure contract. The EDS service layer + auth are mocked.
+ * reset_project on an Edge Delivery project — confirm gate, auth handoffs
+ * (github/dalive/adobe), param-extraction failure, the captured per-step
+ * timeline, and the re-runnable failure contract. The EDS service layer + auth
+ * are mocked. The headless half of the same tool is in
+ * resetProjectTool-headless.test.ts.
  */
+
+jest.mock('@/features/lifecycle/services/projectResetService', () => ({
+    executeProjectReset: jest.fn(async () => ({ success: true, meshRedeployed: false })),
+}));
 
 jest.mock('@/features/eds/services/reset/edsResetService', () => ({
     executeEdsReset: jest.fn(),
@@ -38,7 +44,8 @@ jest.mock('@/features/ai/server/adobeTargetStore', () => ({
     runWithAdobeTarget: jest.fn(async (fn: () => Promise<unknown>) => fn()),
 }));
 
-import { registerEdsResetTool } from '@/features/ai/server/edsResetTool';
+import { registerResetProjectTool } from '@/features/ai/server/resetProjectTool';
+import { executeProjectReset } from '@/features/lifecycle/services/projectResetService';
 import { runWithAdobeTarget } from '@/features/ai/server/adobeTargetStore';
 import { executeEdsReset, extractResetParams } from '@/features/eds/services/reset/edsResetService';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
@@ -74,10 +81,10 @@ function fakeServer() {
             defs.set(name, def as CapturedDef);
         },
         def(): CapturedDef {
-            return defs.get('reset_eds_project')!;
+            return defs.get('reset_project')!;
         },
         async call(args?: unknown): Promise<any> {
-            return JSON.parse((await tools.get('reset_eds_project')!(args)).content[0].text);
+            return JSON.parse((await tools.get('reset_project')!(args)).content[0].text);
         },
     };
 }
@@ -100,7 +107,7 @@ const PARAMS = {
     templateRepo: 'tpl',
 };
 
-describe('reset_eds_project', () => {
+describe('reset_project on an Edge Delivery project', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         getCurrentProject.mockResolvedValue(PROJECT);
@@ -131,7 +138,7 @@ describe('reset_eds_project', () => {
 
     it('requires confirm:true (destructive) and never runs the reset', async () => {
         const s = fakeServer();
-        registerEdsResetTool(s, ctxFactory);
+        registerResetProjectTool(s, ctxFactory);
         const res = await s.call({});
         expect(res).toMatchObject({ destructive: true });
         expect(executeEdsResetMock).not.toHaveBeenCalled();
@@ -141,7 +148,7 @@ describe('reset_eds_project', () => {
         // The wrong-window item: the agent must get a chance to notice the
         // target is wrong BEFORE confirming — an anonymous refusal gives none.
         const s = fakeServer();
-        registerEdsResetTool(s, ctxFactory);
+        registerResetProjectTool(s, ctxFactory);
         const res = await s.call({});
         expect(res.error).toContain('eds-proj');
         expect(res).toMatchObject({ project: 'eds-proj' });
@@ -153,7 +160,7 @@ describe('reset_eds_project', () => {
         // confirm resetting when no project is open.
         getCurrentProject.mockResolvedValue(null);
         const s = fakeServer();
-        registerEdsResetTool(s, ctxFactory);
+        registerResetProjectTool(s, ctxFactory);
         const res = await s.call({});
         expect(res).toMatchObject({ error: expect.stringMatching(/No current project/) });
         expect(executeEdsResetMock).not.toHaveBeenCalled();
@@ -161,14 +168,14 @@ describe('reset_eds_project', () => {
 
     it('names the project in the success payload', async () => {
         const s = fakeServer();
-        registerEdsResetTool(s, ctxFactory);
+        registerResetProjectTool(s, ctxFactory);
         const res = await s.call({ confirm: true });
         expect(res).toMatchObject({ reset: true, project: 'eds-proj' });
     });
 
     it("carries the dry check's caveats for an added demo, and no key otherwise", async () => {
         const s = fakeServer();
-        registerEdsResetTool(s, ctxFactory);
+        registerResetProjectTool(s, ctxFactory);
         expect('caveats' in (await s.call({ confirm: true }))).toBe(false);
 
         executeEdsResetMock.mockResolvedValueOnce({
@@ -182,14 +189,26 @@ describe('reset_eds_project', () => {
         expect(res).toMatchObject({ reset: true, caveats: ['Product links may not work.'] });
     });
 
-    it('errors for a non-EDS project', async () => {
-        isEdsProjectMock.mockReturnValueOnce(false);
+    it('sends a headless project to the component reset, never the storefront one', async () => {
+        // One tool, two kinds of project: the kind decides the path. The storefront
+        // reset must not run against a project that has no storefront repository.
+        isEdsProjectMock.mockReturnValue(false);
         const s = fakeServer();
-        registerEdsResetTool(s, ctxFactory);
-        expect(await s.call({ confirm: true })).toMatchObject({
-            error: expect.stringMatching(/only to EDS/),
-        });
+        registerResetProjectTool(s, ctxFactory);
+
+        expect(await s.call({ confirm: true })).toMatchObject({ reset: true, kind: 'headless' });
+
         expect(executeEdsResetMock).not.toHaveBeenCalled();
+        expect(executeProjectReset).toHaveBeenCalledTimes(1);
+    });
+
+    it('never runs the component reset for an Edge Delivery project', async () => {
+        const s = fakeServer();
+        registerResetProjectTool(s, ctxFactory);
+
+        expect(await s.call({ confirm: true })).toMatchObject({ reset: true, kind: 'storefront' });
+
+        expect(executeProjectReset).not.toHaveBeenCalled();
     });
 
     it('surfaces a param-extraction failure with its code', async () => {
@@ -199,7 +218,7 @@ describe('reset_eds_project', () => {
             code: 'CONFIG_INVALID',
         });
         const s = fakeServer();
-        registerEdsResetTool(s, ctxFactory);
+        registerResetProjectTool(s, ctxFactory);
         expect(await s.call({ confirm: true })).toMatchObject({
             error: /Template/,
             code: 'CONFIG_INVALID',
@@ -212,7 +231,7 @@ describe('reset_eds_project', () => {
             tokenService: { validateToken: jest.fn(async () => ({ valid: false })) },
         });
         const s = fakeServer();
-        registerEdsResetTool(s, ctxFactory);
+        registerResetProjectTool(s, ctxFactory);
         expect(await s.call({ confirm: true })).toMatchObject({ needsAuth: 'github' });
         expect(executeEdsResetMock).not.toHaveBeenCalled();
     });
@@ -222,7 +241,7 @@ describe('reset_eds_project', () => {
             isAuthenticated: jest.fn(async () => false),
         });
         const s = fakeServer();
-        registerEdsResetTool(s, ctxFactory);
+        registerResetProjectTool(s, ctxFactory);
         expect(await s.call({ confirm: true })).toMatchObject({ needsAuth: 'dalive' });
         expect(executeEdsResetMock).not.toHaveBeenCalled();
     });
@@ -231,20 +250,20 @@ describe('reset_eds_project', () => {
         getMeshComponentInstanceMock.mockReturnValueOnce({ path: '/p/mesh' });
         mockInspectToken.mockResolvedValueOnce({ valid: false });
         const s = fakeServer();
-        registerEdsResetTool(s, ctxFactory);
+        registerResetProjectTool(s, ctxFactory);
         expect(await s.call({ confirm: true })).toMatchObject({ needsAuth: 'adobe' });
         expect(executeEdsResetMock).not.toHaveBeenCalled();
     });
 
-    it('declares itself DA.live-authenticated and destructive', async () => {
+    it('declares the sign-ins either kind can need, and that it is destructive', async () => {
         // The descriptor is what the consent layer and the auth pre-flight read.
         // A tool that rewrites a repo and its content must not be annotated as a
         // read, and must not be reachable without DA.live.
         const s = fakeServer();
-        registerEdsResetTool(s, ctxFactory);
+        registerResetProjectTool(s, ctxFactory);
 
         const def = s.def();
-        expect(def.needsAuth).toEqual(['dalive']);
+        expect(def.needsAuth).toEqual(['adobe', 'dalive']);
         expect(def.annotations).toEqual({ readOnlyHint: false, destructiveHint: true });
         expect(Object.keys(def.inputSchema!)).toEqual([
             'includeBlockLibrary',
@@ -255,7 +274,7 @@ describe('reset_eds_project', () => {
 
     it('refuses a call with no arguments at all rather than throwing', async () => {
         const s = fakeServer();
-        registerEdsResetTool(s, ctxFactory);
+        registerResetProjectTool(s, ctxFactory);
         const res = await s.call();
         expect(res).toMatchObject({ destructive: true, project: 'eds-proj' });
         expect(executeEdsResetMock).not.toHaveBeenCalled();
@@ -267,7 +286,7 @@ describe('reset_eds_project', () => {
         getMeshComponentInstanceMock.mockReturnValue({ path: '/p/mesh' });
         mockInspectToken.mockResolvedValue({ valid: true });
         const s = fakeServer();
-        registerEdsResetTool(s, ctxFactory);
+        registerResetProjectTool(s, ctxFactory);
 
         const res = await s.call({ confirm: true });
 
@@ -287,7 +306,7 @@ describe('reset_eds_project', () => {
         getMeshComponentInstanceMock.mockReturnValue({ path: '/p/mesh' });
         mockInspectToken.mockRejectedValue(new Error('IMS unreachable'));
         const s = fakeServer();
-        registerEdsResetTool(s, ctxFactory);
+        registerResetProjectTool(s, ctxFactory);
 
         expect(await s.call({ confirm: true })).toMatchObject({ needsAuth: 'adobe' });
         expect(executeEdsResetMock).not.toHaveBeenCalled();
@@ -295,7 +314,7 @@ describe('reset_eds_project', () => {
 
     it('defaults both optional flags OFF when the caller omits them', async () => {
         const s = fakeServer();
-        registerEdsResetTool(s, ctxFactory);
+        registerResetProjectTool(s, ctxFactory);
 
         await s.call({ confirm: true });
 
@@ -312,7 +331,7 @@ describe('reset_eds_project', () => {
         // ADR-015: these arrive as a parameter. Passing an empty object instead
         // typechecks nowhere and fails only once a mesh redeploy is attempted.
         const s = fakeServer();
-        registerEdsResetTool(s, ctxFactory);
+        registerResetProjectTool(s, ctxFactory);
 
         await s.call({ confirm: true });
 
@@ -325,7 +344,7 @@ describe('reset_eds_project', () => {
 
     it('resets and returns the captured timeline + result fields on success', async () => {
         const s = fakeServer();
-        registerEdsResetTool(s, ctxFactory);
+        registerResetProjectTool(s, ctxFactory);
         const res = await s.call({ confirm: true, includeBlockLibrary: true });
 
         expect(res).toMatchObject({
@@ -355,7 +374,7 @@ describe('reset_eds_project', () => {
 
     it('runs the reset under the stored session org context', async () => {
         const s = fakeServer();
-        registerEdsResetTool(s, ctxFactory);
+        registerResetProjectTool(s, ctxFactory);
         await s.call({ confirm: true });
         expect(runWithAdobeTarget).toHaveBeenCalled();
     });
@@ -376,7 +395,7 @@ describe('reset_eds_project', () => {
             }
         );
         const s = fakeServer();
-        registerEdsResetTool(s, ctxFactory);
+        registerResetProjectTool(s, ctxFactory);
         const res = await s.call({ confirm: true });
         expect(res).toMatchObject({
             reset: false,
@@ -390,7 +409,7 @@ describe('reset_eds_project', () => {
     it('catches a thrown error as a re-runnable failure', async () => {
         executeEdsResetMock.mockRejectedValueOnce(new Error('boom'));
         const s = fakeServer();
-        registerEdsResetTool(s, ctxFactory);
+        registerResetProjectTool(s, ctxFactory);
         const res = await s.call({ confirm: true });
         expect(res).toMatchObject({ reset: false, error: 'boom', rerunSafe: true });
     });

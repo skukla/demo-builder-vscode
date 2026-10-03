@@ -1224,5 +1224,22 @@
         ],
         "cwd": "project",
         "why": "AB-59 (2026-10-02): the mock ERP's demo controls left its own Settings screen for its card in Demo Builder, so an SC changing a real ERP setting never meets them. The agent reaches them through the same handlers the card uses. The undo of start_erp_downtime, so the window can be ended before its time is up."
+    },
+    {
+        "id": "reset-headless",
+        "prompt": "Reset this headless demo back to a clean copy of its components. I broke something in the storefront code and want to start over.",
+        "expect": [
+            "reset_project"
+        ],
+        "cwd": "project",
+        "why": "Added 2026-10-03 with the headless half of reset_project (it was reset_eds_project and refused a headless project, so the person's Reset button had no agent counterpart). Confirm-gated and named in the refusal, so an agent that reaches it without consent still gets a refusal -- what this judges is whether the tool is findable from a plain request."
+    },
+    {
+        "id": "create-from-file",
+        "prompt": "A colleague sent me their exported project file at ~/Downloads/summit.project.demo-builder.json. Create a new project called summit-copy from it.",
+        "expect": [
+            "create_project_from_file"
+        ],
+        "why": "Added 2026-10-03 with the tool: the projects list's Import opens a file picker, so before this an agent had no way to start a project from an exported file and would hand-copy its fields into create_project. Confirm-gated, so a reach without consent is refused; a MISS is a discoverability finding about the tool, not a bad prompt."
     }
 ]

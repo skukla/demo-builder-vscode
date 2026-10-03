@@ -38,6 +38,7 @@ import { registerCommerceRestWriteTool } from '@/features/ai/server/commerceRest
 import { registerComponentRequirementsTool } from '@/features/ai/server/componentRequirementsTool';
 import { registerConfigureProjectTool } from '@/features/ai/server/configureProjectTool';
 import { registerContentAuthoringTools } from '@/features/ai/server/contentAuthoringTools';
+import { registerCreateProjectFromFileTool } from '@/features/ai/server/createProjectFromFileTool';
 import { registerCreateProjectTool } from '@/features/ai/server/createProjectTool';
 import { registerCurrentProjectTool } from '@/features/ai/server/currentProjectTool';
 import { DATA_INSTALLER_DESCRIPTORS } from '@/features/ai/server/dataInstallerDescriptors';
@@ -45,7 +46,6 @@ import { registerDeleteProjectTool } from '@/features/ai/server/deleteProjectToo
 import { registerDemoPackageTools } from '@/features/ai/server/demoPackageTools';
 import { registerDiagnosticsTools } from '@/features/ai/server/diagnosticsTools';
 import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
-import { registerEdsResetTool } from '@/features/ai/server/edsResetTool';
 import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
 import {
     InExtensionMcpServer,
@@ -54,6 +54,7 @@ import {
 import { registerLifecycleTools } from '@/features/ai/server/lifecycleTools';
 import { registerProjectStatusTool } from '@/features/ai/server/projectStatusTool';
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
+import { registerResetProjectTool } from '@/features/ai/server/resetProjectTool';
 import { createScopedStateManager } from '@/features/ai/server/scopedStateManager';
 import { registerSettingsTools } from '@/features/ai/server/settingsTools';
 import { registerSiteTools } from '@/features/ai/server/siteTools';
@@ -707,6 +708,7 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 registerAuthTools(mcpServer, connCtxFactory);
                 registerAdobeTools(mcpServer, connCtxFactory);
                 registerCreateProjectTool(mcpServer, connCtxFactory);
+                registerCreateProjectFromFileTool(mcpServer, connCtxFactory);
                 registerCurrentProjectTool(mcpServer, connCtxFactory, scopedProjectDir);
                 // Same derivation as activate()'s sink wiring — the dir is a
                 // pure function of the extension's log storage.
@@ -739,7 +741,7 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                         .get(key.slice(lastDot + 1));
                 });
                 registerContentAuthoringTools(mcpServer, connCtxFactory);
-                registerEdsResetTool(mcpServer, connCtxFactory);
+                registerResetProjectTool(mcpServer, connCtxFactory);
                 registerAddedDemoTools(mcpServer, connCtxFactory);
                 registerDemoPackageTools(mcpServer, connCtxFactory);
                 registerDeleteProjectTool(mcpServer, connCtxFactory);

@@ -130,6 +130,7 @@ export const TOOL_NARRATION: Record<string, string> = {
 
     // ── Projects ────────────────────────────────────────────────────────
     create_project: 'Creating the project',
+    create_project_from_file: 'Creating a project from a file',
     delete_project: 'Deleting the project',
     rename_project: 'Renaming the project',
     // "Hands back to the user — the wizard is theirs to drive".
@@ -213,7 +214,7 @@ export const TOOL_NARRATION: Record<string, string> = {
     remove_block_from_library: 'Removing a library block',
     refresh_block_library: 'Rebuilding the block library',
     migrate_storefront_name: 'Renaming the storefront',
-    reset_eds_project: 'Resetting the storefront',
+    reset_project: 'Resetting the project',
     probe_shared_demo: "Reading the colleague's demo",
     add_shared_demo: 'Adding the demo to the list',
     forget_added_demo: 'Forgetting the added demo',

@@ -222,8 +222,8 @@ Tool registration on each connection happens in two layers:
 2. A `registerExtraTools` callback (injected by `extension.ts` so the server
    module stays free of `vscode`/handler imports) that calls every other
    `register…` function: descriptor tools, discovery, auth, Adobe, create/open/
-   delete project, cloud resources, storefront, EDS reset, apply updates, view
-   tools.
+   delete project, create from an exported file, cloud resources, storefront,
+   project reset, apply updates, view tools.
 
 ---
 
@@ -455,7 +455,7 @@ The agent then drives `get_auth_status` / `sign_in` and retries. This keeps the
 human-in-the-loop browser sign-in flows working through an agent.
 
 **Progress as a captured timeline.** There's no progress bar on the agent
-surface, so long multi-step tools (`reset_eds_project`, `apply_updates`) collect
+surface, so long multi-step tools (`reset_project`, `apply_updates`) collect
 their per-step messages into a `phases` array and return it, so the agent can
 narrate what happened.
 
@@ -463,9 +463,41 @@ narrate what happened.
 UI calls. When the UI logic was entangled with modals/progress, the headless core
 was *extracted* and both call it — never copied.
 
-**Re-runnable failures.** Idempotent operations (e.g. `reset_eds_project`) report
+**Re-runnable failures.** Idempotent operations (e.g. `reset_project`) report
 `rerunSafe: true` on failure so the agent knows it can fix the cause and call
 again.
+
+### One reset, two kinds of project (2026-10-03)
+
+`reset_project` is the agent's door to the same action as the Reset button, and it
+dispatches the way the button's handler does: an Edge Delivery project goes to
+`executeEdsReset` (storefront repo, DA.live content and config back to the
+template); a headless project goes to `executeProjectReset` (components deleted and
+installed again; integrations and configuration kept), the core
+`resetProjectWithUI` wraps. Before that date the tool was `reset_eds_project` and
+refused a headless project. The headless half refuses a running demo and names
+`stop_demo` rather than stopping it unasked, and asks for the Adobe sign-in only
+when there is a mesh to redeploy. Nothing undoes a reset — it is the return to
+zero — which is why it is consent-gated (`reversibility.ledger.json`).
+
+### Creating from an exported file (2026-10-03)
+
+`create_project_from_file` takes an absolute PATH to a file `export_project_settings`
+(or the projects list's Export) wrote. The path is checked at the boundary (absolute,
+exists, a file, under 1 MB) and the text is read through `readProjectFile`, which
+migrates the v1 file Export writes today and strips every credential. Creation then
+runs through `runProjectCreation` — the same function `create_project` ends in — with
+the file's package, stack, addons, settings, block libraries, integrations (custom
+sources and API picks included), mesh, datapack and store structure as its inputs.
+The integrations are derived by `integrationStateFromSettings`, the function the
+wizard's edit AND import modes use, so the wizard's Import and this tool agree.
+
+The file never decides the receiver's sign-ins, Adobe workspace, storefront
+repository or DA.live site, or any credential. The answer says what came from the
+file (`fromFile.applied`), what did not and why (`fromFile.notApplied`), and which
+credentials the new project still needs (`stillNeeded.credentials`, read from the
+components' declared env vars against `SECRET_ENV_KEYS`). Like `create_project` it is
+gated by `confirm:true` and is not on the consent-dialog list.
 
 ### Integrations live in Adobe workspaces of their own (AB-23)
 

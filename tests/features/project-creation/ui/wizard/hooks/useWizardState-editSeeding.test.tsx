@@ -12,6 +12,7 @@
  */
 
 import { renderHook } from '@testing-library/react';
+import { COMPONENT_IDS } from '@/core/constants';
 import { resolveIntegrationRows } from '@/features/project-creation/ui/components/integration-flow/integrationRows';
 import { isMeshSelected } from '@/features/project-creation/ui/steps/tileStatus';
 import type { EditProjectConfig, ImportedSettings } from '@/types/wizard';
@@ -245,5 +246,47 @@ describe('useWizardState - edit-mode backend seeding', () => {
         const state = renderWizardState(undefined);
 
         expect(state.selectedBackend).toBeUndefined();
+    });
+});
+
+// PL-56d: an import used to open the wizard with no integrations and no mesh,
+// whatever the file said — only edit mode ran the seeding above. One function now
+// feeds both, and the agent's create_project_from_file reads the same one.
+describe('useWizardState - import mode seeds the same App Builder state edit mode does', () => {
+    function renderImport(importedSettings: ImportedSettings) {
+        const { result } = renderHook(() =>
+            useWizardState({ wizardSteps: WIZARD_STEPS, importedSettings }),
+        );
+        return result.current.state;
+    }
+
+    it('carries the integrations, the mesh, the custom sources and the API picks', () => {
+        const sources = { 'owner-custom-app': { owner: 'owner', repo: 'custom-app' } };
+        const state = renderImport({
+            source: { project: 'sent-demo' },
+            selections: {
+                dependencies: [COMPONENT_IDS.HEADLESS_COMMERCE_MESH, 'demo-inspector'],
+                appBuilder: ['erp-sync', 'owner-custom-app'],
+            },
+            appBuilderComponentSources: sources,
+            componentApiPicks: { 'erp-sync': ['CCAPI'] },
+        });
+
+        expect(state.wizardMode).toBe('import');
+        expect(state.selectedAppBuilderComponents).toEqual([
+            'erp-sync',
+            'owner-custom-app',
+            COMPONENT_IDS.HEADLESS_COMMERCE_MESH,
+        ]);
+        expect(state.appBuilderComponentSources).toEqual(sources);
+        expect(state.selectedConsoleApis).toEqual({ 'erp-sync': ['CCAPI'] });
+    });
+
+    it('seeds nothing for an import that names no integrations', () => {
+        const state = renderImport({ source: { project: 'plain' }, selections: {} });
+
+        expect(state.selectedAppBuilderComponents ?? []).toStrictEqual([]);
+        expect(state.appBuilderComponentSources).toBeUndefined();
+        expect(state.selectedConsoleApis).toBeUndefined();
     });
 });

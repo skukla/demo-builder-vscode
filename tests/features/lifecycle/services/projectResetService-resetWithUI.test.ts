@@ -86,7 +86,10 @@ const mockSleep = jest.fn(async (..._a: unknown[]) => undefined);
 jest.mock('@/core/utils/sleep', () => ({ sleep: (...a: unknown[]) => mockSleep(...a) }));
 
 import * as vscode from 'vscode';
-import { resetProjectWithUI } from '@/features/lifecycle/services/projectResetService';
+import {
+    executeProjectReset,
+    resetProjectWithUI,
+} from '@/features/lifecycle/services/projectResetService';
 import {
     FRONTEND_DEF,
     MESH_DEF,
@@ -607,5 +610,83 @@ describe('resetProjectWithUI — the ending', () => {
         await run(project, context);
 
         expect(statuses).toEqual(['resetting', 'ready']);
+    });
+});
+
+// The agent's door (reset_project). Same rebuild, none of the SC's surfaces: an
+// agent has no dialog to answer and no notification to watch, so the core must
+// run with neither and say what the mesh did in its answer.
+describe('executeProjectReset — the same reset with no dialog and no notification', () => {
+    function runCore(project = createResetProject(), context = createResetHandlerContext()) {
+        const report = jest.fn();
+        const outcome = executeProjectReset({ project, context, commandManager, authManager }, report);
+        return { outcome, report, project, context };
+    }
+
+    it('asks nothing, opens no notification, and rebuilds the components', async () => {
+        const { outcome } = runCore();
+
+        await expect(outcome).resolves.toEqual({ success: true, meshRedeployed: false });
+
+        expect(showWarningMessage).not.toHaveBeenCalled();
+        expect(withProgress).not.toHaveBeenCalled();
+        expect(executeCommand).not.toHaveBeenCalled();
+        expect(mockRm).toHaveBeenCalledWith('/projects/demo/components', { recursive: true, force: true });
+        expect(mockCloneAllComponents).toHaveBeenCalledTimes(1);
+        expect(mockInstallAllComponents).toHaveBeenCalledTimes(1);
+    });
+
+    it('reports each stage to the caller with its position', async () => {
+        const { outcome, report } = runCore();
+        await outcome;
+
+        expect(report.mock.calls.map((c) => [c[0], c[2]])).toEqual([
+            ['Reading what this project has', { index: 1, total: 6 }],
+            ['Removing the old components', { index: 2, total: 6 }],
+            ['Downloading the components', { index: 3, total: 6 }],
+            ['Installing dependencies', { index: 4, total: 6 }],
+            ['Writing the settings back', { index: 5, total: 6 }],
+        ]);
+    });
+
+    it('marks the project resetting while it runs and lands on ready', async () => {
+        const seen: string[] = [];
+        const context = createResetHandlerContext();
+        (context.stateManager.saveProject as jest.Mock).mockImplementation(async (p: Project) => {
+            seen.push(p.status);
+        });
+        const { outcome, project } = runCore(createResetProject({ status: 'stopped' }), context);
+        await outcome;
+
+        expect(seen[0]).toBe('resetting');
+        expect(project.status).toBe('ready');
+    });
+
+    it('says the mesh was redeployed when it was', async () => {
+        mockGetMeshComponentInstance.mockReturnValue({ path: '/projects/demo/components/mesh' });
+
+        await expect(runCore().outcome).resolves.toEqual({ success: true, meshRedeployed: true });
+    });
+
+    it('says the mesh was NOT redeployed when the redeploy failed, with the reason', async () => {
+        mockGetMeshComponentInstance.mockReturnValue({ path: '/projects/demo/components/mesh' });
+        mockDeployMeshCreateOrUpdate.mockResolvedValue({ success: false, error: 'aio exploded' });
+
+        await expect(runCore().outcome).resolves.toEqual({
+            success: true,
+            error: 'Reset completed but mesh redeployment failed: aio exploded',
+            meshRedeployed: false,
+        });
+    });
+
+    it('lets a failure reach the caller, with the original status restored and no toast', async () => {
+        mockCloneAllComponents.mockRejectedValue(new Error('git clone failed'));
+        const { outcome, project, context } = runCore(createResetProject({ status: 'stopped' }));
+
+        await expect(outcome).rejects.toThrow('git clone failed');
+
+        expect(project.status).toBe('stopped');
+        expect(context.stateManager.saveProject).toHaveBeenLastCalledWith(project);
+        expect(showErrorMessage).not.toHaveBeenCalled();
     });
 });

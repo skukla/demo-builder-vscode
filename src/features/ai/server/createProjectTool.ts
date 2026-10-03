@@ -40,6 +40,7 @@ import {
     type CapturedEvent,
 } from './progressCapture';
 import { ACCS_GRAPHQL_ENDPOINT } from '@/core/config/envVarKeys';
+import { isMeshComponentId } from '@/core/constants';
 import { dispatchHandler } from '@/core/handlers/dispatchHandler';
 import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import {
@@ -206,14 +207,92 @@ async function edsAuthHandoff(
     return { login };
 }
 
-/** Headless (non-EDS) creation path. */
+/**
+ * What an exported project file adds to a creation: the inputs `create_project`
+ * leaves at their defaults. Built by `create_project_from_file`; the creation
+ * path is the same one either way.
+ */
+export type CreationSeed = Partial<
+    Pick<
+        ProjectConfigSource,
+        | 'componentConfigs'
+        | 'selectedAddons'
+        | 'selectedBlockLibraries'
+        | 'customBlockLibraries'
+        | 'selectedAppBuilderComponents'
+        | 'appBuilderComponentSources'
+        | 'selectedConsoleApis'
+        | 'datapack'
+        | 'storeDiscoveryData'
+    >
+>;
+
 /** What the two creation paths share: the ids, and the row when the package is an added demo (D2). */
 interface CreateArgs {
     projectName: string;
     pkgId: string;
     stackId: string;
     demo?: AddedDemo;
+    seed?: CreationSeed;
+    /** Added to a successful answer (what a file brought, what is still needed). */
+    report?: Record<string, unknown>;
 }
+
+type AdobeContext = Exclude<Awaited<ReturnType<typeof requireAdobeWorkspace>>, { error: unknown }>;
+
+/**
+ * The Adobe workspace the creation deploys into, when it deploys anything: a
+ * mesh the package + stack requires, or the integrations a project file names.
+ * A creation that deploys nothing needs no Adobe sign-in and gets none.
+ */
+async function adobeIfDeploying(
+    ctx: HandlerContext,
+    args: CreateArgs,
+    pkg: DemoPackage,
+): Promise<{ adobe?: AdobeContext } | { error: unknown }> {
+    const deploys =
+        getResolvedMeshRequirement(pkg, args.stackId) === true ||
+        (args.seed?.selectedAppBuilderComponents?.length ?? 0) > 0;
+    if (!deploys) return {};
+    const resolved = await requireAdobeWorkspace(ctx);
+    return 'error' in resolved ? resolved : { adobe: resolved };
+}
+
+/** A file's settings under the call's own: a value the call states wins. */
+function mergedConfigs(
+    seeded: ProjectConfigSource['componentConfigs'],
+    stated: ProjectConfigSource['componentConfigs'],
+): ProjectConfigSource['componentConfigs'] {
+    const merged = { ...(seeded ?? {}) };
+    for (const [id, config] of Object.entries(stated ?? {})) {
+        merged[id] = { ...(merged[id] ?? {}), ...config };
+    }
+    return merged;
+}
+
+/** The creation inputs with a project file's selections laid in. No seed, no change. */
+function withSeed(state: ProjectConfigSource, seed: CreationSeed | undefined): ProjectConfigSource {
+    if (!seed) return state;
+    return {
+        ...state,
+        componentConfigs: mergedConfigs(seed.componentConfigs, state.componentConfigs),
+        selectedAppBuilderComponents: [
+            ...new Set([
+                ...(seed.selectedAppBuilderComponents ?? []),
+                ...(state.selectedAppBuilderComponents ?? []),
+            ]),
+        ],
+        appBuilderComponentSources: seed.appBuilderComponentSources,
+        selectedConsoleApis: seed.selectedConsoleApis,
+        selectedAddons: seed.selectedAddons ?? state.selectedAddons,
+        selectedBlockLibraries: seed.selectedBlockLibraries ?? state.selectedBlockLibraries,
+        customBlockLibraries: seed.customBlockLibraries ?? state.customBlockLibraries,
+        datapack: seed.datapack,
+        storeDiscoveryData: seed.storeDiscoveryData,
+    };
+}
+
+/** Headless (non-EDS) creation path. */
 
 async function createHeadless(
     ctx: HandlerContext,
@@ -221,18 +300,9 @@ async function createHeadless(
     pkg: DemoPackage,
     packages: DemoPackage[],
 ) {
-    let adobe:
-        | {
-              org: WizardState['adobeOrg'];
-              project: WizardState['adobeProject'];
-              workspace: WizardState['adobeWorkspace'];
-          }
-        | undefined;
-    if (getResolvedMeshRequirement(pkg, args.stackId) === true) {
-        const resolved = await requireAdobeWorkspace(ctx);
-        if ('error' in resolved) return asText(resolved.error);
-        adobe = resolved;
-    }
+    const resolved = await adobeIfDeploying(ctx, args, pkg);
+    if ('error' in resolved) return asText(resolved.error);
+    const { adobe } = resolved;
 
     const wizardState: ProjectConfigSource = {
         projectName: args.projectName,
@@ -255,7 +325,7 @@ async function createHeadless(
         customBlockLibraries: [],
     };
 
-    const config = buildProjectConfig(wizardState, null, packages);
+    const config = buildProjectConfig(withSeed(wizardState, args.seed), null, packages);
     try {
         // Run creation under the stored session org context so any `aio` work
         // targets the selected org/workspace via env (no global mutation).
@@ -270,7 +340,23 @@ async function createHeadless(
         path: path.join(projectsDir(), args.projectName),
         // Not the block tools or sync_storefront: both need an Edge Delivery storefront.
         hint: 'Operate on it by name with the project tools (get_project_status, start_demo, update_project_config, …).',
+        ...args.report,
     });
+}
+
+/** The part of a seed storefront setup reads, in the payload's own field names. */
+function seededSetup(args: CreateArgs & { accsEndpoint?: string }): Record<string, unknown> {
+    const { seed } = args;
+    if (!seed) return {};
+    return {
+        componentConfigs: mergedConfigs(
+            seed.componentConfigs,
+            backendEndpointConfig(args.stackId, args.accsEndpoint),
+        ),
+        selectedAddons: seed.selectedAddons,
+        selectedBlockLibraries: seed.selectedBlockLibraries,
+        customBlockLibraries: seed.customBlockLibraries,
+    };
 }
 
 /** EDS creation path: provision the storefront (captured), then create the project. */
@@ -302,18 +388,9 @@ async function createEds(
     // `requiresMesh: false`, and the refusal named API Mesh for projects that
     // declare they need none, which sends the reader hunting a mesh that is not
     // there. GitHub + DA.live are required for EDS regardless, below.
-    let adobe:
-        | {
-              org: WizardState['adobeOrg'];
-              project: WizardState['adobeProject'];
-              workspace: WizardState['adobeWorkspace'];
-          }
-        | undefined;
-    if (getResolvedMeshRequirement(pkg, args.stackId) === true) {
-        const resolved = await requireAdobeWorkspace(ctx);
-        if ('error' in resolved) return asText(resolved.error);
-        adobe = resolved;
-    }
+    const resolved = await adobeIfDeploying(ctx, args, pkg);
+    if ('error' in resolved) return asText(resolved.error);
+    const { adobe } = resolved;
     const auth = await edsAuthHandoff(ctx);
     if ('handoff' in auth) return asText(auth.handoff);
     const githubOwner = args.githubOwner ?? auth.login;
@@ -350,7 +427,15 @@ async function createEds(
             // Rehydration of package-derived config (brandAssets, codePatches,
             // …) requires BOTH the package and the stack id.
             selectedStack: args.stackId,
-            dependencies: setupDeps,
+            dependencies: [
+                ...new Set([
+                    ...setupDeps,
+                    ...(args.seed?.selectedAppBuilderComponents ?? []).filter(isMeshComponentId),
+                ]),
+            ],
+            // A project file's settings and libraries, which the wizard sends
+            // here too; absent for a plain create_project.
+            ...seededSetup(args),
             // The row rides too: the phases read it for the repo branch, the
             // pages and the dry check, exactly as the wizard sends it.
             demo: args.demo,
@@ -401,7 +486,7 @@ async function createEds(
         },
     };
 
-    const config = buildProjectConfig(wizardState, null, packages);
+    const config = buildProjectConfig(withSeed(wizardState, args.seed), null, packages);
     try {
         await runWithAdobeTarget(() => executeProjectCreation(capturing, config));
     } catch (err) {
@@ -423,7 +508,45 @@ async function createEds(
         repoUrl,
         phases: toPhaseTimeline(events),
         hint: 'Operate on it by name (list_blocks, sync_storefront, …).',
+        ...args.report,
     });
+}
+
+/** One creation, as either door states it: `create_project`'s arguments, or a project file's. */
+interface CreationRequest {
+    projectName: string;
+    pkgId: string;
+    stackId: string;
+    link?: string;
+    repoName?: string;
+    githubOwner?: string;
+    daLiveOrg?: string;
+    daLiveSite?: string;
+    accsEndpoint?: string;
+    seed?: CreationSeed;
+    report?: Record<string, unknown>;
+}
+
+/**
+ * Create the project. The ONE creation path on the agent surface: `create_project`
+ * and `create_project_from_file` both end here, so they cannot assemble or run a
+ * creation differently.
+ *
+ * @param ctx     Headless HandlerContext for this call.
+ * @param request What to build, already validated and consented to.
+ * @returns the tool result
+ */
+export async function runProjectCreation(ctx: HandlerContext, request: CreationRequest) {
+    const { pkgId, stackId, link, ...rest } = request;
+    const resolved = await resolvePackage(ctx, { pkgId, stackId, link });
+    if ('error' in resolved) return asText(resolved.error);
+    const { pkg, storefront, packages, demo } = resolved;
+    // A project row never carries the card's zip record.
+    const args = { ...rest, pkgId: pkg.id, stackId, demo: projectRowOf(demo) };
+
+    return stackId.startsWith('eds-')
+        ? createEds(ctx, args, pkg, storefront, packages)
+        : createHeadless(ctx, args, pkg, packages);
 }
 
 /**
@@ -499,30 +622,17 @@ export function registerCreateProjectTool(
                 });
             }
 
-            const ctx = ctxFactory();
-            const resolved = await resolvePackage(ctx, {
+            return runProjectCreation(ctxFactory(), {
+                projectName,
                 pkgId,
                 stackId,
                 link,
-            });
-            if ('error' in resolved) return asText(resolved.error);
-            const { pkg, storefront, packages, demo } = resolved;
-            const baseArgs = {
-                projectName,
-                pkgId: pkg.id,
-                stackId,
-                // A project row never carries the card's zip record.
-                demo: projectRowOf(demo),
                 repoName: args.repoName ? String(args.repoName) : undefined,
                 githubOwner: args.githubOwner ? String(args.githubOwner) : undefined,
                 daLiveOrg: args.daLiveOrg ? String(args.daLiveOrg) : undefined,
                 daLiveSite: args.daLiveSite ? String(args.daLiveSite) : undefined,
                 accsEndpoint: args.accsEndpoint ? String(args.accsEndpoint) : undefined,
-            };
-
-            return stackId.startsWith('eds-')
-                ? createEds(ctx, baseArgs, pkg, storefront, packages)
-                : createHeadless(ctx, baseArgs, pkg, packages);
+            });
         },
     );
 }

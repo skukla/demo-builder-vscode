@@ -11,6 +11,7 @@
  * (createProjectTool-validation.test.ts).
  */
 
+import { registerCreateProjectFromFileTool } from '@/features/ai/server/createProjectFromFileTool';
 import { registerCreateProjectTool } from '@/features/ai/server/createProjectTool';
 import { getAdobeTarget, runWithAdobeTarget } from '@/features/ai/server/adobeTargetStore';
 import type { McpToolSchema } from '@/features/ai/server/mcpToolServer';
@@ -71,6 +72,7 @@ jest.mock('@/features/ai/server/adobeTargetStore', () => ({
 }));
 
 export {
+    registerCreateProjectFromFileTool,
     registerCreateProjectTool,
     getAdobeTarget,
     runWithAdobeTarget,
@@ -119,7 +121,7 @@ export interface FakeServer {
     call(args?: unknown): Promise<any>;
 }
 
-export function fakeServer(): FakeServer {
+export function fakeServer(tool = 'create_project'): FakeServer {
     const tools = new Map<string, ToolHandler>();
     const defs = new Map<string, McpToolSchema>();
     return {
@@ -127,9 +129,9 @@ export function fakeServer(): FakeServer {
             tools.set(name, handler);
             defs.set(name, def);
         },
-        definitionOf: () => defs.get('create_project')!,
+        definitionOf: () => defs.get(tool)!,
         async call(args?: unknown) {
-            return JSON.parse((await tools.get('create_project')!(args)).content[0].text);
+            return JSON.parse((await tools.get(tool)!(args)).content[0].text);
         },
     };
 }

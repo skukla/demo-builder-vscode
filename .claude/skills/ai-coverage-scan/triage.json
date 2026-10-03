@@ -88,6 +88,10 @@
         "getErpDemoControls": {
             "tool": "run_erp_rest",
             "reason": "The handler is a GET of the ERP's health route (appearance and downtime); set_erp_appearance's description tells the agent to read it with run_erp_rest on 'health'."
+        },
+        "importFromFile": {
+            "tool": "create_project_from_file",
+            "reason": "Both start a project from an exported project file. The handler opens a file picker and then the wizard; the tool takes the file's path and creates through create_project's own path, seeded by the same integration seeding the wizard's import uses (2026-10-03)."
         }
     },
     "exclusions": {
@@ -125,16 +129,10 @@
             "reason": "Creates a credential in the user's Console workspace. Kept panel-only on purpose; the handler's own comment says never in the MCP maps."
         },
         "use-bundle-setup": {
-            "reason": "Closes the wizard and reopens it pre-filled from a bundle's setup. UI navigation; the job behind it is the importFromFile gap."
+            "reason": "Closes the wizard and reopens it pre-filled from a bundle's setup. UI navigation; the job behind it, starting a project from an exported file, is create_project_from_file."
         }
     },
     "gaps": {
-        "importFromFile": {
-            "reason": "No tool starts a project from an exported project file. The handler opens a file picker; a path-taking variant is what an agent would need. (A zip bundle's storefront is covered by add_shared_demo.)"
-        },
-        "resetProject": {
-            "reason": "Only an Edge Delivery project can be reset by an agent (reset_eds_project). A headless project's reset (component re-clone) has no tool."
-        },
         "check-credential-service": {
             "reason": "No tool asks whether the shared credential service serves this org; only the Diagnostics command and the Commerce step do."
         },

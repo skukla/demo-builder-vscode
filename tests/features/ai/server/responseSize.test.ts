@@ -660,7 +660,7 @@ describe('the ceiling table tracks the tool surface', () => {
      * covers one of two registration paths reads as full coverage and is not.
      *
      * The ten are listed as IOUs rather than given invented ceilings: several
-     * (`create_project`, `reset_eds_project`, `apply_updates`) return
+     * (`create_project`, `reset_project`, `apply_updates`) return
      * progress/summary payloads whose real size only a live run produces, and a
      * number guessed from a stub records a size production never emits. Promote
      * each to a real ceiling — or to EXEMPT, if a live look shows a fixed short
@@ -693,12 +693,13 @@ describe('the ceiling table tracks the tool surface', () => {
         const DIRECT_PENDING = new Set<string>([
             'apply_updates',
             'create_project',
+            'create_project_from_file',
             'delete_project',
             'edit_project',
             'get_settings',
             'open_url',
             'open_view',
-            'reset_eds_project',
+            'reset_project',
             'set_setting',
             'sign_in',
         ]);

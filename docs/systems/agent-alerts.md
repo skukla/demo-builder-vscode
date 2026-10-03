@@ -53,8 +53,7 @@ Deleting things
 - `cleanup_dalive_site` · `remove_block_from_library` · `remove_integration`
 
 Replacing or wiping
-- `reset_eds_project` · `reset_datapack` · `migrate_storefront_name` · `reset_erp_records`
-- `reset_eds_project` · `reset_datapack` · `migrate_storefront_name`
+- `reset_project` · `reset_datapack` · `migrate_storefront_name` · `reset_erp_records`
 - `forget_added_demo` (with `deleteRepository` it deletes the repository made from a zip)
 - `remove_demo_package` (takes the description file colleagues add the demo from out of the repository)
 
@@ -64,7 +63,7 @@ Reaching other people
 
 ### Deliberately NOT on it
 
-`open_url`, `open_view`, `sign_in`, `create_project`, `apply_updates`,
+`open_url`, `open_view`, `sign_in`, `create_project`, `create_project_from_file`, `apply_updates`,
 `promote_block_to_library`, `repair_site_configuration`.
 
 All of these raised a dialog before 2026-08-25. They are recoverable, additive, or

@@ -110,7 +110,7 @@ sibling modules with verbatim re-exports, and the scan correctly reported no cha
    kebab-case (`'provision-accs-credentials':`). Matching one gives ~50 types instead of 106 —
    and the resulting figure looks plausible, which is what makes it dangerous.
 2. **Not every MCP tool is a descriptor row.** Many are registered directly
-   (`createProjectTool.ts`, `edsResetTool.ts`). Counting only descriptor `type:` values reports
+   (`createProjectTool.ts`, `resetProjectTool.ts`). Counting only descriptor `type:` values reports
    **81%** uncovered against a true **50%** — a 30-point overstatement, because
    `create-project` looks uncovered while the `create_project` tool exists. The scan normalizes
    (strip `-`/`_`, lowercase) and matches against every tool name it can find.

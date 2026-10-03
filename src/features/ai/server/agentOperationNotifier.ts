@@ -59,7 +59,7 @@ export function clearSessionGrants(): void {
 
 /**
  * The open project's name, for tools that act on it and take no argument
- * naming it — `republish`, `sync_content`, `reset_eds_project`.
+ * naming it — `republish`, `sync_content`, `reset_project`.
  *
  * Best-effort: the dialog must still appear if state is unavailable. A missing
  * name costs the reader context; a thrown error would cost them the gate.
