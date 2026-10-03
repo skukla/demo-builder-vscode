@@ -182,25 +182,6 @@ describe('edsResetUI - checkDaLiveAuth (refactored to use ensureDaLiveAuth)', ()
         expect(result.success).toBe(true);
     });
 
-    it('should return null (continue) when DA.live sign-in succeeds', async () => {
-        // Given: ensureDaLiveAuth succeeds after re-auth prompt
-        mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
-        const project = createProject();
-        const context = createMockContext();
-
-        // When
-        const result = await resetEdsProjectWithUI({
-            githubAppService: fakeGitHubAppService,
-            meshDeps,
-            project,
-            context,
-            packages: testPackages,
-        });
-
-        // Then: Reset should proceed
-        expect(result.success).toBe(true);
-    });
-
     it('should restore status and return error when DA.live auth is cancelled', async () => {
         // Given: ensureDaLiveAuth returns cancelled
         mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: false, cancelled: true });
@@ -298,25 +279,6 @@ describe('edsResetUI - checkAdobeAuth (refactored to use ensureAdobeIOAuth)', ()
         expect(result.success).toBe(true);
     });
 
-    it('should return null (continue) when Adobe I/O sign-in succeeds', async () => {
-        // Given: Adobe I/O re-auth succeeds
-        mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
-        const project = createProject(true);
-        const context = createMockContext();
-
-        // When
-        const result = await resetEdsProjectWithUI({
-            githubAppService: fakeGitHubAppService,
-            meshDeps,
-            project,
-            context,
-            packages: testPackages,
-        });
-
-        // Then: Reset should proceed
-        expect(result.success).toBe(true);
-    });
-
     it('should restore status and return error when Adobe I/O auth is cancelled', async () => {
         // Given: Adobe I/O auth cancelled
         mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: false, cancelled: true });
@@ -336,26 +298,6 @@ describe('edsResetUI - checkAdobeAuth (refactored to use ensureAdobeIOAuth)', ()
         expect(result.success).toBe(false);
         expect(result.errorType).toBe('ADOBE_AUTH_REQUIRED');
         expect(result.cancelled).toBe(true);
-    });
-
-    it('should restore status and return error when Adobe I/O sign-in fails', async () => {
-        // Given: Adobe I/O auth fails
-        mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: false });
-        const project = createProject(true);
-        const context = createMockContext();
-
-        // When
-        const result = await resetEdsProjectWithUI({
-            githubAppService: fakeGitHubAppService,
-            meshDeps,
-            project,
-            context,
-            packages: testPackages,
-        });
-
-        // Then: Should return ADOBE_AUTH_REQUIRED
-        expect(result.success).toBe(false);
-        expect(result.errorType).toBe('ADOBE_AUTH_REQUIRED');
     });
 
     it('runs Adobe I/O auth for an Adobe-context project even without a mesh (ACCS)', async () => {

@@ -85,6 +85,7 @@ raised here so the next queue is generated with the answer.
 
 - 2026-09-03  docs(backlog): PL-42 — read the redundancy lists and delete what pins nothing (`591c4c293`)
 - 2026-09-04  docs(backlog): the redundancy sweep result, and a queue regenerated after shared.ts (`b8f21f66f`)
+- 2026-10-03  night2-b: first two modules read on fresh bail-off measurements (the 2026-09-03 lists were stale: envMerge 15->22 tests, edsResetUI 76->88). Deleted 10 tests that duplicated another test's input and assertions: envMerge 22->19, edsResetUI 88->81. Proof: re-measured after deletion, every mutant has the same status (envMerge 33/33 killed, edsResetUI 280/326 killed, unchanged); plus 10 hand-planted defects, each failed the deleted test on the old suite and at least one other test on the new one. Kept 43 listed candidates (8 envMerge, 35 edsResetUI) that pin an argument, an order, an SC-read message, a branch input, or a documented live incident. Uncommitted on loop/2026-10-03-night2-b.
 
 ## The sweep finished — 2026-09-04 02:20, all 143 modules, no failures
 
