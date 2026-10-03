@@ -128,3 +128,4 @@ events.
 - 2026-10-02  Owner 2026-10-02: step 6 includes the product event fix found under AB-60 — the ERP raises Product changed (not product.price / Price changed) with the full record, and the journal names the fields that changed
 - 2026-10-02  docs(plans): the ERP speaks its own language, design and event research (AB-26y) (`b6c04455f`)
 - 2026-10-03  Reconciled 2026-10-03: step 6 is DONE, not queued — demo-erp 32b8408 (contract v16, the ERP's own CloudEvents) and integration 81c69ce (one translation module), deployed and run live on Justrite 2026-10-02 (order 5000000011 end to end). Still open here: remove the ERP's DELETE products/:sku route (demo-erp actions/products/index.js:58), and Demo Builder pre-filling the mapping settings (designed in .rptc/plans/several-erps/erp-own-language-design.md, not built).
+- 2026-10-03  feat(erp): a fill writes each ERP's sales organizations into the integration's mapping, where unset (AB-26y) (`4cdd36d52`)

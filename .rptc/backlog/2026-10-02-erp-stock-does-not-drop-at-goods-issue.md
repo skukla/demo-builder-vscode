@@ -4,7 +4,7 @@ kind: fix
 area: app-builder
 needs: []
 value: med
-status: backlog
+status: built
 parent: AB-26
 ---
 
@@ -24,3 +24,7 @@ A real ERP reduces stock at goods issue; here the ERP's Available rises back aft
 Posting a shipment reduces the plant's quantity by the shipped quantity (no ProductStock.Changed
 for it, or one the integration drops, because Commerce's own shipment already deducted the same
 units: check which before building, or Commerce is deducted twice).
+
+## Shipped so far
+
+- 2026-10-03  Built 2026-10-03 (overnight loop): posting a shipment takes the shipped quantity out of its warehouse, refused when short; no ProductStock.Changed for a goods issue (Commerce deducts on its own shipment); an external shipment deducts once per reference (demo-erp 86f3430; contract note vendored, integration ff7eb00; branch loop/2026-10-03-overnight). Live check owed: ship on Justrite and watch the ERP's on hand fall.
