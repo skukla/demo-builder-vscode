@@ -4,7 +4,7 @@ kind: feature
 area: eds
 needs: []
 value: high
-status: backlog
+status: active
 ---
 
 # Shared storefront: read access to the colleague's DA.live site is the missing piece
@@ -101,3 +101,10 @@ Granting on the colleague's behalf (DA permissions are theirs), and writing to t
 - 2026-09-30  Shipped 2026-09-30 as hotfix beta.149 (master 5b6192ec1, tag v1.0.0-beta.149, GitHub pre-release with the VSIX): Manage Site Access manages content readers on DA.live beside the config admins — grantContentRead/revokeContentRead/listContentReaders on DaLiveConfigService (org permissions sheet, site path, owner's write rows first when the sheet is empty), contentAccessManagerHeadless (verify by re-read), the command's reader rows + a no-project org/site path, tools get_content_access / set_content_reader. Merged back: master → develop (32d18ed80) → loop branch. Not yet done from this design: the Save-as-demo-package intake and the receiving-side probe ('published only' vs 'authored site'); the Config Service adapter in the same shape. Not live-verified on a real org yet — Khalil's grant is the first real run.
 - 2026-09-30  Owner, 2026-09-30: the code-derived library stays as the FALLBACK once EDS-22's authored copy exists. When a storefront is added by link with no read grant on the colleague's DA.live site, the project keeps rebuilding its library from the repo's component-definition.json (the blocks the code declares, generated examples), as today; the authored copy (.da/library and its doc pages) is the upgrade taken only when the grant is present. Neither path is the other's replacement.
 - 2026-10-01  2026-10-01, from the AB-53 rebuild: the Commerce endpoint belongs on the DEMO, not on the create call. A shared storefront's config.json names the sharer's tenant, so the receiver must still be told which instance; create_project takes accsEndpoint and (since d699b6ec4) records it on the backend's config, but an added demo's row should carry it from intake beside the store codes it already records, so create_project needs no accsEndpoint and the catalog pre-warm never skips ('No Commerce/Catalog endpoint configured', justrite 2026-09-30).
+- 2026-09-30  docs(backlog): EDS-22 keeps the code-derived block library as the fallback without a read grant (`e42005243`)
+- 2026-09-30  docs(backlog): EDS-22 logs the beta.149 ship and what the design still owes (`6c64a2eb3`)
+- 2026-09-30  Merge branch 'develop' into loop/2026-09-30-erp-programme (beta.149: the content-read grant) (`66f91a773`)
+- 2026-09-30  chore(release): bump version to 1.0.0-beta.149 (`52253d19f`)
+- 2026-09-30  feat(eds): let a colleague read your storefront's authored content on DA.live (EDS-22) (`79612742f`)
+- 2026-09-30  docs(backlog): EDS-22 design — a read grant on the sharer's DA.live org config, and an intake in Save as demo package (`137b4a176`)
+- 2026-10-01  2026-10-01, from AB-53: a shared demo's intake should also record whether the target website runs B2B and which shared catalogs it has. On a B2B website a category no catalog grants is invisible to search (guests saw 0 of 49 Justrite products). The category rule itself lives in EDS-24.
