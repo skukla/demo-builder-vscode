@@ -52,6 +52,7 @@ at zero, with the journey scan confirming the providers are gone.
 - 2026-09-09  refactor(app-builder): pull the event-provider surface off develop — the work is on a branch (`4a3889049`)
 - 2026-10-03  Reconciled 2026-10-03 (second pass): feature/event-providers still holds the pulled code (086bdc41c), but it is from beta.146 and this branch is 865 commits past beta.149, so restoring it is not a clean checkout. The agent half does not need AB-8's UI answer: an owner question.
 - 2026-10-03  Agent half restored 2026-10-03 without AB-8: list_event_providers (read-only, never creates or subscribes a credential) and delete_event_provider (confirm-gated, refuses any provider that is not the open project's workspace's own or whose label does not match, deletes the named registrations first), on Console teardown's own deps, access recovery and ownership filter; the create tools did not come back, and the reversibility ledger names reinstall_integration as the undo for app-installed providers; not live-probed.
+- 2026-10-03  feat(ai): agents list and remove event providers; Open in Claude Code says when Claude Code is missing; wizard warnings reach Debug Logs; checks see new files (AB-6, AI-4a, PL-65, PL-67) (`c4f3bd94a`)
 
 ## PULLED OFF develop, 2026-09-09 — the work is on a branch, not deleted
 
