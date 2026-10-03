@@ -334,6 +334,17 @@ describe('resetEdsProjectWithUI — the AEM Code Sync check', () => {
         );
     });
 
+    // EDS-23: an inner 400 cannot say the App is missing, so the reset goes on
+    // without the install prompt.
+    it('continues WITHOUT the install prompt on an inner 400', async () => {
+        isAppInstalled.mockResolvedValue({ isInstalled: false, codeStatus: 400, transient: true });
+
+        await run(createProject(), createContext());
+
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
+        expect(mockedReset).toHaveBeenCalled();
+    });
+
     describe('when the App is NOT installed', () => {
         beforeEach(() => {
             isAppInstalled.mockResolvedValue({ isInstalled: false });

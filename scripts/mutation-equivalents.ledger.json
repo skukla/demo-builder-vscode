@@ -4580,7 +4580,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 159,
+            "line": 160,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying triggerCodeSync's catch body drops a logger.warn and the explicit 'return false', so the function returns undefined instead. Its single caller uses the value only as 'if (triggered)', where undefined and false are indistinguishable \u2014 the re-check is skipped either way. No test can separate the two.",
@@ -7417,22 +7417,9 @@
         {
             "module": "src/features/eds/handlers/storefrontSetup/storefrontSetupPhase3.ts",
             "anchors": [
-                "} catch (error) {"
-            ],
-            "line": 57,
-            "mutants": 1,
-            "category": "block",
-            "reason": "This catch exists to swallow a failed CDN preview so the phase continues; its body is one logger.warn naming the error. Emptying the block still swallows it \u2014 control still leaves the try and still sends the 'Code synchronized' progress message and everything after it. 'carries on when the CDN preview fails' drives a rejecting previewCode through this exact path and pins that the phase completes; what an empty catch loses is the message, not a decision.",
-            "decision": "none \u2014 a failed publish that the phase deliberately continues past leaves no other trace, so the warning is the only record of it",
-            "recorded": "2026-09-05",
-            "source": "PL-22 MUT-02, 2026-09-05"
-        },
-        {
-            "module": "src/features/eds/handlers/storefrontSetup/storefrontSetupPhase3.ts",
-            "anchors": [
                 "} else {"
             ],
-            "line": 93,
+            "line": 84,
             "mutants": 1,
             "category": "block",
             "reason": "The else arm of the user-email check contains only a logger.warn saying no email was available. Emptying it leaves the phase doing exactly the same thing: no permissions call, straight on to registerConfigurationService. That the permissions call is genuinely skipped, and that the phase still completes, is pinned by 'skips permissions when no email is known anywhere' and 'skips permissions when the GitHub record carries no user', both of which assert the collaborator was not called.",
@@ -7607,32 +7594,6 @@
             "category": "optionalChain",
             "reason": "Both ?. removals turn a body without a code object into a TypeError. That error is caught by isAppInstalled, which returns { isInstalled: false, transient: true } \u2014 the identical object the unmutated guard two lines later returns for the same body, because a missing code.status is already classified as transient. checkHelixStatus is private, so there is no seam that sees the difference; the only divergence is which log line prints on the way out.",
             "decision": "none \u2014 the missing-code.status guard and the thrown-error path return the same verdict by design",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-04"
-        },
-        {
-            "module": "src/features/eds/services/github/githubAppService.ts",
-            "anchors": [
-                "if (codeStatus === 404) {",
-                "} else if (codeStatus === 200) {"
-            ],
-            "mutants": 8,
-            "category": "branch",
-            "reason": "This if/else chain runs after the return value is already decided: isInstalled and codeStatus were computed above and the same object is returned on every arm. The chain chooses only which logger call fires and at which level, so inverting, forcing or emptying either condition changes nothing a caller can observe. Killing these would mean asserting logger wording, which the ratchet exists to refuse to reward.",
-            "decision": "none \u2014 the chain selects a log line only; the verdict is computed before it",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-04"
-        },
-        {
-            "module": "src/features/eds/services/github/githubAppService.ts",
-            "anchors": [
-                "} else {"
-            ],
-            "line": 296,
-            "mutants": 1,
-            "category": "block",
-            "reason": "The final arm of the same log-only chain: emptying it removes one logger.trace call and nothing else, because { isInstalled, codeStatus } is returned unchanged below regardless of which arm ran. The arm is a bare else rather than a 400 test because the isDefinitiveStatus guard above already returned for every status outside {200, 400, 404}.",
-            "decision": "none \u2014 log-line selection, and the arm is the only remaining status by construction",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-04"
         },
@@ -9736,7 +9697,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 180,
+            "line": 213,
             "mutants": 1,
             "category": "block",
             "reason": "Stryker empties the catch, so a throwing validateToken leaves githubOk unassigned instead of false. Both readings are falsy at the 'if (!githubOk)' below, so the tool returns the same needsAuth:'github' handoff and calls the same collaborators either way. The only difference is the variable's binding, which nothing observes; a test asserting it would have to reach inside the function.",
@@ -9749,7 +9710,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 195,
+            "line": 228,
             "mutants": 1,
             "category": "block",
             "reason": "Stryker empties the catch, so a throwing isAuthenticated leaves daLiveOk unassigned instead of false. Both readings are falsy at the 'if (!daLiveOk)' below, so the tool returns the same needsAuth:'dalive' handoff and calls the same collaborators either way. The only difference is the variable's binding, which nothing observes; a test asserting it would have to reach inside the function.",

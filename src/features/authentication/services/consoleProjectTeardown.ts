@@ -26,6 +26,7 @@
  * deletion) live in `consoleProjectTeardownEvents.ts`.
  */
 
+import { explainMissingDeveloperAccess } from './authenticationErrorFormatter';
 import { errorMessage, teardownEventEntities } from './consoleProjectTeardownEvents';
 import type { EventsAuth, IoEventsClient } from './ioEventsClient';
 import type { WorkspaceS2SCredentialIds } from './types';
@@ -230,9 +231,14 @@ const UNPREEMPTED_DELETE_BLOCKERS =
     'submitted for approval (Pending or Published) — revoke the published app, ' +
     'then retry; or a workspace whose Runtime namespace exposes a shared package.';
 
-/** The raw Console error, plus what it declines to tell you. */
+/**
+ * The raw Console error, plus what it declines to tell you — or, when the refusal
+ * names its cause (a project read-only for this person, AB-18), that cause in plain
+ * words instead of the blockers that apply only when Adobe names none.
+ */
 function explainDeleteFailure(error: unknown): string {
-    return `${errorMessage(error)} — ${UNPREEMPTED_DELETE_BLOCKERS}`;
+    const raw = errorMessage(error);
+    return `${raw} — ${explainMissingDeveloperAccess(raw) ?? UNPREEMPTED_DELETE_BLOCKERS}`;
 }
 
 /** Step 4: delete the Console project (only reached with zero failed items). */

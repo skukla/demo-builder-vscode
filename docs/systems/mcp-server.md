@@ -499,6 +499,18 @@ credentials the new project still needs (`stillNeeded.credentials`, read from th
 components' declared env vars against `SECRET_ENV_KEYS`). Like `create_project` it is
 gated by `confirm:true` and is not on the consent-dialog list.
 
+### Store scope at creation (AI-11, 2026-10-03)
+
+`create_project` and `create_project_from_file` take an optional `storeScope
+{ website, store, storeView }` — the input `configure_project` takes, from the one
+schema in `storeScope.ts`, so all three agree on what a valid scope is (all three
+codes, as text) and where it is stored (the backend's `ACCS_WEBSITE_CODE`,
+`ACCS_STORE_CODE`, `ACCS_STORE_VIEW_CODE`). It is checked before anything is created,
+and refused when the stack has no backend to hold it. It reaches the creation that
+generates `config.json`, so a storefront built on a store other than the demo's is not
+published with the wrong codes first and corrected after. On the file path the call's
+codes win over the file's; omitted, the file's codes stand.
+
 ### Integrations live in Adobe workspaces of their own (AB-23)
 
 Since 2026-09-21 every integration an SC adds gets an Adobe workspace of its own,

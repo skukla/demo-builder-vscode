@@ -101,8 +101,8 @@ describe('GitHub App Service', () => {
             expect(result).toEqual({ isInstalled: false, codeStatus: 404 });
         });
 
-        it('should return false when code.status is 400 in strict mode (default)', async () => {
-            // Given: Valid token, status 400 (may be initializing or config issues)
+        it('should not call code.status 400 installed in strict mode (default)', async () => {
+            // Given: Valid token, inner status 400 (says nothing either way — EDS-23)
             mockTokenService.getToken.mockResolvedValue({
                 token: 'ghp_xxx',
                 tokenType: 'bearer',
@@ -119,13 +119,14 @@ describe('GitHub App Service', () => {
             // When: Checking in strict mode (default)
             const result = await service.isAppInstalled('test-owner', 'test-repo');
 
-            // Then: Should return isInstalled: true (app is installed, just has config issues)
-            // Status 400 typically means app is installed but fstab.yaml has issues
-            expect(result).toEqual({ isInstalled: true, codeStatus: 400 });
+            // Then: NOT installed and NOT a definitive "no" — undetermined (EDS-23).
+            // Measured 2026-09-30/10-01 on skukla/kukla-justrite: an inner 400 both
+            // before the App covered the repo and after it did, so it proves neither.
+            expect(result).toEqual({ isInstalled: false, codeStatus: 400, transient: true });
         });
 
         it('should return true when code.status is 400 in lenient mode', async () => {
-            // Given: Valid token, status 400 (may be initializing or config issues)
+            // Given: Valid token, inner status 400 (says nothing either way — EDS-23)
             mockTokenService.getToken.mockResolvedValue({
                 token: 'ghp_xxx',
                 tokenType: 'bearer',
@@ -144,8 +145,9 @@ describe('GitHub App Service', () => {
                 lenient: true,
             });
 
-            // Then: Should return isInstalled: true with codeStatus
-            expect(result).toEqual({ isInstalled: true, codeStatus: 400 });
+            // Then: lenient keeps its permissive verdict ("anything but 404"), but
+            // the answer is flagged undetermined like every other non-definitive status
+            expect(result).toEqual({ isInstalled: true, codeStatus: 400, transient: true });
         });
 
         it('should return false when code.status is 404 even in lenient mode', async () => {

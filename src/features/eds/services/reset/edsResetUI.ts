@@ -254,9 +254,13 @@ async function checkGitHubAppInstallation(
     // user reinstall a working App eleven times. Report the real cause and let
     // the reset continue; the check is advisory here, not a gate.
     if (outcome.kind === 'undetermined') {
+        // An inner 400 is an answer that cannot say (EDS-23), not a missing response.
+        const answered = outcome.codeStatus !== undefined
+            ? `code.status ${outcome.codeStatus}`
+            : `HTTP ${outcome.httpStatus ?? 'no response'}`;
         context.logger.warn(
             `${logPrefix} Could not verify AEM Code Sync on ${repoOwner}/${repoName} ` +
-                `(HTTP ${outcome.httpStatus ?? 'no response'}) — continuing; this is a failed ` +
+                `(${answered}) — continuing; this is a failed ` +
                 `check, not a missing App.`,
         );
         return null;

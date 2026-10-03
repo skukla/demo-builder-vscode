@@ -23,6 +23,7 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
 import { createDeps, createProject } from './appBuilderComponentRunner.testUtils';
 import { removeAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
 import { createSuccessResult } from '../../../helpers/commandResultFake';
+import { MISSING_LICENCE_REFUSAL } from '../../../helpers/adobeConsoleRefusals';
 
 const SYSTEM: AppBuilderComponentCatalogEntry = {
     id: 'demo-erp',
@@ -102,6 +103,25 @@ describe('a clean-up that does not finish', () => {
         const result = await removeAppBuilderComponent(pairedProject(), 'erp-integration', deps);
 
         expect(result.error).toContain('(socket hang up)');
+    });
+
+    // AB-18: a project whose credential uses a profile the SC is not a developer on
+    // refuses the credential read the clean-up needs. Say why, in words they can act on.
+    it('says in plain words when Adobe refuses the credential the clean-up needs', async () => {
+        const deps = createDeps({
+            catalog: [SYSTEM, INTEGRATION],
+            uninstallAppManagement: jest.fn(async () => {
+                throw new Error(MISSING_LICENCE_REFUSAL);
+            }),
+        });
+
+        const result = await removeAppBuilderComponent(pairedProject(), 'erp-integration', deps);
+
+        expect(result.error).toContain(
+            'ERP integration could not be uninstalled from Commerce (Adobe refused this because ' +
+                'your login is not a developer on every product profile',
+        );
+        expect(result.error).not.toContain('ERR_MSG_OPERATION_NOT_ALLOWED');
     });
 
     it('removing anyway goes ahead, removes both, and says what stays behind', async () => {

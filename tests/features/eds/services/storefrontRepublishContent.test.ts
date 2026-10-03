@@ -37,6 +37,7 @@ import { prewarmCatalog } from '@/features/eds/services/catalogPrewarmService';
 import type { Logger } from '@/types/logger';
 import type { HelixService } from '@/features/eds/services/helix/helixService';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { PREVIEW_CODE_APP_NOT_ON_REPO_ERROR } from '../../../helpers/helixAdminFixtures';
 
 /**
  * Helix arrives through `republishStorefrontContent`'s own params rather than by
@@ -90,6 +91,19 @@ describe('republishStorefrontContent', () => {
         mockPublishAllSiteContent.mockRejectedValueOnce(new Error('helix 503'));
         const res = await republishStorefrontContent(params());
         expect(res).toMatchObject({ success: false, error: 'helix 503' });
+    });
+
+    // EDS-23 recommendation 2: the raw x-error is honest but not actionable. When
+    // the code endpoint says the App is not on the repository, the answer says
+    // that in plain words and links the install page — on the dashboard button
+    // and the `sync_content` tool alike, which share this pipeline.
+    it('says "add the repository to the App" when the code endpoint says the App is not on it', async () => {
+        mockPreviewCode.mockRejectedValueOnce(new Error(PREVIEW_CODE_APP_NOT_ON_REPO_ERROR));
+        const res = await republishStorefrontContent(params());
+        expect(res.success).toBe(false);
+        expect(res.error).toContain('The AEM Code Sync GitHub App is not on me/shop');
+        expect(res.error).toContain('https://github.com/apps/aem-code-sync/installations/select_target');
+        expect(mockPurgeCacheAll).not.toHaveBeenCalled();
     });
 
     // Decided 2026-08-23: Republish is the lightweight retry for a prewarm

@@ -16,6 +16,10 @@ import {
     configureDaLivePermissions,
     resolveProjectAuthoringExperience,
 } from '../../handlers/edsHelpers';
+import {
+    buildAppNotOnRepositoryMessage,
+    isAppNotOnRepositoryError,
+} from '../appInstallationResolver';
 import { prewarmCatalog } from '../catalogPrewarmService';
 import { generateConfigJson, buildConfigGeneratorParams } from '../configGenerator';
 import { syncConfigToRemote, verifyConfigOnCdn } from '../configSyncService';
@@ -524,6 +528,13 @@ export async function republishStorefrontContent(
             '[Republish] Content republish failed',
             error instanceof Error ? error : undefined,
         );
-        return { success: false, error: message };
+        // The code endpoint's x-error is the one place that says the App does not
+        // cover the repository (EDS-23); say it in words the SC can act on.
+        return {
+            success: false,
+            error: isAppNotOnRepositoryError(message)
+                ? buildAppNotOnRepositoryMessage(repoOwner, repoName)
+                : message,
+        };
     }
 }

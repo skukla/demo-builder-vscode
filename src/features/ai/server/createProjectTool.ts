@@ -39,6 +39,12 @@ import {
     withCapturedProgress,
     type CapturedEvent,
 } from './progressCapture';
+import {
+    NO_BACKEND_FOR_SCOPE,
+    storeScopeEnv,
+    storeScopeSchema,
+    type StoreScope,
+} from './storeScope';
 import { ACCS_GRAPHQL_ENDPOINT } from '@/core/config/envVarKeys';
 import { isMeshComponentId } from '@/core/constants';
 import { dispatchHandler } from '@/core/handlers/dispatchHandler';
@@ -84,10 +90,37 @@ function projectsDir(): string {
 function backendEndpointConfig(
     stackId: string,
     accsEndpoint: string | undefined,
+    storeScope?: StoreScope,
 ): ProjectConfigSource['componentConfigs'] {
     const backend = getStackById(stackId)?.backend;
-    if (!backend || !accsEndpoint) return {};
-    return { [backend]: { [ACCS_GRAPHQL_ENDPOINT]: accsEndpoint } };
+    if (!backend || (!accsEndpoint && !storeScope)) return {};
+    return {
+        [backend]: {
+            ...(accsEndpoint ? { [ACCS_GRAPHQL_ENDPOINT]: accsEndpoint } : {}),
+            // The scope the caller chose (AI-11), where configure_project writes it,
+            // so the config.json creation generates names it from the start.
+            ...(storeScope ? storeScopeEnv(storeScope) : {}),
+        },
+    };
+}
+
+/**
+ * Check a `storeScope` argument the way `configure_project`'s schema does, before
+ * anything is created: all three codes, as text, and a backend to hold them.
+ *
+ * @returns the scope (undefined when none was given), or the refusal
+ */
+export function parseStoreScope(
+    stackId: string,
+    raw: unknown,
+): { storeScope?: StoreScope } | { error: string } {
+    if (raw === undefined) return {};
+    const parsed = storeScopeSchema.safeParse(raw);
+    if (!parsed.success) {
+        return { error: 'storeScope needs all three codes as text: website, store and storeView.' };
+    }
+    if (!getStackById(stackId)?.backend) return { error: NO_BACKEND_FOR_SCOPE };
+    return { storeScope: parsed.data };
 }
 
 const NEEDS_ADOBE = {
@@ -234,6 +267,8 @@ interface CreateArgs {
     stackId: string;
     demo?: AddedDemo;
     seed?: CreationSeed;
+    /** The store scope the caller chose, already checked by `parseStoreScope` (AI-11). */
+    storeScope?: StoreScope;
     /** Added to a successful answer (what a file brought, what is still needed). */
     report?: Record<string, unknown>;
 }
@@ -319,7 +354,7 @@ async function createHeadless(
         adobeOrg: adobe?.org,
         adobeProject: adobe?.project,
         adobeWorkspace: adobe?.workspace,
-        componentConfigs: {},
+        componentConfigs: backendEndpointConfig(args.stackId, undefined, args.storeScope),
         selectedAddons: [],
         selectedBlockLibraries: [],
         customBlockLibraries: [],
@@ -351,7 +386,7 @@ function seededSetup(args: CreateArgs & { accsEndpoint?: string }): Record<strin
     return {
         componentConfigs: mergedConfigs(
             seed.componentConfigs,
-            backendEndpointConfig(args.stackId, args.accsEndpoint),
+            backendEndpointConfig(args.stackId, args.accsEndpoint, args.storeScope),
         ),
         selectedAddons: seed.selectedAddons,
         selectedBlockLibraries: seed.selectedBlockLibraries,
@@ -473,7 +508,7 @@ async function createEds(
         adobeOrg: adobe?.org,
         adobeProject: adobe?.project,
         adobeWorkspace: adobe?.workspace,
-        componentConfigs: backendEndpointConfig(args.stackId, args.accsEndpoint),
+        componentConfigs: backendEndpointConfig(args.stackId, args.accsEndpoint, args.storeScope),
         selectedAddons: [],
         selectedBlockLibraries: [],
         customBlockLibraries: [],
@@ -523,6 +558,8 @@ interface CreationRequest {
     daLiveOrg?: string;
     daLiveSite?: string;
     accsEndpoint?: string;
+    /** Already checked by `parseStoreScope`. */
+    storeScope?: StoreScope;
     seed?: CreationSeed;
     report?: Record<string, unknown>;
 }
@@ -565,7 +602,7 @@ export function registerCreateProjectTool(
             annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Create Project',
             description:
-                "Create a new Demo Builder project headlessly from a package + stack. The package is a shipped brand id, an added demo's id (added:owner/repo, from list_demo_packages), or a colleague's demo given as link (probed and added first). EDS stacks also provision a GitHub repo + DA.live content. Requires confirm:true",
+                "Create a new Demo Builder project headlessly from a package + stack. The package is a shipped brand id, an added demo's id (added:owner/repo, from list_demo_packages), or a colleague's demo given as link (probed and added first). EDS stacks also provision a GitHub repo + DA.live content. storeScope sets the store codes at creation, as configure_project does. Requires confirm:true",
             inputSchema: {
                 projectName: z.string().describe('Name for the new project'),
                 package: z
@@ -597,6 +634,9 @@ export function registerCreateProjectTool(
                     .string()
                     .optional()
                     .describe('EDS + ACCS only: Adobe Commerce Cloud GraphQL endpoint'),
+                // The same input configure_project takes (AI-11), so the demo's codes
+                // need not be published first and corrected after.
+                storeScope: storeScopeSchema.optional(),
                 confirm: z
                     .boolean()
                     .optional()
@@ -616,6 +656,8 @@ export function registerCreateProjectTool(
                     error: 'projectName, package (or link), and stack are all required.',
                 });
             }
+            const scope = parseStoreScope(stackId, args?.storeScope);
+            if ('error' in scope) return asText(scope);
             if (args?.confirm !== true) {
                 return asText({
                     error: 'create_project requires confirm:true — it installs dependencies and, for EDS, creates a real GitHub repo + DA.live content. Ask the user to confirm.',
@@ -632,6 +674,7 @@ export function registerCreateProjectTool(
                 daLiveOrg: args.daLiveOrg ? String(args.daLiveOrg) : undefined,
                 daLiveSite: args.daLiveSite ? String(args.daLiveSite) : undefined,
                 accsEndpoint: args.accsEndpoint ? String(args.accsEndpoint) : undefined,
+                storeScope: scope.storeScope,
             });
         },
     );

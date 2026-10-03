@@ -53,6 +53,21 @@ export async function checkGitHubAppForExistingRepo(
         awaitRegistration: options.afterReset === true,
     });
 
+    // An inner 400 says nothing either way (EDS-23): skukla/kukla-justrite read
+    // 400 before the App covered it and after. Phase 3 asks the code endpoint,
+    // whose x-error does say, so this gate hands the question on instead of
+    // failing a setup that may be fine.
+    if (outcome.kind === 'undetermined' && outcome.codeStatus === 400) {
+        logger.info(
+            `[Storefront Setup] AEM Code Sync status for ${repoInfo.repoOwner}/${repoInfo.repoName} ` +
+                `is an inner 400, which cannot say whether the App covers it — deciding at code publish`,
+        );
+        return continueWithoutVerdict(
+            context,
+            'AEM Code Sync will be checked again when the code is published',
+        );
+    }
+
     if (outcome.kind === 'undetermined') {
         return {
             success: false,
@@ -116,12 +131,10 @@ export async function checkGitHubAppForExistingRepo(
         // The real check belongs after registration, where `/status` finally
         // means something and a missing App shows up as `code.status: 404`.
         if (siteUnregistered) {
-            await context.sendMessage('storefront-setup-progress', {
-                phase: 'storefront-code',
-                message: 'Adobe has no site for this repository yet — continuing setup',
-                progress: 28,
-            } satisfies StorefrontSetupProgressPayload);
-            return null;
+            return continueWithoutVerdict(
+                context,
+                'Adobe has no site for this repository yet — continuing setup',
+            );
         }
 
         return pauseForGitHubApp(
@@ -152,6 +165,19 @@ export async function checkGitHubAppForExistingRepo(
     return null;
 }
 
+/**
+ * The gate has no verdict to give yet, so setup continues and the feed says why.
+ * One progress push for every such case — the phase 3 check is the one that decides.
+ */
+async function continueWithoutVerdict(context: HandlerContext, message: string): Promise<null> {
+    await context.sendMessage('storefront-setup-progress', {
+        phase: 'storefront-code',
+        message,
+        progress: 28,
+    } satisfies StorefrontSetupProgressPayload);
+    return null;
+}
+
 /** Where the run paused, so the resume line lands on the same progress row. */
 export interface GitHubAppPauseOptions {
     /** The run's cancel signal. A Cancel during the wait ends the run like any other phase. */
@@ -160,6 +186,8 @@ export interface GitHubAppPauseOptions {
     phase: StorefrontSetupProgressPayload['phase'];
     /** The progress value the pause interrupts; the resume line reuses it. */
     progress: number;
+    /** What ends the wait, when `/status` cannot. See `WaitForAppInstallationOptions.probe`. */
+    probe?: () => Promise<boolean>;
 }
 
 /**
@@ -193,7 +221,7 @@ export async function pauseForGitHubApp(
         services.githubAppService,
         repoInfo,
         context.logger,
-        { signal: options.signal },
+        { signal: options.signal, probe: options.probe },
     );
     if (verdict === 'aborted') throw new Error('Operation cancelled');
     if (verdict === 'timed-out') {

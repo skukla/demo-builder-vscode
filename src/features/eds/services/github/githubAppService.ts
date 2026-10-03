@@ -89,11 +89,13 @@ export class GitHubAppService {
      * Check if the AEM Code Sync GitHub app is installed on a repository.
      *
      * Uses the Helix admin status endpoint to check if code sync is working.
-     * The HTTP response may be 200, but the internal code.status field indicates
-     * whether the app is actually syncing code (200 = working, 400 = initializing, 404 = not installed).
+     * The HTTP response may be 200, but the internal code.status field carries the
+     * verdict: 200 = working, 404 = not installed. An inner 400 says nothing either
+     * way (EDS-23) — only the code endpoint's `x-error` can say whether the App
+     * covers the repository.
      *
      * Two modes:
-     * - Strict (default): Accepts 200 or 400 (app installed, possibly still initializing)
+     * - Strict (default): Accepts only 200
      * - Lenient: Accepts any status except 404 (for post-install verification)
      *
      * @param owner - Repository owner (user or organization)
@@ -218,8 +220,7 @@ export class GitHubAppService {
         }
 
         // Does a 200 status answer carry a reason for an inner 400? Logged to find
-        // out (2026-09-30): the code endpoint says "github bot not installed on
-        // repository" for a state this method classes as "installed, initializing".
+        // out (2026-09-30): it does not — six reads in twenty minutes, no x-error.
         const statusXError = response.headers?.get?.('x-error') ?? undefined;
         const data = await response.json();
         const codeStatus = data?.code?.status;
@@ -250,18 +251,21 @@ export class GitHubAppService {
         if (lenient) {
             isInstalled = codeStatus !== 404;
         } else {
-            isInstalled = codeStatus === 200 || codeStatus === 400;
+            isInstalled = codeStatus === 200;
         }
 
-        this.logger.debug(
-            `[GitHub App] Code status for ${owner}/${repo}: ${codeStatus}, installed: ${isInstalled}`,
-        );
-
-        // Only THREE inner statuses are definitive: 200 and 400 mean installed
-        // (working / initializing); 404 means Helix knows the repo and has no code
-        // sync for it. Everything else — 403 above all — is Helix DECLINING to
-        // answer, and it arrives inside an HTTP 200 body, so the outer
-        // classification never sees it.
+        // Only TWO inner statuses are definitive: 200 means installed and working;
+        // 404 means Helix knows the repo and has no code sync for it. Everything
+        // else — 403 above all — is Helix DECLINING to answer, and it arrives
+        // inside an HTTP 200 body, so the outer classification never sees it.
+        //
+        // 400 is NOT an answer. It used to be read as "installed, initializing".
+        // Measured on skukla/kukla-justrite (EDS-23): 400 on 2026-09-30 while the
+        // App did not cover the repository — the code endpoint said `[admin] github
+        // bot not installed on repository.` — and STILL 400 after the owner added
+        // the repository and its code served 200. So it tells you neither state.
+        // Storefront setup decides by the code endpoint's x-error instead
+        // (`storefrontSetupPhase3.confirmCodeSync`).
         //
         // Without this, strict mode turned `code.status: 403` into a definitive
         // "the App is not installed" while its own log line called that status
@@ -275,33 +279,22 @@ export class GitHubAppService {
         // `isInstalled` BEFORE `transient`, so lenient callers keep their
         // permissive verdict and only the strict path changes — from a false "no"
         // to an honest "undetermined".
-        const isDefinitiveStatus = codeStatus === 200 || codeStatus === 400 || codeStatus === 404;
+        const isDefinitiveStatus = codeStatus === 200 || codeStatus === 404;
         if (!isDefinitiveStatus) {
             this.logger.info(
                 `[GitHub App] AEM Code Sync status undetermined for ${owner}/${repo} ` +
-                    `(code.status: ${codeStatus}) — Helix declined to answer. This is NOT ` +
+                    `(code.status: ${codeStatus}) — the status endpoint cannot say. This is NOT ` +
                     `evidence that the App is missing.`,
             );
             return { isInstalled, codeStatus, transient: true };
         }
 
-        if (codeStatus === 404) {
-            this.logger.info(
-                `[GitHub App] AEM Code Sync app not installed for ${owner}/${repo} (code.status: 404)`,
-            );
-        } else if (codeStatus === 200) {
-            this.logger.info(
-                `[GitHub App] AEM Code Sync app installed and working for ${owner}/${repo}`,
-            );
-        } else {
-            // Only 400 reaches here: the isDefinitiveStatus guard above returned for
-            // every status outside {200, 400, 404}. Sync is initializing — trace level
-            // to keep it out of the normal log.
-            this.logger.trace(
-                `[GitHub App] AEM Code Sync app sync initializing for ${owner}/${repo} (code.status: 400)`,
-            );
-        }
-
+        // One line for both definitive answers: a chain choosing between two
+        // wordings decided nothing a caller can see (it was ledgered as such).
+        this.logger.info(
+            `[GitHub App] AEM Code Sync on ${owner}/${repo}: code.status ${codeStatus}, ` +
+                `installed: ${isInstalled}`,
+        );
         return { isInstalled, codeStatus };
     }
 

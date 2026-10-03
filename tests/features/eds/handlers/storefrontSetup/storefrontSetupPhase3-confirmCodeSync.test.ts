@@ -49,6 +49,7 @@ import type {
 import type { HandlerContext } from '@/types/handlers';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
+import { PREVIEW_CODE_APP_NOT_ON_REPO_ERROR } from '../../../../helpers/helixAdminFixtures';
 
 const REPO: RepoInfo = {
     repoOwner: 'skukla',
@@ -492,5 +493,119 @@ describe('the App-required payload', () => {
 
         expect(result).toBeNull();
         expect(appRequiredPayload(context).message).not.toMatch(/admin rights/i);
+    });
+});
+
+/**
+ * EDS-23 — the code endpoint decides, because `/status` cannot.
+ *
+ * On skukla/kukla-justrite `/status` answered an inner 400 while the App did NOT
+ * cover the repository, and again after it did. The code POST this phase already
+ * makes said which: `x-error: [admin] github bot not installed on repository.`
+ * That answer earns the same pause as an inner 404 (EDS-20), and the pause ends
+ * when the same POST stops saying it — `/status` would read 400 throughout.
+ */
+describe('the code endpoint says the App is not on the repository', () => {
+    const appMissing = () => new Error(PREVIEW_CODE_APP_NOT_ON_REPO_ERROR);
+
+    it('pauses for the App, naming the repository, without asking /status', async () => {
+        const services = makeServices();
+        (services.helixService.previewCode as jest.Mock)
+            .mockRejectedValueOnce(appMissing())
+            .mockResolvedValue(undefined);
+        const context = makeContext();
+
+        const result = await run(context, services);
+
+        expect(mockResolve).not.toHaveBeenCalled();
+        expect(appRequiredPayload(context)).toEqual({
+            owner: 'skukla',
+            repo: 'kukla-bodea',
+            installUrl: 'https://github.com/apps/aem-code-sync',
+            message: expect.stringContaining('skukla/kukla-bodea'),
+        });
+        expect(result).toBeNull();
+        expect(messages(context)).toMatch(/resuming setup/i);
+    });
+
+    it('ends the wait by publishing the code again — the same call, the same arguments', async () => {
+        const services = makeServices();
+        (services.helixService.previewCode as jest.Mock)
+            .mockRejectedValueOnce(appMissing())
+            .mockRejectedValueOnce(appMissing())
+            .mockResolvedValue(undefined);
+
+        await run(makeContext(), services);
+
+        expect(services.helixService.previewCode).toHaveBeenCalledTimes(3);
+        for (const call of (services.helixService.previewCode as jest.Mock).mock.calls) {
+            expect(call).toEqual(['skukla', 'kukla-bodea', '/*', 'main']);
+        }
+        // /status reads the same 400 before and after — it must not end this wait.
+        expect(services.githubAppService.isAppInstalled).not.toHaveBeenCalled();
+    });
+
+    it('says in the code line that the App is missing, not just the raw reason', async () => {
+        const services = makeServices();
+        (services.helixService.previewCode as jest.Mock)
+            .mockRejectedValueOnce(appMissing())
+            .mockResolvedValue(undefined);
+        const context = makeContext();
+
+        await run(context, services);
+
+        expect(messages(context)).toMatch(
+            /Code not published to the CDN — the AEM Code Sync GitHub App is not on skukla\/kukla-bodea/,
+        );
+    });
+
+    it('stops waiting once the endpoint gives a different reason — the App is no longer the blocker', async () => {
+        const services = makeServices();
+        (services.helixService.previewCode as jest.Mock)
+            .mockRejectedValueOnce(appMissing())
+            .mockRejectedValue(new Error('helix 503'));
+
+        const result = await run(makeContext(), services);
+
+        expect(result).toBeNull();
+        expect(services.helixService.previewCode).toHaveBeenCalledTimes(2);
+    });
+
+    it('fails honestly when the App never covers the repository within the wait', async () => {
+        const services = makeServices();
+        (services.helixService.previewCode as jest.Mock).mockRejectedValue(appMissing());
+
+        const result = await run(makeContext(), services);
+
+        expect(result).toMatchObject({
+            success: false,
+            error: expect.stringMatching(/Waited 30 minutes/),
+        });
+    });
+});
+
+describe('an inner 400 from /status', () => {
+    it('is verified by a code publish that succeeded', async () => {
+        mockResolve.mockResolvedValue({ kind: 'undetermined', codeStatus: 400 });
+        const context = makeContext();
+
+        const result = await run(context, makeServices());
+
+        expect(result).toBeNull();
+        expect(messages(context)).toMatch(/AEM Code Sync verified/);
+        expect(sentTypes(context)).not.toContain('storefront-setup-github-app-required');
+    });
+
+    it('is NOT verified when the code publish failed for another reason', async () => {
+        mockResolve.mockResolvedValue({ kind: 'undetermined', codeStatus: 400 });
+        const services = makeServices();
+        (services.helixService.previewCode as jest.Mock).mockRejectedValue(new Error('helix 503'));
+        const context = makeContext();
+
+        const result = await run(context, services);
+
+        expect(result).toBeNull();
+        expect(messages(context)).not.toMatch(/AEM Code Sync verified/);
+        expect(messages(context)).toMatch(/could not verify/i);
     });
 });

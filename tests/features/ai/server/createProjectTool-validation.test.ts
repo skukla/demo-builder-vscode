@@ -136,7 +136,7 @@ describe('create_project — registered schema', () => {
         expect(def().description.length).toBeGreaterThan(0);
     });
 
-    it('accepts the ids (package or link), the four EDS options and confirm', () => {
+    it('accepts the ids (package or link), the four EDS options, storeScope and confirm', () => {
         const schema = schemaOf(def());
 
         expect(Object.keys(schema.shape).sort()).toEqual([
@@ -150,6 +150,7 @@ describe('create_project — registered schema', () => {
             'projectName',
             'repoName',
             'stack',
+            'storeScope',
         ]);
         expect(schema.parse({ projectName: 'p', package: 'k', stack: 's' })).toEqual({
             projectName: 'p',

@@ -49,9 +49,9 @@ extension cannot tear it down.
 
 1. A check for projects that are read-only: detect it (the Console's reason) and explain
    it, instead of letting teardown fail with "Read-only project cannot be deleted".
-2. When the extension itself subscribes a credential to a service with profiles, subscribe
-   only the project's own tenant profile (its id is in the backend's GraphQL URL), and
-   first check the SC is a developer on it (PL-61 covers both subscribe paths).
+2. **Dropped 2026-10-03.** This step (subscribe only the project's own tenant profile, and
+   first check the SC is a developer on it) relied on PL-61, which the owner closed. It is
+   not part of this item any more.
 3. Bodea: the org admin's review of the owner's permissions; then the two leftover
    workspaces `zzerpspike` and `ErpSpikeq3e9` can be deleted.
 
@@ -67,3 +67,4 @@ extension cannot tear it down.
 - 2026-09-20  Owner, 2026-09-20: no longer a blocker — deleting a workspace works today. The CAUSE of the 2026-09-17 read-only failure is not recorded; the evidence in AB-17 is left as it stands so a later reader can tell 'fixed' from 'never explained'.
 - 2026-09-20  Verified 2026-09-20, NOT just taken on word: a create+delete round trip in Bodea's CURRENT project returned HTTP 200 in 3s and removed the Runtime namespace too. But the read-only project from 2026-09-17 still holds both undeleted spike workspaces — the condition was moved away from, not shown fixed. Keep this item.
 - 2026-10-03  Reconciled 2026-10-03 (second pass): fix step 2 relied on PL-61, which is dropped (2026-10-03). Step 1 is partly done by c8f8e30ae (beta.148) for deploys, not teardown.
+- 2026-10-03  2026-10-03 (worktree night2-b, uncommitted): the read-only-project and missing-licence refusals now read in plain words on workspace delete (removal, move, delete_workspace), Console project teardown and a removal's Commerce clean-up, via explainMissingDeveloperAccess beside c8f8e30ae's helper; fix step 2 dropped with PL-61.

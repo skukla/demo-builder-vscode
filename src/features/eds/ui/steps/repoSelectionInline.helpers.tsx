@@ -91,8 +91,8 @@ export function computeRepoValid(
 /**
  * Report what Helix says about Code Sync right now, and stop.
  *
- * Lenient (a 400 code.status is installed-but-unsynced, which is fine at this
- * point) and non-triggering (`skipTrigger`), so it answers in about a second
+ * Lenient (an inner 400 code.status passes here — it cannot say either way
+ * (EDS-23), and storefront setup decides by the code publish) and non-triggering (`skipTrigger`), so it answers in about a second
  * instead of firing a code sync and polling it for up to three minutes.
  *
  * BOTH step-level checks land here — the existing repo just selected, and the new

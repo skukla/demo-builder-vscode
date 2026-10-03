@@ -1,9 +1,9 @@
 /**
  * `configure_project` — the one tool that fills in what `create_project` leaves empty.
  *
- * `create_project` produces a structurally complete but UNCONFIGURED project: it
- * hardcodes `componentConfigs: {}`, `selectedAddons: []`,
- * `selectedBlockLibraries: []`, no datapack and no store scope. Until now the
+ * `create_project` produces a structurally complete but UNCONFIGURED project: no
+ * addons, no block libraries, no datapack, and no store scope unless the caller
+ * passed one (`storeScope`, the same input as here — AI-11). Until now the
  * only way to fill those in was `update_project_config`, which rewrites a whole
  * file as a string — the one unguarded write on the surface.
  *
@@ -51,6 +51,13 @@ import { z } from 'zod';
 import { needsUser } from './handoff';
 import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
+import {
+    NO_BACKEND_FOR_SCOPE,
+    STORE_SCOPE_ENV_KEYS,
+    storeScopeEnv,
+    storeScopeSchema,
+    type StoreScope,
+} from './storeScope';
 import componentsConfig from '@/features/components/config/components.json';
 import type { Project } from '@/types/base';
 import type { StateManager } from '@/types/state';
@@ -86,16 +93,6 @@ function meshEnvDependencies(project: Project): Set<string> {
     return new Set(mesh?.configuration?.requiredEnvVars ?? []);
 }
 
-/** The three codes that locate a storefront in a Commerce hierarchy. */
-const SCOPE_KEYS = ['website', 'store', 'storeView'] as const;
-
-/** Env-var name each scope code is stored under, per backend family. */
-const SCOPE_ENV: Record<(typeof SCOPE_KEYS)[number], string> = {
-    website: 'ACCS_WEBSITE_CODE',
-    store: 'ACCS_STORE_CODE',
-    storeView: 'ACCS_STORE_VIEW_CODE',
-};
-
 const ACCEPTED = ['datapack', 'addons', 'blockLibraries', 'storeScope', 'env'] as const;
 
 interface Applied {
@@ -109,7 +106,7 @@ function stillUnset(project: Project): string[] {
     if (!project.selectedBlockLibraries?.length) unset.push('blockLibraries');
     const backend = project.componentSelections?.backend;
     const backendConfig = backend ? project.componentConfigs?.[backend] : undefined;
-    if (!backendConfig || !SCOPE_KEYS.every((k) => backendConfig[SCOPE_ENV[k]])) {
+    if (!backendConfig || !STORE_SCOPE_ENV_KEYS.every((k) => backendConfig[k])) {
         unset.push('storeScope');
     }
     return unset;
@@ -168,16 +165,14 @@ function applyToProject(
     const backend = project.componentSelections?.backend;
     if (input.storeScope) {
         if (!backend) {
-            return {
-                error: 'Cannot set store scope: this project has no backend component selected.',
-            };
+            return { error: NO_BACKEND_FOR_SCOPE };
         }
-        const scope = input.storeScope as Record<string, string>;
+        const scope = input.storeScope as StoreScope;
         project.componentConfigs = project.componentConfigs ?? {};
         const target = { ...(project.componentConfigs[backend] ?? {}) };
-        for (const key of SCOPE_KEYS) {
-            noteChange(backend, SCOPE_ENV[key], scope[key]);
-            target[SCOPE_ENV[key]] = scope[key];
+        for (const [key, value] of Object.entries(storeScopeEnv(scope))) {
+            noteChange(backend, key, value);
+            target[key] = value;
         }
         project.componentConfigs[backend] = target;
         applied.storeScope = scope;
@@ -248,16 +243,7 @@ export function registerConfigureProjectTool(
                         .array(z.string())
                         .optional()
                         .describe('Block library ids to enable'),
-                    storeScope: z
-                        .object({
-                            website: z.string(),
-                            store: z.string(),
-                            storeView: z.string(),
-                        })
-                        .optional()
-                        .describe(
-                            'All THREE codes together, from discover_store_structure. Two of three is a broken scope, not a narrower one',
-                        ),
+                    storeScope: storeScopeSchema.optional(),
                     env: z
                         .record(z.record(z.union([z.string(), z.boolean(), z.number()])))
                         .optional()
