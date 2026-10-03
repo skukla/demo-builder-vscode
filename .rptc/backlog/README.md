@@ -310,7 +310,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-16j` | feature | └ [An agent tool for an ERP's own settings (ownership, sales-org per website)](2026-09-29-erp-settings-agent-tool.md) | — | med | built |
 | `AB-16k` | question | └ [Two Admin-page designs diverge: shipped tabs vs the §5b side-list prototype](2026-09-29-admin-page-design-divergence.md) | — | high | shipped |
 | `AB-16l` | feature | └ [Commerce promotions reach the ERP's sales order](2026-09-28-erp-promotions-reach-erp.md) | — | med | built |
-| `AB-16m` | question | └ [One shared catalog per priced company: does it scale to thousands?](2026-09-28-erp-shared-catalog-scale.md) | — | med | backlog |
+| `AB-16m` | question | └ [One shared catalog per priced company: does it scale to thousands?](2026-09-28-erp-shared-catalog-scale.md) | — | med | shipped |
 | `AB-16n` | feature | └ [A reset returns the whole ERP story to zero, orders included](2026-09-28-erp-reset-closes-orders.md) | — | high | built |
 | `AB-16o` | feature | └ [The integration has a name of its own, and Commerce's labels are neutral](2026-09-28-erp-integration-own-name.md) | — | high | built |
 | `AB-16p` | feature | └ [The ERP sends the price it would charge, whatever set it](2026-09-28-erp-net-price-in-force.md) | — | high | shipped |
