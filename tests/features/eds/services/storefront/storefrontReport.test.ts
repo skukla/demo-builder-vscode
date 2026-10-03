@@ -212,7 +212,8 @@ describe('storefrontReportLines — the SC-facing rendering', () => {
 
         expect(lines).toEqual([
             '## Where this storefront comes from',
-            "Built on Adobe's Commerce boilerplate 4.0.1. Demo Builder's current one is 6.0.0.",
+            "Built on Adobe's Commerce boilerplate 4.0.1. Demo Builder's current one is 6.0.0. " +
+                'Built on an older boilerplate (4.x); some fixes may not fit.',
             "GitHub records it as made from adobe-commerce/boilerplate-b2b-template, one of Demo Builder's templates.",
             '## What Demo Builder wrote',
             'Product-page fallback (smart 404): there.',
@@ -225,6 +226,22 @@ describe('storefrontReportLines — the SC-facing rendering', () => {
             "Don't fit this code: AEM Assets images.",
         ]);
         expect(lines.join(' ')).not.toMatch(/sku-encoding|nav-tools|sidebar-selector/);
+    });
+
+    it('warns only below the floor: a storefront on the current boilerplate gets no warning (step 05)', async () => {
+        const current = { ...OWN_FILES, 'package.json': TEMPLATE_PACKAGE };
+
+        const lines = storefrontReportLines(await read(COLLEAGUE, deps(current)));
+
+        expect(lines[1]).toBe("Built on Adobe's Commerce boilerplate 6.0.0. Demo Builder's current one is 6.0.0.");
+    });
+
+    it('warns even when the current boilerplate could not be read: the floor is a constant, not a read', async () => {
+        const lines = storefrontReportLines(await read(COLLEAGUE, deps(OWN_FILES, { readLkg: jest.fn(async () => undefined) })));
+
+        expect(lines[1]).toBe(
+            "Built on Adobe's Commerce boilerplate 4.0.1. Built on an older boilerplate (4.x); some fixes may not fit.",
+        );
     });
 
     it('says "could not read" where a read failed', async () => {

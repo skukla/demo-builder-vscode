@@ -7,7 +7,9 @@
  */
 
 import {
+    boilerplateFloorWarning,
     boilerplateLabel,
+    OLDEST_TESTED_BOILERPLATE,
     ourLineage,
     readBoilerplate,
 } from '@/features/eds/services/storefront/storefrontProvenance';
@@ -59,6 +61,37 @@ describe('boilerplateLabel', () => {
 
     it('names any other package as it calls itself', () => {
         expect(boilerplateLabel({ name: 'my-store', version: '1.2.0' })).toBe('my-store 1.2.0');
+    });
+});
+
+describe('boilerplateFloorWarning — warn, never refuse, below the oldest tested boilerplate (step 05)', () => {
+    const adobe = (version: string) => ({ name: '@adobe/aem-boilerplate-commerce', version });
+
+    it('pins the floor: the B2B template at the patches ledger last-known-good was 6.0.0', () => {
+        // Moving this is a deliberate decision (step 05): raise it when the template's major moves.
+        expect(OLDEST_TESTED_BOILERPLATE).toBe('6.0.0');
+    });
+
+    it('warns in plain words, naming the major line, for a storefront below the floor', () => {
+        expect(boilerplateFloorWarning(adobe('4.0.1'))).toBe(
+            'Built on an older boilerplate (4.x); some fixes may not fit.',
+        );
+        expect(boilerplateFloorWarning(adobe('5.9.9'))).toBe(
+            'Built on an older boilerplate (5.x); some fixes may not fit.',
+        );
+    });
+
+    it('says nothing at or above the floor', () => {
+        expect(boilerplateFloorWarning(adobe('6.0.0'))).toBeUndefined();
+        expect(boilerplateFloorWarning(adobe('10.2.0'))).toBeUndefined();
+    });
+
+    it("says nothing for a package that is not Adobe's boilerplate: its version is on another scale", () => {
+        expect(boilerplateFloorWarning({ name: 'buildright-website', version: '1.1.0' })).toBeUndefined();
+    });
+
+    it('says nothing for a version it cannot read, rather than guessing', () => {
+        expect(boilerplateFloorWarning(adobe('next'))).toBeUndefined();
     });
 });
 

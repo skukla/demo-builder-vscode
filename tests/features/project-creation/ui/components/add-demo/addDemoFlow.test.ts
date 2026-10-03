@@ -78,10 +78,21 @@ describe('foundRows', () => {
     });
 
     it("adds ONE row naming what the storefront was built on, when it was read (EDS-13f)", () => {
+        const rows = foundRows({ ...READ, boilerplate: { name: '@adobe/aem-boilerplate-commerce', version: '6.0.0' } });
+
+        expect(rows[2]).toEqual({ label: 'Built on', value: "Adobe's Commerce boilerplate 6.0.0", done: true });
+        expect(rows).toHaveLength(foundRows(READ).length + 1);
+    });
+
+    it('warns on the same row, never refuses, when the boilerplate is below the oldest tested one (step 05)', () => {
         const rows = foundRows({ ...READ, boilerplate: { name: '@adobe/aem-boilerplate-commerce', version: '4.0.1' } });
 
-        expect(rows[2]).toEqual({ label: 'Built on', value: "Adobe's Commerce boilerplate 4.0.1", done: true });
-        expect(rows).toHaveLength(foundRows(READ).length + 1);
+        expect(rows[2]).toEqual({
+            label: 'Built on',
+            value: "Adobe's Commerce boilerplate 4.0.1. Built on an older boilerplate (4.x); some fixes may not fit.",
+            done: true,
+        });
+        expect(isBuildable({ ...READ, boilerplate: { name: '@adobe/aem-boilerplate-commerce', version: '4.0.1' } })).toBe(true);
     });
 
     it('does not ask a headless demo for pages', () => {

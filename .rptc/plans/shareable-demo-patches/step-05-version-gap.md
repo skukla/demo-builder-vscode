@@ -59,3 +59,30 @@ to forks (after EDS-14), never a reset onto the current boilerplate for a genera
 repository, never refuse on age, warn below a floor"? **Recommendation: yes, as written
 above.** If yes, the remaining build is the floor constant with its test and the warning
 line, plus the fork-sync door once EDS-14 lands.
+
+## Decision 2026-10-04: YES, as written
+
+Owner, 2026-10-04 ("Do it!" on the recommendation above): the policy is report always, fix
+what fits, offer the fork sync ONLY to forks, never reset a generated repository onto the
+current boilerplate, never refuse on age, warn below a floor. This settles the disagreement
+noted above: the backlog item (EDS-13f) now says the decision is made.
+
+Built on `loop/2026-10-04-step5` (staged, not committed):
+
+- **The floor**: `OLDEST_TESTED_BOILERPLATE = '6.0.0'` in
+  `src/features/eds/services/storefront/storefrontProvenance.ts`. Source: every patched
+  template in `demo-packages.json` is `adobe-commerce/boilerplate-b2b-template`, pinned by the
+  patches repo's `b2b/last-known-good`; the template's `package.json` there reads 6.0.0
+  (decision 1, read 2026-09-14; not re-read live in this run). Pinned by a test; moved by hand.
+- **The warning** (`boilerplateFloorWarning`): "Built on an older boilerplate (4.x); some fixes
+  may not fit." Only for Adobe's Commerce boilerplate (another package's version is on another
+  scale), never a refusal. Shown on the add dialog's "Built on" row and on the report's first
+  line, which the Storefront Report command, Diagnostics and `get_storefront_report` all render.
+- **Fork sync only for forks**: already true. Check for Updates offers a fork sync only when
+  GitHub says the repository is a fork (`ForkSyncService.checkForkStatus` returns
+  `isFork: false` otherwise; `checkUpdates.ts` filters on it), and EDS-14 (shipped) made a
+  conflict stop instead of resetting. Not built: a "Bring the code up to date with the
+  template" door on the storefront report itself.
+- Known limit: one floor covers one line. The B2C canonical (`hlxsites/aem-boilerplate-commerce`)
+  carries the same package name at 10.x, so a B2C storefront never warns; no B2C template is
+  patched today, so nothing is lost yet.

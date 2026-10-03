@@ -13,9 +13,14 @@
  */
 
 import type { SummaryRow } from '../BuildYourProjectSummary';
-import { boilerplateLabel } from '@/features/eds/services/storefront/storefrontProvenance';
+import { boilerplateFloorWarning, boilerplateLabel } from '@/features/eds/services/storefront/storefrontProvenance';
 import { deriveBlockLibraryName } from '@/features/project-creation/services/customBlockLibraryUtils';
-import { SHARED_DEMO_FILE_VERSION, type AddedDemo, type StorefrontKind } from '@/types/projectFile';
+import {
+    SHARED_DEMO_FILE_VERSION,
+    type AddedDemo,
+    type StorefrontBoilerplate,
+    type StorefrontKind,
+} from '@/types/projectFile';
 import type { SharedDemoProbeResult, SharedDemoRead } from '@/types/webviewRequests';
 
 export type AddDemoStage = 'link' | 'found';
@@ -139,7 +144,7 @@ export function foundRows(read: SharedDemoRead): SummaryRow[] {
         { label: 'Type', value: KIND_LABEL[read.kind], done: true },
         // One row only (EDS-13f decision 7): the rest of the origin is the storefront report's.
         ...(read.boilerplate
-            ? [{ label: 'Built on', value: boilerplateLabel(read.boilerplate), done: true }]
+            ? [{ label: 'Built on', value: builtOnValue(read.boilerplate), done: true }]
             : []),
         {
             label: 'Pages',
@@ -154,6 +159,12 @@ export function foundRows(read: SharedDemoRead): SummaryRow[] {
             ? []
             : [{ label: 'Company (B2B) features', value: read.b2b === 'on' ? 'On' : 'Off', done: true }]),
     ];
+}
+
+/** The boilerplate, with the step-05 floor warning on the same row: a warning, never a refusal. */
+function builtOnValue(boilerplate: StorefrontBoilerplate): string {
+    const warning = boilerplateFloorWarning(boilerplate);
+    return warning ? `${boilerplateLabel(boilerplate)}. ${warning}` : boilerplateLabel(boilerplate);
 }
 
 /** The two key families every shipped brand carries, so the backend choice does not lose the codes. */

@@ -252,10 +252,12 @@
                         "items": {
                             "type": "string",
                             "enum": [
-                                "demo-team-blocks"
+                                "demo-team-blocks",
+                                "demo-builder-blocks"
                             ],
                             "enumDescriptions": [
-                                "Demo Team Block Collection — general-purpose blocks built by the Demo Team, usable in any EDS storefront"
+                                "Demo Team Block Collection — general-purpose blocks built by the Demo Team, usable in any EDS storefront",
+                                "Demo Builder Blocks — optional blocks from Demo Builder: a nav menu built from the Commerce category tree"
                             ]
                         },
                         "uniqueItems": true,

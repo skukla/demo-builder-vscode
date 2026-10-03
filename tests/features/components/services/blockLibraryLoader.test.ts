@@ -106,13 +106,13 @@ describe('blockLibraryLoader', () => {
             expect(isle5).toBeUndefined();
         });
 
-        it('should return demo-team-blocks as the only available library for Isle5 on EDS', () => {
+        it('should return demo-team-blocks and demo-builder-blocks as the available libraries for Isle5 on EDS', () => {
             const edsStack = makeStack();
             const libs = getAvailableBlockLibraries(edsStack, 'isle5');
 
-            // Isle5 sees: demo-team-blocks (not isle5 — native, not buildright-blocks — pinned)
-            expect(libs).toHaveLength(1);
-            expect(libs[0].id).toBe('demo-team-blocks');
+            // Isle5 sees: demo-team-blocks and demo-builder-blocks (offered to every package)
+            // — not isle5 (native), not buildright-blocks (pinned)
+            expect(libs.map((l) => l.id)).toEqual(['demo-team-blocks', 'demo-builder-blocks']);
         });
 
         it('should not include pinned libraries for other packages', () => {
@@ -124,21 +124,22 @@ describe('blockLibraryLoader', () => {
             expect(buildrightLib).toBeUndefined();
         });
 
-        it('should return only demo-team-blocks for Custom package on EDS', () => {
+        it('should return demo-team-blocks and demo-builder-blocks for Custom package on EDS', () => {
             const edsStack = makeStack();
             const libs = getAvailableBlockLibraries(edsStack, 'starter');
 
-            // Custom sees demo-team-blocks only (isle5 and buildright-blocks
+            // Custom sees demo-team-blocks and demo-builder-blocks (isle5 and buildright-blocks
             // are pinned to their own hidden packages via onlyForPackages)
-            expect(libs.map((l) => l.id)).toEqual(['demo-team-blocks']);
+            expect(libs.map((l) => l.id)).toEqual(['demo-team-blocks', 'demo-builder-blocks']);
         });
 
-        it('should return only demo-team-blocks for CitiSignal on EDS', () => {
+        it('should return demo-team-blocks and demo-builder-blocks for CitiSignal on EDS', () => {
             const edsStack = makeStack();
             const libs = getAvailableBlockLibraries(edsStack, 'citisignal');
 
-            // CitiSignal sees demo-team-blocks only (package-DEFAULT, deselectable)
-            expect(libs.map((l) => l.id)).toEqual(['demo-team-blocks']);
+            // CitiSignal sees demo-team-blocks (package-DEFAULT, deselectable) and
+            // demo-builder-blocks (offered, off by default)
+            expect(libs.map((l) => l.id)).toEqual(['demo-team-blocks', 'demo-builder-blocks']);
         });
 
         it('should NOT offer bodea-blocks to non-Bodea packages (pinned via onlyForPackages)', () => {
@@ -330,6 +331,13 @@ describe('blockLibraryLoader', () => {
             expect(getPackageDefaultBlockLibraryIds(edsStack, 'starter')).toEqual([
                 'demo-team-blocks',
             ]);
+        });
+
+        it('never seeds demo-builder-blocks: off by default until its first real run passes (category-pages step 3)', () => {
+            const edsStack = makeStack();
+            for (const pkg of ['citisignal', 'starter', 'isle5', 'bodea', 'buildright']) {
+                expect(getPackageDefaultBlockLibraryIds(edsStack, pkg)).not.toContain('demo-builder-blocks');
+            }
         });
 
         it('returns [] for packages the library does not default to', () => {

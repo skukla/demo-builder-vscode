@@ -24,7 +24,13 @@ import { fixGroupsLabel, resolveFixLedger, STOREFRONT_FIX_IDS } from '../patches
 import { checkFixes, type FixOutcome, type FixState } from '../patches/storefrontFixes';
 import { SMART_404_MARKER_START } from '../pdp/pdp404Snippet';
 import { readRepoBoilerplate, type ReadOutcome } from './storefrontOrigin';
-import { asLineage, boilerplateLabel, ourLineage, type LineageMatch } from './storefrontProvenance';
+import {
+    asLineage,
+    boilerplateFloorWarning,
+    boilerplateLabel,
+    ourLineage,
+    type LineageMatch,
+} from './storefrontProvenance';
 import { COMPONENT_IDS } from '@/core/constants';
 import { resolveStorefrontForProject } from '@/features/components/services/storefrontResolver';
 import type { Project } from '@/types/base';
@@ -217,8 +223,9 @@ function boilerplateLine(report: StorefrontReport): string {
     if (report.boilerplate.status === 'unreadable') return 'Could not read what this storefront is built on.';
     if (report.boilerplate.status === 'absent') return 'This storefront does not say what it is built on.';
     const built = `Built on ${boilerplateLabel(report.boilerplate.value)}.`;
-    if (report.current?.status !== 'read') return built;
-    return `${built} Demo Builder's current one is ${report.current.value.version}.`;
+    const current = report.current?.status === 'read' ? ` Demo Builder's current one is ${report.current.value.version}.` : '';
+    const warning = boilerplateFloorWarning(report.boilerplate.value);
+    return `${built}${current}${warning ? ` ${warning}` : ''}`;
 }
 
 function originLines(origin: StorefrontOriginKind): string[] {

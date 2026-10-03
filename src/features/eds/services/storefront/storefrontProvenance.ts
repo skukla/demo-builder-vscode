@@ -19,6 +19,7 @@
  * @module features/eds/services/storefront/storefrontProvenance
  */
 
+import semver from 'semver';
 import { bundledDemoPackages } from '@/features/components/services/storefrontResolver';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { RepositoryRef, StorefrontBoilerplate, StorefrontLineage } from '@/types/projectFile';
@@ -74,6 +75,33 @@ export function boilerplateLabel(boilerplate: StorefrontBoilerplate): string {
         return `Adobe's Commerce boilerplate ${boilerplate.version}`;
     }
     return `${boilerplate.name} ${boilerplate.version}`;
+}
+
+/**
+ * The oldest boilerplate Demo Builder's fixes are tested against (EDS-13f step 05).
+ *
+ * Source: every patched template in `demo-packages.json` is
+ * `adobe-commerce/boilerplate-b2b-template`, pinned by the patches repo's
+ * `b2b/last-known-good`. At that pin the template's `package.json` read 6.0.0 on
+ * 2026-09-14 (plan decision 1) and 7.0.0 on 2026-10-04 (pin 83b91cb7, committed
+ * 2026-10-03): the fixes have been proven on both, so the OLDEST tested is 6.0.0.
+ * Moved deliberately, never automatically: raise it only when the fixes stop being
+ * proven on a major, not merely because the pin moved on.
+ * A floor WARNS; it never refuses an add (owner, 2026-10-04).
+ */
+export const OLDEST_TESTED_BOILERPLATE = '6.0.0';
+
+/**
+ * The warning for a storefront on Adobe's boilerplate below the floor.
+ *
+ * @param boilerplate - What the storefront's `package.json` names
+ * @returns Plain words, or undefined at/above the floor, for another package, or an unreadable version
+ */
+export function boilerplateFloorWarning(boilerplate: StorefrontBoilerplate): string | undefined {
+    if (boilerplate.name !== ADOBE_COMMERCE_BOILERPLATE) return undefined;
+    const version = semver.coerce(boilerplate.version);
+    if (!version || !semver.lt(version, OLDEST_TESTED_BOILERPLATE)) return undefined;
+    return `Built on an older boilerplate (${version.major}.x); some fixes may not fit.`;
 }
 
 /** Which signal tied the storefront to one of our templates. */

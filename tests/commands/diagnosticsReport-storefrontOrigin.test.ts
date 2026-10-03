@@ -28,7 +28,8 @@ describe('the storefront origin section', () => {
         expect(section(buildSummaryLines(makeTypedReport({ storefrontOrigin: REPORT })), TITLE)).toStrictEqual([
             TITLE,
             '  Where this storefront comes from',
-            "    Built on Adobe's Commerce boilerplate 4.0.1. Demo Builder's current one is 6.0.0.",
+            "    Built on Adobe's Commerce boilerplate 4.0.1. Demo Builder's current one is 6.0.0. " +
+                'Built on an older boilerplate (4.x); some fixes may not fit.',
             "    GitHub records no template or fork for it, and it is not tied to Demo Builder's templates.",
             '  What Demo Builder wrote',
             '    Product-page fallback (smart 404): there.',

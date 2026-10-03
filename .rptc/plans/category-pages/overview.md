@@ -21,7 +21,7 @@ anywhere in the menu. Undo removes the pages Demo Builder wrote and the switch.
 | Category page HTML + plan | `src/features/eds/services/catalogMenu/categoryPages.ts` | built, tested |
 | Nav switch add / remove | `src/features/eds/services/catalogMenu/navSwitch.ts` | built, tested |
 | Write pages + switch, undo | `src/features/eds/services/catalogMenu/catalogMenuService.ts` | built, tested with an in-memory DA.live site; **no caller yet** |
-| `block-libraries.json` entry | — | **not added**, see step 3 |
+| `block-libraries.json` entry | added 2026-10-04, off by default | see step 3 |
 | Human surface, agent tool | — | not built, see step 6 |
 
 ## The owner's steps, in order

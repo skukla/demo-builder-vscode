@@ -31,11 +31,13 @@ only when safe); a colleague's storefront that shows our lineage is offered our 
 named by what they fix; the card and completion say how old the boilerplate is and what that
 means; the caveat wording names what the extension does write.
 
-## Owner decisions still open
+## Owner decisions
 
-The version-gap policy (plan step 05): what to offer when a colleague's storefront is older
-than the current boilerplate, given that a template-generated repository has no shared
-history to merge from.
+All decided. The version-gap policy (plan step 05, decision 6) was confirmed by the owner on
+2026-10-04 ("Do it!"): report always, fix what fits, offer the fork sync only to forks, never
+reset a generated repository onto the current boilerplate, never refuse on age, warn below a
+floor. (Decision 6 in the plan's overview records it as agreed 2026-09-14; this item listed it
+as open until the 2026-10-04 confirmation. They now agree.)
 
 ## Shipped so far
 
@@ -43,3 +45,4 @@ history to merge from.
 - 2026-09-14  docs(rptc): the card stays streamlined, the storefront report is one door away, diagnostics learns the same facts (`ac3ab675d`)
 - 2026-10-03  2026-10-03 unattended run on loop/2026-10-03-night2-b (staged, not committed): steps 01-04 and 07 built, 05 stopped for the owner, 06 docs done and live acceptance not run. Every storefront now records its boilerplate (package.json name+version) and GitHub lineage (template_repository / fork parent) on the card, the project record (creation and reset) and a zip card; the add dialog shows one 'Built on' row. Save as demo package writes description file v2 with builtWith; a project started from it gets its ledger's fixes applied where they fit on create and reset (no re-pin: the hash guard is not built). A colleague's storefront with our lineage is offered the 5 load-bearing + 2 universal fixes that fit, opt-in (Storefront Report command modal, reset_project/create_project applyFixes:true), one commit to the SC's own repo; a fix fits only when its code appears exactly once. Caveat wording now says what Demo Builder writes. New: Demo Builder: Storefront Report command, get_storefront_report tool, Diagnostics 'Storefront origin and Demo Builder's fixes' section, all one computation (storefrontReport.ts). Not built: Welcome/projects-list card line and the dashboard/card menu doors, the zip pre-create fit display, the pre-render and content headings of the report. Live checks owed: aistore by link, a saved Bodea package, the zip path.
 - 2026-10-03  feat(eds): shared demos carry their boilerplate and fixes; one storefront report (EDS-13f steps 01-04, 06, 07) (`0ee47ed3b`)
+- 2026-10-03  2026-10-04 owner confirmed step 05 (version gap) as written: report always, fix what fits, fork sync only for forks, never reset a generated repo, never refuse on age, warn below a floor. Built on loop/2026-10-04-step5 (staged, not committed): floor OLDEST_TESTED_BOILERPLATE = 6.0.0 (the B2B template at the patches repo's b2b/last-known-good), and the warning 'Built on an older boilerplate (N.x); some fixes may not fit.' on the add dialog's Built on row and the storefront report (command, Diagnostics, get_storefront_report). Fork sync was already forks-only. Not built: a fork-sync door on the report.
