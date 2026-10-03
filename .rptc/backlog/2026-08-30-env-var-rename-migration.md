@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: med
-status: backlog
+status: built
 ---
 
 # Component updates cannot follow an environment-variable rename
@@ -41,3 +41,4 @@ the proposal assumed.
 ## Shipped so far
 
 - 2026-10-03  Built 2026-10-03 (overnight, staged not committed): envMerge takes a declared rename list (ENV_VAR_RENAMES, OLD -> NEW, zero entries) and the updater passes it; a declared rename moves the project's value to the new name, never overwrites a value already under it, and drops the old name only when the new template no longer ships it — tested with a synthetic rename.
+- 2026-10-03  chore(platform): delete eight handlers nothing calls; carry renamed env vars; every AI-bundle writer goes through the seam or says why (PL-37, PL-24, PL-58) (`f0b4705e3`)
