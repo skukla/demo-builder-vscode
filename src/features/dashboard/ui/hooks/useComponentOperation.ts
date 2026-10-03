@@ -23,6 +23,7 @@ import {
     type OperationRunnerControls,
     type ScreenOperation,
 } from '@/core/ui/hooks/useOperationRunner';
+import type { ErpOwnsEntry, ErpOwnsRule } from '@/types/erpOwnership';
 
 /** What the modal and the runner know about one operation. */
 export type ComponentOperation = ScreenOperation;
@@ -89,8 +90,8 @@ export interface ComponentOperationControls extends OperationRunnerControls {
     resetErp: (id: string) => void;
     /** Fill an ERP from Commerce; `id` is the integration it runs through, `erp` which of its ERPs. */
     loadErpData: (id: string, erpName: string, erp?: string) => void;
-    /** Add another ERP to the integration `id`, named `erpName` (AB-16). */
-    addErp: (id: string, erpName: string) => void;
+    /** Add another ERP to the integration `id`, named `erpName`, owning what `owns` says (AB-16, AB-64). */
+    addErp: (id: string, erpName: string, owns: ErpOwnsRule, existingOwns: ErpOwnsEntry[]) => void;
 }
 
 /** The integrations screen's operation controls. */
@@ -179,12 +180,12 @@ export function useComponentOperation(): ComponentOperationControls {
      * ERP's id is chosen by the extension.
      */
     const addErp = useCallback(
-        (id: string, erpName: string): void => {
+        (id: string, erpName: string, owns: ErpOwnsRule, existingOwns: ErpOwnsEntry[]): void => {
             start({
                 id,
                 name: erpName,
                 message: 'addErp',
-                payload: { name: erpName },
+                payload: { name: erpName, owns, existingOwns },
                 title: `Adding ${erpName}`,
                 failureTitle: `Couldn't add ${erpName}`,
                 successTitle: `${erpName} added`,

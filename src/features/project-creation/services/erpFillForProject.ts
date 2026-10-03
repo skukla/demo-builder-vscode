@@ -95,6 +95,21 @@ function commerceGet(target: RestTarget, fetchImpl: typeof fetch): CommerceGet {
     return (path) => commerceReply('GET', target, path, undefined, fetchImpl);
 }
 
+/**
+ * A GET over the project's signed Commerce client, or why there is none (no credential, no
+ * sign-in). Shared with the "Add another ERP" ownership read (AB-64), which reads Commerce
+ * the way the fill does.
+ */
+export async function commerceGetForProject(
+    project: Project,
+    authManager: AuthenticationService,
+    fetchImpl: typeof fetch = globalThis.fetch,
+): Promise<CommerceGet | { refusal: string }> {
+    const rest = await resolveRestTargetFor(project, authManager, undefined, fetchImpl);
+    if ('refusal' in rest) return { refusal: rest.refusal.replace(/^Error: /u, '') };
+    return commerceGet(rest, fetchImpl);
+}
+
 /** A POST over the same signed client, for the reads Commerce only answers to a POST (tier prices). */
 function commercePost(target: RestTarget, fetchImpl: typeof fetch): CommercePost {
     return (path, body) => commerceReply('POST', target, path, body, fetchImpl);

@@ -13,6 +13,8 @@
  * @module features/app-builder/services/erpFillRows
  */
 
+import type { ErpOwnsMode } from '@/types/erpOwnership';
+
 /** One Commerce product as the fill reads it. */
 export interface CommerceProductRow {
     id: number;
@@ -24,7 +26,30 @@ export interface CommerceProductRow {
     childIds: number[];
     /** The attribute ids a configurable's variants differ on. */
     optionAttributeIds: string[];
+    /** The websites the product is sold on (`extension_attributes.website_ids`), by id. */
+    websiteIds: number[];
     customAttributes: Record<string, unknown>;
+}
+
+/**
+ * The product as the ownership filter reads it: its website codes (ids mapped through the
+ * store's websites; an id the store does not list is dropped), its source codes, its
+ * attributes. One shape for the fill and for the "Add another ERP" counts, so both answer
+ * the same ownership question (AB-64).
+ */
+export function ownedProductOf(
+    product: Pick<CommerceProductRow, 'websiteIds' | 'customAttributes'>,
+    sourceCodes: string[],
+    websiteCodeById: ReadonlyMap<number, string>,
+): Required<OwnedProduct> {
+    return {
+        customAttributes: product.customAttributes,
+        sourceCodes,
+        websiteCodes: product.websiteIds.flatMap((id) => {
+            const code = websiteCodeById.get(id);
+            return code ? [code] : [];
+        }),
+    };
 }
 
 /** One inventory source's quantity of one SKU. */
@@ -146,16 +171,19 @@ export function salesOrgOf(settings: ErpSettings | undefined): {
 /** What the ownership filter looks at on a product. */
 export interface OwnedProduct {
     sourceCodes?: string[];
+    /** The codes of the websites the product is sold on (AB-64). */
+    websiteCodes?: string[];
     customAttributes?: Record<string, unknown>;
 }
 
 export interface OwnershipFilter {
-    mode: 'all' | 'sources' | 'attribute';
+    mode: ErpOwnsMode;
     owns: (product: OwnedProduct) => boolean;
     describe: string;
 }
 
-const codesOf = (text: unknown): string[] =>
+/** A comma-separated setting as its codes, trimmed and blanks dropped. */
+export const codesOf = (text: unknown): string[] =>
     String(text ?? '')
         .split(',')
         .map((code) => code.trim())
@@ -168,12 +196,21 @@ function attributeOf(text: unknown): { code: string; value: string } | null {
 }
 
 /**
- * Which products belong to this ERP (the integration's rule M3): every product, those
- * stocked in the named sources, or those whose attribute names this ERP. A mode whose
- * setting is blank owns nothing, and says so.
+ * Which products belong to this ERP (the integration's rule M3): every product, those sold
+ * on the named websites (AB-64), those stocked in the named sources, or those whose
+ * attribute names this ERP. A mode whose setting is blank owns nothing, and says so.
  */
 export function ownershipFilter(settings: ErpSettings | undefined): OwnershipFilter {
     const mode = settings?.structure_owns;
+    if (mode === 'websites') {
+        const codes = new Set(codesOf(settings?.structure_owns_websites));
+        const named = codes.size ? [...codes].join(', ') : 'no website (the setting is blank)';
+        return {
+            mode,
+            describe: `products sold on ${named}`,
+            owns: (product) => (product.websiteCodes ?? []).some((code) => codes.has(code)),
+        };
+    }
     if (mode === 'sources') {
         const codes = new Set(codesOf(settings?.structure_owns_sources));
         const named = codes.size ? [...codes].join(', ') : 'no source (the setting is blank)';

@@ -27,6 +27,7 @@ import {
     type CommerceGet,
 } from './erpFillReaders';
 import {
+    ownedProductOf,
     ownershipFilter,
     partnersFrom,
     productsFrom,
@@ -138,11 +139,15 @@ export async function fillErp(deps: ErpFillDeps, projectName: string): Promise<E
         read.websites.map((site) => [site.id, salesOrgOf(settingsByWebsite.get(site.id)).salesOrg]),
     );
     const filter = ownershipFilter(read.settings.default);
+    const websiteCodeById = new Map(read.websites.map((site) => [site.id, site.code]));
     const owned = read.products.filter((p) =>
-        filter.owns({
-            customAttributes: p.customAttributes,
-            sourceCodes: (read.stock.get(p.sku) ?? []).map((row) => row.code),
-        }),
+        filter.owns(
+            ownedProductOf(
+                p,
+                (read.stock.get(p.sku) ?? []).map((row) => row.code),
+                websiteCodeById,
+            ),
+        ),
     );
     const partners = partnersFrom(read.companies, read.websites, salesOrgByWebsite);
     const products = productsFrom(owned, read.stock, read.sourceNames, read.attributes);

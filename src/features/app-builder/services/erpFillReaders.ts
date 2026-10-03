@@ -80,6 +80,7 @@ interface RawProduct {
     extension_attributes?: {
         configurable_product_links?: number[];
         configurable_product_options?: Array<{ attribute_id: string | number }>;
+        website_ids?: Array<number | string>;
     };
 }
 
@@ -101,6 +102,7 @@ export async function listProducts(get: CommerceGet): Promise<CommerceProductRow
         ),
         sku: p.sku,
         typeId: p.type_id,
+        websiteIds: (p.extension_attributes?.website_ids ?? []).map(Number),
     }));
 }
 

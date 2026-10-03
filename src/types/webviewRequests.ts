@@ -18,8 +18,9 @@ import type { AdobeConfig } from './base';
 import type { CustomBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import type { ComponentConfigs, EnvVarDefinition, ServiceDefinition } from './components';
-import type { ErrorCode } from './errorCodes';
 import type { DaLiveContentSource } from './demoPackages';
+import type { ErpOwnsEntry, ErpOwnsRule } from './erpOwnership';
+import type { ErrorCode } from './errorCodes';
 import type { AddedDemo, RememberedDemo, SharedDemoDescription, StorefrontKind } from './projectFile';
 import type { SettingsFile } from './settingsFile';
 import type { ViewMode, ViewModeList } from './viewMode';
@@ -686,6 +687,13 @@ export interface AddErpRequestPayload {
     id?: string;
     /** The new ERP's name, unique in the project (compared without case). */
     name?: string;
+    /**
+     * Which products it owns (AB-64), as the dialog's picker chose; absent = the default,
+     * derived from the store when the add runs (the agent surface).
+     */
+    owns?: ErpOwnsRule;
+    /** Existing ERPs' rules to save with it (the first ERP's, once it stops owning everything). */
+    existingOwns?: ErpOwnsEntry[];
     /** `'modal'` when the SC started it from the integrations screen (PL-59). */
     progress?: 'modal';
 }

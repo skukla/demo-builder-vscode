@@ -42,6 +42,15 @@ jest.mock('@/features/project-creation/services/erpFillForProject', () => ({
     fillErpForProject: (...a: unknown[]) => mockFill(...a),
 }));
 
+// Which products the new ERP owns (AB-64): the options read when the caller gave no rule, and
+// the save of each ERP's rule, asserted on what it is HANDED and on its order against the fill.
+const mockReadOptions = jest.fn();
+const mockSaveOwnership = jest.fn();
+jest.mock('@/features/project-creation/services/erpOwnershipSync', () => ({
+    readErpOwnershipOptionsForProject: (...a: unknown[]) => mockReadOptions(...a),
+    saveErpOwnership: (...a: unknown[]) => mockSaveOwnership(...a),
+}));
+
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(() => ({
@@ -74,6 +83,7 @@ jest.mock('@/features/dashboard/commands/showDashboard', () => ({
 import { setupMocks } from './dashboardHandlers.testUtils';
 import { handleAddErp } from '@/features/dashboard/handlers/erpAddHandler';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
+import type { ErpOwnershipOptions, ErpOwnsRule } from '@/types/erpOwnership';
 import { ErrorCode } from '@/types/errorCodes';
 
 const CACHED_ORG = { id: 'org-1', code: 'ABC@AdobeOrg', name: 'Fake Org' };
@@ -132,7 +142,31 @@ beforeEach(() => {
     mockReader.mockReturnValue(readCredential);
     mockSync.mockResolvedValue({ status: 'registered', ids: ['erp', 'demo-erp-2'], warnings: [] });
     mockFill.mockResolvedValue({ status: 'filled', result: { partners: 2, products: 10, skipped: 0 }, erpId: 'demo-erp-2' });
+    mockReadOptions.mockResolvedValue(OPTIONS);
+    mockSaveOwnership.mockResolvedValue(undefined);
 });
+
+/** The store as the options read answers it: two websites, the first ERP still owning everything. */
+const OPTIONS: ErpOwnershipOptions = {
+    websites: [{ code: 'base', name: 'Main Website' }, { code: 'justrite', name: 'Justrite' }],
+    sources: [{ code: 'default', name: 'Default Source' }],
+    products: [],
+    erps: [{ erp: 'acme', name: 'Acme ERP', owns: { mode: 'all' } }],
+    takenListIds: ['acme'],
+};
+
+/** A rule given outright, so the notes are only the fill's and the list's (AB-64 has its own cases). */
+const OWN_ATTRIBUTE: ErpOwnsRule = { mode: 'attribute', attribute: 'erp_owner=brand-b' };
+
+/** The order the list, the ownership save and the fill ran in. */
+function ranInOrder(): string[] {
+    const calls = [
+        ...mockSync.mock.invocationCallOrder.map((n) => [n, 'list'] as const),
+        ...mockSaveOwnership.mock.invocationCallOrder.map((n) => [n, 'owns'] as const),
+        ...mockFill.mock.invocationCallOrder.map((n) => [n, 'fill'] as const),
+    ];
+    return calls.sort((a, b) => a[0] - b[0]).map(([, name]) => name);
+}
 
 describe('handleAddErp', () => {
     it('deploys a new demo-erp system named as typed, links it, lists every ERP and fills the new one', async () => {
@@ -155,7 +189,111 @@ describe('handleAddErp', () => {
                 added: { id: 'demo-erp-2', name: 'Brand B ERP', kind: 'system' },
                 integration: 'erp-integration',
                 erpList: ['erp', 'demo-erp-2'],
+                owns: { erp: 'brand-b', rule: { mode: 'websites', websites: ['base'] }, describe: 'products sold on base' },
+                existingOwns: [{ erp: 'acme', rule: { mode: 'websites', websites: ['justrite'] }, describe: 'products sold on justrite' }],
+                warning: "Acme ERP's products change at its next Reset ERPs or Load demo data.",
             },
+        });
+    });
+
+    describe('which products the new ERP owns (AB-64)', () => {
+        it('saves the rule the SC chose, and the existing ERPs\' rules sent with it, after the list and before the fill', async () => {
+            const { mockContext } = setup();
+
+            const result = await handleAddErp(mockContext, {
+                id: 'erp-integration',
+                name: 'Brand B ERP',
+                owns: { mode: 'websites', websites: ['justrite'] },
+                existingOwns: [{ erp: 'acme', owns: { mode: 'attribute', attribute: 'erp_owner=acme' } }],
+            });
+
+            // The new ERP's list id is derived from its name (AB-51), never guessed by the dialog.
+            expect(mockSaveOwnership).toHaveBeenCalledWith(expect.any(Object), [
+                { erp: 'brand-b', owns: { mode: 'websites', websites: ['justrite'] } },
+                { erp: 'acme', owns: { mode: 'attribute', attribute: 'erp_owner=acme' } },
+            ]);
+            expect(ranInOrder()).toEqual(['list', 'owns', 'fill']);
+            // A rule given is not read for: the dialog already read the options.
+            expect(mockReadOptions).not.toHaveBeenCalled();
+            expect(result).toMatchObject({
+                success: true,
+                data: {
+                    owns: { erp: 'brand-b', rule: { mode: 'websites', websites: ['justrite'] }, describe: 'products sold on justrite' },
+                    existingOwns: [{ erp: 'acme', describe: 'products whose erp_owner is acme' }],
+                },
+            });
+        });
+
+        it('with no rule given (the agent surface), reads the store and applies the default: the first unowned website, the first ERP given the rest', async () => {
+            const { mockContext } = setup();
+
+            await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP' });
+
+            expect(mockReadOptions).toHaveBeenCalledWith(expect.any(Object), 'erp-integration', AUTH, expect.any(Object));
+            expect(mockSaveOwnership).toHaveBeenCalledWith(expect.any(Object), [
+                { erp: 'brand-b', owns: { mode: 'websites', websites: ['base'] } },
+                { erp: 'acme', owns: { mode: 'websites', websites: ['justrite'] } },
+            ]);
+        });
+
+        it('with one website, the default is the attribute for both ERPs', async () => {
+            mockReadOptions.mockResolvedValue({ ...OPTIONS, websites: [OPTIONS.websites[0]] });
+            const { mockContext } = setup();
+
+            const result = await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP' });
+
+            expect(mockSaveOwnership).toHaveBeenCalledWith(expect.any(Object), [
+                { erp: 'brand-b', owns: { mode: 'attribute', attribute: 'erp_owner=brand-b' } },
+                { erp: 'acme', owns: { mode: 'attribute', attribute: 'erp_owner=acme' } },
+            ]);
+            expect(result).toMatchObject({ success: true, data: { owns: { describe: 'products whose erp_owner is brand-b' } } });
+        });
+
+        it('an existing ERP with a rule of its own is left alone, and no warning says its products change', async () => {
+            mockReadOptions.mockResolvedValue({ ...OPTIONS, erps: [{ erp: 'acme', name: 'Acme ERP', owns: { mode: 'websites', websites: ['base'] } }] });
+            const { mockContext } = setup();
+
+            const result = await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP' });
+
+            expect(mockSaveOwnership).toHaveBeenCalledWith(expect.any(Object), [
+                { erp: 'brand-b', owns: { mode: 'websites', websites: ['justrite'] } },
+            ]);
+            expect(result).toMatchObject({ success: true, data: { existingOwns: [] } });
+            expect((result.data as { warning?: string }).warning).toBeUndefined();
+        });
+
+        it('a rule that cannot be saved is refused before anything runs', async () => {
+            const { mockContext } = setup();
+
+            const result = await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP', owns: { mode: 'websites', websites: [] } });
+
+            expect(result).toMatchObject({ success: false, code: ErrorCode.CONFIG_INVALID, error: 'Tick at least one website.' });
+            expect(mockAdd).not.toHaveBeenCalled();
+        });
+
+        it('a save the integration refused fails the add before the fill, and says how to finish it', async () => {
+            mockSaveOwnership.mockRejectedValue(new Error("brand-b's ownership was not saved: ERP erps answered 500: boom"));
+            const { mockContext } = setup();
+
+            const result = await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP', owns: { mode: 'all' } });
+
+            expect(result).toEqual({
+                success: false,
+                error:
+                    "Brand B ERP is deployed and listed, but brand-b's ownership was not saved: ERP erps answered 500: boom. " +
+                    'Add it again with the same name to finish.',
+            });
+            expect(mockFill).not.toHaveBeenCalled();
+        });
+
+        it('a store the options could not be read from (no rule given) fails the add the same way', async () => {
+            mockReadOptions.mockResolvedValue({ refusal: 'No Commerce credential on this project.' });
+            const { mockContext } = setup();
+
+            const result = await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP' });
+
+            expect(result).toMatchObject({ success: false, error: expect.stringContaining('No Commerce credential on this project.') });
+            expect(mockFill).not.toHaveBeenCalled();
         });
     });
 
@@ -226,7 +364,7 @@ describe('handleAddErp', () => {
         mockFill.mockResolvedValue({ status: 'failed', detail: 'Commerce answered 401 for products' });
         const { mockContext } = setup();
 
-        const result = await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP' });
+        const result = await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP', owns: OWN_ATTRIBUTE });
 
         expect(result).toMatchObject({
             success: true,
@@ -239,7 +377,7 @@ describe('handleAddErp', () => {
         mockFill.mockResolvedValue({ status: 'filled', result: { partners: 2, products: 10, skipped: 0 }, erpId: 'demo-erp-2', note });
         const { mockContext } = setup();
 
-        const result = await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP' });
+        const result = await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP', owns: OWN_ATTRIBUTE });
 
         expect(result).toMatchObject({ success: true, data: { added: { id: 'demo-erp-2' }, warning: note } });
     });
@@ -250,7 +388,7 @@ describe('handleAddErp', () => {
         mockFill.mockResolvedValue({ status: 'failed', detail: 'Commerce answered 401 for products' });
         const { mockContext } = setup();
 
-        const result = await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP' });
+        const result = await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP', owns: OWN_ATTRIBUTE });
 
         expect(result).toMatchObject({
             success: true,

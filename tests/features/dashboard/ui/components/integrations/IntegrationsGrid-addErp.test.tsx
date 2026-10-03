@@ -67,10 +67,15 @@ describe('IntegrationsGrid — Add another ERP', () => {
         await user.type(within(dialog).getByRole('textbox', { name: 'ERP name' }), 'Brand B ERP');
         await user.click(within(dialog).getByRole('button', { name: 'Add' }));
 
+        // The store was not read here (the harness answers requests with a bare success), so the
+        // rule is the fallback: the attribute, from the typed name's list id (AB-64).
+        expect(getClient().request).toHaveBeenCalledWith('getErpOwnershipOptions', { id: 'erp-integration' });
         expect(getClient().postMessage).toHaveBeenCalledWith('addErp', {
             name: 'Brand B ERP',
             id: 'erp-integration',
             progress: 'modal',
+            owns: { mode: 'attribute', attribute: 'erp_owner=brand-b' },
+            existingOwns: [],
         });
     });
 

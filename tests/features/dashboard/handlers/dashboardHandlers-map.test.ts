@@ -282,7 +282,9 @@ describe('dashboardHandlers', () => {
             // getErpDemoControls + setErpAppearance + startErpDowntime + endErpDowntime
             // (77 → 81, AB-59, 2026-10-02): the mock ERP's look and simulated downtime,
             // moved off its own Settings screen onto its card, and the agent tools for them.
-            expect(types).toHaveLength(81);
+            // getErpOwnershipOptions (81 → 82, AB-64, 2026-10-02): what "Add another ERP"
+            // offers for "Which products belong to this ERP?" — websites, sources, products, rules.
+            expect(types).toHaveLength(82);
         });
 
         it('should have handlers as functions', () => {

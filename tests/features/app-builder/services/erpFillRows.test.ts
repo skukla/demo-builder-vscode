@@ -21,6 +21,7 @@ function product(
         typeId: 'simple',
         childIds: [],
         optionAttributeIds: [],
+        websiteIds: [],
         customAttributes: {},
         ...overrides,
     };
@@ -105,6 +106,25 @@ describe('ownershipFilter', () => {
         });
         expect(filter.owns({ customAttributes: { erp_owner: '' } })).toBe(false);
         expect(filter.describe).toMatch(/the setting is blank/u);
+    });
+
+    it('owns the products sold on the named websites (AB-64)', () => {
+        const filter = ownershipFilter({
+            structure_owns: 'websites',
+            structure_owns_websites: 'justrite, evo',
+        });
+        expect(filter.mode).toBe('websites');
+        expect(filter.owns({ websiteCodes: ['justrite'] })).toBe(true);
+        expect(filter.owns({ websiteCodes: ['base', 'evo'] })).toBe(true);
+        expect(filter.owns({ websiteCodes: ['base'] })).toBe(false);
+        expect(filter.owns({})).toBe(false);
+        expect(filter.describe).toBe('products sold on justrite, evo');
+    });
+
+    it('owns no product, and says so, when the websites setting is blank', () => {
+        const filter = ownershipFilter({ structure_owns: 'websites', structure_owns_websites: '' });
+        expect(filter.owns({ websiteCodes: ['base'] })).toBe(false);
+        expect(filter.describe).toBe('products sold on no website (the setting is blank)');
     });
 });
 

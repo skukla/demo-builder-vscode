@@ -249,7 +249,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     add_erp: {
         action: 'Add another ERP',
         consequence:
-            "Creates an Adobe workspace for a new ERP, deploys it there, adds it to the ERP integration's list and fills it from Commerce.",
+            "Creates an Adobe workspace for a new ERP, deploys it there, adds it to the ERP integration's list, saves which products it (and an existing ERP still owning everything) owns, and fills it from Commerce.",
         target: ['name'],
         sessionGrant: false,
     },

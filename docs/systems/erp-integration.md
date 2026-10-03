@@ -138,18 +138,43 @@ serves one ERP, id `erp`, from its deploy settings.
 
 **Adding one.** The integration's card offers **Add another ERP** once the integration is
 deployed (the catalog's `addOnce` on the integration, `listedAs` on the ERP). It asks for a
-name that no ERP in the project has, compared without case, then (`erpAddHandler.ts`):
+name that no ERP in the project has, compared without case, and which products belong to it
+(below), then (`erpAddHandler.ts`):
 
 1. adds a demo-erp system `demo-erp-2` (then `-3`, …) in an Adobe workspace of its own, named
    for it, and deploys it with `ERP_DISPLAY_NAME` = the name and `ERP_ID` = its id;
 2. links it to the integration (`systems` / `usedBy`) and sends the integration the whole
    list (`PUT erp/erps`, `erpListSync.ts`), keeping the settings each ERP already has there;
-3. fills it from Commerce with that ERP's own settings (`GET erp/settings?…&erp=<id>`), and
+3. saves each ERP's ownership rule onto its entry (`PATCH erp/erps`, `erpOwnershipSync.ts`):
+   the new ERP's, and an existing ERP's when it still owned everything;
+4. fills it from Commerce with that ERP's own settings (`GET erp/settings?…&erp=<id>`), and
    merges its key map rows, each carrying `erpId`, into the map the integration holds.
 
-A list that cannot be sent fails the add with the ERP left deployed; adding again with the
-same name finishes it (no second deploy). A fill that does not finish is said, and Load demo
-data on the ERP's card runs it again.
+A list that cannot be sent, or a rule that cannot be saved, fails the add with the ERP left
+deployed; adding again with the same name finishes it (no second deploy). A fill that does not
+finish is said, and Load demo data on the ERP's card runs it again.
+
+**Which products it owns** (AB-64). The dialog asks one question, "Which products belong to
+this ERP?", with three answers, each showing how many products it would give (counted in the
+dialog from one products read, by the fill's own predicate, `erpOwnership.ts` →
+`ownershipFilter`):
+
+| Choice | Saved on the ERP's entry | Owns |
+|---|---|---|
+| Sold on these websites | `structure_owns: websites`, `structure_owns_websites: <codes>` | a product sold on one of the websites (`extension_attributes.website_ids`, mapped to codes through `store/websites`) |
+| Carrying this attribute | `structure_owns: attribute`, `structure_owns_attribute: erp_owner=<its list id>` | a product whose attribute holds the value |
+| Stocked in these inventory sources | `structure_owns: sources`, `structure_owns_sources: <codes>` | a product with stock in one of the sources |
+
+The hint above the choices is the question that decides: should one order ever be split
+between ERPs? No → websites. Yes → attribute or sources. The default (`defaultOwnsRule`): with
+more than one website and at least one not yet named by another ERP's rule, "Sold on these
+websites" with the first such website ticked; otherwise the attribute. Once there are two ERPs
+each owns only what its rule says, so an existing ERP whose rule is still "all" is shown the
+rule it is given (`existingRulesToChange`: the websites left over when the new ERP is split by
+website, else its own attribute) and both are saved together. The existing ERP is not refilled
+by the add; its products change at its next Reset ERPs or Load demo data, which the dialog and
+the answer say. `add_erp` takes the same choice as `owns` and applies the same default without
+it.
 
 **Its credential.** Each added ERP lives in its own Adobe workspace and accepts machine
 calls only from that workspace's own technical account, so the integration cannot reach it
@@ -318,7 +343,8 @@ address and never the key.
 `load_erp_demo_data` fills every ERP (or the one named by `erp`); both end by publishing each
 ERP's prices into the companies' shared catalogs. There is no tool of its own for prices: they
 are published by the fill and by the ERP's own change events.
-`add_erp` (confirm-gated) adds another ERP by name; `remove_integration` on its id removes it
+`add_erp` (confirm-gated) adds another ERP by name, with `owns` saying which products it owns
+(the dialog's choice; omitted, the same default); `remove_integration` on its id removes it
 alone. The tools that act on one ERP take `erp`, its component id. The existing
 `add_integration`, `deploy_integration`, `redeploy_integration` and `remove_integration`
 cover the pair by id; `remove_integration` on either one removes the integration and every ERP, and stops with the

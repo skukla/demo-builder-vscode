@@ -399,7 +399,11 @@ published are the answer's `warning`, not a failure.
 
 `add_erp` (2026-09-28, AB-16) is gated although it only adds: it creates an Adobe workspace
 and deploys a new ERP into it, which takes minutes and is undone only by `remove_integration`
-on the new ERP's id. The ERP tools that act on one ERP (`load_erp_demo_data`,
+on the new ERP's id. Its optional `owns` (AB-64) says which products the new ERP owns —
+websites, attribute or sources — and without it the default applies (the first website no
+other ERP owns, else `erp_owner=<its list id>`); an existing ERP still owning everything is
+given a rule at the same time, and the answer's `owns` / `existingOwns` say the rules in words.
+The ERP tools that act on one ERP (`load_erp_demo_data`,
 `open_erp_screen`, `run_erp_rest`, `write_erp_rest`, `get_erp_status`) take an optional `erp`,
 the ERP's component id, and default to the integration's first, except `load_erp_demo_data`,
 which fills every ERP without it. `reset_erp_records` takes no `erp`: a reset always covers

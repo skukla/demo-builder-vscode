@@ -265,7 +265,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-23` | fix | [An inner code status 400 can mean "the App is not on this repository", and the check calls it installed](2026-09-30-eds-code-status-400-is-not-installed.md) | — | high | backlog |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | backlog |
 
-### app-builder  (108)
+### app-builder  (109)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -369,6 +369,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-61` | fix | └ [Reset ERPs stops when the integration's undo takes longer than 60 seconds](2026-10-02-erp-reset-outruns-sixty-seconds.md) | — | high | built |
 | `AB-62` | fix | └ [A second ERP edit to a product can lose to the first edit's echo](2026-10-02-erp-edit-lost-to-its-own-echo.md) | — | med | backlog |
 | `AB-63` | fix | └ [The ERP's on-hand stock does not drop when it posts a shipment](2026-10-02-erp-stock-does-not-drop-at-goods-issue.md) | — | med | backlog |
+| `AB-64` | feature | └ [An ERP can own the products sold on named websites](2026-10-02-erp-owns-products-by-website.md) | — | med | built |
 | `AB-29` | feature | [Commerce test data cleanup tools](2026-09-24-commerce-test-data-cleanup-tools.md) | — | med | built |
 | `AB-30` | feature | [The ERP integration's Commerce Admin page uses the Commerce back-office design system](2026-09-24-erp-admin-page-commerce-design-system.md) | — | med | active |
 | `AB-33` | fix | [Removing an integration reports Runtime packages left behind in a workspace it then deletes](2026-09-26-remove-integration-leaves-runtime-packages.md) | — | med | built |
@@ -614,7 +615,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — backlog
 
-*214 item(s) sit outside the A–G chain.*
+*215 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

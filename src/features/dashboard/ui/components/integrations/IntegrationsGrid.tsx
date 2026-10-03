@@ -24,7 +24,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ComponentOperationControls } from '../../hooks/useComponentOperation';
-import { AddErpDialog } from '../AddErpDialog';
+import { AddErpDialog, type AddErpDialogProps } from '../AddErpDialog';
 import { AppBuilderComponentRemoveDialog } from '../AppBuilderComponentRemoveDialog';
 import { ErpDowntimeDialog, type ErpDemoControlTarget } from '../ErpDowntimeDialog';
 import { ErpResetDialog } from '../ErpResetDialog';
@@ -257,9 +257,9 @@ export function IntegrationsGrid({
     }, [operations, pendingReset]);
 
     const closeAddErp = useCallback((): void => setAddingErpTo(null), []);
-    const addErp = useCallback(
-        (name: string): void => {
-            if (addingErpTo) operations.addErp(addingErpTo.id, name);
+    const addErp = useCallback<AddErpDialogProps['onAdd']>(
+        (name, owns, existingOwns): void => {
+            if (addingErpTo) operations.addErp(addingErpTo.id, name, owns, existingOwns);
             setAddingErpTo(null);
         },
         [addingErpTo, operations],
@@ -336,7 +336,7 @@ export function IntegrationsGrid({
             />
 
             <AddErpDialog
-                integrationName={addingErpTo?.name}
+                target={addingErpTo ?? undefined}
                 takenNames={systemNames}
                 onAdd={addErp}
                 onClose={closeAddErp}

@@ -119,6 +119,26 @@ jest.mock('@adobe/react-spectrum', () => ({
     ),
     DialogContainer: ({ children }: any) => <div data-testid="dialog-container">{children}</div>,
     Badge: ({ children }: any) => <span data-testid="type-badge">{children}</span>,
+    // The Add another ERP prompt's ownership picker (AB-64): a radio per option, a box per code.
+    RadioGroup: ({ children, value, onChange, label }: any) => (
+        <div role="radiogroup" aria-label={label}>
+            {require('react').Children.map(children, (child: any) =>
+                child ? require('react').cloneElement(child, { selectedValue: value, onSelect: onChange }) : null,
+            )}
+        </div>
+    ),
+    Radio: ({ children, value, selectedValue, onSelect }: any) => (
+        <label>
+            <input type="radio" value={value} checked={value === selectedValue} onChange={() => onSelect?.(value)} />
+            {children}
+        </label>
+    ),
+    Checkbox: ({ children, isSelected, onChange }: any) => (
+        <label>
+            <input type="checkbox" checked={isSelected || false} onChange={(e) => onChange?.(e.target.checked)} />
+            {children}
+        </label>
+    ),
 }));
 
 jest.mock('@spectrum-icons/workflow/Link', () => ({

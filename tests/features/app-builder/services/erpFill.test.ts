@@ -146,6 +146,17 @@ describe('fillErp', () => {
         expect(d.sent[1]).toStrictEqual({ products: [] });
     });
 
+    it("fills the products sold on the ERP's websites, read by code off Commerce's website list (AB-64)", async () => {
+        // Both captured products carry website_ids [2], which store/websites names "citisignal".
+        const owned = deps({ default: { structure_owns: 'websites', structure_owns_websites: 'citisignal' }, websites: {} });
+        expect(await fillErp(owned, 'bodea')).toStrictEqual({ partners: 4, products: 2, skipped: 0, paired: 4 });
+
+        const unowned = deps({ default: { structure_owns: 'websites', structure_owns_websites: 'bodea' }, websites: {} });
+        expect(await fillErp(unowned, 'bodea')).toStrictEqual({
+            partners: 4, products: 0, skipped: 2, owns: 'products sold on bodea', paired: 4,
+        });
+    });
+
     it('stops with the ERP\'s words when an import is refused', async () => {
         const d = deps();
         d.importRecords.mockRejectedValueOnce(new Error('ERP import answered 400: partners must be an array'));

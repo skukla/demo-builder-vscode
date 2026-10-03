@@ -105,6 +105,7 @@ import {
     handleReadErpApi,
     handleWriteErpApi,
 } from '@/features/dashboard/handlers/erpIntegrationHandlers';
+import { handleGetErpOwnershipOptions } from '@/features/dashboard/handlers/erpOwnershipHandler';
 import { handleResetErpRecords } from '@/features/dashboard/handlers/erpResetHandlers';
 import {
     handleGetErpSettings,
@@ -374,6 +375,8 @@ export const dashboardHandlers = defineHandlers({
     loadErpDemoData: handleLoadErpDemoData,
     // "Add another ERP" on the integration's card (AB-16); an added ERP is removed from its own card.
     addErp: handleAddErp,
+    // What its dialog offers for "Which products belong to this ERP?" (AB-64): a read.
+    getErpOwnershipOptions: handleGetErpOwnershipOptions,
     openErpScreen: handleOpenErpScreen,
     // The mock ERP's demo controls on its card (AB-59): its look and a simulated downtime.
     getErpDemoControls: handleGetErpDemoControls,

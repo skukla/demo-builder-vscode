@@ -341,7 +341,8 @@ describe('rows with no output safety net are classified', () => {
         // `{id, erp, loaded: {partners, products, skipped, owns?}}`, or a named refusal.
         'load_erp_demo_data',
         // Category 2, read before listing: `handleAddErp` returns
-        // `{added: {id, name, kind}, integration, erpList, warning?}`, or a named refusal.
+        // `{added: {id, name, kind}, integration, erpList, owns, existingOwns, warning?}`, or a
+        // named refusal (AB-64 added the two rules, each an id, a short rule and a sentence).
         'add_erp',
         // Category 2, read before listing: `handleListRuntimePackages` returns
         // `{data: {namespace, packages}}` or a named refusal (runtimePackageHandlers.ts).
@@ -526,7 +527,8 @@ describe('the ceiling table tracks the tool surface', () => {
         // `{namespace, deleted, failed}`: bounded by what one app left behind.
         // `{id, erp, loaded}`: four counts and a sentence, whatever the catalogue's size.
         'load_erp_demo_data',
-        // `{added, integration, erpList}`: one id and name, and the list's ids (at most a few ERPs).
+        // `{added, integration, erpList, owns, existingOwns}`: one id and name, the list's ids, and
+        // one short rule per ERP (at most a few ERPs).
         'add_erp',
         'delete_undeclared_runtime_code',
         'deploy_mesh',
