@@ -5,7 +5,7 @@ area: ai
 parent: AI-4
 needs: [PR-1]
 value: med
-status: blocked
+status: built
 layer: F
 ---
 # Engine-aware AI launch + detection + opt-in install (Claude wired, Codex placeholders)

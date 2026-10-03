@@ -219,7 +219,7 @@ each item's own file; what has already landed against an item is in its
 | `AI-3a` | feature | └ [The Prompt Workbench is built and nobody has opened it](2026-08-26-prompt-workbench-is-built-not-verified.md) | — | high | superseded |
 | `AI-3b` | feature | [Take the Prompt Workbench off develop and onto its own branch](2026-08-26-extract-prompt-workbench-from-develop.md) | — | high | shipped |
 | `AI-4` | epic | [Getting into the chat at all](epic-ai-chat-access.md) | — | med | backlog |
-| `AI-4a` | feature | └ [Engine-aware AI launch + detection + opt-in install (Claude wired, Codex placeholders)](claude-cli-detection-and-install/overview.md) | PR-1 | med | blocked |
+| `AI-4a` | feature | └ [Engine-aware AI launch + detection + opt-in install (Claude wired, Codex placeholders)](claude-cli-detection-and-install/overview.md) | PR-1 | med | built |
 | `AI-4b` | feature | └ [The Chat tile can only reach the MOST RECENT conversation](2026-08-25-resume-a-past-chat.md) | — | med | backlog |
 | `AI-5` | fix | [delete_adobe_project hangs on the headless path](2026-08-27-delete-adobe-project-headless-hang.md) | — | med | shipped |
 | `AI-6` | fix | [One agent deploy, three progress notifications](2026-08-27-agent-deploy-duplicate-progress-notifications.md) | — | med | shipped |
@@ -280,7 +280,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-1d` | feature | [Build Commerce integrations FROM the integration starter kit, not a blank shell](2026-08-26-scaffold-integrations-from-starter-kit.md) | — | med | shipped |
 | `AB-2` | epic | [Move deliberately to a per-SC Adobe I/O project (Option 2)](per-sc-io-project.md) | — | med | spiked |
 | `AB-3` | fix | [Integration add must fail on install error](2026-08-27-integration-add-must-fail-on-install-error.md) | — | med | shipped |
-| `AB-6` | feature | [Event-provider lifecycle tooling — so eventing round-trips to zero](2026-08-28-event-provider-lifecycle-tooling.md) | AB-8 | high | blocked |
+| `AB-6` | feature | [Event-provider lifecycle tooling — so eventing round-trips to zero](2026-08-28-event-provider-lifecycle-tooling.md) | — | high | built |
 | `AB-7` | fix | [remove_integration reports success while leaving deployed code running](2026-08-28-remove-integration-leaves-runtime-deployed.md) | — | high | shipped |
 | `AB-8` | question | [Where does event-provider management belong, and what does an SC do with it?](2026-09-09-event-provider-surface-design.md) | — | med | open |
 | `AB-10` | feature | └ [An "ERP" section in Commerce Admin where a business user configures the integration](2026-09-16-erp-settings-in-commerce-admin.md) | — | med | superseded |
@@ -424,7 +424,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-48` | chore | └ [Read the most repetitive suites. Consolidation is the excuse, not the point.](2026-09-07-consolidate-over-covered-test-suites.md) | — | high | shipped |
 | `PL-49` | chore | └ [635 tests catch nothing — find out WHY before deciding what goes](2026-09-07-tests-that-catch-nothing.md) | — | high | shipped |
 | `PL-50` | question | └ [160 modules are measured against the suites that share their NAME, not the suites that run them](2026-09-08-modules-measured-by-filename-not-by-what-tests-them.md) | — | high | shipped |
-| `PL-67` | fix | └ [Six enforcer suites cannot see a file git does not track](2026-10-03-sop-checks-blind-to-untracked-files.md) | — | med | backlog |
+| `PL-67` | fix | └ [Six enforcer suites cannot see a file git does not track](2026-10-03-sop-checks-blind-to-untracked-files.md) | — | med | built |
 | `PL-12` | question | [Pattern-conformance audit — one architecture, or one per feature?](2026-08-28-pattern-conformance-audit.md) | — | med | shipped |
 | `PL-17` | question | [The architecture is written for the extension host only; the frontend has rules but no document](2026-08-28-adr015-webview-jurisdiction.md) | — | high | shipped |
 | `PL-18` | feature | [ADR-017 §6 is stated but unenforced — the check that closes it](2026-08-29-adr017-stylesheet-bundle-check.md) | — | high | shipped |
@@ -471,7 +471,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-62` | feature | [Adding something is a card, everywhere](2026-09-21-add-is-a-card.md) | — | low | backlog |
 | `PL-63` | fix | [The CSS baseline check refuses every push that MERGES a stylesheet change](2026-09-23-css-baseline-cannot-accept-a-merged-capture.md) | — | med | built |
 | `PL-64` | fix | [Deleting a project leaves its secrets in SecretStorage](2026-10-02-project-delete-leaves-secrets.md) | — | med | built |
-| `PL-65` | fix | [The wizard's two config warnings should reach the log channel](2026-10-03-wizard-warnings-to-log-channel.md) | — | low | backlog |
+| `PL-65` | fix | [The wizard's two config warnings should reach the log channel](2026-10-03-wizard-warnings-to-log-channel.md) | — | low | built |
 | `PL-66` | feature | [UI tests that drive more than one VS Code surface](2026-10-03-vscode-multi-surface-ui-tests.md) | — | low | backlog |
 
 <!-- END GENERATED registry -->
@@ -602,7 +602,7 @@ the table cannot hold: why the layers are ordered this way.*
 
 - `AB-1c` [Promote a shell-built custom app to a GitHub repo](2026-07-13-promote-app-to-repo.md) — backlog
 - `AB-2` [Move deliberately to a per-SC Adobe I/O project (Option 2)](per-sc-io-project.md) — spiked
-- `AI-4a` [Engine-aware AI launch + detection + opt-in install (Claude wired, Codex placeholders)](claude-cli-detection-and-install/overview.md) — blocked
+- `AI-4a` [Engine-aware AI launch + detection + opt-in install (Claude wired, Codex placeholders)](claude-cli-detection-and-install/overview.md) — built
 - `DI-1` [Datapack authoring loop — export, modify, publish-your-own via project skills](2026-08-23-datapack-authoring-loop.md) — active
 - `DI-2` [Instance wipe option — remove as much data as the service allows](2026-08-22-instance-wipe-option.md) — backlog
 - `EDS-1` [Multi-Locale Storefront — Implementation Plan (Phase 1)](2026-05-19-multisite-multilocale.md) — backlog

@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: low
-status: backlog
+status: built
 ---
 
 # The wizard's two config warnings should reach the log channel
