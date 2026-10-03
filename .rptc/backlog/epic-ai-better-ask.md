@@ -4,7 +4,8 @@ kind: epic
 area: ai
 needs: []
 value: med
-status: active
+status: gated
+waiting-on: parked by the owner (2026-10-03)
 ---
 # Helping a producer write a better ask
 
@@ -32,3 +33,7 @@ ROUND TRIPS, because each one re-reads the whole context. So the advice is
 
 A producer can watch a number fall as they refine, and go back to the version
 that worked.
+
+## Shipped so far
+
+- 2026-10-03  Parked 2026-10-03 (owner): the Prompt Workbench is neither built nor closed; nothing moves until the owner picks it up.

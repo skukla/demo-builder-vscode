@@ -211,11 +211,11 @@ each item's own file; what has already landed against an item is in its
 | `AI-1r` | question | └ [34% of the surface is "agent-relevant and uncovered" — is any of it real?](2026-08-29-agent-surface-gap-34-percent.md) | — | med | open |
 | `AI-1o` | fix | [Every project gets the App Builder skills, including projects with no App Builder app](2026-08-26-pair-skills-to-project-shape.md) | — | high | shipped |
 | `AI-1p` | feature | [Nothing checks that the AI bundle we ship is internally consistent](2026-08-26-ai-bundle-coherence-check.md) | — | high | shipped |
-| `AI-2` | epic | [Can you see what the agent is doing?](epic-ai-see-what-agent-does.md) | — | high | active |
+| `AI-2` | epic | [Can you see what the agent is doing?](epic-ai-see-what-agent-does.md) | _parked by the owner (2026-10-03)_ | high | gated |
 | `AI-2b` | epic | └ [Own the chat surface — render Claude Code's stream in our own UI](2026-08-24-own-the-chat-surface.md) | — | low | spiked |
 | `AI-2c` | feature | └ [The agent activity record — a foundation, with a live view as its first use](2026-08-28-durable-agent-call-trace.md) | — | med | shipped |
 | `AI-2d` | feature | └ [A call tag links the activity record to its debug-log lines](2026-08-28-call-id-links-trace-to-logs.md) | — | med | shipped |
-| `AI-3` | epic | [Helping a producer write a better ask](epic-ai-better-ask.md) | — | med | active |
+| `AI-3` | epic | [Helping a producer write a better ask](epic-ai-better-ask.md) | _parked by the owner (2026-10-03)_ | med | gated |
 | `AI-3a` | feature | └ [The Prompt Workbench is built and nobody has opened it](2026-08-26-prompt-workbench-is-built-not-verified.md) | — | high | superseded |
 | `AI-3b` | feature | [Take the Prompt Workbench off develop and onto its own branch](2026-08-26-extract-prompt-workbench-from-develop.md) | — | high | shipped |
 | `AI-4` | epic | [Getting into the chat at all](epic-ai-chat-access.md) | — | med | backlog |
@@ -465,7 +465,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-56g` | chore | └ [A feature page for moving projects](2026-09-11-portability-docs.md) | PL-56d | low | backlog |
 | `PL-59` | feature | [A long operation should say what it is doing, not just spin](2026-09-16-progress-surface-for-long-operations.md) | — | high | built |
 | `PL-60` | feature | [Finish Adobe Commerce Optimizer (ACO) support](2026-09-17-aco-support.md) | — | high | backlog |
-| `PL-61` | question | [What does a product profile per Commerce instance change for each SC?](2026-09-17-per-instance-commerce-profiles.md) | — | high | open |
+| `PL-61` | question | [What does a product profile per Commerce instance change for each SC?](2026-09-17-per-instance-commerce-profiles.md) | — | high | dropped |
 | `PL-62` | feature | [Adding something is a card, everywhere](2026-09-21-add-is-a-card.md) | — | low | backlog |
 | `PL-63` | fix | [The CSS baseline check refuses every push that MERGES a stylesheet change](2026-09-23-css-baseline-cannot-accept-a-merged-capture.md) | — | med | built |
 | `PL-64` | fix | [Deleting a project leaves its secrets in SecretStorage](2026-10-02-project-delete-leaves-secrets.md) | — | med | built |
