@@ -126,8 +126,10 @@ describe('AI_CONTEXT_VERSION', () => {
     // The bump is what delivers the correction to projects that already have it.
     // v33: AGENTS.md lists each integration's own Adobe workspace, and the API
     // guidance passes componentId so an integration's API reaches its workspace.
-    it('is 33 (AGENTS.md names the workspace each integration lives in)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(33);
+    // v34: AGENTS.md names reset_project (one reset for both project kinds), and
+    // create-eds-project teaches create_project_from_file.
+    it('is 34 (the bundle names the reset tool and creation from an exported file)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(34);
     });
 });
 

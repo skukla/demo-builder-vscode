@@ -241,7 +241,13 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // workspace, and both AGENTS.md and extend-app-builder-app tell agents to pass
 // `componentId` to add_console_apis, which gained it in the same change; without it
 // an API meant for an integration landed on a workspace that integration never uses.
-export const AI_CONTEXT_VERSION = 33;
+// v34 (2026-10-03): two tools landed that the bundle never named, so an agent
+// inside a project was not told they exist. AGENTS.md now names reset_project —
+// one reset for both project kinds (it was reset_eds_project and refused a
+// headless project), what it needs and that it cannot be undone — and
+// create-eds-project teaches create_project_from_file: what an exported project
+// file decides, and what it never carries. The old tool name was taught nowhere.
+export const AI_CONTEXT_VERSION = 34;
 
 /**
  * Component IDs for standardized component instance access

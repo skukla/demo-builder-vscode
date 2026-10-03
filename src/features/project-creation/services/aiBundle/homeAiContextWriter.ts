@@ -257,6 +257,8 @@ function buildHomeWhatYouCanDo(): string {
         '- **See every project:** call `list_projects` to list all Demo Builder projects.',
         '- **Create a new project:** call `create_project` to scaffold a new demo (EDS or',
         '  headless) end to end — see the `create-eds-project` skill in `.claude/skills/`.',
+        '  From an exported project file, call `create_project_from_file` with its absolute path;',
+        '  the file never carries credentials or the Adobe workspace (same skill, section 7).',
         '- **Check or change sign-in:** call `get_auth_status` to see the current Adobe',
         '  sign-in, and `sign_in` to authenticate.',
         '- **Operate on a project by name:** the project tools accept a `projectName` argument,',

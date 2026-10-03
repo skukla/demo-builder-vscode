@@ -175,6 +175,8 @@ describe('ensureHomeAiContext — AGENTS.md and CLAUDE.md pointers', () => {
         expect(agents).toContain('Demo Builder Home');
         expect(agents).toContain('list_projects');
         expect(agents).toContain('create_project');
+        // The projects root is where an exported file is most likely to be opened from.
+        expect(agents).toContain('create_project_from_file');
         expect(agents).toContain('get_auth_status');
         expect(agents).toContain('sign_in');
         // by-name guidance

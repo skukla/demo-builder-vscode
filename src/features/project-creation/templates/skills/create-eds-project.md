@@ -1,6 +1,6 @@
 ---
 name: create-eds-project
-description: Creates a new Demo Builder project from Claude — Edge Delivery (EDS) or headless — end to end without the wizard. Use when the user asks to scaffold, provision, or create a new demo project. Orchestrates the create_project MCP tool, handles Adobe/GitHub/DA.live auth handoffs, narrates per-phase progress, and recovers re-runnable failures.
+description: Creates a new Demo Builder project from Claude — Edge Delivery (EDS) or headless — end to end without the wizard. Use when the user asks to scaffold, provision, or create a new demo project, including from an exported project file. Orchestrates the create_project MCP tool, handles Adobe/GitHub/DA.live auth handoffs, narrates per-phase progress, and recovers re-runnable failures.
 ---
 
 # Create a Demo Builder Project
@@ -83,6 +83,21 @@ now the current project — `get_current_project` resolves to it.
 If the user wants to see the project list in the IDE, offer `open_view view="projects"
 confirm=true` (confirm first). There is no separate "open project as workspace" step —
 the VS Code window stays homed at the projects root.
+
+## 7. Starting from an exported project file
+
+When the user has an exported project file (what `export_project_settings` or the projects
+list's Export writes), call `create_project_from_file` instead of `create_project`: pass
+`filePath` (an absolute path) and `projectName`, with `confirm: true` under the same rule
+as section 2. The file decides the package, stack, addons, settings and integrations. It
+never carries credentials or the Adobe workspace — the workspace you have selected is
+used — and an Edge Delivery file still needs your own
+`repoName`, `daLiveOrg` and `daLiveSite`, because the ones in the file are the sender's.
+
+The answer says what was applied (`fromFile.applied`), what was not and why
+(`fromFile.notApplied`), and which credentials the new project still needs
+(`stillNeeded.credentials`) — tell the user all three. Auth handoffs and failures work as
+in sections 3 and 5.
 
 ## Notes
 

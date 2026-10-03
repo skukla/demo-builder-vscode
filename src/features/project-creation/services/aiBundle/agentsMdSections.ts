@@ -620,6 +620,12 @@ export function buildNotesForAgents(project: Project): string {
             ' consent dialog before running (the demoBuilder.ai.requireAgentConsent setting).' +
             ' A prose "user declined" answer means the operation did NOT run — report it back' +
             ' and ask how to proceed; do not retry without new instructions',
+        '- To return this project to its starting point, call reset_project — one tool for' +
+            ' both kinds of project, Edge Delivery or headless. It needs confirm:true and' +
+            ' cannot be undone. An Edge Delivery reset puts the storefront repo and DA.live' +
+            ' content back to the template; a headless reset deletes the components and' +
+            ' installs them again (integrations and configuration are kept) and refuses' +
+            ' while the demo is running — call stop_demo first',
     ];
 
     if (isEdsProject(project) && localPath) {

@@ -333,6 +333,27 @@ describe('skillsWriter', () => {
         });
     });
 
+    // v34: create_project_from_file landed and the one skill that teaches project
+    // creation did not mention it.
+    describe('create-eds-project from an exported file', () => {
+        it('names create_project_from_file and the absolute path it takes', async () => {
+            await writeSkills('/projects/test', makeEdsProject());
+
+            const content = writtenContent('create-eds-project');
+            expect(content).toContain('create_project_from_file');
+            expect(content).toMatch(/absolute path/i);
+        });
+
+        it('says what the file never carries and what an Edge Delivery file still needs', async () => {
+            await writeSkills('/projects/test', makeEdsProject());
+
+            const content = writtenContent('create-eds-project');
+            expect(content).toMatch(/never carries credentials or the Adobe workspace/);
+            expect(content).toContain('`repoName`, `daLiveOrg` and `daLiveSite`');
+            expect(content).toContain('stillNeeded');
+        });
+    });
+
     describe('removed skills', () => {
         // Each was deleted for a stated reason: Adobe's extensibility tools cover
         // block authoring, and the three use-*-mcp skills described servers the

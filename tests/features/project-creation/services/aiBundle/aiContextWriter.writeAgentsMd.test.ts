@@ -61,6 +61,30 @@ describe('aiContextWriter', () => {
             });
         });
 
+        // v34: reset_project resets BOTH kinds of project (it was reset_eds_project
+        // and refused a headless one), and nothing in the bundle named it — so an
+        // agent inside a project was never told a reset tool existed.
+        describe('reset note', () => {
+            it.each([
+                ['an Edge Delivery project', makeEdsProject()],
+                ['a headless project', makeHeadlessProject()],
+            ])('names reset_project and what it requires for %s', (_label, project) => {
+                const result = generateAgentsMd(project, STACKS);
+
+                expect(result).toContain('reset_project');
+                expect(result).toMatch(/Edge Delivery or headless/);
+                expect(result).toContain('confirm:true');
+                expect(result).toContain('stop_demo');
+                expect(result).toMatch(/cannot be undone/);
+            });
+
+            it('never teaches the old tool name', () => {
+                const result = generateAgentsMd(makeEdsProject(), STACKS);
+
+                expect(result).not.toContain('reset_eds_project');
+            });
+        });
+
         // Every project this extension generates is an Adobe Commerce demo — EDS
         // delivery, storefront drop-ins, da.live authoring, App Builder. Wayfinder
         // is Adobe's own agent router across exactly those properties, so the
