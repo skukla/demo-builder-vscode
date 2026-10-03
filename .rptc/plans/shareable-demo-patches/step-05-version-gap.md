@@ -41,3 +41,21 @@ reset onto the current boilerplate for generated repositories, is the one thing 
 would modernise Jen's storefront, and it is the one thing that destroys her work; I recommend
 against it. If a demo must be current, the honest route is for the colleague to regenerate
 from the template themselves and re-add.
+
+## Status 2026-10-03 (unattended run): stopped here for the owner
+
+Steps 01–04 and 07 were built on `loop/2026-10-03-night2-b` (not committed); this step was
+not started. Two facts for the decision:
+
+- The report half of "report, always" now exists: the storefront report (command, agent tool,
+  Diagnostics) shows the storefront's boilerplate version beside Demo Builder's current one
+  (the template's `package.json` at the patches repo's last-known-good). No floor constant
+  and no "older than tested" warning were added: the floor is this step's.
+- The overview's decision 6 says the owner agreed to this recommendation on 2026-09-14, but
+  the backlog item still lists the version gap as an open owner decision. Those disagree.
+
+**The question:** is the policy "report always + fix what fits + offer the fork sync ONLY
+to forks (after EDS-14), never a reset onto the current boilerplate for a generated
+repository, never refuse on age, warn below a floor"? **Recommendation: yes, as written
+above.** If yes, the remaining build is the floor constant with its test and the warning
+line, plus the fork-sync door once EDS-14 lands.

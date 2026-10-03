@@ -28,6 +28,7 @@
 import type { AiPrompt, Project } from '@/types/base';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type {
+    CodePatchSource,
     CustomIntegrationSource,
     DaLiveContentSource,
     DatapackReference,
@@ -48,8 +49,11 @@ export const SHARED_DEMO_FILE_NAME = 'demo.demo-builder.json';
 /** The project file's current version. v1 is the pre-2026-09 `SettingsFile`. */
 export const PROJECT_FILE_VERSION = 2;
 
-/** The shared-demo description file's current version. */
-export const SHARED_DEMO_FILE_VERSION = 1;
+/**
+ * The shared-demo description file's current version. Version 2 (EDS-13f)
+ * added `builtWith`; a version-1 file is still read, and behaves as before.
+ */
+export const SHARED_DEMO_FILE_VERSION = 2;
 
 /** Prefix of a project's package id when it was built on an added demo, so it never collides with a shipped id. */
 export const ADDED_DEMO_ID_PREFIX = 'added:';
@@ -74,6 +78,32 @@ export interface SharedDemoDescription
     configDefaults?: DemoPackage['configDefaults'];
     blockLibraries?: string[];
     contentSource?: DaLiveContentSource;
+    /**
+     * What the storefront was built from, written by "Save as demo package"
+     * (EDS-13f decision 2). Present means a Demo Builder storefront: starting a
+     * project from it applies the ledger's fixes where they fit. Absent (a
+     * colleague who did not build with Demo Builder, or a version-1 file)
+     * behaves as before.
+     */
+    builtWith?: SharedDemoBuiltWith;
+}
+
+/** A saved package's record of what its storefront was built from (EDS-13f decision 2). */
+export interface SharedDemoBuiltWith {
+    /** The shipped package id, when the storefront was a shipped brand. */
+    package?: string;
+    /** The template the storefront was generated from and pinned to. */
+    template?: RepositoryRef;
+    /** The last-known-good commit of that template the storefront was pinned to. */
+    lkg?: string;
+    /** The patch ledger the storefront was patched from. */
+    codePatchSource?: CodePatchSource;
+    /** The ledger's patch ids the storefront carries. */
+    codePatches?: string[];
+    /** Its `package.json` name and version when it was saved. */
+    boilerplate?: StorefrontBoilerplate;
+    /** The Demo Builder version that saved it. */
+    extension: string;
 }
 
 /** Where an exported project came from. Provenance, never the receiver's identity. */
@@ -95,6 +125,35 @@ export interface ProjectFileSource {
 /** The two kinds of storefront a repository can hold. */
 export type StorefrontKind = 'eds' | 'headless';
 
+/** A GitHub repository by its coordinates. */
+export interface RepositoryRef {
+    owner: string;
+    repo: string;
+}
+
+/**
+ * What a storefront's code was built on (EDS-13f decision 1): the `name` and
+ * `version` of its `package.json`. Both Adobe Commerce canonicals call
+ * themselves `@adobe/aem-boilerplate-commerce`; the B2B line is 6.x, the B2C
+ * line 10.x.
+ */
+export interface StorefrontBoilerplate {
+    name: string;
+    version: string;
+}
+
+/**
+ * Where a storefront's repository came from, as GitHub records it (EDS-13f
+ * decision 1). Both absent is the common case: a repository created empty and
+ * pushed, or reset onto a source, carries no record.
+ */
+export interface StorefrontLineage {
+    /** GitHub's `template_repository`: the template it was generated from. */
+    templateRepository?: RepositoryRef;
+    /** GitHub's `parent`: the repository it is a fork of. */
+    forkParent?: RepositoryRef;
+}
+
 /**
  * The stored storefront row for a project built on an added demo (D2): the
  * slice plus where it came from and what kind it is. Every post-creation
@@ -104,6 +163,10 @@ export interface AddedDemo extends SharedDemoDescription {
     source: { owner: string; repo: string; branch?: string };
     /** Read from the repository when the demo was added, never from the description file. */
     storefrontKind: StorefrontKind;
+    /** The `package.json` name and version read when the demo was added (EDS-13f). Absent on older rows. */
+    boilerplate?: StorefrontBoilerplate;
+    /** The template or fork parent GitHub recorded when the demo was added (EDS-13f). Absent when none. */
+    lineage?: StorefrontLineage;
 }
 
 /**

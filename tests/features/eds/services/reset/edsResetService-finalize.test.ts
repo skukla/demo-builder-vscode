@@ -223,6 +223,17 @@ describe('executeEdsReset - an added demo', () => {
         expect(result.demoCaveats).toEqual(['Product links may not work.']);
     });
 
+    it("carries the fix pass's applied and offered fixes into the result (EDS-13f)", async () => {
+        mockResetRepoToTemplate.mockResolvedValue({
+            ...REPO_RESULT,
+            demoFixes: { offered: ['pdp-empty-data-redirect'] },
+        });
+
+        const { result } = await runReset();
+
+        expect(result.demoFixes).toEqual({ offered: ['pdp-empty-data-redirect'] });
+    });
+
     it('carries no caveats key when the repo reset had none', async () => {
         const { result } = await runReset();
 
@@ -293,6 +304,16 @@ describe('executeEdsReset - the synced commit record', () => {
 
         expect(result.success).toBe(true);
         expect(saved).toStrictEqual([{ ...STOREFRONT_METADATA, lastSyncedCommit: RESET_SHA }]);
+    });
+
+    it('records what the repository is built on now, read back after the reset (EDS-13f)', async () => {
+        const boilerplate = { name: '@adobe/aem-boilerplate-commerce', version: '6.0.0' };
+        mockResetRepoToTemplate.mockResolvedValue({ ...REPO_RESULT, templateCommitSha: RESET_SHA, boilerplate });
+        const { context, saved } = contextCapturingSaves();
+
+        await runReset({ project: storefrontProject() }, context);
+
+        expect(saved).toStrictEqual([{ ...STOREFRONT_METADATA, lastSyncedCommit: RESET_SHA, boilerplate }]);
     });
 
     it('leaves the recorded commit alone when the reset fails after the repository step', async () => {

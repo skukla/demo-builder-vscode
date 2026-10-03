@@ -12,6 +12,17 @@ The `aio` checks in it stay **sequential on purpose**: the first `aio` command i
 session writes `aio-cli-telemetry.optOut` to a shared config file, and parallel
 invocations race that write.
 
+**Storefront origin and Demo Builder's fixes** (EDS-13f) is the same computation as
+**Demo Builder: Storefront Report** and the `get_storefront_report` tool, so the three never
+disagree: what the storefront's `package.json` says it is built on, against Demo Builder's
+current boilerplate (the template at the patches repository's last-known-good commit);
+where GitHub says the repository came from; whether the pieces Demo Builder writes are there
+(the smart-404 snippet, `fstab.yaml`, `config.json`, the description file); and each fix's
+state on the code: `applied` (already there), `fits` (its code is there exactly once and it
+is not applied), `missing` (the code changed), `target-missing` (no such file), or
+`unreadable`. A read that failed says "could not read", never "not there". The section reads
+only; nothing in Diagnostics applies a fix.
+
 **Run it before reading logs.** Most reports that look like a bug in a feature are an
 environment answer — a stale token, a missing Node major, a CLI that is not where the
 extension expects. Diagnostics answers those in one step.

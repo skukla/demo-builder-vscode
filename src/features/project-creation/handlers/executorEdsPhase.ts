@@ -10,16 +10,17 @@
  */
 
 import * as fs from 'fs';
-import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import type { ProgressTracker } from './shared';
 import { COMPONENT_IDS } from '@/core/constants';
 import { parseGitHubUrl } from '@/core/utils/githubUrlParser';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { detectB2bReadiness } from '@/features/eds/services/b2bReadinessDetection';
 import { extractConfigParamsFromConfigs } from '@/features/eds/services/configGenerator';
 import { syncConfigToRemote } from '@/features/eds/services/configSyncService';
+import { readRepoBoilerplate } from '@/features/eds/services/storefront/storefrontOrigin';
 import { resolveTemplateCommitSha } from '@/features/eds/services/templateCommitResolver';
 import { ensureEdsContent } from '@/features/project-creation/services/edsContentSetup';
 import type { HandlerContext } from '@/types/handlers';
@@ -75,11 +76,20 @@ export async function populateEdsMetadata(
     // code may live on a branch other than main; the update check and the
     // baseline commit both read that branch.
     const templateBranch = typedConfig.demo?.source.branch;
+    const { fileOperations } = getGitHubServices(context.context.secrets);
     const lastSyncedCommit = await resolveTemplateCommitSha(
         { ...typedConfig.edsConfig, ...(templateBranch ? { templateBranch } : {}) },
-        getGitHubServices(context.context.secrets).fileOperations,
+        fileOperations,
         context.logger,
     );
+    // What the new repository was built on (EDS-13f), read from the repository
+    // itself, so a shipped brand, a saved package and a colleague's demo all
+    // answer the same way. A failed read records nothing rather than a guess.
+    const [owner, repo] = (githubRepo ?? '').split('/');
+    const boilerplateRead = owner && repo
+        ? await readRepoBoilerplate(fileOperations, { owner, repo }, context.logger)
+        : undefined;
+    const boilerplate = boilerplateRead?.status === 'read' ? boilerplateRead.value : undefined;
 
     const templateOwner = typedConfig.edsConfig.templateOwner;
     const templateRepo = typedConfig.edsConfig.templateRepo;
@@ -106,6 +116,7 @@ export async function populateEdsMetadata(
         ...(templateBranch ? { templateBranch } : {}),
         lastSyncedCommit,
         ...(lkgSource ? { lkgSource } : {}),
+        ...(boilerplate ? { boilerplate } : {}),
     };
     await context.stateManager.saveProject(project);
     context.logger.debug(

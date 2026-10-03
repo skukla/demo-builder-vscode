@@ -223,6 +223,10 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
     // ── storefront ──────────────────────────────────────────────────────────
     republish: { bytes: 1_000, why: 'per-step publish outcome' },
     sync_content: { bytes: 1_000, why: 'per-step publish outcome' },
+    get_storefront_report: {
+        bytes: 6_000,
+        why: 'seven fixes with their targets plus the ~12 lines the SC reads; measured 2026-10-03 on a full fixture, not live',
+    },
 
     // ── discovery / status ──────────────────────────────────────────────────
     list_components: { bytes: 4_000, why: 'catalog summary; 581 live' },

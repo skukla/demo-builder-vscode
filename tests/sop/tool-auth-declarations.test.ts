@@ -78,7 +78,7 @@ const EXPECTED: Record<string, number> = {
     // remove_demo_package (step 09) read and write the SC's own storefront repository.
     // 17 -> 18 on 2026-09-13: export_demo_bundle reads the SC's own repository archive.
     // 18 -> 19 on 2026-10-03: create_project_from_file, likewise.
-    github: 19,
+    github: 20,
     commerce: 2,
     // 45 -> 46 on 2026-09-14: edit_added_demo renames a card in a user setting,
     // and needs no sign-in.
@@ -103,7 +103,7 @@ const EXPECTED: Record<string, number> = {
  * files. That counts text, not declarations, and was roughly double. The CONTROL below
  * caught it — which is the argument for having one.)
  */
-const EXPECTED_TOOLS = 152; // 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x); 144 with add_erp (AB-16).
+const EXPECTED_TOOLS = 153; // 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x); 144 with add_erp (AB-16).
 // 141 -> 142 on 2026-09-27: delete_undeclared_runtime_code.
 // 142 -> 143 on 2026-09-27: load_erp_demo_data.
 // 144 -> 146 on 2026-09-29: get_erp_settings and set_erp_settings (AB-16j).
@@ -111,6 +111,7 @@ const EXPECTED_TOOLS = 152; // 138 -> 141 on 2026-09-25: the three demo setup ch
 // 148 -> 151 on 2026-10-02: the demo ERP's look and simulated downtime (AB-59).
 // 151 -> 152 on 2026-10-03: create_project_from_file (reset_eds_project was renamed
 // reset_project, which does not change the count).
+// 152 -> 153 on 2026-10-03: get_storefront_report (EDS-13f), which needs GitHub.
 
 interface Declaration {
     name: string;

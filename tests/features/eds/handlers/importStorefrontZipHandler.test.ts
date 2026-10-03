@@ -223,6 +223,19 @@ describe('importDemoBundle', () => {
         });
     });
 
+    it("records the zip's boilerplate on a card that carries no description (EDS-13f decision 4)", async () => {
+        const files = new Map(STOREFRONT);
+        files.set('package.json', Buffer.from('{"name":"@adobe/aem-boilerplate-commerce","version":"4.0.1"}'));
+        mockRead.mockReturnValue({ files, rootName: 'summit', dropped: 0 });
+        repoOperations.createEmptyRepository.mockResolvedValue({ fullName: 'steve/summit', name: 'summit', defaultBranch: 'main' });
+
+        await importDemoBundle(ctx(), '/x/summit.zip');
+
+        expect(mockRemember).toHaveBeenCalledWith(
+            expect.objectContaining({ boilerplate: { name: '@adobe/aem-boilerplate-commerce', version: '4.0.1' } }),
+        );
+    });
+
     it('with setup alone opens the wizard from the setup as a settings file would; with neither, refuses in words', async () => {
         mockRead.mockReturnValue({ files: new Map(), rootName: 'b', dropped: 0, setup: SETUP });
         await importDemoBundle(ctx(), '/x/setup-only.zip');

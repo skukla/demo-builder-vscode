@@ -135,7 +135,10 @@ export const handleSaveDemoPackage: MessageHandler<SaveDemoPackageRequest> = asy
     const draft = { name: data?.name ?? '', description: data?.description ?? '' };
 
     const own = await resolveOwnContentSource(storefront, { logger: context.logger });
-    const description = describeProject(project, draft, own.contentSource);
+    // The version that wrote it travels in `builtWith` (EDS-13f), so a receiver can say how old the record is.
+    const description = describeProject(project, draft, own.contentSource, {
+        extension: context.context.extension?.packageJSON?.version,
+    });
     const { fileOperations, repoOperations } = getGitHubServices(context.context.secrets);
     const written = await writeSharedDemoFile(
         fileOperations,

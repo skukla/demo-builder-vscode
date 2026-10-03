@@ -1,28 +1,47 @@
 /**
- * What an added demo adds to the storefront setup run (shareable-demo step 05):
- * the dry check of the load-bearing patches, and its content site as a source
- * of block example pages. Kept beside the phases so that file stays a phase
- * orchestrator and not a home for every demo rule.
+ * What an added demo adds to the storefront setup run (shareable-demo step 05,
+ * EDS-13f): Demo Builder's fixes against the new repository, and its content
+ * site as a source of block example pages. Kept beside the phases so that file
+ * stays a phase orchestrator and not a home for every demo rule.
  *
  * @module features/eds/handlers/storefrontSetup/storefrontSetupDemo
  */
 
-import { addedDemoCaveats } from '../../services/patches/loadBearingPatches';
+import { demoFixLines, runDemoFixPass } from '../../services/patches/demoFixPass';
+import type { FixDeps } from '../../services/patches/storefrontFixes';
 import type { RepoInfo } from './storefrontSetupTypes';
 import type { Logger } from '@/types/logger';
 import type { AddedDemo } from '@/types/projectFile';
+import type { StorefrontSetupStartPayload } from '@/types/webviewRequests';
 
 /**
- * Run the dry check against the demo's code (D4: never patched; D23: each
- * miss becomes a caveat) and record the caveats for the completion card.
+ * Run the fix pass for a new project on an added demo (`demoFixPass.ts`: a
+ * saved package's fixes applied where they fit, a colleague's offered, or the
+ * dry check) against the SC's OWN new repository, and record what the SC reads
+ * for the completion card. Nothing for a shipped brand.
+ *
+ * @param edsConfig - The setup config: the demo row, its source (the template
+ *   fields) and whether the SC accepted the fixes (an agent argument; never a default)
+ * @param repoInfo - The new repository; its caveats are written here
+ * @param fileOps - GitHub reads and the one-commit write
+ * @param logger - Patch ids and reasons go here, never to the SC
  */
-export async function dryCheckDemo(
-    demo: AddedDemo,
+export async function runDemoFixes(
+    edsConfig: Pick<StorefrontSetupStartPayload['edsConfig'], 'demo' | 'templateOwner' | 'templateRepo' | 'applyDemoFixes'>,
     repoInfo: RepoInfo,
-    template: { owner: string; repo: string },
+    fileOps: FixDeps['fileOps'],
     logger: Logger,
 ): Promise<void> {
-    repoInfo.demoCaveats = await addedDemoCaveats(demo, template, logger);
+    const { demo, templateOwner, templateRepo } = edsConfig;
+    if (!demo || !templateOwner || !templateRepo) return;
+    const report = await runDemoFixPass(
+        demo,
+        { owner: repoInfo.repoOwner, repo: repoInfo.repoName, branch: 'main' },
+        { owner: templateOwner, repo: templateRepo },
+        { fileOps, logger },
+        { applyOffered: edsConfig.applyDemoFixes === true },
+    );
+    repoInfo.demoCaveats = demoFixLines(report);
 }
 
 /**

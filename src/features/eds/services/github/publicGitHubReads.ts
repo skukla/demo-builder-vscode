@@ -20,6 +20,7 @@
  * @module features/eds/services/github/publicGitHubReads
  */
 
+import { toGitHubRepo, type RepoResponseData } from './githubRepoRecord';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { GitHubFileContent, GitHubRepo } from '@/features/eds/services/types';
 
@@ -65,26 +66,7 @@ export function publicRepoReaders(fetchImpl: typeof fetch = fetch): PublicRepoRe
                 if (!response.ok) {
                     throw new PublicReadError(response.status, `GitHub answered ${response.status} for ${owner}/${repo}`);
                 }
-                const data = (await response.json()) as {
-                    id: number;
-                    name: string;
-                    full_name: string;
-                    html_url: string;
-                    clone_url: string;
-                    default_branch: string;
-                    is_template?: boolean;
-                    private: boolean;
-                };
-                return {
-                    id: data.id,
-                    name: data.name,
-                    fullName: data.full_name,
-                    htmlUrl: data.html_url,
-                    cloneUrl: data.clone_url,
-                    defaultBranch: data.default_branch,
-                    isTemplate: data.is_template ?? false,
-                    isPrivate: data.private,
-                };
+                return toGitHubRepo((await response.json()) as RepoResponseData);
             },
         },
         fileOps: {

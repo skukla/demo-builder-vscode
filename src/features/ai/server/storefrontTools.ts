@@ -32,6 +32,8 @@ import { COMPONENT_IDS } from '@/core/constants';
 import { phaseReporter } from '@/core/utils/agentPhaseChannel';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { describeCdnPropagation } from '@/features/eds/services/configSyncService';
+import { readStorefrontReport, storefrontReportLines } from '@/features/eds/services/storefront/storefrontReport';
+import { createStorefrontReportDeps } from '@/features/eds/services/storefront/storefrontReportDeps';
 import {
     republishStorefrontConfig,
     republishStorefrontContent,
@@ -223,6 +225,43 @@ export function registerStorefrontTools(
                 if (isOrgMismatchError(err)) return orgMismatchResult();
                 throw err;
             }
+        },
+    );
+
+    registerStorefrontReportTool(server, ctxFactory);
+}
+
+/**
+ * `get_storefront_report` (EDS-13f): the same report `Demo Builder: Storefront
+ * Report` shows, as data plus the words a person reads. Read-only: accepting
+ * the fixes it finds is `reset_project` with `applyFixes:true`, a separate,
+ * confirmed write.
+ */
+function registerStorefrontReportTool(server: McpToolServer, ctxFactory: () => HandlerContext): void {
+    server.registerTool(
+        'get_storefront_report',
+        {
+            needsAuth: ['github'],
+            annotations: { readOnlyHint: true, destructiveHint: false },
+            description:
+                "Where the open project's Edge Delivery storefront comes from (its boilerplate version against " +
+                "Demo Builder's current one, the template GitHub records), what Demo Builder wrote into it, and " +
+                "each Demo Builder fix's state on its code (applied, fits, missing). Read-only. `offer` lists the " +
+                'fixes that fit an added demo; the user accepts them with reset_project applyFixes:true.',
+            inputSchema: {},
+        },
+        async () => {
+            const ctx = ctxFactory();
+            const eds = await requireEdsProject(ctx, 'get_storefront_report');
+            if (!eds.ok) return asText(eds.body);
+            const github = await requireGitHub(ctx, ' to read the storefront');
+            if (github) return asText(github);
+            const report = await readStorefrontReport(
+                eds.project,
+                createStorefrontReportDeps(ctx.context.secrets, ctx.logger),
+            );
+            if (!report) return asText({ error: 'Project is missing GitHub repo metadata' });
+            return asText({ ...report, summary: storefrontReportLines(report) });
         },
     );
 }

@@ -73,6 +73,11 @@
                 "category": "Demo Builder"
             },
             {
+                "command": "demoBuilder.storefrontReport",
+                "title": "Storefront Report",
+                "category": "Demo Builder"
+            },
+            {
                 "command": "demoBuilder.registerGlobalMcp",
                 "title": "Register Global MCP",
                 "category": "Demo Builder"

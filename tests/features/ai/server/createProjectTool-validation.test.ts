@@ -141,6 +141,7 @@ describe('create_project — registered schema', () => {
 
         expect(Object.keys(schema.shape).sort()).toEqual([
             'accsEndpoint',
+            'applyFixes',
             'confirm',
             'daLiveOrg',
             'daLiveSite',

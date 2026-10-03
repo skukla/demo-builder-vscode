@@ -194,6 +194,22 @@ describe('reset of a project built on an added demo — what the SC is told afte
         );
     });
 
+    it('offers the way to the storefront report when fixes fit, and opens it on the click (EDS-13f)', async () => {
+        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValueOnce(RESET).mockResolvedValueOnce('See the storefront report');
+
+        await run({
+            success: true,
+            demoCaveats: ["1 of Demo Builder's fixes fits this storefront's code: empty product pages."],
+            demoFixes: { offered: ['pdp-empty-data-redirect'] },
+        });
+
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
+            "A few things to know about this demo: 1 of Demo Builder's fixes fits this storefront's code: empty product pages.",
+            'See the storefront report',
+        );
+        expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.storefrontReport');
+    });
+
     it('shows nothing extra when the dry check found no caveats', async () => {
         await run({ success: true, demoCaveats: [] });
 

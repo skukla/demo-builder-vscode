@@ -37,6 +37,7 @@ jest.mock('@/commands/repairSiteConfiguration');
 jest.mock('@/commands/ResetAiOnboardingCommand');
 jest.mock('@/commands/ResetAllCommand');
 jest.mock('@/commands/showPromptsPicker');
+jest.mock('@/commands/storefrontReport');
 jest.mock('@/core/base/baseWebviewCommand');
 jest.mock('@/features/dashboard/commands/configure');
 jest.mock('@/features/dashboard/commands/openAi');

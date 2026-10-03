@@ -14,9 +14,10 @@ import type { GitHubFileOperations } from '../github/githubFileOperations';
 import { generateInspectorTreeEntries, installInspectorTagging } from '../inspectorHelpers';
 import { applyCanonicalCodePatches } from '../patches/codePatchPipelineHelpers';
 import type { CodePatchResult } from '../patches/codePatchRegistry';
-import { addedDemoCaveats } from '../patches/loadBearingPatches';
+import { demoFixLines, runDemoFixPass, type DemoFixReport } from '../patches/demoFixPass';
 import { installSmart404Handler } from '../pdp/pdp404HandlerPublisher';
 import { installQuickEdit } from '../quickEditPublisher';
+import { readRepoBoilerplate } from '../storefront/storefrontOrigin';
 import { resolveTemplateCommitSha } from '../templateCommitResolver';
 import type { GitHubTreeInput } from '../types';
 import { buildResetFileOverrides } from './edsResetFileOverrides';
@@ -31,6 +32,7 @@ import type { Project } from '@/types/base';
 import type { AddonSource } from '@/types/demoPackages';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
+import type { StorefrontBoilerplate } from '@/types/projectFile';
 
 // ==========================================================
 // Helpers
@@ -233,10 +235,14 @@ export async function resetRepoToTemplate(
     blockCollectionIds?: string[];
     libraryContentSources: Array<{ org: string; site: string }>;
     canonicalCodePatchResults?: CodePatchResult[];
-    /** The dry check's caveats for an added demo (D23); absent for a shipped brand. */
+    /** What the fix pass says about an added demo (D23, EDS-13f); absent for a shipped brand. */
     demoCaveats?: string[];
+    /** The fix pass's applied and offered fixes for an added demo (EDS-13f). */
+    demoFixes?: Pick<DemoFixReport, 'applied' | 'offered'>;
     /** The template commit the repository now matches; absent when it could not be resolved. */
     templateCommitSha?: string;
+    /** What the repository is built on now, read back after the reset (EDS-13f); absent when unread. */
+    boilerplate?: StorefrontBoilerplate;
 }> {
     const {
         repoOwner,
@@ -314,10 +320,20 @@ export async function resetRepoToTemplate(
     );
     report(1, `Reset ${resetResult.fileCount} files`);
 
-    // An added demo's dry check re-runs on every reset; its caveats ride the result (D23).
-    const demoCaveats = project.demo
-        ? await addedDemoCaveats(project.demo, { owner: templateOwner, repo: templateRepo }, context.logger)
+    // An added demo's fix pass re-runs on every reset (D23, EDS-13f): a saved package
+    // gets its fixes back where they fit, a colleague's storefront with our lineage
+    // is offered them again, anything else gets the dry check. Writes, when there
+    // are any, go to the SC's own repository on the branch reset just wrote.
+    const demoFixes = project.demo
+        ? await runDemoFixPass(
+              project.demo,
+              { owner: repoOwner, repo: repoName, branch: 'main' },
+              { owner: templateOwner, repo: templateRepo },
+              { fileOps: githubFileOps, logger: context.logger },
+              { applyOffered: params.applyDemoFixes === true },
+          )
         : undefined;
+    const demoCaveats = demoFixes ? demoFixLines(demoFixes) : undefined;
 
     const { blockCollectionIds, libraryContentSources } = await reinstallBlockLibraries(
         project,
@@ -363,8 +379,14 @@ export async function resetRepoToTemplate(
     // reset reconciles Quick Edit wiring just like every other vendored file.
     await installQuickEdit(githubFileOps, repoOwner, repoName, context.logger);
 
+    const boilerplate = await readRepoBoilerplate(githubFileOps, { owner: repoOwner, repo: repoName }, context.logger);
+
     return {
         ...(demoCaveats ? { demoCaveats } : {}),
+        ...(boilerplate.status === 'read' ? { boilerplate: boilerplate.value } : {}),
+        ...(demoFixes?.applied || demoFixes?.offered
+            ? { demoFixes: { applied: demoFixes.applied, offered: demoFixes.offered } }
+            : {}),
         filesReset: resetResult.fileCount,
         blockCollectionIds,
         libraryContentSources,

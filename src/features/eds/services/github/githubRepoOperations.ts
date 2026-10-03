@@ -17,6 +17,7 @@ import type {
     GitHubApiError,
 } from '../types';
 import { createAuthenticatedOctokit, injectTokenIntoUrl } from './githubHelpers';
+import { toGitHubRepo } from './githubRepoRecord';
 import type { GitHubTokenService } from './githubTokenService';
 import { getLogger } from '@/core/logging/debugLogger';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
@@ -48,35 +49,6 @@ const ERROR_MESSAGES = {
     REPO_EXISTS: 'Repository name already exists',
 } as const;
 
-/**
- * GitHub Repository Operations Service
- */
-/** The fields of a `GET /repos/{owner}/{repo}` response this extension keeps. */
-interface RepoResponseData {
-    /** GitHub's `private`; the colleague-facing checks read it as visibility. */
-    private?: boolean;
-    id: number;
-    name: string;
-    full_name: string;
-    html_url: string;
-    clone_url: string;
-    default_branch: string;
-    is_template?: boolean;
-}
-
-/** One reading of the repository response, shared by every method that fetches it. */
-function toGitHubRepo(data: RepoResponseData): GitHubRepo {
-    return {
-        id: data.id,
-        name: data.name,
-        fullName: data.full_name,
-        htmlUrl: data.html_url,
-        cloneUrl: data.clone_url,
-        defaultBranch: data.default_branch,
-        isTemplate: data.is_template ?? false,
-        isPrivate: data.private,
-    };
-}
 
 export class GitHubRepoOperations {
     private logger: Logger;

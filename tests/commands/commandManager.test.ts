@@ -167,7 +167,8 @@ describe('CommandManager', () => {
             // 37 → 36: `deleteProject` removed (PL-64) — nothing called it; the
             // card menu and `delete_project` go through projectDeletionService.
             // resetAll stays excluded, dev mode only.
-            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(36);
+            // 37 since EDS-13f added demoBuilder.storefrontReport.
+            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(37);
 
             // Verify all commands are registered (in order of registration)
             const expectedCommands = [
@@ -191,6 +192,7 @@ describe('CommandManager', () => {
                 'demoBuilder.refreshBlockLibrary',
                 'demoBuilder.manageSiteAccess',
                 'demoBuilder.repairSiteConfiguration',
+                'demoBuilder.storefrontReport',
                 'demoBuilder.checkForUpdates',
                 'demoBuilder.openInClaude',
                 'demoBuilder.openAi',

@@ -1,3 +1,4 @@
+import type { StorefrontBoilerplate, StorefrontLineage } from '@/types/projectFile';
 import type { GitHubUser } from '@/types/webviewPayloads';
 /**
  * GitHub Service Types
@@ -64,6 +65,10 @@ export interface GitHubRepo {
     updatedAt?: string;
     /** Whether repository is private (optional, for listing) */
     isPrivate?: boolean;
+    /** GitHub's `template_repository`: the template this repository was generated from (EDS-13f). */
+    templateRepository?: StorefrontLineage['templateRepository'];
+    /** GitHub's `parent`: the repository this one is a fork of (EDS-13f). */
+    forkParent?: StorefrontLineage['forkParent'];
 }
 
 /**
@@ -654,6 +659,9 @@ export interface EdsMetadata {
          *  ledgers sharing the default root LKG. */
         lkgFile?: string;
     };
+    /** The `package.json` name and version the repository was built on, read at
+     *  creation and after each reset (EDS-13f). Absent when it could not be read. */
+    boilerplate?: StorefrontBoilerplate;
 }
 
 /**

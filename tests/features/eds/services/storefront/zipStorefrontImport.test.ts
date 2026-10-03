@@ -263,6 +263,18 @@ describe('createRepositoryFromZip, cardFromZip and setupForCard', () => {
         ).toBeUndefined();
     });
 
+    it("records the boilerplate the zip's package.json names on the card (EDS-13f decision 4)", () => {
+        const files = new Map([
+            ['demo.demo-builder.json', Buffer.from('{"kind":"demo","version":1,"name":"Bodea"}')],
+            ['package.json', Buffer.from('{"name":"@adobe/aem-boilerplate-commerce","version":"6.0.0"}')],
+        ]);
+
+        expect(cardFromZip(files, CREATED)?.boilerplate).toEqual({
+            name: '@adobe/aem-boilerplate-commerce',
+            version: '6.0.0',
+        });
+    });
+
     it("makes the setup the colleague's own: the wizard starts on the card, and the sender's storefront names are dropped", () => {
         const setup = {
             version: 1,

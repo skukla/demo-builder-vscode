@@ -45,6 +45,8 @@ export async function adobeAuthed(): Promise<boolean> {
 interface EdsResetArgs {
     includeBlockLibrary?: boolean;
     verifyCdn?: boolean;
+    /** The SC accepted Demo Builder's fixes for an added demo (EDS-13f). */
+    applyFixes?: boolean;
 }
 
 /**
@@ -100,6 +102,7 @@ export async function runEdsReset(
                     ),
                     includeBlockLibrary: args?.includeBlockLibrary ?? false,
                     verifyCdn: args?.verifyCdn ?? false,
+                    applyDemoFixes: args?.applyFixes === true,
                     redeployMesh: hasMesh,
                 },
                 ctx,
@@ -143,6 +146,9 @@ export async function runEdsReset(
             kind: 'storefront',
             // What may not work on an added demo (D23), in the same words the SC sees.
             ...(result.demoCaveats?.length ? { caveats: result.demoCaveats } : {}),
+            // Applied by this reset, and fitting but left for the user to accept
+            // (call again with applyFixes:true once they agree) (EDS-13f).
+            ...(result.demoFixes ? { fixes: result.demoFixes } : {}),
             filesReset: result.filesReset,
             contentCopied: result.contentCopied,
             meshRedeployed: result.meshRedeployed,

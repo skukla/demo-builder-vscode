@@ -34,6 +34,7 @@ import { RepairSiteConfigurationCommand } from '@/commands/repairSiteConfigurati
 import { ResetAiOnboardingCommand } from '@/commands/ResetAiOnboardingCommand';
 import { ResetAllCommand } from '@/commands/ResetAllCommand';
 import { ShowPromptsPickerCommand } from '@/commands/showPromptsPicker';
+import { StorefrontReportCommand } from '@/commands/storefrontReport';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
 import { ShowAiCommand } from '@/features/dashboard/commands/openAi';
@@ -74,6 +75,7 @@ describe('a command id runs the command object it was built for', () => {
         ['demoBuilder.refreshBlockLibrary', RefreshBlockLibraryCommand],
         ['demoBuilder.manageSiteAccess', ManageSiteAccessCommand],
         ['demoBuilder.repairSiteConfiguration', RepairSiteConfigurationCommand],
+        ['demoBuilder.storefrontReport', StorefrontReportCommand],
         ['demoBuilder.checkForUpdates', CheckUpdatesCommand],
         ['demoBuilder.showPromptsPicker', ShowPromptsPickerCommand],
         ['demoBuilder.openModernizationAgent', OpenModernizationAgentCommand],

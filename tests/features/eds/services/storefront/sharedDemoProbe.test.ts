@@ -14,6 +14,7 @@ import { makeDemoPackage, makeStorefront } from '../../../../helpers/demoPackage
 import { createMockLogger } from '../../../../helpers/loggerFake';
 import { assertKind } from '../../../../helpers/resultAssertions';
 import {
+    AISTORE_PACKAGE_JSON,
     B2B_TEMPLATE_DEPENDENCIES,
     B2C_DEPENDENCIES,
     BODEA_CONFIG_JSON,
@@ -115,6 +116,32 @@ describe('probeSharedDemo', () => {
             overrides: [],
             warnings: [],
         });
+    });
+
+    it('records what the storefront was built on and the template it was generated from (EDS-13f)', async () => {
+        const aistore: FakeRepo = {
+            ...BODEA,
+            repo: 'sayurihanki/aistore',
+            files: { ...BODEA.files, 'package.json': AISTORE_PACKAGE_JSON },
+        };
+
+        const result = await probeSharedDemo(deps(aistore), 'sayurihanki', 'aistore', logger);
+
+        assertOutcome(result, 'read');
+        expect(result.boilerplate).toEqual({ name: '@adobe/aem-boilerplate-commerce', version: '4.0.1' });
+        expect(result.lineage).toEqual({
+            templateRepository: { owner: 'adobe-commerce', repo: 'boilerplate-b2b-template' },
+        });
+        // The same package.json still answers B2B from its drop-ins when config.json is silent.
+        expect(result.b2b).toBe('on');
+    });
+
+    it('records no lineage and no boilerplate when neither is there to read', async () => {
+        const result = await probeSharedDemo(deps(BODEA), 'skukla', 'kukla-bodea', logger);
+
+        assertOutcome(result, 'read');
+        expect(result).not.toHaveProperty('lineage');
+        expect(result).not.toHaveProperty('boilerplate');
     });
 
     it('probes the index the pipeline copies from, and only that', async () => {

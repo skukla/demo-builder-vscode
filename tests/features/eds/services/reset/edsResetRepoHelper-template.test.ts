@@ -90,7 +90,9 @@ describe('resetRepoToTemplate — the bulk template reset', () => {
         // A project built FROM an added demo takes the source's file with the rest of the tree.
         const { overrides, getFileContent } = await runReset(buildParams());
 
-        expect(getFileContent).not.toHaveBeenCalled();
+        // Narrowed 2026-10-03 (EDS-13f): the reset now reads package.json back to record
+        // the boilerplate, so "no read at all" no longer stands in for "no description read".
+        expect(getFileContent.mock.calls.map((call: unknown[]) => call[2])).not.toContain('demo.demo-builder.json');
         expect(overrides?.has('demo.demo-builder.json')).toBe(false);
     });
 

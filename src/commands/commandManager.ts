@@ -12,6 +12,7 @@ import { RepairSiteConfigurationCommand } from './repairSiteConfiguration';
 import { ResetAiOnboardingCommand } from './ResetAiOnboardingCommand';
 import { ResetAllCommand } from './ResetAllCommand';
 import { ShowPromptsPickerCommand } from './showPromptsPicker';
+import { StorefrontReportCommand } from './storefrontReport';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { openUrl } from '@/core/utils/browserUtils';
@@ -242,6 +243,12 @@ export class CommandManager {
         this.registerCommand('demoBuilder.repairSiteConfiguration', () =>
             repairSiteConfiguration.execute(),
         );
+
+        // Storefront Report — where the storefront comes from, what Demo Builder
+        // wrote, each of its fixes; and, for an added demo tied to our templates,
+        // the opt-in offer of the fixes that fit (EDS-13f).
+        const storefrontReport = new StorefrontReportCommand(this.context, this.stateManager, this.logger);
+        this.registerCommand('demoBuilder.storefrontReport', () => storefrontReport.execute());
 
         // Check Updates
         const checkUpdates = new CheckUpdatesCommand(this.context, this.stateManager, this.logger);

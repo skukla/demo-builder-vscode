@@ -1241,5 +1241,14 @@
             "create_project_from_file"
         ],
         "why": "Added 2026-10-03 with the tool: the projects list's Import opens a file picker, so before this an agent had no way to start a project from an exported file and would hand-copy its fields into create_project. Confirm-gated, so a reach without consent is refused; a MISS is a discoverability finding about the tool, not a bad prompt."
+    },
+    {
+        "id": "storefront-report",
+        "prompt": "This storefront came from a colleague's demo. How old is its boilerplate compared to ours, and do any of Demo Builder's fixes fit its code?",
+        "expect": [
+            "get_storefront_report"
+        ],
+        "cwd": "project",
+        "why": "Added 2026-10-03 with the tool (EDS-13f): the storefront report is the one place that says what a storefront was built on and which of Demo Builder's fixes fit. Read-only, so a reach is safe; a MISS means agents cannot find the report from a plain question, and would read package.json by hand instead."
     }
 ]

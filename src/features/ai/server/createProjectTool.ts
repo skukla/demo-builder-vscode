@@ -66,6 +66,7 @@ import type { DemoPackage, Storefront } from '@/types/demoPackages';
 import type { HandlerContext } from '@/types/handlers';
 import type { AddedDemo } from '@/types/projectFile';
 import type { WizardState } from '@/types/webview';
+import type { StorefrontSetupCompletePayload } from '@/types/webviewPayloads';
 
 /** Project a possibly-undefined org down to the lean `{ id, name }` surfaced on a mismatch. */
 function leanOrg(
@@ -269,6 +270,8 @@ interface CreateArgs {
     seed?: CreationSeed;
     /** The store scope the caller chose, already checked by `parseStoreScope` (AI-11). */
     storeScope?: StoreScope;
+    /** The user accepted Demo Builder's fixes for an added demo (EDS-13f). */
+    applyFixes?: boolean;
     /** Added to a successful answer (what a file brought, what is still needed). */
     report?: Record<string, unknown>;
 }
@@ -474,6 +477,7 @@ async function createEds(
             // The row rides too: the phases read it for the repo branch, the
             // pages and the dry check, exactly as the wizard sends it.
             demo: args.demo,
+            ...(args.applyFixes === true ? { applyDemoFixes: true } : {}),
             edsConfig: edsConfigInput,
         }),
     );
@@ -492,6 +496,10 @@ async function createEds(
     // undefined for every agent creation until 2026-09-12, so the project was
     // saved without its repository and reset refused it.
     const repoUrl = lastCompleteData(events)?.githubRepo as string | undefined;
+    // What the setup said about the storefront, in the words the wizard's card shows:
+    // an added demo's caveats and the offer of Demo Builder's fixes (EDS-13f). The
+    // agent never heard them before; the card was the only reader.
+    const caveats = lastCompleteData(events)?.warnings as StorefrontSetupCompletePayload['warnings'];
 
     // Phase 2: create the project, with preflight results threaded in.
     const wizardState: ProjectConfigSource = {
@@ -541,6 +549,7 @@ async function createEds(
         name: args.projectName,
         path: path.join(projectsDir(), args.projectName),
         repoUrl,
+        ...(caveats?.length ? { caveats } : {}),
         phases: toPhaseTimeline(events),
         hint: 'Operate on it by name (list_blocks, sync_storefront, …).',
         ...args.report,
@@ -560,6 +569,8 @@ interface CreationRequest {
     accsEndpoint?: string;
     /** Already checked by `parseStoreScope`. */
     storeScope?: StoreScope;
+    /** The user accepted Demo Builder's fixes for an added demo (EDS-13f); never defaulted on. */
+    applyFixes?: boolean;
     seed?: CreationSeed;
     report?: Record<string, unknown>;
 }
@@ -637,6 +648,13 @@ export function registerCreateProjectTool(
                 // The same input configure_project takes (AI-11), so the demo's codes
                 // need not be published first and corrected after.
                 storeScope: storeScopeSchema.optional(),
+                applyFixes: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Added demos only: apply the Demo Builder fixes that fit the demo's code (one commit to the new repo). " +
+                            'Only when the user said yes to them; the default offers them and writes none',
+                    ),
                 confirm: z
                     .boolean()
                     .optional()
@@ -675,6 +693,7 @@ export function registerCreateProjectTool(
                 daLiveSite: args.daLiveSite ? String(args.daLiveSite) : undefined,
                 accsEndpoint: args.accsEndpoint ? String(args.accsEndpoint) : undefined,
                 storeScope: scope.storeScope,
+                ...(args.applyFixes === true ? { applyFixes: true } : {}),
             });
         },
     );

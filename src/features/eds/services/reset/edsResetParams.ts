@@ -69,6 +69,12 @@ export interface EdsResetParams {
      * added demo's content site cannot be reached (content is not forkable).
      */
     keepContent?: boolean;
+    /**
+     * The SC accepted the offer of Demo Builder's fixes for an added demo that
+     * shows our lineage (EDS-13f step 03). Never defaulted on: a reset without
+     * it offers the fixes and writes none.
+     */
+    applyDemoFixes?: boolean;
     /** Content patches to apply during content copy */
     contentPatches?: string[];
     /** External source for content patches (sibling of codePatchSource). */
@@ -112,6 +118,11 @@ export interface EdsResetResult extends HandlerResponse {
      * code (D23), in SC words. Present only for a project built on an added demo.
      */
     demoCaveats?: string[];
+    /**
+     * Demo Builder's fixes on an added demo (EDS-13f): what this reset applied,
+     * and what fits and was left for the SC to accept. Absent for a shipped brand.
+     */
+    demoFixes?: { applied?: string[]; offered?: string[] };
     /** Additional error details */
     errorDetails?: Record<string, unknown>;
 }

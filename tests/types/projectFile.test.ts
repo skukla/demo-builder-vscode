@@ -25,7 +25,8 @@ describe('project file names (one family, kind first)', () => {
 
     it('versions start where the migration expects them', () => {
         expect(PROJECT_FILE_VERSION).toBe(2);
-        expect(SHARED_DEMO_FILE_VERSION).toBe(1);
+        // 2 since EDS-13f added `builtWith`; a version-1 file is still read.
+        expect(SHARED_DEMO_FILE_VERSION).toBe(2);
     });
 });
 
