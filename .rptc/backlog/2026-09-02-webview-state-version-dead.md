@@ -3,7 +3,7 @@ id: PL-37
 kind: chore
 area: platform
 value: low
-status: backlog
+status: built
 needs: []
 ---
 
@@ -50,3 +50,4 @@ and deleting a protocol field is not a de-duplication.
 
 - 2026-10-03  Reconciled 2026-10-03: the body's 'no caller anywhere' is wrong — baseWebviewCommand.ts:369-370 calls incrementStateVersion() and returns getStateVersion() from update-state. Check whether any webview reads that version before deleting it.
 - 2026-10-03  Deleted 2026-10-03: no webview sends update-state or reads its version, and WebviewClient ignores the handshake payload, so the field, increment, getter, handshake payload, response field and their tests are gone; the update-state and get-state handlers themselves have no webview sender either and were left for a separate decision.
+- 2026-10-03  chore(platform): five small clean-ups (PL-36, PL-37, PL-40, PL-44, PL-56b) (`6817f5486`)

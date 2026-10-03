@@ -394,7 +394,7 @@ each item's own file; what has already landed against an item is in its
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
 | `PL-23` | feature | [Graph-based dependency system](2026-08-30-graph-based-dependencies.md) | — | low | backlog |
-| `PL-36` | fix | [The third Node-version sort in installHandler is untested](2026-09-02-install-handler-target-version-sort.md) | — | med | backlog |
+| `PL-36` | fix | [The third Node-version sort in installHandler is untested](2026-09-02-install-handler-target-version-sort.md) | — | med | built |
 | `PR-1` | epic | [Reframe prerequisites: extension-wide tools vs project-shape requirements (Path A)](2026-06-11-prereqs-architecture-reframe.md) | — | low | backlog |
 
 ### platform  (68)
@@ -447,12 +447,12 @@ each item's own file; what has already landed against an item is in its
 | `PL-55` | chore | └ [Two architectural domains have no convention at all — one of them is a non-negotiable](2026-09-10-architecture-conventions-never-written.md) | — | high | shipped |
 | `PL-57` | chore | └ [The component-extraction convention was enforced by nothing](2026-09-11-component-extraction-convention-unenforced.md) | — | med | shipped |
 | `PL-58` | chore | └ [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) | — | high | backlog |
-| `PL-37` | chore | [The webview handshake's `stateVersion` is write-only](2026-09-02-webview-state-version-dead.md) | — | low | backlog |
+| `PL-37` | chore | [The webview handshake's `stateVersion` is write-only](2026-09-02-webview-state-version-dead.md) | — | low | built |
 | `PL-38` | chore | [Our two most-mocked modules are faked 122 different ways](2026-09-02-webviewclient-mock-divergence.md) | — | med | shipped |
 | `PL-39` | chore | [An item can be marked done while its own body says what is left](2026-09-02-finished-items-carrying-remainders.md) | — | med | backlog |
 | `PL-40` | question | [Can the wizard's configuration warnings even fire, and does anyone need them?](2026-09-03-webview-warnings-reach-nobody.md) | — | med | open |
 | `PL-41` | fix | [Three suites fail only under full-suite load, and it costs real pushes](2026-09-03-suites-that-fail-only-under-load.md) | — | med | shipped |
-| `PL-44` | fix | └ [A lint probe planted inside tests/ races every suite that walks tests/](2026-09-05-lint-probe-races-every-tree-walker.md) | — | med | backlog |
+| `PL-44` | fix | └ [A lint probe planted inside tests/ races every suite that walks tests/](2026-09-05-lint-probe-races-every-tree-walker.md) | — | med | built |
 | `PL-51` | fix | [Test suites that rebuild a mock wall their family helper already owns](2026-09-08-suites-rebuilding-their-family-mock-wall.md) | — | med | backlog |
 | `PL-52` | fix | [A hook-proof suite fails under full parallel load and refuses pushes](2026-09-08-hook-proof-suite-flakes-under-load.md) | — | med | shipped |
 | `PL-53` | question | [351 of the god file's 647 classes appear in no source string — 254 rules deleted](2026-09-09-god-file-classes-nothing-uses.md) | — | med | shipped |
