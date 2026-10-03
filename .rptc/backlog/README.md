@@ -284,7 +284,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-7` | fix | [remove_integration reports success while leaving deployed code running](2026-08-28-remove-integration-leaves-runtime-deployed.md) | — | high | shipped |
 | `AB-8` | question | [Where does event-provider management belong, and what does an SC do with it?](2026-09-09-event-provider-surface-design.md) | — | med | open |
 | `AB-10` | feature | └ [An "ERP" section in Commerce Admin where a business user configures the integration](2026-09-16-erp-settings-in-commerce-admin.md) | — | med | superseded |
-| `AB-11` | feature | └ [Explain the optional App Management listing, and warn that unassociating deletes settings](2026-09-17-app-management-associate-handoff.md) | — | low | backlog |
+| `AB-11` | feature | └ [Explain the optional App Management listing, and warn that unassociating deletes settings](2026-09-17-app-management-associate-handoff.md) | — | low | built |
 | `AB-12` | feature | └ [Removing an integration leaves it "Associated" in App Management](2026-09-17-app-management-teardown-order.md) | AB-11 | low | backlog |
 | `AB-13` | feature | └ [An installed integration takes an update: new code, then Commerce brought to it](2026-09-17-integration-updates.md) | — | high | built |
 | `AB-14` | question | └ [Where does an ERP price go when the project also has ACO?](2026-09-17-erp-pricing-to-aco.md) | PL-60 | low | gated |
@@ -364,11 +364,11 @@ each item's own file; what has already landed against an item is in its
 | `AB-55` | fix | └ [Every order on Justrite is refused: the placement check outruns Commerce](2026-10-02-erp-placement-check-outruns-commerce.md) | — | high | built |
 | `AB-56` | fix | └ [A split order is sent to its ERPs again on later saves](2026-10-02-erp-split-order-resent-on-later-saves.md) | — | med | built |
 | `AB-57` | fix | └ [An ERP's own shipment, echoed back from Commerce, was refused and re-delivered for hours](2026-10-02-erp-shipment-echo-child-line.md) | — | high | built |
-| `AB-58` | fix | └ [A removed alarm survives the deploy, and Demo Builder cannot see or delete it](2026-10-02-runtime-trigger-left-after-deploy.md) | — | low | backlog |
+| `AB-58` | fix | └ [A removed alarm survives the deploy, and Demo Builder cannot see or delete it](2026-10-02-runtime-trigger-left-after-deploy.md) | — | low | built |
 | `AB-59` | feature | └ [The ERP's Settings screen should be settings: a form an ERP user edits, not panels of text](2026-10-02-erp-settings-screen-is-a-form.md) | — | med | built |
 | `AB-60` | question | └ [How fine-grained can events be, in each direction?](2026-10-02-event-payload-granularity.md) | — | med | open |
 | `AB-61` | fix | └ [Reset ERPs stops when the integration's undo takes longer than 60 seconds](2026-10-02-erp-reset-outruns-sixty-seconds.md) | — | high | built |
-| `AB-62` | fix | └ [A second ERP edit to a product can lose to the first edit's echo](2026-10-02-erp-edit-lost-to-its-own-echo.md) | — | med | backlog |
+| `AB-62` | fix | └ [A second ERP edit to a product can lose to the first edit's echo](2026-10-02-erp-edit-lost-to-its-own-echo.md) | — | med | built |
 | `AB-63` | fix | └ [The ERP's on-hand stock does not drop when it posts a shipment](2026-10-02-erp-stock-does-not-drop-at-goods-issue.md) | — | med | backlog |
 | `AB-64` | feature | └ [An ERP can own the products sold on named websites](2026-10-02-erp-owns-products-by-website.md) | — | med | built |
 | `AB-65` | fix | └ [A stray dot after the first editable number in the ERP's Number Series table](2026-10-03-erp-number-series-stray-dot.md) | — | low | backlog |

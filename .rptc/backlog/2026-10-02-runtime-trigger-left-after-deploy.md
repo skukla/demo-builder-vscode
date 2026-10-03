@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: []
 value: low
-status: backlog
+status: built
 ---
 
 # A removed alarm survives the deploy, and Demo Builder cannot see or delete it
@@ -41,3 +41,4 @@ deletes left-behind actions, not triggers or rules.
 - 2026-10-02  Owner asked 2026-10-02: deleted in namespace 285361-kuklajustritexjap-justriteerp (JustriteERP workspace) with aio rt rule delete erp-prices-hourly-on-timer and aio rt trigger delete erp-prices-hourly-timer; re-listed: only erp-schedule-heartbeat and events-retry-timer (and their rules) remain. Open: Demo Builder tools to list and delete undeclared triggers and rules
 - 2026-10-02  docs(backlog): AB-58 — the leftover hourly alarm and its rule deleted on Justrite (`417b1b715`)
 - 2026-10-03  Built, not committed, not run live (loop/2026-10-03-overnight): the deploy's clean-up and delete_undeclared_runtime_code now also delete a rule no app sharing the workspace declares when the action it starts is in a package those apps declare, and the trigger only such rules used (runtimeUndeclaredActions.ts, same command a removal uses: aio runtime rule/trigger delete). list_runtime_packages also answers triggers and rules. Left alone on purpose: a trigger with no rule (nothing says whose it is), and everything when a config keeps its triggers or rules in a $include. Open for the owner: one live run against a workspace with a leftover rule, to confirm 'aio runtime rule list --json' prints trigger.name and action.path as read from the CLI source; if it does not, the clean-up stops with 'could not check' and deletes nothing. Found on the way: 'aio runtime trigger delete' (CLI source) deletes the trigger only and never calls the alarms feed's delete, on the removal path too
+- 2026-10-03  fix(erp): deploy clean-up removes leftover timers; removal warns about App Management; a fill's warning stays visible (AB-58, AB-11, AB-12, AB-26z, AB-47) (`844afae69`)

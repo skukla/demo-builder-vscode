@@ -4,7 +4,7 @@ kind: fix
 area: app-builder
 needs: []
 value: med
-status: backlog
+status: built
 parent: AB-26
 ---
 
@@ -31,3 +31,7 @@ The import of a Commerce change should not overwrite an ERP field the ERP itself
 the change being echoed. Cheapest form: the integration tags the Commerce write it makes for an
 ERP event, and drops the Commerce save event that write causes (it already knows its own
 writes: the ledger records them), instead of importing it back into the ERP.
+
+## Shipped so far
+
+- 2026-10-03  Fixed 2026-10-03 (overnight loop): the integration remembers its own product write for two minutes and drops the Commerce save it causes (commerce-erp-integration fee5a13, branch loop/2026-10-03-overnight; src/lib/own-writes.js). A box journey replays the live timeline and failed before. Live check owed: the quick rename on Justrite.
