@@ -176,6 +176,8 @@ export const TOOL_NARRATION: Record<string, string> = {
     check_setup_steps: 'Checking demo setup in Commerce',
 
     // ── I/O Events lifecycle (AB-6) ─────────────────────────────────────
+    list_event_providers: 'Listing the event providers',
+    delete_event_provider: 'Deleting the event provider',
     install_integration: 'Installing the app into Commerce',
     reinstall_integration: 'Reinstalling the app in Commerce',
     update_integration: 'Updating the integration',

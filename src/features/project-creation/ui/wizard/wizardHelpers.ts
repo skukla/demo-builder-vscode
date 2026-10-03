@@ -471,25 +471,23 @@ function extractImportedMeshEndpoint(
     return undefined;
 }
 
-/** Validate stack/package configuration consistency and log warnings */
-function validateStackPackageConfig(
-    wizardState: ProjectConfigSource,
-    packages: DemoPackage[] | undefined,
-): void {
+/**
+ * Where `buildProjectConfig` sends its two configuration warnings. The wizard hands
+ * the extension's Debug Logs channel (PL-65): both are reachable from a saved
+ * project file, and the webview console they used to go to is somewhere no SC
+ * looks. Without a sink they go to the console, which is right for the extension
+ * host's MCP `create_project` — and it refuses both states before it builds.
+ */
+export type ConfigWarningSink = (message: string) => void;
+
+const consoleWarning: ConfigWarningSink = (message) => console.warn(message);
+
+/** Warn when a stack is selected with no demo package */
+function validateStackPackageConfig(wizardState: ProjectConfigSource, warn: ConfigWarningSink): void {
     if (wizardState.selectedStack && !wizardState.selectedPackage) {
-        console.warn(
-            '[Demo Builder] Incomplete configuration: architecture is selected but brand/package is missing. ' +
-                'This may result in missing storefront data.',
-        );
-        // eslint-disable-next-line no-console
-        console.log(
-            '[buildProjectConfig] Validation warning - selectedStack without selectedPackage:',
-            {
-                selectedPackage: wizardState.selectedPackage,
-                selectedStack: wizardState.selectedStack,
-                hasPackages: !!packages,
-                packagesCount: packages?.length || 0,
-            },
+        warn(
+            `[Demo Builder] Incomplete configuration: stack '${wizardState.selectedStack}' is ` +
+                'selected but no demo package is. This may result in missing storefront data.',
         );
     }
 }
@@ -506,22 +504,18 @@ function resolveFrontendSourceFromPackage(
     return pkg?.storefronts?.[wizardState.selectedStack]?.source;
 }
 
-/** Validate that stack lookup succeeded and log warnings if not */
+/** Warn when the selected stack id resolves to no stack this build ships */
 function validateStackLookup(
     wizardState: ProjectConfigSource,
     stack: ReturnType<typeof getStackById> | undefined,
+    warn: ConfigWarningSink,
 ): void {
     if (wizardState.selectedStack && !stack) {
-        console.warn(
-            `[Demo Builder] Configuration warning: selected architecture '${wizardState.selectedStack}' not found. ` +
-                'Components may be missing from project.',
+        warn(
+            `[Demo Builder] Configuration warning: stack '${wizardState.selectedStack}' ` +
+                `(demo package '${wizardState.selectedPackage ?? 'none'}') is not one this build ` +
+                'ships. Components may be missing from the project.',
         );
-        // eslint-disable-next-line no-console
-        console.log('[buildProjectConfig] Validation warning - stack lookup failed:', {
-            selectedStack: wizardState.selectedStack,
-            selectedPackage: wizardState.selectedPackage,
-            stackFound: false,
-        });
     }
 }
 
@@ -623,12 +617,13 @@ export function buildProjectConfig(
     wizardState: ProjectConfigSource,
     importedSettings?: ImportedSettings | null,
     packages?: DemoPackage[],
+    warn: ConfigWarningSink = consoleWarning,
 ): ProjectCreationConfig {
     const importedMeshEndpoint = extractImportedMeshEndpoint(wizardState.componentConfigs);
-    validateStackPackageConfig(wizardState, packages);
+    validateStackPackageConfig(wizardState, warn);
     const frontendSource = resolveFrontendSourceFromPackage(wizardState, packages);
     const stack = wizardState.selectedStack ? getStackById(wizardState.selectedStack) : undefined;
-    validateStackLookup(wizardState, stack);
+    validateStackLookup(wizardState, stack, warn);
 
     return {
         projectName: wizardState.projectName,

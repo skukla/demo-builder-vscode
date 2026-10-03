@@ -22,6 +22,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerAdobeResourceTools } from '@/features/ai/server/adobeResourceTools';
+import { registerEventProviderTools } from '@/features/ai/server/eventProviderTools';
 import { registerAdobeTools } from '@/features/ai/server/adobeTools';
 import { registerApplyUpdatesTool } from '@/features/ai/server/applyUpdatesTool';
 import { registerAuthTools } from '@/features/ai/server/authTools';
@@ -98,6 +99,7 @@ describe('registration against the real MCP SDK', () => {
         ],
         ['discovery tools', (s: McpToolServer) => registerDiscoveryTools(s)],
         ['adobe resource tools', (s: McpToolServer) => registerAdobeResourceTools(s, ctxFactory)],
+        ['event provider tools', (s: McpToolServer) => registerEventProviderTools(s, ctxFactory)],
         ['configure_project', (s: McpToolServer) => registerConfigureProjectTool(s, stateManager)],
         ['cloud resource tools', (s: McpToolServer) => registerCloudResourceTools(s, ctxFactory)],
     ])('accepts %s', (_name, register) => {
@@ -140,6 +142,7 @@ describe('registration against the real MCP SDK', () => {
             registerValidateSelectionTool(s, ctxFactory);
             registerComponentRequirementsTool(s);
             registerAdobeResourceTools(s, ctxFactory);
+            registerEventProviderTools(s, ctxFactory);
             registerConfigureProjectTool(s, stateManager);
             registerCloudResourceTools(s, ctxFactory);
             registerStorefrontTools(s, ctxFactory);

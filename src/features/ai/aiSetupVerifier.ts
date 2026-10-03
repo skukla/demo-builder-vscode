@@ -43,6 +43,13 @@ export interface AiVerificationResult {
      * above.
      */
     inventory: AiInventory;
+    /**
+     * Whether Claude Code — the command-line tool the chat runs — is installed.
+     * Not a file check, so `verifyAiSetup` never sets it: the handler that called
+     * it adds this from the extension's command executor (AI-4a). Absent means
+     * not asked, which the badge treats as installed.
+     */
+    claudeCli?: { installed: boolean };
 }
 
 /** Cheap existence probe (access-based; false on any error). */

@@ -70,7 +70,8 @@ export interface AiReadyState {
         | 'Broken'
         | 'Updating AI configuration'
         | 'Regenerating AI files'
-        | 'AI tooling missing';
+        | 'AI tooling missing'
+        | 'Claude Code not installed';
 }
 
 /**
@@ -97,6 +98,8 @@ export interface VerifyAiSetupResponse {
             reason: 'setting-disabled' | 'tool-missing';
         }>;
     };
+    /** Whether Claude Code (the command-line tool) is installed; absent = not asked. */
+    claudeCli?: { installed: boolean };
 }
 
 /**

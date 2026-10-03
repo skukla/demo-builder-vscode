@@ -15,3 +15,7 @@ selectedStack and selectedPackage unchecked: useWizardState.ts) and are pinned b
 useWizardState-seeding.test.tsx. They go to the webview console, where no SC looks. Rewire them
 to the extension's log channel (Debug Logs) the way other webview warnings are forwarded, so a
 bad saved file leaves a trace someone can read.
+
+## Shipped so far
+
+- 2026-10-03  Built 2026-10-03: the two warnings live in wizardHelpers.buildProjectConfig (not useWizardState.ts), which now takes a warning sink; the wizard hands it WebviewClient.log, which BaseWebviewCommand writes to Debug Logs; the extension-host MCP caller keeps the console default.

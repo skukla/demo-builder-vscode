@@ -19,17 +19,15 @@
  * checked — and this fails the build the day it starts.
  */
 
-import { execSync } from 'child_process';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { workingTreeFiles } from './architectureScan';
 
 const ROOT = join(__dirname, '../..');
 
 /** Files under tests/ that install a module wall at the top level. */
 function wallModules(): string[] {
-    return execSync(`git ls-files 'tests/**/*.ts' 'tests/**/*.tsx'`, { encoding: 'utf8', cwd: ROOT })
-        .trim()
-        .split('\n')
+    return workingTreeFiles('tests/**/*.ts', 'tests/**/*.tsx')
         .filter((f) => !/\.test\.tsx?$/.test(f))
         .filter((f) => /^jest\.mock\(/m.test(readFileSync(join(ROOT, f), 'utf8')));
 }
@@ -40,12 +38,7 @@ function wallModules(): string[] {
  * @param walls - the wall modules to look for, by basename without extension
  */
 function misorderedSuites(walls: Set<string>): string[] {
-    const suites = execSync(`git ls-files 'tests/**/*.test.ts' 'tests/**/*.test.tsx'`, {
-        encoding: 'utf8',
-        cwd: ROOT,
-    })
-        .trim()
-        .split('\n');
+    const suites = workingTreeFiles('tests/**/*.test.ts', 'tests/**/*.test.tsx');
 
     const offenders: string[] = [];
     for (const suite of suites) {

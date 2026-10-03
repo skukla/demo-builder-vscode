@@ -264,6 +264,17 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
         bytes: 1_000,
         why: 'created project id + name, or a refusal explaining the likely cause',
     },
+    list_event_providers: {
+        bytes: 20_000,
+        why:
+            "One workspace's own providers + its registrations, or a one-sentence reason it " +
+            'could not read them. A workspace holds a handful of each (the starter kit, the ' +
+            'largest known producer, makes ~23 registrations) — far under this ceiling.',
+    },
+    delete_event_provider: {
+        bytes: 4_000,
+        why: 'one outcome per deleted entity (the named registrations, then the provider), or a refusal',
+    },
     create_adobe_workspace: {
         bytes: 1_000,
         why: 'created workspace id + name and the project it landed in',

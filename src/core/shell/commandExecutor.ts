@@ -574,9 +574,12 @@ export class CommandExecutor {
                 return result.stdout.trim().length > 0;
             }
 
-            // For other commands, use enhanced path
+            // For other commands, use enhanced path. `shell` is NOT optional: without
+            // one execa takes the whole string as an executable name, nothing runs,
+            // and the empty stdout read as "absent" for every tool (found 2026-10-03).
             const result = await this.execute(`which ${command}`, {
                 enhancePath: true,
+                shell: DEFAULT_SHELL,
             });
             return result.stdout.trim().length > 0;
         } catch {

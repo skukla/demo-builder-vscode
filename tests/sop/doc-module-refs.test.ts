@@ -19,8 +19,8 @@
  * suite will pass. Judging that is a release-cut job (`.claude/skills/codebase-sweep`).
  */
 import { existsSync, readFileSync, readdirSync } from 'fs';
-import { execSync } from 'child_process';
 import { dirname, join, relative } from 'path';
+import { workingTreeFiles } from './architectureScan';
 
 const ROOT = join(__dirname, '..', '..');
 
@@ -68,9 +68,7 @@ const ALLOWED: Record<string, string> = {
 };
 
 function docs(): string[] {
-    return execSync("git ls-files '*.md'", { encoding: 'utf8', cwd: ROOT })
-        .trim()
-        .split('\n')
+    return workingTreeFiles('*.md')
         .filter((f) => !EXCLUDED.some((x) => f.includes(x)));
 }
 
@@ -249,8 +247,7 @@ describe('a link to a heading reaches a heading that exists', () => {
     // that existed lived in ADRs, so the narrower scope found nothing at all. The
     // control below is what caught that; without it this passed over an empty list.
     const anchorSources = (): string[] =>
-        execSync("git ls-files '*.md'", { encoding: 'utf8', cwd: ROOT })
-            .split('\n')
+        workingTreeFiles('*.md')
             .filter(
                 (f) =>
                     f &&
@@ -327,8 +324,7 @@ describe('the inventories that claim to be complete, are', () => {
 
     it('src/commands/CLAUDE.md names every module in that directory', () => {
         const body = readFileSync(join(ROOT, 'src/commands/CLAUDE.md'), 'utf8');
-        const files = execSync("git ls-files 'src/commands/*.ts'", { encoding: 'utf8', cwd: ROOT })
-            .split('\n')
+        const files = workingTreeFiles('src/commands/*.ts')
             .filter(Boolean)
             .map((f) => f.split('/').pop() as string);
         expect(files.filter((f) => !body.includes(f))).toStrictEqual([]);
@@ -505,8 +501,7 @@ describe('the documentation index lists every document under docs/', () => {
     //                                 is the first thing docs/README.md states.
     const INDEX = join(ROOT, 'docs/README.md');
     const indexed = (): string[] =>
-        execSync("git ls-files 'docs/'", { encoding: 'utf8', cwd: ROOT })
-            .split('\n')
+        workingTreeFiles('docs/')
             .filter(
                 (f) =>
                     f.endsWith('.md') &&
@@ -540,8 +535,7 @@ describe('the architecture index lists every architecture document', () => {
     const INDEX = join(ROOT, 'docs/architecture/CLAUDE.md');
 
     const topLevelDocs = (): string[] =>
-        execSync("git ls-files 'docs/architecture/*.md'", { encoding: 'utf8', cwd: ROOT })
-            .split('\n')
+        workingTreeFiles('docs/architecture/*.md')
             .filter((f) => f.endsWith('.md') && f.split('/').length === 3)
             .map((f) => f.split('/').pop() as string)
             .filter((f) => f !== 'CLAUDE.md');

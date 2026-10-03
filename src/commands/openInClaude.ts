@@ -2,9 +2,16 @@ import * as vscode from 'vscode';
 import { hasConversation as hasClaudeConversation } from './claudeSessionStore';
 import { BaseCommand } from '@/core/base/baseCommand';
 import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
+import {
+    CLAUDE_CODE_INSTALL_URL,
+    isClaudeCliInstalled,
+    type CommandProbe,
+} from '@/features/ai/claudeCliAvailability';
 import { refreshHomeAgentsMd } from '@/features/project-creation/services/aiBundle/homeAiContextWriter';
 import { sanitizeTemplateValue } from '@/features/project-creation/services/sanitization';
 import type { Project } from '@/types/base';
+import type { Logger } from '@/types/logger';
+import type { StateManager } from '@/types/state';
 
 /**
  * The AI engine — which AI tool Demo Builder launches.
@@ -24,6 +31,9 @@ const CLIPBOARD_FALLBACK_TIP_SHOWN_KEY = 'demoBuilder.ai.clipboardFallbackTipSho
 
 /** Terminal name displayed in the integrated terminals dropdown. */
 const TERMINAL_NAME = 'Claude Code';
+
+/** The one action on the not-installed message. */
+const HOW_TO_INSTALL = 'How to install';
 
 /**
  * Find the live "Claude Code" chat terminal, if one is open. "Live" means a
@@ -117,7 +127,27 @@ export function buildRehomePrefix(currentProjectName?: string): string {
  * "pick a prompt, drop it into the conversation" model can't work there.
  */
 export class OpenInClaudeCommand extends BaseCommand {
+    /**
+     * @param cliProbe - the extension's command executor (its `commandExists`),
+     *   asked whether `claude` is installed before anything is typed into a terminal
+     */
+    constructor(
+        context: vscode.ExtensionContext,
+        stateManager: StateManager,
+        logger: Logger,
+        private readonly cliProbe: CommandProbe,
+    ) {
+        super(context, stateManager, logger);
+    }
+
     public async execute(arg?: OpenInClaudeArg): Promise<void> {
+        // Without `claude` the terminal would only say `command not found`. Say what
+        // is missing instead, and open nothing (AI-4a — the field report).
+        if (!(await isClaudeCliInstalled(this.cliProbe))) {
+            await this.explainMissingCli();
+            return;
+        }
+
         // Only the prompt matters now — any project arg is ignored. The home Chat
         // always launches at the projects root so one session addresses any
         // project by name via the in-extension MCP tools.
@@ -145,6 +175,19 @@ export class OpenInClaudeCommand extends BaseCommand {
             await vscode.window.showErrorMessage(
                 `Failed to open Claude Code: ${error instanceof Error ? error.message : 'Unknown error'}`,
             );
+        }
+    }
+
+    /** Tell the user Claude Code is not installed, and offer the install page. */
+    private async explainMissingCli(): Promise<void> {
+        this.logger.warn('[Open in Claude] `claude` not found — the chat was not opened');
+        const choice = await vscode.window.showWarningMessage(
+            'Claude Code (the command-line tool) is not installed, so the chat cannot open. ' +
+                'Install it, then try again.',
+            HOW_TO_INSTALL,
+        );
+        if (choice === HOW_TO_INSTALL) {
+            await vscode.env.openExternal(vscode.Uri.parse(CLAUDE_CODE_INSTALL_URL));
         }
     }
 

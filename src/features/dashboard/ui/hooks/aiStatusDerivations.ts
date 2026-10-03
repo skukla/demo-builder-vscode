@@ -75,7 +75,8 @@ export interface AiBadgeInputs {
  *           convention that blue is "in-flight / transient" across badges
  *           (Mesh "Loading status...", Frontend "Starting...", etc.)
  *   red:    any of the project AI file checks failed
- *   yellow: files OK but an inventory inspector errored
+ *   yellow: files OK but Claude Code (the command-line tool) is not installed,
+ *           or an inventory inspector errored
  *   green:  files OK and inventory healthy
  *
  * Global MCP registration (~/.claude.json) is an optional convenience for
@@ -113,6 +114,13 @@ export function deriveAiReadyState(inputs: AiBadgeInputs): AiReadyState {
     const anyCheckFailed = checks.some((c) => c.status !== 'ok');
     if (anyCheckFailed) {
         return { label: 'AI', color: 'red', text: 'Broken' };
+    }
+
+    // The files are fine, but the chat cannot start without the command-line tool.
+    // Green here was the field report: Claude Desktop installed, no `claude`, badge
+    // green, and the click ended at `command not found` (AI-4a). Absent = not asked.
+    if (verifyResult.claudeCli?.installed === false) {
+        return { label: 'AI', color: 'yellow', text: 'Claude Code not installed' };
     }
 
     const inv = verifyResult.inventory ?? {};

@@ -98,6 +98,11 @@
             "tool": "start_erp_downtime",
             "reverses": "end_erp_downtime",
             "note": "The demo ERP's simulated downtime also ends by itself when its minutes are up (AB-59)."
+        },
+        {
+            "tool": "delete_event_provider",
+            "reverses": "reinstall_integration",
+            "note": "Added 2026-10-03 with the tool (AB-6), at the owner's ask - not create-shaped, so the enforcer would not have asked. The providers it can delete are the open workspace's own 3rd-party custom providers, which in practice an App Management app (the Commerce starter kit) created at install; reinstall_integration uninstalls and installs the app again, and the install finds-or-creates every provider the app declares (.rptc/research/event-provider-lifecycle/research.md section 1.4 - read from the kit's source, not yet seen live). A provider made any other way (a hand-run aio onboarding, a custom app) has no reversal in this extension: the create tools were removed with the rest of the pulled surface in 4a3889049 and did not come back. Consent-gated for that reason."
         }
     ]
 }

@@ -268,18 +268,13 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: ['id'],
         sessionGrant: false,
     },
-    delete_event_registration: {
-        action: 'Delete an event registration',
-        consequence:
-            'Stops Adobe I/O event delivery for this registration. Anything consuming its journal or webhook goes quiet.',
-        target: ['registrationId'],
-        sessionGrant: false,
-    },
     delete_event_provider: {
         action: 'Delete an event provider',
         consequence:
-            'Deletes the provider and its registrations from the workspace. Events of these types stop publishing.',
-        target: ['providerId'],
+            "Deletes the Adobe I/O event provider, and the registrations named with it, from the open project's workspace. Events of its types stop publishing, and anything consuming those registrations goes quiet.",
+        // The label, not the id: nobody can verify a provider id by reading it,
+        // and the tool refuses when the label does not match the provider.
+        target: ['providerLabel'],
         sessionGrant: false,
     },
     migrate_storefront_name: {

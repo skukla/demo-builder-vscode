@@ -18,6 +18,13 @@ import { WizardState } from '@/types/webview';
 import type { CreationFailedPayload } from '@/types/webviewPayloads';
 import type { ImportedSettings } from '@/types/wizard';
 
+/**
+ * The config builder's warnings go to the extension's Debug Logs channel (PL-65):
+ * a saved project can trip them, and the webview console is where no SC looks.
+ * Module-level so the callbacks below do not take a new function every render.
+ */
+const warnToDebugLogs = (message: string): void => webviewClient.log('warn', message);
+
 /** Extract GitHub owner/repo from EDS config for GitHub App check */
 function extractGitHubRepoInfo(edsConfig: WizardState['edsConfig']): {
     owner?: string;
@@ -398,7 +405,7 @@ export function ProjectCreationStep({
         // All checks passed, start creation
         setPhase('creating');
 
-        const projectConfig = buildProjectConfig(state, importedSettings, packages);
+        const projectConfig = buildProjectConfig(state, importedSettings, packages, warnToDebugLogs);
         vscode.createProject(projectConfig);
     }, [checkGitHubApp, state, importedSettings, packages]);
 
@@ -409,7 +416,7 @@ export function ProjectCreationStep({
     const handleGitHubAppInstalled = useCallback(() => {
         // App now installed, proceed with creation
         setPhase('creating');
-        const projectConfig = buildProjectConfig(state, importedSettings, packages);
+        const projectConfig = buildProjectConfig(state, importedSettings, packages, warnToDebugLogs);
         vscode.createProject(projectConfig);
     }, [state, importedSettings, packages]);
 

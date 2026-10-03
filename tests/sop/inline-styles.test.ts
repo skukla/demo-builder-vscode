@@ -12,8 +12,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { execSync } from 'child_process';
-import { loadLedger, expectCeiling } from './architectureScan';
+import { loadLedger, expectCeiling, workingTreeFiles } from './architectureScan';
 
 /**
  * ONE definition of what an inline style IS, shared by the per-file checks and
@@ -393,9 +392,7 @@ describe('ADR-017: styling reaches Spectrum through cn(), not style objects', ()
      */
     const LEDGER = loadLedger('webview-architecture-rules.exemptions.json');
 
-    const TSX = execSync("git ls-files 'src/**/*.tsx'", { encoding: 'utf8' })
-        .trim()
-        .split('\n')
+    const TSX = workingTreeFiles('src/**/*.tsx')
         .filter(Boolean);
 
     function counts(): { total: number; dynamic: number } {

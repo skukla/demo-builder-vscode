@@ -66,7 +66,9 @@ const EXPECTED: Record<string, number> = {
     // change the demo ERP through the Adobe sign-in, like set_erp_settings (AB-59).
     // 55 -> 56 on 2026-10-03: reset_project (was reset_eds_project) also resets a headless
     // project, whose mesh redeploy needs the Adobe sign-in.
-    adobe: 56,
+    // 56 -> 58 on 2026-10-03: list_event_providers and delete_event_provider read and
+    // delete a workspace's I/O event providers through the Adobe sign-in (AB-6).
+    adobe: 58,
     // 21 -> 23 on 2026-09-30 (hotfix beta.149 merged): get_content_access and
     // set_content_reader read and write the DA.live org permissions sheet (EDS-22).
     // 23 -> 24 on 2026-10-03: create_project_from_file, the same creation as create_project.
@@ -103,7 +105,7 @@ const EXPECTED: Record<string, number> = {
  * files. That counts text, not declarations, and was roughly double. The CONTROL below
  * caught it — which is the argument for having one.)
  */
-const EXPECTED_TOOLS = 152; // 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x); 144 with add_erp (AB-16).
+const EXPECTED_TOOLS = 154; // 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x); 144 with add_erp (AB-16).
 // 141 -> 142 on 2026-09-27: delete_undeclared_runtime_code.
 // 142 -> 143 on 2026-09-27: load_erp_demo_data.
 // 144 -> 146 on 2026-09-29: get_erp_settings and set_erp_settings (AB-16j).
@@ -111,6 +113,7 @@ const EXPECTED_TOOLS = 152; // 138 -> 141 on 2026-09-25: the three demo setup ch
 // 148 -> 151 on 2026-10-02: the demo ERP's look and simulated downtime (AB-59).
 // 151 -> 152 on 2026-10-03: create_project_from_file (reset_eds_project was renamed
 // reset_project, which does not change the count).
+// 152 -> 154 on 2026-10-03: list_event_providers and delete_event_provider (AB-6).
 
 interface Declaration {
     name: string;

@@ -1241,5 +1241,21 @@
             "create_project_from_file"
         ],
         "why": "Added 2026-10-03 with the tool: the projects list's Import opens a file picker, so before this an agent had no way to start a project from an exported file and would hand-copy its fields into create_project. Confirm-gated, so a reach without consent is refused; a MISS is a discoverability finding about the tool, not a bad prompt."
+    },
+    {
+        "id": "list-event-providers",
+        "prompt": "Which Adobe I/O event providers does my project's workspace have?",
+        "expect": [
+            "list_event_providers"
+        ],
+        "why": "Added with the tool (2026-10-03, AB-6): the read half of tearing eventing back down to zero. Judges whether an agent finds it from a plain question rather than reaching for the aio CLI."
+    },
+    {
+        "id": "delete-event-provider",
+        "prompt": "Delete the 'ERP events' event provider from my project's workspace, and its registrations.",
+        "expect": [
+            "delete_event_provider"
+        ],
+        "why": "Added with the tool (2026-10-03, AB-6): the teardown an ERP-class journey needs to end at zero. Confirm-gated and label-checked, so an agent that reaches it without consent still gets a refusal -- what this judges is whether the tool is findable at all."
     }
 ]

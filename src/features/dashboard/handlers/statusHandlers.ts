@@ -16,11 +16,13 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
 import { getMeshEndpoint } from '@/core/state/appBuilderComponentState';
 import { verifyAiSetup } from '@/features/ai/aiSetupVerifier';
+import { isClaudeCliInstalled } from '@/features/ai/claudeCliAvailability';
 import { detectMcpDrift } from '@/features/ai/mcpDriftDetector';
 import { handleForcedOrgSwitch } from '@/features/authentication/handlers/orgSwitchHandler';
 import {
     handleRegenerateAiFiles,
     logAiVerification,
+    EXTENSION_COMMAND_PROBE,
 } from '@/features/dashboard/handlers/aiHandlers';
 import { warmOrgServicesCatalog } from '@/features/dashboard/handlers/warmOrgServicesCatalog';
 import { createAiContextFreshnessCheck } from '@/features/dashboard/services/onOpenChecks/aiContextFreshnessCheck';
@@ -162,7 +164,10 @@ export const handleRequestStatus: MessageHandler = async (context) => {
                 const extensionDistPath = path.join(context.context.extensionPath, 'dist');
                 const result = await verifyAiSetup(p, extensionDistPath, recordedHashes);
                 logAiVerification(context, result); // preserve the on-open observability
-                return result;
+                // The same answer the verify-ai-setup request adds, so the badge
+                // agrees on open and after Regenerate (AI-4a).
+                const installed = await isClaudeCliInstalled(EXTENSION_COMMAND_PROBE);
+                return { ...result, claudeCli: { installed } };
             },
         }),
     ];

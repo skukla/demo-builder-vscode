@@ -251,7 +251,11 @@ export class CommandManager {
         // was retired (ADR-019), and with it `demoBuilder.ai.harness`, which this comment
         // named as the pathway for months after the setting stopped existing.
         // `demoBuilder.ai.engine` selects the tool; `'claude-code'` is its only value.
-        const openInClaude = new OpenInClaudeCommand(this.context, this.stateManager, this.logger);
+        // The executor is resolved per call: commands are built at activation, and
+        // asking for a service then would pin whatever existed at that moment.
+        const openInClaude = new OpenInClaudeCommand(this.context, this.stateManager, this.logger, {
+            commandExists: (name) => ServiceLocator.getCommandExecutor().commandExists(name),
+        });
         this.registerCommand('demoBuilder.openInClaude', async (...args: unknown[]) => {
             const project = args[0] as Project | undefined;
             await openInClaude.execute(project);

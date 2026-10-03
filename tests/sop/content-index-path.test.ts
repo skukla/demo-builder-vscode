@@ -10,13 +10,13 @@
  * that the module's list still covers every path the shipped catalog names.
  */
 
-import { execSync } from 'child_process';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { CONTENT_INDEX_PATHS } from '@/features/eds/services/contentIndex';
 import demoPackages from '@/features/components/config/demo-packages.json';
 import demoPackagesSchema from '@/features/components/config/demo-packages.schema.json';
 import sharedDemoSchema from '@/core/state/config/shared-demo.schema.json';
+import { workingTreeFiles } from './architectureScan';
 
 const ROOT = join(__dirname, '..', '..');
 const OWNER = 'src/features/eds/services/contentIndex.ts';
@@ -26,8 +26,7 @@ function stripComments(source: string): string {
     return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
 }
 
-const SOURCES = execSync("git ls-files 'src/**/*.ts' 'src/**/*.tsx'", { cwd: ROOT, encoding: 'utf8' })
-    .split('\n')
+const SOURCES = workingTreeFiles('src/**/*.ts', 'src/**/*.tsx')
     .filter(Boolean);
 
 describe('the content index path is stated once', () => {

@@ -29,7 +29,7 @@ import { execSync } from 'child_process';
 import { existsSync, readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { reportBundleClassUsage, type UsageReport } from './webviewBundleClasses';
-import { loadLedger, expectBanned, expectClean, expectCeiling, expectFloor } from './architectureScan';
+import { loadLedger, expectBanned, expectClean, expectCeiling, expectFloor, workingTreeFiles } from './architectureScan';
 
 const ROOT = execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();
 const LEDGER = loadLedger('webview-architecture-rules.exemptions.json');
@@ -213,8 +213,7 @@ describe('ADR-018 §1: one cascade order, declared, and every bundle carries it'
     const LAYERS = ['vendor', 'reset', 'theme', 'overrides'];
 
     const sheets = (): string[] =>
-        execSync("git ls-files 'src/**/*.css'", { cwd: ROOT, encoding: 'utf8' })
-            .split('\n')
+        workingTreeFiles('src/**/*.css')
             .filter(Boolean);
 
     const noComments = (css: string): string => css.replace(/\/\*[\s\S]*?\*\//g, '');
@@ -274,8 +273,7 @@ describe('ADR-018 §1: one cascade order, declared, and every bundle carries it'
         //
         // Standalone `<!DOCTYPE html>` pages are out of scope: they load none of
         // our sheets, so a block is the only way they can be styled at all.
-        const files = execSync("git ls-files 'src/**/*.ts' 'src/**/*.tsx'", { cwd: ROOT, encoding: 'utf8' })
-            .split('\n')
+        const files = workingTreeFiles('src/**/*.ts', 'src/**/*.tsx')
             .filter(Boolean);
         const offenders: string[] = [];
         let pagesSkipped = 0;
@@ -359,8 +357,7 @@ describe('ADR-017 §7: a stylesheet lives where its owner lives', () => {
      * about whether it read everything.
      */
     const tokensUsedUnder = (dir: string): Set<string> => {
-        const files = execSync(`git ls-files '${dir}'`, { encoding: 'utf8' })
-            .split('\n')
+        const files = workingTreeFiles(dir)
             .filter((f) => /\.tsx?$/.test(f));
         const out = new Set<string>();
         for (const f of files) {
@@ -415,7 +412,7 @@ describe('ADR-017 §7: a stylesheet lives where its owner lives', () => {
     /** Which features use any of these classes, by exact class token. */
     const featuresUsing = (classes: string[]): Set<string> => {
         const out = new Set<string>();
-        for (const f of execSync("git ls-files 'src/features'", { encoding: 'utf8' }).split('\n')) {
+        for (const f of workingTreeFiles('src/features')) {
             if (!/\.tsx?$/.test(f)) continue;
             const code = readFileSync(join(ROOT, f), 'utf8')
                 .replace(/\/\*[\s\S]*?\*\//g, '')
@@ -427,8 +424,7 @@ describe('ADR-017 §7: a stylesheet lives where its owner lives', () => {
     };
 
     it('a core/ui sheet holds shared-component or cross-feature classes, never one feature\'s', () => {
-        const sheets = execSync("git ls-files 'src/core/ui/styles/*.css'", { encoding: 'utf8' })
-            .split('\n')
+        const sheets = workingTreeFiles('src/core/ui/styles/*.css')
             .filter((f) => f && !BASE_SHEETS.has(f));
         expect(sheets.length).toBeGreaterThan(0); // the rule must have something to check
 
@@ -465,9 +461,7 @@ describe('ADR-018 §2: !important is a symptom, not a mechanism', () => {
      * ten and add one that matters more. That judgement belongs to the migration
      * work (PL-21), which this only stops from being quietly undone.
      */
-    const CSS = execSync("git ls-files 'src/**/*.css'", { encoding: 'utf8' })
-        .trim()
-        .split('\n')
+    const CSS = workingTreeFiles('src/**/*.css')
         .filter(Boolean);
 
     it('CONTROL: the stylesheets are found and read', () => {

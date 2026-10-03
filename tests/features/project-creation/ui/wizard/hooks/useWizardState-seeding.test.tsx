@@ -399,15 +399,20 @@ describe('mode, name and selections', () => {
  * against the stacks this build ships. These tests drive that chain end to end —
  * saved settings, through the hook, into the builder — and count the warning.
  *
- * The count is asserted, not the wording: each state trips exactly one of the two
- * branches, and a state that resolves trips neither.
+ * The count is asserted, and the ids each warning names: each state trips exactly
+ * one of the two branches, and a state that resolves trips neither.
+ *
+ * PL-65: the warnings go to a sink the CALLER hands in — the wizard hands the
+ * extension's Debug Logs channel — rather than the webview console, where no SC
+ * looks. So the sink is what these tests watch, and the console must stay quiet.
  */
 describe('a saved project the build cannot resolve still reaches the config builder', () => {
-    let warn: jest.SpyInstance;
+    let warn: jest.Mock;
+    let consoleWarn: jest.SpyInstance;
 
     beforeEach(() => {
-        warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
-        jest.spyOn(console, 'log').mockImplementation(() => undefined);
+        warn = jest.fn();
+        consoleWarn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
     });
 
     afterEach(() => {
@@ -422,10 +427,12 @@ describe('a saved project the build cannot resolve still reaches the config buil
             } as ImportedSettings),
         });
 
-        const config = buildProjectConfig(state);
+        const config = buildProjectConfig(state, undefined, undefined, warn);
 
         expect(state.selectedStack).toBe('a-stack-this-build-lacks');
         expect(warn).toHaveBeenCalledTimes(1);
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining("'a-stack-this-build-lacks'"));
+        expect(consoleWarn).not.toHaveBeenCalled();
         expect(config.components).toBeUndefined();
     });
 
@@ -434,10 +441,12 @@ describe('a saved project the build cannot resolve still reaches the config buil
             importedSettings: { selectedStack: 'eds-accs' } as ImportedSettings,
         });
 
-        const config = buildProjectConfig(state);
+        const config = buildProjectConfig(state, undefined, undefined, warn);
 
         expect(state.selectedPackage).toBeUndefined();
         expect(warn).toHaveBeenCalledTimes(1);
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining("'eds-accs'"));
+        expect(consoleWarn).not.toHaveBeenCalled();
         // The stack itself resolves, so the components are still built.
         expect(config.components?.frontend).toBeDefined();
     });
@@ -450,7 +459,7 @@ describe('a saved project the build cannot resolve still reaches the config buil
             } as ImportedSettings),
         });
 
-        buildProjectConfig(state);
+        buildProjectConfig(state, undefined, undefined, warn);
 
         expect(warn).not.toHaveBeenCalled();
     });

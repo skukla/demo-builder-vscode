@@ -24,6 +24,7 @@ import {
     makeGlobalState,
     makeOpenInClaudeContext,
     makeOpenInClaudeProject,
+    claudePresent,
 } from './openInClaude.testUtils';
 import type { StateManager } from '@/core/state/stateManager';
 
@@ -63,7 +64,8 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(project) as unknown as StateManager,
-                logger
+                logger,
+                claudePresent(),
             );
 
             await command.execute(project as Project);
@@ -80,7 +82,8 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
-                logger
+                logger,
+                claudePresent(),
             );
 
             await command.execute(makeOpenInClaudeProject() as Project);
@@ -98,7 +101,8 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
-                logger
+                logger,
+                claudePresent(),
             );
 
             await command.execute(makeOpenInClaudeProject() as Project);
@@ -123,7 +127,8 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
-                logger
+                logger,
+                claudePresent(),
             );
 
             await command.execute(makeOpenInClaudeProject() as Project);
@@ -147,7 +152,8 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(null),
-                logger
+                logger,
+                claudePresent(),
             );
 
             await command.execute();
@@ -166,7 +172,8 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 stateManager,
-                logger
+                logger,
+                claudePresent(),
             );
 
             await command.execute();
@@ -189,7 +196,8 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()),
-                makeLogger()
+                makeLogger(),
+                claudePresent(),
             );
 
             try {
@@ -219,7 +227,8 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()),
-                makeLogger()
+                makeLogger(),
+                claudePresent(),
             );
 
             await command.execute({ fresh: true });
@@ -242,7 +251,8 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()),
-                makeLogger()
+                makeLogger(),
+                claudePresent(),
             );
 
             await command.execute();
@@ -267,7 +277,8 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 stateManager,
-                makeLogger()
+                makeLogger(),
+                claudePresent(),
             );
 
             await command.execute();

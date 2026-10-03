@@ -11,6 +11,7 @@ import { OpenInClaudeCommand, isClaudeChatOpen } from '@/commands/openInClaude';
 import type { Project } from '@/types/base';
 import {
     setupVscodeMocks, makeLogger, makeStateManager, makeGlobalState, makeOpenInClaudeContext, makeOpenInClaudeProject,
+    claudePresent,
 } from './openInClaude.testUtils';
 import type { StateManager } from '@/core/state/stateManager';
 
@@ -50,6 +51,7 @@ describe('OpenInClaudeCommand', () => {
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
                 makeLogger(),
+                claudePresent(),
             );
 
             await command.execute(makeOpenInClaudeProject() as Project);
@@ -63,6 +65,7 @@ describe('OpenInClaudeCommand', () => {
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
                 makeLogger(),
+                claudePresent(),
             );
 
             await command.execute(makeOpenInClaudeProject() as Project);
@@ -76,6 +79,7 @@ describe('OpenInClaudeCommand', () => {
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
                 makeLogger(),
+                claudePresent(),
             );
 
             await command.execute(makeOpenInClaudeProject() as Project);
@@ -90,6 +94,7 @@ describe('OpenInClaudeCommand', () => {
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(project) as unknown as StateManager,
                 makeLogger(),
+                claudePresent(),
             );
 
             await command.execute(project as Project);
@@ -105,6 +110,7 @@ describe('OpenInClaudeCommand', () => {
                 makeOpenInClaudeContext(globalState),
                 makeStateManager(project) as unknown as StateManager,
                 makeLogger(),
+                claudePresent(),
             );
 
             await command.execute(project as Project);
@@ -137,6 +143,7 @@ describe('OpenInClaudeCommand', () => {
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
                 makeLogger(),
+                claudePresent(),
             );
 
             await command.execute(makeOpenInClaudeProject() as Project);
@@ -159,6 +166,7 @@ describe('OpenInClaudeCommand', () => {
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
                 makeLogger(),
+                claudePresent(),
             );
 
             await command.execute(makeOpenInClaudeProject() as Project);
@@ -175,6 +183,7 @@ describe('OpenInClaudeCommand', () => {
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
                 makeLogger(),
+                claudePresent(),
             );
 
             await command.execute(makeOpenInClaudeProject() as Project);
@@ -195,6 +204,7 @@ describe('OpenInClaudeCommand', () => {
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
                 makeLogger(),
+                claudePresent(),
             );
 
             await command.execute(makeOpenInClaudeProject() as Project);
@@ -260,6 +270,7 @@ describe('OpenInClaudeCommand', () => {
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(project) as unknown as StateManager,
                 makeLogger(),
+                claudePresent(),
             );
 
             await command.execute(project as Project);
@@ -275,6 +286,7 @@ describe('OpenInClaudeCommand', () => {
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
                 makeLogger(),
+                claudePresent(),
             );
 
             await command.execute(makeOpenInClaudeProject() as Project);
@@ -290,6 +302,7 @@ describe('OpenInClaudeCommand', () => {
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(null) as unknown as StateManager,
                 makeLogger(),
+                claudePresent(),
             );
 
             await command.execute(undefined as unknown as Project);

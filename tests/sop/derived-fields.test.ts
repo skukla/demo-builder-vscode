@@ -24,7 +24,7 @@
  */
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { execSync } from 'child_process';
+import { workingTreeFiles } from './architectureScan';
 
 interface Ledger {
     _what: string;
@@ -46,8 +46,7 @@ const FALLBACK = /githubRepo|repoFullName|repoOwner|repoName/;
 /** How close two reads must be to count as one target being assembled. */
 const PAIR_WINDOW = 15;
 
-const SOURCES = execSync('git ls-files src', { cwd: ROOT, encoding: 'utf8' })
-    .split('\n')
+const SOURCES = workingTreeFiles('src')
     .filter((f) => f.endsWith('.ts') || f.endsWith('.tsx'));
 
 interface Pair {

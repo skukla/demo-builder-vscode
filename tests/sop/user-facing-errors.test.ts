@@ -33,10 +33,9 @@
  * row leaving this ledger is a claim that someone looked.
  */
 import { readFileSync } from 'fs';
-import { execSync } from 'child_process';
 import { join } from 'path';
 
-import { expectClean, loadLedger } from './architectureScan';
+import { expectClean, loadLedger, workingTreeFiles } from './architectureScan';
 
 const ROOT = join(__dirname, '..', '..');
 const LEDGER = loadLedger('user-facing-errors.ledger.json');
@@ -64,9 +63,7 @@ const PATTERNS: RegExp[] = [
 ];
 
 function sourceFiles(): string[] {
-    return execSync("git ls-files 'src/**/*.ts' 'src/**/*.tsx'", { cwd: ROOT, encoding: 'utf8' })
-        .trim()
-        .split('\n')
+    return workingTreeFiles('src/**/*.ts', 'src/**/*.tsx')
         .filter(Boolean);
 }
 

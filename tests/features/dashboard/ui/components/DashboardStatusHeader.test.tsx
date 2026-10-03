@@ -230,6 +230,20 @@ describe('DashboardStatusHeader — the AI "Regenerate AI files" remediation', (
         }
     );
 
+    it('offers NOTHING when the badge is yellow because Claude Code is not installed', () => {
+        // Regenerating the AI files cannot install a command-line tool, so the
+        // action would send the user somewhere that does not help (AI-4a).
+        render(
+            <DashboardStatusHeader
+                {...makeProps({
+                    aiReady: { label: 'AI', color: 'yellow', text: 'Claude Code not installed' },
+                })}
+            />
+        );
+
+        expect(cardFor('AI')?.action).toBeUndefined();
+    });
+
     it('is decided per badge — a red AI badge does not give the org one an action', () => {
         render(
             <DashboardStatusHeader

@@ -88,8 +88,10 @@ const mockGetTokenStatus = jest.fn();
 const mockLogin = jest.fn();
 const mockSetShowingProjectsList = jest.fn();
 const mockIsSidebarInitialized = jest.fn(() => false);
+const mockCommandExists = jest.fn();
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
+        getCommandExecutor: () => ({ commandExists: mockCommandExists }),
         isSidebarInitialized: () => mockIsSidebarInitialized(),
         getSidebarProvider: () => ({ setShowingProjectsList: mockSetShowingProjectsList }),
         getAuthenticationService: () => ({
@@ -109,6 +111,7 @@ jest.mock('fs/promises', () => ({ access: (...a: unknown[]) => mockAccess(...a) 
 export { CommandManager, vscode };
 export {
     mockAccess,
+    mockCommandExists,
     mockDaLiveAuthQuickPick,
     mockGetTokenStatus,
     mockIsSidebarInitialized,

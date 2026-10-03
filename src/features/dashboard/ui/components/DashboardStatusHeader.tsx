@@ -53,6 +53,16 @@ export interface DashboardStatusHeaderProps {
 }
 
 /**
+ * Whether the AI badge offers "Regenerate AI files". Red and yellow do, except
+ * the yellow that means Claude Code is not installed: regenerating files cannot
+ * install a command-line tool (AI-4a).
+ */
+function offersRegenerate(aiReady: AiReadyState): boolean {
+    if (aiReady.text === 'Claude Code not installed') return false;
+    return aiReady.color === 'red' || aiReady.color === 'yellow';
+}
+
+/**
  * Renders the dashboard's full-width status masthead row.
  *
  * @param props - Component props
@@ -124,8 +134,7 @@ export function DashboardStatusHeader({
                                             size="S"
                                             className="dashboard-status-badge"
                                             action={
-                                                aiReady.color === 'red' ||
-                                                aiReady.color === 'yellow'
+                                                offersRegenerate(aiReady)
                                                     ? {
                                                           label: 'Regenerate AI files',
                                                           onPress: onRegenerateAi,

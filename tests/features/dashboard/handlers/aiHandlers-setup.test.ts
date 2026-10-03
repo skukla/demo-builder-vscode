@@ -19,6 +19,9 @@ import {
     verifyAiSetup,
     createAiHandlerContext,
 } from './aiHandlers.testUtils';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { resetClaudeCliCache } from '@/features/ai/claudeCliAvailability';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 
@@ -153,6 +156,18 @@ describe('aiHandlers — setup & verification', () => {
             // WHY a tool-driving skill is absent instead of omitting it silently.
             expect(Array.isArray((result.inventory as { gatedSkills?: unknown }).gatedSkills))
                 .toBe(true);
+        });
+
+        it("adds whether Claude Code is installed, asked of the extension's command executor (AI-4a)", async () => {
+            (verifyAiSetup as jest.Mock).mockResolvedValue({ status: 'ok', checks: [] });
+            resetClaudeCliCache();
+            const commandExists = jest.fn().mockResolvedValue(true);
+            ServiceLocator.setCommandExecutor(createMockCommandExecutor({ commandExists }));
+
+            const result = await handleVerifyAiSetup(createAiHandlerContext());
+
+            expect(commandExists).toHaveBeenCalledWith('claude');
+            expect(result.claudeCli).toEqual({ installed: true });
         });
 
         it('returns error when stateManager has no current project', async () => {

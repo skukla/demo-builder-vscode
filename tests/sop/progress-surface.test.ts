@@ -26,7 +26,7 @@
  */
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { execSync } from 'child_process';
+import { workingTreeFiles } from './architectureScan';
 
 interface Ledger {
     _what: string;
@@ -51,8 +51,7 @@ const SURFACE_OWNERS = new Set([
     'src/features/ai/server/agentOperationNotifier.ts',
 ]);
 
-const SOURCES = execSync('git ls-files src', { cwd: ROOT, encoding: 'utf8' })
-    .split('\n')
+const SOURCES = workingTreeFiles('src')
     .filter((f) => f.endsWith('.ts') || f.endsWith('.tsx'));
 
 /** Every `file:line` where `pattern` matches, across the tracked source. */

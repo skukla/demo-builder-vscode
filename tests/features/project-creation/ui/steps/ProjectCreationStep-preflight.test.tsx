@@ -25,6 +25,7 @@ import type { CreationFailedPayload } from '@/types/webviewPayloads';
 const mockPostMessage = jest.fn();
 const mockOnMessage = jest.fn();
 const mockCreateProject = jest.fn();
+const mockLog = jest.fn();
 const mockWebviewClientRequest = jest.fn();
 
 jest.mock('@/core/ui/utils/vscode-api', () => ({
@@ -35,6 +36,9 @@ jest.mock('@/core/ui/utils/vscode-api', () => ({
     },
     webviewClient: {
         request: (...args: unknown[]) => mockWebviewClientRequest(...args),
+        // WebviewClient.log posts `log`, which BaseWebviewCommand writes to the
+        // extension's logger — the Debug Logs channel.
+        log: (...args: unknown[]) => mockLog(...args),
     },
 }));
 
@@ -265,6 +269,24 @@ describe('ProjectCreationStep pre-flight GitHub App check', () => {
             await waitFor(() => expect(mockCreateProject).toHaveBeenCalled());
             expect(screen.queryByTestId('install-dialog')).not.toBeInTheDocument();
             error.mockRestore();
+        });
+    });
+
+    describe("the config builder's warnings (PL-65)", () => {
+        it("reach the extension's log channel, not the webview console", async () => {
+            // A saved project can carry a stack with no package (Edit and Import
+            // seed them unchecked). The warning has to land where someone reads it.
+            renderStep(stateWith({ edsConfig: { existingRepo: 'acme/storefront' }, selectedPackage: undefined }));
+
+            await waitFor(() => expect(mockCreateProject).toHaveBeenCalled());
+            expect(mockLog).toHaveBeenCalledWith('warn', expect.stringContaining("'eds-accs'"));
+        });
+
+        it('CONTROL: stay silent when the stack and package resolve', async () => {
+            renderStep(stateWith({ edsConfig: { existingRepo: 'acme/storefront' } }));
+
+            await waitFor(() => expect(mockCreateProject).toHaveBeenCalled());
+            expect(mockLog).not.toHaveBeenCalled();
         });
     });
 

@@ -16,6 +16,7 @@ import {
     CommandManager,
     commandInstance,
     harness,
+    mockCommandExists,
     mockIsSidebarInitialized,
     mockOpenUrl,
     mockSetShowingProjectsList,
@@ -197,6 +198,20 @@ describe('the AI entry points differ only in what they hand the launcher', () =>
         await h.handlerFor('demoBuilder.openInClaude')();
 
         expect(commandInstance(OpenInClaudeCommand).execute).toHaveBeenCalledWith(undefined);
+    });
+
+    it("asks the extension's command executor whether `claude` is installed", async () => {
+        // The launcher's fourth argument is its only way to learn the CLI is
+        // missing; a probe wired to anything else would answer for some other
+        // PATH than the one the extension runs commands on.
+        harness();
+        mockCommandExists.mockResolvedValue(true);
+        const probe = (OpenInClaudeCommand as unknown as jest.Mock).mock.calls[0][3] as {
+            commandExists(name: string): Promise<boolean>;
+        };
+
+        await expect(probe.commandExists('claude')).resolves.toBe(true);
+        expect(mockCommandExists).toHaveBeenCalledWith('claude');
     });
 
     it('openAiExperience launches with no argument at all', async () => {

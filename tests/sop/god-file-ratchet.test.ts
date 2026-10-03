@@ -40,7 +40,7 @@ import { execSync } from 'child_process';
 import { readFileSync } from 'fs';
 import { basename, join } from 'path';
 
-import { expectCeiling, loadLedger } from './architectureScan';
+import { expectCeiling, loadLedger, workingTreeFiles } from './architectureScan';
 
 const ROOT = execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();
 const LEDGER = loadLedger('architecture-rules.exemptions.json');
@@ -62,8 +62,7 @@ function excluded(path: string): boolean {
     return path.includes('/config/');
 }
 
-const SOURCES = execSync('git ls-files src', { cwd: ROOT, encoding: 'utf8' })
-    .split('\n')
+const SOURCES = workingTreeFiles('src')
     .filter((f) => f.endsWith('.ts') || f.endsWith('.tsx'))
     .filter((f) => !excluded(f));
 

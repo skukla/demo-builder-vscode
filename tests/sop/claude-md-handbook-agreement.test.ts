@@ -243,7 +243,8 @@ describe('the AI-bundle gate seams named in CLAUDE.md all still exist', () => {
 
     it('CONTROL: the seam names are real symbols in src/', () => {
         for (const s of SEAMS) {
-            const hits = execSync(`git grep -l ${s} -- src | wc -l`, {
+            // --untracked: a seam that lives in a file not yet committed is still real (PL-67).
+            const hits = execSync(`git grep --untracked -l ${s} -- src | wc -l`, {
                 encoding: 'utf8',
                 cwd: ROOT,
             }).trim();

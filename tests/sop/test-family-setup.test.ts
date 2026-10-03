@@ -41,6 +41,7 @@
 import { execSync } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
 import { dirname, join, basename } from 'path';
+import { workingTreeFiles } from './architectureScan';
 
 const ROOT = execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();
 /**
@@ -145,12 +146,7 @@ function shareALocalModule(bodies: string[]): boolean {
 }
 
 function familiesWithoutSharedSetup(): string[] {
-    const files = execSync(
-        `git ls-files 'tests/**/*.test.ts' 'tests/**/*.test.tsx' 'tests/*.test.ts' 'tests/*.test.tsx'`,
-        { encoding: 'utf8', cwd: ROOT },
-    )
-        .trim()
-        .split('\n');
+    const files = workingTreeFiles('tests/**/*.test.ts', 'tests/**/*.test.tsx', 'tests/*.test.ts', 'tests/*.test.tsx');
 
     const families = new Map<string, string[]>();
     for (const f of files) {
@@ -182,11 +178,7 @@ describe('split test families share their setup', () => {
     it('CONTROL: positive control: the detector sees families that DO share a testUtils', () => {
         // 59 .testUtils.* files exist; if this is 0 the detector is broken,
         // not the tree clean.
-        const shared = execSync(`git ls-files 'tests/**/*.testUtils.*' | wc -l`, {
-            encoding: 'utf8',
-            cwd: ROOT,
-        }).trim();
-        expect(Number(shared)).toBeGreaterThan(0);
+        expect(workingTreeFiles('tests/**/*.testUtils.*').length).toBeGreaterThan(0);
     });
 
     it('CONTROL: a real family is kept and a token-collision group is rejected', () => {

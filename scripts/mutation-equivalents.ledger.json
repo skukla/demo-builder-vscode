@@ -3109,7 +3109,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 433,
+            "line": 440,
             "mutants": 1,
             "category": "other",
             "reason": "Both mount effects declare an empty dependency list, so Stryker's replacement is a constant one-element array rather than an emptying. React compares dependencies element by element with Object.is, and that constant is identical on every render, so the effect still runs exactly once \u2014 the same as with no dependencies at all. There is no render sequence in which the two forms differ.",
@@ -3237,57 +3237,6 @@
             "category": "branch",
             "reason": "Forcing the length test false leaves the null check doing the work, and the only input it stops catching is an EMPTY array \u2014 which then falls through to filter and map over nothing and returns an empty array by the other route. Both forms answer the empty list identically, so no assertion separates them. The undefined case is still caught and is killed by a test.",
             "decision": "none \u2014 filtering an empty list produces the same empty list the guard returns.",
-            "recorded": "2026-09-04",
-            "source": "PL-22 batch MUT-03"
-        },
-        {
-            "module": "src/features/project-creation/ui/wizard/wizardHelpers.ts",
-            "anchors": [
-                "): void {"
-            ],
-            "line": 478,
-            "mutants": 2,
-            "category": "block",
-            "reason": "This row covers the body-deletion mutant on BOTH validation helpers \u2014 validateStackPackageConfig at line 476 and validateStackLookup at line 511 \u2014 because their signature lines are textually identical and cannot be anchored apart. Each function returns void and does nothing but write to console.warn and console.log, so emptying either body changes nothing a caller or a test can observe, and the only way to notice would be to assert log output.",
-            "decision": "none \u2014 both bodies are console output and nothing else.",
-            "recorded": "2026-09-04",
-            "source": "PL-22 batch MUT-03"
-        },
-        {
-            "module": "src/features/project-creation/ui/wizard/wizardHelpers.ts",
-            "anchors": [
-                "if (wizardState.selectedStack && !wizardState.selectedPackage) {",
-                "if (wizardState.selectedStack && !stack) {"
-            ],
-            "mutants": 4,
-            "category": "branch",
-            "reason": "Both of these guards wrap a body that is only console.warn plus console.log, so suppressing the guard (never warn) and deleting the body are equally invisible to any assertion. The always-warn direction IS observable, because this repo fails a suite that writes to the console at all, and those mutants are killed. What is left is the pair that produce silence, which is what a passing run already looks like.",
-            "decision": "none \u2014 the only difference is whether a warning is printed.",
-            "recorded": "2026-09-04",
-            "source": "PL-22 batch MUT-03"
-        },
-        {
-            "module": "src/features/project-creation/ui/wizard/wizardHelpers.ts",
-            "anchors": [
-                "hasPackages: !!packages,",
-                "stackFound: false,"
-            ],
-            "mutants": 3,
-            "category": "other",
-            "reason": "These fields exist only inside the console.log payload of a validation warning, so they are evaluated only on the path that prints. A test that reached them would itself fail the console gate, and the only assertion that could tell the mutants apart is one on the logged text \u2014 which the ratchet exists to refuse. Nothing but the log reads these values.",
-            "decision": "none \u2014 the values never leave the log payload.",
-            "recorded": "2026-09-04",
-            "source": "PL-22 batch MUT-03"
-        },
-        {
-            "module": "src/features/project-creation/ui/wizard/wizardHelpers.ts",
-            "anchors": [
-                "packagesCount: packages?.length || 0,"
-            ],
-            "mutants": 4,
-            "category": "other",
-            "reason": "Same as the fields beside it: this expression is built only to be logged inside a validation warning, and is evaluated only on the path that prints one. Reaching it in a test would fail the console gate, and separating the mutants would require asserting the logged text. The optional chain, the fallback and both branch directions are all invisible outside the log line.",
-            "decision": "none \u2014 the value never leaves the log payload.",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-03"
         },
@@ -8729,7 +8678,7 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 760,
+            "line": 762,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here the step is starting the in-extension MCP server, whose failure must never abort activation.",
@@ -8754,7 +8703,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 497,
+            "line": 498,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a logger.error plus a showErrorMessage whose text is built from the error. Activation's own tests assert showErrorMessage was NOT called on every success path, which is the observable half; the wording of the message when it IS called is the rest.",
@@ -8767,7 +8716,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 851,
+            "line": 853,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here it is the manifest-format sweep.",
@@ -9116,7 +9065,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 590,
+            "line": 594,
             "mutants": 1,
             "category": "block",
             "reason": "This is the inner fallback in openComponent: the README open already failed, the package.json open has now failed too, and the body is a single logger.debug. Emptying it leaves the catch in place, so the folder is still revealed and the command still reports success - which the flows suite asserts by driving both file probes to reject. The only difference is whether one debug line prints.",

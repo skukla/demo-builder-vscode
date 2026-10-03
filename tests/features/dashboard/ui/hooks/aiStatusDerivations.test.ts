@@ -134,6 +134,31 @@ describe('deriveAiReadyState', () => {
     });
 });
 
+describe('deriveAiReadyState when Claude Code is not installed (AI-4a)', () => {
+    const noCli = { ...healthyVerify, claudeCli: { installed: false } };
+
+    it('is NOT green when the files are fine but `claude` is missing', () => {
+        expect(deriveAiReadyState({ ...idleInputs, verifyResult: noCli })).toEqual({
+            label: 'AI',
+            color: 'yellow',
+            text: 'Claude Code not installed',
+        });
+    });
+
+    it('stays green when `claude` is installed', () => {
+        const verifyResult = { ...healthyVerify, claudeCli: { installed: true } };
+        expect(deriveAiReadyState({ ...idleInputs, verifyResult }).color).toBe('green');
+    });
+
+    it('stays red when the files are broken too — that is the bigger problem', () => {
+        const verifyResult = {
+            ...noCli,
+            checks: [{ name: 'claude-md', status: 'error' as const }],
+        };
+        expect(deriveAiReadyState({ ...idleInputs, verifyResult }).color).toBe('red');
+    });
+});
+
 describe('deriveAiInventoryView', () => {
     it('should report loading when no result and no failure yet', () => {
         const view = deriveAiInventoryView(null, false);

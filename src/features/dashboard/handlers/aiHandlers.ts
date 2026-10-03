@@ -25,6 +25,7 @@ import { stageLine } from '@/core/utils/stageLine';
 import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
 import { pushOperationProgress } from '@/core/vscode/operationProgress';
 import { verifyAiSetup, type AiVerificationResult } from '@/features/ai/aiSetupVerifier';
+import { isClaudeCliInstalled, type CommandProbe } from '@/features/ai/claudeCliAvailability';
 import { clearMcpCache } from '@/features/ai/mcpInspector';
 import { generateAIContextFiles } from '@/features/project-creation/services/aiBundle/aiBundleService';
 import { applicableMcpPackages, installAiDefaultsMcpTools, readInstalledMcpPackages } from '@/features/project-creation/services/aiBundle/aiDefaultsInstaller';
@@ -49,6 +50,16 @@ export { GLOBAL_AI_PROMPTS_KEY, readMergedAiPrompts } from './aiPromptHandlers';
 // ==========================================================
 // Handlers
 // ==========================================================
+
+/**
+ * The extension's command executor, as the Claude Code check asks it. Resolved
+ * inside the call, so an executor that is not registered reads as "not installed"
+ * rather than failing the verify. Shared with the on-open verify in
+ * statusHandlers, so both paths feeding the AI badge ask the same thing (AI-4a).
+ */
+export const EXTENSION_COMMAND_PROBE: CommandProbe = {
+    commandExists: (name) => ServiceLocator.getCommandExecutor().commandExists(name),
+};
 
 /**
  * Handle verify-ai-setup — run AI context file health checks.
@@ -82,6 +93,9 @@ export async function handleVerifyAiSetup(context: HandlerContext): Promise<Hand
         success: true,
         ...result,
         inventory: { ...result.inventory, gatedSkills },
+        // Not a file check, so the verifier cannot answer it: the chat needs the
+        // command-line tool, and the badge must not be green without it (AI-4a).
+        claudeCli: { installed: await isClaudeCliInstalled(EXTENSION_COMMAND_PROBE) },
     };
 }
 

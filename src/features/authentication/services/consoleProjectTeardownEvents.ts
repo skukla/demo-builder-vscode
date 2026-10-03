@@ -5,8 +5,10 @@
  * Console delete: subscribe-on-403 access recovery, the single org-wide
  * provider discovery pass, credential escalation for provider-bearing
  * credential-less workspaces, and per-workspace registration/provider
- * deletion. Consumed only by `consoleProjectTeardown.ts` and the teardown
- * tests (which import `PROPAGATION_RETRY_DELAYS` from here directly); imports
+ * deletion. Consumed by `consoleProjectTeardown.ts`, the teardown tests (which
+ * import `PROPAGATION_RETRY_DELAYS` from here directly) and
+ * `eventProviderLifecycle.ts`, which reuses the access recovery and the
+ * ownership filter for one-provider-at-a-time deletes; imports
  * from the orchestrator module are type-only, so there is no runtime cycle.
  */
 
@@ -43,10 +45,11 @@ export function errorMessage(error: unknown): string {
 /**
  * Subscribe a credential to the I/O Management API, with a hard timeout and
  * exactly one retry — the spike observed the call hanging >2 min once before
- * succeeding on retry.
+ * succeeding on retry. Exported for the event-provider lifecycle (AB-6), which
+ * recovers access the same way.
  */
-async function ensureManagementApiSubscribed(
-    deps: TeardownDeps,
+export async function ensureManagementApiSubscribed(
+    deps: Pick<TeardownDeps, 'subscribeManagementApi'>,
     orgId: string,
     idIntegration: string,
 ): Promise<void> {
@@ -100,9 +103,10 @@ export async function withEventsAccess<T>(
 /**
  * Keep only this project's 3rd-party providers with a parseable binding,
  * partitioned by workspace. Unparseable bindings are dropped — a provider
- * whose binding cannot be parsed must never be deleted.
+ * whose binding cannot be parsed must never be deleted. Exported for the
+ * event-provider lifecycle (AB-6): its "is this provider ours?" test is this one.
  */
-function partitionProjectProviders(
+export function partitionProjectProviders(
     providers: RawProvider[],
     projectId: string,
 ): Map<string, ProviderBinding[]> {

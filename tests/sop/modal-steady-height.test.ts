@@ -18,7 +18,7 @@
  */
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
-import { execSync } from 'child_process';
+import { workingTreeFiles } from './architectureScan';
 
 const ROOT = join(__dirname, '..', '..');
 const LEDGER: { _what: string; noViewsOfItsOwn: Record<string, string> } = JSON.parse(
@@ -35,8 +35,7 @@ const BRANCH = /(view === |phase === |state === |stage === |step === |mode === )
  */
 const HOLDS = [/<SteadyHeight[\s>]/, /modal-progress-body/, /<CenteredFeedbackContainer[\s>]/];
 
-const COMPONENTS = execSync('git ls-files src', { cwd: ROOT, encoding: 'utf8' })
-    .split('\n')
+const COMPONENTS = workingTreeFiles('src')
     .filter((f) => f.endsWith('.tsx'));
 
 interface Modal {

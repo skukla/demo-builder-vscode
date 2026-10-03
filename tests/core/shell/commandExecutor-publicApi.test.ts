@@ -80,6 +80,18 @@ describe('commandExists', () => {
         expect(deps.environmentSetup.findNpmGlobalPaths).toHaveBeenCalled();
     });
 
+    it('runs `which` through a SHELL — without one execa takes "which git" as a file name', async () => {
+        // Measured 2026-10-03 against execa 5.1.1: `execa('which ls', {shell: false})`
+        // fails with empty stdout, so this probe answered "absent" for every tool.
+        // The mocked execa above answers whatever it is handed, which is why the
+        // suite stayed green; the shell option is the argument that matters.
+        const { executor } = build();
+
+        await executor.commandExists('git');
+
+        expect(execaCalls()[0].options.shell).toBeTruthy();
+    });
+
     it('reports the tool as present when `which` printed a path', async () => {
         const { executor } = build();
 
