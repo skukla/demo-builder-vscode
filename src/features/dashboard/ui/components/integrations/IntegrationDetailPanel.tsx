@@ -110,6 +110,23 @@ function MeshEndpointRow({ model }: { model: IntegrationCardModel }): React.Reac
     );
 }
 
+/**
+ * What App Management's listing is, for an app this extension installed (AB-11). The install
+ * writes the app's own record and runs its installer; App Management's own record exists
+ * only when the SC associates the app there, and removing that record deletes the app's
+ * saved settings for the store.
+ */
+function AppManagementRow({ model }: { model: IntegrationCardModel }): React.ReactElement | null {
+    if (!model.installation || model.installation.failed) return null;
+    return (
+        <PanelRow label="App Management">
+            Optional. To list it in Commerce Admin, go to Apps &gt; App Management, choose
+            Associate App and pick this integration&apos;s project and workspace. Unassociating
+            there deletes its settings for that store and cannot be undone.
+        </PanelRow>
+    );
+}
+
 /** Head + body for the selected card. */
 function PanelContent({
     model,
@@ -155,6 +172,7 @@ function PanelContent({
                         </PanelRow>
                     ) : null}
                     <MeshEndpointRow model={model} />
+                    <AppManagementRow model={model} />
                 </div>
                 <SetupChecklistSection
                     model={model}

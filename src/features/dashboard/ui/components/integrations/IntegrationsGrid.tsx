@@ -33,6 +33,7 @@ import { ManageApisModal } from '../ManageApisModal';
 import { FlaggedCardDialogs, needsReinstall, removalStopped } from './FlaggedCardDialogs';
 import { type CardAction, type IntegrationCardModel } from './integrationCardModel';
 import { IntegrationDetailPanel } from './IntegrationDetailPanel';
+import { removalConsequence } from './removalConsequence';
 import { requestRename } from './requestRename';
 import { handleIntegrationErpAction, handleSystemAction } from './systemCardActions';
 import { useFlaggedCardDialog } from './useFlaggedCardDialog';
@@ -69,29 +70,6 @@ export interface IntegrationsGridProps {
 }
 
 const NO_SETTINGS: Record<string, ComponentSettings> = {};
-
-/** The dialog's second line: what the remove reaches beyond the card, if anything. */
-function removalConsequence(target: IntegrationCardModel | undefined): string | undefined {
-    if (target?.isMesh) {
-        return 'Your storefront loses its API Mesh endpoint until you deploy a new mesh.';
-    }
-    // A linked pair goes together (decision 2), whichever card asked.
-    return target?.linked ? linkedRemovalConsequence(target) : undefined;
-}
-
-/**
- * What removing a linked card also removes: the other card, and the system's
- * records, which removal deletes before the undeploy.
- */
-function linkedRemovalConsequence(target: IntegrationCardModel): string {
-    const names = (target.linked?.cards ?? []).map((card) => card.name).join(' and ');
-    // An ERP added from the integration's card goes alone (AB-16).
-    if (target.removesAlone)
-        return `Its records will be deleted, and ${names} stops sending it orders.`;
-    return target.isSystem
-        ? `Its records will be deleted, and ${names} will be removed too.`
-        : `${names} will be removed too, with its records.`;
-}
 
 /** The integrations card grid + its hosted drawer, modals, and confirm dialog. */
 export function IntegrationsGrid({

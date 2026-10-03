@@ -8,8 +8,9 @@
  * check itself (`runtimeNamespace.ts`), so the two cannot disagree.
  *
  * `list_runtime_packages` is read-only. `delete_undeclared_runtime_code` deletes, and
- * only what an app no longer declares in its own packages — the same clean-up every
- * deploy now ends with (`runtimeUndeclaredActions.ts`), for code left from before that.
+ * only what an app no longer declares: actions in its own packages, and the rules and
+ * triggers that started them — the same clean-up every deploy now ends with
+ * (`runtimeUndeclaredActions.ts`), for code left from before that.
  * The namespace key is fetched per call and never returned or logged.
  *
  * @module features/dashboard/handlers/runtimePackageHandlers
@@ -20,6 +21,7 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
 import { deployWorkspaceId } from '@/features/app-builder/services/componentWorkspace';
 import {
+    listRuntimeNames,
     listRuntimePackages,
     runtimeNamespaceEnv,
 } from '@/features/app-builder/services/runtimeNamespace';
@@ -37,10 +39,15 @@ const LIST_FAILED =
     "Could not list what is deployed in this project's Adobe Runtime namespace. " +
     'See Debug Logs for the reason.';
 
-/** The namespace that was read, and the packages in it. */
+/**
+ * The namespace that was read, and what is in it: the packages, and the triggers (timers)
+ * and rules, which belong to the namespace and outlive the package they start (AB-58).
+ */
 export interface RuntimePackagesData {
     namespace: string;
     packages: string[];
+    triggers: string[];
+    rules: string[];
 }
 
 /**
@@ -93,6 +100,8 @@ export const handleListRuntimePackages: MessageHandler<{ componentId?: string }>
                 return {
                     namespace: env.AIO_RUNTIME_NAMESPACE,
                     packages: await listRuntimePackages(deps, env),
+                    triggers: await listRuntimeNames(deps, 'trigger', env),
+                    rules: await listRuntimeNames(deps, 'rule', env),
                 };
             },
         );
@@ -144,7 +153,8 @@ async function openForDelete(
 
 /**
  * Handle 'deleteUndeclaredRuntimeCode' — delete the actions an integration (and any app
- * sharing its workspace) no longer declares in its own packages, and say what was deleted.
+ * sharing its workspace) no longer declares in its own packages, with the rules and
+ * triggers that started them, and say what was deleted.
  */
 export const handleDeleteUndeclaredRuntimeCode: MessageHandler<{ componentId?: string }> = async (
     context,

@@ -166,16 +166,15 @@ export const handleResetErpRecords: MessageHandler<ErpCallPayload & { progress?:
                     inModal: progressSurfaceOf(payload) === 'modal',
                     cardLabel: `${erpName} records`,
                 },
-                async (report): Promise<GuardableResult & { report?: ErpResetReport }> => {
+                async (report): Promise<GuardableResult & { report?: ErpResetReport; warning?: string }> => {
                     const refused = await guardOrBlock(context, call.project, (message) =>
                         report(message),
                     );
                     if (refused) return refused;
                     try {
-                        return {
-                            success: true,
-                            report: await resetErp(context, call, report),
-                        };
+                        const done = await resetErp(context, call, report);
+                        // The progress window's last word, when prices were not published (AB-26z).
+                        return { success: true, report: done, ...(done.warning ? { warning: done.warning } : {}) };
                     } catch (error) {
                         return {
                             success: false,

@@ -9,9 +9,11 @@
 import { contextWith, mockCommandExecutor } from './runtimePackageHandlers.testUtils';
 
 const mockListRuntimePackages = jest.fn();
+const mockListRuntimeNames = jest.fn();
 const mockRuntimeNamespaceEnv = jest.fn();
 jest.mock('@/features/app-builder/services/runtimeNamespace', () => ({
     listRuntimePackages: (...args: unknown[]) => mockListRuntimePackages(...args),
+    listRuntimeNames: (...args: unknown[]) => mockListRuntimeNames(...args),
     runtimeNamespaceEnv: (...args: unknown[]) => mockRuntimeNamespaceEnv(...args),
 }));
 
@@ -33,6 +35,9 @@ beforeEach(() => {
     jest.clearAllMocks();
     mockRuntimeNamespaceEnv.mockResolvedValue(ENV);
     mockListRuntimePackages.mockResolvedValue(['erp', 'demo-erp']);
+    mockListRuntimeNames.mockImplementation(async (_deps: unknown, kind: string) =>
+        kind === 'trigger' ? ['erp-schedule-heartbeat'] : ['erp-schedule-on-heartbeat'],
+    );
 });
 
 describe('handleListRuntimePackages', () => {
@@ -43,8 +48,19 @@ describe('handleListRuntimePackages', () => {
 
         expect(result).toEqual({
             success: true,
-            data: { namespace: 'ns-stage', packages: ['erp', 'demo-erp'] },
+            data: {
+                namespace: 'ns-stage',
+                packages: ['erp', 'demo-erp'],
+                // AB-58: timers and rules outlive the package they start, so they are listed too.
+                triggers: ['erp-schedule-heartbeat'],
+                rules: ['erp-schedule-on-heartbeat'],
+            },
         });
+        const deps = { commandManager: mockCommandExecutor, logger: context.logger };
+        expect(mockListRuntimeNames.mock.calls).toEqual([
+            [deps, 'trigger', ENV],
+            [deps, 'rule', ENV],
+        ]);
         expect(withOrgContext).toHaveBeenCalledWith(
             { orgId: 'org-1', projectId: 'proj-1', workspaceId: 'ws-stage' },
             expect.any(Function)

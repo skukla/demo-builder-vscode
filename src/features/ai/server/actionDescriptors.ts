@@ -481,6 +481,9 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             'else still uses, leftovers or a namespace that cannot be checked stop the removal ' +
             'with COMPONENT_REMOVAL_STOPPED, keeping the integration, and a retry resumes at the ' +
             'undeploy. ' +
+            'An app the user associated in Commerce App Management stays listed as Associated there, ' +
+            'and this tool cannot clear it: have the user unassociate it in Commerce Admin ' +
+            '(Apps > App Management) BEFORE removing. ' +
             'Confirm the id with the user first.',
         map: dashboardHandlers,
         type: 'removeAppBuilderComponent',
@@ -502,7 +505,8 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         description:
             'Delete the Runtime actions an integration left behind: deployed in its own ' +
             "packages but no longer in its config (an action moved or renamed; the Adobe CLI's " +
-            'deploy never deletes those). Every deploy now does this itself; use it for code left from ' +
+            'deploy never deletes those). Also deletes a rule no app declares that starts an action ' +
+            'in those packages, and the trigger (timer) only that rule used. Every deploy now does this itself; use it for code left from ' +
             'before, or when a deploy warned that some could not be deleted. Reads every app ' +
             "sharing the integration's workspace, never touches a package no app declares, and " +
             'deletes nothing when the namespace cannot be read. Returns what it deleted and what ' +

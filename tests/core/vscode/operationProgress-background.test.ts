@@ -96,6 +96,16 @@ describe('Run in background', () => {
         expect(mockShowWarning).not.toHaveBeenCalled();
     });
 
+    it('says a success\'s warning in a notification, since the status bar cannot hold it', async () => {
+        await runningInBackground();
+
+        await pushOperationProgress({ id: ID, state: 'succeeded', warning: 'Prices were not published.' });
+
+        await expect(mockProgressEnded).resolves.toBeUndefined();
+        expect(mockShowWarning).toHaveBeenCalledWith(`${TITLE} — done. Prices were not published.`);
+        expect(mockStatusBar).not.toHaveBeenCalled();
+    });
+
     it('turns into a warning with the reason and the Debug Logs when it fails', async () => {
         mockShowWarning.mockResolvedValue('Open Debug Logs');
         await runningInBackground();

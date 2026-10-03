@@ -219,6 +219,27 @@ describe("IntegrationsGrid — the integration's ERP verbs", () => {
         });
     });
 
+    // AB-47 leftover: a reset covers every ERP the integration serves, so neither the
+    // confirm nor the progress window may name just one of them.
+    it('with two ERPs, the confirm names both and the progress window names neither alone', async () => {
+        const second: LinkedCard = { ...SYSTEM_LINK, id: 'demo-erp-2', name: 'Brand B ERP' };
+        const user = setupUser();
+        renderCards([
+            { ...integrationCard(), linked: { cards: [SYSTEM_LINK, second] } },
+            systemCard(),
+            { ...systemCard(), id: 'demo-erp-2', name: 'Brand B ERP' },
+        ]);
+        const panel = await openPanel(user, 'ERP integration', 'Deployed');
+        await user.click(within(panel).getByRole('button', { name: /^reset erps$/i }));
+
+        const dialog = screen.getByRole('dialog', { name: /reset erps/i });
+        expect(dialog).toHaveTextContent('Resets Nordwind and Brand B ERP: wipes their records');
+        await user.click(within(dialog).getByRole('button', { name: /^reset$/i }));
+
+        expect(screen.getByRole('dialog', { name: 'Resetting the ERPs' })).toBeInTheDocument();
+        expect(screen.queryByRole('dialog', { name: /Resetting (Nordwind|Brand B ERP)/ })).toBeNull();
+    });
+
     it('SAFETY: closing the reset dialog posts nothing', async () => {
         const { user, panel } = await openIntegration();
         await user.click(within(panel).getByRole('button', { name: /^reset erps$/i }));
@@ -251,6 +272,35 @@ describe('IntegrationsGrid — the link between them', () => {
 
         const dialog = screen.getByRole('dialog', { name: 'Remove ERP integration' });
         expect(dialog).toHaveTextContent('Nordwind will be removed too, with its records.');
+    });
+
+    // AB-12: Demo Builder cannot clear App Management's own record, so the SC is told
+    // before the click, on every card that installs into Commerce.
+    it('removing an app installed in Commerce says to unassociate it in App Management first', async () => {
+        const user = setupUser();
+        renderCards([
+            { ...integrationCard(), installation: { label: 'Installed', failed: false } },
+            systemCard(),
+        ]);
+        const panel = await openPanel(user, 'ERP integration', 'Deployed');
+
+        await user.click(within(panel).getByRole('button', { name: /^remove$/i }));
+
+        const dialog = screen.getByRole('dialog', { name: 'Remove ERP integration' });
+        expect(dialog).toHaveTextContent('Nordwind will be removed too, with its records.');
+        expect(dialog).toHaveTextContent(
+            'If you associated it in Commerce Admin under Apps > App Management, unassociate it there first. ' +
+                'Removing it here does not clear that listing.'
+        );
+    });
+
+    it('CONTROL: a card with no Commerce install says nothing about App Management', async () => {
+        const { user, panel } = await openSystem();
+
+        await user.click(within(panel).getByRole('button', { name: /^remove$/i }));
+
+        const dialog = screen.getByRole('dialog', { name: 'Remove Nordwind' });
+        expect(dialog).not.toHaveTextContent(/App Management/);
     });
 
     it('removing the system names the integration that goes with it', async () => {

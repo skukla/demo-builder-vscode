@@ -93,6 +93,13 @@ export interface DeclaredRuntime {
     rules: string[];
 }
 
+/**
+ * Names safe to interpolate into an `aio runtime` command. Declared names come from config
+ * FILES and deployed ones from a listing; a name outside the Adobe id charset is never
+ * deleted (and never quoted into a shell line).
+ */
+export const RUNTIME_ENTITY_NAME = /^[A-Za-z0-9@._-]+$/;
+
 /** Rules first (they point at triggers and actions), then triggers, then packages. */
 export const CLEANUP_ORDER: readonly RuntimeEntityKind[] = ['rule', 'trigger', 'package'];
 

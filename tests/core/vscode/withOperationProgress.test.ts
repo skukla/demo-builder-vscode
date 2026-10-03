@@ -54,6 +54,21 @@ describe('started from a button on a screen (R1)', () => {
         expect(modalPayloads().at(-1)).toEqual({ id: ID, state: 'succeeded' });
     });
 
+    // AB-26z: a fill that stood while its prices were not published said so only in the
+    // answer an agent reads; the SC watching the modal saw a plain success.
+    it('ends the modal with the warning of a run that succeeded with one', async () => {
+        await withOperationProgress({ id: ID, title: 'Filling Northwind', inModal: true }, async () => ({
+            success: true,
+            warning: 'Demo data loaded; prices were not published.',
+        }));
+
+        expect(modalPayloads().at(-1)).toEqual({
+            id: ID,
+            state: 'succeeded',
+            warning: 'Demo data loaded; prices were not published.',
+        });
+    });
+
     it('ends the modal with the reason when the operation fails', async () => {
         await withOperationProgress({ id: ID, title: 'Deploying ERP', inModal: true }, async () => ({
             success: false,

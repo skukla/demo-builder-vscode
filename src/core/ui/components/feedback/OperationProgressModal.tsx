@@ -7,7 +7,8 @@
  * under it and how long the stage usually takes (the Storefront setup step's
  * `LoadingDisplay`, row for row), in one fixed height. While the operation runs it
  * ALWAYS offers "Run in background" (R8), which hands it to a VS Code progress
- * notification that keeps narrating it. A success closes it by itself. A failure
+ * notification that keeps narrating it. A success closes it by itself, unless it carries a
+ * warning or a next step, which wait to be read. A failure
  * stays: the reason, Retry, and the Debug Logs where the full detail went.
  *
  * Not `layout/CenteredFeedbackContainer`: that RESERVES a minimum height and lets
@@ -135,8 +136,10 @@ interface ProgressBodyProps {
     succeeded: boolean;
     failureTitle: string;
     successTitle: string;
-    /** The success view's second line: what is left to do, when there is a next step. */
+    /** The success view's second line: the run's warning, then what is left to do. */
     successMessage?: string;
+    /** The run succeeded with a warning: the view is a warning's, not a green tick. */
+    warned: boolean;
     progress?: OperationProgressPayload | null;
     elapsed?: string;
     /** Every keystroke in a question's fields, for the buttons to hand back. */
@@ -151,6 +154,7 @@ function ProgressBody({
     failureTitle,
     successTitle,
     successMessage,
+    warned,
     progress,
     elapsed,
     onTyped,
@@ -172,7 +176,13 @@ function ProgressBody({
         return <StatusDisplay variant="error" title={failureTitle} message={progress?.error} />;
     }
     if (succeeded) {
-        return <StatusDisplay variant="success" title={successTitle} message={successMessage} />;
+        return (
+            <StatusDisplay
+                variant={warned ? 'warning' : 'success'}
+                title={successTitle}
+                message={successMessage}
+            />
+        );
     }
     // Size L, as every other progress display here: M left-aligns and shrinks
     // the text (ImportDatapackModal).
@@ -245,12 +255,15 @@ export function OperationProgressModal({
     // confirmation there was. This modal has been on screen for the whole run, and
     // the checkmark is its last beat.
     // A next step waits for the SC: closing by itself would take the offer away unread.
+    // So does a warning (AB-26z): a fill whose prices were not published ended on a
+    // green tick, and the reason reached only the Debug Logs.
     const offering = succeeded ? next : undefined;
+    const warning = succeeded ? progress?.warning : undefined;
     useEffect(() => {
-        if (!succeeded || offering) return undefined;
+        if (!succeeded || offering || warning) return undefined;
         const timer = setTimeout(onClose, TIMEOUTS.UI.RESULT_GLANCE);
         return () => clearTimeout(timer);
-    }, [succeeded, offering, onClose]);
+    }, [succeeded, offering, warning, onClose]);
 
     const close = useCallback((): void => {
         if (prompt) {
@@ -292,7 +305,10 @@ export function OperationProgressModal({
                         succeeded={succeeded}
                         failureTitle={operation.failureTitle}
                         successTitle={operation.successTitle}
-                        successMessage={offering?.message}
+                        successMessage={
+                            [warning, offering?.message].filter(Boolean).join(' ') || undefined
+                        }
+                        warned={Boolean(warning)}
                         progress={progress}
                         elapsed={elapsed}
                         onTyped={onTyped}

@@ -5,7 +5,8 @@
  * The modal used to just close, and the SC lost track of what was happening (owner,
  * 2026-09-19). Now the same operation carries on narrating in a VS Code progress
  * notification: titled like the modal, starting at the stage it had reached, and
- * updated with every stage after. Success closes it with a status-bar line; a failure
+ * updated with every stage after. Success closes it with a status-bar line, or with a
+ * warning notification when the run has something to say (`warning`); a failure
  * turns it into a warning with the reason and the Debug Logs. Reopening the modal
  * takes it back and closes the notification — one surface narrates at a time.
  *
@@ -85,6 +86,11 @@ export function forwardToBackgroundNotice(payload: OperationProgressPayload): vo
         return;
     }
     closeBackgroundNotice(payload.id);
+    if (payload.state === 'succeeded' && payload.warning) {
+        // The status bar has no room for it, and goes away by itself.
+        void vscode.window.showWarningMessage(`${notice.title} — done. ${payload.warning}`);
+        return;
+    }
     if (payload.state === 'succeeded') {
         vscode.window.setStatusBarMessage(`$(check) ${notice.title} — done`, TIMEOUTS.STATUS_BAR_SUCCESS);
         return;

@@ -21,6 +21,7 @@ import {
     listRuntimeNames,
     runtimeNamespaceEnv,
     CLEANUP_ORDER,
+    RUNTIME_ENTITY_NAME,
     leftoverLabel,
     type DeclaredRuntime,
     type RuntimeEntityKind,
@@ -30,13 +31,6 @@ import { withOrgContext, type OrgContextTarget } from '@/core/shell/orgContextEn
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { sleep } from '@/core/utils/sleep';
 import { toError } from '@/types/typeGuards';
-
-/**
- * Names safe to interpolate into an `aio runtime` command. Declared names come
- * from config FILES; a name outside the Adobe id charset is never deleted (and
- * never quoted into a shell line).
- */
-const RUNTIME_ENTITY_NAME = /^[A-Za-z0-9@._-]+$/;
 
 /**
  * What the post-undeploy verification found and did (AB-7). `aio app undeploy`

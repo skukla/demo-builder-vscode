@@ -322,6 +322,23 @@ describe('handleLoadErpDemoData — prices', () => {
         expect(result.data).not.toHaveProperty('loaded.prices');
     });
 
+    // The SC pressing the button reads the progress window, not the answer (AB-26z).
+    it('ends the progress window on the same warning when the fill was started from a screen', async () => {
+        mockPublishPrices.mockRejectedValue(
+            new Error('ERP prices answered 500: Commerce did not answer')
+        );
+        const { mockContext } = setup();
+
+        await handleLoadErpDemoData(mockContext, { id: 'erp-integration', progress: 'modal' });
+
+        expect(mockContext.sendMessage).toHaveBeenLastCalledWith('operationProgress', {
+            id: 'erp-integration',
+            state: 'succeeded',
+            warning:
+                'Demo data loaded; prices were not published: ERP prices answered 500: Commerce did not answer. Load demo data again to retry.',
+        });
+    });
+
     it('a publish that outran the call is "still running", not "not published" (no retry asked)', async () => {
         // Runtime's answer when a blocking web call passes 60 s; the action runs on and the
         // writes land (measured 2026-10-01: 72 prices, ledger full minutes later).

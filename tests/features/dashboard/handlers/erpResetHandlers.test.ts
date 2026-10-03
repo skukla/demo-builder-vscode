@@ -238,6 +238,27 @@ describe('handleResetErpRecords', () => {
         expect(result).toMatchObject({ success: true, data: { warning: note } });
     });
 
+    it('ends the progress window on that warning when the reset was started from a screen', async () => {
+        const { mockContext } = setupMocks(pairProject());
+        allowDeveloperRole();
+        const note =
+            'Demo data loaded; prices were not published: ERP prices answered 500: boom. Load demo data again to retry.';
+        mockFillErpForProject.mockResolvedValue({
+            status: 'filled',
+            erpId: 'demo-erp',
+            result: { partners: 3, products: 40, skipped: 0 },
+            note,
+        });
+
+        await handleResetErpRecords(mockContext, { id: 'erp-integration', progress: 'modal' });
+
+        expect(mockContext.sendMessage).toHaveBeenLastCalledWith('operationProgress', {
+            id: 'erp-integration',
+            state: 'succeeded',
+            warning: note,
+        });
+    });
+
     it('needs an id, even with no payload at all', async () => {
         const { mockContext } = setupMocks(pairProject());
         const result = await handleResetErpRecords(mockContext, undefined);

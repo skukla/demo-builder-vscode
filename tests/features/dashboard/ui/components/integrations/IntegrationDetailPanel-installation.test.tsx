@@ -55,6 +55,7 @@ function makeModel(overrides: Partial<IntegrationCardModel> = {}): IntegrationCa
 
 function renderPanel(model: IntegrationCardModel | undefined): {
     onAction: jest.Mock;
+    unmount: () => void;
     healthLine: () => HTMLElement;
     detailLines: () => string[];
 } {
@@ -70,6 +71,7 @@ function renderPanel(model: IntegrationCardModel | undefined): {
     );
     return {
         onAction,
+        unmount: view.unmount,
         healthLine: () =>
             view.container.querySelector('.integration-panel-health') as HTMLElement,
         detailLines: () =>
@@ -134,5 +136,27 @@ describe('IntegrationDetailPanel — the Commerce install on the health line', (
         renderPanel(makeModel({ installation: { label: 'Installed', failed: false } }));
 
         expect(screen.queryByText('Open Commerce Admin')).not.toBeInTheDocument();
+    });
+
+    // AB-11: the install does not list the app in App Management. Listing is optional, and
+    // unassociating there is the one step that destroys something.
+    it('an installed app says App Management is optional, and what unassociating there costs', () => {
+        renderPanel(makeModel({ installation: { label: 'Installed', failed: false } }));
+
+        const row = screen.getByText('App Management').closest('.integration-panel-row');
+        expect(row).toHaveTextContent(
+            'Optional. To list it in Commerce Admin, go to Apps > App Management, choose Associate App ' +
+                "and pick this integration's project and workspace. " +
+                'Unassociating there deletes its settings for that store and cannot be undone.'
+        );
+    });
+
+    it('CONTROL: no App Management row without an install, or while the install has failed', () => {
+        const { unmount } = renderPanel(makeModel());
+        expect(screen.queryByText('App Management')).not.toBeInTheDocument();
+        unmount();
+
+        renderPanel(makeModel({ installation: { label: 'Not installed', failed: true } }));
+        expect(screen.queryByText('App Management')).not.toBeInTheDocument();
     });
 });

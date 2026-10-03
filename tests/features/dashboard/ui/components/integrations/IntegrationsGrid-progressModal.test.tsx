@@ -144,6 +144,29 @@ describe('the progress modal', () => {
         ).not.toBeInTheDocument();
     });
 
+    // AB-26z: the warning of a run that succeeded is said where the SC is looking, and
+    // the modal waits to be closed so it is read.
+    it('shows a success\'s warning under the result, and stays until closed', async () => {
+        const user = setupUser();
+        renderGrid({ appBuilderComponents: NOT_DEPLOYED });
+        const modal = await startDeploy(user);
+
+        push({ id: 'custom-app', state: 'succeeded', warning: 'Prices were not published.' });
+
+        const result = within(modal).getByTestId('status-display');
+        expect(within(result).getByText('custom-app deployed')).toBeInTheDocument();
+        expect(within(result).getByText('Prices were not published.')).toBeInTheDocument();
+
+        await act(async () => {
+            jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 2);
+        });
+        expect(screen.getByRole('dialog', { name: 'Deploying custom-app' })).toBeInTheDocument();
+        await user.click(within(modal).getByRole('button', { name: 'Close' }));
+        expect(
+            screen.queryByRole('dialog', { name: 'Deploying custom-app' }),
+        ).not.toBeInTheDocument();
+    });
+
     it('stays open on failure with the reason', async () => {
         const user = setupUser();
         renderGrid({ appBuilderComponents: NOT_DEPLOYED });

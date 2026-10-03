@@ -27,6 +27,8 @@ import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerResponse, MessageHandler } from '@/types/handlers';
 
 type FillOutcome = GuardableResult & {
+    /** Prices a fill could not publish: the progress window's last word (AB-26z). */
+    warning?: string;
     loaded?: Array<{ erp: string; name: string; result: ErpFillForProjectResult; note?: string }>;
 };
 
@@ -97,14 +99,15 @@ export const handleLoadErpDemoData: MessageHandler<ErpCallPayload & { progress?:
                             ...(filled.note ? { note: filled.note } : {}),
                         });
                     }
-                    return { success: true, loaded };
+                    // Prices not published after a fill that stood: said, never a failure (AB-26z).
+                    const warning = fillNotes(loaded);
+                    return { success: true, loaded, ...(warning ? { warning } : {}) };
                 },
             );
             if (outcome.blocked || !outcome.success)
                 return { success: false, error: outcome.error };
             const loaded = outcome.loaded ?? [];
-            // Prices not published after a fill that stood: said, never a failure (AB-26z).
-            const warning = fillNotes(loaded);
+            const { warning } = outcome;
             return {
                 success: true,
                 data: {

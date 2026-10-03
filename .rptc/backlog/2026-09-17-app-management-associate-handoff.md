@@ -65,3 +65,7 @@ So Demo Builder keeps installing the integration on its own, and this item becom
    actions read it.
 
 Filed 2026-09-17.
+
+## Shipped so far
+
+- 2026-10-03  Copy built, not committed (loop/2026-10-03-overnight): an installed integration's flyout has an App Management row (listing is optional, where to associate, unassociating deletes its settings for that store and cannot be undone); get_integration_install_status says the same to an agent. Open for the owner: read the row on a real card

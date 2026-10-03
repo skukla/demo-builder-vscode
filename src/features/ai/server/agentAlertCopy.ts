@@ -233,7 +233,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     delete_undeclared_runtime_code: {
         action: 'Delete code an integration left behind',
         consequence:
-            "Deletes the Runtime actions in the integration's own packages that its config no longer declares. Nothing it still uses is touched.",
+            "Deletes the Runtime actions in the integration's own packages that its config no longer declares, and the timers and rules that started them. Nothing it still uses is touched.",
         target: ['componentId'],
         // The code is gone for good, though a redeploy of an older version brings it back.
         sessionGrant: false,
@@ -241,7 +241,8 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     remove_integration: {
         action: 'Remove an integration',
         consequence:
-            'Undeploys the integration, deletes its files and its Adobe workspace. Anything calling it stops working.',
+            'Undeploys the integration, deletes its files and its Adobe workspace. Anything calling it stops working. ' +
+            'If it was associated in Commerce Admin under Apps > App Management, it stays listed there: unassociate it there first.',
         target: ['id'],
         // The deployment could be redeployed, but the local files are deleted.
         sessionGrant: false,

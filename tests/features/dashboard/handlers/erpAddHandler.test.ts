@@ -382,6 +382,20 @@ describe('handleAddErp', () => {
         expect(result).toMatchObject({ success: true, data: { added: { id: 'demo-erp-2' }, warning: note } });
     });
 
+    it('ends the progress window on that note when the add was started from a screen', async () => {
+        const note = 'Demo data loaded; prices were not published: ERP prices answered 500: boom. Load demo data again to retry.';
+        mockFill.mockResolvedValue({ status: 'filled', result: { partners: 2, products: 10, skipped: 0 }, erpId: 'demo-erp-2', note });
+        const { mockContext } = setup();
+
+        await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP', owns: OWN_ATTRIBUTE, progress: 'modal' });
+
+        expect(mockContext.sendMessage).toHaveBeenCalledWith('operationProgress', {
+            id: 'erp-integration',
+            state: 'succeeded',
+            warning: note,
+        });
+    });
+
     it("a credential the list could not carry still adds the ERP, and says so beside the fill's note", async () => {
         const warning = "Brand B ERP's credential could not be read; the integration cannot reach it: boom.";
         mockSync.mockResolvedValue({ status: 'registered', ids: ['erp', 'demo-erp-2'], warnings: [warning] });

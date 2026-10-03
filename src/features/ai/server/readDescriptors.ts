@@ -295,7 +295,11 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
             'failed" — a failed install is retried with install_integration, not a redeploy; ' +
             'a persisted needsReinstall (Commerce refused an in-place upgrade) needs reinstall_integration, ' +
             "which is also the repair when Commerce has lost the app's webhooks or events while the " +
-            'app still reports itself installed (install_integration then answers skipped).',
+            'app still reports itself installed (install_integration then answers skipped). ' +
+            'Installed does not mean listed in Commerce Admin under Apps > App Management: that listing ' +
+            'is optional, and exists only once the user chooses Associate App there and picks the ' +
+            "integration's project and workspace. Unassociating there deletes its settings for that store " +
+            'and cannot be undone.',
         map: dashboardHandlers,
         type: 'getAppBuilderInstallStatus',
         inputSchema: {
@@ -540,8 +544,8 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: true,
         description:
-            "List the packages deployed in this project's Adobe I/O Runtime namespace (its " +
-            'Developer Console workspace), with the namespace name. Use to check what an ' +
+            "List the packages, triggers (timers) and rules deployed in this project's Adobe I/O " +
+            'Runtime namespace (its Developer Console workspace), with the namespace name. Use to check what an ' +
             'integration left running after a removal, or what is deployed before a redeploy. ' +
             'Pass componentId to read the workspace that integration deploys into.',
         map: dashboardHandlers,

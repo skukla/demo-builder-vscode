@@ -96,7 +96,8 @@ interface OwnsSaid {
 type AddOutcome = GuardableResult & {
     listed?: string[];
     filled?: boolean;
-    fillNote?: string;
+    /** What the add could not do though it stood: the answer's warning, and the progress window's. */
+    warning?: string;
     owns?: OwnsSaid;
     existingOwns?: OwnsSaid[];
 };
@@ -308,8 +309,8 @@ async function listAndFill(
     // Prices not published after the fill (AB-26z).
     if (filled.status === 'filled' && filled.note) notes.push(filled.note);
     if (filled.status !== 'filled') notes.push(`Demo data did not load: ${sentence(filled.detail)} Use Load demo data on its card.`);
-    const fillNote = notes.length ? { fillNote: notes.join(' ') } : {};
-    return { success: true, listed: listed.ids, filled: filled.status === 'filled', owns, existingOwns, ...fillNote };
+    const warning = notes.length ? { warning: notes.join(' ') } : {};
+    return { success: true, listed: listed.ids, filled: filled.status === 'filled', owns, existingOwns, ...warning };
 }
 
 /** A reason as a sentence: ending in a full stop, whether or not it came with one. */
@@ -370,7 +371,7 @@ export const handleAddErp: MessageHandler<AddErpRequestPayload> = narrateOutcome
                 erpList: outcome.listed,
                 owns: outcome.owns,
                 existingOwns: outcome.existingOwns,
-                ...(outcome.fillNote ? { warning: outcome.fillNote } : {}),
+                ...(outcome.warning ? { warning: outcome.warning } : {}),
             },
         };
     },

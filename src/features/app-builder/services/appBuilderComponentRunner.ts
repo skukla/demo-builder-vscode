@@ -409,8 +409,8 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
         input: RepublishInput
     ) => Promise<{ success: boolean; error?: string; cdnError?: string }>;
     /**
-     * After a deploy, delete the actions the apps at these paths no longer declare, in
-     * their own packages (`runtimeUndeclaredActions.ts`): `aio app deploy` never does.
+     * After a deploy, delete the actions the apps at these paths no longer declare, and the
+     * rules and triggers that started them (`runtimeUndeclaredActions.ts`); `aio` never does.
      * Runs inside the deploy's org context. Absent in tests that do not exercise it.
      */
     deleteUndeclaredActions?: (componentPaths: string[]) => Promise<UndeclaredActionCleanup>;
@@ -622,7 +622,7 @@ function withWarnings(...warnings: Array<string | undefined>): RunnerResult {
 
 /**
  * After an app deploy: delete what the deploy left behind — actions in the app's own
- * packages it no longer declares — and answer a warning when some could not be deleted
+ * packages it no longer declares, and the rules and triggers that started them — and answer a warning when some could not be deleted
  * or the namespace could not be read. Every component deploying into the same workspace
  * is passed, so a pair's two apps keep each other's actions safe.
  */

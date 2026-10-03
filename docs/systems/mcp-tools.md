@@ -260,7 +260,7 @@ server IS — transport, lifecycle, scoping, security — is in
 | `list_datapack_data_types` | read | The data types the Data Installer can process for one operation mode, in dependency |
 | `list_installed_datapacks` | read | Datapacks the Data Installer records as installed, and the Commerce instance each |
 | `list_runtime_activations` | read | List what RAN in this project's Adobe I/O Runtime namespace, newest first: each |
-| `list_runtime_packages` | read | List the packages deployed in this project's Adobe I/O Runtime namespace (its |
+| `list_runtime_packages` | read | List the packages, triggers (timers) and rules deployed in this project's Adobe I/O |
 | `probe_shared_demo` | read | Read a colleague's demo before adding it: what kind of storefront it is (Edge Delivery or headless), |
 | `read_runtime_activation` | read | Read one Runtime activation's log lines and result, by the id list_runtime_activations |
 | `run_erp_rest` | read | GET one of the ERP's own routes as its screens read them: partners, partners/<id>, |

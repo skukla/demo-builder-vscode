@@ -27,12 +27,14 @@ import { withProgressRegister } from './progressRegister';
 import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
 import { detailFor, expectationFor } from '@/core/utils/operationStages';
 import { stageLine } from '@/core/utils/stageLine';
-import type { OperationPosition } from '@/types/webviewPayloads';
+import type { OperationPosition, OperationProgressPayload } from '@/types/webviewPayloads';
 
 /** What an operation answers when it ends. */
 export interface OperationOutcome {
     success: boolean;
     error?: string;
+    /** What a run that succeeded could not do; the modal's success view says it. */
+    warning?: string;
 }
 
 export interface OperationProgressOptions {
@@ -70,6 +72,14 @@ export async function withOperationProgress<T extends OperationOutcome>(
     return runInModal(options.id, run);
 }
 
+/** The modal's last word: the reason on failure, a success's warning when it has one. */
+function endOf(id: string, result: OperationOutcome): OperationProgressPayload {
+    if (!result.success) {
+        return { id, state: 'failed', error: result.error ?? 'The operation did not finish.' };
+    }
+    return result.warning ? { id, state: 'succeeded', warning: result.warning } : { id, state: 'succeeded' };
+}
+
 /** R1 and R7: every stage — and every step of anything nested — to the modal. */
 async function runInModal<T extends OperationOutcome>(
     id: string,
@@ -99,10 +109,6 @@ async function runInModal<T extends OperationOutcome>(
     // The id goes where a guard deep inside the work can find it, so a question it
     // must ask reaches this modal instead of a notification beside it.
     const result = await withModalAsking(id, () => withPhaseSinks([nested], () => run(report)));
-    await pushOperationProgress(
-        result.success
-            ? { id, state: 'succeeded' }
-            : { id, state: 'failed', error: result.error ?? 'The operation did not finish.' },
-    );
+    await pushOperationProgress(endOf(id, result));
     return result;
 }
