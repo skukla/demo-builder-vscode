@@ -4,8 +4,9 @@ kind: question
 area: app-builder
 needs: []
 value: high
-status: built
+status: superseded
 parent: AB-26
+superseded-by: AB-44
 ---
 
 # Should the ERP be seeded with price groups / price lists from Commerce's shared catalogs at setup?

@@ -4,7 +4,7 @@ kind: epic
 area: ai
 needs: []
 value: high
-status: open
+status: active
 ---
 # Is the surface good enough for an agent to do the work?
 

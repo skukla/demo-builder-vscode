@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-1
 needs: []
 value: high
-status: active
+status: built
 ---
 
 # ERP integration: the first pre-built integration in the catalog

@@ -4,7 +4,7 @@ kind: question
 area: ai
 needs: []
 value: med
-status: active
+status: built
 ---
 
 # Should an agent's project delete also clean up the cloud, as a person's does?

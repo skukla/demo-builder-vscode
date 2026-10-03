@@ -4,7 +4,7 @@ kind: feature
 area: platform
 needs: []
 value: med
-status: active
+status: shipped
 parent: PL-30
 ---
 

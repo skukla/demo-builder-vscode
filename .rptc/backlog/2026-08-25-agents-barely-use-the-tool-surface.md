@@ -5,7 +5,7 @@ area: ai
 parent: AI-1
 needs: AI-1c
 value: high
-status: open
+status: shipped
 layer: A
 ---
 # 104 tools, and agents reach 20 of them (measured 2026-08-25; 121 tools now)

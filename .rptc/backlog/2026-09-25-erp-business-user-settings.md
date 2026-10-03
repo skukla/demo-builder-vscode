@@ -4,8 +4,9 @@ kind: feature
 area: app-builder
 needs: []
 value: high
-status: backlog
+status: gated
 parent: AB-26
+waiting-on: a Commerce store that sends mail, or an Adobe source saying what the notify flag does
 ---
 
 # Business-user settings for the ERP pair — which behaviours a merchant chooses, and where

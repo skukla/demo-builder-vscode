@@ -4,7 +4,7 @@ kind: feature
 area: eds
 needs: []
 value: med
-status: backlog
+status: built
 ---
 
 # A project tile that opens AEM Assets

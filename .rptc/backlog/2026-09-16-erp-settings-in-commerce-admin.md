@@ -5,7 +5,8 @@ area: app-builder
 parent: AB-9
 needs: []
 value: med
-status: backlog
+status: superseded
+superseded-by: AB-30
 ---
 
 # An "ERP" section in Commerce Admin where a business user configures the integration

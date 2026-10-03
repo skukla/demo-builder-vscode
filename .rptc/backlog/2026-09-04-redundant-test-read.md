@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: high
-status: open
+status: backlog
 parent: PL-22
 ---
 

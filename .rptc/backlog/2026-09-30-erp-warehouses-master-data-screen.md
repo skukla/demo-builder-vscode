@@ -41,3 +41,7 @@ changed `settings`). demo-erp 378/378.
 
 The SC sees a Warehouses list under MASTER DATA and can rename each. DONE (built + green;
 deploys with the next demo-erp release).
+
+## Shipped so far
+
+- 2026-10-03  Reconciled 2026-10-03: committed, not 'uncommitted' as the body says — demo-erp 6976b08 on main.

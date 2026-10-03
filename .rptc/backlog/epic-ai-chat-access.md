@@ -4,7 +4,7 @@ kind: epic
 area: ai
 needs: []
 value: med
-status: open
+status: backlog
 ---
 # Getting into the chat at all
 

@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: high
-status: active
+status: built
 ---
 
 # A created GitHub repository becomes the selected repository, and the Code Sync notice centres

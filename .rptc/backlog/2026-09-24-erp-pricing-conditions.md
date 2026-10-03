@@ -23,3 +23,4 @@ Unit tests on the engine (dates, quantity, specificity); headless screen checks 
 ## Shipped so far
 - 2026-09-24  BUILT — demo-erp 66c215e (validFrom/validTo/minQty on conditions, date on quote, notApplied per line with reasons; Pricing screen: Min. qty / Valid / Status columns, Active-only switch, ComboBox value help, did-not-apply list; 199 tests green, screen fingerprints re-accepted and stable across 3 full runs); integration d14ea22 vendors the contract (301 tests, biome clean). Not done: live proof that the cart webhook still prices correctly (needs the scratch deploy, slice V)
 - 2026-09-24  docs(backlog): AB-26i pricing conditions built; AB-26a research logged (`a89cade27`)
+- 2026-10-03  Reconciled 2026-10-03: the owed 'cart webhook live proof' is moot — AB-26z removed the cart webhooks; prices reach Commerce as shared-catalog tier prices.

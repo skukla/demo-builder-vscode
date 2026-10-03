@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: []
 value: low
-status: open
+status: backlog
 ---
 
 # A removed alarm survives the deploy, and Demo Builder cannot see or delete it

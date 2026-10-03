@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: []
 value: med
-status: active
+status: built
 ---
 
 # The ERP's Settings screen should be settings: a form an ERP user edits, not panels of text

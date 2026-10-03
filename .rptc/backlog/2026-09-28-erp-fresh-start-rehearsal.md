@@ -5,7 +5,8 @@ area: app-builder
 parent: AB-16
 needs: [AB-16a, AB-16d, AB-26z]
 value: high
-status: backlog
+status: superseded
+superseded-by: AB-53
 ---
 
 # Fresh start: delete Bodea, rebuild from the setup guide, walk the journeys

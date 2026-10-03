@@ -45,3 +45,7 @@ test-cleanup pass:
 
 Filed rather than fixed because it is production code reached from a test loop,
 and deleting a protocol field is not a de-duplication.
+
+## Shipped so far
+
+- 2026-10-03  Reconciled 2026-10-03: the body's 'no caller anywhere' is wrong — baseWebviewCommand.ts:369-370 calls incrementStateVersion() and returns getStateVersion() from update-state. Check whether any webview reads that version before deleting it.

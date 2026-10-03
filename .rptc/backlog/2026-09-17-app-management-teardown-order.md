@@ -3,7 +3,7 @@ id: AB-12
 kind: feature
 area: app-builder
 parent: AB-9
-needs: []
+needs: [AB-11]
 value: low
 status: backlog
 ---

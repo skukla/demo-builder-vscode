@@ -4,8 +4,9 @@ kind: feature
 area: eds
 needs: []
 value: med
-status: backlog
+status: gated
 layer: F
+waiting-on: Mod Agent access
 ---
 # EDS site-scraping capability for Demo Builder
 

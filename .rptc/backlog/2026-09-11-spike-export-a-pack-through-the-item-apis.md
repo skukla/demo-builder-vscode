@@ -5,7 +5,8 @@ area: data-installer
 parent: EDS-13
 needs: []
 value: low
-status: spiked
+status: superseded
+superseded-by: DI-1
 ---
 
 # Spike: export a pack to the service through the item APIs, end to end

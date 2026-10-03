@@ -2,9 +2,9 @@
 id: AB-6
 kind: feature
 area: app-builder
-needs: []
+needs: [AB-8]
 value: high
-status: active
+status: blocked
 ---
 
 # Event-provider lifecycle tooling — so eventing round-trips to zero

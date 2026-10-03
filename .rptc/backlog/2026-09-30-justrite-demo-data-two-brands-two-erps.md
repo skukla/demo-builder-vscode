@@ -4,8 +4,9 @@ kind: feature
 area: app-builder
 needs: [AB-51]
 value: high
-status: active
+status: superseded
 parent: AB-16
+superseded-by: AB-53
 ---
 
 # Bodea's demo data reflects the JustRite picture: two brands, two ERPs, one cart

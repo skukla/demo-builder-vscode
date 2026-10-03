@@ -78,3 +78,4 @@ compared against an independent list of what matters.
 ## Shipped so far
 
 - 2026-09-15  Renumbered from PL-56: the shared-demo work had filed its portability epic as PL-56 on another branch, and merging the two met both.
+- 2026-10-03  Reconciled 2026-10-03: step 1's candidate defect is answered — homeAiContextWriter.ts is outside the hash-and-skip seam on purpose (no manifest; a banner says it is rewritten every activation). Record it as a ledgered exception rather than a bypass.

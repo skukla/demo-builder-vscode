@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: []
 value: low
-status: active
+status: built
 ---
 
 # The ERP lookup fails on a SKU Commerce does not have

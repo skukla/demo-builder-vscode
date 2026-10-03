@@ -4,8 +4,9 @@ kind: epic
 area: eds
 needs: []
 value: low
-status: backlog
+status: gated
 layer: F
+waiting-on: a live login check: an individual buyer vs a company buyer
 ---
 # Plan — Hybrid storefront (Tier 2) + B2B-ready prerequisite & detection
 

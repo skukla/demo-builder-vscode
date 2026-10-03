@@ -86,3 +86,7 @@ ACO.
 
 Each question has an answer with its source, and either a plan for the second path or a
 recorded reason it is not needed.
+
+## Shipped so far
+
+- 2026-10-03  Reconciled 2026-10-03: the body's webhook/item-prices, webhook/discounts and pricing_contract_prices no longer exist on integration main; AB-26z moved contract prices into shared catalogs as tier prices. The question stands for ACO (PL-60).

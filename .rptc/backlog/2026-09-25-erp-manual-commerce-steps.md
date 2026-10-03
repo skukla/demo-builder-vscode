@@ -113,3 +113,4 @@ optional ones are labelled optional with what they add.
 - 2026-09-27  fix(setup): the ERP's warehouse step asks for a stock of the website's own (`756aa97ba`)
 - 2026-09-30  2026-09-30 New manual Commerce step on the ERP integration's checklist (4953d2b13): Catalog Price Scope = Website (Stores > Configuration > Catalog > Catalog > Price), needed for per-website shared-catalog prices (AB-46). Unchecked: Commerce's REST exposes no read of store configuration on ACCS as far as measured; if a read turns up, it becomes a SetupCheck.
 - 2026-09-28  2026-09-28 status tidy (owner: yes): built. Checklist built on develop (e9a87e742, d8c5aae, 756aa97ba); the provider-id fix on the integration's main (169a674). Left: live proof that a fresh install sets the provider id.
+- 2026-10-03  Reconciled 2026-10-03: the cited Demo Builder commit d8c5aae is in no ref of this repo; the matching work is d8b44bf43.

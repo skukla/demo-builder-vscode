@@ -4,7 +4,7 @@ kind: feature
 area: data-installer
 needs: []
 value: med
-status: planned
+status: active
 layer: F
 ---
 # Datapack authoring loop — export, modify, publish-your-own via project skills

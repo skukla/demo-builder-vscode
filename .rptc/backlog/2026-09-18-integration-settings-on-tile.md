@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: med
-status: active
+status: built
 ---
 
 # An integration's settings live on its tile, not on Configure Project

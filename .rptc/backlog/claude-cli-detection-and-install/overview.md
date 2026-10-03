@@ -3,9 +3,9 @@ id: AI-4a
 kind: feature
 area: ai
 parent: AI-4
-needs: []
+needs: [PR-1]
 value: med
-status: backlog
+status: blocked
 layer: F
 ---
 # Engine-aware AI launch + detection + opt-in install (Claude wired, Codex placeholders)
