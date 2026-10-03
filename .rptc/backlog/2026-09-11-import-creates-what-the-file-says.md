@@ -5,7 +5,7 @@ area: platform
 parent: PL-56
 needs: [PL-56c]
 value: high
-status: backlog
+status: active
 ---
 
 # Import creates what the file says, re-proves sign-ins, and tells the SC what it did
@@ -66,3 +66,4 @@ continues, and tell the SC what was applied and what was not.
 ## Shipped so far
 
 - 2026-09-13  feat(eds): a demo bundle's setup opens the wizard pre-filled, on the card its storefront became (`abba851b5`)
+- 2026-10-03  feat(ai): an agent can reset a headless project and start a project from an exported file (`59a915952`)
