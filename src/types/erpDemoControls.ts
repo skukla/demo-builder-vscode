@@ -16,8 +16,21 @@
 /** The ERP's themes: one choice that sets its colour, its logo and where its menu sits. */
 export const ERP_THEME_IDS = ['harbour', 'meridian', 'granite', 'foundry'] as const;
 
+export type ErpThemeId = (typeof ERP_THEME_IDS)[number];
+
 /** The ERP's colours. */
 export const ERP_PALETTE_IDS = ['teal', 'indigo', 'slate', 'bronze', 'plum'] as const;
+
+/**
+ * The colour each theme sets (its THEMES entry's `palette`). No two themes share one, so an
+ * ERP's colour says which theme it shows; plum is reachable from the colour control alone.
+ */
+export const ERP_THEME_PALETTES: Readonly<Record<ErpThemeId, string>> = {
+    harbour: 'teal',
+    meridian: 'indigo',
+    granite: 'slate',
+    foundry: 'bronze',
+};
 
 /** A simulated downtime's length in minutes: the ERP's default, and its bounds. */
 export const ERP_DOWNTIME_MINUTES = { default: 30, min: 1, max: 24 * 60 } as const;

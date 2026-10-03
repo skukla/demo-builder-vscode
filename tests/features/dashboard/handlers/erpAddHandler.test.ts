@@ -51,6 +51,13 @@ jest.mock('@/features/project-creation/services/erpOwnershipSync', () => ({
     saveErpOwnership: (...a: unknown[]) => mockSaveOwnership(...a),
 }));
 
+// The look step (AB-51), its own suite's (erpAddTheme.test.ts): here, what it is handed and
+// when, and what the add answers with what it says.
+const mockTheme = jest.fn();
+jest.mock('@/features/dashboard/handlers/erpAddTheme', () => ({
+    giveAddedErpItsOwnTheme: (...a: unknown[]) => mockTheme(...a),
+}));
+
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(() => ({
@@ -144,6 +151,7 @@ beforeEach(() => {
     mockFill.mockResolvedValue({ status: 'filled', result: { partners: 2, products: 10, skipped: 0 }, erpId: 'demo-erp-2' });
     mockReadOptions.mockResolvedValue(OPTIONS);
     mockSaveOwnership.mockResolvedValue(undefined);
+    mockTheme.mockResolvedValue({});
 });
 
 /** The store as the options read answers it: two websites, the first ERP still owning everything. */
@@ -417,6 +425,59 @@ describe('handleAddErp', () => {
         expect(result).toMatchObject({
             success: true,
             data: { warning: `${warning} Demo data did not load: Commerce answered 401 for products. Use Load demo data on its card.` },
+        });
+    });
+
+    describe('a look no other ERP has (AB-51)', () => {
+        it('hands the step the new ERP once it is linked, before the list is sent', async () => {
+            const { mockContext } = setup();
+
+            await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP', owns: OWN_ATTRIBUTE });
+
+            expect(mockTheme).toHaveBeenCalledTimes(1);
+            const [context, project, integrationId, erpId] = mockTheme.mock.calls[0] as [unknown, Project, string, string];
+            expect(context).toBe(mockContext);
+            expect([integrationId, erpId]).toEqual(['erp-integration', 'demo-erp-2']);
+            expect(project.appBuilderComponents?.['erp-integration']?.systems).toEqual(['demo-erp', 'demo-erp-2']);
+            expect(mockTheme.mock.invocationCallOrder[0]).toBeLessThan(mockSync.mock.invocationCallOrder[0]);
+        });
+
+        it('answers the theme the new ERP was given', async () => {
+            mockTheme.mockResolvedValue({ theme: 'harbour' });
+            const { mockContext } = setup();
+
+            const result = await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP', owns: OWN_ATTRIBUTE });
+
+            expect(result).toMatchObject({ success: true, data: { theme: 'harbour' } });
+            expect((result.data as { warning?: string }).warning).toBeUndefined();
+        });
+
+        it('a look it could not check or change still adds the ERP, and says so on the window', async () => {
+            const warning = "Brand B ERP's look was not checked against the other ERPs: boom. Set it with set_erp_appearance or on its Settings screen.";
+            mockTheme.mockResolvedValue({ warning });
+            const { mockContext } = setup();
+
+            const result = await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP', owns: OWN_ATTRIBUTE, progress: 'modal' });
+
+            expect(result).toMatchObject({ success: true, data: { warning } });
+            expect((result.data as { theme?: string }).theme).toBeUndefined();
+            expect(mockContext.sendMessage).toHaveBeenCalledWith('operationProgress', {
+                id: 'erp-integration',
+                state: 'succeeded',
+                warning,
+            });
+        });
+
+        it('leaves the look of an ERP an earlier add deployed alone', async () => {
+            const unfinished = erpProject({
+                'demo-erp-2': { kind: 'system', status: 'deployed', catalogId: 'demo-erp', name: 'Brand B ERP', usedBy: 'erp-integration', source: { owner: 'skukla', repo: 'demo-erp' } },
+            });
+            unfinished.appBuilderComponents!['erp-integration'].systems = ['demo-erp', 'demo-erp-2'];
+            const { mockContext } = setup(unfinished);
+
+            await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP', owns: OWN_ATTRIBUTE });
+
+            expect(mockTheme).not.toHaveBeenCalled();
         });
     });
 

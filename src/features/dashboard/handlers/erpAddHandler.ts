@@ -10,7 +10,9 @@
  * (AB-64: the one the SC chose in the dialog, or the default when the agent gave none), and the
  * new ERP is filled from Commerce, its key map rows carrying its id. The rule is saved BEFORE
  * the fill, which reads it; an existing ERP whose rule changed is not refilled here, and the
- * answer says its products change at its next reset or Load demo data.
+ * answer says its products change at its next reset or Load demo data. Once linked, an ERP this
+ * add deployed is given a theme no other ERP shows when its own starting theme is another's
+ * (AB-51, `erpAddTheme.ts`); the answer's `theme` says which.
  *
  * Adding again with the name of an ERP whose add stopped partway finishes it: a failed deploy
  * is retried, and a deployed one that the list or the fill missed is listed and filled. The
@@ -30,6 +32,8 @@ import {
     resolveComponentTarget,
     type GuardableResult,
 } from './appBuilderComponentHandlers';
+import { giveAddedErpItsOwnTheme, type ErpAddTheme } from './erpAddTheme';
+import { sentence } from './erpCall';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
@@ -68,6 +72,7 @@ import {
 } from '@/features/project-creation/services/erpOwnershipSync';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';
+import type { ErpThemeId } from '@/types/erpDemoControls';
 import type { ErpOwnsEntry, ErpOwnsRule } from '@/types/erpOwnership';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
@@ -103,6 +108,8 @@ type AddOutcome = GuardableResult & {
     mapping?: ErpMappingReport;
     owns?: OwnsSaid;
     existingOwns?: OwnsSaid[];
+    /** The theme Demo Builder gave the new ERP, when it looked like another (AB-51). */
+    theme?: ErpThemeId;
 };
 
 /**
@@ -267,9 +274,29 @@ async function recordName(context: HandlerContext, plan: ErpAddPlan): Promise<vo
 }
 
 /**
+ * Link the deployed ERP to the integration; then, when THIS add deployed it, give it a look no
+ * other ERP has (AB-51). It runs here, as soon as the ERP answers its health, so its screen has
+ * its own look before the list and the fill, and a later retry (deployed already) never
+ * replaces a look someone has set since.
+ */
+async function linkNewErp(
+    context: HandlerContext,
+    plan: ErpAddPlan,
+    report: (stage: string, step?: string) => void,
+): Promise<ErpAddTheme> {
+    const { project, integrationId, entry } = plan;
+    linkComponents(project, integrationId, entry.id, getAppBuilderComponentCatalog());
+    await context.stateManager.saveProject(project);
+    if (plan.deployed) return {};
+    report(OPERATION_STAGES.adding.label, `Giving ${plan.name} a look of its own`);
+    return giveAddedErpItsOwnTheme(context, project, integrationId, entry.id);
+}
+
+/**
  * After the ERP is deployed: link it, list every ERP with the integration, fill the new one.
  * A list that could not be sent fails the add (the integration would not route to the ERP);
- * a fill that did not finish is said, and Load demo data on the ERP's card runs it again.
+ * a fill that did not finish is said, and Load demo data on the ERP's card runs it again; a look
+ * that could not be checked or changed is said too.
  */
 async function listAndFill(
     context: HandlerContext,
@@ -277,8 +304,7 @@ async function listAndFill(
     report: (stage: string, step?: string) => void,
 ): Promise<AddOutcome> {
     const { project, integrationId, entry } = plan;
-    linkComponents(project, integrationId, entry.id, getAppBuilderComponentCatalog());
-    await context.stateManager.saveProject(project);
+    const themed = await linkNewErp(context, plan, report);
     const authManager = ServiceLocator.getAuthenticationService();
     const auth = await resolveAppManagementAuth(project, authManager);
     report(OPERATION_STAGES.adding.label, 'Telling the integration about its ERPs');
@@ -308,18 +334,14 @@ async function listAndFill(
     );
     // A credential the list could not carry (AB-16a) and a fill that did not finish are
     // both said, and the add stands.
-    const notes = [...listed.warnings, ...ownsNotes];
+    const notes = [...(themed.warning ? [themed.warning] : []), ...listed.warnings, ...ownsNotes];
     // Prices not published after the fill (AB-26z).
     if (filled.status === 'filled' && filled.note) notes.push(filled.note);
     if (filled.status !== 'filled') notes.push(`Demo data did not load: ${sentence(filled.detail)} Use Load demo data on its card.`);
     const warning = notes.length ? { warning: notes.join(' ') } : {};
     const mapping = filled.status === 'filled' && filled.mapping ? { mapping: filled.mapping } : {};
-    return { success: true, listed: listed.ids, filled: filled.status === 'filled', owns, existingOwns, ...mapping, ...warning };
-}
-
-/** A reason as a sentence: ending in a full stop, whether or not it came with one. */
-function sentence(text: string): string {
-    return /[.!?]$/u.test(text) ? text : `${text}.`;
+    const theme = themed.theme ? { theme: themed.theme } : {};
+    return { success: true, listed: listed.ids, filled: filled.status === 'filled', owns, existingOwns, ...mapping, ...theme, ...warning };
 }
 
 /** Deploy the new ERP in its own workspace, unless an earlier add already did. */
@@ -376,6 +398,7 @@ export const handleAddErp: MessageHandler<AddErpRequestPayload> = narrateOutcome
                 owns: outcome.owns,
                 existingOwns: outcome.existingOwns,
                 ...(outcome.mapping ? { mapping: outcome.mapping } : {}),
+                ...(outcome.theme ? { theme: outcome.theme } : {}),
                 ...(outcome.warning ? { warning: outcome.warning } : {}),
             },
         };

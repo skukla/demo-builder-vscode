@@ -566,7 +566,8 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             'its attribute), saved with the new one; it is NOT refilled, and data.warning says its ' +
             'products change at its next reset or Load demo data. The answer says the rule applied ' +
             '(data.owns, data.existingOwns, each with the rule in words) and which website mappings ' +
-            'its fill filled and kept (data.mapping). Ask the user which rule ' +
+            'its fill filled and kept (data.mapping). A new ERP whose starting colour is another ' +
+            "ERP's is given the first theme no other ERP shows (data.theme). Ask the user which rule " +
             'before running it. The ERP integration is added once; add_integration refuses a ' +
             'second. Remove one ERP with remove_integration on its id. Takes a few minutes. ' +
             'Requires confirm:true.',

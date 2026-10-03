@@ -173,6 +173,11 @@ export function shapeErpRow(erp: ErpCall['erp']) {
     };
 }
 
+/** A reason as a sentence: ending in a full stop, whether or not it came with one. */
+export function sentence(text: string): string {
+    return /[.!?]$/u.test(text) ? text : `${text}.`;
+}
+
 export function errorText(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
 }

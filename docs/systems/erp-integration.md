@@ -191,6 +191,18 @@ by the add; its products change at its next Reset ERPs or Load demo data, which 
 the answer say. `add_erp` takes the same choice as `owns` and applies the same default without
 it.
 
+**Its look.** The ERP picks its starting theme from a hash of its list id (demo-erp
+`lib/appearance.js` `themeForErpId`) and cannot see the other ERPs, so two can start alike
+(`justrite` and `accuform` both hash to Foundry). Once the new ERP is deployed and linked,
+before the list is sent, the add reads every ERP's look (`GET health`) and, when the new
+one's colour is another ERP's, gives it the first theme no other ERP shows, in the ERP's own
+order Harbour, Meridian, Granite, Foundry (`erpTheme.ts`, `erpAddTheme.ts`; written through
+the same handler as `set_erp_appearance`). Colour is the comparison because every theme has
+its own and it is what makes two screens look alike. With all four in use it is left as it
+is. Only an ERP this add deployed is touched, so a retried add never replaces a look someone
+set. The answer's `theme` says the theme given; a look that could not be read or written is
+the add's warning, and the add stands.
+
 **Its credential.** Each added ERP lives in its own Adobe workspace and accepts machine
 calls only from that workspace's own technical account, so the integration cannot reach it
 with its own credential (401 "Technical account mismatch"). Every time Demo Builder sends the
