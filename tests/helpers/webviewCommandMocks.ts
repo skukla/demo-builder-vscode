@@ -27,8 +27,6 @@ jest.mock('@/core/communication/webviewCommunicationManager', () => ({
         sendMessage: jest.fn().mockResolvedValue(undefined),
         request: jest.fn().mockResolvedValue({}),
         dispose: jest.fn(),
-        incrementStateVersion: jest.fn(),
-        getStateVersion: jest.fn().mockReturnValue(1),
     }),
 }));
 

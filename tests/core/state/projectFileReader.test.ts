@@ -27,7 +27,10 @@ describe('readProjectFile', () => {
     });
 
     it('migrates a v1 settings file to v2: provenance, picks, and never a credential', () => {
-        const v1 = settingsFileV1WithSecrets();
+        // Exports written before PL-56b also carried `installedBlockLibraries`. The
+        // serializer no longer emits it and the type no longer has it, but those
+        // files are still on disk — so it is added here, at the text boundary.
+        const v1 = { ...settingsFileV1WithSecrets(), installedBlockLibraries: [] };
         const result = readProjectFile(JSON.stringify(v1));
         expect(result.ok).toBe(true);
         if (!result.ok) return;

@@ -51,6 +51,7 @@ const MUST_NOT_SHIP: ReadonlyArray<readonly [string, string]> = [
     ['.stryker-tmp', 'mutation SANDBOX — a whole copy of the repo; shipped 112 MB in beta.146'],
     ['reports', 'mutation and health REPORTS — shipped 144 MB in beta.145'],
     ['.jest-cache', 'jest transform cache — has shipped before'],
+    ['.eslint-probe', 'the type-aware lint suite’s probe file; exists only mid-test'],
     ['.test-extensions', 'ExTester downloads — has shipped before'],
     ['coverage', 'coverage output'],
     ['.serena', 'editor tooling index'],

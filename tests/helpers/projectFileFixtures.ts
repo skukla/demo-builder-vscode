@@ -57,7 +57,6 @@ export function settingsFileV1WithSecrets(): SettingsFile {
         selectedAddons: [],
         selectedBlockLibraries: ['bodea-blocks'],
         customBlockLibraries: [],
-        installedBlockLibraries: [],
         edsConfig: {
             daLiveOrg: 'someone',
             daLiveSite: 'bodea-demo',

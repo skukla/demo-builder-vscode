@@ -366,8 +366,7 @@ export abstract class BaseWebviewCommand<TInitialData = unknown> extends BaseCom
             }
             const updated = { ...current, ...updates };
             await this.stateManager.saveProject(updated);
-            this.communicationManager?.incrementStateVersion();
-            return { success: true, version: this.communicationManager?.getStateVersion() };
+            return { success: true };
         });
     }
 

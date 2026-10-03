@@ -92,8 +92,9 @@ function walk(dir: string): string[] {
     try {
         entries = fs.readdirSync(dir, { withFileTypes: true });
     } catch {
-        // A sibling suite's temp dir (eslint-type-aware's `tmp-probe`) can vanish
-        // between the listing and this read. This checks COMMITTED files, so a
+        // A sibling suite's temp dir can vanish between the listing and this read
+        // (eslint-type-aware's `tests/tmp-probe` did, until PL-44 moved that probe
+        // out of `tests/`). This checks COMMITTED files, so a
         // directory that no longer exists is not one — skip, as the
         // canonical-fakes walker does. Failed the full run once on 2026-09-03.
         return out;

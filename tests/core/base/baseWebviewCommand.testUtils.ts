@@ -102,8 +102,6 @@ export interface CommFake {
     sendMessage: jest.Mock;
     request: jest.Mock;
     dispose: jest.Mock;
-    incrementStateVersion: jest.Mock;
-    getStateVersion: jest.Mock;
     /** Every handler the command registered, so a test can invoke one directly. */
     handlers: HandlerMap;
 }
@@ -124,8 +122,6 @@ export function createCommFake(): CommFake {
         sendMessage: jest.fn().mockResolvedValue(undefined),
         request: jest.fn().mockResolvedValue({}),
         dispose: jest.fn(),
-        incrementStateVersion: jest.fn(),
-        getStateVersion: jest.fn().mockReturnValue(7),
         handlers,
     };
 }

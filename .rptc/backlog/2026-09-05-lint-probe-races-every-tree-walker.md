@@ -59,3 +59,4 @@ costs one retry and heals itself. Do it at a quiet moment, not under a running l
 ## Shipped so far
 
 - 2026-09-04  docs(backlog): PL-44 — the lint probe races every suite that walks tests/ (`575d9ff68`)
+- 2026-10-03  Probe moved 2026-10-03 from tests/tmp-probe/ to .eslint-probe/ at the repo root, named in eslint.casts.mjs files, tsconfig.test.json include, .gitignore, .vscodeignore and the VSIX enforcer; the suite's plant-a-cast test still finds the cast there and a new test pins the two config entries.

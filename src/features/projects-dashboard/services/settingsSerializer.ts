@@ -205,7 +205,6 @@ export function extractSettingsFromProject(
         selectedAddons: project.selectedAddons,
         selectedBlockLibraries: project.selectedBlockLibraries,
         customBlockLibraries: project.customBlockLibraries,
-        installedBlockLibraries: project.installedBlockLibraries,
         // EDS configuration (for Edge Delivery Services stacks)
         edsConfig,
         // App Builder integration round-trip: custom/instance sources are

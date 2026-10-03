@@ -256,10 +256,10 @@ describe('WebviewCommunicationManager — protocol decisions', () => {
                 id: 'w-2',
                 type: '__webview_ready__',
                 timestamp: Date.now(),
-                payload: { stateVersion: 7 },
+                payload: { source: 'wizard' },
             } as Message);
 
-            expect(handler).toHaveBeenCalledWith({ stateVersion: 7 });
+            expect(handler).toHaveBeenCalledWith({ source: 'wizard' });
         });
 
         it('ignores a second ready signal, which no longer has a handler', async () => {

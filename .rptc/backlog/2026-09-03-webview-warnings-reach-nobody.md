@@ -96,3 +96,4 @@ delete, or rewire. Whichever it is becomes its own item.
 
 - 2026-09-03  docs(backlog): PL-40 becomes a question — reachability decides delete vs rewire (`a02a3504d`)
 - 2026-09-03  docs(backlog): the wizard's configuration warnings reach nobody (PL-40) (`bb16b18d6`)
+- 2026-10-03  Answer 2026-10-03: both warnings are REACHABLE, but only from a saved file — edit and import seed selectedStack and selectedPackage unchecked (proved by three tests in useWizardState-seeding.test.tsx); a fresh wizard run and the MCP create_project tool cannot produce either state; no evidence anyone has hit one (stacks.json has never lost a stack id, and the one local project resolves); verdict: rewire to the log channel rather than delete, as its own item.

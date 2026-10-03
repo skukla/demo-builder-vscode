@@ -329,17 +329,10 @@ describe('settingsSerializer', () => {
     });
 
     describe('extractSettingsFromProject - installedBlockLibraries handling', () => {
-        it('should include installedBlockLibraries when present in project', () => {
-            const installedLibs = [
-                {
-                    name: 'Isle5',
-                    source: { owner: 'adobe', repo: 'isle5', branch: 'main' },
-                    commitSha: 'abc123',
-                    blockIds: ['hero-cta', 'newsletter'],
-                    installedAt: '2025-06-15T10:30:00.000Z',
-                },
-            ];
-
+        // Install tracking (commit SHA, block ids) describes THIS project's checkout.
+        // Nothing reads it back from a settings file — a project built from one
+        // records its own on install — so it is not exported (PL-56b).
+        it('leaves install tracking out of the settings, even when the project has it', () => {
             const project: Project = {
                 name: 'project-with-installed-libs',
                 created: new Date(),
@@ -348,28 +341,20 @@ describe('settingsSerializer', () => {
                 status: 'ready',
                 componentSelections: {},
                 componentConfigs: {},
-                installedBlockLibraries: installedLibs,
+                installedBlockLibraries: [
+                    {
+                        name: 'Isle5',
+                        source: { owner: 'adobe', repo: 'isle5', branch: 'main' },
+                        commitSha: 'abc123',
+                        blockIds: ['hero-cta', 'newsletter'],
+                        installedAt: '2025-06-15T10:30:00.000Z',
+                    },
+                ],
             };
 
             const result = extractSettingsFromProject(project, false);
 
-            expect(result.installedBlockLibraries).toEqual(installedLibs);
-        });
-
-        it('should omit installedBlockLibraries when absent from project', () => {
-            const project: Project = {
-                name: 'project-without-installed-libs',
-                created: new Date(),
-                lastModified: new Date(),
-                path: '/path/to/project',
-                status: 'ready',
-                componentSelections: {},
-                componentConfigs: {},
-            };
-
-            const result = extractSettingsFromProject(project, false);
-
-            expect(result.installedBlockLibraries).toBeUndefined();
+            expect(result).not.toHaveProperty('installedBlockLibraries');
         });
     });
 

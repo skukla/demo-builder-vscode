@@ -5,7 +5,7 @@
  * These files allow users to share and reuse configuration across projects.
  */
 
-import type { CustomBlockLibrary, InstalledBlockLibrary } from '@/types/blockLibraries';
+import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { AddedDemo } from '@/types/projectFile';
 
 /**
@@ -102,8 +102,6 @@ export interface SettingsFile {
     selectedBlockLibraries?: string[];
     /** Custom block libraries added by URL */
     customBlockLibraries?: CustomBlockLibrary[];
-    /** Installed block library tracking data (commit SHA at install time) */
-    installedBlockLibraries?: InstalledBlockLibrary[];
     /** EDS configuration (for Edge Delivery Services stacks) */
     edsConfig?: SettingsEdsConfig;
     /**
@@ -138,14 +136,3 @@ export interface SettingsFile {
 
 /** Current schema version */
 export const SETTINGS_FILE_VERSION = 1;
-
-/**
- * Result of importing settings
- */
-export interface ImportResult {
-    success: boolean;
-    settings?: SettingsFile;
-    error?: string;
-    /** Source description for UI feedback */
-    sourceDescription?: string;
-}

@@ -181,7 +181,8 @@ function migrateV1(v1: SettingsFile): ProjectFile {
         appBuilderComponentSources: v1.appBuilderComponentSources,
         componentApiPicks: foldLegacyPicks(v1.componentApiPicks, v1.additionalConsoleApis),
         // Dropped on purpose (PL-56b): `includesSecrets` (a claim about a field that no
-        // longer exists), `installedBlockLibraries` (exported, never read back).
+        // longer exists), `installedBlockLibraries` (older exports carry it; it was
+        // never read back, and the serializer stopped emitting it).
     });
 }
 

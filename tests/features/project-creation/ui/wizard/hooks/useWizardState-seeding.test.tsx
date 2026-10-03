@@ -8,6 +8,7 @@
  * tests pin all three.
  */
 
+import { buildProjectConfig } from '@/features/project-creation/ui/wizard/wizardHelpers';
 import type { ImportedSettings, WizardStepDefinition } from '@/types/wizard';
 import { editProjectWith, renderWizard, stateFor } from './useWizardState.testUtils';
 
@@ -384,5 +385,73 @@ describe('mode, name and selections', () => {
         });
 
         expect(result.current.state.currentStep).toBe('build-your-project');
+    });
+});
+
+/**
+ * CAN THE CONFIG BUILDER'S TWO WARNINGS FIRE? (PL-40) — yes, from a saved project.
+ *
+ * `buildProjectConfig` warns when a stack is selected with no package, and when
+ * the selected stack id resolves to nothing. A fresh wizard run cannot produce
+ * either state, and the MCP `create_project` tool refuses both before it builds.
+ * Edit and import are the open door: they seed `selectedStack` and
+ * `selectedPackage` straight from the saved file, each on its own, with no check
+ * against the stacks this build ships. These tests drive that chain end to end —
+ * saved settings, through the hook, into the builder — and count the warning.
+ *
+ * The count is asserted, not the wording: each state trips exactly one of the two
+ * branches, and a state that resolves trips neither.
+ */
+describe('a saved project the build cannot resolve still reaches the config builder', () => {
+    let warn: jest.SpyInstance;
+
+    beforeEach(() => {
+        warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+        jest.spyOn(console, 'log').mockImplementation(() => undefined);
+    });
+
+    afterEach(() => {
+        jest.restoreAllMocks();
+    });
+
+    it('warns once, and builds no components, for a stack id this build does not ship', () => {
+        const state = stateFor({
+            editProject: editProjectWith({
+                selectedPackage: 'citisignal',
+                selectedStack: 'a-stack-this-build-lacks',
+            } as ImportedSettings),
+        });
+
+        const config = buildProjectConfig(state);
+
+        expect(state.selectedStack).toBe('a-stack-this-build-lacks');
+        expect(warn).toHaveBeenCalledTimes(1);
+        expect(config.components).toBeUndefined();
+    });
+
+    it('warns once for a stack that arrives with no package', () => {
+        const state = stateFor({
+            importedSettings: { selectedStack: 'eds-accs' } as ImportedSettings,
+        });
+
+        const config = buildProjectConfig(state);
+
+        expect(state.selectedPackage).toBeUndefined();
+        expect(warn).toHaveBeenCalledTimes(1);
+        // The stack itself resolves, so the components are still built.
+        expect(config.components?.frontend).toBeDefined();
+    });
+
+    it('CONTROL: stays silent when the saved stack and package both resolve', () => {
+        const state = stateFor({
+            editProject: editProjectWith({
+                selectedPackage: 'citisignal',
+                selectedStack: 'eds-accs',
+            } as ImportedSettings),
+        });
+
+        buildProjectConfig(state);
+
+        expect(warn).not.toHaveBeenCalled();
     });
 });

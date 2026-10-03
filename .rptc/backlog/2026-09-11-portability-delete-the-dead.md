@@ -21,3 +21,7 @@ first and alone; nothing waits on it, and nothing here is soft-deprecated afterw
   (in-memory only). Two tests pin the emission; they go too.
 - NOT dead: `sourceDescription`, plumbed through four files to one debug line. [[PL-56d]]'s
   import banner is its first real consumer; leave it.
+
+## Shipped so far
+
+- 2026-10-03  Done 2026-10-03 in part: ImportResult deleted, installedBlockLibraries no longer exported or typed on SettingsFile (two emission tests replaced by one asserting absence); additionalConsoleApis STAYS — the compiler shows the v1 reader and the wizard's edit/import fallback still read it, and import-from-file still hands v1 files straight to the wizard (readProjectFile has no production caller yet).

@@ -260,6 +260,34 @@ describe('Install Handler - plugins', () => {
         );
     });
 
+    /**
+     * THE ORDER A PER-VERSION TOOL IS INSTALLED IN (PL-36).
+     *
+     * The Node versions still missing the tool are sorted as NUMBERS before the
+     * install steps run for each. As text, '8' sorts after '20' — and the version
+     * the steps finish on is the one a "default" step would pin. The sibling sorts
+     * are covered in the nodeVersions suite; this one lives here because its path
+     * needs `getInstalledNodeVersions` faked, which only this suite does.
+     */
+    it('runs the install steps for the missing Node versions in numeric order', async () => {
+        const shared = jest.requireMock('@/features/prerequisites/handlers/shared');
+        // Out of order on purpose, and chosen so a text sort gives a DIFFERENT
+        // answer ('10', '20', '8') from both this order and the numeric one.
+        (shared.checkPerNodeVersionStatus as jest.Mock).mockResolvedValue({
+            perNodeVersionStatus: [],
+            perNodeVariantMissing: true,
+            missingVariantMajors: ['20', '8', '10'],
+        });
+        (getInstalledNodeVersions as jest.Mock).mockResolvedValue(['20', '8', '10']);
+
+        await handleInstallPrerequisite(mockContext, { prereqId: 0 });
+
+        const versionsInstalledFor = (
+            mockContext.progressUnifier!.executeStep as jest.Mock
+        ).mock.calls.map(([, , , , options]) => (options as { nodeVersion?: string })?.nodeVersion);
+        expect(versionsInstalledFor).toEqual(['8', '10', '20']);
+    });
+
 
     /**
      * A PLUGIN NEEDED BY SOMETHING THE PROJECT DEPENDS ON.

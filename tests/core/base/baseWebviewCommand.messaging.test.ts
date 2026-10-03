@@ -205,23 +205,12 @@ describe('BaseWebviewCommand communication', () => {
             });
         });
 
-        it('bumps the state version so the webview knows its copy is stale', async () => {
+        it('answers an update with success and nothing else', async () => {
             const result = await (
                 comm.handlers['update-state'] as (u: Record<string, unknown>) => Promise<unknown>
             )({ port: 3000 });
 
-            expect(comm.incrementStateVersion).toHaveBeenCalled();
-            expect(result).toEqual({ success: true, version: 7 });
-        });
-
-        it('survives an update that lands after the manager is gone', async () => {
-            currentCommand.forgetComm();
-
-            await expect(
-                (comm.handlers['update-state'] as (u: Record<string, unknown>) => Promise<unknown>)(
-                    { port: 3000 },
-                ),
-            ).resolves.toEqual({ success: true, version: undefined });
+            expect(result).toStrictEqual({ success: true });
         });
 
         // Asserted as a sequence, not as two memberships: a listener that maps

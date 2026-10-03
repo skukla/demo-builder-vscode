@@ -147,7 +147,6 @@ export class WebviewCommunicationManager {
     // points below and read by nothing in src or tests, under a comment saying
     // they were "read indirectly". They were not. Removed 2026-09-05.
     private handshakeComplete = false;
-    private stateVersion = 0;
     private disposables: vscode.Disposable[] = [];
     private logger = getLogger();
     private config: Required<CommunicationConfig>;
@@ -189,7 +188,6 @@ export class WebviewCommunicationManager {
                     id: uuidv4(),
                     type: '__handshake_complete__',
                     timestamp: Date.now(),
-                    payload: { stateVersion: this.stateVersion },
                 });
 
                 this.handshakeComplete = true;
@@ -298,20 +296,6 @@ export class WebviewCommunicationManager {
         handler: MessageHandlerFunction<P, R>,
     ): void {
         this.on(type, handler);
-    }
-
-    /**
-     * Update state version (for consistency tracking)
-     */
-    incrementStateVersion(): number {
-        return ++this.stateVersion;
-    }
-
-    /**
-     * Get current state version
-     */
-    getStateVersion(): number {
-        return this.stateVersion;
     }
 
     /**
