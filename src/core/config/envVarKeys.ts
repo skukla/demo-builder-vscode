@@ -104,16 +104,17 @@ export const BACKEND_OWNED_SCOPE_KEYS: readonly string[] = [
 /**
  * Commerce env-var keys whose VALUES are credentials.
  *
- * These must be stripped from any artifact that claims to be secret-free —
- * today that is the settings export (`includeSecrets: false`), which promises
- * "a secret-free copy" in the `export_project_settings` MCP description.
+ * These are stripped from every file a project leaves the builder in — today
+ * that is the project export (`createExportSettings`: the save dialog, the
+ * `export_project_settings` MCP tool, the demo bundle's setup part) and the
+ * project-file reader. No export has an option to keep them.
  *
  * **Why this list rather than `type: 'password'`.** The env-var definitions in
  * `components.json` type exactly ONE var as `password`
  * (`ADOBE_COMMERCE_ADMIN_PASSWORD`); all three API keys are typed `text`,
  * because `type` drives how the Configure field RENDERS, not whether the value
  * is sensitive. Filtering on it would strip the admin password and still write
- * three API keys into a file stamped `includesSecrets: false`.
+ * three API keys into a file that is meant to carry none.
  *
  * App Builder component secrets are NOT here: their catalog marks them
  * `type: 'secret'`, and an integration's Settings store them in VS Code
@@ -123,7 +124,7 @@ export const BACKEND_OWNED_SCOPE_KEYS: readonly string[] = [
  * A username is deliberately absent — it is half a credential, not a secret,
  * and the export stays useful for re-import with it present.
  *
- * Adding a Commerce credential? Add it here, or it ships in a "secret-free" file.
+ * Adding a Commerce credential? Add it here, or it ships in an exported file.
  * That instruction is now ENFORCED — `tests/sop/credential-env-vars-registered.test.ts`
  * fails on a credential-shaped var in the catalog that is neither listed here nor
  * documented as an exception, so forgetting is loud rather than silent.

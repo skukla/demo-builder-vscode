@@ -114,7 +114,7 @@ const INPUT_KEYS: Record<string, string[]> = {
     save_ai_prompt: ['prompt'],
     delete_ai_prompt: ['promptId'],
     deploy_mesh: [],
-    export_project_settings: ['includeSecrets', 'path'],
+    export_project_settings: ['path'],
     refresh_block_library: [],
     delete_mesh: ['workspaceId'],
     add_console_apis: ['apis', 'componentId'],

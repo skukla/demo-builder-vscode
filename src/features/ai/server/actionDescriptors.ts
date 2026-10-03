@@ -818,11 +818,11 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: false,
         readOnly: false,
         description:
-            "Export the current project's settings to a JSON file on disk (folder, saved state, " +
-            'component configs, and — by default — secrets). Secrets are written to the FILE only; ' +
-            'the response returns just { path, includesSecrets }, never the secret values. The ' +
-            'target must be inside the project directory (defaults to ' +
-            '<project>/<name>.demo-builder.json). Pass includeSecrets:false for a secret-free copy.',
+            "Export the current project's settings to a JSON file on disk (selections, " +
+            'component configs, Adobe context). The file never carries a credential, so it is ' +
+            'safe to hand to someone else; the response returns { path }. The target must be ' +
+            'inside the project directory (defaults to ' +
+            '<project>/<name>.project.demo-builder.json).',
         map: dashboardHandlers,
         type: 'exportProjectSettings',
         inputSchema: {
@@ -831,12 +831,8 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
                 .optional()
                 .describe(
                     'Target file (relative to the project dir, or absolute inside it). ' +
-                        'Omit for <project>/<name>.demo-builder.json.',
+                        'Omit for <project>/<name>.project.demo-builder.json.',
                 ),
-            includeSecrets: z
-                .boolean()
-                .optional()
-                .describe('Write secrets to the file (default true — a full local backup).'),
         },
     },
     {

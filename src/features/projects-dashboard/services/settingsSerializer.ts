@@ -8,6 +8,7 @@
 import { stripSecretValues } from '@/core/config/envVarKeys';
 import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { Project } from '@/types/base';
+import { PROJECT_FILE_SUFFIX } from '@/types/projectFile';
 import {
     SETTINGS_FILE_VERSION,
     type SettingsFile,
@@ -121,22 +122,17 @@ function deriveAppBuilderComponentSources(
 }
 
 /**
- * Extract settings from an existing project
+ * Extract settings from an existing project, IN MEMORY.
  *
- * Creates a SettingsFile from a project's current state.
- * Used for "Copy from Existing" functionality.
+ * This is the seed Copy-from-project and Edit hand the wizard on the same
+ * machine. It carries `componentConfigs` whole, so the fields the SC typed are
+ * re-seeded. It is NOT what an export writes: anything that reaches a file goes
+ * through {@link createExportSettings}, which removes every credential.
  *
  * @param project - Source project to extract settings from
- * @param includeSecrets - Whether to write credential VALUES into the file.
- *   REQUIRED, no default: this used to default `true` here and `false` in
- *   `createExportSettings`, so the same operation carried secrets or not
- *   depending on which door the caller came through. Every caller states intent.
  * @returns SettingsFile with extracted settings
  */
-export function extractSettingsFromProject(
-    project: Project,
-    includeSecrets: boolean,
-): SettingsFile {
+export function extractSettingsFromProject(project: Project): SettingsFile {
     // Extract EDS config from eds-storefront component metadata (if present)
     let edsConfig: SettingsEdsConfig | undefined;
     const edsStorefront = project.componentInstances?.['eds-storefront'];
@@ -174,17 +170,8 @@ export function extractSettingsFromProject(
         source: {
             project: project.name,
         },
-        includesSecrets: includeSecrets,
         selections: project.componentSelections || {},
-        // `includeSecrets` used to be consumed ONLY by the line above — the label —
-        // while configs went out whole. So `includeSecrets: false` produced a file
-        // containing ADOBE_COMMERCE_ADMIN_PASSWORD and stamped it
-        // `includesSecrets: false`: not a leak so much as a file that asserts it is
-        // safe to share when it is not, against an MCP description promising "a
-        // secret-free copy". The flag now actually removes them.
-        configs: includeSecrets
-            ? project.componentConfigs || {}
-            : stripSecretValues(project.componentConfigs),
+        configs: project.componentConfigs || {},
         adobe: project.adobe
             ? {
                   // Include IDs for pre-selection in wizard
@@ -220,21 +207,22 @@ export function extractSettingsFromProject(
 }
 
 /**
- * Create a SettingsFile for export to disk
+ * Create the file an export writes: the project, and never a credential.
+ *
+ * The ONE function every export door goes through (the save dialog, the
+ * headless `export_project_settings` tool, the demo bundle's setup part). There
+ * is no include-secrets option and no stamp saying whether credentials are in
+ * (owner decision D24): they are not. `SECRET_ENV_KEYS` is the register of what
+ * a credential is.
  *
  * @param project - Source project
  * @param extensionVersion - Current extension version
- * @param includeSecrets - Whether to write credential VALUES into the file.
- *   REQUIRED, no default — see {@link extractSettingsFromProject}.
  * @returns SettingsFile ready for JSON serialization
  */
-export function createExportSettings(
-    project: Project,
-    extensionVersion: string,
-    includeSecrets: boolean,
-): SettingsFile {
-    const settings = extractSettingsFromProject(project, includeSecrets);
+export function createExportSettings(project: Project, extensionVersion: string): SettingsFile {
+    const settings = extractSettingsFromProject(project);
     settings.source.extension = extensionVersion;
+    settings.configs = stripSecretValues(settings.configs);
     return settings;
 }
 
@@ -242,7 +230,7 @@ export function createExportSettings(
  * Generate a suggested filename for exported settings
  *
  * @param projectName - Name of the project
- * @returns Suggested filename (e.g., "my-project.demo-builder.json")
+ * @returns Suggested filename (e.g., "my-project.project.demo-builder.json")
  */
 export function getSuggestedFilename(projectName: string): string {
     // Sanitize project name for filename
@@ -252,5 +240,5 @@ export function getSuggestedFilename(projectName: string): string {
         .replace(/-+/g, '-')
         .replace(/^-|-$/g, '');
 
-    return `${sanitized || 'project'}.demo-builder.json`;
+    return `${sanitized || 'project'}${PROJECT_FILE_SUFFIX}`;
 }

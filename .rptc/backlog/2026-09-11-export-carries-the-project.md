@@ -40,3 +40,7 @@ Export runs the same checks Share runs: a named datapack must be in the datapack
 The serializer suite gains a field-set test pinned to the contract's list (a manifest
 field added later without a decision goes red); a real converged project's manifest is the
 fixture; the secret-strip battery becomes "no `SECRET_ENV_KEYS` key is ever present".
+
+## Shipped so far
+
+- 2026-10-03  Credential half done, uncommitted on loop/2026-10-03-overnight: every export door writes through createExportSettings with no credential, the includeSecrets option and includesSecrets stamp are deleted (tool, handler, service, type, tests, docs), the file is named <name>.project.demo-builder.json and the dialog says Demo Builder project. NOT done: the version-2 file shape (import still reads version 1, so the writer and PL-56d have to move together) and the D32 reachability checks.

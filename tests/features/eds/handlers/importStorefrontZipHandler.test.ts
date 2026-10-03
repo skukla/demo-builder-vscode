@@ -38,7 +38,6 @@ const SETUP: SettingsFile = {
     version: 1,
     exportedAt: 'x',
     source: { project: 'bodea' },
-    includesSecrets: false,
     selections: {},
     configs: {},
     selectedStack: 'eds-accs',

@@ -182,7 +182,7 @@ export async function copySettingsFromProject(context: HandlerContext): Promise<
         }
 
         // Extract settings from project using serializer
-        const settings = extractSettingsFromProject(sourceProject, true);
+        const settings = extractSettingsFromProject(sourceProject);
 
         context.logger.info(`Copying settings from project: ${sourceProject.name}`);
 
@@ -226,15 +226,14 @@ export async function exportProjectSettings(
         const extension = vscode.extensions.getExtension('AdobeDemoSystem.adobe-demo-builder');
         const extensionVersion = extension?.packageJSON?.version || 'unknown';
 
-        // Create settings using serializer (always include secrets for local export)
-        const settings = createExportSettings(project, extensionVersion, true);
+        const settings = createExportSettings(project, extensionVersion);
         const suggestedFilename = getSuggestedFilename(project.name);
 
         // Show save dialog
         const saveUri = await vscode.window.showSaveDialog({
             defaultUri: vscode.Uri.file(suggestedFilename),
             filters: {
-                'Demo Builder Settings': ['json'],
+                'Demo Builder project': ['json'],
                 'All Files': ['*'],
             },
             title: 'Export Project Settings',
@@ -277,16 +276,10 @@ export async function exportProjectSettings(
     }
 }
 
-/**
- * Result of a headless settings export. Secrets, when included, are written to
- * the FILE only — this object carries just the path and the flag, never the
- * secret values themselves.
- */
+/** Result of a headless settings export: where the credential-free file went. */
 export interface ExportSettingsToFileResult {
     /** Absolute path the settings JSON was written to. */
     path: string;
-    /** Whether the written file includes secrets. */
-    includesSecrets: boolean;
     /** Confirmation sentence for agents — the write completed; how to re-check. */
     verify: string;
 }
@@ -294,30 +287,26 @@ export interface ExportSettingsToFileResult {
 /**
  * Export a project's settings to a JSON file on disk, headlessly (no save dialog).
  *
- * Backs the `export_project_settings` MCP tool. Secrets go to the FILE only, so an
- * agent never receives API keys/tokens in its context — the return value is just
- * `{ path, includesSecrets }`. `includeSecrets` defaults to `true` (a local backup,
- * matching the webview export).
+ * Backs the `export_project_settings` MCP tool. The file carries no credential
+ * (`createExportSettings`), and the return value is just the path.
  *
  * The target must resolve INSIDE the project directory; traversal or writes to an
  * arbitrary location are rejected by {@link assertPathInsideSync}. Default target:
- * `<project>/<name>.demo-builder.json`.
+ * `<project>/<name>.project.demo-builder.json`.
  */
 export async function exportProjectSettingsToFile(
     project: Project,
-    opts: { path?: string; includeSecrets?: boolean } = {},
+    opts: { path?: string } = {},
 ): Promise<ExportSettingsToFileResult> {
-    const includeSecrets = opts.includeSecrets ?? true;
     const extension = vscode.extensions.getExtension('AdobeDemoSystem.adobe-demo-builder');
     const extensionVersion = extension?.packageJSON?.version || 'unknown';
-    const settings = createExportSettings(project, extensionVersion, includeSecrets);
+    const settings = createExportSettings(project, extensionVersion);
 
     const target = resolveExportTarget(project, opts.path);
     await writeFileAtomic(target, JSON.stringify(settings, null, 2));
 
     return {
         path: target,
-        includesSecrets: settings.includesSecrets,
         // The write is complete when this returns (writeFileAtomic) — say so,
         // or agents ls the directory to make sure (measured, tier-2 battery).
         verify: 'Confirmed — the file exists at `path`; Read it directly if you need the contents.',

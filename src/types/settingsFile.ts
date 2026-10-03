@@ -82,8 +82,6 @@ export interface SettingsFile {
     exportedAt: string;
     /** Source information */
     source: SettingsSource;
-    /** Whether secrets are included */
-    includesSecrets: boolean;
     /** Component selections */
     selections: SettingsSelections;
     /** Component configuration values */

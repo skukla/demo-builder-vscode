@@ -191,8 +191,8 @@ describe('handleEditProject', () => {
 
         const result = await handleEditProject(context, { projectPath: project.path });
 
-        // includeSecrets = true: a local edit re-seeds the fields the user typed.
-        expect(mockExtractSettingsFromProject).toHaveBeenCalledWith(project, true);
+        // The in-memory seed, not the export: a local edit re-seeds the fields the user typed.
+        expect(mockExtractSettingsFromProject).toHaveBeenCalledWith(project);
         expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.createProject', {
             editProject: {
                 projectPath: project.path,

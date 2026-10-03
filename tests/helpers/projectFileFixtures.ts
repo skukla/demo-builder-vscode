@@ -18,8 +18,15 @@
 import { CATALOG_API_KEY, PAAS_ADMIN_PASSWORD } from '@/core/config/envVarKeys';
 import type { SettingsFile } from '@/types/settingsFile';
 
-/** A version-1 export as the serializer writes it today, secrets included. */
-export function settingsFileV1WithSecrets(): SettingsFile {
+/**
+ * A v1 file as it sits on disk when written before 2026-10: the current type
+ * plus the `includesSecrets` stamp, which left `SettingsFile` with the flag it
+ * labelled (PL-56c). Old files still carry it, so the reader is tested with it.
+ */
+export type SettingsFileV1OnDisk = SettingsFile & { includesSecrets: boolean };
+
+/** A version-1 export as the serializer wrote it before 2026-10, secrets included. */
+export function settingsFileV1WithSecrets(): SettingsFileV1OnDisk {
     return {
         version: 1,
         exportedAt: '2026-09-11T00:00:00.000Z',

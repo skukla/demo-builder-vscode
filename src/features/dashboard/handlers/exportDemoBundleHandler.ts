@@ -27,13 +27,14 @@ import { exportProjectSettings, exportProjectSettingsToFile } from '@/features/p
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
+import { PROJECT_FILE_SUFFIX } from '@/types/projectFile';
 import type { ExportDemoBundleRequest, ExportDemoBundleResult } from '@/types/webviewRequests';
 
 export const NO_STOREFRONT_TO_BUNDLE = 'Only an Edge Delivery project has a storefront to put in the file.';
 export const NOTHING_TICKED = 'Tick at least one part to put in the file.';
 
 function bundleBaseName(project: Project): string {
-    return getSuggestedFilename(project.name).replace(/\.demo-builder\.json$/, '') || 'demo';
+    return getSuggestedFilename(project.name).slice(0, -PROJECT_FILE_SUFFIX.length) || 'demo';
 }
 
 /** Where the bundle goes: the given path inside the project directory, or the project's own folder. */
@@ -67,7 +68,7 @@ function extensionVersion(): string {
 /** The setup part on its own is the settings file the projects list imports today. */
 async function setupOnly(context: HandlerContext, project: Project, providedPath: string | undefined): Promise<HandlerResponse> {
     if (!providedPath && context.panel) return exportProjectSettings(context, project);
-    const written = await exportProjectSettingsToFile(project, { path: providedPath, includeSecrets: false });
+    const written = await exportProjectSettingsToFile(project, { path: providedPath });
     return { success: true, data: { path: written.path, fileCount: 1, parts: ['setup'] } satisfies ExportDemoBundleResult };
 }
 
@@ -105,7 +106,7 @@ export const handleExportDemoBundle: MessageHandler<ExportDemoBundleRequest> = a
         const repository = await repoOperations.getRepository(storefront.owner, storefront.repo);
         const archive = await fileOperations.downloadRepoArchive(storefront.owner, storefront.repo, repository.defaultBranch);
         const parts: DemoBundleParts = {
-            ...(wantSetup ? { settings: createExportSettings(project, extensionVersion(), false) } : {}),
+            ...(wantSetup ? { settings: createExportSettings(project, extensionVersion()) } : {}),
             storefront: { archive, description },
         };
         const bundle = buildDemoBundle(bundleBaseName(project), parts);

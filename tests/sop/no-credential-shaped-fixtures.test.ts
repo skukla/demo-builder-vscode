@@ -89,7 +89,6 @@ const CREDENTIAL_CEILINGS: Record<string, number> = {
     'tests/features/eds/services/toolManager.testUtils.ts': 1,
     'tests/features/project-creation/helpers/envFileGenerator-values.test.ts': 1,
     'tests/features/project-creation/ui/helpers/stackHelpers.test.ts': 4,
-    'tests/features/projects-dashboard/services/exportProjectSettingsToFile.test.ts': 1,
 };
 
 /**

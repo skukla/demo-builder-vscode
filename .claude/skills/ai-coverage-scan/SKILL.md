@@ -12,7 +12,7 @@ spine, and a type no agent can reach is a feature the AI surface does not have.
 
 ```bash
 bash .claude/skills/ai-coverage-scan/scan.sh          # summary
-bash .claude/skills/ai-coverage-scan/scan.sh --list   # + every uncovered feature
+bash .claude/skills/ai-coverage-scan/scan.sh --list   # + every alias and exclusion, with its reason
 ```
 
 ## The scan was measuring itself wrong until 2026-08-24 — every earlier figure is inflated
@@ -35,6 +35,9 @@ below it is superseded.
 | Uncovered | 64 (23 UI-only, 41 agent-relevant) | 66 (23 UI-only, **43 agent-relevant**) |
 | **Agent-relevant name gap** | 41 — 33% | **43 — 34%** |
 
+These two columns are the UNTRIAGED name gap. They are kept as history; the current,
+triaged figure is in the next section.
+
 By area (2026-08-30): `ProjectCreationHandlerRegistry` (14), `edsHandlers` (9),
 `dashboardHandlers` (9), `addIntegrationFlowHandlers` (5), the rest 1–2 each.
 
@@ -43,34 +46,50 @@ replaced number would have hidden that the surface moved on BOTH sides — four 
 handlers, two newly covered. A one-column table cannot tell "we added features" from
 "we lost coverage", and those call for opposite responses.
 
-## The number is an UPPER BOUND, not a work list — read this before sizing anything
+## The count is triaged — read "real gap" and "untriaged", not the old percentage
 
-The scan matches handler names against tool names. It cannot see that a feature is
-already reachable under a DIFFERENT name, and it cannot see that a handler must never be
-exposed. Triaged by hand 2026-08-24, the 41 break down roughly as:
+Matching handler names against tool names cannot tell "no tool exists" from "the tool
+is called something else", and cannot tell a feature from the message channel talking to
+itself. Until 2026-10-03 the scan reported both as a gap (the "34%" of AI-1r). Every
+uncovered handler was then read, one at a time, and the reading lives in
+`triage.json` beside the script, each row with its reason:
 
-- **Already reachable, different name** — `getProjects` → `list_projects`, `switchOrg` →
-  `select_org`, `requestStatus` → `get_project_status`, `exportProject` →
-  `export_project_settings`, `republishContent` → `republish`, `get-github-repos` →
-  `list_github_repos`, `validateSelection` → `validate_component_selection`, the whole
-  auth cluster → `get_auth_status` / `sign_in` / `connect_dalive`. The majority.
-- **Disqualified by design** — wizard/webview plumbing that carries dispatch rather than
-  outcome (`ready`, `log`, `loadPreset`, `update-components-data`, `re-detect-context`,
-  `storefront-setup-cancel`). The standing rule: *does the return value carry the
-  OUTCOME, or only the dispatch?*
-- **Disqualified by headless-safety** — `importFromFile` opens a
-  `vscode.window.showOpenDialog`. A path-taking variant would qualify; the handler as
-  written does not.
-- **Genuinely open, and it is a handful** — settings import (a path-taking variant),
-  sign-out / GitHub account switching, `check-credential-service`,
-  `provision-accs-credentials`, non-EDS project reset.
+| List | Means | 2026-10-03 |
+|---|---|---|
+| `aliases` | reachable through a tool with a different name | 23 |
+| `exclusions` | an agent has no business calling it (channel plumbing, wizard state, a pasted credential) | 17 |
+| `gaps` | read and judged a REAL gap | 6 |
 
-So: **the reachability axis is essentially closed.** Treat a rising number as a prompt to
-look, never as a backlog. And note what the count structurally cannot see — cost. A
-feature reachable through a tool can still be unusable: the ~121k-token block-shape
-derivation is invisible here because `list_blocks` exists, so blocks read as "covered".
+The scan also reads `dispatchHandler(map, ctx, 'key', …)` inside directly-registered
+tools, so a handler a tool calls by hand counts as covered without a row (2 today:
+`github-oauth` via `sign_in`, `storefront-setup-start` via `create_project`).
 
+**Measured 2026-10-03, branch `loop/2026-10-03-overnight`:** 172 handler types; 123
+reachable (98 by name, 2 dispatched, 23 aliased); 43 not for an agent (26 UI verbs, 17
+listed); **6 real gaps (3%)**; 0 untriaged. The same tree under the old rule read 48
+(28%). The six: settings import from a path (`importFromFile`), headless project reset
+(`resetProject`), the credential-service probe (`check-credential-service`), DA.live
+sign-out (`clear-dalive-auth`), GitHub account switch (`github-change-account`), and the
+"Add another ERP" options read (`getErpOwnershipOptions`).
 
+**UNTRIAGED is the number to act on.** A handler added after the last reading lands
+there. Read the handler (not its name), then add one row to `triage.json`. A rising
+real-gap count is still a prompt to look, never a backlog: `tool-verdicts` found that a
+tool nobody's prompt asks for is not obviously worth adding.
+
+**The file is checked on every run**, because a list nothing checks rots. A row whose
+handler is gone, whose tool is gone, that is now covered by name, that sits in two lists,
+or that has no reason is printed under STALE TRIAGE ROWS and the scan exits 1.
+`python3 coverage.py --self-test` proves each of those refusals fires.
+
+Two readings the earlier hand triage got wrong, kept as the reason to read the code:
+`republishContent` is `sync_content` (both call `republishStorefrontContent`), not
+`republish`, which publishes `config.json` only; and `importFromFile` is half covered —
+a zip bundle through `add_shared_demo`, a settings file through nothing.
+
+What the count structurally cannot see is cost. A feature reachable through a tool can
+still be unusable: the ~121k-token block-shape derivation is invisible here because
+`list_blocks` exists, so blocks read as "covered".
 
 **Re-measure before trusting this table.** Backlog entries in this repo rot precisely because
 nobody re-runs the number; that is what the scan is for.
@@ -100,6 +119,8 @@ sibling modules with verbatim re-exports, and the scan correctly reported no cha
    scan separates them with a verb-prefix heuristic. **The heuristic is crude:** it will
    misfile anything whose name starts with a UI verb but does real work. Read `--list` before
    quoting the number.
+   A `triage.json` row wins over the heuristic, so a verb-named handler that does real work
+   can be listed as an alias or a gap.
 
 ## What the scan CANNOT tell you
 

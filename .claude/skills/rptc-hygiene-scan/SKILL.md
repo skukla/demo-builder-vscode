@@ -71,6 +71,24 @@ not to make the judgement for you.
 absent from the findings, with its citation resolved and 0 commits since filing —
 which is how that item was confirmed still live without re-deriving it by hand.
 
+## §7 — a finished item that still says what is left
+
+`backlog.mjs leftovers`, run by the scan. It names every item at `shipped` or
+`built` whose prose still carries a remainder ("remaining", "remainder", "next
+step", "follow-on", "not yet done", "left for") and which has neither a child
+item nor `superseded-by`. Found 2026-09-02: 18 such items, and none of that work
+was in any list, because nobody re-opens a finished item (PL-39).
+
+How to judge a row: read the quoted sentence in the item. If the work is real
+and open, file it as a child item (the row then disappears, because the
+remainder has a home). If it was done, reword the sentence as history ("the
+remaining work was finished in ..."). **Never delete the sentence to clear the
+row** — it says what the author knew and could not finish.
+
+It is a phrase match and it over-reports: "the concentrated remainder" and
+"Follow-on to AI-2c" are not open work. A sentence that mixes history and a
+live remainder is read as history, so it also under-reports. Advisory, always.
+
 ## When it runs
 
 Three layers, because an instruction to "remember to run this" is the failure it exists to

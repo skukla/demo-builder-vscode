@@ -38,7 +38,7 @@ export const handleEditProject: MessageHandler = async (context) => {
         '@/features/projects-dashboard/services/settingsSerializer'
     );
     // Include secrets — this is a local edit of the user's own project.
-    const settings = extractSettingsFromProject(project, true);
+    const settings = extractSettingsFromProject(project);
 
     context.logger.info(`Opening edit wizard for project: ${project.name}`);
     await vscode.commands.executeCommand('demoBuilder.createProject', {
@@ -193,13 +193,11 @@ export const handleRenameProject: MessageHandler<{ newName: string }> = async (c
 /**
  * Handle 'exportProjectSettings' message — write the current project's settings
  * to a JSON file on disk (the headless entry behind the export_project_settings
- * MCP tool). Secrets go to the FILE only; the response carries just the path and
- * the includes-secrets flag, never the secret values. The target must resolve
- * inside the project directory. `includeSecrets` defaults to true (a local backup).
+ * MCP tool). The file carries no credential and the response carries the path.
+ * The target must resolve inside the project directory.
  */
 export const handleExportProjectSettings: MessageHandler<{
     path?: string;
-    includeSecrets?: boolean;
 }> = async (context, data) => {
     const project = await context.stateManager.getCurrentProject();
     if (!project) {
@@ -210,10 +208,7 @@ export const handleExportProjectSettings: MessageHandler<{
         '@/features/projects-dashboard/services/settingsTransferService'
     );
     try {
-        const result = await exportProjectSettingsToFile(project, {
-            path: data?.path,
-            includeSecrets: data?.includeSecrets,
-        });
+        const result = await exportProjectSettingsToFile(project, { path: data?.path });
         return { success: true, data: result };
     } catch (error) {
         context.logger.error(

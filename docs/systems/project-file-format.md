@@ -21,6 +21,11 @@ type and the committed schema cannot drift from the generator.
 
 ## What a project file carries
 
+Export today writes the version-1 shape, which the reader below migrates. It is already
+credential-free and already named `<project-name>.project.demo-builder.json`; it has no
+option to include credentials and no field that says whether they are in. Writing the
+version-2 shape described here is the remaining work of backlog item PL-56c.
+
 Everything the manifest persists that describes the demo rather than the machine:
 
 - the project's title and slug, and where the file came from (source project, extension

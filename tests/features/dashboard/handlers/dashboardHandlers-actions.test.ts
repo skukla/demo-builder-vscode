@@ -212,7 +212,7 @@ describe('Dashboard Action Handlers', () => {
             const result = await handleEditProject(mockContext);
 
             expect(result).toEqual({ success: true });
-            expect(extractSettingsFromProject).toHaveBeenCalledWith(mockProject, true);
+            expect(extractSettingsFromProject).toHaveBeenCalledWith(mockProject);
             expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.createProject', {
                 editProject: {
                     projectPath: mockProject.path,

@@ -1,16 +1,15 @@
 /**
- * SECRET_ENV_KEYS — the gate behind the "secret-free copy" promise.
+ * SECRET_ENV_KEYS — the gate behind "an exported file never carries a credential".
  *
- * `export_project_settings` with `includeSecrets: false` strips every key in
- * SECRET_ENV_KEYS. That list is maintained by hand, and a doc comment asking
- * people to add new credentials to it is not a gate — it is a hope. These tests
- * are the gate.
+ * Every project export strips every key in SECRET_ENV_KEYS. That list is
+ * maintained by hand, and a doc comment asking people to add new credentials to
+ * it is not a gate — it is a hope. These tests are the gate.
  *
- * They would have caught the state this session started in: `includeSecrets`
- * removed nothing at all, and the obvious fix (filter on `type: 'password'`)
- * would have shipped three API keys in a file stamped `includesSecrets: false`,
- * because only ONE catalog var is typed `password` and `type` describes how a
- * field RENDERS, not whether its value is sensitive.
+ * They would have caught the state the 2026-08-11 session started in: the old
+ * include-secrets option removed nothing at all, and the obvious fix (filter on
+ * `type: 'password'`) would have shipped three API keys in a file that claimed
+ * to carry none, because only ONE catalog var is typed `password` and `type`
+ * describes how a field RENDERS, not whether its value is sensitive.
  */
 
 import componentsJson from '@/features/components/config/components.json';

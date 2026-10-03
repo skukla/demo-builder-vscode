@@ -498,7 +498,7 @@ export const handleEditProject: MessageHandler<{ projectPath: string }> = async 
 
         // Note: Edit menu is only shown when project is not running (UI enforces this)
         // Extract settings for edit mode (include secrets for local edit)
-        const settings = extractSettingsFromProject(project, true);
+        const settings = extractSettingsFromProject(project);
 
         context.logger.info(`Opening edit wizard for project: ${project.name}`);
         context.logger.debug(

@@ -33,10 +33,9 @@ describe('ACTION_DESCRIPTORS', () => {
         expect(d).toBeDefined();
         expect(d!.map).toBe(dashboardHandlers);
         expect(d!.type).toBe('exportProjectSettings');
-        // Optional path + includeSecrets inputs.
-        const keys = Object.keys(d!.inputSchema ?? {});
-        expect(keys).toContain('path');
-        expect(keys).toContain('includeSecrets');
+        // One optional input: where to write. No include-secrets option (D24, PL-56c).
+        expect(Object.keys(d!.inputSchema ?? {})).toStrictEqual(['path']);
+        expect(d!.description).not.toMatch(/includeSecrets|includesSecrets/);
         // Writing a local settings backup is idempotent — NOT confirm-gated.
         expect(d!.confirm).toBeUndefined();
     });

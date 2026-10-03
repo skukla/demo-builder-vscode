@@ -47,3 +47,7 @@ and the drift cannot recur.
 
 The risk to check first: the real function resolves storefront config, so a
 fixture has to supply a brand and stack these suites do not currently set.
+
+## Shipped so far
+
+- 2026-10-03  The stand-in was never called: both dashboard suites mock resetEdsProjectWithUI, the only thing their handler calls, so the fake and its edsResetService mock were deleted (a throwing probe passed 13/13 before the delete); the real function's own suite covers the daLiveSite fallback.

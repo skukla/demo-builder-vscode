@@ -28,7 +28,7 @@ server IS — transport, lifecycle, scoping, security — is in
 | `deploy_integration` |  | Deploy (or redeploy) one App Builder integration on the current |
 | `deploy_mesh` |  | Deploy (or redeploy) the current project's API Mesh. Runs the guard |
 | `end_erp_downtime` |  | End the demo ERP's simulated downtime now (start_erp_downtime), so it answers again. |
-| `export_project_settings` |  | Export the current project's settings to a JSON file on disk (folder, saved state, |
+| `export_project_settings` |  | Export the current project's settings to a JSON file on disk (selections, |
 | `install_integration` |  | Re-run the Commerce install/associate pass for a DEPLOYED App Management |
 | `install_prerequisite` | **confirm** | Install one missing prerequisite (Node, aio CLI, plugins) by its prereqId from |
 | `invoke_runtime_action` | **confirm** | Run one deployed action in this project's Adobe I/O Runtime namespace (or the |

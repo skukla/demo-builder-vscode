@@ -2,7 +2,8 @@
  * handleExportProjectSettings — the headless settings export behind the
  * export_project_settings MCP tool. Resolves the current project, delegates to
  * the path-validated exportProjectSettingsToFile service, and returns only
- * { path, includesSecrets } (secrets stay on disk, never in the response).
+ * what the service answers ({ path, verify }). The file carries no credential and
+ * the handler takes no include-secrets option (D24, PL-56c).
  */
 
 
@@ -46,27 +47,30 @@ describe('handleExportProjectSettings', () => {
         expect(mockExportToFile).not.toHaveBeenCalled();
     });
 
-    it('delegates to the file service and returns only { path, includesSecrets }', async () => {
+    it('delegates to the file service with the path only and returns its answer', async () => {
         mockExportToFile.mockResolvedValue({
-            path: '/projects/my-demo/my-demo.demo-builder.json',
-            includesSecrets: true,
+            path: '/projects/my-demo/my-demo.project.demo-builder.json',
+            verify: 'Confirmed',
         });
 
         const result = await handleExportProjectSettings(makeContext(PROJECT), {
             path: 'backup.json',
-            includeSecrets: true,
         });
 
-        expect(mockExportToFile).toHaveBeenCalledWith(PROJECT, {
-            path: 'backup.json',
-            includeSecrets: true,
-        });
+        expect(mockExportToFile).toHaveBeenCalledWith(PROJECT, { path: 'backup.json' });
         expect(result).toEqual({
             success: true,
-            data: { path: '/projects/my-demo/my-demo.demo-builder.json', includesSecrets: true },
+            data: { path: '/projects/my-demo/my-demo.project.demo-builder.json', verify: 'Confirmed' },
         });
-        // The response carries ONLY path + includesSecrets — no configs/secret values.
-        expect(Object.keys(result.data as object).sort()).toEqual(['includesSecrets', 'path']);
+    });
+
+    it('does not forward an includeSecrets a stale caller still sends', async () => {
+        mockExportToFile.mockResolvedValue({ path: '/p', verify: 'Confirmed' });
+        const stale: { path?: string } = JSON.parse('{"path":"backup.json","includeSecrets":true}');
+
+        await handleExportProjectSettings(makeContext(PROJECT), stale);
+
+        expect(mockExportToFile).toHaveBeenCalledWith(PROJECT, { path: 'backup.json' });
     });
 
     it('surfaces a containment/validation failure as an error', async () => {

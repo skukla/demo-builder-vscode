@@ -1,8 +1,8 @@
 /**
  * exportProjectSettingsToFile — the headless settings export behind the
- * export_project_settings MCP tool. Writes the settings JSON (with secrets when
- * requested) to a path-validated file inside the project directory and returns
- * only { path, includesSecrets } — secrets never travel in the return value.
+ * export_project_settings MCP tool. Writes the credential-free project file to a
+ * path-validated file inside the project directory and returns { path, verify }.
+ * There is no include-secrets option and no stamp (D24, PL-56c).
  */
 
 jest.mock(
@@ -22,33 +22,25 @@ jest.mock('@/core/validation/PathSafetyValidator', () => ({
     assertPathInsideSync: (target: string, base: string) => mockAssertInside(target, base),
 }));
 
-// Keep getSuggestedFilename real; stub the serializer so the result's
-// includesSecrets faithfully reflects the flag we pass in.
-jest.mock('@/features/projects-dashboard/services/settingsSerializer', () => {
-    const actual = jest.requireActual('@/features/projects-dashboard/services/settingsSerializer');
-    return {
-        ...actual,
-        createExportSettings: jest.fn(
-            (_project: unknown, version: string, includeSecrets: boolean) => ({
-                version: '1.0.0',
-                source: { extension: version },
-                includesSecrets: includeSecrets,
-                configs: includeSecrets ? { API_KEY: 'super-secret' } : {},
-            })
-        ),
-    };
-});
-
 import * as path from 'path';
 import { exportProjectSettingsToFile } from '@/features/projects-dashboard/services/settingsTransferService';
-import { createExportSettings } from '@/features/projects-dashboard/services/settingsSerializer';
 import { writeFileAtomic } from '@/core/utils/writeFileAtomic';
 import { createMockProject } from '../../../helpers/projectFake';
 
 const writeMock = writeFileAtomic as jest.Mock;
-const createMock = createExportSettings as jest.Mock;
 
-const PROJECT = createMockProject({ name: 'My Demo', path: '/projects/my-demo' });
+// The REAL serializer runs: a stubbed one answers the same whatever it is handed,
+// so it could not see this service asking for (or dropping) the credential strip.
+const PROJECT = createMockProject({
+    name: 'My Demo',
+    path: '/projects/my-demo',
+    componentConfigs: {
+        'adobe-commerce-paas': {
+            ADOBE_COMMERCE_URL: 'https://shop.example.com',
+            ADOBE_COMMERCE_ADMIN_PASSWORD: 'fake-test-pw-not-a-secret',
+        },
+    },
+});
 
 describe('exportProjectSettingsToFile', () => {
     beforeEach(() => {
@@ -56,25 +48,24 @@ describe('exportProjectSettingsToFile', () => {
         mockAssertInside.mockImplementation((p: string) => p);
     });
 
-    it('writes to <project>/<name>.demo-builder.json by default and returns the path', async () => {
+    it('writes to <project>/<name>.project.demo-builder.json by default and returns the path', async () => {
         const result = await exportProjectSettingsToFile(PROJECT);
 
-        const expected = path.join('/projects/my-demo', 'my-demo.demo-builder.json');
-        expect(result.path).toBe(expected);
-        expect(result.includesSecrets).toBe(true);
-        // The file is written; secrets live in the FILE, not the return value.
+        const expected = path.join('/projects/my-demo', 'my-demo.project.demo-builder.json');
         expect(writeMock).toHaveBeenCalledTimes(1);
         expect(writeMock.mock.calls[0][0]).toBe(expected);
-        expect(writeMock.mock.calls[0][1]).toContain('super-secret');
-        expect(result).toEqual({ path: expected, includesSecrets: true, verify: expect.stringContaining('the file exists at') });
+        expect(result).toEqual({ path: expected, verify: expect.stringContaining('the file exists at') });
     });
 
-    it('honors includeSecrets=false (no secrets on disk, flag reflected)', async () => {
-        const result = await exportProjectSettingsToFile(PROJECT, { includeSecrets: false });
+    it('writes a file with no credential and no includesSecrets stamp', async () => {
+        await exportProjectSettingsToFile(PROJECT);
 
-        expect(createMock).toHaveBeenCalledWith(PROJECT, '9.9.9', false);
-        expect(result.includesSecrets).toBe(false);
-        expect(writeMock.mock.calls[0][1]).not.toContain('super-secret');
+        const written = JSON.parse(writeMock.mock.calls[0][1]);
+        // Control: the project's non-secret config did reach the file.
+        expect(written.configs['adobe-commerce-paas'].ADOBE_COMMERCE_URL).toBe('https://shop.example.com');
+        expect(written.source.extension).toBe('9.9.9');
+        expect(writeMock.mock.calls[0][1]).not.toContain('fake-test-pw-not-a-secret');
+        expect(written).not.toHaveProperty('includesSecrets');
     });
 
     it('resolves a relative path against the project dir', async () => {

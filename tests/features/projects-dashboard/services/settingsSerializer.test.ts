@@ -15,6 +15,7 @@ import {
     getSuggestedFilename,
 } from '@/features/projects-dashboard/services/settingsSerializer';
 import type { Project } from '@/types/base';
+import { SECRET_ENV_KEYS } from '@/core/config/envVarKeys';
 import { SETTINGS_FILE_VERSION } from '@/types/settingsFile';
 import type { SettingsFile } from '@/types/settingsFile';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
@@ -86,7 +87,6 @@ describe('settingsSerializer', () => {
                 version,
                 exportedAt: '2024-01-01T00:00:00Z',
                 source: { project: 'test' },
-                includesSecrets: false,
                 selections: {},
                 configs: {},
             };
@@ -128,7 +128,7 @@ describe('settingsSerializer', () => {
         it('should extract basic settings from project', () => {
             const project = createProject();
 
-            const result = extractSettingsFromProject(project, false);
+            const result = extractSettingsFromProject(project);
 
             expect(result.version).toBe(SETTINGS_FILE_VERSION);
             expect(result.source.project).toBe('test-project');
@@ -136,14 +136,10 @@ describe('settingsSerializer', () => {
             expect(result.configs).toEqual(project.componentConfigs);
         });
 
-        it('should include includesSecrets flag', () => {
-            const project = createProject();
+        it('carries no includesSecrets stamp (D24: no field says whether credentials are in)', () => {
+            const result = extractSettingsFromProject(createProject());
 
-            const withSecrets = extractSettingsFromProject(project, true);
-            const withoutSecrets = extractSettingsFromProject(project, false);
-
-            expect(withSecrets.includesSecrets).toBe(true);
-            expect(withoutSecrets.includesSecrets).toBe(false);
+            expect(result).not.toHaveProperty('includesSecrets');
         });
 
         it('should include Adobe context when present', () => {
@@ -157,7 +153,7 @@ describe('settingsSerializer', () => {
                 },
             });
 
-            const result = extractSettingsFromProject(project, false);
+            const result = extractSettingsFromProject(project);
 
             expect(result.adobe).toBeDefined();
             expect(result.adobe?.orgId).toBe('org-789');
@@ -178,7 +174,7 @@ describe('settingsSerializer', () => {
                 },
             });
 
-            const result = extractSettingsFromProject(project, false);
+            const result = extractSettingsFromProject(project);
 
             expect(result.adobe?.projectName).toBe('833BronzeShark');
             expect(result.adobe?.projectTitle).toBe('Citisignal Headless');
@@ -196,7 +192,7 @@ describe('settingsSerializer', () => {
                 },
             });
 
-            const result = extractSettingsFromProject(project, false);
+            const result = extractSettingsFromProject(project);
 
             expect(result.adobe?.workspaceId).toBe('ws-456');
             expect(result.adobe?.workspaceTitle).toBe('Staging Environment');
@@ -215,7 +211,7 @@ describe('settingsSerializer', () => {
                 },
             });
 
-            const result = extractSettingsFromProject(project, false);
+            const result = extractSettingsFromProject(project);
 
             expect(result.adobe).toEqual({
                 orgId: 'org-789',
@@ -230,7 +226,7 @@ describe('settingsSerializer', () => {
         it('should not include adobe field when no adobe config', () => {
             const project = createProject({ adobe: undefined });
 
-            const result = extractSettingsFromProject(project, false);
+            const result = extractSettingsFromProject(project);
 
             expect(result.adobe).toBeUndefined();
         });
@@ -241,7 +237,7 @@ describe('settingsSerializer', () => {
                 componentConfigs: undefined,
             });
 
-            const result = extractSettingsFromProject(project, false);
+            const result = extractSettingsFromProject(project);
 
             expect(result.selections).toStrictEqual({});
             expect(result.configs).toStrictEqual({});
@@ -268,7 +264,7 @@ describe('settingsSerializer', () => {
                 customBlockLibraries: customLibs,
             };
 
-            const result = extractSettingsFromProject(project, false);
+            const result = extractSettingsFromProject(project);
 
             expect(result.customBlockLibraries).toEqual(customLibs);
         });
@@ -285,7 +281,7 @@ describe('settingsSerializer', () => {
                 // No customBlockLibraries
             };
 
-            const result = extractSettingsFromProject(project, false);
+            const result = extractSettingsFromProject(project);
 
             expect(result.customBlockLibraries).toBeUndefined();
         });
@@ -318,7 +314,7 @@ describe('settingsSerializer', () => {
             };
 
             // Export (serialize)
-            const exported = extractSettingsFromProject(project, false);
+            const exported = extractSettingsFromProject(project);
             const json = JSON.stringify(exported);
 
             // Import (parse)
@@ -352,7 +348,7 @@ describe('settingsSerializer', () => {
                 ],
             };
 
-            const result = extractSettingsFromProject(project, false);
+            const result = extractSettingsFromProject(project);
 
             expect(result).not.toHaveProperty('installedBlockLibraries');
         });
@@ -370,26 +366,22 @@ describe('settingsSerializer', () => {
         };
 
         it('should include extension version in source', () => {
-            const result = createExportSettings(project, '1.2.3', false);
+            const result = createExportSettings(project, '1.2.3');
 
             expect(result.source.extension).toBe('1.2.3');
-        });
-
-        it('should allow including secrets when requested', () => {
-            const result = createExportSettings(project, '1.0.0', true);
-
-            expect(result.includesSecrets).toBe(true);
         });
     });
 
     /**
-     * The `includesSecrets` label used to be the ONLY thing the flag controlled —
-     * configs were emitted whole either way. So `includeSecrets: false` produced a
-     * file containing the admin password and stamped it `includesSecrets: false`,
-     * against an MCP description promising "a secret-free copy". These pin the
-     * label and the content agreeing.
+     * An exported file never carries a credential (owner decision D24, PL-56c).
+     *
+     * There used to be an `includeSecrets` flag. First it controlled only the
+     * `includesSecrets` label while configs went out whole; then it was fixed to
+     * strip; and on a project whose credentials had moved to SecretStorage,
+     * "with secrets" wrote none and still stamped the file as carrying them. The
+     * flag and the stamp are gone: the file is credential-free whoever asks.
      */
-    describe('includeSecrets actually removes secret values', () => {
+    describe('an exported file never carries a credential', () => {
         const withSecrets: Project = createMockProject({
             name: 'secret-test',
             created: new Date(),
@@ -404,6 +396,10 @@ describe('settingsSerializer', () => {
                     ADOBE_COMMERCE_ADMIN_PASSWORD: 'fake-test-pw-not-a-secret',
                     ADOBE_CATALOG_API_KEY: 'catalog-key-value',
                 },
+                'adobe-commerce-accs': {
+                    ACCS_GRAPHQL_ENDPOINT: 'https://example.invalid/graphql',
+                    ACCS_OAUTH_CLIENT_SECRET: 'fake-test-pw-not-a-secret',
+                },
                 'some-integration': {
                     ACO_API_KEY: 'aco-key-value',
                     EXPERIENCE_PLATFORM_API_KEY: 'ep-key-value',
@@ -411,21 +407,33 @@ describe('settingsSerializer', () => {
             },
         });
 
-        it('strips every secret-valued key when includeSecrets is false', () => {
-            const result = extractSettingsFromProject(withSecrets, false);
+        it('the fixture holds every registered credential key — control', () => {
+            // If SECRET_ENV_KEYS grows and this fixture does not, the test below
+            // would pass without checking the new key.
+            const held = Object.values(withSecrets.componentConfigs ?? {}).flatMap((c) =>
+                Object.keys(c),
+            );
+            expect(SECRET_ENV_KEYS.filter((key) => !held.includes(key))).toStrictEqual([]);
+        });
 
-            const paas = result.configs['adobe-commerce-paas'];
-            expect(paas.ADOBE_COMMERCE_ADMIN_PASSWORD).toBeUndefined();
-            // Typed `text` in components.json, so a `type: 'password'` filter would
-            // have missed it and shipped a key in a "secret-free" file.
-            expect(paas.ADOBE_CATALOG_API_KEY).toBeUndefined();
-            const integration = result.configs['some-integration'];
-            expect(integration.ACO_API_KEY).toBeUndefined();
-            expect(integration.EXPERIENCE_PLATFORM_API_KEY).toBeUndefined();
+        it('has no SECRET_ENV_KEYS key present in any component config', () => {
+            const result = createExportSettings(withSecrets, '1.0.0');
+
+            const present = Object.values(result.configs).flatMap((config) =>
+                Object.keys(config).filter((key) => SECRET_ENV_KEYS.includes(key)),
+            );
+            expect(present).toStrictEqual([]);
+            expect(JSON.stringify(result)).not.toContain('fake-test-pw-not-a-secret');
+        });
+
+        it('carries no includesSecrets stamp', () => {
+            expect(createExportSettings(withSecrets, '1.0.0')).not.toHaveProperty(
+                'includesSecrets',
+            );
         });
 
         it('keeps non-secret config so the file is still importable', () => {
-            const result = extractSettingsFromProject(withSecrets, false);
+            const result = createExportSettings(withSecrets, '1.0.0');
 
             const paas = result.configs['adobe-commerce-paas'];
             expect(paas.ADOBE_COMMERCE_URL).toBe('https://shop.example.com');
@@ -433,34 +441,23 @@ describe('settingsSerializer', () => {
             expect(paas.ADOBE_COMMERCE_ADMIN_USERNAME).toBe('admin');
         });
 
-        it('keeps secrets when includeSecrets is true (the local-backup case)', () => {
-            const result = extractSettingsFromProject(withSecrets, true);
-
-            expect(result.configs['adobe-commerce-paas'].ADOBE_COMMERCE_ADMIN_PASSWORD).toBe(
-                'fake-test-pw-not-a-secret'
-            );
-            expect(result.includesSecrets).toBe(true);
-        });
-
         it('does not mutate the live project when stripping', () => {
-            // Callers hand this `project.componentConfigs` directly; a mutating
-            // strip would empty the running project's credentials.
-            extractSettingsFromProject(withSecrets, false);
+            // A mutating strip would empty the running project's credentials.
+            createExportSettings(withSecrets, '1.0.0');
 
             expect(
                 withSecrets.componentConfigs?.['adobe-commerce-paas'].ADOBE_COMMERCE_ADMIN_PASSWORD
             ).toBe('fake-test-pw-not-a-secret');
         });
 
-        it('the label never claims secret-free while carrying a secret', () => {
-            // The invariant the defect violated, stated directly.
-            for (const flag of [true, false]) {
-                const result = extractSettingsFromProject(withSecrets, flag);
-                const hasSecret = Object.values(result.configs).some(
-                    (c) => c.ADOBE_COMMERCE_ADMIN_PASSWORD !== undefined
-                );
-                expect(hasSecret).toBe(result.includesSecrets);
-            }
+        it('the in-memory copy/edit seed keeps what the SC typed (it is not a file)', () => {
+            // Copy-from-project and Edit feed the wizard on the same machine and
+            // never touch disk; stripping here would blank the Commerce fields.
+            const result = extractSettingsFromProject(withSecrets);
+
+            expect(result.configs['adobe-commerce-paas'].ADOBE_COMMERCE_ADMIN_PASSWORD).toBe(
+                'fake-test-pw-not-a-secret'
+            );
         });
     });
 
@@ -491,7 +488,7 @@ describe('settingsSerializer', () => {
                 },
             };
 
-            const result = extractSettingsFromProject(project, false);
+            const result = extractSettingsFromProject(project);
 
             expect(result.selectedPackage).toBe('citisignal');
         });
@@ -509,7 +506,7 @@ describe('settingsSerializer', () => {
                 selectedStack: 'headless-paas',
             };
 
-            const result = extractSettingsFromProject(project, false);
+            const result = extractSettingsFromProject(project);
 
             expect(result.selectedPackage).toBeUndefined();
         });
@@ -537,10 +534,7 @@ describe('settingsSerializer', () => {
         it('maps the eds-storefront metadata into edsConfig', () => {
             // The whole object, not a field: this is the shape an import reads
             // back, and the derived template fields must not ride along.
-            const result = extractSettingsFromProject(
-                projectWithEdsMetadata(edsMetadata),
-                false
-            );
+            const result = extractSettingsFromProject(projectWithEdsMetadata(edsMetadata));
 
             expect(result.edsConfig).toEqual({
                 daLiveOrg: 'acme',
@@ -560,10 +554,7 @@ describe('settingsSerializer', () => {
         it('derives the DA.live site from the repo when the metadata has none', () => {
             const { daLiveSite: _stripped, ...withoutSite } = edsMetadata;
 
-            const result = extractSettingsFromProject(
-                projectWithEdsMetadata(withoutSite),
-                false
-            );
+            const result = extractSettingsFromProject(projectWithEdsMetadata(withoutSite));
 
             expect(result.edsConfig).toEqual({
                 daLiveOrg: 'acme',
@@ -581,10 +572,7 @@ describe('settingsSerializer', () => {
         it('derives the DA.live org from the repo owner when the metadata has none', () => {
             const { daLiveOrg: _stripped, ...withoutOrg } = edsMetadata;
 
-            const result = extractSettingsFromProject(
-                projectWithEdsMetadata(withoutOrg),
-                false
-            );
+            const result = extractSettingsFromProject(projectWithEdsMetadata(withoutOrg));
 
             expect(result.edsConfig?.daLiveOrg).toBe('acme-org');
         });
@@ -592,29 +580,20 @@ describe('settingsSerializer', () => {
         // An unmigrated project's own site name still wins: there the DA content
         // really does live somewhere other than the repo name.
         it('keeps a stored site name that differs from the repo', () => {
-            const result = extractSettingsFromProject(
-                projectWithEdsMetadata({ ...edsMetadata, daLiveSite: 'somewhere-else' }),
-                false
-            );
+            const result = extractSettingsFromProject(projectWithEdsMetadata({ ...edsMetadata, daLiveSite: 'somewhere-else' }));
 
             expect(result.edsConfig?.daLiveSite).toBe('somewhere-else');
         });
 
         it('splits githubRepo on the slash — owner first, repo second', () => {
-            const result = extractSettingsFromProject(
-                projectWithEdsMetadata({ githubRepo: 'owner-side/repo-side' }),
-                false
-            );
+            const result = extractSettingsFromProject(projectWithEdsMetadata({ githubRepo: 'owner-side/repo-side' }));
 
             expect(result.edsConfig?.githubOwner).toBe('owner-side');
             expect(result.edsConfig?.repoName).toBe('repo-side');
         });
 
         it('leaves owner and repo undefined when there is no githubRepo', () => {
-            const result = extractSettingsFromProject(
-                projectWithEdsMetadata({ daLiveOrg: 'acme' }),
-                false
-            );
+            const result = extractSettingsFromProject(projectWithEdsMetadata({ daLiveOrg: 'acme' }));
 
             expect(result.edsConfig?.githubOwner).toBeUndefined();
             expect(result.edsConfig?.repoName).toBeUndefined();
@@ -625,7 +604,7 @@ describe('settingsSerializer', () => {
                 componentInstances: { 'eds-storefront': edsStorefrontInstance() },
             });
 
-            expect(extractSettingsFromProject(noMetadata, false).edsConfig).toBeUndefined();
+            expect(extractSettingsFromProject(noMetadata).edsConfig).toBeUndefined();
         });
 
         it('reads the eds-storefront instance BY ID and no other', () => {
@@ -637,39 +616,39 @@ describe('settingsSerializer', () => {
                 },
             });
 
-            expect(extractSettingsFromProject(otherComponent, false).edsConfig).toBeUndefined();
+            expect(extractSettingsFromProject(otherComponent).edsConfig).toBeUndefined();
         });
     });
 
     describe('getSuggestedFilename', () => {
         it('should create valid filename from project name', () => {
-            expect(getSuggestedFilename('my-project')).toBe('my-project.demo-builder.json');
+            expect(getSuggestedFilename('my-project')).toBe('my-project.project.demo-builder.json');
         });
 
         it('should convert to lowercase', () => {
-            expect(getSuggestedFilename('My-Project')).toBe('my-project.demo-builder.json');
+            expect(getSuggestedFilename('My-Project')).toBe('my-project.project.demo-builder.json');
         });
 
         it('should replace spaces and special characters', () => {
-            expect(getSuggestedFilename('My Project! @#$')).toBe('my-project.demo-builder.json');
+            expect(getSuggestedFilename('My Project! @#$')).toBe('my-project.project.demo-builder.json');
         });
 
         it('should collapse multiple hyphens', () => {
             expect(getSuggestedFilename('my--project---name')).toBe(
-                'my-project-name.demo-builder.json'
+                'my-project-name.project.demo-builder.json'
             );
         });
 
         it('should trim leading and trailing hyphens', () => {
-            expect(getSuggestedFilename('-my-project-')).toBe('my-project.demo-builder.json');
+            expect(getSuggestedFilename('-my-project-')).toBe('my-project.project.demo-builder.json');
         });
 
         it('should use default name for empty string', () => {
-            expect(getSuggestedFilename('')).toBe('project.demo-builder.json');
+            expect(getSuggestedFilename('')).toBe('project.project.demo-builder.json');
         });
 
         it('should use default name for all special characters', () => {
-            expect(getSuggestedFilename('!@#$%^&*()')).toBe('project.demo-builder.json');
+            expect(getSuggestedFilename('!@#$%^&*()')).toBe('project.project.demo-builder.json');
         });
     });
 });

@@ -1,0 +1,170 @@
+{
+    "_about": "AI-1r triage, read handler by handler on 2026-10-03. Checked by coverage.py on every run: a row whose handler or tool is gone, that is now covered by name, or that has no reason, fails the scan. See SKILL.md.",
+    "aliases": {
+        "getProjects": {
+            "tool": "list_projects",
+            "reason": "Both list every Demo Builder project on disk; the tool also marks the current one."
+        },
+        "requestStatus": {
+            "tool": "get_project_status",
+            "reason": "Same derivation (dashboardStatusService); the handler pushes it to the dashboard, the tool returns it."
+        },
+        "republishContent": {
+            "tool": "sync_content",
+            "reason": "Both call republishStorefrontContent (DA.live pages to the CDN). NOT `republish`, which regenerates and publishes config.json only."
+        },
+        "exportProject": {
+            "tool": "export_project_settings",
+            "reason": "Same file from the same function (createExportSettings); the tool writes for the current project, which set_current_project picks."
+        },
+        "import-storefront-zip": {
+            "tool": "add_shared_demo",
+            "reason": "add_shared_demo with zipPath runs the same zip-to-repository import (readStorefrontZip + the handler's own refusal check)."
+        },
+        "configure": {
+            "tool": "open_view",
+            "reason": "The handler only runs the demoBuilder.configureProject command; open_view with view=configure runs the same command."
+        },
+        "authenticate": {
+            "tool": "sign_in",
+            "reason": "Adobe browser sign-in through the same authManager.login(); the tool does not pass force."
+        },
+        "reAuthenticate": {
+            "tool": "sign_in",
+            "reason": "Adobe browser sign-in. The handler also restores the project's org context afterwards; agent tools carry that per call (runWithAdobeTarget)."
+        },
+        "check-auth": {
+            "tool": "get_auth_status",
+            "reason": "Adobe authentication status, without the wizard's progress pushes."
+        },
+        "check-dalive-auth": {
+            "tool": "get_auth_status",
+            "reason": "DA.live authentication status and the pinned namespace."
+        },
+        "check-github-auth": {
+            "tool": "get_auth_status",
+            "reason": "GitHub authentication status with the user and their orgs."
+        },
+        "switchOrg": {
+            "tool": "select_org",
+            "reason": "An agent names the org by id and tools run under that target; the forced browser chooser is how a person changes org. ORG_MISMATCH answers point the agent at select_org or sign_in."
+        },
+        "get-github-repos": {
+            "tool": "list_github_repos",
+            "reason": "Same repoOperations.listUserRepositories read."
+        },
+        "get-projects": {
+            "tool": "list_adobe_projects",
+            "reason": "Adobe Console projects in the selected org, through the same authManager.getProjects."
+        },
+        "get-workspaces": {
+            "tool": "list_workspaces",
+            "reason": "Workspaces of the selected Adobe project."
+        },
+        "list-org-console-apis": {
+            "tool": "list_console_apis",
+            "reason": "The org's subscribable Adobe services with which are already covered; the wizard variant only adds in-flight picks that exist in the webview."
+        },
+        "ensure-mesh-api-subscribed": {
+            "tool": "deploy_mesh",
+            "reason": "The mesh deploy core (deployMeshHeadless) subscribes the API Mesh API itself before deploying; add_console_apis subscribes any other API."
+        },
+        "checkCompatibility": {
+            "tool": "validate_component_selection",
+            "reason": "The tool dispatches this handler itself (through a local run helper the scan cannot follow)."
+        },
+        "loadDependencies": {
+            "tool": "validate_component_selection",
+            "reason": "The tool dispatches this handler itself (through a local run helper the scan cannot follow)."
+        },
+        "validateSelection": {
+            "tool": "validate_component_selection",
+            "reason": "The tool dispatches this handler itself (through a local run helper the scan cannot follow)."
+        },
+        "loadComponents": {
+            "tool": "list_components",
+            "reason": "Same component registry sections: frontends, backends, integrations, dependencies."
+        },
+        "get-components-data": {
+            "tool": "get_component_requirements",
+            "reason": "The tool was first written as a row over this handler, then narrowed to one component; list_components gives the ids."
+        },
+        "getErpDemoControls": {
+            "tool": "run_erp_rest",
+            "reason": "The handler is a GET of the ERP's health route (appearance and downtime); set_erp_appearance's description tells the agent to read it with run_erp_rest on 'health'."
+        }
+    },
+    "exclusions": {
+        "log": {
+            "reason": "The webview writing its own log lines to the extension's logger. Channel plumbing."
+        },
+        "ready": {
+            "reason": "The wizard webview announcing it has loaded. Channel plumbing."
+        },
+        "answerOperationPrompt": {
+            "reason": "The progress modal handing back the button the SC pressed. An agent answers through confirm:true on the tool."
+        },
+        "getOperationProgress": {
+            "reason": "A reopened progress modal asking where its operation got to, and taking it back from the notification. Modal plumbing."
+        },
+        "update-component-selection": {
+            "reason": "Stores the wizard's in-progress selection in shared state and returns only { success }. No sender found in the webview code on 2026-10-03."
+        },
+        "update-components-data": {
+            "reason": "Stores the wizard's components cache in shared state and returns only { success }. No sender found in the webview code on 2026-10-03."
+        },
+        "validate": {
+            "reason": "Validates one wizard form field and PUSHES the verdict to the webview; the return value carries no outcome."
+        },
+        "loadPreset": {
+            "reason": "Turns a wizard preset id into selections. An agent passes selections to create_project directly. No sender found in the webview code on 2026-10-03."
+        },
+        "continue-prerequisites": {
+            "reason": "Resumes the wizard's own check loop from an index held in shared state. An agent uses check_prerequisites and install_prerequisite."
+        },
+        "re-detect-context": {
+            "reason": "Clears org caches and re-reads them for the wizard's display after a sign-in outside the app. Agent tools carry their org target on every call."
+        },
+        "ensure-org-selected": {
+            "reason": "A wizard gate that answers only whether an org is selected. An agent selects one with select_org. No sender found in the webview code on 2026-10-03."
+        },
+        "check-project-apis": {
+            "reason": "A wizard-era probe for the API Mesh CLI plugin. check_mesh is the agent's mesh read. No sender found in the webview code on 2026-10-03."
+        },
+        "store-dalive-token-with-org": {
+            "reason": "Takes a pasted DA.live credential. An agent must never carry one; connect_dalive hands the paste to the user."
+        },
+        "storefront-setup-cancel": {
+            "reason": "Aborts the wizard's in-flight storefront setup through its own AbortController, behind a modal confirmation. An agent undoes with delete_github_repo and cleanup_dalive_site."
+        },
+        "prepareSetupChecks": {
+            "reason": "Signs in to Commerce early so the setup guide's first check is fast. check_setup_steps signs in itself."
+        },
+        "provision-accs-credentials": {
+            "reason": "Creates a credential in the user's Console workspace. Kept panel-only on purpose; the handler's own comment says never in the MCP maps."
+        },
+        "use-bundle-setup": {
+            "reason": "Closes the wizard and reopens it pre-filled from a bundle's setup. UI navigation; the job behind it is the importFromFile gap."
+        }
+    },
+    "gaps": {
+        "importFromFile": {
+            "reason": "No tool starts a project from an exported project file. The handler opens a file picker; a path-taking variant is what an agent would need. (A zip bundle's storefront is covered by add_shared_demo.)"
+        },
+        "resetProject": {
+            "reason": "Only an Edge Delivery project can be reset by an agent (reset_eds_project). A headless project's reset (component re-clone) has no tool."
+        },
+        "check-credential-service": {
+            "reason": "No tool asks whether the shared credential service serves this org; only the Diagnostics command and the Commerce step do."
+        },
+        "clear-dalive-auth": {
+            "reason": "No tool signs out of DA.live. Whether an agent should be able to is an owner decision."
+        },
+        "github-change-account": {
+            "reason": "No tool switches the GitHub account (clear the token, force a fresh sign-in). sign_in covers signing in, not changing who."
+        },
+        "getErpOwnershipOptions": {
+            "reason": "add_erp asks the agent to offer the user an ownership rule, and no tool reads the options the dialog shows (which websites and sources are still unowned)."
+        }
+    }
+}

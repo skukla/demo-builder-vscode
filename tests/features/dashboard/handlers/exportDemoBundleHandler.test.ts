@@ -73,8 +73,8 @@ beforeEach(() => {
     mockGitHub.mockReturnValue({ repoOperations, fileOperations });
     repoOperations.getRepository.mockResolvedValue({ fullName: 'steve/kukla-bodea', defaultBranch: 'main', isPrivate: false });
     fileOperations.downloadRepoArchive.mockResolvedValue(archive());
-    mockSettingsDialog.mockResolvedValue({ success: true, data: { path: '/picked/kukla-bodea.demo-builder.json' } });
-    mockSettingsFile.mockResolvedValue({ path: '/p/kukla-bodea.demo-builder.json', includesSecrets: false, verify: 'x' });
+    mockSettingsDialog.mockResolvedValue({ success: true, data: { path: '/picked/kukla-bodea.project.demo-builder.json' } });
+    mockSettingsFile.mockResolvedValue({ path: '/p/kukla-bodea.project.demo-builder.json', verify: 'x' });
     global.fetch = jest.fn(async () => ({ ok: false, status: 404 })) as unknown as typeof fetch;
 });
 
@@ -92,8 +92,8 @@ describe('handleExportDemoBundle', () => {
         expect(fromDialog).toMatchObject({ success: true });
 
         const headless = await handleExportDemoBundle(contextFor(edsProject(dir), false), { setup: true, storefront: false, path: 'out.json' });
-        expect(mockSettingsFile).toHaveBeenCalledWith(expect.anything(), { path: 'out.json', includeSecrets: false });
-        expect(headless).toEqual({ success: true, data: { path: '/p/kukla-bodea.demo-builder.json', fileCount: 1, parts: ['setup'] } });
+        expect(mockSettingsFile).toHaveBeenCalledWith(expect.anything(), { path: 'out.json' });
+        expect(headless).toEqual({ success: true, data: { path: '/p/kukla-bodea.project.demo-builder.json', fileCount: 1, parts: ['setup'] } });
     });
 
     it('asks where with the save dialog from the webview, and answers cancelled when dismissed', async () => {
@@ -115,7 +115,7 @@ describe('handleExportDemoBundle', () => {
         expect(result).toMatchObject({ success: true, data: { path: target, fileCount: 3, parts: ['setup', 'storefront'] } });
         const written = new AdmZip(fs.readFileSync(target));
         const setup = JSON.parse(written.readAsText('kukla-bodea-demo-bundle/setup.demo-builder.json'));
-        expect(setup.includesSecrets).toBe(false);
+        expect(setup).not.toHaveProperty('includesSecrets');
         expect(JSON.stringify(setup)).not.toContain('fake-test-pw-not-a-secret');
         const description = JSON.parse(written.readAsText('kukla-bodea-demo-bundle/storefront/demo.demo-builder.json'));
         expect(description).toMatchObject({ kind: 'demo', name: 'Bodea', contentSource: { org: 'skukla', site: 'kukla-bodea' } });

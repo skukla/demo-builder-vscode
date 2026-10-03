@@ -20,6 +20,7 @@ node $B set AI-1c status=active value=high
 node $B log AI-1c "Phase 1 landed (abc1234)"
 node $B sync                  # rewrite the README's generated spans
 node $B stale                 # advisory: WIP items with nothing recorded
+node $B leftovers             # advisory: finished items whose body still names work
 node $B unlogged              # commits that NAME an item but never reached it
 node $B unlogged --write      # ...and record them, no typing
 ```

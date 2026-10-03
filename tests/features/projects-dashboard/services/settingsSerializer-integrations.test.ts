@@ -54,7 +54,7 @@ describe('settingsSerializer', () => {
                 appBuilderComponents: { 'firefly-image-gen': INSTANCE_STATE },
             });
 
-            const result = extractSettingsFromProject(project, false);
+            const result = extractSettingsFromProject(project);
 
             expect(result.appBuilderComponentSources).toEqual({
                 'firefly-image-gen': {
@@ -71,7 +71,7 @@ describe('settingsSerializer', () => {
                 appBuilderComponents: { 'acme-widget': CUSTOM_IMPORT_STATE },
             });
 
-            const result = extractSettingsFromProject(project, false);
+            const result = extractSettingsFromProject(project);
 
             expect(result.appBuilderComponentSources).toEqual({
                 'acme-widget': { owner: 'acme', repo: 'widget', branch: 'dev' },
@@ -97,7 +97,7 @@ describe('settingsSerializer', () => {
                 },
             });
 
-            const result = extractSettingsFromProject(project, false);
+            const result = extractSettingsFromProject(project);
 
             expect(Object.keys(result.appBuilderComponentSources ?? {})).toEqual([
                 'firefly-image-gen',
@@ -122,7 +122,7 @@ describe('settingsSerializer', () => {
                 },
             });
 
-            const result = extractSettingsFromProject(project, false);
+            const result = extractSettingsFromProject(project);
 
             expect(result.appBuilderComponentSources).toBeUndefined();
         });
@@ -138,7 +138,7 @@ describe('settingsSerializer', () => {
                 },
             });
 
-            const result = extractSettingsFromProject(project, false);
+            const result = extractSettingsFromProject(project);
 
             expect(Object.keys(result.appBuilderComponentSources ?? {})).toEqual(['acme-widget']);
         });
@@ -146,7 +146,7 @@ describe('settingsSerializer', () => {
         it('omits appBuilderComponentSources when the project has no keyed map', () => {
             const project = createProject();
 
-            const result = extractSettingsFromProject(project, false);
+            const result = extractSettingsFromProject(project);
 
             expect(result.appBuilderComponentSources).toBeUndefined();
         });
@@ -159,7 +159,7 @@ describe('settingsSerializer', () => {
                 componentApiPicks: { __existing__: ['AssetComputeSDK', 'CCAPI'] },
             });
 
-            const result = extractSettingsFromProject(project, false);
+            const result = extractSettingsFromProject(project);
 
             expect(result.additionalConsoleApis).toBeUndefined();
             expect(result.componentApiPicks).toEqual({
@@ -170,7 +170,7 @@ describe('settingsSerializer', () => {
         it('should omit additionalConsoleApis when absent', () => {
             const project = createProject();
 
-            const result = extractSettingsFromProject(project, false);
+            const result = extractSettingsFromProject(project);
 
             expect(result.additionalConsoleApis).toBeUndefined();
         });
@@ -187,7 +187,7 @@ describe('settingsSerializer', () => {
                 additionalConsoleApis: ['CCAPI', 'AssetComputeSDK'],
             });
 
-            const result = extractSettingsFromProject(project, false);
+            const result = extractSettingsFromProject(project);
 
             expect(result.componentApiPicks).toEqual({
                 'erp-sync': ['CCAPI'],
@@ -197,7 +197,7 @@ describe('settingsSerializer', () => {
 
         it('omits the keyed picks when there are none', () => {
             expect(
-                extractSettingsFromProject(createProject(), false).componentApiPicks
+                extractSettingsFromProject(createProject()).componentApiPicks
             ).toBeUndefined();
         });
 
@@ -207,7 +207,7 @@ describe('settingsSerializer', () => {
                 additionalConsoleApis: ['CCAPI'],
             });
 
-            const result = extractSettingsFromProject(project, false);
+            const result = extractSettingsFromProject(project);
 
             expect(result.selections).toEqual({
                 appBuilder: ['firefly-image-gen', 'acme-widget'],
@@ -215,13 +215,6 @@ describe('settingsSerializer', () => {
             expect(result.configs).toStrictEqual({});
             expect(result.version).toBe(SETTINGS_FILE_VERSION);
             expect(result.source.project).toBe('integrations-project');
-        });
-
-        it('should leave includeSecrets behavior unchanged with the derived fields present', () => {
-            const project = createProject({ additionalConsoleApis: ['CCAPI'] });
-
-            expect(extractSettingsFromProject(project, true).includesSecrets).toBe(true);
-            expect(extractSettingsFromProject(project, false).includesSecrets).toBe(false);
         });
 
         it('should round-trip: export then parse preserves derived sources + names + apis', () => {
@@ -237,7 +230,7 @@ describe('settingsSerializer', () => {
                 componentApiPicks: { __existing__: ['AssetComputeSDK', 'CCAPI'] },
             });
 
-            const exported = extractSettingsFromProject(project, false);
+            const exported = extractSettingsFromProject(project);
             const parseResult = parseSettingsFile(JSON.stringify(exported));
 
             assertOk(parseResult);
@@ -273,7 +266,7 @@ describe('settingsSerializer', () => {
                 },
             });
 
-            const exported = extractSettingsFromProject(project, false);
+            const exported = extractSettingsFromProject(project);
 
             expect(Object.keys(exported.appBuilderComponentSources ?? {})).toEqual(['acme-widget']);
         });
@@ -290,7 +283,7 @@ describe('settingsSerializer', () => {
                 },
             });
 
-            const exported = JSON.stringify(extractSettingsFromProject(project, true));
+            const exported = JSON.stringify(extractSettingsFromProject(project));
 
             expect(exported).toContain('"acme-widget"');
             expect(exported).not.toContain(ownWorkspace.id);

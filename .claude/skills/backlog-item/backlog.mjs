@@ -26,6 +26,7 @@
  *   log <id> "<text>"     append a dated line to `## Shipped so far`
  *   sync                  rewrite the README's generated spans in place
  *   stale                 advisory: work-in-progress items with nothing recorded
+ *   leftovers             advisory: finished items whose own body still names work
  *   unlogged [--since R]  commits that NAME an item but were never logged to it
  *
  *   filters: --area X --status S --layer L --kind K --value V --grep TERM
@@ -212,6 +213,61 @@ export function startable(items) {
         .filter((i) => !NOT_STARTABLE.has(i.status) && !waiting(i))
         .sort((a, b) => (rank[a.value] ?? 3) - (rank[b.value] ?? 3) ||
                         a.id.localeCompare(b.id, undefined, { numeric: true }));
+}
+
+// ── leftovers ────────────────────────────────────────────────────────────────
+
+// PL-39. On 2026-09-02, 18 items sat at `shipped` or `built` and still named
+// remaining work in their own prose. Nobody re-opens a finished item, so that work
+// was in no list: not `next` (the item is done), not `stale` (it has a record),
+// not `check` (the frontmatter is valid). This READS the prose of finished items.
+//
+// The phrases are the six the item names. They are not banned and must not be:
+// they are the most useful sentences in these files. The point is that something
+// looks at them.
+export const FINISHED = new Set(['shipped', 'built']);
+const REMAINDER = /\b(remaining|remainder|next steps?|follow-on|not yet done|left for)\b/i;
+// A remainder told as history is the record, not open work: "the remaining work
+// WAS finished in...". Same split `doc-drift.sh` makes for paths that are gone.
+const HISTORICAL = /\b(was|were|has been|have been|had been|is now|are now|no longer|since (been )?(done|finished|shipped|landed|closed|fixed)|resolved|completed)\b/i;
+
+/**
+ * The sentences of a body, with hard-wrapped lines joined first. Items are
+ * wrapped at ~80 columns, so "remaining" and the "was finished" that makes it
+ * history are routinely on different LINES of one sentence; judging by line
+ * would report history as open work. A list row, table row or heading starts a
+ * new unit. Fenced code is dropped: a quoted scan output is not a claim.
+ */
+export function sentences(body) {
+    const units = [];
+    let current = '';
+    const flush = () => { if (current.trim()) units.push(current.trim()); current = ''; };
+    for (const line of body.replace(/```[\s\S]*?```/g, '').split('\n')) {
+        if (!line.trim() || /^\s*([-*]\s|\d+\.\s|\||#)/.test(line)) flush();
+        current += ` ${line.trim()}`;
+    }
+    flush();
+    return units.flatMap((u) => u.split(/(?<=[.!?])\s+/)).filter(Boolean);
+}
+
+/**
+ * Finished items that still name work, and why each of the others was skipped.
+ *
+ * An item with a child, or with `superseded-by`, is skipped: its remainder has
+ * somewhere to live, which is all this check asks for.
+ */
+export function leftovers(items) {
+    const finished = items.filter((i) => FINISHED.has(i.status));
+    const parents = new Set(items.map((i) => i.parent).filter(Boolean));
+    const homed = finished.filter((i) => parents.has(i.id) || i['superseded-by']);
+    const found = [], historyOnly = [];
+    for (const i of finished.filter((x) => !homed.includes(x))) {
+        const named = sentences(i.body ?? '').filter((s) => REMAINDER.test(s));
+        const open = named.filter((s) => !HISTORICAL.test(s));
+        if (open.length) found.push({ id: i.id, status: i.status, title: i.title, rel: i.rel, sentences: open });
+        else if (named.length) historyOnly.push(i.id);
+    }
+    return { found, finished: finished.length, homed: homed.length, historyOnly: historyOnly.length };
 }
 
 // ── rendering ────────────────────────────────────────────────────────────────
@@ -486,6 +542,28 @@ function main() {
             console.log(`\n  ${unlogged.length} of ${wip} work-in-progress item(s) have nothing recorded` +
                         `\n  control: ${items.length} parsed, ${items.filter((i) => WIP.has(i.status)).length} in a working state, ` +
                         `${items.filter((i) => WIP.has(i.status) && i.kind === 'epic').length} epic(s) excluded`);
+            return;
+        }
+        case 'leftovers': {
+            // Advisory, never a gate, and never part of `check`: a sentence about
+            // remaining work is a judgement to make (file it as a child, or say it
+            // is history), not a defect to refuse a commit over. A failing check
+            // would be answered by deleting the sentence, which trades a visible
+            // gap for an invisible one.
+            const r = leftovers(items);
+            if (opt.json) return console.log(JSON.stringify(r.found, null, 2));
+            for (const f of r.found) {
+                console.log(`  ${f.id.padEnd(6)} ${f.status.padEnd(7)} ${f.title}`);
+                console.log(`         "${f.sentences[0].slice(0, 110)}"` +
+                            (f.sentences.length > 1 ? `  (+${f.sentences.length - 1} more)` : ''));
+            }
+            // The control. "0 leftovers" from a backlog with no finished items, or
+            // from a pattern that matches nothing, reads the same as a clean record.
+            console.log(`\n  ${r.found.length} finished item(s) still name work, and it has no item of its own` +
+                        `\n  control: ${items.length} parsed, ${r.finished} shipped or built, ` +
+                        `${r.homed} have a child or superseded-by (skipped), ` +
+                        `${r.historyOnly} name a remainder only as history (skipped)` +
+                        '\n  for each: file the remainder as a child item, or reword it as history if it is done.');
             return;
         }
         case 'unlogged': {

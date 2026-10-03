@@ -7,7 +7,6 @@
 
 import './dashboardValidatorMocks';
 import { HandlerContext } from '@/types/handlers';
-import { fakeExtractResetParams } from '../../../helpers/edsResetParamsFake';
 import { Project } from '@/types/base';
 
 // Explicit test timeout to prevent hanging
@@ -101,18 +100,13 @@ jest.mock('@/features/eds/services/configGenerator', () => ({
 // Mock global fetch for code sync verification
 global.fetch = jest.fn();
 
-// Mock edsResetService (dynamically imported) - the shared service for EDS resets
+// Mock edsResetUI (dynamically imported). The handler calls only this entry point,
+// so parameter extraction and the reset itself never run in this suite; they are
+// covered against the real function in tests/features/eds/services/reset/.
 // resetEdsProjectWithUI is the consolidated entry point for EDS reset
-// extractResetParams and executeEdsReset are internal to the service
 const mockResetEdsProjectWithUI = jest.fn();
-const mockExtractResetParams = jest.fn();
-const mockExecuteEdsReset = jest.fn();
 jest.mock('@/features/eds/services/reset/edsResetUI', () => ({
     resetEdsProjectWithUI: (...args: unknown[]) => mockResetEdsProjectWithUI(...args),
-}));
-jest.mock('@/features/eds/services/reset/edsResetService', () => ({
-    extractResetParams: (...args: unknown[]) => mockExtractResetParams(...args),
-    executeEdsReset: (...args: unknown[]) => mockExecuteEdsReset(...args),
 }));
 
 // =============================================================================
@@ -249,17 +243,6 @@ describe('handleResetProject', () => {
         (vscode.window.withProgress as jest.Mock).mockImplementation(async (_options, callback) => {
             const progressReporter = { report: jest.fn() };
             return callback(progressReporter);
-        });
-
-        // Setup edsResetService mocks
-        // Default: extractResetParams returns success with valid params
-        mockExtractResetParams.mockImplementation(fakeExtractResetParams);
-
-        // Default: executeEdsReset returns success
-        mockExecuteEdsReset.mockResolvedValue({
-            success: true,
-            filesReset: 100,
-            contentCopied: 10,
         });
 
         // Default: resetEdsProjectWithUI returns success
