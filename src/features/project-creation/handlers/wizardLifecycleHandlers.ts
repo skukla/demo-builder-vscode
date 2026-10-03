@@ -22,15 +22,12 @@ import { toError } from '@/types/typeGuards';
 /**
  * ready - Initial wizard ready event
  *
- * Called when the wizard webview is fully loaded and ready.
- * Loads component definitions for the component selection step.
+ * Called when the wizard webview is fully loaded and ready. An acknowledgement
+ * only: the init message is sent by BaseWebviewCommand with getInitialData(),
+ * and the wizard requests the component registry itself (`get-components-data`).
  */
 export async function handleReady(context: HandlerContext): Promise<SimpleResult> {
     context.logger.debug('Wizard webview ready');
-
-    // Note: init message is already sent by BaseWebviewCommand with getInitialData()
-    // Just load components here
-    await loadComponents(context);
 
     return { success: true };
 }
@@ -179,28 +176,6 @@ export async function handleOpenExternal(
     } catch (error) {
         context.logger.error('[OpenExternal] Failed to open URL', error as Error);
         return { success: false, error: (error as Error).message };
-    }
-}
-
-/**
- * Helper: Load components
- *
- * Loads component definitions from templates/components.json
- * Uses the modern handler pattern by directly invoking the handler
- */
-async function loadComponents(context: HandlerContext): Promise<void> {
-    try {
-        // Invoke the loadComponents handler directly
-        const { handleLoadComponents } = await import('../../components/handlers/componentHandlers');
-        const result = await handleLoadComponents(context);
-
-        // Send result to webview if successful
-        if (result.success && result.data && context.communicationManager) {
-            const messageType = (result as { type?: string }).type || 'componentsLoaded';
-            await context.communicationManager.sendMessage(messageType, result.data);
-        }
-    } catch (error) {
-        context.logger.error('Failed to load components:', error as Error);
     }
 }
 

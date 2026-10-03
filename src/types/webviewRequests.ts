@@ -400,7 +400,6 @@ export interface ComponentDataDTO {
     id: string;
     name: string;
     description?: string;
-    features?: string[];
     dependencies?: {
         required?: string[];
         optional?: string[];
@@ -414,7 +413,6 @@ export interface ComponentDataDTO {
         deploymentTarget?: string;
         [key: string]: unknown;
     };
-    recommended?: boolean;
 }
 
 /**

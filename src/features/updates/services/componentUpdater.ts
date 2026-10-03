@@ -2,7 +2,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { flattenArchiveRoot } from './archiveRoot';
-import { mergeEnvContent, parseEnvFile } from './envMerge';
+import { ENV_VAR_RENAMES, mergeEnvContent, parseEnvFile } from './envMerge';
 import { isMeshComponentId } from '@/core/constants';
 import { classifyTransience, extractErrorMessage } from '@/core/errors';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
@@ -498,7 +498,7 @@ export class ComponentUpdater {
                 continue;
             }
       
-            const mergedContent = mergeEnvContent(oldContent, newTemplate);
+            const mergedContent = mergeEnvContent(oldContent, newTemplate, ENV_VAR_RENAMES);
             await fs.writeFile(envPath, mergedContent, 'utf-8');
       
             const addedKeys = Array.from(parseEnvFile(newTemplate).keys()).filter(

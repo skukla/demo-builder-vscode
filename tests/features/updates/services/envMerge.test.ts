@@ -16,7 +16,11 @@
  * new name, finds nothing, and fails at runtime.
  */
 
-import { mergeEnvContent, parseEnvFile } from '@/features/updates/services/envMerge';
+import {
+    ENV_VAR_RENAMES,
+    mergeEnvContent,
+    parseEnvFile,
+} from '@/features/updates/services/envMerge';
 
 describe('parsing an env file', () => {
     it('reads KEY=value pairs', () => {
@@ -108,7 +112,81 @@ describe('merging .env with a new .env.example', () => {
     });
 });
 
-describe('THE GAP: a renamed variable is not migrated', () => {
+describe('a renamed variable carries the user value across', () => {
+    /**
+     * PL-24. A component renames `CATALOG_SERVICE_ENDPOINT` to
+     * `ADOBE_CATALOG_SERVICE_ENDPOINT` and ships a template carrying only the new
+     * name. With the rename DECLARED, the existing project's value moves to the
+     * new name — CLAUDE.md property 3: existing projects keep working.
+     *
+     * The rename here is synthetic. The real list (`ENV_VAR_RENAMES`) has no
+     * entries yet, because no component has renamed a variable since this landed.
+     */
+    const RENAMES = { CATALOG_SERVICE_ENDPOINT: 'ADOBE_CATALOG_SERVICE_ENDPOINT' };
+    const OLD_ENV = 'CATALOG_SERVICE_ENDPOINT=https://catalog.adobe.io/graphql\nAPI_KEY=k-1';
+    const NEW_TEMPLATE = 'ADOBE_CATALOG_SERVICE_ENDPOINT=\nAPI_KEY=';
+
+    it("puts the user's value under the new name", () => {
+        const merged = parseEnvFile(mergeEnvContent(OLD_ENV, NEW_TEMPLATE, RENAMES));
+
+        expect(merged.get('ADOBE_CATALOG_SERVICE_ENDPOINT')).toBe(
+            'https://catalog.adobe.io/graphql',
+        );
+    });
+
+    it('drops the old name, which nothing reads any more', () => {
+        const merged = parseEnvFile(mergeEnvContent(OLD_ENV, NEW_TEMPLATE, RENAMES));
+
+        expect(merged.has('CATALOG_SERVICE_ENDPOINT')).toBe(false);
+    });
+
+    it('leaves every other key alone', () => {
+        const merged = parseEnvFile(mergeEnvContent(OLD_ENV, NEW_TEMPLATE, RENAMES));
+
+        expect(merged.get('API_KEY')).toBe('k-1');
+        expect(merged.size).toBe(2);
+    });
+
+    it('never overwrites a value the user already set under the new name', () => {
+        const both = `${OLD_ENV}\nADOBE_CATALOG_SERVICE_ENDPOINT=https://mine.example/graphql`;
+
+        const merged = parseEnvFile(mergeEnvContent(both, NEW_TEMPLATE, RENAMES));
+
+        expect(merged.get('ADOBE_CATALOG_SERVICE_ENDPOINT')).toBe('https://mine.example/graphql');
+        // Both names were the user's; neither is discarded.
+        expect(merged.get('CATALOG_SERVICE_ENDPOINT')).toBe('https://catalog.adobe.io/graphql');
+    });
+
+    it('does nothing when the project never had the old name', () => {
+        const merged = parseEnvFile(mergeEnvContent('API_KEY=k-1', NEW_TEMPLATE, RENAMES));
+
+        expect(merged.get('ADOBE_CATALOG_SERVICE_ENDPOINT')).toBe('');
+        expect(merged.has('CATALOG_SERVICE_ENDPOINT')).toBe(false);
+    });
+
+    it('keeps the old name when the new template still ships it', () => {
+        // A template carrying both names means the component still reads the old
+        // one, so it is not dead and must not be removed.
+        const template = `${NEW_TEMPLATE}\nCATALOG_SERVICE_ENDPOINT=`;
+
+        const merged = parseEnvFile(mergeEnvContent(OLD_ENV, template, RENAMES));
+
+        expect(merged.get('ADOBE_CATALOG_SERVICE_ENDPOINT')).toBe(
+            'https://catalog.adobe.io/graphql',
+        );
+        expect(merged.get('CATALOG_SERVICE_ENDPOINT')).toBe('https://catalog.adobe.io/graphql');
+    });
+
+    it('the shipped rename list maps old names to different new names', () => {
+        // Zero entries today. When one is added, it must be a real rename.
+        for (const [from, to] of Object.entries(ENV_VAR_RENAMES)) {
+            expect(to).not.toBe(from);
+            expect(to).toMatch(/^[A-Z][A-Z0-9_]*$/);
+        }
+    });
+});
+
+describe('THE GAP, with no rename declared: a renamed variable is not migrated', () => {
     /**
      * The scenario the deleted suite described in comments. A component renames
      * `CATALOG_SERVICE_ENDPOINT` to `ADOBE_CATALOG_SERVICE_ENDPOINT` and ships a

@@ -380,7 +380,6 @@ export interface ComponentSelection {
     services?: string[];
     integrations?: string[];
     appBuilder?: string[];
-    preset?: string;
 }
 
 // ONE declaration with @/types/components (this file used to carry a

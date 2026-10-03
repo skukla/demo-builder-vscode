@@ -247,22 +247,6 @@ export interface RawComponentRegistry {
     tools?: Record<string, RawComponentDefinition>;
     services?: Record<string, ServiceDefinition>;
     envVars?: Record<string, Omit<EnvVarDefinition, 'key'>>;
-    presets?: PresetDefinition[];
-}
-
-/**
- * PresetDefinition - Component preset
- */
-export interface PresetDefinition {
-    id: string;
-    name: string;
-    description?: string;
-    selections: {
-        frontend: string;
-        backend: string;
-        dependencies: string[];
-        integrations?: string[];
-    };
 }
 
 /**
@@ -291,7 +275,6 @@ export interface ComponentRegistry {
     };
     services?: Record<string, ServiceDefinition>;
     envVars?: Record<string, Omit<EnvVarDefinition, 'key'>>;
-    presets?: PresetDefinition[];
 }
 
 /**
@@ -303,7 +286,6 @@ export interface ComponentSelection {
     dependencies?: string[];
     integrations?: string[];
     services?: ServiceDefinition[];
-    preset?: string;
 }
 
 /**

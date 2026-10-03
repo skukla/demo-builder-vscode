@@ -15,7 +15,7 @@
 import * as path from 'path';
 import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
 import { validateNodeVersion } from '@/core/validation/validators/NodeVersionValidator';
-import { ComponentRegistry, PresetDefinition, RawComponentDefinition, RawComponentRegistry, ServiceDefinition, TransformedComponentDefinition } from '@/types/components';
+import { ComponentRegistry, RawComponentDefinition, RawComponentRegistry, ServiceDefinition, TransformedComponentDefinition } from '@/types/components';
 
 // Re-export DependencyResolver for backward compatibility
 export { DependencyResolver } from './DependencyResolver';
@@ -304,11 +304,6 @@ export class ComponentRegistryManager {
             ...(registry.components.integrations || []),
         ];
         return allComponents.find(c => c.id === id);
-    }
-
-    async getPresets(): Promise<PresetDefinition[]> {
-        // Presets are not currently defined in components.json v2.0
-        return [];
     }
 
     async checkCompatibility(frontendId: string, backendId: string): Promise<boolean> {

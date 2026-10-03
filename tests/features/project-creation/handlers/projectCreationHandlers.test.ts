@@ -63,6 +63,23 @@ describe('projectCreationHandlers', () => {
             expect(hasHandler(projectCreationHandlers, 'list-org-console-apis')).toBe(true);
         });
 
+        // Removed 2026-10-03: no webview sent any of these, no MCP tool dispatched
+        // them, and no command called them. A registered handler nothing sends is
+        // a capability that reads as live; these stay out.
+        it.each([
+            'loadPreset',
+            'loadComponents',
+            'update-component-selection',
+            'update-components-data',
+            'ensure-org-selected',
+            'check-project-apis',
+        ])('does not register %s, which nothing sends', (type) => {
+            expect(hasHandler(projectCreationHandlers, type)).toBe(false);
+        });
+
+        it('CONTROL: a message the wizard does send is registered', () => {
+            expect(hasHandler(projectCreationHandlers, 'get-components-data')).toBe(true);
+        });
     });
 
 });

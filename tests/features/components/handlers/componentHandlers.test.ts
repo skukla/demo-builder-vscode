@@ -9,11 +9,7 @@ import { ComponentRegistryManager, DependencyResolver, setupComponentHandlerSuit
 import {
     handleLoadDependencies,
     handleValidateSelection,
-    handleUpdateComponentSelection,
-    handleUpdateComponentsData,
-    handleLoadComponents,
     handleCheckCompatibility,
-    handleLoadPreset,
 } from '@/features/components/handlers/componentHandlers';
 import { HandlerContext } from '@/types/handlers';
 
@@ -185,86 +181,6 @@ describe('componentHandlers - Pattern B (request-response)', () => {
         });
     });
 
-    describe('handleUpdateComponentSelection', () => {
-        it('should store selection in sharedState and return success:true', async () => {
-            const selection = {
-                frontend: 'headless',
-                backend: 'adobe-commerce-paas',
-                dependencies: ['dep-a'],
-                services: [],
-            };
-
-            const result = await handleUpdateComponentSelection(mockContext, selection);
-
-            expect(result).toEqual({ success: true });
-            expect(mockContext.sharedState.currentComponentSelection).toEqual(selection);
-        });
-
-        it('should return error for invalid payload', async () => {
-            const result = await handleUpdateComponentSelection(mockContext, null);
-
-            expect(result).toEqual({ success: false, error: 'Invalid payload' });
-        });
-    });
-
-    describe('handleUpdateComponentsData', () => {
-        it('should store components data in sharedState and return success:true', async () => {
-            const data = { frontends: [], backends: [], dependencies: [] };
-
-            const result = await handleUpdateComponentsData(mockContext, data);
-
-            expect(result).toEqual({ success: true });
-            expect(mockContext.sharedState.componentsData).toEqual(data);
-        });
-
-        it('should return error for invalid payload', async () => {
-            const result = await handleUpdateComponentsData(mockContext, undefined);
-
-            expect(result).toEqual({ success: false, error: 'Invalid payload' });
-        });
-    });
-
-    describe('handleLoadComponents', () => {
-        it('should return componentsLoaded with success:true', async () => {
-            mockRegistryManager.getFrontends.mockResolvedValue([
-                {
-                    id: 'headless',
-                    name: 'CitiSignal Next.js',
-                    description: 'Storefront',
-                    dependencies: { required: [], optional: [] },
-                    configuration: {},
-                },
-            ]);
-            mockRegistryManager.getBackends.mockResolvedValue([]);
-            mockRegistryManager.getIntegrations.mockResolvedValue([]);
-            mockRegistryManager.getDependencies.mockResolvedValue([]);
-            mockRegistryManager.getPresets.mockResolvedValue([]);
-
-            const result = await handleLoadComponents(mockContext);
-
-            expect(result.success).toBe(true);
-            expect(result).toHaveProperty('type', 'componentsLoaded');
-            expect(result).toHaveProperty('data');
-            const data = result.data;
-            expect(data).toHaveProperty('frontends');
-            expect(data).toHaveProperty('backends');
-            expect(data).toHaveProperty('integrations');
-            expect(data).toHaveProperty('dependencies');
-            expect(data).toHaveProperty('presets');
-            expect(mockContext.sendMessage).not.toHaveBeenCalled();
-        });
-
-        it('should return error with success:false on registry failure', async () => {
-            mockRegistryManager.getFrontends.mockRejectedValue(new Error('Registry load failed'));
-
-            const result = await handleLoadComponents(mockContext);
-
-            expect(result.success).toBe(false);
-            expect(result).toHaveProperty('error');
-            expect(result).toHaveProperty('code');
-        });
-    });
-
     describe('handleCheckCompatibility', () => {
         it('should return compatible:true when checkCompatibility returns true', async () => {
             mockRegistryManager.checkCompatibility.mockResolvedValue(true);
@@ -312,51 +228,6 @@ describe('componentHandlers - Pattern B (request-response)', () => {
 
             expect(result.success).toBe(false);
             expect(result).toHaveProperty('code');
-        });
-    });
-
-    describe('handleLoadPreset', () => {
-        const mockPreset = {
-            id: 'citisignal-headless',
-            name: 'CitiSignal Headless',
-            description: 'CitiSignal with Next.js',
-            selections: {
-                frontend: 'headless',
-                backend: 'adobe-commerce-paas',
-                dependencies: ['dep-a'],
-            },
-        };
-
-        it('should return presetLoaded with preset selections', async () => {
-            mockRegistryManager.getPresets.mockResolvedValue([mockPreset]);
-
-            const result = await handleLoadPreset(mockContext, { presetId: 'citisignal-headless' });
-
-            expect(result).toEqual({
-                success: true,
-                type: 'presetLoaded',
-                data: {
-                    frontend: 'headless',
-                    backend: 'adobe-commerce-paas',
-                    dependencies: ['dep-a'],
-                },
-            });
-        });
-
-        it('should return error when preset is not found', async () => {
-            mockRegistryManager.getPresets.mockResolvedValue([mockPreset]);
-
-            const result = await handleLoadPreset(mockContext, { presetId: 'nonexistent' });
-
-            expect(result.success).toBe(false);
-            expect(result).toHaveProperty('error');
-            expect(result).toHaveProperty('code');
-        });
-
-        it('should return error for invalid payload', async () => {
-            const result = await handleLoadPreset(mockContext, undefined);
-
-            expect(result).toEqual({ success: false, error: 'Invalid payload' });
         });
     });
 });

@@ -69,9 +69,7 @@ export interface DependencyDataDTO {
 export function toComponentData(
     component: RegistryComponent,
     options?: {
-        recommendedId?: string;
         includeDependencies?: boolean;
-        includeFeatures?: boolean;
     },
 ): ComponentDataDTO {
     const result: ComponentDataDTO = {
@@ -81,16 +79,8 @@ export function toComponentData(
         configuration: component.configuration,
     };
 
-    if (options?.includeFeatures && component.features) {
-        result.features = component.features;
-    }
-
     if (options?.includeDependencies && component.dependencies) {
         result.dependencies = component.dependencies;
-    }
-
-    if (options?.recommendedId && component.id === options.recommendedId) {
-        result.recommended = true;
     }
 
     return result;
@@ -144,9 +134,7 @@ export function withEnvVarKeys(
 export function toComponentDataArray(
     components: RegistryComponent[],
     options?: {
-        recommendedId?: string;
         includeDependencies?: boolean;
-        includeFeatures?: boolean;
     },
 ): ComponentDataDTO[] {
     return components.map((c) => toComponentData(c, options));

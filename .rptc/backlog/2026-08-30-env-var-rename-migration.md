@@ -37,3 +37,7 @@ updater a rename map so it can carry a value across.
 The original recommendation is from before `envMerge` was extracted and tested.
 Re-read that module first — the seam it now has may make a rename map cheaper than
 the proposal assumed.
+
+## Shipped so far
+
+- 2026-10-03  Built 2026-10-03 (overnight, staged not committed): envMerge takes a declared rename list (ENV_VAR_RENAMES, OLD -> NEW, zero entries) and the updater passes it; a declared rename moves the project's value to the new name, never overwrites a value already under it, and drops the old name only when the new template no longer ships it — tested with a synthetic rename.

@@ -39,3 +39,4 @@ Harness journeys both legs; ledger revert of the reimbursement on reset; headles
 - 2026-10-02  docs(research): how a real ERP handles a web order paid by card (AB-26s) (`033c5e324`)
 - 2026-10-02  docs(plans): payment leg live tests answered — reimburse and its undo work on Justrite; owner decisions (`2102df9a5`)
 - 2026-10-02  feat(setup): an optional card payments step (AB-26s) (`07edf17c4`)
+- 2026-10-03  Card half built 2026-10-03 (overnight loop): a card-paid order reaches each ERP with a payment reference (method, gateway transaction id, card brand, last four, its share of the amount; never a card number, allow-listed and tested) and the ERP's invoice is paid at posting under that reference, raising no payment event, so no company credit moves (demo-erp 94935b2, contract v18; integration d3cdc5e). Not proven live: whether Payment Services on ACCS fills last_trans_id and cc_type; needs a card method on Justrite (optional setup step 9).

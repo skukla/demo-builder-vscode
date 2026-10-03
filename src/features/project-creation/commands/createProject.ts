@@ -99,7 +99,6 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
         // Initialize shared state object (passed by reference to handlers)
         this.sharedState = {
             currentComponentSelection: undefined,
-            componentsData: undefined,
             currentPrerequisites: undefined,
             currentPrerequisiteStates: undefined,
             isAuthenticating: false,

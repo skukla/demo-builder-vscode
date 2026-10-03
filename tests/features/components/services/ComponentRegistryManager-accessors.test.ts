@@ -82,14 +82,6 @@ describe('services', () => {
     });
 });
 
-describe('presets', () => {
-    it('reports none — components.json has carried no presets since v2', async () => {
-        const manager = managerFor();
-
-        await expect(manager.getPresets()).resolves.toStrictEqual([]);
-    });
-});
-
 describe('getComponentById', () => {
     it('finds a mesh entry, which no selection group lists', async () => {
         const manager = managerFor();

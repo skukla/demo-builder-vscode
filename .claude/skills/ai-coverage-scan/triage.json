@@ -81,10 +81,6 @@
             "tool": "validate_component_selection",
             "reason": "The tool dispatches this handler itself (through a local run helper the scan cannot follow)."
         },
-        "loadComponents": {
-            "tool": "list_components",
-            "reason": "Same component registry sections: frontends, backends, integrations, dependencies."
-        },
         "get-components-data": {
             "tool": "get_component_requirements",
             "reason": "The tool was first written as a row over this handler, then narrowed to one component; list_components gives the ids."
@@ -107,29 +103,14 @@
         "getOperationProgress": {
             "reason": "A reopened progress modal asking where its operation got to, and taking it back from the notification. Modal plumbing."
         },
-        "update-component-selection": {
-            "reason": "Stores the wizard's in-progress selection in shared state and returns only { success }. No sender found in the webview code on 2026-10-03."
-        },
-        "update-components-data": {
-            "reason": "Stores the wizard's components cache in shared state and returns only { success }. No sender found in the webview code on 2026-10-03."
-        },
         "validate": {
             "reason": "Validates one wizard form field and PUSHES the verdict to the webview; the return value carries no outcome."
-        },
-        "loadPreset": {
-            "reason": "Turns a wizard preset id into selections. An agent passes selections to create_project directly. No sender found in the webview code on 2026-10-03."
         },
         "continue-prerequisites": {
             "reason": "Resumes the wizard's own check loop from an index held in shared state. An agent uses check_prerequisites and install_prerequisite."
         },
         "re-detect-context": {
             "reason": "Clears org caches and re-reads them for the wizard's display after a sign-in outside the app. Agent tools carry their org target on every call."
-        },
-        "ensure-org-selected": {
-            "reason": "A wizard gate that answers only whether an org is selected. An agent selects one with select_org. No sender found in the webview code on 2026-10-03."
-        },
-        "check-project-apis": {
-            "reason": "A wizard-era probe for the API Mesh CLI plugin. check_mesh is the agent's mesh read. No sender found in the webview code on 2026-10-03."
         },
         "store-dalive-token-with-org": {
             "reason": "Takes a pasted DA.live credential. An agent must never carry one; connect_dalive hands the paste to the user."

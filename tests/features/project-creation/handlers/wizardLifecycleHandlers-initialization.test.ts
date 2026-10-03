@@ -1,27 +1,22 @@
 /**
  * Lifecycle Handlers Tests - Initialization
  *
- * Tests for wizard initialization and ready state:
- * - handleReady: Initial wizard ready event
- * - Component loading on wizard ready
+ * `ready` is the wizard webview announcing it has loaded. The handler
+ * acknowledges and nothing more: the `init` message is sent by
+ * BaseWebviewCommand, and the wizard asks for the component registry itself
+ * with a `get-components-data` request.
+ *
+ * Until 2026-10-03 `ready` also read the whole registry and pushed it as
+ * `componentsLoaded` — a message no webview listened for.
  */
 
 import { createWizardLifecycleContext } from './wizardLifecycleHandlers.testUtils';
 import { handleReady } from '@/features/project-creation/handlers/wizardLifecycleHandlers';
-import { HandlerContext as _HandlerContext } from '@/types/handlers';
 
 jest.mock('@/core/validation/URLValidator');
 
-// Mock component handlers module
-jest.mock('@/features/components/handlers/componentHandlers', () => ({
-    handleLoadComponents: jest.fn().mockResolvedValue({
-        success: true,
-        data: { components: [] }
-    })
-}));
-
 describe('lifecycleHandlers - Initialization', () => {
-    let mockContext: any;
+    let mockContext: ReturnType<typeof createWizardLifecycleContext>;
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -36,81 +31,19 @@ describe('lifecycleHandlers - Initialization', () => {
             expect(mockContext.logger.debug).toHaveBeenCalledWith('Wizard webview ready');
         });
 
-        it('should load components on ready', async () => {
-            const { handleLoadComponents } = require('@/features/components/handlers/componentHandlers');
-            (handleLoadComponents as jest.Mock).mockResolvedValue({
-                success: true,
-                data: { components: ['component1', 'component2'] }
-            });
-
+        it('pushes nothing to the webview', async () => {
             await handleReady(mockContext);
 
-            expect(handleLoadComponents).toHaveBeenCalledWith(mockContext);
-            expect(mockContext.communicationManager.sendMessage).toHaveBeenCalledWith(
-                'componentsLoaded',
-                { components: ['component1', 'component2'] }
-            );
+            expect(mockContext.communicationManager?.sendMessage).not.toHaveBeenCalled();
+            expect(mockContext.sendMessage).not.toHaveBeenCalled();
         });
 
-        it('does NOT push a componentsLoaded message when the load failed', async () => {
-            // A failed load still carries a `data` field; pushing it would blank the
-            // component step with an empty catalog instead of leaving it alone.
-            const { handleLoadComponents } = require('@/features/components/handlers/componentHandlers');
-            (handleLoadComponents as jest.Mock).mockResolvedValue({
-                success: false,
-                data: { components: [] },
-            });
-
-            const result = await handleReady(mockContext);
-
-            expect(mockContext.communicationManager.sendMessage).not.toHaveBeenCalled();
-            expect(result.success).toBe(true);
-        });
-
-        it('does NOT push a componentsLoaded message when the load returned no data', async () => {
-            const { handleLoadComponents } = require('@/features/components/handlers/componentHandlers');
-            (handleLoadComponents as jest.Mock).mockResolvedValue({ success: true });
-
+        it('reads no registry, so it has nothing to fail on', async () => {
+            // The old registry read ran against this bare context and logged
+            // "Failed to load components". Nothing is read now.
             await handleReady(mockContext);
 
-            expect(mockContext.communicationManager.sendMessage).not.toHaveBeenCalled();
-        });
-
-        it('skips the push when the webview has no communication manager', async () => {
-            const { handleLoadComponents } = require('@/features/components/handlers/componentHandlers');
-            (handleLoadComponents as jest.Mock).mockResolvedValue({
-                success: true,
-                data: { components: ['component1'] },
-            });
-            mockContext.communicationManager = undefined;
-
-            const result = await handleReady(mockContext);
-
-            expect(result.success).toBe(true);
-        });
-
-        it('should handle component loading error gracefully', async () => {
-            const error = new Error('Failed to load components');
-            const { handleLoadComponents } = require('@/features/components/handlers/componentHandlers');
-            (handleLoadComponents as jest.Mock).mockRejectedValue(error);
-
-            const result = await handleReady(mockContext);
-
-            expect(result.success).toBe(true);
-            expect(mockContext.logger.error).toHaveBeenCalledWith(
-                'Failed to load components:',
-                error
-            );
-        });
-    });
-
-    describe('Integration Scenarios', () => {
-        it('should handle complete wizard lifecycle - ready phase', async () => {
-            const { handleLoadComponents } = require('@/features/components/handlers/componentHandlers');
-
-            // Ready
-            await handleReady(mockContext);
-            expect(handleLoadComponents).toHaveBeenCalledWith(mockContext);
+            expect(mockContext.logger.error).not.toHaveBeenCalled();
         });
     });
 });

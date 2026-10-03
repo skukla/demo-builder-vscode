@@ -99,6 +99,21 @@ price from Commerce, so the buyer sees the company's price everywhere and checko
 waits on an ERP. There is no cart webhook: the two that priced the cart (contract price and
 discount ceiling) were removed with AB-26z.
 
+Promotions stay in Commerce, and the two kinds reach the ERP's sales order differently
+(AB-16l; commerce-erp-integration, src/lib/order-sync.js). Tell the SC before a promotion demo:
+
+- A **catalog price rule** arrives as a **lower price**. Commerce applies it before the
+  cart, so the order line's price already includes it, and the ERP shows no discount.
+- A **cart price rule** arrives as a **line discount**. The line keeps its price and carries
+  the amount taken off, so the ERP's order shows the promotion and adds up to what the buyer
+  paid. This needs the integration from `030bc88` on, redeployed and reinstalled, because the
+  order event must carry each line's `base_discount_amount`.
+- A catalog price rule aimed at an ERP-priced company's customer group competes with the
+  ERP's price: by default Commerce charges the lowest of the two. With **Apply Catalog Price
+  Rule on Grouped Price** on (Sales > Promotions), the rule discounts the company's quantity-1
+  ERP price instead. Aim campaigns at groups the ERP does not price, unless that competition
+  is what the demo shows (`.rptc/plans/several-erps/pricing-strategy.md`).
+
 Live calls happen once per owning ERP, at checkout, for the decisions that must be current:
 credit (can this company carry this order, AB-20) and availability (can this ERP promise this
 quantity, AB-19). Neither is built yet. Each will have a time limit and a fallback: an ERP

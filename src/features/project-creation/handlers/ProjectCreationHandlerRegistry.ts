@@ -17,7 +17,6 @@ import { handleCreateProject } from './createHandler';
 import { handleValidate } from './validateHandler';
 import * as lifecycle from './wizardLifecycleHandlers';
 import { handleReDetectContext } from '@/features/authentication/handlers/organizationHandlers';
-import { handleCheckProjectApis, handleEnsureOrgSelected } from '@/features/authentication/handlers/projectHandlers';
 import * as components from '@/features/components/handlers/componentHandlers';
 import { dataInstallerHandlers } from '@/features/data-installer/handlers/dataInstallerHandlers';
 import { handleOpenDataInstallerSettings } from '@/features/data-installer/handlers/settingsHandlers';
@@ -66,21 +65,13 @@ export const projectCreationHandlers = defineHandlers({
     'install-prerequisite': handleInstallPrerequisite,
 
     // Component handlers
-    'update-component-selection': components.handleUpdateComponentSelection,
-    'update-components-data': components.handleUpdateComponentsData,
-    loadComponents: components.handleLoadComponents,
     'get-components-data': components.handleGetComponentsData,
     checkCompatibility: components.handleCheckCompatibility,
     loadDependencies: components.handleLoadDependencies,
-    loadPreset: components.handleLoadPreset,
     validateSelection: components.handleValidateSelection,
 
     // Re-detect Adobe context after an external auth/org change
     're-detect-context': handleReDetectContext,
-
-    // Project handlers
-    'ensure-org-selected': handleEnsureOrgSelected,
-    'check-project-apis': handleCheckProjectApis,
 
     // Workspace handlers
     // Mesh handlers

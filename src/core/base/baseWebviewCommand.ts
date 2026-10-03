@@ -351,23 +351,6 @@ export abstract class BaseWebviewCommand<TInitialData = unknown> extends BaseCom
             this.communicationManager?.sendMessage('theme-changed', { theme: themeMode });
         });
         this.disposables.add(themeListener);
-
-        // State request handler
-        this.communicationManager.on('get-state', async () => {
-            const state = await this.stateManager.getCurrentProject();
-            return state;
-        });
-
-        // State update handler
-        this.communicationManager.on('update-state', async (updates: Record<string, unknown>) => {
-            const current = await this.stateManager.getCurrentProject();
-            if (!current) {
-                throw new Error('No project loaded');
-            }
-            const updated = { ...current, ...updates };
-            await this.stateManager.saveProject(updated);
-            return { success: true };
-        });
     }
 
     /**
