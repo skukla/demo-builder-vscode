@@ -372,7 +372,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-63` | fix | └ [The ERP's on-hand stock does not drop when it posts a shipment](2026-10-02-erp-stock-does-not-drop-at-goods-issue.md) | — | med | built |
 | `AB-64` | feature | └ [An ERP can own the products sold on named websites](2026-10-02-erp-owns-products-by-website.md) | — | med | built |
 | `AB-65` | fix | └ [A stray dot after the first editable number in the ERP's Number Series table](2026-10-03-erp-number-series-stray-dot.md) | — | low | built |
-| `AB-66` | fix | └ [A checkout invoice's event arriving late could tell an ERP to invoice an order it has not confirmed](2026-10-03-checkout-invoice-event-race.md) | — | med | backlog |
+| `AB-66` | fix | └ [A checkout invoice's event arriving late could tell an ERP to invoice an order it has not confirmed](2026-10-03-checkout-invoice-event-race.md) | — | med | built |
 | `AB-29` | feature | [Commerce test data cleanup tools](2026-09-24-commerce-test-data-cleanup-tools.md) | — | med | built |
 | `AB-30` | feature | [The ERP integration's Commerce Admin page uses the Commerce back-office design system](2026-09-24-erp-admin-page-commerce-design-system.md) | — | med | built |
 | `AB-33` | fix | [Removing an integration reports Runtime packages left behind in a workspace it then deletes](2026-09-26-remove-integration-leaves-runtime-packages.md) | — | med | built |

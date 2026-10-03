@@ -4,7 +4,7 @@ kind: fix
 area: app-builder
 needs: []
 value: med
-status: backlog
+status: built
 parent: AB-26
 ---
 
@@ -23,3 +23,7 @@ The integration should recognise a checkout invoice (the order's payment was cap
 checkout and this invoice covers it) and never pass it to an ERP: the ERP records the payment
 from the order's payment reference already (AB-26s card half). Pin it with a box journey that
 delivers the checkout invoice event after the order is sent.
+
+## Shipped so far
+
+- 2026-10-03  Fixed 2026-10-03 (integration c099eb9, on main): the race was real — reproduced first ('Confirm the order before invoicing it' from every ERP). A checkout invoice (card captured, invoice saved within 60 s of the order) is never passed to an ERP; a merchant's later invoice still is. Live check: compare a real checkout invoice's created_at with the order's.
