@@ -6,20 +6,12 @@
  * Pattern: write to temp file first, then rename (atomic on POSIX).
  */
 
-import * as fs from 'fs/promises';
+// The family helper owns the fs/promises mock and the writer import: a direct
+// import of the writer here could bind the real fs before the mock registers.
+import { ProjectConfigWriter, mockFs, mockLogger } from './projectConfigWriter.testUtils';
 import * as path from 'path';
-import { ProjectConfigWriter } from '@/core/state/projectConfigWriter';
 import type { Project } from '@/types/base';
-import { createMockLogger } from '../../helpers/loggerFake';
 import { createMockProject } from '../../helpers/projectFake';
-
-// Mock fs/promises
-jest.mock('fs/promises');
-
-const mockFs = fs as jest.Mocked<typeof fs>;
-
-// Create a minimal mock logger
-const mockLogger = createMockLogger();
 
 // Create a minimal valid project for testing
 function createTestProject(overrides: Partial<Project> = {}): Project {

@@ -37,6 +37,7 @@ import type { DaLiveCopyResult } from '../types';
 import type { DaLiveApiClient } from './daLiveApiClient';
 import { DA_LIVE_BASE_URL } from './daLiveConstants';
 import { resolveDaPath } from './daLiveContentHelpers';
+import type { CopySingleFile } from './daLiveFileCopy';
 import type { ContentPatchSource } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
 
@@ -47,17 +48,7 @@ import type { Logger } from '@/types/logger';
  * one fails here at compile time instead of silently at a call boundary.
  */
 export interface AccountChromeCollaborators {
-    copySingleFile: (
-        token: string,
-        source: { org: string; site: string; preview?: boolean },
-        sourcePath: string,
-        destination: { org: string; site: string },
-        destPath: string,
-        contentPatchIds?: string[],
-        contentPatchSource?: ContentPatchSource,
-        patchReport?: PatchReport,
-        discoveredPaths?: Set<string>
-    ) => Promise<boolean>;
+    copySingleFile: CopySingleFile;
     discoverAndCopyReferences: (
         source: { org: string; site: string },
         dest: { org: string; site: string },

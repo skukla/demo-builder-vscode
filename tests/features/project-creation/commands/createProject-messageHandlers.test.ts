@@ -9,18 +9,16 @@
  * the auto-registration loop over the handler registry.
  */
 
+import { CreateProjectWebviewCommand } from './createProject.testUtils';
 import * as vscode from 'vscode';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { showOneTimeTip } from '@/core/utils/oneTimeTip';
-import { CreateProjectWebviewCommand } from '@/features/project-creation/commands/createProject';
 import { projectCreationHandlers } from '@/features/project-creation/handlers/ProjectCreationHandlerRegistry';
 import { internals } from '../../../helpers/commandInternals';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
-jest.mock('@/core/logging/debugLogger');
-jest.mock('@/features/prerequisites/services/PrerequisitesManager');
 jest.mock('@/core/utils/oneTimeTip', () => ({ showOneTimeTip: jest.fn() }));
 jest.mock('@/core/handlers/dispatchHandler', () => ({
     dispatchHandler: jest.fn().mockResolvedValue({ success: true }),

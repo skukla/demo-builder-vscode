@@ -5,20 +5,16 @@
  * Covers saveProject, clearProject, clearAll functionality.
  */
 
-import * as fs from 'fs/promises';
-import * as path from 'path';
 import {
     setupMocks,
     mockStateFile,
     createStateManagerProject,
     type TestMocks,
 } from './stateManager.testUtils';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 import type { Project } from '@/types/base';
 import { assertDefined } from '../../helpers/resultAssertions';
-
-// Re-declare mocks to ensure proper typing and hoisting
-jest.mock('fs/promises');
-jest.mock('os');
 
 describe('StateManager - Project Management', () => {
     let testMocks: TestMocks;

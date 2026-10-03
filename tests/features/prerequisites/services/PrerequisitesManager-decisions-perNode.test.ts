@@ -6,8 +6,6 @@
  * turns a set of per-version verdicts into one status.
  */
 
-jest.mock('@/core/config/ConfigurationLoader');
-
 const mockCheckPerNodeVersionStatus = jest.fn();
 jest.mock('@/features/prerequisites/handlers/shared', () => ({
     ...jest.requireActual('@/features/prerequisites/handlers/shared'),

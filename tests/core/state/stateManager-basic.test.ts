@@ -5,13 +5,9 @@
  * Covers initialization, getCurrentProject, hasProject functionality.
  */
 
+import { setupMocks, mockStateFile, createStateManagerProject, type TestMocks } from './stateManager.testUtils';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { setupMocks, mockStateFile, createStateManagerProject, type TestMocks } from './stateManager.testUtils';
-
-// Re-declare mocks to ensure proper typing and hoisting
-jest.mock('fs/promises');
-jest.mock('os');
 
 describe('StateManager - Basic Operations', () => {
     let testMocks: TestMocks;

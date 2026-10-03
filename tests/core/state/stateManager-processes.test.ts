@@ -5,13 +5,9 @@
  * Covers addProcess, removeProcess, getProcess functionality.
  */
 
-import * as fs from 'fs/promises';
 import { setupMocks, type TestMocks } from './stateManager.testUtils';
+import * as fs from 'fs/promises';
 import type { ProcessInfo } from '@/types/base';
-
-// Re-declare mocks to ensure proper typing and hoisting
-jest.mock('fs/promises');
-jest.mock('os');
 
 describe('StateManager - Process Management', () => {
     let testMocks: TestMocks;

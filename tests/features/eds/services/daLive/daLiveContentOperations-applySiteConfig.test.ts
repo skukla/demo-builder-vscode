@@ -19,22 +19,15 @@
  *   - 401 + hasWriteAccess=false → no POST, returns failure
  */
 
+import { mockFetch } from './daLiveContentOperations.testUtils';
 import { DaLiveContentOperations, type TokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
-
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: {
-        NORMAL: 30000,
-        QUICK: 5000,
-    },
-}));
 
 jest.mock('@/core/utils/timeFormatting', () => ({
     formatDuration: jest.fn().mockReturnValue('0ms'),
 }));
 
-const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 // applySiteConfig shares the 401 ownership-probe path with applyOrgConfig:

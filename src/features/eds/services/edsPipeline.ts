@@ -43,7 +43,7 @@ export type { EdsPipelineProgressCallback };
  * not gaps during the brand-content copy that runs first.
  *
  * Verified rather than assumed: `overlayAccountChrome`
- * (`daLiveContentCopy.ts:761`) seeds its entry points from
+ * (`daLiveAccountChrome.ts`) seeds its entry points from
  * `RUNTIME_SURFACES.authPages` (`runtimeSurfaceInventory.ts`), every one of
  * which is under `/customer/`, then follows references out from those pages.
  *

@@ -3,7 +3,6 @@
  * what a plugin's install commands are, and the delegations to the extracted modules.
  */
 
-jest.mock('@/core/config/ConfigurationLoader');
 jest.mock('@/features/prerequisites/services/versioning/MultiVersionDetector', () => ({
     checkMultipleNodeVersions: jest.fn(),
     getInstalledNodeVersions: jest.fn().mockResolvedValue([]),

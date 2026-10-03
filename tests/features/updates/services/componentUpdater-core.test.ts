@@ -8,10 +8,6 @@
  * - Snapshot lifecycle
  */
 
-import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
-import type { Logger } from '@/types/logger';
-import type { Project } from '@/types/base';
-
 import {
     CommandExecutor,
     ComponentUpdater,
@@ -19,8 +15,11 @@ import {
     fs,
     setupUpdater,
 } from './componentUpdater.testUtils';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
+import type { Logger } from '@/types/logger';
+import type { Project } from '@/types/base';
+
 import { createMockProject } from '../../../helpers/projectFake';
-jest.mock('@/core/validation/URLValidator');
 
 describe('ComponentUpdater - Core Workflow', () => {
     let updater: ComponentUpdater;

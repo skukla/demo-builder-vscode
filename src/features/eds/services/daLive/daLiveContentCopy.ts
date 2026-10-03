@@ -1,15 +1,24 @@
 /**
  * DaLiveContentCopy — copy authored content between DA.live sites.
  *
- * The content-copy cluster of the DA.live stack: single-file and recursive
- * copy, spreadsheet handling, HTML patching/transform, whole-site duplication,
- * and reference-following discovery. Extracted from `DaLiveContentOperations` as
- * part of its decomposition; the facade constructs one and delegates.
+ * The content-copy entry point of the DA.live stack: single-file and recursive
+ * copy, whole-site duplication, and the whole-site content copy that runs during
+ * project creation and reset. Extracted from `DaLiveContentOperations` as part of
+ * its decomposition; the facade constructs one and delegates.
  *
- * Two neighbours were cut out of here and are delegated to, not reimplemented:
- * `daLiveSpreadsheetCopy` (2026-09-10) and `daLiveAccountChrome` (2026-09-10) —
- * the account-chrome overlay and the auth-page stubs, which are about the auth
- * surfaces rather than about copying a document because it exists.
+ * What is left here is the ORCHESTRATION. Each step lives in its own module and is
+ * called, not reimplemented:
+ *
+ *   - `daLiveFileCopy` — one document, CDN to DA.live (every loop below uses it)
+ *   - `daLiveCopyPaths` — which source paths a whole-site copy covers
+ *   - `daLiveBatchCopy` — the batch loop and reference following
+ *   - `daLiveContentReferences` — path filters, reference extraction, the audit
+ *   - `daLiveSiteCopy` — server-side whole-tree duplication
+ *   - `daLiveSpreadsheetCopy` and `daLiveAccountChrome` (both cut 2026-09-10)
+ *
+ * The third cut (2026-10-03, EDS-8) took the file from 981 lines to the size it is
+ * now. The public methods kept their signatures, so every caller and suite was
+ * untouched.
  *
  * Keep this module `vscode`-free (the MCP server constructs the DA.live stack
  * in a separate Node process).
@@ -17,142 +26,37 @@
  * @module features/eds/services/daLive/daLiveContentCopy
  */
 
-import {
-    addContentResult,
-    addReferenceResult,
-    isDeferredReference,
-    type PatchReport,
-} from '../patches/patchReportHelper';
-import { getRuntimeSurfaces, type RuntimeSurfaceSource } from '../runtimeSurfaceResolver';
-import {
-    DaLiveAuthError,
-    type DaLiveCopyResult,
-    type DaLiveProgressCallback,
-    type DaLiveContentSource,
-} from '../types';
+import type { PatchReport } from '../patches/patchReportHelper';
+import type { RuntimeSurfaceSource } from '../runtimeSurfaceResolver';
+import type { DaLiveCopyResult, DaLiveProgressCallback, DaLiveContentSource } from '../types';
 import {
     createAuthPageStubs as createAuthPageStubsImpl,
     overlayAccountChrome as overlayAccountChromeImpl,
 } from './daLiveAccountChrome';
-import { DaLiveApiClient } from './daLiveApiClient';
+import type { DaLiveApiClient } from './daLiveApiClient';
 import {
-    CONTENT_COPY_BATCH_SIZE,
-    DA_LIVE_BASE_URL,
-    MAX_RETRY_ATTEMPTS,
-    getRetryDelay,
-} from './daLiveConstants';
-import { DaLiveContentDiscovery } from './daLiveContentDiscovery';
-import { transformHtmlForDaLive, buildSourceUrl, resolveDaPath } from './daLiveContentHelpers';
-import { DaLiveSourceOperations } from './daLiveSourceOperations';
-import {
-    copySpreadsheetFile as copySpreadsheetFileImpl,
-    isSpreadsheetPath as isSpreadsheetPathImpl,
-} from './daLiveSpreadsheetCopy';
-import { sleep } from '@/core/utils/sleep';
-import { formatDuration } from '@/core/utils/timeFormatting';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+    copyPathsInBatches,
+    discoverAndCopyReferences,
+    type BatchCopyDeps,
+} from './daLiveBatchCopy';
+import type { DaLiveContentDiscovery } from './daLiveContentDiscovery';
+import { auditUncopiedReferences } from './daLiveContentReferences';
+import { backfillEssentialPaths, enumerateAndFilterContentPaths } from './daLiveCopyPaths';
+import { copySingleFile as copySingleFileImpl, type CopySingleFile } from './daLiveFileCopy';
+import { copyDaLiveSite as copyDaLiveSiteImpl, type SiteCopyResult } from './daLiveSiteCopy';
+import type { DaLiveSourceOperations } from './daLiveSourceOperations';
 import type { ContentPatchSource } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
 
-/**
- * Filter out product overlay documents from content paths.
- *
- * Product overlays (e.g., /products/sku-123) are template documents used by
- * EDS routing but should not be copied during content migration. Only the
- * default product page template (/products/default) should be copied.
- *
- * @param paths - Array of content paths from the index
- * @returns Filtered paths with product overlays removed
- */
-export function filterProductOverlays(paths: string[]): string[] {
-    return paths.filter((path) => {
-        // Check if this is a product path
-        if (path.includes('/products/')) {
-            // Keep /products/default and anything under it
-            // e.g., /products/default, /products/default/something
-            return path.endsWith('/products/default') || path.includes('/products/default/');
-        }
-        // Keep all non-product paths unchanged
-        return true;
-    });
-}
-
-/**
- * Extract internal document references from a page's authored HTML.
- *
- * EDS pages can embed other authored documents (fragments) and link to other
- * pages. Some of those targets — notably the account left-nav fragment
- * `/customer/nav` — are NOT in the content index and NOT in any hardcoded
- * backfill list, so the copy pipeline never pulls them and the feature renders
- * empty (see `.rptc/research/content-copy-completeness`). Following these
- * references lets the pipeline copy them from canonical, no fork.
- *
- * Returns extension-free, site-relative paths (matching the enumerated path
- * shape, so callers can dedup against already-copied paths). Excludes external
- * hosts, anchors/mailto/relative links, media/asset/icon URLs, and
- * `/products/*` catalog overlays (handled elsewhere).
- *
- * @param html - The source page HTML (e.g. from `.plain.html`)
- * @param sourceBaseUrl - The source CDN base (e.g. `https://main--site--org.aem.live`)
- */
-export function extractReferencedPaths(html: string, sourceBaseUrl: string): string[] {
-    const refs = new Set<string>();
-
-    // Normalize one candidate reference and add it if it's a copyable internal path.
-    const consider = (raw: string): void => {
-        let href = raw.trim();
-        if (!href) return;
-
-        // Normalize an absolute same-site URL to a site-relative path; skip any
-        // other absolute/protocol-relative URL (external host).
-        if (href.startsWith(sourceBaseUrl)) {
-            href = href.slice(sourceBaseUrl.length) || '/';
-        } else if (/^[a-z]+:/i.test(href) || href.startsWith('//')) {
-            return;
-        }
-
-        // Internal site-relative paths only (drops #anchors, ./relatives, mailto:).
-        if (!href.startsWith('/')) return;
-
-        href = href.split('#')[0].split('?')[0];
-        if (!href || href === '/') return;
-
-        // Skip media, static assets, icons, and catalog product overlays.
-        if (/\.(png|jpe?g|gif|svg|webp|ico|css|js|json|pdf|mp4|woff2?|ttf)$/i.test(href)) return;
-        if (href.includes('/media_') || href.startsWith('/icons/') || href.startsWith('/styles/'))
-            return;
-        if (href.startsWith('/products/')) return;
-
-        // Match the enumerated path shape (extension-free).
-        href = href.replace(/\.html$/i, '');
-        if (href && href !== '/') refs.add(href);
-    };
-
-    let match: RegExpExecArray | null;
-
-    // 1. Anchor hrefs — links, and link-style fragment references.
-    const hrefPattern = /href\s*=\s*["']([^"']+)["']/gi;
-    while ((match = hrefPattern.exec(html)) !== null) consider(match[1]);
-
-    // 2. EDS fragment-block convention: a `<div class="fragment">` whose cell text
-    //    IS the path (no <a>), e.g. the account page's
-    //    `<div class="fragment"><div><div>/customer/nav</div></div></div>`. Scope the
-    //    match to fragment blocks (not any bare-path leaf) so it stays precise to the
-    //    convention and doesn't over-discover stray paths elsewhere in content.
-    const fragmentPattern =
-        /class=["'][^"']*\bfragment\b[^"']*["'][\s\S]*?>\s*(\/[a-z0-9][^<>\s"']*)\s*</gi;
-    while ((match = fragmentPattern.exec(html)) !== null) consider(match[1]);
-
-    return [...refs];
-}
+export { extractReferencedPaths, filterProductOverlays } from './daLiveContentReferences';
 
 /** Copy authored content between DA.live sites. */
 // TRANSPORT JURISDICTION (2026-08-22 consolidation): writes to admin.da.live
 // go through `apiClient.fetchWithRetry` (shared retry + one-shot-body factory
-// + page-level 429 tolerance). The remaining raw `fetch` calls here target the
-// PUBLIC CDN (aem.live / aem.page) — a different system, deliberately outside
-// the DA.live client: probes swallow errors by design and must not inherit
-// retries, and CDN reads carry their own 404-tolerant semantics.
+// + page-level 429 tolerance). The raw `fetch` calls in the modules this class
+// delegates to target the PUBLIC CDN (aem.live / aem.page) — a different system,
+// deliberately outside the DA.live client: probes swallow errors by design and
+// must not inherit retries, and CDN reads carry their own 404-tolerant semantics.
 export class DaLiveContentCopy {
     constructor(
         private readonly apiClient: DaLiveApiClient,
@@ -245,475 +149,67 @@ export class DaLiveContentCopy {
     }
 
     /**
-     * Process HTML content: apply patches and transform for DA.live.
+     * Copy a single file with retry logic — see `daLiveFileCopy.copySingleFile`
+     * for the CDN read, the preview-host rule, and the write.
      *
-     * When `patchReport` is supplied, each content-patch result (applied or
-     * not) is routed into the unified report via `addContentResult` so the
-     * pipeline's final `reportUnapplied` toast can name unapplied content
-     * patches alongside unapplied code patches. Without a report (e.g.
-     * one-off content copies outside the create/reset pipeline), the
-     * previous debug-log behavior is preserved.
+     * Positional, typed by `CopySingleFile` so the batch loops and the account-chrome
+     * overlay that borrow it cannot drift from it: (token, source, sourcePath,
+     * destination, destPath, contentPatchIds?, contentPatchSource?, patchReport?,
+     * discoveredPaths?).
      */
-    private async processHtmlContent(
-        sourceResponse: Response,
-        sourcePath: string,
-        sourceBaseUrl: string,
-        contentPatchIds?: string[],
-        contentPatchSource?: ContentPatchSource,
-        patchReport?: PatchReport,
-        discoveredPaths?: Set<string>,
-    ): Promise<Blob> {
-        let htmlText = await sourceResponse.text();
-
-        // Collect internal document references (e.g. the /customer/nav fragment
-        // embedded by the account page) so the copy loop can pull them from
-        // canonical — they are often absent from the index and backfill lists.
-        if (discoveredPaths) {
-            for (const ref of extractReferencedPaths(htmlText, sourceBaseUrl)) {
-                discoveredPaths.add(ref);
-            }
-        }
-
-        if (contentPatchIds && contentPatchIds.length > 0) {
-            const { applyContentPatches } = await import('../patches/contentPatchRegistry');
-            const { html: patchedHtml, results } = await applyContentPatches(
-                htmlText,
-                sourcePath,
-                contentPatchIds,
-                this.logger,
-                contentPatchSource,
-            );
-            htmlText = patchedHtml;
-
-            for (const result of results) {
-                if (patchReport) {
-                    addContentResult(patchReport, result);
-                } else if (!result.applied && result.reason) {
-                    this.logger.debug(
-                        `[DA.live] Content patch '${result.patchId}' not applied to ${sourcePath}: ${result.reason}`,
-                    );
-                }
-            }
-        }
-
-        const transformedHtml = transformHtmlForDaLive(htmlText, sourceBaseUrl);
-        return new Blob([transformedHtml], { type: 'text/html' });
-    }
-
-    /**
-     * Copy a single file with retry logic
-     * Uses the /source endpoint (like storefront-tools) which creates content directly,
-     * rather than /copy which requires the destination site to already exist.
-     *
-     * For HTML content, fetches .plain.html to get just the main content without
-     * the full page wrapper, then transforms and wraps it in document structure.
-     *
-     * `source.preview` reads the PREVIEW host (`.aem.page`) instead of the
-     * published one. Content pages are published, so `.aem.live` is right for
-     * them. Block-library doc pages are a different matter: a library source
-     * publishes SOME of its doc pages and not others, and which is which is a
-     * per-block property nobody maintains deliberately. Measured 2026-08-18
-     * across the two library sources this extension ships:
-     *
-     *     accs-citisignal  cards, hero              preview 200, live 404
-     *     accs-citisignal  carousel, product-teaser preview 200, live 200
-     *     bodea-source     guided-selling-luxe, …   preview 200, live 200
-     *
-     * Preview is the superset — publishing requires previewing first — so it is
-     * the only host where everything a source HAS is reachable.
-     *
-     * Aimed at the published host, this copy silently skipped whichever blocks
-     * happened to be preview-only, and those fell through to
-     * `generateStubDocPages`: an author opening the DA.live palette got a box
-     * with the block's name where the authored example should be, for some
-     * blocks and not others. That is worse than a clean failure, because a
-     * library half full of stubs looks like it worked.
-     *
-     * @param contentPatchIds - Optional content patch IDs to apply to HTML content
-     * @param contentPatchSource - Optional external source for content patches
-     */
-    async copySingleFile(
-        token: string,
-        source: { org: string; site: string; preview?: boolean },
-        sourcePath: string,
-        destination: { org: string; site: string },
-        destPath: string,
-        contentPatchIds?: string[],
-        contentPatchSource?: ContentPatchSource,
-        patchReport?: PatchReport,
-        discoveredPaths?: Set<string>,
-    ): Promise<boolean> {
-        const sourceHost = source.preview ? 'aem.page' : 'aem.live';
-        const sourceBaseUrl = `https://main--${source.site}--${source.org}.${sourceHost}`;
-
-        const isSpreadsheet = await this.isSpreadsheetPath(sourceBaseUrl, sourcePath);
-        if (isSpreadsheet) {
-            return this.copySpreadsheetFile(token, source, sourcePath, destination, destPath);
-        }
-
-        const isHtmlPath = !sourcePath.match(/\.[a-z0-9]+$/i) || sourcePath.endsWith('.html');
-        const sourceUrl = buildSourceUrl(sourceBaseUrl, sourcePath, isHtmlPath);
-
-        for (let attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
-            try {
-                // CDN read: raw fetch on purpose (see the jurisdiction note on
-                // the class). Non-OK is terminal — only network errors retry,
-                // via this loop.
-                const sourceResponse = await fetch(sourceUrl, {
-                    signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
-                });
-
-                if (!sourceResponse.ok) {
-                    // 404 is expected for blocks without doc pages on the CDN — log at debug
-                    const logLevel = sourceResponse.status === 404 ? 'debug' : 'warn';
-                    this.logger[logLevel](
-                        `[DA.live] Failed to fetch source ${sourcePath}: ${sourceResponse.status}`,
-                    );
-                    return false;
-                }
-
-                const contentType = sourceResponse.headers.get('content-type') || '';
-                const isHtml = contentType.includes('text/html') || isHtmlPath;
-                const daPath = resolveDaPath(destPath, isHtml);
-
-                const contentBlob = isHtml
-                    ? await this.processHtmlContent(
-                          sourceResponse,
-                          sourcePath,
-                          sourceBaseUrl,
-                          contentPatchIds,
-                          contentPatchSource,
-                          patchReport,
-                          discoveredPaths,
-                      )
-                    : await sourceResponse.blob();
-
-                const destUrl = `${DA_LIVE_BASE_URL}/source/${destination.org}/${destination.site}/${daPath}`;
-
-                // DA.live write via the shared client: 5xx/network retries live
-                // THERE now (this loop used to re-run the whole source+dest
-                // pair); the factory rebuilds the one-shot FormData per attempt
-                // from the reusable blob.
-                const response = await this.apiClient.fetchWithRetry(
-                    destUrl,
-                    () => {
-                        const formData = new FormData();
-                        formData.append('data', contentBlob);
-                        return {
-                            method: 'POST',
-                            headers: { Authorization: `Bearer ${token}` },
-                            body: formData,
-                        };
-                    },
-                    { rateLimit: 'return' },
-                );
-
-                if (response.ok) return true;
-
-                // Token expired — throw so caller can pause-and-prompt for re-auth
-                if (response.status === 401) {
-                    throw new DaLiveAuthError('DA.live token expired during content copy');
-                }
-
-                let errorDetail = '';
-                try {
-                    const errorBody = await response.text();
-                    errorDetail = errorBody ? `: ${errorBody}` : '';
-                } catch {
-                    // Ignore if response body can't be read
-                }
-
-                this.logger.warn(
-                    `[DA.live] Copy failed for ${destPath}: ${response.status}${errorDetail}`,
-                );
-                return false;
-            } catch (error) {
-                // Auth errors must propagate immediately — never retry or swallow
-                if (error instanceof DaLiveAuthError) throw error;
-
-                if (attempt < MAX_RETRY_ATTEMPTS) {
-                    await sleep(getRetryDelay(attempt));
-                    continue;
-                }
-                this.logger.error(`[DA.live] Copy error for ${destPath}`, error as Error);
-                return false;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Spreadsheet handling lives in `daLiveSpreadsheetCopy.ts` — a DA.live
-     * spreadsheet is an Excel doc served as JSON, with no `.plain.html`, so it
-     * cannot use the normal copy path at all. These two keep the class's shape;
-     * the logic moved out on 2026-09-10.
-     */
-    private isSpreadsheetPath(baseUrl: string, path: string): Promise<boolean> {
-        return isSpreadsheetPathImpl(baseUrl, path);
-    }
-
-    private copySpreadsheetFile(
-        token: string,
-        source: { org: string; site: string },
-        sourcePath: string,
-        destination: { org: string; site: string },
-        destPath: string,
-    ): Promise<boolean> {
-        return copySpreadsheetFileImpl(
-            { apiClient: this.apiClient, logger: this.logger },
+    async copySingleFile(...args: Parameters<CopySingleFile>): Promise<boolean> {
+        const [
             token,
             source,
             sourcePath,
             destination,
             destPath,
+            contentPatchIds,
+            contentPatchSource,
+            patchReport,
+            discoveredPaths,
+        ] = args;
+        return copySingleFileImpl(
+            { apiClient: this.apiClient, logger: this.logger },
+            {
+                token,
+                source,
+                sourcePath,
+                destination,
+                destPath,
+                contentPatchIds,
+                contentPatchSource,
+                patchReport,
+                discoveredPaths,
+            },
         );
     }
 
     /**
-     * Copy an entire DA.live site tree to a new site name in one operation.
-     *
-     * Uses DA's `POST /copy/{org}/{site}` endpoint with `destination=/{org}/{destSite}/`
-     * — a single request that recursively duplicates the source tree under
-     * the destination path. The destination namespace is auto-created.
-     *
-     * Used by the storefront name-migration path on reset to move content
-     * from a legacy `<repo>-content` site to the matching `<repo>` site
-     * before re-registering Helix against the new DA URL. The source is
-     * NOT modified; the caller deletes it after verifying the new site.
-     *
-     * @param srcOrg - source DA.live org
-     * @param srcSite - source DA.live site
-     * @param destOrg - destination DA.live org (typically same as srcOrg)
-     * @param destSite - destination DA.live site
-     * @returns success or failure with status detail
+     * Copy an entire DA.live site tree to a new site name in one operation —
+     * see `daLiveSiteCopy.copyDaLiveSite`.
      */
     async copyDaLiveSite(
         srcOrg: string,
         srcSite: string,
         destOrg: string,
         destSite: string,
-    ): Promise<{ success: true } | { success: false; error: string; status?: number }> {
-        const token = await this.apiClient.getImsToken();
-        const url = `${DA_LIVE_BASE_URL}/copy/${srcOrg}/${srcSite}/`;
-        const formData = new FormData();
-        formData.append('destination', `/${destOrg}/${destSite}/`);
-
-        try {
-            // Deliberately NOT via fetchWithRetry: one whole-site bulk copy on
-            // a VERY_LONG timeout — auto-retrying 5xx here could triple a
-            // multi-minute operation, and the reset flow that calls this owns
-            // its own recovery.
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { Authorization: `Bearer ${token}` },
-                body: formData,
-                signal: AbortSignal.timeout(TIMEOUTS.VERY_LONG),
-            });
-
-            if (response.status === 204 || response.ok) {
-                this.logger.info(
-                    `[DA.live] Copied site ${srcOrg}/${srcSite} → ${destOrg}/${destSite} (status=${response.status})`,
-                );
-                return { success: true };
-            }
-
-            const bodyText = await response.text().catch(() => '');
-            return {
-                success: false,
-                status: response.status,
-                error: `Copy failed: ${response.status} ${response.statusText}${bodyText ? ` — ${bodyText.slice(0, 200)}` : ''}`,
-            };
-        } catch (error) {
-            return { success: false, error: (error as Error).message };
-        }
+    ): Promise<SiteCopyResult> {
+        return copyDaLiveSiteImpl(
+            { apiClient: this.apiClient, logger: this.logger },
+            srcOrg,
+            srcSite,
+            { org: destOrg, site: destSite },
+        );
     }
 
-    /**
-     * Enumerate source content paths and apply the standard filters.
-     *
-     * Prefers the DA.live list API (complete), falling back to the CDN content
-     * index. The list API returns 404 (mapped to empty array) for orgs the user
-     * doesn't belong to, so also falls back when it succeeds but returns 0 paths.
-     * Then removes product-overlay documents and the library-index spreadsheet.
-     *
-     * @param source - Source content configuration (org, site, indexUrl)
-     * @returns The filtered content paths plus whether the list API was used
-     */
-    private async enumerateAndFilterContentPaths(
-        source: DaLiveContentSource,
-    ): Promise<{ contentPaths: string[]; usedDaLiveList: boolean }> {
-        let contentPaths: string[];
-        let usedDaLiveList = false;
-
-        try {
-            contentPaths = await this.discoveryOps.getContentPathsFromDaLive(
-                source.org,
-                source.site,
-            );
-            if (contentPaths.length > 0) {
-                usedDaLiveList = true;
-                this.logger.info(
-                    `[DA.live] Enumerated ${contentPaths.length} content files via list API`,
-                );
-            } else {
-                this.logger.info(
-                    `[DA.live] List API returned 0 files, falling back to content index`,
-                );
-                contentPaths = await this.discoveryOps.getContentPathsFromIndex(source);
-            }
-        } catch {
-            this.logger.info(`[DA.live] List API unavailable, falling back to content index`);
-            contentPaths = await this.discoveryOps.getContentPathsFromIndex(source);
-        }
-
-        // Filter out product overlay documents (keep only /products/default)
-        const originalCount = contentPaths.length;
-        contentPaths = filterProductOverlays(contentPaths);
-        const filteredCount = originalCount - contentPaths.length;
-        if (filteredCount > 0) {
-            this.logger.info(`[DA.live] Filtered ${filteredCount} product overlay paths`);
-        }
-
-        // Filter out ONLY the .da/library/blocks spreadsheet - we generate our own with correct paths
-        // The template's spreadsheet has paths pointing to the template site, not the user's site
-        // Note: The index may appear as /.da/library/blocks or /.da/library/blocks.json in full-index.json
-        // BUT: Keep the individual block documentation pages (/.da/library/blocks/hero, etc.)
-        // which contain example HTML and should be copied from the template
-        const libraryIndexPaths = ['/.da/library/blocks', '/.da/library/blocks.json'];
-        const preLibraryCount = contentPaths.length;
-        contentPaths = contentPaths.filter((p) => !libraryIndexPaths.includes(p));
-        if (contentPaths.length < preLibraryCount) {
-            this.logger.info(
-                `[DA.live] Excluded library index (will be generated with correct paths)`,
-            );
-        }
-
-        return { contentPaths, usedDaLiveList };
-    }
-
-    /**
-     * Backfill essential content that the CDN content index omits (only needed
-     * on the index-fallback path; the DA.live list API already returns it all):
-     * config spreadsheets, the nav/footer fragments, and the customer auth pages.
-     * Mutates `contentPaths` (prepends found paths) and `missingAuthPages`
-     * (auth pages absent from source, which get destination stubs later).
-     */
-    private async backfillEssentialPaths(
-        source: { org: string; site: string },
-        contentPaths: string[],
-        missingAuthPages: Array<{ path: string; blockClass: string }>,
-        surfaceSource?: RuntimeSurfaceSource,
-    ): Promise<void> {
-        const baseUrl = `https://main--${source.site}--${source.org}.aem.live`;
-        // Static hand list, with the ledger's generated `runtime-surfaces.json`
-        // merged in when available (ADR-008 consumer). Best-effort: falls back to
-        // the static inventory when no source / unreachable.
-        const inventory = await getRuntimeSurfaces(surfaceSource, this.logger);
-
-        const probeAndAdd = async (path: string, probeUrl: string): Promise<boolean> => {
-            if (contentPaths.includes(path)) return true;
-            try {
-                const response = await fetch(probeUrl, { method: 'HEAD' });
-                if (response.ok) {
-                    contentPaths.unshift(path);
-                    return true;
-                }
-            } catch {
-                // Doesn't exist / unreachable — skip.
-            }
-            return false;
+    /** The batch loops' collaborators: the per-file copy is THIS instance's. */
+    private batchDeps(): BatchCopyDeps {
+        return {
+            apiClient: this.apiClient,
+            logger: this.logger,
+            copySingleFile: this.copySingleFile.bind(this),
         };
-
-        // Spreadsheets: served as .json on CDN, stored as .xlsx on DA.live.
-        for (const configPath of inventory.spreadsheets) {
-            await probeAndAdd(configPath, `${baseUrl}${configPath}.json`);
-        }
-
-        // HTML fragment documents (nav, footer): not indexed but loaded at runtime.
-        // `/customer/*` fragments (e.g. the code-loaded /customer/sidebar-fragment)
-        // gate to a login at the bare URL, so probe the `.plain.html` we actually
-        // copy — same lesson as the auth pages below. Others resolve bare.
-        for (const fragmentPath of inventory.fragments) {
-            const probeUrl = fragmentPath.startsWith('/customer/')
-                ? `${baseUrl}${fragmentPath}.plain.html`
-                : `${baseUrl}${fragmentPath}`;
-            await probeAndAdd(fragmentPath, probeUrl);
-        }
-
-        // Customer auth pages: dropin-rendered, not indexed. Probe the
-        // `.plain.html` we actually copy (not the bare rendered URL — dropin auth
-        // pages like /customer/account gate to a login at the bare path, so a bare
-        // probe can mis-stub a page whose authored content really exists). Pages
-        // absent from source get destination stubs with the correct block markup.
-        for (const authPage of inventory.authPages) {
-            if (contentPaths.includes(authPage.path)) continue;
-            const found = await probeAndAdd(authPage.path, `${baseUrl}${authPage.path}.plain.html`);
-            if (!found) missingAuthPages.push(authPage);
-        }
-    }
-
-    /**
-     * Follow internal references discovered while copying and pull them from
-     * canonical. Transitive (depth-capped) and deduped against everything already
-     * enumerated/copied. Best-effort: a referenced doc that 404s is skipped, not
-     * fatal — the completeness audit surfaces genuine dangling refs separately.
-     *
-     * @returns the discovered paths that were successfully copied
-     */
-    private async discoverAndCopyReferences(
-        source: { org: string; site: string },
-        dest: { org: string; site: string },
-        enumeratedPaths: string[],
-        discoveredPaths: Set<string>,
-        contentPatchIds?: string[],
-        contentPatchSource?: ContentPatchSource,
-        patchReport?: PatchReport,
-    ): Promise<string[]> {
-        const copied: string[] = [];
-        const visited = new Set<string>(enumeratedPaths);
-        const MAX_DISCOVERY_DEPTH = 3;
-
-        for (let depth = 0; depth < MAX_DISCOVERY_DEPTH; depth++) {
-            const newPaths = [...discoveredPaths].filter((p) => !visited.has(p));
-            if (newPaths.length === 0) break;
-            for (const p of newPaths) visited.add(p);
-
-            this.logger.info(
-                `[DA.live] Discovered ${newPaths.length} referenced document(s) not in the index (depth ${depth + 1}): ${newPaths.join(', ')}`,
-            );
-
-            for (let i = 0; i < newPaths.length; i += CONTENT_COPY_BATCH_SIZE) {
-                const batch = newPaths.slice(i, i + CONTENT_COPY_BATCH_SIZE);
-                const token = await this.apiClient.getImsToken();
-                const results = await Promise.all(
-                    batch.map(async (sourcePath) => {
-                        const success = await this.copySingleFile(
-                            token,
-                            source,
-                            sourcePath,
-                            dest,
-                            sourcePath,
-                            contentPatchIds,
-                            contentPatchSource,
-                            patchReport,
-                            discoveredPaths,
-                        );
-                        return { path: sourcePath, success };
-                    }),
-                );
-                for (const result of results) {
-                    if (result.success) {
-                        copied.push(result.path);
-                    } else {
-                        this.logger.debug(
-                            `[DA.live] Discovered reference not copyable (skipped): ${result.path}`,
-                        );
-                    }
-                }
-            }
-        }
-
-        return copied;
     }
 
     /**
@@ -737,91 +233,18 @@ export class DaLiveContentCopy {
         destSite: string,
         patchReport?: PatchReport,
     ): Promise<DaLiveCopyResult> {
+        const deps = this.batchDeps();
         return overlayAccountChromeImpl(
             this.logger,
             this.apiClient,
             {
-                copySingleFile: this.copySingleFile.bind(this),
-                discoverAndCopyReferences: this.discoverAndCopyReferences.bind(this),
+                copySingleFile: deps.copySingleFile,
+                discoverAndCopyReferences: (...args) => discoverAndCopyReferences(deps, ...args),
             },
             accountSource,
             destOrg,
             destSite,
             patchReport,
-        );
-    }
-
-    /**
-     * Copy the enumerated paths in parallel batches (extracted 2026-08-24,
-     * function-length pass — body unchanged). Appends results to
-     * `copiedFiles` / `failedFiles`; internal references found along the way
-     * land in `discoveredPaths`.
-     */
-    private async copyPathsInBatches(
-        source: DaLiveContentSource,
-        dest: { org: string; site: string },
-        contentPaths: string[],
-        copiedFiles: string[],
-        failedFiles: { path: string; error: string }[],
-        discoveredPaths: Set<string>,
-        progressCallback?: DaLiveProgressCallback,
-        contentPatchIds?: string[],
-        contentPatchSource?: ContentPatchSource,
-        patchReport?: PatchReport,
-    ): Promise<void> {
-        const totalFiles = contentPaths.length;
-        const destOrg = dest.org;
-        const destSite = dest.site;
-        const contentStart = Date.now();
-        for (let i = 0; i < contentPaths.length; i += CONTENT_COPY_BATCH_SIZE) {
-            const batch = contentPaths.slice(i, i + CONTENT_COPY_BATCH_SIZE);
-            const token = await this.apiClient.getImsToken();
-            const batchNum = Math.floor(i / CONTENT_COPY_BATCH_SIZE) + 1;
-            const batchStart = Date.now();
-
-            // Report progress at batch start
-            if (progressCallback) {
-                progressCallback({
-                    currentFile: batch[0],
-                    processed: i,
-                    total: totalFiles,
-                    percentage: Math.round((i / totalFiles) * 100),
-                });
-            }
-
-            // Copy batch in parallel
-            const results = await Promise.all(
-                batch.map(async (sourcePath) => {
-                    const success = await this.copySingleFile(
-                        token,
-                        { org: source.org, site: source.site },
-                        sourcePath,
-                        { org: destOrg, site: destSite },
-                        sourcePath,
-                        contentPatchIds,
-                        contentPatchSource,
-                        patchReport,
-                        discoveredPaths,
-                    );
-                    return { path: sourcePath, success };
-                }),
-            );
-
-            this.logger.debug(
-                `[DA.live] Content batch ${batchNum}: ${batch.length} files in ${formatDuration(Date.now() - batchStart)}`,
-            );
-
-            // Track results
-            for (const result of results) {
-                if (result.success) {
-                    copiedFiles.push(result.path);
-                } else {
-                    failedFiles.push({ path: result.path, error: 'Copy failed' });
-                }
-            }
-        }
-        this.logger.debug(
-            `[DA.live] Content copy total: ${totalFiles} files in ${formatDuration(Date.now() - contentStart)}`,
         );
     }
 
@@ -863,7 +286,11 @@ export class DaLiveContentCopy {
 
         // Enumerate and filter source content paths (list API w/ CDN-index fallback,
         // product-overlay filter, library-index exclusion).
-        const { contentPaths, usedDaLiveList } = await this.enumerateAndFilterContentPaths(source);
+        const { contentPaths, usedDaLiveList } = await enumerateAndFilterContentPaths(
+            this.discoveryOps,
+            this.logger,
+            source,
+        );
 
         progressCallback?.({
             processed: 0,
@@ -880,7 +307,8 @@ export class DaLiveContentCopy {
         // be in the content index. The DA.live list API already returns
         // everything, so this is only needed for the fallback path.
         if (!usedDaLiveList) {
-            await this.backfillEssentialPaths(
+            await backfillEssentialPaths(
+                this.logger,
                 source,
                 contentPaths,
                 missingAuthPages,
@@ -888,36 +316,32 @@ export class DaLiveContentCopy {
             );
         }
 
-        const copiedFiles: string[] = [];
-        const failedFiles: { path: string; error: string }[] = [];
-        let totalFiles = contentPaths.length;
-
         // Internal document references discovered while copying (e.g. the
-        // /customer/nav fragment embedded by the account page). Drained after the
-        // main loop so referenced-but-unindexed docs get pulled from canonical.
-        const discoveredPaths = new Set<string>();
+        // /customer/nav fragment embedded by the account page) land in
+        // `discoveredPaths`, drained after the main loop so referenced-but-unindexed
+        // docs get pulled from canonical.
+        const outcome = {
+            copiedFiles: [] as string[],
+            failedFiles: [] as { path: string; error: string }[],
+            discoveredPaths: new Set<string>(),
+        };
+        const { copiedFiles, failedFiles, discoveredPaths } = outcome;
+        let totalFiles = contentPaths.length;
+        const deps = this.batchDeps();
+        const dest = { org: destOrg, site: destSite };
+        const patches = { contentPatchIds, contentPatchSource, patchReport };
 
         // Copy files in parallel batches for improved performance (~5x faster)
-        await this.copyPathsInBatches(
-            source,
-            { org: destOrg, site: destSite },
-            contentPaths,
-            copiedFiles,
-            failedFiles,
-            discoveredPaths,
-            progressCallback,
-            contentPatchIds,
-            contentPatchSource,
-            patchReport,
-        );
+        await copyPathsInBatches(deps, source, dest, contentPaths, outcome, progressCallback, patches);
 
         // Reference-following discovery: copy internal documents referenced by
         // already-copied pages but absent from the index + backfill lists (e.g.
         // the /customer/nav account-menu fragment). Closes the "silently-dropped
         // content" bug class without hardcoding paths or forking content.
-        const discoveredCopied = await this.discoverAndCopyReferences(
+        const discoveredCopied = await discoverAndCopyReferences(
+            deps,
             { org: source.org, site: source.site },
-            { org: destOrg, site: destSite },
+            dest,
             contentPaths,
             discoveredPaths,
             contentPatchIds,
@@ -929,28 +353,9 @@ export class DaLiveContentCopy {
             totalFiles++;
         }
 
-        // Completeness audit: any internal document referenced by copied content
-        // but not itself copied (e.g. a fragment that 404s on source) is surfaced
-        // via the proceed-and-warn report — the loud signal for the
-        // "silently-dropped content" class even if discovery missed a shape. The
-        // demo still proceeds; this never fails the copy.
-        // References a later stage is configured to supply are not gaps — see
-        // `deferredReferencePrefixes`. Skipping them keeps this channel worth reading.
-        const copiedSet = new Set(copiedFiles);
-        for (const ref of discoveredPaths) {
-            if (!copiedSet.has(ref) && !isDeferredReference(patchReport, ref)) {
-                this.logger.warn(
-                    `[DA.live] Completeness audit — referenced document not copied: ${ref}`,
-                );
-                if (patchReport) {
-                    addReferenceResult(
-                        patchReport,
-                        ref,
-                        'referenced by copied content but not found on source',
-                    );
-                }
-            }
-        }
+        // Completeness audit: references copied content points at but that were
+        // never copied go to the proceed-and-warn report. Never fails the copy.
+        auditUncopiedReferences(this.logger, discoveredPaths, copiedFiles, patchReport);
 
         // Create stub pages for auth pages that don't exist on source.
         totalFiles += await createAuthPageStubsImpl(

@@ -14,9 +14,6 @@ import { DataInstallerWriteClient } from '@/features/data-installer/services/dat
 import { watchImportJob } from '@/features/data-installer/services/importJobRunner';
 import type { Project } from '@/types/base';
 
-jest.mock('@/core/auth/adobeAuthGuard', () => ({
-    ensureAdobeIOAuth: jest.fn().mockResolvedValue({ authenticated: true }),
-}));
 // `PollingService` reads the GLOBAL logger at construction, and the extension
 // host initializes that at activation — which no handler test does. Without this
 // the detached watch dies in its own try/catch and simply never starts, showing

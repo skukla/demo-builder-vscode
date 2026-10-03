@@ -7,8 +7,6 @@
  * the answers the mocks give back. A mock cannot see a malformed call.
  */
 
-jest.mock('@/core/config/ConfigurationLoader');
-
 // The wall FIRST: this module installs jest.mock at its top level, and a mock
 // registers only when the file's body runs — after a subject import, too late.
 import { setupMocks, setupConfigLoader, type TestMocks } from './PrerequisitesManager.testUtils';

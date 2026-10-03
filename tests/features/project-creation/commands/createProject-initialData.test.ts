@@ -7,9 +7,9 @@
  * `undefined` being falsy dropped every step from the wizard with no error.
  */
 
+import { CreateProjectWebviewCommand } from './createProject.testUtils';
 import * as fs from 'fs';
 import * as vscode from 'vscode';
-import { CreateProjectWebviewCommand } from '@/features/project-creation/commands/createProject';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
@@ -24,7 +24,6 @@ jest.mock('fs', () => ({
     existsSync: jest.fn(),
     readFileSync: jest.fn(),
 }));
-jest.mock('@/core/logging/debugLogger');
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(() => ({
@@ -35,7 +34,6 @@ jest.mock('@/core/di/serviceLocator', () => ({
         })),
     },
 }));
-jest.mock('@/features/prerequisites/services/PrerequisitesManager');
 
 /** Serve `json` as the wizard-steps.json content; no other file exists. */
 function setupStepsFile(json: string): void {

@@ -14,8 +14,11 @@
  * Strict TDD: written BEFORE the handler exists.
  */
 
+// The family helper owns the module wall AND re-exports the handler. It must be
+// imported BEFORE anything it mocks, and the handler must come from it — a direct
+// import of the SUT loads the real module before these mocks register.
+import { importHandlers } from './importHandlers.testUtils';
 import * as vscode from 'vscode';
-import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
 import { provisionAccsCredentials } from '@/features/data-installer/services/accsCredentialProvisioner';
 import type { Project } from '@/types/base';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
@@ -28,14 +31,6 @@ import {
 } from '../../../helpers/extensionContextFake';
 import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 
-jest.mock('@/core/auth/adobeAuthGuard', () => ({
-    ensureAdobeIOAuth: jest.fn().mockResolvedValue({ authenticated: true }),
-}));
-jest.mock('@/features/data-installer/services/dataInstallerWriteClient');
-jest.mock('@/features/data-installer/services/importJobRunner', () => ({
-    watchImportJob: jest.fn(),
-    IMPORT_POLL: { maxAttempts: 120, timeout: 600_000 },
-}));
 jest.mock('@/features/data-installer/services/accsCredentialProvisioner', () => ({
     provisionAccsCredentials: jest.fn(),
 }));

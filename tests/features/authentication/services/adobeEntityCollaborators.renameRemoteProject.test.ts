@@ -13,14 +13,12 @@
 import {
     createEntityCollaborators,
     type EntityCollaborators,
-} from '@/features/authentication/services/adobeEntityService';
+    getLogger,
+} from './adobeEntityCollaborators.testUtils';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import type { StepLogger } from '@/core/logging/stepLogger';
 import type { Logger } from '@/types/logger';
-jest.mock('@/types/typeGuards');
-
-import { getLogger } from '@/core/logging/debugLogger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 

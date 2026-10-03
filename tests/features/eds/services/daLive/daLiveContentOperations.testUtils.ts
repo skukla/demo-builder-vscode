@@ -15,13 +15,6 @@
  *   daLiveContentOperations-utils.test.ts
  */
 
-// Mock the timeout config
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: {
-        NORMAL: 30000,
-        QUICK: 5000,
-    },
-}));
 // Mock global fetch
 const mockFetch = jest.fn();
 

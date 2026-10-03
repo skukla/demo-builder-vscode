@@ -18,6 +18,7 @@
  *   - Does not delete the block's source files (out of scope here).
  */
 
+import { mockFetch } from './daLiveContentOperations.testUtils';
 import {
     DaLiveContentOperations,
     type TokenProvider,
@@ -25,14 +26,6 @@ import {
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: {
-        NORMAL: 30000,
-        QUICK: 5000,
-    },
-}));
-
-const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 interface FetchCall { 0: string; 1?: RequestInit }

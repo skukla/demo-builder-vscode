@@ -3,16 +3,13 @@
  * Tests getInstallSteps and infrastructure version removal
  */
 
-// Mock debugLogger FIRST to prevent "Logger not initialized" errors
-jest.mock('@/core/config/ConfigurationLoader');
-
-import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 import {
     setupMocks,
     setupConfigLoader,
     createDynamicInstallPrerequisite,
     type TestMocks,
 } from './PrerequisitesManager.testUtils';
+import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 import { PrerequisitesCacheManager } from '@/features/prerequisites/services/prerequisitesCacheManager';
 
 describe('PrerequisitesManager - Installation Orchestration', () => {

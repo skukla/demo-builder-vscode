@@ -123,8 +123,9 @@ describe('source files stay within the size limits this repo states', () => {
     it('CONTROL: the scan reads a real tree and applies a real limit', () => {
         // A zero here would make both ratchets pass while measuring nothing.
         expect(SOURCES.length).toBeGreaterThan(500);
-        // A known-over file is seen, and a comfortably-under one is not.
-        expect(measure('src/features/eds/services/daLive/daLiveContentCopy.ts')).not.toBeNull();
+        // A known-over file is seen, and a comfortably-under one is not. (The known-over
+        // file was daLiveContentCopy.ts until its 2026-10-03 cut put it under 400.)
+        expect(measure('src/features/eds/services/daLive/daLiveConfigService.ts')).not.toBeNull();
         expect(measure('src/core/ui/utils/classNames.ts')).toBeNull();
     });
 

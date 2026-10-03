@@ -10,13 +10,9 @@
  * Solution: Always reload from disk to get latest data
  */
 
-import * as fs from 'fs/promises';
 import { setupMocks, createStateManagerProject, type TestMocks } from './stateManager.testUtils';
+import * as fs from 'fs/promises';
 import type { Project } from '@/types/base';
-
-// Re-declare mocks to ensure proper typing and hoisting
-jest.mock('fs/promises');
-jest.mock('os');
 
 describe('StateManager - getCurrentProject Reload Behavior', () => {
     let testMocks: TestMocks;

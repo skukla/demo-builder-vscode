@@ -97,7 +97,7 @@ export function buildPublishHeaders(tokens: HelixTokens): Record<string, string>
  * (204/404 ok, 401/403 non-fatal) and not the credential, and because 403 is
  * deliberately non-fatal the failure surfaced as a silent 'partial'.
  *
- * Matches `helixService.getDeleteAuthHeaders` exactly: the Bearer ALONE. The
+ * Matches `HelixAdminAuth.getDeleteAuthHeaders` exactly: the Bearer ALONE. The
  * publish token is withheld rather than sent alongside — the matrix says it 403s,
  * and sending both would leave it ambiguous which credential Helix honoured.
  */
@@ -180,7 +180,7 @@ export async function previewAndPublishPage(
 /**
  * Issue a DELETE against one Helix partition (live or preview).
  *
- * Mirrors `helixService.deleteResource` — semantics AND credential (see
+ * Mirrors `helixPageDeletion.deleteResource` — semantics AND credential (see
  * {@link buildDeleteHeaders}; the credential half was missing until 2026-08-04) —
  * but vscode-free:
  *   - 204 / 404 → success (404 = already absent)

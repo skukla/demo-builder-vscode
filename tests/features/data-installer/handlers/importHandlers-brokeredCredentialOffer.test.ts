@@ -15,8 +15,11 @@
  * could never help.
  */
 
+// The family helper owns the module wall AND re-exports the handler. It must be
+// imported BEFORE anything it mocks, and the handler must come from it — a direct
+// import of the SUT loads the real module before these mocks register.
+import { importHandlers } from './importHandlers.testUtils';
 import * as vscode from 'vscode';
-import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
 import { clearSharedCredentialCache } from '@/features/data-installer/services/commerceCredentialBroker';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
@@ -30,14 +33,6 @@ import {
 } from '../../../helpers/extensionContextFake';
 import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 
-jest.mock('@/core/auth/adobeAuthGuard', () => ({
-    ensureAdobeIOAuth: jest.fn().mockResolvedValue({ authenticated: true }),
-}));
-jest.mock('@/features/data-installer/services/dataInstallerWriteClient');
-jest.mock('@/features/data-installer/services/importJobRunner', () => ({
-    watchImportJob: jest.fn(),
-    IMPORT_POLL: { maxAttempts: 120, timeout: 600_000 },
-}));
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: { getCommandExecutor: jest.fn(() => ({ execute: jest.fn() })) },
 }));
