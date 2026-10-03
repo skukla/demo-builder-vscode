@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: [AB-26b]
 value: med
-status: built
+status: shipped
 ---
 
 # Per-source stock changes reach the ERP, plus the small gaps (product delete, credit truth, currency)
@@ -26,3 +26,4 @@ Harness journeys for each gap; fixture-backed tests for the new reads; the custo
 - 2026-09-24  docs(backlog): AB-26h per-source stock, product delete and the exposure rule built to the edge; loop report updated (`9d145ddff`)
 - 2026-09-30  2026-09-29 Live on Bodea: stock per source §2.2 PASS. REMAINING: gap G2 (a non-default source's quantity edited in Commerce reaching the ERP) still open.
 - 2026-09-28  2026-09-28 status tidy (owner: yes): built. Product delete proven live 09-25/27; exposure note built; currency from the mapped website built (demo-erp f04c897, 09-24); Move stock replaced the removed minute timer. Left: owner confirms the exposure rule; non-default-source stock not proven live; AB-26y step 6 plans to remove the ERP's product delete route.
+- 2026-10-03  Shipped 2026-10-03 by the owner's finish line for work that lives only in the ERP and integration repositories: on their main branch and deployed (they carry no release tags). Any live proof this item still names is a check, not a reason to hold it open.

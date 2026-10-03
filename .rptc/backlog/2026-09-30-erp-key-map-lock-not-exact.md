@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-16
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # The key-map State lock is not exact, and its commit message says more than it does
@@ -37,3 +37,4 @@ The header names the window and its size; the existing lock tests unchanged.
 ## Shipped so far
 
 - 2026-09-30  2026-09-30 FIXED AS DOCUMENTATION (integration 3b328b9, feature/live-checks-at-checkout). state-lock.js header now states the lock is best-effort, names the get→put→get race (two takers each read back their own token), sizes it, says State has no compare-and-set so nothing here closes it, and that the tests prove the protocol not the race. No mechanism change — none is available.
+- 2026-10-03  Shipped 2026-10-03 by the owner's finish line for work that lives only in the ERP and integration repositories: on their main branch and deployed (they carry no release tags). Any live proof this item still names is a check, not a reason to hold it open.

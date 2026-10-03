@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: [AB-26e, AB-26m, AB-26l]
 value: high
-status: built
+status: shipped
 ---
 
 # The walk-through — what to look at in the ERP, what to look at in Commerce, and how each relates
@@ -50,3 +50,4 @@ demo path can be walked from the document alone by someone who has not seen the 
 - 2026-09-24  Picked up (lane 1: a document written from the preview; the live re-check is the owner's). Staleness check: every screen it names exists in the preview and has a headless check (T-2: home, orders, shipments, invoices, products, partners, pricing, events, settings, plus the documents); the entity map (AB-26m) and the composite-entity research (AB-26a) exist to draw the relation tables from. Dependencies AB-26e (built to its supervised edge), AB-26m and AB-26l (built) are on the same branch (loop report decision 7). Written as commerce-erp-integration/docs/walkthrough.md, with each screen named by its preview address so every look is reproducible without committing images
 - 2026-09-24  BUILT — commerce-erp-integration 91fb8ce (docs/walkthrough.md: part 1 the ERP screen by screen along the twenty-minute path with mirrored vs the ERP's own on each; part 2 Commerce from the other side naming the ERP action behind each thing; part 3 one relation table per composite entity, the printable twin of the Mapping tab; two-pair note; what a first live showing must confirm), linked from the README and the setup guide; demo-erp 806b196 (README pointer). Two claims checked against the code before publishing: any blocking level other than open writes back as blocked (isBlocked), and the cancel handler writes the ERP's reason into the comments. Every ERP screen named by its preview address. NOT done: the live re-check against a deployed pair (the owner's); the two-pair nine moments wait for the routing integration
 - 2026-09-24  docs(rptc): walk-through built; the ERP programme report closed with its walkthrough queue (`3ff4f92a7`)
+- 2026-10-03  Shipped 2026-10-03 by the owner's finish line for work that lives only in the ERP and integration repositories: on their main branch and deployed (they carry no release tags). Any live proof this item still names is a check, not a reason to hold it open.

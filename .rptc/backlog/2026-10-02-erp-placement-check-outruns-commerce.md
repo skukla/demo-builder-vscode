@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: []
 value: high
-status: built
+status: shipped
 ---
 
 # Every order on Justrite is refused: the placement check outruns Commerce
@@ -46,3 +46,4 @@ outrun Runtime's 60 s on 2026-10-01; an unmerged commit on `fix/batched-ownershi
 - 2026-10-02  commerce-erp-integration main f63574a: 8 s deadline + one batched owner search (placement 16 s -> 3.5 s); deployed to Justrite, order 5000000002 placed
 - 2026-10-02  commerce-erp-integration main cd4629c: unsaved lines (no item_id) split by their own owner; deployed; order 2 placement log asks Justrite ERP (274.86) and Accuform ERP (42.42)
 - 2026-10-02  docs(backlog): AB-55 — every Justrite order was refused by a placement check that outran Commerce; fixed and deployed (`9ea8559f5`)
+- 2026-10-03  Shipped 2026-10-03 by the owner's finish line for work that lives only in the ERP and integration repositories: on their main branch and deployed (they carry no release tags). Any live proof this item still names is a check, not a reason to hold it open.

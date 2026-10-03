@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-9
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # Ask the ERP live whether it can ship this, and when
@@ -84,3 +84,4 @@ and the answer reaches the shopper as Commerce data.
 - 2026-09-30  2026-09-30 PROMISE-ON-THE-PART BUILT (integration 15010df; demo-erp contract v11 c6963d5). The router asks each owning ERP products/availability just BEFORE its part is sent (after, the ERP would count the order against itself) and records the answer on the part; the parts page reads it as a sentence ('1 of 2 lines ship now; CAB2 by 2026-10-07'). Never a hold: a failed ask leaves no promise, the send goes on. One shared call (lib/erp-availability.js) for the webhook and the router. Contract version 11 adds availability + credit-check routes/shapes, both copies byte-identical. 966 integration / 390 ERP tests. REMAINING: deploy + live proof (a shortfall shows its date on the parts page; a down ERP places the order with no promise).
 - 2026-09-28  2026-09-28 status tidy (owner: yes): backlog. No code yet; two owner decisions logged 09-28. Its 'what exists' section still names the cart price webhooks AB-26z removed; needs the mock ERP to offer a promised delivery date.
 - 2026-10-03  Reconciled 2026-10-03: the 09-28 'backlog, no code yet' line is stale — the placement check is on main (ERP a5d5abd, c6963d5; integration 206fbde, 3f1a369, 15010df). The cart webhooks the body names were removed by AB-26z; only webhook/placement remains.
+- 2026-10-03  Shipped 2026-10-03 by the owner's finish line for work that lives only in the ERP and integration repositories: on their main branch and deployed (they carry no release tags). Any live proof this item still names is a check, not a reason to hold it open.

@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: [AB-26g, AB-26h]
 value: high
-status: built
+status: shipped
 ---
 
 # Business structure — sales organisation per website, prefix and ownership per pair, legal identity, warehouse names, the Organisation card
@@ -27,3 +27,4 @@ Step 01's record-shape test fails on any unpinned field; harness journeys for th
 - 2026-09-24  Step 04 BUILT — demo-erp 126cf5f (Settings: Organisation + Warehouses cards, rename a plant; customer: Sold-to in + Legal identity; order header sales org; invoice Seller card; shipment ship-from with the ERP plant name; Pricing scope column, Add rule + Test a Price pickers; fakeApi mirrors the shapes; fingerprints re-accepted, 14/14 twice; bundle 938507/996147; 244 pass). Screens looked at: Settings, Customer, Order, Invoice, Shipment, Pricing
 - 2026-09-24  Step 05 BUILT — demo-erp df2075c (README API table, every route and key) + integration 965e7fe (docs/demo-setup.md, the SC-facing guide with Admin path, API check and undo per requirement; README Structure row, order row, mirror reads); routing research gains Who this is for; realism audit and bidirectional item 7 carry one-line pointers; plan moved to .rptc/complete/erp-business-structure/. NOT verified live: App Management's rendering of text fields; store/* field names on ACCS. Scans: no src/ in this repo touched; lib/structure.js is new in both repos with no prior implementation of the job (architecture-duplication not triggered)
 - 2026-09-24  docs(rptc): business structure shipped — plan archived, record caught up (`969c66fc4`)
+- 2026-10-03  Shipped 2026-10-03 by the owner's finish line for work that lives only in the ERP and integration repositories: on their main branch and deployed (they carry no release tags). Any live proof this item still names is a check, not a reason to hold it open.

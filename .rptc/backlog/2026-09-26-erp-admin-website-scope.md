@@ -4,7 +4,7 @@ kind: fix
 area: app-builder
 needs: []
 value: high
-status: built
+status: shipped
 parent: AB-26
 ---
 
@@ -50,3 +50,4 @@ has no per-ERP dimension, which B3 decides. Owner questions are in the research 
 - 2026-09-26  commerce-erp-integration a2a13a8, deployed to Bodea: the picker walks lib-config's tree (websites and their store views; stores and Admin left out), a value's origin level is compared properly (website values stop reading Inherited), a commerce node with no websites counts as unread, Refresh websites reads Commerce again (erp/settings ?refresh=true), a failed read keeps the last list with a note. Tests and the preview use the tree lib-config builds from Bodea's real websites. Proven live: the refreshed tree from the deployed action holds the four websites and their store views, same shape as the tests. Not seen live: the picker's popup inside the Admin frame (it would not render in a screenshot).
 - 2026-09-26  docs(backlog): AB-36 built and deployed, the Mapping tab offers every website (`5512b2cb6`)
 - 2026-09-26  docs(research): why the Admin page lists no websites, and how website scope meets several ERPs (`b99b0c491`)
+- 2026-10-03  Shipped 2026-10-03 by the owner's finish line for work that lives only in the ERP and integration repositories: on their main branch and deployed (they carry no release tags). Any live proof this item still names is a check, not a reason to hold it open.

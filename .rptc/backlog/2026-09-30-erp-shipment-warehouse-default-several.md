@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # A shipment with no warehouse still fails when a product sits in several warehouses
@@ -38,3 +38,4 @@ the common one; no common → the fullest; no stock anywhere → unset as before
 ## Shipped so far
 
 - 2026-09-30  2026-09-30 FIXED (demo-erp de7bd8a, loop branch). defaultWarehouse(products, lines): the warehouse holding every shipped line when exactly one does; else the fullest across the shipped lines; null only when nothing holds them; ties broken by code; each product read once. 6 pure tests; 398/398. REMAINING: live proof with the deploy (an agent-created shipment for products in two warehouses now ships).
+- 2026-10-03  Shipped 2026-10-03 by the owner's finish line for work that lives only in the ERP and integration repositories: on their main branch and deployed (they carry no release tags). Any live proof this item still names is a check, not a reason to hold it open.

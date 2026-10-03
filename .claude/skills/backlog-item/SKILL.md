@@ -222,6 +222,13 @@ nothing can leave stops describing anything. It is now RELEASED: does a tag
 contain the item's commits. Mechanical, anybody can check it, and a defect found
 in something released is a new item rather than a reason to unship it.
 
+**Work that lives only in the ERP or the integration repository has no tag to be
+in** (`skukla/demo-erp`, `skukla/commerce-erp-integration`: they ship by being on
+`main` and deployed). For that work, RELEASED means on that repository's `main`
+and deployed (owner, 2026-10-03). The 2026-10-03 reconcile found about thirty such
+items that the tag rule could never have moved out of `built`. An item with
+commits in BOTH this repository and those still waits for the Demo Builder tag.
+
 **`spiked` is not `planned`.** Feasibility answered with no decision to build is
 its own state; calling it `planned` implies an intent nobody has formed.
 

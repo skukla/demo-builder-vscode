@@ -4,7 +4,7 @@ kind: fix
 area: app-builder
 needs: []
 value: med
-status: built
+status: shipped
 parent: AB-26
 ---
 
@@ -23,3 +23,4 @@ be recognised and skipped, or a real stock change keyed some other way (sku, sou
 ## Shipped so far
 
 - 2026-09-26  commerce-erp-integration 2d725ba: main hands the check and transformer the event's data and both read data.value one level further in, so every real stock event failed; their tests handed them the whole event. Fixed, with a test driving main itself. Proven live 11:32 UTC: an ERP rename now brings 'Product smartcable updated: stock 1000' into the ERP journal, which the 11:05 and 11:06 renames never did.
+- 2026-10-03  Shipped 2026-10-03 by the owner's finish line for work that lives only in the ERP and integration repositories: on their main branch and deployed (they carry no release tags). Any live proof this item still names is a check, not a reason to hold it open.

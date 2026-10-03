@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: med
-status: built
+status: shipped
 parent: AB-26
 ---
 
@@ -45,3 +45,4 @@ deploys with the next demo-erp release).
 ## Shipped so far
 
 - 2026-10-03  Reconciled 2026-10-03: committed, not 'uncommitted' as the body says — demo-erp 6976b08 on main.
+- 2026-10-03  Shipped 2026-10-03 by the owner's finish line for work that lives only in the ERP and integration repositories: on their main branch and deployed (they carry no release tags). Any live proof this item still names is a check, not a reason to hold it open.

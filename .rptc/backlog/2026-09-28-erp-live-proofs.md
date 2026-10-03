@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-16
 needs: [AB-16a]
 value: high
-status: built
+status: shipped
 ---
 
 # Live proofs still owed on Bodea for several ERPs
@@ -40,3 +40,4 @@ Each line above has been seen working on Bodea, with the order numbers recorded 
 - 2026-09-28  2026-09-28 Partially Held and Re-send proven in the pair-in-a-box tests (integration main 36fc7ac, owner chose this over a live break): two in-process ERPs; one unreachable -> its part held, the order Partially Held naming it, the event retried without re-sending the other part; back -> Re-send sends it once, status back to pending, a second press skips. The refused (401) variant too. Each break of the product (double send, no Partially Held, Re-send double send) fails the test. Live proof on Bodea waits for AB-16q (maintenance mode).
 - 2026-09-28  2026-09-28 proven live on Bodea (integration d8d5aae, both ERPs fafaddb): Contoso put in maintenance (15:25 UTC, until 15:55) through write_erp_rest; get_erp_status: Contoso not reachable, 'Contoso ERP is in maintenance until 15:55 UTC.'. Guest order 3000000022 (accesspoint + proliantdl380): Northwind sales order 0000001012 at once; Contoso's part held, retried 4 times with the maintenance reason; Commerce status partially_held. Maintenance ended 15:30:57; Re-send (erp/resend-part) 15:31: Contoso sales order 0000001001; Commerce status back to pending; a second Re-send answered skipped; each ERP holds exactly one sales order for it.
 - 2026-09-28  2026-09-28 one-ERP reset proven live on Bodea (Demo Builder 37712be33, integration 4de1d30): reset_erp_records erp=demo-erp-2 undid only Contoso's writes (erp: demo-erp-2 in the answer; 0 reverted, 2 orders' ERP numbers cleared), wiped Contoso (182 products, 5 partners, 1 price list, 2 sales orders, 7 events) and refilled it with only its own 3 products and 4 paired companies (179 skipped as not its own). Northwind untouched. Contoso's 182 leftover products: cleared.
+- 2026-10-03  Shipped 2026-10-03 by the owner's finish line for work that lives only in the ERP and integration repositories: on their main branch and deployed (they carry no release tags). Any live proof this item still names is a check, not a reason to hold it open.

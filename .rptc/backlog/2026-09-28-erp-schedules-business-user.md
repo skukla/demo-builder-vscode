@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: [AB-26z]
 value: med
-status: built
+status: shipped
 ---
 
 # A business user edits the integration's schedules
@@ -43,3 +43,4 @@ schedule (AB-26z follow-up: a timezone on the ERP's company code).
 ## Shipped so far
 
 - 2026-10-02  commerce-erp-integration 3c55ebf: heartbeat alarm erp-schedule-heartbeat every 5 min + six schedule settings at Default Config (store timezone; price publish on/off, hourly/daily/weekly, minute, time, weekday; defaults hourly at :05 UTC); app 0.12.0 upgraded in Commerce. Open: (1) owner checks the six settings render and save in the App Management form; (2) confirm the old erp-prices-hourly-timer is gone (the deploy logged a failed alarm DELETE from Adobe alarms service)
+- 2026-10-03  Shipped 2026-10-03 by the owner's finish line for work that lives only in the ERP and integration repositories: on their main branch and deployed (they carry no release tags). Any live proof this item still names is a check, not a reason to hold it open.

@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-16
 needs: [AB-16a]
 value: high
-status: built
+status: shipped
 ---
 
 # Integration paths that still reach only the first ERP
@@ -36,3 +36,4 @@ AB-16d.
 - 2026-09-28  docs(backlog): AB-16h proven live (a cancel reaches every ERP's part) (`0779891db`)
 - 2026-09-28  docs(backlog): AB-16h built; its follow-ups recorded (`8daa19744`)
 - 2026-09-28  docs(backlog): AB-16h, integration paths that reach only the first ERP (`2315689f6`)
+- 2026-10-03  Shipped 2026-10-03 by the owner's finish line for work that lives only in the ERP and integration repositories: on their main branch and deployed (they carry no release tags). Any live proof this item still names is a check, not a reason to hold it open.

@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: [AB-26l]
 value: med
-status: built
+status: shipped
 ---
 
 # Screen redesign 1 — shell and navigation
@@ -24,3 +24,4 @@ Headless checks with fingerprints on every surface; no layout regression on the 
 - 2026-09-24  Staleness: three of this item's four pieces shipped with AB-26l (rail counts, shell search, Home label) — demo-erp 5b2a269. What remains is the sticky document title line
 - 2026-09-24  BUILT — the last piece, the sticky title line: demo-erp (feat(screen): the title line stays while a page scrolls under it), headless check scrolls Products in a 560px window and asserts the title stays; the other three pieces shipped with AB-26l (5b2a269). 224 tests, 14 screen checks
 - 2026-09-24  docs(backlog): AB-26n shell redesign built (sticky title line; the rest shipped with AB-26l) (`4bfb09a03`)
+- 2026-10-03  Shipped 2026-10-03 by the owner's finish line for work that lives only in the ERP and integration repositories: on their main branch and deployed (they carry no release tags). Any live proof this item still names is a check, not a reason to hold it open.

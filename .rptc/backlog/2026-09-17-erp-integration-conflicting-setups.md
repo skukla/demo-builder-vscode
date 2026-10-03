@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-9
 needs: [AB-23]
 value: med
-status: backlog
+status: dropped
 ---
 
 # Refuse an ERP integration that would collide with another project's
@@ -77,3 +77,4 @@ reach the same workspace.
 - 2026-09-22  feat(app-builder): a second copy is told which copy it is (`ed6e6b56c`)
 - 2026-09-22  feat(app-builder): a second ERP calls itself by its name in Commerce (`a4913e015`)
 - 2026-09-28  2026-09-28 status tidy (owner: yes): backlog. Not being worked: the refusal its Done-when asks for does not exist (last work 09-22 built a per-copy app id instead). May need rewording, since copies are no longer the model.
+- 2026-10-03  Dropped 2026-10-03 (owner): overtaken — a per-copy app id was built instead (ed6e6b56c), and copies are no longer the model (its own 2026-09-28 log).

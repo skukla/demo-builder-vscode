@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: [AB-26b]
 value: high
-status: built
+status: shipped
 ---
 
 # The credit hold reaches Commerce (hold / unhold), undone on reset
@@ -25,3 +25,4 @@ Unit tests assert the hold/unhold calls and their arguments; harness journey: ho
 - 2026-09-24  docs(backlog): AB-26f credit hold built to its supervised edge (live proof waits for a credential) (`472b52670`)
 - 2026-09-30  2026-09-29 Live proof done: ERP credit hold -> Commerce On Hold + release -> unhold (AB-26e matrix), and today's reset_erp_records released holds / undid credit reversions. Lane-2 live proof that was owed is complete.
 - 2026-09-28  2026-09-28 status tidy (owner: yes): built. Credit hold round trip proven live 09-25 and 09-27 (live-validation-learnings.md); code on main 4703b60. Left: unhold on reset proven live; captured Commerce event payloads as test data.
+- 2026-10-03  Shipped 2026-10-03 by the owner's finish line for work that lives only in the ERP and integration repositories: on their main branch and deployed (they carry no release tags). Any live proof this item still names is a check, not a reason to hold it open.
