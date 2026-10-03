@@ -15,7 +15,7 @@ import { createMockExtensionContext } from '../../../helpers/extensionContextFak
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
-import type { SettingsFile } from '@/types/settingsFile';
+import { projectFileV2 } from '../../../helpers/projectFileFixtures';
 
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({ getGitHubServices: jest.fn() }));
 jest.mock('@/features/eds/services/github/githubTreePush', () => ({ pushFiles: jest.fn() }));
@@ -34,15 +34,7 @@ const mockRead = readStorefrontZip as jest.Mock;
 const mockOpen = vscode.window.showOpenDialog as jest.Mock;
 const mockExecute = vscode.commands.executeCommand as jest.Mock;
 const mockRemember = rememberAddedDemo as jest.Mock;
-const SETUP: SettingsFile = {
-    version: 1,
-    exportedAt: 'x',
-    source: { project: 'bodea' },
-    selections: {},
-    configs: {},
-    selectedStack: 'eds-accs',
-    edsConfig: { githubOwner: 'sender' },
-};
+const SETUP = projectFileV2();
 
 const tokenService = { validateToken: jest.fn() };
 const repoOperations = {

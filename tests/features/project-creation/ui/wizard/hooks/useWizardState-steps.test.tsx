@@ -151,7 +151,7 @@ describe('the org-change reset', () => {
     function renderInMode(mode: 'create' | 'import' | 'edit') {
         const editProject =
             mode === 'edit' ? { projectName: 'p', projectPath: '/p', settings: {} } : undefined;
-        const importedSettings = mode === 'import' ? { source: { project: 'p' } } : undefined;
+        const importedSettings = mode === 'import' ? { source: { project: 'p', extension: '1.0.0' } } : undefined;
         const hook = renderHook(() =>
             useWizardState({ wizardSteps: STEPS, editProject, importedSettings })
         );
@@ -265,7 +265,7 @@ describe('the UI state the hook exposes', () => {
         const { result } = renderHook(() =>
             useWizardState({
                 wizardSteps: STEPS,
-                importedSettings: { source: { project: 'acme' } },
+                importedSettings: { source: { project: 'acme', extension: '1.0.0' } },
             })
         );
 

@@ -5,7 +5,8 @@
  * providing a single source of truth for step props patterns.
  */
 
-import type { SettingsFile } from './settingsFile';
+import type { ProjectFile } from './projectFile';
+import type { SettingsEdsConfig } from './settingsFile';
 import type { WizardState, WizardStep } from './webview';
 
 /**
@@ -95,14 +96,23 @@ export interface StepCondition {
 }
 
 /**
- * The wizard's view of imported/copied settings. The wire always carries a
- * full `SettingsFile` (every fill site — file import via `parseSettingsFile`,
- * copy-from-project and edit mode via `extractSettingsFromProject` — produces
- * one), but the wizard reads it defensively, so every field is optional.
- * Derived, not re-declared: this WAS a hand-maintained near-copy of
- * `SettingsFile` that drifted field by field.
+ * What Copy and Edit hand the wizard: the project file (v2), built in memory
+ * from a project on this machine (`extractSettingsFromProject`), plus the
+ * project's own storefront, which only Edit reopens. An import hands the file
+ * itself (`readProjectFile`), with no storefront: the receiver creates their own.
  */
-export type ImportedSettings = Partial<SettingsFile>;
+export type ProjectSeed = ProjectFile & {
+    /** The project's own repository and DA.live site. Read by edit mode only. */
+    edsConfig?: SettingsEdsConfig;
+};
+
+/**
+ * The wizard's view of imported, copied or edited settings. Every fill site
+ * produces a project file or a {@link ProjectSeed}; the wizard reads it
+ * defensively, so every field is optional. Derived, not re-declared: this WAS
+ * a hand-maintained near-copy of the settings file that drifted field by field.
+ */
+export type ImportedSettings = Partial<ProjectSeed>;
 
 /**
  * Configuration for editing an existing project (wizard edit mode).

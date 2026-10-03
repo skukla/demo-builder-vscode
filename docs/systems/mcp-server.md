@@ -485,7 +485,8 @@ zero — which is why it is consent-gated (`reversibility.ledger.json`).
 `create_project_from_file` takes an absolute PATH to a file `export_project_settings`
 (or the projects list's Export) wrote. The path is checked at the boundary (absolute,
 exists, a file, under 1 MB) and the text is read through `readProjectFile`, which
-migrates the v1 file Export writes today and strips every credential. Creation then
+reads the version-2 file Export writes, migrates a version-1 file from before
+2026-10, and strips every credential. Creation then
 runs through `runProjectCreation` — the same function `create_project` ends in — with
 the file's package, stack, addons, settings, block libraries, integrations (custom
 sources and API picks included), mesh, datapack and store structure as its inputs.

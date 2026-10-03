@@ -5,7 +5,7 @@ versioned, and neither ever carries a credential.
 
 | File | Name | Lives | Written by | Read by |
 |---|---|---|---|---|
-| Project file | `<project-name>.project.demo-builder.json` | wherever the SC saves it | Export (projects dashboard; the `export_project_settings` tool) | Import from File, Copy from Existing |
+| Project file | `<project-name>.project.demo-builder.json` | wherever the SC saves it | Export (projects list, dashboard, a demo bundle's setup part; the `export_project_settings` tool) | Import (projects list), a demo bundle, the `create_project_from_file` tool |
 | Shared-demo file | `demo.demo-builder.json` | the root of a storefront repository | Export → Storefront as demo package, or a colleague by hand | "Add a demo package" |
 
 They are one family with the project manifest, `.demo-builder.json`, which stays in the
@@ -21,10 +21,11 @@ type and the committed schema cannot drift from the generator.
 
 ## What a project file carries
 
-Export today writes the version-1 shape, which the reader below migrates. It is already
-credential-free and already named `<project-name>.project.demo-builder.json`; it has no
-option to include credentials and no field that says whether they are in. Writing the
-version-2 shape described here is the remaining work of backlog item PL-56c.
+Export writes version 2, through one function: `createExportSettings` in
+`src/features/projects-dashboard/services/settingsSerializer.ts`. It has no option to
+include credentials and no field that says whether they are in. Copy and Edit build the
+same file in memory (`extractSettingsFromProject`), keeping the SC's own values, and add the
+project's own storefront, which only Edit reopens.
 
 Everything the manifest persists that describes the demo rather than the machine:
 
@@ -44,6 +45,25 @@ Everything the manifest persists that describes the demo rather than the machine
 
 What stays local and is never in the file: paths, dates, statuses, component instances and
 versions, installed snapshots, publish state, AI file hashes, the pinned flag.
+
+## What an import does with it
+
+Every import door reads through `readProjectFile` and nothing else. The wizard's Import
+opens with everything above that creation takes as an input: package, stack, addons, block
+libraries, settings, integrations with their custom sources and API picks, the mesh, the
+datapack (when the file names its version), the store structure, and the Adobe org,
+project and workspace. The title comes along when the project's name is still free on the
+receiving machine; otherwise the name gets a `-copy` suffix and the SC names it.
+
+Some of the file is deliberately not applied, and
+`tests/features/project-creation/ui/wizard/projectFileRoundTrip.test.tsx` pins each case:
+
+- credentials, which are never in the file;
+- the storefront repository and DA.live site, which are the sender's. The receiver signs in
+  to GitHub and DA.live and creates their own, exactly as for a new project; an import
+  never marks either sign-in as done;
+- the Commerce connection record and saved AI prompts, which travel but are not inputs to
+  creation.
 
 ## Where a project's storefront is looked up
 

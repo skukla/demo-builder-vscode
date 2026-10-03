@@ -1,113 +1,35 @@
 /**
- * settingsSerializer — core parse/validate/extract/export slice.
+ * settingsSerializer — the project file's writer: extract and export.
+ *
+ * The reader (parse, validate, version-1 migration) is `readProjectFile`, tested
+ * in tests/core/state/projectFileReader.test.ts; a file written here is read back
+ * through it below.
  *
  * The App Builder integration derivation tests (§E: appBuilderComponentSources
- * derived from the keyed map + additionalConsoleApis) live in the sibling
+ * derived from the keyed map, and the API picks) live in the sibling
  * settingsSerializer-integrations.test.ts.
  */
 
 import {
-    parseSettingsFile,
-    isValidSettingsFile,
-    isNewerVersion,
     extractSettingsFromProject,
     createExportSettings,
     getSuggestedFilename,
 } from '@/features/projects-dashboard/services/settingsSerializer';
 import type { Project } from '@/types/base';
 import { SECRET_ENV_KEYS } from '@/core/config/envVarKeys';
-import { SETTINGS_FILE_VERSION } from '@/types/settingsFile';
-import type { SettingsFile } from '@/types/settingsFile';
+import { readProjectFile } from '@/core/state/projectFileReader';
+import { PROJECT_FILE_VERSION } from '@/types/projectFile';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import { createMockProject, edsStorefrontInstance } from '../../../helpers/projectFake';
-import { assertNotOk, assertOk } from '../../../helpers/resultAssertions';
+
+/** Read written text back through the one reader; a refusal fails the test with its reason. */
+function readBack(json: string) {
+    const read = readProjectFile(json);
+    if (!read.ok) throw new Error(`the written file did not read back: ${read.error}`);
+    return read;
+}
 
 describe('settingsSerializer', () => {
-    describe('parseSettingsFile', () => {
-        it('should parse valid JSON settings file', () => {
-            const json = JSON.stringify({
-                version: 1,
-                exportedAt: '2024-01-01T00:00:00Z',
-                source: { project: 'test' },
-                includesSecrets: false,
-                selections: {},
-                configs: {},
-            });
-
-            const result = parseSettingsFile(json);
-
-            assertOk(result);
-            expect(result.settings.version).toBe(1);
-        });
-
-        it('should return error for invalid JSON', () => {
-            const result = parseSettingsFile('{ invalid json }');
-
-            assertNotOk(result);
-            expect(result.error).toContain('corrupted');
-        });
-
-        it('should return error for non-settings object', () => {
-            const json = JSON.stringify({ foo: 'bar' });
-
-            const result = parseSettingsFile(json);
-
-            assertNotOk(result);
-            expect(result.error).toContain('Demo Builder settings');
-        });
-    });
-
-    describe('isValidSettingsFile', () => {
-        it('should return true for valid settings structure', () => {
-            expect(isValidSettingsFile({ version: 1 })).toBe(true);
-        });
-
-        it('should return false for null', () => {
-            expect(isValidSettingsFile(null)).toBe(false);
-        });
-
-        it('should return false for non-object', () => {
-            expect(isValidSettingsFile('string')).toBe(false);
-            expect(isValidSettingsFile(123)).toBe(false);
-        });
-
-        it('should return false for missing version', () => {
-            expect(isValidSettingsFile({})).toBe(false);
-        });
-
-        it('should return false for non-numeric version', () => {
-            expect(isValidSettingsFile({ version: 'v1' })).toBe(false);
-        });
-    });
-
-    describe('isNewerVersion', () => {
-        /** A minimal but COMPLETE SettingsFile at the given schema version. */
-        function settingsAtVersion(version: number): SettingsFile {
-            return {
-                version,
-                exportedAt: '2024-01-01T00:00:00Z',
-                source: { project: 'test' },
-                selections: {},
-                configs: {},
-            };
-        }
-
-        it('should return true when version is newer', () => {
-            const settings = settingsAtVersion(SETTINGS_FILE_VERSION + 1);
-            expect(isNewerVersion(settings)).toBe(true);
-        });
-
-        it('should return false when version is current', () => {
-            const settings = settingsAtVersion(SETTINGS_FILE_VERSION);
-            expect(isNewerVersion(settings)).toBe(false);
-        });
-
-        it('should return false when version is older', () => {
-            const settings = settingsAtVersion(SETTINGS_FILE_VERSION - 1);
-            expect(isNewerVersion(settings)).toBe(false);
-        });
-    });
-
     describe('extractSettingsFromProject', () => {
         const createProject = (overrides?: Partial<Project>): Project => ({
             name: 'test-project',
@@ -130,7 +52,8 @@ describe('settingsSerializer', () => {
 
             const result = extractSettingsFromProject(project);
 
-            expect(result.version).toBe(SETTINGS_FILE_VERSION);
+            expect(result.kind).toBe('project');
+            expect(result.version).toBe(PROJECT_FILE_VERSION);
             expect(result.source.project).toBe('test-project');
             expect(result.selections).toEqual(project.componentSelections);
             expect(result.configs).toEqual(project.componentConfigs);
@@ -317,10 +240,8 @@ describe('settingsSerializer', () => {
             const exported = extractSettingsFromProject(project);
             const json = JSON.stringify(exported);
 
-            // Import (parse)
-            const parseResult = parseSettingsFile(json);
-            assertOk(parseResult);
-            expect(parseResult.settings.customBlockLibraries).toEqual(customLibs);
+            // Import (the one reader)
+            expect(readBack(json).file.customBlockLibraries).toEqual(customLibs);
         });
     });
 
@@ -369,6 +290,76 @@ describe('settingsSerializer', () => {
             const result = createExportSettings(project, '1.2.3');
 
             expect(result.source.extension).toBe('1.2.3');
+        });
+
+        it('writes a version-2 project file that reads back as one, not as a migration', () => {
+            const read = readBack(JSON.stringify(createExportSettings(project, '1.2.3')));
+
+            expect(read.file.kind).toBe('project');
+            expect(read.file.version).toBe(PROJECT_FILE_VERSION);
+            expect(read.migratedFrom).toBeUndefined();
+        });
+
+        it('carries what the version-1 file dropped: title, Commerce, store structure, datapack, prompts', () => {
+            const full = createMockProject({
+                name: 'full',
+                title: 'Full Demo',
+                commerce: {
+                    type: 'software-as-a-service',
+                    instance: {
+                        url: 'https://example.invalid',
+                        environmentId: 'env-1',
+                        storeView: 'us',
+                        websiteCode: 'base',
+                        storeCode: 'main',
+                    },
+                },
+                commerceStoreStructure: { websites: [], storeGroups: [], storeViews: [] },
+                datapack: { name: 'catalog', version: '1.0.0' },
+                aiPrompts: [{ id: 'p1', title: 'Explain', prompt: 'Explain this demo' }],
+            });
+
+            const file = createExportSettings(full, '1.2.3');
+
+            expect(file.title).toBe('Full Demo');
+            expect(file.source.title).toBe('Full Demo');
+            expect(file.commerce).toStrictEqual(full.commerce);
+            expect(file.commerceStoreStructure).toStrictEqual(full.commerceStoreStructure);
+            expect(file.datapack).toStrictEqual(full.datapack);
+            expect(file.aiPrompts).toStrictEqual(full.aiPrompts);
+        });
+
+        it('writes the Adobe org and workspace NAMES, which version 1 read and never wrote', () => {
+            const file = createExportSettings(
+                createMockProject({
+                    adobe: { organization: 'ORG', organizationName: 'Example Org', workspace: 'W', workspaceName: 'Stage' },
+                }),
+                '1.2.3',
+            );
+
+            expect(file.adobe?.orgName).toBe('Example Org');
+            expect(file.adobe?.workspaceName).toBe('Stage');
+        });
+
+        it('carries the storefront as provenance only, never as a setting', () => {
+            const file = createExportSettings(
+                createMockProject({
+                    componentInstances: {
+                        'eds-storefront': {
+                            ...edsStorefrontInstance(),
+                            metadata: { githubRepo: 'acme-org/demo-storefront', daLiveOrg: 'acme' },
+                        },
+                    },
+                }),
+                '1.2.3',
+            );
+
+            expect(file.source.storefront).toStrictEqual({
+                githubRepo: 'acme-org/demo-storefront',
+                daLiveOrg: 'acme',
+                daLiveSite: 'demo-storefront',
+            });
+            expect(file).not.toHaveProperty('edsConfig');
         });
     });
 

@@ -21,8 +21,13 @@ import type { ComponentConfigs, EnvVarDefinition, ServiceDefinition } from './co
 import type { DaLiveContentSource } from './demoPackages';
 import type { ErpOwnsEntry, ErpOwnsRule } from './erpOwnership';
 import type { ErrorCode } from './errorCodes';
-import type { AddedDemo, RememberedDemo, SharedDemoDescription, StorefrontKind } from './projectFile';
-import type { SettingsFile } from './settingsFile';
+import type {
+    AddedDemo,
+    ProjectFile,
+    RememberedDemo,
+    SharedDemoDescription,
+    StorefrontKind,
+} from './projectFile';
 import type { ViewMode, ViewModeList } from './viewMode';
 import type { GitHubRepoItem } from './webview';
 import type { GitHubUser } from './webviewPayloads';
@@ -64,12 +69,12 @@ export interface ImportStorefrontZipResult {
     dropped?: number;
     isPrivate?: boolean;
     /** A demo bundle's setup part, when the zip carried one; the dialog offers to start from it. */
-    setup?: SettingsFile;
+    setup?: ProjectFile;
 }
 
 /** Start a project from a bundle's setup, on the card its storefront became. */
 export interface UseBundleSetupRequest {
-    setup: SettingsFile;
+    setup: ProjectFile;
     demo: AddedDemo;
 }
 

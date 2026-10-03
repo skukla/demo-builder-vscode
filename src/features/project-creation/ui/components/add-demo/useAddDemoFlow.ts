@@ -23,8 +23,7 @@ import {
 } from './addDemoFlow';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 import type { DemoPackage } from '@/types/demoPackages';
-import type { AddedDemo, RememberedDemo, StorefrontKind } from '@/types/projectFile';
-import type { SettingsFile } from '@/types/settingsFile';
+import type { AddedDemo, ProjectFile, RememberedDemo, StorefrontKind } from '@/types/projectFile';
 import type { StorefrontZipProgressPayload } from '@/types/webviewPayloads';
 import type {
     AddSharedDemoRequest,
@@ -109,7 +108,7 @@ export interface UseAddDemoFlowReturn {
     makePublic: boolean;
     setMakePublic: (on: boolean) => void;
     /** The setup a bundle carried, when the zip was one. */
-    bundleSetup?: SettingsFile;
+    bundleSetup?: ProjectFile;
     /** Add the demo, then reopen the wizard pre-filled from the bundle's setup. */
     startFromBundle: () => void;
 }
@@ -151,7 +150,7 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
     const [zipConflict, setZipConflict] = useState<{ owner: string; repo: string } | undefined>(undefined);
     // Public by default (owner, 2026-09-14): a demo package is for sharing.
     const [makePublic, setMakePublic] = useState(true);
-    const [bundleSetup, setBundleSetup] = useState<SettingsFile | undefined>(undefined);
+    const [bundleSetup, setBundleSetup] = useState<ProjectFile | undefined>(undefined);
     // The repository the zip door created, so the card records that the
     // extension made it and Remove can offer to delete it. Nothing else sets it:
     // "Add it from that repository" proves no such thing.

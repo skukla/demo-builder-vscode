@@ -21,13 +21,16 @@ import {
     type RepoReadiness,
 } from './repoStorefrontReadiness';
 import { ZIP_COMMIT_MESSAGE } from './zipImportCommit';
-import { readSharedDemoDescription } from '@/core/state/projectFileReader';
+import { readProjectFile, readSharedDemoDescription } from '@/core/state/projectFileReader';
 import { normalizeRepositoryName } from '@/core/validation/normalizers';
 import { addedDemoId } from '@/features/components/services/storefrontResolver';
-import { parseSettingsFile } from '@/features/projects-dashboard/services/settingsSerializer';
 import type { Logger } from '@/types/logger';
-import { SHARED_DEMO_FILE_NAME, type AddedDemo, type RememberedDemo } from '@/types/projectFile';
-import type { SettingsFile } from '@/types/settingsFile';
+import {
+    SHARED_DEMO_FILE_NAME,
+    type AddedDemo,
+    type ProjectFile,
+    type RememberedDemo,
+} from '@/types/projectFile';
 
 /** Dropped whatever the zip's own ignore file says: never part of a storefront's code. */
 const ALWAYS_DROPPED = ['.git/', 'node_modules/', '.npm-cache/', '.DS_Store', '.env'];
@@ -40,7 +43,7 @@ export interface ZipStorefront {
     /** How many entries were dropped as ignored or never-committed. */
     dropped: number;
     /** A demo bundle's setup part, when the zip is one and the file is valid. */
-    setup?: SettingsFile;
+    setup?: ProjectFile;
     /** Why a setup file that was there could not be read. */
     setupError?: string;
 }
@@ -138,8 +141,8 @@ export function readStorefrontZip(zipPath: string): ZipStorefront {
 function setupOfBundle(files: Map<string, Buffer>): Pick<ZipStorefront, 'setup' | 'setupError'> {
     const bytes = files.get(BUNDLE_SETUP_FILE);
     if (!bytes) return {};
-    const parsed = parseSettingsFile(bytes.toString('utf-8'));
-    return parsed.success ? { setup: parsed.settings } : { setupError: parsed.error };
+    const read = readProjectFile(bytes.toString('utf-8'));
+    return read.ok ? { setup: read.file } : { setupError: read.error };
 }
 
 /**
@@ -292,10 +295,9 @@ export function cardFromZip(
 
 /**
  * A bundle's setup, made the colleague's own: the wizard starts on the card the
- * bundle's storefront became, and the sender's repository and site names are
- * dropped (the colleague names theirs in the wizard).
+ * bundle's storefront became. The sender's repository and site are provenance
+ * in the file, never a setting, so the colleague names theirs in the wizard.
  */
-export function setupForCard(setup: SettingsFile, card: AddedDemo): SettingsFile {
-    const { edsConfig: _sendersStorefront, ...rest } = setup;
-    return { ...rest, demo: card, selectedPackage: addedDemoId(card) };
+export function setupForCard(setup: ProjectFile, card: AddedDemo): ProjectFile {
+    return { ...setup, demo: card, selectedPackage: addedDemoId(card) };
 }

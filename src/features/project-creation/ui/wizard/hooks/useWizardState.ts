@@ -122,56 +122,9 @@ function buildEditModeEdsConfig(
     };
 }
 
-/**
- * Build EDS config for import mode from imported project settings.
- * Auth tokens are assumed valid since importing from existing project.
- */
-function buildImportModeEdsConfig(
-    edsConfig: NonNullable<ImportedSettings['edsConfig']>,
-): WizardState['edsConfig'] {
-    const owner = edsConfig.githubOwner || '';
-    const repo = edsConfig.repoName || '';
-    const site = edsConfig.daLiveSite || '';
-    const hasGithub = Boolean(owner && repo);
-    const hasDaLive = Boolean(edsConfig.daLiveOrg);
-
-    return {
-        accsHost: '',
-        storeViewCode: '',
-        customerGroup: '',
-        repoName: repo,
-        daLiveOrg: edsConfig.daLiveOrg || '',
-        daLiveSite: site,
-        githubAuth: hasGithub
-            ? {
-                  isAuthenticated: true,
-                  // Seed with the login only; the auth check fills the rest.
-                  user: { login: owner, email: null, name: null, avatarUrl: null },
-              }
-            : undefined,
-        daLiveAuth: hasDaLive
-            ? {
-                  isAuthenticated: true,
-                  org: edsConfig.daLiveOrg,
-              }
-            : undefined,
-        repoUrl: edsConfig.repoUrl,
-        repoMode: hasGithub ? 'existing' : undefined,
-        selectedRepo: hasGithub
-            ? {
-                  id: `${owner}/${repo}`,
-                  name: repo,
-                  fullName: `${owner}/${repo}`,
-                  htmlUrl: `https://github.com/${owner}/${repo}`,
-              }
-            : undefined,
-        selectedSite: site
-            ? {
-                  id: site,
-                  name: site,
-              }
-            : undefined,
-    };
+/** A datapack creation can record: it records a name AND a version, so a file naming no version seeds none. */
+function recordableDatapack(datapack: ImportedSettings['datapack']): WizardState['datapack'] {
+    return datapack?.version ? { name: datapack.name, version: datapack.version } : undefined;
 }
 
 /** Build Adobe context objects from edit settings */
@@ -283,6 +236,12 @@ function computeInitialState(
     const adobeContext = initializeAdobeContextFromImport(importedSettings);
     const initialProjectName = initializeProjectName(importedSettings, existingProjectNames);
     const wizardMode = importedSettings ? 'import' : 'create';
+    // The title only when the slug is the source's own: "Bodea Demo" over a folder
+    // named bodea-demo-copy would show two projects under one name.
+    const projectTitle =
+        initialProjectName && initialProjectName === importedSettings?.source?.project
+            ? importedSettings.title
+            : undefined;
 
     if (importedSettings) {
         log.info(`Initializing wizard in ${wizardMode} mode`, {
@@ -298,6 +257,7 @@ function computeInitialState(
     return {
         currentStep: firstStep,
         projectName: initialProjectName,
+        projectTitle,
         wizardMode,
         componentConfigs: importedSettings?.configs || {},
         adobeAuth: { isAuthenticated: false, isChecking: false },
@@ -314,9 +274,13 @@ function computeInitialState(
         // The same seeding edit mode runs (PL-56d): an import used to open with
         // no integrations and no mesh whatever the file said.
         ...(importedSettings ? integrationStateFromSettings(importedSettings) : {}),
-        edsConfig: importedSettings?.edsConfig
-            ? buildImportModeEdsConfig(importedSettings.edsConfig)
-            : undefined,
+        datapack: recordableDatapack(importedSettings?.datapack),
+        storeDiscoveryData: importedSettings?.commerceStoreStructure,
+        // No storefront and no sign-in state: the receiver creates their own
+        // repository and site, and GitHub and DA.live are asked exactly as for a
+        // new project. A file's repository is the sender's (provenance only), and
+        // an import used to mark both sign-ins as proven without checking (PL-56d).
+        edsConfig: undefined,
     };
 }
 

@@ -9,19 +9,17 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import {
-    parseSettingsFile,
-    isNewerVersion,
     extractSettingsFromProject,
     createExportSettings,
     getSuggestedFilename,
 } from './settingsSerializer';
+import { readProjectFile } from '@/core/state/projectFileReader';
 import { showWebviewQuickPick } from '@/core/utils/quickPickUtils';
 import { writeFileAtomic } from '@/core/utils/writeFileAtomic';
 import { assertPathInsideSync } from '@/core/validation/PathSafetyValidator';
 import { getProjectDescription } from '@/features/projects-dashboard/utils/componentSummaryUtils';
 import type { Project } from '@/types/base';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
-import { SETTINGS_FILE_VERSION } from '@/types/settingsFile';
 
 /**
  * Import settings from a JSON file
@@ -70,24 +68,23 @@ export async function importSettingsFromUri(context: HandlerContext, fileUri: vs
         const fileContent = await vscode.workspace.fs.readFile(fileUri);
         const jsonString = Buffer.from(fileContent).toString('utf8');
 
-        // Parse and validate using settings serializer
-        const parseResult = parseSettingsFile(jsonString);
-        if (!parseResult.success) {
+        // The one reader: a version-2 file passes through, a version-1 file
+        // migrates, credentials are stripped whatever the file claims.
+        const read = readProjectFile(jsonString);
+        if (!read.ok) {
             return {
                 success: true,
                 data: {
                     success: false,
-                    error: parseResult.error,
+                    error: read.error,
                 },
             };
         }
 
-        const settings = parseResult.settings;
-
-        // Version check (allow older versions, just log warning)
-        if (isNewerVersion(settings)) {
+        const settings = read.file;
+        if (read.newerThanSupported) {
             context.logger.warn(
-                `Settings file version ${settings.version} is newer than supported version ${SETTINGS_FILE_VERSION}`,
+                `Project file version ${settings.version} is newer than this build; what it understands was used`,
             );
         }
 

@@ -17,7 +17,7 @@ import { getEndpoint as getEndpointHelper } from '@/features/mesh/services/meshE
 import { CreateProjectWebviewCommand } from '@/features/project-creation/commands/createProject';
 import { formatGroupName } from '@/features/project-creation/helpers/formatters';
 import type { Logger } from '@/types/logger';
-import type { SettingsFile } from '@/types/settingsFile';
+import { projectFileV2 } from '../../../helpers/projectFileFixtures';
 import type { EditProjectConfig } from '@/types/wizard';
 import { internals } from '../../../helpers/commandInternals';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
@@ -136,7 +136,7 @@ describe('execute stores the mode it was opened in', () => {
 
     it('keeps the imported settings for the webview to seed from', async () => {
         const command = buildOpenable();
-        const imported = { selections: { frontend: 'eds-storefront' } } as SettingsFile;
+        const imported = projectFileV2({ selections: { frontend: 'eds-storefront' } });
 
         await command.execute({ importedSettings: imported, sourceDescription: 'a file' });
 

@@ -16,11 +16,12 @@ import type { AdobeProject, Workspace } from '@/types/webview';
 export type IntegrationKind = 'mesh' | 'catalog' | 'blank' | 'custom';
 
 /**
- * Reserved `selectedConsoleApis` key carrying a project's pre-existing
- * `additionalConsoleApis` in edit mode. Serialization-only: it joins the
+ * Reserved `selectedConsoleApis` key carrying API picks whose integration is
+ * unknown (a project's or a version-1 file's flat list, folded there on read:
+ * `UNATTRIBUTED_PICKS_KEY`, same value). Serialization-only: it joins the
  * subscription union, is never surfaced as a row, and blocks instance ids
- * (buildReservedIds). The ONE definition — edit-mode seeding (useWizardState),
- * the row resolver, and the instance-id collision domain all import it.
+ * (buildReservedIds). The row resolver and the instance-id collision domain
+ * both import it.
  */
 export const RESERVED_EXISTING_KEY = '__existing__';
 

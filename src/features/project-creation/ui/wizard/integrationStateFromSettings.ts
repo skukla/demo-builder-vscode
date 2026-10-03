@@ -10,14 +10,13 @@
  */
 
 import { isMeshComponentId } from '@/core/constants';
-import { RESERVED_EXISTING_KEY } from '@/features/project-creation/ui/components/integration-flow/flowStages';
 import type { WizardState } from '@/types/webview';
 import type { ImportedSettings } from '@/types/wizard';
 
-/** The settings fields this reads. An exported project file has the same four. */
+/** The settings fields this reads. An exported project file has the same three. */
 type IntegrationSettings = Pick<
     ImportedSettings,
-    'selections' | 'appBuilderComponentSources' | 'componentApiPicks' | 'additionalConsoleApis'
+    'selections' | 'appBuilderComponentSources' | 'componentApiPicks'
 >;
 
 /** The creation inputs those fields become. */
@@ -39,21 +38,16 @@ type IntegrationState = Pick<
  *   drops the mesh. Non-mesh base deps are filtered — seeding them would
  *   falsely trip anyDeployableSelected and force the destination gate.
  * - `appBuilderComponentSources` → custom-URL sources (else custom rows vanish)
- * - `componentApiPicks` → `selectedConsoleApis` per integration, PREFERRED: it is
- *   the attributed form, and the only one that survives step 07. Seeding from the
- *   flat field instead collapsed every pick into one anonymous bucket, so reopening
- *   a project forgot which integration wanted what.
- * - flat `additionalConsoleApis` → `selectedConsoleApis['__existing__']`, the
- *   fallback for a settings file written before the keyed form existed
- *   (reserved key: joins the serialization union, never shown per-row)
+ * - `componentApiPicks` → `selectedConsoleApis` per integration: the attributed
+ *   form. A version-1 file's flat list arrives already folded under the
+ *   unattributed key (`readProjectFile`), which joins the serialization union
+ *   and is never shown per-row.
  *
  * @param settings - the saved settings, or an exported project file
  * @returns the three creation inputs; each is undefined when the settings name none
  */
 export function integrationStateFromSettings(settings: IntegrationSettings): IntegrationState {
-    const keyedPicks = settings.componentApiPicks;
-    const hasKeyedPicks = keyedPicks && Object.keys(keyedPicks).length > 0;
-    const existingApis = settings.additionalConsoleApis;
+    const picks = settings.componentApiPicks;
     const meshDeps = settings.selections?.dependencies?.filter(isMeshComponentId);
     const appBuilderWithMesh = [
         ...new Set([...(settings.selections?.appBuilder ?? []), ...(meshDeps ?? [])]),
@@ -61,10 +55,6 @@ export function integrationStateFromSettings(settings: IntegrationSettings): Int
     return {
         selectedAppBuilderComponents: appBuilderWithMesh.length ? appBuilderWithMesh : undefined,
         appBuilderComponentSources: settings.appBuilderComponentSources,
-        selectedConsoleApis: hasKeyedPicks
-            ? keyedPicks
-            : existingApis?.length
-              ? { [RESERVED_EXISTING_KEY]: existingApis }
-              : undefined,
+        selectedConsoleApis: picks && Object.keys(picks).length > 0 ? picks : undefined,
     };
 }

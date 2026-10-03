@@ -67,3 +67,4 @@ continues, and tell the SC what was applied and what was not.
 
 - 2026-09-13  feat(eds): a demo bundle's setup opens the wizard pre-filled, on the card its storefront became (`abba851b5`)
 - 2026-10-03  feat(ai): an agent can reset a headless project and start a project from an exported file (`59a915952`)
+- 2026-10-03  Import half done 2026-10-03, uncommitted on loop/2026-10-03-night2-a: every import door reads through readProjectFile (the second parser parseSettingsFile is deleted); the wizard's import seeds datapack, store structure and title; buildImportModeEdsConfig deleted, so Import and Copy seed no storefront and no sign-in state and GitHub/DA.live are asked as for a new project. v1 files import through the reader's migration. NOT done: the 'Brought in N settings from <file>; N need your input' banner (needs a counting rule and new wizard plumbing), the credentials-needed list in the wizard, the datapack banner (D31).

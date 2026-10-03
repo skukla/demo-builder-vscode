@@ -2349,7 +2349,7 @@
             "anchors": [
                 "hasSelections: !!editSettings.selections,"
             ],
-            "line": 215,
+            "line": 168,
             "mutants": 2,
             "category": "branch",
             "reason": "This is a field of the object literal handed to log.info as its second argument, and nothing else reads it. Dropping or adding the negation changes one boolean inside a development-only log line \u2014 the wizard state returned from buildEditModeState is built further down from editSettings.selections itself, never from this flag. Telling the two apart would mean asserting the logger's payload, which pins wording rather than behaviour.",
@@ -2362,7 +2362,7 @@
             "anchors": [
                 "hasAdobe: !!editSettings.adobe,"
             ],
-            "line": 216,
+            "line": 169,
             "mutants": 2,
             "category": "branch",
             "reason": "This is a field of the object literal handed to log.info as its second argument, and nothing else reads it. Dropping or adding the negation changes one boolean inside a development-only log line \u2014 the wizard state returned from buildEditModeState is built further down from editSettings.adobe itself, never from this flag. Telling the two apart would mean asserting the logger's payload, which pins wording rather than behaviour.",
@@ -2375,7 +2375,7 @@
             "anchors": [
                 "hasConfigs: !!editSettings.configs,"
             ],
-            "line": 217,
+            "line": 170,
             "mutants": 2,
             "category": "branch",
             "reason": "This is a field of the object literal handed to log.info as its second argument, and nothing else reads it. Dropping or adding the negation changes one boolean inside a development-only log line \u2014 the wizard state returned from buildEditModeState is built further down from editSettings.configs itself, never from this flag. Telling the two apart would mean asserting the logger's payload, which pins wording rather than behaviour.",
@@ -2388,7 +2388,7 @@
             "anchors": [
                 "hasEdsConfig: !!editSettings.edsConfig,"
             ],
-            "line": 218,
+            "line": 171,
             "mutants": 2,
             "category": "branch",
             "reason": "This is a field of the object literal handed to log.info as its second argument, and nothing else reads it. Dropping or adding the negation changes one boolean inside a development-only log line \u2014 the wizard state returned from buildEditModeState is built further down from editSettings.edsConfig itself, never from this flag. Telling the two apart would mean asserting the logger's payload, which pins wording rather than behaviour.",
@@ -2401,7 +2401,7 @@
             "anchors": [
                 "if (editSettings.edsConfig) {"
             ],
-            "line": 221,
+            "line": 174,
             "mutants": 2,
             "category": "branch",
             "reason": "Both arms of this if are a single log call \u2014 an info listing the stored EDS fields, or a warn that none were found. The state actually built from editSettings.edsConfig is decided much further down, on its own separate check at the end of buildEditModeState, so forcing this condition false or emptying its block moves only what is printed in development.",
@@ -2414,7 +2414,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 228,
+            "line": 181,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this else-block removes the warn that fires when a project stored no EDS config. Execution continues to the adobeContext build on the next line either way, and the returned state's edsConfig is computed from its own check lower down. No returned field, no collaborator call and no render differs.",
@@ -2427,7 +2427,7 @@
             "anchors": [
                 "if (importedSettings) {"
             ],
-            "line": 287,
+            "line": 246,
             "mutants": 2,
             "category": "branch",
             "reason": "The body of this if is one log.info and nothing more. Every value it reports \u2014 the selections, the Adobe block, the configs, the generated name \u2014 was computed on the four lines above it and is returned from computeInitialState regardless of whether this branch runs. Forcing it false or emptying it changes only development output.",
@@ -2440,7 +2440,7 @@
             "anchors": [
                 "hasSelections: !!importedSettings.selections,"
             ],
-            "line": 289,
+            "line": 248,
             "mutants": 2,
             "category": "branch",
             "reason": "A field of the object literal passed to log.info, read by nothing else. The initial state returned below takes importedSettings.selections directly, not this boolean, so dropping or adding the negation moves one value inside a development-only log line and nothing in the wizard. Separating the two would require asserting the log payload.",
@@ -2453,7 +2453,7 @@
             "anchors": [
                 "hasAdobe: !!importedSettings.adobe,"
             ],
-            "line": 290,
+            "line": 249,
             "mutants": 2,
             "category": "branch",
             "reason": "A field of the object literal passed to log.info, read by nothing else. The initial state returned below takes importedSettings.adobe directly, not this boolean, so dropping or adding the negation moves one value inside a development-only log line and nothing in the wizard. Separating the two would require asserting the log payload.",
@@ -2466,7 +2466,7 @@
             "anchors": [
                 "hasConfigs: !!importedSettings.configs,"
             ],
-            "line": 291,
+            "line": 250,
             "mutants": 2,
             "category": "branch",
             "reason": "A field of the object literal passed to log.info, read by nothing else. The initial state returned below takes importedSettings.configs directly, not this boolean, so dropping or adding the negation moves one value inside a development-only log line and nothing in the wizard. Separating the two would require asserting the log payload.",
@@ -2479,7 +2479,7 @@
             "anchors": [
                 "configKeys: importedSettings.configs ? Object.keys(importedSettings.configs) : [],"
             ],
-            "line": 292,
+            "line": 251,
             "mutants": 1,
             "category": "other",
             "reason": "The empty fallback here is the else arm of a field inside the log.info payload; it is reached only when the import carried no configs, and it is printed rather than used. componentConfigs on the returned state comes from importedSettings?.configs || {} further down, which this expression cannot reach. Any test able to see the difference would be asserting log content.",
@@ -2492,7 +2492,7 @@
             "anchors": [
                 "existingProjectNames || [],"
             ],
-            "line": 347,
+            "line": 311,
             "mutants": 1,
             "category": "other",
             "reason": "This fallback fires only when the caller passes no existing-names list, and the array goes straight to initializeProjectName, which uses it for one thing: existingNames.includes(baseName) inside generateUniqueProjectName. A list holding Stryker's placeholder string answers that check identically to an empty list for every project name a wizard can be opened with.",
@@ -2505,7 +2505,7 @@
             "anchors": [
                 "const originalStep = wizardSteps?.find((ws) => ws.id === step.id);"
             ],
-            "line": 366,
+            "line": 330,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Removing the optional call would throw only if this map body ran with wizardSteps undefined, and it cannot: enabledSteps is getEnabledWizardSteps(wizardSteps), which returns an empty array for a missing or empty configuration, so the map never executes a single iteration. There is no input that reaches this line with wizardSteps absent.",
@@ -2518,7 +2518,7 @@
             "anchors": [
                 "condition: originalStep?.condition,"
             ],
-            "line": 371,
+            "line": 335,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "originalStep is the result of finding step.id in wizardSteps, and step came from getEnabledWizardSteps(wizardSteps) \u2014 every id being searched for was taken from that same array, so the find always hits. Removing the optional read can never dereference undefined, whatever step configuration is handed in.",
@@ -2531,7 +2531,7 @@
             "anchors": [
                 "if (currentOrgId) {"
             ],
-            "line": 442,
+            "line": 406,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true sets hasSeenOrgRef when the org is absent, but the flag can only change an outcome once orgActuallyChanged is evaluated with prevOrgId defined \u2014 and prevOrgId is assigned currentOrgId at the end of a previous run, so a defined prevOrgId means that run had a defined currentOrgId and already set the flag unmutated. The two therefore agree on every sequence of org values.",
@@ -2544,7 +2544,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 471,
+            "line": 435,
             "mutants": 1,
             "category": "other",
             "reason": "This is the useCallback dependency list for updateState. Replacing the empty array with one holding a constant string leaves the memo equally stable \u2014 the value never changes between renders, so the callback identity never invalidates either way, and the test asserting updateState keeps the same reference across a state change passes under both.",
@@ -2648,7 +2648,7 @@
             "anchors": [
                 "if (typeof value !== 'object' || value === null) return false;"
             ],
-            "line": 39,
+            "line": 38,
             "mutants": 4,
             "category": "branch",
             "reason": "Relaxing this first guard does not let a bad step through \u2014 it makes the next line run 'id' in value against a string, a number or null, which throws a TypeError. readWizardStepsFile catches that and returns 'unreadable', and getInitialData answers 'unreadable' with the same null wizardSteps it answers 'invalid-shape' with. Every mutant here therefore lands on the identical response; only which error line is logged differs.",
@@ -2661,7 +2661,7 @@
             "anchors": [
                 "function formatComponentDefaults(defaults: ComponentSelection | null): string {"
             ],
-            "line": 51,
+            "line": 50,
             "mutants": 1,
             "category": "block",
             "reason": "This whole function exists to build one string, and it has exactly one call site: a template literal inside this.logger.debug in getInitialData. Emptying its body changes what that debug line prints and nothing else \u2014 componentDefaults reaches the webview from the parsed file, never from this formatter. Killing it would mean asserting a log string.",
@@ -2674,7 +2674,7 @@
             "anchors": [
                 "if (!defaults) return 'no defaults loaded';"
             ],
-            "line": 52,
+            "line": 51,
             "mutants": 3,
             "category": "branch",
             "reason": "Part of formatComponentDefaults, whose only consumer is a template literal inside this.logger.debug. Every mutant on the not-loaded case changes a substring of that one debug line; the componentDefaults value the webview actually receives is read from defaults.json and passed through untouched, so no returned field, message payload or collaborator call differs.",
@@ -2687,7 +2687,7 @@
             "anchors": [
                 "const frontend = defaults.frontend || 'none';"
             ],
-            "line": 53,
+            "line": 52,
             "mutants": 3,
             "category": "branch",
             "reason": "Part of formatComponentDefaults, whose only consumer is a template literal inside this.logger.debug. Every mutant on the frontend fallback changes a substring of that one debug line; the componentDefaults value the webview actually receives is read from defaults.json and passed through untouched, so no returned field, message payload or collaborator call differs.",
@@ -2700,7 +2700,7 @@
             "anchors": [
                 "const backend = defaults.backend || 'none';"
             ],
-            "line": 54,
+            "line": 53,
             "mutants": 3,
             "category": "branch",
             "reason": "Part of formatComponentDefaults, whose only consumer is a template literal inside this.logger.debug. Every mutant on the backend fallback changes a substring of that one debug line; the componentDefaults value the webview actually receives is read from defaults.json and passed through untouched, so no returned field, message payload or collaborator call differs.",
@@ -2713,7 +2713,7 @@
             "anchors": [
                 "const depCount = defaults.dependencies?.length || 0;"
             ],
-            "line": 55,
+            "line": 54,
             "mutants": 4,
             "category": "branch",
             "reason": "Part of formatComponentDefaults, whose only consumer is a template literal inside this.logger.debug. Every mutant on the dependency count changes a substring of that one debug line; the componentDefaults value the webview actually receives is read from defaults.json and passed through untouched, so no returned field, message payload or collaborator call differs.",
@@ -2726,7 +2726,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 128,
+            "line": 127,
             "mutants": 1,
             "category": "block",
             "reason": "The constructor's api-services catch body is a single this.logger.debug. Emptying it still swallows the failure, still leaves sharedState.apiServicesConfig undefined, and still lets the wizard open \u2014 a test asserting exactly that already passes with and without the log. The only difference is whether the reason appears in the debug channel.",
@@ -2739,7 +2739,7 @@
             "anchors": [
                 "return { outcome: 'absent' };"
             ],
-            "line": 157,
+            "line": 156,
             "mutants": 1,
             "category": "other",
             "reason": "Emptying this result object leaves outcome undefined. Both callers discriminate on it: getInitialData matches 'ok', 'invalid-shape' and 'unreadable', and ensureStepLogger matches 'ok' and 'unreadable'. An undefined outcome matches none of them, which is exactly what 'absent' already does \u2014 no steps, no error logged. The two are indistinguishable from outside.",
@@ -2752,7 +2752,7 @@
             "anchors": [
                 "if (!stepsConfig || !Array.isArray(stepsConfig.steps)) {"
             ],
-            "line": 160,
+            "line": 159,
             "mutants": 3,
             "category": "branch",
             "reason": "Relaxing this guard does not admit a malformed file \u2014 it makes the next line call .every on null or on a string, which throws, so the read returns 'unreadable' instead of 'unparseable'. getInitialData answers both with wizardSteps null, and ensureStepLogger passes undefined steps for both. Only the logged wording separates them.",
@@ -2765,7 +2765,7 @@
             "anchors": [
                 "return { outcome: 'unparseable' };"
             ],
-            "line": 161,
+            "line": 160,
             "mutants": 1,
             "category": "other",
             "reason": "Same as the absent result above: an empty object leaves outcome undefined, which matches none of the branches either caller tests, producing the identical no-steps-and-no-error response that 'unparseable' already produces.",
@@ -2778,7 +2778,7 @@
             "anchors": [
                 "return { outcome: 'unreadable', error: error as Error };"
             ],
-            "line": 168,
+            "line": 167,
             "mutants": 1,
             "category": "other",
             "reason": "Emptying this leaves outcome undefined, so getInitialData skips its error log and ensureStepLogger skips its debug \u2014 but wizardSteps is null either way and StepLogger still gets undefined steps. The error field it drops is only ever passed to a logger call, so nothing observable moves.",
@@ -2791,7 +2791,7 @@
             "anchors": [
                 "if (read.outcome === 'ok') {"
             ],
-            "line": 192,
+            "line": 191,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true assigns read.steps unconditionally \u2014 and on every non-ok outcome that property does not exist, so wizardSteps becomes undefined, which is precisely the value the untaken branch leaves it at. StepLogger.create therefore receives undefined for a failed read either way, which the suite already asserts.",
@@ -2804,7 +2804,7 @@
             "anchors": [
                 "} else if (read.outcome === 'unreadable') {"
             ],
-            "line": 194,
+            "line": 193,
             "mutants": 4,
             "category": "branch",
             "reason": "The body of this branch is one this.logger.debug and nothing else; the step logger is built below it with whatever wizardSteps holds, which this branch never assigns. Forcing the condition either way, inverting the equality or emptying the block all change only whether a line prints.",
@@ -2817,7 +2817,7 @@
             "anchors": [
                 "if (defaults) {"
             ],
-            "line": 267,
+            "line": 266,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true reads .componentSelection off the null that parseJSON returns for an unreadable file, which throws inside the surrounding try and lands in the catch \u2014 leaving componentDefaults at its initial null, which is exactly what the untaken branch leaves it at. The suite's malformed-defaults test passes under both.",
@@ -2830,7 +2830,7 @@
             "anchors": [
                 "const stepPreview = wizardSteps"
             ],
-            "line": 288,
+            "line": 287,
             "mutants": 1,
             "category": "other",
             "reason": "stepPreview is built solely to be interpolated into the this.logger.debug two lines below; wizardSteps itself is already assigned and is what reaches the webview. Dropping the slice changes how many ids appear in that one log line and nothing a caller can observe.",
@@ -2843,7 +2843,7 @@
             "anchors": [
                 ".map((s) => s.id)"
             ],
-            "line": 290,
+            "line": 289,
             "mutants": 1,
             "category": "other",
             "reason": "Part of the same preview string: the mapped ids are joined and interpolated into one this.logger.debug call. Replacing the mapper changes the text of that line, while the steps sent to the webview come from the parsed file above, untouched by this expression.",
@@ -2856,7 +2856,7 @@
             "anchors": [
                 "const remainingCount = stepCount > 3 ? ` ... (and ${stepCount - 3} more)` : '';"
             ],
-            "line": 292,
+            "line": 291,
             "mutants": 5,
             "category": "branch",
             "reason": "remainingCount is appended to the preview inside the same this.logger.debug. Forcing the comparison either way, widening it, or flipping the subtraction changes only the suffix of that debug line \u2014 the wizardSteps array the webview receives was assigned before this expression and is not derived from it.",
@@ -2869,7 +2869,7 @@
             "anchors": [
                 "} else if (stepsRead.outcome === 'invalid-shape') {"
             ],
-            "line": 294,
+            "line": 293,
             "mutants": 1,
             "category": "branch",
             "reason": "The body is a single this.logger.error. wizardSteps was left null by the branch above and stays null whichever way this condition goes, so the response the webview receives is identical; only whether the validation message is logged changes.",
@@ -2882,7 +2882,7 @@
             "anchors": [
                 "} else if (stepsRead.outcome === 'unreadable') {"
             ],
-            "line": 300,
+            "line": 299,
             "mutants": 4,
             "category": "branch",
             "reason": "Same shape as the invalid-shape branch above: the body is one this.logger.error, and wizardSteps is null on entry and on exit regardless. Forcing the condition either way, inverting the equality or emptying the block moves only a log line.",
@@ -2895,7 +2895,7 @@
             "anchors": [
                 "const customBlockLibraryDefaults = parseCustomBlockLibrarySettings("
             ],
-            "line": 315,
+            "line": 314,
             "mutants": 1,
             "category": "other",
             "reason": "The empty default on the setting read below is only used when the setting has never been set, and whatever it yields goes straight into parseCustomBlockLibrarySettings, which keeps an entry only when parseCustomBlockLibraryUrl resolves it to an owner and repo. Stryker's placeholder string is not a repository URL, so it is dropped and the result is the same empty array.",
@@ -2908,7 +2908,7 @@
             "anchors": [
                 "const updated = parseCustomBlockLibrarySettings("
             ],
-            "line": 460,
+            "line": 459,
             "mutants": 1,
             "category": "other",
             "reason": "Same as the getInitialData read: the fallback fires only for an unset setting, and the value is parsed by parseCustomBlockLibrarySettings before it is pushed to the webview. A placeholder string resolves to no owner and repo, so it is filtered out and the pushed payload holds the same empty array \u2014 which the settings-listener suite asserts directly.",
@@ -2921,7 +2921,7 @@
             "anchors": [
                 "if (this.editProject?.settings?.edsConfig) {"
             ],
-            "line": 323,
+            "line": 322,
             "mutants": 3,
             "category": "branch",
             "reason": "Both arms of this if are a this.logger.debug, and the editProject sent to the webview is the field itself, assigned in execute and returned untouched below. Forcing the condition false or emptying the block changes only which debug line prints. The optional read on settings is defensive against a value the EditProjectConfig type forbids \u2014 settings is required there, so no caller can produce the shape that would make removing it throw.",
@@ -2934,7 +2934,7 @@
             "anchors": [
                 "} else if (this.editProject) {"
             ],
-            "line": 332,
+            "line": 331,
             "mutants": 3,
             "category": "branch",
             "reason": "The body is one this.logger.debug noting that an edit carried no EDS config. Nothing in the returned initial data is computed here \u2014 editProject is passed through as the field execute assigned \u2014 so forcing the condition either way or emptying the block moves only the debug channel.",
@@ -2947,7 +2947,7 @@
             "anchors": [
                 "if (panel) {"
             ],
-            "line": 487,
+            "line": 486,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true calls dispose on undefined when no wizard panel is open \u2014 and that call sits inside the try whose catch is deliberately empty, so the TypeError is swallowed and disposeActivePanel still returns having done nothing. The no-panel test passes under both, because the guard and the catch cover the same case.",
@@ -2960,7 +2960,7 @@
             "anchors": [
                 "if (this.importedSettings) {"
             ],
-            "line": 504,
+            "line": 503,
             "mutants": 3,
             "category": "branch",
             "reason": "The body is a single this.logger.debug naming the import source. importedSettings is assigned on the line above and read by getInitialData from the field, never from this branch, so forcing the condition either way or emptying the block leaves the wizard's initial data identical.",
@@ -2973,7 +2973,7 @@
             "anchors": [
                 "if (this.editProject.settings?.selections) {"
             ],
-            "line": 519,
+            "line": 518,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Removing this optional read would throw only for an edit project whose settings is undefined, and EditProjectConfig declares settings as required \u2014 no caller can construct that value without deliberately defeating the type. The guard is defensive against a shape the compiler already refuses.",
@@ -2986,7 +2986,7 @@
             "anchors": [
                 "let componentDefaults: ComponentSelection | null = null;"
             ],
-            "line": 252,
+            "line": 251,
             "mutants": 1,
             "category": "block",
             "reason": "The catch that closes this try block holds one this.logger.debug. Emptying it still swallows the failure and still leaves componentDefaults at the null declared here, which is what the webview receives \u2014 the suite asserts exactly that for both a malformed defaults.json and a throwing read. Only the debug channel differs.",
@@ -5017,7 +5017,7 @@
             "anchors": [
                 "if (index >= 0) {"
             ],
-            "line": 200,
+            "line": 201,
             "mutants": 3,
             "category": "block",
             "reason": "Three mutants sit on prevStage's in-order fast path \u2014 tighten the guard to index > 0, force it false, or empty its block \u2014 and none of them is observable, because the fast path is an O(1) restatement of the fallback below it. Falling through runs survivingPredecessor(current, order), which for a current at index k > 0 returns the nearest canonical stage present in order; that IS order[k-1], because a derived order is always a subsequence of the canonical order and never a reshuffle of it. For k === 0 it finds nothing canonically earlier and returns null, which is what the ternary returns too. Enumerated all 3840 reachable (current, kind, changingDestination, isSignedIn, destinationCommitted, meshSelected, selectedIds, mode) combinations against copies of prevStage carrying each mutation: zero disagreements. The subsequence property the argument rests on is pinned by 'derived orders never leave canonical sequence' in flowStages.test.ts, so if a future deriver breaks it this row stops being true and that test says so.",

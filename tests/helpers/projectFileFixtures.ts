@@ -16,6 +16,7 @@
  */
 
 import { CATALOG_API_KEY, PAAS_ADMIN_PASSWORD } from '@/core/config/envVarKeys';
+import type { ProjectFile } from '@/types/projectFile';
 import type { SettingsFile } from '@/types/settingsFile';
 
 /**
@@ -81,5 +82,27 @@ export function settingsFileV1WithSecrets(): SettingsFileV1OnDisk {
         },
         additionalConsoleApis: ['CommerceCloudService'],
         componentApiPicks: { 'someone-pricing-app': ['CommerceCloudService'] },
+    };
+}
+
+/**
+ * A minimal version-2 project file as the writer emits it (`createExportSettings`),
+ * with the sender's storefront as provenance. Extend it with a spread.
+ */
+export function projectFileV2(overrides: Partial<ProjectFile> = {}): ProjectFile {
+    return {
+        kind: 'project',
+        version: 2,
+        exportedAt: '2026-10-03T00:00:00.000Z',
+        source: {
+            project: 'bodea',
+            extension: '1.0.0-test',
+            storefront: { githubRepo: 'sender/kukla-bodea', daLiveOrg: 'sender' },
+        },
+        selections: {},
+        configs: {},
+        selectedPackage: 'bodea',
+        selectedStack: 'eds-accs',
+        ...overrides,
     };
 }

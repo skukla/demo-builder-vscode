@@ -96,7 +96,8 @@ function selectedAppBuilderIds(typedConfig: ProjectCreationConfig): string[] {
  * Project — notably `additionalConsoleApis` for the subscribe union — must be
  * written here. `componentSelections.appBuilder` persists the selected ids;
  * custom/instance SOURCES are NOT persisted (§E) — edit mode derives them from
- * the keyed `appBuilderComponents` map via `extractSettingsFromProject`.
+ * the keyed `appBuilderComponents` map via `extractSettingsFromProject` (Edit
+ * and Copy) and `createExportSettings` (the exported project file).
  */
 export function buildInitialProject(
     typedConfig: ProjectCreationConfig,

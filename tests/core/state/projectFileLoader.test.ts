@@ -546,7 +546,7 @@ describe('§E edit-mode round-trip — keyed instances → manifest → edit set
                 name: 'Firefly Image Gen',
             },
         });
-        expect(settings.additionalConsoleApis).toBeUndefined();
+        expect(settings).not.toHaveProperty('additionalConsoleApis');
         expect(settings.componentApiPicks).toEqual({ __existing__: ['FireflySDK'] });
     });
 });

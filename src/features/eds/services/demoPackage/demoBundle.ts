@@ -17,15 +17,14 @@
  */
 
 import AdmZip from 'adm-zip';
-import { SHARED_DEMO_FILE_NAME, type SharedDemoDescription } from '@/types/projectFile';
-import type { SettingsFile } from '@/types/settingsFile';
+import { SHARED_DEMO_FILE_NAME, type ProjectFile, type SharedDemoDescription } from '@/types/projectFile';
 
 export const BUNDLE_SETUP_FILE = 'setup.demo-builder.json';
 export const BUNDLE_STOREFRONT_DIR = 'storefront/';
 
 export interface DemoBundleParts {
     /** The setup part, credentials already stripped. */
-    settings?: SettingsFile;
+    settings?: ProjectFile;
     /** The storefront part: the repository archive GitHub served, and its description. */
     storefront?: { archive: Buffer; description: SharedDemoDescription };
 }

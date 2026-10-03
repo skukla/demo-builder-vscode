@@ -7,10 +7,10 @@
 import AdmZip from 'adm-zip';
 import { buildDemoBundle, defaultBundleName } from '@/features/eds/services/demoPackage/demoBundle';
 import type { SharedDemoDescription } from '@/types/projectFile';
-import type { SettingsFile } from '@/types/settingsFile';
+import { projectFileV2 } from '../../../../helpers/projectFileFixtures';
 
 const DESCRIPTION: SharedDemoDescription = { kind: 'demo', version: 1, name: 'Bodea' };
-const SETTINGS = { version: 1, exportedAt: 'x', source: { project: 'bodea' }, selections: {}, configs: {} } as unknown as SettingsFile;
+const SETTINGS = projectFileV2();
 
 function archive(entries: Record<string, string>, root = 'skukla-kukla-bodea-abc1234/'): Buffer {
     const zip = new AdmZip();

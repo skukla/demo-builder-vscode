@@ -1,8 +1,12 @@
 /**
- * Settings File Types
+ * Settings File Types: the version-1 project file, READ-ONLY.
  *
- * Defines the schema for exported/imported project settings files.
- * These files allow users to share and reuse configuration across projects.
+ * Nothing writes this shape any more: export writes the version-2 `ProjectFile`
+ * (`types/projectFile.ts`). It stays because version-1 files written before
+ * 2026-10 are still on disk, and `readProjectFile` migrates them; `SettingsFile`
+ * is the shape that migration reads. The pieces both versions share
+ * (selections, Adobe context, configs, the storefront fields Edit reopens) are
+ * declared here and reused by the version-2 types.
  */
 
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
@@ -73,7 +77,7 @@ export interface SettingsEdsConfig {
 }
 
 /**
- * Complete settings file structure
+ * The version-1 file as it sits on disk. Read by the migration, never written.
  */
 export interface SettingsFile {
     /** Schema version for future compatibility */
@@ -113,24 +117,12 @@ export interface SettingsFile {
         { owner: string; repo: string; branch?: string; name?: string }
     >;
     /**
-     * Adobe Console API sdk codes subscribed beyond catalog `requiredApis`
-     * (wizard free picks + runtime `add_console_apis` additions). Seeds the
-     * wizard's reserved `selectedConsoleApis['__existing__']` key in edit mode
-     * so existing picks survive a rebuild.
+     * Adobe Console API sdk codes subscribed beyond catalog `requiredApis`, with no
+     * record of which integration wanted each. Old files carry it; the migration
+     * folds it under the unattributed key of `componentApiPicks`.
      */
     additionalConsoleApis?: string[];
-    /**
-     * The ATTRIBUTED form of the same picks — which integration wanted each code.
-     *
-     * Carried alongside the flat field, not instead of it: a settings file written
-     * now must still import on a build that only knows the flat form. It is the form
-     * that survives step 07, which is why export cannot rely on the flat field alone.
-     *
-     * On import it seeds `selectedConsoleApis` per integration; the flat field is the
-     * fallback and lands everything under the unattributed key.
-     */
+    /** The ATTRIBUTED form of the same picks: which integration wanted each code. */
     componentApiPicks?: Record<string, string[]>;
 }
 
-/** Current schema version */
-export const SETTINGS_FILE_VERSION = 1;

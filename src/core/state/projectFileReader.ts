@@ -186,8 +186,11 @@ function migrateV1(v1: SettingsFile): ProjectFile {
     });
 }
 
-/** The source project's repo and site as provenance. A missing repo yields no entry. */
-function storefrontProvenance(
+/**
+ * The source project's repo and site as provenance. A missing repo yields no
+ * entry. Shared with the writer, so a v1 file and a v2 file say it the same way.
+ */
+export function storefrontProvenance(
     eds: NonNullable<SettingsFile['edsConfig']>,
 ): NonNullable<ProjectFileSource['storefront']> {
     const githubRepo =

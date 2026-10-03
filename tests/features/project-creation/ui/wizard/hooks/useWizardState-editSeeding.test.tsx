@@ -5,8 +5,8 @@
  * (`extractSettingsFromProject`) into initial wizard state:
  *   - `selections.appBuilder`            → `selectedAppBuilderComponents`
  *   - `appBuilderComponentSources`       → `appBuilderComponentSources`
- *   - `additionalConsoleApis`            → `selectedConsoleApis['__existing__']`
- *     (reserved key: joins the serialization union, never shown per-row)
+ *   - `componentApiPicks`                → `selectedConsoleApis` (the unattributed
+ *     `__existing__` key joins the serialization union, never shown per-row)
  *
  * Written BEFORE the seeding exists (strict RED).
  */
@@ -68,18 +68,6 @@ describe('useWizardState - edit-mode App Builder seeding', () => {
         expect(state.appBuilderComponentSources).toEqual(sources);
     });
 
-    it('seeds selectedConsoleApis.__existing__ from additionalConsoleApis', () => {
-        const state = renderWizardState(
-            makeEditProject({
-                additionalConsoleApis: ['AssetComputeSDK', 'CCAPI'],
-            })
-        );
-
-        expect(state.selectedConsoleApis).toEqual({
-            __existing__: ['AssetComputeSDK', 'CCAPI'],
-        });
-    });
-
     /**
      * Step 07 precondition, import side. The flat field lands everything under the
      * unattributed key, so an edit round-trip USED to destroy attribution even when
@@ -91,7 +79,6 @@ describe('useWizardState - edit-mode App Builder seeding', () => {
         const state = renderWizardState(
             makeEditProject({
                 componentApiPicks: { 'erp-sync': ['CCAPI'], 'firefly-app': ['AssetComputeSDK'] },
-                additionalConsoleApis: ['CCAPI', 'AssetComputeSDK'],
             })
         );
 
@@ -101,22 +88,21 @@ describe('useWizardState - edit-mode App Builder seeding', () => {
         });
     });
 
-    it('falls back to the flat field when a settings file predates the keyed form', () => {
-        // An older export has only the flat field; it must still seed something,
-        // under the unattributed key, rather than importing as no picks at all.
-        const state = renderWizardState(makeEditProject({ additionalConsoleApis: ['CCAPI'] }));
+    it('seeds the unattributed picks under their reserved key, never as a row', () => {
+        // A version-1 file's flat list arrives here already folded (readProjectFile).
+        const state = renderWizardState(makeEditProject({ componentApiPicks: { __existing__: ['CCAPI'] } }));
 
         expect(state.selectedConsoleApis).toEqual({ __existing__: ['CCAPI'] });
     });
 
-    it('does not set selectedConsoleApis when additionalConsoleApis is absent', () => {
+    it('does not set selectedConsoleApis when there are no picks', () => {
         const state = renderWizardState(makeEditProject({}));
 
         expect(state.selectedConsoleApis).toBeUndefined();
     });
 
-    it('does not set selectedConsoleApis when additionalConsoleApis is empty', () => {
-        const state = renderWizardState(makeEditProject({ additionalConsoleApis: [] }));
+    it('does not set selectedConsoleApis when the picks object is empty', () => {
+        const state = renderWizardState(makeEditProject({ componentApiPicks: {} }));
 
         expect(state.selectedConsoleApis).toBeUndefined();
     });
@@ -263,7 +249,7 @@ describe('useWizardState - import mode seeds the same App Builder state edit mod
     it('carries the integrations, the mesh, the custom sources and the API picks', () => {
         const sources = { 'owner-custom-app': { owner: 'owner', repo: 'custom-app' } };
         const state = renderImport({
-            source: { project: 'sent-demo' },
+            source: { project: 'sent-demo', extension: '1.0.0' },
             selections: {
                 dependencies: [COMPONENT_IDS.HEADLESS_COMMERCE_MESH, 'demo-inspector'],
                 appBuilder: ['erp-sync', 'owner-custom-app'],
@@ -283,7 +269,7 @@ describe('useWizardState - import mode seeds the same App Builder state edit mod
     });
 
     it('seeds nothing for an import that names no integrations', () => {
-        const state = renderImport({ source: { project: 'plain' }, selections: {} });
+        const state = renderImport({ source: { project: 'plain', extension: '1.0.0' }, selections: {} });
 
         expect(state.selectedAppBuilderComponents ?? []).toStrictEqual([]);
         expect(state.appBuilderComponentSources).toBeUndefined();

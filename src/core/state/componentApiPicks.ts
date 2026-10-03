@@ -46,8 +46,9 @@ function hasOwnWorkspace(project: ApiPickSource, owner: string): boolean {
 /**
  * Owner key for picks that predate attribution. Migrated projects' flat
  * `additionalConsoleApis` land here because their real owner is unrecoverable —
- * no owner is guessed. Mirrors the wizard's `RESERVED_EXISTING_KEY`, which
- * models the same "we already lost this once" case in edit-mode seeding.
+ * no owner is guessed. A version-1 project file's flat list folds here too
+ * (`readProjectFile`). Mirrors the wizard's `RESERVED_EXISTING_KEY`, which
+ * keeps the key out of the rows and the instance ids.
  */
 export const UNATTRIBUTED_PICKS_KEY = '__existing__';
 

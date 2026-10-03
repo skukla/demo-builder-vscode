@@ -24,10 +24,9 @@ import type { CustomBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import type { EnvVarDefinition, TransformedComponentDefinition } from './components';
 import type { AddedDemo } from './projectFile';
-import type { SettingsFile } from './settingsFile';
 import type { ViewMode } from './viewMode';
 import type { ComponentSelection, CreationProgress, ThemeMode, UnifiedProgress } from './webview';
-import type { EditProjectConfig, WizardStepDefinition } from './wizard';
+import type { EditProjectConfig, ProjectSeed, WizardStepDefinition } from './wizard';
 import type { ProjectDisplayName } from '@/core/utils/projectDisplayName';
 
 /**
@@ -111,8 +110,8 @@ export interface WizardInitialData {
     wizardSteps: WizardStepDefinition[] | null;
     /** All project names — duplicate-name validation. */
     existingProjectNames: string[];
-    /** Full settings file from import/copy — `null` in plain create mode. */
-    importedSettings: SettingsFile | null;
+    /** The project file from Import, or the seed Copy builds — `null` in plain create mode. */
+    importedSettings: ProjectSeed | null;
     /** Edit-mode configuration — `null` in create mode. */
     editProject: EditProjectConfig | null;
     /** Initial view mode for the template gallery (from settings). */

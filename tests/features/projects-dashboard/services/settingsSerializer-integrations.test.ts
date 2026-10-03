@@ -4,17 +4,17 @@
  * Split from settingsSerializer.test.ts to keep both files under the eslint
  * max-lines limit. Covers extractSettingsFromProject's derivation of
  * appBuilderComponentSources from the keyed `appBuilderComponents` map plus
- * additionalConsoleApis. All other serializer behavior lives in the sibling
+ * the API picks. All other serializer behavior lives in the sibling
  * settingsSerializer.test.ts.
  */
 
+import { readProjectFile } from '@/core/state/projectFileReader';
 import {
-    parseSettingsFile,
+    createExportSettings,
     extractSettingsFromProject,
 } from '@/features/projects-dashboard/services/settingsSerializer';
 import type { AppBuilderComponentState, Project } from '@/types/base';
-import { SETTINGS_FILE_VERSION } from '@/types/settingsFile';
-import { assertOk } from '../../../helpers/resultAssertions';
+import { PROJECT_FILE_VERSION } from '@/types/projectFile';
 
 describe('settingsSerializer', () => {
     describe('extractSettingsFromProject - App Builder integration round-trip', () => {
@@ -161,7 +161,7 @@ describe('settingsSerializer', () => {
 
             const result = extractSettingsFromProject(project);
 
-            expect(result.additionalConsoleApis).toBeUndefined();
+            expect(result).not.toHaveProperty('additionalConsoleApis');
             expect(result.componentApiPicks).toEqual({
                 __existing__: ['AssetComputeSDK', 'CCAPI'],
             });
@@ -172,7 +172,7 @@ describe('settingsSerializer', () => {
 
             const result = extractSettingsFromProject(project);
 
-            expect(result.additionalConsoleApis).toBeUndefined();
+            expect(result).not.toHaveProperty('additionalConsoleApis');
         });
 
         /**
@@ -213,7 +213,7 @@ describe('settingsSerializer', () => {
                 appBuilder: ['firefly-image-gen', 'acme-widget'],
             });
             expect(result.configs).toStrictEqual({});
-            expect(result.version).toBe(SETTINGS_FILE_VERSION);
+            expect(result.version).toBe(PROJECT_FILE_VERSION);
             expect(result.source.project).toBe('integrations-project');
         });
 
@@ -230,11 +230,11 @@ describe('settingsSerializer', () => {
                 componentApiPicks: { __existing__: ['AssetComputeSDK', 'CCAPI'] },
             });
 
-            const exported = extractSettingsFromProject(project);
-            const parseResult = parseSettingsFile(JSON.stringify(exported));
+            const exported = createExportSettings(project, '1.0.0');
+            const read = readProjectFile(JSON.stringify(exported));
+            if (!read.ok) throw new Error(read.error);
 
-            assertOk(parseResult);
-            expect(parseResult.settings.appBuilderComponentSources).toEqual({
+            expect(read.file.appBuilderComponentSources).toEqual({
                 'firefly-image-gen': {
                     owner: 'skukla',
                     repo: 'app-builder-shell',
@@ -249,8 +249,8 @@ describe('settingsSerializer', () => {
                 },
                 'acme-widget': { owner: 'acme', repo: 'widget', branch: 'dev' },
             });
-            expect(parseResult.settings.additionalConsoleApis).toBeUndefined();
-            expect(parseResult.settings.componentApiPicks).toEqual({
+            expect(read.file).not.toHaveProperty('additionalConsoleApis');
+            expect(read.file.componentApiPicks).toEqual({
                 __existing__: ['AssetComputeSDK', 'CCAPI'],
             });
         });

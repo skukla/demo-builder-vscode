@@ -3,8 +3,9 @@
  *
  * The agent's counterpart to the projects list's Import. That door opens a file
  * picker and then the wizard; this one takes a PATH, reads the file through the
- * typed reader (`readProjectFile`: v2 passes through, v1 — what Export writes
- * today — migrates, credentials are stripped whatever the file claims), and
+ * typed reader (`readProjectFile`: v2 — what Export writes — passes through, a
+ * v1 file from before 2026-10 migrates, credentials are stripped whatever the
+ * file claims), and
  * creates through `runProjectCreation`, the same path `create_project` ends in.
  * There is no second creation pipeline.
  *

@@ -20,12 +20,11 @@ import { formatGroupName as formatGroupNameHelper } from '@/features/project-cre
 import { ADDED_DEMOS_SETTING, readAddedDemos } from '@/features/project-creation/services/addedDemoSettings';
 import { parseCustomBlockLibrarySettings } from '@/features/project-creation/services/customBlockLibraryUtils';
 import { HandlerContext, SharedState } from '@/types/handlers';
-import type { SettingsFile } from '@/types/settingsFile';
 import { parseJSON } from '@/types/typeGuards';
 import type { ComponentSelection } from '@/types/webview';
 import type { BlockLibraryDefaultsUpdatedPayload, AddedDemosUpdatedPayload,
     CustomBlockLibraryDefaultsUpdatedPayload, WizardInitialData } from '@/types/webviewPayloads';
-import type { EditProjectConfig, WizardStepDefinition } from '@/types/wizard';
+import type { EditProjectConfig, ProjectSeed, WizardStepDefinition } from '@/types/wizard';
 
 /**
  * Type guard for one wizard-steps.json entry (SOP §10 compliance)
@@ -65,7 +64,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
     private stepLogger: StepLogger | null = null;
     private stepLoggerInitPromise: Promise<StepLogger> | null = null;
     private templatesPath: string;
-    private importedSettings: SettingsFile | null = null; // Settings imported from file or copied from project
+    private importedSettings: ProjectSeed | null = null; // The project file from Import, or Copy's seed
     private editProject: EditProjectConfig | null = null; // Configuration for editing existing project
 
     // Shared state object (passed by reference to handlers for automatic synchronization)
@@ -494,7 +493,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
     }
 
     public async execute(options?: {
-        importedSettings?: SettingsFile;
+        importedSettings?: ProjectSeed;
         sourceDescription?: string;
         editProject?: EditProjectConfig;
     }): Promise<void> {

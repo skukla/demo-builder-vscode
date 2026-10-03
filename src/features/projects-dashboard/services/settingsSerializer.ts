@@ -1,96 +1,20 @@
 /**
- * Settings Serializer Service
+ * The project file's writer: a project in, the version-2 project file out.
  *
- * Handles serialization, parsing, and validation of project settings files.
- * Used for import/export functionality to share settings between projects.
+ * ONE writer (PL-56c). Every export door writes {@link createExportSettings};
+ * Copy and Edit seed the wizard from {@link extractSettingsFromProject}, the same
+ * file built in memory with the SC's own values kept. The reader is
+ * `readProjectFile` (`core/state/projectFileReader.ts`), which also migrates the
+ * version-1 files written before 2026-10.
  */
 
 import { stripSecretValues } from '@/core/config/envVarKeys';
+import { storefrontProvenance } from '@/core/state/projectFileReader';
 import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { Project } from '@/types/base';
-import { PROJECT_FILE_SUFFIX } from '@/types/projectFile';
-import {
-    SETTINGS_FILE_VERSION,
-    type SettingsFile,
-    type SettingsEdsConfig,
-} from '@/types/settingsFile';
-
-/**
- * Result of parsing a settings file
- */
-export interface ParseResult {
-    success: true;
-    settings: SettingsFile;
-}
-
-/**
- * Error result from parsing a settings file
- */
-export interface ParseError {
-    success: false;
-    error: string;
-}
-
-/**
- * Parse and validate a JSON string as a settings file
- *
- * @param jsonString - Raw JSON string to parse
- * @returns ParseResult on success, ParseError on failure
- */
-export function parseSettingsFile(jsonString: string): ParseResult | ParseError {
-    // Parse JSON
-    let parsed: unknown;
-    try {
-        parsed = JSON.parse(jsonString);
-    } catch {
-        return {
-            success: false,
-            error: "This file couldn't be read. It may have been corrupted.",
-        };
-    }
-
-    // Validate structure
-    if (!isValidSettingsFile(parsed)) {
-        return {
-            success: false,
-            error: "This doesn't appear to be a Demo Builder settings file.",
-        };
-    }
-
-    return {
-        success: true,
-        settings: parsed as SettingsFile,
-    };
-}
-
-/**
- * Validate that an object has the required settings file structure
- *
- * @param obj - Object to validate
- * @returns True if valid settings file structure
- */
-export function isValidSettingsFile(obj: unknown): boolean {
-    if (!obj || typeof obj !== 'object') {
-        return false;
-    }
-
-    // Must have version field
-    if (!('version' in obj) || typeof obj.version !== 'number') {
-        return false;
-    }
-
-    return true;
-}
-
-/**
- * Check if settings file version is newer than supported
- *
- * @param settings - Settings file to check
- * @returns True if version is newer than supported
- */
-export function isNewerVersion(settings: SettingsFile): boolean {
-    return settings.version > SETTINGS_FILE_VERSION;
-}
+import { PROJECT_FILE_SUFFIX, PROJECT_FILE_VERSION, type ProjectFile } from '@/types/projectFile';
+import type { SettingsAdobeContext, SettingsEdsConfig } from '@/types/settingsFile';
+import type { ProjectSeed } from '@/types/wizard';
 
 /**
  * Derive the wizard's custom-source map from the keyed `appBuilderComponents`
@@ -106,8 +30,8 @@ export function isNewerVersion(settings: SettingsFile): boolean {
  */
 function deriveAppBuilderComponentSources(
     project: Project,
-): SettingsFile['appBuilderComponentSources'] {
-    const derived: NonNullable<SettingsFile['appBuilderComponentSources']> = {};
+): ProjectFile['appBuilderComponentSources'] {
+    const derived: NonNullable<ProjectFile['appBuilderComponentSources']> = {};
     for (const [id, state] of Object.entries(project.appBuilderComponents ?? {})) {
         if (state.kind !== 'integration') continue;
         if (getAppBuilderComponentEntry(id) !== undefined) continue;
@@ -122,88 +46,109 @@ function deriveAppBuilderComponentSources(
 }
 
 /**
- * Extract settings from an existing project, IN MEMORY.
+ * The project's own storefront, read from the `eds-storefront` instance.
  *
- * This is the seed Copy-from-project and Edit hand the wizard on the same
- * machine. It carries `componentConfigs` whole, so the fields the SC typed are
- * re-seeded. It is NOT what an export writes: anything that reaches a file goes
- * through {@link createExportSettings}, which removes every credential.
- *
- * @param project - Source project to extract settings from
- * @returns SettingsFile with extracted settings
+ * Edit reopens it; an export carries it only as provenance (where the project
+ * lived), because the receiver creates their own.
  */
-export function extractSettingsFromProject(project: Project): SettingsFile {
-    // Extract EDS config from eds-storefront component metadata (if present)
-    let edsConfig: SettingsEdsConfig | undefined;
-    const edsStorefront = project.componentInstances?.['eds-storefront'];
-    if (edsStorefront?.metadata) {
-        const metadata = edsStorefront.metadata as Record<string, unknown>;
-        // Parse "owner/repo" format from githubRepo metadata
-        const githubRepoParts = metadata.githubRepo?.toString().split('/');
-
-        // Only include project-specific EDS fields
-        // templateOwner, templateRepo, contentSource, patches are derived from brand+stack
-        edsConfig = {
-            // Derived too, and for the same reason as the site below: republish
-            // and the agent's storefront tools both read `daLiveOrg || repoOwner`,
-            // because the DA.live org IS the GitHub namespace. A project without a
-            // stored one would reach the edit wizard's last step with an
-            // incomplete config, exactly as a missing site did.
-            daLiveOrg: (metadata.daLiveOrg as string | undefined) ?? githubRepoParts?.[0],
-            // DERIVED, not read raw. `daLiveSite` is legacy metadata the loader
-            // STRIPS on load (projectFileLoader), because the DA site name IS the
-            // repo name; only unmigrated projects still carry one. Reading it raw
-            // gave every migrated project an undefined site, and the edit wizard's
-            // last step refused with "Storefront configuration is incomplete" after
-            // the SC had walked the whole wizard with nothing wrong on screen
-            // (owner, 2026-09-20). Same derivation as `getEdsDaLiveTarget`.
-            daLiveSite: (metadata.daLiveSite as string | undefined) ?? githubRepoParts?.[1],
-            githubOwner: githubRepoParts?.[0], // Extract owner from "owner/repo"
-            repoName: githubRepoParts?.[1], // Extract repo name from "owner/repo"
-            repoUrl: metadata.repoUrl as string | undefined,
-        };
-    }
-
+function storefrontOf(project: Project): SettingsEdsConfig | undefined {
+    const metadata = project.componentInstances?.['eds-storefront']?.metadata as
+        | Record<string, unknown>
+        | undefined;
+    if (!metadata) return undefined;
+    // Parse "owner/repo" format from githubRepo metadata
+    const githubRepoParts = metadata.githubRepo?.toString().split('/');
+    // Only project-specific fields: templateOwner, templateRepo, contentSource and
+    // patches are derived from brand + stack.
     return {
-        version: SETTINGS_FILE_VERSION,
+        // Derived too, and for the same reason as the site below: republish
+        // and the agent's storefront tools both read `daLiveOrg || repoOwner`,
+        // because the DA.live org IS the GitHub namespace. A project without a
+        // stored one would reach the edit wizard's last step with an
+        // incomplete config, exactly as a missing site did.
+        daLiveOrg: (metadata.daLiveOrg as string | undefined) ?? githubRepoParts?.[0],
+        // DERIVED, not read raw. `daLiveSite` is legacy metadata the loader
+        // STRIPS on load (projectFileLoader), because the DA site name IS the
+        // repo name; only unmigrated projects still carry one. Reading it raw
+        // gave every migrated project an undefined site, and the edit wizard's
+        // last step refused with "Storefront configuration is incomplete" after
+        // the SC had walked the whole wizard with nothing wrong on screen
+        // (owner, 2026-09-20). Same derivation as `getEdsDaLiveTarget`.
+        daLiveSite: (metadata.daLiveSite as string | undefined) ?? githubRepoParts?.[1],
+        githubOwner: githubRepoParts?.[0],
+        repoName: githubRepoParts?.[1],
+        repoUrl: metadata.repoUrl as string | undefined,
+    };
+}
+
+/** The Adobe org, project and workspace: ids for pre-selection, names for display and matching. */
+function adobeContextOf(project: Project): SettingsAdobeContext | undefined {
+    const adobe = project.adobe;
+    if (!adobe) return undefined;
+    // project.adobe stores the org and workspace IDS in `organization`/`workspace`.
+    return {
+        orgId: adobe.organization,
+        orgName: adobe.organizationName,
+        projectId: adobe.projectId,
+        projectName: adobe.projectName,
+        projectTitle: adobe.projectTitle,
+        workspaceId: adobe.workspace,
+        workspaceName: adobe.workspaceName,
+        workspaceTitle: adobe.workspaceTitle,
+    };
+}
+
+/**
+ * The version-2 project file for a project: everything the contract's
+ * "travels" column names, values as they are (credentials included; the
+ * export strips them).
+ */
+function projectFileOf(project: Project, extensionVersion: string): ProjectFile {
+    const storefront = storefrontOf(project);
+    return {
+        kind: 'project',
+        version: PROJECT_FILE_VERSION,
         exportedAt: new Date().toISOString(),
         source: {
             project: project.name,
+            ...(project.title ? { title: project.title } : {}),
+            extension: extensionVersion,
+            ...(storefront ? { storefront: storefrontProvenance(storefront) } : {}),
         },
-        selections: project.componentSelections || {},
-        configs: project.componentConfigs || {},
-        adobe: project.adobe
-            ? {
-                  // Include IDs for pre-selection in wizard
-                  // Note: project.adobe stores IDs in organization/workspace fields
-                  orgId: project.adobe.organization,
-                  projectId: project.adobe.projectId,
-                  workspaceId: project.adobe.workspace,
-                  // Include names for display and fallback matching
-                  projectName: project.adobe.projectName,
-                  projectTitle: project.adobe.projectTitle,
-                  workspaceTitle: project.adobe.workspaceTitle,
-              }
-            : undefined,
-        // Package/Stack/Addons selections for import/copy retention
+        title: project.title,
         selectedPackage: project.selectedPackage,
-        demo: project.demo,
         selectedStack: project.selectedStack,
         selectedAddons: project.selectedAddons,
         selectedBlockLibraries: project.selectedBlockLibraries,
         customBlockLibraries: project.customBlockLibraries,
-        // EDS configuration (for Edge Delivery Services stacks)
-        edsConfig,
-        // App Builder integration round-trip: custom/instance sources are
-        // DERIVED from the keyed appBuilderComponents map (§E); the Console API
-        // picks beyond requiredApis persist on the project (manifest field)
+        demo: project.demo,
+        selections: project.componentSelections || {},
+        configs: project.componentConfigs || {},
+        commerce: project.commerce,
+        commerceStoreStructure: project.commerceStoreStructure,
+        datapack: project.datapack,
+        adobe: adobeContextOf(project),
+        // Custom/instance sources are DERIVED from the keyed appBuilderComponents
+        // map (§E); the attributed API picks are the manifest field as it is.
         appBuilderComponentSources: deriveAppBuilderComponentSources(project),
-        // BOTH forms. The keyed map is the one that survives step 07 — exporting the
-        // flat field alone meant a settings file would carry nothing once the flat
-        // write is retired, and an edit round-trip collapsed every pick into the
-        // unattributed bucket even before then.
         componentApiPicks: project.componentApiPicks,
+        aiPrompts: project.aiPrompts,
     };
+}
+
+/**
+ * The project file built IN MEMORY, for Copy-from-project and Edit.
+ *
+ * It carries `componentConfigs` whole, so the fields the SC typed are
+ * re-seeded, and the project's own storefront, which Edit reopens. It is NOT
+ * what an export writes: anything that reaches a file goes through
+ * {@link createExportSettings}, which removes every credential.
+ *
+ * @param project - Source project to extract settings from
+ * @returns The wizard's seed
+ */
+export function extractSettingsFromProject(project: Project): ProjectSeed {
+    return { ...projectFileOf(project, ''), edsConfig: storefrontOf(project) };
 }
 
 /**
@@ -217,13 +162,11 @@ export function extractSettingsFromProject(project: Project): SettingsFile {
  *
  * @param project - Source project
  * @param extensionVersion - Current extension version
- * @returns SettingsFile ready for JSON serialization
+ * @returns The version-2 project file, ready for JSON serialization
  */
-export function createExportSettings(project: Project, extensionVersion: string): SettingsFile {
-    const settings = extractSettingsFromProject(project);
-    settings.source.extension = extensionVersion;
-    settings.configs = stripSecretValues(settings.configs);
-    return settings;
+export function createExportSettings(project: Project, extensionVersion: string): ProjectFile {
+    const file = projectFileOf(project, extensionVersion);
+    return { ...file, configs: stripSecretValues(file.configs) };
 }
 
 /**

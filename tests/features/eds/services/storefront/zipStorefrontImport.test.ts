@@ -17,8 +17,8 @@ import {
     setupForCard,
     suggestRepoName,
 } from '@/features/eds/services/storefront/zipStorefrontImport';
-import type { SettingsFile } from '@/types/settingsFile';
 import { createMockLogger } from '../../../../helpers/loggerFake';
+import { projectFileV2 } from '../../../../helpers/projectFileFixtures';
 
 const ROOT = 'citisignal-b2b-summit-main';
 const GITIGNORE = [
@@ -133,7 +133,9 @@ describe('readStorefrontZip', () => {
                 'bodea-demo-bundle'
             )
         );
-        expect(read.setup).toMatchObject({ version: 1, selectedStack: 'eds-accs' });
+        // A bundle written before 2026-10 carries a version-1 setup; it reads
+        // through the one reader and arrives as a version-2 file.
+        expect(read.setup).toMatchObject({ kind: 'project', version: 2, selectedStack: 'eds-accs' });
         expect(read.setupError).toBeUndefined();
         expect([...read.files.keys()]).not.toContain('setup.demo-builder.json');
 
@@ -263,17 +265,8 @@ describe('createRepositoryFromZip, cardFromZip and setupForCard', () => {
         ).toBeUndefined();
     });
 
-    it("makes the setup the colleague's own: the wizard starts on the card, and the sender's storefront names are dropped", () => {
-        const setup = {
-            version: 1,
-            exportedAt: 'x',
-            source: { project: 'bodea' },
-            selections: {},
-            configs: {},
-            selectedPackage: 'bodea',
-            selectedStack: 'eds-accs',
-            edsConfig: { githubOwner: 'sender', repoName: 'kukla-bodea', daLiveOrg: 'sender' },
-        } as unknown as SettingsFile;
+    it("makes the setup the colleague's own: the wizard starts on the card, and the sender's storefront stays provenance", () => {
+        const setup = projectFileV2();
         const card = {
             kind: 'demo' as const,
             version: 1,
@@ -285,6 +278,8 @@ describe('createRepositoryFromZip, cardFromZip and setupForCard', () => {
         expect(own.demo).toEqual(card);
         expect(own.selectedPackage).toBe('added:steve/summit');
         expect(own.selectedStack).toBe('eds-accs');
-        expect(own.edsConfig).toBeUndefined();
+        // Provenance, never a setting: the wizard seeds no storefront from it.
+        expect(own.source.storefront).toEqual(setup.source.storefront);
+        expect(own).not.toHaveProperty('edsConfig');
     });
 });

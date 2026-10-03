@@ -3,9 +3,9 @@
  *
  * The hook computes its whole initial state once, from three mutually exclusive
  * inputs: an edit project, imported settings, or neither. Each produces a
- * different EDS config (edit assumes the stored auth is unproven; import assumes
- * it is good), a different wizard mode, and a different Adobe context. These
- * tests pin all three.
+ * different EDS config (edit reopens the project's own storefront with its
+ * sign-ins unproven; import and create seed none), a different wizard mode, and
+ * a different Adobe context. These tests pin all three.
  */
 
 import { buildProjectConfig } from '@/features/project-creation/ui/wizard/wizardHelpers';
@@ -95,54 +95,30 @@ describe('edit mode seeds an EDS config whose auth is unproven', () => {
     });
 });
 
-describe('import mode seeds an EDS config whose auth is already good', () => {
-    it('marks both sides authenticated and carries the DA.live org onto the auth', () => {
-        const eds = stateFor({ importedSettings: { edsConfig: FULL_EDS } }).edsConfig;
+describe('import and copy seed no storefront and no sign-in (PL-56d)', () => {
+    // An import used to open with the SENDER's repository selected and both
+    // GitHub and DA.live marked signed in, without checking either. Now the
+    // receiver is asked exactly as for a new project.
+    it('ignores a copied project\'s own storefront: the copy creates its own', () => {
+        expect(stateFor({ importedSettings: { edsConfig: FULL_EDS } }).edsConfig).toBeUndefined();
+    });
 
-        expect(eds).toEqual({
-            accsHost: '',
-            storeViewCode: '',
-            customerGroup: '',
-            repoName: 'acme-site',
-            daLiveOrg: 'acme-da',
-            daLiveSite: 'acme-site-da',
-            githubAuth: {
-                isAuthenticated: true,
-                user: { login: 'acme-org', email: null, name: null, avatarUrl: null },
+    it('ignores the sender\'s storefront in a project file: it is provenance only', () => {
+        const state = stateFor({
+            importedSettings: {
+                source: {
+                    project: 'acme',
+                    extension: '1.0.0',
+                    storefront: { githubRepo: 'acme-org/acme-site', daLiveOrg: 'acme-da' },
+                },
             },
-            daLiveAuth: { isAuthenticated: true, org: 'acme-da' },
-            repoUrl: 'https://github.com/acme-org/acme-site',
-            repoMode: 'existing',
-            selectedRepo: {
-                id: 'acme-org/acme-site',
-                name: 'acme-site',
-                fullName: 'acme-org/acme-site',
-                htmlUrl: 'https://github.com/acme-org/acme-site',
-            },
-            selectedSite: { id: 'acme-site-da', name: 'acme-site-da' },
         });
+
+        expect(state.edsConfig).toBeUndefined();
     });
 
-    it('leaves the GitHub half unset when the repo is missing', () => {
-        const eds = stateFor({
-            importedSettings: { edsConfig: { githubOwner: 'acme-org', daLiveOrg: 'd' } },
-        }).edsConfig;
-
-        expect(eds?.githubAuth).toBeUndefined();
-        expect(eds?.repoMode).toBeUndefined();
-        expect(eds?.selectedRepo).toBeUndefined();
-    });
-
-    it('leaves the DA.live half unset when the org is missing', () => {
-        const eds = stateFor({
-            importedSettings: { edsConfig: { githubOwner: 'o', repoName: 'r' } },
-        }).edsConfig;
-
-        expect(eds?.daLiveAuth).toBeUndefined();
-    });
-
-    it('has no EDS config for an import that carried none', () => {
-        expect(stateFor({ importedSettings: {} }).edsConfig).toBeUndefined();
+    it('CONTROL: edit mode still reopens the project\'s own storefront', () => {
+        expect(stateFor({ editProject: editProjectWith({ edsConfig: FULL_EDS }) }).edsConfig).toBeDefined();
     });
 });
 
@@ -231,7 +207,7 @@ describe('mode, name and selections', () => {
     });
 
     it('opens in import mode and takes the source project name', () => {
-        const state = stateFor({ importedSettings: { source: { project: 'acme' } } });
+        const state = stateFor({ importedSettings: { source: { project: 'acme', extension: '1.0.0' } } });
 
         expect(state.wizardMode).toBe('import');
         expect(state.projectName).toBe('acme');
@@ -239,7 +215,7 @@ describe('mode, name and selections', () => {
 
     it('makes the imported name unique against the projects that already exist', () => {
         const state = stateFor({
-            importedSettings: { source: { project: 'acme' } },
+            importedSettings: { source: { project: 'acme', extension: '1.0.0' } },
             existingProjectNames: ['acme'],
         });
 
@@ -365,15 +341,10 @@ describe('mode, name and selections', () => {
         expect(stateFor({ editProject: editProjectWith({}) }).componentConfigs).toStrictEqual({});
     });
 
-    it('falls back to the flat API list when the keyed picks object is present but empty', () => {
-        const state = stateFor({
-            editProject: editProjectWith({
-                componentApiPicks: {},
-                additionalConsoleApis: ['CCAPI'],
-            }),
-        });
+    it('seeds no API picks when the keyed picks object is present but empty', () => {
+        const state = stateFor({ editProject: editProjectWith({ componentApiPicks: {} }) });
 
-        expect(state.selectedConsoleApis).toEqual({ __existing__: ['CCAPI'] });
+        expect(state.selectedConsoleApis).toBeUndefined();
     });
 
     it('starts on the first enabled step', () => {
