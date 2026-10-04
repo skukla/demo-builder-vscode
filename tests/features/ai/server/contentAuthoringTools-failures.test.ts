@@ -195,7 +195,7 @@ describe('write_page failures', () => {
         daOps.createSource.mockRejectedValueOnce(new Error('403 from DA admin'));
 
         expect(
-            await register().call('write_page', { path: '/about', content: '<p>x</p>' })
+            await register().call('write_page', { path: '/about', content: '<p>x</p>', confirm: true })
         ).toEqual({ written: false, path: '/about', error: '403 from DA admin' });
     });
 });
@@ -348,7 +348,7 @@ describe('the default Helix wiring', () => {
         registerContentAuthoringTools(s, ctxFactory);
         createDaLiveServiceTokenProviderMock.mockClear();
 
-        await s.call('publish_page', { path: '/about' });
+        await s.call('publish_page', { path: '/about', confirm: true });
 
         expect(createDaLiveServiceTokenProviderMock).toHaveBeenCalled();
     });

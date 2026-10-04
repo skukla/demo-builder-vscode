@@ -6,8 +6,7 @@ description: Creates a new Demo Builder project from Claude — Edge Delivery (E
 # Create a Demo Builder Project
 
 Provision a new project headlessly with the `create_project` MCP tool — no webview, no
-wizard. VS Code must be open on an existing Demo Builder project (that is how this MCP
-server is reachable).
+wizard.
 
 ## 1. Gather inputs
 
@@ -80,7 +79,7 @@ project-name-addressed, so you keep working on the new project in the same promp
 (`configure_project`, `sync_storefront`, …) with no window reload. The new project is
 now the current project — `get_current_project` resolves to it.
 
-If the user wants to see the project list in the IDE, offer `open_view view="projects"
+If the user wants to see the project list in the IDE, offer `open_view view="projects_list"
 confirm=true` (confirm first). There is no separate "open project as workspace" step —
 the VS Code window stays homed at the projects root.
 

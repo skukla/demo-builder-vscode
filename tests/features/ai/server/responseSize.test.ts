@@ -693,6 +693,7 @@ describe('the ceiling table tracks the tool surface', () => {
         const DIRECT_PENDING = new Set<string>([
             'apply_updates',
             'create_project',
+            'copy_project',
             'create_project_from_file',
             'delete_project',
             'edit_project',

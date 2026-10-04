@@ -235,6 +235,40 @@ async function openPathCall(
 
 const message = (err: unknown): string => (err instanceof Error ? err.message : String(err));
 
+/** `org/site`, the name an SC knows the storefront's DA.live content by. */
+const siteName = (t: StorefrontTarget): string => `${t.daLiveOrg}/${t.daLiveSite}`;
+
+/**
+ * write_page's answer without `confirm:true` (CLAUDE.md property 5). A plain write
+ * is gated too: it replaces the DA.live source the live site is built from, so the
+ * next publish of the page — by anyone — ships it.
+ */
+function writeRefusal(target: StorefrontTarget, webPath: string, publish: boolean) {
+    const site = siteName(target);
+    const replaces = `write_page replaces the page ${webPath} in the DA.live source of the storefront ${site}`;
+    const then = publish
+        ? ' and publishes it to the live site, where visitors see it at once'
+        : ', which the live site is built from; it goes live the next time the page is published';
+    return asText({
+        error: `${replaces}${then}. Call again with confirm:true.`,
+        site,
+        path: webPath,
+        publish,
+    });
+}
+
+/** publish_page's answer without `confirm:true`: it changes what visitors see. */
+function publishRefusal(target: StorefrontTarget, webPath: string) {
+    const site = siteName(target);
+    return asText({
+        error:
+            `publish_page puts the current DA.live content of ${webPath} live on the storefront ${site}, ` +
+            'where visitors see it at once. Call again with confirm:true.',
+        site,
+        path: webPath,
+    });
+}
+
 const pathField = z
     .string()
     .describe('Page path as it appears on the site, e.g. "/about" or "/" for the home page');
@@ -321,9 +355,9 @@ export function registerContentAuthoringTools(
         'write_page',
         {
             needsAuth: ['dalive'],
-            annotations: { readOnlyHint: false, destructiveHint: false },
+            annotations: { readOnlyHint: false, destructiveHint: true },
             description:
-                "Write a page's HTML to the current project's DA.live storefront; set publish:true to preview+publish it in the same call",
+                "Write a page's HTML to the current project's DA.live storefront, replacing what is there; set publish:true to preview+publish it in the same call. Changes the source the live site is built from, so it requires confirm:true",
             inputSchema: {
                 path: pathField,
                 content: z.string().describe('Full page HTML (EDS block markup)'),
@@ -331,6 +365,10 @@ export function registerContentAuthoringTools(
                     .boolean()
                     .optional()
                     .describe('Preview and publish immediately after writing (default false)'),
+                confirm: z
+                    .boolean()
+                    .optional()
+                    .describe('Must be true — the page is replaced in the source the live site is built from'),
             },
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -346,6 +384,7 @@ export function registerContentAuthoringTools(
             if (!webPath) return asText(INVALID_PATH);
             const r = await resolveTarget(ctxFactory, { needsGitHub: publish });
             if (!r.ok) return asText(r.body);
+            if (args?.confirm !== true) return writeRefusal(r.target, webPath, publish);
 
             const sourcePath = toSourcePath(webPath);
             const { daLiveOrg, daLiveSite } = r.target;
@@ -391,15 +430,20 @@ export function registerContentAuthoringTools(
         'publish_page',
         {
             needsAuth: ['dalive'],
-            annotations: { readOnlyHint: false, destructiveHint: false },
-            description: 'Preview and publish an existing DA.live page to the live CDN',
-            inputSchema: { path: pathField },
+            annotations: { readOnlyHint: false, destructiveHint: true },
+            description:
+                'Preview and publish an existing DA.live page to the live CDN, replacing what visitors see. Requires confirm:true',
+            inputSchema: {
+                path: pathField,
+                confirm: z.boolean().optional().describe('Must be true — the page goes live at once'),
+            },
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         async (args: any) => {
             const r = await openPathCall(ctxFactory, args, { needsGitHub: true });
             if (!r.ok) return asText(r.body);
             const { webPath } = r;
+            if (args?.confirm !== true) return publishRefusal(r.target, webPath);
 
             try {
                 await runWithAdobeTarget(() =>

@@ -432,6 +432,15 @@ worked example of the rule: `promote_block_to_library` was ungated because it
 only *adds* things, and `refresh_block_library` because "rebuild" sounds local.
 Both push to a live site. Reach, not intent, is what decides.
 
+`write_page` and `publish_page` were the last two content tools open, and closed on
+2026-10-04 (owner: "Yes, write_page should ask"). Both are `confirm:true`-gated and
+raise the consent dialog, on the `build_catalog_menu` pattern: the sign-in pre-flight
+runs first, then the gate, so the refusal can name the storefront (`org/site`) and the
+page, and for `write_page` whether it publishes (`site`, `path`, `publish` in the
+refusal). A write WITHOUT `publish` is gated too: it replaces the DA.live source the
+live site is built from, and the page's next publish, by anyone, ships it. The dialog
+shows the page and, for `write_page`, the `publish` flag; neither is session-grantable.
+
 Note the shape of the refusal differs by tool. Most return an error and do
 nothing. `apply_updates` is the one that reports what *would* happen: no
 `confirm` = a read-only "here's what's available". Don't assume the dry-run
@@ -500,9 +509,22 @@ credentials the new project still needs (`stillNeeded.credentials`, read from th
 components' declared env vars against `SECRET_ENV_KEYS`). Like `create_project` it is
 gated by `confirm:true` and is not on the consent-dialog list.
 
+`copy_project` (2026-10-04, PL-56f) is the projects list's Copy from Existing without
+its picker: it takes the source project's NAME, loads it without saving it back, and
+reads it the way the human Copy does — `copySeedFromProject`, the file Export writes
+read back through `readProjectFile` — then goes down `create_project_from_file`'s own
+second half (`createFromProjectFile` in `createProjectFromFileTool.ts`). So a copy
+carries what an import carries and nothing more: never a credential, and the source's
+storefront only as provenance. An Edge Delivery copy gets its own repository and
+DA.live site (owner, 2026-10-04): it needs `repoName`, `daLiveOrg` and `daLiveSite`
+like an import, and naming the source's own repository or site is refused before
+anything is created. The answer reports `fromProject` where an import reports
+`fromFile`. Gated by `confirm:true`, not on the consent-dialog list, undone by
+`delete_project`.
+
 ### Store scope at creation (AI-11, 2026-10-03)
 
-`create_project` and `create_project_from_file` take an optional `storeScope
+`create_project`, `create_project_from_file` and `copy_project` take an optional `storeScope
 { website, store, storeView }` — the input `configure_project` takes, from the one
 schema in `storeScope.ts`, so all three agree on what a valid scope is (all three
 codes, as text) and where it is stored (the backend's `ACCS_WEBSITE_CODE`,

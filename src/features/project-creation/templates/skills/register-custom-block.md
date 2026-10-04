@@ -55,6 +55,6 @@ After `promote_block_to_library` returns, report to the user in plain language �
 
 Keep the internal field names (`docPage`, `sheet`, `componentDefinition`) and code symbols out of the user-facing message — "registered and published" is what they need to hear.
 
-### PDP-targeted blocks: the Phase 1 caveat
+### PDP-targeted blocks: where they show
 
-If the block you're registering is meant for the product detail page (recently-viewed products, related-products, custom PDP hero, etc.), tell the user explicitly: "This block will show on `/products/default` when authors place it there. It will **not yet appear on real product URLs** like `/products/{urlKey}/{sku}` — those serve a generic Phase 1 template. Phase 2 will close this gap by rendering against the authored PDP template." Otherwise the SC will register the block, place it on `/products/default`, click a real product URL expecting to see it, and be confused. Architecture: `docs/architecture/eds-byom-pdp-routing.md` in the demo-builder-vscode repo.
+If the block you're registering is meant for the product detail page (recently-viewed products, related-products, custom PDP hero, etc.), tell the user: "Place it on `/products/default`. Real product URLs like `/products/{urlKey}/{sku}` are served from that authored page, so the block shows on them too. A product page published before the change can keep the old version until it is published again; a reset re-publishes every product page." Otherwise the SC will place the block, open a product they visited before, and think it did not work.

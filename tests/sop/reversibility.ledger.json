@@ -41,6 +41,11 @@
             "note": "Added 2026-10-03. The same creation as create_project, seeded from an exported file, so the same tool undoes it. It deploys the integrations the file names, which delete_project tears down with the project."
         },
         {
+            "tool": "copy_project",
+            "reverses": "delete_project",
+            "note": "Added 2026-10-04 (PL-56f). The same creation as create_project_from_file, seeded from the source project's own file, so the same tool undoes it; the source project is only read. The copy's repository and DA.live site are its own, which delete_project's deleteGithubRepo and deleteDaLiveSite remove."
+        },
+        {
             "tool": "reset_project",
             "reason": "Added 2026-10-03, when the tool grew to cover headless projects (it was reset_eds_project). A reset IS the return to zero this property asks for, so nothing undoes it: what it discards - hand edits to the storefront repository, its DA.live content, or a headless project's component folders - exists nowhere else to restore from. That is why it asks first (confirm:true and the consent dialog) and why integrations, whose code may be the SC's own, are left alone. Not create-shaped, so the enforcer would not have asked; written down because the owner did. Snapshot-before-reset would be the reversal, and whether to build one is an owner decision."
         },

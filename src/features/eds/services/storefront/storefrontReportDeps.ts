@@ -10,9 +10,12 @@ import type * as vscode from 'vscode';
 import { demoFixLines, runDemoFixPass, type DemoFixReport } from '../patches/demoFixPass';
 import { readLkgSha } from '../patches/lkgReader';
 import type { StorefrontReportDeps } from './storefrontReport';
+import { templateCatchUpOf, type TemplateCatchUp } from './templateCatchUp';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
+import { ForkSyncService, type ForkSyncResult } from '@/features/updates/services/forkSyncService';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
+import type { RepositoryRef } from '@/types/projectFile';
 import { getEdsRepoParts } from '@/types/typeGuards';
 
 /** The readers the report needs, from the signed-in GitHub clients. */
@@ -51,4 +54,35 @@ export async function applyStorefrontFixes(
         { applyOffered: true },
     );
     return { report, lines: demoFixLines(report) };
+}
+
+/**
+ * Whether the report may offer to bring the code up to date with the template:
+ * GitHub's read of the project's own repository, through the same fork check
+ * Check for Updates uses (`ForkSyncService`). A read; nothing is written.
+ *
+ * @returns The catch-up to offer, or undefined (not a fork of ours, up to date, or unreadable)
+ */
+export async function readTemplateCatchUp(
+    repository: RepositoryRef,
+    secrets: vscode.SecretStorage,
+    logger: Logger,
+): Promise<TemplateCatchUp | undefined> {
+    const status = await new ForkSyncService(secrets, logger).checkForkStatus(repository.owner, repository.repo);
+    return templateCatchUpOf(repository, status);
+}
+
+/**
+ * Accept the catch-up: GitHub's merge-upstream on the fork's default branch, the
+ * same call Check for Updates makes for a fork. A conflict changes nothing.
+ *
+ * @throws Error from GitHub on a permission or rate-limit refusal
+ */
+export async function catchUpWithTemplate(
+    catchUp: TemplateCatchUp,
+    secrets: vscode.SecretStorage,
+    logger: Logger,
+): Promise<ForkSyncResult> {
+    const { owner, repo } = catchUp.repository;
+    return new ForkSyncService(secrets, logger).syncFork(owner, repo, catchUp.branch);
 }

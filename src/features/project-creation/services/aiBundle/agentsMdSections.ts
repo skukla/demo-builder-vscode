@@ -450,8 +450,8 @@ export function buildAppBuilderIntegrations(project: Project): string {
         '',
         '- Before editing, confirm WHICH integration (`components/<id>/`) the user means — ask',
         '  when more than one exists or the target is ambiguous.',
-        "- Deploys are per-integration: run them from that integration's own `components/<id>/`",
-        "  directory; deploying one integration never touches another's package.",
+        '- Deploys are per-integration: call deploy_integration with the integration\'s id; it',
+        "  deploys under the project's Adobe org, and deploying one never touches another's package.",
         '',
         'See the `extend-app-builder-app` skill for the full build loop.',
     ].join('\n');
@@ -609,8 +609,8 @@ export function buildNotesForAgents(project: Project): string {
 
     const lines: string[] = [
         '## Notes for AI Agents',
-        '- Component .env files hold all mutable configuration',
-        '- Do not edit .demo-builder.json directly — use the update_project_config MCP tool',
+        "- Settings live in the project's .demo-builder.json; the components' .env files are generated from them",
+        '- Do not edit .demo-builder.json directly — to set a value, use the configure_project MCP tool',
         '- Sync operations are available as MCP tools via .claude/mcp.json',
         '- Run get_auth_status BEFORE any multi-step flow (publish, reset, library refresh):' +
             ' sign-in is the one step that needs the user, so surface it at the start,' +

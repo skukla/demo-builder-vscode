@@ -209,6 +209,10 @@ function buildEditModeState(firstStep: WizardStep, editProject: EditProjectConfi
         selectedBlockLibraries: editSettings.selectedBlockLibraries,
         customBlockLibraries: editSettings.customBlockLibraries,
         ...integrationStateFromSettings(editSettings),
+        // Seeded as Import seeds them (PL-56e): Edit opened with neither, so its
+        // Datapacks step showed nothing recorded and Finish sent neither back.
+        datapack: recordableDatapack(editSettings.datapack),
+        storeDiscoveryData: editSettings.commerceStoreStructure,
         edsConfig: editSettings.edsConfig
             ? buildEditModeEdsConfig(editSettings.edsConfig)
             : undefined,

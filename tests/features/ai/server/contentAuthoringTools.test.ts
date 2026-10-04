@@ -245,7 +245,7 @@ describe('read_page', () => {
 
 describe('write_page', () => {
     it('writes to the DA source path and does not publish by default', async () => {
-        const res = await register().call('write_page', { path: '/about', content: '<p>x</p>' });
+        const res = await register().call('write_page', { path: '/about', content: '<p>x</p>', confirm: true });
 
         expect(daOps.createSource).toHaveBeenCalledWith(
             'skukla',
@@ -264,6 +264,7 @@ describe('write_page', () => {
             path: '/about',
             content: '<p>x</p>',
             publish: true,
+            confirm: true,
         });
 
         expect(daOps.createSource).toHaveBeenCalledWith(
@@ -288,6 +289,7 @@ describe('write_page', () => {
             path: '/about',
             content: '<p>x</p>',
             publish: true,
+            confirm: true,
         });
 
         expect(helix.previewAndPublishPage).not.toHaveBeenCalled();
@@ -303,6 +305,7 @@ describe('write_page', () => {
             path: '/about',
             content: '<p>x</p>',
             publish: true,
+            confirm: true,
         });
 
         expect(res).toMatchObject({
@@ -318,13 +321,13 @@ describe('write_page', () => {
         });
 
         // Write alone: DA.live is enough.
-        expect(await register().call('write_page', { path: '/a', content: 'x' })).toMatchObject({
+        expect(await register().call('write_page', { path: '/a', content: 'x', confirm: true })).toMatchObject({
             written: true,
         });
 
         // Publishing sends x-auth-token, so GitHub is required.
         expect(
-            await register().call('write_page', { path: '/a', content: 'x', publish: true })
+            await register().call('write_page', { path: '/a', content: 'x', publish: true, confirm: true })
         ).toMatchObject({ needsAuth: 'github' });
     });
 
@@ -339,7 +342,7 @@ describe('write_page', () => {
 
 describe('publish_page', () => {
     it('previews and publishes the web path', async () => {
-        const res = await register().call('publish_page', { path: '/products/shoes' });
+        const res = await register().call('publish_page', { path: '/products/shoes', confirm: true });
 
         expect(helix.previewAndPublishPage).toHaveBeenCalledWith(
             'skukla',
@@ -350,13 +353,13 @@ describe('publish_page', () => {
     });
 
     it('strips a .html suffix the caller supplied', async () => {
-        await register().call('publish_page', { path: '/about.html' });
+        await register().call('publish_page', { path: '/about.html', confirm: true });
         expect(helix.previewAndPublishPage).toHaveBeenCalledWith('skukla', 'bodea', '/about');
     });
 
     it('reports the failure rather than throwing', async () => {
         helix.previewAndPublishPage.mockRejectedValueOnce(new Error('403 denied'));
-        expect(await register().call('publish_page', { path: '/about' })).toMatchObject({
+        expect(await register().call('publish_page', { path: '/about', confirm: true })).toMatchObject({
             published: false,
             error: expect.stringMatching(/403/),
         });
@@ -366,7 +369,7 @@ describe('publish_page', () => {
         getGitHubServicesMock.mockReturnValueOnce({
             tokenService: { validateToken: jest.fn(async () => ({ valid: false })) },
         });
-        expect(await register().call('publish_page', { path: '/about' })).toMatchObject({
+        expect(await register().call('publish_page', { path: '/about', confirm: true })).toMatchObject({
             needsAuth: 'github',
         });
     });

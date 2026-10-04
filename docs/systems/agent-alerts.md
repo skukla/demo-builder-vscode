@@ -61,11 +61,12 @@ Replacing or wiping
 Reaching other people
 - `set_site_admin` · `republish` · `sync_content` · `rename_adobe_project`
 - `build_catalog_menu` (publishes a page per menu category and the nav change to the live storefront)
+- `write_page` (replaces a page in the DA.live source the live site is built from; the dialog shows whether it also publishes) · `publish_page` (puts a page live) — both since 2026-10-04
 - `start_datapack_import` · `start_datapack_export`
 
 ### Deliberately NOT on it
 
-`open_url`, `open_view`, `sign_in`, `create_project`, `create_project_from_file`, `apply_updates`,
+`open_url`, `open_view`, `sign_in`, `create_project`, `create_project_from_file`, `copy_project`, `apply_updates`,
 `promote_block_to_library`, `repair_site_configuration`.
 
 All of these raised a dialog before 2026-08-25. They are recoverable, additive, or

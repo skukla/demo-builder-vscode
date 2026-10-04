@@ -11,6 +11,7 @@
  * (createProjectTool-validation.test.ts).
  */
 
+import { registerCopyProjectTool } from '@/features/ai/server/copyProjectTool';
 import { registerCreateProjectFromFileTool } from '@/features/ai/server/createProjectFromFileTool';
 import { registerCreateProjectTool } from '@/features/ai/server/createProjectTool';
 import { getAdobeTarget, runWithAdobeTarget } from '@/features/ai/server/adobeTargetStore';
@@ -72,6 +73,7 @@ jest.mock('@/features/ai/server/adobeTargetStore', () => ({
 }));
 
 export {
+    registerCopyProjectTool,
     registerCreateProjectFromFileTool,
     registerCreateProjectTool,
     getAdobeTarget,

@@ -9,7 +9,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import {
-    extractSettingsFromProject,
+    copySeedFromProject,
     createExportSettings,
     getSuggestedFilename,
 } from './settingsSerializer';
@@ -178,8 +178,12 @@ export async function copySettingsFromProject(context: HandlerContext): Promise<
             };
         }
 
-        // Extract settings from project using serializer
-        const settings = extractSettingsFromProject(sourceProject);
+        // The file Import would read for this project, read the same way (PL-56e).
+        const read = copySeedFromProject(sourceProject);
+        if (!read.ok) {
+            return { success: true, data: { success: false, error: read.error } };
+        }
+        const settings = read.file;
 
         context.logger.info(`Copying settings from project: ${sourceProject.name}`);
 

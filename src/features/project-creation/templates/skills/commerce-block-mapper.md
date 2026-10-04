@@ -41,7 +41,7 @@ For each drop-in, these levers exist:
 | **Slots** | Pass custom React/HTML content to named slots (e.g., a custom call-to-action under the product gallery). | Override slots the drop-in doesn't expose. |
 | **Container blocks** | Wrap drop-ins in EDS blocks that handle the surrounding layout, copy, and CTAs. | Replace the drop-in itself with custom block code. |
 | **Events** | Subscribe to drop-in events (add-to-cart, variant-changed) to drive surrounding behavior. | Modify the drop-in's internal event flow. |
-| **Configuration** | Drop-in config (display options, feature flags) via `.demo-builder.json` and component `.env`. | Bypass config to enable removed features. |
+| **Configuration** | Drop-in config (display options, feature flags) via the storefront's `config.json`, which Demo Builder generates from the project's settings. | Bypass config to enable removed features. |
 
 ## Process
 
@@ -50,7 +50,7 @@ For each drop-in, these levers exist:
    - Product listing layout → maps to `product-list-page` drop-in
    - Cart / mini-cart → maps to `commerce-cart` drop-in
    - Checkout → maps to `commerce-checkout` drop-in
-   - Search → maps to `commerce-search` drop-in (where available)
+   - Search → the header's search box uses the product discovery drop-in (`@dropins/storefront-product-discovery`); there is no `commerce-search` block
 
 2. **For each commerce section, extract the design tokens from the scrape**:
    - Brand primary / secondary colors

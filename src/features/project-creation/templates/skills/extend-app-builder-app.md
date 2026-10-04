@@ -46,9 +46,9 @@ edits and deploys below are per-integration, scoped to that folder.
    Measured 2026-08-28: a full starter-kit build session spent most of its
    cost re-deriving from source files what that server answers in one call,
    with the server sitting at zero uses.
-6. **Deploy and verify.** Deploys are per-integration: run `aio app deploy`
-   from that integration's `components/<id>/` directory (or the extensibility
-   tooling's deploy tool), then hit the action URL (`aio app get-url`) before
+6. **Deploy and verify.** Deploys are per-integration: call `deploy_integration`
+   with that integration's id, which deploys it under the project's Adobe org and
+   touches no other integration, then hit the action URL (`aio app get-url`) before
    reporting success.
 
 ## Rules

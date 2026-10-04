@@ -20,3 +20,7 @@ and that Copy from Existing produces the same creation wire as Import from File.
 
 A round-trip test on a captured real project: Edit with no changes → save → manifest
 identical in every travelling field. Copy vs Import: same file, same wire.
+
+## Shipped so far
+
+- 2026-10-04  2026-10-04 night3-a (staged, not committed): staleness - Copy and Edit already used the export's writer but never the reader, so Copy carried the source's credentials and storefront and Edit opened with no datapack or store structure; now Copy opens the wizard with copySeedFromProject (the export read back by readProjectFile, same file and same creation wire as Import, no credential, own repository) and Edit with that file plus its own values and storefront (sign-ins re-checked), seeding datapack and store structure as Import does; pinned by projectCopyEditRoundTrip.test.tsx and copySettingsFromProject.test.ts; the one real project on this machine (justrite) reads through.

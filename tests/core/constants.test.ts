@@ -128,8 +128,10 @@ describe('AI_CONTEXT_VERSION', () => {
     // guidance passes componentId so an integration's API reaches its workspace.
     // v34: AGENTS.md names reset_project (one reset for both project kinds), and
     // create-eds-project teaches create_project_from_file.
-    it('is 34 (the bundle names the reset tool and creation from an exported file)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(34);
+    // v35: factual fixes from the 2026-10 AI-files audit — no false mesh .env rule, the
+    // real open_view name, one true answer on PDP blocks, no blocks the template lacks.
+    it('is 35 (the bundle stops saying things the code does not do)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(35);
     });
 });
 

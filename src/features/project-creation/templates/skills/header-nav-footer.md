@@ -33,11 +33,11 @@ Site chrome appears on every page. The Mod Agent processes pages individually, s
    - Any promo bar above the header
 
 2. **Use existing EDS chrome blocks as starting points.** The EDS Storefront boilerplate ships these block types:
-   - `header` — global header block
-   - `nav` — primary navigation
-   - `breadcrumb` — breadcrumb component
+   - `header` — global header block; it loads the primary navigation from the `/nav` page as a fragment (there is no separate `nav` block)
    - `footer` — global footer block
    - `commerce-mini-cart` — drop-in cart icon
+
+   There is no breadcrumb block in the boilerplate; if the reference has one, it is a new block.
 
    Don't recreate them from scratch. Extend their CSS and markup to match the scraped reference. If the reference forces you to introduce a brand-new chrome block (rare — most cases extend existing ones), call the `register-custom-block` skill (or directly invoke `promote_block_to_library`) after writing the source files so the block appears in DA.live's authoring picker.
 
@@ -53,11 +53,11 @@ Site chrome appears on every page. The Mod Agent processes pages individually, s
 
 5. **Wire commerce affordances into chrome.**
    - Mini-cart icon → wires to the `commerce-cart` drop-in for count + dropdown
-   - Search input → wires to `commerce-search` drop-in if present
+   - Search input → the header's search already loads the product discovery drop-in (`@dropins/storefront-product-discovery`); restyle it rather than adding another
    - Account icon → wires to the auth drop-in
    - Locale switcher → wires to the project's locale config
 
-6. **For nav structure**: read the reference's nav from the scrape and replicate the hierarchy in the project's `nav.docx` (Document Authoring) or `nav.md` (markdown). EDS pulls nav content from the document, not from hardcoded markup.
+6. **For nav structure**: read the reference's nav from the scrape and replicate the hierarchy in the storefront's `nav` page in DA.live (read it with `read_page` on `/nav`; change it with `write_page`, which asks the user first and needs `confirm: true`). EDS pulls nav content from that page, not from hardcoded markup.
 
 ## What NOT to do
 

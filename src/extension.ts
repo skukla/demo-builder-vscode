@@ -39,6 +39,7 @@ import { registerCommerceRestWriteTool } from '@/features/ai/server/commerceRest
 import { registerComponentRequirementsTool } from '@/features/ai/server/componentRequirementsTool';
 import { registerConfigureProjectTool } from '@/features/ai/server/configureProjectTool';
 import { registerContentAuthoringTools } from '@/features/ai/server/contentAuthoringTools';
+import { registerCopyProjectTool } from '@/features/ai/server/copyProjectTool';
 import { registerCreateProjectFromFileTool } from '@/features/ai/server/createProjectFromFileTool';
 import { registerCreateProjectTool } from '@/features/ai/server/createProjectTool';
 import { registerCurrentProjectTool } from '@/features/ai/server/currentProjectTool';
@@ -711,6 +712,7 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 registerAdobeTools(mcpServer, connCtxFactory);
                 registerCreateProjectTool(mcpServer, connCtxFactory);
                 registerCreateProjectFromFileTool(mcpServer, connCtxFactory);
+                registerCopyProjectTool(mcpServer, connCtxFactory);
                 registerCurrentProjectTool(mcpServer, connCtxFactory, scopedProjectDir);
                 // Same derivation as activate()'s sink wiring — the dir is a
                 // pure function of the extension's log storage.

@@ -89,6 +89,10 @@
             "tool": "run_erp_rest",
             "reason": "The handler is a GET of the ERP's health route (appearance and downtime); set_erp_appearance's description tells the agent to read it with run_erp_rest on 'health'."
         },
+        "copyFromExisting": {
+            "tool": "copy_project",
+            "reason": "Both start a project as a copy of one on this machine. The handler opens a picker and then the wizard; the tool takes the source's name and creates through create_project_from_file's own second half, from the same seed the handler opens the wizard with (copySeedFromProject, 2026-10-04)."
+        },
         "importFromFile": {
             "tool": "create_project_from_file",
             "reason": "Both start a project from an exported project file. The handler opens a file picker and then the wizard; the tool takes the file's path and creates through create_project's own path, seeded by the same integration seeding the wizard's import uses (2026-10-03)."

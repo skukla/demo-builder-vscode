@@ -247,7 +247,18 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // headless project), what it needs and that it cannot be undone — and
 // create-eds-project teaches create_project_from_file: what an exported project
 // file decides, and what it never carries. The old tool name was taught nowhere.
-export const AI_CONTEXT_VERSION = 34;
+// v35 (2026-10-04): factual fixes from the AI-files audit
+// (.rptc/research/ai-files-audit-2026-10/), each re-checked against the code. Removed
+// diagnose-demo's mesh .env "trap" (deploy_mesh regenerates the .env since 2026-08-04);
+// open_view takes "projects_list"; register-custom-block now agrees with
+// commerce-block-mapper and AGENTS.md that a block on /products/default shows on real
+// product URLs; header-nav-footer and commerce-block-mapper stop naming nav,
+// breadcrumb and commerce-search blocks the template does not have; nothing
+// gitignores .scraped/ (the project root is not a repository); sync-changes names
+// write_page/publish_page (both confirm:true) for a page and says sync_storefront
+// publishes only the home page; settings live in the project and .env files are
+// generated from them; integrations deploy with deploy_integration.
+export const AI_CONTEXT_VERSION = 35;
 
 /**
  * Component IDs for standardized component instance access

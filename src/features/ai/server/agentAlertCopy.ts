@@ -194,6 +194,22 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: ['path'],
         sessionGrant: false,
     },
+    write_page: {
+        action: 'Write a page',
+        consequence:
+            "Replaces the page's content on DA.live, which the live storefront is built from; when publishing, visitors see it at once.",
+        // `publish` too: a write that goes live and one that waits for the next
+        // publish are different decisions, as granting and revoking are for
+        // set_site_admin. Not session-grantable: the page's old content is replaced.
+        target: ['path', 'publish'],
+        sessionGrant: false,
+    },
+    publish_page: {
+        action: 'Publish a page',
+        consequence: "Puts the page's current DA.live content on the live storefront; visitors see it at once.",
+        target: ['path'],
+        sessionGrant: false,
+    },
     build_catalog_menu: {
         action: 'Build the catalog menu',
         consequence:

@@ -24,6 +24,6 @@ Use this skill to add or enable a component in your Demo Builder project.
 
 ## Notes
 
-- Component `.env` files live at `{componentPath}/.env` (or `.env.local` for Next.js).
+- Component `.env` files live at `{componentPath}/.env`.
 - Do not edit `.demo-builder.json` directly — it is managed by the extension.
 - After config changes, restart the demo for them to take effect.

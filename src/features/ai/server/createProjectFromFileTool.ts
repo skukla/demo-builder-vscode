@@ -153,6 +153,122 @@ function endpointFrom(file: ProjectFile, stackId: string): string | undefined {
 const text = (value: unknown): string | undefined => (value ? String(value) : undefined);
 
 /**
+ * The new project's own name, storefront, store codes and consent. Shared by
+ * `create_project_from_file` and `copy_project`: both build a NEW project whose
+ * repository and site are the caller's, never the ones the file came from.
+ */
+export const NEW_PROJECT_FIELDS = {
+    projectName: z.string().describe('Name for the new project'),
+    repoName: z.string().optional().describe('EDS only: name for YOUR new GitHub storefront repo'),
+    githubOwner: z
+        .string()
+        .optional()
+        .describe(
+            'EDS only: the GitHub account or organization to create the repo under (default: the signed-in account)',
+        ),
+    daLiveOrg: z.string().optional().describe('EDS only: your DA.live organization'),
+    daLiveSite: z.string().optional().describe('EDS only: your DA.live site name'),
+    accsEndpoint: z
+        .string()
+        .optional()
+        .describe('EDS + ACCS only: Adobe Commerce Cloud GraphQL endpoint (default: the one the project recorded)'),
+    // The file records its sender's codes; a store other than theirs has its
+    // own. Same input as configure_project; the file's codes when omitted.
+    storeScope: storeScopeSchema.optional(),
+    confirm: z
+        .boolean()
+        .optional()
+        .describe(
+            'Must be true — creates a project (clones repos, installs deps, deploys the integrations it names; EDS also creates a real GitHub repo + DA.live content)',
+        ),
+};
+
+/** Who is asking, so a refusal names the tool and the answer says where the project came from. */
+interface ProjectFileOrigin {
+    toolName: 'create_project_from_file' | 'copy_project';
+    /** `fromFile` for an exported file, `fromProject` for a copy of a project on this machine. */
+    reportKey: 'fromFile' | 'fromProject';
+    sourceProject: string;
+}
+
+/** What the refusal without confirm:true says would be created. */
+function wouldCreate(file: ProjectFile, seed: CreationSeed, origin: ProjectFileOrigin) {
+    return {
+        ...(origin.reportKey === 'fromProject' ? { from: origin.sourceProject } : {}),
+        package: file.selectedPackage,
+        stack: file.selectedStack,
+        integrations: seed.selectedAppBuilderComponents ?? [],
+        addons: seed.selectedAddons ?? [],
+    };
+}
+
+/**
+ * Create a project from a project file already read through `readProjectFile`.
+ * The second half of `create_project_from_file`, and all of `copy_project` after it
+ * has found the source: one checking, consent and creation path for both.
+ *
+ * @param ctxFactory Builds a headless HandlerContext
+ * @param args       The tool call's arguments (projectName, the storefront fields, storeScope, confirm)
+ * @param read       The reader's answer for the file
+ * @param origin     Which tool, and where the file came from
+ * @returns the tool result
+ */
+export async function createFromProjectFile(
+    ctxFactory: () => HandlerContext,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    args: any,
+    read: ReadOk,
+    origin: ProjectFileOrigin,
+) {
+    const { file } = read;
+    if (!file.selectedStack) {
+        return asText({ error: 'This project file names no stack, so there is nothing to build.' });
+    }
+    if (!file.selectedPackage) {
+        return asText({ error: 'This project file names no demo package, so there is nothing to build.' });
+    }
+    const scope = parseStoreScope(file.selectedStack, args?.storeScope);
+    if ('error' in scope) return asText(scope);
+    const seed = seedFrom(file);
+    if (args?.confirm !== true) {
+        return asText({
+            error: `${origin.toolName} requires confirm:true — it installs dependencies, deploys the integrations the project names and, for EDS, creates a real GitHub repo + DA.live content. Ask the user to confirm.`,
+            wouldCreate: wouldCreate(file, seed, origin),
+        });
+    }
+    return runProjectCreation(ctxFactory(), {
+        projectName: String(args.projectName).trim(),
+        pkgId: file.selectedPackage,
+        stackId: file.selectedStack,
+        repoName: text(args.repoName),
+        githubOwner: text(args.githubOwner),
+        daLiveOrg: text(args.daLiveOrg),
+        daLiveSite: text(args.daLiveSite),
+        accsEndpoint: text(args.accsEndpoint) ?? endpointFrom(file, file.selectedStack),
+        storeScope: scope.storeScope,
+        seed,
+        report: {
+            [origin.reportKey]: {
+                sourceProject: origin.sourceProject,
+                ...(read.migratedFrom ? { migratedFromVersion: read.migratedFrom } : {}),
+                ...(read.newerThanSupported
+                    ? {
+                          warning:
+                              'This file was written by a newer Demo Builder. What this version understands was used.',
+                      }
+                    : {}),
+                applied: appliedFrom(file, seed),
+                notApplied: notAppliedFrom(file, seed),
+            },
+            stillNeeded: {
+                credentials: credentialsNeeded(file.selectedStack, seed),
+                how: 'A project file never carries a credential. Set each with update_project_config, or have the user enter it in Configure.',
+            },
+        },
+    });
+}
+
+/**
  * Register `create_project_from_file`.
  *
  * @param server     The tool server.
@@ -176,34 +292,7 @@ export function registerCreateProjectFromFileTool(
                 'needs your own repoName, daLiveOrg and daLiveSite. Requires confirm:true',
             inputSchema: {
                 filePath: z.string().describe('Absolute path to the exported project file'),
-                projectName: z.string().describe('Name for the new project'),
-                repoName: z
-                    .string()
-                    .optional()
-                    .describe('EDS only: name for YOUR new GitHub storefront repo'),
-                githubOwner: z
-                    .string()
-                    .optional()
-                    .describe(
-                        'EDS only: the GitHub account or organization to create the repo under (default: the signed-in account)',
-                    ),
-                daLiveOrg: z.string().optional().describe('EDS only: your DA.live organization'),
-                daLiveSite: z.string().optional().describe('EDS only: your DA.live site name'),
-                accsEndpoint: z
-                    .string()
-                    .optional()
-                    .describe(
-                        'EDS + ACCS only: Adobe Commerce Cloud GraphQL endpoint (default: the one the file recorded)',
-                    ),
-                // The file records its sender's codes; a store other than theirs has its
-                // own. Same input as configure_project; the file's codes when omitted.
-                storeScope: storeScopeSchema.optional(),
-                confirm: z
-                    .boolean()
-                    .optional()
-                    .describe(
-                        'Must be true — creates a project (clones repos, installs deps, deploys the integrations the file names; EDS also creates a real GitHub repo + DA.live content)',
-                    ),
+                ...NEW_PROJECT_FIELDS,
             },
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -215,60 +304,10 @@ export function registerCreateProjectFromFileTool(
             }
             const read = await readFileAt(filePath);
             if ('error' in read) return asText({ error: read.error });
-            const { file } = read;
-            if (!file.selectedStack) {
-                return asText({ error: 'This project file names no stack, so there is nothing to build.' });
-            }
-            if (!file.selectedPackage) {
-                return asText({
-                    error: 'This project file names no demo package, so there is nothing to build.',
-                });
-            }
-
-            const scope = parseStoreScope(file.selectedStack, args?.storeScope);
-            if ('error' in scope) return asText(scope);
-            const seed = seedFrom(file);
-            if (args?.confirm !== true) {
-                return asText({
-                    error: 'create_project_from_file requires confirm:true — it installs dependencies, deploys the integrations the file names and, for EDS, creates a real GitHub repo + DA.live content. Ask the user to confirm.',
-                    wouldCreate: {
-                        package: file.selectedPackage,
-                        stack: file.selectedStack,
-                        integrations: seed.selectedAppBuilderComponents ?? [],
-                        addons: seed.selectedAddons ?? [],
-                    },
-                });
-            }
-
-            return runProjectCreation(ctxFactory(), {
-                projectName,
-                pkgId: file.selectedPackage,
-                stackId: file.selectedStack,
-                repoName: text(args.repoName),
-                githubOwner: text(args.githubOwner),
-                daLiveOrg: text(args.daLiveOrg),
-                daLiveSite: text(args.daLiveSite),
-                accsEndpoint: text(args.accsEndpoint) ?? endpointFrom(file, file.selectedStack),
-                storeScope: scope.storeScope,
-                seed,
-                report: {
-                    fromFile: {
-                        sourceProject: file.source.project,
-                        ...(read.migratedFrom ? { migratedFromVersion: read.migratedFrom } : {}),
-                        ...(read.newerThanSupported
-                            ? {
-                                  warning:
-                                      'This file was written by a newer Demo Builder. What this version understands was used.',
-                              }
-                            : {}),
-                        applied: appliedFrom(file, seed),
-                        notApplied: notAppliedFrom(file, seed),
-                    },
-                    stillNeeded: {
-                        credentials: credentialsNeeded(file.selectedStack, seed),
-                        how: 'A project file never carries a credential. Set each with update_project_config, or have the user enter it in Configure.',
-                    },
-                },
+            return createFromProjectFile(ctxFactory, args, read, {
+                toolName: 'create_project_from_file',
+                reportKey: 'fromFile',
+                sourceProject: read.file.source.project,
             });
         },
     );

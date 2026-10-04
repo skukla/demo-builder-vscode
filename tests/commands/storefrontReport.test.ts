@@ -8,6 +8,8 @@
 jest.mock('@/features/eds/services/storefront/storefrontReportDeps', () => ({
     createStorefrontReportDeps: jest.fn(() => ({ marker: 'deps' })),
     applyStorefrontFixes: jest.fn(),
+    readTemplateCatchUp: jest.fn(),
+    catchUpWithTemplate: jest.fn(),
 }));
 jest.mock('@/features/eds/services/storefront/storefrontReport', () => ({
     readStorefrontReport: jest.fn(),
@@ -15,10 +17,14 @@ jest.mock('@/features/eds/services/storefront/storefrontReport', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { APPLY_FIXES, StorefrontReportCommand } from '@/commands/storefrontReport';
+import { APPLY_FIXES, CATCH_UP, StorefrontReportCommand } from '@/commands/storefrontReport';
 import type { StateManager } from '@/core/state/stateManager';
 import { readStorefrontReport, type StorefrontReport } from '@/features/eds/services/storefront/storefrontReport';
-import { applyStorefrontFixes } from '@/features/eds/services/storefront/storefrontReportDeps';
+import {
+    applyStorefrontFixes,
+    catchUpWithTemplate,
+    readTemplateCatchUp,
+} from '@/features/eds/services/storefront/storefrontReportDeps';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { makeAddedDemo } from '../helpers/demoPackageFixtures';
@@ -34,6 +40,8 @@ windowApi.showTextDocument = windowApi.showTextDocument ?? jest.fn();
 
 const mockRead = readStorefrontReport as jest.Mock;
 const mockApply = applyStorefrontFixes as jest.Mock;
+const mockReadCatchUp = readTemplateCatchUp as jest.Mock;
+const mockCatchUp = catchUpWithTemplate as jest.Mock;
 
 const REPORT: StorefrontReport = {
     repository: { owner: 'steve', repo: 'aistore-copy' },
@@ -119,5 +127,92 @@ describe('StorefrontReportCommand', () => {
             'OK',
         );
         expect(workspace.openTextDocument).not.toHaveBeenCalled();
+    });
+});
+
+describe('StorefrontReportCommand — bring the code up to date with the template (forks only)', () => {
+    const CATCH = {
+        repository: { owner: 'steve', repo: 'aistore-copy' },
+        branch: 'main',
+        template: { owner: 'adobe-commerce', repo: 'boilerplate-b2b-template' },
+        behindBy: 3,
+    };
+    const SHIPPED = createMockProject({ name: 'bodea' });
+
+    beforeEach(() => {
+        mockRead.mockResolvedValue({ ...REPORT, offer: undefined });
+    });
+
+    it('asks only when the report found a fork of our template that is behind, reading with this project and credential', async () => {
+        mockReadCatchUp.mockResolvedValue(undefined);
+        const { cmd, context } = command(SHIPPED);
+
+        await cmd.execute();
+
+        expect(mockReadCatchUp).toHaveBeenCalledWith(REPORT.repository, context.secrets, expect.anything());
+        expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
+        expect(mockCatchUp).not.toHaveBeenCalled();
+    });
+
+    it('names the fork, the template, how far behind, and what a conflict does; writes nothing on no', async () => {
+        mockReadCatchUp.mockResolvedValue(CATCH);
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue(undefined);
+
+        await command(SHIPPED).cmd.execute();
+
+        expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
+            'Bring the code up to date with the template?',
+            {
+                modal: true,
+                detail:
+                    'steve/aistore-copy is a fork of adobe-commerce/boilerplate-b2b-template and is 3 commits behind it. ' +
+                    "GitHub merges the template's changes into main; your own commits stay. " +
+                    'If they conflict, nothing is changed.',
+            },
+            CATCH_UP,
+        );
+        expect(mockCatchUp).not.toHaveBeenCalled();
+    });
+
+    it('merges on yes, for that fork with this credential, and says it is done', async () => {
+        mockReadCatchUp.mockResolvedValue(CATCH);
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValueOnce(CATCH_UP);
+        mockCatchUp.mockResolvedValue({ success: true, message: 'merged' });
+        const { cmd, context } = command(SHIPPED);
+
+        await cmd.execute();
+
+        expect(mockCatchUp).toHaveBeenCalledWith(CATCH, context.secrets, expect.anything());
+        expect(vscode.window.showInformationMessage).toHaveBeenLastCalledWith(
+            'steve/aistore-copy is up to date with adobe-commerce/boilerplate-b2b-template.',
+            'OK',
+        );
+    });
+
+    it('says nothing changed when the merge conflicts', async () => {
+        mockReadCatchUp.mockResolvedValue(CATCH);
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValueOnce(CATCH_UP);
+        mockCatchUp.mockResolvedValue({ success: false, conflict: true, message: 'diverged' });
+
+        await command(SHIPPED).cmd.execute();
+
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
+            "Nothing was changed: the template's changes conflict with this storefront's own. " +
+                'Merge them on GitHub, or leave the code as it is.',
+            'OK',
+        );
+    });
+
+    it('reports a failed merge rather than throwing', async () => {
+        mockReadCatchUp.mockResolvedValue(CATCH);
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValueOnce(CATCH_UP);
+        mockCatchUp.mockRejectedValue(new Error('GitHub API permission denied.'));
+
+        await command(SHIPPED).cmd.execute();
+
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
+            'Could not bring the code up to date: GitHub API permission denied.',
+            'OK',
+        );
     });
 });

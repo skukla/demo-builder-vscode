@@ -19,6 +19,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { registerViewTools } from '@/features/ai/server/viewTools';
 import { BUNDLE_LABELS, SERVER_LABELS } from '@/features/dashboard/ui/components/aiSurfaceNames';
 import { SKILL_MCP_TOOL_DEPENDENCIES, DEMO_BUILDER_ALWAYS_ON_SKILLS } from '@/types/ai';
 
@@ -207,5 +208,49 @@ describe('every user-facing name carries its provenance', () => {
     it.each(Object.entries(BUNDLE_LABELS))('bundle %s', (_id, entry) => {
         expect(entry.label.length).toBeGreaterThan(0);
         expect(entry.source.length).toBeGreaterThan(10);
+    });
+});
+
+describe('every open_view the bundle teaches names a view the tool accepts', () => {
+    // The AI-files audit (2026-10) found create-eds-project teaching
+    // `open_view view="projects"`; the tool's enum says `projects_list`, so the
+    // call failed. The enum is read from the REGISTERED schema, not restated here.
+    function acceptedViews(): string[] {
+        let views: string[] = [];
+        registerViewTools(
+            {
+                registerTool: (name: string, def: { inputSchema?: Record<string, unknown> }) => {
+                    if (name === 'open_view') views = (def.inputSchema?.view as { options: string[] }).options;
+                },
+            } as unknown as Parameters<typeof registerViewTools>[0],
+            async () => undefined,
+        );
+        return views;
+    }
+
+    const sources = [
+        ...fs
+            .readdirSync(path.join(__dirname, '../../src/features/project-creation/templates/skills'))
+            .map((f) => `src/features/project-creation/templates/skills/${f}`),
+        'src/features/project-creation/services/aiBundle/agentsMdSections.ts',
+        'src/features/project-creation/services/aiBundle/homeAiContextWriter.ts',
+    ];
+
+    it('CONTROL: the enum was read and the corpus names open_view somewhere', () => {
+        expect(acceptedViews()).toContain('projects_list');
+        const all = sources.map((f) => fs.readFileSync(path.join(__dirname, '../..', f), 'utf-8')).join('\n');
+        expect(all).toMatch(/open_view view="/);
+    });
+
+    it('names only accepted views', () => {
+        const accepted = new Set(acceptedViews());
+        const bad: string[] = [];
+        for (const file of sources) {
+            const text = fs.readFileSync(path.join(__dirname, '../..', file), 'utf-8');
+            for (const m of text.matchAll(/open_view view="([^"]+)"/g)) {
+                if (!accepted.has(m[1])) bad.push(`${file}: ${m[1]}`);
+            }
+        }
+        expect(bad).toStrictEqual([]);
     });
 });

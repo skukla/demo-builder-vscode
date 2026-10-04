@@ -131,6 +131,7 @@ export const TOOL_NARRATION: Record<string, string> = {
     // ── Projects ────────────────────────────────────────────────────────
     create_project: 'Creating the project',
     create_project_from_file: 'Creating a project from a file',
+    copy_project: 'Copying a project',
     delete_project: 'Deleting the project',
     rename_project: 'Renaming the project',
     // "Hands back to the user — the wizard is theirs to drive".

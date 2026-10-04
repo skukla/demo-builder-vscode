@@ -163,8 +163,8 @@ export function registerStorefrontTools(
             description:
                 "Publish ALL of this project's EDS storefront content — config, code and " +
                 'DA.live pages — to the CDN, replacing what visitors are currently served. ' +
-                'Requires confirm:true. (Not the same as sync_storefront, which only ' +
-                'commits and pushes to git.)',
+                'Requires confirm:true. (Not the same as sync_storefront, which commits and ' +
+                'pushes the storefront code and publishes only the home page.)',
             inputSchema: {
                 confirm: z.boolean().optional().describe('Must be true to proceed'),
             },

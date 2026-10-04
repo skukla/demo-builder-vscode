@@ -9,16 +9,18 @@ Use this skill to update Commerce or service settings for a Demo Builder project
 
 ## Two kinds of value, and only one of them you can read
 
-**Ordinary settings** live in component `.env` files, and you can read and write
-them with the tools below:
+**Ordinary settings** live in the project's settings, under the component they
+belong to; the components' `.env` files are generated from them. You can read and
+write them with the tools below:
 
-- **Commerce URL**: `ADOBE_COMMERCE_URL` in the backend component `.env`
-- **Store view**: `ADOBE_COMMERCE_STORE_VIEW_CODE` in the backend component `.env`
-- **API Mesh endpoint**: `MESH_ENDPOINT` in the mesh component `.env`
-- **ACCS endpoint**: `ACCS_GRAPHQL_ENDPOINT` in the backend component `.env`
+- **Commerce URL**: `ADOBE_COMMERCE_URL`, in the backend's settings (the backend has
+  no folder of its own; the value is written into the frontend's and the mesh's `.env`)
+- **Store view**: `ADOBE_COMMERCE_STORE_VIEW_CODE`, likewise
+- **API Mesh endpoint**: `MESH_ENDPOINT`, a frontend setting, in the frontend's `.env`
+- **ACCS endpoint**: `ACCS_GRAPHQL_ENDPOINT`, in the backend's settings
 
 **Passwords and client secrets do not.** They are kept in the OS keychain, so
-`get_component_config` will not show them and a manifest read will not either —
+`get_component_config` shows them masked and a manifest read does not hold them —
 that is deliberate, not a fault. These are:
 
 - `ADOBE_COMMERCE_ADMIN_PASSWORD`
@@ -35,7 +37,7 @@ fields are only an override.
 
 ## Steps
 
-1. Use `get_component_config` to view the current values. A secret shows as absent.
+1. Use `get_component_config` to view the current values. A secret shows masked.
 2. Use `configure_project` for an ordinary setting; for a secret, hand it to
    the user with the Configure route above.
 3. Restart the demo server so the new values take effect.

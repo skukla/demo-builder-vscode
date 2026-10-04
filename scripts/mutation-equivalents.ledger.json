@@ -2427,7 +2427,7 @@
             "anchors": [
                 "if (importedSettings) {"
             ],
-            "line": 246,
+            "line": 250,
             "mutants": 2,
             "category": "branch",
             "reason": "The body of this if is one log.info and nothing more. Every value it reports \u2014 the selections, the Adobe block, the configs, the generated name \u2014 was computed on the four lines above it and is returned from computeInitialState regardless of whether this branch runs. Forcing it false or emptying it changes only development output.",
@@ -2440,7 +2440,7 @@
             "anchors": [
                 "hasSelections: !!importedSettings.selections,"
             ],
-            "line": 248,
+            "line": 252,
             "mutants": 2,
             "category": "branch",
             "reason": "A field of the object literal passed to log.info, read by nothing else. The initial state returned below takes importedSettings.selections directly, not this boolean, so dropping or adding the negation moves one value inside a development-only log line and nothing in the wizard. Separating the two would require asserting the log payload.",
@@ -2453,7 +2453,7 @@
             "anchors": [
                 "hasAdobe: !!importedSettings.adobe,"
             ],
-            "line": 249,
+            "line": 253,
             "mutants": 2,
             "category": "branch",
             "reason": "A field of the object literal passed to log.info, read by nothing else. The initial state returned below takes importedSettings.adobe directly, not this boolean, so dropping or adding the negation moves one value inside a development-only log line and nothing in the wizard. Separating the two would require asserting the log payload.",
@@ -2466,7 +2466,7 @@
             "anchors": [
                 "hasConfigs: !!importedSettings.configs,"
             ],
-            "line": 250,
+            "line": 254,
             "mutants": 2,
             "category": "branch",
             "reason": "A field of the object literal passed to log.info, read by nothing else. The initial state returned below takes importedSettings.configs directly, not this boolean, so dropping or adding the negation moves one value inside a development-only log line and nothing in the wizard. Separating the two would require asserting the log payload.",
@@ -2479,7 +2479,7 @@
             "anchors": [
                 "configKeys: importedSettings.configs ? Object.keys(importedSettings.configs) : [],"
             ],
-            "line": 251,
+            "line": 255,
             "mutants": 1,
             "category": "other",
             "reason": "The empty fallback here is the else arm of a field inside the log.info payload; it is reached only when the import carried no configs, and it is printed rather than used. componentConfigs on the returned state comes from importedSettings?.configs || {} further down, which this expression cannot reach. Any test able to see the difference would be asserting log content.",
@@ -2492,7 +2492,7 @@
             "anchors": [
                 "existingProjectNames || [],"
             ],
-            "line": 311,
+            "line": 315,
             "mutants": 1,
             "category": "other",
             "reason": "This fallback fires only when the caller passes no existing-names list, and the array goes straight to initializeProjectName, which uses it for one thing: existingNames.includes(baseName) inside generateUniqueProjectName. A list holding Stryker's placeholder string answers that check identically to an empty list for every project name a wizard can be opened with.",
@@ -2505,7 +2505,7 @@
             "anchors": [
                 "const originalStep = wizardSteps?.find((ws) => ws.id === step.id);"
             ],
-            "line": 330,
+            "line": 334,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Removing the optional call would throw only if this map body ran with wizardSteps undefined, and it cannot: enabledSteps is getEnabledWizardSteps(wizardSteps), which returns an empty array for a missing or empty configuration, so the map never executes a single iteration. There is no input that reaches this line with wizardSteps absent.",
@@ -2518,7 +2518,7 @@
             "anchors": [
                 "condition: originalStep?.condition,"
             ],
-            "line": 335,
+            "line": 339,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "originalStep is the result of finding step.id in wizardSteps, and step came from getEnabledWizardSteps(wizardSteps) \u2014 every id being searched for was taken from that same array, so the find always hits. Removing the optional read can never dereference undefined, whatever step configuration is handed in.",
@@ -2531,7 +2531,7 @@
             "anchors": [
                 "if (currentOrgId) {"
             ],
-            "line": 406,
+            "line": 410,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true sets hasSeenOrgRef when the org is absent, but the flag can only change an outcome once orgActuallyChanged is evaluated with prevOrgId defined \u2014 and prevOrgId is assigned currentOrgId at the end of a previous run, so a defined prevOrgId means that run had a defined currentOrgId and already set the flag unmutated. The two therefore agree on every sequence of org values.",
@@ -2544,7 +2544,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 435,
+            "line": 439,
             "mutants": 1,
             "category": "other",
             "reason": "This is the useCallback dependency list for updateState. Replacing the empty array with one holding a constant string leaves the memo equally stable \u2014 the value never changes between renders, so the callback identity never invalidates either way, and the test asserting updateState keeps the same reference across a state change passes under both.",
@@ -8627,7 +8627,7 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 764,
+            "line": 766,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here the step is starting the in-extension MCP server, whose failure must never abort activation.",
@@ -8652,7 +8652,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 499,
+            "line": 500,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a logger.error plus a showErrorMessage whose text is built from the error. Activation's own tests assert showErrorMessage was NOT called on every success path, which is the observable half; the wording of the message when it IS called is the rest.",
@@ -8665,7 +8665,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 855,
+            "line": 857,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here it is the manifest-format sweep.",
@@ -8989,7 +8989,7 @@
             "anchors": [
                 "bytes > MAX_PUBLISHED_READ_BYTES"
             ],
-            "line": 623,
+            "line": 667,
             "mutants": 2,
             "category": "branch",
             "reason": "This condition chooses between the whole body and a slice of it at the cap. Slicing a body that is at or under the cap returns that body unchanged, so both mutants - always slicing, and slicing at the boundary - produce a byte-identical content field. The sibling condition two lines down decides the truncated flag, which IS observable and is pinned at both the ordinary and the exact-cap sizes.",

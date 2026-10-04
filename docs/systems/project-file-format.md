@@ -23,9 +23,14 @@ type and the committed schema cannot drift from the generator.
 
 Export writes version 2, through one function: `createExportSettings` in
 `src/features/projects-dashboard/services/settingsSerializer.ts`. It has no option to
-include credentials and no field that says whether they are in. Copy and Edit build the
-same file in memory (`extractSettingsFromProject`), keeping the SC's own values, and add the
-project's own storefront, which only Edit reopens.
+include credentials and no field that says whether they are in. Copy and Edit read the same
+file through the same reader Import uses (since 2026-10-04): Copy from Existing opens the
+wizard with `copySeedFromProject`, which is the export read back by `readProjectFile`, so a
+copy and an import of one project send the same creation wire. Edit uses
+`extractSettingsFromProject`, which is that file plus the two things only Edit keeps,
+because it edits the SC's own project: the setting values as they are, credentials
+included, and the project's own storefront, which it reopens with the sign-ins re-checked.
+`tests/features/project-creation/ui/wizard/projectCopyEditRoundTrip.test.tsx` pins both.
 
 Everything the manifest persists that describes the demo rather than the machine:
 

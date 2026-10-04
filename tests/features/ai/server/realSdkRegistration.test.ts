@@ -30,6 +30,7 @@ import { registerCloudResourceTools } from '@/features/ai/server/cloudResourceTo
 import { registerComponentRequirementsTool } from '@/features/ai/server/componentRequirementsTool';
 import { registerConfigureProjectTool } from '@/features/ai/server/configureProjectTool';
 import { registerContentAuthoringTools } from '@/features/ai/server/contentAuthoringTools';
+import { registerCopyProjectTool } from '@/features/ai/server/copyProjectTool';
 import { registerCreateProjectFromFileTool } from '@/features/ai/server/createProjectFromFileTool';
 import { registerCreateProjectTool } from '@/features/ai/server/createProjectTool';
 import { registerAgentTraceTool } from '@/features/ai/server/agentTraceTool';
@@ -133,6 +134,7 @@ describe('registration against the real MCP SDK', () => {
             registerAdobeTools(s, ctxFactory);
             registerCreateProjectTool(s, ctxFactory);
             registerCreateProjectFromFileTool(s, ctxFactory);
+            registerCopyProjectTool(s, ctxFactory);
             registerCurrentProjectTool(s, ctxFactory);
             registerAgentTraceTool(s, new ToolTraceRecorder(), '/nonexistent-trace-dir');
             registerProjectStatusTool(s, stateManager);

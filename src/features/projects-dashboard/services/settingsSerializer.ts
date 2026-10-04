@@ -1,15 +1,20 @@
 /**
  * The project file's writer: a project in, the version-2 project file out.
  *
- * ONE writer (PL-56c). Every export door writes {@link createExportSettings};
- * Copy and Edit seed the wizard from {@link extractSettingsFromProject}, the same
- * file built in memory with the SC's own values kept. The reader is
- * `readProjectFile` (`core/state/projectFileReader.ts`), which also migrates the
- * version-1 files written before 2026-10.
+ * ONE writer (PL-56c). Every export door writes {@link createExportSettings}, and
+ * every door into the wizard reads it back through ONE reader, `readProjectFile`
+ * (`core/state/projectFileReader.ts`), which also migrates the version-1 files
+ * written before 2026-10 (PL-56e): Import reads a file from disk, Copy reads
+ * {@link copySeedFromProject}, and Edit reads {@link extractSettingsFromProject},
+ * the same file with the SC's own values and storefront put back.
  */
 
 import { stripSecretValues } from '@/core/config/envVarKeys';
-import { storefrontProvenance } from '@/core/state/projectFileReader';
+import {
+    readProjectFile,
+    storefrontProvenance,
+    type ReadProjectFileResult,
+} from '@/core/state/projectFileReader';
 import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { Project } from '@/types/base';
 import { PROJECT_FILE_SUFFIX, PROJECT_FILE_VERSION, type ProjectFile } from '@/types/projectFile';
@@ -137,18 +142,35 @@ function projectFileOf(project: Project, extensionVersion: string): ProjectFile 
 }
 
 /**
- * The project file built IN MEMORY, for Copy-from-project and Edit.
+ * What Copy from Existing opens the wizard with: the file Export writes, read back
+ * by the reader Import uses (PL-56e). So copying a project and importing its
+ * export are the same file and the same creation wire: no credential (D24; they
+ * move keychain to keychain or are entered again, never through the file), and
+ * the source's storefront only as provenance, because the copy gets its own
+ * repository and DA.live site.
  *
- * It carries `componentConfigs` whole, so the fields the SC typed are
- * re-seeded, and the project's own storefront, which Edit reopens. It is NOT
- * what an export writes: anything that reaches a file goes through
- * {@link createExportSettings}, which removes every credential.
+ * @param project - The project being copied
+ * @returns The reader's answer: the file, or the sentence it refused with
+ */
+export function copySeedFromProject(project: Project): ReadProjectFileResult {
+    return readProjectFile(JSON.stringify(createExportSettings(project, '')));
+}
+
+/**
+ * What Edit opens the wizard with: {@link copySeedFromProject}'s file, plus the
+ * two things only Edit keeps because it edits the SC's OWN project — the setting
+ * values as they are (credentials included; Finish writes them back) and the
+ * project's storefront, which Edit reopens already signed in.
  *
- * @param project - Source project to extract settings from
+ * @param project - The project being edited
  * @returns The wizard's seed
+ * @throws Error naming the project when the reader refuses its file; Edit then
+ *   says so rather than opening on a seed Import would not accept
  */
 export function extractSettingsFromProject(project: Project): ProjectSeed {
-    return { ...projectFileOf(project, ''), edsConfig: storefrontOf(project) };
+    const read = copySeedFromProject(project);
+    if (!read.ok) throw new Error(`${project.name} can't be opened for editing: ${read.error}`);
+    return { ...read.file, configs: project.componentConfigs ?? {}, edsConfig: storefrontOf(project) };
 }
 
 /**

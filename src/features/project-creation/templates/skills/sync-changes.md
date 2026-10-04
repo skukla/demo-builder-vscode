@@ -11,10 +11,11 @@ Use this skill to decide which sync operation to run after making changes.
 
 | What changed? | Use this MCP tool |
 |---|---|
-| Page content (`.md` file in DA.live) | `sync_content` — calls Helix preview + publish |
-| Block JS or CSS in `blocks/` | `sync_storefront` — git commit + push, then Helix preview+publish when credentials are available |
+| A DA.live page (pages are HTML documents in DA.live) | `write_page` to change it, `publish_page` to put it live — both ask the user first and need `confirm: true`. `sync_content` publishes the whole site, and asks first too |
+| Block JS or CSS in `blocks/` | `sync_storefront` — git commit + push, then Helix preview+publish of the home page when credentials are available |
 | `mesh.json` or API Mesh config | `deploy_mesh` — redeploys via `aio` CLI |
-| Component `.env` credential | `configure_project`, then restart demo |
+| A component setting | `configure_project`, then restart demo |
+| A credential (secret) | the user enters it in Configure — `configure_project` refuses secrets |
 | Block changes to push back to source library | `promote_block_to_library` |
 | Remove a block from the library | `remove_block_from_library` |
 
@@ -33,9 +34,9 @@ It then runs `git add -A && git commit -m "AI: sync files" && git push` in that 
 
 **It does NOT:**
 
-- publish. It only runs git. The live site still needs a publish — call `sync_content`, or
-  `sync_storefront`, which pushes AND publishes when Helix credentials are available. A
-  pushed change is not yet a visible change.
+- publish. It only runs git. A pushed change is not yet a visible change: `sync_storefront`
+  pushes and publishes the home page only, `publish_page` publishes one page, and
+  `sync_content` publishes the whole site (both of those ask the user first).
 - cover files edited outside the Write/Edit tools — a shell `sed`, a script, or the user
   editing by hand. Call `sync_storefront` explicitly for those.
 - cover anything outside the storefront directory.
@@ -52,7 +53,8 @@ take effect after restarting the dev server or redeploying.
 
 - `sync_content` calls Helix preview first, then publish. Both steps are required.
 - `sync_storefront` runs `git add -A && git commit && git push` in the storefront directory,
-  then Helix preview+publish when both Helix tokens and the GitHub repo are known. The commit
+  then Helix preview+publish of the home page (`/`) when both Helix tokens and the GitHub
+  repo are known. The commit
   step is skipped cleanly when there is nothing staged, so calling it again is safe.
 - `deploy_mesh` spawns `aio api-mesh:update` (falling back to `api-mesh:create` when no mesh
   exists yet) — requires Adobe I/O CLI to be authenticated. Note the hyphen: the topic is

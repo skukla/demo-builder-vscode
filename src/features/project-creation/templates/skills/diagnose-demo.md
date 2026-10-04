@@ -147,18 +147,6 @@ For EDS projects these are two different things, and the gap is the most common 
 If a change is in GitHub but not on the live site, you are between the two. Call
 `sync_storefront`; it is idempotent.
 
-## The mesh `.env` ordering trap
-
-`deploy_mesh` deploys whatever `.env` is on disk. It does **not** regenerate it. Only a
-**Configure save** regenerates `.env` from the project's settings.
-
-So after changing Commerce settings the correct order is:
-
-1. Configure → save (regenerates `.env`)
-2. `deploy_mesh`
-
-Deploying first redeploys the old configuration and reports success.
-
 ## When a tool answer is not enough
 
 - **Debug Logs** — the "Demo Builder: Debug Logs" output channel carries the structured
