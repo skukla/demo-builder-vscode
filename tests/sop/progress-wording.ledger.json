@@ -1,7 +1,7 @@
 {
     "_note": "Progress-notification titles and messages that break the PL-59 wording today. Each list may only shrink: see tests/sop/progress-wording.test.ts.",
     "titles": {
-        "src/features/dashboard/handlers/appBuilderComponentHandlers.ts | ${title} ${label}": "Assembled from parts: the title is always an -ing verb (\"Deploying\", \"Updating\") and the label the object, so it reads \"Deploying ERP integration\" at runtime."
+        "src/features/dashboard/handlers/appBuilderComponentOperation.ts | ${title} ${label}": "Assembled from parts: the title is always an -ing verb (\"Deploying\", \"Updating\") and the label the object, so it reads \"Deploying ERP integration\" at runtime."
     },
     "messages": {
         "src/features/lifecycle/commands/startDemo.ts | \u2713 Started at http://localhost:${port}": "Predates the wording rule (PL-59 phase 2, 2026-09-19); reworded in its slice of extension-wide.md."

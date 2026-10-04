@@ -23,6 +23,11 @@ const STAGE_REPORTERS = [
     'src/features/app-builder/services/appBuilderComponentRunner.ts',
     'src/features/app-builder/services/appDeployment.ts',
     'src/features/dashboard/handlers/appBuilderComponentHandlers.ts',
+    // Split out of appBuilderComponentHandlers.ts (EDS-8, 2026-10-04); their stage
+    // reports moved with them, so the rule follows.
+    'src/features/dashboard/handlers/appBuilderComponentGuards.ts',
+    'src/features/dashboard/handlers/appBuilderComponentAdd.ts',
+    'src/features/dashboard/handlers/appBuilderComponentRemove.ts',
     'src/features/dashboard/handlers/appManagementInstallHandlers.ts',
     'src/core/shell/buildComponent.ts',
     'src/features/mesh/services/meshDeployment.ts',

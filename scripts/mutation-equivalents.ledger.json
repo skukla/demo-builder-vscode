@@ -6104,7 +6104,7 @@
             "anchors": [
                 "const errorText = await response.text().catch(() => '');"
             ],
-            "line": 298,
+            "line": 247,
             "mutants": 1,
             "category": "other",
             "reason": "Stryker rewrites the .catch(() => '') callback to return undefined. The result feeds only `${errorText ? ` - ${errorText}` : ''}`, and undefined and '' are both falsy, so the assembled message is byte-identical. The callback runs at all only when response.text() rejects, and even then nothing downstream can tell the two values apart.",
@@ -6113,7 +6113,7 @@
             "source": "mutationLedger add"
         },
         {
-            "module": "src/features/eds/services/daLive/daLiveConfigService.ts",
+            "module": "src/features/eds/services/daLive/daLiveSiteAccess.ts",
             "anchors": [
                 "if (hasRootPermission && hasContentPermission && hasConfigPermission) {"
             ],
@@ -6125,7 +6125,7 @@
             "source": "mutationLedger add"
         },
         {
-            "module": "src/features/eds/services/daLive/daLiveConfigService.ts",
+            "module": "src/features/eds/services/daLive/daLiveSiteAccess.ts",
             "anchors": [
                 "const names = existing?.[':names'] || ['permissions'];"
             ],
@@ -6137,11 +6137,11 @@
             "source": "mutationLedger add"
         },
         {
-            "module": "src/features/eds/services/daLive/daLiveConfigService.ts",
+            "module": "src/features/eds/services/daLive/daLiveSiteAccess.ts",
             "anchors": [
                 "if (!config?.permissions?.data) {"
             ],
-            "line": 489,
+            "line": 198,
             "mutants": 4,
             "category": "branch",
             "reason": "Same shape as hasUserAccess: the guard and the catch return the identical { configured: false, userCount: 0, users: [] }, so turning the guard off or dropping either ?. throws into the catch and produces the same value. Only a logger.warn differs.",
@@ -6150,11 +6150,11 @@
             "source": "mutationLedger add"
         },
         {
-            "module": "src/features/eds/services/daLive/daLiveConfigService.ts",
+            "module": "src/features/eds/services/daLive/daLiveSiteAccess.ts",
             "anchors": [
                 "if (!config?.permissions?.data) {"
             ],
-            "line": 444,
+            "line": 153,
             "mutants": 4,
             "category": "branch",
             "reason": "hasUserAccess returns { hasAccess: false } from three places \u2014 this guard, the end of the loop, and the catch \u2014 so disabling the guard (or dropping either ?. so it throws) lands in the catch and returns the SAME object. Nothing observable differs: no argument changes, no request is made, and only a logger.warn separates the paths. The guard is still right to keep, because reaching the loop with no data is a thrown TypeError being swallowed rather than a decision.",
@@ -7909,11 +7909,11 @@
             "source": "PL-22 MUT-08"
         },
         {
-            "module": "src/features/dashboard/handlers/appBuilderComponentHandlers.ts",
+            "module": "src/features/dashboard/handlers/appBuilderComponentOperation.ts",
             "anchors": [
                 "if (result.success) {"
             ],
-            "line": 866,
+            "line": 235,
             "mutants": 7,
             "category": "branch",
             "reason": "The three-way tail of withComponentProgress writes one USER-log line per outcome and nothing else \u2014 no return value changes, no channel is pushed. Forcing any branch, or emptying any body, changes only which line prints, which is what the ratchet exists to refuse to reward. The outcome itself is asserted through the returned result and the row-status pushes.",
@@ -7922,7 +7922,7 @@
             "source": "PL-22 MUT-08"
         },
         {
-            "module": "src/features/dashboard/handlers/appBuilderComponentHandlers.ts",
+            "module": "src/features/dashboard/handlers/appBuilderComponentAdd.ts",
             "anchors": [
                 "if (payload.source?.owner && payload.source?.repo) {"
             ],
@@ -7934,11 +7934,11 @@
             "source": "PL-22 MUT-08"
         },
         {
-            "module": "src/features/dashboard/handlers/appBuilderComponentHandlers.ts",
+            "module": "src/features/dashboard/handlers/appBuilderComponentAdd.ts",
             "anchors": [
                 "success: false,"
             ],
-            "line": 496,
+            "line": 228,
             "mutants": 1,
             "category": "branch",
             "reason": "The Configure route's inner success flag never reaches a caller: the outer handler matches result.blocked first and returns its own { success: false, error }. Flipping it changes a value that is overwritten one frame later. Re-anchored 2026-09-10 (474 -> 475): unchanged code, shifted by the AB-7 cleanup-reporting block added to handleRemoveAppBuilderComponent.",
@@ -7947,7 +7947,7 @@
             "source": "PL-22 MUT-08"
         },
         {
-            "module": "src/features/dashboard/handlers/appBuilderComponentHandlers.ts",
+            "module": "src/features/dashboard/handlers/appBuilderComponentRename.ts",
             "anchors": [
                 "return { cancelled: true };"
             ],
@@ -7959,7 +7959,7 @@
             "source": "PL-22 MUT-08"
         },
         {
-            "module": "src/features/dashboard/handlers/appBuilderComponentHandlers.ts",
+            "module": "src/features/dashboard/handlers/appBuilderComponentRename.ts",
             "anchors": [
                 "const resolved = await resolveRenameName(payload?.name, entry.name ?? id, takenNames);"
             ],
