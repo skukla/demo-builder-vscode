@@ -17,6 +17,7 @@
  */
 
 import AdmZip from 'adm-zip';
+import { isNeverShipped } from '../storefront/neverShippedFiles';
 import { SHARED_DEMO_FILE_NAME, type ProjectFile, type SharedDemoDescription } from '@/types/projectFile';
 
 export const BUNDLE_SETUP_FILE = 'setup.demo-builder.json';
@@ -63,7 +64,8 @@ export function buildDemoBundle(name: string, parts: DemoBundleParts): DemoBundl
         for (const entry of archive.getEntries()) {
             if (entry.isDirectory) continue;
             const path = entry.entryName.slice(strip);
-            if (!path || path === SHARED_DEMO_FILE_NAME) continue;
+            // A secret committed to the repository still never leaves in a bundle.
+            if (!path || path === SHARED_DEMO_FILE_NAME || isNeverShipped(path)) continue;
             out.addFile(`${root}${BUNDLE_STOREFRONT_DIR}${path}`, entry.getData());
         }
         out.addFile(

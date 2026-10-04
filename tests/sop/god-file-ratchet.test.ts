@@ -124,8 +124,10 @@ describe('source files stay within the size limits this repo states', () => {
         // A zero here would make both ratchets pass while measuring nothing.
         expect(SOURCES.length).toBeGreaterThan(500);
         // A known-over file is seen, and a comfortably-under one is not. (The known-over
-        // file was daLiveContentCopy.ts until its 2026-10-03 cut put it under 400.)
-        expect(measure('src/features/eds/services/daLive/daLiveConfigService.ts')).not.toBeNull();
+        // file was daLiveContentCopy.ts until its 2026-10-03 cut put it under 400, then
+        // daLiveConfigService.ts until its 2026-10-04 cut did the same. edsPipeline.ts is
+        // over and adjudicated to stay whole — one job, one export — so it should hold.)
+        expect(measure('src/features/eds/services/edsPipeline.ts')).not.toBeNull();
         expect(measure('src/core/ui/utils/classNames.ts')).toBeNull();
     });
 

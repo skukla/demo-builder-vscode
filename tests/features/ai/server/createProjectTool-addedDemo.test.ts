@@ -168,3 +168,34 @@ describe('create_project — from a link', () => {
         expect(res.error).toMatch(/package \(or link\)/);
     });
 });
+
+describe("create_project — an added demo's Commerce endpoint (EDS-22)", () => {
+    const SHARER_ENDPOINT = 'https://na1-sandbox.api.commerce.example/tenant/graphql';
+    const KHALIL = makeAddedDemo({
+        source: { owner: 'kmanns', repo: 'justrite' },
+        configDefaults: { ACCS_GRAPHQL_ENDPOINT: SHARER_ENDPOINT },
+    });
+
+    beforeEach(() => mockRead.mockReturnValue([KHALIL]));
+
+    it("needs no accsEndpoint when the demo's row names the instance, and records it on the backend", async () => {
+        const res = await toolServer().call({ ...EDS, stack: 'eds-accs', package: 'added:kmanns/justrite' });
+
+        expect(res.created).toBe(true);
+        expect(capturedWizardState().edsConfig).toMatchObject({ accsEndpoint: SHARER_ENDPOINT });
+        expect(capturedWizardState().componentConfigs).toStrictEqual({
+            'adobe-commerce-accs': { ACCS_GRAPHQL_ENDPOINT: SHARER_ENDPOINT },
+        });
+    });
+
+    it('an accsEndpoint the caller passes still wins over the row', async () => {
+        await toolServer().call({
+            ...EDS,
+            stack: 'eds-accs',
+            package: 'added:kmanns/justrite',
+            accsEndpoint: 'https://mine.example/graphql',
+        });
+
+        expect(capturedWizardState().edsConfig).toMatchObject({ accsEndpoint: 'https://mine.example/graphql' });
+    });
+});

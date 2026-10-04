@@ -235,6 +235,18 @@ describe('the AI entry points differ only in what they hand the launcher', () =>
         expect(commandInstance(OpenInClaudeCommand).execute).toHaveBeenCalledWith({ fresh: true });
     });
 
+    // The third way into the same chat (AI-4b): Claude Code's own picker of
+    // earlier conversations, rather than whichever one `--continue` lands on.
+    it('pickAiChat asks for the earlier-chat picker', async () => {
+        const h = harness();
+
+        await h.handlerFor('demoBuilder.pickAiChat')();
+
+        expect(commandInstance(OpenInClaudeCommand).execute).toHaveBeenCalledWith({
+            pickPast: true,
+        });
+    });
+
     it('openAi runs the prompt library, not the launcher', async () => {
         const h = harness();
 

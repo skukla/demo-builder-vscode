@@ -37,7 +37,17 @@ describe('storefrontSyncService.syncAndPublish', () => {
             await syncAndPublish({ storefrontPath: STOREFRONT, commitMessage: 'msg' });
 
             const addCall = execFileMock.mock.calls.find((c) => c[1].includes('add'));
-            expect(addCall?.[1]).toEqual(['-C', STOREFRONT, 'add', '-A']);
+            // Every change, except a .env file at any depth: a secret in the
+            // storefront folder must never reach GitHub, ignored or not.
+            expect(addCall?.[1]).toEqual([
+                '-C',
+                STOREFRONT,
+                'add',
+                '-A',
+                '--',
+                '.',
+                ':(exclude,glob)**/.env*',
+            ]);
         });
 
         it('runs git commit with the sanitized message', async () => {

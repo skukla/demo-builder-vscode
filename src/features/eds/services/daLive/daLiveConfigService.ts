@@ -20,104 +20,53 @@
  */
 
 import { DaLiveApiClient } from './daLiveApiClient';
+import type {
+    ContentReader,
+    GrantAccessResult,
+    HasAccessResult,
+    MultiSheetConfig,
+} from './daLiveConfigTypes';
 import { DA_LIVE_BASE_URL } from './daLiveConstants';
 import type { TokenProvider } from './daLiveContentOperations';
+import { DaLiveContentReaders } from './daLiveContentReaders';
+import { DaLiveSiteAccess } from './daLiveSiteAccess';
 import type { Logger } from '@/types/logger';
 
-// ==========================================================
-// Constants
-// ==========================================================
-
-/** DA.live Admin API base URL */
-// Host constant shared from daLiveConstants — one definition (2026-08-22 spine sweep).
-
-// ==========================================================
-// Types
-// ==========================================================
-
-/**
- * Permission row in the permissions sheet
- *
- * From storefront-tools permissions.js:
- * - path: 'CONFIG' for admin, '/**' for recursive access to all content
- * - groups: User email or org ID (comma-separated for multiple)
- * - actions: 'write' or 'read'
- * - comments: Optional description
- */
-export interface PermissionRow {
-    /** Content path pattern */
-    path: string;
-    /** User email(s) or group ID(s), comma-separated */
-    groups: string;
-    /** Permission level */
-    actions: 'write' | 'read';
-    /** Optional description */
-    comments?: string;
-}
-
-/**
- * Sheet data structure within multi-sheet config
- */
-export interface SheetData<T> {
-    total: number;
-    limit: number;
-    offset: number;
-    data: T[];
-    ':colWidths'?: number[];
-}
-
-/**
- * Multi-sheet config format used by DA.live Config API
- */
-export interface MultiSheetConfig {
-    ':names': string[];
-    ':version': number;
-    ':type': 'multi-sheet';
-    /** Data sheet (general key-value settings) */
-    data?: SheetData<Record<string, string>>;
-    /** Permissions sheet */
-    permissions?: SheetData<PermissionRow>;
-    /** Library sheet (block library configuration) */
-    library?: SheetData<{ title: string; path: string }>;
-    /** Allow other sheets */
-    [key: string]: unknown;
-}
-
-/**
- * Result of granting user access
- */
-export interface GrantAccessResult {
-    success: boolean;
-    error?: string;
-}
-
-/**
- * Result of checking user access
- */
-export interface HasAccessResult {
-    hasAccess: boolean;
-    permissionLevel?: 'write' | 'read';
-}
+export type {
+    ContentReader,
+    GrantAccessResult,
+    HasAccessResult,
+    MultiSheetConfig,
+    PermissionRow,
+    SheetData,
+} from './daLiveConfigTypes';
 
 // ==========================================================
 // DA.live Config Service
 // ==========================================================
 
 /**
- * DA.live Config Service for managing site permissions
+ * DA.live Config Service: reads and writes the org and site config sheets.
  *
  * Uses the correct admin.da.live/config/ API endpoint with proper
- * DA.live IMS authentication and multi-sheet config format.
+ * DA.live IMS authentication and multi-sheet config format. Who may write or
+ * read a site is decided in `DaLiveSiteAccess` and `DaLiveContentReaders`,
+ * which are handed this service as their store.
  */
 export class DaLiveConfigService {
     /** Shared DA.live transport (retry/timeout/429) — 2026-08-22 consolidation. */
     private readonly apiClient: DaLiveApiClient;
+    private readonly siteAccess: DaLiveSiteAccess;
+    private readonly contentReaders: DaLiveContentReaders;
 
     constructor(
         private tokenProvider: TokenProvider,
         private logger: Logger,
     ) {
-        this.apiClient = new DaLiveApiClient(tokenProvider, logger);}
+        this.apiClient = new DaLiveApiClient(tokenProvider, logger);
+        this.siteAccess = new DaLiveSiteAccess(this, logger);
+        this.contentReaders = new DaLiveContentReaders(this, logger);
+    }
 
     /**
      * Get IMS token from TokenProvider
@@ -311,209 +260,6 @@ export class DaLiveConfigService {
     }
 
     /**
-     * Grant user write access to a site
-     *
-     * This is the main entry point for configuring permissions.
-     * IMPORTANT: Permissions are stored at the ORG level, not site level.
-     * See: https://da.live/docs/administration/permissions
-     *
-     * Follows the pattern:
-     * 1. Read existing ORG config (preserve other settings)
-     * 2. Merge user into permissions sheet with site-specific path
-     * 3. Update ORG config
-     *
-     * @param org - DA.live organization name
-     * @param site - DA.live site name
-     * @param userEmail - User's email address to grant access
-     * @returns Result indicating success or failure
-     */
-    async grantUserAccess(
-        org: string,
-        site: string,
-        userEmail: string,
-    ): Promise<GrantAccessResult> {
-        try {
-            this.logger.info(`[DaLiveConfig] Granting access to ${userEmail} for ${org}/${site}`);
-
-            // Step 1: Read existing ORG config (permissions are at org level)
-            const existing = await this.getOrgConfig(org);
-
-            // Step 2: Build permissions data
-            const permissionsData: PermissionRow[] = [];
-
-            // Preserve existing permissions
-            if (existing?.permissions?.data) {
-                permissionsData.push(...existing.permissions.data);
-            }
-
-            // /+** matches the root path AND everything underneath it
-            // /**  only matches children (sub-paths), not the root itself
-            // Without +, listing the org root returns 403 (can't list projects)
-            const rootPath = '/+**';
-            const sitePath = `/${site}/+**`;
-
-            // Check existing permissions to avoid duplicates
-            const hasRootPermission = permissionsData.some(
-                (row) => row.groups === userEmail && row.path === rootPath,
-            );
-            const hasContentPermission = permissionsData.some(
-                (row) => row.groups === userEmail && row.path === sitePath,
-            );
-            const hasConfigPermission = permissionsData.some(
-                (row) => row.groups === userEmail && row.path === 'CONFIG',
-            );
-
-            // Add CONFIG permission (required by DA.live API for config modification)
-            if (!hasConfigPermission) {
-                permissionsData.push({
-                    path: 'CONFIG',
-                    groups: userEmail,
-                    actions: 'write',
-                    comments: 'Demo Builder - config access',
-                });
-            }
-
-            // Add root permission (required for org-level listing)
-            if (!hasRootPermission) {
-                permissionsData.push({
-                    path: rootPath,
-                    groups: userEmail,
-                    actions: 'write',
-                    comments: 'Demo Builder - org content access',
-                });
-            }
-
-            // Add site-specific content permission
-            if (!hasContentPermission) {
-                permissionsData.push({
-                    path: sitePath,
-                    groups: userEmail,
-                    actions: 'write',
-                    comments: `Demo Builder - ${site} content access`,
-                });
-            }
-
-            if (hasRootPermission && hasContentPermission && hasConfigPermission) {
-                this.logger.debug(`[DaLiveConfig] User ${userEmail} already has full access to ${site}`);
-            }
-
-            // Step 3: Build updated config
-            const names = existing?.[':names'] || ['permissions'];
-            if (!names.includes('permissions')) {
-                names.push('permissions');
-            }
-
-            const updatedConfig: MultiSheetConfig = {
-                ...existing,
-                ':names': names,
-                ':version': 3,
-                ':type': 'multi-sheet',
-                permissions: {
-                    total: permissionsData.length,
-                    limit: permissionsData.length,
-                    offset: 0,
-                    data: permissionsData,
-                    ':colWidths': [200, 350, 75, 150],
-                },
-            };
-
-            // Step 4: Update ORG config (permissions are at org level)
-            await this.updateOrgConfig(org, updatedConfig);
-
-            this.logger.info(`[DaLiveConfig] Access granted to ${userEmail} for ${org}/${site}`);
-            return { success: true };
-        } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            this.logger.error(`[DaLiveConfig] Failed to grant access: ${message}`);
-            return { success: false, error: message };
-        }
-    }
-
-    /**
-     * Check if user has access to site
-     *
-     * @param org - DA.live organization name
-     * @param site - DA.live site name
-     * @param userEmail - User's email address to check
-     * @returns Result with access status and permission level
-     */
-    async hasUserAccess(org: string, site: string, userEmail: string): Promise<HasAccessResult> {
-        try {
-            const config = await this.getConfig(org, site);
-
-            if (!config?.permissions?.data) {
-                return { hasAccess: false };
-            }
-
-            // Check for exact email match or wildcard access
-            for (const row of config.permissions.data) {
-                // Check if groups contains the user's email
-                const groups = row.groups.split(',').map((g) => g.trim());
-                const hasAccess = groups.includes(userEmail) || groups.includes('*');
-
-                if (hasAccess) {
-                    return {
-                        hasAccess: true,
-                        permissionLevel: row.actions,
-                    };
-                }
-            }
-
-            return { hasAccess: false };
-        } catch (error) {
-            this.logger.warn(`[DaLiveConfig] Error checking access: ${(error as Error).message}`);
-            return { hasAccess: false };
-        }
-    }
-
-    /**
-     * Get permissions status for a site
-     *
-     * Returns summary of configured permissions.
-     *
-     * @param org - DA.live organization name
-     * @param site - DA.live site name
-     * @returns Permissions status
-     */
-    async getPermissionsStatus(
-        org: string,
-        site: string,
-    ): Promise<{
-        configured: boolean;
-        userCount: number;
-        users: string[];
-    }> {
-        try {
-            const config = await this.getConfig(org, site);
-
-            if (!config?.permissions?.data) {
-                return {
-                    configured: false,
-                    userCount: 0,
-                    users: [],
-                };
-            }
-
-            const users = config.permissions.data.map((row) => row.groups);
-
-            return {
-                configured: users.length > 0,
-                userCount: users.length,
-                users,
-            };
-        } catch (error) {
-            this.logger.warn(
-                `[DaLiveConfig] Error getting permissions status: ${(error as Error).message}`,
-            );
-            return {
-                configured: false,
-                userCount: 0,
-                users: [],
-            };
-        }
-    }
-
-    /**
      * Delete site-level config entry (best-effort)
      *
      * During site setup, `updateSiteConfig()` writes block library config to
@@ -567,285 +313,56 @@ export class DaLiveConfigService {
         }
     }
 
-    /**
-     * Remove all site-specific permission rows from the org config
-     *
-     * When a site is deleted, its `/{site}/+**` permission rows become stale.
-     * This method removes them for ALL users, while preserving shared rows
-     * like `CONFIG` and `/+**`.
-     *
-     * @param org - DA.live organization name
-     * @param site - DA.live site name to clean up
-     * @returns Result with removed count
-     */
-    async removeSitePermissions(
-        org: string,
-        site: string,
-    ): Promise<GrantAccessResult> {
-        try {
-            this.logger.info(
-                `[DaLiveConfig] Removing permissions for site ${site} from org ${org}`,
-            );
-
-            const existing = await this.getOrgConfig(org);
-
-            if (!existing?.permissions?.data) {
-                this.logger.debug('[DaLiveConfig] No permissions to clean up');
-                return { success: true };
-            }
-
-            const sitePath = `/${site}/+**`;
-            const originalCount = existing.permissions.data.length;
-
-            const filteredPermissions = existing.permissions.data.filter(
-                (row) => row.path !== sitePath,
-            );
-
-            const removedCount = originalCount - filteredPermissions.length;
-
-            if (removedCount === 0) {
-                this.logger.debug(
-                    `[DaLiveConfig] No permission rows found for site ${site}`,
-                );
-                return { success: true };
-            }
-
-            const updatedConfig: MultiSheetConfig = {
-                ...existing,
-                permissions: {
-                    ...existing.permissions,
-                    total: filteredPermissions.length,
-                    limit: filteredPermissions.length,
-                    data: filteredPermissions,
-                },
-            };
-
-            await this.updateOrgConfig(org, updatedConfig);
-
-            this.logger.info(
-                `[DaLiveConfig] Removed ${removedCount} permission row(s) for site ${site}`,
-            );
-            return { success: true };
-        } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            this.logger.error(
-                `[DaLiveConfig] Failed to remove site permissions: ${message}`,
-            );
-            return { success: false, error: message };
-        }
-    }
-
-    /**
-     * Remove user access from site
-     *
-     * @param org - DA.live organization name
-     * @param site - DA.live site name
-     * @param userEmail - User's email address to remove
-     * @returns Result indicating success or failure
-     */
-    async revokeUserAccess(
-        org: string,
-        site: string,
-        userEmail: string,
-    ): Promise<GrantAccessResult> {
-        try {
-            this.logger.info(`[DaLiveConfig] Revoking access for ${userEmail} from ${org}/${site}`);
-
-            // Read existing config
-            const existing = await this.getConfig(org, site);
-
-            if (!existing?.permissions?.data) {
-                return { success: true }; // No permissions to revoke
-            }
-
-            // Filter out the user's permissions
-            const filteredPermissions = existing.permissions.data.filter(
-                (row) => row.groups !== userEmail,
-            );
-
-            // Update config with filtered permissions
-            const updatedConfig: MultiSheetConfig = {
-                ...existing,
-                permissions: {
-                    total: filteredPermissions.length,
-                    limit: filteredPermissions.length,
-                    offset: 0,
-                    data: filteredPermissions,
-                    ':colWidths': [200, 350, 75, 150],
-                },
-            };
-
-            await this.updateConfig(org, site, updatedConfig);
-
-            this.logger.info(`[DaLiveConfig] Access revoked for ${userEmail} from ${org}/${site}`);
-            return { success: true };
-        } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            this.logger.error(`[DaLiveConfig] Failed to revoke access: ${message}`);
-            return { success: false, error: message };
-        }
-    }
-
     // ======================================================================
-    // Content readers — who may read a site's authored content (EDS-22)
+    // Access — the work lives in DaLiveSiteAccess and DaLiveContentReaders;
+    // these keep the methods every caller already names.
     // ======================================================================
 
-    /**
-     * Everyone with a row on this site's content in the ORG permissions sheet,
-     * one entry per address (a row's `groups` may be a comma-separated list).
-     *
-     * @throws Error when the org config cannot be read (401/403 for a non-owner)
-     */
-    async listContentReaders(org: string, site: string): Promise<ContentReader[]> {
-        const existing = await this.getOrgConfig(org);
-        const rows = existing?.permissions?.data ?? [];
-        const sitePath = contentPathOf(site);
-        const readers: ContentReader[] = [];
-        for (const row of rows) {
-            if (row.path !== sitePath) continue;
-            for (const email of groupsOf(row)) {
-                readers.push({ email, actions: row.actions });
-            }
-        }
-        return readers;
+    /** Grant a user write access to a site (`DaLiveSiteAccess.grantUserAccess`). */
+    grantUserAccess(org: string, site: string, userEmail: string): Promise<GrantAccessResult> {
+        return this.siteAccess.grantUserAccess(org, site, userEmail);
     }
 
-    /**
-     * Let `userEmail` READ this site's authored content: one `read` row on the
-     * site's path in the ORG sheet. Nothing else is granted — not CONFIG, not the
-     * org root — so a reader can copy the site and never change it.
-     *
-     * A sheet that holds any row restricts everyone it does not name, the owner
-     * included. So when the sheet is EMPTY and `ownerEmail` is given, the owner's
-     * own write rows go in first (the same three `grantUserAccess` writes for a
-     * site's creator). An address already able to read or write the path is left
-     * as it is — no duplicate row, no downgrade.
-     *
-     * @param org - DA.live organization name
-     * @param site - DA.live site name
-     * @param userEmail - the reader
-     * @param ownerEmail - the signed-in owner, kept able to write when the sheet starts empty
-     */
-    async grantContentRead(
+    /** Whether a user has access to a site (`DaLiveSiteAccess.hasUserAccess`). */
+    hasUserAccess(org: string, site: string, userEmail: string): Promise<HasAccessResult> {
+        return this.siteAccess.hasUserAccess(org, site, userEmail);
+    }
+
+    /** A summary of a site's permissions (`DaLiveSiteAccess.getPermissionsStatus`). */
+    getPermissionsStatus(
+        org: string,
+        site: string,
+    ): Promise<{ configured: boolean; userCount: number; users: string[] }> {
+        return this.siteAccess.getPermissionsStatus(org, site);
+    }
+
+    /** Drop a deleted site's permission rows (`DaLiveSiteAccess.removeSitePermissions`). */
+    removeSitePermissions(org: string, site: string): Promise<GrantAccessResult> {
+        return this.siteAccess.removeSitePermissions(org, site);
+    }
+
+    /** Remove a user's access to a site (`DaLiveSiteAccess.revokeUserAccess`). */
+    revokeUserAccess(org: string, site: string, userEmail: string): Promise<GrantAccessResult> {
+        return this.siteAccess.revokeUserAccess(org, site, userEmail);
+    }
+
+    /** Everyone with a row on a site's content (`DaLiveContentReaders.listContentReaders`). */
+    listContentReaders(org: string, site: string): Promise<ContentReader[]> {
+        return this.contentReaders.listContentReaders(org, site);
+    }
+
+    /** Let a user read a site's content (`DaLiveContentReaders.grantContentRead`). */
+    grantContentRead(
         org: string,
         site: string,
         userEmail: string,
         ownerEmail?: string,
     ): Promise<GrantAccessResult> {
-        try {
-            const existing = await this.getOrgConfig(org);
-            const rows: PermissionRow[] = [...(existing?.permissions?.data ?? [])];
-            const sitePath = contentPathOf(site);
-
-            if (rows.length === 0 && ownerEmail) {
-                rows.push(
-                    { path: 'CONFIG', groups: ownerEmail, actions: 'write', comments: 'Demo Builder - config access' },
-                    { path: '/+**', groups: ownerEmail, actions: 'write', comments: 'Demo Builder - org content access' },
-                    { path: sitePath, groups: ownerEmail, actions: 'write', comments: `Demo Builder - ${site} content access` },
-                );
-            }
-
-            const alreadyHas = rows.some(
-                (row) => row.path === sitePath && groupsOf(row).some((g) => sameAddress(g, userEmail)),
-            );
-            if (alreadyHas) {
-                this.logger.debug(`[DaLiveConfig] ${userEmail} can already read ${org}/${site}`);
-                return { success: true };
-            }
-            rows.push({
-                path: sitePath,
-                groups: userEmail,
-                actions: 'read',
-                comments: `Demo Builder - ${site} content read`,
-            });
-
-            await this.updateOrgConfig(org, withPermissions(existing, rows));
-            this.logger.info(`[DaLiveConfig] Read access granted for ${org}/${site}`);
-            return { success: true };
-        } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            this.logger.error(`[DaLiveConfig] Failed to grant read access: ${message}`);
-            return { success: false, error: message };
-        }
+        return this.contentReaders.grantContentRead(org, site, userEmail, ownerEmail);
     }
 
-    /**
-     * Stop `userEmail` reading this site's content: the address leaves every `read`
-     * row on the site's path (a row that named several keeps the others; one left
-     * empty goes). Write rows, CONFIG and the org root are never touched here.
-     */
-    async revokeContentRead(org: string, site: string, userEmail: string): Promise<GrantAccessResult> {
-        try {
-            const existing = await this.getOrgConfig(org);
-            const rows = existing?.permissions?.data ?? [];
-            const sitePath = contentPathOf(site);
-            let changed = false;
-            const kept: PermissionRow[] = [];
-            for (const row of rows) {
-                if (row.path !== sitePath || row.actions !== 'read') {
-                    kept.push(row);
-                    continue;
-                }
-                const remaining = groupsOf(row).filter((g) => !sameAddress(g, userEmail));
-                if (remaining.length === groupsOf(row).length) {
-                    kept.push(row);
-                    continue;
-                }
-                changed = true;
-                if (remaining.length > 0) kept.push({ ...row, groups: remaining.join(', ') });
-            }
-            if (!changed) {
-                this.logger.debug(`[DaLiveConfig] ${userEmail} had no read row on ${org}/${site}`);
-                return { success: true };
-            }
-            await this.updateOrgConfig(org, withPermissions(existing, kept));
-            this.logger.info(`[DaLiveConfig] Read access revoked for ${org}/${site}`);
-            return { success: true };
-        } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            this.logger.error(`[DaLiveConfig] Failed to revoke read access: ${message}`);
-            return { success: false, error: message };
-        }
+    /** Stop a user reading a site's content (`DaLiveContentReaders.revokeContentRead`). */
+    revokeContentRead(org: string, site: string, userEmail: string): Promise<GrantAccessResult> {
+        return this.contentReaders.revokeContentRead(org, site, userEmail);
     }
-}
-
-/** One address with a row on a site's content, and what the row lets it do. */
-export interface ContentReader {
-    email: string;
-    actions: 'read' | 'write';
-}
-
-/** The path a site's content rows carry: the site and everything under it. */
-function contentPathOf(site: string): string {
-    return `/${site}/+**`;
-}
-
-/** A row's addresses: `groups` may be one address or a comma-separated list. */
-function groupsOf(row: PermissionRow): string[] {
-    return row.groups
-        .split(',')
-        .map((g) => g.trim())
-        .filter((g) => g.length > 0);
-}
-
-const sameAddress = (a: string, b: string): boolean => a.trim().toLowerCase() === b.trim().toLowerCase();
-
-/** The org config with its permissions sheet replaced by `rows`, every other sheet kept. */
-function withPermissions(existing: MultiSheetConfig | null, rows: PermissionRow[]): MultiSheetConfig {
-    const names = [...(existing?.[':names'] ?? [])];
-    if (!names.includes('permissions')) names.push('permissions');
-    return {
-        ...existing,
-        ':names': names,
-        ':version': 3,
-        ':type': 'multi-sheet',
-        permissions: {
-            ...(existing?.permissions ?? {}),
-            total: rows.length,
-            limit: rows.length,
-            offset: 0,
-            data: rows,
-            ':colWidths': [200, 350, 75, 150],
-        },
-    };
 }

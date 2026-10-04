@@ -57,3 +57,4 @@ From the research, with file:line there:
 ## Shipped so far
 
 - 2026-09-18  docs(backlog): AB-22 — import a colleague's integration, with its research (`0c4abe22a`)
+- 2026-10-04  2026-10-03 (loop/2026-10-04-night3-b, uncommitted): built steps 1-3 as pure, tested modules not yet wired in - integrationRepoReader.ts reads layout, App Management, Node major, install.yaml APIs and every $VAR input across $includes (env.dist labels/samples only) and integrationInputClassifier.ts sorts them into platform / connected / a person's Setting in envSchema shape; stopped at step 4, which needs a decision on where discovered settings persist on the integration record and replaces the add-time refusal.

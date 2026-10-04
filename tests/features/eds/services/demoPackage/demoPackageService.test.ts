@@ -124,6 +124,27 @@ describe('describeProject', () => {
         });
     });
 
+    it("carries an ACCS project's Commerce endpoint, so the receiver is told which instance (EDS-22)", () => {
+        const project = edsProject({
+            componentConfigs: {
+                'adobe-commerce-accs': {
+                    ACCS_GRAPHQL_ENDPOINT: 'https://na1-sandbox.api.commerce.example/tenant/graphql',
+                    ACCS_WEBSITE_CODE: 'bodea',
+                },
+            },
+        });
+
+        const file = describeProject(project, { name: 'Bodea', description: '' }, CONTENT, { packages: CATALOG });
+
+        expect(file.configDefaults).toEqual({
+            ACCS_GRAPHQL_ENDPOINT: 'https://na1-sandbox.api.commerce.example/tenant/graphql',
+            ADOBE_COMMERCE_WEBSITE_CODE: 'bodea',
+            ACCS_WEBSITE_CODE: 'bodea',
+        });
+        // An ACCS endpoint is never offered as a PaaS one: the two are different services.
+        expect(file.configDefaults).not.toHaveProperty('ADOBE_COMMERCE_GRAPHQL_ENDPOINT');
+    });
+
     it("falls back to the project's title for an empty name and leaves out what the project does not have", () => {
         const file = describeProject(edsProject({ componentConfigs: {} }), { name: '', description: '' }, CONTENT, {
             packages: CATALOG,

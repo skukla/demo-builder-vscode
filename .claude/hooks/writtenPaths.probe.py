@@ -49,12 +49,15 @@ def run_bash(cmd):
     return fired(r.stderr or '')
 
 
-HANDLER = 'src/features/dashboard/handlers/appBuilderComponentHandlers.ts'
+# Must stay OVER the handler limit, or the god-file case below has nothing to fire on.
+# Was appBuilderComponentHandlers.ts until EDS-8 cut it to 152 lines (2026-10-04);
+# this one is ~950 and adjudicated to stay whole (a handler map grows by design).
+HANDLER = 'src/features/projects-dashboard/handlers/dashboardHandlers.ts'
 CSS = 'src/core/ui/styles/index.css'
 HELIX = 'src/features/eds/services/helix/helixApiClient.ts'
 
 CASES = [
-    # THE BUG THIS FIXES: a 910-line handler edited through python.
+    # THE BUG THIS FIXES: an oversized handler edited through python.
     ("python3 - <<'PY'\np='" + HANDLER + "'\nopen(p,'w').write(x)\nPY", 'god-file'),
     # a stylesheet edited with an in-place sed
     ("sed -i '' 's/a/b/' " + CSS, 'css-baseline'),

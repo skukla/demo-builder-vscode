@@ -99,6 +99,18 @@ export type SharedDemoProbeResult =
     | { outcome: 'unreadable'; reason: string }
     | SharedDemoRead;
 
+/**
+ * The SC's reach into a colleague's DA.live site (EDS-22): `authored` can list it;
+ * `published-only` was refused (403), and `reader` is the address to grant;
+ * `not-signed-in` has no DA.live sign-in, or one DA.live refused (401);
+ * `unknown` got no usable answer.
+ */
+export type AuthoredContentAccess =
+    | { level: 'authored' }
+    | { level: 'published-only'; reader: string | null }
+    | { level: 'not-signed-in' }
+    | { level: 'unknown' };
+
 export interface SharedDemoRead {
     outcome: 'read';
     /** The repository as GitHub names it now; differs from the request after a rename. */
@@ -124,6 +136,11 @@ export interface SharedDemoRead {
     boilerplate?: StorefrontBoilerplate;
     /** The template or fork parent GitHub records for the repository; absent when it records none (EDS-13f). */
     lineage?: StorefrontLineage;
+    /**
+     * Whether the SC can read the content site's AUTHORED tree on DA.live, or
+     * only its published pages (EDS-22). Absent when there is no content site.
+     */
+    contentAccess?: AuthoredContentAccess;
     /** Which read values the description file replaced, in the result's field names. */
     overrides: string[];
     /** Things the SC should hear, in plain words. */

@@ -52,6 +52,25 @@ describe('buildDemoBundle', () => {
         expect(setupOnly.parts).toEqual(['setup']);
     });
 
+    it('never packs a .env file from the repository into the bundle, at any depth', () => {
+        const out = buildDemoBundle('bodea', {
+            storefront: {
+                archive: archive({
+                    'head.html': 'x',
+                    '.env': 'SECRET=1',
+                    '.env.local': 'SECRET=2',
+                    'api/.env.production': 'SECRET=3',
+                }),
+                description: DESCRIPTION,
+            },
+        });
+
+        expect(names(out.bytes)).toEqual([
+            'bodea-demo-bundle/storefront/demo.demo-builder.json',
+            'bodea-demo-bundle/storefront/head.html',
+        ]);
+    });
+
     it('names the file after the project', () => {
         expect(defaultBundleName('bodea')).toBe('bodea-demo-bundle.zip');
     });

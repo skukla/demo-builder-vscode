@@ -156,7 +156,7 @@ describe('CommandManager', () => {
             );
         });
 
-        it('should register all 36 commands (resetAll only in dev mode)', () => {
+        it('should register all 38 commands (resetAll only in dev mode)', () => {
             commandManager.registerCommands();
 
             // 34 → 37: `signInAdobe` (PL-5), `signInDaLive` (EDS-9) and
@@ -168,7 +168,8 @@ describe('CommandManager', () => {
             // card menu and `delete_project` go through projectDeletionService.
             // resetAll stays excluded, dev mode only.
             // 37 since EDS-13f added demoBuilder.storefrontReport.
-            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(37);
+            // 38 since AI-4b added demoBuilder.pickAiChat.
+            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(38);
 
             // Verify all commands are registered (in order of registration)
             const expectedCommands = [
@@ -200,6 +201,7 @@ describe('CommandManager', () => {
                 // commandManager.registerCommands().
                         'demoBuilder.openAiExperience',
                 'demoBuilder.newAiChat',
+                'demoBuilder.pickAiChat',
                 'demoBuilder.showPromptsPicker',
                 'demoBuilder.openModernizationAgent',
                 'demoBuilder.diagnostics',

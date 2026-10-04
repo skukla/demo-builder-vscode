@@ -148,6 +148,45 @@ describe('Sidebar', () => {
             expect(onOpenAiChat).toHaveBeenCalledTimes(1);
         });
 
+        it('offers a way back to an EARLIER chat when onPickAiChat is given', () => {
+            // AI-4b: a third way into the same chat, so it joins the Chat menu
+            // rather than becoming a tile (AiZone's docstring records why).
+            const onOpenAiChat = jest.fn();
+            const onNewAiChat = jest.fn();
+            const onPickAiChat = jest.fn();
+            renderWithProvider(
+                <Sidebar
+                    context={createProjectContext()}
+                    onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
+                    onOpenAiChat={onOpenAiChat}
+                    onShowPrompts={jest.fn()}
+                    onNewAiChat={onNewAiChat}
+                    onPickAiChat={onPickAiChat}
+                />
+            );
+
+            fireEvent.click(screen.getByRole('menuitem', { name: /earlier chat/i }));
+            expect(onPickAiChat).toHaveBeenCalledTimes(1);
+            expect(onOpenAiChat).not.toHaveBeenCalled();
+            expect(onNewAiChat).not.toHaveBeenCalled();
+        });
+
+        it('offers no earlier-chat item when onPickAiChat is absent', () => {
+            renderWithProvider(
+                <Sidebar
+                    context={createProjectContext()}
+                    onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
+                    onOpenAiChat={jest.fn()}
+                    onShowPrompts={jest.fn()}
+                    onNewAiChat={jest.fn()}
+                />
+            );
+
+            expect(screen.queryByRole('menuitem', { name: /earlier chat/i })).not.toBeInTheDocument();
+        });
+
         it('renders THREE AI tiles once the workbench has a callback', () => {
             // Reversed 2026-08-25. Two earlier readings said a third tile would
             // not fit; both missed that the stack was CENTRED, so half the

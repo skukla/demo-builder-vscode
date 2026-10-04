@@ -20,6 +20,7 @@ import {
     classifyRepoForStorefront,
     type RepoReadiness,
 } from './repoStorefrontReadiness';
+import { isNeverShipped } from './neverShippedFiles';
 import { readBoilerplate } from './storefrontProvenance';
 import { ZIP_COMMIT_MESSAGE } from './zipImportCommit';
 import { readProjectFile, readSharedDemoDescription } from '@/core/state/projectFileReader';
@@ -34,8 +35,6 @@ import {
     type StorefrontBoilerplate,
 } from '@/types/projectFile';
 
-/** Dropped whatever the zip's own ignore file says: never part of a storefront's code. */
-const ALWAYS_DROPPED = ['.git/', 'node_modules/', '.npm-cache/', '.DS_Store', '.env'];
 
 export interface ZipStorefront {
     /** Repository-relative path → bytes, the single root folder stripped. */
@@ -92,14 +91,6 @@ function ignoreRule(line: string): ((path: string) => boolean) | undefined {
     };
 }
 
-function alwaysDropped(path: string): boolean {
-    return ALWAYS_DROPPED.some((rule) =>
-        rule.endsWith('/')
-            ? path.startsWith(rule) || path.includes(`/${rule}`)
-            : path === rule || path.endsWith(`/${rule}`),
-    );
-}
-
 /**
  * Unpack a zip into repository-relative files.
  *
@@ -129,7 +120,8 @@ export function readStorefrontZip(zipPath: string): ZipStorefront {
     const files = new Map<string, Buffer>();
     let dropped = 0;
     for (const { path, entry } of relative) {
-        if (!path || alwaysDropped(path) || rules.some((rule) => rule(path))) {
+        // Dropped whatever the zip's own ignore file says: secrets and never-committed folders.
+        if (!path || isNeverShipped(path) || rules.some((rule) => rule(path))) {
             dropped += 1;
             continue;
         }

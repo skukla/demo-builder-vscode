@@ -17,8 +17,18 @@ jest.mock('@/features/eds/services/storefront/sharedDemoProbe', () => ({
 const fileOperations = { getFileContent: jest.fn() };
 const repoOperations = { getRepository: jest.fn() };
 const tokenService = { validateToken: jest.fn(), getToken: jest.fn() };
+const daAuth = {
+    getAccessToken: jest.fn().mockResolvedValue('fake-test-token-not-a-secret'),
+    getUserEmail: jest.fn().mockResolvedValue('sc@example.com'),
+};
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getGitHubServices: () => ({ fileOperations, repoOperations, tokenService }),
+    getDaLiveAuthService: () => daAuth,
+}));
+const accessProbe = jest.fn();
+jest.mock('@/features/eds/services/daLive/authoredContentAccess', () => ({
+    ...jest.requireActual('@/features/eds/services/daLive/authoredContentAccess'),
+    probeAuthoredContentAccess: (...args: unknown[]) => accessProbe(...args),
 }));
 const adopt = jest.fn();
 jest.mock('@/features/eds/handlers/edsGitHubHandlers', () => ({
@@ -151,5 +161,50 @@ describe('handleProbeSharedDemo — a link instead of owner and repo', () => {
 
         const result = await handleProbeSharedDemo(ctx(), { link: 'not a link' });
         expect(result).toEqual({ success: false, error: 'The link is not a GitHub link or a demo site address' });
+    });
+});
+
+describe('handleProbeSharedDemo — can the SC read the authored DA.live site? (EDS-22)', () => {
+    const WITH_SITE = { ...READ, contentSource: { org: 'kmanns', site: 'justrite', indexPath: '/query-index.json' } };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        tokenService.getToken.mockResolvedValue({ token: 'fake-test-token-not-a-secret' });
+    });
+
+    it('asks about the content site the repository mounts, with the SC\'s DA.live sign-in', async () => {
+        probe.mockResolvedValue(WITH_SITE);
+        accessProbe.mockResolvedValue({ level: 'authored' });
+
+        const response = await handleProbeSharedDemo(ctx(), { owner: 'kmanns', repo: 'justrite' });
+
+        expect(accessProbe).toHaveBeenCalledTimes(1);
+        const [target, deps] = accessProbe.mock.calls[0];
+        expect(target).toEqual({ org: 'kmanns', site: 'justrite' });
+        await deps.getAccessToken();
+        expect(daAuth.getAccessToken).toHaveBeenCalled();
+        expect(response.result).toEqual({ ...WITH_SITE, contentAccess: { level: 'authored' } });
+    });
+
+    it('when only published pages are readable, says who must grant what', async () => {
+        probe.mockResolvedValue(WITH_SITE);
+        accessProbe.mockResolvedValue({ level: 'published-only', reader: 'sc@example.com' });
+
+        const response = await handleProbeSharedDemo(ctx(), { owner: 'kmanns', repo: 'justrite' });
+
+        const read = response.result as typeof WITH_SITE & { contentAccess: unknown; warnings: string[] };
+        expect(read.contentAccess).toEqual({ level: 'published-only', reader: 'sc@example.com' });
+        expect(read.warnings).toEqual([
+            expect.stringContaining('ask the owner of kmanns on DA.live to let sc@example.com read justrite'),
+        ]);
+    });
+
+    it('asks nothing when the repository mounts no content site', async () => {
+        probe.mockResolvedValue(READ);
+
+        const response = await handleProbeSharedDemo(ctx(), { owner: 'jen', repo: 'isle5-demo' });
+
+        expect(accessProbe).not.toHaveBeenCalled();
+        expect(response.result).toEqual(READ);
     });
 });

@@ -1,7 +1,7 @@
 {
     "_what": "Which surface a long operation opens. Two populations, both enforced by progress-surface.test.ts. 'directProgress' is every vscode.window.withProgress outside the five modules that own the surfaces \u2014 each entry says why it still opens its own notification instead of going through withOperationProgress, and the list may only shrink. 'blockingDialogs' is every modal:true dialog \u2014 each entry names the decision it gates, because a blocking dialog is for a choice made BEFORE work starts and for nothing else.",
     "directProgress": {
-        "src/commands/commandManager.ts:388": "Adobe sign-in, started from the palette, a dashboard button and a wizard step. It is not an operation with stages \u2014 one title, one spinner, nothing to report \u2014 and the router would have nothing to route.",
+        "src/commands/commandManager.ts:395": "Adobe sign-in, started from the palette, a dashboard button and a wizard step. It is not an operation with stages \u2014 one title, one spinner, nothing to report \u2014 and the router would have nothing to route.",
         "src/commands/migrateStorefrontNames.ts:157": "A one-off maintenance command run from the palette. R2 already says one notification, which is what this opens; nothing else narrates it.",
         "src/commands/repairSiteConfiguration.ts:102": "The republish half of the same palette command. Moving it alone would split one command across two surfaces.",
         "src/commands/repairSiteConfiguration.ts:78": "Palette maintenance command, reads the site's configuration. One notification is the right surface; it predates the router.",
@@ -21,7 +21,7 @@
         "src/features/updates/commands/updateExecutor.ts:246": "Component update during the same run, and part of the same sequence.",
         "src/features/updates/commands/updateExecutor.ts:342": "Adobe MCP update during the same run, and part of the same sequence.",
         "src/features/updates/services/extensionUpdater.ts:21": "Installs the new VSIX and reloads the window. Nothing of ours survives the reload, so a surface owned by our own state is the wrong place for it.",
-        "src/commands/commandManager.ts:449": "GitHub sign-in from the palette: one notification while the browser flow completes, the same shape as the Adobe sign-in above it (develop, merged 2026-09-24)."
+        "src/commands/commandManager.ts:456": "GitHub sign-in from the palette: one notification while the browser flow completes, the same shape as the Adobe sign-in above it (develop, merged 2026-09-24)."
     },
     "blockingDialogs": {
         "src/commands/ResetAiOnboardingCommand.ts:31": "Gates: reset the AI onboarding surface? Destructive and asked once, before anything runs.",

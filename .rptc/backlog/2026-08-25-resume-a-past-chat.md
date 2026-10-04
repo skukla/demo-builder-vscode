@@ -106,3 +106,4 @@ records why."
 
 - 2026-08-28  Citations re-verified 2026-08-28 after the hygiene scan's CODE MOVED advisory: AiZone.tsx docstring (now ~line 8) still records the one-affordance reasoning; openInClaude.ts --continue guard and --resume note both intact. Premise unchanged.
 - 2026-08-28  docs(backlog): resume-a-past-chat citations re-verified after code moved (`78a659052`)
+- 2026-10-04  2026-10-03 (loop/2026-10-04-night3-b, uncommitted): built 'Pick an earlier chat' in the sidebar Chat menu and palette (demoBuilder.pickAiChat) launching Claude Code's own picker as 'claude --resume' in a fresh Claude Code tab, no prompt, guarded by the session-store probe; the live check that the picker renders and resumes in the editor-area terminal is still open.
