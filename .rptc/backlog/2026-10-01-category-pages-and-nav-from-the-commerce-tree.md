@@ -4,7 +4,8 @@ kind: feature
 area: eds
 needs: []
 value: high
-status: active
+status: gated
+waiting-on: the owner watching the first real run on Justrite
 ---
 
 # Category pages and the nav are generated from the Commerce category tree
@@ -181,3 +182,4 @@ before anyone can see it.
 - 2026-10-03  2026-10-04 category-pages plan step 6 built on loop/2026-10-04-catalog-menu (staged, not committed): one handler pair (dashboard catalogMenuHandlers buildCatalogMenu/removeCatalogMenu, Pattern B) behind both a Catalog Menu tile in the dashboard storefront zone (dialog with Build / Remove, Remove confirms) and the agent tools build_catalog_menu (declared as write_page) and remove_catalog_menu (confirm + consent dialog). Categories from Catalog Service with run_commerce_query's own request (resolveCommerceRequest extracted), falling back to a subtree walk from the store's root category when the tree read is empty (subtree numbers unverified). Pages through one DA.live+Helix adapter (ai/server/storefrontPages.ts, which now also owns the storefront target helpers moved out of contentAuthoringTools). Record kept on componentInstances['eds-storefront'].metadata.catalogMenu. Build refuses and changes nothing when blocks/catalog-menu/catalog-menu.js is not in the storefront repo. Wizard checkbox NOT built (creation path needs a new phase after the storefront exists); next step. No live run.
 - 2026-10-03  Correction to the step 6 entry (coordinator, property 5): build_catalog_menu is now confirm:true-gated with consent copy (destructiveHint true), not declared as write_page; its refusal reads the tree first (previewCatalogMenu) and names the site and the page count. The dashboard Build asks first, like Remove. write_page itself unchanged — same property-5 exposure, an open owner question.
 - 2026-10-03  feat(eds): the catalog menu from the dashboard and for agents; building asks first (EDS-24 step 6) (`f7b196e3c`)
+- 2026-10-04  Tabled 2026-10-04 (owner): the first real run, the decision to make it automatic at creation (with the category grants so a B2B menu is never empty), and folding rebuild/remove into the storefront's actions all wait until the owner can watch the Justrite run.

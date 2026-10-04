@@ -263,7 +263,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-21` | feature | [A project tile that opens AEM Assets](2026-09-30-aem-assets-project-tile.md) | — | med | built |
 | `EDS-22` | feature | [Shared storefront: read access to the colleague's DA.live site is the missing piece](2026-09-30-shared-storefront-read-access-to-the-source-dalive-site.md) | — | high | active |
 | `EDS-23` | fix | [An inner code status 400 can mean "the App is not on this repository", and the check calls it installed](2026-09-30-eds-code-status-400-is-not-installed.md) | — | high | built |
-| `EDS-24` | feature | [Category pages and the nav are generated from the Commerce category tree](2026-10-01-category-pages-and-nav-from-the-commerce-tree.md) | — | high | active |
+| `EDS-24` | feature | [Category pages and the nav are generated from the Commerce category tree](2026-10-01-category-pages-and-nav-from-the-commerce-tree.md) | _the owner watching the first real run on Justrite_ | high | gated |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | built |
 
 ### app-builder  (111)
