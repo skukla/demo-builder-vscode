@@ -78,6 +78,10 @@ import {
     handleRenameAppBuilderComponent,
 } from '@/features/dashboard/handlers/appBuilderComponentHandlers';
 import {
+    handlePromoteAppBuilderComponent,
+    handleUnpromoteAppBuilderComponent,
+} from '@/features/dashboard/handlers/appBuilderComponentPromote';
+import {
     handleGetAppBuilderInstallStatus,
     handleInstallAppBuilderComponent,
     handleReinstallAppBuilderComponent,
@@ -359,6 +363,9 @@ export const dashboardHandlers = defineHandlers({
     redeployAppBuilderComponent: handleRedeployAppBuilderComponent,
     removeAppBuilderComponent: handleRemoveAppBuilderComponent,
     renameAppBuilderComponent: handleRenameAppBuilderComponent,
+    // A blank-starter app saved to its own GitHub repository, and the undo (AB-1c).
+    promoteAppBuilderComponent: handlePromoteAppBuilderComponent,
+    unpromoteAppBuilderComponent: handleUnpromoteAppBuilderComponent,
     // App Management install state (AB-5): the live status read and the
     // install-without-redeploy retry.
     installAppBuilderComponent: handleInstallAppBuilderComponent,

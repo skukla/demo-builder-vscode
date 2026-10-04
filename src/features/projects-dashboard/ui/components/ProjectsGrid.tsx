@@ -20,6 +20,8 @@ export interface ProjectsGridProps {
      * VS Code window.
      */
     onSelectProject: (project: Project, opts?: { forceNewWindow?: boolean }) => void;
+    /** The "New project" card, rendered as the last cell (PL-62); absent while filtering. */
+    addCard?: React.ReactNode;
     /** Bundled action callbacks passed to each card's menu */
     actions?: ProjectActions;
 }
@@ -32,6 +34,7 @@ export function ProjectsGrid({
     runningProjectPath,
     onSelectProject,
     actions = {},
+    addCard,
 }: ProjectsGridProps) {
     return (
         <div data-testid="projects-grid" className="projects-grid">
@@ -44,6 +47,7 @@ export function ProjectsGrid({
                     actions={actions}
                 />
             ))}
+            {addCard}
         </div>
     );
 }

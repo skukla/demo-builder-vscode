@@ -15,7 +15,7 @@ import type { CardAction, IntegrationCardModel } from './integrationCardModel';
 import { actionRowFor } from '@/core/ui/components/integrations/IntegrationActionsMenu';
 import { renderMenuIcon } from '@/core/ui/components/ui/menuIcons';
 
-const DESTRUCTIVE: ReadonlySet<CardAction> = new Set(['remove', 'remove-anyway']);
+const DESTRUCTIVE: ReadonlySet<CardAction> = new Set(['remove', 'remove-anyway', 'delete-github-repo']);
 
 export interface FlyoutActionsProps {
     model: IntegrationCardModel;

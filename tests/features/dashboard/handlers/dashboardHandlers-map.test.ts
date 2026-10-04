@@ -286,7 +286,9 @@ describe('dashboardHandlers', () => {
             // offers for "Which products belong to this ERP?" — websites, sources, products, rules.
             // buildCatalogMenu + removeCatalogMenu (82 → 84, EDS-24, 2026-10-04): the catalog
             // menu from the Commerce tree and its undo, shared with the agent's two tools.
-            expect(types).toHaveLength(84);
+            // promoteAppBuilderComponent + unpromoteAppBuilderComponent (84 → 86, AB-1c,
+            // 2026-10-05): save a blank-starter app to its own GitHub repository, and the undo.
+            expect(types).toHaveLength(86);
         });
 
         it('should have handlers as functions', () => {

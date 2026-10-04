@@ -3,7 +3,9 @@
  *
  * Each builder returns one Markdown section (or `''` when it does not apply to
  * the project shape); `aiContextWriter.generateAgentsMd` composes them in
- * order. Extracted from `aiContextWriter.ts` when it outgrew the 500-line file
+ * order. The storefront sections live in `agentsMdStorefrontSections.ts` and the
+ * Adobe I/O / App Builder ones in `agentsMdAdobeSections.ts` (split by topic,
+ * EDS-8, 2026-10-05); both are re-exported here. Extracted from `aiContextWriter.ts` when it outgrew the 500-line file
  * cap (2026-08-14 review) — same pattern as the `claudeSettingsWriter`
  * extraction from `mcpConfigWriter`.
  *
@@ -12,7 +14,6 @@
  * injection, Markdown link injection).
  */
 
-import aiDefaultsConfig from '../../config/ai-defaults.json';
 import {
     sanitizeTemplateValue,
     sanitizeGithubSlug,
@@ -20,15 +21,12 @@ import {
     sanitizeBlockId,
     escapeMarkdown,
 } from '../sanitization';
-import { integrationWorkspaceLines } from './agentsMdWorkspaces';
-import { aiDefaultsEntryApplies, projectNeedsAppBuilderTooling } from './aiToolingGate';
 import { COMPONENT_IDS } from '@/core/constants';
 import { resolveStorefrontForProject } from '@/features/components/services/storefrontResolver';
 import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,
 } from '@/features/eds/handlers/edsHelpers';
-import type { AiDefaults } from '@/types/aiDefaults';
 import type { Project } from '@/types/base';
 import type { Stack } from '@/types/stacks';
 import {
@@ -45,6 +43,14 @@ import {
  */
 const WAYFINDER_ROUTER_URL =
     'https://cdn.jsdelivr.net/gh/adobe-commerce/wayfinder@d7275860b9ead78986f16318f3e1dc9842481fea/skills/AGENTS.md';
+
+export {
+    buildAdobeIo,
+    buildAppBuilderIntegrations,
+    buildConsoleApiAccess,
+    buildToolServers,
+} from './agentsMdAdobeSections';
+export { buildBlockLibraries, buildPdpRouting, buildStorefront } from './agentsMdStorefrontSections';
 
 // ─── Section builders ────────────────────────────────────────────────────────
 
@@ -190,113 +196,6 @@ export function buildQueryingCommerce(project: Project): string {
     ].join('\n');
 }
 
-export function buildStorefront(project: Project): string {
-    if (!isEdsProject(project)) return '';
-
-    const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
-    if (!edsInstance?.path) return '';
-
-    // githubRepo is NOT escaped — it's used inside a URL path where backslash breaks things
-    const githubRepo = sanitizeGithubSlug(
-        sanitizeTemplateValue((edsInstance.metadata?.githubRepo as string | undefined) ?? ''),
-    );
-    const localPath = escapeMarkdown(sanitizeTemplateValue(edsInstance.path));
-
-    const lines: string[] = [
-        '## Storefront',
-        `- **Local path:** ${localPath}  (git clone of the GitHub repo — edit files here)`,
-    ];
-
-    if (githubRepo) {
-        lines.push(`- **GitHub repo:** https://github.com/${githubRepo}`);
-    }
-
-    const previewUrl = getEdsPreviewUrl(project);
-    if (previewUrl) {
-        lines.push(`- **Preview URL:** ${escapeMarkdown(sanitizeUrl(previewUrl))}`);
-    }
-
-    const liveUrl = getEdsLiveUrl(project);
-    if (liveUrl) {
-        lines.push(`- **Live URL:** ${escapeMarkdown(sanitizeUrl(liveUrl))}`);
-    }
-
-    lines.push('');
-    lines.push(
-        `> Block files live in \`${localPath}/blocks/\`. Edit them here with standard file tools.`,
-    );
-    lines.push('> Helix picks up pushes to the GitHub repo automatically for preview.');
-    lines.push('> For live: push changes to GitHub — Helix picks up the update automatically.');
-    lines.push('');
-    // The storefront ships a complete typography scale and agents did not know
-    // it existed, so block CSS grew hand-picked font sizes ("fonts are too
-    // small") with no oracle to iterate against. Deliberately phrased as "read
-    // the properties" — the scale belongs to the boilerplate, and a hardcoded
-    // token list here would rot when it re-versions. Note the boilerplate's own
-    // blocks are inconsistent (some hardcode sizes), so "match the neighbours"
-    // is explicitly not the rule.
-    lines.push('> **Typography rule:** the storefront ships a complete type scale as');
-    lines.push('> `--type-*` custom properties in `styles/styles.css` (display, headline, body,');
-    lines.push('> details — each a full `font` shorthand with size and line-height). When writing');
-    lines.push('> block CSS, read that file and use `font: var(--type-…)` for every text style —');
-    lines.push(
-        '> never invent a `font-size`, and do not copy one from a neighbouring block (a few',
-    );
-    lines.push('> boilerplate blocks hardcode sizes; they are the exception, not the pattern).');
-
-    return lines.join('\n');
-}
-
-/**
- * PDP routing context for EDS storefronts.
- *
- * Tells the AI what's not obvious from the code:
- *   1. Per-product URLs route through the canonical Adobe BYOM
- *      `content.overlay` pattern (replacement for deprecated folder
- *      mapping), NOT per-product DA pages.
- *   2. The full routing stack has four layers (pre-warming, overlay,
- *      Phase 2 template fetch, smart-404 recovery) — every AI suggestion
- *      should fit somewhere on this stack instead of inventing a new one.
- *   3. Don't suggest `aem-commerce-prerender` per-project, Tier 3 SSR
- *      (JSON-LD / Merchant Center), or folder mapping. All wrong for
- *      this design.
- */
-export function buildPdpRouting(project: Project): string {
-    if (!isEdsProject(project)) return '';
-
-    return [
-        '## PDP Routing (How Product Pages Work)',
-        '',
-        "Per-product URLs (`/products/{urlKey}/{sku}`) are routed automatically using Adobe's canonical BYOM `content.overlay` pattern (the documented replacement for deprecated folder mapping). **Do not** create per-product DA pages, **do not** configure folder mapping, and **do not** suggest deploying `aem-commerce-prerender` per project.",
-        '',
-        '**The four-layer routing stack:**',
-        "1. **Pre-warming at create/reset** — Demo Builder enumerates the Commerce catalog and pre-publishes every SKU's PDP URL into Helix content-bus during setup. Equivalent to one cycle of the canonical scheduled poller, run synchronously. After this runs, every catalog product loads instantly on first click. Check reset logs for `[Catalog Prewarm] Complete: N/N succeeded`.",
-        '2. **BYOM `content.overlay` registration** — Configuration Service points Helix at a shared `render-pdp` action. Registration shape matches `aem-commerce-prerender`\'s canonical setup wizard (`{ url, type: "markup", suffix: ".html" }`).',
-        "3. **`render-pdp` returns SC's authored template** (Phase 2 LIVE since 2026-06-09) — the overlay fetches the storefront's authored `/products/default` and returns it for any `/products/*/*` path. SC customizations to `/products/default` (header, footer, custom blocks, layout) inherit on every real PDP automatically. Generic shell remains as a fallback when the authored template fetch fails.",
-        "4. **Smart-404 client-side recovery** — vendored into `head.html`, `404.html`, and `delayed.js`. When a user visits a PDP URL that wasn't pre-warmed (catalog churn after setup, brand-new SKU), the snippet triggers `prepublish-pdp` to publish on demand and redirects. Closes the gap Adobe acknowledges in `adobe-rnd/aem-commerce-prerender` issue #262 (event-driven recovery, OPEN at https://github.com/adobe-rnd/aem-commerce-prerender/issues/262).",
-        '',
-        '**Visitor behavior:**',
-        '- Pre-warmed SKU → instant (content-bus has it from setup)',
-        '- New SKU added after setup → smart-404 cycle (~2s) on first visit → published to content-bus → instant thereafter',
-        '- Mixed-case URLs from PLPs → eager `head.html` redirect to lowercase before any paint',
-        '- Deleted SKU → cached HTML still serves; drop-in detects empty Commerce data (backlog item to redirect to native `/404`)',
-        '',
-        '**When PDPs 404 in a freshly-created storefront**, check in this order:',
-        "1. Is `demoBuilder.byom.overlayUrl` configured? (default points at the team's shared deployment)",
-        '2. Did the latest reset complete the pre-warming step? (check `[Catalog Prewarm]` log lines)',
-        '3. Is the `render-pdp` overlay action reachable? (`curl <overlayUrl>`)',
-        '4. Is the smart `/404.html` published? (`curl https://main--{repo}--{owner}.aem.live/404.html`)',
-        '5. Did the Configuration Service write include `suffix: ".html"` on the overlay? (this aligns with canonical; missing it caused live-tier 404s in earlier debugging)',
-        '',
-        '**Things to NOT suggest** — these are wrong for this architecture:',
-        "- Deploying `aem-commerce-prerender` per project (it's single-tenant; conflicts with our multi-tenant Configuration Service writes — see `reference_commerce_prerender_unfit` memory entry)",
-        '- Server-side SSR injection (JSON-LD, og:image per SKU, Merchant Center metadata) — Tier 3 from the canonical pattern, deliberately omitted for demos',
-        '- Folder mapping in any form — deprecated by Adobe',
-        "- Manual per-product DA pages — colleague's workaround that doesn't scale",
-        '',
-        'Full architecture, request flows, and load-bearing dependencies: see `docs/architecture/eds-byom-pdp-routing.md`. Decision rationale and canonical anchoring: `docs/architecture/adr/005-byom-pdp-routing.md` (ADR-005).',
-    ].join('\n');
-}
 
 /**
  * List every component instance with a `metadata.githubRepo` value.
@@ -327,225 +226,6 @@ export function buildComponentRepositories(project: Project): string {
     return ['## Component Repositories', ...rows].join('\n');
 }
 
-// All values are sanitized before interpolation — see ./sanitization for the threat model.
-// GitHub owner/repo values are double-sanitized: sanitizeTemplateValue first (strips Markdown
-// control characters), then sanitizeGithubSlug (enforces the slug allowlist). Both layers
-// are intentional — sanitizeGithubSlug's allowlist alone is sufficient, but the layering
-// provides defense-in-depth and makes the sanitization intent explicit at each call site.
-export function buildBlockLibraries(project: Project): string {
-    if (!isEdsProject(project)) return '';
-
-    const installed = project.installedBlockLibraries;
-    if (!installed || installed.length === 0) return '';
-
-    const customLibs = project.customBlockLibraries ?? [];
-    const customKeys = new Set(customLibs.map((lib) => `${lib.source.owner}/${lib.source.repo}`));
-
-    const lines: string[] = ['## Block Libraries'];
-
-    for (const lib of installed) {
-        // Owner/repo are NOT escaped — they're inside URL paths where backslash breaks things
-        const owner = sanitizeGithubSlug(sanitizeTemplateValue(lib.source.owner));
-        const repo = sanitizeGithubSlug(sanitizeTemplateValue(lib.source.repo));
-        const type = customKeys.has(`${lib.source.owner}/${lib.source.repo}`)
-            ? 'custom'
-            : 'built-in';
-        const blockList = lib.blockIds.map((id) => escapeMarkdown(sanitizeBlockId(id))).join(', ');
-        const libName = escapeMarkdown(sanitizeTemplateValue(lib.name));
-
-        lines.push('');
-        lines.push(`- **${libName}** (${type})`);
-        lines.push(`  - Source: https://github.com/${owner}/${repo}`);
-        lines.push(`  - Blocks: ${blockList}`);
-        if (lib.commitSha) {
-            lines.push(
-                `  - Source commit: ${escapeMarkdown(sanitizeTemplateValue(lib.commitSha))}`,
-            );
-        }
-    }
-
-    lines.push('');
-    lines.push(
-        '> Blocks are copied into the storefront repo during setup — they are NOT separate local',
-    );
-    lines.push(
-        '> repositories. To edit a block, modify it in `blocks/` and call `sync_storefront` to push',
-    );
-    lines.push('> to the storefront.');
-    lines.push('>');
-    lines.push(
-        '> Block libraries are read-only sources — edits to copied block files live in this',
-    );
-    lines.push(
-        "> storefront's repo, not the library repo. Library promotion is a planned future Demo",
-    );
-    lines.push('> Builder feature.');
-
-    return lines.join('\n');
-}
-
-export function buildAdobeIo(project: Project): string {
-    if (!project.adobe) return '';
-
-    const lines: string[] = ['## Adobe I/O Project'];
-
-    if (project.adobe.organization) {
-        lines.push(
-            `- **Organization:** ${escapeMarkdown(sanitizeTemplateValue(project.adobe.organization))}`,
-        );
-    }
-    if (project.adobe.projectTitle ?? project.adobe.projectName) {
-        lines.push(
-            `- **Project:** ${escapeMarkdown(sanitizeTemplateValue(project.adobe.projectTitle ?? project.adobe.projectName ?? ''))}`,
-        );
-    }
-    if (project.adobe.workspaceTitle ?? project.adobe.workspace) {
-        lines.push(
-            `- **Workspace:** ${escapeMarkdown(sanitizeTemplateValue(project.adobe.workspaceTitle ?? project.adobe.workspace ?? ''))}`,
-        );
-    }
-    lines.push(...integrationWorkspaceLines(project));
-
-    // length > 1 means at least one field was populated beyond the section header.
-    // Append the org-context warning only when the section is non-empty.
-    if (lines.length <= 1) return '';
-
-    lines.push('');
-    lines.push(
-        '> **Set your Adobe org target before any Adobe operation.** Demo Builder targets the Adobe',
-    );
-    lines.push(
-        '> org *per operation* — it does not clobber a shared global, so concurrent windows and',
-    );
-    lines.push(
-        '> agents stay isolated. Establish your target first with `select_org` → `select_project` →',
-    );
-    lines.push('> `select_workspace`. If an Adobe tool returns');
-    lines.push(
-        '> `{ error_type: "ORG_MISMATCH", non_retryable: true }`, **do not retry** — a blind retry hits',
-    );
-    lines.push(
-        '> the same wrong-org 403. Surface it: ask the user to select the correct organization (or',
-    );
-    lines.push('> re-login to switch account), then proceed.');
-
-    return lines.join('\n');
-}
-
-/**
- * Per-integration addressing for AI-built App Builder integrations — only for
- * App Builder-adjacent projects (same gate as the Console-API section). A
- * project can hold N integrations, each cloned into its own
- * `components/<id>/` folder; agents must confirm the target before editing.
- */
-export function buildAppBuilderIntegrations(project: Project): string {
-    if (!projectNeedsAppBuilderTooling(project)) return '';
-
-    return [
-        '## App Builder Integrations',
-        'A project can hold multiple AI-built App Builder integrations. Each lives in its own',
-        '`components/<id>/` folder with its own `app.config.yaml`, and each deploys into its own',
-        'isolated OpenWhisk (I/O Runtime) package — and, when listed under **Integration',
-        'workspaces**, into its own Adobe workspace.',
-        '',
-        '- Before editing, confirm WHICH integration (`components/<id>/`) the user means — ask',
-        '  when more than one exists or the target is ambiguous.',
-        '- Deploys are per-integration: call deploy_integration with the integration\'s id; it',
-        "  deploys under the project's Adobe org, and deploying one never touches another's package.",
-        '',
-        'See the `extend-app-builder-app` skill for the full build loop.',
-    ].join('\n');
-}
-
-/**
- * Runtime Console-API access guidance — only for App Builder-adjacent projects
- * (the tools guard themselves, but advertising them elsewhere is noise).
- */
-export function buildConsoleApiAccess(project: Project): string {
-    if (!projectNeedsAppBuilderTooling(project)) return '';
-
-    return [
-        '## Adding Adobe API Access',
-        'Custom App Builder work often needs an Adobe API the project was not created with',
-        '(e.g. Firefly Services). Before writing code that calls a new Adobe API:',
-        '',
-        "1. Call the `list_console_apis` MCP tool to find the service's sdk code (it flags",
-        '   codes Demo Builder already manages).',
-        '2. Confirm the code(s) with the user, then call `add_console_apis` — it subscribes',
-        "   the API on a Developer Console workspace credential and persists the choice so",
-        '   later component changes keep it. Pass `componentId` when the API is for one',
-        "   integration: one listed under **Integration workspaces** runs in its own",
-        "   workspace, and an API added without its id lands in the project's instead.",
-        '3. If a service needs a product profile, the tool will say so — direct the user to',
-        '   the Adobe Developer Console (Project → Workspace → Add API) instead.',
-        '',
-        'See the `extend-app-builder-app` skill for the full build loop.',
-    ].join('\n');
-}
-
-/**
- * The OTHER MCP servers this project has, and what each is for.
- *
- * ## Why this section exists — and what it does NOT rest on
- *
- * It exists because an agent should know which servers it has. That is worth
- * stating plainly on its own merits.
- *
- * **It is not backed by a measurement.** It was written on one: seven battery
- * runs where the agent opened `dropins` zero times, read as "a server nobody
- * names is a server nobody uses". Two runs of a BETTER prompt disproved that the
- * same day — asked something only `dropins` can answer ("which slots does the
- * product-list block expose?"), the agent called `mcp__dropins__list_slots` on
- * its first call, by name, with no prompting and no exploration.
- *
- * The seven zeros were the wrong question, not a discoverability failure:
- * `cross-no-products` is answerable from the catalog and the rendered page, so
- * not reaching for `dropins` was the correct choice, not a missed one.
- *
- * So: keep this, because telling an agent what it has is reasonable. Do not cite
- * it as a fix for a problem that has not been shown to exist.
- *
- * Before this, the generated bundle named `demo-builder` four times and the
- * other three servers not once.
- *
- * ## Why it is generated from ai-defaults.json
- *
- * That file already carries a `description` and a `requires` gate per server and
- * is the same source `mcpConfigWriter` writes `.mcp.json` from. Generating from
- * it means this section cannot claim a server the project did not get, and a new
- * entry appears here without anyone remembering to add it — the drift that made
- * `get_commerce_endpoints` invisible to the battery for a day.
- *
- * Naming a server the project does NOT have is worse than silence: it sends the
- * agent looking for something absent. The gate is `aiDefaultsEntryApplies`, the
- * same predicate the installer and the config writer use.
- */
-export function buildToolServers(project: Project): string {
-    const servers = (aiDefaultsConfig as AiDefaults).mcpServers.filter((entry) =>
-        aiDefaultsEntryApplies(entry, project),
-    );
-    if (servers.length === 0) return '';
-
-    const lines = [
-        '## Your MCP Servers',
-        'This project has more than one MCP server. `demo-builder` is only the first —',
-        'reach for the others when the job is theirs, and search by SERVER NAME when you',
-        'do not know a tool\'s exact name:',
-        '',
-        '- **demo-builder** — this extension: projects, Commerce endpoints and queries,',
-        '  published pages, datapacks, Adobe I/O, deploys.',
-    ];
-    for (const entry of servers) {
-        lines.push(`- **${entry.id}** — ${entry.description}`);
-    }
-    lines.push(
-        '',
-        'A tool you cannot name is still findable: `ToolSearch` takes a server prefix',
-        '(`mcp__dropins__`) as well as an exact name, so list a server\'s tools before',
-        'deciding no tool exists and doing the job by hand.',
-    );
-    return lines.join('\n');
-}
 
 export function buildTryAskingClaude(project: Project): string {
     const lines: string[] = ['## Try asking Claude'];

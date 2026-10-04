@@ -59,6 +59,9 @@ const MENU_ROWS: Partial<Record<CardAction, { label: string; icon: string }>> = 
     'simulate-downtime': { label: 'Simulate downtime', icon: 'downtime' },
     // The integration's alone: a reset covers every ERP it serves (owner, 2026-10-01).
     'reset-records': { label: 'Reset ERPs', icon: 'reset' },
+    // A blank-starter app's own repository (AB-1c), and its undo.
+    'save-to-github': { label: 'Save to GitHub', icon: 'export' },
+    'delete-github-repo': { label: 'Delete its GitHub repository', icon: 'delete' },
 };
 
 /**

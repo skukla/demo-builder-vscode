@@ -53,7 +53,11 @@ export type CardAction =
     // The ERP integration's: add another ERP beside the ones it serves (AB-16).
     | 'add-erp'
     // After a removal stopped on a clean-up that did not finish: go ahead.
-    | 'remove-anyway';
+    | 'remove-anyway'
+    // A blank-starter app: save it to its own GitHub repository (AB-1c), and the undo,
+    // which deletes the repository Demo Builder made. Both confirm in the extension.
+    | 'save-to-github'
+    | 'delete-github-repo';
 
 /** Everything a card face, drawer body, and drawer action bar render. */
 export interface IntegrationCardModel {

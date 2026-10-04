@@ -50,6 +50,9 @@ import '@/core/ui/styles/drawer.css';
 import '@/core/ui/styles/modal.css';
 // .inline-notice-*, .inline-rename-* — two small shared components.
 import '@/core/ui/styles/inline-controls.css';
+// .add-card — the "New project" card at the grid's end, which opens the New menu
+// (PL-62). A stylesheet reaches only the bundles whose entry imports it (ADR-017 §6).
+import '@/core/ui/styles/add-card.css';
 
 // Local constant - webview cannot import TIMEOUTS from extension host
 // Equivalent to TIMEOUTS.PROJECT_STATE_PERSIST_DELAY in src/core/utils/timeoutConfig.ts

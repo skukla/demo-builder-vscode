@@ -78,3 +78,23 @@ export function handleIntegrationErpAction(
     }
     return false;
 }
+
+/** The card verbs whose whole job happens in the extension's own dialogs (AB-1c). */
+const REPOSITORY_MESSAGES: Partial<Record<CardAction, string>> = {
+    'save-to-github': 'promoteAppBuilderComponent',
+    'delete-github-repo': 'unpromoteAppBuilderComponent',
+};
+
+/**
+ * Saving a blank-starter app to its own GitHub repository, and the undo: the
+ * extension asks where, confirms, and runs it; the component snapshot push then
+ * refreshes the card.
+ *
+ * @returns whether the action was handled here
+ */
+export function handleRepositoryAction(model: IntegrationCardModel, action: CardAction): boolean {
+    const message = REPOSITORY_MESSAGES[action];
+    if (!message) return false;
+    webviewClient.postMessage(message, { id: model.componentId ?? model.id });
+    return true;
+}

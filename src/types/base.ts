@@ -330,6 +330,17 @@ export interface AppBuilderComponentState {
      */
     catalogId?: string;
     source: { owner: string; repo: string; branch?: string };
+    /**
+     * Set when Demo Builder saved this app to a repository of its own (AB-1c):
+     * `source` is then that repository, and `from` is where the app came from (the
+     * blank starter). Its presence is the proof the undo needs to delete the
+     * repository; the undo restores `from` and removes this.
+     */
+    promotion?: {
+        from: { owner: string; repo: string; branch?: string };
+        /** ISO date string of the save. */
+        at: string;
+    };
     endpoint?: string; // mesh GraphQL endpoint
     url?: string; // integration primary URL
     deployedUrls?: Record<string, string>;

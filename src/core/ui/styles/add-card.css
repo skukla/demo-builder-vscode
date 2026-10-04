@@ -2,7 +2,9 @@
  * .add-card — the dashed "add another" card at the end of a grid (AddCard, PL-62).
  *
  * REACHES ONLY THE BUNDLES THAT IMPORT IT (ADR-017 §6): today `wizard` (the Welcome
- * step's "Add a demo package") and `integrations` ("Add an integration"). A new
+ * step's "Add a demo package"), `integrations` ("Add an integration"),
+ * `projectsList` ("New project", the card that opens a menu) and `aiOverview`
+ * ("New prompt", which replaced the prompt library's own dashed tile). A new
  * host bundle imports it in its entry, or the card renders unstyled with no error.
  *
  * The card's SHAPE (size, border width, radius, padding, hover) is the host's own
@@ -16,7 +18,7 @@
  */
 
 @layer theme {
-    .add-card:is(.expandable-brand-card, .integration-card, .integration-row) {
+    .add-card:is(.expandable-brand-card, .integration-card, .integration-row, .project-card-spectrum, .project-row, .ai-prompt-card) {
         border-style: dashed;
         background: transparent;
         display: flex;
@@ -30,6 +32,36 @@
        draw the state it can be put in. Same value as `.expandable-brand-card.dimmed`. */
     .add-card.dimmed {
         opacity: 0.5;
+    }
+
+    /* A prompt card reserves 40px on the right for its kebab; the add card has none. */
+    .add-card.ai-prompt-card {
+        padding-right: 12px;
+    }
+
+    /* The card that opens a menu (Your Projects): the card is a box, and the ONE
+       button inside it fills it — padding moves from the card to the button, so a
+       click anywhere on the card lands on the button. Spectrum's ActionButton sits
+       in `@layer vendor`, below this one, so these win without `!important`. */
+    .add-card.add-card-menu {
+        padding: 0;
+    }
+
+    .add-card-menu > .add-card-trigger {
+        width: 100%;
+        height: auto;
+        flex: 1;
+        align-self: stretch;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: flex-start;
+        padding: var(--card-padding);
+        border: none;
+        border-radius: inherit;
+        background: transparent;
+        text-align: left;
+        cursor: pointer;
     }
 
     .add-card-name {

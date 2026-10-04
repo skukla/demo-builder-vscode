@@ -24,7 +24,7 @@ The counterpart index for hooks is `../hooks/CLAUDE.md`.
 | Just the status dot | `ui/StatusDot` | a styled `<span>` |
 | Centering any of the above at a fixed height | `layout/CenteredFeedbackContainer` | ad-hoc flex + height |
 | Adobe API catalog fetch states | `feedback/ApiCatalogFeedback` | re-deriving loading/sign-in/error |
-| "Add another" on a card grid — a dashed card as the grid's LAST cell, hidden while a filter is on, never counted | `ui/AddCard` (host passes its card class as `cardClassName`; its bundle imports `add-card.css`) | a header "Add" button, or a per-grid dashed tile |
+| "Add another" on a card grid — a dashed card as the grid's LAST cell, hidden while a filter is on, never counted | `ui/AddCard` (host passes its card class as `cardClassName`; its bundle imports `add-card.css`; pass `menu` — a Spectrum `Menu` — when adding is a choice, as Your Projects does) | a header "Add" button, or a per-grid dashed tile |
 | Card overflow (kebab) menu | `ui/CardActionsMenu` + `ui/menuIcons` | a bespoke `MenuTrigger` |
 | A menu row's icon | `renderMenuIcon('<concept>')` | importing a Spectrum icon per menu |
 | One integration in a list or grid | `integrations/IntegrationCard` | a per-surface integration row |
