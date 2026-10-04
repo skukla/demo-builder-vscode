@@ -4,7 +4,7 @@ kind: feature
 area: platform
 needs: []
 value: high
-status: active
+status: planned
 ---
 
 # Finish Adobe Commerce Optimizer (ACO) support
