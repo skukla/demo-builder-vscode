@@ -50,9 +50,10 @@ def run_bash(cmd):
 
 
 # Must stay OVER the handler limit, or the god-file case below has nothing to fire on.
-# Was appBuilderComponentHandlers.ts until EDS-8 cut it to 152 lines (2026-10-04);
-# this one is ~950 and adjudicated to stay whole (a handler map grows by design).
-HANDLER = 'src/features/projects-dashboard/handlers/dashboardHandlers.ts'
+# Was appBuilderComponentHandlers.ts until EDS-8 cut it to 152 lines (2026-10-04),
+# then projects-dashboard/handlers/dashboardHandlers.ts until EDS-8 cut that to a
+# 42-line re-export (2026-10-05). This one is ~680 lines.
+HANDLER = 'src/features/prerequisites/handlers/shared.ts'
 CSS = 'src/core/ui/styles/index.css'
 HELIX = 'src/features/eds/services/helix/helixApiClient.ts'
 

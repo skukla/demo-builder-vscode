@@ -21,6 +21,8 @@ export interface ProjectRowListProps {
      * VS Code window.
      */
     onSelectProject: (project: Project, opts?: { forceNewWindow?: boolean }) => void;
+    /** The "New project" card, rendered as the last cell (PL-62); absent while filtering. */
+    addCard?: React.ReactNode;
     /** Bundled action callbacks passed to each row's menu */
     actions?: ProjectActions;
 }
@@ -33,6 +35,7 @@ export function ProjectRowList({
     runningProjectPath,
     onSelectProject,
     actions = {},
+    addCard,
 }: ProjectRowListProps) {
     return (
         <div className="project-row-list">
@@ -45,6 +48,7 @@ export function ProjectRowList({
                     actions={actions}
                 />
             ))}
+            {addCard}
         </div>
     );
 }

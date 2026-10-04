@@ -233,6 +233,8 @@ describe('every open_view the bundle teaches names a view the tool accepts', () 
             .readdirSync(path.join(__dirname, '../../src/features/project-creation/templates/skills'))
             .map((f) => `src/features/project-creation/templates/skills/${f}`),
         'src/features/project-creation/services/aiBundle/agentsMdSections.ts',
+        'src/features/project-creation/services/aiBundle/agentsMdStorefrontSections.ts',
+        'src/features/project-creation/services/aiBundle/agentsMdAdobeSections.ts',
         'src/features/project-creation/services/aiBundle/homeAiContextWriter.ts',
     ];
 

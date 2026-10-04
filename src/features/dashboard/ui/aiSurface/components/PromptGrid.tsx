@@ -2,7 +2,8 @@
  * PromptGrid
  *
  * Renders the user's saved AI prompts as a responsive grid of `<PromptCard>`s,
- * ending with a "+ New prompt" tile. A search input (the same `SearchHeader`
+ * ending with the shared "New prompt" add card (PL-62), which steps aside while a
+ * search narrows the grid, as it does on every grid. A search input (the same `SearchHeader`
  * used by the projects dashboard) lets users narrow the grid by typing.
  *
  * Ordering: pinned items first, alphabetical within each pin-group.
@@ -10,11 +11,12 @@
  * the persisted prompt list is untouched.
  */
 
-import { Text, View } from '@adobe/react-spectrum';
+import { View } from '@adobe/react-spectrum';
 import React, { useCallback, useMemo, useState } from 'react';
 import { PromptCard } from './PromptCard';
 import { GridLayout } from '@/core/ui/components/layout/GridLayout';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
+import { AddCard } from '@/core/ui/components/ui/AddCard';
 import type { AiPrompt } from '@/types/base';
 
 export interface PromptGridProps {
@@ -30,7 +32,7 @@ export interface PromptGridProps {
     onDelete: (id: string) => void;
     /** Kebab action — toggle pinned state, called with the next value. */
     onPinToggle: (id: string, nextPinned: boolean) => void;
-    /** Called when the "+ New prompt" tile is clicked. */
+    /** Called when the "New prompt" card is clicked. */
     onNew: () => void;
     /** Kebab action — copy the prompt body to clipboard. Optional. */
     onCopy?: (promptBody: string) => void;
@@ -119,14 +121,14 @@ export function PromptGrid({
                         onCopy={onCopy}
                     />
                 ))}
-                <button
-                    type="button"
-                    data-testid="ai-new-prompt-tile"
-                    onClick={onNew}
-                    className="prompt-new-tile"
-                >
-                    <Text UNSAFE_className="text-sm">+ New prompt</Text>
-                </button>
+                {searchQuery.trim() ? null : (
+                    <AddCard
+                        name="New prompt"
+                        onOpen={onNew}
+                        cardClassName="ai-prompt-card"
+                        testId="ai-new-prompt-tile"
+                    />
+                )}
             </GridLayout>
         </View>
     );

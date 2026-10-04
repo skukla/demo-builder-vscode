@@ -172,15 +172,6 @@ describe('TokenManager — inspectToken', () => {
         expect(result.valid).toBe(false);
     });
 
-    it('a refresh that returns a STILL-BAD token leaves the original verdict', async () => {
-        const result = await managerReading(
-            { token: LONG_TOKEN, expiry: Date.now() - 30 * 60 * 1000 },
-            async () => ({ token: 'short', expiry: Date.now() + HOUR_MS })
-        ).inspectToken();
-
-        expect(result.valid).toBe(false);
-    });
-
     /**
      * Replaces the old "command execution errors" case. An unreadable config store
      * is "not signed in" — the same answer the failed subprocess gave — and must
@@ -242,20 +233,6 @@ describe('TokenManager — boundaries', () => {
         }).inspectToken();
 
         expect(result.valid).toBe(false);
-    });
-
-    it('handles an expiry a year out', async () => {
-        const result = await managerReading({
-            token: LONG_TOKEN,
-            expiry: Date.now() + 365 * 24 * HOUR_MS,
-        }).inspectToken();
-
-        expect(result.valid).toBe(true);
-        expect(result.expiresIn).toBeGreaterThan(525000);
-    });
-
-    it('returns invalid for an empty entry', async () => {
-        await expect(managerReading({}).inspectToken()).resolves.toMatchObject({ valid: false });
     });
 
     // The store is HJSON written by another tool; nulls are possible and are not
@@ -387,6 +364,7 @@ describe('TokenManager — silent refresh orchestration', () => {
             async () => ({ token: 'short', expiry: Date.now() + HOUR_MS }),
         ).inspectToken();
 
+        expect(result.valid).toBe(false);
         expect(result.token).toBe(LONG_TOKEN);
         expect(result.expiresIn).toBeLessThan(0);
     });

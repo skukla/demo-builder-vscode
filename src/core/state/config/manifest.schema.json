@@ -695,6 +695,38 @@
             "repo"
           ]
         },
+        "promotion": {
+          "type": "object",
+          "properties": {
+            "from": {
+              "type": "object",
+              "properties": {
+                "owner": {
+                  "type": "string"
+                },
+                "repo": {
+                  "type": "string"
+                },
+                "branch": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "owner",
+                "repo"
+              ]
+            },
+            "at": {
+              "type": "string",
+              "description": "ISO date string of the save."
+            }
+          },
+          "required": [
+            "from",
+            "at"
+          ],
+          "description": "Set when Demo Builder saved this app to a repository of its own (AB-1c): `source` is then that repository, and `from` is where the app came from (the blank starter). Its presence is the proof the undo needs to delete the repository; the undo restores `from` and removes this."
+        },
         "endpoint": {
           "type": "string"
         },

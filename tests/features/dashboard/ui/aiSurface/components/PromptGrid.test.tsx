@@ -271,11 +271,16 @@ describe('PromptGrid', () => {
             expect(screen.getByText(`${PROMPTS.length} prompts`)).toBeInTheDocument();
         });
 
-        it('renders zero cards when filter matches nothing — only the New tile remains', () => {
+        // The add card is not a prompt and cannot match a search, so it steps aside
+        // while one is on — the same rule on every grid (PL-62). It used to stay.
+        it('renders zero cards when filter matches nothing, and the New card steps aside', () => {
             renderGrid({ userPrompts: PROMPTS });
             const input = screen.getByPlaceholderText(/search prompts/i);
             fireEvent.change(input, { target: { value: 'xyznomatch' } });
             expect(screen.queryAllByTestId('ai-prompt-card')).toHaveLength(0);
+            expect(screen.queryByTestId('ai-new-prompt-tile')).not.toBeInTheDocument();
+
+            fireEvent.change(input, { target: { value: '' } });
             expect(screen.getByTestId('ai-new-prompt-tile')).toBeInTheDocument();
         });
     });

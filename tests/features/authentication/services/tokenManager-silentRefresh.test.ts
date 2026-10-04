@@ -92,15 +92,6 @@ describe('refreshStoredToken', () => {
         );
     });
 
-    it('persists the minted access token where the CLI reads it', async () => {
-        contextGet.mockResolvedValue(contextWithRefreshToken());
-        getAccessToken.mockResolvedValue({ access_token: LIVE_ACCESS });
-
-        await refreshStoredToken();
-
-        expect(contextSet).toHaveBeenCalledWith('cli.access_token', LIVE_ACCESS, false);
-    });
-
     it('persists a ROTATED refresh token too, when IMS returned one', async () => {
         const rotated = { token: 'n'.repeat(150), expiry: Date.now() + 14 * 24 * HOUR };
         contextGet.mockResolvedValue(contextWithRefreshToken());

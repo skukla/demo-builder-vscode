@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-1
 needs: AB-1
 value: low
-status: backlog
+status: active
 ---
 # App Builder app — app-only / no-storefront project
 
@@ -79,3 +79,8 @@ and the frontend add is already conditional), make storefront-dependent wizard s
 non-storefront output sink for mesh/app endpoints. Guard existing storefront paths with tests. See
 .rptc/backlog/2026-06-17-appbuilder-app-only-project.md and
 .rptc/research/adobe-io-deployable-workspace/research.md (§5)."`
+
+## Shipped so far
+
+- 2026-10-04  Research + design done (night4-b), no code: .rptc/plans/app-only-project/overview.md. Staleness re-verified (schema:74 + types still require frontend; executor tolerates none; env sink no-ops). Measured: Stack.frontend optional breaks 10 src + 10 test sites under tsc (reverted). Parked on 3 owner decisions with recommendations: where the SC says 'no storefront' (rec: a Backend-step option resolving to an app-only stack), where app addresses go (rec: show providesEnvVars on the integrations screen, no file), whether App Builder entitlement is required (rec: yes).
+- 2026-10-04  feat: save a blank-starter app to GitHub; adding is a card on every grid (`79f8ed297`)

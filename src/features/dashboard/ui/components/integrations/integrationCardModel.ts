@@ -42,6 +42,7 @@ import type {
     LinkedCard,
 } from '@/core/ui/components/integrations/integrationCardModel.types';
 import { getStatusDisplay, severityToDot } from '@/core/ui/utils/statusVocabulary';
+import { promotionVerbOf } from '@/features/app-builder/services/promotionEligibility';
 import { setupChecklistOf } from '@/features/app-builder/services/setupChecklist';
 import {
     getAppBuilderComponentCatalog,
@@ -355,6 +356,15 @@ function deriveKindFacet(entry: IdentifiedAppBuilderComponent): {
             renamable: Boolean(catalogEntry.nameFromEnvVar),
         };
     }
+    if (entry.promotion) {
+        // Saved from the blank starter to the SC's own repository (AB-1c): still
+        // theirs, now with a home an exported project carries.
+        return {
+            kindLabel: 'Custom · saved to GitHub',
+            sourceLine: formatSourceLine(entry.source),
+            renamable: true,
+        };
+    }
     if (isBlankSource(entry.source)) {
         return {
             // NOT "built with AI": the blank starter is an EMPTY shell you build
@@ -437,10 +447,13 @@ export function deriveIntegrationCard(
         urlLabel: 'App URL',
         apis: facet.apis,
         installation,
-        menuActions: withErpActions(
+        menuActions: withPromotionActions(
             entry,
-            face.status,
-            buildMenuActions(face.status, primaryUrl, installation, Boolean(entry.updateAvailable)),
+            withErpActions(
+                entry,
+                face.status,
+                buildMenuActions(face.status, primaryUrl, installation, Boolean(entry.updateAvailable)),
+            ),
         ),
         canRename: entry.kind === 'integration' && facet.renamable,
         ...(systems.length > 0 ? { linked: { cards: systems } } : {}),
@@ -468,6 +481,28 @@ function withErpActions(
         listedSystemOf(kind, getAppBuilderComponentCatalog());
     if (status !== 'deployed' || !addsErps) return actions;
     const own: CardAction[] = ['add-erp', 'load-demo-data', 'reset-records'];
+    const at = actions.indexOf('remove');
+    return at === -1 ? [...actions, ...own] : [...actions.slice(0, at), ...own, ...actions.slice(at)];
+}
+
+/** The repository verb an integration offers: the undo once saved, the save while blank. */
+function promotionVerbs(entry: IdentifiedAppBuilderComponent): CardAction[] {
+    const verb = promotionVerbOf(entry.id, entry);
+    if (!('verb' in verb)) return [];
+    return verb.verb === 'undo' ? ['delete-github-repo'] : ['save-to-github'];
+}
+
+/**
+ * A blank-starter app's own repository (AB-1c), just above Remove: "Save to GitHub"
+ * while it is still the blank starter, and the undo once Demo Builder saved it. Not
+ * mid-deploy (the menu is empty then), and never on a pre-built or imported app.
+ */
+function withPromotionActions(
+    entry: IdentifiedAppBuilderComponent,
+    actions: CardAction[],
+): CardAction[] {
+    if (actions.length === 0) return actions;
+    const own = promotionVerbs(entry);
     const at = actions.indexOf('remove');
     return at === -1 ? [...actions, ...own] : [...actions.slice(0, at), ...own, ...actions.slice(at)];
 }

@@ -18,7 +18,9 @@
  * Strict TDD: written BEFORE the handler exists.
  */
 
-import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
+// The write-client and job-runner mocks, and the handlers loaded after them, come
+// from the family helper (PL-51): a direct import would bind the real modules.
+import { importHandlers } from './importHandlers.testUtils';
 import { discoverStoreStructure } from '@/features/eds/services/commerceStoreDiscovery';
 import { resolveCommerceCredentials } from '@/features/data-installer/services/commerceCredentials';
 import type { Project } from '@/types/base';
@@ -38,11 +40,6 @@ jest.mock('@/features/eds/services/commerceStoreDiscovery', () => ({
 }));
 jest.mock('@/features/data-installer/services/commerceCredentials', () => ({
     resolveCommerceCredentials: jest.fn(),
-}));
-jest.mock('@/features/data-installer/services/dataInstallerWriteClient');
-jest.mock('@/features/data-installer/services/importJobRunner', () => ({
-    watchImportJob: jest.fn(),
-    IMPORT_POLL: { maxAttempts: 120, timeout: 600_000 },
 }));
 
 const mockedDiscover = discoverStoreStructure as jest.MockedFunction<typeof discoverStoreStructure>;

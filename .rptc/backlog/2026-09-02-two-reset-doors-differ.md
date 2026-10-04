@@ -14,7 +14,7 @@ call the same primitive with different options:
 
 | | dashboard | projects list |
 |---|---|---|
-| where | `src/features/dashboard/handlers/projectManagementHandlers.ts:78` | `src/features/projects-dashboard/handlers/dashboardHandlers.ts:811` |
+| where | `src/features/dashboard/handlers/projectManagementHandlers.ts:78` | `handleResetProject` in `src/features/projects-dashboard/handlers/projectsListLifecycle.ts` (was `dashboardHandlers.ts:811` before the 2026-10-05 split) |
 | finds the project by | `stateManager.getCurrentProject()` | `resolveProjectFromPath(payload.projectPath)` |
 | `includeBlockLibrary` | **not passed → false** | `true` |
 | `verifyCdn` | **not passed → false** | `true` |

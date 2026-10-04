@@ -8045,11 +8045,11 @@
             "source": "PL-22 MUT-08"
         },
         {
-            "module": "src/features/projects-dashboard/handlers/dashboardHandlers.ts",
+            "module": "src/features/projects-dashboard/handlers/projectsListBrowse.ts",
             "anchors": [
                 "} catch (openError) {"
             ],
-            "line": 223,
+            "line": 193,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger.error call \u2014 emptying it leaves the same swallowed error and the same returned success, so the only observable difference is which log line prints. The classifier reads the 'catch (openError) {' line, which carries no logger token.",
@@ -8058,11 +8058,11 @@
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/projects-dashboard/handlers/dashboardHandlers.ts",
+            "module": "src/features/projects-dashboard/handlers/projectsListLifecycle.ts",
             "anchors": [
                 "if (edsStorefront) {"
             ],
-            "line": 514,
+            "line": 115,
             "mutants": 2,
             "category": "branch",
             "reason": "The whole block is three logger.debug calls describing the EDS metadata for troubleshooting. Both branch outcomes produce the same wizard command and the same response; only the debug transcript differs.",
@@ -8071,11 +8071,11 @@
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/projects-dashboard/handlers/dashboardHandlers.ts",
+            "module": "src/features/projects-dashboard/handlers/projectsListLifecycle.ts",
             "anchors": [
                 "if (edsStorefront.metadata) {"
             ],
-            "line": 516,
+            "line": 117,
             "mutants": 3,
             "category": "branch",
             "reason": "Nested inside the debug-only block above: its body is three more logger.debug lines. Nothing downstream reads anything it computes.",
@@ -8084,11 +8084,11 @@
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/projects-dashboard/handlers/dashboardHandlers.ts",
+            "module": "src/features/projects-dashboard/handlers/projectsListLifecycle.ts",
             "anchors": [
                 "if (settings.edsConfig) {"
             ],
-            "line": 529,
+            "line": 130,
             "mutants": 2,
             "category": "branch",
             "reason": "Body is four logger.debug calls echoing the already-extracted edsConfig. The settings object handed to the wizard is identical either way.",
@@ -8097,11 +8097,11 @@
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/projects-dashboard/handlers/dashboardHandlers.ts",
+            "module": "src/features/projects-dashboard/handlers/projectsListOpen.ts",
             "anchors": [
                 ".then(undefined, (error) => {"
             ],
-            "line": 772,
+            "line": 187,
             "mutants": 1,
             "category": "block",
             "reason": "The rejection arm of a fire-and-forget notification chain; its body is a single logger.error. Emptying it leaves the same unhandled-free promise and the same already-returned success response.",
@@ -8110,11 +8110,11 @@
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/projects-dashboard/handlers/dashboardHandlers.ts",
+            "module": "src/features/projects-dashboard/handlers/projectsListLifecycle.ts",
             "anchors": [
                 "if (!payload?.projectPath || !payload?.newName) {"
             ],
-            "line": 576,
+            "line": 177,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Two optional chains on one line; only the SECOND is unreachable. Dropping the '?' on payload?.newName throws only when payload is undefined, and short-circuiting means the left operand already returned in that case. No input reaches it. The first chain on the same line IS killed, by the absent-payload test.",

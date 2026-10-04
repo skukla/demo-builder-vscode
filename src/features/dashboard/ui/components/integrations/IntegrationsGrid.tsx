@@ -36,7 +36,7 @@ import { type CardAction, type IntegrationCardModel } from './integrationCardMod
 import { IntegrationDetailPanel } from './IntegrationDetailPanel';
 import { removalConsequence } from './removalConsequence';
 import { requestRename } from './requestRename';
-import { handleIntegrationErpAction, handleSystemAction } from './systemCardActions';
+import { handleIntegrationErpAction, handleRepositoryAction, handleSystemAction } from './systemCardActions';
 import { useFlaggedCardDialog } from './useFlaggedCardDialog';
 import { useIntegrationSettings } from './useIntegrationSettings';
 import { IntegrationCard } from '@/core/ui/components/integrations/IntegrationCard';
@@ -146,7 +146,7 @@ export function IntegrationsGrid({
             const routed = model.isSystem
                 ? handleSystemAction(model, action, erpHandlers)
                 : handleIntegrationErpAction(model, action, erpHandlers);
-            if (routed) {
+            if (routed || handleRepositoryAction(model, action)) {
                 return;
             }
             // Open: the integration's Adobe workspace in the Developer Console

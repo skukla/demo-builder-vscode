@@ -198,8 +198,9 @@ true by construction.
 
 ### Files
 
-- `src/features/projects-dashboard/handlers/dashboardHandlers.ts` —
-  `handleSelectProject` workspace-anchor logic
+- `src/features/projects-dashboard/handlers/projectsListBrowse.ts` —
+  `handleSelectProject` workspace-anchor logic (in `dashboardHandlers.ts` until
+  the 2026-10-05 split, which still re-exports it)
 - `src/features/projects-dashboard/ui/components/ProjectCard.tsx`,
   `ProjectRow.tsx` — shift/cmd-click modifier passthrough
 - `src/features/dashboard/commands/showDashboard.ts` —

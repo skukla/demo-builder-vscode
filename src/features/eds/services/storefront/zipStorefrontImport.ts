@@ -15,15 +15,16 @@ import AdmZip from 'adm-zip';
 import { BUNDLE_SETUP_FILE, BUNDLE_STOREFRONT_DIR } from '../demoPackage/demoBundle';
 import type { GitHubRepoOperations } from '../github/githubRepoOperations';
 import { pushFiles, type TreePushOps } from '../github/githubTreePush';
+import { isNeverShipped } from './neverShippedFiles';
 import {
     CANONICAL_STOREFRONT_FILES,
     classifyRepoForStorefront,
     type RepoReadiness,
 } from './repoStorefrontReadiness';
-import { isNeverShipped } from './neverShippedFiles';
 import { readBoilerplate } from './storefrontProvenance';
 import { ZIP_COMMIT_MESSAGE } from './zipImportCommit';
 import { readProjectFile, readSharedDemoDescription } from '@/core/state/projectFileReader';
+import { parseIgnoreRules } from '@/core/utils/gitignoreRules';
 import { normalizeRepositoryName } from '@/core/validation/normalizers';
 import { addedDemoId } from '@/features/components/services/storefrontResolver';
 import type { Logger } from '@/types/logger';
@@ -50,48 +51,6 @@ export interface ZipStorefront {
 }
 
 /**
- * One `.gitignore` line as a test over repository-relative paths. Covers what
- * storefront ignore files actually use: a name (`node_modules`, `*.bak`), a
- * directory (`logs/`, `coverage/*`), and a rooted path with globs
- * (`scripts/__dropins__/**\/*.map`). Negations (`!`) are not honoured: a file
- * the zip author un-ignored is rare, and dropping it is the safe direction.
- */
-function ignoreRule(line: string): ((path: string) => boolean) | undefined {
-    const rule = line.trim();
-    if (!rule || rule.startsWith('#') || rule.startsWith('!')) return undefined;
-    const dirOnly = /\/\*?$/.test(rule);
-    const body = rule.replace(/\/\*?$/, '').replace(/^\//, '');
-    if (!body) return undefined;
-    // A slash inside the pattern roots it at the repository; a bare name matches
-    // any path component (git's own rule).
-    const rooted = body.includes('/');
-    const regex = new RegExp(
-        '^' +
-            body
-                .split('**')
-                .map((part) =>
-                    part
-                        .replace(/[.+^${}()|[\]\\]/g, '\\$&')
-                        .replace(/\*/g, '[^/]*')
-                        .replace(/\?/g, '[^/]'),
-                )
-                .join('.*') +
-            '$',
-    );
-    return (path: string): boolean => {
-        const segments = path.split('/');
-        const directories = segments.slice(0, -1);
-        if (!rooted) {
-            return (dirOnly ? directories : segments).some((segment) => regex.test(segment));
-        }
-        const prefixes = directories.map((_, i) => segments.slice(0, i + 1).join('/'));
-        return (dirOnly ? prefixes : [path, ...prefixes]).some((candidate) =>
-            regex.test(candidate),
-        );
-    };
-}
-
-/**
  * Unpack a zip into repository-relative files.
  *
  * @param zipPath - The zip file on disk
@@ -107,15 +66,9 @@ export function readStorefrontZip(zipPath: string): ZipStorefront {
     const strip = rootName ? rootName.length + 1 : 0;
     const relative = entries.map((entry) => ({ path: entry.entryName.slice(strip), entry }));
 
-    const ignoreLines =
-        relative
-            .find((file) => file.path === '.gitignore')
-            ?.entry.getData()
-            .toString('utf-8')
-            .split('\n') ?? [];
-    const rules = ignoreLines
-        .map(ignoreRule)
-        .filter((rule): rule is (path: string) => boolean => rule !== undefined);
+    const rules = parseIgnoreRules(
+        relative.find((file) => file.path === '.gitignore')?.entry.getData().toString('utf-8') ?? '',
+    );
 
     const files = new Map<string, Buffer>();
     let dropped = 0;
