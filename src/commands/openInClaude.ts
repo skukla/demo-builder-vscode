@@ -61,7 +61,12 @@ export function isClaudeChatOpen(): boolean {
  * positional `Project` arg for backwards compatibility and the
  * `{ project?, prompt? }` payload.
  */
-export type OpenInClaudeArg = Project | { project?: Project; prompt?: string; fresh?: boolean };
+export type OpenInClaudeArg =
+    | Project
+    | { project?: Project; prompt?: string; fresh?: boolean; pickPast?: boolean };
+
+/** Said when the SC asks to pick an earlier chat and none exist yet. */
+const NO_EARLIER_CHATS = 'There are no earlier chats to pick from yet.';
 
 /**
  * Re-home preamble prepended to a prompt delivered into a CONTINUED conversation
@@ -151,7 +156,7 @@ export class OpenInClaudeCommand extends BaseCommand {
         // Only the prompt matters now — any project arg is ignored. The home Chat
         // always launches at the projects root so one session addresses any
         // project by name via the in-extension MCP tools.
-        const { prompt, fresh } = normalizeArg(arg);
+        const { prompt, fresh, pickPast } = normalizeArg(arg);
         const cwd = resolveProjectsRoot();
 
         this.logger.info(
@@ -167,7 +172,11 @@ export class OpenInClaudeCommand extends BaseCommand {
         await refreshHomeAgentsMd(cwd, currentProjectName);
 
         try {
-            await this.launchTerminal(cwd, prompt, currentProjectName, fresh);
+            if (pickPast) {
+                await this.launchPastChatPicker(cwd);
+            } else {
+                await this.launchTerminal(cwd, prompt, currentProjectName, fresh);
+            }
         } catch (error) {
             this.logger.error(
                 `[Open in Claude] failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -176,6 +185,37 @@ export class OpenInClaudeCommand extends BaseCommand {
                 `Failed to open Claude Code: ${error instanceof Error ? error.message : 'Unknown error'}`,
             );
         }
+    }
+
+    /**
+     * Open Claude Code's own session picker (`claude --resume` with no value) so
+     * the SC can return to an EARLIER conversation, not just the most recent one
+     * `--continue` lands on (AI-4b).
+     *
+     * The list is Claude Code's, not ours: it owns the transcript format, so a
+     * second session list here would be a second thing to keep correct. No prompt
+     * rides along — the SC is choosing where to go, and whether `--resume`
+     * delivers a launch-argument prompt into the session picked afterwards is
+     * unverified. Like New Chat, the running chat terminal is retired first and
+     * a new process started; nothing is pasted into a live REPL, so there is no
+     * timing to race.
+     *
+     * With no transcript at all the picker has nothing to show, so say that and
+     * leave the running terminal alone.
+     */
+    private async launchPastChatPicker(cwd: string): Promise<void> {
+        if (!hasClaudeConversation(cwd)) {
+            this.logger.info('[Open in Claude] pick an earlier chat: none exist yet');
+            await vscode.window.showInformationMessage(NO_EARLIER_CHATS);
+            return;
+        }
+        findLiveClaudeTerminal()?.dispose();
+        const terminal = this.createTerminal(TERMINAL_NAME, cwd, {
+            viewColumn: vscode.ViewColumn.Active,
+        });
+        terminal.show();
+        terminal.sendText('claude --resume');
+        this.logger.info('[Open in Claude] opened the earlier-chat picker (claude --resume)');
     }
 
     /** Tell the user Claude Code is not installed, and offer the install page. */
@@ -408,7 +448,7 @@ export async function resetAiOnboardingState(context: vscode.ExtensionContext): 
 }
 
 /**
- * Read the two fields `execute` acts on out of the polymorphic argument.
+ * Read the three fields `execute` acts on out of the polymorphic argument.
  *
  * Accepts `undefined`, a `{ prompt?, fresh? }` payload, or a `Project` passed
  * positionally (the legacy form). The legacy case needs no branch of its own: a
@@ -420,7 +460,12 @@ export async function resetAiOnboardingState(context: vscode.ExtensionContext): 
 function normalizeArg(arg: OpenInClaudeArg | undefined): {
     prompt: string | undefined;
     fresh: boolean;
+    pickPast: boolean;
 } {
-    const payload = arg as { prompt?: string; fresh?: boolean } | undefined;
-    return { prompt: payload?.prompt, fresh: payload?.fresh === true };
+    const payload = arg as { prompt?: string; fresh?: boolean; pickPast?: boolean } | undefined;
+    return {
+        prompt: payload?.prompt,
+        fresh: payload?.fresh === true,
+        pickPast: payload?.pickPast === true,
+    };
 }

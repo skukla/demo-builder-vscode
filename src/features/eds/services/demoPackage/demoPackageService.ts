@@ -18,6 +18,7 @@ import { resolveContentIndex } from '../contentIndex';
 import type { GitHubRepoOperations } from '../github/githubRepoOperations';
 import { asBoilerplate } from '../storefront/storefrontProvenance';
 import {
+    ACCS_GRAPHQL_ENDPOINT,
     ACCS_STORE_CODE,
     ACCS_STORE_VIEW_CODE,
     ACCS_WEBSITE_CODE,
@@ -57,15 +58,23 @@ export function ownStorefrontOf(project: Project): OwnStorefront | undefined {
     return { owner: repo.owner, repo: repo.repo, daLiveOrg: site.org, daLiveSite: site.site };
 }
 
-/** Store codes under both key families, as the Add dialog writes them, from whichever the project set. */
-function storeCodeDefaults(project: Project): Record<string, string> | undefined {
+/**
+ * Store codes under both key families, as the Add dialog writes them, from
+ * whichever the project set; and an ACCS project's Commerce endpoint, under the
+ * ACCS key only, so a receiver is told which instance the demo runs on (EDS-22).
+ * The storefront's `config.json` is not read for this: behind a mesh it names
+ * the mesh, not Commerce. A PaaS endpoint is not carried (an owner decision).
+ */
+function commerceDefaults(project: Project): Record<string, string> | undefined {
     const configs = project.componentConfigs ?? {};
+    const out: Record<string, string> = {};
+    const endpoint = lookupComponentConfigValue(configs, ACCS_GRAPHQL_ENDPOINT);
+    if (endpoint) out[ACCS_GRAPHQL_ENDPOINT] = endpoint;
     const pairs: Array<[string, string]> = [
         [PAAS_WEBSITE_CODE, ACCS_WEBSITE_CODE],
         [PAAS_STORE_CODE, ACCS_STORE_CODE],
         [PAAS_STORE_VIEW_CODE, ACCS_STORE_VIEW_CODE],
     ];
-    const out: Record<string, string> = {};
     for (const [paas, accs] of pairs) {
         const value = lookupComponentConfigValue(configs, paas) ?? lookupComponentConfigValue(configs, accs);
         if (value) {
@@ -134,7 +143,7 @@ export function describeProject(
     const resolved = resolveStorefrontForProject(project, options.packages);
     const pkg = resolved?.package;
     const requiresMesh = resolved?.storefront?.requiresMesh ?? pkg?.requiresMesh;
-    const configDefaults = storeCodeDefaults(project);
+    const configDefaults = commerceDefaults(project);
     const integrations = integrationsOf(project);
     const blockLibraries = project.selectedBlockLibraries?.filter((id) => id.length > 0);
     return {

@@ -37,7 +37,9 @@ surface (`dashboard/commands/showDashboard.ts::dispose`).
 
 ## AiZone
 
-Two tiles. **Chat** is a `MenuTrigger` offering *Continue chat* / *New chat*;
+Two tiles. **Chat** is a `MenuTrigger` offering *Continue chat* / *New chat* /
+*Pick an earlier chat* (the last opens Claude Code's own `claude --resume` picker,
+AI-4b, and appears only when `onPickAiChat` is supplied);
 **Prompts** is a plain button opening the QuickPick. The zone label carries no
 class: it used `dashboard-zone-label` until 2026-09-08, and that rule had been
 deleted in `2344f2485` ("no zone heading") long before, so the class styled

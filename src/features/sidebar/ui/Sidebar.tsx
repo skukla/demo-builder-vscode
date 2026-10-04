@@ -41,6 +41,8 @@ export interface SidebarProps {
     /** Callback to show the prompt picker — Prompts button in AiZone. */
     onShowPrompts?: () => void;
     onNewAiChat?: () => void;
+    /** Opens Claude Code's picker of earlier chats — a Chat menu item (AI-4b). */
+    onPickAiChat?: () => void;
     /** Callback to start demo */
     onStartDemo?: () => void;
     /** Callback to stop demo */
@@ -68,6 +70,7 @@ export function Sidebar({
     onOpenAiChat,
     onShowPrompts,
     onNewAiChat,
+    onPickAiChat,
     onStartDemo: _onStartDemo,
     onStopDemo: _onStopDemo,
     onOpenDashboard: _onOpenDashboard,
@@ -103,6 +106,7 @@ export function Sidebar({
                     onOpenAiChat={onOpenAiChat}
                     onShowPrompts={onShowPrompts}
                     onNewAiChat={onNewAiChat}
+                    onPickAiChat={onPickAiChat}
                 />
             )}
             <UtilityBar

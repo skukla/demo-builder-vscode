@@ -288,6 +288,13 @@ export class CommandManager {
             await openInClaude.execute({ fresh: true });
         });
 
+        // Pick an Earlier AI Chat — opens Claude Code's own session picker
+        // (`claude --resume`), the way back to a conversation `--continue` no
+        // longer lands on (AI-4b).
+        this.registerCommand('demoBuilder.pickAiChat', async () => {
+            await openInClaude.execute({ pickPast: true });
+        });
+
         // Show Prompts Picker — single-purpose prompt QuickPick. Replaces the
         // state-aware AiMenuCommand. Always shows the picker; selection inserts
         // via openInClaude or routes to the prompt library.

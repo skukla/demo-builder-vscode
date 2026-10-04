@@ -27,6 +27,7 @@ import { promisify } from 'util';
 import { isRulesetRejection } from '../errorFormatters';
 import { injectTokenIntoUrl } from '../github/githubHelpers';
 import { previewAndPublishPage } from '../helix/helixApiClient';
+import { SECRET_FILES_PATHSPEC_EXCLUDE } from './neverShippedFiles';
 
 const execFile = promisify(childProcess.execFile);
 
@@ -251,9 +252,18 @@ async function remoteArgs(storefrontPath: string, githubToken?: string): Promise
     return [injectTokenIntoUrl(remoteRaw.trim(), githubToken), 'HEAD'];
 }
 
+/** Stage every change except a `.env*` file at any depth: a secret never reaches GitHub. */
 async function stageAll(storefrontPath: string): Promise<void> {
     try {
-        await execFile('git', ['-C', storefrontPath, 'add', '-A']);
+        await execFile('git', [
+            '-C',
+            storefrontPath,
+            'add',
+            '-A',
+            '--',
+            '.',
+            SECRET_FILES_PATHSPEC_EXCLUDE,
+        ]);
     } catch (err) {
         throw wrapGitError(err, 'add');
     }

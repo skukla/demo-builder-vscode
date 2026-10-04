@@ -122,6 +122,11 @@ function SidebarApp(): React.ReactElement {
         sendMessage('newAiChat');
     }, []);
 
+    // Handle pick an earlier chat (AiZone Chat menu) — Claude Code's own picker.
+    const handlePickAiChat = useCallback(() => {
+        sendMessage('pickAiChat');
+    }, []);
+
     // Handle start demo
     const handleStartDemo = useCallback(() => {
         sendMessage('startDemo');
@@ -180,6 +185,7 @@ function SidebarApp(): React.ReactElement {
                 onOpenAiChat={handleOpenAiChat}
                 onShowPrompts={handleShowPrompts}
                 onNewAiChat={handleNewAiChat}
+                onPickAiChat={handlePickAiChat}
                 onStartDemo={handleStartDemo}
                 onStopDemo={handleStopDemo}
                 onOpenDashboard={handleOpenDashboard}

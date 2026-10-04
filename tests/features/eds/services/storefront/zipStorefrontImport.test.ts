@@ -91,6 +91,34 @@ describe('readStorefrontZip', () => {
         expect(read.files.get('fonts/roboto.woff2')).toEqual(PNG);
     });
 
+    it('drops every .env file at any depth, whatever the zip\'s own ignore file says (secrets never ship)', () => {
+        // No .gitignore at all: the always-drop rule alone must catch them.
+        const { '.gitignore': _ignore, ...noIgnore } = STOREFRONT;
+        const file = zipWith({
+            ...noIgnore,
+            '.env': 'SECRET=1',
+            '.env.local': 'SECRET=2',
+            '.env.production': 'SECRET=3',
+            '.env.example': 'SECRET=',
+            'api/.env': 'SECRET=4',
+            'tools/deep/.env.development.local': 'SECRET=5',
+            'scripts/environment.js': 'export {};',
+            'docs/.envrc': 'export SECRET=6',
+        });
+
+        const read = readStorefrontZip(file);
+
+        expect([...read.files.keys()].sort()).toEqual([
+            'fonts/roboto.woff2',
+            'fstab.yaml',
+            'head.html',
+            'scripts/delayed.js',
+            'scripts/environment.js',
+            'scripts/scripts.js',
+        ]);
+        expect(read.dropped).toBe(7);
+    });
+
     it('reads a demo bundle: the repository is its storefront folder, description file included', () => {
         const read = readStorefrontZip(
             zipWith(

@@ -46,12 +46,51 @@ const SIDEBAR_MESSAGE_TYPES = [
     'openAiChat',
     'showPrompts',
     'newAiChat',
+    'pickAiChat',
     'startDemo',
     'stopDemo',
     'openDashboard',
     'openConfigure',
     'checkUpdates',
 ] as const;
+
+/** A sidebar button whose whole job is to run one VS Code command. */
+interface CommandButton {
+    /** Names the action in the log line and the failure line. */
+    label: string;
+    command: string;
+    argument?: string;
+}
+
+/**
+ * The buttons that only forward to a command, keyed by message type. One
+ * forwarder runs them all, so each logs and swallows a failure the same way.
+ *
+ * `openAiChat` resumes; `newAiChat` starts fresh — the only path onto the current
+ * generated `AGENTS.md`; `pickAiChat` opens Claude Code's picker of earlier chats.
+ */
+const COMMAND_BUTTONS = new Map<string, CommandButton>(Object.entries({
+    createProject: { label: 'Create project', command: 'demoBuilder.createProject' },
+    openTools: {
+        label: 'Open tools',
+        command: 'workbench.action.quickOpen',
+        argument: '>Demo Builder: ',
+    },
+    openSettings: {
+        label: 'Open settings',
+        command: 'workbench.action.openSettings',
+        argument: 'demoBuilder',
+    },
+    openAiChat: { label: 'Open AI chat', command: 'demoBuilder.openAiExperience' },
+    showPrompts: { label: 'Show prompts', command: 'demoBuilder.showPromptsPicker' },
+    newAiChat: { label: 'New AI chat', command: 'demoBuilder.newAiChat' },
+    pickAiChat: { label: 'Pick an earlier AI chat', command: 'demoBuilder.pickAiChat' },
+    startDemo: { label: 'Start demo', command: 'demoBuilder.startDemo' },
+    stopDemo: { label: 'Stop demo', command: 'demoBuilder.stopDemo' },
+    openDashboard: { label: 'Open dashboard', command: 'demoBuilder.showProjectDashboard' },
+    openConfigure: { label: 'Open configure', command: 'demoBuilder.configure' },
+    checkUpdates: { label: 'Check updates', command: 'demoBuilder.checkUpdates' },
+}));
 
 /**
  * SidebarProvider - WebviewViewProvider for the Demo Builder sidebar
@@ -302,60 +341,16 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 await this.handleBack();
                 break;
 
-            case 'createProject':
-                await this.handleCreateProject();
-                break;
-
-            case 'openTools':
-                await this.handleOpenTools();
-                break;
-
             case 'openHelp':
                 await this.handleOpenHelp();
-                break;
-
-            case 'openSettings':
-                await this.handleOpenSettings();
                 break;
 
             case 'openLogs':
                 await this.handleOpenLogs();
                 break;
 
-            case 'openAiChat':
-                await this.handleOpenAiChat();
-                break;
-
-            case 'showPrompts':
-                await this.handleShowPrompts();
-                break;
-
-            case 'newAiChat':
-                await this.handleNewAiChat();
-                break;
-
-            case 'startDemo':
-                await this.handleStartDemo();
-                break;
-
-            case 'stopDemo':
-                await this.handleStopDemo();
-                break;
-
-            case 'openDashboard':
-                await this.handleOpenDashboard();
-                break;
-
-            case 'openConfigure':
-                await this.handleOpenConfigure();
-                break;
-
-            case 'checkUpdates':
-                await this.handleCheckUpdates();
-                break;
-
             default:
-                this.logger.warn(`Unknown sidebar message: ${message.type}`);
+                await this.handleCommandButton(message.type);
         }
     }
 
@@ -428,38 +423,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     }
 
     /**
-     * Handle create project request
-     */
-    private async handleCreateProject(): Promise<void> {
-        this.logger.info('Sidebar: Create new project');
-
-        try {
-            await vscode.commands.executeCommand('demoBuilder.createProject');
-        } catch (error) {
-            this.logger.error(
-                'Create project failed',
-                error instanceof Error ? error : undefined,
-            );
-        }
-    }
-
-    /**
-     * Handle open tools request - opens command palette filtered to Demo Builder commands
-     */
-    private async handleOpenTools(): Promise<void> {
-        this.logger.info('Sidebar: Open tools');
-
-        try {
-            await vscode.commands.executeCommand('workbench.action.quickOpen', '>Demo Builder: ');
-        } catch (error) {
-            this.logger.error(
-                'Open tools failed',
-                error instanceof Error ? error : undefined,
-            );
-        }
-    }
-
-    /**
      * Handle open help request
      */
     private async handleOpenHelp(): Promise<void> {
@@ -472,23 +435,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         } catch (error) {
             this.logger.error(
                 'Open help failed',
-                error instanceof Error ? error : undefined,
-            );
-        }
-    }
-
-    /**
-     * Handle open settings request
-     */
-    private async handleOpenSettings(): Promise<void> {
-        this.logger.info('Sidebar: Open settings');
-
-        try {
-            // Open VS Code settings filtered to Demo Builder
-            await vscode.commands.executeCommand('workbench.action.openSettings', 'demoBuilder');
-        } catch (error) {
-            this.logger.error(
-                'Open settings failed',
                 error instanceof Error ? error : undefined,
             );
         }
@@ -513,135 +459,20 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         }
     }
 
-    /**
-     * Handle open AI chat request — opens/focuses the Claude terminal.
-     * Backs the Chat button in the sidebar's AiZone.
-     */
-    private async handleOpenAiChat(): Promise<void> {
-        this.logger.info('Sidebar: Open AI chat');
-
-        try {
-            await vscode.commands.executeCommand('demoBuilder.openAiExperience');
-        } catch (error) {
-            this.logger.error(
-                'Open AI chat failed',
-                error instanceof Error ? error : undefined,
-            );
+    /** Run a forwarding button's command; a failure is logged, never thrown. */
+    private async handleCommandButton(type: string): Promise<void> {
+        const button = COMMAND_BUTTONS.get(type);
+        if (!button) {
+            this.logger.warn(`Unknown sidebar message: ${type}`);
+            return;
         }
-    }
-
-    /**
-     * Handle new AI chat request — starts a FRESH conversation.
-     * Backs the New button in the sidebar's AiZone.
-     *
-     * Distinct from `handleOpenAiChat`, which resumes. A resumed conversation
-     * never re-reads `AGENTS.md`, so this is the only path that puts a
-     * conversation on the current generated bundle.
-     */
-    private async handleNewAiChat(): Promise<void> {
-        this.logger.info('Sidebar: New AI chat');
-
+        const { label, command, argument } = button;
+        this.logger.info(`Sidebar: ${label}`);
         try {
-            await vscode.commands.executeCommand('demoBuilder.newAiChat');
+            const args = argument === undefined ? [] : [argument];
+            await vscode.commands.executeCommand(command, ...args);
         } catch (error) {
-            this.logger.error('New AI chat failed', error instanceof Error ? error : undefined);
-        }
-    }
-
-    /**
-     * Handle show prompts request — shows the prompt QuickPick.
-     * Backs the Prompts button in the sidebar's AiZone.
-     */
-    private async handleShowPrompts(): Promise<void> {
-        this.logger.info('Sidebar: Show prompts');
-
-        try {
-            await vscode.commands.executeCommand('demoBuilder.showPromptsPicker');
-        } catch (error) {
-            this.logger.error(
-                'Show prompts failed',
-                error instanceof Error ? error : undefined,
-            );
-        }
-    }
-
-    /**
-     * Handle start demo request
-     */
-    private async handleStartDemo(): Promise<void> {
-        this.logger.info('Sidebar: Start demo');
-
-        try {
-            await vscode.commands.executeCommand('demoBuilder.startDemo');
-        } catch (error) {
-            this.logger.error(
-                'Start demo failed',
-                error instanceof Error ? error : undefined,
-            );
-        }
-    }
-
-    /**
-     * Handle stop demo request
-     */
-    private async handleStopDemo(): Promise<void> {
-        this.logger.info('Sidebar: Stop demo');
-
-        try {
-            await vscode.commands.executeCommand('demoBuilder.stopDemo');
-        } catch (error) {
-            this.logger.error(
-                'Stop demo failed',
-                error instanceof Error ? error : undefined,
-            );
-        }
-    }
-
-    /**
-     * Handle open dashboard request
-     */
-    private async handleOpenDashboard(): Promise<void> {
-        this.logger.info('Sidebar: Open dashboard');
-
-        try {
-            await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
-        } catch (error) {
-            this.logger.error(
-                'Open dashboard failed',
-                error instanceof Error ? error : undefined,
-            );
-        }
-    }
-
-    /**
-     * Handle open configure request
-     */
-    private async handleOpenConfigure(): Promise<void> {
-        this.logger.info('Sidebar: Open configure');
-
-        try {
-            await vscode.commands.executeCommand('demoBuilder.configure');
-        } catch (error) {
-            this.logger.error(
-                'Open configure failed',
-                error instanceof Error ? error : undefined,
-            );
-        }
-    }
-
-    /**
-     * Handle check updates request
-     */
-    private async handleCheckUpdates(): Promise<void> {
-        this.logger.info('Sidebar: Check updates');
-
-        try {
-            await vscode.commands.executeCommand('demoBuilder.checkUpdates');
-        } catch (error) {
-            this.logger.error(
-                'Check updates failed',
-                error instanceof Error ? error : undefined,
-            );
+            this.logger.error(`${label} failed`, error instanceof Error ? error : undefined);
         }
     }
 

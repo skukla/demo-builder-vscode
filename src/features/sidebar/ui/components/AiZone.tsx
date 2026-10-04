@@ -5,9 +5,9 @@
  * stacked vertically. Visual language mirrors the project dashboard's labeled
  * zones (PRIMARY / STOREFRONT / BUILD).
  *
- * TWO tiles: Chat (a menu) and Prompts. Only Chat is a menu — continuing and
- * starting fresh are two ways to do one thing, which is what earns one
- * affordance. It shows no chevron ICON; see `tileFor` for why the caret is a
+ * TWO tiles: Chat (a menu) and Prompts. Only Chat is a menu — continuing,
+ * starting fresh and picking an earlier chat are three ways to do one thing,
+ * which is what earns one affordance. It shows no chevron ICON; see `tileFor` for why the caret is a
  * character.
  *
  * A third Workbench tile lived here until 2026-08-26, when the prompt-evaluation
@@ -39,11 +39,17 @@ export interface AiZoneProps {
      * current bundle.
      */
     onNewAiChat?: () => void;
+    /**
+     * Called to pick an EARLIER conversation in Claude Code's own picker
+     * (`claude --resume`). Optional; adds a third Chat menu item when given.
+     */
+    onPickAiChat?: () => void;
 }
 
 /** Menu keys for the Chat tile. */
 const CONTINUE = 'continue';
 const NEW = 'new';
+const PICK = 'pick';
 
 /**
  * One tile face, with a caret when it opens a menu.
@@ -85,7 +91,7 @@ function tileFor(
 /**
  * AiZone — labeled zone with Chat and Prompts tiles stacked vertically.
  */
-export function AiZone({ onOpenAiChat, onShowPrompts, onNewAiChat }: AiZoneProps) {
+export function AiZone({ onOpenAiChat, onShowPrompts, onNewAiChat, onPickAiChat }: AiZoneProps) {
     return (
         <Flex direction="column" gap="size-100" alignItems="center">
             <Text>AI</Text>
@@ -100,11 +106,14 @@ export function AiZone({ onOpenAiChat, onShowPrompts, onNewAiChat }: AiZoneProps
                                     onOpenAiChat();
                                 } else if (key === NEW) {
                                     onNewAiChat();
+                                } else if (key === PICK) {
+                                    onPickAiChat?.();
                                 }
                             }}
                         >
                             <Item key={CONTINUE}>Continue chat</Item>
                             <Item key={NEW}>New chat</Item>
+                            {onPickAiChat ? <Item key={PICK}>Pick an earlier chat</Item> : null}
                         </Menu>
                     </MenuTrigger>
                 ) : (

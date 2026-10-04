@@ -108,6 +108,11 @@
                 "category": "Demo Builder"
             },
             {
+                "command": "demoBuilder.pickAiChat",
+                "title": "Pick an Earlier AI Chat",
+                "category": "Demo Builder"
+            },
+            {
                 "command": "demoBuilder.openModernizationAgent",
                 "title": "Open AEM Modernization Agent",
                 "category": "Demo Builder"

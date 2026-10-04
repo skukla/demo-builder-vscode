@@ -590,7 +590,10 @@ export async function runProjectCreation(ctx: HandlerContext, request: CreationR
     if ('error' in resolved) return asText(resolved.error);
     const { pkg, storefront, packages, demo } = resolved;
     // A project row never carries the card's zip record.
-    const args = { ...rest, pkgId: pkg.id, stackId, demo: projectRowOf(demo) };
+    // An added demo whose package names its Commerce instance needs no endpoint
+    // from the caller (EDS-22); one the caller passes still wins.
+    const accsEndpoint = rest.accsEndpoint ?? demo?.configDefaults?.[ACCS_GRAPHQL_ENDPOINT];
+    const args = { ...rest, accsEndpoint, pkgId: pkg.id, stackId, demo: projectRowOf(demo) };
 
     return stackId.startsWith('eds-')
         ? createEds(ctx, args, pkg, storefront, packages)
@@ -644,7 +647,9 @@ export function registerCreateProjectTool(
                 accsEndpoint: z
                     .string()
                     .optional()
-                    .describe('EDS + ACCS only: Adobe Commerce Cloud GraphQL endpoint'),
+                    .describe(
+                        "EDS + ACCS only: Adobe Commerce Cloud GraphQL endpoint (default: an added demo's own, when its package names one)",
+                    ),
                 // The same input configure_project takes (AI-11), so the demo's codes
                 // need not be published first and corrected after.
                 storeScope: storeScopeSchema.optional(),
