@@ -4,7 +4,7 @@ kind: feature
 area: platform
 needs: []
 value: high
-status: backlog
+status: active
 ---
 
 # Finish Adobe Commerce Optimizer (ACO) support
@@ -74,3 +74,4 @@ waits on it, and `EDS-1` (multisite) specifies ACO catalog views per locale.
 
 - 2026-09-17  docs(backlog): PL-60 finishes ACO support; AB-14 asks where ERP prices go on an ACO storefront (`599c3d9de`)
 - 2026-10-04  2026-10-04 loop (night 4): research + design, nothing built (every next step waits on a product choice). Item re-verified accurate; also dead: executeCommerceCleanup and filterAddonsByPackage. Research (.rptc/research/aco-support/research.md): the generated ACO config is wrong in shape (documented: AC-View-ID required, AC-Source-Locale, optional AC-Price-Book-ID, no all.Store, ACO analytics block); only ACO_TENANT_ID survives as an input (ingestion uses an IMS client id+secret, not an API key); catalog views have no create API; ingestion has deletes but no list. Plan with five owner decisions P1-P5: .rptc/plans/aco-support/overview.md.
+- 2026-10-04  feat(eds,ai): adopt an empty org repository, explain GitHub org refusals, and a skill for building catalog data (`dd6784bb0`)
