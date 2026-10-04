@@ -13,7 +13,7 @@ status: gated
 Filed 2026-09-11 from `.rptc/research/project-import-export/research.md` ("Dead"). Runs
 first and alone; nothing waits on it, and nothing here is soft-deprecated afterwards.
 
-- `ImportResult` (`src/types/settingsFile.ts:141`): zero references.
+- `ImportResult` (was in `src/types/settingsFile.ts`): zero references. Deleted in `6817f5486`.
 - `SettingsFile.additionalConsoleApis`: typed and read, never written by any producer; the
   manifest write was retired 2026-08-23. The read fallback in `useWizardState.ts:228` goes
   with it once no v1 file can carry it (check the migration in [[PL-56a]] first).
