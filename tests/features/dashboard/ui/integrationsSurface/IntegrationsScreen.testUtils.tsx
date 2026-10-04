@@ -133,7 +133,9 @@ jest.mock('@/features/dashboard/ui/components/integrations/IntegrationsGrid', ()
     // handed isActionDisabled, and the only visible consequence is an empty menu.
     // The two mesh callbacks get real buttons for the same reason: without them
     // nothing in the suite ever invoked handleDeployMesh/handleReAuthenticate.
-    IntegrationsGrid: ({ cards, viewMode, onAddRequest, onDeployMesh, onReAuthenticate }: any) => (
+    // `grid-add` renders only when the screen hands `onAdd` — the add card's
+    // presence is the screen's decision (PL-62), so the stub must not fake it.
+    IntegrationsGrid: ({ cards, viewMode, onAdd, onDeployMesh, onReAuthenticate }: any) => (
         <div data-testid="grid" data-view-mode={viewMode}>
             {cards.map((c: any) => (
                 <div
@@ -144,7 +146,7 @@ jest.mock('@/features/dashboard/ui/components/integrations/IntegrationsGrid', ()
                     {c.name} · {c.statusLabel}
                 </div>
             ))}
-            <button onClick={onAddRequest}>grid-add</button>
+            {onAdd && <button onClick={onAdd}>grid-add</button>}
             <button onClick={onDeployMesh}>grid-deploy-mesh</button>
             <button onClick={onReAuthenticate}>grid-reauth</button>
         </div>

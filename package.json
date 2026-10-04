@@ -501,7 +501,7 @@
         "test:force": "node --max-old-space-size=4096 node_modules/.bin/jest --forceExit",
         "test:unit": "node --max-old-space-size=4096 node_modules/.bin/jest --selectProjects node --testPathIgnorePatterns='integration'",
         "test:integration": "node --max-old-space-size=4096 node_modules/.bin/jest --testPathPattern='integration'",
-        "test:ui": "extest setup-and-run \"tests/ui/*.test.js\" --code_version 1.136.1 --code_settings tests/ui/settings.json --extensions_dir .test-extensions",
+        "test:ui": "node tests/ui/run.mjs",
         "test:typecheck": "tsc --noEmit",
         "typecheck:tests": "tsc -p tsconfig.test.json",
         "metrics:baseline": "node scripts/capture-baseline-metrics.js",

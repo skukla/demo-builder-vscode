@@ -1,7 +1,8 @@
 /**
  * IntegrationsGrid — the dashboard integrations surface: a calm card per
- * integration, the mesh as a peer card FIRST, the add tile as the last cell (it IS
- * the empty state), and all detail plus every non-face action in the detail drawer.
+ * integration, the mesh as a peer card FIRST, the shared add card as the last cell
+ * when the screen hands `onAdd` (PL-62), and all detail plus every non-face action
+ * in the detail drawer.
  *
  * The grid owns exactly one instance each of the drawer, the add modal, the
  * remove, reset, reinstall and remove-anyway confirms, the Manage-APIs, Settings and
@@ -41,6 +42,7 @@ import { useIntegrationSettings } from './useIntegrationSettings';
 import { IntegrationCard } from '@/core/ui/components/integrations/IntegrationCard';
 import { IntegrationRow } from '@/core/ui/components/integrations/IntegrationRow';
 import type { ViewMode } from '@/core/ui/components/navigation/SearchHeader';
+import { AddCard } from '@/core/ui/components/ui/AddCard';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { ComponentSettings } from '@/types/appBuilderComponents';
 
@@ -67,6 +69,11 @@ export interface IntegrationsGridProps {
     operations: ComponentOperationControls;
     /** Opens a card's setup guide (AB-26x); the screen holds it, for its progress modal too. */
     onOpenGuide?: (cardId: string) => void;
+    /**
+     * Opens the screen's add flow. Given → the grid ends with the add card (PL-62).
+     * The screen withholds it while a filter is on: the card is not a result.
+     */
+    onAdd?: () => void;
 }
 
 const NO_SETTINGS: Record<string, ComponentSettings> = {};
@@ -80,6 +87,7 @@ export function IntegrationsGrid({
     componentSettings = NO_SETTINGS,
     operations,
     onOpenGuide,
+    onAdd,
 }: IntegrationsGridProps): React.ReactElement {
     const settings = useIntegrationSettings(derivedCards, componentSettings);
     const { cards, open: openSettings } = settings;
@@ -257,9 +265,9 @@ export function IntegrationsGrid({
     }, [operations, pendingRemove, pendingRemoveId]);
 
     return (
-        // No section heading, count, or Add button here: the SCREEN's page header
-        // and sticky action band own those (the same division ProjectsDashboard
-        // uses). This component is the card surface only.
+        // No section heading or count here: the SCREEN's page header and sticky
+        // action band own those (the same division ProjectsDashboard uses). Adding
+        // is the last cell of the grid itself — a card, not a header button (PL-62).
         <div className="integrations-surface">
             {/* The grid owns the full width; the detail FLYOUT overlays it rather
                 than taking a column beside it. Plain divs — a Spectrum Flex caps
@@ -275,6 +283,13 @@ export function IntegrationsGrid({
                         onRename={requestRename}
                     />
                 ))}
+                {onAdd ? (
+                    <AddCard
+                        name="Add an integration"
+                        onOpen={onAdd}
+                        cardClassName={viewMode === 'rows' ? 'integration-row' : 'integration-card'}
+                    />
+                ) : null}
             </div>
 
             <IntegrationDetailPanel

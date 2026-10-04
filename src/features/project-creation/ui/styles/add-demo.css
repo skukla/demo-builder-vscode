@@ -1,4 +1,5 @@
-/* The "Add a demo package" dialog and its card on the Welcome grid. Stage chrome is the
+/* The "Add a demo package" dialog, and an added demo's card menu. The plus card on
+   the Welcome grid is the shared AddCard (core/ui/styles/add-card.css). Stage chrome is the
    Add Integration flow's (`.intflow-*`); the found rows are the Build summary's
    (`.sum-*`). Only what neither has lives here. */
 
@@ -33,19 +34,6 @@
         display: flex;
         flex-direction: column;
         gap: 2px;
-    }
-
-    /* The plus card: the same card as a brand, drawn as an invitation. */
-    .expandable-brand-card.add-demo-card {
-        border-style: dashed;
-        background: transparent;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-    }
-
-    .expandable-brand-card.add-demo-card .brand-card-name::before {
-        content: '+ ';
     }
 
     /* An added demo's menu, in the brand card's corner (the selection check sits

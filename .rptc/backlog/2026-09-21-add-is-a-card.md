@@ -73,3 +73,7 @@ These are why the button is not a one-line swap:
   the commit.
 
 Filed 2026-09-21.
+
+## Shipped so far
+
+- 2026-10-04  PARTLY DONE (night3-a, uncommitted): 2 of the 4 grids. One shared card, src/core/ui/components/ui/AddCard.tsx + src/core/ui/styles/add-card.css (dashed, '+', host passes its card class). Welcome step's 'Add a demo package' now uses it (its two existing suites pass unchanged). Integrations: header 'Add integration' button REMOVED; 'Add an integration' card is the last grid cell, in cards AND rows view. Decisions taken (owner may overrule): (1) filter on -> card hidden, same as the Welcome grid; (2) counts exclude it; (4) empty integrations screen keeps its existing CTA empty state - no grid there; (5) role=button, tab stop, Enter/Space, name 'Add an integration'; (6) header button deleted. Reverses the 2026-08 'no add affordance' grid tests by design. add-card.css is imported by the wizard and integrations bundles only; tests/sop/stylesheet-bundles caught a missing '.dimmed' on integrations and a control (dropping the import) failed with four violations. NOT DONE: Your Projects 'New' is a 3-item menu (New, Copy from existing, Import from file) - decision 3 is the owner's: card opens the same menu, or one card per way? Prompt library '+ New prompt' tile (PromptGrid.tsx, ai.css) is a second dashed-tile implementation, not moved. Needs a visual look and a webview-visual-baseline capture before push (CSS changed).

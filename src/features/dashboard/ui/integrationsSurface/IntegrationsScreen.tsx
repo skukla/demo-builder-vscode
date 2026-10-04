@@ -223,6 +223,8 @@ export function IntegrationsScreen({
     ]);
 
     const visibleCards = useMemo(() => filterCards(cards, searchQuery), [cards, searchQuery]);
+    // Trimmed like the filter itself: a query of spaces narrows nothing.
+    const isFiltering = searchQuery.trim().length > 0;
     // The demo setup guide (AB-26x) lives here, not in the grid: the progress modal below
     // opens it too, when an operation finishes with setup still to do.
     const { open: openGuide, modal: guideModal } = useSetupGuide(cards);
@@ -363,21 +365,12 @@ export function IntegrationsScreen({
                                 }
                             />
                         </View>
-                        {/* Trailing buttons mirror DashboardStatusHeader: a
-                            secondary nav button after the flexed content, with the
-                            primary action last (as "New" is on the projects list). */}
+                        {/* The trailing nav button mirrors DashboardStatusHeader. No
+                            Add button here: adding is the card at the end of the
+                            grid (PL-62), and the empty state carries its own CTA. */}
                         <Button variant="secondary" onPress={handleBack}>
                             Project Dashboard
                         </Button>
-                        {/* Withheld while empty: the empty state carries the CTA,
-                            and it is the thing the eye lands on. Two Add buttons
-                            for one action is the duplication this surface spent
-                            2026-08-04 removing everywhere else. */}
-                        {cards.length > 0 && (
-                            <Button variant="cta" onPress={openAdd}>
-                                Add integration
-                            </Button>
-                        )}
                     </Flex>
                 }
             >
@@ -403,16 +396,18 @@ export function IntegrationsScreen({
                         componentSettings={componentSettings}
                         operations={operations}
                         onOpenGuide={openGuide}
+                        // The add card steps aside while a filter is on: it is
+                        // not a result, and alone it would read as "add one"
+                        // rather than "nothing matched".
+                        onAdd={isFiltering ? undefined : openAdd}
                     />
                 )}
 
                 {/* No-results message, mirroring the projects list. The grid gets
                     search-FILTERED cards while the empty-state gate above reads
                     the unfiltered list, so a no-match search renders an empty
-                    grid. The dashed add tile used to sit there alone, reading as
-                    "add one" rather than "nothing matched"; with the tile gone
-                    the area would otherwise be blank, and the header's "0 of N"
-                    is a count, not an answer. */}
+                    grid (the add card is withheld while filtering), and the
+                    header's "0 of N" is a count, not an answer. */}
 
                 {searchFoundNothing && (
                     <Flex
@@ -426,8 +421,8 @@ export function IntegrationsScreen({
                     </Flex>
                 )}
 
-                {/* Hosted HERE so the header button and the grid's add tile open
-                    the same one instance. */}
+                {/* Hosted HERE so the empty state's CTA and the grid's add card
+                    open the same one instance. */}
                 <AddIntegrationFlowAdapter
                     isOpen={addOpen || destOpen}
                     mode={destOpen ? 'destination' : 'add'}

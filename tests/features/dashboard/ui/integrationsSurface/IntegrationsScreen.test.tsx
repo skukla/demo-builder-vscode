@@ -482,15 +482,15 @@ describe('IntegrationsScreen', () => {
             expect(screen.queryByTestId('add-modal')).not.toBeInTheDocument();
         });
 
-        // The band's Add is withheld while the list is empty (the empty state
-        // carries the CTA), so this is the only test that sees it at all.
-        it('opens from the band button once there are cards', async () => {
+        // With cards, the way in is the grid's add card (PL-62); the band has no
+        // Add button. IntegrationsScreen-addCard.test.tsx pins the card's rules.
+        it('opens from the grid\u2019s add card once there are cards', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const handlers = captureHandlers();
             render(<IntegrationsScreen hasAdobeContext appBuilderComponents={{ a: DEPLOYED }} />);
             settleStatus(handlers);
 
-            await user.click(screen.getByRole('button', { name: 'Add integration' }));
+            await user.click(screen.getByRole('button', { name: 'grid-add' }));
 
             expect(screen.getByTestId('add-modal')).toHaveAttribute('data-mode', 'add');
         });
@@ -500,7 +500,7 @@ describe('IntegrationsScreen', () => {
             const handlers = captureHandlers();
             render(<IntegrationsScreen hasAdobeContext appBuilderComponents={{ a: DEPLOYED }} />);
             settleStatus(handlers);
-            await user.click(screen.getByRole('button', { name: 'Add integration' }));
+            await user.click(screen.getByRole('button', { name: 'grid-add' }));
 
             await user.click(screen.getByRole('button', { name: 'close-modal' }));
 
@@ -553,7 +553,7 @@ describe('IntegrationsScreen', () => {
             );
             settleStatus(handlers);
 
-            await user.click(screen.getByRole('button', { name: 'Add integration' }));
+            await user.click(screen.getByRole('button', { name: 'grid-add' }));
 
             expect(screen.getByTestId('add-modal')).toHaveAttribute('data-catalog-size', '1');
         });
@@ -564,7 +564,7 @@ describe('IntegrationsScreen', () => {
             render(<IntegrationsScreen hasAdobeContext appBuilderComponents={{ a: DEPLOYED }} />);
             settleStatus(handlers);
 
-            await user.click(screen.getByRole('button', { name: 'Add integration' }));
+            await user.click(screen.getByRole('button', { name: 'grid-add' }));
 
             expect(screen.getByTestId('add-modal')).toHaveAttribute('data-catalog-size', '0');
         });

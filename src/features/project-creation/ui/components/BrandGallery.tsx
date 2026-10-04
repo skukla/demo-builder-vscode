@@ -12,6 +12,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { sortPackages, filterPackagesBySearchQuery } from './brandGalleryHelpers';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
+import { AddCard } from '@/core/ui/components/ui/AddCard';
 import { CardActionsMenu } from '@/core/ui/components/ui/CardActionsMenu';
 import { SelectionCheck } from '@/core/ui/components/ui/SelectionCheck';
 import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
@@ -49,32 +50,6 @@ export const ADD_DEMO_CARD = {
     name: 'Add a demo package',
     description: "Use a colleague's storefront or your own, from a link or a zip file.",
 } as const;
-
-/**
- * The plus card at the end of the grid: the package card's shape with nothing
- * to select, so it reads as one of the cards and behaves as a door.
- */
-function AddDemoCard({ onOpen, isDimmed }: { onOpen: () => void; isDimmed: boolean }) {
-    const handleKeyDown = useActivateOnKey(onOpen);
-    return (
-        <div
-            role="button"
-            tabIndex={0}
-            data-testid="add-demo-card"
-            onClick={onOpen}
-            onKeyDown={handleKeyDown}
-            className={cn('expandable-brand-card', 'add-demo-card', isDimmed && 'dimmed')}
-            aria-label={`${ADD_DEMO_CARD.name}: ${ADD_DEMO_CARD.description}`}
-        >
-            <div className="brand-card-header">
-                <div className="brand-card-title-row">
-                    <Text UNSAFE_className="brand-card-name">{ADD_DEMO_CARD.name}</Text>
-                </div>
-                <Text UNSAFE_className="brand-card-description">{ADD_DEMO_CARD.description}</Text>
-            </div>
-        </div>
-    );
-}
 
 interface PackageCardProps {
     pkg: DemoPackage;
@@ -289,7 +264,14 @@ export function BrandGallery({
                     );
                 })}
                 {onAddDemo && !searchQuery ? (
-                    <AddDemoCard onOpen={onAddDemo} isDimmed={selectedPackage !== undefined} />
+                    <AddCard
+                        name={ADD_DEMO_CARD.name}
+                        description={ADD_DEMO_CARD.description}
+                        onOpen={onAddDemo}
+                        cardClassName="expandable-brand-card"
+                        isDimmed={selectedPackage !== undefined}
+                        testId="add-demo-card"
+                    />
                 ) : null}
             </div>
 

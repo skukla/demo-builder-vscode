@@ -31,6 +31,9 @@ import '../styles/ai.css';
 import '@/features/project-creation/ui/styles/add-integration-flow.css';
 // .integration-* — the card and its detail panel.
 import '@/core/ui/styles/integration-cards.css';
+// .add-card — the "Add an integration" card at the grid's end; after
+// integration-cards.css, whose card and row shapes it sits on. The wizard imports it too.
+import '@/core/ui/styles/add-card.css';
 // .modal-* — the shared Modal shell.
 import '@/core/ui/styles/modal.css';
 // The shared UI vocabulary — 19 small families. Seven of the eight entries.

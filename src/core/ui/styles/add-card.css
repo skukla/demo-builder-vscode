@@ -1,0 +1,53 @@
+/**
+ * .add-card — the dashed "add another" card at the end of a grid (AddCard, PL-62).
+ *
+ * REACHES ONLY THE BUNDLES THAT IMPORT IT (ADR-017 §6): today `wizard` (the Welcome
+ * step's "Add a demo package") and `integrations` ("Add an integration"). A new
+ * host bundle imports it in its entry, or the card renders unstyled with no error.
+ *
+ * The card's SHAPE (size, border width, radius, padding, hover) is the host's own
+ * card class, passed as `cardClassName`; only what makes it an invitation is here.
+ * The selectors name the host shapes they sit on, which is what lets them beat the
+ * host's `background` and `border-style` in the same layer without `!important`.
+ *
+ * The name and description type match the card families they sit among
+ * (`.brand-card-name` / `.integration-card-name`: 15px / 600; descriptions 12px).
+ * Moved from `add-demo.css`, where the first of these cards lived.
+ */
+
+@layer theme {
+    .add-card:is(.expandable-brand-card, .integration-card, .integration-row) {
+        border-style: dashed;
+        background: transparent;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        cursor: pointer;
+    }
+
+    /* Dimmed with its neighbours (the Welcome grid, once a package is chosen). Owned
+       here, not borrowed from the host, so every bundle that renders the card can
+       draw the state it can be put in. Same value as `.expandable-brand-card.dimmed`. */
+    .add-card.dimmed {
+        opacity: 0.5;
+    }
+
+    .add-card-name {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--spectrum-global-color-gray-900);
+    }
+
+    .add-card-name::before {
+        content: '+ ';
+    }
+
+    .add-card-description {
+        display: block;
+        font-size: 12px;
+        line-height: 1.4;
+        color: var(--spectrum-global-color-gray-600);
+    }
+}
