@@ -101,3 +101,16 @@ export function asRawText(text: string, options?: { isError?: true }): McpTextRe
     // field to read. The caller knows whether the call failed and has to say so.
     return options?.isError ? { ...result, isError: true } : result;
 }
+
+/**
+ * A prose answer whose refusals and failures start "Error: " — the convention the
+ * Commerce tools share — marked `isError` when it is one, so a caller cannot read
+ * a refusal as a result. AI-10, 2026-10-01: an expired sign-in answered as plain
+ * text and a load script counted the write as done.
+ *
+ * @param text - the refusal, error line, or the answer itself
+ * @returns the MCP text result, with isError when the text starts "Error: "
+ */
+export function asRawTextMarkingErrors(text: string): McpTextResult {
+    return text.startsWith('Error: ') ? asRawText(text, { isError: true }) : asRawText(text);
+}

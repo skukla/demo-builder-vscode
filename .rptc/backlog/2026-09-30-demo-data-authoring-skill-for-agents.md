@@ -4,7 +4,7 @@ kind: feature
 area: ai
 needs: []
 value: high
-status: active
+status: built
 ---
 
 # A demo-data authoring skill: an SC's agent builds and loads the demo data from a brief
@@ -56,3 +56,4 @@ service owns DATAPACKS (published sample data); this is the authoring side that 
 - 2026-10-01  2026-09-30 PROVEN on the ACCS sandbox: write_commerce_rest bulk:true PUT products/bySku with 43 request bodies — one 23 s call, bulk_uuid answered, all 43 operations status 1 (complete) within 15 s ('Service execution success ProductRepositoryInterface::save'). The ACCS route is V1/async/bulk/<path> (the PaaS order async/bulk/V1 404s empty at the gateway). So a 96-product load is one call plus a status poll, not 35 minutes. The datapack route remains the SC-shaped packaging; the bulk route is what it (or any ad-hoc load) should call.
 - 2026-10-01  Loader rule learned 2026-10-01: a REST product create leaves a Default Source row (qty 0, status 0) on every product; on a website served by another stock that row makes Catalog Service report the product out of stock (hypothesis under test on AB-53). A bulk load must either send no stock_item or delete the zero rows afterwards with one inventory/source-items-delete call.
 - 2026-10-01  2026-10-01, owner: two purposes, kept apart — SHARING finished work is the datapack (DI-1/DI-3); THIS item is an agent working Commerce data without hitting walls. Learned from the Justrite tree restructure, for this item: (1) a read-only visibility check — productSearch once per customer group beside a Catalog Service lookup by SKU — names permissions vs stock vs feed in one call; the 'stuck index' was B2B category permissions for most of a day; (2) a new category is invisible on a B2B website until a shared catalog grants it — the skill must grant and verify per group (EDS-24 has the measurements); (3) write_commerce_rest's 'requires confirm' refusal and an expired Adobe session both answer as plain text, so a script read both as success — tool answers that refuse must be marked errors; (4) category product links went one call each (25 calls, ~15 min) — prove the bulk route for categories/{id}/products.
+- 2026-10-04  2026-10-04 loop (night 4): built the always-on author-commerce-data skill (plan before writing, order of operations, silent create failures as rules, bulk loads + status poll, B2B category grants, per-customer-group visibility table, 'Error: wrote nothing', the undo list); AI_CONTEXT_VERSION 36. run_commerce_rest, write_commerce_rest and run_commerce_query now mark every 'Error:' answer isError (owner note 3 — only the confirm refusal did). Plan: .rptc/plans/demo-data-authoring/overview.md. Owner live check: paste a brief in a scratch ACCS project and watch the agent follow the skill.

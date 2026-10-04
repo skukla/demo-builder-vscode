@@ -29,14 +29,16 @@ jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () 
 }));
 
 function fakeServer() {
-    const tools = new Map<string, (args: any) => Promise<{ content: Array<{ text: string }> }>>();
+    type Answer = { content: Array<{ text: string }>; isError?: true };
+    const tools = new Map<string, (args: any) => Promise<Answer>>();
     const declarations = new Map<string, McpToolSchema>();
     return {
-        registerTool(name: string, def: McpToolSchema, handler: (args: any) => Promise<{ content: Array<{ text: string }> }>) {
+        registerTool(name: string, def: McpToolSchema, handler: (args: any) => Promise<Answer>) {
             tools.set(name, handler);
             declarations.set(name, def);
         },
         declaration: (): McpToolSchema => declarations.get('run_commerce_rest')!,
+        call: async (args?: unknown): Promise<Answer> => tools.get('run_commerce_rest')!(args),
         raw: async (args?: unknown): Promise<string> => (await tools.get('run_commerce_rest')!(args)).content[0].text,
     };
 }
@@ -285,6 +287,28 @@ describe('refusals, each before any call', () => {
         fetchMock = answering(200, '{}', 400);
         const out = await serve().raw({ path: 'customers/43' });
         expect(out).toContain('IMS refused the credential (HTTP 400)');
+    });
+});
+
+/*
+ * AI-10, 2026-10-01: an expired sign-in answered as plain text, and a script read it as a
+ * result. Every answer that is a refusal or a failure carries isError; a read that worked
+ * does not.
+ */
+describe('a refusal is marked as an error, a result is not', () => {
+    it('no sign-in, a bad path, and a Commerce 404 are each isError', async () => {
+        isAuthenticated.mockResolvedValue(false);
+        expect((await serve().call({ path: 'customers/43' })).isError).toBe(true);
+        isAuthenticated.mockResolvedValue(true);
+        expect((await serve().call({ path: '/V1/customers' })).isError).toBe(true);
+        fetchMock = answering(404, '{"message":"No such entity."}');
+        expect((await serve().call({ path: 'customers/43' })).isError).toBe(true);
+    });
+
+    it('a read that worked carries no isError', async () => {
+        const result = await serve().call({ path: 'customers/43' });
+        expect(result.content[0].text).not.toMatch(/^Error: /);
+        expect(result.isError).toBeUndefined();
     });
 });
 

@@ -215,6 +215,24 @@ describe('the signed write (args pinned)', () => {
         expect(out).toContain('positive number');
     });
 
+    it('a refusal or a Commerce error is isError, so a script cannot read it as success (AI-10)', async () => {
+        const s = serve();
+        expect((await s.call({ method: 'GET', path: 'customers/43', confirm: true })).isError).toBe(true);
+        expect(
+            (await s.call({ method: 'POST', path: 'products', bulk: true, body: {}, confirm: true })).isError
+        ).toBe(true);
+        isAuthenticated.mockResolvedValue(false);
+        expect((await serve().call({ method: 'DELETE', path: 'customers/43', confirm: true })).isError).toBe(true);
+        isAuthenticated.mockResolvedValue(true);
+        fetchMock = answering(400, '{"message":"The product was unable to be saved."}');
+        expect((await serve().call({ method: 'POST', path: 'products', body: {}, confirm: true })).isError).toBe(true);
+    });
+
+    it('a write that worked carries no isError', async () => {
+        const result = await serve().call({ method: 'PUT', path: 'companyCredits/12', body: {}, confirm: true });
+        expect(result.isError).toBeUndefined();
+    });
+
     it('bulk:true sends the ARRAY body to the asynchronous bulk API and says to poll the uuid', async () => {
         // Owner 2026-09-30: 96 products at 13–25 s each through the per-record path
         // "doesn't bode well for a quick action for an end user".

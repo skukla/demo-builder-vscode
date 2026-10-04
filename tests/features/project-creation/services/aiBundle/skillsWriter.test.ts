@@ -165,10 +165,10 @@ describe('skillsWriter', () => {
             mockMissingAdobeBundle();
             await writeSkills('/projects/test', makeEdsProject());
 
-            // 14 always-written Demo-Builder skills. 15 → 14 on 2026-08-26
+            // 15 always-written Demo-Builder skills (author-commerce-data, 2026-10-04). 15 → 14 on 2026-08-26
             // (AI-1o): extend-app-builder-app is App Builder work, and a
             // storefront with no mesh and no attached component is not doing it.
-            expect(writtenFiles()).toHaveLength(14);
+            expect(writtenFiles()).toHaveLength(15);
         });
 
         it('writes scrape-reference-site for EDS projects', async () => {
@@ -227,7 +227,7 @@ describe('skillsWriter', () => {
             const writeFileMock = fsPromises.writeFile as jest.Mock;
             const calls = writeFileMock.mock.calls;
 
-            expect(calls).toHaveLength(14);
+            expect(calls).toHaveLength(15);
             for (const [, content] of calls) {
                 expect(typeof content).toBe('string');
                 expect((content as string).length).toBeGreaterThan(0);
@@ -498,11 +498,11 @@ describe('skillsWriter', () => {
 
             const files = writtenFiles();
             expect(files.some((p) => p.includes('/.claude/skills/aem-'))).toBe(false);
-            // 14 Demo-Builder skills, and no extend-app-builder-app: an EDS
+            // 15 Demo-Builder skills, and no extend-app-builder-app: an EDS
             // storefront alone is not App Builder work (AI-1o).
             expect(
                 files.filter((p) => p.startsWith('/projects/test/.claude/skills/'))
-            ).toHaveLength(14);
+            ).toHaveLength(15);
         });
 
         it('still writes the three Demo-Builder lifecycle skills when copying the Adobe bundle', async () => {

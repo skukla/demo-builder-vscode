@@ -41,6 +41,7 @@ export const DEMO_BUILDER_ALWAYS_ON_SKILLS = [
     'diagnose-demo',
     // Sample data
     'import-datapack',
+    'author-commerce-data',
     // EDS site-scraping
     'scrape-reference-site',
     'connect-authenticated-site',

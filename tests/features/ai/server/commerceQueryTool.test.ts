@@ -42,7 +42,7 @@ import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 function fakeServer() {
      
-    const tools = new Map<string, (args: any) => Promise<{ content: Array<{ text: string }> }>>();
+    const tools = new Map<string, (args: any) => Promise<{ content: Array<{ text: string }>; isError?: true }>>();
     // The DECLARATION is kept, not discarded: `needsAuth`, the read-only
     // annotations and the endpoint enum are contract an agent's client reads out
     // of `tools/list`, and nothing else in this repo checks them for this tool.
@@ -54,6 +54,7 @@ function fakeServer() {
             declarations.set(name, def);
         },
         declaration: (): McpToolSchema => declarations.get('run_commerce_query')!,
+        call: async (args?: unknown) => tools.get('run_commerce_query')!(args),
         raw: async (args?: unknown): Promise<string> =>
             (await tools.get('run_commerce_query')!(args)).content[0].text,
         json: async (args?: unknown): Promise<any> =>
@@ -413,6 +414,16 @@ describe('run_commerce_query — failure paths', () => {
         expect(await s.raw({ query: '{ x }' })).toBe(
             'Error: the request to commerceGraphQl failed — ECONNREFUSED',
         );
+    });
+
+    it('marks a refusal or failure isError, and a result not (AI-10)', async () => {
+        const s = serve();
+        expect((await s.call({ query: 'mutation { createCart { id } }' })).isError).toBe(true);
+        expect((await s.call({ query: '' })).isError).toBe(true);
+        fetchMock.mockRejectedValueOnce(new Error('ECONNREFUSED'));
+        expect((await s.call({ query: '{ x }' })).isError).toBe(true);
+        fetchMock.mockResolvedValueOnce({ ok: true, status: 200, text: async () => 'not json' });
+        expect((await s.call({ query: '{ x }' })).isError).toBeUndefined();
     });
 
     it('reports a non-Error rejection rather than printing [object Object]', async () => {

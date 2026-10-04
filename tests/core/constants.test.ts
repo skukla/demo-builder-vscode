@@ -130,8 +130,10 @@ describe('AI_CONTEXT_VERSION', () => {
     // create-eds-project teaches create_project_from_file.
     // v35: factual fixes from the 2026-10 AI-files audit — no false mesh .env rule, the
     // real open_view name, one true answer on PDP blocks, no blocks the template lacks.
-    it('is 35 (the bundle stops saying things the code does not do)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(35);
+    // v36: the author-commerce-data skill (AI-10). Without the bump, existing projects
+    // never receive it.
+    it('is 36 (a skill for building catalog data in the project store)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(36);
     });
 });
 

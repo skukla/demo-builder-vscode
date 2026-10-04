@@ -4,7 +4,7 @@ kind: feature
 area: eds
 needs: []
 value: high
-status: backlog
+status: active
 ---
 
 # A storefront can live in an organization's repository, not only the SC's own
@@ -65,3 +65,4 @@ authorization step — the same shape as the site-access explanation in [[EDS-16
 ## Shipped so far
 
 - 2026-09-16  docs(backlog): EDS-17 — a storefront can live in an org's repository (`e4643022a`)
+- 2026-10-04  2026-10-04 loop (night 4): staleness — most of the item already exists (pick an existing repo, setup creates in the picked org, config keyed on owner/repo, ask-your-admin Code Sync text). Built: GitHub's three organization refusals (SAML single sign-on, OAuth app not approved, cannot create repos in the org) now say what to do in getRepository/checkRepositoryAccess/delete/both creates (githubOrgRefusal.ts); an SSO-hidden repo list is logged; an EMPTY existing repo is now adopted — first commit, then the template reset, then the Code Sync check (adoptEmptyRepo.ts; the step promised it and setup failed). Parked for the owner in .rptc/plans/storefront-in-org-repository/overview.md: D1 never delete an adopted repo, D2 wizard Create honours the namespace picker, D3 an org 404 silently falls back to the personal namespace, D4 org repos reached only through a team are not listed (adding organization_member risks the 1000-repo cap). Owner live checks: adopt an empty org repo; an SSO org refusal.

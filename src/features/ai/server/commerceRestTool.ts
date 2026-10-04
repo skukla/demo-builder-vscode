@@ -20,7 +20,7 @@
 
 import { z } from 'zod';
 import { resolveRestTarget, sendRest, validateRestPath } from './commerceRestClient';
-import { asRawText } from './mcpToolResult';
+import { asRawTextMarkingErrors } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -67,10 +67,10 @@ export function registerCommerceRestTool(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         async (args: any) => {
             const checked = validateRestPath(args?.path);
-            if ('error' in checked) return asRawText(`Error: ${checked.error}`);
+            if ('error' in checked) return asRawTextMarkingErrors(`Error: ${checked.error}`);
             const target = await resolveRestTarget(ctxFactory(), args?.storeView, fetchImpl);
-            if ('refusal' in target) return asRawText(target.refusal);
-            return asRawText(await sendRest('GET', target, checked.path, undefined, fetchImpl));
+            if ('refusal' in target) return asRawTextMarkingErrors(target.refusal);
+            return asRawTextMarkingErrors(await sendRest('GET', target, checked.path, undefined, fetchImpl));
         },
     );
 }

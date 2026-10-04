@@ -36,7 +36,7 @@
 import { createHash } from 'crypto';
 import { z } from 'zod';
 import { buildCommerceEndpoints } from './commerceEndpointsTool';
-import { asRawText, asText } from './mcpToolResult';
+import { asRawTextMarkingErrors, asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import type { StateManager } from '@/types/state';
 
@@ -219,10 +219,10 @@ export function registerCommerceQueryTool(
         async (args: any) => {
             const query = String(args?.query ?? '');
             if (!query.trim()) {
-                return asRawText('Error: `query` is required.');
+                return asRawTextMarkingErrors('Error: `query` is required.');
             }
             if (!isReadOnlyQuery(query)) {
-                return asRawText(
+                return asRawTextMarkingErrors(
                     'Error: run_commerce_query is read-only and this looks like a mutation. ' +
                         'It runs queries against a demo backend; changing data is deliberately not ' +
                         'available here.',
@@ -231,7 +231,7 @@ export function registerCommerceQueryTool(
 
             const project = await stateManager.getCurrentProject();
             if (!project) {
-                return asRawText(
+                return asRawTextMarkingErrors(
                     'Error: no current project. Use list_projects then set the current project.',
                 );
             }
@@ -245,7 +245,7 @@ export function registerCommerceQueryTool(
                 requested,
                 args?.customerGroupId,
             );
-            if (typeof request === 'string') return asRawText(request);
+            if (typeof request === 'string') return asRawTextMarkingErrors(request);
             const { url, headers, chosen } = request;
 
             const controller = new AbortController();
@@ -263,7 +263,7 @@ export function registerCommerceQueryTool(
                 });
             } catch (err) {
                 const why = err instanceof Error ? err.message : String(err);
-                return asRawText(`Error: the request to ${chosen} failed — ${why}`);
+                return asRawTextMarkingErrors(`Error: the request to ${chosen} failed — ${why}`);
             } finally {
                 clearTimeout(timer);
             }
@@ -272,13 +272,13 @@ export function registerCommerceQueryTool(
             if (!res.ok) {
                 // Status first: a 401 here is an expired session, not a bad query,
                 // and the two need completely different fixes.
-                return asRawText(
+                return asRawTextMarkingErrors(
                     `Error: ${chosen} returned HTTP ${res.status}. ${body.slice(0, 500)}`,
                 );
             }
 
             if (body.length > MAX_RESPONSE_CHARS) {
-                return asRawText(
+                return asRawTextMarkingErrors(
                     `[truncated: ${body.length} chars, showing the first ${MAX_RESPONSE_CHARS}. ` +
                         'Narrow the query — ask for fewer fields or a smaller pageSize.]\n' +
                         body.slice(0, MAX_RESPONSE_CHARS),
@@ -290,7 +290,7 @@ export function registerCommerceQueryTool(
                 // lets the agent see `errors` and fix its own query.
                 return asText(JSON.parse(body));
             } catch {
-                return asRawText(body);
+                return asRawTextMarkingErrors(body);
             }
         },
     );

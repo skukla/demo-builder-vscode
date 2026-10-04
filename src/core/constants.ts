@@ -258,7 +258,12 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // write_page/publish_page (both confirm:true) for a page and says sync_storefront
 // publishes only the home page; settings live in the project and .env files are
 // generated from them; integrations deploy with deploy_integration.
-export const AI_CONTEXT_VERSION = 35;
+// v36 (2026-10-04): a new always-on skill, author-commerce-data (AI-10) — building a
+// demo's catalog in the project's Commerce store from a brief: the order of operations,
+// the silent create failures as rules, bulk loads, the per-customer-group visibility
+// check, and that an "Error:" answer wrote nothing. Without the bump, existing projects
+// never receive it.
+export const AI_CONTEXT_VERSION = 36;
 
 /**
  * Component IDs for standardized component instance access

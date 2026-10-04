@@ -26,7 +26,7 @@ import {
     validateRestPath,
     type RestMethod,
 } from './commerceRestClient';
-import { asRawText } from './mcpToolResult';
+import { asRawText, asRawTextMarkingErrors } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -113,20 +113,20 @@ export function registerCommerceRestWriteTool(
             }
             const method = args?.method as RestMethod | undefined;
             if (!method || !WRITE_METHODS.includes(method as (typeof WRITE_METHODS)[number])) {
-                return asRawText(
+                return asRawTextMarkingErrors(
                     'Error: method must be POST, PUT or DELETE. For reads use run_commerce_rest.',
                 );
             }
             const checked = validateRestPath(args?.path);
-            if ('error' in checked) return asRawText(`Error: ${checked.error}`);
+            if ('error' in checked) return asRawTextMarkingErrors(`Error: ${checked.error}`);
             const bulk = args?.bulk === true;
             if (bulk) {
                 const refusal = refuseBadBulk(method, args?.body);
-                if (refusal) return asRawText(refusal);
+                if (refusal) return asRawTextMarkingErrors(refusal);
             }
             const target = await resolveRestTarget(ctxFactory(), args?.storeView, fetchImpl);
-            if ('refusal' in target) return asRawText(target.refusal);
-            return asRawText(
+            if ('refusal' in target) return asRawTextMarkingErrors(target.refusal);
+            return asRawTextMarkingErrors(
                 await sendRest(method, target, checked.path, args?.body, fetchImpl, { bulk }),
             );
         },

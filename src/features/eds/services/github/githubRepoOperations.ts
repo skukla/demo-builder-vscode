@@ -17,6 +17,7 @@ import type {
     GitHubApiError,
 } from '../types';
 import { createAuthenticatedOctokit, injectTokenIntoUrl } from './githubHelpers';
+import { explainOrgRefusal } from './githubOrgRefusal';
 import { toGitHubRepo } from './githubRepoRecord';
 import type { GitHubTokenService } from './githubTokenService';
 import { getLogger } from '@/core/logging/debugLogger';
@@ -118,6 +119,8 @@ export class GitHubRepoOperations {
             const apiError = error as GitHubApiError & {
                 errors?: Array<{ message: string }>;
             };
+            const orgRefusal = explainOrgRefusal(error, targetOwner ?? templateOwner);
+            if (orgRefusal) throw new Error(orgRefusal);
 
             if (apiError.status === 422) {
                 const nameError = apiError.errors?.find(e =>
@@ -153,6 +156,8 @@ export class GitHubRepoOperations {
             created = toGitHubRepo(response.data);
         } catch (error) {
             const apiError = error as GitHubApiError & { errors?: Array<{ message: string }> };
+            const orgRefusal = targetOwner ? explainOrgRefusal(error, targetOwner) : undefined;
+            if (orgRefusal) throw new Error(orgRefusal);
             if (apiError.status === 422 && apiError.errors?.some((e) => e.message.includes('already exists'))) {
                 throw new Error(ERROR_MESSAGES.REPO_EXISTS);
             }
@@ -229,7 +234,7 @@ export class GitHubRepoOperations {
             }
 
             if (apiError.status === 403) {
-                throw new Error('Access denied to this repository');
+                throw new Error(explainOrgRefusal(error, owner) ?? 'Access denied to this repository');
             }
 
             throw error;
@@ -341,6 +346,7 @@ export class GitHubRepoOperations {
 
                 const repos = response.data;
                 this.logger.debug(`[GitHub:ListRepos] Page ${page}: received ${repos.length} repos`);
+                this.warnIfSsoHidRepos(response.headers);
 
                 // Filter to only repos with push access and map to our type
                 const mappedRepos = (repos as GitHubApiRepoResponse[])
@@ -431,7 +437,7 @@ export class GitHubRepoOperations {
             if (apiError.status === 403) {
                 return {
                     hasAccess: false,
-                    error: 'Access denied to this repository',
+                    error: explainOrgRefusal(error, owner) ?? 'Access denied to this repository',
                 };
             }
 
@@ -457,6 +463,8 @@ export class GitHubRepoOperations {
         } catch (error) {
             const apiError = error as GitHubApiError;
 
+            const orgRefusal = explainOrgRefusal(error, owner);
+            if (orgRefusal) throw new Error(orgRefusal);
             if (apiError.status === 403) {
                 throw new Error(
                     `Cannot delete repository: missing delete_repo scope. ` +
@@ -483,6 +491,22 @@ export class GitHubRepoOperations {
         });
 
         this.logger.debug(`[GitHub] Repository ${owner}/${repo} archived`);
+    }
+
+    /**
+     * GitHub leaves out the repositories of an organization whose single sign-on
+     * this sign-in is not authorized for, and says so only in a header:
+     * `X-GitHub-SSO: partial-results; organizations=<ids>` (docs.github.com/en/rest/
+     * authentication/authenticating-to-the-rest-api, read 2026-10-04). EDS-17.
+     */
+    private warnIfSsoHidRepos(headers: Record<string, unknown> | undefined): void {
+        const sso = headers?.['x-github-sso'];
+        if (typeof sso === 'string' && sso.startsWith('partial-results')) {
+            this.logger.warn(
+                '[GitHub:ListRepos] Some organization repositories are hidden: those organizations ' +
+                    `require single sign-on this GitHub sign-in is not authorized for (${sso})`,
+            );
+        }
     }
 
     /**

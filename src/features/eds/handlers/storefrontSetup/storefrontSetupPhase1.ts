@@ -11,6 +11,7 @@ import type { GitHubRepoOperations } from '../../services/github/githubRepoOpera
 import { pinRepoToLkg } from '../../services/patches/lkgPinHelper';
 import type { PatchReport } from '../../services/patches/patchReportHelper';
 import type { GitHubRepo } from '../../services/types';
+import { seedIfEmpty } from './adoptEmptyRepo';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import { checkGitHubAppForExistingRepo } from './storefrontSetupPhaseHelpers';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
@@ -276,14 +277,25 @@ async function executePhaseExistingRepo(
     // When the user DECLINED the reset the repo is already a storefront, so the
     // check both works and still does its original job — stopping Phase 2 from
     // writing into a repo they asked to preserve. It stays here for them.
-    if (!edsConfig.resetToTemplate) {
+    //
+    // An EMPTY repo is reset whatever the checkbox said: it has nothing to
+    // preserve, and the step already shows it as "set up from the template"
+    // (EDS-17 — an owner hands an SC an empty organization repository).
+    const adoptedEmpty = await seedIfEmpty(
+        services.githubFileOps,
+        repoInfo.repoOwner,
+        repoInfo.repoName,
+        logger,
+    );
+    const reset = edsConfig.resetToTemplate || adoptedEmpty;
+    if (!reset) {
         const appGateResult = await checkGitHubAppForExistingRepo(context, services, repoInfo, {
             signal,
         });
         if (appGateResult) return appGateResult;
     }
 
-    if (edsConfig.resetToTemplate) {
+    if (reset) {
         logger.info('[Storefront Setup] Resetting repository to template');
         await context.sendMessage('storefront-setup-progress', {
             phase: 'repository',

@@ -67,8 +67,8 @@ Orchestrated by `generateAIContextFiles` (creation phase 6 + regenerate + update
 ## Test pins that move
 
 - `skillsWriter.hashAndSkip.test.ts` / `skillsWriter.toolGating.test.ts` — these pin the
-  exact skill-file COUNT, and the count depends on gating: **14** always-on with the
-  Playwright tools present, **11** without them (3 of the 14 are delivery-gated via
+  exact skill-file COUNT, and the count depends on gating: **15** always-on with the
+  Playwright tools present, **12** without them (3 of the 15 are delivery-gated via
   `SKILL_MCP_TOOL_DEPENDENCIES`), plus `extend-app-builder-app` when its predicate holds.
   A new conditional skill bumps these and needs positive + negative (bare-project) cases.
 
