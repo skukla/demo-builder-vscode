@@ -220,11 +220,11 @@ each item's own file; what has already landed against an item is in its
 | `AI-3b` | feature | [Take the Prompt Workbench off develop and onto its own branch](2026-08-26-extract-prompt-workbench-from-develop.md) | — | high | shipped |
 | `AI-4` | epic | [Getting into the chat at all](epic-ai-chat-access.md) | — | med | backlog |
 | `AI-4a` | feature | └ [Engine-aware AI launch + detection + opt-in install (Claude wired, Codex placeholders)](claude-cli-detection-and-install/overview.md) | PR-1 | med | built |
-| `AI-4b` | feature | └ [The Chat tile can only reach the MOST RECENT conversation](2026-08-25-resume-a-past-chat.md) | — | med | backlog |
+| `AI-4b` | feature | └ [The Chat tile can only reach the MOST RECENT conversation](2026-08-25-resume-a-past-chat.md) | — | med | built |
 | `AI-5` | fix | [delete_adobe_project hangs on the headless path](2026-08-27-delete-adobe-project-headless-hang.md) | — | med | shipped |
 | `AI-6` | fix | [One agent deploy, three progress notifications](2026-08-27-agent-deploy-duplicate-progress-notifications.md) | — | med | shipped |
 | `AI-7` | question | [Unattended teardown consent — how does a commissioned journey get to zero?](2026-08-28-unattended-teardown-consent.md) | — | med | shipped |
-| `AI-8` | question | [Audit our context files against what the research actually says](2026-08-29-context-file-audit-against-evidence.md) | — | high | open |
+| `AI-8` | question | [Audit our context files against what the research actually says](2026-08-29-context-file-audit-against-evidence.md) | — | high | built |
 | `AI-9` | question | [Should an agent's project delete also clean up the cloud, as a person's does?](2026-09-19-agent-project-delete-leaves-cloud.md) | — | med | built |
 | `AI-10` | feature | [A demo-data authoring skill: an SC's agent builds and loads the demo data from a brief](2026-09-30-demo-data-authoring-skill-for-agents.md) | — | high | active |
 | `AI-11` | feature | [Create project cannot set store scope for an added demo](2026-09-30-create-project-cannot-set-store-scope-for-an-added-demo.md) | — | med | built |
@@ -462,17 +462,17 @@ each item's own file; what has already landed against an item is in its
 | `PL-56b` | chore | └ [Portability: delete what is already dead](2026-09-11-portability-delete-the-dead.md) | PL-56d | low | gated |
 | `PL-56c` | feature | └ [Export carries the whole project, and never a credential](2026-09-11-export-carries-the-project.md) | PL-56a | high | built |
 | `PL-56d` | fix | └ [Import creates what the file says, re-proves sign-ins, and tells the SC what it did](2026-09-11-import-creates-what-the-file-says.md) | PL-56c | high | built |
-| `PL-56e` | fix | └ [Copy and Edit read the same complete file, so neither can drop what the other keeps](2026-09-11-copy-and-edit-on-one-file.md) | PL-56c, PL-56d | med | backlog |
-| `PL-56f` | feature | └ [Agent tools for import and copy](2026-09-11-portability-agent-tools.md) | PL-56d | med | active |
-| `PL-56g` | chore | └ [A feature page for moving projects](2026-09-11-portability-docs.md) | PL-56d | low | backlog |
+| `PL-56e` | fix | └ [Copy and Edit read the same complete file, so neither can drop what the other keeps](2026-09-11-copy-and-edit-on-one-file.md) | PL-56c, PL-56d | med | built |
+| `PL-56f` | feature | └ [Agent tools for import and copy](2026-09-11-portability-agent-tools.md) | PL-56d | med | built |
+| `PL-56g` | chore | └ [A feature page for moving projects](2026-09-11-portability-docs.md) | PL-56d | low | built |
 | `PL-59` | feature | [A long operation should say what it is doing, not just spin](2026-09-16-progress-surface-for-long-operations.md) | — | high | built |
 | `PL-60` | feature | [Finish Adobe Commerce Optimizer (ACO) support](2026-09-17-aco-support.md) | — | high | backlog |
 | `PL-61` | question | [What does a product profile per Commerce instance change for each SC?](2026-09-17-per-instance-commerce-profiles.md) | — | high | dropped |
-| `PL-62` | feature | [Adding something is a card, everywhere](2026-09-21-add-is-a-card.md) | — | low | backlog |
+| `PL-62` | feature | [Adding something is a card, everywhere](2026-09-21-add-is-a-card.md) | — | low | active |
 | `PL-63` | fix | [The CSS baseline check refuses every push that MERGES a stylesheet change](2026-09-23-css-baseline-cannot-accept-a-merged-capture.md) | — | med | built |
 | `PL-64` | fix | [Deleting a project leaves its secrets in SecretStorage](2026-10-02-project-delete-leaves-secrets.md) | — | med | built |
 | `PL-65` | fix | [The wizard's two config warnings should reach the log channel](2026-10-03-wizard-warnings-to-log-channel.md) | — | low | built |
-| `PL-66` | feature | [UI tests that drive more than one VS Code surface](2026-10-03-vscode-multi-surface-ui-tests.md) | — | low | backlog |
+| `PL-66` | feature | [UI tests that drive more than one VS Code surface](2026-10-03-vscode-multi-surface-ui-tests.md) | — | low | built |
 
 <!-- END GENERATED registry -->
 
@@ -592,7 +592,7 @@ the table cannot hold: why the layers are ordered this way.*
 **D** — 2 items
 
 - `AI-3a` [The Prompt Workbench is built and nobody has opened it](2026-08-26-prompt-workbench-is-built-not-verified.md) — superseded
-- `AI-4b` [The Chat tile can only reach the MOST RECENT conversation](2026-08-25-resume-a-past-chat.md) — backlog
+- `AI-4b` [The Chat tile can only reach the MOST RECENT conversation](2026-08-25-resume-a-past-chat.md) — built
 
 **E** — 1 item
 
