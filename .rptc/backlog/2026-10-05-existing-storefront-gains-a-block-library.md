@@ -100,3 +100,4 @@ Code: `src/features/updates/services/blockLibraryInstall.ts` (find + apply),
 
 - 2026-10-05  Built, not committed and not run live: a selected-but-uninstalled block library is offered as an install by Check for Updates and apply_updates, through the shared installer; gate green (1820 suites)
 - 2026-10-05  fix(updates): install a selected block library on an existing storefront (`a6a356d22`)
+- 2026-10-05  2026-10-05 Proven live on Justrite: configure_project ticked demo-builder-blocks, the update check offered exactly 'Demo Builder Blocks: install', applying it made one commit (87736e6) adding blocks/catalog-menu to the storefront repo.
