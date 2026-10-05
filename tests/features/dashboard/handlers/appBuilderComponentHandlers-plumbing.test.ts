@@ -22,6 +22,7 @@ import {
     handleDeployAppBuilderComponent,
     handleRemoveAppBuilderComponent,
     handleRenameAppBuilderComponent,
+    mockAddAppBuilderComponent,
     mockBuildCustomIntegrationEntry,
     mockBuildDefaultRunnerDeps,
     mockDetectProjectOrgMismatch,
@@ -575,6 +576,41 @@ describe('the add answer names what the SC named', () => {
         expect(result.added).toEqual({ id: 'erp-sync', name: 'ERP Integration', kind: 'integration' });
         const saved = (mockContext.stateManager.saveProject as jest.Mock).mock.calls[0][0];
         expect(saved.componentConfigs['erp-sync']).toEqual({ ERP_DISPLAY_NAME: 'Northwind ERP' });
+        mockGetAppBuilderComponentCatalog.mockReturnValue([]);
+    });
+
+    // AB-67: an agent adding the ERP pair names its first ERP through `name`, and an
+    // ERP's name is fixed once added. Asserted on the ARGUMENT the deploy receives,
+    // read by the real deploy-input resolver against the real shipped catalog rows —
+    // a saved-config assertion alone would pass if the name landed under a key the
+    // ERP's deploy never reads.
+    it('hands the deploy a project whose ERP deploys under the typed name', async () => {
+        const catalog = (
+            jest.requireActual('@/features/components/config/app-builder-components.json') as {
+                appBuilderComponents: AppBuilderComponentCatalogEntry[];
+            }
+        ).appBuilderComponents;
+        const integration = catalog.find((entry) => entry.id === 'erp-integration')!;
+        const erp = catalog.find((entry) => entry.id === 'demo-erp')!;
+        const { resolveDeployInputs } = jest.requireActual(
+            '@/features/app-builder/services/deployInputs'
+        ) as typeof import('@/features/app-builder/services/deployInputs');
+        // The real entry declares Commerce backends; the add door's stack gate is real too.
+        const { mockContext } = setupMocks({
+            componentSelections: { backend: 'adobe-commerce-accs', frontend: 'eds-storefront' },
+        });
+        mockTestDeveloperPermissions(true);
+        mockGetAppBuilderComponentEntry.mockReturnValue(integration);
+        mockGetAppBuilderComponentCatalog.mockReturnValue(catalog);
+
+        await handleAddAppBuilderComponent(mockContext, { id: 'erp-integration', name: 'Justrite ERP' });
+
+        const deployed = mockAddAppBuilderComponent.mock.calls[0][0];
+        expect(resolveDeployInputs(deployed, erp).ERP_DISPLAY_NAME).toBe('Justrite ERP');
+        // Control: the same resolver, before the add, answers the default.
+        expect(resolveDeployInputs({ ...deployed, componentConfigs: {} }, erp).ERP_DISPLAY_NAME).toBe(
+            'Acme ERP'
+        );
         mockGetAppBuilderComponentCatalog.mockReturnValue([]);
     });
 });

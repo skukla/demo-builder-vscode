@@ -293,5 +293,18 @@ describe('ACTION_DESCRIPTORS', () => {
             // NOT confirm-gated, same as deploy_integration.
             expect(d!.confirm).toBeUndefined();
         });
+
+        // AB-67: the handler already names the ERP pair's first ERP from `name`
+        // (recordPairedSystemName), but the tool said `name` was only for a custom
+        // instance, so agents never passed it and every agent-added ERP was "Acme ERP"
+        // — a name that cannot change afterwards.
+        it("add_integration tells an agent that `name` names the ERP integration's first ERP, for good", () => {
+            const d = row('add_integration')!;
+            expect(d.description).toMatch(/first ERP/);
+            expect(d.description).toMatch(/cannot be changed/);
+            const nameHelp = (d.inputSchema!.name as { description?: string }).description;
+            expect(nameHelp).toMatch(/ERP integration/);
+            expect(nameHelp).toMatch(/first ERP/);
+        });
     });
 });

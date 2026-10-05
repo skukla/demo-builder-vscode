@@ -4,7 +4,7 @@ kind: fix
 area: app-builder
 needs: []
 value: med
-status: backlog
+status: built
 ---
 
 # An agent cannot name the first ERP when it adds the ERP integration
@@ -37,3 +37,7 @@ Let `add_integration` take the entry's text settings at add time (e.g. `settings
 that the ERP's name is fixed once added. Human and agent surface then agree.
 
 Undo: unchanged — `remove_integration` already removes the pair.
+
+## Shipped so far
+
+- 2026-10-05  Built. The handler already named the first ERP from add_integration's name (the same field the add dialog fills); the tool just never said so. Fixed the tool and name-field descriptions (name names the first ERP; cannot change after add), removed a stale comment claiming an add_integration preflight, pinned the deploy argument with the real resolver and catalog. No settings field added: it would be a second door to the same value. Gate green.

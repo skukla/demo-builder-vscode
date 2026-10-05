@@ -219,9 +219,9 @@ function runAdd(
             // the grid undeployed and opens its Settings is AB-22. Refuse plainly
             // rather than deploy with blanks. No shipped catalog entry declares such
             // a setting. `blocked`, like a guard refusal: nothing ran and nothing
-            // persisted, so the caller must not take the failed-op path. The AGENT
-            // path never reaches here — `add_integration`'s preflight answers with
-            // the handoff before dispatching.
+            // persisted, so the caller must not take the failed-op path. The agent
+            // path (`add_integration`) dispatches straight here and gets this same
+            // refusal.
             const userVars = userSuppliedEnvVars(entry);
             if (userVars.names.length > 0) {
                 return {

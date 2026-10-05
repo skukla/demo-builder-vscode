@@ -38,7 +38,11 @@ const addIntegrationSchema = {
     name: z
         .string()
         .optional()
-        .describe('Display name for a custom/blank instance (defaults to the repo name)'),
+        .describe(
+            'For the ERP integration: the name of its first ERP, e.g. "Justrite ERP" (default ' +
+                '"Acme ERP"); it cannot be changed after the add. For a custom/blank instance: its ' +
+                'display name (defaults to the repo name).',
+        ),
     instanceId: z
         .string()
         .optional()
@@ -79,7 +83,9 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             'register it on the dashboard. get_project shows the workspace on its record. ' +
             'Pass a catalog `id` (from list_components) OR a custom GitHub `source`. Adding a ' +
             'catalog id the project already has adds a numbered copy in its own workspace; a ' +
-            'project has one mesh and one ERP integration (a second ERP is add_erp). ' +
+            'project has one mesh and one ERP integration (a second ERP is add_erp). Adding the ' +
+            'ERP integration also adds its first ERP, named from `name`; an ERP\'s name cannot be ' +
+            'changed once added, so ask the user what to call it and pass it here. ' +
             'Takes about a minute. Returns the id to use with deploy_integration / ' +
             'remove_integration. Confirm the choice with the user first.',
         map: dashboardHandlers,

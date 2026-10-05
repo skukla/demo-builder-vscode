@@ -385,7 +385,8 @@ are published by the fill and by the ERP's own change events.
 (the dialog's choice; omitted, the same default); `remove_integration` on its id removes it
 alone. The tools that act on one ERP take `erp`, its component id. The existing
 `add_integration`, `deploy_integration`, `redeploy_integration` and `remove_integration`
-cover the pair by id; `remove_integration` on either one removes the integration and every ERP, and stops with the
+cover the pair by id; `add_integration`'s `name` names the first ERP, the same field the add
+dialog's name fills, so an agent asks for it before the add (AB-67); `remove_integration` on either one removes the integration and every ERP, and stops with the
 error code `COMPONENT_REMOVAL_STOPPED` when a clean-up fails (`force: true` goes ahead).
 `check_integration_updates` records which apps have newer code, `update_integration`
 updates the pair (the ERP first), and `reinstall_integration` (confirm-gated) is refused
