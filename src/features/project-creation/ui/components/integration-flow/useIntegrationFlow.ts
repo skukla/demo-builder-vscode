@@ -262,8 +262,8 @@ export function useIntegrationFlow(args: UseIntegrationFlowArgs): UseIntegration
                 // minted id loses the pairing — the add then refused with
                 // "Provider demo-erp is not deployed yet", naming a component the
                 // SC had never heard of and could not add (owner, 2026-09-20).
-                // The typed name names the SYSTEM instead, through the display-name
-                // var its catalog entry already declares.
+                // The typed name names the pair instead (`pairNames`): the integration
+                // and its system, through the display-name vars each declares.
                 const bound = args.catalog.find(
                     (candidate) => candidate.kind === 'system' && candidate.boundTo === entry.id,
                 );

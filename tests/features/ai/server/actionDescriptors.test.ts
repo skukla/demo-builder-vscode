@@ -295,7 +295,7 @@ describe('ACTION_DESCRIPTORS', () => {
         });
 
         // AB-67: the handler already names the ERP pair's first ERP from `name`
-        // (recordPairedSystemName), but the tool said `name` was only for a custom
+        // (now recordPairNames, which names both), but the tool said `name` was only for a custom
         // instance, so agents never passed it and every agent-added ERP was "Acme ERP"
         // — a name that cannot change afterwards.
         it("add_integration tells an agent that `name` names the ERP integration's first ERP, for good", () => {

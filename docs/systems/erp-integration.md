@@ -153,7 +153,8 @@ serves one ERP, id `erp`, from its deploy settings.
 
 **Adding one.** The integration's card offers **Add another ERP** once the integration is
 deployed (the catalog's `addOnce` on the integration, `listedAs` on the ERP). It asks for a
-name that no ERP in the project has, compared without case, and which products belong to it
+name that no ERP in the project has, compared without case — made to end in "ERP" first, so
+"Brand B" is added as "Brand B ERP" — and which products belong to it
 (below), then (`erpAddHandler.ts`):
 
 1. adds a demo-erp system `demo-erp-2` (then `-3`, …) in an Adobe workspace of its own, named
@@ -334,13 +335,20 @@ ERP** adds the key to the link in the extension (`systemScreen.ts`), so it never
 webview, a log, the project file or an agent. An ERP deployed before the screen existed
 answers "Redeploy it to add one."
 
-The ERP's name is an input of the ERP integration ("ERP name", default Acme ERP), typed when
-the pair is added. The ERP reads the integration's value, so the name is set in one place; it
-names the ERP's row and the ERP calls itself that. It is fixed once the pair is added: a
-different name means removing the pair and adding it again (Settings refuse it).
+**One typed name names the pair** (`pairNames.ts`). The SC types a brand when the pair is
+added; a trailing "ERP" or "Integration" is dropped, and the rest names both: "Justrite" (or
+"Justrite ERP Integration") gives the integration **Justrite Integration** and its ERP
+**Justrite ERP**, and nothing typed gives **Acme Integration** and **Acme ERP**. The add screen
+previews both. The dashboard add, `add_integration` and the wizard all record the two names
+the same way, as the integration's inputs `INTEGRATION_DISPLAY_NAME` and `ERP_DISPLAY_NAME`.
 
-The integration has a name of its own (`INTEGRATION_DISPLAY_NAME`, "Integration name", default
-**ERP Integration**; AB-16o), never its ERP's: its card, and Commerce Admin's menu entry, page
+The ERP's name is an input of the ERP integration ("ERP name"). The ERP reads the
+integration's value, so the name is set in one place; it names the ERP's row and the ERP
+calls itself that. It is fixed once the pair is added: a different name means removing the
+pair and adding it again (Settings refuse it).
+
+The integration has a name of its own (`INTEGRATION_DISPLAY_NAME`, "Integration name";
+AB-16o), never its ERP's: its card, and Commerce Admin's menu entry, page
 title and App Management app name. Commerce's order column reads "ERP order" and the product
 action "Move stock between ERP warehouses", since both are about every ERP. The name changes
 by a **rename** (the pencil beside it, or `rename_integration`), which sets the input as well

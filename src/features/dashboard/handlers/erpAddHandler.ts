@@ -51,6 +51,7 @@ import {
     existingRulesToChange,
     ownsProblem,
 } from '@/features/app-builder/services/erpOwnership';
+import { systemWordOf, withSystemWord } from '@/features/app-builder/services/pairNames';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import {
@@ -173,7 +174,8 @@ async function planErpAdd(
     const served = servingIntegration(project, integrationId, catalog);
     if ('error' in served) return served;
     const { system } = served;
-    const name = payload?.name?.trim() ?? '';
+    // An ERP's name ends in what it is, as the pair's does (pairNames): "Accuform" → "Accuform ERP".
+    const name = withSystemWord(payload?.name?.trim() ?? '', systemWordOf(system));
     const retryId = name ? unfinishedNamed(project, integrationId, system, name) : undefined;
     // The name, then the rules (AB-64): both are the SC's input, refused the same way.
     const problem = erpNameProblem(project, name, retryId) ?? ownsPayloadProblem(payload);

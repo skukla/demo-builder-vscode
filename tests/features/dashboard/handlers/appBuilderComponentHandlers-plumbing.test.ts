@@ -555,7 +555,9 @@ describe('the add answer names what the SC named', () => {
     // progress title all said Northwind ERP. An agent relayed the wrong name.
     // Since AB-16o the integration has a name of its own: the typed name names the ERP,
     // and the answer is the integration's name, the same one the progress title used.
-    it("answers with the integration's own name, and the typed name goes to its ERP", async () => {
+    // Since 2026-10-05 one typed name names BOTH (pairNames): "Northwind ERP" gives
+    // "Northwind Integration" and "Northwind ERP".
+    it('answers with the integration name the typed one gives, and records both names', async () => {
         const { mockContext } = setupMocks();
         mockTestDeveloperPermissions(true);
         mockGetAppBuilderComponentEntry.mockReturnValue({
@@ -568,14 +570,24 @@ describe('the add answer names what the SC named', () => {
             ],
         });
         mockGetAppBuilderComponentCatalog.mockReturnValue([
-            { id: 'erp-db', kind: 'system', boundTo: 'erp-sync', nameFromEnvVar: 'ERP_DISPLAY_NAME' },
+            {
+                id: 'erp-db',
+                name: 'ERP',
+                kind: 'system',
+                systemType: 'ERP',
+                boundTo: 'erp-sync',
+                nameFromEnvVar: 'ERP_DISPLAY_NAME',
+            },
         ]);
 
         const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync', name: 'Northwind ERP' });
 
-        expect(result.added).toEqual({ id: 'erp-sync', name: 'ERP Integration', kind: 'integration' });
+        expect(result.added).toEqual({ id: 'erp-sync', name: 'Northwind Integration', kind: 'integration' });
         const saved = (mockContext.stateManager.saveProject as jest.Mock).mock.calls[0][0];
-        expect(saved.componentConfigs['erp-sync']).toEqual({ ERP_DISPLAY_NAME: 'Northwind ERP' });
+        expect(saved.componentConfigs['erp-sync']).toEqual({
+            INTEGRATION_DISPLAY_NAME: 'Northwind Integration',
+            ERP_DISPLAY_NAME: 'Northwind ERP',
+        });
         mockGetAppBuilderComponentCatalog.mockReturnValue([]);
     });
 
@@ -607,6 +619,7 @@ describe('the add answer names what the SC named', () => {
 
         const deployed = mockAddAppBuilderComponent.mock.calls[0][0];
         expect(resolveDeployInputs(deployed, erp).ERP_DISPLAY_NAME).toBe('Justrite ERP');
+        expect(resolveDeployInputs(deployed, integration).INTEGRATION_DISPLAY_NAME).toBe('Justrite Integration');
         // Control: the same resolver, before the add, answers the default.
         expect(resolveDeployInputs({ ...deployed, componentConfigs: {} }, erp).ERP_DISPLAY_NAME).toBe(
             'Acme ERP'

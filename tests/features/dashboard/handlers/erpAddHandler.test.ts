@@ -314,6 +314,25 @@ describe('handleAddErp', () => {
         expect(mockAdd).not.toHaveBeenCalled();
     });
 
+    it('gives a name without "ERP" the word, so the ERP is named what it is', async () => {
+        const { mockContext } = setup();
+
+        const result = await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B' });
+
+        const [project] = added();
+        expect(project.componentConfigs?.['demo-erp-2']).toEqual({ ERP_DISPLAY_NAME: 'Brand B ERP' });
+        expect(result).toMatchObject({ success: true, data: { added: { name: 'Brand B ERP' } } });
+    });
+
+    it('refuses a name that is taken once it ends in "ERP"', async () => {
+        const { mockContext } = setup();
+
+        const result = await handleAddErp(mockContext, { id: 'erp-integration', name: 'acme' });
+
+        expect(result).toMatchObject({ success: false, code: ErrorCode.CONFIG_INVALID });
+        expect(mockAdd).not.toHaveBeenCalled();
+    });
+
     it('refuses an integration that serves one system only', async () => {
         const { mockContext } = setup(erpProject({ 'starter-kit': { kind: 'integration', status: 'deployed', source: { owner: 'skukla', repo: 'x' } } }));
 

@@ -23,6 +23,8 @@ import { withSelectedAppBuilderComponent } from '../wizard/appBuilderComponentSe
 import { buildEdsConfigFromStorefront } from './edsConfigFromStorefront';
 import { isMeshComponentId } from '@/core/constants';
 import { vscode } from '@/core/ui/utils/vscode-api';
+import { pairNameInputs } from '@/features/app-builder/services/pairNames';
+import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import {
     getNativeBlockLibraries,
     getDefaultBlockLibraryIds,
@@ -70,9 +72,8 @@ export interface UseProjectBuilderReturn {
     onBlockLibrariesChange: (libraries: string[]) => void;
     onCustomBlockLibrariesChange: (libs: CustomBlockLibrary[]) => void;
     /**
-     * @param displayName - what the SC typed for a PAIRED entry: the name of its
-     *   bound system, not a new identity for the entry (the dashboard add records
-     *   it; the wizard stages the selection only).
+     * @param displayName - what the SC typed for a PAIRED entry: the name both it
+     *   and its bound system are named from (`pairNames`), not a new identity.
      */
     onAppBuilderComponentToggle: (id: string, isSelected: boolean, displayName?: string) => void;
     /**
@@ -355,7 +356,7 @@ export function useProjectBuilder(
     );
 
     const onAppBuilderComponentToggle = useCallback(
-        (id: string, isSelected: boolean) => {
+        (id: string, isSelected: boolean, displayName?: string) => {
             // A required component cannot be toggled OFF. The card layer
             // already hides Remove on it; this guard is defense in depth so a
             // second door found later cannot reopen the hole — dropping a
@@ -372,6 +373,17 @@ export function useProjectBuilder(
             const update: Partial<WizardState> = {
                 selectedAppBuilderComponents: nextComponents,
             };
+            // A pair is named by the same rule the dashboard's add enforces (pairNames),
+            // so a project created with it matches one it is added to later.
+            const catalog = getAppBuilderComponentCatalog();
+            const entry = isSelected ? catalog.find((candidate) => candidate.id === id) : undefined;
+            const names = entry && pairNameInputs(entry, catalog, displayName);
+            if (names) {
+                update.componentConfigs = {
+                    ...(state.componentConfigs ?? {}),
+                    [id]: { ...(state.componentConfigs?.[id] ?? {}), ...names },
+                };
+            }
             // Toggle-off also drops the integration's free Console-API picks so
             // stale picks never survive a re-add or serialize into creation.
             if (!isSelected) {
@@ -381,7 +393,7 @@ export function useProjectBuilder(
 
             updateState(update);
         },
-        [selectedAppBuilderComponents, state.selectedConsoleApis, isRequiredComponent, updateState],
+        [selectedAppBuilderComponents, state.selectedConsoleApis, state.componentConfigs, isRequiredComponent, updateState],
     );
 
     const onAddCustomAppBuilderComponent = useCallback(

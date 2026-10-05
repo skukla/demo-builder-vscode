@@ -19,11 +19,37 @@ import React, { useState } from 'react';
 import { ChoiceCard } from '../../ChoiceCard';
 import { OptionalNameField } from '../OptionalNameField';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
+import {
+    DEFAULT_PAIR_BASE,
+    pairNames,
+    pairedSystemOf,
+    systemWordOf,
+} from '@/features/app-builder/services/pairNames';
+import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 
 /** Said under the name before a pre-built integration is added. */
 export const NAME_IS_FIXED =
     "The name can't be changed later. To use a different name, remove it and add it again.";
+
+/**
+ * What the name field says under it. For an entry that brings a system, the two
+ * names the typed one gives (`pairNames`), so "Justrite" visibly becomes
+ * "Justrite Integration" and "Justrite ERP" before anything is added.
+ */
+function nameField(
+    entry: AppBuilderComponentCatalogEntry | undefined,
+    label: string | undefined,
+): { defaultLabel: string; description: string } {
+    const system = entry && pairedSystemOf(entry, getAppBuilderComponentCatalog());
+    if (!system) return { defaultLabel: entry?.name ?? '', description: NAME_IS_FIXED };
+    const word = systemWordOf(system);
+    const names = pairNames(label, word);
+    return {
+        defaultLabel: DEFAULT_PAIR_BASE,
+        description: `Adds “${names.integration}” and its ${word} “${names.system}”. ${NAME_IS_FIXED}`,
+    };
+}
 
 /** Show the catalog filter only once the gallery is big enough to warrant it. */
 const CATALOG_SEARCH_THRESHOLD = 5;
@@ -71,6 +97,7 @@ export function CatalogStage({
     const q = query.trim().toLowerCase();
     const filtered = q ? catalog.filter((entry) => matchesQuery(entry, q)) : catalog;
     const selectedEntry = catalog.find((entry) => entry.id === selectedId);
+    const naming = nameField(selectedEntry, label);
     return (
         <div className="intflow-catalog">
             <SearchHeader
@@ -110,13 +137,13 @@ export function CatalogStage({
                 whole dialog grow under the SC's cursor (owner, 2026-09-21). */}
             <OptionalNameField
                 label={label}
-                defaultLabel={selectedEntry?.name ?? ''}
+                defaultLabel={naming.defaultLabel}
                 onLabelChange={onLabelChange}
                 disabledHint={selectedEntry ? undefined : 'Pick an integration first'}
                 // A pre-built integration cannot be renamed once added (the rename handler
                 // refuses catalog entries), and a pair's name is fixed at creation
                 // (owner, 2026-09-25): say so before the name is committed, not after.
-                description={NAME_IS_FIXED}
+                description={naming.description}
             />
         </div>
     );

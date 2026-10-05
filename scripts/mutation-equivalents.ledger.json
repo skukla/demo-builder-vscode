@@ -7938,7 +7938,7 @@
             "anchors": [
                 "success: false,"
             ],
-            "line": 228,
+            "line": 229,
             "mutants": 1,
             "category": "branch",
             "reason": "The Configure route's inner success flag never reaches a caller: the outer handler matches result.blocked first and returns its own { success: false, error }. Flipping it changes a value that is overwritten one frame later. Re-anchored 2026-09-10 (474 -> 475): unchanged code, shifted by the AB-7 cleanup-reporting block added to handleRemoveAppBuilderComponent.",

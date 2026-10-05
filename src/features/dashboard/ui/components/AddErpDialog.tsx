@@ -27,6 +27,7 @@ import {
     existingRulesToChange,
     ownsProblem,
 } from '@/features/app-builder/services/erpOwnership';
+import { withSystemWord } from '@/features/app-builder/services/pairNames';
 import { useErpOwnershipOptions } from '@/features/dashboard/ui/hooks/useErpOwnershipOptions';
 import type { ErpOwnershipOptions, ErpOwnsEntry, ErpOwnsRule } from '@/types/erpOwnership';
 
@@ -122,7 +123,10 @@ function AddErpForm({ target, takenNames, onAdd, onClose }: AddErpDialogProps & 
     const [touched, setTouched] = useState(false);
     const { options, error, loading } = useErpOwnershipOptions(target.id);
 
-    const listId = erpListIdFor(name, options?.takenListIds ?? NONE);
+    // The name the ERP is given — ending in "ERP", as the extension enforces — drives
+    // the list id and the duplicate check, so both match what is actually added.
+    const saved = withSystemWord(name, 'ERP');
+    const listId = erpListIdFor(saved, options?.takenListIds ?? NONE);
     const attribute = `erp_owner=${listId}`;
     // The default, once the store is read and until the SC changes the picker. The list id
     // is not an input on purpose: the default's mode and websites do not depend on it, and
@@ -137,10 +141,10 @@ function AddErpForm({ target, takenNames, onAdd, onClose }: AddErpDialogProps & 
         () => (options ? existingRulesToChange({ websites: options.websites, erps: options.erps }, rule) : []),
         [options, rule],
     );
-    const problem = nameProblem(name, takenNames);
-    const ready = name.trim().length > 0 && !problem && !ownsProblem(rule);
+    const problem = nameProblem(saved, takenNames);
+    const ready = saved.length > 0 && !problem && !ownsProblem(rule);
     const add = (): void => {
-        if (ready) onAdd(name.trim(), rule, changes);
+        if (ready) onAdd(saved, rule, changes);
     };
     return (
         <Modal
@@ -164,6 +168,7 @@ function AddErpForm({ target, takenNames, onAdd, onClose }: AddErpDialogProps & 
                     width="100%"
                     validationState={problem ? 'invalid' : undefined}
                     errorMessage={problem}
+                    description={saved && saved !== name.trim() ? `Added as “${saved}”.` : undefined}
                     onKeyDown={(event) => {
                         if (event.key === 'Enter') add();
                     }}

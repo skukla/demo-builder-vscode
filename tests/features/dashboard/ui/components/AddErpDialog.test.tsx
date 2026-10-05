@@ -184,6 +184,28 @@ describe('AddErpDialog — choosing', () => {
     });
 });
 
+describe('AddErpDialog — the name ends in ERP', () => {
+    it('a name without "ERP" is added with it, and the dialog says so', async () => {
+        mockRequest.mockResolvedValue(answers({ ...STORE, websites: [STORE.websites[0]] }));
+        const { onAdd } = await open();
+        typeName('Brand B');
+
+        expect(screen.getByText('Added as “Brand B ERP”.')).toBeInTheDocument();
+        fireEvent.click(addButton());
+
+        expect(onAdd).toHaveBeenCalledWith('Brand B ERP', { mode: 'attribute', attribute: 'erp_owner=brand-b' }, expect.any(Array));
+    });
+
+    it('checks the name it will be added as for duplicates', async () => {
+        mockRequest.mockResolvedValue(answers(STORE));
+        await open();
+        typeName('acme');
+
+        expect(screen.getByText('This project already has an ERP by that name.')).toBeInTheDocument();
+        expect(addDisabled()).toBe(true);
+    });
+});
+
 describe('AddErpDialog — before and without the store', () => {
     it('counts read "…" while the store is being read', async () => {
         mockRequest.mockReturnValue(new Promise(() => undefined));

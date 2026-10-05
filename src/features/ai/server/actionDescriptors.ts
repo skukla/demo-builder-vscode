@@ -39,8 +39,9 @@ const addIntegrationSchema = {
         .string()
         .optional()
         .describe(
-            'For the ERP integration: the name of its first ERP, e.g. "Justrite ERP" (default ' +
-                '"Acme ERP"); it cannot be changed after the add. For a custom/blank instance: its ' +
+            'For the ERP integration: the brand that names it AND its first ERP, e.g. "Justrite" ' +
+                'gives "Justrite Integration" and "Justrite ERP" (a trailing "ERP"/"Integration" is ' +
+                'dropped first; default "Acme"); fixed after the add. For a custom/blank instance: its ' +
                 'display name (defaults to the repo name).',
         ),
     instanceId: z
@@ -84,8 +85,8 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             'Pass a catalog `id` (from list_components) OR a custom GitHub `source`. Adding a ' +
             'catalog id the project already has adds a numbered copy in its own workspace; a ' +
             'project has one mesh and one ERP integration (a second ERP is add_erp). Adding the ' +
-            'ERP integration also adds its first ERP, named from `name`; an ERP\'s name cannot be ' +
-            'changed once added, so ask the user what to call it and pass it here. ' +
+            'ERP integration also adds its first ERP; one `name` names both ("Justrite" → Justrite ' +
+            'Integration + Justrite ERP) and cannot be changed once added, so ask the user. ' +
             'Takes about a minute. Returns the id to use with deploy_integration / ' +
             'remove_integration. Confirm the choice with the user first.',
         map: dashboardHandlers,
@@ -584,7 +585,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         confirm: true,
         inputSchema: {
             id: z.string().describe('The ERP integration id (from get_project)'),
-            name: z.string().min(1).max(40).describe('The new ERP\'s name, e.g. "Brand B ERP"'),
+            name: z.string().min(1).max(40).describe('The new ERP\'s name; it is made to end in "ERP" ("Brand B" → "Brand B ERP")'),
             owns: z
                 .object({
                     mode: z.enum(['websites', 'attribute', 'sources']),

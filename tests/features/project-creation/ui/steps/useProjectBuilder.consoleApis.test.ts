@@ -187,3 +187,40 @@ describe('useProjectBuilder — selectedConsoleApis cleanup (integrations flow)'
         expect(call.selectedConsoleApis).toStrictEqual({});
     });
 });
+
+// The wizard names a pair by the rule the dashboard's add enforces (pairNames), read
+// against the real catalog, so a project created with the pair matches one it is added to.
+describe('useProjectBuilder — naming the ERP pair', () => {
+    it('records both names the typed one gives, under the inputs each deploys from', () => {
+        const { result, updateState } = setup({ componentConfigs: { 'erp-integration': { ERP_BASE_URL: 'x' } } });
+        act(() => {
+            result.current.onAppBuilderComponentToggle('erp-integration', true, 'JustRite ERP Integration');
+        });
+        expect(updateState.mock.calls[0][0].componentConfigs).toEqual({
+            'erp-integration': {
+                ERP_BASE_URL: 'x',
+                INTEGRATION_DISPLAY_NAME: 'JustRite Integration',
+                ERP_DISPLAY_NAME: 'JustRite ERP',
+            },
+        });
+    });
+
+    it('a pair added without a name gets the defaults', () => {
+        const { result, updateState } = setup();
+        act(() => {
+            result.current.onAppBuilderComponentToggle('erp-integration', true);
+        });
+        expect(updateState.mock.calls[0][0].componentConfigs?.['erp-integration']).toEqual({
+            INTEGRATION_DISPLAY_NAME: 'Acme Integration',
+            ERP_DISPLAY_NAME: 'Acme ERP',
+        });
+    });
+
+    it('an entry that brings no system records no names', () => {
+        const { result, updateState } = setup();
+        act(() => {
+            result.current.onAppBuilderComponentToggle('erp-sync', true, 'Anything');
+        });
+        expect('componentConfigs' in updateState.mock.calls[0][0]).toBe(false);
+    });
+});

@@ -23,6 +23,7 @@ import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
 import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
 import { resolveDeployInputs, resolveDisplayName } from '@/features/app-builder/services/deployInputs';
+import { pairNameInputs } from '@/features/app-builder/services/pairNames';
 import {
     buildCustomIntegrationEntry,
     entryFitsProjectAxes,
@@ -235,7 +236,6 @@ function runAdd(
             }
 
             await recordApiPicks(context, project, entry.id, payload.apis);
-            await recordPairedSystemName(context, project, entry, payload.name);
 
             report(OPERATION_STAGES.adding.label);
             // The deploy tails report every step; hand them the reporter so a slow add
@@ -256,54 +256,45 @@ function runAdd(
 
 /**
  * What the add is called while it runs: the name its inputs give it. For the ERP
- * integration that is its own name ("ERP Integration" by default, AB-16o); a name the
- * SC types on the add names its ERP, not the integration.
+ * integration that is its own name, which `recordPairNames` has just recorded.
  */
 function addLabel(project: Project, entry: AppBuilderComponentCatalogEntry): string {
     return resolveDisplayName(entry, resolveDeployInputs(project, entry));
 }
 
-/** The input the entry's bound system is NAMED from, when it has one. */
-function pairedNameKey(entry: AppBuilderComponentCatalogEntry): string | undefined {
-    const kind = entry.catalogId ?? entry.id;
-    const bound = getAppBuilderComponentCatalog().find(
-        (candidate) => candidate.kind === 'system' && candidate.boundTo === kind,
-    );
-    return bound?.nameFromEnvVar;
-}
-
 /**
- * A typed name on a PAIRED entry names its bound SYSTEM, not the integration,
- * which has a name of its own (AB-16o).
+ * Name a PAIRED entry and the system it brings from the one name the SC typed:
+ * "Justrite" → "Justrite Integration" and "Justrite ERP" (`pairNames`). Every add
+ * records both, so an untyped add is "Acme Integration" and "Acme ERP" rather than
+ * whatever each default happens to be.
  *
- * The ERP it talks to is called whatever the SC typed. Recorded against the
- * INTEGRATION's id because
- * that is the owner `resolveDeployInputs` reads first for a bound pair, so the
- * system picks it up when it deploys — and the pair keeps arriving together,
- * which forking the entry under a minted id had broken (owner, 2026-09-20).
+ * Recorded against the INTEGRATION's id because that is the owner
+ * `resolveDeployInputs` reads first for a bound pair, so the system picks it up
+ * when it deploys — and the pair keeps arriving together, which forking the entry
+ * under a minted id had broken (owner, 2026-09-20).
+ *
+ * A retry with nothing typed keeps the names the first attempt recorded.
  *
  * @param context - the handler context, for saving
  * @param project - the project being added to
  * @param entry - the entry being added
  * @param name - what the SC typed, if anything
  */
-async function recordPairedSystemName(
+async function recordPairNames(
     context: HandlerContext,
     project: Project,
     entry: AppBuilderComponentCatalogEntry,
     name: string | undefined,
 ): Promise<void> {
-    const typed = name?.trim();
-    if (!typed) return;
-    const key = pairedNameKey(entry);
-    if (!key) return;
+    const inputs = pairNameInputs(entry, getAppBuilderComponentCatalog(), name);
+    if (!inputs) return;
+    const current = project.componentConfigs?.[entry.id] ?? {};
+    const kept = !name?.trim() && Object.keys(inputs).every((key) => String(current[key] ?? '').trim());
+    if (kept) return;
 
     project.componentConfigs = {
         ...(project.componentConfigs ?? {}),
-        [entry.id]: {
-            ...(project.componentConfigs?.[entry.id] ?? {}),
-            [key]: typed,
-        },
+        [entry.id]: { ...current, ...inputs },
     };
     await context.stateManager.saveProject(project);
 }
@@ -384,6 +375,7 @@ export const handleAddAppBuilderComponent: MessageHandler<
     const refusal = refuseAdd(project, entry);
     if (refusal) return refusal;
 
+    await recordPairNames(context, project, entry, payload?.name);
     const label = addLabel(project, entry);
     const result = await runAdd(context, project, entry, payload ?? {});
     return reportAddOutcome(context, entry, result, label);

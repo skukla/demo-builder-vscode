@@ -13,6 +13,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
 import { CatalogStage, NAME_IS_FIXED } from '@/features/project-creation/ui/components/integration-flow/stages/CatalogStage';
+import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 
 function entry(id: string, name: string, description?: string): AppBuilderComponentCatalogEntry {
@@ -66,6 +67,24 @@ describe('CatalogStage', () => {
     it('says under the name that it cannot be changed later, once something is picked', () => {
         renderStage({ selectedId: 'acme-a' });
         expect(screen.getByText(NAME_IS_FIXED)).toBeInTheDocument();
+    });
+
+    // One typed name names the integration AND its ERP (pairNames); the screen shows both.
+    describe('a pair, read against the real catalog', () => {
+        const erpIntegration = getAppBuilderComponentCatalog().find((e) => e.id === 'erp-integration')!;
+
+        it('shows the two names the typed one gives', () => {
+            renderStage({ catalog: [erpIntegration], selectedId: 'erp-integration', label: 'JustRite ERP Integration' });
+            expect(
+                screen.getByText(`Adds “JustRite Integration” and its ERP “JustRite ERP”. ${NAME_IS_FIXED}`),
+            ).toBeInTheDocument();
+        });
+
+        it('with nothing typed, previews and suggests the default', () => {
+            renderStage({ catalog: [erpIntegration], selectedId: 'erp-integration' });
+            expect(screen.getByText(`Adds “Acme Integration” and its ERP “Acme ERP”. ${NAME_IS_FIXED}`)).toBeInTheDocument();
+            expect(screen.getByPlaceholderText('Acme')).toBeInTheDocument();
+        });
     });
 
     it('says nothing about the name before a pick', () => {

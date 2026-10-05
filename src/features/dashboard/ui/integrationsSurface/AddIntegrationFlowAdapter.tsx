@@ -249,9 +249,9 @@ export function AddIntegrationFlowAdapter({
                 displayName?: string,
             ): void => {
                 if (selected) {
-                    // `displayName` names the entry's bound SYSTEM (the ERP the
-                    // integration talks to); the entry keeps its catalog identity,
-                    // so the pair still arrives together.
+                    // `displayName` names the pair — the integration and its bound
+                    // SYSTEM, by `pairNames` — while the entry keeps its catalog
+                    // identity, so the pair still arrives together.
                     const entry = catalogRef.current.find((candidate) => candidate.id === id);
                     // A kind the project already has is added as a numbered copy
                     // (AB-23). Named HERE, by the same rule the add handler applies,
