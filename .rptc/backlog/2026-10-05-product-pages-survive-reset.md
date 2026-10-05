@@ -90,3 +90,7 @@ What the check settles, each unverified today:
 - whether a deleted storefront's product pages were in fact still served before this.
 
 Found on the way and filed, not fixed: EDS-31 ("Manage DA.live Sites" unpublishes nothing).
+
+## Shipped so far
+
+- 2026-10-05  fix(eds): reset and delete remove a storefront's product pages (EDS-26) (`696de0118`)
