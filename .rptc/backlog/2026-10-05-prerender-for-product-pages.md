@@ -48,3 +48,7 @@ Three things have moved since then (web research 2026-10-05, in
 Deliverable: a research note with a recommendation (adopt, adopt for some stacks, or keep
 ours), then an owner decision. Category pages are NOT in scope here: EDS-24 chose editable
 pages written at setup, because generated pages override authored ones.
+
+## Shipped so far
+
+- 2026-10-05  2026-10-05 Answered: keep our shared action as the default for every stack; do not adopt prerender per demo (one site per deployment, ~65 min for a new SKU, guest price baked into B2B pages, no documented uninstall). Add server-rendered tags inside render-pdp only if a demo needs SEO. Research: .rptc/research/prerender-vs-shared-action/research.md. Awaiting the owner's acceptance.

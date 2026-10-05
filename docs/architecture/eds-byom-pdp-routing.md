@@ -59,12 +59,13 @@ Demo Builder uses the canonical BYOM pattern with **two deliberate innovations**
 │    Called by the smart 404 from the visitor's browser.     │
 │    Triggers Helix admin POST /preview + POST /live for     │
 │    the requested path. Gated to PDP-shape paths only.      │
-│    No auth (Helix admin POST is currently open).           │
+│    Signs with the site's publish key (registered by the    │
+│    extension; see publishKeyRegistrar.ts).                 │
 │                                                            │
 └────────────────────────────────────────────────────────────┘
 ```
 
-The two repos coordinate via three URL strings — the `render-pdp` overlay URL, the `prepublish-pdp` trigger URL, and the storefront's `?org=&site=` stamping. No per-tenant credentials, no per-tenant state, no shared secret.
+The two repos coordinate via three URL strings — the `render-pdp` overlay URL, the `prepublish-pdp` trigger URL, and the storefront's `?org=&site=` stamping. One piece of per-tenant state: since storefront setup pins a site admin (which closes the Helix admin API to anonymous callers), the extension registers a site-scoped publish key with the shared action after every site config write, and a sweep renews it (`src/features/eds/services/pdp/publishKeyRegistrar.ts`, `publishKeyRenewalSweep.ts`). No shared secret between tenants.
 
 ---
 
@@ -164,7 +165,9 @@ Verified 2026-06-09: `products(skus: ["Orchard2"])` and `products(skus: ["orchar
 
 **If this ever changes** (Catalog Service becomes case-sensitive): every PDP across every storefront resolves at the routing layer but renders with empty product details — silent rot. Detection probe in `.rptc/research/multitenant-prerender-evaluation/addendum-2026-06-09-runtime-validation.md` (Finding 4 + reproducibility block). Mitigation paths documented in the same Finding.
 
-### 3. Helix admin `POST /preview` and `POST /live` are currently unauthenticated for these storefronts
+### 3. Helix admin `POST /preview` and `POST /live` — no longer unauthenticated (superseded)
+
+**Corrected 2026-10-05.** The assumption below held when this was written; it stopped holding once storefront setup pinned a site admin, which sets `requireAuth: "auto"` and closes the admin API to anonymous callers. `prepublish-pdp` now signs each publish with a site-scoped publish key the extension mints and registers (`publishKeyRegistrar.ts`; measured 2026-08-15 in `.rptc/complete/pdp-prewarm-401-after-admin-pinning.md`). The text below is kept as the original record.
 
 Verified by the `accs-discovery-service` team (research doc at `accs-discovery-service/docs/research/helix-admin-auth-findings.md`, summarized in this repo's addendum at `.rptc/research/multitenant-prerender-evaluation/addendum-2026-06-09-helix-admin-auth-and-trigger-placement.md`).
 

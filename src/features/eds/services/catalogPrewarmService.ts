@@ -11,13 +11,13 @@
  * `prepublish-pdp` action. Storefront setup pins a site admin, and any
  * `access.admin` role closes the whole Helix admin API to anonymous callers —
  * the anonymous POST this used to make returned 401 for every SKU (0/39 in the
- * field on beta.129). Do not route this back through the action unless the
- * action itself gains credentials.
+ * field on beta.129).
  *
- * The smart-404 + prepublish-pdp fallback still exists for SKUs added to
- * Commerce after setup, but note it is subject to the SAME 401 on a site with a
- * pinned admin — it runs in the visitor's browser and cannot hold a credential.
- * Backlog: `pdp-prewarm-401-after-admin-pinning.md`.
+ * The smart-404 + prepublish-pdp fallback covers SKUs added to Commerce after
+ * setup. The visitor's browser holds no credential; the shared action signs the
+ * publish with the site's publish key, which the extension registers after every
+ * site config write (`pdp/publishKeyRegistrar.ts`) and renews
+ * (`pdp/publishKeyRenewalSweep.ts`).
  *
  * v1 covers ACCS storefronts only. PaaS auth requirements for the
  * direct /graphql endpoint (vs. mesh-routed) are unverified; PaaS

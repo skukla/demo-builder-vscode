@@ -87,7 +87,7 @@ Demo Builder serves Adobe Solutions Consultants prepping demos. Two requirements
 - **Smart-404 has no canonical equivalent today.** We built what Adobe has acknowledged as a desired feature (issue #262) but hasn't shipped. If issue #262 ships, Demo Builder might migrate to the canonical mechanism. Until then, smart-404 is custom code we own.
 - **No server-side SSR / JSON-LD / Merchant Center support.** Acceptable for demos (humans on calls). If production-grade SEO is ever needed on a demo storefront, that requires layering `aem-commerce-prerender` on top — a meaningful additional setup step for the SC.
 - **~2-second cold-path latency** the first time a never-warmed SKU is visited (smart-404 cycle). Pre-warming covers the catalog at create/reset, so cold paths only fire for catalog churn. Spinner + storefront chrome stay visible during the cycle.
-- **Depends on Helix admin POST being unauthenticated** for our origin. If Helix changes that contract, the smart-404 cold-path mechanism needs follow-up.
+- **Depends on Helix accepting a site-scoped publish key** held by the shared action. (Originally: depended on Helix admin POST being unauthenticated; that ended when setup began pinning a site admin, and the extension now registers a publish key per site after every config write and renews it — `publishKeyRegistrar.ts`, corrected 2026-10-05.)
 - **Depends on Catalog Service being case-insensitive on SKU lookups.** If that changes, PDPs render with empty product data (silent rot). Detection probe documented in memory entry `catalog-service-sku-case-insensitive`.
 
 ### Neutral
@@ -139,7 +139,8 @@ So the trade is: accept the maintenance burden of custom code that fills a docum
 Two triggers should cause us to revisit smart-404:
 
 1. **Adobe ships event-driven recovery** (resolves issue #262). At that point, evaluate whether the canonical mechanism is sufficient for demo workflows. If so, retire smart-404.
-2. **Helix locks down admin POST.** Smart-404's cold-path trigger relies on this; we'd need to switch to authenticated trigger or accept the churn-404 behavior.
+2. **Helix stops accepting site-scoped publish keys.** (This trigger originally read "Helix locks down admin POST"; that happened for pinned sites, and the publish key per site is the authenticated trigger it called for — corrected 2026-10-05.)
+3. **Re-evaluated 2026-10-05 (EDS-25):** Adobe's `aem-commerce-prerender` is still one site per deployment, has no on-demand publish (#262 open), and bakes the guest price into B2B pages. Kept ours; see `.rptc/research/prerender-vs-shared-action/research.md`.
 
 ---
 
