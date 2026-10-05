@@ -178,8 +178,10 @@ answers for the path. If it does not, the fallback above is what the SC sees; re
 the overlay registration first on delete is the untested alternative. The live check is
 in `.rptc/backlog/2026-10-05-product-pages-survive-reset.md`.
 
-**Not covered:** the "Manage DA.live Sites" command deletes a site's content by its
-DA.live name with no GitHub repository in hand, so it unpublishes nothing.
+The "Manage DA.live Sites" command goes through the same teardown (EDS-31). It finds
+each site's repository from the local project that uses it, else assumes the
+same-named repository in the DA.live org's namespace; when the unpublish fails, the
+result names the sites whose pages may still be live.
 
 ### Out of scope (later workstreams or deliberate non-goals)
 

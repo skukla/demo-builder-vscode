@@ -22,12 +22,9 @@ import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
-import {
-    createDaLiveServiceTokenProvider,
-    DaLiveContentOperations,
-    type TokenProvider,
-} from '@/features/eds/services/daLive/daLiveContentOperations';
+import { DaLiveContentOperations, type TokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
 import { DaLiveOrgOperations } from '@/features/eds/services/daLive/daLiveOrgOperations';
+import { firstUsableDaLiveToken } from '@/features/eds/services/daLive/daLiveTokenChain';
 import { projectsSharingRepo } from '@/features/eds/services/storefront/sharedRepoProjects';
 import { tearDownStorefront } from '@/features/eds/services/storefront/storefrontTeardown';
 import type { HandlerContext } from '@/types/handlers';
@@ -55,15 +52,8 @@ const NEEDS_ADOBE = {
 
 /**
  * Build DA.live org + content operations on the DA.live session when there is
- * one, else on the Adobe IMS token. Returns null when neither is available (the
- * caller turns that into a `needsAuth` handoff).
- *
- * The DA.live token first, because it is the one DA.live accepts: measured live
- * 2026-09-12, the IMS token listed ZERO sites for an org that has many and was
- * refused (403) when asked to list a site the reset tool had just written to
- * with the DA.live token. The IMS path stays as the fallback it always was —
- * it is what the human cleanup command wires, and that command's own behaviour
- * against DA.live is a separate question, filed rather than changed here.
+ * one, else on the Adobe IMS token (`firstUsableDaLiveToken`). Returns null when
+ * neither is available (the caller turns that into a `needsAuth` handoff).
  */
 async function buildDaLiveOps(
     ctx: HandlerContext,
@@ -73,35 +63,16 @@ async function buildDaLiveOps(
     /** Handed on to the shared storefront teardown, which reads it per call. */
     tokenProvider: TokenProvider;
 } | null> {
-    const tokenProvider = (await daLiveTokenProvider(ctx)) ?? (await imsTokenProvider());
+    const tokenProvider = await firstUsableDaLiveToken({
+        daLiveSession: () => getDaLiveAuthService(ctx.context),
+        imsTokenManager: () => ServiceLocator.getAuthenticationService().getTokenManager(),
+    });
     if (!tokenProvider) return null;
     return {
         tokenProvider,
         org: new DaLiveOrgOperations(tokenProvider, ctx.logger),
         content: new DaLiveContentOperations(tokenProvider, ctx.logger),
     };
-}
-
-/** The DA.live session's token, when the SC has pasted one. */
-async function daLiveTokenProvider(ctx: HandlerContext): Promise<TokenProvider | null> {
-    try {
-        const service = getDaLiveAuthService(ctx.context);
-        if (!(await service.getAccessToken())) return null;
-        return createDaLiveServiceTokenProvider(service);
-    } catch {
-        return null;
-    }
-}
-
-/** The Adobe IMS token, when valid. */
-async function imsTokenProvider(): Promise<TokenProvider | null> {
-    try {
-        const tokenManager = ServiceLocator.getAuthenticationService().getTokenManager();
-        if (!(await tokenManager.inspectToken()).valid) return null;
-        return { getAccessToken: async () => (await tokenManager.inspectToken()).token ?? null };
-    } catch {
-        return null;
-    }
 }
 
 /**

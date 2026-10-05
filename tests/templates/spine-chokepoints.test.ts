@@ -435,14 +435,11 @@ describe('spine choke-points', () => {
         //
         // Traced down, every delete door converges on tearDownStorefront: the
         // delete-project button (projectDeletionService), the agent's delete_project
-        // (agentProjectCleanup) and cleanup_dalive_site (cloudResourceTools). Reset has
-        // its own door (edsResetProductPages, called once by executeEdsReset before
-        // the content pipeline pre-warms).
-        //
-        // NOT covered, and filed rather than pinned: the "Manage DA.live Sites" command
-        // (eds/commands/cleanupDaLiveSites.ts) deletes a site's content by DA.live name
-        // with no GitHub repository in hand, so it unpublishes nothing — the same gap
-        // the delete button had before 2026-09-19.
+        // (agentProjectCleanup), cleanup_dalive_site (cloudResourceTools) and the
+        // "Manage DA.live Sites" command (cleanupDaLiveSites, since EDS-31: it used to
+        // delete content alone and leave every page live). Reset has its own door
+        // (edsResetProductPages, called once by executeEdsReset before the content
+        // pipeline pre-warms).
         const sorted = (pattern: RegExp): string[] => filesTouchingPrimitive(pattern).sort();
 
         expect(sorted(/\bremoveProductPages\(/)).toStrictEqual([
@@ -453,6 +450,7 @@ describe('spine choke-points', () => {
         expect(sorted(/\btearDownStorefront\(/)).toStrictEqual([
             'features/ai/server/agentProjectCleanup.ts',
             'features/ai/server/cloudResourceTools.ts',
+            'features/eds/commands/cleanupDaLiveSites.ts',
             'features/eds/services/storefront/storefrontTeardown.ts',
             'features/projects-dashboard/services/projectDeletionService.ts',
         ]);
