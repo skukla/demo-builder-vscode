@@ -10,6 +10,7 @@ import {
     deriveAdobeEntityName,
     deriveFreeAdobeEntityName,
     randomNameSuffix,
+    toAdobeTitle,
 } from '@/features/authentication/services/adobeEntityName';
 
 describe('deriveAdobeEntityName', () => {
@@ -116,5 +117,32 @@ describe('deriveFreeAdobeEntityName', () => {
 
     it('falls back to App when the title has nothing Adobe accepts', () => {
         expect(deriveFreeAdobeEntityName('***', [])).toBe('App');
+    });
+});
+
+// aio's config schema takes a title of letters, digits and spaces, 1–45 long; Console
+// takes anything, so a title it accepted failed at `aio app use` (2026-10-05, live).
+describe('toAdobeTitle', () => {
+    it('turns punctuation into a space so the title reads the same', () => {
+        expect(toAdobeTitle('Multi-ERP Integration')).toBe('Multi ERP Integration');
+        expect(toAdobeTitle("Acme's ERP (test) #2")).toBe('Acme s ERP test 2');
+    });
+
+    it('keeps accented letters, which the schema allows', () => {
+        expect(toAdobeTitle('Café Demo')).toBe('Café Demo');
+    });
+
+    it('leaves a title the schema already accepts alone', () => {
+        expect(toAdobeTitle('Kukla Justrite')).toBe('Kukla Justrite');
+    });
+
+    it('keeps it to 45 characters, with no trailing space', () => {
+        const title = toAdobeTitle(`${'a'.repeat(44)} bcd`);
+        expect(title).toBe('a'.repeat(44));
+        expect(toAdobeTitle('x'.repeat(60))).toHaveLength(45);
+    });
+
+    it('falls back to App when nothing usable is left', () => {
+        expect(toAdobeTitle('---')).toBe('App');
     });
 });

@@ -78,6 +78,18 @@ describe('the name a new workspace is given', () => {
         });
         expect(create).toHaveBeenCalledTimes(1);
     });
+
+    // 2026-10-05: Console took "Multi-ERP Integration", then `aio app use` refused the
+    // workspace's config because its title had a dash.
+    it('is sent with a title aio will accept back', async () => {
+        const create = jest.fn().mockResolvedValue({ body: { workspaceId: 'ws-new' } });
+        const ops = opsWith(create, jest.fn().mockResolvedValue([]));
+
+        const result = await ops.createWorkspace('Multi-ERP Integration', 'd', TARGET);
+
+        expect((create.mock.calls[0][2] as { title: string }).title).toBe('Multi ERP Integration');
+        expect(result).toMatchObject({ name: 'MultiERPIntegration', title: 'Multi ERP Integration' });
+    });
 });
 
 // 2026-10-05: an ERP removed and added again three minutes later got the same

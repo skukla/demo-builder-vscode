@@ -16,7 +16,7 @@
  * @module features/authentication/services/adobeConsoleProjectOps
  */
 
-import { deriveAdobeEntityName, deriveFreeAdobeEntityName } from './adobeEntityName';
+import { deriveAdobeEntityName, deriveFreeAdobeEntityName, toAdobeTitle } from './adobeEntityName';
 import type { AdobeSDKClient } from './adobeSDKClient';
 import type { AuthCacheManager } from './authCacheManager';
 import { explainMissingDeveloperAccess } from './authenticationErrorFormatter';
@@ -132,13 +132,14 @@ export class AdobeConsoleProjectOps {
             // Adobe validates the machine `name` as alphanumeric-only; derive it from the
             // free-form title (the user's input). The title stays human-readable in the UI.
             const name = deriveAdobeEntityName(title);
+            const consoleTitle = toAdobeTitle(title);
             this.debugLogger.info(
-                `[Entity Fetcher] Creating App Builder project "${title}" (name: ${name}) in org ${orgId}`,
+                `[Entity Fetcher] Creating App Builder project "${consoleTitle}" (name: ${name}) in org ${orgId}`,
             );
 
             const response = await client.createFireflyProject(orgId, {
                 name,
-                title,
+                title: consoleTitle,
                 description,
             });
 
@@ -170,7 +171,7 @@ export class AdobeConsoleProjectOps {
             return {
                 id: projectId,
                 name,
-                title,
+                title: consoleTitle,
                 description: description || undefined,
                 org_id: orgId,
             };
@@ -220,9 +221,9 @@ export class AdobeConsoleProjectOps {
                 ) => Promise<unknown>;
             };
 
-            await client.editProject(orgId, projectId, { title });
+            await client.editProject(orgId, projectId, { title: toAdobeTitle(title) });
             this.debugLogger.info(
-                `[Entity Fetcher] Renamed remote project ${projectId} title to "${title}"`,
+                `[Entity Fetcher] Renamed remote project ${projectId} title to "${toAdobeTitle(title)}"`,
             );
             return { ok: true };
         } catch (error) {
@@ -389,11 +390,12 @@ export class AdobeConsoleProjectOps {
                 () => undefined,
             );
             let name = deriveFreeAdobeEntityName(title, taken);
+            const consoleTitle = toAdobeTitle(title);
             const send = () => {
                 this.debugLogger.info(
-                    `[Entity Fetcher] Creating workspace "${title}" (name: ${name}) in project ${projectId}`,
+                    `[Entity Fetcher] Creating workspace "${consoleTitle}" (name: ${name}) in project ${projectId}`,
                 );
-                return client.createWorkspace(orgId, projectId, { name, title, description });
+                return client.createWorkspace(orgId, projectId, { name, title: consoleTitle, description });
             };
             const response = await send().catch((error: Error) => {
                 if (!isNameClash(error) || !taken) throw error;
@@ -418,7 +420,7 @@ export class AdobeConsoleProjectOps {
             // app deploys — createWorkspace alone doesn't provision one.
             await this.ensureWorkspaceRuntimeNamespace(orgId, projectId, workspaceId);
 
-            return { id: workspaceId, name, title };
+            return { id: workspaceId, name, title: consoleTitle };
         } catch (error) {
             const message = (error as Error).message || '';
             if (isNameClash(error as Error)) {

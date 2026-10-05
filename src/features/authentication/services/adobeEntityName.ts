@@ -91,3 +91,26 @@ export function deriveFreeAdobeEntityName(
         if (!inUse.has(numbered.toLowerCase())) return numbered;
     }
 }
+
+/** The longest TITLE `aio`'s config schema accepts. */
+const MAX_TITLE_LENGTH = 45;
+/** What `aio`'s config schema allows in a project or workspace title. */
+const TITLE_CHARS = /[^A-Za-z0-9À-ÖØ-öø-ÿ\s]+/g;
+
+/**
+ * A project or workspace TITLE that `aio` will accept back.
+ *
+ * Console takes any title, but `aio app use` validates the downloaded config
+ * against `aio-cli-plugin-app/schema/config.schema.json`, whose title pattern
+ * allows only letters (Latin-1 accents included), digits and spaces, 1–45 long.
+ * A title Console accepted therefore failed one step later, after the workspace
+ * existed: "Multi-ERP Integration" (2026-10-05, live). Punctuation becomes a
+ * space, so the title still reads the same — "Multi ERP Integration".
+ *
+ * @param title - the free-form title
+ * @returns a title `aio` accepts, or 'App' when nothing usable is left
+ */
+export function toAdobeTitle(title: string): string {
+    const clean = (title || '').replace(TITLE_CHARS, ' ').replace(/\s+/g, ' ').trim();
+    return clean.slice(0, MAX_TITLE_LENGTH).trim() || 'App';
+}
