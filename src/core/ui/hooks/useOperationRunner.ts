@@ -18,7 +18,7 @@
  * @module core/ui/hooks/useOperationRunner
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
 /** One operation, as the modal and the runner know it. */
@@ -56,6 +56,22 @@ export interface ScreenOperation {
     resume: boolean;
 }
 
+/**
+ * Whether a progress push shows the run has BEGUN — a step, or a question it
+ * needs answered. Not a bare `running`: the handler wrapper sends one the moment
+ * the request arrives, before any VS Code dialog, so opening on it put the modal
+ * behind the very question the SC had not answered yet (2026-10-05, delete).
+ */
+function hasBegun(push: { stage?: string; prompt?: unknown }): boolean {
+    return Boolean(push.stage || push.prompt);
+}
+
+/** A run that ended in a real failure, not one the SC declined. */
+function endedInFailure(response: unknown): boolean {
+    const answer = response as { success?: boolean; cancelled?: boolean } | undefined;
+    return answer?.success === false && answer.cancelled !== true;
+}
+
 /** An operation as a caller starts one: the runner counts the runs. */
 export type StartableOperation = Omit<ScreenOperation, 'run' | 'resume'>;
 
@@ -65,7 +81,8 @@ export interface OperationRunnerControls {
     /** Send the message and show the modal straight away. */
     start: (operation: StartableOperation) => void;
     /**
-     * Send the message, and show the modal only once the run reports. For an
+     * Send the message, and show the modal only once the run begins — its first
+     * step or question, or a failure before either. For an
      * operation whose first seconds belong to VS Code's own dialogs — a reset
      * confirms, then may ask about sample data — where opening on the click would
      * put a spinner behind a question. `onSettled` fires when the message
@@ -87,8 +104,8 @@ export interface OperationRunnerControls {
 export function useOperationRunner(): OperationRunnerControls {
     const [last, setLast] = useState<ScreenOperation | null>(null);
     const [isOpen, setIsOpen] = useState(false);
-    /** Sent, and waiting for the run to report before the modal opens. */
-    const [pending, setPending] = useState<StartableOperation | null>(null);
+    /** Sent, and waiting for the run to begin before the modal opens. */
+    const pending = useRef<StartableOperation | null>(null);
 
     const openModal = useCallback((operation: StartableOperation, resume: boolean): void => {
         setLast((previous) => ({ ...operation, run: (previous?.run ?? 0) + 1, resume }));
@@ -118,36 +135,47 @@ export function useOperationRunner(): OperationRunnerControls {
 
     const startWhenItBegins = useCallback(
         (operation: StartableOperation, onSettled?: () => void): void => {
-            setPending(operation);
+            pending.current = operation;
             // A request, not a push: its answer is how we learn that a run which
-            // never reported is over, and when a caller may refresh what changed.
+            // never began is over, and when a caller may refresh what changed.
             void webviewClient
                 .request(operation.message, {
                     ...operation.payload,
                     id: operation.id,
                     progress: 'modal',
                 })
-                .catch(() => undefined)
-                .then(() => {
-                    setPending(null);
-                    onSettled?.();
-                });
+                .then(
+                    (response) => {
+                        if (pending.current === operation) {
+                            pending.current = null;
+                            // Failed before its first step: still say why.
+                            if (endedInFailure(response)) openModal(operation, true);
+                        }
+                        onSettled?.();
+                    },
+                    // A timeout is not an end: the SC may take longer than the
+                    // request waits to answer VS Code's question, and the run
+                    // still begins after it. Keep waiting for its first step.
+                    () => onSettled?.(),
+                );
         },
-        [],
+        [openModal],
     );
 
     // `resume: true`, because the push that opens the modal has already gone by:
     // the modal asks where the run is rather than showing "Starting" until the
     // next stage.
-    useEffect(() => {
-        if (!pending) return undefined;
-        return webviewClient.onMessage('operationProgress', (data: unknown) => {
-            const payload = data as { id?: string } | undefined;
-            if (payload?.id !== pending.id) return;
-            openModal(pending, true);
-            setPending(null);
-        });
-    }, [pending, openModal]);
+    useEffect(
+        () =>
+            webviewClient.onMessage('operationProgress', (data: unknown) => {
+                const waiting = pending.current;
+                const push = data as { id?: string; stage?: string; prompt?: unknown } | undefined;
+                if (!waiting || push?.id !== waiting.id || !hasBegun(push)) return;
+                pending.current = null;
+                openModal(waiting, true);
+            }),
+        [openModal],
+    );
 
     const reopen = useCallback(
         (id: string): boolean => {

@@ -39,12 +39,15 @@ const RESET = {
 };
 
 /** Push a progress payload to every live subscriber. */
-function report(id: string): void {
+function push(payload: Record<string, unknown>): void {
     act(() => {
-        for (const listener of listeners) {
-            listener({ id, state: 'running', stage: 'Resetting the repository' });
-        }
+        for (const listener of listeners) listener(payload);
     });
+}
+
+/** The run reports a step. */
+function report(id: string): void {
+    push({ id, state: 'running', stage: 'Resetting the repository' });
 }
 
 beforeEach(() => {
@@ -107,5 +110,52 @@ describe('startWhenItBegins', () => {
 
         expect(result.current.open).toBeNull();
         expect(onSettled).toHaveBeenCalled();
+    });
+
+    // 2026-10-05: the handler wrapper reports a bare `running` the moment the request
+    // arrives, before VS Code asks anything, and the modal opened behind the delete's
+    // "Also delete these external resources?" question.
+    it('does not open on the bare running sent before any question is answered', () => {
+        const { result } = renderHook(() => useOperationRunner());
+        act(() => result.current.startWhenItBegins(RESET));
+
+        push({ id: 'reset:bodea', state: 'running' });
+
+        expect(result.current.open).toBeNull();
+    });
+
+    it('opens on a question the run asks in the modal', () => {
+        const { result } = renderHook(() => useOperationRunner());
+        act(() => result.current.startWhenItBegins(RESET));
+
+        push({ id: 'reset:bodea', state: 'running', prompt: { message: 'Sign in again', actions: ['Sign in'] } });
+
+        expect(result.current.open).toEqual(expect.objectContaining({ id: 'reset:bodea' }));
+    });
+
+    it('opens on a run that failed before its first step, to say why', async () => {
+        request.mockResolvedValue({ success: false, error: 'Project not found' });
+        const { result } = renderHook(() => useOperationRunner());
+
+        await act(async () => {
+            result.current.startWhenItBegins(RESET);
+        });
+
+        expect(result.current.open).toEqual(expect.objectContaining({ id: 'reset:bodea', resume: true }));
+    });
+
+    // The request gives up after 30s; the SC can take longer than that to answer.
+    it('keeps waiting for the first step when the request times out', async () => {
+        request.mockRejectedValue(new Error('Request timeout: resetProject'));
+        const onSettled = jest.fn();
+        const { result } = renderHook(() => useOperationRunner());
+        await act(async () => {
+            result.current.startWhenItBegins(RESET, onSettled);
+        });
+
+        report('reset:bodea');
+
+        expect(onSettled).toHaveBeenCalled();
+        expect(result.current.open).toEqual(expect.objectContaining({ id: 'reset:bodea' }));
     });
 });
