@@ -1396,11 +1396,11 @@
             "source": "PL-22 batch MUT-08, stopDemo focus run"
         },
         {
-            "module": "src/features/prerequisites/handlers/shared.ts",
+            "module": "src/features/prerequisites/handlers/nodeVersionRequirements.ts",
             "anchors": [
                 "if (allPluginRequired.length > 0) {"
             ],
-            "line": 75,
+            "line": 68,
             "mutants": 2,
             "category": "branch",
             "reason": "Forcing this guard true assigns requiredForComponents = [...new Set([])], which is an EMPTY array, and the return statement below rejects an empty array by exactly the same test it applies to undefined (requiredForComponents && requiredForComponents.length > 0). So both the mutated and the original route end at getNodeVersionKeys over the whole mapping. The false variant of the same guard IS killed by the two union tests, which is what shows the pair apart.",
@@ -1409,11 +1409,11 @@
             "source": "PL-22 MUT-01, 2026-09-04"
         },
         {
-            "module": "src/features/prerequisites/handlers/shared.ts",
+            "module": "src/features/prerequisites/handlers/nodeVersionRequirements.ts",
             "anchors": [
                 "hasSelection: false,"
             ],
-            "line": 366,
+            "line": 216,
             "mutants": 1,
             "category": "branch",
             "reason": "This is a field of the object literal handed to context.debugLogger.debug on the line above, and that call is its only reader. Flipping it changes one key in a debug payload; no collaborator is called differently and the function still returns an empty list. The classifier reads a bounded window of the enclosing statement and cannot see the debug call four lines up, so it lands here as a branch rather than as log presentation.",
@@ -1422,11 +1422,11 @@
             "source": "PL-22 MUT-01, 2026-09-04"
         },
         {
-            "module": "src/features/prerequisites/handlers/shared.ts",
+            "module": "src/features/prerequisites/handlers/perNodeVersionStatus.ts",
             "anchors": [
                 "const installedVersions = fnmListResult.stdout"
             ],
-            "line": 503,
+            "line": 86,
             "mutants": 2,
             "category": "other",
             "reason": "Both mutants concern blank lines in fnm list output. Dropping .trim() leaves a trailing empty entry after split, and the .filter on the next line removes it; dropping that .filter leaves the empty entry in the array, and the loop below matches each entry against /v?(\\d+)/, which cannot match an empty or whitespace-only string, so no major is added either way. installedVersions is read by nothing but that loop, so a difference in its length is unobservable.",
@@ -1435,11 +1435,11 @@
             "source": "PL-22 MUT-01, 2026-09-04"
         },
         {
-            "module": "src/features/prerequisites/handlers/shared.ts",
+            "module": "src/features/prerequisites/handlers/perNodeVersionStatus.ts",
             "anchors": [
                 ".filter((v) => v.trim());"
             ],
-            "line": 506,
+            "line": 89,
             "mutants": 1,
             "category": "other",
             "reason": "Replacing v.trim() with v keeps whitespace-only entries in the list instead of dropping them. The only reader is the loop below, which matches each entry against /v?(\\d+)/; a whitespace-only entry matches nothing and contributes no major, so the set of installed majors is identical with the entry present or absent.",
@@ -1448,11 +1448,11 @@
             "source": "PL-22 MUT-01, 2026-09-04"
         },
         {
-            "module": "src/features/prerequisites/handlers/shared.ts",
+            "module": "src/features/prerequisites/handlers/perNodeVersionStatus.ts",
             "anchors": [
                 "if (prereq.check.parseVersion) {"
             ],
-            "line": 553,
+            "line": 136,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true runs the parse block for a prerequisite that declares no parseVersion. new RegExp(undefined) is the empty pattern, which matches at position zero with no capture group, so match[1] is undefined and the || '' fallback leaves cliVersion as the empty string it was initialised to. createVersionStatus therefore receives the same three arguments on both routes.",
@@ -1461,11 +1461,11 @@
             "source": "PL-22 MUT-01, 2026-09-04"
         },
         {
-            "module": "src/features/prerequisites/handlers/shared.ts",
+            "module": "src/features/prerequisites/handlers/perNodeVersionStatus.ts",
             "anchors": [
                 "if (match) cliVersion = match[1] || '';"
             ],
-            "line": 556,
+            "line": 139,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true reads match[1] when the regex did not match, so match is null and the read throws a TypeError. That throw is caught by the enclosing try in the same block, whose catch comments that regex parse errors are ignored, leaving cliVersion as the empty string the unmutated path also leaves it. The exception never escapes and no collaborator sees a different call.",
@@ -1474,11 +1474,11 @@
             "source": "PL-22 MUT-01, 2026-09-04"
         },
         {
-            "module": "src/features/prerequisites/handlers/shared.ts",
+            "module": "src/features/prerequisites/handlers/perNodeVersionStatus.ts",
             "anchors": [
                 "const duration = Date.now() - startTime;"
             ],
-            "line": 577,
+            "line": 160,
             "mutants": 1,
             "category": "other",
             "reason": "duration is read on the very next statement and nowhere else, and that statement is a context.logger.debug call whose message reports how long the parallel check took. Adding the two clocks instead of subtracting them changes a number inside one debug line; the function's return value, every collaborator call and every status it produces are untouched.",
@@ -1487,11 +1487,11 @@
             "source": "PL-22 MUT-01, 2026-09-04"
         },
         {
-            "module": "src/features/prerequisites/handlers/shared.ts",
+            "module": "src/features/prerequisites/handlers/prerequisiteCheckError.ts",
             "anchors": [
                 "isRecheck = false,"
             ],
-            "line": 620,
+            "line": 33,
             "mutants": 1,
             "category": "branch",
             "reason": "isRecheck is read once, to choose between the words 're-check' and 'check' for the checkType string, and checkType appears only inside log messages and the text of a timeout or failure notification. Flipping the default changes which of two words those strings carry; no branch is taken differently, no collaborator receives a different argument, and the returned status is identical.",

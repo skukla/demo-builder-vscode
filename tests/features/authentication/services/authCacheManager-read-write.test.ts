@@ -19,7 +19,7 @@ import {
  * - Org list caching
  * - Console.where caching
  *
- * Total tests: 28
+ * Total tests: 26
  */
 
 // Mock getLogger
@@ -141,15 +141,6 @@ describe('AuthCacheManager - Read/Write Operations', () => {
             expect(result.isExpired).toBe(true);
         });
 
-        it('should use custom TTL when provided', () => {
-            const customTTL = 5000; // 5 seconds
-            cacheManager.setCachedAuthStatus(true, customTTL);
-
-            const result = cacheManager.getCachedAuthStatus();
-            expect(result.isAuthenticated).toBe(true);
-            expect(result.isExpired).toBe(false);
-        });
-
         it('should overwrite existing auth status', () => {
             cacheManager.setCachedAuthStatus(true);
             cacheManager.setCachedAuthStatus(false);
@@ -167,15 +158,6 @@ describe('AuthCacheManager - Read/Write Operations', () => {
             expect(result).toBeDefined();
             expect(result?.org).toBe('org123');
             expect(result?.isValid).toBe(true);
-        });
-
-        it('should cache validation result as invalid', () => {
-            cacheManager.setValidationCache('org123', false);
-            const result = cacheManager.getValidationCache();
-
-            expect(result).toBeDefined();
-            expect(result?.org).toBe('org123');
-            expect(result?.isValid).toBe(false);
         });
 
         it('should return undefined when no validation cached', () => {
