@@ -52,9 +52,6 @@ export interface ErpListEntry {
     settings?: unknown;
 }
 
-/** The longest ERP name: it heads a card, a workspace title and the integration's Admin page. */
-export const MAX_ERP_NAME = 40;
-
 type Components = Pick<Project, 'appBuilderComponents'>;
 
 /**
@@ -84,32 +81,17 @@ export function nextListedSystemId(
 }
 
 /**
- * Why a name cannot name a new ERP, or undefined when it can: blank, too long, or already
- * the name of a system in the project, compared without case (the integration refuses two
- * ERPs of one name in its list, `erpsProblem`).
+ * The names a new ERP may not take: every system's in the project (`erpNameProblem`
+ * compares them without case).
  *
  * @param project - the project
- * @param name - the name the SC typed
  * @param retryId - the id being retried, whose own name does not count as taken
- * @returns the problem in words
+ * @returns the taken names
  */
-export function erpNameProblem(
-    project: Components,
-    name: string | undefined,
-    retryId?: string,
-): string | undefined {
-    const trimmed = name?.trim() ?? '';
-    if (!trimmed) return 'Name the ERP, e.g. "Brand B ERP".';
-    if (trimmed.length > MAX_ERP_NAME) return `An ERP name is at most ${MAX_ERP_NAME} characters.`;
-    const taken = Object.entries(project.appBuilderComponents ?? {}).some(
-        ([id, state]) =>
-            id !== retryId &&
-            state.kind === 'system' &&
-            state.name?.trim().toLowerCase() === trimmed.toLowerCase(),
-    );
-    return taken
-        ? `An ERP named "${trimmed}" is already in this project. Pick another name.`
-        : undefined;
+export function takenSystemNames(project: Components, retryId?: string): string[] {
+    return Object.entries(project.appBuilderComponents ?? {})
+        .filter(([id, state]) => id !== retryId && state.kind === 'system' && state.name)
+        .map(([, state]) => state.name as string);
 }
 
 /**

@@ -84,7 +84,7 @@ describe('IntegrationsGrid — Add another ERP', () => {
 
         await user.type(within(dialog).getByRole('textbox', { name: 'ERP name' }), 'acme erp');
 
-        expect(within(dialog).getByText('This project already has an ERP by that name.')).toBeInTheDocument();
+        expect(within(dialog).getByText('An ERP named "acme ERP" is already in this project. Pick another name.')).toBeInTheDocument();
         await user.click(within(dialog).getByRole('button', { name: 'Add' }));
         expect(getClient().postMessage).not.toHaveBeenCalledWith('addErp', expect.anything());
     });

@@ -179,7 +179,7 @@ describe('AddErpDialog — choosing', () => {
         await open();
         typeName('acme erp');
 
-        expect(screen.getByText('This project already has an ERP by that name.')).toBeInTheDocument();
+        expect(screen.getByText('An ERP named "acme ERP" is already in this project. Pick another name.')).toBeInTheDocument();
         expect(addDisabled()).toBe(true);
     });
 });
@@ -201,7 +201,16 @@ describe('AddErpDialog — the name ends in ERP', () => {
         await open();
         typeName('acme');
 
-        expect(screen.getByText('This project already has an ERP by that name.')).toBeInTheDocument();
+        expect(screen.getByText('An ERP named "acme ERP" is already in this project. Pick another name.')).toBeInTheDocument();
+        expect(addDisabled()).toBe(true);
+    });
+
+    it('checks the length of the name it will be added as', async () => {
+        mockRequest.mockResolvedValue(answers(STORE));
+        await open();
+        typeName('x'.repeat(38));
+
+        expect(screen.getByText('An ERP name is at most 40 characters.')).toBeInTheDocument();
         expect(addDisabled()).toBe(true);
     });
 });

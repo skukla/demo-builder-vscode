@@ -63,6 +63,28 @@ export function withSystemWord(typed: string, systemWord: string): string {
     return base ? `${base} ${systemWord}` : systemWord;
 }
 
+/** The longest ERP name: it heads a card, a workspace title and the integration's Admin page. */
+export const MAX_ERP_NAME = 40;
+
+/**
+ * Why a name cannot name a new ERP, or undefined when it can: blank, too long, or already
+ * taken, compared without case (the integration refuses two ERPs of one name in its list,
+ * `erpsProblem`). The one check the Add another ERP dialog shows and the extension enforces.
+ *
+ * @param name - the name the ERP would be added as (`withSystemWord`)
+ * @param takenNames - the names already in the project (`takenSystemNames`)
+ * @returns the problem in words
+ */
+export function erpNameProblem(name: string | undefined, takenNames: readonly string[]): string | undefined {
+    const trimmed = name?.trim() ?? '';
+    if (!trimmed) return 'Name the ERP, e.g. "Brand B ERP".';
+    if (trimmed.length > MAX_ERP_NAME) return `An ERP name is at most ${MAX_ERP_NAME} characters.`;
+    const lower = trimmed.toLowerCase();
+    return takenNames.some((taken) => taken.trim().toLowerCase() === lower)
+        ? `An ERP named "${trimmed}" is already in this project. Pick another name.`
+        : undefined;
+}
+
 /** The system bound to this integration, when it brings one that is named from an input. */
 export function pairedSystemOf(
     entry: AppBuilderComponentCatalogEntry,

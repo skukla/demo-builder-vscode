@@ -44,14 +44,14 @@ import { catalogEntryFor } from '@/features/app-builder/services/componentEntry'
 import { erpCredentialReader } from '@/features/app-builder/services/erpCredential';
 import type { ErpMappingReport } from '@/features/app-builder/services/erpFillMapping';
 import { ErpIntegrationClient } from '@/features/app-builder/services/erpIntegrationClient';
-import { erpListIdOf, erpNameProblem, nextListedSystemId } from '@/features/app-builder/services/erpList';
+import { erpListIdOf, nextListedSystemId, takenSystemNames } from '@/features/app-builder/services/erpList';
 import {
     defaultOwnsRule,
     describeOwns,
     existingRulesToChange,
     ownsProblem,
 } from '@/features/app-builder/services/erpOwnership';
-import { systemWordOf, withSystemWord } from '@/features/app-builder/services/pairNames';
+import { erpNameProblem, systemWordOf, withSystemWord } from '@/features/app-builder/services/pairNames';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import {
@@ -178,7 +178,7 @@ async function planErpAdd(
     const name = withSystemWord(payload?.name?.trim() ?? '', systemWordOf(system));
     const retryId = name ? unfinishedNamed(project, integrationId, system, name) : undefined;
     // The name, then the rules (AB-64): both are the SC's input, refused the same way.
-    const problem = erpNameProblem(project, name, retryId) ?? ownsPayloadProblem(payload);
+    const problem = erpNameProblem(name, takenSystemNames(project, retryId)) ?? ownsPayloadProblem(payload);
     if (problem) return { error: { success: false, error: problem, code: ErrorCode.CONFIG_INVALID } };
     const id = retryId ?? nextListedSystemId(project, system);
     const entry = catalogEntryFor(project, id, catalog) ?? { ...system, id, catalogId: system.id };

@@ -9,11 +9,12 @@
 
 import {
     erpListFor,
-    erpNameProblem,
     erpsWithOwnCredential,
     mergeKeyMap,
     nextListedSystemId,
+    takenSystemNames,
 } from '@/features/app-builder/services/erpList';
+import { erpNameProblem } from '@/features/app-builder/services/pairNames';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { AppBuilderComponentState } from '@/types/base';
 import { createMockProject } from '../../../helpers/projectFake';
@@ -72,26 +73,33 @@ describe('nextListedSystemId', () => {
     });
 });
 
-describe('erpNameProblem', () => {
+// The project half of the check: which names are taken (takenSystemNames), handed to the
+// one name check the dialog and the extension share (erpNameProblem).
+describe('erpNameProblem over takenSystemNames', () => {
     const taken = project({ 'demo-erp': erp({ name: 'Acme ERP' }) });
 
     it('accepts a free name', () => {
-        expect(erpNameProblem(taken, 'Brand B ERP')).toBeUndefined();
+        expect(erpNameProblem('Brand B ERP', takenSystemNames(taken))).toBeUndefined();
     });
 
     it('refuses a blank name, and one that is too long', () => {
-        expect(erpNameProblem(taken, '  ')).toBe('Name the ERP, e.g. "Brand B ERP".');
-        expect(erpNameProblem(taken, 'x'.repeat(41))).toBe('An ERP name is at most 40 characters.');
+        expect(erpNameProblem('  ', takenSystemNames(taken))).toBe('Name the ERP, e.g. "Brand B ERP".');
+        expect(erpNameProblem('x'.repeat(41), takenSystemNames(taken))).toBe('An ERP name is at most 40 characters.');
     });
 
     it('refuses a name already in the project, without case', () => {
-        expect(erpNameProblem(taken, 'acme erp')).toBe(
+        expect(erpNameProblem('acme erp', takenSystemNames(taken))).toBe(
             'An ERP named "acme erp" is already in this project. Pick another name.'
         );
     });
 
     it("does not count the retried ERP's own name", () => {
-        expect(erpNameProblem(taken, 'Acme ERP', 'demo-erp')).toBeUndefined();
+        expect(erpNameProblem('Acme ERP', takenSystemNames(taken, 'demo-erp'))).toBeUndefined();
+    });
+
+    it("counts only systems' names", () => {
+        const withIntegration = project({ 'erp-integration': { ...erp({ name: 'Acme ERP' }), kind: 'integration' } });
+        expect(takenSystemNames(withIntegration)).toStrictEqual([]);
     });
 });
 

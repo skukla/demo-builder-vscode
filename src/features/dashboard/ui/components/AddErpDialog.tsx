@@ -2,8 +2,8 @@
  * The prompt in front of "Add another ERP" (AB-16, AB-64): the ERP integration is added once,
  * and each further ERP is added from its card under a name the SC types, with one more
  * question — which products belong to it. The name must be new to the project, compared
- * without case; the extension checks it again before anything runs (`erpNameProblem`), so
- * this check is for the SC's benefit, not the gate.
+ * without case, by the same `erpNameProblem` the extension applies again before anything
+ * runs, so this check is for the SC's benefit, not the gate.
  *
  * The ownership picker ({@link ErpOwnershipPicker}) opens with a default the store decides
  * (`defaultOwnsRule`), its counts read once from Commerce as the dialog opens. Once there are
@@ -27,12 +27,9 @@ import {
     existingRulesToChange,
     ownsProblem,
 } from '@/features/app-builder/services/erpOwnership';
-import { withSystemWord } from '@/features/app-builder/services/pairNames';
+import { MAX_ERP_NAME, erpNameProblem, withSystemWord } from '@/features/app-builder/services/pairNames';
 import { useErpOwnershipOptions } from '@/features/dashboard/ui/hooks/useErpOwnershipOptions';
 import type { ErpOwnershipOptions, ErpOwnsEntry, ErpOwnsRule } from '@/types/erpOwnership';
-
-/** The longest name, the extension's `MAX_ERP_NAME`. */
-const MAX_NAME = 40;
 
 /** Said once there is an ERP to show beside the new one. */
 export const TWO_ERPS_NOTE = 'Once there are two ERPs, each owns only what its rule says.';
@@ -52,15 +49,6 @@ export interface AddErpDialogProps {
     onClose: () => void;
 }
 
-/** Why the typed name cannot be used, or undefined. */
-function nameProblem(name: string, taken: string[]): string | undefined {
-    const trimmed = name.trim();
-    if (!trimmed) return undefined;
-    const lower = trimmed.toLowerCase();
-    return taken.some((existing) => existing.trim().toLowerCase() === lower)
-        ? 'This project already has an ERP by that name.'
-        : undefined;
-}
 
 /** The picker's state for a rule. */
 function choiceOf(rule: ErpOwnsRule): OwnershipChoice {
@@ -141,7 +129,8 @@ function AddErpForm({ target, takenNames, onAdd, onClose }: AddErpDialogProps & 
         () => (options ? existingRulesToChange({ websites: options.websites, erps: options.erps }, rule) : []),
         [options, rule],
     );
-    const problem = nameProblem(saved, takenNames);
+    // Shown once something is typed; Add stays off while the name is blank either way.
+    const problem = saved ? erpNameProblem(saved, takenNames) : undefined;
     const ready = saved.length > 0 && !problem && !ownsProblem(rule);
     const add = (): void => {
         if (ready) onAdd(saved, rule, changes);
@@ -163,7 +152,7 @@ function AddErpForm({ target, takenNames, onAdd, onClose }: AddErpDialogProps & 
                     label="ERP name"
                     value={name}
                     onChange={setName}
-                    maxLength={MAX_NAME}
+                    maxLength={MAX_ERP_NAME}
                     autoFocus
                     width="100%"
                     validationState={problem ? 'invalid' : undefined}
