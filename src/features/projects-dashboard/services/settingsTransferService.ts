@@ -17,6 +17,7 @@ import { readProjectFile } from '@/core/state/projectFileReader';
 import { showWebviewQuickPick } from '@/core/utils/quickPickUtils';
 import { writeFileAtomic } from '@/core/utils/writeFileAtomic';
 import { assertPathInsideSync } from '@/core/validation/PathSafetyValidator';
+import { askForDetailsDuringOperation, modalIsAsking } from '@/core/vscode/operationPrompt';
 import { getProjectDescription } from '@/features/projects-dashboard/utils/componentSummaryUtils';
 import type { Project } from '@/types/base';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -117,9 +118,46 @@ export async function importSettingsFromUri(context: HandlerContext, fileUri: vs
 }
 
 /**
+ * Which project to copy from: in the projects list's modal when it started the
+ * copy (picker-to-modal), else a QuickPick. Undefined when the SC cancelled.
+ */
+async function pickSourceProject(projects: Project[], inModal: boolean): Promise<Project | undefined> {
+    if (inModal) {
+        const asked = await askForDetailsDuringOperation({
+            message: 'Start a new project with the settings of one you already have.',
+            fields: [
+                {
+                    id: 'project',
+                    label: 'Copy settings from',
+                    kind: 'choice',
+                    options: projects.map((project) => ({
+                        id: project.path,
+                        label: `${project.name} — ${getProjectDescription(project)}`,
+                    })),
+                },
+            ],
+            actions: ['Copy settings'],
+        });
+        if (asked.action !== 'Copy settings') return undefined;
+        return projects.find((project) => project.path === asked.values.project);
+    }
+    const items: vscode.QuickPickItem[] = projects.map((project) => ({
+        label: project.name,
+        description: getProjectDescription(project),
+        detail: project.path,
+    }));
+    // Webview-safe utility for proper keyboard handling.
+    const selected = await showWebviewQuickPick(items, {
+        title: 'Copy Settings from Project',
+        placeholder: 'Select a project to copy settings from',
+    });
+    return selected ? projects.find((project) => project.path === selected.detail) : undefined;
+}
+
+/**
  * Copy settings from an existing project
  *
- * Shows a QuickPick of available projects and extracts settings from the selected one.
+ * Asks which project (see `pickSourceProject`) and extracts settings from it.
  */
 export async function copySettingsFromProject(context: HandlerContext): Promise<HandlerResponse> {
     try {
@@ -148,33 +186,12 @@ export async function copySettingsFromProject(context: HandlerContext): Promise<
             };
         }
 
-        // Build QuickPick items
-        const items: vscode.QuickPickItem[] = projects.map((project) => ({
-            label: project.name,
-            description: getProjectDescription(project),
-            detail: project.path,
-        }));
-
-        // Show QuickPick (use webview-safe utility for proper keyboard handling)
-        const selected = await showWebviewQuickPick(items, {
-            title: 'Copy Settings from Project',
-            placeholder: 'Select a project to copy settings from',
-        });
-
-        if (!selected) {
+        const sourceProject = await pickSourceProject(projects, modalIsAsking());
+        if (!sourceProject) {
             // User cancelled
             return {
                 success: true,
                 data: { success: false, error: 'cancelled' },
-            };
-        }
-
-        // Find the selected project
-        const sourceProject = projects.find((p) => p.path === selected.detail);
-        if (!sourceProject) {
-            return {
-                success: false,
-                error: 'Selected project not found',
             };
         }
 

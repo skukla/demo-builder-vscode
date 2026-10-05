@@ -24,6 +24,7 @@
         "src/commands/commandManager.ts:456": "GitHub sign-in from the palette: one notification while the browser flow completes, the same shape as the Adobe sign-in above it (develop, merged 2026-09-24)."
     },
     "blockingDialogs": {
+        "src/features/dashboard/handlers/appBuilderComponentPromote.ts:121": "Gates: create a PUBLIC GitHub repository and push the app to it? Only when no screen modal is asking; from the card the same yes is the modal's Create button.",
         "src/commands/ResetAiOnboardingCommand.ts:31": "Gates: reset the AI onboarding surface? Destructive and asked once, before anything runs.",
         "src/commands/ResetAllCommand.ts:28": "Gates: delete all Demo Builder data and state? The most destructive thing the extension offers.",
         "src/commands/migrateStorefrontNames.ts:139": "Gates: rename these storefronts? The detail lists exactly which ones, so the SC answers with the list in front of them.",

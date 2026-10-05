@@ -8,7 +8,8 @@
  * What this wrapper adds on top of the service:
  *   1. Token discovery via `GitHubTokenService` (the MCP path reads env vars
  *      instead, see `src/mcp-server.ts`).
- *   2. `withProgress` notification + `showInputBox` commit message prompt.
+ *   2. `withProgress` notification + the commit message prompt (the dashboard's
+ *      progress modal when the tile started it, else `showInputBox`).
  *   3. Non-technical-user conflict resolution flow when `git push` is
  *      rejected AS NON-FAST-FORWARD: auto `git pull --rebase`; if rebase
  *      produces conflict markers, opens VS Code's Source Control view and
@@ -29,7 +30,11 @@ import { BaseCommand } from '@/core/base/baseCommand';
 import { COMPONENT_IDS } from '@/core/constants';
 import { PollingService } from '@/core/shell/pollingService';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { askDuringOperation } from '@/core/vscode/operationPrompt';
+import {
+    askDuringOperation,
+    askForDetailsDuringOperation,
+    modalIsAsking,
+} from '@/core/vscode/operationPrompt';
 import { getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { HelixApiError } from '@/features/eds/services/helix/helixApiClient';
@@ -61,7 +66,38 @@ export interface SyncStorefrontOutcome {
     cancelled?: boolean;
 }
 
+const DEFAULT_COMMIT_MESSAGE = 'Demo Builder: sync local changes';
+
 export class SyncStorefrontCommand extends BaseCommand {
+    /**
+     * The commit message: in the dashboard's progress modal when the tile started
+     * the sync (picker-to-modal), else an input box at the top of the window. A
+     * blank message in the modal is the default, since Sync was pressed.
+     */
+    private async askCommitMessage(): Promise<string | undefined> {
+        if (!modalIsAsking()) {
+            return this.showInputBox({
+                prompt: 'Commit message',
+                value: DEFAULT_COMMIT_MESSAGE,
+                placeHolder: 'Describe what changed',
+            });
+        }
+        const asked = await askForDetailsDuringOperation({
+            message: 'Sync your local storefront changes to GitHub and republish them.',
+            fields: [
+                {
+                    id: 'message',
+                    label: 'Commit message',
+                    value: DEFAULT_COMMIT_MESSAGE,
+                    placeholder: 'Describe what changed',
+                },
+            ],
+            actions: ['Sync'],
+        });
+        if (asked.action !== 'Sync') return undefined;
+        return asked.values.message?.trim() || DEFAULT_COMMIT_MESSAGE;
+    }
+
     async execute(): Promise<SyncStorefrontOutcome> {
         const project = await this.stateManager.getCurrentProject();
         if (!project) {
@@ -86,11 +122,7 @@ export class SyncStorefrontCommand extends BaseCommand {
             return { success: false, error };
         }
 
-        const commitMessage = await this.showInputBox({
-            prompt: 'Commit message',
-            value: 'Demo Builder: sync local changes',
-            placeHolder: 'Describe what changed',
-        });
+        const commitMessage = await this.askCommitMessage();
         if (!commitMessage) return { success: false, cancelled: true }; // user cancelled
 
         const { tokenService } = getGitHubServices(this.context.secrets);

@@ -8,6 +8,8 @@
  */
 
 import { validateProjectPath } from '@/core/validation/PathSafetyValidator';
+import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
+import { withModalAsking } from '@/core/vscode/operationPrompt';
 import { importDemoBundle } from '@/features/eds/handlers/importStorefrontZipHandler';
 import {
     copySettingsFromProject,
@@ -31,14 +33,31 @@ export const handleImportFromFile: MessageHandler = async (
         : importSettingsFromUri(context, picked);
 };
 
+/** What the projects list sends when it starts a copy in its modal. */
+export interface CopyFromExistingPayload {
+    id?: string;
+    progress?: 'modal';
+}
+
 /**
- * Copy settings from an existing project
+ * Copy settings from an existing project. From the projects list, which project
+ * is asked in that screen's modal; otherwise a QuickPick asks.
  */
-export const handleCopyFromExisting: MessageHandler = async (
-    context: HandlerContext,
-): Promise<HandlerResponse> => {
-    return copySettingsFromProject(context);
-};
+export const handleCopyFromExisting: MessageHandler<CopyFromExistingPayload> = narrateOutcomeToModal(
+    async (context, payload) => {
+        const id = payload?.id;
+        if (progressSurfaceOf(payload) !== 'modal' || !id) return copySettingsFromProject(context);
+        const result = await withModalAsking(id, () => copySettingsFromProject(context));
+        // The modal ends on the OUTER answer, so a copy that could not read the
+        // project's settings must say so there rather than end on a tick.
+        const copied = result.data as { success?: boolean; error?: string } | undefined;
+        if (copied?.success === false && copied.error !== 'cancelled') {
+            return { success: false, error: copied.error };
+        }
+        return result;
+    },
+    (payload) => payload?.id,
+);
 
 /**
  * Export project settings to a file

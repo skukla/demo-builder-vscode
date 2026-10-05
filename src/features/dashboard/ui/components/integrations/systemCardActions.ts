@@ -79,16 +79,19 @@ export function handleIntegrationErpAction(
     return false;
 }
 
-/** The card verbs whose whole job happens in the extension's own dialogs (AB-1c). */
+/**
+ * The card verbs whose whole job happens in the extension's own dialogs (AB-1c).
+ * Saving to GitHub is not one: it asks in the screen's progress modal, so it
+ * starts through the screen's operations like a deploy.
+ */
 const REPOSITORY_MESSAGES: Partial<Record<CardAction, string>> = {
-    'save-to-github': 'promoteAppBuilderComponent',
     'delete-github-repo': 'unpromoteAppBuilderComponent',
 };
 
 /**
- * Saving a blank-starter app to its own GitHub repository, and the undo: the
- * extension asks where, confirms, and runs it; the component snapshot push then
- * refreshes the card.
+ * The undo of saving a blank-starter app to its own GitHub repository: the
+ * extension confirms and runs it; the component snapshot push then refreshes
+ * the card.
  *
  * @returns whether the action was handled here
  */

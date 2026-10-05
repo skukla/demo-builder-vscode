@@ -16,6 +16,7 @@ import {
     handlePromoteAppBuilderComponent,
     handleUnpromoteAppBuilderComponent,
 } from '@/features/dashboard/handlers/appBuilderComponentPromote';
+import { answerOperationPrompt, isAwaitingAnswer } from '@/core/vscode/operationPrompt';
 import type { AppBuilderComponentState, Project } from '@/types/base';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
@@ -191,6 +192,64 @@ describe('handlePromoteAppBuilderComponent', () => {
             error: expect.stringMatching(/was created but the files did not reach it/),
         });
         expect(stateManager.saveProject).not.toHaveBeenCalled();
+    });
+});
+
+describe('handlePromoteAppBuilderComponent from the card (progress modal)', () => {
+    /** Start a modal save and wait until its one question is up. */
+    async function saveAndAsk(context: ReturnType<typeof setup>['context']) {
+        const done = handlePromoteAppBuilderComponent(context, { id: 'my-app', progress: 'modal' });
+        for (let i = 0; i < 200 && !isAwaitingAnswer('my-app'); i++) {
+            await new Promise((resolve) => setTimeout(resolve, 0));
+        }
+        expect(isAwaitingAnswer('my-app')).toBe(true);
+        return { done };
+    }
+
+    it('asks where, what to call it and the yes as ONE question, with no dialogs', async () => {
+        const { context } = setup();
+        getUserOrgs.mockResolvedValue(['acme']);
+        const { done } = await saveAndAsk(context);
+
+        answerOperationPrompt('my-app', CREATE_REPOSITORY, { owner: 'acme', name: 'Order Sync!' });
+        const result = await done;
+
+        expect(createEmptyRepository).toHaveBeenCalledWith('order-sync', false, 'acme');
+        expect(result).toMatchObject({ success: true, repository: { url: expect.any(String) } });
+        expect(pick).not.toHaveBeenCalled();
+        expect(input).not.toHaveBeenCalled();
+        expect(warn).not.toHaveBeenCalled();
+        expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
+    });
+
+    it('creates nothing when the modal is dismissed', async () => {
+        const { stateManager, context } = setup();
+        const { done } = await saveAndAsk(context);
+
+        answerOperationPrompt('my-app', undefined, { name: 'order-sync' });
+
+        expect(await done).toEqual({ success: true, cancelled: true });
+        expect(createEmptyRepository).not.toHaveBeenCalled();
+        expect(stateManager.saveProject).not.toHaveBeenCalled();
+    });
+
+    it('asks again, keeping the owner, when the name is empty', async () => {
+        const { context } = setup();
+        getUserOrgs.mockResolvedValue(['acme']);
+        const { done } = await saveAndAsk(context);
+
+        answerOperationPrompt('my-app', CREATE_REPOSITORY, { owner: 'acme', name: '  ' });
+        // The answered question clears before the second one is put up.
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        for (let i = 0; i < 200 && !isAwaitingAnswer('my-app'); i++) {
+            await new Promise((resolve) => setTimeout(resolve, 0));
+        }
+        expect(isAwaitingAnswer('my-app')).toBe(true);
+        expect(createEmptyRepository).not.toHaveBeenCalled();
+
+        answerOperationPrompt('my-app', CREATE_REPOSITORY, { owner: 'acme', name: 'sync' });
+        await done;
+        expect(createEmptyRepository).toHaveBeenCalledWith('sync', false, 'acme');
     });
 });
 

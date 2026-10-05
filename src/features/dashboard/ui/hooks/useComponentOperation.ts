@@ -41,6 +41,8 @@ const OPERATION_MESSAGES: Partial<Record<CardAction, string>> = {
     // Re-run the Commerce install pass WITHOUT a redeploy (AB-5).
     install: 'installAppBuilderComponent',
     remove: 'removeAppBuilderComponent',
+    // Asks where and what to call it in the modal, then pushes (picker-to-modal).
+    'save-to-github': 'promoteAppBuilderComponent',
 };
 
 /**
@@ -61,6 +63,7 @@ const VERBS: Partial<
     update: { running: 'Updating', base: 'update', done: 'updated' },
     install: { running: 'Installing', base: 'install', done: 'installed', suffix: ' into Commerce' },
     remove: { running: 'Removing', base: 'remove', done: 'removed' },
+    'save-to-github': { running: 'Saving', base: 'save', done: 'saved', suffix: ' to GitHub' },
 };
 
 /** The running title and the failure title for an action on a named integration. */

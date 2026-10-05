@@ -1315,7 +1315,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 563,
+            "line": 595,
             "mutants": 1,
             "category": "block",
             "reason": "The catch in readDaLiveToken holds only `return undefined;`, and a function that falls off the end of an empty catch also returns undefined, so the mutant is behaviourally identical. The explicit return cannot be deleted: tsconfig sets noImplicitReturns, which rejects a path that returns nothing when another path returns a value. The suite pins the outcome \u2014 a throwing auth service yields no DA.live token and the sync still runs.",
@@ -8223,7 +8223,7 @@
             "anchors": [
                 "if (resolved) return;"
             ],
-            "line": 351,
+            "line": 398,
             "mutants": 1,
             "category": "branch",
             "reason": "A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. The guard's FORCED-TRUE half IS killed (a gesture that returns early never settles, and the test hangs); the forced-false and 'resolved = false' halves leave behaviour identical because the extra resolve is discarded.",
@@ -8236,7 +8236,7 @@
             "anchors": [
                 "resolved = true;"
             ],
-            "line": 352,
+            "line": 399,
             "mutants": 1,
             "category": "branch",
             "reason": "A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. The guard's FORCED-TRUE half IS killed (a gesture that returns early never settles, and the test hangs); the forced-false and 'resolved = false' halves leave behaviour identical because the extra resolve is discarded.",
@@ -8285,7 +8285,7 @@
             "anchors": [
                 "return { deleteGitHubRepo: false, deleteDaLiveSite: false };"
             ],
-            "line": 307,
+            "line": 350,
             "mutants": 3,
             "category": "other",
             "reason": "Emptying the returned object leaves both flags undefined, which is falsy exactly where false was: performEdsCleanup skips the repo on a falsy deleteGitHubRepo and performDaLiveCleanup returns on a falsy deleteDaLiveSite. The same is true of flipping either literal to true on this path, because the project reaching it has neither a repo nor a complete DA.live pair to act on. The suite asserts the CALLS made, which do not move.",

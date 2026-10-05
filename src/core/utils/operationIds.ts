@@ -29,6 +29,12 @@ export const BLOCK_LIBRARY_OPERATION_ID = 'block-library';
 export const REPUBLISH_OPERATION_ID = 'republish';
 
 /**
+ * The projects list's "Copy from a project": it asks which project in that
+ * screen's modal, then opens the wizard (picker-to-modal).
+ */
+export const COPY_SETTINGS_OPERATION_ID = 'copy-settings';
+
+/**
  * Changing where a project's integrations deploy. Project-scoped, like the
  * storefront buttons, so it names the operation rather than a target.
  */

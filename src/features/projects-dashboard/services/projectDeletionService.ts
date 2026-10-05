@@ -13,7 +13,11 @@ import * as vscode from 'vscode';
 import { deleteProjectFiles } from './projectFilesDeletion';
 import { showOneTimeTip } from '@/core/utils/oneTimeTip';
 import { deleteOperationId } from '@/core/utils/operationIds';
-import { askDuringOperation } from '@/core/vscode/operationPrompt';
+import {
+    askDuringOperation,
+    askForDetailsDuringOperation,
+    withModalAsking,
+} from '@/core/vscode/operationPrompt';
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
 import { ensureDaLiveAuth as ensureDaLiveAuthShared, getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
 import { DaLiveAuthService } from '@/features/eds/services/daLive/daLiveAuthService';
@@ -122,7 +126,11 @@ export async function deleteProject(
     let cleanupOptions: CleanupOptions | null = null;
     if (isEds && edsMetadata) {
         // Auth is checked lazily in performEdsCleanup when user selects an option
-        cleanupOptions = await showCleanupConfirmation(project, edsMetadata);
+        cleanupOptions = await showCleanupConfirmation(
+            project,
+            edsMetadata,
+            options?.progress === 'modal' ? (options.operationId ?? deleteOperationId(project.name)) : undefined,
+        );
 
         // User cancelled the cleanup dialog
         if (cleanupOptions === null) {
@@ -218,17 +226,57 @@ export async function deleteProject(
 
 
 /**
+ * One external resource the SC may delete alongside the project.
+ */
+interface CleanupQuickPickItem extends vscode.QuickPickItem {
+    id: 'github' | 'daLive';
+}
+
+/**
+ * The same question as the QuickPick, in the modal already narrating the delete:
+ * one box per resource, unticked, as the QuickPick starts.
+ */
+async function askCleanupInModal(
+    project: Project,
+    items: CleanupQuickPickItem[],
+): Promise<CleanupOptions | null> {
+    const labels: Record<CleanupQuickPickItem['id'], string> = {
+        github: 'Also delete the GitHub repository',
+        daLive: 'Also delete the DA.live site',
+    };
+    const asked = await askForDetailsDuringOperation({
+        message: `Delete "${project.name}"? Its files are removed from this machine. You can also delete what it created online. Sign-in may be required.`,
+        fields: items.map((item) => ({
+            id: item.id,
+            label: labels[item.id],
+            kind: 'checkbox' as const,
+            value: '',
+            description: item.description,
+        })),
+        actions: ['Delete'],
+    });
+    if (asked.action !== 'Delete') return null;
+    return {
+        deleteGitHubRepo: asked.values.github === 'true',
+        deleteDaLiveSite: asked.values.daLive === 'true',
+    };
+}
+
+/**
  * Show cleanup confirmation dialog for EDS projects
  *
- * Presents a QuickPick with checkboxes for external resources to also delete.
- * - Press Enter or click Delete → Delete local project + selected external resources
- * - Click outside or press Escape → Cancel entirely (no deletion)
+ * Asks which external resources to also delete: in the screen's progress modal when
+ * a screen started the delete, else a QuickPick with checkboxes.
+ * - Delete (or Enter) → Delete local project + selected external resources
+ * - Cancel, Escape or click outside → Cancel entirely (no deletion)
  *
+ * @param modalId - the operation id of the screen's modal, when one is showing
  * @returns Cleanup options (which external resources to delete), or null if cancelled
  */
 async function showCleanupConfirmation(
     project: Project,
     edsMetadata: ReturnType<typeof extractEdsMetadata>,
+    modalId?: string,
 ): Promise<CleanupOptions | null> {
     // Check cleanup behavior configuration setting
     const config = vscode.workspace.getConfiguration('demoBuilder');
@@ -258,11 +306,6 @@ async function showCleanupConfirmation(
         }
 
         return { deleteGitHubRepo: false, deleteDaLiveSite: false };
-    }
-
-    // Build QuickPick items matching plan: "Delete Repository", "Delete DA.live Site"
-    interface CleanupQuickPickItem extends vscode.QuickPickItem {
-        id: 'github' | 'daLive';
     }
 
     const items: CleanupQuickPickItem[] = [];
@@ -305,6 +348,10 @@ async function showCleanupConfirmation(
         }
 
         return { deleteGitHubRepo: false, deleteDaLiveSite: false };
+    }
+
+    if (modalId) {
+        return withModalAsking(modalId, () => askCleanupInModal(project, items));
     }
 
     // Cancel button for explicit cancellation

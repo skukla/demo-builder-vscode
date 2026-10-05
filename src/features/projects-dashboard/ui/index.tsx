@@ -14,7 +14,7 @@ import { WebviewApp } from '@/core/ui/components/WebviewApp';
 import { useOperationRunner } from '@/core/ui/hooks/useOperationRunner';
 import { useViewModePreference } from '@/core/ui/hooks/useViewModePreference';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import { deleteOperationId, resetOperationId } from '@/core/utils/operationIds';
+import { COPY_SETTINGS_OPERATION_ID, deleteOperationId, resetOperationId } from '@/core/utils/operationIds';
 import { sleep } from '@/core/utils/sleep';
 import type { Project } from '@/types/base';
 import type {
@@ -190,16 +190,6 @@ function ProjectsDashboardApp() {
         }
     }, []);
 
-    // Handle copy from existing project
-    const handleCopyFromExisting = useCallback(async () => {
-        try {
-            await webviewClient.postMessage('copyFromExisting');
-            // QuickPick will show, then wizard opens - handled by extension
-        } catch (error) {
-            console.error('Failed to copy from existing:', error);
-        }
-    }, []);
-
     // Handle import from file
     const handleImportFromFile = useCallback(async () => {
         try {
@@ -226,6 +216,19 @@ function ProjectsDashboardApp() {
     // screen's one progress modal (PL-59).
     const operations = useOperationRunner();
     const startOperation = operations.startWhenItBegins;
+
+    // Copy from a project: the modal asks which one, then the wizard opens with
+    // its settings (picker-to-modal).
+    const handleCopyFromExisting = useCallback(() => {
+        startOperation({
+            id: COPY_SETTINGS_OPERATION_ID,
+            name: 'settings',
+            message: 'copyFromExisting',
+            title: 'Copy settings from a project',
+            failureTitle: "Couldn't copy the settings",
+            successTitle: 'Settings copied',
+        });
+    }, [startOperation]);
 
     // Handle delete project — narrated in this screen's progress modal, which
     // opens once the run reports: VS Code asks to confirm first, and for an EDS

@@ -28,6 +28,7 @@ import {
     createExportSettings,
 } from '@/features/projects-dashboard/services/settingsSerializer';
 import { copySettingsFromProject } from '@/features/projects-dashboard/services/settingsTransferService';
+import { answerOperationPrompt, isAwaitingAnswer, withModalAsking } from '@/core/vscode/operationPrompt';
 import type { Project } from '@/types/base';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject, edsStorefrontInstance } from '../../../helpers/projectFake';
@@ -118,6 +119,34 @@ describe('copySettingsFromProject', () => {
                 settings: mockExecuteCommand.mock.calls[0][1].importedSettings,
                 sourceDescription: 'bodea-demo',
             },
+        });
+    });
+
+    describe('asked in the projects list modal', () => {
+        async function copyAndAsk() {
+            const done = withModalAsking('copy-settings', () => copySettingsFromProject(contextWith(SOURCE)));
+            for (let i = 0; i < 200 && !isAwaitingAnswer('copy-settings'); i++) {
+                await new Promise((resolve) => setTimeout(resolve, 0));
+            }
+            expect(isAwaitingAnswer('copy-settings')).toBe(true);
+            return { done };
+        }
+
+        it('opens the wizard from the project chosen there, with no QuickPick', async () => {
+            const { done } = await copyAndAsk();
+            answerOperationPrompt('copy-settings', 'Copy settings', { project: SOURCE.path });
+            await done;
+
+            expect(mockQuickPick).not.toHaveBeenCalled();
+            expect(mockExecuteCommand.mock.calls[0][1].sourceDescription).toBe(SOURCE.name);
+        });
+
+        it('opens nothing when the modal is dismissed', async () => {
+            const { done } = await copyAndAsk();
+            answerOperationPrompt('copy-settings', undefined, { project: SOURCE.path });
+
+            expect((await done).data).toEqual({ success: false, error: 'cancelled' });
+            expect(mockExecuteCommand).not.toHaveBeenCalled();
         });
     });
 });

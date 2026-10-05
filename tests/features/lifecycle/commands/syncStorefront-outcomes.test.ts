@@ -28,6 +28,11 @@ import {
     type SyncStorefrontOutcome,
 } from './syncStorefront.testUtils';
 import type { StateManager } from '@/core/state/stateManager';
+import {
+    answerOperationPrompt,
+    isAwaitingAnswer,
+    withModalAsking,
+} from '@/core/vscode/operationPrompt';
 import type { Project } from '@/types/base';
 
 const STOREFRONT = '/projects/demo/components/eds-storefront';
@@ -87,6 +92,29 @@ describe('execute — the inputs it gathers', () => {
             value: 'Demo Builder: sync local changes',
             placeHolder: 'Describe what changed',
         });
+    });
+
+    it('asks for the commit message in the progress modal when one is showing', async () => {
+        const done = withModalAsking('sync', () => runCommand());
+        for (let i = 0; i < 200 && !isAwaitingAnswer('sync'); i++) {
+            await new Promise((resolve) => setTimeout(resolve, 0));
+        }
+        answerOperationPrompt('sync', 'Sync', { message: 'New hero copy' });
+        await done;
+
+        expect(vscode.window.showInputBox).not.toHaveBeenCalled();
+        expect(syncAndPublishMock.mock.calls[0][0].commitMessage).toBe('New hero copy');
+    });
+
+    it('syncs nothing when the modal question is dismissed', async () => {
+        const done = withModalAsking('sync', () => runCommand());
+        for (let i = 0; i < 200 && !isAwaitingAnswer('sync'); i++) {
+            await new Promise((resolve) => setTimeout(resolve, 0));
+        }
+        answerOperationPrompt('sync', undefined, { message: 'x' });
+
+        expect(await done).toEqual({ success: false, cancelled: true });
+        expect(syncAndPublishMock).not.toHaveBeenCalled();
     });
 
     it('forwards NO GitHub token when the token service has none', async () => {

@@ -356,10 +356,18 @@ export interface OperationPrompt {
     fields?: OperationPromptField[];
 }
 
-/** One thing the SC types into a question the modal is asking. */
+/** One thing the SC answers in a question the modal is asking. */
 export interface OperationPromptField {
     id: string;
     label: string;
+    /**
+     * What is asked: something typed (the default), a box to tick — answered
+     * `'true'` or `''` — or one of `options`, answered with the option's id. Every
+     * answer is a string, so a question's values stay `Record<string, string>`.
+     */
+    kind?: 'text' | 'checkbox' | 'choice';
+    /** The answers a `choice` offers. */
+    options?: OperationPromptOption[];
     /** What it is already, so re-asking after an error keeps what was typed. */
     value?: string;
     placeholder?: string;
@@ -367,6 +375,12 @@ export interface OperationPromptField {
     description?: string;
     /** A credential: masked as it is typed. */
     secret?: boolean;
+}
+
+/** One answer a `choice` field offers. */
+export interface OperationPromptOption {
+    id: string;
+    label: string;
 }
 
 /** `appBuilderComponentsSnapshot` — the full fresh persisted map. */

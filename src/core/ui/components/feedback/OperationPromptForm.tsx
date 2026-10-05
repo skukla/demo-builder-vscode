@@ -2,7 +2,7 @@
  * What the SC types to let a paused operation carry on (PL-59, owner 2026-09-20).
  *
  * The progress modal asks its own questions; when one needs a value — the DA.live
- * namespace, a pasted token — it asks here rather than handing off to a VS Code
+ * namespace, a pasted token, a box to tick, one of a few choices — it asks here rather than handing off to a VS Code
  * input box. Handing off is the defect this whole change removes, one step along:
  * one question, two surfaces.
  *
@@ -19,7 +19,7 @@
  * @module core/ui/components/feedback/OperationPromptForm
  */
 
-import { Flex, TextField } from '@adobe/react-spectrum';
+import { Checkbox, Flex, Item, Picker, Text, TextField } from '@adobe/react-spectrum';
 import React, { useEffect, useState } from 'react';
 import type { OperationPromptField } from '@/types/webviewPayloads';
 
@@ -29,9 +29,59 @@ export interface OperationPromptFormProps {
     onChange: (values: Record<string, string>) => void;
 }
 
-/** What the fields say they already hold — a re-ask keeps what was typed. */
+/** What the fields say they already hold — a re-ask keeps what was typed. A choice
+ * with nothing chosen starts on its first option, so it is never answered empty. */
 function initialValues(fields: OperationPromptField[]): Record<string, string> {
-    return Object.fromEntries(fields.map((field) => [field.id, field.value ?? '']));
+    return Object.fromEntries(
+        fields.map((field) => [
+            field.id,
+            field.value ?? (field.kind === 'choice' ? (field.options?.[0]?.id ?? '') : ''),
+        ]),
+    );
+}
+
+/** One field, as its kind asks. */
+function PromptField({ field, value, onChange }: {
+    field: OperationPromptField;
+    value: string;
+    onChange: (value: string) => void;
+}): React.ReactElement {
+    if (field.kind === 'checkbox') {
+        return (
+            <Flex direction="column">
+                <Checkbox isSelected={value === 'true'} onChange={(on) => onChange(on ? 'true' : '')}>
+                    {field.label}
+                </Checkbox>
+                {field.description && <Text>{field.description}</Text>}
+            </Flex>
+        );
+    }
+    if (field.kind === 'choice') {
+        return (
+            <Picker
+                label={field.label}
+                selectedKey={value}
+                onSelectionChange={(key) => onChange(String(key))}
+                description={field.description}
+                width="100%"
+            >
+                {(field.options ?? []).map((option) => (
+                    <Item key={option.id} textValue={option.label}>{option.label}</Item>
+                ))}
+            </Picker>
+        );
+    }
+    return (
+        <TextField
+            label={field.label}
+            type={field.secret ? 'password' : 'text'}
+            value={value}
+            onChange={onChange}
+            placeholder={field.placeholder}
+            description={field.description}
+            width="100%"
+        />
+    );
 }
 
 /** The fields of one question, in the order the guard asked for them. */
@@ -62,15 +112,11 @@ export function OperationPromptForm({
     return (
         <Flex direction="column" gap="size-200" width="100%">
             {fields.map((field) => (
-                <TextField
+                <PromptField
                     key={field.id}
-                    label={field.label}
-                    type={field.secret ? 'password' : 'text'}
+                    field={field}
                     value={values[field.id] ?? ''}
                     onChange={(value) => change(field.id, value)}
-                    placeholder={field.placeholder}
-                    description={field.description}
-                    width="100%"
                 />
             ))}
         </Flex>

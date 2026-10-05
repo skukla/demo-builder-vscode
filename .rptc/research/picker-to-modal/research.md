@@ -131,6 +131,18 @@ about a second, where the picker was instant.
    Each one is behaviour-preserving on the palette path, so its existing tests should stay green
    except for the pins on the modal path.
 
+### Done (2026-10-05)
+
+- Field kinds shipped as `kind: 'text' | 'checkbox' | 'choice'`, not `'checkboxes'`. One box per
+  field answers `'true'` or `''`, so `values` stays `Record<string, string>` and needed no widening.
+- **Delete cleanup** asks one box per external resource in the delete's modal.
+- **Save to GitHub** now starts through the integrations screen's operation runner. The owner
+  choice, the repository name and the confirmation are one modal question; Create is the yes.
+- **Copy settings** starts through the projects list's runner (`COPY_SETTINGS_OPERATION_ID`) and
+  asks which project with a choice field.
+- **Sync commit message** asks in the dashboard's modal. The palette keeps its input box.
+- Site access window: not started.
+
 Estimated size: one small shared change (field kinds plus form rendering), then four call
 sites. Low risk, because each site keeps its fallback. The Site access window is the largest
 single item: a new webview over existing services, replacing about 679 lines of picker flow.

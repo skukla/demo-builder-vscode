@@ -14,7 +14,7 @@ beforeEach(() => {
 });
 
 describe('IntegrationsGrid repository verbs', () => {
-    it('sends the save for a blank-starter app', async () => {
+    it('starts the save for a blank-starter app in the progress modal, which asks where', async () => {
         const user = setupUser();
         renderGrid({
             appBuilderComponents: {
@@ -27,6 +27,7 @@ describe('IntegrationsGrid repository verbs', () => {
 
         expect(getClient().postMessage).toHaveBeenCalledWith('promoteAppBuilderComponent', {
             id: 'order-sync',
+            progress: 'modal',
         });
     });
 
