@@ -37,3 +37,7 @@ Let `add_integration` take the entry's text settings at add time (e.g. `settings
 that the ERP's name is fixed once added. Human and agent surface then agree.
 
 Undo: unchanged — `remove_integration` already removes the pair.
+
+## Shipped so far
+
+- 2026-10-04  docs(backlog): AB-67 — an agent cannot name the first ERP when it adds the ERP integration (`e06700b37`)
