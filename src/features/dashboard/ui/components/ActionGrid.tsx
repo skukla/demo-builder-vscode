@@ -11,10 +11,10 @@
  *    the project through — see it as a customer, edit it as a creator,
  *    manage it as an admin.
  *  - Storefront zone (EDS only): Republish — the remedy carrying the
- *    storefront-drift dot — and Catalog Menu (EDS-24). Sync Storefront used
- *    to sit here and moved to the More menu: its main consumer is the AI
- *    loop, where a PostToolUse hook commits and pushes automatically, and it
- *    is EDS-only in an otherwise near-universal row.
+ *    storefront-drift dot. Sync Storefront used to sit here and moved to the
+ *    More menu: its main consumer is the AI loop, where a PostToolUse hook
+ *    commits and pushes automatically, and it is EDS-only in an otherwise
+ *    near-universal row.
  *  - Build zone: Configure and a "More" overflow menu holding Export, Sync
  *    Storefront (EDS only), Refresh Block Library (EDS only), Dev Console,
  *    Reset, and Delete (destructive, last).
@@ -90,7 +90,6 @@ import Refresh from '@spectrum-icons/workflow/Refresh';
 import Replay from '@spectrum-icons/workflow/Replay';
 import Settings from '@spectrum-icons/workflow/Settings';
 import StopCircle from '@spectrum-icons/workflow/StopCircle';
-import TextBulletedHierarchy from '@spectrum-icons/workflow/TextBulletedHierarchy';
 import UserAdmin from '@spectrum-icons/workflow/UserAdmin';
 import React from 'react';
 import type { MeshStatus, StatusDisplay } from '../hooks/useDashboardStatus';
@@ -179,11 +178,6 @@ export interface ActionGridProps {
     handleRefreshBlockLibrary?: () => void;
     /** Handler for Republish Content overflow item (EDS projects only) */
     handleRepublishContent?: () => void;
-    /**
-     * Opens the catalog menu dialog (EDS-24): build the storefront's menu from the
-     * Commerce category tree, or remove it. EDS only — it writes storefront pages.
-     */
-    handleCatalogMenu?: () => void;
     /** Handler for Configure button */
     handleConfigure: () => void;
     /** Handler for Dev Console button (overflow menu) */
@@ -510,21 +504,15 @@ function PrimaryZone({
  * button that does not fix the state it reports. Only storefrontRepublishService
  * clears it.
  *
- * Catalog Menu (EDS-24) sits beside it: it writes category pages and the nav, so it is
- * storefront content too. One tile opening a dialog that offers Build and Remove,
- * rather than two tiles — the undo belongs next to the thing it undoes.
- *
  * Extracted for the same reason as PrimaryZone: inline, its conditionals pushed
  * ActionGrid past its complexity budget.
  */
 function StorefrontZone({
     needsRepublish,
     handleRepublishContent,
-    handleCatalogMenu,
 }: {
     needsRepublish: boolean;
     handleRepublishContent?: () => void;
-    handleCatalogMenu?: () => void;
 }): React.ReactElement {
     return (
         <div className="dashboard-zone-section" data-zone="storefront">
@@ -538,15 +526,6 @@ function StorefrontZone({
                         icon={<Replay size="L" />}
                         testId="republish-tile"
                         onPress={handleRepublishContent}
-                    />
-                )}
-                {handleCatalogMenu && (
-                    <DashboardTile
-                        label="Catalog Menu"
-                        icon={<TextBulletedHierarchy size="L" />}
-                        onPress={handleCatalogMenu}
-                        action="catalog-menu-tile"
-                        tooltip="Build the menu from the Commerce catalog, or remove it"
                     />
                 )}
             </div>
@@ -577,7 +556,6 @@ export function ActionGrid({
     handleSyncStorefront,
     handleRefreshBlockLibrary,
     handleRepublishContent,
-    handleCatalogMenu,
     handleConfigure,
     handleOpenDevConsole,
     handleOpenAemAssets,
@@ -652,7 +630,6 @@ export function ActionGrid({
                     <StorefrontZone
                         needsRepublish={needsRepublish}
                         handleRepublishContent={handleRepublishContent}
-                        handleCatalogMenu={handleCatalogMenu}
                     />
                 )}
                 {/* Build zone — deploy/configure plus an overflow menu. On the same

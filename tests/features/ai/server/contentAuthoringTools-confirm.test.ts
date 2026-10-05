@@ -6,8 +6,7 @@
  * overwrites the DA.live source the live site is built from, and with publish:true
  * publishes it too. So both refuse without `confirm:true`, and the refusal names
  * the storefront and the page so the agent can put the question to the SC in
- * those words. Same shape as `build_catalog_menu` (catalogMenuTools.ts): the
- * sign-in pre-flight runs first, then the gate, then the write.
+ * those words. The sign-in pre-flight runs first, then the gate, then the write.
  */
 
 import {

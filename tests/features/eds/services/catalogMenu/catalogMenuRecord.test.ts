@@ -31,7 +31,11 @@ function withMetadata(metadata: Record<string, unknown> | undefined): Project {
     });
 }
 
-const RECORD = { pages: [{ path: '/safety-signs', hash: 'abc' }], navSwitch: true };
+const RECORD = {
+    pages: [{ path: '/safety-signs', hash: 'abc' }],
+    links: [{ urlPath: 'signs', path: '/safety-signage' }],
+    navSwitch: true,
+};
 
 describe('readCatalogMenuRecord', () => {
     it('reads the record kept on the storefront instance', () => {
@@ -40,15 +44,15 @@ describe('readCatalogMenuRecord', () => {
     });
 
     it('is the empty record when there is none', () => {
-        expect(readCatalogMenuRecord(withMetadata({ githubRepo: 'a/b' }))).toEqual({ pages: [], navSwitch: false });
-        expect(readCatalogMenuRecord(withMetadata(undefined))).toEqual({ pages: [], navSwitch: false });
+        expect(readCatalogMenuRecord(withMetadata({ githubRepo: 'a/b' }))).toEqual({ pages: [], links: [], navSwitch: false });
+        expect(readCatalogMenuRecord(withMetadata(undefined))).toEqual({ pages: [], links: [], navSwitch: false });
     });
 
     it('drops page entries that do not read as a path and a hash, and a non-boolean switch', () => {
         const project = withMetadata({
             catalogMenu: { pages: [{ path: '/a' }, { path: '/b', hash: 'h' }, 'x'], navSwitch: 'yes' },
         });
-        expect(readCatalogMenuRecord(project)).toEqual({ pages: [{ path: '/b', hash: 'h' }], navSwitch: false });
+        expect(readCatalogMenuRecord(project)).toEqual({ pages: [{ path: '/b', hash: 'h' }], links: [], navSwitch: false });
     });
 });
 
@@ -68,7 +72,7 @@ describe('writeCatalogMenuRecord', () => {
     it('deletes the key once nothing is claimed, so an undone project carries no trace', () => {
         const project = withMetadata({ githubRepo: 'a/b', catalogMenu: RECORD });
 
-        writeCatalogMenuRecord(project, { pages: [], navSwitch: false });
+        writeCatalogMenuRecord(project, { pages: [], links: [], navSwitch: false });
 
         expect(project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata).toEqual({ githubRepo: 'a/b' });
     });

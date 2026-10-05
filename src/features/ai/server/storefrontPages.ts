@@ -1,19 +1,14 @@
 /**
- * The current project's storefront pages: where they live, the clients that reach them,
- * and one page adapter over both (EDS-24).
+ * The current project's storefront: where its pages live and the clients that reach them.
  *
  * `storefrontTarget`, `daLiveOps` and `helixFor` moved here from `contentAuthoringTools.ts`
- * unchanged, so the content tools and the catalog menu resolve the storefront the same
- * way. {@link createStorefrontPages} is the catalog menu's `StorefrontPages` port over the
- * same calls `read_page`, `write_page` (with publish) and `delete_page` make, in the same
- * order — used by the agent's tools and the dashboard alike.
+ * unchanged. The catalog menu's page port over the same calls is
+ * `features/eds/services/catalogMenu/storefrontPageAdapter.ts` (EDS-24).
  *
  * @module features/ai/server/storefrontPages
  */
 
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
-import type { StorefrontPages } from '@/features/eds/services/catalogMenu/catalogMenuService';
-import { resolveDaPath } from '@/features/eds/services/daLive/daLiveContentHelpers';
 import {
     DaLiveContentOperations,
     createDaLiveServiceTokenProvider,
@@ -84,72 +79,4 @@ export function helixFor(ctx: HandlerContext): HelixService {
         getGitHubServices(ctx.context.secrets).tokenService,
         createDaLiveServiceTokenProvider(getDaLiveAuthService(ctx.context)),
     );
-}
-
-/** The two clients the page adapter drives — narrowed to the calls it makes. */
-export interface PageTransport {
-    daLive: Pick<DaLiveContentOperations, 'readSource' | 'createSource' | 'deleteSource'>;
-    helix: Pick<HelixService, 'previewAndPublishPage' | 'unpublishPage'>;
-}
-
-/** DA source path for a web path — `/nav` → `nav.html`. The content pipeline's own rule. */
-function sourcePathOf(webPath: string): string {
-    return resolveDaPath(webPath, true);
-}
-
-/**
- * The catalog menu's page port over DA.live and Helix.
- *
- * - `read` reads WHOLE: a cut-short page written back would lose its tail, so a
- *   truncated read throws instead of answering.
- * - `write` is `write_page` with `publish: true`: overwrite the source, then preview and
- *   publish; a failure at either step throws, so nothing is recorded as live that is not.
- * - `remove` is `delete_page`: unpublish FIRST and stop if that fails (the source stays,
- *   so the page can still be removed), then delete the source.
- *
- * @param transport - the DA.live and Helix clients
- * @param target - the storefront's DA.live org and site
- * @returns the pages, by web path
- */
-export function createStorefrontPages(
-    transport: PageTransport,
-    target: Pick<StorefrontTarget, 'daLiveOrg' | 'daLiveSite'>,
-): StorefrontPages {
-    const { daLiveOrg: org, daLiveSite: site } = target;
-    return {
-        async read(path) {
-            const res = await transport.daLive.readSource(org, site, sourcePathOf(path), Number.POSITIVE_INFINITY);
-            if (res.status === 404) return null;
-            if (res.status < 200 || res.status >= 300) {
-                throw new Error(`Could not read ${path}: HTTP ${res.status}`);
-            }
-            if (res.truncated) throw new Error(`Could not read all of ${path}`);
-            return res.body;
-        },
-        async write(path, html) {
-            const written = await transport.daLive.createSource(org, site, sourcePathOf(path), html, {
-                overwrite: true,
-            });
-            if (!written.success) throw new Error(written.error ?? `Could not write ${path}`);
-            await transport.helix.previewAndPublishPage(org, site, path);
-        },
-        async remove(path) {
-            if (!(await transport.helix.unpublishPage(org, site, path))) {
-                throw new Error(`Could not unpublish ${path}; its source was left in place`);
-            }
-            const deleted = await transport.daLive.deleteSource(org, site, sourcePathOf(path));
-            if (!deleted.success) throw new Error(deleted.error ?? `Could not delete ${path}`);
-        },
-    };
-}
-
-/**
- * The page adapter for the current project's storefront, from a handler context.
- *
- * @param ctx - the handler context whose sign-ins the clients use
- * @param target - the storefront
- * @returns the pages
- */
-export function storefrontPagesFor(ctx: HandlerContext, target: StorefrontTarget): StorefrontPages {
-    return createStorefrontPages({ daLive: daLiveOps(ctx), helix: helixFor(ctx) }, target);
 }

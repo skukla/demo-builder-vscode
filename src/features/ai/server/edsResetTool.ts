@@ -149,6 +149,9 @@ export async function runEdsReset(
             // Applied by this reset, and fitting but left for the user to accept
             // (call again with applyFixes:true once they agree) (EDS-13f).
             ...(result.demoFixes ? { fixes: result.demoFixes } : {}),
+            // Category pages and the catalog menu, re-written by the reset (EDS-24) —
+            // including pages someone else made, left alone by name.
+            ...(result.catalogMenu ? { categoryPages: result.catalogMenu } : {}),
             filesReset: result.filesReset,
             contentCopied: result.contentCopied,
             meshRedeployed: result.meshRedeployed,

@@ -8,13 +8,16 @@
  */
 
 import {
+    CATALOG_MENU_SITE,
     helixInstance,
     mockExecuteEdsPipeline,
     mockHelixService,
     mockMigrate,
     mockPreviewCode,
     mockPublishConfig,
+    mockPutBackCatalogMenu,
     mockResetRepoToTemplate,
+    mockTakeOutCatalogMenu,
     mockTokenProvider,
     pipelineProgressCallback,
     resetOrchestrationMocks,
@@ -327,6 +330,59 @@ describe('executeEdsReset - content pipeline', () => {
             success: false,
             error: 'Reset cancelled — DA.live re-authentication required',
         });
+    });
+});
+
+describe('executeEdsReset - category pages and the catalog menu (EDS-24)', () => {
+    it('takes them out BEFORE the content pipeline and puts them back AFTER it, on the same site', async () => {
+        const { params, context } = await runReset();
+
+        const takeOut = mockTakeOutCatalogMenu.mock.invocationCallOrder[0];
+        const pipeline = mockExecuteEdsPipeline.mock.invocationCallOrder[0];
+        const putBack = mockPutBackCatalogMenu.mock.invocationCallOrder[0];
+        expect(takeOut).toBeLessThan(pipeline);
+        expect(pipeline).toBeLessThan(putBack);
+
+        expect(mockTakeOutCatalogMenu).toHaveBeenCalledWith(
+            params,
+            context.logger,
+            expect.objectContaining({
+                daLiveContentOps: expect.any(DaLiveContentOperations),
+                tokenProvider: mockTokenProvider,
+            }),
+            expect.any(Function),
+        );
+        expect(mockPutBackCatalogMenu).toHaveBeenCalledWith(
+            params,
+            CATALOG_MENU_SITE,
+            context.logger,
+            expect.any(Function),
+        );
+    });
+
+    it("carries the step's sentence on the result, so the agent and the SC see the clash report", async () => {
+        mockPutBackCatalogMenu.mockResolvedValue("Left 1 page alone because Demo Builder didn't write it.");
+
+        const { result } = await runReset();
+
+        expect(result).toMatchObject({
+            success: true,
+            catalogMenu: "Left 1 page alone because Demo Builder didn't write it.",
+        });
+    });
+
+    it('adds nothing to the result when the storefront has no catalog menu', async () => {
+        const { result } = await runReset();
+        expect(result).not.toHaveProperty('catalogMenu');
+    });
+
+    it('does not put anything back when the content pipeline fails', async () => {
+        mockExecuteEdsPipeline.mockResolvedValue({ success: false, error: 'copy failed' });
+
+        await runReset();
+
+        expect(mockTakeOutCatalogMenu).toHaveBeenCalled();
+        expect(mockPutBackCatalogMenu).not.toHaveBeenCalled();
     });
 });
 

@@ -15,7 +15,7 @@
  * 8. Clear + copy demo content to DA.live
  * 9. Create block library in DA.live
  * 10. Apply EDS settings
- * 11. Purge cache + publish content
+ * 11. Purge cache + publish content; category pages + catalog menu re-written (EDS-24)
  * 12. (Optional) Redeploy API Mesh
  *
  * @module features/eds/services/reset/edsResetService
@@ -40,6 +40,7 @@ import { createPatchReport, addCodeResult, reportUnapplied } from '../patches/pa
 import { migrateStorefrontNamingIfNeeded } from '../storefront/storefrontNameMigration';
 import { updateStorefrontState } from '../storefront/storefrontStalenessDetector';
 import { GitHubAppNotInstalledError } from '../types';
+import { putBackCatalogMenu, takeOutCatalogMenu } from './edsResetCatalogMenu';
 import {
     publishConfigAndRegisterSite,
     type ConfigStepServices,
@@ -136,10 +137,6 @@ async function syncCodeAndPermissions(
     }
 }
 
-/**
- * Handle a DA.live authentication failure mid-pipeline by prompting re-authentication.
- * Returns on success (caller should continue the pipeline loop); throws on cancellation.
- */
 /** Map a pipeline progress event to the wizard step number and format the message. */
 function mapPipelineProgress(
     info: { operation: string; message: string; current?: number; total?: number },
@@ -465,6 +462,11 @@ export async function executeEdsReset(
             services,
         );
 
+        // Category pages and the menu switch come out before the content is re-copied,
+        // and go back in after it is published (EDS-24, `edsResetCatalogMenu.ts`).
+        const clients = { daLiveContentOps, githubFileOps, githubTokenService, tokenProvider };
+        const catalogMenuSite = await takeOutCatalogMenu(params, context.logger, clients, report);
+
         // Steps 8-11: Content Pipeline (with DA.live re-auth retry)
         contentCopied = await runContentPipeline(
             params,
@@ -476,11 +478,12 @@ export async function executeEdsReset(
             context,
             report,
         );
+        const catalogMenu = await putBackCatalogMenu(params, catalogMenuSite, context.logger, report);
         recordSyncedCommit(params.project, repoResetResult.templateCommitSha, context.logger);
         recordBoilerplate(params.project, repoResetResult.boilerplate);
 
         // Steps 11-12: CDN verification + optional mesh redeploy + state persistence
-        return await finalizeReset(
+        const result = await finalizeReset(
             params,
             context,
             report,
@@ -490,6 +493,7 @@ export async function executeEdsReset(
             configWritten,
             { demoCaveats: repoResetResult.demoCaveats, demoFixes: repoResetResult.demoFixes },
         );
+        return catalogMenu === undefined ? result : { ...result, catalogMenu };
     } catch (error) {
         return handleResetError(error, context.logger);
     }

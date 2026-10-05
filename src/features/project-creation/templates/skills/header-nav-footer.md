@@ -59,11 +59,13 @@ Site chrome appears on every page. The Mod Agent processes pages individually, s
 
 6. **For nav structure**: read the reference's nav from the scrape and replicate the hierarchy in the storefront's `nav` page in DA.live (read it with `read_page` on `/nav`; change it with `write_page`, which asks the user first and needs `confirm: true`). EDS pulls nav content from that page, not from hardcoded markup.
 
+   **Product categories come from Commerce, not from typing.** When the storefront has the Demo Builder Blocks library, the nav already holds a "Shop the catalog" line and a `catalog-menu` block, written at storefront setup: in the browser the line becomes one menu entry per Commerce category the shopper may see, and each category has its own page, also written at setup. Keep that line where the reference shows its product menu; `Shop the catalog: <category name>` places one category and its sub-categories. Do not type the category tree into the nav or write category pages by hand. A category added in Commerce later gets its page from `sync_content`. The `catalog-menu` table may hold two-cell rows, a category's url path then a page (`signs | /safety-signage`): each links that category's menu entry to a page that is not at the category's own address. Demo Builder writes one for every hand-built category page it finds; keep those rows, and add or edit one to point a category at a different page.
+
 ## What NOT to do
 
 - **Don't hardcode brand-specific menu items in nav block code.** Put them in the nav document. EDS authoring expects nav content to be editable by content authors, not developers.
 - **Don't duplicate the chrome per page.** Site chrome is global; it lives once and renders everywhere.
-- **Don't ship the reference's mega-menu structure verbatim** if it includes real product categories. Replace with demo-appropriate categories from the demo's catalog.
+- **Don't ship the reference's mega-menu structure verbatim** if it includes real product categories. Replace it with the demo's own categories — the catalog-menu line draws them from Commerce.
 - **Don't omit a11y attributes.** Headers, nav, and footer need proper ARIA landmarks (`<header>`, `<nav role="navigation">`, `<footer>`, skip-to-content link). Adobe's existing chrome blocks ship these — don't strip them.
 
 ## Verification

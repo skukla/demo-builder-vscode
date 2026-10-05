@@ -42,6 +42,7 @@ import { getAppBuilderComponentEntry } from '@/features/components/services/appB
 import { migrateDeclaredSecrets } from '@/features/components/services/commerceSecretMigration';
 import { componentRegistryFrom } from '@/features/components/services/componentRegistryAccess';
 import { generateAIContextFiles } from '@/features/project-creation/services/aiBundle/aiBundleService';
+import { executeCatalogMenuPhase } from '@/features/project-creation/services/catalogMenuPhase';
 import { executeCatalogPrewarmPhase } from '@/features/project-creation/services/catalogPrewarmPhase';
 import { cloneAllComponents, installAllComponents } from '@/features/project-creation/services/componentInstallationOrchestrator';
 import { finalizeProject, generateEnvironmentFiles, sendCompletionAndCleanup } from '@/features/project-creation/services/projectFinalizationService';
@@ -426,6 +427,17 @@ export async function executeProjectCreation(
     // and impossible for creation, where the pipeline runs during storefront
     // setup and the datapack lands here. Never throws.
     await executeCatalogPrewarmPhase(context, project, progressTracker);
+
+    // ========================================================================
+    // PHASE 5e: CATEGORY PAGES AND THE CATALOG MENU (EDS-24)
+    // ========================================================================
+    //
+    // AFTER sample data for the same reason as pre-warming: the categories the pages
+    // are written for arrive with the datapack. Acts only on a storefront that has the
+    // catalog-menu block; reset and republish run the same step. Never throws.
+    if (isEdsStack) {
+        await executeCatalogMenuPhase(context, project, progressTracker, existingProject);
+    }
 
     await finalizeProject(finalizationContext);
     await sendCompletionAndCleanup(finalizationContext);

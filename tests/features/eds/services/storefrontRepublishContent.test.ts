@@ -30,6 +30,13 @@ jest.mock('@/features/eds/services/catalogPrewarmService', () => ({
     prewarmCatalog: jest.fn(async () => ({ attempted: 2, succeeded: 2, failed: 0, skipped: false })),
 }));
 
+// The catalog menu step has its own suite (catalogMenuStep.test.ts); here it is walled
+// and asserted by what republish hands it and does with its answer (EDS-24).
+const mockApplyCatalogMenuStep = jest.fn();
+jest.mock('@/features/eds/services/catalogMenu/catalogMenuStep', () => ({
+    applyCatalogMenuStep: (...a: unknown[]) => mockApplyCatalogMenuStep(...a),
+}));
+
 import { republishStorefrontContent } from '@/features/eds/services/storefront/storefrontRepublishService';
 import { verifyConfigOnCdn } from '@/features/eds/services/configSyncService';
 import { resolveByomOverlayConfig } from '@/features/eds/handlers/byomOverlay';
@@ -65,13 +72,18 @@ function params(overrides: Record<string, unknown> = {}) {
         logger,
         daLiveAuthService: { getUserEmail: jest.fn(async () => 'u@example.com') },
         githubTokenService: {},
+        githubFiles: { getFileContent: jest.fn().mockResolvedValue(null) },
+        persist: jest.fn(async () => undefined),
         helixService: fakeHelix,
         ...overrides,
     } as unknown as Parameters<typeof republishStorefrontContent>[0];
 }
 
 describe('republishStorefrontContent', () => {
-    beforeEach(() => jest.clearAllMocks());
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockApplyCatalogMenuStep.mockResolvedValue(undefined);
+    });
 
     it('runs the pipeline (code → purge → publish → verify) and returns success', async () => {
         const res = await republishStorefrontContent(params());
@@ -145,6 +157,47 @@ describe('republishStorefrontContent', () => {
             expect(logger.warn).toHaveBeenCalledWith(
                 expect.stringContaining('pre-warming failed (non-fatal)'),
             );
+        });
+    });
+
+    describe('category pages and the catalog menu ride the republish (EDS-24)', () => {
+        it("re-applies after the content publish, on this storefront's pages and repository", async () => {
+            const p = params();
+            await republishStorefrontContent(p);
+
+            const [project, site] = mockApplyCatalogMenuStep.mock.calls[0];
+            expect(project).toBe(p.project);
+            await site.hasBlock();
+            expect(p.githubFiles.getFileContent).toHaveBeenCalledWith(
+                'me',
+                'shop',
+                'blocks/catalog-menu/catalog-menu.js',
+            );
+            const publishOrder = mockPublishAllSiteContent.mock.invocationCallOrder[0];
+            expect(mockApplyCatalogMenuStep.mock.invocationCallOrder[0]).toBeGreaterThan(publishOrder);
+        });
+
+        it('carries the sentence on the result, shows it, and keeps the record on the project', async () => {
+            mockApplyCatalogMenuStep.mockResolvedValue('Wrote and published 1 category page.');
+            const onProgress = jest.fn();
+            const p = params({ onProgress });
+
+            const res = await republishStorefrontContent(p);
+
+            expect(res).toEqual({
+                success: true,
+                cdnVerified: true,
+                catalogMenu: 'Wrote and published 1 category page.',
+            });
+            expect(onProgress).toHaveBeenCalledWith('Wrote and published 1 category page.');
+            expect(p.persist).toHaveBeenCalledWith(p.project);
+        });
+
+        it('adds nothing and saves nothing extra when the storefront has no catalog menu', async () => {
+            const p = params();
+            const res = await republishStorefrontContent(p);
+            expect(res).toEqual({ success: true, cdnVerified: true });
+            expect(p.persist).not.toHaveBeenCalled();
         });
     });
 });

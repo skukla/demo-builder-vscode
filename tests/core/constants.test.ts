@@ -132,8 +132,9 @@ describe('AI_CONTEXT_VERSION', () => {
     // real open_view name, one true answer on PDP blocks, no blocks the template lacks.
     // v36: the author-commerce-data skill (AI-10). Without the bump, existing projects
     // never receive it.
-    it('is 36 (a skill for building catalog data in the project store)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(36);
+    // v37: category pages are written at storefront setup (EDS-24); two skills say so.
+    it('is 37 (category pages and the catalog menu come from storefront setup)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(37);
     });
 });
 

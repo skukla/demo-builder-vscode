@@ -280,43 +280,6 @@ export interface RemoveDemoPackageResult {
     removedFromList: boolean;
 }
 
-/** A page a catalog menu run left alone: the SC edited it, or Demo Builder never wrote it. */
-export interface CatalogMenuPageSkip {
-    path: string;
-    reason: 'edited' | 'not-ours';
-}
-
-/** A page a catalog menu run could not write or remove. */
-export interface CatalogMenuPageFailure {
-    path: string;
-    error: string;
-}
-
-/** `buildCatalogMenu` — what the run wrote, left alone and could not do (EDS-24). */
-export interface BuildCatalogMenuResult {
-    /** The run in plain words, for the SC. */
-    summary: string;
-    /** Web paths written and published. */
-    written: string[];
-    skipped: CatalogMenuPageSkip[];
-    failed: CatalogMenuPageFailure[];
-    /** Categories whose url path the storefront cannot serve; no page was written. */
-    unsafe: Array<{ name: string; urlPath: string }>;
-    nav: 'added' | 'already-present' | 'no-menu-list' | 'not-a-page' | 'missing' | 'failed';
-    navError?: string;
-}
-
-/** `removeCatalogMenu` — what the undo removed and left (EDS-24). */
-export interface RemoveCatalogMenuResult {
-    summary: string;
-    removed: string[];
-    alreadyGone: string[];
-    skipped: CatalogMenuPageSkip[];
-    failed: CatalogMenuPageFailure[];
-    nav: 'removed' | 'not-present' | 'not-recorded' | 'missing' | 'failed';
-    navError?: string;
-}
-
 export interface ChangeDemoSourceResult {
     /** The project's row now. */
     demo: AddedDemo;

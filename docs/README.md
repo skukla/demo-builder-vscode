@@ -102,6 +102,7 @@ Enforced by `tests/sop/doc-module-refs.test.ts` — each area's front door must 
   [systems/data-installer.md](systems/data-installer.md) ·
   [systems/prerequisites-system.md](systems/prerequisites-system.md) ·
   [systems/custom-block-libraries.md](systems/custom-block-libraries.md) ·
+  [systems/category-pages.md](systems/category-pages.md) ·
   [systems/project-file-format.md](systems/project-file-format.md) ·
   [systems/moving-projects.md](systems/moving-projects.md) ·
   [systems/sharing-a-demo.md](systems/sharing-a-demo.md)

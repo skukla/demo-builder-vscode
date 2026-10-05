@@ -400,4 +400,29 @@ describe('spine choke-points', () => {
         expect(hits).toEqual(expect.arrayContaining(spine));
         expect(hits.filter((f) => !spine.includes(f))).toStrictEqual([]);
     });
+
+    it('category PAGES: one step writes and removes them, from the three storefront flows only', () => {
+        // Audited 2026-10-05 (EDS-24 redesign, no button). The primitive is the service
+        // pair that writes and removes the category pages and the nav switch; only the
+        // step calls it, because the step is what keeps the record on the project.
+        // The step itself is reached from exactly three doors: project creation (the
+        // wizard and create_project, via the executor), reset (dashboard Reset and
+        // reset_project, via executeEdsReset), and republish (dashboard Republish and
+        // sync_content, via republishStorefrontContent).
+        const primitive = /\b(applyCatalogMenu|removeCatalogMenu)\(/;
+        expect(filesTouchingPrimitive(primitive)).toStrictEqual([
+            'features/eds/services/catalogMenu/catalogMenuService.ts',
+            'features/eds/services/catalogMenu/catalogMenuStep.ts',
+        ]);
+
+        const doors = [
+            'features/eds/services/catalogMenu/catalogMenuStep.ts',
+            'features/eds/services/reset/edsResetCatalogMenu.ts',
+            'features/eds/services/storefront/storefrontRepublishService.ts',
+            'features/project-creation/services/catalogMenuPhase.ts',
+        ];
+        const stepHits = filesTouchingPrimitive(/\b(applyCatalogMenuStep|removeCatalogMenuStep)\(/);
+        expect(stepHits).toEqual(expect.arrayContaining(doors));
+        expect(stepHits.filter((f) => !doors.includes(f))).toStrictEqual([]);
+    });
 });

@@ -22,6 +22,7 @@ import type {
     StorefrontPages,
 } from '@/features/eds/services/catalogMenu/catalogMenuService';
 import type { CatalogCategory } from '@/features/eds/services/catalogMenu/categoryPages';
+import { fakeStorefront } from './catalogMenuService.testUtils';
 
 const NAV =
     '<body><header></header><main><div><p>Brand</p></div>' +
@@ -32,25 +33,8 @@ const CATEGORIES: CatalogCategory[] = [
     { id: '42', name: 'Exit Signs', urlPath: 'safety-signs/exit-signs', level: 3, parentId: '41' },
 ];
 
-/** An in-memory DA.live site. `failWrites` makes a write throw for those paths. */
-function fakeSite(initial: Record<string, string> = { '/nav': NAV }, failWrites: string[] = []) {
-    const pages = new Map(Object.entries(initial));
-    const written: string[] = [];
-    const removed: string[] = [];
-    const port: StorefrontPages = {
-        read: async (path) => pages.get(path) ?? null,
-        write: async (path, html) => {
-            if (failWrites.includes(path)) throw new Error(`HTTP 500 writing ${path}`);
-            pages.set(path, html);
-            written.push(path);
-        },
-        remove: async (path) => {
-            pages.delete(path);
-            removed.push(path);
-        },
-    };
-    return { pages, port, written, removed };
-}
+const fakeSite = (initial: Record<string, string> = { '/nav': NAV }, failWrites: string[] = []) =>
+    fakeStorefront(initial, failWrites);
 
 function deps(site: ReturnType<typeof fakeSite>, categories = CATEGORIES): CatalogMenuDeps {
     return { pages: site.port, readCategories: async () => categories };
@@ -91,7 +75,7 @@ describe('applyCatalogMenu', () => {
 
         const second = await applyCatalogMenu(deps(site), first.record);
 
-        expect(second.skipped).toEqual([{ path: '/safety-signs', reason: 'edited' }]);
+        expect(second.skipped).toEqual([{ path: '/safety-signs', reason: 'edited', name: 'Safety Signs' }]);
         expect(site.pages.get('/safety-signs')).toContain('Our signs');
         expect(second.record.pages.map((p) => p.path)).toEqual(['/safety-signs/exit-signs']);
     });
@@ -101,7 +85,7 @@ describe('applyCatalogMenu', () => {
 
         const report = await applyCatalogMenu(deps(site));
 
-        expect(report.skipped).toEqual([{ path: '/safety-signs', reason: 'not-ours' }]);
+        expect(report.skipped).toEqual([{ path: '/safety-signs', reason: 'not-ours', name: 'Safety Signs' }]);
         expect(site.pages.get('/safety-signs')).toBe('<body>authored by hand</body>');
         expect(report.record.pages.map((p) => p.path)).toEqual(['/safety-signs/exit-signs']);
     });
@@ -211,7 +195,7 @@ describe('removeCatalogMenu (the undo)', () => {
 
     it('removes nothing when there is no record of authorship', async () => {
         const site = fakeSite({ '/nav': NAV, '/safety-signs': '<body>x</body>' });
-        const empty: CatalogMenuRecord = { pages: [], navSwitch: false };
+        const empty: CatalogMenuRecord = { pages: [], links: [], navSwitch: false };
 
         const report = await removeCatalogMenu({ pages: site.port }, empty);
 

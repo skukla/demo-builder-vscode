@@ -21,6 +21,13 @@ land.
    its three category-page options.
 3. **A page someone else made or edited is never touched** (ADR-013 hash-and-skip, already
    in `catalogMenuService`). A colleague's hand-made category pages stay theirs.
+   **A hand-built page for a category is always honored — at any address** (owner's rule,
+   2026-10-05). Adobe binds a page to a category by the `urlPath` row of its
+   `product-list-page` block (older storefronts: a `category` id row), not by the page's
+   path. So setup reads the storefront's pages first; a category that already has a page
+   gets none from us, and the menu links to theirs through a "category | page" row in the
+   nav's `catalog-menu` table. The SC can type or edit those rows; ours are told from
+   theirs by the record.
 4. **A category added after setup** appears in the menu at once; its page arrives at the
    next reset or republish. **Fallback, if step 0 proves it:** until then its menu link goes
    to the search page filtered to that category, so it never lands on a 404.
@@ -109,3 +116,67 @@ colleague storefront (Justrite).
    opens the filtered search page; after Republish it has its own page.
 5. Edit one generated page, then Republish: the edit stays.
 6. Reset: the nav and pages return to the template's state.
+
+## Step 0 findings (2026-10-05, reads only)
+
+1. **The fallback works.** The search page's list block (`blocks/product-list-page/`,
+   Justrite and the boilerplate) reads `?filter=` through its own `search-url.js`, which
+   turns `categoryPath:<urlPath>` into `{attribute: 'categoryPath', in: [<urlPath>]}`. A
+   category page sends `eq`. Catalog Service, Justrite store view, via `run_commerce_query`:
+   `signs` 45 / 45 (`eq` / `in`), `signs/danger-signs` 7 / 7, `no-such-category` 0 / 0 (the
+   control), for the guest and for group 20 alike. Two url-path shapes `search-url.js` would
+   misread: a hyphen between two numbers (read as a price range) and a comma (split into
+   values). The block gives those no fallback. `/search` exists on Justrite and on the ACO
+   boilerplate (200).
+2. **How reset clears pages.** The EDS pipeline's `clear-content` step
+   (`edsPipeline.ts`, `pipelineClearContent`) deletes ALL DA.live content
+   (`deleteAllSiteContent`) and unpublishes every deleted path, then re-copies from the
+   content source. So on a normal reset the category pages go with everything else; only a
+   keep-content reset (an added demo whose content site is gone) leaves them. Reset now
+   removes by the record first either way, so both cases end the same.
+3. **Justrite holds no category pages from a dev run.** Every current category path
+   (`/signs`, `/signs/danger-signs`, `/safety-cabinets`, `/lockout-tagout`,
+   `/5s-visual-workplace`) and the old `/safety-signs` is 404 on both aem.live and aem.page;
+   `/nav` has no `catalog-menu` block or "Shop the catalog" line. The DA.live listing could
+   not be read (`list_content` needs a DA.live sign-in, which is the user's). Justrite's own
+   hand-made pages `/apparel`, `/hazard-communication`, `/workplace-safety` are live (200);
+   none is at a current category path, so the first run should report no clash unless the
+   tree changes. Justrite's tree (Catalog Service, 2026-10-05): root "Justrite Catalog"
+   (119) with Signs and Labels (8 sub-categories), Lockout and Tagout, 5S and Visual
+   Workplace, Safety Cabinets; plus "Default Category" (2). Both roots have an empty
+   `urlPath`, so they get no page.
+4. **The running Demo Builder build** (`42cfcc665`, 2026-10-03) predates the catalog menu
+   tools, so none of this was probed through them.
+
+## Built (2026-10-05, branch `loop/2026-10-04-day-a`, staged, not committed)
+
+Steps 1-6 and 8 as planned; step 4 built because step 0 proved it; step 7 left to the owner.
+
+- One step, `eds/services/catalogMenu/catalogMenuStep.ts`, on a site from
+  `catalogMenuSiteDeps.ts`. Creation runs it after the datapack phase
+  (`project-creation/services/catalogMenuPhase.ts`, which carries the record across edit
+  mode); reset takes out with the record before the content pipeline and puts back after
+  (`eds/services/reset/edsResetCatalogMenu.ts`); republish runs it after the content publish
+  (`storefrontRepublishService.ts`). `reset_project` and `sync_content` return the sentence
+  as `categoryPages`.
+- When the block has left the repository, the step removes what it wrote (the nav must not
+  name a block the site lacks).
+- Deleted: the dashboard tile, `CatalogMenuModal`, `useCatalogMenu`, `catalogMenuHandlers`,
+  `build_catalog_menu` / `remove_catalog_menu`, their narration, consent copy, ledger row,
+  request types, timeouts, response ceilings, battery prompts and tests. The page adapter
+  moved to `eds/services/catalogMenu/storefrontPageAdapter.ts`.
+- Block library: a category with no page links to `/search?filter=categoryPath:<urlPath>`,
+  found by one `HEAD` per shown category.
+- Hand-built pages at any address (2026-10-05): `existingCategoryPages.ts` finds them
+  (DA.live folder walk through the page adapter's `listPages`, one read per page, six at a
+  time; the published index carries no block content, so it is not used).
+  `catalogMenuService` skips the write (`has-own-page`), removes our earlier page for that
+  category when unedited, and hands `navSwitch.ts` the rows to merge into the table. The
+  record gains `links`. The summary says "Signs uses your page at /safety-signage." Block
+  library: the block reads the rows, links a mapped category to its page, and neither
+  probes it nor falls back to search. Not yet run against a live site.
+- Docs: `docs/systems/category-pages.md`; AI bundle v37 (header-nav-footer,
+  author-commerce-data).
+- Step 7: the Demo Builder Blocks library stays off by default. Recommendation unchanged:
+  default-on for packages that load a catalog, after the first live run passes.
+

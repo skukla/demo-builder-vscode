@@ -123,6 +123,12 @@ export interface EdsResetResult extends HandlerResponse {
      * and what fits and was left for the SC to accept. Absent for a shipped brand.
      */
     demoFixes?: { applied?: string[]; offered?: string[] };
+    /**
+     * What happened to the category pages and the catalog menu (EDS-24), in SC words —
+     * pages written, and pages someone else made left alone by name. Absent when the
+     * storefront has no catalog-menu block and Demo Builder wrote nothing there.
+     */
+    catalogMenu?: string;
     /** Additional error details */
     errorDetails?: Record<string, unknown>;
 }

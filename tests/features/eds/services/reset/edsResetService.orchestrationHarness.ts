@@ -59,6 +59,15 @@ jest.mock('@/features/eds/services/edsPipeline', () => ({
     executeEdsPipeline: (...args: unknown[]) => mockExecuteEdsPipeline(...args),
 }));
 
+/** The site object the reset hands from the take-out to the put-back. */
+export const CATALOG_MENU_SITE = { site: 'the storefront, as the catalog menu step sees it' };
+export const mockTakeOutCatalogMenu = jest.fn();
+export const mockPutBackCatalogMenu = jest.fn();
+jest.mock('@/features/eds/services/reset/edsResetCatalogMenu', () => ({
+    takeOutCatalogMenu: (...args: unknown[]) => mockTakeOutCatalogMenu(...args),
+    putBackCatalogMenu: (...args: unknown[]) => mockPutBackCatalogMenu(...args),
+}));
+
 export const mockVerifyCdnResources = jest.fn();
 jest.mock('@/features/eds/services/configSyncService', () => ({
     verifyCdnResources: (...args: unknown[]) => mockVerifyCdnResources(...args),
@@ -118,6 +127,8 @@ export function resetOrchestrationMocks(): void {
         libraryPaths: [],
     });
     mockRedeployApiMesh.mockResolvedValue(null);
+    mockTakeOutCatalogMenu.mockResolvedValue(CATALOG_MENU_SITE);
+    mockPutBackCatalogMenu.mockResolvedValue(undefined);
     mockVerifyCdnResources.mockResolvedValue({ configVerified: true });
     mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
 }

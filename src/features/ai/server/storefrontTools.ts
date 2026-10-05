@@ -196,7 +196,9 @@ export function registerStorefrontTools(
             if (daLive) return asText(daLive);
             const daLiveAuthService = getDaLiveAuthService(ctx.context);
 
-            const { tokenService: githubTokenService } = getGitHubServices(ctx.context.secrets);
+            const { tokenService: githubTokenService, fileOperations: githubFiles } = getGitHubServices(
+                ctx.context.secrets,
+            );
             try {
                 const result = await runWithAdobeTarget(() =>
                     republishStorefrontContent({
@@ -211,11 +213,14 @@ export function registerStorefrontTools(
                         onProgress: phaseReporter(),
                         daLiveAuthService,
                         githubTokenService,
+                        githubFiles,
                     }),
                 );
                 return asText({
                     success: result.success,
                     cdnVerified: result.cdnVerified,
+                    // Category pages written or refreshed, and pages left alone by name (EDS-24).
+                    ...(result.catalogMenu ? { categoryPages: result.catalogMenu } : {}),
                     cdnStatus: result.success
                         ? describeCdnPropagation({ cdnVerified: result.cdnVerified })
                         : undefined,

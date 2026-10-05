@@ -74,11 +74,6 @@
             "note": "delete_page unpublishes AND deletes the source, so it is a WIDER reversal than publish_page's exact inverse - there is no unpublish-but-keep-source tool. Recorded because the published state can be undone; narrowing it is a product question, not a defect."
         },
         {
-            "tool": "build_catalog_menu",
-            "reverses": "remove_catalog_menu",
-            "note": "Not create-shaped by verb, recorded anyway (EDS-24). remove_catalog_menu unpublishes and deletes exactly the category pages the build recorded writing - by hash, so a page the SC edited since is left alone - and takes the menu line and block back out of the nav. A round trip returns the nav byte-for-byte (catalogMenuHandlers.test.ts)."
-        },
-        {
             "tool": "install_prerequisite",
             "reason": "DECIDED 2026-09-11 (owner): uninstall should NOT exist. Node, the aio CLI and its plugins are machine-level tools an SC almost certainly uses outside this extension; removing them because a demo ended is a worse outcome than the asymmetry. This is a stated decision, not an open question."
         },

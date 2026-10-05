@@ -196,17 +196,6 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
         bytes: 600,
         why: 'what happened to the file, the card and the flag; or the refusal with the save date',
     },
-    build_catalog_menu: {
-        bytes: 16_000,
-        why:
-            'one web path per category page written (about 35 bytes each), the few left alone or failed, ' +
-            'and a summary that names at most five paths per sentence. Fixture-sized, not measured live: ' +
-            '200 categories is about 8KB, so this fires on a shape change, not a bigger catalog (EDS-24)',
-    },
-    remove_catalog_menu: {
-        bytes: 16_000,
-        why: 'the same lists for the undo: one web path per page removed, plus the summary; or the refusal (EDS-24)',
-    },
     cleanup_dalive_site: { bytes: 1_000, why: 'delete outcome or refusal' },
 
     // ── Diagnostics ─────────────────────────────────────────────────────────

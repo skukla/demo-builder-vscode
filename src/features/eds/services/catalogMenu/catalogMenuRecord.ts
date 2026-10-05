@@ -24,6 +24,11 @@ function isPageEntry(value: unknown): value is { path: string; hash: string } {
     return typeof entry?.path === 'string' && typeof entry.hash === 'string';
 }
 
+function isLinkEntry(value: unknown): value is { urlPath: string; path: string } {
+    const entry = value as { urlPath?: unknown; path?: unknown } | null;
+    return typeof entry?.urlPath === 'string' && typeof entry.path === 'string';
+}
+
 /**
  * The record Demo Builder kept the last time it built or removed the menu.
  *
@@ -32,12 +37,20 @@ function isPageEntry(value: unknown): value is { path: string; hash: string } {
  */
 export function readCatalogMenuRecord(project: Project): CatalogMenuRecord {
     const metadata = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata;
-    const raw = metadata?.[KEY] as { pages?: unknown; navSwitch?: unknown } | undefined;
+    const raw = metadata?.[KEY] as { pages?: unknown; links?: unknown; navSwitch?: unknown } | undefined;
     const pages = Array.isArray(raw?.pages) ? raw.pages.filter(isPageEntry) : [];
+    // A record kept before the rows existed has no `links`: it wrote none.
+    const links = Array.isArray(raw?.links) ? raw.links.filter(isLinkEntry) : [];
     return {
         pages: pages.map(({ path, hash }) => ({ path, hash })),
+        links: links.map(({ urlPath, path }) => ({ urlPath, path })),
         navSwitch: raw?.navSwitch === true,
     };
+}
+
+/** Whether the record claims nothing: no page, no row, no switch. */
+export function isEmptyRecord(record: CatalogMenuRecord): boolean {
+    return record.pages.length + record.links.length === 0 && !record.navSwitch;
 }
 
 /**
@@ -52,7 +65,7 @@ export function writeCatalogMenuRecord(project: Project, record: CatalogMenuReco
         throw new Error('This project has no storefront to keep the catalog menu record on');
     }
     const metadata = { ...(instance.metadata ?? {}) };
-    if (record.pages.length === 0 && !record.navSwitch) {
+    if (isEmptyRecord(record)) {
         delete metadata[KEY];
     } else {
         metadata[KEY] = record;

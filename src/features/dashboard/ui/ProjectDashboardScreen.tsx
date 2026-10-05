@@ -13,7 +13,6 @@ import { DialogContainer } from '@adobe/react-spectrum';
 import React, { useState, useRef } from 'react';
 import { ActionGrid } from './components/ActionGrid';
 import { AiCapabilitiesModal } from './components/AiCapabilitiesModal';
-import { CatalogMenuModal } from './components/catalog-menu/CatalogMenuModal';
 import { DashboardStatusHeader } from './components/DashboardStatusHeader';
 import { DemoPackageModal } from './components/demo-package/DemoPackageModal';
 import { DemoSourceNotice } from './components/DemoSourceNotice';
@@ -112,8 +111,6 @@ export function ProjectDashboardScreen({
         webviewClient.postMessage('requestStatus');
     };
     const handover = useHandoverDialogs(isEdsStable); // Export, Save as demo package
-    // The catalog menu (EDS-24) — Edge Delivery only: it writes storefront pages.
-    const [catalogMenuOpen, setCatalogMenuOpen] = useState(false);
     // Inline title rename commit (null = success; string = inline error).
     const renameInline = useInlineRename();
 
@@ -296,9 +293,6 @@ export function ProjectDashboardScreen({
                                     handleRepublishContent={
                                         isEdsStable ? handleRepublishContent : undefined
                                     }
-                                    handleCatalogMenu={
-                                        isEdsStable ? () => setCatalogMenuOpen(true) : undefined
-                                    }
                                     handleConfigure={handleConfigure}
                                     handleOpenDevConsole={handleOpenDevConsole}
                                     handleOpenAemAssets={handleOpenAemAssets}
@@ -337,9 +331,6 @@ export function ProjectDashboardScreen({
             ) : null}
             {handover.demoPackageOpen ? (
                 <DemoPackageModal isOpen onClose={handover.closeDemoPackage} />
-            ) : null}
-            {catalogMenuOpen ? (
-                <CatalogMenuModal isOpen onClose={() => setCatalogMenuOpen(false)} />
             ) : null}
 
             {/* Capability catalog — reached from the "View AI Capabilities" link,

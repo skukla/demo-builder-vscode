@@ -184,7 +184,9 @@ export const handleRepublishContent: MessageHandler<StorefrontActionPayload> =
                 }
 
                 const daLiveAuthService = getDaLiveAuthService(context.context);
-                const { tokenService: githubTokenService } = getGitHubServices(context.context.secrets);
+                const { tokenService: githubTokenService, fileOperations: githubFiles } = getGitHubServices(
+                    context.context.secrets,
+                );
 
                 report('Republishing the content');
                 const { republishStorefrontContent } = await import(
@@ -201,6 +203,7 @@ export const handleRepublishContent: MessageHandler<StorefrontActionPayload> =
                     logger: context.logger,
                     daLiveAuthService,
                     githubTokenService,
+                    githubFiles,
                     onProgress: (message: string) => report('Republishing the content', message),
                 });
 

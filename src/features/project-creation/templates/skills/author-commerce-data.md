@@ -80,6 +80,23 @@ fine by SKU and are missing from every search and listing.
 Whenever you create or move categories: assign them to every shared catalog that should see them
 (the public one for guests, and each company's own), then verify per group (next section).
 
+## Give new categories their storefront pages
+
+On an Edge Delivery storefront with the Demo Builder Blocks library, Demo Builder writes one page
+per category marked Include in Menu when the storefront is set up, and the nav's catalog menu
+reads the category tree live. A category you create now appears in that menu at once and links to
+the search page filtered to it until it has a page. To give it its own page, call `sync_content`
+(it asks first): it writes pages for new categories, refreshes the ones Demo Builder wrote that
+nobody has edited, and leaves every other page alone. Never write category pages one by one with
+`write_page`: Demo Builder keeps no record of those, so a reset cannot take them back out.
+
+A category that already has a hand-built page keeps it, wherever that page lives: a page whose
+`product-list-page` block names the category in its `urlPath` row counts, at any address. Demo
+Builder writes no second page for that category, links the menu to the existing one, and says so
+in the result ("Signs uses your page at /safety-signage."). The link is a row in the `catalog-menu`
+table in `/nav`: the category's url path, then the page. To point a category at a different page,
+edit or add that row; rows Demo Builder did not write are never changed.
+
 ## Check that the shopper can see it
 
 Writes succeeding is not the goal; the storefront showing the data is. After each phase:

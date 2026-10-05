@@ -1,15 +1,15 @@
 /**
  * The storefront's pages, as the catalog menu service needs them (EDS-24): one adapter
  * over the DA.live source API and Helix — the same calls `read_page`, `write_page`
- * (with publish) and `delete_page` make, in the same order — used by the agent's tools
- * and the dashboard alike.
+ * (with publish) and `delete_page` make, in the same order — used by storefront setup,
+ * reset and republish alike.
  *
  * DA.live and Helix are the external boundary, so they are the fakes; what is asserted
  * is HOW each is called: which org/site, which spelling of the path (the DA source API
  * wants `nav.html`, Helix wants `/nav`), and what happens when a step fails.
  */
 
-import { createStorefrontPages } from '@/features/ai/server/storefrontPages';
+import { createStorefrontPages } from '@/features/eds/services/catalogMenu/storefrontPageAdapter';
 
 const TARGET = { daLiveOrg: 'skukla', daLiveSite: 'kukla-justrite' };
 
@@ -18,6 +18,7 @@ function transport() {
         readSource: jest.fn(),
         createSource: jest.fn().mockResolvedValue({ success: true }),
         deleteSource: jest.fn().mockResolvedValue({ success: true }),
+        listDirectory: jest.fn().mockResolvedValue([]),
     };
     const helix = {
         previewAndPublishPage: jest.fn().mockResolvedValue(undefined),
@@ -114,5 +115,70 @@ describe('remove', () => {
         const t = transport();
         t.daLive.deleteSource.mockResolvedValue({ success: false, error: 'HTTP 500' });
         await expect(t.pages.remove('/safety-signs')).rejects.toThrow('HTTP 500');
+    });
+});
+
+/**
+ * `listPages` is how a hand-built category page at any address is found. One DA.live
+ * list call per folder; the entry shape is `DaLiveEntry` (`path` carries the org and
+ * site, files carry `ext`).
+ */
+describe('listPages', () => {
+    const file = (path: string, ext = 'html') => ({ name: path, path: `/skukla/kukla-justrite${path}.${ext}`, ext });
+    const folder = (path: string) => ({ name: path, path: `/skukla/kukla-justrite${path}` });
+
+    function listing(tree: Record<string, ReturnType<typeof file | typeof folder>[]>) {
+        const t = transport();
+        t.daLive.listDirectory.mockImplementation(async (_org: string, _site: string, dir: string) => tree[dir] ?? []);
+        return t;
+    }
+
+    it('walks every folder and answers the pages by web path', async () => {
+        const t = listing({
+            '/': [file('/index'), file('/about'), folder('/signs')],
+            '/signs': [file('/signs/danger-signs'), folder('/signs/deep')],
+            '/signs/deep': [file('/signs/deep/page')],
+        });
+
+        expect((await t.pages.listPages()).sort()).toEqual(['/about', '/index', '/signs/danger-signs', '/signs/deep/page']);
+        expect(t.daLive.listDirectory.mock.calls.map((c) => c.slice(0, 3))).toEqual([
+            ['skukla', 'kukla-justrite', '/'],
+            ['skukla', 'kukla-justrite', '/signs'],
+            ['skukla', 'kukla-justrite', '/signs/deep'],
+        ]);
+    });
+
+    it('leaves out what cannot be a category page, and never opens those folders', async () => {
+        const t = listing({
+            '/': [
+                file('/nav'),
+                file('/footer'),
+                file('/placeholders', 'json'),
+                file('/hero', 'png'),
+                folder('/products'),
+                folder('/fragments'),
+                folder('/drafts'),
+                folder('/.da'),
+                folder('/customer'),
+            ],
+            '/customer': [file('/customer/nav'), file('/customer/account')],
+            '/products': [file('/products/sku-1')],
+        });
+
+        expect(await t.pages.listPages()).toEqual(['/customer/account']);
+        expect(t.daLive.listDirectory.mock.calls.map((c) => c[2])).toEqual(['/', '/customer']);
+    });
+
+    it('accepts the extension spelled with or without its dot', async () => {
+        const t = listing({ '/': [{ name: 'about', path: '/skukla/kukla-justrite/about.html', ext: '.html' }] });
+
+        expect(await t.pages.listPages()).toEqual(['/about']);
+    });
+
+    it('lets a listing failure through', async () => {
+        const t = transport();
+        t.daLive.listDirectory.mockRejectedValue(new Error('DA.live 401'));
+
+        await expect(t.pages.listPages()).rejects.toThrow('DA.live 401');
     });
 });

@@ -20,6 +20,8 @@ import {
     buildAppNotOnRepositoryMessage,
     isAppNotOnRepositoryError,
 } from '../appInstallationResolver';
+import { createCatalogMenuSite } from '../catalogMenu/catalogMenuSiteDeps';
+import { applyCatalogMenuStep } from '../catalogMenu/catalogMenuStep';
 import { prewarmCatalog } from '../catalogPrewarmService';
 import { generateConfigJson, buildConfigGeneratorParams } from '../configGenerator';
 import { syncConfigToRemote, verifyConfigOnCdn } from '../configSyncService';
@@ -28,6 +30,7 @@ import {
     DaLiveContentOperations,
     createDaLiveServiceTokenProvider,
 } from '../daLive/daLiveContentOperations';
+import type { GitHubFileOperations } from '../github/githubFileOperations';
 import type { GitHubTokenService } from '../github/githubTokenService';
 import { HelixService } from '../helix/helixService';
 import type { PhaseProgressCallback } from '../types';
@@ -376,6 +379,8 @@ export interface RepublishContentParams {
     daLiveAuthService: DaLiveAuthService;
     /** GitHub token service for the Helix Admin API. */
     githubTokenService: GitHubTokenService;
+    /** Reads the storefront repository: whether it has the catalog-menu block (EDS-24). */
+    githubFiles: Pick<GitHubFileOperations, 'getFileContent'>;
     /** Optional per-step progress callback. */
     onProgress?: (message: string) => void;
     /**
@@ -397,11 +402,13 @@ export interface RepublishContentResult {
     error?: string;
     /** Whether config.json was verified on the CDN (best-effort — may still be propagating). */
     cdnVerified?: boolean;
+    /** What happened to the category pages and the catalog menu (EDS-24), in SC words. */
+    catalogMenu?: string;
 }
 
 /**
- * Republish ALL storefront content to the CDN — the headless 5-step pipeline
- * (EDS config → config.json → code → permissions → publish + verify) that
+ * Republish ALL storefront content to the CDN — the headless pipeline
+ * (EDS config → config.json → code → permissions → publish → category pages → verify) that
  * `handleRepublishContent` wraps with UI (auth modal, progress, status).
  *
  * Single source of truth: both the dashboard's Republish button and the MCP
@@ -486,6 +493,25 @@ export async function republishStorefrontContent(
             (info) => report(info.message),
         );
 
+        // Step 4b: Category pages and the catalog menu (EDS-24) — the step storefront
+        // setup and reset run. A category added since gets its page; ours are
+        // refreshed only if unedited; every other page is left alone. Never throws.
+        const catalogMenu = await applyCatalogMenuStep(
+            project,
+            createCatalogMenuSite({
+                project,
+                target: { repoOwner, repoName, daLiveOrg, daLiveSite },
+                daLive: daLiveContentOps,
+                helix: helixService,
+                github: params.githubFiles,
+            }),
+        );
+        if (catalogMenu !== undefined) {
+            report(catalogMenu);
+            logger.info(`[Republish] Catalog menu: ${catalogMenu}`);
+            await persist(project);
+        }
+
         // Step 5: Pre-warm the catalog's PDP pages (self-gating: ACCS + BYOM
         // only; non-fatal). Decided 2026-08-23: Republish is the lightweight
         // retry for a prewarm that failed at creation — e.g. a hibernated
@@ -521,7 +547,7 @@ export async function republishStorefrontContent(
         // Step 6: Verify config.json on the CDN (best-effort).
         report('Verifying CDN');
         const cdnVerified = await verifyConfigOnCdn(repoOwner, repoName, logger);
-        return { success: true, cdnVerified };
+        return { success: true, cdnVerified, ...(catalogMenu === undefined ? {} : { catalogMenu }) };
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         logger.error(

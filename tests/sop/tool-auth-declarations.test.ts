@@ -75,7 +75,9 @@ const EXPECTED: Record<string, number> = {
     // 24 -> 26 on 2026-10-04: build_catalog_menu and remove_catalog_menu write, publish and
     // delete DA.live pages (EDS-24).
     // 26 -> 27 on 2026-10-04: copy_project, the same creation as create_project_from_file.
-    dalive: 27,
+    // 27 -> 25 on 2026-10-05: build_catalog_menu and remove_catalog_menu removed — storefront
+    // setup, reset and republish write the category pages now (EDS-24 redesign).
+    dalive: 25,
     // 10 -> 12 on 2026-09-12: forget_added_demo and change_demo_source (step 06
     // of the shareable-demo program) both read and write GitHub; 12 -> 14 the
     // same day for probe_shared_demo and add_shared_demo (step 07).
@@ -86,7 +88,8 @@ const EXPECTED: Record<string, number> = {
     // 20 -> 22 on 2026-10-04: build_catalog_menu and remove_catalog_menu publish through
     // Helix, which sends the GitHub token, and the build reads the repository for its block.
     // 22 -> 23 on 2026-10-04: copy_project, likewise.
-    github: 23,
+    // 23 -> 21 on 2026-10-05: build_catalog_menu and remove_catalog_menu removed (EDS-24).
+    github: 21,
     commerce: 2,
     // 45 -> 46 on 2026-09-14: edit_added_demo renames a card in a user setting,
     // and needs no sign-in.
@@ -111,7 +114,7 @@ const EXPECTED: Record<string, number> = {
  * files. That counts text, not declarations, and was roughly double. The CONTROL below
  * caught it — which is the argument for having one.)
  */
-const EXPECTED_TOOLS = 158; // 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x); 144 with add_erp (AB-16).
+const EXPECTED_TOOLS = 156; // 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x); 144 with add_erp (AB-16).
 // 141 -> 142 on 2026-09-27: delete_undeclared_runtime_code.
 // 142 -> 143 on 2026-09-27: load_erp_demo_data.
 // 144 -> 146 on 2026-09-29: get_erp_settings and set_erp_settings (AB-16j).
@@ -123,6 +126,8 @@ const EXPECTED_TOOLS = 158; // 138 -> 141 on 2026-09-25: the three demo setup ch
 // 154 -> 155 on 2026-10-03: get_storefront_report (EDS-13f), which needs GitHub.
 // 155 -> 157 on 2026-10-04: build_catalog_menu and remove_catalog_menu (EDS-24).
 // 157 -> 158 on 2026-10-04: copy_project (PL-56f).
+// 158 -> 156 on 2026-10-05: build_catalog_menu and remove_catalog_menu removed (EDS-24:
+// the category pages are written by storefront setup, reset and republish, not a button).
 
 interface Declaration {
     name: string;

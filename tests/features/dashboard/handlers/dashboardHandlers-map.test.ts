@@ -288,7 +288,9 @@ describe('dashboardHandlers', () => {
             // menu from the Commerce tree and its undo, shared with the agent's two tools.
             // promoteAppBuilderComponent + unpromoteAppBuilderComponent (84 → 86, AB-1c,
             // 2026-10-05): save a blank-starter app to its own GitHub repository, and the undo.
-            expect(types).toHaveLength(86);
+            // buildCatalogMenu + removeCatalogMenu removed (86 → 84, EDS-24 redesign,
+            // 2026-10-05): storefront setup, reset and republish write the category pages.
+            expect(types).toHaveLength(84);
         });
 
         it('should have handlers as functions', () => {

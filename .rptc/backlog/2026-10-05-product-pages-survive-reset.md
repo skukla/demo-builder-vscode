@@ -23,6 +23,20 @@ Effect today (inferred, not measured): after a reset, old SKUs still resolve; th
 empty-data patch sends a visitor to 404 when the product is gone from Commerce. Whether a
 deleted storefront's product pages keep being served is unverified.
 
+## Rules (owner, 2026-10-05)
+
+- **True deletion, not just unpublish:** remove the live copy, then the preview copy. A
+  product page has no DA.live document, so these two copies are all there is. If Helix
+  refuses the preview removal "while source exists" (the overlay still answers for every
+  product path), fall back to live-only and say so — never claim a clean zero.
+- **Only `/products/*` pages, only on the SC's own site** (the Helix site is keyed by the
+  GitHub owner/repo). Never DA.live content: a DA.live site the SC reuses, or a colleague's
+  content an added storefront reads, is untouched.
+- **Refuse, don't guess, when another project publishes to the same repository** — removal
+  there would take the other project's pages down too.
+- Pages a shopper's first visit published (smart-404) are not recorded anywhere: list the
+  site's published `/products/*` paths from Helix rather than trusting pre-warm's list.
+
 ## What to do
 
 1. Measure: on a scratch storefront, publish a few PDPs, reset, and read their status

@@ -214,8 +214,6 @@ export const TOOL_NARRATION: Record<string, string> = {
     write_page: 'Writing the page',
     publish_page: 'Publishing the page',
     delete_page: 'Deleting the page',
-    build_catalog_menu: 'Building the catalog menu',
-    remove_catalog_menu: 'Removing the catalog menu',
     promote_block_to_library: 'Adding a block to the library',
     remove_block_from_library: 'Removing a library block',
     refresh_block_library: 'Rebuilding the block library',

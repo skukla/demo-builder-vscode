@@ -263,7 +263,13 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // the silent create failures as rules, bulk loads, the per-customer-group visibility
 // check, and that an "Error:" answer wrote nothing. Without the bump, existing projects
 // never receive it.
-export const AI_CONTEXT_VERSION = 36;
+// v37 (2026-10-05): category pages and the catalog menu are written at storefront setup
+// (EDS-24). header-nav-footer says the nav's product menu comes from the catalog-menu line,
+// not typed categories; author-commerce-data says a new category gets its page from
+// sync_content, never from write_page one page at a time. Same unreleased version: a
+// hand-built category page at any address is honored, and the nav's catalog-menu table
+// holds the "category | page" rows that link the menu to it.
+export const AI_CONTEXT_VERSION = 37;
 
 /**
  * Component IDs for standardized component instance access

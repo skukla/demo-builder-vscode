@@ -34,6 +34,8 @@ export interface PlannedPage {
     /** Web path, e.g. `/safety-signs/exit-signs`. */
     path: string;
     name: string;
+    /** The category's url path, as Commerce spells it. */
+    urlPath: string;
     html: string;
 }
 
@@ -52,6 +54,11 @@ const SAFE_SEGMENT = /^[a-z0-9_-]+$/;
 
 function isServablePath(urlPath: string): boolean {
     return urlPath.split('/').every((segment) => SAFE_SEGMENT.test(segment));
+}
+
+/** A url path as typed in a table cell, made comparable: no case, no outer slashes. */
+export function normaliseUrlPath(value: string): string {
+    return value.trim().toLowerCase().replace(/^\/+|\/+$/g, '');
 }
 
 /** The DA.live source HTML for one category page. */
@@ -80,7 +87,7 @@ export function planCategoryPages(categories: CatalogCategory[]): CategoryPagePl
         const path = `/${category.urlPath}`;
         if (seen.has(path)) continue;
         seen.add(path);
-        pages.push({ path, name: category.name, html: categoryPageHtml(category.name, category.urlPath) });
+        pages.push({ path, name: category.name, urlPath: category.urlPath, html: categoryPageHtml(category.name, category.urlPath) });
     }
     return { pages, unsafe };
 }
