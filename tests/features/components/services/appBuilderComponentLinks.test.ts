@@ -15,6 +15,8 @@ import {
     listedSystemOf,
     nextCopyOf,
     pairedInstanceId,
+    strandedSystem,
+    strandedSystemMessage,
     systemsUsedBy,
 } from '@/features/components/services/appBuilderComponentLinks';
 import type { AppBuilderComponentState, Project } from '@/types/base';
@@ -300,5 +302,71 @@ describe('add-once integrations and the systems added beside them', () => {
         expect(listedSystemOf('erp-integration', catalog)?.id).toBe('demo-erp');
         expect(listedSystemOf('erp-integration', CATALOG)).toBeUndefined();
         expect(addAnotherLabel({ systemType: 'ERP' })).toBe('Add another ERP');
+    });
+});
+
+// 2026-10-05: re-adding the ERP integration deployed its ERP, then failed; the project
+// held the ERP and no integration, and a redeploy renamed it to the default.
+describe('a system whose integration is not in the project', () => {
+    it('is stranded, and adding the integration picks it up', () => {
+        const p = project({ 'demo-erp': component('system') });
+
+        expect(strandedSystem(p, 'demo-erp', CATALOG)).toEqual({
+            integrationKind: 'erp-integration',
+            reusedByAdd: true,
+        });
+    });
+
+    it('is stranded as a numbered copy, which adding the integration does not pick up', () => {
+        const p = project({ 'demo-erp-2': component('system', { catalogId: 'demo-erp' }) });
+
+        expect(strandedSystem(p, 'demo-erp-2', CATALOG)).toEqual({
+            integrationKind: 'erp-integration',
+            reusedByAdd: false,
+        });
+    });
+
+    it('is not stranded while its integration is there, even a failed one', () => {
+        const p = project({
+            'erp-integration': component('integration', { status: 'error' }),
+            'demo-erp': component('system'),
+        });
+
+        expect(strandedSystem(p, 'demo-erp', CATALOG)).toBeUndefined();
+    });
+
+    it('is not stranded beside an integration that disclaims it', () => {
+        const p = project({
+            'erp-integration': component('integration', { systems: [] }),
+            'demo-erp': component('system'),
+        });
+
+        expect(strandedSystem(p, 'demo-erp', CATALOG)).toBeUndefined();
+    });
+
+    it('is not stranded beside a numbered copy of its integration', () => {
+        const p = project({
+            'erp-integration-2': component('integration', { catalogId: 'erp-integration' }),
+            'demo-erp': component('system'),
+        });
+
+        expect(strandedSystem(p, 'demo-erp', CATALOG)).toBeUndefined();
+    });
+
+    it('never applies to an integration, or a system that comes with none', () => {
+        const p = project({
+            'erp-integration': component('integration'),
+            loner: component('system'),
+        });
+
+        expect(strandedSystem(p, 'erp-integration', CATALOG)).toBeUndefined();
+        expect(strandedSystem(p, 'loner', CATALOG)).toBeUndefined();
+    });
+
+    it('tells the SC what finishes it', () => {
+        expect(strandedSystemMessage('Justrite ERP', 'ERP Integration', true)).toBe(
+            'Justrite ERP came with ERP Integration, which is not in this project. Add ERP Integration to finish — it reuses Justrite ERP.',
+        );
+        expect(strandedSystemMessage('ERP 2', 'ERP Integration', false)).toMatch(/Remove it\.$/);
     });
 });

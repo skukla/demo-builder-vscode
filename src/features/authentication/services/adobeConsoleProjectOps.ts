@@ -20,6 +20,7 @@ import { deriveAdobeEntityName, deriveFreeAdobeEntityName } from './adobeEntityN
 import type { AdobeSDKClient } from './adobeSDKClient';
 import type { AuthCacheManager } from './authCacheManager';
 import { explainMissingDeveloperAccess } from './authenticationErrorFormatter';
+import { DeletedWorkspaceNames } from './deletedWorkspaceNames';
 import type {
     AdobeProject,
     AdobeWorkspace,
@@ -56,6 +57,8 @@ export class AdobeConsoleProjectOps {
         private cacheManager: AuthCacheManager,
         /** Lists a project's workspaces (the facade wires in the reads' fetch). */
         private listWorkspaces: (orgId: string, projectId: string) => Promise<AdobeWorkspace[]>,
+        /** Names deleted recently, which a new workspace must not take yet. */
+        private deletedNames: DeletedWorkspaceNames = new DeletedWorkspaceNames(),
     ) {}
 
     /**
@@ -378,9 +381,11 @@ export class AdobeConsoleProjectOps {
             // Console's workspace boxes SHOW the name, so it is the title's letters and
             // digits — "Northwind ERP" → `NorthwindERP` (no dash: the deploy service
             // refuses a dashed namespace) — numbered `NorthwindERP1` when it is taken.
-            // A clash the list could not show gets one retry with a random ending.
+            // A clash the list could not show gets one retry with a random ending. A
+            // name deleted minutes ago is taken too: its Runtime namespace is still
+            // being torn down (`deletedWorkspaceNames`).
             const taken = await this.listWorkspaces(orgId, projectId).then(
-                (all) => all.map((w) => w.name),
+                (all) => [...all.map((w) => w.name), ...this.deletedNames.resting(projectId)],
                 () => undefined,
             );
             let name = deriveFreeAdobeEntityName(title, taken);
@@ -442,7 +447,12 @@ export class AdobeConsoleProjectOps {
      */
     async deleteWorkspace(
         workspaceId: string,
-        target?: { orgId?: string; projectId?: string },
+        target?: {
+            orgId?: string;
+            projectId?: string;
+            /** Its name, held back from new workspaces while Adobe finishes the delete. */
+            workspaceName?: string;
+        },
     ): Promise<{ deleted: true; note?: string } | ConsoleOpFailure> {
         if (!workspaceId) {
             return { error: 'A workspace id is required.' };
@@ -475,6 +485,7 @@ export class AdobeConsoleProjectOps {
             );
             await client.deleteWorkspace(orgId, projectId, workspaceId);
             this.debugLogger.info('[Entity Fetcher] Workspace deleted successfully');
+            await this.deletedNames.remember(projectId, target?.workspaceName);
             return { deleted: true };
         } catch (error) {
             const message = (error as Error).message || '';
@@ -484,6 +495,7 @@ export class AdobeConsoleProjectOps {
             // reporting a failure the SC would then act on.
             if (orgId && projectId && (await this.workspaceGone(orgId, projectId, workspaceId))) {
                 this.debugLogger.info('[Entity Fetcher] The workspace is gone despite the error');
+                await this.deletedNames.remember(projectId, target?.workspaceName);
                 return {
                     deleted: true,
                     note: 'Adobe answered with an error, but the workspace is no longer in the project.',

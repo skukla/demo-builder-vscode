@@ -12,7 +12,7 @@
  */
 
 import type { AdobeSDKClient } from './adobeSDKClient';
-import { OrgServicesCatalog, type OrgServicesStore } from './orgServicesSavedCatalog';
+import { OrgServicesCatalog, type SavedState } from './orgServicesSavedCatalog';
 import type {
     OrgServiceInfo,
     SDKResponse,
@@ -105,7 +105,7 @@ export class AdobeOrgServices {
     private readonly servicesFlights = new Map<string, SingleFlight<OrgServiceInfo[]>>();
 
     /** @param store - keeps the API list across window reloads; without one, every reload waits. */
-    constructor(private sdkClient: AdobeSDKClient, store?: OrgServicesStore) {
+    constructor(private sdkClient: AdobeSDKClient, store?: SavedState) {
         this.catalog = new OrgServicesCatalog(store);
     }
 

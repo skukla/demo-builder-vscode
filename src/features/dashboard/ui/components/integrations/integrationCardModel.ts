@@ -52,6 +52,8 @@ import {
 import {
     isAddedSystem,
     listedSystemOf,
+    strandedSystem,
+    strandedSystemMessage,
     systemsUsedBy,
 } from '@/features/components/services/appBuilderComponentLinks';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
@@ -580,6 +582,32 @@ function withRemovalStopped(
     };
 }
 
+/** What a stranded system's card still offers: its screen and its removal. */
+const STRANDED_ACTIONS: readonly CardAction[] = ['open', 'remove', 'remove-anyway'];
+
+/**
+ * A system whose integration's add failed (`strandedSystem`): the face says what
+ * finishes it, and the menu loses its deploys — run alone it would take the default
+ * name and have nothing to talk to. While an add that picks it up runs, the live
+ * status shows instead.
+ */
+function withStrandedSystem(
+    card: IntegrationCardModel,
+    stranded: ReturnType<typeof strandedSystem>,
+    catalog: readonly Pick<AppBuilderComponentCatalogEntry, 'id' | 'name'>[],
+): IntegrationCardModel {
+    if (!stranded || card.status === 'deploying') return card;
+    const integrationName =
+        catalog.find((entry) => entry.id === stranded.integrationKind)?.name ?? stranded.integrationKind;
+    return {
+        ...card,
+        statusLabel: 'Not finished',
+        dotVariant: 'warning',
+        message: strandedSystemMessage(card.name, integrationName, stranded.reusedByAdd),
+        menuActions: card.menuActions.filter((action) => STRANDED_ACTIONS.includes(action)),
+    };
+}
+
 /** Collapse a raw MeshStatus onto the card vocabulary (config drift = stale). */
 export function toMeshCardStatus(status: MeshStatus | undefined): CardStatus {
     switch (status) {
@@ -824,7 +852,8 @@ export function buildIntegrationCards(
     for (const system of components.filter(
         (component) => component.kind === 'system' && !placed.has(component.id),
     )) {
-        cards.push(deriveSystemCard(system, overrides[system.id], undefined, links));
+        const card = deriveSystemCard(system, overrides[system.id], undefined, links);
+        cards.push(withStrandedSystem(card, strandedSystem(project, system.id, links), links));
         placed.add(system.id);
     }
 

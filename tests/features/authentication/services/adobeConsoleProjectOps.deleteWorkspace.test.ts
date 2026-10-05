@@ -13,6 +13,7 @@ jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(unde
 
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { DeletedWorkspaceNames } from '@/features/authentication/services/deletedWorkspaceNames';
 import { TARGET, opsWith as buildOps, workspace } from './adobeConsoleProjectOps.testUtils';
 import { READ_ONLY_PROJECT_REFUSAL } from '../../../helpers/adobeConsoleRefusals';
 
@@ -30,6 +31,41 @@ describe('AdobeConsoleProjectOps.deleteWorkspace', () => {
 
         await expect(ops.deleteWorkspace('ws-1', TARGET)).resolves.toEqual({ deleted: true });
         expect(list).not.toHaveBeenCalled();
+    });
+
+    it('holds the deleted name back from new workspaces', async () => {
+        const deletedNames = new DeletedWorkspaceNames();
+        const ops = buildOps({ deleteWorkspace: jest.fn().mockResolvedValue({}) }, jest.fn(), deletedNames);
+
+        await ops.deleteWorkspace('ws-1', { ...TARGET, workspaceName: 'JustriteERP' });
+
+        expect(deletedNames.resting('proj-1')).toEqual(['JustriteERP']);
+    });
+
+    it('holds the name when the workspace is gone despite an error', async () => {
+        const deletedNames = new DeletedWorkspaceNames();
+        const ops = buildOps(
+            { deleteWorkspace: jest.fn().mockRejectedValue(GATEWAY_TIMEOUT) },
+            jest.fn().mockResolvedValue([]),
+            deletedNames,
+        );
+
+        await ops.deleteWorkspace('ws-1', { ...TARGET, workspaceName: 'JustriteERP' });
+
+        expect(deletedNames.resting('proj-1')).toEqual(['JustriteERP']);
+    });
+
+    it('holds nothing when the delete failed', async () => {
+        const deletedNames = new DeletedWorkspaceNames();
+        const ops = buildOps(
+            { deleteWorkspace: jest.fn().mockRejectedValue(GATEWAY_TIMEOUT) },
+            jest.fn().mockResolvedValue([workspace('ws-1')]),
+            deletedNames,
+        );
+
+        await ops.deleteWorkspace('ws-1', { ...TARGET, workspaceName: 'JustriteERP' });
+
+        expect(deletedNames.resting('proj-1')).toStrictEqual([]);
     });
 
     it('reports deleted, with a note, when the error came back but the workspace is gone', async () => {

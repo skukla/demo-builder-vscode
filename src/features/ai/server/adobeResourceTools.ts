@@ -219,6 +219,7 @@ export function registerAdobeResourceTools(
             const result = await mgr.deleteWorkspace(workspaceId, {
                 orgId: target.orgId,
                 projectId: target.projectId,
+                workspaceName,
             });
 
             // No workspace name is protected — deleting a real project's Production

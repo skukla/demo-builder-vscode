@@ -7,12 +7,12 @@
  */
 
 import { AdobeOrgServices } from '@/features/authentication/services/adobeOrgServices';
-import type { OrgServicesStore } from '@/features/authentication/services/orgServicesSavedCatalog';
+import type { SavedState } from '@/features/authentication/services/orgServicesSavedCatalog';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 
 export const SERVICES = [{ code: 'GraphQLServiceSDK', name: 'Mesh', type: 't' }];
 
-export function makeService(initialized = true, store?: OrgServicesStore) {
+export function makeService(initialized = true, store?: SavedState) {
     const client = {
         getServicesForOrg: jest.fn(),
         getIntegration: jest.fn(),
@@ -39,7 +39,7 @@ export function memoryStore(initial: Record<string, unknown> = {}) {
     const update = jest.fn(async (key: string, value: unknown) => {
         values.set(key, value);
     });
-    const store: OrgServicesStore = { get: <T>(key: string) => get(key) as T | undefined, update };
+    const store: SavedState = { get: <T>(key: string) => get(key) as T | undefined, update };
     return { store, get, update };
 }
 

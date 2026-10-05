@@ -74,15 +74,17 @@ function textInputValue(
  * under. The ERP integration gained a name of its own (`INTEGRATION_DISPLAY_NAME`, AB-16o)
  * after projects already showed "Northwind ERP Integration"; without this their next
  * deploy would rename the card and Commerce's labels to the default (owner rule: existing
- * projects keep their names). Not for a bound system: it takes its integration's values
- * first, and its name stays exactly as it resolved before.
+ * projects keep their names). A bound system reads its integration's value first, so
+ * this is reached only when that value is gone — as when adding the integration failed
+ * and its unsaved settings were dropped, and a redeploy of the ERP it had already put up
+ * renamed "Justrite ERP" to the default "Acme ERP" (2026-10-05).
  */
 function fallbackFor(
     project: Project,
     entry: AppBuilderComponentCatalogEntry,
     envVar: AppBuilderComponentEnvVar,
 ): string | undefined {
-    if (envVar.name !== entry.nameFromEnvVar || entry.boundTo) return envVar.default;
+    if (envVar.name !== entry.nameFromEnvVar) return envVar.default;
     const recorded = project.appBuilderComponents?.[entry.id]?.name?.trim();
     return recorded || envVar.default;
 }

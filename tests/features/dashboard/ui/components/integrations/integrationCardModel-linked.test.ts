@@ -207,6 +207,44 @@ describe('buildIntegrationCards with a system', () => {
         expect(cards[0].menuActions).toContain('remove');
     });
 
+    // 2026-10-05: the integration's add failed after its ERP deployed. Redeploying the ERP
+    // alone renamed it "Acme ERP"; the card now says what finishes it instead.
+    it('a system whose integration is gone says what finishes it, and offers no deploy', () => {
+        const withIntegration: AppBuilderComponentCatalogEntry[] = [
+            ...CATALOG,
+            {
+                id: 'erp-integration',
+                name: 'ERP Integration',
+                description: '',
+                kind: 'integration',
+                source: { owner: 'skukla', repo: 'commerce-erp-integration', branch: 'main' },
+            },
+        ];
+
+        const [card] = buildIntegrationCards([erp()], {}, withIntegration);
+
+        expect(card).toMatchObject({
+            statusLabel: 'Not finished',
+            dotVariant: 'warning',
+            message: 'Nordwind came with ERP Integration, which is not in this project. Add ERP Integration to finish — it reuses Nordwind.',
+            menuActions: ['open', 'remove'],
+        });
+    });
+
+    it('a stranded system that failed offers no retry either', () => {
+        const [card] = buildIntegrationCards([erp({ status: 'error', error: '401' })], {}, CATALOG);
+        expect(card.menuActions).toEqual(['open', 'remove']);
+    });
+
+    it('a stranded system being picked up by an add shows the live status', () => {
+        const [card] = buildIntegrationCards(
+            [erp()],
+            { 'demo-erp': { status: 'deploying', message: 'Deploying Nordwind…' } },
+            CATALOG,
+        );
+        expect(card.statusLabel).toBe('Deploying Nordwind…');
+    });
+
     it('a system being added before its record exists is synthesized as a system card', () => {
         const cards = buildIntegrationCards([], { 'demo-erp': { status: 'deploying', message: 'Deploying ERP…' } }, CATALOG);
         expect(cards).toHaveLength(1);

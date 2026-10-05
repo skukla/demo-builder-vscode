@@ -90,6 +90,23 @@ describe('resolveDeployInputs', () => {
         expect(resolveDeployInputs(project, SYSTEM)).toEqual({ ERP_DISPLAY_NAME: 'Nordwind' });
     });
 
+    // 2026-10-05: adding the integration failed after its ERP deployed, the typed name
+    // went with the integration's unsaved settings, and a redeploy of the ERP renamed it
+    // to the default.
+    it('a bound system whose integration holds no name keeps the name it is recorded under', () => {
+        const project = createMockProject({
+            appBuilderComponents: {
+                'demo-erp': {
+                    kind: 'system',
+                    status: 'deployed',
+                    source: { owner: 'skukla', repo: 'demo-erp' },
+                    name: 'Justrite ERP',
+                },
+            },
+        });
+        expect(resolveDeployInputs(project, SYSTEM)).toEqual({ ERP_DISPLAY_NAME: 'Justrite ERP' });
+    });
+
     it('a provided var comes from the provider component that is already deployed; secrets never ride the env', () => {
         const project = createMockProject({
             appBuilderComponents: {

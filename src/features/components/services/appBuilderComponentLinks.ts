@@ -80,6 +80,51 @@ export function integrationUsing(project: Components, systemId: string, catalog:
 }
 
 /**
+ * A system left behind by an integration add that failed: the system deployed first
+ * (it always does), the integration did not, and the project holds no integration of
+ * the kind the system comes with. Deployed on its own it runs with nothing to talk to,
+ * and it has lost the name typed for it with the integration's settings — on
+ * 2026-10-05 a redeploy turned "Justrite ERP" into "Acme ERP".
+ *
+ * @param project - the project
+ * @param systemId - the system's `appBuilderComponents` id
+ * @param catalog - where the system's integration is declared (`boundTo`)
+ * @returns the integration's catalog id, and whether adding it picks this system up
+ *   (it reuses the first of its kind, not a numbered copy), or undefined when the
+ *   system is not stranded
+ */
+export function strandedSystem(
+    project: Components,
+    systemId: string,
+    catalog: Catalog,
+): { integrationKind: string; reusedByAdd: boolean } | undefined {
+    const state = project.appBuilderComponents?.[systemId];
+    if (state?.kind !== 'system' || integrationUsing(project, systemId, catalog)) return undefined;
+    const kind = catalogEntryOf(state, systemId);
+    const integrationKind = catalog.find((candidate) => candidate.id === kind)?.boundTo;
+    if (!integrationKind) return undefined;
+    const hasIntegration = Object.entries(project.appBuilderComponents ?? {}).some(
+        ([id, other]) => catalogEntryOf(other, id) === integrationKind,
+    );
+    return hasIntegration ? undefined : { integrationKind, reusedByAdd: systemId === kind };
+}
+
+/**
+ * What the SC is told about a stranded system ({@link strandedSystem}), on its card
+ * and when a deploy of it is refused.
+ *
+ * @param systemName - the system's name in the project
+ * @param integrationName - the name of the integration it comes with
+ * @param reusedByAdd - whether adding that integration picks this system up
+ * @returns the sentence
+ */
+export function strandedSystemMessage(systemName: string, integrationName: string, reusedByAdd: boolean): string {
+    return reusedByAdd
+        ? `${systemName} came with ${integrationName}, which is not in this project. Add ${integrationName} to finish — it reuses ${systemName}.`
+        : `${systemName} came with ${integrationName}, which is not in this project, so it cannot run on its own. Remove it.`;
+}
+
+/**
  * The catalog entry a record was made from: its `catalogId`, else its own id. Not
  * checked against the catalog — a custom integration is in no catalog and still
  * brings nothing, which the `boundTo` lookup answers by finding no system.

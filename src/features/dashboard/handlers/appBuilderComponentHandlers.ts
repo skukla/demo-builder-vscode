@@ -46,10 +46,13 @@ import { getAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
 import { deployAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
+import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
+import { strandedSystem, strandedSystemMessage } from '@/features/components/services/appBuilderComponentLinks';
 import {
     buildDefaultRunnerDeps,
     buildRunnerDepsContext,
 } from '@/features/project-creation/services/appBuilderComponentRunnerDeps';
+import type { Project } from '@/types/base';
 import type { HandlerContext, MessageHandler } from '@/types/handlers';
 
 export {
@@ -75,6 +78,24 @@ export {
 export { handleRemoveAppBuilderComponent } from './appBuilderComponentRemove';
 export { handleRenameAppBuilderComponent } from './appBuilderComponentRename';
 
+/**
+ * Why a system cannot be deployed on its own, when its integration's add failed and
+ * left it behind (`strandedSystem`): it would run with nothing to talk to, under the
+ * default name. Undefined for anything else.
+ */
+function strandedRefusal(project: Project, id: string): string | undefined {
+    const catalog = getAppBuilderComponentCatalog();
+    const stranded = strandedSystem(project, id, catalog);
+    if (!stranded) return undefined;
+    const integrationName =
+        catalog.find((entry) => entry.id === stranded.integrationKind)?.name ?? stranded.integrationKind;
+    return strandedSystemMessage(
+        getAppBuilderComponent(project, id)?.name ?? id,
+        integrationName,
+        stranded.reusedByAdd,
+    );
+}
+
 /** Shared deploy/redeploy: guards → D1 deployAppBuilderComponent {id}. */
 async function deployById(
     context: HandlerContext,
@@ -85,6 +106,8 @@ async function deployById(
     const target = await resolveComponentTarget(context, requestedId);
     if (!target.ok) return target.error;
     const { id, project } = target;
+    const stranded = strandedRefusal(project, id);
+    if (stranded) return { success: false, error: stranded };
 
     // The display name, as Add and Remove already pass — the notification title is
     // now its whole content, so a raw slug is what a background user would read.

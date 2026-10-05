@@ -10,6 +10,7 @@
  * formats are not supported after aio-cli v10"; measured 2026-09-22).
  */
 
+import { DeletedWorkspaceNames, NAME_REST_MS } from '@/features/authentication/services/deletedWorkspaceNames';
 import { TARGET, opsWith as buildOps, workspace } from './adobeConsoleProjectOps.testUtils';
 
 const CONFLICT = new Error('[CoreConsoleAPISDK:ERROR_CREATE_WORKSPACE] 409 - Conflict');
@@ -76,5 +77,58 @@ describe('the name a new workspace is given', () => {
             error: '403 - Forbidden',
         });
         expect(create).toHaveBeenCalledTimes(1);
+    });
+});
+
+// 2026-10-05: an ERP removed and added again three minutes later got the same
+// workspace name, so the same Runtime namespace, and its deploy failed on the timer
+// with a 401 while Adobe was still tearing the old namespace down.
+describe('a name deleted moments ago', () => {
+    const DELETED_AT = 1_000_000;
+
+    function opsAfterDeleting(name: string, now: () => number) {
+        const deletedNames = new DeletedWorkspaceNames(undefined, now);
+        const create = jest.fn().mockResolvedValue({ body: { workspaceId: 'ws-new' } });
+        const ops = buildOps(
+            {
+                deleteWorkspace: jest.fn().mockResolvedValue({}),
+                createWorkspace: create,
+                createRuntimeNamespace: jest.fn().mockResolvedValue({ body: {} }),
+            },
+            jest.fn().mockResolvedValue([workspace('Production')]),
+            deletedNames,
+        );
+        return { ops, create, remove: () => ops.deleteWorkspace('ws-old', { ...TARGET, workspaceName: name }) };
+    }
+
+    it('is numbered, though the project no longer lists it', async () => {
+        let now = DELETED_AT;
+        const { ops, create, remove } = opsAfterDeleting('JustriteERP', () => now);
+        await remove();
+        now += 3 * 60_000;
+
+        await ops.createWorkspace('Justrite ERP', 'd', TARGET);
+
+        expect(sentName(create)).toBe('JustriteERP1');
+    });
+
+    it('is given out again once it has rested', async () => {
+        let now = DELETED_AT;
+        const { ops, create, remove } = opsAfterDeleting('JustriteERP', () => now);
+        await remove();
+        now += NAME_REST_MS + 1;
+
+        await ops.createWorkspace('Justrite ERP', 'd', TARGET);
+
+        expect(sentName(create)).toBe('JustriteERP');
+    });
+
+    it('holds only in the project it was deleted from', async () => {
+        const { ops, create, remove } = opsAfterDeleting('JustriteERP', () => DELETED_AT);
+        await remove();
+
+        await ops.createWorkspace('Justrite ERP', 'd', { ...TARGET, projectId: 'proj-2' });
+
+        expect(sentName(create)).toBe('JustriteERP');
     });
 });

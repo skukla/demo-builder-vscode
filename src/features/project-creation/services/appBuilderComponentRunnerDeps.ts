@@ -272,6 +272,7 @@ export function buildDefaultRunnerDeps(
             const result = await ctx.authManager.deleteWorkspace(workspace.id, {
                 orgId: project.adobe?.organization,
                 projectId: project.adobe?.projectId,
+                workspaceName: workspace.name,
             });
             // Adobe's own words reach the log rather than a guess. The one refusal the AB-2
             // spike predicted here — a workspace still holding live event registrations

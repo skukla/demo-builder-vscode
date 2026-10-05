@@ -2,7 +2,7 @@ import * as path from 'path';
 import type { RemoteRenameResult } from './adobeConsoleProjectOps';
 import { isValidTokenResponse } from './authPredicates';
 import { withOrgContext, type OrgContextTarget } from './orgContextEnv';
-import type { OrgServicesStore } from './orgServicesSavedCatalog';
+import type { SavedState } from './orgServicesSavedCatalog';
 import { getLogger } from '@/core/logging/debugLogger';
 import { StepLogger } from '@/core/logging/stepLogger';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
@@ -58,8 +58,8 @@ export class AuthenticationService {
         extensionPath: string,
         logger: Logger,
         private commandManager: CommandExecutor,
-        /** Keeps the org's API list across window reloads (`context.globalState`). */
-        private readonly orgServicesStore?: OrgServicesStore,
+        /** Keeps the org's API list and deleted workspace names across reloads (`context.globalState`). */
+        private readonly savedState?: SavedState,
     ) {
         this.logger = logger;
 
@@ -131,7 +131,7 @@ export class AuthenticationService {
                 // this same manager says the token has hours left — the state
                 // that had a user signing in three times to no effect.
                 async () => (await this.tokenManager.inspectToken()).valid,
-                this.orgServicesStore,
+                this.savedState,
             );
 
             return stepLogger;
@@ -619,7 +619,7 @@ export class AuthenticationService {
      */
     async deleteWorkspace(
         workspaceId: string,
-        target?: { orgId?: string; projectId?: string },
+        target?: { orgId?: string; projectId?: string; workspaceName?: string },
     ): Promise<{ deleted: true; note?: string } | ConsoleOpFailure> {
         return withTiming('deleteWorkspace', async () => {
             const { projectOps } = await this.ensureEntities();

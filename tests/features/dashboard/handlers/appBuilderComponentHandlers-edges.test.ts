@@ -22,6 +22,7 @@ import {
     ERP_ENTRY,
     handleAddAppBuilderComponent,
     handleDeployAppBuilderComponent,
+    handleRedeployAppBuilderComponent,
     handleRemoveAppBuilderComponent,
     handleRenameAppBuilderComponent,
     mockAddAppBuilderComponent,
@@ -533,5 +534,35 @@ describe('the rename collision domain', () => {
             error: 'AppBuilderComponent id is required',
             code: expect.any(String),
         });
+    });
+});
+
+describe('a system left behind by a failed integration add', () => {
+    // 2026-10-05: an integration add failed after its ERP deployed; redeploying the ERP
+    // alone renamed it "Acme ERP" and left it running with nothing to talk to.
+    it('refuses a system whose integration is not in the project, and says what finishes it', async () => {
+        const { mockContext } = setupMocks({
+            appBuilderComponents: {
+                'demo-erp': {
+                    kind: 'system',
+                    status: 'deployed',
+                    name: 'Justrite ERP',
+                    source: { owner: 'skukla', repo: 'demo-erp' },
+                },
+            },
+        });
+        mockGetAppBuilderComponentCatalog.mockReturnValue([
+            { id: 'demo-erp', kind: 'system', boundTo: 'erp-integration', name: 'ERP' },
+            { id: 'erp-integration', kind: 'integration', name: 'ERP Integration' },
+        ]);
+        mockTestDeveloperPermissions(true);
+
+        const result = await handleRedeployAppBuilderComponent(mockContext, { id: 'demo-erp' });
+
+        expect(result).toEqual({
+            success: false,
+            error: 'Justrite ERP came with ERP Integration, which is not in this project. Add ERP Integration to finish — it reuses Justrite ERP.',
+        });
+        expect(mockDeployAppBuilderComponent).not.toHaveBeenCalled();
     });
 });

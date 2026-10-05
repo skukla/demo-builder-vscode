@@ -16,10 +16,11 @@ import { getLogger } from '@/core/logging/debugLogger';
 import { CACHE_TTL } from '@/core/utils/timeoutConfig';
 
 /**
- * Where the org's API list is kept between sessions. Production passes
+ * Where the extension keeps things between sessions — the org's API list here,
+ * recently deleted workspace names in `deletedWorkspaceNames`. Production passes
  * `context.globalState`; this is the two methods of it that are used.
  */
-export interface OrgServicesStore {
+export interface SavedState {
     get<T>(key: string): T | undefined;
     update(key: string, value: unknown): PromiseLike<void>;
 }
@@ -41,7 +42,7 @@ function isSavedCatalog(value: unknown): value is SavedCatalog {
 
 /** The org's saved list, or `undefined` when there is none worth using. */
 export function readSavedCatalog(
-    store: OrgServicesStore | undefined,
+    store: SavedState | undefined,
     orgId: string,
 ): SavedCatalog | undefined {
     const saved = store?.get<unknown>(savedCatalogKey(orgId));
@@ -50,7 +51,7 @@ export function readSavedCatalog(
 
 /** Save a fresh list for the next session. A failed save costs only that. */
 export function saveCatalog(
-    store: OrgServicesStore | undefined,
+    store: SavedState | undefined,
     orgId: string,
     services: OrgServiceInfo[],
 ): void {
@@ -77,7 +78,7 @@ export interface CatalogCopy {
 export class OrgServicesCatalog {
     private readonly copies = new Map<string, CatalogCopy>();
 
-    constructor(private readonly store?: OrgServicesStore) {}
+    constructor(private readonly store?: SavedState) {}
 
     /** The org's kept copy — from memory, else from the store — or `undefined`. */
     get(orgId: string): CatalogCopy | undefined {

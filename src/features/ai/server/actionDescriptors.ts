@@ -206,7 +206,9 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         description:
             'Deploy (or redeploy) one App Builder integration on the current ' +
             'project by its id (from get_project). Runs the guard chain and deploys under the ' +
-            "project's Adobe org context. For the API Mesh, use deploy_mesh instead.",
+            "project's Adobe org context. For the API Mesh, use deploy_mesh instead. " +
+            'An ERP whose integration is not in the project is refused: add that integration instead, ' +
+            'which reuses the ERP.',
         map: dashboardHandlers,
         type: 'deployAppBuilderComponent',
         inputSchema: {

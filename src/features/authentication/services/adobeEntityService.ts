@@ -38,7 +38,8 @@ import { AdobeOrgServices } from './adobeOrgServices';
 import type { AdobeSDKClient } from './adobeSDKClient';
 import { AdobeWorkspaceCredentials } from './adobeWorkspaceCredentials';
 import type { AuthCacheManager } from './authCacheManager';
-import type { OrgServicesStore } from './orgServicesSavedCatalog';
+import { DeletedWorkspaceNames } from './deletedWorkspaceNames';
+import type { SavedState } from './orgServicesSavedCatalog';
 import type { StepLogger } from '@/core/logging/stepLogger';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { Logger } from '@/types/logger';
@@ -71,7 +72,7 @@ export function createEntityCollaborators(
     config: {
         onNoOrgsAccessible?: () => Promise<void>;
         isTokenValid?: () => Promise<boolean>;
-        orgServicesStore?: OrgServicesStore;
+        savedState?: SavedState;
     } = {},
 ): EntityCollaborators {
     const cli = new AdobeCliFallback(
@@ -86,9 +87,12 @@ export function createEntityCollaborators(
         onNoOrgsAccessible: config.onNoOrgsAccessible,
     });
     const credentials = new AdobeWorkspaceCredentials(sdkClient, cacheManager);
-    const orgServices = new AdobeOrgServices(sdkClient, config.orgServicesStore);
-    const projectOps = new AdobeConsoleProjectOps(sdkClient, cacheManager, (orgId, projectId) =>
-        reads.fetchWorkspaces(orgId, projectId),
+    const orgServices = new AdobeOrgServices(sdkClient, config.savedState);
+    const projectOps = new AdobeConsoleProjectOps(
+        sdkClient,
+        cacheManager,
+        (orgId, projectId) => reads.fetchWorkspaces(orgId, projectId),
+        new DeletedWorkspaceNames(config.savedState),
     );
     return { reads, credentials, orgServices, projectOps };
 }
@@ -112,8 +116,8 @@ export function createEntityServices(
      * when absent the CLI fallback keeps its previous, blunter assertion.
      */
     isTokenValid?: () => Promise<boolean>,
-    /** Keeps the org's API list across window reloads (`context.globalState`). */
-    orgServicesStore?: OrgServicesStore,
+    /** Keeps the org's API list and deleted workspace names across reloads (`context.globalState`). */
+    savedState?: SavedState,
 ): EntityServices {
     const selector = new AdobeEntitySelector(commandManager, cacheManager);
     const collaborators = createEntityCollaborators(
@@ -125,7 +129,7 @@ export function createEntityServices(
         {
             onNoOrgsAccessible: () => selector.clearConsoleContext(),
             ...(isTokenValid ? { isTokenValid } : {}),
-            ...(orgServicesStore ? { orgServicesStore } : {}),
+            ...(savedState ? { savedState } : {}),
         },
     );
     const resolver = new AdobeContextResolver(commandManager, cacheManager, collaborators.reads);
