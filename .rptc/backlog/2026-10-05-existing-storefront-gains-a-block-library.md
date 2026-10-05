@@ -99,3 +99,4 @@ Code: `src/features/updates/services/blockLibraryInstall.ts` (find + apply),
 ## Shipped so far
 
 - 2026-10-05  Built, not committed and not run live: a selected-but-uninstalled block library is offered as an install by Check for Updates and apply_updates, through the shared installer; gate green (1820 suites)
+- 2026-10-05  fix(updates): install a selected block library on an existing storefront (`a6a356d22`)
