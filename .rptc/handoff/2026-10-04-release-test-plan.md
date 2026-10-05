@@ -1,18 +1,19 @@
 # Release test plan — everything built since the last Demo Builder release
 
-Written 2026-10-04 for the owner. Covers the work of the four overnight runs (2026-10-02 to
-10-05), today's day run, and the ERP fixes deployed today. Ordered the way an SC moves through
+Written 2026-10-04 for the owner; updated 2026-10-05 with the category and product page work
+(EDS-24, 26, 27, 28). Covers the work of the four overnight runs (2026-10-02 to 10-05), the day
+runs, and the ERP fixes deployed 2026-10-04. Ordered the way an SC moves through
 Demo Builder. Item ids are in brackets at the end of each line, for the record only.
 
-**Time:** about 2½ hours for everything; the ★ rows alone take about an hour and cover what
+**Time:** about 3 hours for everything; the ★ rows alone take about 1¼ hours and cover what
 matters most.
 
 ## Before you start
 
-1. **Build the release candidate.** It doesn't exist yet as one branch. The work is on
-   `loop/2026-10-04-day-a` (everything through the second overnight run, plus today's agent fix)
-   and `loop/2026-10-04-day-b` (today's cleanup). Ask me to combine them; then `npm run compile`
-   and reload the Demo Builder window.
+1. **Use the release candidate.** `loop/2026-10-05-release-candidate` combines
+   `loop/2026-10-04-day-a` (everything through the overnight runs, plus the 2026-10-05 page work)
+   and `loop/2026-10-04-day-b` (cleanup). Run `npm run compile` in that tree and reload the Demo
+   Builder window.
 2. **Projects to use:**
    - **Justrite**, which has both ERPs set up fresh today: Justrite ERP owns 43 products, Accuform
      ERP owns 96, there are no orders yet, and today's cut-off-button fix is deployed.
@@ -57,7 +58,28 @@ matters most.
 | ★ | Run the **Storefront Report** on a storefront forked from our template | It says what it's built on and which fixes fit. If the template has newer code, it offers to bring it in, and the default is No [EDS-13f] |
 | | Run any long operation (deploy, reset) | The progress window says what it's doing at each stage, not just a spinner [PL-59] |
 
-## 5. App Builder integrations (scratch project)
+## 5. Category and product pages (Edge Delivery storefronts)
+
+The category menu reads Commerce's category tree live; Demo Builder writes an editable page per
+"Include in Menu" category and never touches a page someone else made or edited. Use a scratch
+project from a shipped package unless the row says Justrite.
+
+| | Do this | Expect |
+|---|---|---|
+| ★ | Create a storefront with **Demo Builder Blocks** ticked | The nav has the catalog menu. Each "Include in Menu" category has a page that lists its products. The summary names any category that already had a page [EDS-24 — *proven on Justrite, not yet at creation*] |
+| | Before creating, hand-build a page for one category at another address (a product list block naming it) | No second page is written; the menu links to your page and the summary says so [EDS-24 — *not yet run live*] |
+| | Edit one Demo Builder category page in DA.live, then **Republish** | Your edit survives [EDS-24] |
+| | **Reset** the scratch project | The nav and the unedited category pages come back exactly; edited pages are left alone [EDS-24] |
+| ★ | On an existing storefront without the library, tick **Demo Builder Blocks** in Configure, then **Check for updates** | One item, "Demo Builder Blocks: install". Applying it is one commit to the storefront repository [EDS-28 — *proven on Justrite*] |
+| ★ | With the project open, add a category in Commerce Admin set to "Include in Menu" (wait a few minutes) | A notice names it and offers **Add pages** or **Always add for this project**. **Add pages** writes and publishes it [EDS-27 — *notice not yet seen live*] |
+| | Turn on `demoBuilder.categoryPages.autoAdd` and add another category | Its page is added and published without asking, then a notice says what was added, with **Stop for this project** [EDS-27 — *not yet seen live*] |
+| | Ask the agent "Are any categories missing pages? Add them." | It lists them, then asks before adding. It can't turn the automatic setting on [EDS-27 — *proven on Justrite*] |
+| ★ | **Reset** a storefront that has published product pages | The result says how many product pages were removed, then the current catalog's pages come back and answer [EDS-26 — *proven on Justrite*] |
+| | **Delete** the scratch project | Its product pages are removed from the live site too; DA.live content is not touched by this step [EDS-26 — *not yet run live*] |
+| | Reset or delete a project whose storefront repository another project on this machine also uses | It refuses and names the other project [EDS-26] |
+| | Command palette → **Manage DA.live Sites**, delete a throwaway site | The confirmation says its pages come off the live site. Afterwards its aem.live pages answer 404; if any couldn't be unpublished, the message names the site [EDS-31 — *not yet run live*] |
+
+## 6. App Builder integrations (scratch project)
 
 | | Do this | Expect |
 |---|---|---|
@@ -69,7 +91,7 @@ matters most.
 | | Read the integration's detail panel, then **Remove** it | The panel explains the optional App Management listing. Remove warns the listing stays until unassociated in Commerce Admin, and reports anything left behind [AB-11, AB-12, AB-33] |
 | | (If you can) use a project where you aren't a developer on the Commerce product profile | A plain explanation of who can fix it, not a raw Adobe error [AB-18] |
 
-## 6. The ERP pair (scratch project, or Justrite after a reset)
+## 7. The ERP pair (scratch project, or Justrite after a reset)
 
 | | Do this | Expect |
 |---|---|---|
@@ -79,7 +101,7 @@ matters most.
 | | **Reset ERPs** | Orders are closed off, Commerce's credit limits and blocks are undone, both ERPs are wiped and refilled, and it doesn't stop at 60 seconds [AB-16n, AB-61, AB-47] |
 | | In the ERP, open the **user menu → Appearance**, then **Settings** | Appearance has a live preview of theme, logo and navigation style; Settings is a form an ERP user edits [AB-59] |
 
-## 7. Running the demo — order to cash, on Justrite
+## 8. Running the demo — order to cash, on Justrite
 
 Use the walkthrough in `commerce-erp-integration/docs/walkthrough.md` ("One order, two ERPs").
 
@@ -97,7 +119,7 @@ Use the walkthrough in `commerce-erp-integration/docs/walkthrough.md` ("One orde
 | | Drag a few column edges in any ERP grid | Text and number columns resize [grid audit] |
 | | Follow the order's progress strip on an order with a return | All stages fit at 1280 with no sideways scroll [today's fix] |
 
-## 8. Using an agent (in a project's Claude Code chat)
+## 9. Using an agent (in a project's Claude Code chat)
 
 | | Ask the agent | Expect |
 |---|---|---|
@@ -113,7 +135,11 @@ Use the walkthrough in `commerce-erp-integration/docs/walkthrough.md` ("One orde
 
 - One ERP heading ("Amount") is still cut at 1280 on an order line that has both a discount and
   quantity left to close. The button still shows. Fixing it needs a column removed (your call).
-- Category pages and the catalog menu (EDS-24) are built but tabled until you've seen them.
+- **Guest prices on Justrite show $0.00.** Signed-in company buyers see prices; guests and the
+  General group get none, while a request with no group gets list prices. Under investigation, not
+  caused by the page work.
+- An expired DA.live sign-in can read as "no publishable pages" on Republish, and as still signed
+  in [EDS-29, EDS-30, filed].
 - Optimizer support (PL-60) and app-only projects (AB-1b) are designs only.
 - The card payment path (AB-26s card half) needs a card payment method on Justrite first.
 - The real-VS-Code UI tests (PL-66) haven't been run: `npm run test:ui`.

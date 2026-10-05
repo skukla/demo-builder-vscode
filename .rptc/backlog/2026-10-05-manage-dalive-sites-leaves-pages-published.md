@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: low
-status: backlog
+status: built
 ---
 
 # "Manage DA.live Sites" deletes a site's content and leaves its pages published
@@ -34,3 +34,8 @@ text to say the pages come off the live site.
 
 Not verified: whether a site listed here can have a repository under a different name
 that no local project records.
+
+## Shipped so far
+
+- 2026-10-05  fix(eds): Manage DA.live Sites takes pages off the live site (EDS-31) (`e97f43ddd`)
+- 2026-10-05  Built, gate green (1831 suites). Not yet run live: needs a throwaway DA.live site to delete; the same-named repository fallback is unproven.
