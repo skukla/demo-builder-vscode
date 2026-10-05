@@ -52,3 +52,4 @@ pages written at setup, because generated pages override authored ones.
 ## Shipped so far
 
 - 2026-10-05  2026-10-05 Answered: keep our shared action as the default for every stack; do not adopt prerender per demo (one site per deployment, ~65 min for a new SKU, guest price baked into B2B pages, no documented uninstall). Add server-rendered tags inside render-pdp only if a demo needs SEO. Research: .rptc/research/prerender-vs-shared-action/research.md. Awaiting the owner's acceptance.
+- 2026-10-05  docs(eds): EDS-25 answered — keep the shared product-page action; records corrected; EDS-26 filed (`67fdc3e05`)
