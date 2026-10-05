@@ -15,6 +15,7 @@
  * @module features/app-builder/services/pairNames
  */
 
+import { systemBoundTo } from '@/features/components/services/appBuilderComponentLinks';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 
 /** The name a pair gets when the SC types none. */
@@ -67,10 +68,8 @@ export function pairedSystemOf(
     entry: AppBuilderComponentCatalogEntry,
     catalog: readonly AppBuilderComponentCatalogEntry[],
 ): AppBuilderComponentCatalogEntry | undefined {
-    const kind = entry.catalogId ?? entry.id;
-    return catalog.find(
-        (candidate) => candidate.kind === 'system' && candidate.boundTo === kind && Boolean(candidate.nameFromEnvVar),
-    );
+    const system = systemBoundTo(entry.catalogId ?? entry.id, catalog);
+    return system?.nameFromEnvVar ? system : undefined;
 }
 
 /** What a system is called as a word: its type ("ERP"), else its catalog name. */

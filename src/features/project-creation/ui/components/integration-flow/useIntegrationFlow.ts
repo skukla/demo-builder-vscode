@@ -43,6 +43,7 @@ import {
     type IntegrationKind,
 } from './flowStages';
 import { mintInstance } from './instanceId';
+import { systemBoundTo } from '@/features/components/services/appBuilderComponentLinks';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AdobeAuthSessionState, AdobeProject, WizardState, Workspace } from '@/types/webview';
 
@@ -264,10 +265,7 @@ export function useIntegrationFlow(args: UseIntegrationFlowArgs): UseIntegration
                 // SC had never heard of and could not add (owner, 2026-09-20).
                 // The typed name names the pair instead (`pairNames`): the integration
                 // and its system, through the display-name vars each declares.
-                const bound = args.catalog.find(
-                    (candidate) => candidate.kind === 'system' && candidate.boundTo === entry.id,
-                );
-                if (bound) {
+                if (systemBoundTo(entry.id, args.catalog)) {
                     builder.onAppBuilderComponentToggle(entry.id, true, draft.label?.trim());
                     return;
                 }

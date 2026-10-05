@@ -22,6 +22,7 @@ import type { AppBuilderComponentRequirement } from '../../../services/appBuilde
 import { isMeshSelected } from '../../steps/tileStatus';
 import { BASELINE_CODE } from './apiAccessConstants';
 import { RESERVED_EXISTING_KEY, type IntegrationKind } from './flowStages';
+import { systemBoundTo } from '@/features/components/services/appBuilderComponentLinks';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AdobeAuthSessionState } from '@/types/webview';
 
@@ -105,7 +106,7 @@ function companionOf(
     integrationId: string,
     components: AppBuilderComponentCatalogEntry[],
 ): string | undefined {
-    return components.find((entry) => entry.kind === 'system' && entry.boundTo === integrationId)?.name;
+    return systemBoundTo(integrationId, components)?.name;
 }
 
 /** Whether the shared Adobe I/O destination (project + workspace) is committed. */

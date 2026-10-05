@@ -4297,7 +4297,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 388,
+            "line": 386,
             "mutants": 1,
             "category": "other",
             "reason": "These eight callbacks take no dependencies because each one updates the draft through the functional form of setDraft, so nothing they close over can change. The Stryker replacement is a constant literal that compares equal on every render, so useCallback still returns the same function; neither the identity, the call count, nor the resulting draft differs in any way a test can observe.",
@@ -4310,7 +4310,7 @@
             "anchors": [
                 "[],"
             ],
-            "line": 361,
+            "line": 359,
             "mutants": 1,
             "category": "other",
             "reason": "These eight callbacks take no dependencies because each one updates the draft through the functional form of setDraft, so nothing they close over can change. The Stryker replacement is a constant literal that compares equal on every render, so useCallback still returns the same function; neither the identity, the call count, nor the resulting draft differs in any way a test can observe.",
@@ -5090,7 +5090,7 @@
             "anchors": [
                 "const ids = state.selectedAppBuilderComponents ?? [];"
             ],
-            "line": 173,
+            "line": 174,
             "mutants": 1,
             "category": "ArrayDeclaration",
             "reason": "Stryker fills the ?? [] fallback with a one-element array of its own marker string. Every id the loop cannot resolve is dropped: no source record is keyed by it, components.find returns undefined, and the iteration hits continue. The marker id therefore adds no row and the result is identical to the empty fallback.",
@@ -8835,7 +8835,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 1597,
+            "line": 1594,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single deps.logger.warn. Emptying it leaves the catch itself in place, so a failing remote teardown is swallowed exactly as before and the removal continues to clear local state - which the remove-contracts suite asserts directly with a rejecting executor. Only the log line differs.",
@@ -8861,7 +8861,7 @@
             "anchors": [
                 "if (cleared.componentApiPicks) {"
             ],
-            "line": 1842,
+            "line": 1839,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true assigns cleared.componentApiPicks onto the caller's project when it is undefined. cleared is spread from that same project, so an undefined value there means the caller's field was already undefined and the assignment writes back exactly what was there. The mutation is a no-op for every input on which the guard was false.",
@@ -8874,7 +8874,7 @@
             "anchors": [
                 "if (cleared.componentConfigs) {"
             ],
-            "line": 1845,
+            "line": 1842,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true assigns cleared.componentConfigs onto the caller's project when it is undefined. cleared is spread from that same project, so an undefined value there means the caller's field was already undefined and the assignment writes back exactly what was there. The mutation is a no-op for every input on which the guard was false.",

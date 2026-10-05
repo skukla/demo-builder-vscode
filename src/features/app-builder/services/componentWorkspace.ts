@@ -30,7 +30,7 @@
 
 import { catalogEntryFor, pairedEntry } from './componentEntry';
 import type { RuntimeNamespaceEnv } from './runtimeNamespace';
-import { pairedInstanceId } from '@/features/components/services/appBuilderComponentLinks';
+import { pairedInstanceId, systemBoundTo } from '@/features/components/services/appBuilderComponentLinks';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState, Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
@@ -90,8 +90,7 @@ export function workspaceNamedFor(
     catalog: AppBuilderComponentCatalogEntry[] = [],
 ): AppBuilderComponentCatalogEntry {
     if (entry.kind === 'system') return entry;
-    const kind = entry.catalogId ?? entry.id;
-    const system = catalog.find((candidate) => candidate.kind === 'system' && candidate.boundTo === kind);
+    const system = systemBoundTo(entry.catalogId ?? entry.id, catalog);
     return system ? pairedEntry(entry, system) : entry;
 }
 

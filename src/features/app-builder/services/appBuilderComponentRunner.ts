@@ -101,7 +101,7 @@ import {
     linkBroughtSystem,
     pairedInstanceId,
     systemsUsedBy,
-} from '@/features/components/services/appBuilderComponentLinks';
+ systemBoundTo } from '@/features/components/services/appBuilderComponentLinks';
 import type {
     ComponentInstallOptions,
     ComponentInstallResult,
@@ -869,10 +869,7 @@ function boundSystemOf(
     entry: AppBuilderComponentCatalogEntry,
     catalog: AppBuilderComponentCatalogEntry[],
 ): AppBuilderComponentCatalogEntry | undefined {
-    const kind = entry.catalogId ?? entry.id;
-    const system = catalog.find(
-        (candidate) => candidate.kind === 'system' && candidate.boundTo === kind,
-    );
+    const system = systemBoundTo(entry.catalogId ?? entry.id, catalog);
     return system && pairedEntry(entry, system);
 }
 

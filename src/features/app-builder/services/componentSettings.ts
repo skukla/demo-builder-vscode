@@ -17,7 +17,7 @@
  */
 
 import { getProvidedEnvVars } from '@/core/state/appBuilderComponentState';
-import { pairedInstanceId } from '@/features/components/services/appBuilderComponentLinks';
+import { pairedInstanceId, systemBoundTo } from '@/features/components/services/appBuilderComponentLinks';
 import { classifyEnvSchema } from '@/features/project-creation/services/envVarClassifier';
 import type {
     AppBuilderComponentCatalogEntry,
@@ -46,8 +46,7 @@ function pairNameSetting(
     catalog: AppBuilderComponentCatalogEntry[],
 ): string | undefined {
     if (entry.kind === 'system') return entry.nameFromEnvVar;
-    const kind = entry.catalogId ?? entry.id;
-    return catalog.find((candidate) => candidate.kind === 'system' && candidate.boundTo === kind)?.nameFromEnvVar;
+    return systemBoundTo(entry.catalogId ?? entry.id, catalog)?.nameFromEnvVar;
 }
 
 /**

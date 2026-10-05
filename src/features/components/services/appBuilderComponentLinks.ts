@@ -199,7 +199,7 @@ export function linkComponents(
 export function linkBroughtSystem(project: Project, integrationId: string, catalog: Catalog): boolean {
     const catalogId = project.appBuilderComponents?.[integrationId]?.catalogId;
     const kind = catalogId ?? integrationId;
-    const system = catalog.find((entry) => entry.kind === 'system' && entry.boundTo === kind);
+    const system = systemBoundTo(kind, catalog);
     if (!system) return false;
     const systemId = pairedInstanceId(integrationId, catalogId, system.id);
     if (!present(project, systemId) || !present(project, integrationId)) return false;
@@ -290,6 +290,22 @@ export function copyForAdd<T extends { id: string; name: string; kind: string; a
 
 /** The part of a catalog entry the card's "Add another" reads. */
 type ListingEntry = Pick<AppBuilderComponentCatalogEntry, 'id' | 'kind' | 'boundTo' | 'systemType' | 'listedAs'>;
+
+/**
+ * The catalog entry of the system bound to an integration kind (its `boundTo`) — the
+ * ERP the ERP integration brings — or undefined when it brings none. The one lookup
+ * every pair-aware path shares.
+ *
+ * @param integrationKind - the integration's catalog id (`catalogId ?? id`)
+ * @param catalog - the catalog
+ * @returns the bound system's entry
+ */
+export function systemBoundTo<T extends Pick<ListingEntry, 'kind' | 'boundTo'>>(
+    integrationKind: string,
+    catalog: readonly T[],
+): T | undefined {
+    return catalog.find((entry) => entry.kind === 'system' && entry.boundTo === integrationKind);
+}
 
 /**
  * The catalog entry of the system an integration serves in a LIST (`listedAs`), the one
