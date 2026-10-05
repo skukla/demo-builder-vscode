@@ -144,6 +144,18 @@
     pointer-events: auto;
 }
 
+/* Inside a Spectrum ListView row, whose text slot is one line tall and clips.
+ * The collapsed pencil keeps its 32px HEIGHT (only its width collapses), so an
+ * inline field grew to 32px, centred its name in that, and the slot cut the
+ * name's lower half off. Filling the slot instead centres the name on the line
+ * and lets the pencil overflow evenly. */
+.inline-rename-row,
+.inline-rename-row .inline-rename {
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
 .inline-rename .inline-rename-pencil {
     flex: 0 0 auto;
 }
