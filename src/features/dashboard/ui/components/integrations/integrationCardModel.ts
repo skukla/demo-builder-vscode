@@ -441,6 +441,9 @@ export function deriveIntegrationCard(
     return withRemovalStopped(entry, {
         id: entry.id,
         isMesh: false,
+        // Says what the card is whatever it is named: "Acme ERP" beside an ERP
+        // card would otherwise read as a second ERP.
+        typeBadge: 'Integration',
         name: override?.name ?? entry.name ?? entry.id,
         kindLabel: facet.kindLabel,
         sourceLine: facet.sourceLine,

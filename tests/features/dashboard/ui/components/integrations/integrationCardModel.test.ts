@@ -324,6 +324,20 @@ describe('deriveIntegrationCard — override precedence', () => {
 // kindLabel / AI caption / canRename
 // ---------------------------------------------------------------------------
 describe('deriveIntegrationCard — kindLabel + canRename', () => {
+    // An integration named "Acme ERP" sits beside an ERP card badged "ERP"; its own
+    // badge is what tells them apart, whatever the name says.
+    it('badges the card "Integration" whatever it is named', () => {
+        const model = deriveIntegrationCard(
+            integration({
+                id: 'erp-integration',
+                name: 'Acme ERP',
+                source: { owner: 'adobe', repo: 'erp-integration' },
+            })
+        );
+
+        expect(model.typeBadge).toBe('Integration');
+    });
+
     it('catalog id hit: "Pre-built", apis from requiredApis, NOT renamable', () => {
         const model = deriveIntegrationCard(
             integration({
