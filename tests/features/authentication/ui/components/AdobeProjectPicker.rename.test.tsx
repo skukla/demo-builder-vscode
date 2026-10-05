@@ -99,3 +99,16 @@ describe('AdobeProjectPicker — rename', () => {
         expect(mockUpdateState).not.toHaveBeenCalled();
     });
 });
+
+// 2026-10-05: the field sat outside the row's Text slot, so the row's grid put the name
+// before the selection checkbox and pushed the description aside.
+describe('the row layout', () => {
+    it("puts the project name in the row's text slot", () => {
+        renderPicker();
+        const name = screen.getByText(mockProjects[0].title || mockProjects[0].name);
+
+        // The Spectrum mock renders Text as data-testid="spectrum-text"; real ListView
+        // gives that slot the row's content grid area.
+        expect(name.closest('[data-testid="spectrum-text"]')).not.toBeNull();
+    });
+});

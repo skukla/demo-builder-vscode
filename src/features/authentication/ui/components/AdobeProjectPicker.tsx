@@ -201,11 +201,16 @@ export function AdobeProjectPicker({
             const title = item.title || item.name;
             return (
                 <>
-                    <InlineRenameField
-                        name={title}
-                        label={`New name for ${title}`}
-                        onRename={(next) => handleRename(item, next)}
-                    />
+                    {/* In the row's Text slot: a ListView row is a grid that places only its
+                        slotted children, and the bare field landed in the first free cell,
+                        before the selection checkbox, pushing the description aside. */}
+                    <Text>
+                        <InlineRenameField
+                            name={title}
+                            label={`New name for ${title}`}
+                            onRename={(next) => handleRename(item, next)}
+                        />
+                    </Text>
                     {item.deletable === true && (
                         <ActionButton
                             isQuiet
