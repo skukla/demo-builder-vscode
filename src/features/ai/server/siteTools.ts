@@ -330,7 +330,7 @@ export function registerSiteTools(server: McpToolServer, ctxFactory: () => Handl
                             "Your Adobe account holds no admin role on this site's " +
                             'configuration, so the repair was refused. Run "Demo Builder: ' +
                             'Manage Site Access": it names anyone who can add you, and when ' +
-                            'nobody is visible it opens the AEM Code Sync app on GitHub. Once ' +
+                            'nobody is visible it links to the GitHub pages that fix it. Once ' +
                             'you hold the role, the repair can be retried.',
                         resumeWith: 'get_site_access',
                     })),

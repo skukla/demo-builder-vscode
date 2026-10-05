@@ -3,7 +3,6 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { ConfigureCommand } from './configure';
 import { DiagnosticsCommand } from './diagnostics';
-import { ManageSiteAccessCommand } from './manageSiteAccess';
 import { MigrateStorefrontNamesCommand } from './migrateStorefrontNames';
 import { OpenInClaudeCommand } from './openInClaude';
 import { OpenModernizationAgentCommand } from './openModernizationAgent';
@@ -22,6 +21,7 @@ import { ShowAiCommand } from '@/features/dashboard/commands/openAi';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
 import { ShowIntegrationsCommand } from '@/features/dashboard/commands/showIntegrations';
 import { ShowDataInstallerCommand } from '@/features/data-installer/commands/showDataInstaller';
+import { ShowSiteAccessCommand } from '@/features/eds/commands/showSiteAccess';
 import { getBookmarkletSetupPageUrl } from '@/features/eds/ui/helpers/bookmarkletSetupPage';
 import { getBookmarkletUrl } from '@/features/eds/utils/daLiveTokenBookmarklet';
 import { StartDemoCommand } from '@/features/lifecycle/commands/startDemo';
@@ -218,12 +218,13 @@ export class CommandManager {
             refreshBlockLibrary.execute(),
         );
 
-        // Manage Site Access — who administers the storefront's Configuration
-        // Service entry. Palette-visible on purpose: the person who needs to run
-        // it is often NOT the person whose project is broken (a teammate grants
-        // the role on someone else's behalf), so it cannot live only on a
-        // project-scoped surface.
-        const manageSiteAccess = new ManageSiteAccessCommand(
+        // Manage Site Access — the Site access webview: who administers the
+        // storefront's Configuration Service entry and who reads its DA.live
+        // content. Palette-visible on purpose: the person who needs to run it is
+        // often NOT the person whose project is broken (a teammate grants the role
+        // on someone else's behalf), so it is its own webview rather than a modal
+        // on a project-scoped surface.
+        const manageSiteAccess = new ShowSiteAccessCommand(
             this.context,
             this.stateManager,
             this.logger,

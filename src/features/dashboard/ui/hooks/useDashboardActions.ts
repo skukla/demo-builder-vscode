@@ -59,6 +59,8 @@ export interface UseDashboardActionsReturn {
     handleOpenDevConsole: () => void;
     /** Open the bound AEM author's Assets console (URL resolved backend-side from the setting) */
     handleOpenAemAssets: () => void;
+    /** Opens the Site access webview (EDS storefronts). */
+    handleOpenSiteAccess: () => void;
     /** Delete the project */
     /** Republish DA.live content to CDN (EDS projects only) */
     /** Navigate back to projects list */
@@ -144,6 +146,10 @@ export function useDashboardActions({
         webviewClient.postMessage('openAemAssets');
     }, []);
 
+    const handleOpenSiteAccess = useCallback(() => {
+        webviewClient.postMessage('openSiteAccess');
+    }, []);
+
     const handleNavigateBack = useCallback(() => {
         webviewClient.postMessage('navigateBack');
     }, []);
@@ -172,6 +178,7 @@ export function useDashboardActions({
         handleEditProject,
         handleOpenDevConsole,
         handleOpenAemAssets,
+        handleOpenSiteAccess,
         handleNavigateBack,
         handleReAuthenticate,
         handleSwitchOrg,

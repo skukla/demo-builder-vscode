@@ -26,7 +26,6 @@ import {
 
 import { ConfigureCommand } from '@/commands/configure';
 import { DiagnosticsCommand } from '@/commands/diagnostics';
-import { ManageSiteAccessCommand } from '@/commands/manageSiteAccess';
 import { MigrateStorefrontNamesCommand } from '@/commands/migrateStorefrontNames';
 import { OpenInClaudeCommand } from '@/commands/openInClaude';
 import { OpenModernizationAgentCommand } from '@/commands/openModernizationAgent';
@@ -42,6 +41,7 @@ import { ShowAiCommand } from '@/features/dashboard/commands/openAi';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
 import { ShowIntegrationsCommand } from '@/features/dashboard/commands/showIntegrations';
 import { ShowDataInstallerCommand } from '@/features/data-installer/commands/showDataInstaller';
+import { ShowSiteAccessCommand } from '@/features/eds/commands/showSiteAccess';
 import { StartDemoCommand } from '@/features/lifecycle/commands/startDemo';
 import { StopDemoCommand } from '@/features/lifecycle/commands/stopDemo';
 import { SyncStorefrontCommand } from '@/features/lifecycle/commands/syncStorefront';
@@ -74,7 +74,7 @@ describe('a command id runs the command object it was built for', () => {
         ['demoBuilder.deployMesh', DeployMeshCommand],
         ['demoBuilder.syncStorefront', SyncStorefrontCommand],
         ['demoBuilder.refreshBlockLibrary', RefreshBlockLibraryCommand],
-        ['demoBuilder.manageSiteAccess', ManageSiteAccessCommand],
+        ['demoBuilder.manageSiteAccess', ShowSiteAccessCommand],
         ['demoBuilder.repairSiteConfiguration', RepairSiteConfigurationCommand],
         ['demoBuilder.storefrontReport', StorefrontReportCommand],
         ['demoBuilder.checkForUpdates', CheckUpdatesCommand],

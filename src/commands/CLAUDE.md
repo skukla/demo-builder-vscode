@@ -13,8 +13,6 @@ works, because each file carries a substantial header comment.
 | `claudeSessionStore.ts` | Probes Claude Code's per-cwd conversation store; decides whether `claude --continue` is safe at launch |
 | `configure.ts` | `demoBuilder.configure` — QuickPick to edit .env, redeploy mesh, and related project configuration |
 | `diagnostics.ts` | The diagnostics report (see below) |
-| `manageSiteAccess.ts` | QuickPick over who holds the Configuration Service admin role on the project's storefront, and who may read its authored content on DA.live (EDS-22). UX only — logic and post-write verification live in `siteAccessManagerHeadless` and `contentAccessManagerHeadless` |
-| `manageContentReaders.ts` | The content-reader rows and flows of `manageSiteAccess.ts` — let someone read a site's authored content, or stop them — usable with no project open from a typed org and site |
 | `repairSiteConfiguration.ts` | For a legacy project whose DA.live site name differs from the repo name: runs the storefront name migration, then re-runs the refused Configuration Service write, then republishes. Step 2 runs only when step 1 reports `repaired` |
 | `storefrontReport.ts` | Where the current project's storefront comes from, what Demo Builder wrote into it, and each of its fixes, as a markdown document; for an added demo tied to our templates, offers the fixes that fit (modal, default No). Computation and wording live in `storefrontReport.ts` under `features/eds/services/storefront/` (EDS-13f) |
 | `migrateStorefrontNames.ts` | One-shot palette command for projects built before `164fd251`, whose DA.live site name does not match the GitHub repo name |
@@ -32,6 +30,7 @@ Four modules here are not commands but support them:
 | `diagnosticsChecks.ts` | The collection half of Diagnostics — environment, tools, Adobe CLI, capability probes. Free functions, because none needs the command's state |
 | `diagnosticsReport.ts` | The rendering half. Split from collection deliberately: the two change for different reasons |
 | `handlerContextFactory.ts` | Builds a COMPLETE `HandlerContext` for a webview panel. Every panel command used to hand-roll one, and most filled it in partially |
+| `standalonePanelCommand.ts` | Base for webviews that stand beside whatever is open and work with no project — the Data Installer and Site access. Owns the bundle HTML, registering every handler map in one loop, and the panel handler context |
 | `orphanedSettings.ts` | Finds settings a user has set that the extension no longer reads — renaming a contributed setting does not migrate the value, so it strands silently |
 
 ## Registration

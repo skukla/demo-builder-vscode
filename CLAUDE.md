@@ -216,7 +216,7 @@ without producing a signal.
 - `debug-log-triage` — parse a pasted Debug Logs dump: the structured stdout/stderr block above a blank error carries the truth; benign-noise catalog; channel→feature map
 - `adobe-docs-lookup` — route an Adobe docs question to the source that has it (App Builder concepts live on developer.adobe.com, which NO doc MCP indexes) + recover from `-32002` / 401 MCP session failures
 - `component-extraction-scan` — find UI markup duplicated across ≥3 sites that should be one component (inverse of the SOP God-file scan)
-- `webview-visual-baseline` — prove a CSS/webview change moved exactly what it meant to: a computed-style fingerprint of every element on all eight surfaces, before and after, compared by exact string equality (not screenshots). The safety net PL-21 is gated on, and the instrument that measured ADR-018
+- `webview-visual-baseline` — prove a CSS/webview change moved exactly what it meant to: a computed-style fingerprint of every element on all nine surfaces, before and after, compared by exact string equality (not screenshots). The safety net PL-21 is gated on, and the instrument that measured ADR-018
 - `ask-the-tool` — do a mechanical refactor over many files by letting the COMPILER decide which
   sites are real: change all of them, run `typecheck:tests` once, and the files that now error are
   the ones where the thing you removed was load-bearing. Then the suite catches what tsc cannot see
@@ -266,7 +266,7 @@ including 291 browser-bundle ones, in a document that mentions React zero times.
 Each has its own enforcer (`tests/sop/architecture-rules.test.ts` and
 `tests/sop/webview-architecture-rules.test.ts`) and its own ledger.
 
-**Webview side (ADR-017)**: the composition root is the bundle entry (8 of them);
+**Webview side (ADR-017)**: the composition root is the bundle entry (9 of them);
 dependencies arrive as props, not context; the message channel is a RATIFIED
 singleton (`acquireVsCodeApi()` is once-per-webview, so there is nothing to
 vary); hooks are the service layer; and a feature stylesheet reaches only the
@@ -335,11 +335,11 @@ works, and nothing anywhere fails for the paths you did not.
 Before calling a change done, walk this list and decide which entries apply. An
 entry that does not apply is a one-line statement, not a silence.
 
-**1. Eight webview bundles.** `WEBVIEW_ENTRIES` in `esbuild.config.js`: wizard,
+**1. Nine webview bundles.** `WEBVIEW_ENTRIES` in `esbuild.config.js`: wizard,
 dashboard, configure, sidebar, projectsList, aiOverview, integrations,
-dataInstaller. A feature stylesheet reaches only the bundles whose entry imports
+dataInstaller, siteAccess. A feature stylesheet reaches only the bundles whose entry imports
 it, so a class can be styled on one surface and absent on the next **with no error
-anywhere** (ADR-017). Shared UI touched → ask which of the eight render it.
+anywhere** (ADR-017). Shared UI touched → ask which of the nine render it.
 
 **2. Creation and regeneration must agree.** Anything project creation writes,
 "Regenerate AI Files" has to reproduce for a project that gains the qualifying

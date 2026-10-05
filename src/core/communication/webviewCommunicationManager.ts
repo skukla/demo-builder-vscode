@@ -79,6 +79,9 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
     // above, in a different message.
     'check-github-app': TIMEOUTS.LONG, // 180s - may trigger a code sync and re-check
 
+    // Site access: waits for an admin role granted on GitHub — four checks over ~105s.
+    waitForSiteAccess: TIMEOUTS.LONG, // 180s - polls the Configuration Service for the grant
+
     // An integration's Settings (AB-21): the save redeploys what uses the change,
     // up to two app deploys in a row (the ERP, then its integration).
     saveIntegrationSettings: TIMEOUTS.EXTENDED, // 600s - store, then up to two redeploys

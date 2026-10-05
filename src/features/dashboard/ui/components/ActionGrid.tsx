@@ -105,6 +105,7 @@ type OverflowKey =
     | 'refreshBlockLibrary'
     | 'devConsole'
     | 'aemAssets'
+    | 'siteAccess'
     | 'changeDemoSource'
     | 'saveDemoPackage'
     | 'reset'
@@ -174,6 +175,8 @@ export interface ActionGridProps {
     handleOpenAdminPanel: () => void;
     /** Handler for Sync Storefront button (EDS projects only) */
     handleSyncStorefront?: () => void;
+    /** Handler for the Site Access overflow item (EDS projects only) */
+    handleOpenSiteAccess?: () => void;
     /** Handler for Refresh Block Library overflow item (EDS projects only) */
     handleRefreshBlockLibrary?: () => void;
     /** Handler for Republish Content overflow item (EDS projects only) */
@@ -559,6 +562,7 @@ export function ActionGrid({
     handleConfigure,
     handleOpenDevConsole,
     handleOpenAemAssets,
+    handleOpenSiteAccess,
     handleEditProject,
     handleExportProject,
     handleChangeDemoSource,
@@ -588,6 +592,7 @@ export function ActionGrid({
             refreshBlockLibrary: handleRefreshBlockLibrary,
             devConsole: handleOpenDevConsole,
             aemAssets: handleOpenAemAssets,
+            siteAccess: handleOpenSiteAccess,
             changeDemoSource: handleChangeDemoSource,
             saveDemoPackage: handleSaveDemoPackage,
             reset: handleResetProject,
@@ -689,6 +694,10 @@ export function ActionGrid({
                                     Beside Dev Console: both open an Adobe surface
                                     the host resolves. */}
                                 <Item key="aemAssets">AEM Assets</Item>
+                                {/* Who administers the storefront and who reads its content. */}
+                                {isEds && handleOpenSiteAccess ? (
+                                    <Item key="siteAccess">Site Access</Item>
+                                ) : null}
                                 {handleChangeDemoSource ? (
                                     <Item key="changeDemoSource">Change Demo Source</Item>
                                 ) : null}

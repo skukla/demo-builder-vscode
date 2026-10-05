@@ -298,6 +298,8 @@ const WEBVIEW_ENTRIES = {
     integrations: 'src/features/dashboard/ui/integrationsSurface/index.tsx',
     // Standalone Data Installer surface — webview behind `demoBuilder.showDataInstaller`.
     dataInstaller: 'src/features/data-installer/ui/index.tsx',
+    // Site access — webview behind `demoBuilder.manageSiteAccess`.
+    siteAccess:   'src/features/eds/ui/siteAccess/index.tsx',
 };
 
 /**
@@ -311,6 +313,8 @@ const WEBVIEW_ENTRIES = {
 const LAYERED_VENDOR_ENTRIES = [
     'sidebar', 'projectsList', 'aiOverview', 'configure',
     'dashboard', 'dataInstaller', 'integrations', 'wizard',
+    // Layered from its first build, so there is no unlayered look to measure against.
+    'siteAccess',
 ];
 
 function pick(entries, names) {

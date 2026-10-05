@@ -14,7 +14,7 @@ half and deliberately does not restate any of it.
 features carry their own sheet beside their UI (`data-installer`, `eds`).
 
 **A feature stylesheet reaches only the bundles whose entry imports it.** There are
-eight bundles, so a class can be styled on one surface and simply absent on the
+nine bundles, so a class can be styled on one surface and simply absent on the
 next, with no error anywhere. That is the single most common styling surprise here.
 
 ## `UNSAFE_className`, and why it is the supported path

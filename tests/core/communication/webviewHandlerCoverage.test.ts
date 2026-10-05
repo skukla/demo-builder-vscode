@@ -59,6 +59,11 @@ const PANELS: ReadonlyArray<{ name: string; entry: string; command: string; noRe
         command: 'features/data-installer/commands/showDataInstaller.ts',
     },
     {
+        name: 'siteAccess',
+        entry: 'features/eds/ui/siteAccess/index.tsx',
+        command: 'features/eds/commands/showSiteAccess.ts',
+    },
+    {
         name: 'integrations',
         entry: 'features/dashboard/ui/integrationsSurface/index.tsx',
         command: 'features/dashboard/commands/showIntegrations.ts',

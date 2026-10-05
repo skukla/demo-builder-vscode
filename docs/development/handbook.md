@@ -106,9 +106,9 @@ close into a cycle and "move it to `core/`" stops being a safe answer.
 > *Why:* a symbol reachable by two paths is a symbol whose home nobody can name. It is
 > also the rule this codebase already follows: **1,935 imports reach into a module from
 > outside it, against 162 from within**, so the barrels were the minority report, not the
-> convention. Seven of the eight webview bundle entries are `index.tsx` by necessity
+> convention. Eight of the nine webview bundle entries are `index.tsx` by necessity
 > and are read from `WEBVIEW_ENTRIES`, so the check cannot drift from the build. The
-> eighth — the dashboard — is `main.tsx`, because an `index.ts` barrel used to sit
+> ninth — the dashboard — is `main.tsx`, because an `index.ts` barrel used to sit
 > beside it and tsc keeps only one file per basename. That barrel is gone, so the
 > constraint is too; the rename is simply not worth an entry-point change.
 >
@@ -541,7 +541,7 @@ meant.
 **Position.** One composition root per surface. Logic lives in hooks, rendering in
 components, and styling in cascade layers rather than in specificity fights.
 
-Each of the eight webviews has one entry file. That entry mounts the app, reads the
+Each of the nine webviews has one entry file. That entry mounts the app, reads the
 initial data, and decides which stylesheets load — it is the only place that does. Below
 it, components receive what they need as props.
 
@@ -814,7 +814,7 @@ check says so and names the file.
 > contents at the moment you create the file.
 
 > **Convention.** Capture a visual baseline before changing a stylesheet.
-> *Why:* a CSS change that breaks a surface produces no error anywhere. Eight bundles
+> *Why:* a CSS change that breaks a surface produces no error anywhere. Nine bundles
 > exist and a feature stylesheet reaches only the ones whose entry imports it, so a class
 > can be styled on one surface and absent on the next with everything still green.
 > [ADR-018](../architecture/adr/018-css-architecture.md) sets this as the evidence bar
@@ -1677,7 +1677,7 @@ check says so and names the file.
 > **Convention.** A stylesheet change is not pushed until a RESTING visual
 > baseline has been captured while it was in the tree.
 > *Why:* a CSS change that breaks a surface produces no error anywhere — there are
-> eight webview bundles and a feature stylesheet reaches only the ones whose entry
+> nine webview bundles and a feature stylesheet reaches only the ones whose entry
 > imports it, so a class can be styled on one surface and absent on the next with
 > nothing failing. On 2026-09-10 a dashboard regression reached a release
 > spot-check because the day's CSS work was verified with the INTERACTION capture

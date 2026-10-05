@@ -154,9 +154,11 @@ describe('ADR-018 step 3: Spectrum in @layer vendor, one entry at a time', () =>
         // ALL EIGHT ARE NOW LAYERED, so this list is complete and the assertion
         // is no longer a ratchet — it is the finished state. What it still guards
         // is an entry being ADDED to WEBVIEW_ENTRIES and quietly left out.
+        // siteAccess, 2026-10-05: layered from its first build — it never had an
+        //   unlayered look to move away from.
         expect([...LAYERED_VENDOR_ENTRIES].sort()).toStrictEqual([
             'aiOverview', 'configure', 'dashboard', 'dataInstaller',
-            'integrations', 'projectsList', 'sidebar', 'wizard',
+            'integrations', 'projectsList', 'sidebar', 'siteAccess', 'wizard',
         ]);
     });
 

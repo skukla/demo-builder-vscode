@@ -141,7 +141,15 @@ about a second, where the picker was instant.
 - **Copy settings** starts through the projects list's runner (`COPY_SETTINGS_OPERATION_ID`) and
   asks which project with a choice field.
 - **Sync commit message** asks in the dashboard's modal. The palette keeps its input box.
-- Site access window: not started.
+- Site access webview shipped (the ninth bundle, `siteAccess`). `demoBuilder.manageSiteAccess`
+  keeps its id, so the palette entry, both error toasts, Repair Site Configuration and the agent's
+  `needsUser` handoff all open it unchanged. With a storefront project it shows both lists; with
+  none it asks for an org and site and shows the readers. Removal is confirmed in the shared
+  `Modal`; "check access" runs the same `waitForConfigAccess` poll with a progress line; links go
+  through an allow-listed id, never a URL. The dashboard's More menu gained "Site Access" for EDS
+  projects. `manageSiteAccess.ts` and `manageContentReaders.ts` are deleted. The agent's site tools
+  already called the same headless managers, so the webview and the agent share one spine; nothing
+  there was rerouted.
 
 Estimated size: one small shared change (field kinds plus form rendering), then four call
 sites. Low risk, because each site keeps its fallback. The Site access window is the largest

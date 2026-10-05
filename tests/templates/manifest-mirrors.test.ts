@@ -200,6 +200,8 @@ describe('webview bundle names mirror esbuild WEBVIEW_ENTRIES', () => {
         for (const { source } of srcFiles) {
             const code = codeLines(source);
             for (const m of code.matchAll(/featureBundleName: '([A-Za-z]+)'/g)) used.add(m[1]);
+            // Standalone panels name theirs once, on StandalonePanelCommand's field.
+            for (const m of code.matchAll(/bundleName = '([A-Za-z]+)'/g)) used.add(m[1]);
             // The sidebar hand-rolls its filename ('sidebar-bundle.js').
             for (const m of code.matchAll(/'([A-Za-z]+)-bundle\.js'/g)) used.add(m[1]);
         }

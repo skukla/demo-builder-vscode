@@ -38,7 +38,7 @@ import { homedir } from 'os';
 
 import type { Project } from '@/types/base';
 import type { Message } from '@/types/messages';
-import type { DashboardStatusUpdatePayload } from '@/types/webviewPayloads';
+import type { DashboardStatusUpdatePayload, SiteAccessView } from '@/types/webviewPayloads';
 import type { SidebarContext } from '@/features/sidebar/types';
 import type { TransformedComponentDefinition } from '@/types/components';
 
@@ -72,6 +72,7 @@ export const SURFACES = [
     'aiOverview',
     'integrations',
     'dataInstaller',
+    'siteAccess',
 ] as const;
 
 export type Surface = (typeof SURFACES)[number];
@@ -206,6 +207,32 @@ export function buildPushedMessages(project: Project): Record<string, PushedMess
         // warns about, arriving the same day as the change that caused it.
         getContext: { type: 'contextResponse', payload: { context } },
         requestStatus: { type: 'statusUpdate', payload: status },
+    };
+}
+
+/**
+ * What `getSiteAccess` answers for a storefront project: both lists, one of each
+ * kind of row, so every row treatment renders.
+ */
+export function buildSiteAccessView(project: Project): SiteAccessView {
+    const site = `demo-org/${project.name}`;
+    return {
+        admins: {
+            site,
+            canManage: true,
+            people: [
+                { email: 'owner@example.com', role: 'Site admin', removable: true },
+                { email: 'lead@example.com', role: 'Org admin — every site', removable: false },
+            ],
+        },
+        readers: {
+            site,
+            canManage: true,
+            people: [
+                { email: 'colleague@example.com', role: 'Reads', removable: true },
+                { email: 'author@example.com', role: 'Writes', removable: false },
+            ],
+        },
     };
 }
 

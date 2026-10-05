@@ -10,13 +10,13 @@ ADR-018. Every claim in those documents came from here.
 
 ## What it does
 
-Captures a **computed-style fingerprint** of all eight webview surfaces — every
+Captures a **computed-style fingerprint** of all nine webview surfaces — every
 element, keyed by structural path, with 23 computed properties — so a CSS change
 can be proved behaviour-preserving by an empty diff, or shown to move exactly
 the elements it was meant to.
 
 Since 2026-09-08 it captures each surface at **two themes and three widths**
-(PL-47), keyed `surface@theme@width`. That is 8 x 2 x 3 = 48 loads, so budget a
+(PL-47), keyed `surface@theme@width`. That is 9 x 2 x 3 = 54 loads, so budget a
 couple of minutes; pass a narrower matrix to `capture({ surfaces, themes, widths })`
 while iterating on one surface.
 

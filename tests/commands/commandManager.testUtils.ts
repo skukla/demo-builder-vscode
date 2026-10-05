@@ -28,7 +28,6 @@ import type { StateManager } from '@/types/state';
 
 jest.mock('@/commands/configure');
 jest.mock('@/commands/diagnostics');
-jest.mock('@/commands/manageSiteAccess');
 jest.mock('@/commands/migrateStorefrontNames');
 jest.mock('@/commands/openInClaude');
 jest.mock('@/commands/openModernizationAgent');
@@ -44,6 +43,7 @@ jest.mock('@/features/dashboard/commands/openAi');
 jest.mock('@/features/dashboard/commands/showDashboard');
 jest.mock('@/features/dashboard/commands/showIntegrations');
 jest.mock('@/features/data-installer/commands/showDataInstaller');
+jest.mock('@/features/eds/commands/showSiteAccess');
 jest.mock('@/features/lifecycle/commands/startDemo');
 jest.mock('@/features/lifecycle/commands/stopDemo');
 jest.mock('@/features/lifecycle/commands/syncStorefront');

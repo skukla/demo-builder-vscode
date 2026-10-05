@@ -258,6 +258,9 @@ describe('the AI-bundle gate seams named in CLAUDE.md all still exist', () => {
     });
 });
 
+/** The count as CLAUDE.md spells it ("Nine webview bundles"). */
+const NUMBER_WORDS: Record<number, string> = { 8: 'eight', 9: 'nine', 10: 'ten' };
+
 describe('the "hit every surface" list names every surface that exists', () => {
     // The list exists to stop a change landing on one path and missing the others.
     // A list that has itself gone stale does the opposite: it tells you that you
@@ -280,7 +283,7 @@ describe('the "hit every surface" list names every surface that exists', () => {
         const names = entries();
         for (const n of names) expect(CLAUDE_MD).toContain(n.toLowerCase());
         expect(CLAUDE_MD).toContain(
-            `${names.length === 8 ? 'eight' : String(names.length)} webview bundles`
+            `${NUMBER_WORDS[names.length] ?? String(names.length)} webview bundles`
         );
     });
 });

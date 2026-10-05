@@ -290,7 +290,9 @@ describe('dashboardHandlers', () => {
             // 2026-10-05): save a blank-starter app to its own GitHub repository, and the undo.
             // buildCatalogMenu + removeCatalogMenu removed (86 → 84, EDS-24 redesign,
             // 2026-10-05): storefront setup, reset and republish write the category pages.
-            expect(types).toHaveLength(84);
+            // openSiteAccess (84 → 85, 2026-10-05): the More menu opens the Site access
+            // webview beside the dashboard, as openDataInstaller does.
+            expect(types).toHaveLength(85);
         });
 
         it('should have handlers as functions', () => {

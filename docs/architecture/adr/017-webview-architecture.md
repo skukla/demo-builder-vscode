@@ -37,7 +37,7 @@ React rule in a document about service locators.
 
 ### 1. The composition root is the bundle entry
 
-Each of the eight entries in `WEBVIEW_ENTRIES` (`esbuild.config.js`) is a
+Each of the nine entries in `WEBVIEW_ENTRIES` (`esbuild.config.js`) is a
 composition root, and the only one its bundle has. It owns mounting, the
 init-data cast, and which stylesheets the bundle loads.
 

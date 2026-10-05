@@ -288,6 +288,27 @@ export const handleDeployMesh: MessageHandler<{ id?: string; progress?: 'modal' 
     );
 
 /**
+ * A handler that opens a standalone webview beside the dashboard — one that
+ * works without a project, so it must not close what the SC was looking at.
+ *
+ * A failed dispatch is reported, not thrown: the dashboard is still perfectly
+ * usable when one surface will not open.
+ */
+function openBesideDashboard(commandId: string, name: string): MessageHandler {
+    return async (context) => {
+        try {
+            context.logger.info(`Opening ${name}`);
+            await vscode.commands.executeCommand(commandId);
+            return { success: true };
+        } catch (error) {
+            const reason = error instanceof Error ? error.message : String(error);
+            context.logger.error(`Failed to open ${name}: ${reason}`);
+            return { success: false, error: reason };
+        }
+    };
+}
+
+/**
  * Handle 'openDataInstaller' — open the Data Installer surface.
  *
  * Deliberately NOT the `openIntegrations` shape. That one replaces the tab: it
@@ -298,21 +319,15 @@ export const handleDeployMesh: MessageHandler<{ id?: string; progress?: 'modal' 
  * project is open — so browsing it must not close what the user was looking at.
  * The command's own registration records that decision; this dispatches and
  * touches nothing else.
- *
- * A failed dispatch is reported, not thrown: the dashboard is still perfectly
- * usable when one tile's surface will not open.
  */
-export const handleOpenDataInstaller: MessageHandler = async (context) => {
-    try {
-        context.logger.info('Opening Data Installer surface');
-        await vscode.commands.executeCommand('demoBuilder.showDataInstaller');
-        return { success: true };
-    } catch (error) {
-        const reason = error instanceof Error ? error.message : String(error);
-        context.logger.error(`Failed to open the Data Installer: ${reason}`);
-        return { success: false, error: reason };
-    }
-};
+export const handleOpenDataInstaller = openBesideDashboard('demoBuilder.showDataInstaller', 'the Data Installer');
+
+/**
+ * Handle 'openSiteAccess' — open the Site access webview for this storefront.
+ * Beside the dashboard for the same reason: Site access is also reachable with
+ * no project at all, from the palette.
+ */
+export const handleOpenSiteAccess = openBesideDashboard('demoBuilder.manageSiteAccess', 'Site Access');
 
 // ============================================================================
 // Handler Map Export (Step 3: Handler Registry Simplification)
@@ -348,6 +363,7 @@ export const dashboardHandlers = defineHandlers({
     openIntegrations: handleOpenIntegrations,
     setViewModeOverride: handleSetViewModeOverride,
     openDataInstaller: handleOpenDataInstaller,
+    openSiteAccess: handleOpenSiteAccess,
     showProjectDashboard: handleShowProjectDashboard,
 
     // Mesh handlers

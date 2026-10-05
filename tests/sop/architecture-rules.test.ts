@@ -264,13 +264,24 @@ describe('ADR-015: a repeated composition point builds nothing STATEFUL', () => 
 });
 
 describe('ADR-015: commands extend the base classes', () => {
+    // An abstract class that itself extends a base counts as one, so a shared
+    // intermediate (StandalonePanelCommand) does not make its subclasses violations.
+    const bases = new Set(['BaseCommand', 'BaseWebviewCommand']);
+    for (const f of FILES) {
+        const s = src.get(f) as string;
+        for (const m of s.matchAll(/export abstract class (\w+)[^{]*?extends \w*(BaseCommand|BaseWebviewCommand)\b/g)) {
+            bases.add(m[1]);
+        }
+    }
+    const extendsBase = (decl: string): boolean =>
+        [...decl.matchAll(/extends (\w+)/g)].some((e) => bases.has(e[1]) || /(BaseCommand|BaseWebviewCommand)$/.test(e[1]));
     const violations: string[] = [];
     for (const f of FILES) {
         if (!/\/commands\//.test(f) && !/^src\/commands\//.test(f)) continue;
         const s = src.get(f) as string;
-        for (const m of s.matchAll(/export class (\w+)[^{]*\{/g)) {
+        for (const m of s.matchAll(/export (?:abstract )?class (\w+)[^{]*\{/g)) {
             const decl = s.slice(m.index ?? 0, (m.index ?? 0) + 200);
-            if (!/extends \w*(BaseCommand|BaseWebviewCommand)/.test(decl)) {
+            if (!extendsBase(decl)) {
                 violations.push(`${f}:${m[1]}`);
             }
         }
@@ -283,6 +294,10 @@ describe('ADR-015: commands extend the base classes', () => {
                 /extends \w*(BaseCommand|BaseWebviewCommand)/.test(src.get(f) as string)
         );
         expect(conforming).toBe(true);
+    });
+
+    it('positive control: an intermediate base is recognised as a base', () => {
+        expect(bases.has('StandalonePanelCommand')).toBe(true);
     });
 
     it('every non-extending command class is a reasoned ledger entry', () => {

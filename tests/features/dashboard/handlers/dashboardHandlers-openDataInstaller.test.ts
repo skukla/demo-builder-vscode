@@ -43,28 +43,30 @@ function makeContext() {
 
 beforeEach(() => jest.clearAllMocks());
 
-describe('openDataInstaller', () => {
+describe.each([
+    ['openDataInstaller', 'demoBuilder.showDataInstaller'],
+    // Site access works with no project, so it opens beside the dashboard too.
+    ['openSiteAccess', 'demoBuilder.manageSiteAccess'],
+] as const)('%s', (type, commandId) => {
     it('is registered — positive control for the assertions below', () => {
-        expect(dashboardHandlers.openDataInstaller).toBeInstanceOf(Function);
+        expect(dashboardHandlers[type]).toBeInstanceOf(Function);
     });
 
-    it('dispatches the Data Installer command and reports success', async () => {
-        const result = await dashboardHandlers.openDataInstaller(makeContext(), undefined);
+    it('dispatches its command and reports success', async () => {
+        const result = await dashboardHandlers[type](makeContext(), undefined);
 
-        expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-            'demoBuilder.showDataInstaller'
-        );
+        expect(vscode.commands.executeCommand).toHaveBeenCalledWith(commandId);
         expect(result).toEqual({ success: true });
     });
 
     /** The rule this handler exists to keep. */
-    it('leaves the dashboard open — the catalog is global, not project-scoped', async () => {
+    it('leaves the dashboard open — the surface is not project-scoped', async () => {
         const dispose = jest.fn();
         jest.spyOn(BaseWebviewCommand, 'getActivePanel').mockReturnValue(
             createMockWebviewPanel({ dispose })
         );
 
-        await dashboardHandlers.openDataInstaller(makeContext(), undefined);
+        await dashboardHandlers[type](makeContext(), undefined);
 
         expect(dispose).not.toHaveBeenCalled();
     });
@@ -72,7 +74,7 @@ describe('openDataInstaller', () => {
     it('does not start a webview transition either', async () => {
         const transition = jest.spyOn(BaseWebviewCommand, 'startWebviewTransition');
 
-        await dashboardHandlers.openDataInstaller(makeContext(), undefined);
+        await dashboardHandlers[type](makeContext(), undefined);
 
         expect(transition).not.toHaveBeenCalled();
     });
@@ -86,7 +88,7 @@ describe('openDataInstaller', () => {
 
         // The REASON has to survive: the dashboard shows what it was told, and a
         // bare `undefined` from an emptied catch reads as a silent success.
-        await expect(dashboardHandlers.openDataInstaller(context, undefined)).resolves.toEqual({
+        await expect(dashboardHandlers[type](context, undefined)).resolves.toEqual({
             success: false,
             error: 'command missing',
         });

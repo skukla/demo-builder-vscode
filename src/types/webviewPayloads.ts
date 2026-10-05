@@ -42,6 +42,70 @@ export interface DataInstallerInitialData {
 }
 
 /**
+ * `ShowSiteAccessCommand.getInitialData` → the siteAccess bundle.
+ *
+ * Opens with no project too: then only content readers can be managed, for an
+ * org and site the SC types.
+ */
+export interface SiteAccessInitialData {
+    theme: ThemeMode;
+    /** Project display name — `''` when no project is open. */
+    projectName: ProjectDisplayName;
+    /** Whether the open project has a storefront whose access can be managed. */
+    hasStorefront: boolean;
+}
+
+/** Something the Site access screen tells the SC, and what they can do about it. */
+export interface SiteAccessNotice {
+    tone: 'success' | 'warning' | 'error';
+    message: string;
+    /** Pages that fix it, opened in the browser. Only the allow-listed GitHub pages. */
+    links?: SiteAccessLink[];
+    /** The fix is done on GitHub and lands within minutes: offer to check for it. */
+    offerWait?: boolean;
+    /** Access landed, and the refused configuration write can now be repaired. */
+    offerRepair?: boolean;
+}
+
+/** A page a refusal sends the SC to. `id` is resolved to its URL in the extension. */
+export interface SiteAccessLink {
+    id: 'github-app-settings' | 'code-sync-app' | 'github-email-settings';
+    label: string;
+}
+
+/** One person on one of the two lists. */
+export interface SiteAccessPerson {
+    email: string;
+    /** What they hold, in words: "Site admin", "Org admin — every site", "Reads", "Writes". */
+    role: string;
+    /** Whether Remove is offered. Org admins and writers are shown but not removable here. */
+    removable: boolean;
+}
+
+/** One of the two lists: who administers the site, or who reads its content. */
+export interface SiteAccessList {
+    /** What it is a list FOR: `owner/repo` for admins, `org/site` for readers. */
+    site: string;
+    people: SiteAccessPerson[];
+    /** Whether this identity can add and remove here. */
+    canManage: boolean;
+    /** Why it could not be read or cannot be changed. */
+    notice?: SiteAccessNotice;
+}
+
+/** Both lists. `admins` is absent with no project; `readers` with no DA.live site. */
+export interface SiteAccessView {
+    admins?: SiteAccessList;
+    readers?: SiteAccessList;
+}
+
+/** What a change answers: what happened, and the lists as they are now. */
+export interface SiteAccessChangeResult {
+    notice: SiteAccessNotice;
+    view: SiteAccessView;
+}
+
+/**
  * `ProjectDashboardWebviewCommand.getInitialData` → the dashboard bundle.
  */
 export interface DashboardInitialData {

@@ -153,6 +153,7 @@ export function ProjectDashboardScreen({
         handleEditProject,
         handleOpenDevConsole,
         handleOpenAemAssets,
+        handleOpenSiteAccess,
         handleRestartDemo,
         handleNavigateBack,
         handleReAuthenticate,
@@ -296,6 +297,7 @@ export function ProjectDashboardScreen({
                                     handleConfigure={handleConfigure}
                                     handleOpenDevConsole={handleOpenDevConsole}
                                     handleOpenAemAssets={handleOpenAemAssets}
+                                    handleOpenSiteAccess={isEdsStable ? handleOpenSiteAccess : undefined}
                                     handleEditProject={handleEditProject}
                                     handleExportProject={handover.openExport}
                                     handleSaveDemoPackage={handover.openDemoPackage}
