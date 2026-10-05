@@ -22,6 +22,7 @@ import {
     generateInspectorTreeEntries,
     installInspectorTagging,
 } from '../../services/inspectorHelpers';
+import { toInstalledBlockLibrary } from '../../services/installedBlockLibraryRecord';
 import { installSmart404Handler } from '../../services/pdp/pdp404HandlerPublisher';
 import { placeholderStubTreeEntries } from '../../services/placeholderStubs';
 import { installQuickEdit } from '../../services/quickEditPublisher';
@@ -305,13 +306,9 @@ async function installBlockCollectionsWithTracking(
             if (result.libraryVersions && result.libraryVersions.length > 0) {
                 const currentProject = await context.stateManager.getCurrentProject();
                 if (currentProject) {
-                    currentProject.installedBlockLibraries = result.libraryVersions.map((lv) => ({
-                        name: lv.name,
-                        source: lv.source,
-                        commitSha: lv.commitSha,
-                        blockIds: lv.blockIds,
-                        installedAt: new Date().toISOString(),
-                    }));
+                    currentProject.installedBlockLibraries = result.libraryVersions.map((lv) =>
+                        toInstalledBlockLibrary(lv),
+                    );
                     await context.stateManager.saveProject(currentProject);
                     logger.info(
                         `[Storefront Setup] Saved install tracking for ${result.libraryVersions.length} block libraries`,

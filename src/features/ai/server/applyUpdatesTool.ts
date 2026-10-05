@@ -1,7 +1,8 @@
 /**
  * apply_updates (Phase 4) — check and apply available updates for the current
  * project across all categories (fork sync, template, components, Adobe MCP,
- * block libraries, inspector SDK), via the headless updateApplyService.
+ * block libraries, inspector SDK), via the headless updateApplyService. It also
+ * installs a block library the project has selected but never received (EDS-28).
  *
  * Two modes in one tool:
  *  - WITHOUT confirm: read-only — reports what's available (acts as the check).
@@ -18,6 +19,7 @@ import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
+import { describePendingInstall } from '@/features/updates/services/blockLibraryInstall';
 import {
     applyUpdatesHeadless,
     computeProjectUpdateSelections,
@@ -34,6 +36,9 @@ function summarize(selections: UpdateSelections): Record<string, unknown> {
         component: selections.component.map((c) => `${c.componentId} → ${c.latestVersion}`),
         adobeMcp: selections.adobeMcp.map((a) => `${a.packageName} → ${a.latestVersion}`),
         blockLibrary: selections.blockLibrary.map((b) => b.library.name),
+        blockLibraryInstall: selections.blockLibraryInstall.map((b) =>
+            describePendingInstall(b.library),
+        ),
         inspector: selections.inspector.length,
     };
 }
@@ -54,7 +59,7 @@ export function registerApplyUpdatesTool(
             needsAuth: ['github'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             description:
-                'Check and (with confirm:true) apply available updates for the current project — fork sync, template, components, Adobe MCP, block libraries, inspector SDK. Without confirm, reports what is available. A template update that conflicts with the user\'s edits stops and names the files; it is applied over them only with resetTemplateOnConflict:true.',
+                'Check and (with confirm:true) apply available updates for the current project — fork sync, template, components, Adobe MCP, block libraries, inspector SDK — and install any block library the project has selected (configure_project blockLibraries) whose blocks are not in its storefront repository yet. Without confirm, reports what is available. A template update that conflicts with the user\'s edits stops and names the files; it is applied over them only with resetTemplateOnConflict:true.',
             inputSchema: {
                 confirm: z
                     .boolean()
@@ -134,6 +139,7 @@ export function registerApplyUpdatesTool(
                     component: result.component,
                     adobeMcp: result.adobeMcp,
                     addon: result.addon,
+                    blockLibraryInstall: result.blockLibraryInstall,
                 },
                 phases,
             });

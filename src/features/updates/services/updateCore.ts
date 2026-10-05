@@ -14,7 +14,11 @@ import type * as vscode from 'vscode';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
-import { installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
+import {
+    installBlockCollections,
+    type BlockLibraryEntry,
+    type InstallBlockCollectionResult,
+} from '@/features/eds/services/blockCollectionHelpers';
 import { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
 import type { Project } from '@/types/base';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
@@ -102,7 +106,7 @@ export async function applyBlockLibraryUpdateResolved(
     }
 
     // effectiveBehavior === 'enabled'
-    await reinstallBlockLibraryFiles(item, ctx);
+    await installBlockLibraryFiles(item, ctx);
     await updateCommitShaWithRollback(lib, item.latestCommit, () =>
         ctx.stateManager.saveProject(item.project),
     );
@@ -142,10 +146,21 @@ async function applyDisabledMarker(
     }
 }
 
-async function reinstallBlockLibraryFiles(
-    item: Pick<BlockLibraryUpdateTarget, 'project' | 'library'>,
+/**
+ * Copy one library's blocks into the project's storefront repository — the ONE
+ * place the update pipeline calls the block installer. An update re-runs it for
+ * a library already recorded; an install (EDS-28, `blockLibraryInstall.ts`)
+ * runs it for a library that is selected but not yet in the storefront, and
+ * reads the result to write the record.
+ *
+ * The installer only ADDS: a block folder that already exists in the storefront
+ * is left exactly as it is (`installBlockCollections` seeds its seen-set from
+ * the destination's `blocks/`).
+ */
+export async function installBlockLibraryFiles(
+    item: { project: Project; library: BlockLibraryEntry },
     ctx: UpdateContext,
-): Promise<void> {
+): Promise<InstallBlockCollectionResult> {
     const storefront = item.project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
     const githubRepo = storefront?.metadata?.githubRepo;
     if (!storefront || typeof githubRepo !== 'string' || !githubRepo.includes('/')) {
@@ -168,4 +183,5 @@ async function reinstallBlockLibraryFiles(
     if (!result.success) {
         throw new Error(result.error ?? 'Block library re-install failed');
     }
+    return result;
 }

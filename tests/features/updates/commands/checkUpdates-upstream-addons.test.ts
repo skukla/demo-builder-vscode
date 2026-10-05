@@ -22,6 +22,7 @@ import {
 } from './checkUpdates.testUtils';
 import * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 
@@ -91,6 +92,74 @@ describe('CheckUpdatesCommand — Add-on Updates', () => {
         const blockItems = items.filter((i: any) => i.isBlockLibraryUpdate === true);
         expect(blockItems).toHaveLength(1);
         expect(blockItems[0].commitsBehind).toBe(7);
+    });
+
+    it('offers a selected-but-not-installed block library as an INSTALL, and installs it only when picked', async () => {
+        // EDS-28. Nothing is mocked between the picked row and GitHub's file
+        // operations except the installer call itself (the shared stub), so the
+        // argument it receives is the real dispatch's.
+        const { mockContext, mockStateManager, mockLogger } = setupDefaultMocks();
+        const project = projectWithAddons({ selectedBlockLibraries: ['demo-builder-blocks'] });
+        const library = {
+            name: 'Demo Builder Blocks',
+            source: { owner: 'skukla', repo: 'demo-builder-block-library', branch: 'main' },
+        };
+        mockStateManager.getAllProjects.mockResolvedValue([{ name: project.name, path: project.path, lastModified: new Date() }]);
+        mockStateManager.loadProjectFromPath.mockResolvedValue(project);
+        const installMock = installBlockCollections as jest.Mock;
+        installMock.mockResolvedValue({
+            success: true,
+            blocksCount: 1,
+            blockIds: ['commerce-nav'],
+            libraryVersions: [{ ...library, commitSha: 'src-1', blockIds: ['commerce-nav'] }],
+        });
+        // The SC picks exactly the rows offered.
+        (vscode.window.showQuickPick as jest.Mock).mockImplementation(async (items: any[]) =>
+            items.filter((i) => i.isBlockLibraryInstall === true),
+        );
+
+        const command = new CheckUpdatesCommand(mockContext, mockStateManager, mockLogger);
+        const executePromise = command.execute();
+        await jest.runAllTimersAsync();
+        await executePromise;
+
+        const items = (vscode.window.showQuickPick as jest.Mock).mock.calls[0][0];
+        const installItems = items.filter((i: any) => i.isBlockLibraryInstall === true);
+        expect(installItems).toHaveLength(1);
+        expect(installItems[0]).toMatchObject({
+            label: 'test-project',
+            detail: '    $(package) Demo Builder Blocks: install',
+            description: 'skukla/demo-builder-block-library',
+            library,
+        });
+        // Checking wrote nothing; the install ran once, after the pick, into the
+        // project's own storefront repository.
+        expect(installMock).toHaveBeenCalledTimes(1);
+        expect(installMock.mock.calls[0].slice(1, 4)).toEqual(['testuser', 'my-storefront', [library]]);
+        expect(project.installedBlockLibraries).toHaveLength(2);
+        expect(project.installedBlockLibraries![1]).toMatchObject({
+            ...library,
+            commitSha: 'src-1',
+            blockIds: ['commerce-nav'],
+        });
+        expect(mockStateManager.saveProject).toHaveBeenCalledWith(project);
+    });
+
+    it('does not install a selected library when the SC picks nothing', async () => {
+        const { mockContext, mockStateManager, mockLogger } = setupDefaultMocks();
+        const project = projectWithAddons({ selectedBlockLibraries: ['demo-builder-blocks'] });
+        mockStateManager.getAllProjects.mockResolvedValue([{ name: project.name, path: project.path, lastModified: new Date() }]);
+        mockStateManager.loadProjectFromPath.mockResolvedValue(project);
+        (vscode.window.showQuickPick as jest.Mock).mockResolvedValue([]);
+
+        const command = new CheckUpdatesCommand(mockContext, mockStateManager, mockLogger);
+        const executePromise = command.execute();
+        await jest.runAllTimersAsync();
+        await executePromise;
+
+        expect(vscode.window.showQuickPick).toHaveBeenCalled();
+        expect(installBlockCollections as jest.Mock).not.toHaveBeenCalled();
+        expect(project.installedBlockLibraries).toHaveLength(1);
     });
 
     it('should show inspector SDK update items in QuickPick', async () => {

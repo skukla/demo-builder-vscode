@@ -7105,7 +7105,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 226,
+            "line": 227,
             "mutants": 1,
             "category": "block",
             "reason": "This else block holds one statement, a logger.warn saying a selected block library has no source configured. The library is skipped either way \u2014 the skip is the absent push, not anything this block does \u2014 so emptying it removes a log line and changes neither the list handed to installBlockCollections nor any progress payload.",
@@ -7118,7 +7118,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 354,
+            "line": 351,
             "mutants": 1,
             "category": "block",
             "reason": "The same shape at the end of applyStandaloneInspectorTagging: the else holds one logger.warn naming why standalone inspector tagging was skipped. The function returns void, sends no progress push on this arm and the caller ignores it, so emptying the block is invisible to everything except the log.",

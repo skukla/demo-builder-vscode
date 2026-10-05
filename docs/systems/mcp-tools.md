@@ -98,7 +98,7 @@ server IS — transport, lifecycle, scoping, security — is in
 
 | Tool | | What it does |
 |---|---|---|
-| `apply_updates` | **confirm** | Check and (with confirm:true) apply available updates for the current project — fork sync, template, components, Adobe MCP, block libraries, inspector SDK. Without confirm, reports what is available. |
+| `apply_updates` | **confirm** | Check and (with confirm:true) apply available updates for the current project — fork sync, template, components, Adobe MCP, block libraries, inspector SDK — and install any block library the project h |
 
 ## `src/features/ai/server/authTools.ts`
 

@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { performBlockLibraryInstalls } from './blockLibraryInstallExecutor';
 import {
     performAddonUpdates,
     performAdobeMcpUpdates,
@@ -13,6 +14,7 @@ import {
     getTemplateSource,
     toAdobeMcpUpdateItem,
     type AdobeMcpUpdateItem,
+    type BlockLibraryInstallItem,
     type BlockLibraryUpdateItem,
     type ForkSyncItem,
     type InspectorUpdateItem,
@@ -27,6 +29,10 @@ import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { AddonUpdateChecker } from '@/features/updates/services/addonUpdateChecker';
 import { AdobeMcpUpdateChecker } from '@/features/updates/services/adobeMcpUpdateChecker';
+import {
+    describePendingInstall,
+    findUninstalledBlockLibraries,
+} from '@/features/updates/services/blockLibraryInstall';
 import { ExtensionUpdater } from '@/features/updates/services/extensionUpdater';
 import { ForkSyncService } from '@/features/updates/services/forkSyncService';
 import { shouldOfferGraduation } from '@/features/updates/services/releaseTrack';
@@ -208,7 +214,7 @@ export class CheckUpdatesCommand extends BaseCommand {
         componentUpdates: MultiProjectUpdateResult[],
         templateUpdates: Array<{ project: Project; update: TemplateUpdateResult }>,
         forkSyncItems: ForkSyncItem[],
-        blockLibraryItems: BlockLibraryUpdateItem[],
+        blockLibraryItems: Array<BlockLibraryUpdateItem | BlockLibraryInstallItem>,
         inspectorItems: InspectorUpdateItem[],
         adobeMcpItems: AdobeMcpUpdateItem[],
         currentProject: Project | null,
@@ -248,6 +254,9 @@ export class CheckUpdatesCommand extends BaseCommand {
         const selectedBlockLibraries = selected.filter(
             (item): item is BlockLibraryUpdateItem => 'isBlockLibraryUpdate' in item,
         );
+        const selectedLibraryInstalls = selected.filter(
+            (item): item is BlockLibraryInstallItem => 'isBlockLibraryInstall' in item,
+        );
         const selectedInspectors = selected.filter(
             (item): item is InspectorUpdateItem => 'isInspectorUpdate' in item,
         );
@@ -258,6 +267,7 @@ export class CheckUpdatesCommand extends BaseCommand {
         this.logger.debug(
             `[Updates] User selected: ${selectedForks.length} fork(s), ${selectedTemplates.length} template(s), `
             + `${selectedComponents.length} component(s), ${selectedBlockLibraries.length} block lib(s), `
+            + `${selectedLibraryInstalls.length} block lib install(s), `
             + `${selectedInspectors.length} inspector(s), ${selectedAdobeMcp.length} Adobe MCP package(s)`,
         );
 
@@ -286,6 +296,12 @@ export class CheckUpdatesCommand extends BaseCommand {
             await performAddonUpdates(
                 selectedBlockLibraries, selectedInspectors, templateSyncSucceeded, ctx,
             );
+        }
+
+        // Last: an install is a commit to the storefront repository, and a
+        // template sync above may have just moved that branch.
+        if (selectedLibraryInstalls.length > 0) {
+            await performBlockLibraryInstalls(selectedLibraryInstalls, ctx);
         }
     }
 
@@ -402,10 +418,13 @@ export class CheckUpdatesCommand extends BaseCommand {
     private async checkAddonUpdates(
         allProjects: Project[],
         currentProject: Project | null,
-    ): Promise<{ blockLibraryItems: BlockLibraryUpdateItem[]; inspectorItems: InspectorUpdateItem[] }> {
+    ): Promise<{
+        blockLibraryItems: Array<BlockLibraryUpdateItem | BlockLibraryInstallItem>;
+        inspectorItems: InspectorUpdateItem[];
+    }> {
         this.logger.debug(`[Updates] Checking add-on updates across ${allProjects.length} project(s)`);
         const addonChecker = new AddonUpdateChecker(this.context.secrets, this.logger);
-        const blockLibraryItems: BlockLibraryUpdateItem[] = [];
+        const blockLibraryItems: Array<BlockLibraryUpdateItem | BlockLibraryInstallItem> = [];
         const inspectorItems: InspectorUpdateItem[] = [];
 
         for (const project of allProjects) {
@@ -422,6 +441,19 @@ export class CheckUpdatesCommand extends BaseCommand {
                     latestCommit: update.latestCommit,
                     commitsBehind: update.commitsBehind,
                     isBlockLibraryUpdate: true,
+                });
+            }
+
+            // Selected but never installed (EDS-28): offered as an install.
+            for (const library of findUninstalledBlockLibraries(project)) {
+                blockLibraryItems.push({
+                    label: project.name,
+                    detail: `    $(package) ${describePendingInstall(library)}`,
+                    description: `${library.source.owner}/${library.source.repo}`,
+                    picked: isCurrent,
+                    project,
+                    library,
+                    isBlockLibraryInstall: true,
                 });
             }
 

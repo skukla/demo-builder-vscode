@@ -41,6 +41,21 @@ Releases are **prereleases**, and `releases/latest` ignores those — a detail t
 bitten this repo before. See
 [cut-release](../../../.claude/skills/cut-release/SKILL.md).
 
+## A selected block library is installed here, not only at creation
+
+Ticking a block library on a project that already exists only records the id in
+`selectedBlockLibraries`. The update check turns that into an **install** item
+("Demo Builder Blocks: install") whenever a selected library has no record in
+`installedBlockLibraries` (`services/blockLibraryInstall.ts`). Applying it — the
+picked row in Check for Updates, or `apply_updates` with `confirm:true` — makes
+one commit to the storefront repository through the same installer updates and
+creation use, and writes the same record creation writes.
+
+The installer only adds: a block folder the storefront already has is left as it
+is. It does not rebuild the DA.live authoring library — run "Refresh Block
+Library" (`refresh_block_library`) for that. Un-selecting a library removes
+nothing.
+
 ## Related
 
 - [component-version-management.md](../../../docs/architecture/component-version-management.md)

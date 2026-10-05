@@ -130,6 +130,7 @@ function emptySelections(): UpdateSelections {
         component: [],
         adobeMcp: [],
         blockLibrary: [],
+        blockLibraryInstall: [],
         inspector: [],
     };
 }

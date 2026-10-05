@@ -31,7 +31,7 @@ const applyMock = applyUpdatesHeadless as jest.Mock;
 const countMock = countSelections as jest.Mock;
 const reportPhaseMock = reportPhase as jest.Mock;
 
-const EMPTY = { forkSync: [], template: [], component: [], adobeMcp: [], blockLibrary: [], inspector: [] };
+const EMPTY = { forkSync: [], template: [], component: [], adobeMcp: [], blockLibrary: [], blockLibraryInstall: [], inspector: [] };
 
 function fakeServer() {
 
@@ -147,9 +147,10 @@ describe('apply_updates', () => {
             component: [{ componentId: 'mesh', latestVersion: '2.0.0' }],
             adobeMcp: [{ packageName: '@adobe/aem-mcp', latestVersion: '3.1.0' }],
             blockLibrary: [{ library: { name: 'Bodea blocks' } }],
+            blockLibraryInstall: [{ library: { name: 'Demo Builder Blocks' } }],
             inspector: [{ y: 1 }],
         });
-        countMock.mockReturnValueOnce(7);
+        countMock.mockReturnValueOnce(8);
         const s = fakeServer();
         registerApplyUpdatesTool(s, ctxFactory);
 
@@ -161,8 +162,32 @@ describe('apply_updates', () => {
             component: ['mesh → 2.0.0'],
             adobeMcp: ['@adobe/aem-mcp → 3.1.0'],
             blockLibrary: ['Bodea blocks'],
+            // Reads as an INSTALL, not an update (EDS-28).
+            blockLibraryInstall: ['Demo Builder Blocks: install'],
             inspector: 1,
         });
+    });
+
+    it('says in its description that it installs a selected block library, and reports the install', async () => {
+        const installResult = {
+            successCount: 1,
+            failCount: 0,
+            errors: [],
+            installed: ['Demo Builder Blocks: installed 1 block (commerce-nav)'],
+        };
+        applyMock.mockResolvedValueOnce({
+            forkSync: {}, template: {}, component: {}, adobeMcp: {}, addon: {},
+            blockLibraryInstall: installResult,
+            totalApplied: 1,
+            totalFailed: 0,
+        });
+        const s = fakeServer();
+        registerApplyUpdatesTool(s, ctxFactory);
+
+        expect(s.definition().description).toMatch(/install any block library the project has selected/);
+        const res = await s.call({ confirm: true });
+
+        expect(res.categories.blockLibraryInstall).toStrictEqual(installResult);
     });
 
     it('refuses to apply while the demo is running', async () => {

@@ -28,6 +28,8 @@ export const mockUpdateComponent = jest.fn();
 export const mockApplyAdobeMcpUpdate = jest.fn();
 export const mockApplyBlockLibraryUpdateResolved = jest.fn();
 export const mockUpdateCommitShaWithRollback = jest.fn();
+/** The installer the block-library INSTALL core calls (EDS-28). */
+export const mockInstallBlockLibraryFiles = jest.fn();
 export const mockCheckTemplateUpdates = jest.fn();
 export const mockCheckAllProjectsForUpdates = jest.fn();
 export const mockCheckMcpUpdates = jest.fn();
@@ -75,6 +77,7 @@ jest.mock('@/features/updates/services/adobeMcpUpdateCore', () => ({
 jest.mock('@/features/updates/services/updateCore', () => ({
     applyBlockLibraryUpdateResolved: (...a: unknown[]) => mockApplyBlockLibraryUpdateResolved(...a),
     updateCommitShaWithRollback: (...a: unknown[]) => mockUpdateCommitShaWithRollback(...a),
+    installBlockLibraryFiles: (...a: unknown[]) => mockInstallBlockLibraryFiles(...a),
 }));
 jest.mock('@/features/updates/services/templateUpdateChecker', () => ({
     TemplateUpdateChecker: class {
@@ -168,6 +171,7 @@ export function emptySelections(): UpdateSelections {
         component: [],
         adobeMcp: [],
         blockLibrary: [],
+        blockLibraryInstall: [],
         inspector: [],
     };
 }
@@ -186,6 +190,12 @@ export function resetFakes(): void {
     mockApplyAdobeMcpUpdate.mockResolvedValue(undefined);
     mockApplyBlockLibraryUpdateResolved.mockResolvedValue(undefined);
     mockUpdateCommitShaWithRollback.mockResolvedValue(undefined);
+    mockInstallBlockLibraryFiles.mockResolvedValue({
+        success: true,
+        blocksCount: 0,
+        blockIds: [],
+        libraryVersions: [],
+    });
     mockCheckForkStatus.mockResolvedValue(null);
     mockCheckTemplateUpdates.mockResolvedValue(null);
     mockCheckAllProjectsForUpdates.mockResolvedValue([]);

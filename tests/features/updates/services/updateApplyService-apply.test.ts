@@ -517,6 +517,7 @@ describe('totals', () => {
                 blockLibrary: [
                     { project, library: installedLibrary('Lib A'), latestCommit: 'bbb' },
                 ],
+                blockLibraryInstall: [],
                 inspector: [{ project, latestCommit: 'z' }],
             },
             makeCtx()

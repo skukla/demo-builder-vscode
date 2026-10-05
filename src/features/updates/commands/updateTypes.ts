@@ -7,6 +7,7 @@
 
 import * as vscode from 'vscode';
 import { COMPONENT_IDS } from '@/core/constants';
+import type { BlockLibraryEntry } from '@/features/eds/services/blockCollectionHelpers';
 import type { AdobeMcpUpdateResult } from '@/features/updates/services/adobeMcpUpdateChecker';
 import type { TemplateUpdateResult } from '@/features/updates/services/templateUpdateChecker';
 import type { MultiProjectUpdateResult } from '@/features/updates/services/updateManager';
@@ -49,6 +50,17 @@ export interface BlockLibraryUpdateItem extends vscode.QuickPickItem {
     isBlockLibraryUpdate: true;
 }
 
+/**
+ * A library the project has SELECTED but whose blocks are not in its
+ * storefront yet (EDS-28). Not an update: there is no installed record and no
+ * "commits behind", so it is its own member rather than a flag on the above.
+ */
+export interface BlockLibraryInstallItem extends vscode.QuickPickItem {
+    project: Project;
+    library: BlockLibraryEntry;
+    isBlockLibraryInstall: true;
+}
+
 export interface InspectorUpdateItem extends vscode.QuickPickItem {
     project: Project;
     latestCommit: string;
@@ -70,6 +82,7 @@ export type UpdateItem =
     | TemplateUpdateItem
     | ForkSyncItem
     | BlockLibraryUpdateItem
+    | BlockLibraryInstallItem
     | InspectorUpdateItem
     | AdobeMcpUpdateItem;
 
@@ -127,7 +140,7 @@ export function buildUpdatePickerItems(
     componentUpdates: MultiProjectUpdateResult[],
     templateUpdates: Array<{ project: Project; update: TemplateUpdateResult }>,
     forkSyncItems: ForkSyncItem[],
-    blockLibraryItems: BlockLibraryUpdateItem[],
+    blockLibraryItems: Array<BlockLibraryUpdateItem | BlockLibraryInstallItem>,
     inspectorItems: InspectorUpdateItem[],
     adobeMcpItems: AdobeMcpUpdateItem[],
     currentProject: Project | null,

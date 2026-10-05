@@ -24,6 +24,12 @@ import { getTemplateSource, shouldSkipBlockLibrary } from '@/features/updates/co
 import { AddonUpdateChecker } from '@/features/updates/services/addonUpdateChecker';
 import { AdobeMcpUpdateChecker } from '@/features/updates/services/adobeMcpUpdateChecker';
 import { applyAdobeMcpUpdate } from '@/features/updates/services/adobeMcpUpdateCore';
+import {
+    applyBlockLibraryInstall,
+    describeInstallOutcome,
+    findUninstalledBlockLibraries,
+    type BlockLibraryInstallTarget,
+} from '@/features/updates/services/blockLibraryInstall';
 import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import { ForkSyncService } from '@/features/updates/services/forkSyncService';
 import {
@@ -57,6 +63,8 @@ export interface UpdateSelections {
     }>;
     adobeMcp: Array<{ project: Project; packageName: string; latestVersion: string }>;
     blockLibrary: Array<{ project: Project; library: InstalledBlockLibrary; latestCommit: string }>;
+    /** Selected but not yet in the storefront (EDS-28) — an install, not an update. */
+    blockLibraryInstall: BlockLibraryInstallTarget[];
     inspector: Array<{ project: Project; latestCommit: string }>;
 }
 
@@ -68,6 +76,8 @@ export interface CategoryResult {
     errors: string[];
     /** Block libraries deferred under the headless 'ask' → 'disabled' policy. */
     deferred?: string[];
+    /** One plain line per block library installed: what was added to the storefront. */
+    installed?: string[];
 }
 
 /** Aggregate outcome across all categories. */
@@ -77,6 +87,7 @@ export interface ApplyUpdatesResult {
     component: CategoryResult;
     adobeMcp: CategoryResult;
     addon: CategoryResult;
+    blockLibraryInstall: CategoryResult;
     totalApplied: number;
     totalFailed: number;
 }
@@ -323,14 +334,44 @@ async function applyAddons(
     return result;
 }
 
+/**
+ * Install each selected-but-missing block library. Not gated by
+ * `syncBehavior`: an install only adds block folders that are not in the
+ * storefront yet (see blockLibraryInstall.ts), and the caller's `confirm:true`
+ * is the consent for the commit it makes.
+ */
+async function applyBlockLibraryInstalls(
+    items: UpdateSelections['blockLibraryInstall'],
+    ctx: UpdateContext,
+    onProgress?: OnProgress,
+): Promise<CategoryResult> {
+    const result = emptyResult();
+    for (const item of items) {
+        onProgress?.(`Installing block library ${item.library.name}`);
+        try {
+            const outcome = await applyBlockLibraryInstall(item, ctx);
+            result.successCount++;
+            (result.installed ??= []).push(describeInstallOutcome(outcome));
+        } catch (error) {
+            result.failCount++;
+            result.errors.push(`${item.library.name}: ${sanitizeErrorForLogging(error as Error)}`);
+            ctx.logger.error(
+                `[Updates] Failed to install block library "${item.library.name}"`,
+                error as Error,
+            );
+        }
+    }
+    return result;
+}
+
 // ==========================================================
 // Orchestrator
 // ==========================================================
 
 /**
  * Apply all selected updates headlessly, in the same category order the QuickPick
- * command uses (fork → template → components → Adobe MCP → add-ons), threading
- * template-sync successes into the add-on dedup.
+ * command uses (fork → template → components → Adobe MCP → add-ons → block
+ * library installs), threading template-sync successes into the add-on dedup.
  */
 export async function applyUpdatesHeadless(
     selections: UpdateSelections,
@@ -355,13 +396,20 @@ export async function applyUpdatesHeadless(
         onProgress,
     );
 
-    const cats = [forkSync, template, component, adobeMcp, addon];
+    const blockLibraryInstall = await applyBlockLibraryInstalls(
+        selections.blockLibraryInstall,
+        ctx,
+        onProgress,
+    );
+
+    const cats = [forkSync, template, component, adobeMcp, addon, blockLibraryInstall];
     return {
         forkSync,
         template,
         component,
         adobeMcp,
         addon,
+        blockLibraryInstall,
         totalApplied: cats.reduce((s, c) => s + c.successCount, 0),
         totalFailed: cats.reduce((s, c) => s + c.failCount, 0),
     };
@@ -389,6 +437,7 @@ export async function computeProjectUpdateSelections(
         component: [],
         adobeMcp: [],
         blockLibrary: [],
+        blockLibraryInstall: [],
         inspector: [],
     };
 
@@ -471,6 +520,11 @@ export async function computeProjectUpdateSelections(
         logger.warn(`[Updates] Add-on check failed: ${sanitizeErrorForLogging(error as Error)}`);
     }
 
+    // Block libraries selected but never installed. No network, so no try.
+    for (const library of findUninstalledBlockLibraries(project)) {
+        selections.blockLibraryInstall.push({ project, library });
+    }
+
     return selections;
 }
 
@@ -482,6 +536,7 @@ export function countSelections(selections: UpdateSelections): number {
         selections.component.length +
         selections.adobeMcp.length +
         selections.blockLibrary.length +
+        selections.blockLibraryInstall.length +
         selections.inspector.length
     );
 }

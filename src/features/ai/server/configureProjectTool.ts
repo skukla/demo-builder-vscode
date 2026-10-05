@@ -242,7 +242,9 @@ export function registerConfigureProjectTool(
                     blockLibraries: z
                         .array(z.string())
                         .optional()
-                        .describe('Block library ids to enable'),
+                        .describe(
+                            'Block library ids to enable. This records the choice; on an existing storefront, apply_updates then installs the blocks',
+                        ),
                     storeScope: storeScopeSchema.optional(),
                     env: z
                         .record(z.record(z.union([z.string(), z.boolean(), z.number()])))

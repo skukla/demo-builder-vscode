@@ -283,6 +283,10 @@ describe('computeProjectUpdateSelections', () => {
     });
 
     describe('a failing checker costs only its own category', () => {
+        /** Also carries a selected-but-uninstalled library, so the install category is non-empty. */
+        const everythingProject = () =>
+            edsProject({ selectedBlockLibraries: ['demo-builder-blocks'] });
+
         function everythingHasAnUpdate(project: ReturnType<typeof edsProject>): void {
             mockCheckForkStatus.mockResolvedValue({ isFork: true, behindBy: 1 });
             mockCheckTemplateUpdates.mockResolvedValue({ hasUpdates: true });
@@ -307,7 +311,7 @@ describe('computeProjectUpdateSelections', () => {
         ] as const)(
             'a throwing %s checker empties only that category and warns once',
             async (_label, checker, category) => {
-                const project = edsProject();
+                const project = everythingProject();
                 const handlerCtx = createMockHandlerContext();
                 everythingHasAnUpdate(project);
                 checker.mockRejectedValue(new Error('boom'));
@@ -324,12 +328,12 @@ describe('computeProjectUpdateSelections', () => {
         );
 
         it('with nothing failing, every category is selected and counted', async () => {
-            const project = edsProject();
+            const project = everythingProject();
             everythingHasAnUpdate(project);
 
             const sel = await computeProjectUpdateSelections(project, createMockHandlerContext());
 
-            expect(countSelections(sel)).toBe(6);
+            expect(countSelections(sel)).toBe(7);
         });
     });
 });
@@ -347,9 +351,12 @@ describe('countSelections', () => {
                 { project, library: installedLibrary('y'), latestCommit: 'c' },
                 { project, library: installedLibrary('z'), latestCommit: 'c' },
             ],
+            blockLibraryInstall: [
+                { project, library: { name: 'n', source: installedLibrary('n').source } },
+            ],
             inspector: [{ project, latestCommit: 'c' }],
         };
 
-        expect(countSelections(sel)).toBe(8);
+        expect(countSelections(sel)).toBe(9);
     });
 });
