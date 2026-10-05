@@ -412,6 +412,16 @@
                 }
             },
             {
+                "title": "Category Pages",
+                "properties": {
+                    "demoBuilder.categoryPages.autoAdd": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "Add and publish a page for each new Commerce category on the open project's Edge Delivery storefront without asking. Off: Demo Builder offers first. Add-only: it never edits or removes a page, and it runs only while VS Code is open with the project. A project can override this from the notice it shows."
+                    }
+                }
+            },
+            {
                 "title": "AI",
                 "properties": {
                     "demoBuilder.ai.engine": {

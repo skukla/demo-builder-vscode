@@ -127,18 +127,23 @@ const IN_NAV: Array<ApplyReport['nav']> = ['added', 'links-updated', 'already-pr
 
 const EMPTY_RECORD: CatalogMenuRecord = { pages: [], links: [], navSwitch: false };
 
-function hashOf(content: string): string {
+/** The hash a page is recorded under: its stored source, trimmed. */
+export function hashOf(content: string): string {
     return createHash('sha256').update(content.trim()).digest('hex');
 }
 
 const messageOf = (error: unknown): string => (error instanceof Error ? error.message : String(error));
 
-type PageOutcome =
+export type PageOutcome =
     | { kind: 'written'; hash: string }
     | { kind: 'skipped'; reason: 'edited' | 'not-ours' }
     | { kind: 'failed'; error: string };
 
-async function writeOwnedPage(
+/**
+ * Write a page only when it is ours to write: the address is empty, or it holds what the
+ * record says we wrote. Shared with the add-only path (`newCategoryPages.ts`).
+ */
+export async function writeOwnedPage(
     pages: StorefrontPages,
     path: string,
     html: string,

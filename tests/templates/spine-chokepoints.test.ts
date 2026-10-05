@@ -425,4 +425,22 @@ describe('spine choke-points', () => {
         expect(stepHits).toEqual(expect.arrayContaining(doors));
         expect(stepHits.filter((f) => !doors.includes(f))).toStrictEqual([]);
     });
+
+    it('category PAGES for new categories: the add-only write has one step and two doors', () => {
+        // Audited 2026-10-05 (EDS-27). Pages for categories added after setup are
+        // written by the SAME step file as the three flows above, through an add-only
+        // primitive that cannot rewrite or remove a page. Two doors reach it: the
+        // watcher that runs while a project is open (offer, or add when the SC has
+        // opted in) and the agent's add_category_pages. The unattended write lives
+        // behind the watcher alone, which is where the owner's ruling is recorded.
+        expect(filesTouchingPrimitive(/\baddMissingCategoryPages\(/)).toStrictEqual([
+            'features/eds/services/catalogMenu/catalogMenuStep.ts',
+            'features/eds/services/catalogMenu/newCategoryPages.ts',
+        ]);
+        expect(filesTouchingPrimitive(/\baddNewCategoryPagesStep\(/)).toStrictEqual([
+            'features/ai/server/categoryPageTools.ts',
+            'features/eds/services/catalogMenu/catalogMenuStep.ts',
+            'features/eds/services/catalogMenu/newCategoryPagesWatcher.ts',
+        ]);
+    });
 });

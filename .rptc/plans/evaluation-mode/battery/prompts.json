@@ -1294,5 +1294,24 @@
         "cwd": "project",
         "why": "Added 2026-10-04 when publish_page became confirm-gated alongside write_page (property 5). A MISS means the agent calls sync_content and republishes the whole site for one page. Tier 2: it publishes to a live storefront.",
         "tier": 2
+    },
+    {
+        "id": "check-category-pages",
+        "prompt": "I added a couple of categories in Commerce this morning. Do they have pages on my storefront yet?",
+        "expect": [
+            "check_category_pages"
+        ],
+        "cwd": "project",
+        "why": "Added 2026-10-05 with the tool (EDS-27): the read that names the menu categories with no page, using the same hand-built-page checks as storefront setup. A MISS means the agent lists DA.live content and compares it to a Commerce query by hand, and counts a hand-built page at another address as missing. Read-only, so a reach is safe."
+    },
+    {
+        "id": "t2-add-category-pages",
+        "prompt": "Two of my new Commerce categories have no page on the storefront. Add their pages, but don't touch anything that is already there.",
+        "expect": [
+            "add_category_pages"
+        ],
+        "cwd": "project",
+        "why": "Added 2026-10-05 with the tool (EDS-27): the add-only write. A MISS means the agent runs sync_content (which refreshes pages and edits the nav) or writes pages one at a time with write_page, outside the record that lets a reset remove them. Tier 2: it writes and publishes pages on a live storefront.",
+        "tier": 2
     }
 ]

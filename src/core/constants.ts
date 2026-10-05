@@ -268,7 +268,10 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // not typed categories; author-commerce-data says a new category gets its page from
 // sync_content, never from write_page one page at a time. Same unreleased version: a
 // hand-built category page at any address is honored, and the nav's catalog-menu table
-// holds the "category | page" rows that link the menu to it.
+// holds the "category | page" rows that link the menu to it. Same unreleased version again
+// (EDS-27): both skills name check_category_pages / add_category_pages for a category added
+// after setup, and author-commerce-data says Demo Builder looks by itself while the project
+// is open and that the autoAdd setting is the SC's to turn on.
 export const AI_CONTEXT_VERSION = 37;
 
 /**

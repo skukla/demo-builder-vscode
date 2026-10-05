@@ -246,6 +246,14 @@ export const TIMEOUTS = {
     /** Auto-update check interval (4 hours) */
     AUTO_UPDATE_CHECK_INTERVAL: 4 * 60 * 60 * 1000,
 
+    /**
+     * How often the open project's storefront is checked for Commerce categories that
+     * have no page yet (EDS-27): 15 minutes. A look costs one GitHub read, one Catalog
+     * Service query and one DA.live read per menu category, so it is cheap enough to
+     * repeat; the menu's search fallback covers a new category in between.
+     */
+    NEW_CATEGORY_PAGES_CHECK_INTERVAL: 15 * 60 * 1000,
+
     /** Startup update check delay (10 seconds) */
     STARTUP_UPDATE_CHECK_DELAY: 10000,
 

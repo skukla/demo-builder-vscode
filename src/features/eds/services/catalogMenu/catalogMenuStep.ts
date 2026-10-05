@@ -23,13 +23,25 @@
  *   plain sentence for the flow's progress line and log; `undefined` means there was
  *   nothing to say (no block and nothing of ours on the site).
  *
+ * ## Categories added afterwards (EDS-27)
+ *
+ * {@link findNewCategoryPagesStep} and {@link addNewCategoryPagesStep} are the same step
+ * for the watcher that runs while a project is open, and for agents: find the categories
+ * with no page, and add those. ADD-ONLY — no page is rewritten or removed and the nav is
+ * not touched (`newCategoryPages.ts`). They act only on a storefront that has the block
+ * AND that this step has already set the menu up on (a record exists): a storefront never
+ * set up would otherwise have every category "missing", and its first run belongs to
+ * Republish, which also puts the menu in the nav.
+ *
  * @module features/eds/services/catalogMenu/catalogMenuStep
  */
 
 import { isEmptyRecord, readCatalogMenuRecord, writeCatalogMenuRecord } from './catalogMenuRecord';
 import { applyCatalogMenu, removeCatalogMenu, type StorefrontPages } from './catalogMenuService';
-import { describeBuild, describeRemoval } from './catalogMenuSummary';
+import { describeAdded, describeBuild, describeRemoval } from './catalogMenuSummary';
 import type { CatalogCategory } from './categoryPages';
+import { addMissingCategoryPages, findMissingCategoryPages } from './newCategoryPages';
+import { DaLiveAuthError } from '@/features/eds/services/types';
 import type { Project } from '@/types/base';
 
 /** One storefront, as the step needs it. Built by `createCatalogMenuSite`. */
@@ -111,4 +123,84 @@ export async function applyCatalogMenuStep(
     return removed === undefined
         ? undefined
         : `The storefront no longer has the catalog menu block, so Demo Builder took its menu out. ${removed}`;
+}
+
+/** A category, as the SC knows it, and the address its page goes at. */
+export interface NewCategory {
+    name: string;
+    path: string;
+}
+
+/** What a look for unpaged categories found. `signIn`: the DA.live sign-in was refused. */
+export type NewCategoryPagesCheck =
+    | { status: 'nothing' }
+    | { status: 'missing'; categories: NewCategory[] }
+    | { status: 'failed'; error: string; signIn: boolean };
+
+export interface NewCategoryPagesAdded {
+    added: NewCategory[];
+    /** One sentence for the notice, the log and the agent. */
+    summary: string;
+    /** True when nothing was added because the DA.live sign-in was refused. */
+    signIn: boolean;
+}
+
+const failure = (error: unknown): { error: string; signIn: boolean } => ({
+    error: messageOf(error),
+    signIn: error instanceof DaLiveAuthError,
+});
+
+/** Whether this is a storefront the add-only path acts on: set up by the step, block present. */
+async function isSetUpWithBlock(project: Project, site: CatalogMenuSite): Promise<boolean> {
+    if (isEmptyRecord(readCatalogMenuRecord(project))) return false;
+    return site.hasBlock();
+}
+
+/**
+ * The menu categories that have no page yet. A READ: it writes nothing, removes nothing,
+ * and does not change the project.
+ *
+ * A read that fails comes back as `failed` — never as "these are all missing".
+ *
+ * @param project - the project, whose record is read
+ * @param site - the storefront
+ * @returns the categories without pages, nothing, or why it could not tell
+ */
+export async function findNewCategoryPagesStep(
+    project: Project,
+    site: CatalogMenuSite,
+): Promise<NewCategoryPagesCheck> {
+    try {
+        if (!(await isSetUpWithBlock(project, site))) return { status: 'nothing' };
+        const missing = await findMissingCategoryPages(site, readCatalogMenuRecord(project));
+        if (missing.length === 0) return { status: 'nothing' };
+        return { status: 'missing', categories: missing.map(({ name, path }) => ({ name, path })) };
+    } catch (error) {
+        return { status: 'failed', ...failure(error) };
+    }
+}
+
+/**
+ * Write and publish a page for each menu category that has none. Add-only; never throws.
+ *
+ * @param project - the project, whose record is read and then replaced in place
+ * @param site - the storefront
+ * @returns the categories that got a page, and the sentence that says so
+ */
+export async function addNewCategoryPagesStep(
+    project: Project,
+    site: CatalogMenuSite,
+): Promise<NewCategoryPagesAdded> {
+    try {
+        if (!(await isSetUpWithBlock(project, site))) {
+            return { added: [], summary: describeAdded([], []), signIn: false };
+        }
+        const report = await addMissingCategoryPages(site, readCatalogMenuRecord(project));
+        writeCatalogMenuRecord(project, report.record);
+        const added = report.written.map(({ name, path }) => ({ name, path }));
+        return { added, summary: describeAdded(added, report.failed), signIn: false };
+    } catch (error) {
+        const { error: message, signIn } = failure(error);
+        return { added: [], summary: `No category pages were added: ${message}.`, signIn };
+    }
 }

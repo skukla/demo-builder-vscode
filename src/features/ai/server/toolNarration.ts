@@ -213,6 +213,8 @@ export const TOOL_NARRATION: Record<string, string> = {
     sync_storefront: 'Pushing the storefront to GitHub',
     write_page: 'Writing the page',
     publish_page: 'Publishing the page',
+    check_category_pages: 'Checking for new categories',
+    add_category_pages: 'Adding pages for new categories',
     delete_page: 'Deleting the page',
     promote_block_to_library: 'Adding a block to the library',
     remove_block_from_library: 'Removing a library block',

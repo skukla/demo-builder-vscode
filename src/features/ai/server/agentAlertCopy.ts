@@ -210,6 +210,16 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: ['path'],
         sessionGrant: false,
     },
+    add_category_pages: {
+        action: 'Add pages for new categories',
+        consequence:
+            'Writes and publishes a page for each Commerce category that has none; visitors can open them at once. No existing page is changed.',
+        // Acts on the open project's storefront; the pages are named in the agent's
+        // own refusal, not in an argument.
+        target: [],
+        // New pages reach visitors, and running it again does not take them back.
+        sessionGrant: false,
+    },
     forget_added_demo: {
         action: 'Forget an added demo',
         consequence:

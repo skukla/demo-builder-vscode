@@ -9,6 +9,7 @@ import { COMPONENT_IDS } from '@/core/constants';
 import { readCatalogMenuRecord } from '@/features/eds/services/catalogMenu/catalogMenuRecord';
 import type { StorefrontPages } from '@/features/eds/services/catalogMenu/catalogMenuService';
 import type { CatalogMenuSite } from '@/features/eds/services/catalogMenu/catalogMenuStep';
+import { readAutoAddOverride } from '@/features/eds/services/catalogMenu/categoryPageAutoAdd';
 import { executeCatalogMenuPhase } from '@/features/project-creation/services/catalogMenuPhase';
 import type { Project } from '@/types/base';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
@@ -98,6 +99,16 @@ describe('executeCatalogMenuPhase', () => {
 
         expect(readCatalogMenuRecord(rebuilt).pages.map((p) => p.path)).toEqual(['/signs']);
         expect(progress.mock.calls[0][2]).not.toContain("didn't write");
+    });
+
+    it("edit mode: the SC's own choice about pages for new categories follows the storefront", async () => {
+        const before = storefront('skukla/kukla-justrite', { autoAddCategoryPages: true });
+        const rebuilt = storefront();
+        const s = fakeSite();
+
+        await executeCatalogMenuPhase(createMockHandlerContext(), rebuilt, jest.fn(), before, () => siteOver(s.port));
+
+        expect(readAutoAddOverride(rebuilt)).toBe(true);
     });
 
     it('edit mode onto a different storefront: the old record does not follow', async () => {

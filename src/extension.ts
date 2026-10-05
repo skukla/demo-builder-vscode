@@ -30,6 +30,7 @@ import { createAgentTraceFileSink } from '@/features/ai/server/agentTraceSink';
 import { registerAgentTraceTool } from '@/features/ai/server/agentTraceTool';
 import { registerApplyUpdatesTool } from '@/features/ai/server/applyUpdatesTool';
 import { registerAuthTools } from '@/features/ai/server/authTools';
+import { registerCategoryPageTools } from '@/features/ai/server/categoryPageTools';
 import { registerCloudResourceTools } from '@/features/ai/server/cloudResourceTools';
 import { registerCommerceEndpointsTool } from '@/features/ai/server/commerceEndpointsTool';
 import { registerCommerceQueryTool } from '@/features/ai/server/commerceQueryTool';
@@ -74,6 +75,10 @@ import { seedDefaultAiPrompts } from '@/features/dashboard/services/defaultPromp
 import { cleanupDaLiveSitesCommand } from '@/features/eds/commands/cleanupDaLiveSites';
 import { manageGitHubReposCommand } from '@/features/eds/commands/manageGitHubRepos';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
+import {
+    readAutoAddCategoryPagesSetting,
+    registerNewCategoryPagesWatch,
+} from '@/features/eds/handlers/newCategoryPagesWatch';
 import { DaLiveAuthService } from '@/features/eds/services/daLive/daLiveAuthService';
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
 import { registerEwSettingChangeListener } from '@/features/eds/services/ewSettingChangeListener';
@@ -452,6 +457,18 @@ export async function activate(context: vscode.ExtensionContext) {
             ),
         );
 
+        // New Commerce categories get their pages while a project is open (EDS-27):
+        // offered by default, added without asking only when the SC has turned
+        // `demoBuilder.categoryPages.autoAdd` on. The open project only.
+        context.subscriptions.push(
+            registerNewCategoryPagesWatch({
+                stateManager,
+                ctxFactory: () => createHeadlessHandlerContext(context, stateManager, logger),
+                onDidSignIn: (listener) => getDaLiveAuthService(context).onDidSignIn(listener),
+                logger,
+            }),
+        );
+
         // Initialize auto-updater (but don't check yet - wait for sidebar activation)
         // Update checks are triggered when the user clicks the sidebar icon
         autoUpdater = new AutoUpdater(context, logger);
@@ -745,6 +762,7 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                         .get(key.slice(lastDot + 1));
                 });
                 registerContentAuthoringTools(mcpServer, connCtxFactory);
+                registerCategoryPageTools(mcpServer, connCtxFactory, readAutoAddCategoryPagesSetting);
                 registerResetProjectTool(mcpServer, connCtxFactory);
                 registerAddedDemoTools(mcpServer, connCtxFactory);
                 registerDemoPackageTools(mcpServer, connCtxFactory);

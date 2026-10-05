@@ -26,14 +26,16 @@ step by reset and republish.
 | Project creation | After the datapack is installed (the categories arrive with it) | `project-creation/services/catalogMenuPhase.ts` |
 | Reset (dashboard, `reset_project`) | Takes out what Demo Builder wrote, with the stored record, before re-copying the content; writes it again after publishing | `eds/services/reset/edsResetCatalogMenu.ts` |
 | Republish (dashboard, `sync_content`) | Writes pages for categories added since; refreshes ours if unedited | `eds/services/storefront/storefrontRepublishService.ts` |
+| While the project is open (EDS-27) | Offers pages for categories added since, or adds them when the SC opted in. Add-only | `eds/services/catalogMenu/newCategoryPagesWatcher.ts` |
 
-All three call one step, `eds/services/catalogMenu/catalogMenuStep.ts`, on a site built by
+All of them call one step file, `eds/services/catalogMenu/catalogMenuStep.ts`, on a site built by
 `catalogMenuSiteDeps.ts`. The step never fails the flow around it: every outcome comes
 back as one sentence for the progress line and the log (and as `categoryPages` on the
 `reset_project` and `sync_content` results).
 
 An existing project picks this up at its next reset or republish. Nothing is written to a
-live site on extension start.
+live site on extension start, with one exception the SC opts into: pages for categories
+added after setup (below).
 
 ## A category that already has a page
 
@@ -117,11 +119,75 @@ the site does not have. Project delete removes the whole site.
 
 ## A category added after setup
 
-It appears in the menu at once (the block reads Commerce live). Its page arrives at the
-next republish or reset. Until then the block links it to the search page filtered to
-that category, `/search?filter=categoryPath:<url path>`, which lists its products. The
-block finds out which pages are missing with one `HEAD` request per shown category. A
-category with a row in the table is taken to have a page: no request, no fallback.
+It appears in the menu at once (the block reads Commerce live). Until it has a page the
+block links it to the search page filtered to that category,
+`/search?filter=categoryPath:<url path>`, which lists its products. The block finds out
+which pages are missing with one `HEAD` request per shown category. A category with a row
+in the table is taken to have a page: no request, no fallback.
+
+### Demo Builder gives it a page while the project is open (EDS-27)
+
+Demo Builder looks at the OPEN project's storefront for menu categories with no page:
+when the project opens, every 15 minutes while VS Code stays open
+(`TIMEOUTS.NEW_CATEGORY_PAGES_CHECK_INTERVAL`), after a DA.live sign-in, and when the
+setting below changes. Never every project on the machine.
+
+| Setting `demoBuilder.categoryPages.autoAdd` | What the SC sees |
+|---|---|
+| **off** (the default) | An offer: `2 new categories on "Justrite" have no page yet (Tools, Gloves). Add their pages?` with **Add pages** and **Always add for this project**. Nothing is written until one is pressed. The same offer is not shown twice; a different set of categories is a new offer. |
+| **on** | The pages are added and published without asking, then a notice names them: `Justrite: Added pages for 2 new categories: Tools (/tools), Gloves (/gloves).` with **Stop for this project**. |
+
+The setting is for all of an SC's projects. A project's own choice beats it, both ways:
+**Always add for this project** turns it on for that project, **Stop for this project**
+turns it off. The choice is kept on the storefront instance, beside the record
+(`metadata.autoAddCategoryPages`, `categoryPageAutoAdd.ts`), the same place the
+authoring experience keeps its per-project choice. There is no control for it in the
+Configure screen.
+
+What it does and does not do:
+
+- **Add-only.** It writes pages for categories that have none. It never rewrites a page,
+  never removes one, and never touches the nav. A page for a category deleted from
+  Commerce stays until Republish or reset. A hand-built page found at another address is
+  honored (no page is written), but its link row in the nav table is only written by
+  Republish or reset.
+- **A hand-built page is always honored**, by the checks above: a page at the category's
+  address (ours, ours but edited, or someone else's), a row in the nav table, or a page
+  for it at any address.
+- **Only on a storefront already set up.** It needs the catalog-menu block in the
+  repository AND a record that setup, reset or republish has run the step. A storefront
+  that has never had its category pages written gets them from Republish, which also
+  puts the menu in the nav.
+- **A failed read is a failure.** If the categories, the nav or the page list cannot be
+  read, nothing is offered and nothing is written. A storefront that answers "no nav"
+  counts as a failed read. It is logged (`[Category Pages]` in the Debug Logs).
+- **Expired DA.live sign-in:** one notice saying so, then it waits and looks again at the
+  next tick or sign-in. It never opens a browser. It does not ask the stored sign-in
+  status first, because that can say yes after the sign-in has expired (EDS-30).
+- **Undo:** turning the setting off stops it. The pages it added are on the record, so
+  reset removes them like any other page Demo Builder wrote.
+
+**The limit:** it only works while VS Code is open with the project. A category added
+overnight gets its page when the project is next open; until then the menu's search
+fallback covers it.
+
+**The rule this bends.** Cloud writes are confirmed before they run and never run
+unattended (CLAUDE.md property 5). Owner's ruling, 2026-10-05: an opt-in setting is the
+SC confirming once, in advance, and that is acceptable for add-only category pages. It
+does not extend to edits, removals, or any other cloud write. The ruling is recorded at
+the one call that makes the unattended write, in `newCategoryPagesWatcher.ts`.
+
+One cost per look, on a storefront that is up to date: one GitHub read (the block), one
+Catalog Service query, the nav, and one DA.live read per menu category. The whole site
+is walked for hand-built pages only when some category still looks unpaged.
+
+Agents: `check_category_pages` (a read) and `add_category_pages` (confirm-gated) run the
+same step. `get_settings` reads the setting. An agent cannot turn automatic adding on;
+`set_setting` hands that to the SC.
+
+Code: `catalogMenuStep.ts` (`findNewCategoryPagesStep`, `addNewCategoryPagesStep`),
+`newCategoryPages.ts` (the add-only read and write), `newCategoryPagesWatcher.ts` (offer
+or add), `eds/handlers/newCategoryPagesWatch.ts` (when it looks).
 
 Verified 2026-10-05 on the Justrite store: Catalog Service answers `categoryPath` with
 `in` (what the search page sends) the same as `eq` (what a category page sends) —

@@ -9,6 +9,8 @@
  */
 
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
+import { createCatalogMenuSite } from '@/features/eds/services/catalogMenu/catalogMenuSiteDeps';
+import type { CatalogMenuSite } from '@/features/eds/services/catalogMenu/catalogMenuStep';
 import {
     DaLiveContentOperations,
     createDaLiveServiceTokenProvider,
@@ -79,4 +81,24 @@ export function helixFor(ctx: HandlerContext): HelixService {
         getGitHubServices(ctx.context.secrets).tokenService,
         createDaLiveServiceTokenProvider(getDaLiveAuthService(ctx.context)),
     );
+}
+
+/**
+ * The project's storefront as the catalog menu step sees it, on this context's sign-ins
+ * — for project creation, the new-category watcher and the category page tools.
+ *
+ * @param ctx - the handler context
+ * @param project - the project
+ * @returns the site, or null when the project has no usable storefront coordinates
+ */
+export function catalogMenuSiteFor(ctx: HandlerContext, project: Project): CatalogMenuSite | null {
+    const target = storefrontTarget(project);
+    if (!target) return null;
+    return createCatalogMenuSite({
+        project,
+        target,
+        daLive: daLiveOps(ctx),
+        helix: helixFor(ctx),
+        github: getGitHubServices(ctx.context.secrets).fileOperations,
+    });
 }

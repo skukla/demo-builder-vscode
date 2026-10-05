@@ -4,7 +4,7 @@ kind: feature
 area: eds
 needs: [EDS-24]
 value: med
-status: planned
+status: built
 ---
 
 # New categories get their pages without a Republish

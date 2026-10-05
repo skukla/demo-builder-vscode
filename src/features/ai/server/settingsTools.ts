@@ -1,5 +1,5 @@
 /**
- * Settings tools (Phase 4, Group 7) — read the 22 `demoBuilder.*` keys, and
+ * Settings tools (Phase 4, Group 7) — read the `demoBuilder.*` keys, and
  * hand a change back to the user.
  *
  * ## Why the read exists
@@ -74,6 +74,10 @@ export const SETTING_KEYS = [
     'demoBuilder.accsDiscovery.services',
     'demoBuilder.byom.enabled',
     'demoBuilder.byom.overlayUrl',
+    // Read-visible so an agent can tell why category pages do or do not appear by
+    // themselves (EDS-27). Turning it on approves unattended page writes in advance,
+    // so it goes through set_setting's hands-back like every key here.
+    'demoBuilder.categoryPages.autoAdd',
     'demoBuilder.ai.engine',
     'demoBuilder.dataInstaller.enabled',
     'demoBuilder.dataInstaller.apiBaseUrl',

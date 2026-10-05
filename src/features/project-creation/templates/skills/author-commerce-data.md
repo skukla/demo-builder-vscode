@@ -85,10 +85,19 @@ Whenever you create or move categories: assign them to every shared catalog that
 On an Edge Delivery storefront with the Demo Builder Blocks library, Demo Builder writes one page
 per category marked Include in Menu when the storefront is set up, and the nav's catalog menu
 reads the category tree live. A category you create now appears in that menu at once and links to
-the search page filtered to it until it has a page. To give it its own page, call `sync_content`
-(it asks first): it writes pages for new categories, refreshes the ones Demo Builder wrote that
-nobody has edited, and leaves every other page alone. Never write category pages one by one with
-`write_page`: Demo Builder keeps no record of those, so a reset cannot take them back out.
+the search page filtered to it until it has a page. To give it its own page, call
+`check_category_pages` (a read: it names the categories with no page) and then
+`add_category_pages` (it asks first). That adds the missing pages and changes nothing else: no
+existing page is rewritten or removed and the nav is left alone. `sync_content` does the same and
+more: it also refreshes the pages Demo Builder wrote that nobody has edited. Never write category
+pages one by one with `write_page`: Demo Builder keeps no record of those, so a reset cannot take
+them back out.
+
+While the project is open in VS Code, Demo Builder also looks for new categories by itself (when
+the project opens, then every 15 minutes). It offers to add their pages, or adds them without
+asking when the SC has turned on the `demoBuilder.categoryPages.autoAdd` setting
+(`check_category_pages` says which). Do not turn that setting on for the SC: it approves page
+writes in advance, and that is theirs to decide. `set_setting` hands the change to them.
 
 A category that already has a hand-built page keeps it, wherever that page lives: a page whose
 `product-list-page` block names the category in its `urlPath` row counts, at any address. Demo

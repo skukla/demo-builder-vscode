@@ -266,7 +266,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-24` | feature | [Category pages and the nav are generated from the Commerce category tree](2026-10-01-category-pages-and-nav-from-the-commerce-tree.md) | _the owner watching the first real run on Justrite_ | high | built |
 | `EDS-25` | question | [Should product pages use Adobe's prerender, and how?](2026-10-05-prerender-for-product-pages.md) | — | med | open |
 | `EDS-26` | fix | [Reset and delete leave a storefront's product pages published](2026-10-05-product-pages-survive-reset.md) | — | med | backlog |
-| `EDS-27` | feature | [New categories get their pages without a Republish](2026-10-05-new-categories-get-pages-automatically.md) | EDS-24 | med | planned |
+| `EDS-27` | feature | [New categories get their pages without a Republish](2026-10-05-new-categories-get-pages-automatically.md) | EDS-24 | med | built |
 | `EDS-28` | fix | [Existing storefront gains a block library](2026-10-05-existing-storefront-gains-a-block-library.md) | — | high | built |
 | `EDS-29` | fix | [Republish says "No publishable pages found" when the DA.live sign-in has expired](2026-10-05-republish-blames-content-for-an-expired-sign-in.md) | — | med | backlog |
 | `EDS-30` | fix | [The sign-in status says DA.live is signed in when the sign-in has expired](2026-10-05-dalive-sign-in-status-says-yes-when-expired.md) | — | med | backlog |

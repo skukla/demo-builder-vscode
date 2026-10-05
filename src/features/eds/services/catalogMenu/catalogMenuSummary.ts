@@ -146,3 +146,20 @@ export function describeRemoval(report: RemovalFacts): string {
         .filter(Boolean)
         .join(' ');
 }
+
+/**
+ * What the add-only run did (EDS-27): the categories that got a page, by name.
+ *
+ * @param added - the categories whose pages were written and published
+ * @param failed - the pages that could not be written
+ * @returns the summary
+ */
+export function describeAdded(added: Array<{ name: string; path: string }>, failed: PageFailure[]): string {
+    if (added.length + failed.length === 0) return 'No category is missing a page.';
+    const names = named(added.map((c) => `${c.name} (${c.path})`));
+    const what = added.length === 1 ? 'a page for 1 new category' : `pages for ${added.length} new categories`;
+    return [
+        ...(added.length ? [`Added ${what}: ${names}.`] : []),
+        ...failedSentence(failed, 'written', RETRY_BUILD),
+    ].join(' ');
+}

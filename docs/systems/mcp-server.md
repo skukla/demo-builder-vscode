@@ -560,8 +560,23 @@ alone and named in the step's sentence, which `reset_project` and `sync_content`
 as `categoryPages`. Reset takes the pages and the switch out with that record before it
 re-copies the content, then writes them again.
 
-So an agent that wants a new Commerce category to have its page calls `sync_content`;
-one that wants the menu gone deselects the library and resets. Both are confirm-gated.
+So an agent that wants the menu gone deselects the library and resets (confirm-gated).
+
+For a category added in Commerce AFTER setup there are two tools (EDS-27,
+`categoryPageTools.ts`), on the same step file:
+
+- `check_category_pages`: a read. The menu categories with no page yet, and whether this
+  project adds such pages without asking (the `demoBuilder.categoryPages.autoAdd` setting
+  and the project's own choice).
+- `add_category_pages`: writes and publishes those pages, and only those. No page is
+  rewritten or removed and the nav is not touched. `confirm:true`, and it raises the
+  consent dialog. `sync_content` still does the same as part of a full republish.
+
+Both read first and report a refused DA.live sign-in as the `needsAuth` handoff. Neither
+asks the stored sign-in status, which can say yes after the sign-in has expired (EDS-30).
+An agent cannot switch automatic adding on: `get_settings` reads the setting,
+`set_setting` hands the change to the SC, and the per-project choice is set only from the
+notices the SC sees. See `docs/systems/category-pages.md`.
 
 ### Integrations live in Adobe workspaces of their own (AB-23)
 

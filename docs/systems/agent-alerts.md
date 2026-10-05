@@ -60,6 +60,7 @@ Replacing or wiping
 Reaching other people
 - `set_site_admin` · `republish` · `sync_content` · `rename_adobe_project`
 - `write_page` (replaces a page in the DA.live source the live site is built from; the dialog shows whether it also publishes) · `publish_page` (puts a page live) — both since 2026-10-04
+- `add_category_pages` (writes and publishes a page for each Commerce category that has none; add-only) — since 2026-10-05
 - `start_datapack_import` · `start_datapack_export`
 
 ### Deliberately NOT on it

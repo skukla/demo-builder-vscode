@@ -16,15 +16,18 @@
  * @module features/project-creation/services/catalogMenuPhase
  */
 
-import { daLiveOps, helixFor, storefrontTarget } from '@/features/ai/server/storefrontPages';
-import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
+import { catalogMenuSiteFor, storefrontTarget } from '@/features/ai/server/storefrontPages';
 import {
     isEmptyRecord,
     readCatalogMenuRecord,
     writeCatalogMenuRecord,
 } from '@/features/eds/services/catalogMenu/catalogMenuRecord';
-import { createCatalogMenuSite, type CatalogMenuTarget } from '@/features/eds/services/catalogMenu/catalogMenuSiteDeps';
+import type { CatalogMenuTarget } from '@/features/eds/services/catalogMenu/catalogMenuSiteDeps';
 import { applyCatalogMenuStep, type CatalogMenuSite } from '@/features/eds/services/catalogMenu/catalogMenuStep';
+import {
+    readAutoAddOverride,
+    writeAutoAddOverride,
+} from '@/features/eds/services/catalogMenu/categoryPageAutoAdd';
 import type { ProgressReporter } from '@/features/project-creation/services/catalogPrewarmPhase';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
@@ -43,6 +46,8 @@ function carryRecord(project: Project, existing: Project | undefined, target: Ca
     if (before?.repoOwner !== target.repoOwner || before.repoName !== target.repoName) return;
     const carried = readCatalogMenuRecord(existing);
     if (isEmptyRecord(readCatalogMenuRecord(project))) writeCatalogMenuRecord(project, carried);
+    // The SC's own choice about pages for new categories (EDS-27) travels the same way.
+    if (readAutoAddOverride(project) === undefined) writeAutoAddOverride(project, readAutoAddOverride(existing));
 }
 
 /**
@@ -63,15 +68,8 @@ export async function executeCatalogMenuPhase(
         const target = storefrontTarget(project);
         if (!target) return;
         carryRecord(project, existingProject, target);
-        const site = makeSite
-            ? makeSite(target)
-            : createCatalogMenuSite({
-                  project,
-                  target,
-                  daLive: daLiveOps(context),
-                  helix: helixFor(context),
-                  github: getGitHubServices(context.context.secrets).fileOperations,
-              });
+        const site = makeSite ? makeSite(target) : catalogMenuSiteFor(context, project);
+        if (!site) return;
         const summary = await applyCatalogMenuStep(project, site);
         if (summary === undefined) return;
         context.logger.info(`[Catalog Menu] ${summary}`);

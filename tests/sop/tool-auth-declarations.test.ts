@@ -77,7 +77,9 @@ const EXPECTED: Record<string, number> = {
     // 26 -> 27 on 2026-10-04: copy_project, the same creation as create_project_from_file.
     // 27 -> 25 on 2026-10-05: build_catalog_menu and remove_catalog_menu removed — storefront
     // setup, reset and republish write the category pages now (EDS-24 redesign).
-    dalive: 25,
+    // 25 -> 27 on 2026-10-05: check_category_pages and add_category_pages read, write and
+    // publish DA.live pages for categories added after setup (EDS-27).
+    dalive: 27,
     // 10 -> 12 on 2026-09-12: forget_added_demo and change_demo_source (step 06
     // of the shareable-demo program) both read and write GitHub; 12 -> 14 the
     // same day for probe_shared_demo and add_shared_demo (step 07).
@@ -89,7 +91,9 @@ const EXPECTED: Record<string, number> = {
     // Helix, which sends the GitHub token, and the build reads the repository for its block.
     // 22 -> 23 on 2026-10-04: copy_project, likewise.
     // 23 -> 21 on 2026-10-05: build_catalog_menu and remove_catalog_menu removed (EDS-24).
-    github: 21,
+    // 21 -> 23 on 2026-10-05: check_category_pages and add_category_pages read the
+    // repository for the block, and the add publishes through Helix (EDS-27).
+    github: 23,
     commerce: 2,
     // 45 -> 46 on 2026-09-14: edit_added_demo renames a card in a user setting,
     // and needs no sign-in.
@@ -114,7 +118,7 @@ const EXPECTED: Record<string, number> = {
  * files. That counts text, not declarations, and was roughly double. The CONTROL below
  * caught it — which is the argument for having one.)
  */
-const EXPECTED_TOOLS = 156; // 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x); 144 with add_erp (AB-16).
+const EXPECTED_TOOLS = 158; // 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x); 144 with add_erp (AB-16).
 // 141 -> 142 on 2026-09-27: delete_undeclared_runtime_code.
 // 142 -> 143 on 2026-09-27: load_erp_demo_data.
 // 144 -> 146 on 2026-09-29: get_erp_settings and set_erp_settings (AB-16j).
@@ -128,6 +132,7 @@ const EXPECTED_TOOLS = 156; // 138 -> 141 on 2026-09-25: the three demo setup ch
 // 157 -> 158 on 2026-10-04: copy_project (PL-56f).
 // 158 -> 156 on 2026-10-05: build_catalog_menu and remove_catalog_menu removed (EDS-24:
 // the category pages are written by storefront setup, reset and republish, not a button).
+// 156 -> 158 on 2026-10-05: check_category_pages and add_category_pages (EDS-27).
 
 interface Declaration {
     name: string;
