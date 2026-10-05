@@ -58,3 +58,4 @@ added are removed by reset like any other page Demo Builder wrote.
 ## Shipped so far
 
 - 2026-10-05  feat(eds): new Commerce categories get their pages without a Republish (EDS-27) (`4879c9dff`)
+- 2026-10-05  2026-10-05 Live, read-only: the setting reads false; check_category_pages on Justrite answers no missing pages. The offer and the add are not yet seen live (needs a new Commerce category).
