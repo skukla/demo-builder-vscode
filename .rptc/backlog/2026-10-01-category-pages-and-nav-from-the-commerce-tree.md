@@ -190,3 +190,4 @@ before anyone can see it.
 - 2026-10-05  feat(eds): category pages and the catalog menu come from storefront setup, not a button (EDS-24) (`89401edec`)
 - 2026-10-05  docs(eds): category menu and pages without a button; brand research; EDS-25 asks about prerender for product pages (`50205331c`)
 - 2026-10-05  2026-10-05 First live run on Justrite (an added colleague storefront) passed: Republish wrote and published 12 category pages and added the menu to the nav (nothing removed from the nav, compared before/after); the hand-made pages untouched; the guest menu lists the Signs tree, Lockout and 5S from Commerce; the owner confirmed in Chrome that /signs/danger-signs lists its 7 products. Still to prove on a scratch project: an edited page surviving Republish, the reset round trip, the search fallback for a new category, and a fresh boilerplate project.
+- 2026-10-05  docs(backlog): EDS-24 and EDS-28 proven live on Justrite (`f65144bf7`)

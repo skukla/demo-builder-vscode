@@ -32,3 +32,7 @@ the SC sees. Check the other callers of the same lister for the same swallow.
 Also seen in the same run, earlier in the log: `[DaLiveConfig] Failed to grant access: Failed
 to read org config: 401 Unauthorized` — logged as a warning and passed over. Same cause; it
 should have stopped the run with the sign-in message before any publish.
+
+## Shipped so far
+
+- 2026-10-05  docs(backlog): EDS-29 and EDS-30 — an expired DA.live sign-in reads as no content, and as signed in (`f2e68a8e1`)

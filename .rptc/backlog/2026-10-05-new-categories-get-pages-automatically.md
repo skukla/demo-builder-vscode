@@ -54,3 +54,7 @@ The setting in `package.json` (schema, type and reader together); the agent surf
 agent read and change the setting, and trigger the check?); docs/systems/category-pages.md;
 the generated AI files if they describe it. Undo: turning the setting off stops it; pages it
 added are removed by reset like any other page Demo Builder wrote.
+
+## Shipped so far
+
+- 2026-10-05  feat(eds): new Commerce categories get their pages without a Republish (EDS-27) (`4879c9dff`)
