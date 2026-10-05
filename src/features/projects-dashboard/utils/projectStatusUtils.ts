@@ -127,24 +127,6 @@ function getIntegrationStatuses(project: Project): AppBuilderComponentState['sta
 }
 
 /**
- * Whether the project has any App Builder component at all — the test for
- * offering a route to the Integrations page.
- *
- * Replaced `listRedeployableIntegrations`, which existed to build one
- * "Redeploy <name>" menu item per integration. Those grew with N and predate the
- * dedicated Integrations page; the page owns per-integration actions now, so the
- * menu needs a single yes/no rather than a list. Deliberately NOT filtered by
- * status: a not-deployed or failed integration is exactly when you want to go
- * look at it.
- *
- * @param project - the project to test
- * @returns true when at least one App Builder component is keyed on the project
- */
-export function hasIntegrations(project: Project): boolean {
-    return Object.keys(project.appBuilderComponents ?? {}).length > 0;
-}
-
-/**
  * The storefront's label and dot for a surface that shows exactly one status
  * line (`ProjectRow`). Both halves come from the shared table, so this cannot
  * drift from the dashboard's rendering of the same state — which is precisely

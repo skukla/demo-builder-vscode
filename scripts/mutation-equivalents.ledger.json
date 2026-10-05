@@ -10679,7 +10679,7 @@
             "anchors": [
                 "].filter((concern): concern is DeploymentConcern => concern !== null);"
             ],
-            "line": 246,
+            "line": 228,
             "mutants": 2,
             "category": "branch",
             "reason": "Both survivors here let nulls stay in the concerns array, and a null cannot change the answer: the winner is chosen with CONCERN_ORDER.find(c => concerns.includes(c)), and CONCERN_ORDER holds only the four real concerns, so a null matches nothing. When every source is null the array is non-empty but the find still returns undefined, and the guard below returns null exactly as the length check would have.",
@@ -10716,7 +10716,7 @@
             "anchors": [
                 "text: getStatusText(project.status, undefined, true),"
             ],
-            "line": 292,
+            "line": 274,
             "mutants": 1,
             "category": "branch",
             "reason": "This call is only reached for an EDS project whose status is 'resetting' or 'republishing' \u2014 the in-flight guard three lines above returns null for anything else. getStatusText answers 'Resetting...' and 'Republishing...' for both of those whether isEds is true or false, because its EDS branch and its switch spell those two states identically. So the flag cannot change the text here.",
@@ -10729,7 +10729,7 @@
             "anchors": [
                 "variant: getStatusVariant(project.status, true),"
             ],
-            "line": 293,
+            "line": 275,
             "mutants": 1,
             "category": "branch",
             "reason": "This call is only reached for an EDS project whose status is 'resetting' or 'republishing' \u2014 the in-flight guard three lines above returns null for anything else. getStatusVariant answers 'warning' for both of those whether isEds is true or false, because its EDS branch and its switch agree on the transitional states. So the flag cannot change the variant here.",

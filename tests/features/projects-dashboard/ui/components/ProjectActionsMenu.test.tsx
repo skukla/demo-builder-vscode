@@ -30,22 +30,6 @@ const edsProject = (name = 'EDS Project') =>
     createProjectsDashboardProject({ name, selectedStack: 'eds-dalive' });
 
 /**
- * A project that HAS integrations — `hasIntegrations` counts the keys of
- * `appBuilderComponents`, the keyed record the manifest persists.
- */
-const withIntegrations = (name = 'Integrated') =>
-    createProjectsDashboardProject({
-        name,
-        appBuilderComponents: {
-            'app-builder-shell': {
-                kind: 'integration',
-                status: 'deployed',
-                source: { owner: 'adobe', repo: 'app-builder-shell' },
-            },
-        },
-    });
-
-/**
  * An EDS project (the resolved authoring experience no longer rides in the
  * view model — the Author label is static and the backend resolves the target).
  */
@@ -512,9 +496,10 @@ describe('ProjectActionsMenu', () => {
         // The projects list is the ONLY short route to the integrations surface
         // (project → dashboard → Integrations is the long way), and this item
         // replaced the per-integration "Redeploy <name>" entries that grew with N.
+        // It shows with no integrations too: that page is where the first is added.
 
-        it('offers Integrations when the project has integrations and the callback is wired', () => {
-            const project = withIntegrations();
+        it('offers Integrations when the callback is wired', () => {
+            const project = createProjectsDashboardProject({ name: 'Test' });
             const onOpenIntegrations = jest.fn();
             renderWithProvider(
                 <ProjectActionsMenu project={project} actions={{ onOpenIntegrations }} />
@@ -526,22 +511,10 @@ describe('ProjectActionsMenu', () => {
             expect(onOpenIntegrations).toHaveBeenCalledWith(project);
         });
 
-        it('omits it for a project with no integrations, even with the callback wired', () => {
+        it('omits it when the callback is absent', () => {
             renderWithProvider(
                 <ProjectActionsMenu
                     project={createProjectsDashboardProject({ name: 'Test' })}
-                    actions={{ onOpenIntegrations: jest.fn(), onDelete: jest.fn() }}
-                />
-            );
-            openMenu();
-
-            expect(screen.queryByText('Integrations')).not.toBeInTheDocument();
-        });
-
-        it('omits it when the callback is absent, however many integrations exist', () => {
-            renderWithProvider(
-                <ProjectActionsMenu
-                    project={withIntegrations()}
                     actions={{ onDelete: jest.fn() }}
                 />
             );

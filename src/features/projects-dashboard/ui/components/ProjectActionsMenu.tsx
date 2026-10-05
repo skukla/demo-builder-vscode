@@ -33,7 +33,6 @@ import { Text, Section, Item } from '@adobe/react-spectrum';
 import React, { useCallback, useMemo } from 'react';
 import { CardActionsMenu } from '@/core/ui/components/ui/CardActionsMenu';
 import { renderMenuIcon } from '@/core/ui/components/ui/menuIcons';
-import { hasIntegrations } from '@/features/projects-dashboard/utils/projectStatusUtils';
 import type { Project } from '@/types/base';
 import { isEdsProject } from '@/types/typeGuards';
 
@@ -228,7 +227,8 @@ export function ProjectActionsMenu({
         // grew with N. Those predate the dedicated Integrations page; now that it
         // exists, per-integration actions belong there and this is the route —
         // the projects list otherwise has none (project → dashboard → Integrations).
-        if (onOpenIntegrations && hasIntegrations(project)) {
+        // Offered with none yet too: the page is where the first one gets added.
+        if (onOpenIntegrations) {
             manage.push({ key: 'openIntegrations', label: 'Integrations', icon: 'apiAccess' });
         }
         if (onPinToggle) {

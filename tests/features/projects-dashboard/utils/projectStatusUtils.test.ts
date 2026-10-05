@@ -16,7 +16,6 @@ import {
     getStatusVariant,
     getFrontendPort,
     getDeploymentSummary,
-    hasIntegrations,
 } from '@/features/projects-dashboard/utils/projectStatusUtils';
 import { createProjectsDashboardProject, createRunningProject } from '../testUtils';
 
@@ -373,60 +372,6 @@ describe('projectStatusUtils', () => {
             });
 
             expect(getDeploymentSummary(project)?.text).toBe('Attention needed');
-        });
-    });
-
-    describe('hasIntegrations', () => {
-        it('is true for any keyed App Builder component', () => {
-            const project = createProjectsDashboardProject({
-                appBuilderComponents: {
-                    'erp-sync': {
-                        kind: 'integration',
-                        status: 'deployed',
-                        source: { owner: 'acme', repo: 'erp-sync' },
-                    },
-                },
-            });
-
-            expect(hasIntegrations(project)).toBe(true);
-        });
-
-        // Deliberately unfiltered by status: a not-deployed or failed integration
-        // is exactly when you want to go and look at it.
-        it.each(['not-deployed', 'error', 'stale'] as const)(
-            'is true for a %s integration too',
-            (status) => {
-                const project = createProjectsDashboardProject({
-                    appBuilderComponents: {
-                        'erp-sync': {
-                            kind: 'integration',
-                            status,
-                            source: { owner: 'acme', repo: 'erp-sync' },
-                        },
-                    },
-                });
-
-                expect(hasIntegrations(project)).toBe(true);
-            }
-        );
-
-        it('counts the mesh — it is a card on that page too', () => {
-            const project = createProjectsDashboardProject({
-                appBuilderComponents: {
-                    mesh: {
-                        kind: 'mesh',
-                        status: 'deployed',
-                        source: { owner: 'skukla', repo: 'commerce-mesh' },
-                    },
-                },
-            });
-
-            expect(hasIntegrations(project)).toBe(true);
-        });
-
-        it('is false when the keyed map is absent or empty', () => {
-            expect(hasIntegrations(createProjectsDashboardProject({}))).toBe(false);
-            expect(hasIntegrations(createProjectsDashboardProject({ appBuilderComponents: {} }))).toBe(false);
         });
     });
 });
