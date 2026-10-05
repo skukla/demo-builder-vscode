@@ -11,6 +11,7 @@
 import type { StorefrontPages } from './catalogMenuService';
 import { resolveDaPath } from '@/features/eds/services/daLive/daLiveContentHelpers';
 import type { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { listDaLivePages } from '@/features/eds/services/daLive/daLivePageWalk';
 import type { HelixService } from '@/features/eds/services/helix/helixService';
 
 /** The two clients the page adapter drives — narrowed to the calls it makes. */
@@ -29,7 +30,6 @@ const SKIPPED_FOLDERS = new Set(['fragments', 'drafts']);
 const PRODUCT_PAGES = '/products';
 /** Documents the header and footer load; never a page of their own. */
 const CHROME_DOCUMENTS = new Set(['nav', 'footer']);
-const PAGE_SUFFIX = '.html';
 
 const lastSegment = (path: string): string => path.slice(path.lastIndexOf('/') + 1);
 
@@ -38,40 +38,19 @@ function isSkippedFolder(path: string): boolean {
     return path === PRODUCT_PAGES || name.startsWith('.') || SKIPPED_FOLDERS.has(name);
 }
 
-/** The web path of a page document, or null for anything that is not a candidate page. */
-function pagePathOf(sitePath: string): string | null {
-    if (!sitePath.endsWith(PAGE_SUFFIX)) return null;
-    const webPath = sitePath.slice(0, -PAGE_SUFFIX.length);
-    return CHROME_DOCUMENTS.has(lastSegment(webPath)) ? null : webPath;
-}
-
 /**
  * Every page that could be a category page, found by walking the site's folders: one
- * DA.live list call per folder, folders one after another. Product pages (`/products`),
- * `fragments`, `drafts` and dot-folders (`.da`, the block library's own pages) are never
- * opened; nav and footer documents, sheets and media are left out.
+ * DA.live list call per folder, folders one after another (`daLivePageWalk.ts`). Product
+ * pages (`/products`), `fragments`, `drafts` and dot-folders (`.da`, the block library's
+ * own pages) are never opened; nav and footer documents, sheets and media are left out.
  */
 async function listCandidatePages(
     daLive: PageTransport['daLive'],
     org: string,
     site: string,
 ): Promise<string[]> {
-    const prefix = `/${org}/${site}`;
-    const found: string[] = [];
-    const walk = async (folder: string): Promise<void> => {
-        for (const entry of await daLive.listDirectory(org, site, folder)) {
-            const sitePath = entry.path.startsWith(prefix) ? entry.path.slice(prefix.length) : entry.path;
-            if (!entry.ext) {
-                if (!isSkippedFolder(sitePath)) await walk(sitePath);
-                continue;
-            }
-            // The path's own ending decides: the list API's `ext` is spelled both ways in this repo.
-            const page = pagePathOf(sitePath);
-            if (page !== null) found.push(page);
-        }
-    };
-    await walk('/');
-    return found;
+    const pages = await listDaLivePages(daLive, org, site, '/', isSkippedFolder);
+    return pages.filter((page) => !CHROME_DOCUMENTS.has(lastSegment(page)));
 }
 
 /**

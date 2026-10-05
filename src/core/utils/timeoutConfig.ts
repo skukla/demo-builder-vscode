@@ -254,6 +254,13 @@ export const TIMEOUTS = {
      */
     NEW_CATEGORY_PAGES_CHECK_INTERVAL: 15 * 60 * 1000,
 
+    /**
+     * How long a Helix status job (the listing of a site's published paths, EDS-26) may
+     * run before the listing is given up as failed: 2 minutes. Polled every
+     * `POLL.INTERVAL`.
+     */
+    HELIX_STATUS_JOB_MAX: 2 * 60 * 1000,
+
     /** Startup update check delay (10 seconds) */
     STARTUP_UPDATE_CHECK_DELAY: 10000,
 

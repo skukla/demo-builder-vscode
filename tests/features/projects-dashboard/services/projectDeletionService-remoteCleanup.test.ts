@@ -13,6 +13,7 @@ import {
     deleteProjectFiles,
     mockDefaultDeleteAdminApiKey,
     mockDefaultListAllPages,
+    mockDefaultListPublishedPaths,
     mockDefaultUnpublishPages,
     mockDeleteRepository,
     mockDeleteSiteConfig,
@@ -37,6 +38,7 @@ import {
     edsProject,
     mockDeleteAdminApiKey,
     mockListAllPages,
+    mockListPublishedPaths,
     mockUnpublishPages,
     plainProject,
 } from './projectDeletionService.fixtures';
@@ -71,6 +73,8 @@ beforeEach(() => {
         previewFailed: 0,
     });
     mockDeleteAdminApiKey.mockResolvedValue({ success: true });
+    mockListPublishedPaths.mockResolvedValue([]);
+    mockDefaultListPublishedPaths.mockResolvedValue([]);
     mockDefaultListAllPages.mockResolvedValue([]);
     mockDefaultUnpublishPages.mockResolvedValue({
         success: true,
@@ -140,6 +144,65 @@ describe('the CDN unpublish step', () => {
         expect(of(resultsOf(result), 'helix')).toEqual([
             { type: 'helix', name: 'skukla/demo-storefront', success: true },
         ]);
+    });
+
+    // Product pages are published through the overlay and are in no DA.live listing (EDS-26).
+    it('removes the product pages Helix lists, by owner/repo, and records them as cleaned', async () => {
+        armQuickPick('accept', ['daLive']);
+        mockListPublishedPaths.mockResolvedValue(['/products/drum/dc-100', '/products/default', '/index']);
+
+        const result = await deleteProject(context(), edsProject(), SERVICES);
+
+        expect(mockListPublishedPaths).toHaveBeenCalledWith('skukla', 'demo-storefront', 'main', '/products/*');
+        expect(mockUnpublishPages).toHaveBeenNthCalledWith(2, 'skukla', 'demo-storefront', 'main', [
+            '/products/drum/dc-100',
+        ]);
+        expect(of(resultsOf(result), 'helix')).toContainEqual({
+            type: 'helix',
+            name: 'product pages, skukla/demo-storefront',
+            success: true,
+        });
+    });
+
+    it('leaves the product pages, and says why, when another project publishes to the same repository', async () => {
+        armQuickPick('accept', ['daLive']);
+        mockListPublishedPaths.mockResolvedValue(['/products/drum/dc-100']);
+        const ctx = context();
+        const other = edsProject({ name: 'other-demo', path: '/projects/other' });
+        (ctx.stateManager.getAllProjects as jest.Mock).mockResolvedValue([
+            { name: 'demo-project', path: '/projects/demo', lastModified: new Date(0) },
+            { name: 'other-demo', path: '/projects/other', lastModified: new Date(0) },
+        ]);
+        (ctx.stateManager.loadProjectFromPath as jest.Mock).mockImplementation(async (path: string) =>
+            path === '/projects/other' ? other : edsProject(),
+        );
+
+        const result = await deleteProject(ctx, edsProject(), SERVICES);
+
+        expect(mockListPublishedPaths).not.toHaveBeenCalled();
+        expect(mockUnpublishPages).toHaveBeenCalledTimes(1);
+        expect(of(resultsOf(result), 'helix')).toContainEqual({
+            type: 'helix',
+            name: 'product pages, skukla/demo-storefront',
+            success: false,
+            error:
+                'Product pages were left published: the project "other-demo" also publishes to ' +
+                'skukla/demo-storefront, and removing them would take its product pages down too.',
+        });
+    });
+
+    it('never reports a clean result when Helix keeps the preview copies', async () => {
+        armQuickPick('accept', ['daLive']);
+        mockListPublishedPaths.mockResolvedValue(['/products/drum/dc-100']);
+        mockUnpublishPages
+            .mockResolvedValueOnce({ success: true, count: 2, total: 2, liveFailed: 0, previewFailed: 0 })
+            .mockResolvedValueOnce({ success: true, count: 1, total: 1, liveFailed: 0, previewFailed: 1 });
+
+        const result = await deleteProject(context(), edsProject(), SERVICES);
+
+        const row = of(resultsOf(result), 'helix').find((r) => r.name.startsWith('product pages'));
+        expect(row).toMatchObject({ success: false });
+        expect(row?.error).toContain('those preview copies remain');
     });
 
     it('falls back to the real Helix when no service seam is handed in', async () => {

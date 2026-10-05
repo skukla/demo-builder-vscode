@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: med
-status: backlog
+status: built
 ---
 
 # Reset and delete leave a storefront's product pages published
@@ -45,3 +45,48 @@ deleted storefront's product pages keep being served is unverified.
    (pre-warm knows its list; smart-404 publishes are not recorded — read the status API's
    listing, or record them in the shared action). The category pages EDS-24 writes live in
    DA.live and are already covered.
+
+## Built 2026-10-05, not yet seen live
+
+Built with no cloud writes, so step 1 above (measure) has NOT been done. What was built:
+
+- `storefront/productPageRemoval.ts` is the one implementation. It asks Helix for the
+  site's published `/products/*` paths (`helix/helixPublishedPaths.ts`, the Admin API's
+  bulk status job), keeps only `/products/<urlKey>/<sku>` paths that DA.live has no
+  document for, and removes live then preview through `HelixService.unpublishPages`.
+- Reset runs it before the content pipeline (`reset/edsResetProductPages.ts`); the
+  storefront teardown runs it for the delete button, `delete_project` and
+  `cleanup_dalive_site` (`storefront/storefrontTeardown.ts`).
+- Another local project on the same repository: nothing is removed, the sentence names it.
+- The outcome is a sentence on the progress line, in the log, and `productPages` on the
+  three tool results.
+
+There was no listing API in the code or in the `eds-publish-and-config` skill. The bulk
+status job is new to this codebase; its request and response shape are written from
+Adobe's Admin API reference, not from a captured response.
+
+### The live check (scratch storefront, or Justrite with the owner's say)
+
+1. Before: `get_auth_status`, then confirm product pages exist, for example
+   `read_published_page({ path: "/products/<urlKey>/<sku>" })` for one pre-warmed SKU
+   and one never-warmed SKU after visiting it in a browser.
+2. `reset_project({ confirm: true })`. Read `productPages` in the result and the
+   `[Product Pages]` and `[Helix]` lines in the Debug Logs.
+3. After: the same `read_published_page` on a SKU that is no longer in the catalog should
+   404; a current SKU should load (pre-warm re-made it).
+4. Delete: `delete_project({ name, confirm: true, confirmName: name, deleteDaLiveSite: true })`
+   on a scratch project, read `daLiveSite.productPages`, then fetch a product URL.
+
+What the check settles, each unverified today:
+
+- the bulk status request is accepted and its details carry `data.resources[].path`
+  (capture the body into `tests/features/eds/services/helix/helixPublishedPaths.test.ts`);
+- it lists pages published by a shopper's first visit as well as pre-warmed ones;
+- on teardown, the DA.live sign-in alone is enough for it (that Helix client has no
+  GitHub token);
+- whether Helix removes a preview copy while the overlay still answers. If it refuses,
+  the result must read "those preview copies remain"; whether removing the overlay
+  registration first would let them go is untested;
+- whether a deleted storefront's product pages were in fact still served before this.
+
+Found on the way and filed, not fixed: EDS-31 ("Manage DA.live Sites" unpublishes nothing).

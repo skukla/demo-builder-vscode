@@ -28,6 +28,7 @@ import {
     type TokenProvider,
 } from '@/features/eds/services/daLive/daLiveContentOperations';
 import { DaLiveOrgOperations } from '@/features/eds/services/daLive/daLiveOrgOperations';
+import { projectsSharingRepo } from '@/features/eds/services/storefront/sharedRepoProjects';
 import { tearDownStorefront } from '@/features/eds/services/storefront/storefrontTeardown';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -328,7 +329,7 @@ export function registerCloudResourceTools(
             needsAuth: ['dalive'],
             annotations: { readOnlyHint: false, destructiveHint: true },
             description:
-                'Delete all content for a DA.live site, and take its pages off the CDN when the GitHub repo is given (irreversible). Requires confirm:true and confirmName="org/site".',
+                'Delete all content for a DA.live site, and take its pages (product pages included; see productPages in the result) off the CDN when the GitHub repo is given (irreversible). Requires confirm:true and confirmName="org/site".',
             inputSchema: {
                 org: z.string().describe('DA.live organization name'),
                 site: z.string().describe('DA.live site name'),
@@ -381,6 +382,8 @@ export function registerCloudResourceTools(
                                     ctx.context.globalState,
                                 ),
                             makeContentOps: () => ops.content,
+                            // A site, not a project, is being acted on (EDS-26).
+                            otherProjectsOnRepo: (repo) => projectsSharingRepo(ctx.stateManager, repo),
                         },
                     ),
                 );
@@ -390,6 +393,7 @@ export function registerCloudResourceTools(
                     deletedCount: torn.deletedCount,
                     unpublishedPages: torn.unpublishedPages,
                     stillPublished: torn.stillPublished,
+                    ...(torn.productPages ? { productPages: torn.productPages.summary } : {}),
                     ...(torn.stillPublished && !args?.githubRepo
                         ? {
                               note: 'The source is gone but the published pages are still live. Call again with githubRepo:"owner/repo" to take them off the CDN.',

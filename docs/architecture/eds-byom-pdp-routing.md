@@ -136,6 +136,51 @@ The cold path runs once per SKU across all visitors to a storefront. Every subse
 | `demoBuilder.byom.enabled` setting | This repo | Master toggle; when off, no overlay registers and no 404 publishes |
 | `demoBuilder.byom.overlayUrl` setting | This repo | Override for non-default deployments. Defaults to the team's shared deployment. |
 
+### Reset and delete remove the product pages (EDS-26)
+
+Product pages are published through the overlay and have no DA.live document, so
+re-copying or deleting the content never cleared them. Until 2026-10-05 a reset left
+every product page of the old catalog live, and deleting a storefront left them too.
+
+Both now remove them (`storefront/productPageRemoval.ts`, one implementation):
+
+| Flow | When | Where |
+|---|---|---|
+| Reset (dashboard, `reset_project`) | Before the content pipeline, whose last step pre-warms the current catalog. A reset ends with product pages for the current catalog only. | `reset/edsResetProductPages.ts` |
+| Delete (the delete-project button, `delete_project`, `cleanup_dalive_site` with `githubRepo`) | In the storefront teardown, after the DA.live pages are unpublished and before the source is deleted. | `storefront/storefrontTeardown.ts` |
+
+The rules (owner, 2026-10-05):
+
+- **True deletion.** The live copy goes, then the preview copy, page by page with the
+  DA.live sign-in (ADR-002). If Helix refuses the preview removal, the result says the
+  live copies are gone and the preview copies remain. It is never reported as clean.
+- **The list comes from Helix,** not from pre-warm: a page a shopper's first visit
+  published is recorded nowhere else. It is the Admin API's bulk status job for
+  `/products/*` on the site keyed by GitHub owner/repo (`helix/helixPublishedPaths.ts`).
+  If the listing fails, nothing is removed and the sentence says the pages may still be
+  live.
+- **Only generated product pages.** A path is removed only when it is
+  `/products/<urlKey>/<sku>` and DA.live has no document for it. The authored template
+  `/products/default`, and any page an author made under `/products`, is DA.live
+  content and is not touched by this step.
+- **Refused on a shared repository.** When another local project publishes to the same
+  GitHub repository, nothing is removed and the sentence names that project. Only
+  projects on this machine can be seen.
+
+The sentence goes on the progress line and in the log, and to agents as `productPages`
+on the `reset_project`, `delete_project` and `cleanup_dalive_site` results. The delete
+button shows anything short of a clean removal in its results.
+
+**Not yet seen live** (the build made no cloud writes): the bulk status request and its
+response shape, whether the DA.live sign-in alone is enough for it on teardown (which has
+no GitHub token), and whether Helix removes a preview copy while the overlay still
+answers for the path. If it does not, the fallback above is what the SC sees; removing
+the overlay registration first on delete is the untested alternative. The live check is
+in `.rptc/backlog/2026-10-05-product-pages-survive-reset.md`.
+
+**Not covered:** the "Manage DA.live Sites" command deletes a site's content by its
+DA.live name with no GitHub repository in hand, so it unpublishes nothing.
+
 ### Out of scope (later workstreams or deliberate non-goals)
 
 - **~~SC template customizations on real product URLs.~~** Resolved — Phase 2 shipped 2026-06-09. The overlay now fetches the storefront's authored `/products/default` and serves it on `/products/{urlKey}/{sku}`. SC customizations inherit automatically.
@@ -238,6 +283,7 @@ If Phase 1's behavior diverges from this in production, those four probes locali
 | Smart-404 snippet generation + install (head.html, 404.html, delayed.js) | `src/features/eds/services/pdp/pdp404HandlerPublisher.ts` |
 | **Catalog pre-warming (enumerate + bulk pre-publish)** | `src/features/eds/services/catalogPrewarmService.ts` |
 | Pipeline integration (smart-404 install + pre-warming) | `src/features/eds/services/edsPipeline.ts`, `src/features/eds/handlers/storefrontSetup/storefrontSetupPhase2.ts` (create / edit), `src/features/eds/services/reset/edsResetRepoHelper.ts` (reset) |
+| **Product page removal on reset and delete (EDS-26)** | `src/features/eds/services/storefront/productPageRemoval.ts` (the rules), `helix/helixPublishedPaths.ts` (the listing), `reset/edsResetProductPages.ts`, `storefront/storefrontTeardown.ts`, `storefront/sharedRepoProjects.ts` |
 | Settings | `package.json` (`demoBuilder.byom.enabled`, `demoBuilder.byom.overlayUrl`) |
 
 ---

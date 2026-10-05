@@ -129,6 +129,12 @@ export interface EdsResetResult extends HandlerResponse {
      * storefront has no catalog-menu block and Demo Builder wrote nothing there.
      */
     catalogMenu?: string;
+    /**
+     * What happened to the product pages the overlay published (EDS-26), in SC words:
+     * removed, left because another project shares the repository, preview copies Helix
+     * kept, or that they could not be listed. Absent when Helix listed none.
+     */
+    productPages?: string;
     /** Additional error details */
     errorDetails?: Record<string, unknown>;
 }

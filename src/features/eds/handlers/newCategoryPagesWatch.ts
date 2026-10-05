@@ -38,7 +38,7 @@ export function readAutoAddCategoryPagesSetting(): boolean {
         .get<boolean>(AUTO_ADD_SETTING_LEAF, false);
 }
 
-export interface NewCategoryPagesWatchDeps {
+interface NewCategoryPagesWatchDeps {
     stateManager: Pick<StateManager, 'onProjectChanged' | 'getCurrentProject' | 'saveProject'>;
     /** Builds the context whose sign-ins the look uses. */
     ctxFactory: () => HandlerContext;

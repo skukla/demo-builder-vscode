@@ -18,6 +18,7 @@ import {
     mockPutBackCatalogMenu,
     mockResetRepoToTemplate,
     mockTakeOutCatalogMenu,
+    mockTakeOutProductPages,
     mockTokenProvider,
     pipelineProgressCallback,
     resetOrchestrationMocks,
@@ -330,6 +331,44 @@ describe('executeEdsReset - content pipeline', () => {
             success: false,
             error: 'Reset cancelled — DA.live re-authentication required',
         });
+    });
+});
+
+describe('executeEdsReset - the product pages the overlay published (EDS-26)', () => {
+    it('removes them BEFORE the content pipeline, whose last step pre-warms the current catalog', async () => {
+        const { params, context } = await runReset();
+
+        expect(mockTakeOutProductPages.mock.invocationCallOrder[0]).toBeLessThan(
+            mockExecuteEdsPipeline.mock.invocationCallOrder[0],
+        );
+        expect(mockTakeOutProductPages).toHaveBeenCalledTimes(1);
+        expect(mockTakeOutProductPages).toHaveBeenCalledWith(
+            params,
+            context,
+            expect.objectContaining({
+                daLiveContentOps: expect.any(DaLiveContentOperations),
+                tokenProvider: mockTokenProvider,
+            }),
+            expect.any(Function),
+        );
+    });
+
+    it('carries the sentence on the result, beside the category pages one', async () => {
+        mockTakeOutProductPages.mockResolvedValue('Removed 40 product pages from o/r, live and preview.');
+        mockPutBackCatalogMenu.mockResolvedValue('Wrote and published 3 category pages.');
+
+        const { result } = await runReset();
+
+        expect(result).toMatchObject({
+            success: true,
+            productPages: 'Removed 40 product pages from o/r, live and preview.',
+            catalogMenu: 'Wrote and published 3 category pages.',
+        });
+    });
+
+    it('adds nothing to the result when there were no product pages to remove', async () => {
+        const { result } = await runReset();
+        expect(result).not.toHaveProperty('productPages');
     });
 });
 

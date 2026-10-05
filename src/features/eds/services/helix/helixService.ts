@@ -36,6 +36,7 @@ import {
     type ResourceStatus,
 } from './helixPageContent';
 import { deleteResource, unpublishPages, type UnpublishPagesResult } from './helixPageDeletion';
+import { listPublishedPaths } from './helixPublishedPaths';
 import {
     HelixSiteContent,
     SITE_PUBLISH_PHASES,
@@ -273,6 +274,14 @@ export class HelixService {
         webPaths: string[],
     ): Promise<UnpublishPagesResult> {
         return unpublishPages(this.opDeps, org, site, branch, webPaths);
+    }
+
+    /**
+     * Every path the site holds in preview or live matching `pattern` (EDS-26). A read;
+     * throws when Helix cannot say. Delegates to `helixPublishedPaths`.
+     */
+    async listPublishedPaths(org: string, site: string, branch: string, pattern: string): Promise<string[]> {
+        return listPublishedPaths(this.opDeps, org, site, branch, pattern);
     }
 
     /**

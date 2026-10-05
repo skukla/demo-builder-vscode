@@ -68,12 +68,15 @@ export const mockInitKeyStore = jest.fn();
 export const mockListAllPages = jest.fn();
 export const mockUnpublishPages = jest.fn();
 export const mockDeleteAdminApiKey = jest.fn();
+/** What Helix lists as published under /products — where overlay-made pages are found (EDS-26). */
+export const mockListPublishedPaths = jest.fn();
 export const SERVICES: DeletionServices = {
     initKeyStore: mockInitKeyStore,
     makeHelix: () => ({
         listAllPages: mockListAllPages,
         unpublishPages: mockUnpublishPages,
         deleteAdminApiKey: mockDeleteAdminApiKey,
+        listPublishedPaths: mockListPublishedPaths,
     }),
 };
 

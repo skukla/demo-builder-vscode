@@ -152,6 +152,9 @@ export async function runEdsReset(
             // Category pages and the catalog menu, re-written by the reset (EDS-24) —
             // including pages someone else made, left alone by name.
             ...(result.catalogMenu ? { categoryPages: result.catalogMenu } : {}),
+            // The old catalog's product pages, removed before the new ones are made
+            // (EDS-26) — or why they were left, which is never reported as clean.
+            ...(result.productPages ? { productPages: result.productPages } : {}),
             filesReset: result.filesReset,
             contentCopied: result.contentCopied,
             meshRedeployed: result.meshRedeployed,

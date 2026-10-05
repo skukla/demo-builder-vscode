@@ -134,7 +134,7 @@ export function hashOf(content: string): string {
 
 const messageOf = (error: unknown): string => (error instanceof Error ? error.message : String(error));
 
-export type PageOutcome =
+type PageOutcome =
     | { kind: 'written'; hash: string }
     | { kind: 'skipped'; reason: 'edited' | 'not-ours' }
     | { kind: 'failed'; error: string };

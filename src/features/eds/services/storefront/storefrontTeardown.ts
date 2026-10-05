@@ -1,20 +1,24 @@
 /**
  * storefrontTeardown — taking an EDS storefront off the internet, in one place.
  *
- * Four steps, in an order that matters:
+ * Five steps, in an order that matters:
  *
  *   1. **Unpublish from the CDN.** aem.live keeps serving what was published even
  *      after the source is gone, so this goes FIRST. It is addressed by the
  *      GitHub repo, not by the DA.live site, because that is what the Helix admin
  *      API is keyed on (ADR 002; the DA.live Bearer token is the only credential
  *      that gets past "while source exists").
- *   2. Delete the site's Admin API key, which has nothing left to authorize.
- *   3. Delete the DA.live source documents.
- *   4. Remove the site's permission rows and its site config.
+ *   2. **Remove the product pages** the overlay published (EDS-26,
+ *      `productPageRemoval.ts`). They have no DA.live document, so step 1's listing
+ *      never names them; Helix's own listing does. Left alone, with the reason, when
+ *      another local project publishes to the same repository.
+ *   3. Delete the site's Admin API key, which has nothing left to authorize.
+ *   4. Delete the DA.live source documents.
+ *   5. Remove the site's permission rows and its site config.
  *
  * **Why it is shared.** Step 1 lived only in the delete-project button
  * (`projectDeletionService`), so the agent's `cleanup_dalive_site` — which calls
- * `deleteAllSiteContent`, steps 3 alone — deleted the source and left the
+ * `deleteAllSiteContent`, step 4 alone — deleted the source and left the
  * storefront LIVE, with `delete_page` (one page at a time) as its only other
  * route. An SC cannot return to zero through an agent that way, which is the
  * first property this extension holds (AI-9, answered 2026-09-19).
@@ -26,6 +30,7 @@
  * @module features/eds/services/storefront/storefrontTeardown
  */
 
+import { removeProductPages, type ProductPageRemovalResult } from './productPageRemoval';
 import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
 import { HelixService } from '@/features/eds/services/helix/helixService';
 import type { Logger } from '@/types/logger';
@@ -36,7 +41,7 @@ export interface DaLiveTokenProvider {
 }
 
 /**
- * The three Helix calls the unpublish makes, out of a class with dozens. A narrow
+ * The four Helix calls the unpublish makes, out of a class with dozens. A narrow
  * seam is what let this be tested at all — see `projectDeletionService`, whose
  * module mock once supplied a method the source had stopped calling.
  */
@@ -55,6 +60,8 @@ export interface TeardownHelix {
         previewFailed: number;
     }>;
     deleteAdminApiKey(org: string, site: string): Promise<{ success: boolean; error?: string }>;
+    /** What the site has in preview or live matching a pattern — where product pages are found. */
+    listPublishedPaths(org: string, site: string, branch: string, pattern: string): Promise<string[]>;
 }
 
 /** The DA.live content calls the teardown makes. */
@@ -86,6 +93,12 @@ export interface StorefrontTeardownDeps {
     makeHelix?: (logger: Logger, tokenProvider: DaLiveTokenProvider) => TeardownHelix;
     /** Injectable for tests; defaults to the real content operations. */
     makeContentOps?: (tokenProvider: DaLiveTokenProvider, logger: Logger) => TeardownContentOps;
+    /**
+     * Display names of OTHER local projects publishing to this `owner/repo`. Product
+     * pages are left alone when there are any (EDS-26). Required, so every caller says
+     * which project, if any, it is acting for.
+     */
+    otherProjectsOnRepo: (githubRepo: string) => Promise<string[]>;
     /** One short line per step, for a caller that is narrating progress. */
     onStep?: (step: string) => void;
 }
@@ -99,6 +112,12 @@ export interface StorefrontTeardownResult {
      * SC about whether the site is down.
      */
     stillPublished: boolean;
+    /**
+     * What happened to the product pages the overlay published (EDS-26); undefined when
+     * there was no repo to act against. Its `summary` is for the SC — a caller that
+     * reports the teardown without it can hide pages that are still live.
+     */
+    productPages?: ProductPageRemovalResult;
     /** Whether the DA.live source documents went. */
     contentDeleted: boolean;
     /** How many source documents were deleted. */
@@ -136,6 +155,19 @@ export async function tearDownStorefront(
             if (!unpublished.success) {
                 logger.warn(`[Teardown] CDN unpublish failed for ${owner}/${repo}`);
             }
+
+            // The DA.live pages just listed ARE the authored pages: anything else Helix
+            // holds under /products/{urlKey}/{sku} was made through the overlay.
+            onStep?.('Removing the product pages');
+            result.productPages = await removeProductPages(
+                { repoOwner: owner, repoName: repo },
+                {
+                    helix,
+                    listAuthoredProductPages: async () => pages,
+                    otherProjectsOnRepo: () => deps.otherProjectsOnRepo(`${owner}/${repo}`),
+                    logger,
+                },
+            );
 
             const keyDeleted = await helix.deleteAdminApiKey(daLiveOrg, daLiveSite);
             if (!keyDeleted.success) {

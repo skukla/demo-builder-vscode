@@ -8223,7 +8223,7 @@
             "anchors": [
                 "if (resolved) return;"
             ],
-            "line": 346,
+            "line": 351,
             "mutants": 1,
             "category": "branch",
             "reason": "A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. The guard's FORCED-TRUE half IS killed (a gesture that returns early never settles, and the test hangs); the forced-false and 'resolved = false' halves leave behaviour identical because the extra resolve is discarded.",
@@ -8236,7 +8236,7 @@
             "anchors": [
                 "resolved = true;"
             ],
-            "line": 347,
+            "line": 352,
             "mutants": 1,
             "category": "branch",
             "reason": "A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. The guard's FORCED-TRUE half IS killed (a gesture that returns early never settles, and the test hangs); the forced-false and 'resolved = false' halves leave behaviour identical because the extra resolve is discarded.",
@@ -8285,7 +8285,7 @@
             "anchors": [
                 "return { deleteGitHubRepo: false, deleteDaLiveSite: false };"
             ],
-            "line": 302,
+            "line": 307,
             "mutants": 3,
             "category": "other",
             "reason": "Emptying the returned object leaves both flags undefined, which is falsy exactly where false was: performEdsCleanup skips the repo on a falsy deleteGitHubRepo and performDaLiveCleanup returns on a falsy deleteDaLiveSite. The same is true of flipping either literal to true on this path, because the project reaching it has neither a repo nor a complete DA.live pair to act on. The suite asserts the CALLS made, which do not move.",
@@ -10203,7 +10203,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 38,
+            "line": 39,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this catch makes githubAuthed return undefined instead of false, and its single call site is 'if (!(await githubAuthed(ctx)))' - which takes the same branch for both, returning the needsAuth handoff. The function's return type is boolean, so no caller can distinguish them either; the test that a throwing token validation is treated as unauthenticated already covers the path and passes under both.",
@@ -10216,7 +10216,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 101,
+            "line": 102,
             "mutants": 1,
             "category": "block",
             "reason": "Same shape as its twin in githubAuthed: emptying this catch makes buildDaLiveOps return undefined rather than null, and both call sites read 'if (!ops) return asText(NEEDS_ADOBE)'. Both values are falsy, so both produce the Adobe sign-in handoff, and the test that a throwing token inspection hands off to Adobe auth passes under either. Nothing downstream ever holds the value long enough to compare it.",
@@ -10255,7 +10255,7 @@
             "anchors": [
                 "if (args?.confirm !== true || args?.confirmName !== fullName) {"
             ],
-            "line": 263,
+            "line": 264,
             "mutants": 2,
             "category": "optionalChain",
             "reason": "delete_github_repo reads args?.owner and args?.repo above this line and returns early unless both are non-empty, so by the time the confirmation gate runs, args is known to be an object carrying them. Dropping either optional chain here cannot throw on any input that reaches the line. The chains on the owner and repo reads ARE killed, by the no-arguments test - which is where a missing argument object actually arrives.",
@@ -10268,7 +10268,7 @@
             "anchors": [
                 "if (args?.confirm !== true || args?.confirmName !== fullName) {"
             ],
-            "line": 356,
+            "line": 357,
             "mutants": 2,
             "category": "optionalChain",
             "reason": "cleanup_dalive_site's copy of the same situation: args?.org and args?.site are read above and the tool returns early unless both are non-empty strings, so args is an object by the time this gate runs and the optional chains cannot fire. Both halves of the gate - confirm:true and the confirmName echo - are killed by their own tests, including one that supplies a correct echo without confirm.",
@@ -10281,7 +10281,7 @@
             "anchors": [
                 "const offset = Math.max(0, Math.trunc(args?.offset ?? 0));"
             ],
-            "line": 311,
+            "line": 312,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "This line is inside list_dalive_sites, past its \"org is required\" guard, which reads args?.org and returns early when it is empty - so args is an object with a non-empty org string by the time pagination is computed. Dropping the optional chain here cannot throw on any input that reaches the line. The identical line in list_github_repos has no guard in front of it and its chain IS killed, by the test that calls that tool with no argument object at all.",
@@ -10294,7 +10294,7 @@
             "anchors": [
                 "const limit = Math.min(100, Math.max(1, Math.trunc(args?.limit ?? 30)));"
             ],
-            "line": 312,
+            "line": 313,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "This line is inside list_dalive_sites, past its \"org is required\" guard, which reads args?.org and returns early when it is empty - so args is an object with a non-empty org string by the time pagination is computed. Dropping the optional chain here cannot throw on any input that reaches the line. The identical line in list_github_repos has no guard in front of it and its chain IS killed, by the test that calls that tool with no argument object at all.",

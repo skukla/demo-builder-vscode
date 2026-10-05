@@ -68,6 +68,13 @@ jest.mock('@/features/eds/services/reset/edsResetCatalogMenu', () => ({
     putBackCatalogMenu: (...args: unknown[]) => mockPutBackCatalogMenu(...args),
 }));
 
+/** Reset's removal of the product pages the overlay published (EDS-26). */
+export const mockTakeOutProductPages = jest.fn();
+jest.mock('@/features/eds/services/reset/edsResetProductPages', () => ({
+    ...jest.requireActual('@/features/eds/services/reset/edsResetProductPages'),
+    takeOutProductPages: (...args: unknown[]) => mockTakeOutProductPages(...args),
+}));
+
 export const mockVerifyCdnResources = jest.fn();
 jest.mock('@/features/eds/services/configSyncService', () => ({
     verifyCdnResources: (...args: unknown[]) => mockVerifyCdnResources(...args),
@@ -128,6 +135,7 @@ export function resetOrchestrationMocks(): void {
     });
     mockRedeployApiMesh.mockResolvedValue(null);
     mockTakeOutCatalogMenu.mockResolvedValue(CATALOG_MENU_SITE);
+    mockTakeOutProductPages.mockResolvedValue(undefined);
     mockPutBackCatalogMenu.mockResolvedValue(undefined);
     mockVerifyCdnResources.mockResolvedValue({ configVerified: true });
     mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });

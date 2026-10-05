@@ -146,7 +146,8 @@ export function registerResetProjectTool(
             annotations: { readOnlyHint: false, destructiveHint: true },
             description:
                 'Reset the current project to its starting point, Edge Delivery or headless. ' +
-                'An Edge Delivery project: the storefront repo, DA.live content and config go back to the template. A headless ' +
+                'An Edge Delivery project: the storefront repo, DA.live content and config go back to the template, and the old ' +
+                "catalog's product pages are removed before the current ones are made (productPages in the result). A headless " +
                 'project: its components are deleted and installed again (stop the demo first); ' +
                 'integrations and configuration are kept. Requires confirm:true.',
             inputSchema: {

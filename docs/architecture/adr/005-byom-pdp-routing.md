@@ -155,5 +155,12 @@ Two triggers should cause us to revisit smart-404:
 
 ## Reference notes
 
+- **2026-10-05, the undo (EDS-26).** This decision publishes product pages that exist
+  nowhere but in Helix, and it shipped without their removal: reset and delete left
+  them live. Both now remove them, listed from Helix itself, with a refusal when another
+  local project shares the repository and a stated live-only fallback when Helix keeps
+  the preview copies. See "Reset and delete remove the product pages" in
+  [eds-byom-pdp-routing.md](../eds-byom-pdp-routing.md). Not yet seen live.
+
 - `.rptc/backlog/2026-06-09-pdp-graceful-empty-state.md` — a backlog item since closed
   and archived. The path is accurate to the decision's date.

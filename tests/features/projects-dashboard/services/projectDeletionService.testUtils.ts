@@ -124,6 +124,7 @@ export const mockHelixInitKeyStore = jest.fn();
 export const mockDefaultListAllPages = jest.fn();
 export const mockDefaultUnpublishPages = jest.fn();
 export const mockDefaultDeleteAdminApiKey = jest.fn();
+export const mockDefaultListPublishedPaths = jest.fn();
 jest.mock('@/features/eds/services/helix/helixService', () => ({
     HelixService: Object.assign(
         class {
@@ -135,6 +136,9 @@ jest.mock('@/features/eds/services/helix/helixService', () => ({
             }
             deleteAdminApiKey(...a: unknown[]) {
                 return mockDefaultDeleteAdminApiKey(...a);
+            }
+            listPublishedPaths(...a: unknown[]) {
+                return mockDefaultListPublishedPaths(...a);
             }
         },
         { initKeyStore: (...a: unknown[]) => mockHelixInitKeyStore(...a) },

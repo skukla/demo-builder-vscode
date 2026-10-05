@@ -53,6 +53,7 @@ import {
     type EdsResetResult,
     type ExtractParamsResult,
 } from './edsResetParams';
+import { takeOutProductPages, withPageSentences } from './edsResetProductPages';
 import { resetRepoToTemplate } from './edsResetRepoHelper';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Project } from '@/types/base';
@@ -64,9 +65,8 @@ import type { StorefrontBoilerplate } from '@/types/projectFile';
 // Re-exports for backward compatibility
 // ==========================================================
 
-// Re-exports from the consolidated import above — kept here for the long-standing
-// downstream-consumer API. Splitting the import/re-export means the no-duplicate-imports
-// rule sees a single `from './edsResetParams'` statement.
+// Kept for the long-standing downstream-consumer API. Import and re-export are split so
+// the no-duplicate-imports rule sees a single `from './edsResetParams'` statement.
 export { extractResetParams };
 export type { EdsResetParams, EdsResetProgress, EdsResetResult, ExtractParamsResult };
 
@@ -462,10 +462,10 @@ export async function executeEdsReset(
             services,
         );
 
-        // Category pages and the menu switch come out before the content is re-copied,
-        // and go back in after it is published (EDS-24, `edsResetCatalogMenu.ts`).
+        // Out before the content is re-copied: category pages (EDS-24), product pages (EDS-26).
         const clients = { daLiveContentOps, githubFileOps, githubTokenService, tokenProvider };
         const catalogMenuSite = await takeOutCatalogMenu(params, context.logger, clients, report);
+        const productPages = await takeOutProductPages(params, context, clients, report);
 
         // Steps 8-11: Content Pipeline (with DA.live re-auth retry)
         contentCopied = await runContentPipeline(
@@ -493,7 +493,7 @@ export async function executeEdsReset(
             configWritten,
             { demoCaveats: repoResetResult.demoCaveats, demoFixes: repoResetResult.demoFixes },
         );
-        return catalogMenu === undefined ? result : { ...result, catalogMenu };
+        return withPageSentences(result, { catalogMenu, productPages });
     } catch (error) {
         return handleResetError(error, context.logger);
     }

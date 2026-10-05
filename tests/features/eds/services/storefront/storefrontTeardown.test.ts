@@ -35,6 +35,11 @@ function helixFake(overrides: Record<string, unknown> = {}) {
             previewFailed: 0,
         }),
         deleteAdminApiKey: jest.fn().mockResolvedValue({ success: true }),
+        // What Helix says the site has published under /products (EDS-26): two pages
+        // made through the overlay, and the authored one DA.live also lists.
+        listPublishedPaths: jest
+            .fn()
+            .mockResolvedValue(['/products/drum/dc-100', '/products/sign/es-2', '/products/shirt']),
         ...overrides,
     };
 }
@@ -58,6 +63,7 @@ function depsWith(helix = helixFake(), content = contentFake(), onStep?: (s: str
             initKeyStore: jest.fn().mockResolvedValue(undefined),
             makeHelix: () => helix,
             makeContentOps: () => content,
+            otherProjectsOnRepo: jest.fn().mockResolvedValue([] as string[]),
             onStep,
         },
         helix,
@@ -94,6 +100,7 @@ describe('with a repo to unpublish against', () => {
             contentDeleted: true,
             deletedCount: 7,
             error: undefined,
+            productPages: expect.objectContaining({ status: 'removed', found: 2 }),
         });
     });
 
@@ -138,9 +145,71 @@ describe('with a repo to unpublish against', () => {
 
         expect(steps).toEqual([
             'Taking the pages off the CDN',
+            'Removing the product pages',
             'Deleting the DA.live content',
             'Clearing the site settings',
         ]);
+    });
+});
+
+// Product pages are published through the overlay and have no DA.live document, so the
+// DA.live listing above never names them (EDS-26).
+describe('the product pages the overlay published', () => {
+    it('are listed from Helix by owner/repo and removed, after the DA.live pages and before the source', async () => {
+        const { deps, helix, content } = depsWith();
+
+        const result = await tearDownStorefront(SITE, deps);
+
+        expect(helix.listPublishedPaths).toHaveBeenCalledWith('acme', 'storefront', 'main', '/products/*');
+        expect(helix.unpublishPages).toHaveBeenCalledTimes(2);
+        expect(helix.unpublishPages).toHaveBeenNthCalledWith(2, 'acme', 'storefront', 'main', [
+            '/products/drum/dc-100',
+            '/products/sign/es-2',
+        ]);
+        expect(helix.unpublishPages.mock.invocationCallOrder[1]).toBeLessThan(
+            content.deleteAllSiteContent.mock.invocationCallOrder[0],
+        );
+        expect(helix.unpublishPages.mock.invocationCallOrder[1]).toBeLessThan(
+            helix.deleteAdminApiKey.mock.invocationCallOrder[0],
+        );
+        expect(result.productPages?.summary).toBe('Removed 2 product pages from acme/storefront, live and preview.');
+    });
+
+    it('are left alone, with the reason, when another project publishes to the same repository', async () => {
+        const { deps, helix } = depsWith();
+        deps.otherProjectsOnRepo.mockResolvedValue(['Other Demo']);
+
+        const result = await tearDownStorefront(SITE, deps);
+
+        expect(deps.otherProjectsOnRepo).toHaveBeenCalledWith('acme/storefront');
+        expect(helix.listPublishedPaths).not.toHaveBeenCalled();
+        expect(helix.unpublishPages).toHaveBeenCalledTimes(1);
+        expect(result.productPages).toMatchObject({ status: 'refused' });
+        expect(result.productPages?.summary).toContain('"Other Demo" also publishes to acme/storefront');
+    });
+
+    it('a listing Helix refuses does not stop the teardown, and is not reported as clean', async () => {
+        const helix = helixFake({ listPublishedPaths: jest.fn().mockRejectedValue(new Error('HTTP 401')) });
+        const { deps, content } = depsWith(helix);
+
+        const result = await tearDownStorefront(SITE, deps);
+
+        expect(content.deleteAllSiteContent).toHaveBeenCalled();
+        expect(result.productPages).toMatchObject({ status: 'failed' });
+        expect(result.productPages?.summary).toContain('may still be live');
+    });
+
+    it('says the preview copies remain when Helix refuses to remove them', async () => {
+        const helix = helixFake();
+        helix.unpublishPages
+            .mockResolvedValueOnce({ success: true, count: 2, total: 2, liveFailed: 0, previewFailed: 0 })
+            .mockResolvedValueOnce({ success: true, count: 2, total: 2, liveFailed: 0, previewFailed: 2 });
+        const { deps } = depsWith(helix);
+
+        const result = await tearDownStorefront(SITE, deps);
+
+        expect(result.productPages).toMatchObject({ status: 'live-only' });
+        expect(result.productPages?.summary).toContain('those preview copies remain');
     });
 });
 
@@ -151,6 +220,7 @@ describe('with no repo', () => {
         const result = await tearDownStorefront({ daLiveOrg: 'acme', daLiveSite: 'shop' }, deps);
 
         expect(helix.unpublishPages).not.toHaveBeenCalled();
+        expect(helix.listPublishedPaths).not.toHaveBeenCalled();
         expect(content.deleteAllSiteContent).toHaveBeenCalledWith('acme', 'shop');
         expect(result.stillPublished).toBe(true);
         expect(result.unpublishedPages).toBeUndefined();

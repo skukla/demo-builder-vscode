@@ -25,6 +25,8 @@ import {
     formatCleanupResults,
     type CleanupResultItem,
 } from '@/features/eds/services/resourceCleanupHelpers';
+import type { ProductPageRemovalResult } from '@/features/eds/services/storefront/productPageRemoval';
+import { otherProjectsPublishingTo } from '@/features/eds/services/storefront/sharedRepoProjects';
 import { tearDownStorefront } from '@/features/eds/services/storefront/storefrontTeardown';
 import type { Project } from '@/types/base';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -36,10 +38,12 @@ import type { Logger } from '@/types/logger';
 interface CleanupOptions {
     deleteGitHubRepo: boolean;
     deleteDaLiveSite: boolean;
+    /** The project being deleted: it does not count as "another project on the repository". */
+    projectPath?: string;
 }
 
 /**
- * The three Helix calls the CDN-unpublish step makes, out of a class with dozens.
+ * The four Helix calls the CDN-unpublish step makes, out of a class with dozens.
  */
 export interface DeletionHelix {
     listAllPages(org: string, site: string, path?: string): Promise<string[]>;
@@ -56,6 +60,7 @@ export interface DeletionHelix {
         previewFailed: number;
     }>;
     deleteAdminApiKey(org: string, site: string): Promise<{ success: boolean; error?: string }>;
+    listPublishedPaths(org: string, site: string, branch: string, pattern: string): Promise<string[]>;
 }
 
 /**
@@ -164,7 +169,7 @@ export async function deleteProject(
                 await performEdsCleanup(
                     context,
                     edsMetadata,
-                    cleanupOptions,
+                    { ...cleanupOptions, projectPath: project.path },
                     cleanupResults,
                     { report: ({ message }) => report(message ?? '') },
                     services,
@@ -421,9 +426,12 @@ async function performDaLiveCleanup(
                     await initKeyStore(context.context.secrets, context.context.globalState);
                 },
                 makeHelix: services?.makeHelix,
+                otherProjectsOnRepo: (repo) =>
+                    otherProjectsPublishingTo(context.stateManager, repo, options.projectPath),
                 onStep: (step) => progress.report({ message: step }),
             },
         );
+        reportProductPages(torn.productPages, edsMetadata.githubRepo ?? resourceName, results);
 
         // Only when pages actually came down: nothing was published means nothing
         // to report as cleaned up.
@@ -450,6 +458,26 @@ async function performDaLiveCleanup(
             error: (error as Error).message,
         });
     }
+}
+
+/**
+ * Put the product pages' outcome on the cleanup results (EDS-26). Clean removal is a
+ * success row; anything short of it — refused, live-only, could not list — is shown with
+ * its sentence, so "deleted" is never said over pages that may still be up.
+ */
+function reportProductPages(
+    productPages: ProductPageRemovalResult | undefined,
+    site: string,
+    results: CleanupResultItem[],
+): void {
+    if (!productPages || productPages.status === 'nothing') return;
+    const clean = productPages.status === 'removed';
+    results.push({
+        type: 'helix',
+        name: `product pages, ${site}`,
+        success: clean,
+        ...(clean ? {} : { error: productPages.summary }),
+    });
 }
 
 /**

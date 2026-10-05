@@ -426,6 +426,42 @@ describe('spine choke-points', () => {
         expect(stepHits.filter((f) => !doors.includes(f))).toStrictEqual([]);
     });
 
+    it('product PAGE removal: one implementation, reached from teardown and from reset only', () => {
+        // Audited 2026-10-05 (EDS-26). Product pages are published through the overlay
+        // and have no DA.live document, so nothing that walks DA.live ever removed them.
+        // The primitive is `removeProductPages` — the one place that decides WHICH
+        // paths may go (generated product pages only), refuses on a shared repository,
+        // and reports a live-only removal as such.
+        //
+        // Traced down, every delete door converges on tearDownStorefront: the
+        // delete-project button (projectDeletionService), the agent's delete_project
+        // (agentProjectCleanup) and cleanup_dalive_site (cloudResourceTools). Reset has
+        // its own door (edsResetProductPages, called once by executeEdsReset before
+        // the content pipeline pre-warms).
+        //
+        // NOT covered, and filed rather than pinned: the "Manage DA.live Sites" command
+        // (eds/commands/cleanupDaLiveSites.ts) deletes a site's content by DA.live name
+        // with no GitHub repository in hand, so it unpublishes nothing — the same gap
+        // the delete button had before 2026-09-19.
+        const sorted = (pattern: RegExp): string[] => filesTouchingPrimitive(pattern).sort();
+
+        expect(sorted(/\bremoveProductPages\(/)).toStrictEqual([
+            'features/eds/services/reset/edsResetProductPages.ts',
+            'features/eds/services/storefront/productPageRemoval.ts',
+            'features/eds/services/storefront/storefrontTeardown.ts',
+        ]);
+        expect(sorted(/\btearDownStorefront\(/)).toStrictEqual([
+            'features/ai/server/agentProjectCleanup.ts',
+            'features/ai/server/cloudResourceTools.ts',
+            'features/eds/services/storefront/storefrontTeardown.ts',
+            'features/projects-dashboard/services/projectDeletionService.ts',
+        ]);
+        expect(sorted(/\btakeOutProductPages\(/)).toStrictEqual([
+            'features/eds/services/reset/edsResetProductPages.ts',
+            'features/eds/services/reset/edsResetService.ts',
+        ]);
+    });
+
     it('category PAGES for new categories: the add-only write has one step and two doors', () => {
         // Audited 2026-10-05 (EDS-27). Pages for categories added after setup are
         // written by the SAME step file as the three flows above, through an add-only

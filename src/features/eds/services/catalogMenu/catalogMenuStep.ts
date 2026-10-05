@@ -132,12 +132,12 @@ export interface NewCategory {
 }
 
 /** What a look for unpaged categories found. `signIn`: the DA.live sign-in was refused. */
-export type NewCategoryPagesCheck =
+type NewCategoryPagesCheck =
     | { status: 'nothing' }
     | { status: 'missing'; categories: NewCategory[] }
     | { status: 'failed'; error: string; signIn: boolean };
 
-export interface NewCategoryPagesAdded {
+interface NewCategoryPagesAdded {
     added: NewCategory[];
     /** One sentence for the notice, the log and the agent. */
     summary: string;

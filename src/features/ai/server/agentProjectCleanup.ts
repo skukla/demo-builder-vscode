@@ -18,6 +18,7 @@ import * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import { extractEdsMetadata } from '@/features/eds/services/resourceCleanupHelpers';
+import { otherProjectsPublishingTo } from '@/features/eds/services/storefront/sharedRepoProjects';
 import { tearDownStorefront } from '@/features/eds/services/storefront/storefrontTeardown';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
@@ -45,6 +46,8 @@ export interface CloudCleanupOutcome {
         unpublishedPages?: number;
         /** The CDN was not unpublished, so the storefront may still serve. */
         stillPublished: boolean;
+        /** What happened to the product pages the overlay published, in SC words (EDS-26). */
+        productPages?: string;
         error?: string;
     };
 }
@@ -126,6 +129,9 @@ export async function cleanUpProjectCloud(
                             context.context.secrets,
                             context.context.globalState,
                         ),
+                    // The project being deleted is still on disk here, and does not count.
+                    otherProjectsOnRepo: (repo) =>
+                        otherProjectsPublishingTo(context.stateManager, repo, project.path),
                 },
             );
             outcome.daLiveSite = {
@@ -133,6 +139,7 @@ export async function cleanUpProjectCloud(
                 contentDeleted: torn.contentDeleted,
                 unpublishedPages: torn.unpublishedPages,
                 stillPublished: torn.stillPublished,
+                ...(torn.productPages ? { productPages: torn.productPages.summary } : {}),
                 error: torn.error,
             };
         } catch (error) {
