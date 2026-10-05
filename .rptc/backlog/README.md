@@ -229,7 +229,7 @@ each item's own file; what has already landed against an item is in its
 | `AI-10` | feature | [A demo-data authoring skill: an SC's agent builds and loads the demo data from a brief](2026-09-30-demo-data-authoring-skill-for-agents.md) | — | high | built |
 | `AI-11` | feature | [Create project cannot set store scope for an added demo](2026-09-30-create-project-cannot-set-store-scope-for-an-added-demo.md) | — | med | built |
 
-### eds  (36)
+### eds  (38)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -268,6 +268,8 @@ each item's own file; what has already landed against an item is in its
 | `EDS-26` | fix | [Reset and delete leave a storefront's product pages published](2026-10-05-product-pages-survive-reset.md) | — | med | backlog |
 | `EDS-27` | feature | [New categories get their pages without a Republish](2026-10-05-new-categories-get-pages-automatically.md) | EDS-24 | med | planned |
 | `EDS-28` | fix | [Existing storefront gains a block library](2026-10-05-existing-storefront-gains-a-block-library.md) | — | high | built |
+| `EDS-29` | fix | [Republish says "No publishable pages found" when the DA.live sign-in has expired](2026-10-05-republish-blames-content-for-an-expired-sign-in.md) | — | med | backlog |
+| `EDS-30` | fix | [The sign-in status says DA.live is signed in when the sign-in has expired](2026-10-05-dalive-sign-in-status-says-yes-when-expired.md) | — | med | backlog |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | built |
 
 ### app-builder  (112)
@@ -626,7 +628,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — built
 
-*226 item(s) sit outside the A–G chain.*
+*228 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 
