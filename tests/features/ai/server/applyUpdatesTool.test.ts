@@ -173,7 +173,7 @@ describe('apply_updates', () => {
             successCount: 1,
             failCount: 0,
             errors: [],
-            installed: ['Demo Builder Blocks: installed 1 block (commerce-nav)'],
+            installed: ['Added 1 block from Demo Builder Blocks to test-storefront.'],
         };
         applyMock.mockResolvedValueOnce({
             forkSync: {}, template: {}, component: {}, adobeMcp: {}, addon: {},

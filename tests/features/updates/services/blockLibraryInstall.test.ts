@@ -310,16 +310,16 @@ describe('applyBlockLibraryInstall', () => {
 });
 
 describe('the wording both surfaces share', () => {
-    it('reads as an install before, and says what was added after', () => {
+    it('reads as an install before, and as one short sentence after', () => {
         expect(describePendingInstall(LIBRARY)).toBe('Demo Builder Blocks: install');
-        expect(describeInstallOutcome({ name: 'Demo Builder Blocks', blockIds: ['commerce-nav'] })).toBe(
-            'Demo Builder Blocks: installed 1 block (commerce-nav)',
+        expect(describeInstallOutcome({ name: 'Demo Builder Blocks', blockIds: ['commerce-nav'] }, 'justrite')).toBe(
+            'Added 1 block from Demo Builder Blocks to justrite.',
         );
-        expect(describeInstallOutcome({ name: 'Demo Builder Blocks', blockIds: ['a', 'b'] })).toBe(
-            'Demo Builder Blocks: installed 2 blocks (a, b)',
+        expect(describeInstallOutcome({ name: 'Demo Builder Blocks', blockIds: ['a', 'b'] }, 'justrite')).toBe(
+            'Added 2 blocks from Demo Builder Blocks to justrite.',
         );
-        expect(describeInstallOutcome({ name: 'Demo Builder Blocks', blockIds: [] })).toMatch(
-            /nothing to add/,
+        expect(describeInstallOutcome({ name: 'Demo Builder Blocks', blockIds: [] }, 'justrite')).toBe(
+            'Demo Builder Blocks is already in justrite.',
         );
     });
 });

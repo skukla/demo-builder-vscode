@@ -126,10 +126,25 @@ describe('ProjectConfigWriter manifest fields', () => {
             expect(manifest.selectedBlockLibraries).toEqual(['citisignal', 'b2b']);
         });
 
+        it('writes installedBlockLibraries when non-empty', async () => {
+            const installed = [
+                {
+                    name: 'Demo Builder Blocks',
+                    source: { owner: 'skukla', repo: 'demo-builder-blocks', branch: 'main' },
+                    commitSha: 'abc123',
+                    blockIds: ['catalog-menu'],
+                    installedAt: '2026-10-05T15:38:19.000Z',
+                },
+            ];
+
+            expect((await save({ installedBlockLibraries: installed })).installedBlockLibraries).toEqual(installed);
+        });
+
         it.each([
             ['selectedAddons'],
             ['selectedBlockLibraries'],
             ['customBlockLibraries'],
+            ['installedBlockLibraries'],
         ] as const)('omits %s when it is an empty array', async (field) => {
             const manifest = await save({ [field]: [] });
 
@@ -140,6 +155,7 @@ describe('ProjectConfigWriter manifest fields', () => {
             ['selectedAddons'],
             ['selectedBlockLibraries'],
             ['customBlockLibraries'],
+            ['installedBlockLibraries'],
         ] as const)('omits %s when it is undefined', async (field) => {
             const manifest = await save({ [field]: undefined });
 

@@ -45,6 +45,13 @@ function addOptionalManifestFields(manifest: Record<string, unknown>, project: P
     if (project.customBlockLibraries?.length) {
         manifest.customBlockLibraries = project.customBlockLibraries;
     }
+    // What each library put in the storefront, and at which commit. Never saved until
+    // 2026-10-05: every block-library install was forgotten on the next load, so the
+    // update check offered the same install again each time it ran, and found no
+    // installed library to check for updates.
+    if (project.installedBlockLibraries?.length) {
+        manifest.installedBlockLibraries = project.installedBlockLibraries;
+    }
     if (project.aiPrompts?.length) {
         manifest.aiPrompts = project.aiPrompts;
     }

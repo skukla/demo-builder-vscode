@@ -14,7 +14,7 @@ import { reconcileComponentSelections } from './componentSelectionReconcile';
 import { validateManifestShape } from './manifestValidation';
 import { stripDuplicateBackendOwnedScope } from '@/core/config/backendOwnedScope';
 import type { ComponentInstance, Project , AiPrompt } from '@/types/base';
-import type { CustomBlockLibrary } from '@/types/blockLibraries';
+import type { CustomBlockLibrary, InstalledBlockLibrary } from '@/types/blockLibraries';
 import type { Logger } from '@/types/logger';
 import { getComponentInstancesByType, parseJSON } from '@/types/typeGuards';
 
@@ -99,6 +99,7 @@ export interface ProjectManifest {
     selectedAddons?: string[];
     selectedBlockLibraries?: string[];
     customBlockLibraries?: CustomBlockLibrary[];
+    installedBlockLibraries?: InstalledBlockLibrary[];
     aiPrompts?: AiPrompt[];
     aiContextVersion?: number;
     aiFileHashes?: Record<string, string>;
@@ -197,6 +198,7 @@ export class ProjectFileLoader {
                 selectedAddons: manifest.selectedAddons,
                 selectedBlockLibraries: manifest.selectedBlockLibraries,
                 customBlockLibraries: manifest.customBlockLibraries,
+                installedBlockLibraries: manifest.installedBlockLibraries,
                 aiPrompts: manifest.aiPrompts,
                 // Absent on legacy manifests (pre-§E) — loads as undefined.
                 // LEGACY-READ-ONLY once componentApiPicks exists: migrateApiPicks

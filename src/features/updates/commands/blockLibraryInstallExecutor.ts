@@ -25,9 +25,7 @@ export async function performBlockLibraryInstalls(
     for (const { project, library } of selections) {
         try {
             const outcome = await applyBlockLibraryInstall({ project, library }, ctx);
-            vscode.window.showInformationMessage(
-                `${project.name} — ${describeInstallOutcome(outcome)}`,
-            );
+            vscode.window.showInformationMessage(describeInstallOutcome(outcome, project.name));
         } catch (error) {
             const sanitizedError = sanitizeErrorForLogging(error as Error);
             ctx.logger.error(

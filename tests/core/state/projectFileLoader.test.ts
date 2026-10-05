@@ -132,6 +132,25 @@ describe('ProjectFileLoader — legacy appBuilderComponent migration', () => {
         expect(project!.publishKeyRegisteredAt).toBeUndefined();
     });
 
+    // 2026-10-05: the record was never read back, so the update check offered the same
+    // block-library install after every run.
+    it('loads installedBlockLibraries from the manifest into the project', async () => {
+        const installed = [
+            {
+                name: 'Demo Builder Blocks',
+                source: { owner: 'skukla', repo: 'demo-builder-blocks', branch: 'main' },
+                commitSha: 'abc123',
+                blockIds: [],
+                installedAt: '2026-10-05T15:38:19.000Z',
+            },
+        ];
+        primeFsWithManifest({ name: 'legacy-demo', installedBlockLibraries: installed });
+
+        const project = await new ProjectFileLoader(makeLogger()).loadProject(PROJECT_PATH, () => []);
+
+        expect(project?.installedBlockLibraries).toEqual(installed);
+    });
+
     it('does not write the manifest file during load (read-only migration in D1)', async () => {
         primeFsWithManifest({
             name: 'legacy-demo',

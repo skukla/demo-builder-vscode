@@ -104,13 +104,16 @@ export function describePendingInstall(library: BlockLibraryEntry): string {
     return `${library.name}: install`;
 }
 
-/** The line both surfaces show after an install ran. */
-export function describeInstallOutcome(outcome: BlockLibraryInstallOutcome): string {
+/**
+ * The line both surfaces show after an install ran: one short sentence. Which blocks it
+ * added go to the log, not the notification.
+ */
+export function describeInstallOutcome(outcome: BlockLibraryInstallOutcome, projectName: string): string {
     const count = outcome.blockIds.length;
     if (count === 0) {
-        return `${outcome.name}: nothing to add — every block in it already exists in the storefront`;
+        return `${outcome.name} is already in ${projectName}.`;
     }
-    return `${outcome.name}: installed ${count} block${count === 1 ? '' : 's'} (${outcome.blockIds.join(', ')})`;
+    return `Added ${count} block${count === 1 ? '' : 's'} from ${outcome.name} to ${projectName}.`;
 }
 
 /**
@@ -147,7 +150,10 @@ export async function applyBlockLibraryInstall(
         throw error;
     }
 
-    ctx.logger.info(`[Updates] ${describeInstallOutcome(record)} in ${project.name}`);
+    ctx.logger.info(
+        `[Updates] ${describeInstallOutcome(record, project.name)}` +
+            (record.blockIds.length ? ` (${record.blockIds.join(', ')})` : ''),
+    );
     return { name: record.name, blockIds: record.blockIds };
 }
 

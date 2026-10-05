@@ -95,7 +95,7 @@ describe('applyUpdatesHeadless — block library installs', () => {
             successCount: 1,
             failCount: 0,
             errors: [],
-            installed: ['Demo Builder Blocks: installed 1 block (commerce-nav)'],
+            installed: ['Added 1 block from Demo Builder Blocks to demo.'],
         });
         expect(res.totalApplied).toBe(1);
     });

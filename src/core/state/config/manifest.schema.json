@@ -207,6 +207,12 @@
             "$ref": "#/definitions/CustomBlockLibrary"
           }
         },
+        "installedBlockLibraries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/InstalledBlockLibrary"
+          }
+        },
         "aiPrompts": {
           "type": "array",
           "items": {
@@ -1261,6 +1267,60 @@
         "branch"
       ],
       "description": "AddonSource - GitHub repository source for an addon\n\nUsed by addons that fetch content from an external repository (e.g., the Commerce Block Collection fetches blocks from isle5)."
+    },
+    "InstalledBlockLibrary": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Library display name"
+        },
+        "source": {
+          "$ref": "#/definitions/AddonSource",
+          "description": "Source repository (owner/repo/branch)"
+        },
+        "commitSha": {
+          "type": "string",
+          "description": "Commit SHA of the source repo at installation time"
+        },
+        "blockIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Block IDs installed from this library"
+        },
+        "installedAt": {
+          "type": "string",
+          "description": "ISO date string when blocks were installed"
+        },
+        "syncDisabledMarker": {
+          "type": "object",
+          "properties": {
+            "upstreamSha": {
+              "type": "string",
+              "description": "Latest upstream commit SHA we know about (but did not install)"
+            },
+            "lastCheckedAt": {
+              "type": "string",
+              "description": "ISO date string of the last update check that set this marker"
+            }
+          },
+          "required": [
+            "upstreamSha",
+            "lastCheckedAt"
+          ],
+          "description": "Set when `demoBuilder.blockLibraries.syncBehavior` is `disabled` (or `ask` + user chose Skip) and update detection found newer upstream commits. Files in the storefront stay at `commitSha`; this records what we know about upstream so the AI Overview screen can show \"Sync disabled — N commits behind upstream\" without lying about which files are present.\n\nCleared when the user re-enables sync and a successful update runs."
+        }
+      },
+      "required": [
+        "blockIds",
+        "commitSha",
+        "installedAt",
+        "name",
+        "source"
+      ],
+      "description": "Persisted tracking data with installation timestamp"
     },
     "AiPrompt": {
       "type": "object",

@@ -351,7 +351,7 @@ async function applyBlockLibraryInstalls(
         try {
             const outcome = await applyBlockLibraryInstall(item, ctx);
             result.successCount++;
-            (result.installed ??= []).push(describeInstallOutcome(outcome));
+            (result.installed ??= []).push(describeInstallOutcome(outcome, item.project.name));
         } catch (error) {
             result.failCount++;
             result.errors.push(`${item.library.name}: ${sanitizeErrorForLogging(error as Error)}`);

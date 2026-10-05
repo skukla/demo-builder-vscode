@@ -52,7 +52,7 @@ describe('performBlockLibraryInstalls', () => {
         expect(mockApply).toHaveBeenCalledTimes(1);
         expect(mockApply).toHaveBeenCalledWith({ project: picked.project, library }, ctx);
         expect(showInfo).toHaveBeenCalledWith(
-            'demo — Demo Builder Blocks: installed 1 block (commerce-nav)',
+            'Added 1 block from Demo Builder Blocks to demo.',
         );
         expect(showError).not.toHaveBeenCalled();
     });
@@ -76,6 +76,6 @@ describe('performBlockLibraryInstalls', () => {
             expect.stringMatching(/^Failed to install Demo Builder Blocks in first: .*GitHub said no/),
         );
         expect(mockApply).toHaveBeenCalledTimes(2);
-        expect(showInfo).toHaveBeenCalledWith(expect.stringMatching(/^second — .*nothing to add/));
+        expect(showInfo).toHaveBeenCalledWith('Demo Builder Blocks is already in second.');
     });
 });
