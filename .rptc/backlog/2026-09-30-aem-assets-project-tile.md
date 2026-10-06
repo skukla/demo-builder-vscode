@@ -52,3 +52,4 @@ derivation from the setting.
 
 - 2026-09-30  Shipped on loop/2026-09-30-erp-programme (64d3aa7fd): More menu 'AEM Assets' opens https://<demoBuilder.daLive.aemAuthorUrl>/assets.html/content/dam; unset setting → notification offering the setting. Agent surface: get_project_urls reports aemAssets, open_url accepts target aemAssets. Gate: dashboard + server suites (168), sop (58), tsc, typecheck:tests, npm run lint all green. Not yet live-probed — the running host serves the feature/erp-integration worktree build.
 - 2026-10-03  Reconciled 2026-10-03 (second pass): the logged 64d3aa7fd is on no branch (rebased away); the real commit is 7a773be4e, on feature/erp-integration, not develop.
+- 2026-10-06  fix(dashboard): More > AEM Assets opens Assets View, not the classic console (`eee4fa94b`)

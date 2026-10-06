@@ -310,20 +310,6 @@
                 }
             },
             {
-                "title": "App Builder Components",
-                "properties": {
-                    "demoBuilder.appBuilderComponents.custom": {
-                        "type": "array",
-                        "items": {
-                            "type": "string",
-                            "description": "GitHub repository URL (e.g., https://github.com/owner/repo)"
-                        },
-                        "default": [],
-                        "description": "Custom App Builder components (meshes or integrations) to include in the App Builder component catalog. Each entry is a public GitHub repository URL."
-                    }
-                }
-            },
-            {
                 "title": "DA.live",
                 "properties": {
                     "demoBuilder.daLive.aemAuthorUrl": {

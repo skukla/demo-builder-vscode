@@ -273,7 +273,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-31` | fix | ["Manage DA.live Sites" deletes a site's content and leaves its pages published](2026-10-05-manage-dalive-sites-leaves-pages-published.md) | — | low | built |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | built |
 
-### app-builder  (112)
+### app-builder  (113)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -388,6 +388,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-50` | chore | [Push the stranded docs commits; delete the two remote branches already on main](2026-09-30-erp-branches-housekeeping.md) | — | low | backlog |
 | `AB-53` | epic | [JustRite from nothing: wipe the Adobe I/O project, rebuild on Khalil's storefront, one data model](2026-09-30-justrite-from-nothing-fresh-project-khalil-storefront.md) | AB-51 | high | active |
 | `AB-67` | fix | [An agent cannot name the first ERP when it adds the ERP integration](2026-10-04-add-integration-names-its-first-erp.md) | — | med | built |
+| `AB-68` | feature | [Remember custom integration repos across projects](2026-10-06-remember-custom-integration-repos.md) | — | med | backlog |
 | `PL-24` | feature | [Component updates cannot follow an environment-variable rename](2026-08-30-env-var-rename-migration.md) | — | med | built |
 
 ### data-installer  (3)
@@ -629,7 +630,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — built
 
-*229 item(s) sit outside the A–G chain.*
+*230 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 
