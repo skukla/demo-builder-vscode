@@ -63,25 +63,6 @@
     padding: 8px;
 }
 
-/* ---- Dashboard integrations summary tile (build zone) ----
- * Shaped exactly like its neighbours (Configure / More) — the dot and count are
- * absolutely positioned overlays, NOT extra inline content, so the tile keeps a
- * neighbour's footprint and the action row stays on one line. Widening the tile
- * is what pushed it to wrap onto its own row. */
-.integrations-tile {
-    position: relative;
-}
-
-/* Status dot rides the tile's top-right corner. */
-/* POSITION only. Colour, size and the in-progress pulse come from StatusDot;
-   this tile used to restate all three from Spectrum globals, which is how it
-   ended up with a blue dot that never pulsed. */
-.integrations-tile-dot {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-}
-
 /* The demo setup guide's step (SetupGuideModal): state, title, why, where, actions — each
    its own paragraph, with room between them, since the SC reads one step at a time. */
 /* The demo setup guide (SetupGuideModal): a two-pane body — every step down the left, the

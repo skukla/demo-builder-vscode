@@ -7,17 +7,19 @@
  * self-describing tiles needed no captions, and the overflow that grew instead
  * hid everyday doors (AEM Assets, Dev Console, Sync, Site Access) beside Delete.
  *
- *  - Open (accent): where you go to use the project. Start/Stop + Restart
- *    (non-EDS), Open in Browser, Author Content (EDS), Manage Commerce, AEM
- *    Assets, Dev Console. Every one opens a surface; none changes the project.
+ *  - Open (cards): where you go to use the project. Start/Stop + Restart
+ *    (non-EDS), Open in Browser, Author Content (EDS), Manage Commerce, each
+ *    saying where it leads, with AEM Assets and Dev Console listed beside them.
+ *    Every one opens a surface; none changes the project.
  *  - Storefront (EDS only): keeping the site itself in shape. Republish (the
- *    remedy carrying the drift dot), Sync Storefront, Refresh Block Library,
- *    Site Access.
+ *    remedy carrying the drift dot), Sync Storefront, Refresh Blocks, Site Access.
  *  - Build: what the demo contains. Edit (what it HAS), Configure (their
- *    values), Integrations, Datapacks, and a small More holding the two rare,
- *    destructive actions — Reset, then Delete last.
- *  - Share: moving a demo between people. Export, Save as Demo Package (EDS),
- *    Change Demo Source (only for a project built on an added demo).
+ *    values), Integrations, Datapacks, then — set apart — Reset and Delete.
+ *  - Share: moving a demo between people. Export, Save as Package (EDS),
+ *    Change Source (only for a project built on an added demo).
+ *
+ * Storefront, Build and Share are compact lists, where a status dot sits
+ * beside the label with its word ("Needed", "Error") rather than in a corner.
  *
  * (Logs moved to the sidebar Logs utility; Rename is inline on the dashboard
  * title / project card name. Deploy Mesh retired in ADR-011 D3 Step 08 — the
@@ -72,9 +74,9 @@
  * @module features/dashboard/ui/components/ActionGrid
  */
 
-import { ActionButton, Item, Menu, MenuTrigger, Text } from '@adobe/react-spectrum';
+import Delete from '@spectrum-icons/workflow/Delete';
 import Edit from '@spectrum-icons/workflow/Edit';
-import More from '@spectrum-icons/workflow/More';
+import Revert from '@spectrum-icons/workflow/Revert';
 import Settings from '@spectrum-icons/workflow/Settings';
 import React from 'react';
 import type { MeshStatus, StatusDisplay } from '../hooks/useDashboardStatus';
@@ -86,9 +88,6 @@ import { OpenZone } from './OpenZone';
 import { ShareZone } from './ShareZone';
 import { StorefrontZone } from './StorefrontZone';
 import type { AppBuilderComponentState } from '@/types/base';
-
-/** Overflow menu item keys. */
-type OverflowKey = 'reset' | 'delete';
 
 /**
  * Props for the ActionGrid component
@@ -188,7 +187,7 @@ export interface ActionGridProps {
      * SC's own Welcome step. About the SC; Export is about handing over.
      */
     handleSaveDemoPackage?: () => void;
-    /** Handler for Reset (always shown, in the small More menu, before Delete) */
+    /** Handler for Reset (always shown, at the foot of Build, before Delete) */
     handleResetProject: () => void;
     /** Handler for Delete button */
     handleDeleteProject: () => void;
@@ -213,20 +212,6 @@ const LIFECYCLE_DOT: Partial<Record<string, 'info' | 'error'>> = {
     blue: 'info',
     red: 'error',
 };
-
-/**
- * Route a "More" menu key to its handler.
- *
- * A lookup rather than a switch, and outside the component: six cases inline
- * were most of what pushed ActionGrid past its complexity limit. `OverflowKey`
- * keys the record, so adding a menu item without wiring it fails to typecheck.
- */
-function dispatchOverflow(
-    key: React.Key,
-    handlers: Record<OverflowKey, (() => void) | undefined>,
-): void {
-    handlers[key as OverflowKey]?.();
-}
 
 /**
  * Edit — reopens the creation wizard: which brand, stack, components and block
@@ -263,7 +248,7 @@ function EditTile({
 }
 
 /**
- * The Build zone — what the demo contains, plus the small menu holding the two
+ * The Build zone — what the demo contains, then Reset and Delete: the two
  * rare, destructive actions. Delete is last, per the overflow-menu convention;
  * the confirm dialog behind it remains the real safety net.
  */
@@ -292,8 +277,6 @@ function BuildZone({
     handleResetProject: () => void;
     handleDeleteProject: () => void;
 }): React.ReactElement {
-    const handleOverflowAction = (key: React.Key): void =>
-        dispatchOverflow(key, { reset: handleResetProject, delete: handleDeleteProject });
     return (
         <DashboardZone id="build" title="Build" compact>
             {handleEditProject && <EditTile canEdit={canEdit} onPress={handleEditProject} />}
@@ -318,22 +301,26 @@ function BuildZone({
             {/* Datapacks — the global catalog, opened beside the dashboard. */}
             {dataInstallerAvailable && <DataInstallerTile />}
 
-            <MenuTrigger>
-                <ActionButton
-                    isQuiet
-                    UNSAFE_className="dashboard-action-button"
-                    aria-label="Reset or Delete"
-                >
-                    <More size="L" />
-                    <Text UNSAFE_className="icon-label">Reset or Delete</Text>
-                </ActionButton>
-                <Menu onAction={handleOverflowAction}>
-                    <Item key="reset">Reset</Item>
-                    <Item key="delete" textValue="Delete">
-                        <Text UNSAFE_className="menu-item-destructive">Delete</Text>
-                    </Item>
-                </Menu>
-            </MenuTrigger>
+            {/* Reset and Delete — the two rare, destructive actions, last, and
+                set apart by a gap. Each opens its own confirmation, which is the
+                real safety net; Delete is red so it never reads as routine. */}
+            <div className="dashboard-compact-danger">
+                <DashboardTile
+                    label="Reset"
+                    icon={<Revert size="L" />}
+                    onPress={handleResetProject}
+                    action="reset"
+                    tooltip="Put the demo back to how it was first set up"
+                />
+                <DashboardTile
+                    label="Delete"
+                    icon={<Delete size="L" />}
+                    onPress={handleDeleteProject}
+                    action="delete"
+                    className="dashboard-action-button--danger"
+                    tooltip="Delete this project and what it created"
+                />
+            </div>
         </DashboardZone>
     );
 }

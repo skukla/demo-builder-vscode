@@ -89,7 +89,7 @@ export function RemedyTile({
             description={description}
             action={testId}
             tooltip={idleTooltip}
-            status={needed ? { variant: 'warning', tooltip, testId: `${testId}-dot` } : undefined}
+            status={needed ? { variant: 'warning', tooltip, label: 'Needed', testId: `${testId}-dot` } : undefined}
         />
     );
 }

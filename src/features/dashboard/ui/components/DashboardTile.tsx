@@ -35,6 +35,9 @@ export interface DashboardTileStatus {
     variant: StatusDotVariant;
     /** What the dot means. Replaces the idle tooltip while shown. */
     tooltip: string;
+    /** The short word shown beside the dot where a row has room (the compact
+     *  lists); a square tile or card keeps only the corner dot. */
+    label?: string;
     testId: string;
 }
 
@@ -93,14 +96,19 @@ export function DashboardTile({
             {status && (
                 // The SHARED dot, never a hand-rolled span: rolling its own is
                 // what once cost the integrations tile its in-progress pulse.
-                // `integrations-tile-dot` supplies POSITION only; `tile-status-dot`
-                // exempts it from the tile's blanket "no descendant backgrounds on
-                // hover" rule, which would otherwise blank it under the pointer.
-                <StatusDot
-                    variant={status.variant}
-                    className="integrations-tile-dot tile-status-dot"
-                    testId={status.testId}
-                />
+                // `dashboard-tile-status` supplies POSITION — a corner overlay on
+                // tiles and cards, inline after the label in a compact list;
+                // `tile-status-dot` exempts the dot from the tile's blanket "no
+                // descendant backgrounds on hover" rule, which would otherwise
+                // blank it under the pointer.
+                <span className="dashboard-tile-status">
+                    <StatusDot variant={status.variant} className="tile-status-dot" testId={status.testId} />
+                    {status.label ? (
+                        <span className="dashboard-tile-status-text" data-variant={status.variant}>
+                            {status.label}
+                        </span>
+                    ) : null}
+                </span>
             )}
         </ActionButton>
     );

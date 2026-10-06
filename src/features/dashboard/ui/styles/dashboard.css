@@ -296,12 +296,64 @@
     -webkit-line-clamp: 1;
     text-align: left;
     font-size: 13px;
+    /* Hug the words, so an inline status sits beside them, not at the far edge. */
+    width: auto;
 }
 
-.dashboard-compact-list .integrations-tile-dot {
-    top: 50%;
-    right: 10px;
-    transform: translateY(-50%);
+/* A tile's status: a corner dot on cards, where there is no room for words... */
+.dashboard-tile-status {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.dashboard-tile-status-text {
+    display: none;
+}
+
+/* ...and in a compact list, the dot and its word right after the label, so the
+   row says what is wrong without a hover. */
+.dashboard-compact-list .dashboard-tile-status {
+    position: static;
+    margin-left: 2px;
+    /* Spectrum orders the button's label; an unordered child sorts BEFORE it. */
+    order: 3;
+}
+
+.dashboard-compact-list .dashboard-tile-status-text {
+    display: inline;
+    font-size: 11px;
+    white-space: nowrap;
+    color: var(--spectrum-global-color-gray-700);
+}
+
+.dashboard-tile-status-text[data-variant='error'] {
+    color: var(--spectrum-global-color-red-600);
+}
+
+.dashboard-tile-status-text[data-variant='warning'] {
+    color: var(--spectrum-global-color-orange-600);
+}
+
+.dashboard-tile-status-text[data-variant='info'] {
+    color: var(--spectrum-global-color-blue-600);
+}
+
+/* Reset and Delete: the foot of Build, a gap above them so the two destructive
+   actions never read as part of the everyday list. */
+.dashboard-compact-danger {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 12px;
+}
+
+.dashboard-action-button--danger svg,
+.dashboard-action-button--danger .icon-label {
+    color: var(--spectrum-global-color-red-600);
 }
 
 /* ===========================================
@@ -434,10 +486,5 @@
  * size-400) so the tiles still align under the masthead content. */
 .control-panel-single {
     padding: var(--spectrum-global-dimension-size-400);
-}
-
-/* Destructive overflow-menu entry (Delete lives at the bottom of "More"). */
-.menu-item-destructive {
-    color: var(--spectrum-global-color-red-600);
 }
 }

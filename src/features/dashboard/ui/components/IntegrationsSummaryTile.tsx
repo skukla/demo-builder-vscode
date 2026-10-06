@@ -145,13 +145,16 @@ export function IntegrationsSummaryTile({
             icon={<Plug size="L" />}
             onPress={() => webviewClient.postMessage('openIntegrations')}
             action="integrations"
-            className="integrations-tile"
             tooltip="View and manage this project's integrations"
             status={
-                worst
+                // Healthy says nothing, like every other dot on the dashboard:
+                // a green "all good" was the one status always showing, so it
+                // drew the eye to the one thing that needed nothing.
+                worst && worst.variant !== 'success'
                     ? {
                           variant: worst.variant,
                           tooltip: worst.label,
+                          label: worst.label,
                           testId: 'integrations-tile-dot',
                       }
                     : undefined

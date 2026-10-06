@@ -118,7 +118,6 @@ describe('IntegrationsSummaryTile', () => {
 
     describe('worst-status dot (most alarming wins)', () => {
         it.each([
-            [['deployed', 'deployed'], 'success'],
             [['deployed', 'not-deployed'], 'neutral'],
             [['not-deployed', 'deploying'], 'info'],
             [['deploying', 'stale'], 'warning'],
@@ -237,10 +236,8 @@ describe('IntegrationsSummaryTile', () => {
                 />
             );
 
-            expect(screen.getByTestId('integrations-tile-dot')).toHaveAttribute(
-                'data-variant',
-                'success'
-            );
+            // Healthy wears no dot at all — the only signal is the absence of one.
+            expect(screen.queryByTestId('integrations-tile-dot')).not.toBeInTheDocument();
         });
 
         // BOTH of these were invisible here until 2026-09-06: the precedence
@@ -277,10 +274,8 @@ describe('IntegrationsSummaryTile', () => {
                 />
             );
 
-            expect(screen.getByTestId('integrations-tile-dot')).toHaveAttribute(
-                'data-variant',
-                'success'
-            );
+            // Healthy wears no dot at all — the only signal is the absence of one.
+            expect(screen.queryByTestId('integrations-tile-dot')).not.toBeInTheDocument();
         });
     });
 
@@ -300,10 +295,8 @@ describe('IntegrationsSummaryTile', () => {
                 />
             );
 
-            expect(screen.getByTestId('integrations-tile-dot')).toHaveAttribute(
-                'data-variant',
-                'success'
-            );
+            // Healthy wears no dot at all — the only signal is the absence of one.
+            expect(screen.queryByTestId('integrations-tile-dot')).not.toBeInTheDocument();
         });
 
         it('shows no dot at all when the mesh record is the only entry', () => {
@@ -398,7 +391,7 @@ describe('IntegrationsSummaryTile', () => {
         render(
             <IntegrationsSummaryTile
                 hasAdobeContext
-                appBuilderComponents={components('deployed')}
+                appBuilderComponents={components('stale')}
             />
         );
 
@@ -428,7 +421,6 @@ describe('IntegrationsSummaryTile — the dot explains itself', () => {
         ['error', 'Deploy failed'],
         ['stale', 'Update needed'],
         ['not-deployed', 'Not deployed'],
-        ['deployed', 'Deployed'],
     ])('says what a %s dot means', (status, label) => {
         render(
             <IntegrationsSummaryTile
@@ -459,6 +451,38 @@ describe('IntegrationsSummaryTile — the dot explains itself', () => {
             'error'
         );
         expect(screen.getByRole('tooltip')).toHaveTextContent('Deploy failed');
+    });
+
+    it('says it beside the label too, not only on hover', () => {
+        render(
+            <IntegrationsSummaryTile
+                hasAdobeContext
+                appBuilderComponents={{ a: integration('error') }}
+            />
+        );
+
+        const words = screen
+            .getByRole('button', { name: /integrations/i })
+            .querySelector('.dashboard-tile-status-text');
+        expect(words).toHaveTextContent('Deploy failed');
+        expect(words).toHaveAttribute('data-variant', 'error');
+    });
+
+    // Owner, 2026-10-06: the green dot was the one status always showing, and the
+    // furthest from its label. Healthy is now silent, like every other tile.
+    it('wears no dot and no words when everything is deployed', () => {
+        render(
+            <IntegrationsSummaryTile
+                hasAdobeContext
+                hasMesh
+                meshStatus="deployed"
+                appBuilderComponents={{ a: integration('deployed'), b: integration('deployed') }}
+            />
+        );
+
+        expect(screen.queryByTestId('integrations-tile-dot')).not.toBeInTheDocument();
+        expect(screen.queryByText('Deployed')).not.toBeInTheDocument();
+        expect(screen.getByRole('tooltip')).toHaveTextContent(/integrations/i);
     });
 
     it('still explains the tile when there is no dot to explain', () => {

@@ -68,6 +68,14 @@ describe('Storefront zone — the Republish tile', () => {
         expect(screen.getByTestId('republish-tile-dot')).toHaveAttribute('data-variant', 'warning');
     });
 
+    it('says "Needed" beside the label, so the dot is not left to explain itself', () => {
+        const { container } = render(<ActionGrid {...edsProps} demoStatus={stale} />);
+
+        const status = within(getZone(container, 'storefront')).getByText('Needed');
+        expect(status).toHaveClass('dashboard-tile-status-text');
+        expect(status).toHaveAttribute('data-variant', 'warning');
+    });
+
     it('wears NO dot when the storefront is current', () => {
         render(<ActionGrid {...edsProps} demoStatus={published} />);
 
@@ -330,11 +338,7 @@ describe('ActionGrid — every dot has words', () => {
  * Configure changes VALUES; Edit changes what exists.
  */
 describe('Edit and Sync Storefront tiles', () => {
-    /**
-     * Query tiles by `data-action`, never by text alone: the More MenuTrigger
-     * renders INSIDE the build zone, so a text query scoped to that zone can
-     * match a menu item and pass whether or not a tile exists.
-     */
+    /** Query tiles by `data-action`: it names the tile, not just some matching text. */
     const tile = (container: HTMLElement, action: string) =>
         container.querySelector(`[data-action="${action}"]`);
 
@@ -344,11 +348,10 @@ describe('Edit and Sync Storefront tiles', () => {
         expect(getZone(container, 'build').contains(tile(container, 'edit'))).toBe(true);
     });
 
-    it('takes Edit out of the More menu — one door, not two', () => {
-        const { container } = render(<ActionGrid {...defaultProps} />);
+    it('offers Edit through exactly one door', () => {
+        render(<ActionGrid {...defaultProps} />);
 
-        const menu = container.querySelector('[role="menu"]') as HTMLElement;
-        expect(within(menu).queryByText('Edit')).not.toBeInTheDocument();
+        expect(screen.getAllByText('Edit')).toHaveLength(1);
     });
 
     it('disables the Edit tile while a non-EDS demo runs, rather than hiding it', () => {
@@ -372,8 +375,7 @@ describe('Edit and Sync Storefront tiles', () => {
         expect(getZone(container, 'storefront').contains(tile(container, 'sync-storefront'))).toBe(
             true
         );
-        const menu = container.querySelector('[role="menu"]') as HTMLElement;
-        expect(within(menu).queryByText('Sync Storefront')).not.toBeInTheDocument();
+        expect(screen.getAllByText('Sync Storefront')).toHaveLength(1);
     });
 
     it('keeps Sync Storefront EDS-only', () => {
