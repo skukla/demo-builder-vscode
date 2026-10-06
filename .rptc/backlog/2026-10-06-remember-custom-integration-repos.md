@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: med
-status: backlog
+status: active
 ---
 
 # Remember custom integration repos across projects
@@ -26,4 +26,6 @@ modal are remembered in a user setting and offered as catalog entries on the nex
 project's Integrations area (and the dashboard's Add Integration). Re-add the setting in
 the same change that adds its reader and writer, with a regenerate/existing-project story.
 
+## Shipped so far
 
+- 2026-10-06  chore(settings): remove demoBuilder.appBuilderComponents.custom, which nothing read (`cb0f5812d`)

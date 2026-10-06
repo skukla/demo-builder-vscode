@@ -16,7 +16,7 @@
  * @module features/dashboard/ui/components/IntegrationsSummaryTile
  */
 
-import Data from '@spectrum-icons/workflow/Data';
+import Plug from '@spectrum-icons/workflow/Plug';
 import React from 'react';
 import type { MeshStatus } from '../hooks/useDashboardStatus';
 import { DashboardTile } from './DashboardTile';
@@ -142,7 +142,7 @@ export function IntegrationsSummaryTile({
     return (
         <DashboardTile
             label="Integrations"
-            icon={<Data size="L" />}
+            icon={<Plug size="L" />}
             onPress={() => webviewClient.postMessage('openIntegrations')}
             action="integrations"
             className="integrations-tile"

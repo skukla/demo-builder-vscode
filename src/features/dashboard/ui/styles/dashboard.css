@@ -133,16 +133,23 @@
     padding: 8px; /* Shadow overflow padding */
 }
 
-/* Stacked, labelled rows. No fixed width — the zones take their intrinsic
-   content width and sit left within the standard band (a compact action cluster). */
+/* Labelled groups, two per row (Open beside Storefront, Build beside Share) so
+   the dashboard fits without scrolling; one per row when the panel is narrow.
+   Columns size to their content, so tiles never stretch. */
 .dashboard-zones {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
+    display: grid;
+    grid-template-columns: repeat(2, max-content);
+    gap: 24px 48px;
     width: fit-content;
 }
 
-/* One labelled row per job (Open, Storefront, Build, Share), stacked by
+@media (max-width: 1100px) {
+    .dashboard-zones {
+        grid-template-columns: max-content;
+    }
+}
+
+/* One labelled group per job (Open, Storefront, Build, Share), laid out by
    .dashboard-zones. The headings came back on 2026-10-06: they were dropped on
    2026-07-09 when everything fit one strip, and the actions no longer do. */
 .dashboard-zone-section {

@@ -108,7 +108,7 @@ describe('ProjectDashboardScreen - added demo source', () => {
         renderDashboard({ demo: DEMO });
         expect(screen.queryByTestId('change-source-dialog')).not.toBeInTheDocument();
 
-        fireEvent.click(screen.getByText('Change Demo Source'));
+        fireEvent.click(screen.getByText('Change Source'));
 
         const dialog = screen.getByTestId('change-source-dialog');
         expect(dialog).toHaveAttribute('data-mode', 'change');
@@ -123,7 +123,7 @@ describe('ProjectDashboardScreen - added demo source', () => {
 
     it('offers no door for a project built on a shipped brand', async () => {
         renderDashboard({});
-        expect(screen.queryByText('Change Demo Source')).not.toBeInTheDocument();
+        expect(screen.queryByText('Change Source')).not.toBeInTheDocument();
 
         emitWarning();
 

@@ -17,7 +17,7 @@
  * @module features/dashboard/ui/components/DataInstallerTile
  */
 
-import Data from '@spectrum-icons/workflow/Data';
+import Box from '@spectrum-icons/workflow/Box';
 import React from 'react';
 import { DashboardTile } from './DashboardTile';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
@@ -26,7 +26,7 @@ export function DataInstallerTile(): React.ReactElement {
     return (
         <DashboardTile
             label="Datapacks"
-            icon={<Data size="L" />}
+            icon={<Box size="L" />}
             onPress={() => webviewClient.postMessage('openDataInstaller')}
             action="dataInstaller"
             tooltip="Browse and install Adobe Commerce sample-data datapacks"

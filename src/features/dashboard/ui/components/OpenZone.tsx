@@ -142,7 +142,7 @@ export function OpenZone({
                 icon={<Globe size="L" />}
                 onPress={isEds ? (handleOpenLiveSite ?? NOOP) : handleOpenBrowser}
                 isDisabled={isOpeningBrowser || (!isEds && !isRunning)}
-                className="dashboard-action-button--hero"
+                className={isEds ? 'dashboard-action-button--hero' : undefined}
             />
 
             {/* Author — EDS only. Static label: the resolved authoring
@@ -153,7 +153,6 @@ export function OpenZone({
                     icon={<Edit size="L" />}
                     onPress={handleOpenDaLive ?? NOOP}
                     isDisabled={isOpeningBrowser}
-                    className="dashboard-action-button--hero"
                 />
             )}
 
@@ -163,7 +162,6 @@ export function OpenZone({
                 label="Manage Commerce"
                 icon={<UserAdmin size="L" />}
                 onPress={handleOpenAdminPanel}
-                className="dashboard-action-button--hero"
             />
 
             {/* AEM Assets (EDS-21) — every project type: the bound AEM is a
@@ -173,7 +171,6 @@ export function OpenZone({
                 label="AEM Assets"
                 icon={<ImageAlbum size="L" />}
                 onPress={handleOpenAemAssets}
-                className="dashboard-action-button--hero"
                 tooltip="Open the AEM environment your storefronts use for images and assets"
             />
 
@@ -181,7 +178,6 @@ export function OpenZone({
                 label="Dev Console"
                 icon={<Code size="L" />}
                 onPress={handleOpenDevConsole}
-                className="dashboard-action-button--hero"
                 tooltip="Open this project in the Adobe Developer Console"
             />
         </DashboardZone>

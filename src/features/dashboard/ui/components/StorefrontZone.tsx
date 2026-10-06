@@ -1,4 +1,4 @@
-import Replay from '@spectrum-icons/workflow/Replay';
+import UploadToCloud from '@spectrum-icons/workflow/UploadToCloud';
 import Sync from '@spectrum-icons/workflow/Sync';
 import UserGroup from '@spectrum-icons/workflow/UserGroup';
 import ViewGrid from '@spectrum-icons/workflow/ViewGrid';
@@ -35,7 +35,7 @@ export function StorefrontZone({
                     tooltip="Republish needed — configuration changed since the last publish"
                     idleTooltip="Push config and authored content to the CDN"
                     needed={needsRepublish}
-                    icon={<Replay size="L" />}
+                    icon={<UploadToCloud size="L" />}
                     testId="republish-tile"
                     onPress={handleRepublishContent}
                 />
@@ -51,11 +51,11 @@ export function StorefrontZone({
             )}
             {handleRefreshBlockLibrary && (
                 <DashboardTile
-                    label="Refresh Block Library"
+                    label="Refresh Blocks"
                     icon={<ViewGrid size="L" />}
                     onPress={handleRefreshBlockLibrary}
                     action="refresh-block-library"
-                    tooltip="Bring in the latest blocks from your block libraries"
+                    tooltip="Refresh the block library: bring in the latest blocks from your block libraries"
                 />
             )}
             {handleOpenSiteAccess && (

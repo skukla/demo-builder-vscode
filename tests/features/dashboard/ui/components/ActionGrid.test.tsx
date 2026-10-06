@@ -112,8 +112,8 @@ describe('ActionGrid', () => {
                 'AEM Assets',
                 'Dev Console',
             ]);
-            for (const label of ['AEM Assets', 'Dev Console']) {
-                expect(screen.getByText(label).closest('button')?.className).toContain(
+            for (const label of ['Author Content', 'Manage Commerce', 'AEM Assets', 'Dev Console']) {
+                expect(screen.getByText(label).closest('button')?.className).not.toContain(
                     'dashboard-action-button--hero'
                 );
             }
@@ -177,18 +177,22 @@ describe('ActionGrid', () => {
             expect(screen.queryByText('Author Content')).not.toBeInTheDocument();
         });
 
-        it('should mark primary tiles with the hero accent modifier class', () => {
-            render(<ActionGrid {...defaultProps} />);
+        it('accents only the one primary action: Open in Browser for EDS', () => {
+            const { container } = render(<ActionGrid {...edsProps} />);
 
-            const openButton = screen.getByText('Open in Browser').closest('button');
-            expect(openButton?.className).toContain('dashboard-action-button--hero');
+            const accented = Array.from(
+                container.querySelectorAll('.dashboard-action-button--hero')
+            ).map((n) => n.querySelector('.icon-label')?.textContent);
+            expect(accented).toEqual(['Open in Browser']);
         });
 
-        it('should mark the Author button with the hero accent modifier class', () => {
-            render(<ActionGrid {...edsProps} />);
+        it('accents only the one primary action: Start/Stop for non-EDS', () => {
+            const { container } = render(<ActionGrid {...defaultProps} />);
 
-            const authorButton = screen.getByText('Author Content').closest('button');
-            expect(authorButton?.className).toContain('dashboard-action-button--hero');
+            const accented = Array.from(
+                container.querySelectorAll('.dashboard-action-button--hero')
+            ).map((n) => n.querySelector('.icon-label')?.textContent);
+            expect(accented).toEqual(['Start']);
         });
 
         it('should not render Start/Stop in the Open row for EDS projects', () => {
@@ -213,13 +217,6 @@ describe('ActionGrid', () => {
 
             const primary = getZone(container, 'open');
             expect(within(primary).getByText('Manage Commerce')).toBeInTheDocument();
-        });
-
-        it('should mark the Manage Commerce tile with the hero accent modifier class', () => {
-            render(<ActionGrid {...defaultProps} />);
-
-            const adminButton = screen.getByText('Manage Commerce').closest('button');
-            expect(adminButton?.className).toContain('dashboard-action-button--hero');
         });
 
         it('should not disable Manage Commerce while isOpeningBrowser (resolves backend-side)', () => {
@@ -251,7 +248,7 @@ describe('ActionGrid', () => {
             expect(getZone(container, 'storefront')).toBeInTheDocument();
         });
 
-        it('orders Republish, Sync Storefront, Refresh Block Library, Site Access', () => {
+        it('orders Republish, Sync Storefront, Refresh Blocks, Site Access', () => {
             const { container } = render(
                 <ActionGrid
                     {...edsProps}
@@ -266,7 +263,7 @@ describe('ActionGrid', () => {
             expect(labels).toEqual([
                 'Republish',
                 'Sync Storefront',
-                'Refresh Block Library',
+                'Refresh Blocks',
                 'Site Access',
             ]);
         });

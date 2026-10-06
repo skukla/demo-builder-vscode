@@ -101,7 +101,7 @@ describe('ActionGrid — the Share row', () => {
         expect(defaultProps.handleExportProject).toHaveBeenCalled();
     });
 
-    it('offers Save as Demo Package, after Export, to an EDS project only', async () => {
+    it('offers Save as Package, after Export, to an EDS project only', async () => {
         const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
         const handleSaveDemoPackage = jest.fn();
         const headless = render(
@@ -121,7 +121,7 @@ describe('ActionGrid — the Share row', () => {
         expect(handleSaveDemoPackage).toHaveBeenCalled();
     });
 
-    it('offers Change Demo Source only for a project built on an added demo', async () => {
+    it('offers Change Source only for a project built on an added demo', async () => {
         const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
         const first = render(<ActionGrid {...defaultProps} />);
         expect(tile(first.container, 'change-demo-source')).not.toBeInTheDocument();
@@ -143,7 +143,7 @@ describe('ActionGrid — the Share row', () => {
  * door to a handler the host only wires for projects that have one.
  */
 describe.each([
-    ['Refresh Block Library', 'refresh-block-library', 'handleRefreshBlockLibrary'],
+    ['Refresh Blocks', 'refresh-block-library', 'handleRefreshBlockLibrary'],
     ['Site Access', 'site-access', 'handleOpenSiteAccess'],
 ] as const)('%s tile — EDS AND wired, not either', (_label, action, prop) => {
     it('appears in the Storefront row for an EDS project whose host wired the handler', () => {

@@ -32,20 +32,20 @@ export function ShareZone({
             />
             {isEds && handleSaveDemoPackage && (
                 <DashboardTile
-                    label="Save as Demo Package"
+                    label="Save as Package"
                     icon={<SaveFloppy size="L" />}
                     onPress={handleSaveDemoPackage}
                     action="save-demo-package"
-                    tooltip="Make this storefront a card on your Welcome step"
+                    tooltip="Save as a demo package: this storefront becomes a card on your Welcome step"
                 />
             )}
             {handleChangeDemoSource && (
                 <DashboardTile
-                    label="Change Demo Source"
+                    label="Change Source"
                     icon={<Switch size="L" />}
                     onPress={handleChangeDemoSource}
                     action="change-demo-source"
-                    tooltip="Point this project at another copy of the demo it was built on"
+                    tooltip="Change the demo source: point this project at another copy of the demo it was built on"
                 />
             )}
         </DashboardZone>
