@@ -36,14 +36,14 @@ function probes(over: Partial<ConversationProbes> = {}): ConversationProbes {
 describe('buildChatCommand — Claude Code', () => {
     it('starts fresh with the prompt after `--` when there is nothing to continue', () => {
         expect(
-            buildChatCommand(CLAUDE, CWD, { prompt: 'hi', fresh: false, rehome }, probes()),
+            buildChatCommand(CLAUDE, CWD, { prompt: 'hi', fresh: false, rehome, permissions: 'ask' }, probes()),
         ).toEqual({ line: "claude -- 'hi'", resumed: false });
     });
 
     it('continues, re-homed, when this directory has a conversation', () => {
         const p = probes({ claudeHasConversation: jest.fn(() => true) });
 
-        expect(buildChatCommand(CLAUDE, CWD, { prompt: 'hi', fresh: false, rehome }, p)).toEqual({
+        expect(buildChatCommand(CLAUDE, CWD, { prompt: 'hi', fresh: false, rehome, permissions: 'ask' }, p)).toEqual({
             line: "claude --continue -- '[re-home] hi'",
             resumed: true,
         });
@@ -53,7 +53,7 @@ describe('buildChatCommand — Claude Code', () => {
     it('never continues a New Chat', () => {
         const p = probes({ claudeHasConversation: jest.fn(() => true) });
 
-        expect(buildChatCommand(CLAUDE, CWD, { fresh: true, rehome }, p)).toEqual({
+        expect(buildChatCommand(CLAUDE, CWD, { fresh: true, rehome, permissions: 'ask' }, p)).toEqual({
             line: 'claude',
             resumed: false,
         });
@@ -63,14 +63,14 @@ describe('buildChatCommand — Claude Code', () => {
 describe('buildChatCommand — Copilot CLI', () => {
     it('starts an interactive chat that runs the prompt (`-i`, not `-p`, which exits)', () => {
         expect(
-            buildChatCommand(COPILOT, CWD, { prompt: 'hi', fresh: false, rehome }, probes()),
+            buildChatCommand(COPILOT, CWD, { prompt: 'hi', fresh: false, rehome, permissions: 'ask' }, probes()),
         ).toEqual({ line: "copilot -i 'hi'", resumed: false });
     });
 
     it("resumes THIS directory's newest session by ID, re-homed", () => {
         const p = probes({ copilotLatestSession: jest.fn(() => 'abc-123') });
 
-        expect(buildChatCommand(COPILOT, CWD, { prompt: 'hi', fresh: false, rehome }, p)).toEqual({
+        expect(buildChatCommand(COPILOT, CWD, { prompt: 'hi', fresh: false, rehome, permissions: 'ask' }, p)).toEqual({
             line: "copilot --resume 'abc-123' -i '[re-home] hi'",
             resumed: true,
         });
@@ -80,7 +80,7 @@ describe('buildChatCommand — Copilot CLI', () => {
     it('resumes with no prompt as a bare resume', () => {
         const p = probes({ copilotLatestSession: jest.fn(() => 'abc-123') });
 
-        expect(buildChatCommand(COPILOT, CWD, { fresh: false, rehome }, p).line).toBe(
+        expect(buildChatCommand(COPILOT, CWD, { fresh: false, rehome, permissions: 'ask' }, p).line).toBe(
             "copilot --resume 'abc-123'",
         );
     });
@@ -88,7 +88,7 @@ describe('buildChatCommand — Copilot CLI', () => {
     it('never resumes a New Chat', () => {
         const p = probes({ copilotLatestSession: jest.fn(() => 'abc-123') });
 
-        expect(buildChatCommand(COPILOT, CWD, { prompt: 'hi', fresh: true, rehome }, p)).toEqual({
+        expect(buildChatCommand(COPILOT, CWD, { prompt: 'hi', fresh: true, rehome, permissions: 'ask' }, p)).toEqual({
             line: "copilot -i 'hi'",
             resumed: false,
         });
@@ -101,6 +101,7 @@ describe('buildPastChatPickerCommand', () => {
             buildPastChatPickerCommand(
                 CLAUDE,
                 CWD,
+                'ask',
                 probes({ claudeHasConversation: jest.fn(() => true) }),
             ),
         ).toBe('claude --resume');
@@ -108,14 +109,39 @@ describe('buildPastChatPickerCommand', () => {
             buildPastChatPickerCommand(
                 COPILOT,
                 CWD,
+                'ask',
                 probes({ copilotLatestSession: jest.fn(() => 'abc') }),
             ),
         ).toBe('copilot --resume');
     });
 
     it('answers nothing when there is nothing to pick', () => {
-        expect(buildPastChatPickerCommand(CLAUDE, CWD, probes())).toBeUndefined();
-        expect(buildPastChatPickerCommand(COPILOT, CWD, probes())).toBeUndefined();
+        expect(buildPastChatPickerCommand(CLAUDE, CWD, 'ask', probes())).toBeUndefined();
+        expect(buildPastChatPickerCommand(COPILOT, CWD, 'ask', probes())).toBeUndefined();
+    });
+});
+
+describe('permissions', () => {
+    it.each([
+        [CLAUDE, 'auto', "claude --permission-mode auto -- 'hi'"],
+        [CLAUDE, 'full', "claude --dangerously-skip-permissions -- 'hi'"],
+        [COPILOT, 'auto', "copilot --allow-all-tools -i 'hi'"],
+        [COPILOT, 'full', "copilot --allow-all -i 'hi'"],
+    ] as const)('%#: puts the level before the prompt', (launch, permissions, line) => {
+        expect(
+            buildChatCommand(launch, CWD, { prompt: 'hi', fresh: true, rehome, permissions }, probes())
+                .line,
+        ).toBe(line);
+    });
+
+    it('carries the level into a resume and into the earlier-chat list', () => {
+        const p = probes({ copilotLatestSession: jest.fn(() => 'abc') });
+        expect(
+            buildChatCommand(COPILOT, CWD, { fresh: false, rehome, permissions: 'full' }, p).line,
+        ).toBe("copilot --allow-all --resume 'abc'");
+        expect(buildPastChatPickerCommand(COPILOT, CWD, 'full', p)).toBe(
+            'copilot --allow-all --resume',
+        );
     });
 });
 

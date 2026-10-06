@@ -16,6 +16,7 @@ import {
     type AgentEngineDescriptor,
     type AgentEngineSetting,
 } from './agentEngine';
+import type { AgentPermissions } from './chatLaunch';
 
 export interface ActiveEngine {
     descriptor: AgentEngineDescriptor;
@@ -24,6 +25,8 @@ export interface ActiveEngine {
      * needs none (VS Code's own chat).
      */
     installed: boolean;
+    /** `demoBuilder.ai.permissions`; terminal engines only. */
+    permissions: AgentPermissions;
 }
 
 /**
@@ -32,11 +35,12 @@ export interface ActiveEngine {
  * @param probe - the extension's command executor (`commandExists`)
  */
 export async function resolveActiveEngine(probe: CommandProbe): Promise<ActiveEngine> {
-    const setting = vscode.workspace
-        .getConfiguration('demoBuilder.ai')
-        .get<AgentEngineSetting>('engine');
-    // An explicit setting decides alone; only `auto` needs to know what is installed.
-    const detect = !setting || setting === 'auto';
+    const config = vscode.workspace.getConfiguration('demoBuilder.ai');
+    const setting = config.get<AgentEngineSetting>('engine');
+    const permissions = config.get<AgentPermissions>('permissions') ?? 'ask';
+    // An explicit setting (or the default) decides alone; only `auto` needs to know
+    // what is installed.
+    const detect = setting === 'auto';
     const engine = resolveEngine(setting, {
         claudeCode: detect && (await isAgentCliInstalled('claude', probe)),
         copilotCli: detect && (await isAgentCliInstalled('copilot', probe)),
@@ -46,7 +50,7 @@ export async function resolveActiveEngine(probe: CommandProbe): Promise<ActiveEn
         descriptor.launch.kind === 'terminal'
             ? await isAgentCliInstalled(descriptor.launch.command, probe)
             : true;
-    return { descriptor, installed };
+    return { descriptor, installed, permissions };
 }
 
 /**

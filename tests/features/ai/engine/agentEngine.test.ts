@@ -34,7 +34,11 @@ describe('resolveEngine', () => {
         // The one engine that needs nothing on the PATH, so it is the honest default
         // for a machine that has neither.
         expect(resolveEngine('auto', NEITHER)).toBe('copilot-vscode');
-        expect(resolveEngine(undefined, NEITHER)).toBe('copilot-vscode');
+    });
+
+    it("defaults to VS Code's own chat even when both CLIs are installed", () => {
+        // The panel is the experience Demo Builder promotes (owner, 2026-10-06).
+        expect(resolveEngine(undefined, BOTH)).toBe('copilot-vscode');
     });
 });
 

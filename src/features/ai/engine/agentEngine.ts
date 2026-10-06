@@ -113,6 +113,9 @@ export function describeEngine(engine: AgentEngine): AgentEngineDescriptor {
     return DESCRIPTORS[engine];
 }
 
+/** The shipped default of `demoBuilder.ai.engine` — package.json says the same. */
+export const DEFAULT_ENGINE_SETTING: AgentEngineSetting = 'copilot-vscode';
+
 /** Which CLIs are on the PATH — the only evidence `auto` resolves from. */
 export interface InstalledAgents {
     claudeCode: boolean;
@@ -126,10 +129,10 @@ export interface InstalledAgents {
  * the SC said what they want, and a launch failure that names the missing CLI is
  * more use than silently talking to the other agent.
  *
- * `auto` prefers what is installed, and prefers Copilot when both are — it is the
- * agent colleagues are required to use, and Claude Code is being retired. With
- * neither installed it answers `copilot-vscode`, because VS Code's own agent needs
- * no CLI at all.
+ * Unset means the shipped default, `copilot-vscode`: VS Code's own chat panel is
+ * the experience Demo Builder promotes, whatever else is installed (owner,
+ * 2026-10-06). `auto` prefers what is installed, and prefers Copilot when both
+ * are; with neither it also answers `copilot-vscode`, which needs no CLI at all.
  *
  * @param setting - the value of `demoBuilder.ai.engine`
  * @param installed - which agent CLIs are present
@@ -139,7 +142,8 @@ export function resolveEngine(
     setting: AgentEngineSetting | undefined,
     installed: InstalledAgents,
 ): AgentEngine {
-    if (setting && setting !== 'auto') return setting;
+    const effective = setting ?? DEFAULT_ENGINE_SETTING;
+    if (effective !== 'auto') return effective;
     if (installed.copilotCli) return 'copilot-cli';
     if (installed.claudeCode) return 'claude-code';
     return 'copilot-vscode';

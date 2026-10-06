@@ -52,12 +52,40 @@ describe('resolveActiveEngine', () => {
         [['claude'], 'claude-code'],
         [[], 'copilot-vscode'],
     ])('under auto with %j installed, picks %s', async (installed, expected) => {
-        setEngine(undefined);
+        setEngine('auto');
 
         const active = await resolveActiveEngine(only(...installed));
 
         expect(active.descriptor.id).toBe(expected);
         expect(active.installed).toBe(true);
+    });
+});
+
+describe('resolveActiveEngine — defaults', () => {
+    beforeEach(() => resetAgentCliCache());
+
+    it("serves VS Code's chat when nothing is set, without probing any CLI", async () => {
+        setEngine(undefined);
+        const probe = only('claude', 'copilot');
+
+        const active = await resolveActiveEngine(probe);
+
+        expect(active.descriptor.id).toBe('copilot-vscode');
+        expect(probe.commandExists).not.toHaveBeenCalled();
+    });
+
+    it('reads demoBuilder.ai.permissions, defaulting to ask', async () => {
+        setEngine('claude-code');
+        await expect(resolveActiveEngine(only('claude'))).resolves.toMatchObject({
+            permissions: 'ask',
+        });
+
+        (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+            get: jest.fn((key: string) => (key === 'permissions' ? 'full' : 'claude-code')),
+        });
+        await expect(resolveActiveEngine(only('claude'))).resolves.toMatchObject({
+            permissions: 'full',
+        });
     });
 });
 

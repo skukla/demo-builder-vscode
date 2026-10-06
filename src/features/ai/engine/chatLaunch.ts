@@ -10,11 +10,21 @@
  * | prompt | `claude -- '<p>'` | `copilot -i '<p>'` |
  * | resume | `--continue` (Claude scopes it to the directory) | `--resume <id>` of the newest session in the directory |
  * | earlier chats | `claude --resume` | `copilot --resume` |
+ * | `auto` permissions | `--permission-mode auto` | `--allow-all-tools` |
+ * | `full` permissions | `--dangerously-skip-permissions` | `--allow-all` |
  *
  * @module features/ai/engine/chatLaunch
  */
 
 import type { TerminalLaunch } from './agentEngine';
+
+/** `demoBuilder.ai.permissions`: how much the agent may do without asking. */
+export type AgentPermissions = 'ask' | 'auto' | 'full';
+
+const PERMISSION_FLAGS: Record<TerminalLaunch['command'], Record<AgentPermissions, string>> = {
+    claude: { ask: '', auto: ' --permission-mode auto', full: ' --dangerously-skip-permissions' },
+    copilot: { ask: '', auto: ' --allow-all-tools', full: ' --allow-all' },
+};
 
 /** Where each engine's saved conversations are looked up. Handed in, so tests can say. */
 export interface ConversationProbes {
@@ -49,10 +59,15 @@ export function quoteForShell(value: string): string {
 export function buildChatCommand(
     launch: TerminalLaunch,
     cwd: string,
-    options: { prompt?: string; fresh: boolean; rehome: (prompt: string) => string },
+    options: {
+        prompt?: string;
+        fresh: boolean;
+        rehome: (prompt: string) => string;
+        permissions: AgentPermissions;
+    },
     probes: ConversationProbes,
 ): ChatCommand {
-    const { prompt, fresh, rehome } = options;
+    const { prompt, fresh, rehome, permissions } = options;
     let resumeArgs = '';
     let promptFlag: string;
     const binary = launch.command;
@@ -69,9 +84,8 @@ export function buildChatCommand(
     }
     const resumed = resumeArgs !== '';
     const text = prompt && resumed ? rehome(prompt) : prompt;
-    const line = text
-        ? `${binary}${resumeArgs} ${promptFlag} ${quoteForShell(text)}`
-        : `${binary}${resumeArgs}`;
+    const head = `${binary}${PERMISSION_FLAGS[binary][permissions]}${resumeArgs}`;
+    const line = text ? `${head} ${promptFlag} ${quoteForShell(text)}` : head;
     return { line, resumed };
 }
 
@@ -82,10 +96,13 @@ export function buildChatCommand(
 export function buildPastChatPickerCommand(
     launch: TerminalLaunch,
     cwd: string,
+    permissions: AgentPermissions,
     probes: ConversationProbes,
 ): string | undefined {
-    if (launch.command === 'claude') {
-        return probes.claudeHasConversation(cwd) ? 'claude --resume' : undefined;
-    }
-    return probes.copilotLatestSession(cwd) ? 'copilot --resume' : undefined;
+    const binary = launch.command;
+    const exists =
+        binary === 'claude'
+            ? probes.claudeHasConversation(cwd)
+            : probes.copilotLatestSession(cwd) !== undefined;
+    return exists ? `${binary}${PERMISSION_FLAGS[binary][permissions]} --resume` : undefined;
 }

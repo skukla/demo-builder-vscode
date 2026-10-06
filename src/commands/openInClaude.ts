@@ -13,6 +13,7 @@ import {
 import {
     buildChatCommand,
     buildPastChatPickerCommand,
+    type AgentPermissions,
     type ConversationProbes,
 } from '@/features/ai/engine/chatLaunch';
 import { latestCopilotSession } from '@/features/ai/engine/copilotSessionStore';
@@ -164,7 +165,7 @@ export class OpenInClaudeCommand extends BaseCommand {
     }
 
     public async execute(arg?: OpenInClaudeArg): Promise<void> {
-        const { descriptor, installed } = await resolveActiveEngine(this.cliProbe);
+        const { descriptor, installed, permissions } = await resolveActiveEngine(this.cliProbe);
         // Without the CLI the terminal would only say `command not found`. Say what
         // is missing instead, and open nothing (AI-4a — the field report).
         if (!installed && descriptor.launch.kind === 'terminal') {
@@ -195,7 +196,7 @@ export class OpenInClaudeCommand extends BaseCommand {
             if (launch.kind === 'vscode-chat') {
                 await this.openVsCodeChat(prompt, currentProjectName, fresh, pickPast);
             } else if (pickPast) {
-                await this.launchPastChatPicker(launch, cwd);
+                await this.launchPastChatPicker(launch, cwd, permissions);
             } else {
                 await this.launchTerminal(
                     descriptor,
@@ -204,6 +205,7 @@ export class OpenInClaudeCommand extends BaseCommand {
                     prompt,
                     currentProjectName,
                     fresh,
+                    permissions,
                 );
             }
         } catch (error) {
@@ -264,8 +266,12 @@ export class OpenInClaudeCommand extends BaseCommand {
      * With no transcript at all the picker has nothing to show, so say that and
      * leave the running terminal alone.
      */
-    private async launchPastChatPicker(launch: TerminalLaunch, cwd: string): Promise<void> {
-        const command = buildPastChatPickerCommand(launch, cwd, CONVERSATION_PROBES);
+    private async launchPastChatPicker(
+        launch: TerminalLaunch,
+        cwd: string,
+        permissions: AgentPermissions,
+    ): Promise<void> {
+        const command = buildPastChatPickerCommand(launch, cwd, permissions, CONVERSATION_PROBES);
         if (!command) {
             this.logger.info('[Open in Claude] pick an earlier chat: none exist yet');
             await vscode.window.showInformationMessage(NO_EARLIER_CHATS);
@@ -343,6 +349,7 @@ export class OpenInClaudeCommand extends BaseCommand {
         prompt: string | undefined,
         currentProjectName: string | undefined,
         fresh: boolean,
+        permissions: AgentPermissions,
     ): Promise<void> {
         if (!cwd) {
             this.logger.error('[Open in Claude] cannot launch terminal: cwd missing');
@@ -414,6 +421,7 @@ export class OpenInClaudeCommand extends BaseCommand {
                 prompt,
                 fresh,
                 rehome: (text) => buildRehomePrefix(currentProjectName) + text,
+                permissions,
             },
             CONVERSATION_PROBES,
         );

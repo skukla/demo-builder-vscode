@@ -382,8 +382,28 @@
                             "GitHub Copilot in the terminal (the `copilot` CLI).",
                             "GitHub Copilot Chat inside VS Code."
                         ],
-                        "default": "auto",
+                        "default": "copilot-vscode",
                         "description": "Which AI agent Demo Builder serves: where it writes MCP config, which hook format it installs, and what the Chat button opens."
+                    },
+                    "demoBuilder.ai.permissions": {
+                        "type": "string",
+                        "enum": [
+                            "ask",
+                            "auto",
+                            "full"
+                        ],
+                        "enumItemLabels": [
+                            "Ask first",
+                            "Auto",
+                            "Full access"
+                        ],
+                        "enumDescriptions": [
+                            "The agent asks before running tools or editing files.",
+                            "Routine actions run without asking. Claude Code: `--permission-mode auto`. Copilot CLI: `--allow-all-tools` (paths and URLs are still checked).",
+                            "Nothing is asked. Claude Code: `--dangerously-skip-permissions`. Copilot CLI: `--allow-all`."
+                        ],
+                        "default": "ask",
+                        "markdownDescription": "How much the agent may do without asking, applied when the Chat button starts Claude Code or Copilot CLI in a terminal. Copilot in VS Code uses VS Code's own setting instead — the permissions picker in the chat box, or `#chat.permissions.default#`. Demo Builder's own consent prompt for destructive operations (`#demoBuilder.ai.requireAgentConsent#`) still applies at every level."
                     },
                     "demoBuilder.ai.requireAgentConsent": {
                         "type": "boolean",

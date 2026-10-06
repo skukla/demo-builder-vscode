@@ -130,6 +130,11 @@ the Chat launch by engine: Claude Code and Copilot CLI each get their own termin
 (`claude -- '<p>'` / `copilot -i '<p>'`, command lines built in `engine/chatLaunch.ts`), and a
 live terminal is reused only for the same engine; Copilot in VS Code opens VS Code's chat in
 agent mode (`workbench.action.chat.open`). A missing CLI is named by the agent the SC chose.
+The default is `copilot-vscode` — VS Code's chat panel is the promoted experience even when a
+CLI is installed (owner, 2026-10-06); `auto` is opt-in. `demoBuilder.ai.permissions`
+(`ask` | `auto` | `full`) adds the engine's own flags to a terminal launch (`--permission-mode auto`
+/ `--dangerously-skip-permissions` for Claude, `--allow-all-tools` / `--allow-all` for Copilot);
+VS Code's chat has no launch argument for it, so it follows VS Code's own `chat.permissions.default`.
 
 **Why there is no extension surface.** Launches once routed through the Claude Code
 VS Code extension's URI handler. That was retired because the handler opens a new

@@ -78,6 +78,7 @@ export const SETTING_KEYS = [
     // so it goes through set_setting's hands-back like every key here.
     'demoBuilder.categoryPages.autoAdd',
     'demoBuilder.ai.engine',
+    'demoBuilder.ai.permissions',
     'demoBuilder.dataInstaller.enabled',
     'demoBuilder.dataInstaller.apiBaseUrl',
 ] as const;

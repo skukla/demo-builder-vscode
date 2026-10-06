@@ -30,6 +30,7 @@ jest.mock('@/features/dashboard/services/onOpenChecks/orchestrator', () => ({
 // detector) loads BEFORE the subject, so the subject binds to it.
 import { setupMocks } from './dashboardHandlers.testUtils';
 import './dashboardValidatorMocks';
+import * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { resetAgentCliCache } from '@/features/ai/engine/agentCli';
 import { handleRequestStatus } from '@/features/dashboard/handlers/statusHandlers';
@@ -48,6 +49,10 @@ it("adds the command executor's answer about the SC's agent to the on-open verif
         createMockCommandExecutor({ commandExists }),
     );
 
+    // A terminal engine is the one with a CLI to ask about.
+    jest.mocked(vscode.workspace.getConfiguration).mockReturnValue({
+        get: jest.fn((key: string) => (key === 'engine' ? 'copilot-cli' : undefined)),
+    } as unknown as vscode.WorkspaceConfiguration);
     await handleRequestStatus(mockContext);
     const result = await mockCapturedVerify!('/proj');
 

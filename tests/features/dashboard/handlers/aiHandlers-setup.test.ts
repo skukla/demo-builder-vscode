@@ -19,6 +19,7 @@ import {
     verifyAiSetup,
     createAiHandlerContext,
 } from './aiHandlers.testUtils';
+import * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { resetAgentCliCache } from '@/features/ai/engine/agentCli';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
@@ -164,6 +165,10 @@ describe('aiHandlers — setup & verification', () => {
             const commandExists = jest.fn().mockResolvedValue(true);
             ServiceLocator.setCommandExecutor(createMockCommandExecutor({ commandExists }));
 
+            // A terminal engine is the one with a CLI to ask about.
+            jest.mocked(vscode.workspace.getConfiguration).mockReturnValue({
+                get: jest.fn((key: string) => (key === 'engine' ? 'copilot-cli' : undefined)),
+            } as unknown as vscode.WorkspaceConfiguration);
             const result = await handleVerifyAiSetup(createAiHandlerContext());
 
             // No engine set means auto, and auto prefers Copilot when both are installed.
