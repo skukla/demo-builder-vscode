@@ -127,10 +127,10 @@ export function IntegrationsSummaryTile({
     // and the tile carries no dot at all — an empty project used to be painted
     // green, "all good" about nothing. The tile still renders: it is the way in
     // to add the first integration.
-    //
-    // Shaped like its build-zone neighbours (icon above label) so the row reads
-    // as one bar; the dot rides the icon as a small overlay rather than widening
-    // the tile, which is what made it wrap onto its own line before.
+    // An Open-row card beside Open in Browser, Author Content and Manage
+    // Commerce (owner, 2026-10-06): integrations are a destination of the same
+    // weight, not a line item under Build. On a card the status word replaces
+    // the description line, so the dot sits beside words, not in a far corner.
     //
     // Wording comes from the SHARED vocabulary, so the tooltip cannot disagree
     // with the card the integrations surface shows for the same state.
@@ -142,6 +142,7 @@ export function IntegrationsSummaryTile({
     return (
         <DashboardTile
             label="Integrations"
+            description="Connected systems"
             icon={<Plug size="L" />}
             onPress={() => webviewClient.postMessage('openIntegrations')}
             action="integrations"

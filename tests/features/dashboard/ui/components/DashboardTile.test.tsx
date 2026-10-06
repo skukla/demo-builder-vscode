@@ -104,6 +104,33 @@ describe('DashboardTile', () => {
         expect(screen.getByRole('button')).toBeDisabled();
     });
 
+    it('on a card, shows the dot and its word in place of the description, not in a corner', () => {
+        const { container } = render(
+            <DashboardTile
+                label="Integrations"
+                description="Connected systems"
+                icon={icon}
+                onPress={jest.fn()}
+                status={{ variant: 'warning', tooltip: 'Needs sign-in', label: 'Needs sign-in', testId: 'dot' }}
+            />
+        );
+
+        expect(screen.queryByText('Connected systems')).not.toBeInTheDocument();
+        const line = container.querySelector('.dashboard-tile-text .dashboard-tile-status--inline');
+        expect(line).not.toBeNull();
+        expect(within(line as HTMLElement).getByTestId('dot')).toBeInTheDocument();
+        expect(within(line as HTMLElement).getByText('Needs sign-in')).toBeInTheDocument();
+        expect(screen.getAllByTestId('dot')).toHaveLength(1);
+    });
+
+    it('on a card with nothing to report, keeps the description', () => {
+        render(
+            <DashboardTile label="Integrations" description="Connected systems" icon={icon} onPress={jest.fn()} />
+        );
+
+        expect(screen.getByText('Connected systems')).toBeInTheDocument();
+    });
+
     it('keeps the dot inside the tile so hover targets one element', () => {
         render(
             <DashboardTile

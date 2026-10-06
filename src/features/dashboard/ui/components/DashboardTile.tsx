@@ -35,8 +35,9 @@ export interface DashboardTileStatus {
     variant: StatusDotVariant;
     /** What the dot means. Replaces the idle tooltip while shown. */
     tooltip: string;
-    /** The short word shown beside the dot where a row has room (the compact
-     *  lists); a square tile or card keeps only the corner dot. */
+    /** The short word shown beside the dot where a row has room: after the label
+     *  in a compact list, in place of the description on a card. A square tile,
+     *  or a card given no word, keeps only the corner dot. */
     label?: string;
     testId: string;
 }
@@ -73,6 +74,11 @@ export function DashboardTile({
     className,
     action,
 }: DashboardTileProps): React.ReactElement {
+    // A card with something to report says it on its second line — dot and word
+    // where "where this goes" usually sits — instead of a corner dot a card's
+    // width away from the title it qualifies. A corner dot is what made the
+    // integrations status read as detached once it became a card.
+    const inlineStatus = description && status?.label ? status : undefined;
     const button = (
         <ActionButton
             onPress={onPress}
@@ -88,12 +94,25 @@ export function DashboardTile({
             {description ? (
                 <span className="dashboard-tile-text">
                     <Text UNSAFE_className="icon-label">{label}</Text>
-                    <Text UNSAFE_className="dashboard-tile-description">{description}</Text>
+                    {inlineStatus ? (
+                        <span className="dashboard-tile-status dashboard-tile-status--inline">
+                            <StatusDot
+                                variant={inlineStatus.variant}
+                                className="tile-status-dot"
+                                testId={inlineStatus.testId}
+                            />
+                            <span className="dashboard-tile-status-text" data-variant={inlineStatus.variant}>
+                                {inlineStatus.label}
+                            </span>
+                        </span>
+                    ) : (
+                        <Text UNSAFE_className="dashboard-tile-description">{description}</Text>
+                    )}
                 </span>
             ) : (
                 <Text UNSAFE_className="icon-label">{label}</Text>
             )}
-            {status && (
+            {status && !inlineStatus && (
                 // The SHARED dot, never a hand-rolled span: rolling its own is
                 // what once cost the integrations tile its in-progress pulse.
                 // `dashboard-tile-status` supplies POSITION — a corner overlay on

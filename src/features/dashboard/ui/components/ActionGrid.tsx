@@ -8,18 +8,22 @@
  * hid everyday doors (AEM Assets, Dev Console, Sync, Site Access) beside Delete.
  *
  *  - Open (cards): where you go to use the project. Start/Stop + Restart
- *    (non-EDS), Open in Browser, Author Content (EDS), Manage Commerce, each
- *    saying where it leads, with AEM Assets and Dev Console listed beside them.
- *    Every one opens a surface; none changes the project.
+ *    (non-EDS), Open in Browser, Author Content (EDS), Manage Commerce,
+ *    Integrations, each saying where it leads, with AEM Assets and Dev Console
+ *    listed beside them. Every one opens a surface; none changes the project.
+ *    Integrations moved up from Build on 2026-10-06 (owner): it is a
+ *    destination of the same weight as the other three.
  *  - Storefront (EDS only): keeping the site itself in shape. Republish (the
  *    remedy carrying the drift dot), Sync Storefront, Refresh Blocks, Site Access.
  *  - Build: what the demo contains. Edit (what it HAS), Configure (their
- *    values), Integrations, Datapacks, then — set apart — Reset and Delete.
+ *    values), Datapacks, then — set apart — Reset and Delete.
  *  - Share: moving a demo between people. Export, Save as Package (EDS),
  *    Change Source (only for a project built on an added demo).
  *
  * Storefront, Build and Share are compact lists, where a status dot sits
  * beside the label with its word ("Needed", "Error") rather than in a corner.
+ * An Open card with a status shows the dot and word as its second line, in
+ * place of its description.
  *
  * (Logs moved to the sidebar Logs utility; Rename is inline on the dashboard
  * title / project card name. Deploy Mesh retired in ADR-011 D3 Step 08 — the
@@ -104,8 +108,8 @@ export interface ActionGridProps {
     /** Whether mesh-related actions (Configure) should be disabled */
     isMeshActionDisabled: boolean;
     /**
-     * Integrations summary tile inputs. The tile lives in the Build zone beside
-     * Configure — integrations are a "set this up" concern, not a run-time action.
+     * Integrations card inputs. The card is the last of the Open row: a
+     * destination of the same weight as the storefront, authoring and admin.
      */
     hasAdobeContext?: boolean;
     /**
@@ -255,11 +259,7 @@ function EditTile({
 function BuildZone({
     canEdit,
     isMeshActionDisabled,
-    hasAdobeContext,
     dataInstallerAvailable,
-    appBuilderComponents,
-    hasMesh,
-    meshStatus,
     handleEditProject,
     handleConfigure,
     handleResetProject,
@@ -267,11 +267,7 @@ function BuildZone({
 }: {
     canEdit: boolean;
     isMeshActionDisabled: boolean;
-    hasAdobeContext?: boolean;
     dataInstallerAvailable?: boolean;
-    appBuilderComponents?: Record<string, AppBuilderComponentState>;
-    hasMesh?: boolean;
-    meshStatus?: MeshStatus;
     handleEditProject?: () => void;
     handleConfigure: () => void;
     handleResetProject: () => void;
@@ -286,16 +282,6 @@ function BuildZone({
                 icon={<Settings size="L" />}
                 onPress={handleConfigure}
                 isDisabled={isMeshActionDisabled}
-            />
-
-            {/* Integrations — the whole integrations footprint (count + worst
-                status), routing to the dedicated surface. Renders nothing
-                without an Adobe org. */}
-            <IntegrationsSummaryTile
-                hasAdobeContext={hasAdobeContext}
-                appBuilderComponents={appBuilderComponents}
-                hasMesh={hasMesh}
-                meshStatus={meshStatus}
             />
 
             {/* Datapacks — the global catalog, opened beside the dashboard. */}
@@ -395,6 +381,15 @@ export function ActionGrid({
                 handleOpenAdminPanel={handleOpenAdminPanel}
                 handleOpenAemAssets={handleOpenAemAssets}
                 handleOpenDevConsole={handleOpenDevConsole}
+                integrations={
+                    // Renders nothing without an Adobe org.
+                    <IntegrationsSummaryTile
+                        hasAdobeContext={hasAdobeContext}
+                        appBuilderComponents={appBuilderComponents}
+                        hasMesh={hasMesh}
+                        meshStatus={meshStatus}
+                    />
+                }
             />
             <div className="dashboard-zones-secondary">
             {isEds && (
@@ -409,11 +404,7 @@ export function ActionGrid({
             <BuildZone
                 canEdit={canEdit}
                 isMeshActionDisabled={isMeshActionDisabled}
-                hasAdobeContext={hasAdobeContext}
                 dataInstallerAvailable={dataInstallerAvailable}
-                appBuilderComponents={appBuilderComponents}
-                hasMesh={hasMesh}
-                meshStatus={meshStatus}
                 handleEditProject={handleEditProject}
                 handleConfigure={handleConfigure}
                 handleResetProject={handleResetProject}

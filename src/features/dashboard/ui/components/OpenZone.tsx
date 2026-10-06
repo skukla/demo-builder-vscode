@@ -63,9 +63,10 @@ const NOOP = (): void => undefined;
 
 /**
  * The Open zone — where the SC goes. The cards are the in-demo destinations (see
- * it as a customer, author it, manage it as an admin), each saying in one line
- * where it leads; the setup-time ones (AEM Assets, Dev Console) sit beside them
- * as a compact list. Every tile opens a surface; none changes the project.
+ * it as a customer, author it, manage it as an admin, its integrations), each
+ * saying in one line where it leads; the setup-time ones (AEM Assets, Dev
+ * Console) sit beside them as a compact list. Every tile opens a surface; none
+ * changes the project.
  *
  * Extracted whole: its conditionals were most of ActionGrid's complexity budget
  * (eslint counts every `&&`/`?:`), and a zone is a cohesive unit.
@@ -89,6 +90,7 @@ export function OpenZone({
     handleOpenAdminPanel,
     handleOpenAemAssets,
     handleOpenDevConsole,
+    integrations,
 }: {
     isEds: boolean;
     isRunning: boolean;
@@ -108,6 +110,8 @@ export function OpenZone({
     handleOpenAdminPanel: () => void;
     handleOpenAemAssets: () => void;
     handleOpenDevConsole: () => void;
+    /** The Integrations card, built by the caller (it owns the status inputs). Last card. */
+    integrations?: React.ReactNode;
 }): React.ReactElement {
     return (
         <DashboardZone
@@ -191,6 +195,8 @@ export function OpenZone({
                 icon={<UserAdmin size="L" />}
                 onPress={handleOpenAdminPanel}
             />
+
+            {integrations}
         </DashboardZone>
     );
 }

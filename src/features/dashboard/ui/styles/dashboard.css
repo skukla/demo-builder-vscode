@@ -330,6 +330,20 @@
     color: var(--spectrum-global-color-gray-700);
 }
 
+/* ...and on a card, the dot and its word as the second line, in place of the
+   description. */
+.dashboard-tile-status--inline {
+    position: static;
+    font-size: 11px;
+    line-height: 1.2;
+}
+
+.dashboard-tile-status--inline .dashboard-tile-status-text {
+    display: inline;
+    white-space: nowrap;
+    color: var(--spectrum-global-color-gray-700);
+}
+
 .dashboard-tile-status-text[data-variant='error'] {
     color: var(--spectrum-global-color-red-600);
 }

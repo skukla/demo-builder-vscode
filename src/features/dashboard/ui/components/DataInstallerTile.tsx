@@ -1,10 +1,10 @@
 /**
  * Build-zone tile that opens the Data Installer.
  *
- * Sits beside the Integrations tile because both route to a dedicated surface,
- * which is what the Build zone holds.
+ * Routes to a dedicated surface, like the Integrations card in the Open row
+ * (which sat beside it in Build until 2026-10-06).
  *
- * **Not a tab replacement, unlike its neighbour.** `openIntegrations` disposes
+ * **Not a tab replacement, unlike Integrations.** `openIntegrations` disposes
  * the dashboard panel and opens in place, because that surface is scoped to the
  * project you came from. The datapack catalog is global to the SERVICE — the
  * same packs whatever project is open — so browsing it must not close what you

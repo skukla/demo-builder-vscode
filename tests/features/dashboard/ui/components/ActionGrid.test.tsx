@@ -117,6 +117,22 @@ describe('ActionGrid', () => {
             ]);
         });
 
+        it('makes Integrations the last card when the project has an Adobe org, not a Build line', () => {
+            const { container } = render(<ActionGrid {...edsProps} hasAdobeContext />);
+
+            const cards = Array.from(
+                container.querySelectorAll('.dashboard-card-row > .dashboard-action-button')
+            );
+            expect(cards.map((n) => n.querySelector('.icon-label')?.textContent)).toEqual([
+                'Open in Browser',
+                'Author Content',
+                'Manage Commerce',
+                'Integrations',
+            ]);
+            expect(cards[3].querySelector('.dashboard-tile-description')?.textContent).toBe('Connected systems');
+            expect(within(getZone(container, 'build')).queryByText('Integrations')).not.toBeInTheDocument();
+        });
+
         it('lists AEM Assets and Dev Console beside the cards, not as cards', () => {
             const { container } = render(<ActionGrid {...edsProps} />);
 
