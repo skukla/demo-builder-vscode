@@ -31,7 +31,7 @@ describe('ActionGrid — the small More menu', () => {
         const { container } = render(<ActionGrid {...defaultProps} />);
 
         expect(
-            within(getZone(container, 'build')).getByLabelText('More actions')
+            within(getZone(container, 'build')).getByLabelText('Reset or Delete')
         ).toBeInTheDocument();
     });
 

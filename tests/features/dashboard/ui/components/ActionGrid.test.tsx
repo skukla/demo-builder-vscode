@@ -99,22 +99,39 @@ describe('ActionGrid', () => {
     });
 
     describe('Open row', () => {
-        it('keeps the big tiles to the in-demo destinations', () => {
+        it('makes cards of the in-demo destinations, each saying where it goes', () => {
             const { container } = render(<ActionGrid {...edsProps} />);
 
-            const labels = Array.from(
-                getZone(container, 'open').querySelectorAll('.icon-label')
-            ).map((n) => n.textContent);
-            expect(labels).toEqual(['Open in Browser', 'Author Content', 'Manage Commerce']);
+            const cards = Array.from(
+                container.querySelectorAll('.dashboard-card-row > .dashboard-action-button')
+            );
+            expect(cards.map((n) => n.querySelector('.icon-label')?.textContent)).toEqual([
+                'Open in Browser',
+                'Author Content',
+                'Manage Commerce',
+            ]);
+            expect(cards.map((n) => n.querySelector('.dashboard-tile-description')?.textContent)).toEqual([
+                'The live storefront',
+                'Edit storefront pages',
+                'The Commerce Admin',
+            ]);
         });
 
-        it('lists AEM Assets and Dev Console in Build, before More', () => {
+        it('lists AEM Assets and Dev Console beside the cards, not as cards', () => {
             const { container } = render(<ActionGrid {...edsProps} />);
 
-            const labels = Array.from(
-                getZone(container, 'build').querySelectorAll('.icon-label')
-            ).map((n) => n.textContent);
-            expect(labels.slice(-3)).toEqual(['AEM Assets', 'Dev Console', 'More']);
+            const aside = getZone(container, 'open').querySelector(
+                '.dashboard-card-row > .dashboard-compact-list'
+            );
+            expect(
+                Array.from(aside?.querySelectorAll('.icon-label') ?? []).map((n) => n.textContent)
+            ).toEqual(['AEM Assets', 'Dev Console']);
+        });
+
+        it('names a card by its title alone', () => {
+            render(<ActionGrid {...edsProps} />);
+
+            expect(screen.getByRole('button', { name: 'Manage Commerce' })).toBeInTheDocument();
         });
 
         it('renders only Open as big tiles; the other groups are compact lists', () => {

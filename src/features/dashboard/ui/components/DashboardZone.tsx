@@ -10,18 +10,21 @@ import { DashboardTile } from './DashboardTile';
  * jobs; the `data-zone` hook is what tests and styling key on.
  *
  * `compact` renders the tiles as a short list of icon-beside-label rows: the
- * secondary tier under the big Open tiles, so eighteen actions stop reading as
- * eighteen equals.
+ * secondary tier under the Open cards, so eighteen actions stop reading as
+ * eighteen equals. `aside` is a compact list placed beside the tiles, inside the
+ * same group.
  */
 export function DashboardZone({
     id,
     title,
     compact = false,
+    aside,
     children,
 }: {
     id: string;
     title: string;
     compact?: boolean;
+    aside?: React.ReactNode;
     children: React.ReactNode;
 }): React.ReactElement {
     return (
@@ -31,7 +34,14 @@ export function DashboardZone({
             aria-label={title}
         >
             <h2 className="dashboard-zone-heading">{title}</h2>
-            <div className="dashboard-zone-grid">{children}</div>
+            {compact ? (
+                <div className="dashboard-zone-grid dashboard-compact-list">{children}</div>
+            ) : (
+                <div className="dashboard-zone-grid dashboard-card-row">
+                    {children}
+                    {aside ? <div className="dashboard-compact-list">{aside}</div> : null}
+                </div>
+            )}
         </section>
     );
 }
@@ -56,9 +66,12 @@ export function RemedyTile({
     needed,
     icon,
     testId,
+    description,
     onPress,
 }: {
     label: string;
+    /** The Open-row card's one-line "where this goes". */
+    description?: string;
     /** Shown when the fix is due. */
     tooltip: string;
     /** Shown otherwise — never the bare label, which would say nothing. */
@@ -73,6 +86,7 @@ export function RemedyTile({
             label={label}
             icon={icon}
             onPress={onPress}
+            description={description}
             action={testId}
             tooltip={idleTooltip}
             status={needed ? { variant: 'warning', tooltip, testId: `${testId}-dot` } : undefined}

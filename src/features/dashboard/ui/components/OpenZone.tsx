@@ -1,5 +1,7 @@
+import Code from '@spectrum-icons/workflow/Code';
 import Edit from '@spectrum-icons/workflow/Edit';
 import Globe from '@spectrum-icons/workflow/Globe';
+import ImageAlbum from '@spectrum-icons/workflow/ImageAlbum';
 import PlayCircle from '@spectrum-icons/workflow/PlayCircle';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import StopCircle from '@spectrum-icons/workflow/StopCircle';
@@ -38,6 +40,7 @@ function LifecycleTile({
             onPress={onPress}
             isDisabled={isDisabled}
             className="dashboard-action-button--hero"
+            description={isRunning ? 'Stop the local demo' : 'Run the demo locally'}
             tooltip={statusText ?? `${label} the demo`}
             status={
                 dot
@@ -59,10 +62,10 @@ function LifecycleTile({
 const NOOP = (): void => undefined;
 
 /**
- * The Open zone — the big tiles, and the only ones: where the SC goes DURING a
- * demo — see it as a customer, author it, manage it as an admin. Every tile opens
- * a surface; none changes the project. Setup-time destinations (AEM Assets, Dev
- * Console) live in the compact Build list instead, so this row stays short.
+ * The Open zone — where the SC goes. The cards are the in-demo destinations (see
+ * it as a customer, author it, manage it as an admin), each saying in one line
+ * where it leads; the setup-time ones (AEM Assets, Dev Console) sit beside them
+ * as a compact list. Every tile opens a surface; none changes the project.
  *
  * Extracted whole: its conditionals were most of ActionGrid's complexity budget
  * (eslint counts every `&&`/`?:`), and a zone is a cohesive unit.
@@ -84,6 +87,8 @@ export function OpenZone({
     handleOpenLiveSite,
     handleOpenDaLive,
     handleOpenAdminPanel,
+    handleOpenAemAssets,
+    handleOpenDevConsole,
 }: {
     isEds: boolean;
     isRunning: boolean;
@@ -101,9 +106,33 @@ export function OpenZone({
     handleOpenLiveSite?: () => void;
     handleOpenDaLive?: () => void;
     handleOpenAdminPanel: () => void;
+    handleOpenAemAssets: () => void;
+    handleOpenDevConsole: () => void;
 }): React.ReactElement {
     return (
-        <DashboardZone id="open" title="Open">
+        <DashboardZone
+            id="open"
+            title="Open"
+            aside={
+                <>
+                    {/* AEM Assets (EDS-21) — every project type: the bound AEM is a
+                        Demo Builder setting, not a property of the project, and the
+                        host offers the setting when none is bound. */}
+                    <DashboardTile
+                        label="AEM Assets"
+                        icon={<ImageAlbum size="L" />}
+                        onPress={handleOpenAemAssets}
+                        tooltip="Open the AEM environment your storefronts use for images and assets"
+                    />
+                    <DashboardTile
+                        label="Dev Console"
+                        icon={<Code size="L" />}
+                        onPress={handleOpenDevConsole}
+                        tooltip="Open this project in the Adobe Developer Console"
+                    />
+                </>
+            }
+        >
             {!isEds && (
                 <LifecycleTile
                     isRunning={isRunning}
@@ -125,6 +154,7 @@ export function OpenZone({
                     needed={needsRestart}
                     icon={<Refresh size="L" />}
                     testId="restart-tile"
+                    description="Pick up configuration changes"
                     onPress={handleRestartDemo}
                 />
             )}
@@ -138,6 +168,7 @@ export function OpenZone({
                 onPress={isEds ? (handleOpenLiveSite ?? NOOP) : handleOpenBrowser}
                 isDisabled={isOpeningBrowser || (!isEds && !isRunning)}
                 className={isEds ? 'dashboard-action-button--hero' : undefined}
+                description={isEds ? 'The live storefront' : 'The local storefront'}
             />
 
             {/* Author — EDS only. Static label: the resolved authoring
@@ -145,6 +176,7 @@ export function OpenZone({
             {isEds && (
                 <DashboardTile
                     label="Author Content"
+                    description="Edit storefront pages"
                     icon={<Edit size="L" />}
                     onPress={handleOpenDaLive ?? NOOP}
                     isDisabled={isOpeningBrowser}
@@ -155,6 +187,7 @@ export function OpenZone({
                 backend-side, so no isOpeningBrowser gating here. */}
             <DashboardTile
                 label="Manage Commerce"
+                description="The Commerce Admin"
                 icon={<UserAdmin size="L" />}
                 onPress={handleOpenAdminPanel}
             />

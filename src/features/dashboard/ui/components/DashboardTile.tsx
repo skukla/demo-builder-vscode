@@ -42,6 +42,8 @@ export interface DashboardTileProps {
     label: string;
     icon: React.ReactNode;
     onPress: () => void;
+    /** One short line under the label saying where the tile goes. Open-row cards only. */
+    description?: string;
     /** Shown when there is no status dot. Omit for a tile with no tooltip. */
     tooltip?: string;
     /** Present only when there is something to report. */
@@ -61,6 +63,7 @@ export function DashboardTile({
     label,
     icon,
     onPress,
+    description,
     tooltip,
     status,
     isDisabled,
@@ -74,9 +77,19 @@ export function DashboardTile({
             isDisabled={isDisabled}
             UNSAFE_className={cn('dashboard-action-button', className)}
             data-action={action}
+            // A card's name is its title; the description line is a hint, not
+            // part of what the button is called.
+            aria-label={description ? label : undefined}
         >
             {icon}
-            <Text UNSAFE_className="icon-label">{label}</Text>
+            {description ? (
+                <span className="dashboard-tile-text">
+                    <Text UNSAFE_className="icon-label">{label}</Text>
+                    <Text UNSAFE_className="dashboard-tile-description">{description}</Text>
+                </span>
+            ) : (
+                <Text UNSAFE_className="icon-label">{label}</Text>
+            )}
             {status && (
                 // The SHARED dot, never a hand-rolled span: rolling its own is
                 // what once cost the integrations tile its in-progress pulse.

@@ -73,9 +73,7 @@
  */
 
 import { ActionButton, Item, Menu, MenuTrigger, Text } from '@adobe/react-spectrum';
-import Code from '@spectrum-icons/workflow/Code';
 import Edit from '@spectrum-icons/workflow/Edit';
-import ImageAlbum from '@spectrum-icons/workflow/ImageAlbum';
 import More from '@spectrum-icons/workflow/More';
 import Settings from '@spectrum-icons/workflow/Settings';
 import React from 'react';
@@ -265,8 +263,7 @@ function EditTile({
 }
 
 /**
- * The Build zone — what the demo contains and where it is set up (AEM Assets,
- * Dev Console), plus the small More holding the two
+ * The Build zone — what the demo contains, plus the small menu holding the two
  * rare, destructive actions. Delete is last, per the overflow-menu convention;
  * the confirm dialog behind it remains the real safety net.
  */
@@ -280,8 +277,6 @@ function BuildZone({
     meshStatus,
     handleEditProject,
     handleConfigure,
-    handleOpenAemAssets,
-    handleOpenDevConsole,
     handleResetProject,
     handleDeleteProject,
 }: {
@@ -294,8 +289,6 @@ function BuildZone({
     meshStatus?: MeshStatus;
     handleEditProject?: () => void;
     handleConfigure: () => void;
-    handleOpenAemAssets: () => void;
-    handleOpenDevConsole: () => void;
     handleResetProject: () => void;
     handleDeleteProject: () => void;
 }): React.ReactElement {
@@ -325,31 +318,14 @@ function BuildZone({
             {/* Datapacks — the global catalog, opened beside the dashboard. */}
             {dataInstallerAvailable && <DataInstallerTile />}
 
-            {/* AEM Assets (EDS-21) — every project type: the bound AEM is a
-                Demo Builder setting, not a property of the project, and the
-                host offers the setting when none is bound. */}
-            <DashboardTile
-                label="AEM Assets"
-                icon={<ImageAlbum size="L" />}
-                onPress={handleOpenAemAssets}
-                tooltip="Open the AEM environment your storefronts use for images and assets"
-            />
-
-            <DashboardTile
-                label="Dev Console"
-                icon={<Code size="L" />}
-                onPress={handleOpenDevConsole}
-                tooltip="Open this project in the Adobe Developer Console"
-            />
-
             <MenuTrigger>
                 <ActionButton
                     isQuiet
                     UNSAFE_className="dashboard-action-button"
-                    aria-label="More actions"
+                    aria-label="Reset or Delete"
                 >
                     <More size="L" />
-                    <Text UNSAFE_className="icon-label">More</Text>
+                    <Text UNSAFE_className="icon-label">Reset or Delete</Text>
                 </ActionButton>
                 <Menu onAction={handleOverflowAction}>
                     <Item key="reset">Reset</Item>
@@ -430,6 +406,8 @@ export function ActionGrid({
                 handleOpenLiveSite={handleOpenLiveSite}
                 handleOpenDaLive={handleOpenDaLive}
                 handleOpenAdminPanel={handleOpenAdminPanel}
+                handleOpenAemAssets={handleOpenAemAssets}
+                handleOpenDevConsole={handleOpenDevConsole}
             />
             <div className="dashboard-zones-secondary">
             {isEds && (
@@ -451,8 +429,6 @@ export function ActionGrid({
                 meshStatus={meshStatus}
                 handleEditProject={handleEditProject}
                 handleConfigure={handleConfigure}
-                handleOpenAemAssets={handleOpenAemAssets}
-                handleOpenDevConsole={handleOpenDevConsole}
                 handleResetProject={handleResetProject}
                 handleDeleteProject={handleDeleteProject}
             />

@@ -147,7 +147,13 @@
     display: flex;
     flex-wrap: wrap;
     align-items: flex-start;
-    gap: 24px 48px;
+    gap: 24px var(--dashboard-tile-gap);
+}
+
+/* Each compact group is exactly one card wide, so on a wide panel Storefront,
+   Build and Share sit as columns under the three Open cards. */
+.dashboard-zone-section--compact {
+    width: var(--dashboard-card-width);
 }
 
 /* One labelled group per job (Open, Storefront, Build, Share), laid out by
@@ -180,10 +186,76 @@
     gap: var(--dashboard-tile-gap);
 }
 
-/* Compact groups: one row per action, icon beside label, no border until
-   hovered — the secondary tier, deliberately quieter than the Open tiles. Every
-   rule is scoped to the compact section, so DashboardTile stays one component. */
-.dashboard-zone-section--compact .dashboard-zone-grid {
+/* Open-row cards: wider than the square tiles, icon beside a title and a one-line
+   "where this goes". Child combinator on purpose — the compact list placed beside
+   the cards (the zone's `aside`) holds tiles too, and must not become cards. */
+.dashboard-card-row > .dashboard-action-button {
+    width: var(--dashboard-card-width);
+    height: 72px;
+    aspect-ratio: auto;
+    padding: 12px 14px;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 12px;
+    text-align: left;
+    position: relative;
+}
+
+.dashboard-card-row > .dashboard-action-button svg {
+    width: 22px;
+    height: 22px;
+    flex: none;
+}
+
+.dashboard-tile-text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    min-width: 0;
+    text-align: left;
+}
+
+/* Spectrum gives every slotted Text in an ActionButton its label styling,
+   centred; both lines of a card read left-aligned. */
+.dashboard-tile-text > * {
+    align-self: stretch;
+    text-align: left;
+}
+
+.dashboard-card-row > .dashboard-action-button .icon-label {
+    margin-top: 0;
+    -webkit-line-clamp: 1;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.dashboard-tile-description {
+    font-size: 11px;
+    line-height: 1.2;
+    color: var(--spectrum-global-color-gray-700);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dashboard-action-button--hero .dashboard-tile-description {
+    color: var(--spectrum-global-color-blue-600);
+}
+
+/* The compact list beside the cards: centred on them, a little apart. */
+.dashboard-card-row > .dashboard-compact-list {
+    display: flex;
+    flex-direction: column;
+    align-self: center;
+    gap: 2px;
+    margin-left: 4px;
+}
+
+/* Compact lists: one row per action, icon beside label, no border until
+   hovered — the secondary tier, deliberately quieter than the Open cards. Every
+   rule is scoped to the list, so DashboardTile stays one component. */
+.dashboard-zone-grid.dashboard-compact-list {
     flex-flow: column nowrap;
     gap: 2px;
     /* Pull the rows left by their own padding + border so each icon lines up
@@ -191,8 +263,9 @@
     margin-left: -11px;
 }
 
-.dashboard-zone-section--compact .dashboard-action-button {
-    width: 180px;
+.dashboard-compact-list .dashboard-action-button {
+    width: 100%;
+    min-width: 160px;
     height: 32px;
     aspect-ratio: auto;
     padding: 0 10px;
@@ -204,28 +277,28 @@
     border-color: transparent;
 }
 
-.dashboard-zone-section--compact .dashboard-action-button:hover,
-.dashboard-zone-section--compact .dashboard-action-button:focus {
+.dashboard-compact-list .dashboard-action-button:hover,
+.dashboard-compact-list .dashboard-action-button:focus {
     background: var(--spectrum-global-color-gray-100);
     border-color: transparent;
     transform: none;
     box-shadow: none;
 }
 
-.dashboard-zone-section--compact .dashboard-action-button svg {
+.dashboard-compact-list .dashboard-action-button svg {
     width: 16px;
     height: 16px;
     flex: none;
 }
 
-.dashboard-zone-section--compact .dashboard-action-button .icon-label {
+.dashboard-compact-list .dashboard-action-button .icon-label {
     margin-top: 0;
     -webkit-line-clamp: 1;
     text-align: left;
     font-size: 13px;
 }
 
-.dashboard-zone-section--compact .integrations-tile-dot {
+.dashboard-compact-list .integrations-tile-dot {
     top: 50%;
     right: 10px;
     transform: translateY(-50%);

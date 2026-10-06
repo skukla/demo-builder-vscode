@@ -294,6 +294,7 @@ button[class*="spectrum-Button"][disabled],
 :root {
     --dashboard-tile-size: 96px;
     --dashboard-tile-gap: 16px;
+    --dashboard-card-width: 210px;
     }
 
 /* Org-mismatch banner — a dark, accent-bordered warning card that matches the
