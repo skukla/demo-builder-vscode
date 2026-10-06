@@ -172,9 +172,9 @@ export function buildToolServers(project: Project): string {
     }
     lines.push(
         '',
-        'A tool you cannot name is still findable: `ToolSearch` takes a server prefix',
-        '(`mcp__dropins__`) as well as an exact name, so list a server\'s tools before',
-        'deciding no tool exists and doing the job by hand.',
+        'A tool you cannot name is still findable: ask a server for its tools by name',
+        'before deciding no tool exists and doing the job by hand. (How you search is',
+        'your own: the mechanism and the tool-name spelling differ between agents.)',
     );
     return lines.join('\n');
 }

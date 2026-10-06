@@ -124,7 +124,9 @@ Either way the prompt is also copied to the clipboard as a silent fallback. **Do
 reintroduce a timed or delayed paste on spawn** — it was tried twice and always raced
 cold start, because no "TUI ready" signal exists.
 
-`demoBuilder.ai.engine` selects the tool; `'claude-code'` is currently the only value.
+`demoBuilder.ai.engine` names the agent (`auto`, `claude-code`, `copilot-cli`,
+`copilot-vscode`; resolved in `features/ai/engine/agentEngine.ts`). The launch here still
+opens Claude Code only until AI-12 step 08 routes it by engine.
 
 **Why there is no extension surface.** Launches once routed through the Claude Code
 VS Code extension's URI handler. That was retired because the handler opens a new

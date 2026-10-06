@@ -29,8 +29,8 @@
  */
 
 import * as fsPromises from 'fs/promises';
-import * as os from 'os';
 import * as path from 'path';
+import { globalMcpConfigPaths } from '@/features/ai/engine/agentEngine';
 import { resolveMcpToolsDir } from '@/features/project-creation/services/aiBundle/aiDefaultsInstaller';
 import { parseJSON } from '@/types/typeGuards';
 
@@ -74,17 +74,25 @@ async function readMcpJson(projectPath: string): Promise<McpJsonShape | null> {
 }
 
 /**
- * Read the user-scope config. Absent, unreadable or malformed all mean "nothing
- * to check" — never an error. This runs on dashboard open, and `~/.claude.json`
- * is user-owned state we only ever read here.
+ * Read EVERY agent's user-scope config — Claude Code's and Copilot CLI's. Both can
+ * carry a `demo-builder` entry pinning this extension's versioned `dist/` path, so
+ * both can drift after an update, and a colleague on Copilot would otherwise be
+ * told everything is fine while their entry pointed at a build that is gone.
+ *
+ * Absent, unreadable or malformed all mean "nothing to check" — never an error.
+ * This runs on dashboard open, and these are user-owned files we only ever read.
  */
-async function readUserMcpJson(): Promise<McpJsonShape | null> {
-    try {
-        const raw = await fsPromises.readFile(path.join(os.homedir(), '.claude.json'), 'utf-8');
-        return parseJSON<McpJsonShape>(raw);
-    } catch {
-        return null;
+async function readUserMcpConfigs(): Promise<McpJsonShape[]> {
+    const configs: McpJsonShape[] = [];
+    for (const configPath of globalMcpConfigPaths()) {
+        try {
+            const parsed = parseJSON<McpJsonShape>(await fsPromises.readFile(configPath, 'utf-8'));
+            if (parsed) configs.push(parsed);
+        } catch {
+            // Absent or unreadable — nothing to check in this one.
+        }
     }
+    return configs;
 }
 
 /**
@@ -139,12 +147,14 @@ export async function detectMcpDrift(projectPath: string): Promise<McpDriftResul
         missing.push(...(await missingArgsFor(cfg.args, toolsDir, id === EXTENSION_PROXY_ID)));
     }
 
-    // User scope: ONLY our own entry. Everything else in that file belongs to
-    // other tools and to the user; a broken path there is not ours to report.
-    const userConfig = await readUserMcpJson();
-    const userEntry = userConfig?.mcpServers?.[EXTENSION_PROXY_ID];
-    if (userEntry) {
-        missing.push(...(await missingArgsFor(userEntry.args, toolsDir, true)));
+    // User scope: ONLY our own entry, in each agent's config. Everything else in
+    // those files belongs to other tools and to the user; a broken path there is
+    // not ours to report.
+    for (const userConfig of await readUserMcpConfigs()) {
+        const userEntry = userConfig.mcpServers?.[EXTENSION_PROXY_ID];
+        if (userEntry) {
+            missing.push(...(await missingArgsFor(userEntry.args, toolsDir, true)));
+        }
     }
 
     // Both scopes can name the SAME stale path — the common case right after an

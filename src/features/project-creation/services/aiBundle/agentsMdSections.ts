@@ -227,8 +227,8 @@ export function buildComponentRepositories(project: Project): string {
 }
 
 
-export function buildTryAskingClaude(project: Project): string {
-    const lines: string[] = ['## Try asking Claude'];
+export function buildTryAsking(project: Project): string {
+    const lines: string[] = ['## Try asking'];
 
     if (isEdsProject(project)) {
         lines.push('- "Update the hero block background to white and push the changes"');

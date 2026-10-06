@@ -7,6 +7,7 @@ import {
     isClaudeCliInstalled,
     type CommandProbe,
 } from '@/features/ai/claudeCliAvailability';
+import type { AgentEngine } from '@/features/ai/engine/agentEngine';
 import { refreshHomeAgentsMd } from '@/features/project-creation/services/aiBundle/homeAiContextWriter';
 import { sanitizeTemplateValue } from '@/features/project-creation/services/sanitization';
 import type { Project } from '@/types/base';
@@ -14,12 +15,13 @@ import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
 
 /**
- * The AI engine — which AI tool Demo Builder launches.
+ * The AI engine — which agent Demo Builder launches.
  *
- * Today Claude Code is the only supported engine. The type is kept so a future
- * engine (Codex, etc.) can be added without restructuring the launch path.
+ * Defined by the engine seam (`features/ai/engine/agentEngine`), which is the one
+ * place an engine is named. Re-exported here for the launch path's existing
+ * callers; the launch itself stops being Claude-only in AI-12 step 08.
  */
-export type Engine = 'claude-code';
+export type Engine = AgentEngine;
 
 /**
  * globalState key tracking whether the soft "prompt sent to Claude; clipboard

@@ -274,7 +274,12 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // is open and that the autoAdd setting is the SC's to turn on. Same unreleased version
 // (ADR-024): AGENTS.md says render-pdp writes the real SKU into each product page and that
 // custom blocks link to products with getProductLink.
-export const AI_CONTEXT_VERSION = 37;
+// v38 (2026-10-06): the bundle stops naming one agent (Copilot support, AI-12 step 02).
+// "Try asking Claude" became "Try asking", and the tool-servers paragraph no longer tells
+// the agent to reach for `ToolSearch` with an `mcp__server__` prefix — Claude Code's
+// mechanism; Copilot spells an MCP tool `server-tool`. Existing projects only get the
+// neutral text because of this bump.
+export const AI_CONTEXT_VERSION = 38;
 
 /**
  * Component IDs for standardized component instance access

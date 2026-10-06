@@ -1,4 +1,5 @@
 import * as fsPromises from 'fs/promises';
+import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { ConfigureCommand } from './configure';
@@ -258,7 +259,8 @@ export class CommandManager {
         // Open in Claude Code (CLI) — terminal launch, always. The URI-handler surface
         // was retired (ADR-019), and with it `demoBuilder.ai.harness`, which this comment
         // named as the pathway for months after the setting stopped existing.
-        // `demoBuilder.ai.engine` selects the tool; `'claude-code'` is its only value.
+        // `demoBuilder.ai.engine` names the agent (features/ai/engine/agentEngine); this
+        // launch still opens Claude Code only until AI-12 step 08 routes it by engine.
         // The executor is resolved per call: commands are built at activation, and
         // asking for a service then would pin whatever existed at that moment.
         const openInClaude = new OpenInClaudeCommand(this.context, this.stateManager, this.logger, {
@@ -476,13 +478,14 @@ export class CommandManager {
         // without an open project). Per-project .mcp.json remains the default.
         this.registerCommand('demoBuilder.registerGlobalMcp', async () => {
             try {
-                const configPath = await registerGlobalMcp(
+                const written = await registerGlobalMcp(
                     path.join(this.context.extensionPath, 'dist'),
                 );
-                this.logger.info(`[MCP] global registration written to ${configPath}`);
+                this.logger.info(`[MCP] global registration written to ${written.join(', ')}`);
+                const files = written.map((file) => file.replace(os.homedir(), '~')).join(' and ');
                 void vscode.window.showInformationMessage(
-                    'Demo Builder MCP registered globally in ~/.claude.json. ' +
-                        'Claude Code can now reach a running Demo Builder window from any directory.',
+                    `Demo Builder MCP registered globally in ${files}. ` +
+                        'Your agent can now reach a running Demo Builder window from any directory.',
                 );
             } catch (error) {
                 this.logger.error('[MCP] global registration failed', error as Error);

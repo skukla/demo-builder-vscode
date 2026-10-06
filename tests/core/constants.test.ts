@@ -133,8 +133,9 @@ describe('AI_CONTEXT_VERSION', () => {
     // v36: the author-commerce-data skill (AI-10). Without the bump, existing projects
     // never receive it.
     // v37: category pages are written at storefront setup (EDS-24); two skills say so.
-    it('is 37 (category pages and the catalog menu come from storefront setup)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(37);
+    // v38: the bundle stops naming one agent (Copilot support).
+    it('is 38 (the bundle stops naming one agent)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(38);
     });
 });
 
