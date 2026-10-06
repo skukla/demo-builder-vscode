@@ -129,7 +129,8 @@ describe('configGenerator — environment fork and failure reporting', () => {
                 storeCode: 'citisignal_store',
                 websiteCode: 'citisignal',
                 customerGroup: 'group-hash',
-                aemAssetsEnabled: false,
+                // Never saved, so the catalog default.
+                aemAssetsEnabled: true,
             });
         });
 
@@ -212,7 +213,7 @@ describe('configGenerator — environment fork and failure reporting', () => {
         });
     });
 
-    describe('aemAssetsEnabled is a strict string comparison', () => {
+    describe('aemAssetsEnabled: the saved value, else the catalog default', () => {
         it('is true only for the exact string "true"', () => {
             const params = extractConfigParamsFromConfigs({
                 'eds-storefront': { AEM_ASSETS_ENABLED: 'true' },
@@ -229,8 +230,26 @@ describe('configGenerator — environment fork and failure reporting', () => {
             expect(params.aemAssetsEnabled).toBe(false);
         });
 
-        it('is false when the flag is absent entirely', () => {
+        // REGRESSION (JustRite, 2026-10-06): the catalog default became "true" in
+        // a578893d6 and the .env honoured it, but this read only saved values, so
+        // a project that never touched the setting published
+        // `commerce-assets-enabled: false`. The storefront then appended
+        // Commerce resize params to AEM delivery URLs, and AEM answered 400 —
+        // every product image broken while Configure showed "Enabled".
+        it('takes the catalog default when the flag was never saved', () => {
             const params = extractConfigParamsFromConfigs({ 'eds-storefront': {} });
+
+            expect(params.aemAssetsEnabled).toBe(true);
+        });
+
+        it('takes the catalog default with no component configs at all', () => {
+            expect(extractConfigParamsFromConfigs(undefined).aemAssetsEnabled).toBe(true);
+        });
+
+        it('accepts a saved boolean as well as the string', () => {
+            const params = extractConfigParamsFromConfigs({
+                'eds-storefront': { AEM_ASSETS_ENABLED: false },
+            });
 
             expect(params.aemAssetsEnabled).toBe(false);
         });

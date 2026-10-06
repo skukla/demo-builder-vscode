@@ -320,7 +320,13 @@ export function extractConfigParamsFromConfigs(
         customerGroup: config[isAccs ? ACCS_CUSTOMER_GROUP : PAAS_CUSTOMER_GROUP] as
             | string
             | undefined,
-        aemAssetsEnabled: config.AEM_ASSETS_ENABLED === 'true',
+        // The saved value, else the catalog default — the same order the .env
+        // generator uses. Reading only saved values shipped `false` to every
+        // project that never touched the setting, after the catalog default
+        // became "true" (a578893d6), while its .env and Configure said enabled.
+        aemAssetsEnabled:
+            String(config.AEM_ASSETS_ENABLED ?? componentsConfig.envVars.AEM_ASSETS_ENABLED.default) ===
+            'true',
     };
 }
 
