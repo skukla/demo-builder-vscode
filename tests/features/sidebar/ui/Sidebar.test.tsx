@@ -208,6 +208,26 @@ describe('Sidebar', () => {
             });
         });
 
+        it('orders the Chat menu Continue, earlier chat, New — the two ways back together', () => {
+            renderWithProvider(
+                <Sidebar
+                    context={createProjectContext()}
+                    onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
+                    onOpenAiChat={jest.fn()}
+                    onShowPrompts={jest.fn()}
+                    onNewAiChat={jest.fn()}
+                    onPickAiChat={jest.fn()}
+                />
+            );
+
+            expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+                'Continue chat',
+                'Pick an earlier chat',
+                'New chat',
+            ]);
+        });
+
         it('offers a way back to an EARLIER chat when onPickAiChat is given', () => {
             // AI-4b: a third way into the same chat, so it joins the Chat menu
             // rather than becoming a tile (AiZone's docstring records why).
