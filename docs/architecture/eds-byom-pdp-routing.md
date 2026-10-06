@@ -265,6 +265,8 @@ The PDP URL is `/products/{urlKey}/{sku}` with both segments cleaned by `sanitiz
 
 **SC guidance**: any SKU works; the URL shows the cleaned form. Custom blocks that link to PDPs must build the href with `getProductLink(urlKey, sku)` — a hand-built link keeps case and punctuation and misses the page. Full rationale in [ADR-024](adr/024-pdp-sku-in-the-page.md).
 
+**The overlay request carries the suffix.** The overlay is registered with `suffix: ".html"`, so Helix asks `render-pdp` for `/products/{urlKey}/{sku}.html`, never the bare path. `parsePdpPath` strips it. The first ADR-024 deploy did not, the SKU segment cleaned to `…-html`, no request ever matched its canonical path, and the JustRite reset's pre-warm went 0/49 (2026-10-06, fixed in `accs-discovery-service` `8035199`). A `render-pdp` test that calls the bare path is testing a request Helix never sends.
+
 **If this ever changes** (the URL-key lookup stops resolving, e.g. a catalog whose search index cannot filter on `url_key`): `render-pdp` falls back to the SKU lookup, which finds plain SKUs only; pages for SKUs Helix had to clean are then served without the tag and render empty. Check the lookup before anything else.
 
 ### 5. One overlay per base content — and it is bound to the content, not the site

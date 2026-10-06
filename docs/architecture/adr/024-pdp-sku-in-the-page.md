@@ -112,6 +112,12 @@ the URL fallback was the only source, and the fallback is lossy.
   Those links keep working through the smart-404 redirect, one hop slower; a
   storefront reset restores canonical `commerce.js` and its links point straight
   at the canonical path.
+- **Added demos keep their source's code.** A demo built on someone else's
+  repository (JustRite, from `kmanns/justrite`) resets to THAT repository's
+  `commerce.js`, encoder included — the reset restores the source faithfully and
+  no patch runs over it. Its `_HH` links keep landing through the smart-404
+  redirect until the source repository drops the encoder; plain SKUs are
+  unaffected, since the encoder leaves `[a-z0-9-]` alone.
 - **SCs** no longer need clean SKUs. Any SKU works; the URL shows the cleaned
   form.
 - **Custom blocks** that link to a product page must call
