@@ -77,8 +77,8 @@ describe('ActionGrid', () => {
 
     describe('Labelled rows (owner, 2026-10-06)', () => {
         it.each([
-            ['a non-EDS', () => defaultProps, ['Open', 'Build', 'Share', 'Consoles']],
-            ['an EDS', () => edsProps, ['Open', 'Storefront', 'Build', 'Share', 'Consoles']],
+            ['a non-EDS', () => defaultProps, ['Open', 'Build', 'Share']],
+            ['an EDS', () => edsProps, ['Open', 'Storefront', 'Build', 'Share']],
         ])('gives %s project one headed row per job, in order', (_label, props, expected) => {
             render(<ActionGrid {...props()} />);
 
@@ -91,7 +91,6 @@ describe('ActionGrid', () => {
             ['open', 'Open'],
             ['build', 'Build'],
             ['share', 'Share'],
-            ['consoles', 'Consoles'],
         ])('names the %s row by its heading, so it is announced as a group', (zone, title) => {
             const { container } = render(<ActionGrid {...defaultProps} />);
 
@@ -134,14 +133,23 @@ describe('ActionGrid', () => {
             expect(within(getZone(container, 'build')).queryByText('Integrations')).not.toBeInTheDocument();
         });
 
-        it('lists AEM Assets and Dev Console under Consoles, last, so the Open row stays inside the content band', () => {
-            const { container } = render(<ActionGrid {...edsProps} hasAdobeContext />);
+        it('puts AEM Assets in Build after Datapacks, and nothing beside the Open cards', () => {
+            const { container } = render(<ActionGrid {...edsProps} hasAdobeContext dataInstallerAvailable />);
 
-            expect(
-                Array.from(getZone(container, 'consoles').querySelectorAll('.icon-label')).map((n) => n.textContent)
-            ).toEqual(['AEM Assets', 'Dev Console']);
-            expect(within(getZone(container, 'open')).queryByText('AEM Assets')).not.toBeInTheDocument();
-            expect(within(getZone(container, 'open')).queryByText('Dev Console')).not.toBeInTheDocument();
+            const build = Array.from(getZone(container, 'build').querySelectorAll('.icon-label')).map(
+                (n) => n.textContent
+            );
+            expect(build.slice(build.indexOf('Datapacks'), build.indexOf('Datapacks') + 2)).toEqual([
+                'Datapacks',
+                'AEM Assets',
+            ]);
+            expect(getZone(container, 'open').querySelector('.dashboard-compact-list')).toBeNull();
+        });
+
+        it('has no Dev Console on the dashboard (each integration card opens its own workspace)', () => {
+            render(<ActionGrid {...edsProps} hasAdobeContext />);
+
+            expect(screen.queryByText('Dev Console')).not.toBeInTheDocument();
         });
 
         it('names a card by its title alone', () => {
@@ -156,20 +164,17 @@ describe('ActionGrid', () => {
             const compact = Array.from(
                 container.querySelectorAll('.dashboard-zone-section--compact')
             ).map((n) => n.getAttribute('data-zone'));
-            expect(compact).toEqual(['storefront', 'build', 'share', 'consoles']);
+            expect(compact).toEqual(['storefront', 'build', 'share']);
             expect(getZone(container, 'open').className).not.toContain('--compact');
         });
 
-        it.each([
-            ['AEM Assets', 'handleOpenAemAssets'],
-            ['Dev Console', 'handleOpenDevConsole'],
-        ] as const)('runs its handler when %s is pressed', async (label, prop) => {
+        it('runs its handler when AEM Assets is pressed', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             render(<ActionGrid {...defaultProps} />);
 
-            await user.click(screen.getByText(label));
+            await user.click(screen.getByText('AEM Assets'));
 
-            expect(defaultProps[prop]).toHaveBeenCalled();
+            expect(defaultProps.handleOpenAemAssets).toHaveBeenCalled();
         });
 
         it('should place Start in the Open row when not running (non-EDS)', () => {

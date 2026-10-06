@@ -16,15 +16,20 @@
  *  - Storefront (EDS only): keeping the site itself in shape. Republish (the
  *    remedy carrying the drift dot), Sync Storefront, Refresh Blocks, Site Access.
  *  - Build: what the demo contains. Edit (what it HAS), Configure (their
- *    values), Datapacks, then — set apart — Reset and Delete.
+ *    values), Datapacks and AEM Assets (the products, then their images), then
+ *    — set apart — Reset and Delete.
  *  - Share: moving a demo between people. Export, Save as Package (EDS),
  *    Change Source (only for a project built on an added demo).
- *  - Consoles: the Adobe web consoles behind the demo, AEM Assets and Dev
- *    Console. They sat beside the Open cards until Integrations made four cards
- *    and the list ran past the content band; as the fourth list it lines up
- *    under the fourth card.
  *
- * Storefront, Build, Share and Consoles are compact lists, where a status dot sits
+ * AEM Assets and Dev Console sat beside the Open cards until Integrations made
+ * a fourth card and they ran past the content band (owner, 2026-10-06). They
+ * were never one job: AEM Assets prepares demo data (images for SKUs), so it
+ * joined Datapacks in Build; Dev Console shows how an integration works, which
+ * each integration card's Open already does at THAT integration's workspace —
+ * the dashboard link reached only the project's main one — so it left the
+ * dashboard.
+ *
+ * Storefront, Build and Share are compact lists, where a status dot sits
  * beside the label with its word ("Needed", "Error") rather than in a corner.
  * An Open card with a status shows the dot and word as its second line, in
  * place of its description.
@@ -84,11 +89,11 @@
 
 import Delete from '@spectrum-icons/workflow/Delete';
 import Edit from '@spectrum-icons/workflow/Edit';
+import ImageAlbum from '@spectrum-icons/workflow/ImageAlbum';
 import Revert from '@spectrum-icons/workflow/Revert';
 import Settings from '@spectrum-icons/workflow/Settings';
 import React from 'react';
 import type { MeshStatus, StatusDisplay } from '../hooks/useDashboardStatus';
-import { ConsolesZone } from './ConsolesZone';
 import { DashboardTile } from './DashboardTile';
 import { DashboardZone } from './DashboardZone';
 import { DataInstallerTile } from './DataInstallerTile';
@@ -169,8 +174,6 @@ export interface ActionGridProps {
     handleRepublishContent?: () => void;
     /** Handler for Configure button */
     handleConfigure: () => void;
-    /** Handler for the Dev Console tile */
-    handleOpenDevConsole: () => void;
     /**
      * Handler for the AEM Assets tile (EDS-21). Always offered: the
      * bound AEM is a setting the webview cannot read, so the host resolves it
@@ -267,12 +270,14 @@ function BuildZone({
     dataInstallerAvailable,
     handleEditProject,
     handleConfigure,
+    handleOpenAemAssets,
     handleResetProject,
     handleDeleteProject,
 }: {
     canEdit: boolean;
     isMeshActionDisabled: boolean;
     dataInstallerAvailable?: boolean;
+    handleOpenAemAssets: () => void;
     handleEditProject?: () => void;
     handleConfigure: () => void;
     handleResetProject: () => void;
@@ -291,6 +296,17 @@ function BuildZone({
 
             {/* Datapacks — the global catalog, opened beside the dashboard. */}
             {dataInstallerAvailable && <DataInstallerTile />}
+
+            {/* AEM Assets (EDS-21) — where the SC gives the demo's products their
+                images. Every project type: the bound AEM is a Demo Builder
+                setting, not a property of the project, and the host offers the
+                setting when none is bound. */}
+            <DashboardTile
+                label="AEM Assets"
+                icon={<ImageAlbum size="L" />}
+                onPress={handleOpenAemAssets}
+                tooltip="Open the AEM environment your storefronts use for images and assets"
+            />
 
             {/* Reset and Delete — the two rare, destructive actions, last, and
                 set apart by a gap. Each opens its own confirmation, which is the
@@ -340,7 +356,6 @@ export function ActionGrid({
     handleRefreshBlockLibrary,
     handleRepublishContent,
     handleConfigure,
-    handleOpenDevConsole,
     handleOpenAemAssets,
     handleOpenSiteAccess,
     handleEditProject,
@@ -410,6 +425,7 @@ export function ActionGrid({
                 dataInstallerAvailable={dataInstallerAvailable}
                 handleEditProject={handleEditProject}
                 handleConfigure={handleConfigure}
+                handleOpenAemAssets={handleOpenAemAssets}
                 handleResetProject={handleResetProject}
                 handleDeleteProject={handleDeleteProject}
             />
@@ -418,10 +434,6 @@ export function ActionGrid({
                 handleExportProject={handleExportProject}
                 handleSaveDemoPackage={handleSaveDemoPackage}
                 handleChangeDemoSource={handleChangeDemoSource}
-            />
-            <ConsolesZone
-                handleOpenAemAssets={handleOpenAemAssets}
-                handleOpenDevConsole={handleOpenDevConsole}
             />
             </div>
         </div>

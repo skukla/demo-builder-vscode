@@ -96,7 +96,6 @@ describe('useDashboardActions', () => {
             expect(result.current.handleStopDemo).toBeDefined();
             expect(result.current.handleOpenBrowser).toBeDefined();
             expect(result.current.handleConfigure).toBeDefined();
-            expect(result.current.handleOpenDevConsole).toBeDefined();
             expect(result.current.handleNavigateBack).toBeDefined();
             expect(result.current.handleReAuthenticate).toBeDefined();
             expect(result.current.handleEditProject).toBeDefined();
@@ -109,7 +108,6 @@ describe('useDashboardActions', () => {
             expect(typeof result.current.handleStopDemo).toBe('function');
             expect(typeof result.current.handleOpenBrowser).toBe('function');
             expect(typeof result.current.handleConfigure).toBe('function');
-            expect(typeof result.current.handleOpenDevConsole).toBe('function');
             expect(typeof result.current.handleNavigateBack).toBe('function');
             expect(typeof result.current.handleReAuthenticate).toBe('function');
         });
@@ -188,16 +186,6 @@ describe('useDashboardActions', () => {
             });
 
             expect(mockPostMessage).toHaveBeenCalledWith('configure');
-        });
-
-        it('should send openDevConsole message', () => {
-            const { result } = renderActionsHook();
-
-            act(() => {
-                result.current.handleOpenDevConsole();
-            });
-
-            expect(mockPostMessage).toHaveBeenCalledWith('openDevConsole');
         });
 
         it('should send openAemAssets message (EDS-21)', () => {
@@ -480,7 +468,6 @@ describe('useDashboardActions', () => {
             expect(result.current.handleStartDemo).toBe(initialHandlers.handleStartDemo);
             expect(result.current.handleStopDemo).toBe(initialHandlers.handleStopDemo);
             expect(result.current.handleConfigure).toBe(initialHandlers.handleConfigure);
-            expect(result.current.handleOpenDevConsole).toBe(initialHandlers.handleOpenDevConsole);
             expect(result.current.handleOpenAemAssets).toBe(initialHandlers.handleOpenAemAssets);
             expect(result.current.handleNavigateBack).toBe(initialHandlers.handleNavigateBack);
             expect(result.current.handleReAuthenticate).toBe(initialHandlers.handleReAuthenticate);

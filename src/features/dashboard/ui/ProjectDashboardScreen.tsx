@@ -151,7 +151,6 @@ export function ProjectDashboardScreen({
         handleOpenAdminPanel,
         handleConfigure,
         handleEditProject,
-        handleOpenDevConsole,
         handleOpenAemAssets,
         handleOpenSiteAccess,
         handleRestartDemo,
@@ -297,7 +296,6 @@ export function ProjectDashboardScreen({
                                         isEdsStable ? handleRepublishContent : undefined
                                     }
                                     handleConfigure={handleConfigure}
-                                    handleOpenDevConsole={handleOpenDevConsole}
                                     handleOpenAemAssets={handleOpenAemAssets}
                                     handleOpenSiteAccess={isEdsStable ? handleOpenSiteAccess : undefined}
                                     handleEditProject={handleEditProject}

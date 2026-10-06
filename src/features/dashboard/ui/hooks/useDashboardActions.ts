@@ -55,8 +55,6 @@ export interface UseDashboardActionsReturn {
     handleConfigure: () => void;
     /** Open the wizard in edit mode for the current project */
     handleEditProject: () => void;
-    /** Open Adobe Developer Console */
-    handleOpenDevConsole: () => void;
     /** Open the bound AEM author in Assets View (URL resolved backend-side from the setting) */
     handleOpenAemAssets: () => void;
     /** Opens the Site access webview (EDS storefronts). */
@@ -140,10 +138,6 @@ export function useDashboardActions({
         webviewClient.postMessage('editProject');
     }, []);
 
-    const handleOpenDevConsole = useCallback(() => {
-        webviewClient.postMessage('openDevConsole');
-    }, []);
-
     const handleOpenAemAssets = useCallback(() => {
         webviewClient.postMessage('openAemAssets');
     }, []);
@@ -184,7 +178,6 @@ export function useDashboardActions({
         handleOpenAdminPanel,
         handleConfigure,
         handleEditProject,
-        handleOpenDevConsole,
         handleOpenAemAssets,
         handleOpenSiteAccess,
         handleNavigateBack,

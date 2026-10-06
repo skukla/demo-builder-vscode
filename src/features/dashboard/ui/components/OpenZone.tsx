@@ -62,9 +62,8 @@ const NOOP = (): void => undefined;
 /**
  * The Open zone — where the SC goes. The cards are the in-demo destinations (see
  * it as a customer, author it, manage it as an admin, its integrations), each
- * saying in one line where it leads. The setup-time consoles (AEM Assets, Dev
- * Console) are the Consoles list below. Every tile opens a surface; none
- * changes the project.
+ * saying in one line where it leads. Every tile opens a surface; none changes
+ * the project.
  *
  * Extracted whole: its conditionals were most of ActionGrid's complexity budget
  * (eslint counts every `&&`/`?:`), and a zone is a cohesive unit.

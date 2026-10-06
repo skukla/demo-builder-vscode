@@ -134,7 +134,7 @@
 }
 
 /* Two tiers: the Open zone's big tiles on top, then the secondary groups
-   (Storefront, Build, Share, Consoles) side by side as compact lists beneath it. A clear
+   (Storefront, Build, Share) side by side as compact lists beneath it. A clear
    first place to look is what makes eighteen actions stop feeling like a wall. */
 .dashboard-zones {
     display: flex;
@@ -151,13 +151,13 @@
 }
 
 /* Each compact group is exactly one card wide, so on a wide panel the lists
-   sit as columns under the Open cards — four over four on an EDS project, which
-   is exactly the 960px content band whose right edge "All Projects" marks. */
+   sit as columns under the Open cards. Four cards are exactly the 960px content
+   band whose right edge "All Projects" marks; nothing may sit beside them. */
 .dashboard-zone-section--compact {
     width: var(--dashboard-card-width);
 }
 
-/* One labelled group per job (Open, Storefront, Build, Share, Consoles), laid out by
+/* One labelled group per job (Open, Storefront, Build, Share), laid out by
    .dashboard-zones. The headings came back on 2026-10-06: they were dropped on
    2026-07-09 when everything fit one strip, and the actions no longer do. */
 .dashboard-zone-section {
