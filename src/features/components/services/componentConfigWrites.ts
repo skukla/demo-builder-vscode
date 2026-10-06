@@ -17,7 +17,7 @@
  */
 
 import { BACKEND_OWNED_SCOPE_KEYS } from '@/core/config/envVarKeys';
-import type { ComponentConfigs } from '@/types/webview';
+import type { ComponentConfig, ComponentConfigs } from '@/types/webview';
 
 /** The shape both surfaces agree on: a field and the components that declare it. */
 export interface FieldRef {
@@ -92,7 +92,7 @@ export function findFieldValue(
 export function writeToComponents(
     configs: ComponentConfigs,
     componentIds: string[],
-    values: Record<string, string | boolean>,
+    values: ComponentConfig,
 ): ComponentConfigs {
     const next = { ...configs };
     for (const componentId of componentIds) {

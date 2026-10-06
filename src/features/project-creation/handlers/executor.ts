@@ -45,6 +45,7 @@ import { generateAIContextFiles } from '@/features/project-creation/services/aiB
 import { executeCatalogMenuPhase } from '@/features/project-creation/services/catalogMenuPhase';
 import { executeCatalogPrewarmPhase } from '@/features/project-creation/services/catalogPrewarmPhase';
 import { cloneAllComponents, installAllComponents } from '@/features/project-creation/services/componentInstallationOrchestrator';
+import { fillCreationDefaults } from '@/features/project-creation/services/creationConfigDefaults';
 import { finalizeProject, generateEnvironmentFiles, sendCompletionAndCleanup } from '@/features/project-creation/services/projectFinalizationService';
 import { HandlerContext } from '@/types/handlers';
 import { isEdsStackId } from '@/types/typeGuards';
@@ -282,6 +283,11 @@ export async function executeProjectCreation(
 
     const registryManager = componentRegistryFrom(context);
     const registry = await registryManager.loadRegistry();
+
+    // The defaults the wizard's settings screen fills on load, filled here for
+    // every door — an agent's create_project never mounts that screen. Absent
+    // keys only: a value the wizard saved, or one the user cleared, stands.
+    project.componentConfigs = fillCreationDefaults(typedConfig, registry, project.componentConfigs ?? {});
 
     // Create unified setup context (eliminates parameter threading)
     // Composes HandlerContext to avoid duplicating logger and other common dependencies

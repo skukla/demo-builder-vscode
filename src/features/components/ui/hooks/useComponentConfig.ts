@@ -9,6 +9,10 @@ import {
     writeFieldValue,
     writeToComponents,
 } from '@/features/components/services/componentConfigWrites';
+import {
+    applyFieldDefaults,
+    collectConfigFields,
+} from '@/features/components/services/componentConfigDefaults';
 import { getStackById } from '@/features/components/services/demoPackageLoader';
 import { deriveGraphqlEndpoint } from '@/features/components/services/envVarHelpers';
 import {
@@ -100,61 +104,6 @@ let registryInFlight: Promise<ComponentsData> | undefined;
 export function resetComponentRegistryCache(): void {
     registryCache = undefined;
     registryInFlight = undefined;
-}
-
-/**
- * Apply field defaults and brand-specific package defaults to component configs.
- *
- * Writes through `writeToComponents`, so `prevConfigs` and every per-component object
- * inside it are left untouched — the caller's object is not rewritten in place.
- */
-function applyFieldDefaults(
-    prevConfigs: ComponentConfigs,
-    groups: ServiceGroup[],
-    packageConfigDefaults: Record<string, string> | undefined,
-    backendId: string | undefined,
-): ComponentConfigs {
-    let newConfigs = prevConfigs;
-    let hasChanges = false;
-    const packageDefaults = packageConfigDefaults || {};
-
-    groups.forEach((group) => {
-        group.fields.forEach((field) => {
-            const packageValue = packageDefaults[field.key];
-            const defaultValue = packageValue ?? field.default;
-            if (defaultValue === undefined || defaultValue === '') return;
-
-            // Both package and field defaults only fill a BLANK — neither may override
-            // a stored value. Package defaults used to override, which stomped the
-            // user's saved Business Structure scope (e.g. their selected website) back
-            // to the brand's codes every time the wizard loaded a project (2026-08-13,
-            // leah-b2b-demo). Restamping brand codes on a real package SWITCH is
-            // WelcomeStep's handlePackageSelect, which clears the old package's keys
-            // so this fill applies the new ones. The blank check is per component
-            // because STORAGE is per component — not because divergent values are
-            // wanted. Every write path fans one field's value to all its components,
-            // so two copies disagreeing is a defect, never a feature (see
-            // resolveWriteTargets).
-            //
-            // "Blank" is undefined or '', NOT falsy. A bare truthiness check sat
-            // here and re-applied the default over a stored `false` or `0` on every
-            // mount — an unticked checkbox re-ticking itself, a numeric field
-            // refusing to hold zero. This is the same defect the validation effect
-            // below already carries a note about, twenty lines apart, and the same
-            // rule `findFieldValue` uses: undefined and '' are absent, everything
-            // else is present.
-            const targets = resolveWriteTargets(field, backendId).filter((componentId) => {
-                const stored = newConfigs[componentId]?.[field.key];
-                return stored === undefined || stored === '';
-            });
-            if (targets.length === 0) return;
-
-            newConfigs = writeToComponents(newConfigs, targets, { [field.key]: defaultValue });
-            hasChanges = true;
-        });
-    });
-
-    return hasChanges ? newConfigs : prevConfigs;
 }
 
 export function useComponentConfig({
@@ -269,60 +218,18 @@ export function useComponentConfig({
 
     // Build service groups from selected components
     const serviceGroups = useMemo(() => {
-        const fieldMap = new Map<string, UniqueField>();
-        const envVarDefs = componentsData.envVars || {};
         const stack = selectedStack ? getStackById(selectedStack) : undefined;
-
-        selectedComponents.forEach(({ id, data }) => {
-            const addField = (envVarKey: string) => {
-                // Skip MESH_ENDPOINT - auto-configured during project creation
-                if (envVarKey === 'MESH_ENDPOINT') return;
-
-                const envVarDef = envVarDefs[envVarKey];
-                if (envVarDef) {
-                    if (!fieldMap.has(envVarKey)) {
-                        fieldMap.set(envVarKey, {
-                            ...envVarDef,
-                            key: envVarKey,
-                            componentIds: [id],
-                        });
-                    } else {
-                        const existing = fieldMap.get(envVarKey);
-                        if (existing && !existing.componentIds.includes(id)) {
-                            existing.componentIds.push(id);
-                        }
-                    }
-                }
-            };
-
-            // Use centralized env var resolution (includes component vars + service vars)
-            // Note: Can't use resolveComponentEnvVars() here directly because we're in browser context
-            // and need to use componentsData (loaded via vscode.request), not ComponentRegistryManager
-
-            // Add component's own env vars
-            data.configuration?.requiredEnvVars?.forEach(addField);
-            data.configuration?.optionalEnvVars?.forEach(addField);
-
-            // Add backend-specific service env vars using inline resolution
-            // (This logic mirrors resolveComponentEnvVars but uses browser-loaded componentsData)
-            if (data.configuration?.requiredServices && stack?.backend) {
-                const backendId = stack.backend;
-                data.configuration.requiredServices.forEach((serviceId) => {
-                    const serviceDef = componentsData.services?.[serviceId];
-                    if (serviceDef?.backendSpecific && serviceDef.requiredEnvVarsByBackend) {
-                        const backendSpecificVars = serviceDef.requiredEnvVarsByBackend[backendId];
-                        if (backendSpecificVars) {
-                            backendSpecificVars.forEach(addField);
-                        }
-                    } else if (serviceDef?.requiredEnvVars) {
-                        serviceDef.requiredEnvVars.forEach(addField);
-                    }
-                });
-            }
-        });
+        // The shared rule: creation applies the same one headlessly, so a
+        // project made by an agent gets the defaults this screen would fill.
+        const fields: UniqueField[] = collectConfigFields(
+            selectedComponents,
+            componentsData.envVars || {},
+            componentsData.services,
+            stack?.backend,
+        );
 
         const groups: Record<string, UniqueField[]> = {};
-        fieldMap.forEach((field) => {
+        fields.forEach((field) => {
             const metadata = field as UniqueField & { group?: string };
             const groupKey = metadata.group || 'other';
             if (!groups[groupKey]) groups[groupKey] = [];
@@ -343,7 +250,12 @@ export function useComponentConfig({
         if (serviceGroups.length === 0) return;
 
         setComponentConfigs((prevConfigs) =>
-            applyFieldDefaults(prevConfigs, serviceGroups, packageConfigDefaults, backendId),
+            applyFieldDefaults(
+                prevConfigs,
+                serviceGroups.flatMap((group) => group.fields),
+                packageConfigDefaults,
+                backendId,
+            ),
         );
     }, [serviceGroups, packageConfigDefaults, backendId]);
 
