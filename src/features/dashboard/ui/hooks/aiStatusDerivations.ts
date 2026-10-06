@@ -119,8 +119,8 @@ export function deriveAiReadyState(inputs: AiBadgeInputs): AiReadyState {
     // The files are fine, but the chat cannot start without the command-line tool.
     // Green here was the field report: Claude Desktop installed, no `claude`, badge
     // green, and the click ended at `command not found` (AI-4a). Absent = not asked.
-    if (verifyResult.claudeCli?.installed === false) {
-        return { label: 'AI', color: 'yellow', text: 'Claude Code not installed' };
+    if (verifyResult.agentCli?.installed === false) {
+        return { label: 'AI', color: 'yellow', text: `${verifyResult.agentCli.name} not installed` };
     }
 
     const inv = verifyResult.inventory ?? {};

@@ -45,7 +45,12 @@ describe('describeEngine', () => {
             displayName: 'Claude Code',
             globalMcpConfigPath: '.claude.json',
             hookFormat: 'claude',
-            launch: { kind: 'terminal', command: 'claude' },
+            launch: {
+                kind: 'terminal',
+                command: 'claude',
+                terminalName: 'Claude Code',
+                installUrl: 'https://claude.com/code',
+            },
         });
     });
 
@@ -55,7 +60,13 @@ describe('describeEngine', () => {
             displayName: 'Copilot CLI',
             globalMcpConfigPath: '.copilot/mcp-config.json',
             hookFormat: 'copilot',
-            launch: { kind: 'terminal', command: 'copilot' },
+            launch: {
+                kind: 'terminal',
+                command: 'copilot',
+                terminalName: 'Copilot',
+                installUrl:
+                    'https://docs.github.com/en/copilot/how-tos/copilot-cli/set-up-copilot-cli/install-copilot-cli',
+            },
         });
     });
 

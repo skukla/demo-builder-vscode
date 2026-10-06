@@ -56,11 +56,11 @@ export interface DashboardStatusHeaderProps {
 
 /**
  * Whether the AI badge offers "Regenerate AI files". Red and yellow do, except
- * the yellow that means Claude Code is not installed: regenerating files cannot
- * install a command-line tool (AI-4a).
+ * the yellow that means the agent's CLI is not installed: regenerating files
+ * cannot install a command-line tool (AI-4a).
  */
 function offersRegenerate(aiReady: AiReadyState): boolean {
-    if (aiReady.text === 'Claude Code not installed') return false;
+    if (aiReady.text.endsWith(' not installed')) return false;
     return aiReady.color === 'red' || aiReady.color === 'yellow';
 }
 

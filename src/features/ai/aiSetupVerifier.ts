@@ -50,7 +50,7 @@ export interface AiVerificationResult {
      * it adds this from the extension's command executor (AI-4a). Absent means
      * not asked, which the badge treats as installed.
      */
-    claudeCli?: { installed: boolean };
+    agentCli?: { installed: boolean; name: string };
 }
 
 /** Cheap existence probe (access-based; false on any error). */

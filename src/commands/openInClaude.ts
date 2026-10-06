@@ -2,12 +2,20 @@ import * as vscode from 'vscode';
 import { hasConversation as hasClaudeConversation } from './claudeSessionStore';
 import { BaseCommand } from '@/core/base/baseCommand';
 import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
+import { resolveActiveEngine } from '@/features/ai/engine/activeEngine';
+import type { CommandProbe } from '@/features/ai/engine/agentCli';
 import {
-    CLAUDE_CODE_INSTALL_URL,
-    isClaudeCliInstalled,
-    type CommandProbe,
-} from '@/features/ai/claudeCliAvailability';
-import type { AgentEngine } from '@/features/ai/engine/agentEngine';
+    AGENT_TERMINAL_NAMES,
+    type AgentEngine,
+    type AgentEngineDescriptor,
+    type TerminalLaunch,
+} from '@/features/ai/engine/agentEngine';
+import {
+    buildChatCommand,
+    buildPastChatPickerCommand,
+    type ConversationProbes,
+} from '@/features/ai/engine/chatLaunch';
+import { latestCopilotSession } from '@/features/ai/engine/copilotSessionStore';
 import { refreshHomeAgentsMd } from '@/features/project-creation/services/aiBundle/homeAiContextWriter';
 import { sanitizeTemplateValue } from '@/features/project-creation/services/sanitization';
 import type { Project } from '@/types/base';
@@ -19,44 +27,51 @@ import type { StateManager } from '@/types/state';
  *
  * Defined by the engine seam (`features/ai/engine/agentEngine`), which is the one
  * place an engine is named. Re-exported here for the launch path's existing
- * callers; the launch itself stops being Claude-only in AI-12 step 08.
+ * callers.
  */
 export type Engine = AgentEngine;
 
 /**
- * globalState key tracking whether the soft "prompt sent to Claude; clipboard
+ * globalState key tracking whether the soft "prompt sent; clipboard
  * fallback available" tip has been shown. Fires once-ever on the first prompt
  * click so the user learns the contract (auto-insert with clipboard fallback)
  * without repeated noise.
  */
 const CLIPBOARD_FALLBACK_TIP_SHOWN_KEY = 'demoBuilder.ai.clipboardFallbackTipShown';
 
-/** Terminal name displayed in the integrated terminals dropdown. */
-const TERMINAL_NAME = 'Claude Code';
-
 /** The one action on the not-installed message. */
 const HOW_TO_INSTALL = 'How to install';
 
 /**
- * Find the live "Claude Code" chat terminal, if one is open. "Live" means a
- * terminal whose name matches and whose `exitStatus` is `undefined` (the shell
- * is still running). Shared by the launch reuse path and the `isClaudeChatOpen`
- * state check so the matching logic lives in one place.
+ * Find a live agent chat terminal, if one is open. "Live" means a terminal whose
+ * name matches and whose `exitStatus` is `undefined` (the shell is still
+ * running). Shared by the launch reuse path and the `isClaudeChatOpen` state
+ * check so the matching logic lives in one place.
+ *
+ * @param names - the terminal names to accept; every engine's by default
  */
-export function findLiveClaudeTerminal(): vscode.Terminal | undefined {
+export function findLiveClaudeTerminal(
+    names: string[] = AGENT_TERMINAL_NAMES,
+): vscode.Terminal | undefined {
     return vscode.window.terminals.find(
-        (t) => t.name === TERMINAL_NAME && t.exitStatus === undefined,
+        (t) => names.includes(t.name) && t.exitStatus === undefined,
     );
 }
 
 /**
- * Whether a live Claude Code chat terminal is currently open. Backs the
- * state-aware AI icon: when no chat is open the AI menu launches the chat
+ * Whether a live agent chat terminal — of any engine — is currently open. Backs
+ * the state-aware AI icon: when no chat is open the AI menu launches the chat
  * directly instead of showing the prompt QuickPick.
  */
 export function isClaudeChatOpen(): boolean {
     return findLiveClaudeTerminal() !== undefined;
 }
+
+/** Where each engine's earlier conversations are found. */
+const CONVERSATION_PROBES: ConversationProbes = {
+    claudeHasConversation: hasClaudeConversation,
+    copilotLatestSession: latestCopilotSession,
+};
 
 /**
  * Argument shape accepted by `OpenInClaudeCommand.execute`. Supports the legacy
@@ -111,9 +126,10 @@ export function buildRehomePrefix(currentProjectName?: string): string {
 }
 
 /**
- * OpenInClaudeCommand — opens Claude Code (`claude --continue`) in a VS Code
- * integrated terminal placed as a tab in the active editor group (next to
- * Project Dashboard).
+ * OpenInClaudeCommand — opens the SC's agent chat. Which agent is decided by the
+ * engine seam (`demoBuilder.ai.engine`, AI-12): Claude Code or Copilot CLI run in a
+ * VS Code integrated terminal placed as a tab in the active editor group (next to
+ * Project Dashboard); Copilot in VS Code opens VS Code's own chat in agent mode.
  *
  * Always launches at the projects root (`resolveProjectsRoot()`), never at a
  * project subdir. This is the single "home" Chat: the VS Code window stays
@@ -136,7 +152,7 @@ export function buildRehomePrefix(currentProjectName?: string): string {
 export class OpenInClaudeCommand extends BaseCommand {
     /**
      * @param cliProbe - the extension's command executor (its `commandExists`),
-     *   asked whether `claude` is installed before anything is typed into a terminal
+     *   asked which agent CLIs are installed before anything is typed into a terminal
      */
     constructor(
         context: vscode.ExtensionContext,
@@ -148,10 +164,11 @@ export class OpenInClaudeCommand extends BaseCommand {
     }
 
     public async execute(arg?: OpenInClaudeArg): Promise<void> {
-        // Without `claude` the terminal would only say `command not found`. Say what
+        const { descriptor, installed } = await resolveActiveEngine(this.cliProbe);
+        // Without the CLI the terminal would only say `command not found`. Say what
         // is missing instead, and open nothing (AI-4a — the field report).
-        if (!(await isClaudeCliInstalled(this.cliProbe))) {
-            await this.explainMissingCli();
+        if (!installed && descriptor.launch.kind === 'terminal') {
+            await this.explainMissingCli(descriptor.displayName, descriptor.launch);
             return;
         }
 
@@ -162,7 +179,7 @@ export class OpenInClaudeCommand extends BaseCommand {
         const cwd = resolveProjectsRoot();
 
         this.logger.info(
-            `[Open in Claude] cwd=${cwd} prompt=${prompt ? 'yes' : 'no'} fresh=${fresh ? 'yes' : 'no'}`,
+            `[Open in Claude] engine=${descriptor.id} cwd=${cwd} prompt=${prompt ? 'yes' : 'no'} fresh=${fresh ? 'yes' : 'no'}`,
         );
 
         // Resolve the active project ONCE and use it for both deliveries of the
@@ -174,27 +191,69 @@ export class OpenInClaudeCommand extends BaseCommand {
         await refreshHomeAgentsMd(cwd, currentProjectName);
 
         try {
-            if (pickPast) {
-                await this.launchPastChatPicker(cwd);
+            const { launch } = descriptor;
+            if (launch.kind === 'vscode-chat') {
+                await this.openVsCodeChat(prompt, currentProjectName, fresh, pickPast);
+            } else if (pickPast) {
+                await this.launchPastChatPicker(launch, cwd);
             } else {
-                await this.launchTerminal(cwd, prompt, currentProjectName, fresh);
+                await this.launchTerminal(
+                    descriptor,
+                    launch,
+                    cwd,
+                    prompt,
+                    currentProjectName,
+                    fresh,
+                );
             }
         } catch (error) {
             this.logger.error(
                 `[Open in Claude] failed: ${error instanceof Error ? error.message : String(error)}`,
             );
             await vscode.window.showErrorMessage(
-                `Failed to open Claude Code: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                `Failed to open ${descriptor.displayName}: ${error instanceof Error ? error.message : 'Unknown error'}`,
             );
         }
     }
 
     /**
-     * Open Claude Code's own session picker (`claude --resume` with no value) so
-     * the SC can return to an EARLIER conversation, not just the most recent one
-     * `--continue` lands on (AI-4b).
+     * Copilot in VS Code: open VS Code's own chat in agent mode, the prompt already
+     * in it and run. That chat cannot be resumed by command, so a prompt always
+     * carries the re-home preamble — the chat may be a long-running one.
      *
-     * The list is Claude Code's, not ours: it owns the transcript format, so a
+     * New Chat starts a new chat session first; "pick an earlier chat" opens VS
+     * Code's agent sessions list, which is VS Code's, not ours.
+     */
+    private async openVsCodeChat(
+        prompt: string | undefined,
+        currentProjectName: string | undefined,
+        fresh: boolean,
+        pickPast: boolean,
+    ): Promise<void> {
+        if (pickPast) {
+            await vscode.commands.executeCommand('workbench.action.chat.focusAgentSessionsViewer');
+            this.logger.info('[Open in Claude] opened VS Code\'s agent sessions list');
+            return;
+        }
+        if (fresh) {
+            await vscode.commands.executeCommand('workbench.action.chat.newChat');
+        }
+        const query = prompt ? buildRehomePrefix(currentProjectName) + prompt : undefined;
+        await vscode.commands.executeCommand(
+            'workbench.action.chat.open',
+            query ? { mode: 'agent', query, isPartialQuery: false } : { mode: 'agent' },
+        );
+        this.logger.info(
+            `[Open in Claude] VS Code chat opened (agent mode, prompt=${prompt ? 'yes' : 'no'}, fresh=${fresh ? 'yes' : 'no'})`,
+        );
+    }
+
+    /**
+     * Open the agent's own session picker (`claude --resume` / `copilot --resume`
+     * with no value) so the SC can return to an EARLIER conversation, not just the
+     * most recent one a plain launch lands on (AI-4b).
+     *
+     * The list is the agent's, not ours: it owns the transcript format, so a
      * second session list here would be a second thing to keep correct. No prompt
      * rides along — the SC is choosing where to go, and whether `--resume`
      * delivers a launch-argument prompt into the session picked afterwards is
@@ -205,31 +264,34 @@ export class OpenInClaudeCommand extends BaseCommand {
      * With no transcript at all the picker has nothing to show, so say that and
      * leave the running terminal alone.
      */
-    private async launchPastChatPicker(cwd: string): Promise<void> {
-        if (!hasClaudeConversation(cwd)) {
+    private async launchPastChatPicker(launch: TerminalLaunch, cwd: string): Promise<void> {
+        const command = buildPastChatPickerCommand(launch, cwd, CONVERSATION_PROBES);
+        if (!command) {
             this.logger.info('[Open in Claude] pick an earlier chat: none exist yet');
             await vscode.window.showInformationMessage(NO_EARLIER_CHATS);
             return;
         }
         findLiveClaudeTerminal()?.dispose();
-        const terminal = this.createTerminal(TERMINAL_NAME, cwd, {
+        const terminal = this.createTerminal(launch.terminalName, cwd, {
             viewColumn: vscode.ViewColumn.Active,
         });
         terminal.show();
-        terminal.sendText('claude --resume');
-        this.logger.info('[Open in Claude] opened the earlier-chat picker (claude --resume)');
+        terminal.sendText(command);
+        this.logger.info(`[Open in Claude] opened the earlier-chat picker (${command})`);
     }
 
-    /** Tell the user Claude Code is not installed, and offer the install page. */
-    private async explainMissingCli(): Promise<void> {
-        this.logger.warn('[Open in Claude] `claude` not found — the chat was not opened');
+    /** Tell the user the agent's CLI is not installed, and offer the install page. */
+    private async explainMissingCli(displayName: string, launch: TerminalLaunch): Promise<void> {
+        this.logger.warn(
+            `[Open in Claude] \`${launch.command}\` not found — the chat was not opened`,
+        );
         const choice = await vscode.window.showWarningMessage(
-            'Claude Code (the command-line tool) is not installed, so the chat cannot open. ' +
+            `${displayName} (the command-line tool) is not installed, so the chat cannot open. ` +
                 'Install it, then try again.',
             HOW_TO_INSTALL,
         );
         if (choice === HOW_TO_INSTALL) {
-            await vscode.env.openExternal(vscode.Uri.parse(CLAUDE_CODE_INSTALL_URL));
+            await vscode.env.openExternal(vscode.Uri.parse(launch.installUrl));
         }
     }
 
@@ -256,12 +318,13 @@ export class OpenInClaudeCommand extends BaseCommand {
     }
 
     /**
-     * Launch `claude --continue` in an integrated terminal at `cwd`,
-     * reusing an existing "Claude Code" terminal if one is still alive.
+     * Launch the agent CLI in an integrated terminal at `cwd`, reusing that
+     * engine's terminal ("Claude Code", "Copilot") if one is still alive. What is
+     * typed comes from `buildChatCommand`, beside the engine seam.
      *
      * When `prompt` is provided, delivery depends on spawn vs reuse:
-     *   - Spawn: pass the prompt to `claude --continue <prompt>` as a launch
-     *     argument. Race-free — claude receives it the moment it starts, with
+     *   - Spawn: pass the prompt to the CLI (`claude --continue -- <prompt>`,
+     *     `copilot --resume <id> -i <prompt>`) as a launch argument. Race-free — claude receives it the moment it starts, with
      *     no waiting for the REPL and nothing to drop. claude runs it
      *     immediately (auto-submits).
      *   - Reuse: claude is already running and can't take a new launch arg, so
@@ -274,6 +337,8 @@ export class OpenInClaudeCommand extends BaseCommand {
      * Dashboard — not a split.
      */
     private async launchTerminal(
+        descriptor: AgentEngineDescriptor,
+        launch: TerminalLaunch,
         cwd: string,
         prompt: string | undefined,
         currentProjectName: string | undefined,
@@ -282,7 +347,7 @@ export class OpenInClaudeCommand extends BaseCommand {
         if (!cwd) {
             this.logger.error('[Open in Claude] cannot launch terminal: cwd missing');
             await vscode.window.showErrorMessage(
-                'Cannot open Claude Code: no directory is available.',
+                `Cannot open ${descriptor.displayName}: no directory is available.`,
             );
             return;
         }
@@ -294,7 +359,9 @@ export class OpenInClaudeCommand extends BaseCommand {
             this.logger.debug('[Open in Claude] prompt copied to clipboard (silent fallback)');
         }
 
-        const live = findLiveClaudeTerminal();
+        // Only this engine's terminal: pasting into another agent's chat would hand
+        // the prompt to the agent the SC did not choose.
+        const live = findLiveClaudeTerminal([launch.terminalName]);
 
         if (fresh) {
             // New Chat: retire the running conversation's terminal and fall
@@ -320,53 +387,50 @@ export class OpenInClaudeCommand extends BaseCommand {
                 // Reuse case: claude is already at its REPL (a CONTINUED conversation)
                 // — re-home it to the active project, then inject the prompt.
                 this.injectPromptViaBracketedPaste(buildRehomePrefix(currentProjectName) + prompt);
-                this.maybeShowClipboardFallbackTip();
+                this.maybeShowClipboardFallbackTip(descriptor.displayName);
             }
             return;
         }
 
         // Chat-first: open the terminal as a tab in the active editor group
         // (next to Project Dashboard), not a side split.
-        const terminal = this.createTerminal(TERMINAL_NAME, cwd, {
+        const terminal = this.createTerminal(launch.terminalName, cwd, {
             viewColumn: vscode.ViewColumn.Active,
         });
         terminal.show();
-        // Deliver the prompt as a launch argument so claude runs it on startup —
-        // no waiting for the REPL, no dropped paste. `--` marks end-of-options so
-        // a prompt that starts with a dash is taken as text, not a flag.
+        // Deliver the prompt as a launch argument so the CLI runs it on startup —
+        // no waiting for the REPL, no dropped paste.
         //
-        // Only pass `--continue` when a prior conversation exists for this cwd.
-        // `claude --continue` on cold start prints "No conversation found to
-        // continue" and exits, leaving the user with a dead terminal. The
-        // session-store probe (`claudeSessionStore.hasConversation`) checks
-        // `~/.claude/projects/<encoded-cwd>/` for any `.jsonl` transcript.
-        //
-        // `fresh` overrides it outright: a New Chat that resumed would be a new
-        // tab wearing the old conversation's context, which is the one thing it
-        // must not be.
-        const useContinue = !fresh && hasClaudeConversation(cwd);
-        const continueFlag = useContinue ? ' --continue' : '';
-        // Resuming a conversation (`--continue`) won't re-read AGENTS.md, so carry
-        // the re-home preamble. A cold start self-homes from AGENTS.md → no preamble.
-        const effectivePrompt =
-            prompt && useContinue ? buildRehomePrefix(currentProjectName) + prompt : prompt;
-        const launchCommand = effectivePrompt
-            ? `claude${continueFlag} -- ${this.quotePromptForShell(effectivePrompt)}`
-            : `claude${continueFlag}`;
-        terminal.sendText(launchCommand);
+        // Resume only when this directory has an earlier conversation: a resume
+        // with nothing to resume leaves a dead tab. `fresh` overrides it outright —
+        // a New Chat that resumed would be a new tab wearing the old
+        // conversation's context, the one thing it must not be. A resumed
+        // conversation won't re-read AGENTS.md, so its prompt carries the re-home
+        // preamble; a cold start self-homes from AGENTS.md.
+        const { line, resumed } = buildChatCommand(
+            launch,
+            cwd,
+            {
+                prompt,
+                fresh,
+                rehome: (text) => buildRehomePrefix(currentProjectName) + text,
+            },
+            CONVERSATION_PROBES,
+        );
+        terminal.sendText(line);
         this.logger.info(
-            `[Open in Claude] terminal spawned (location=editor-active, prompt=${prompt ? 'yes' : 'no'}, resume=${useContinue ? 'yes' : 'no'})`,
+            `[Open in Claude] terminal spawned (engine=${descriptor.id}, location=editor-active, prompt=${prompt ? 'yes' : 'no'}, resume=${resumed ? 'yes' : 'no'})`,
         );
 
         if (prompt) {
-            this.maybeShowClipboardFallbackTip();
+            this.maybeShowClipboardFallbackTip(descriptor.displayName);
         }
     }
 
     /**
      * Inject the prompt into the active terminal via bracketed-paste escape
      * sequences (CSI 200~ / CSI 201~). Bracketed-paste tells the receiving
-     * REPL (claude ≥ 2.1.108) that the input is pasted content — preserves
+     * REPL (claude ≥ 2.1.108, copilot) that the input is pasted content — preserves
      * multi-line and does not auto-submit. The user reviews and hits Enter.
      */
     private injectPromptViaBracketedPaste(prompt: string): void {
@@ -378,21 +442,11 @@ export class OpenInClaudeCommand extends BaseCommand {
     }
 
     /**
-     * POSIX-quote a prompt for use as a single shell argument. Wraps the whole
-     * string in single quotes and escapes any embedded single quote as `'\''`
-     * (close, escaped quote, reopen). Safe for spaces, `$`, backticks, double
-     * quotes, and newlines (all literal inside single quotes).
-     */
-    private quotePromptForShell(prompt: string): string {
-        return `'${prompt.replace(/'/g, "'\\''")}'`;
-    }
-
-    /**
      * Show the soft "prompt sent; clipboard fallback available" tip once-ever
      * so the user learns the contract without repeated notifications. Flag is
      * set BEFORE the toast shows (race-safe).
      */
-    private maybeShowClipboardFallbackTip(): void {
+    private maybeShowClipboardFallbackTip(displayName: string): void {
         const already = this.context.globalState.get<boolean>(
             CLIPBOARD_FALLBACK_TIP_SHOWN_KEY,
             false,
@@ -400,7 +454,7 @@ export class OpenInClaudeCommand extends BaseCommand {
         if (already) return;
         void this.context.globalState.update(CLIPBOARD_FALLBACK_TIP_SHOWN_KEY, true);
         void vscode.window.showInformationMessage(
-            'Prompt sent to Claude. Also on your clipboard if you need to paste.',
+            `Prompt sent to ${displayName}. Also on your clipboard if you need to paste.`,
         );
     }
 }

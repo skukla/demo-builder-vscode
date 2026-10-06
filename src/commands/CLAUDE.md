@@ -125,8 +125,11 @@ reintroduce a timed or delayed paste on spawn** — it was tried twice and alway
 cold start, because no "TUI ready" signal exists.
 
 `demoBuilder.ai.engine` names the agent (`auto`, `claude-code`, `copilot-cli`,
-`copilot-vscode`; resolved in `features/ai/engine/agentEngine.ts`). The launch here still
-opens Claude Code only until AI-12 step 08 routes it by engine.
+`copilot-vscode`; resolved in `features/ai/engine/activeEngine.ts`). `openInClaude.ts` routes
+the Chat launch by engine: Claude Code and Copilot CLI each get their own terminal
+(`claude -- '<p>'` / `copilot -i '<p>'`, command lines built in `engine/chatLaunch.ts`), and a
+live terminal is reused only for the same engine; Copilot in VS Code opens VS Code's chat in
+agent mode (`workbench.action.chat.open`). A missing CLI is named by the agent the SC chose.
 
 **Why there is no extension surface.** Launches once routed through the Claude Code
 VS Code extension's URI handler. That was retired because the handler opens a new

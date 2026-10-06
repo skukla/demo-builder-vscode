@@ -17,7 +17,8 @@
 import * as vscode from 'vscode';
 
 import { hasConversation as hasClaudeConversation } from '@/commands/claudeSessionStore';
-import type { CommandProbe } from '@/features/ai/claudeCliAvailability';
+import type { CommandProbe } from '@/features/ai/engine/agentCli';
+import type { AgentEngineSetting } from '@/features/ai/engine/agentEngine';
 import type { Project } from '@/types/base';
 import { createMockExtensionContext } from '../helpers/extensionContextFake';
 import { createMockProject as createMockProjectBase } from '../helpers/projectFake';
@@ -104,7 +105,7 @@ export function makeOpenInClaudeProject(overrides: Partial<Project> = {}): Parti
  */
 export function setupVscodeMocks(opts: {
     /** Engine setting. Defaults to `'claude-code'`. */
-    engine?: 'claude-code';
+    engine?: AgentEngineSetting;
     /**
      * Workspace folder path to expose via `vscode.workspace.workspaceFolders[0]`.
      * Defaults to `/projects/demo` so existing tests that assume workspace =

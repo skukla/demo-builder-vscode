@@ -31,17 +31,17 @@ jest.mock('@/features/dashboard/services/onOpenChecks/orchestrator', () => ({
 import { setupMocks } from './dashboardHandlers.testUtils';
 import './dashboardValidatorMocks';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { resetClaudeCliCache } from '@/features/ai/claudeCliAvailability';
+import { resetAgentCliCache } from '@/features/ai/engine/agentCli';
 import { handleRequestStatus } from '@/features/dashboard/handlers/statusHandlers';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 beforeEach(() => {
     mockCapturedVerify = undefined;
-    resetClaudeCliCache();
+    resetAgentCliCache();
     mockVerifyAiSetup.mockResolvedValue({ status: 'ok', checks: [], inventory: { skills: [], mcps: [], sessionMcps: [] } });
 });
 
-it("adds the command executor's answer about `claude` to the on-open verify", async () => {
+it("adds the command executor's answer about the SC's agent to the on-open verify", async () => {
     const { mockContext } = setupMocks();
     const commandExists = jest.fn().mockResolvedValue(true);
     jest.mocked(ServiceLocator.getCommandExecutor).mockReturnValue(
@@ -51,6 +51,6 @@ it("adds the command executor's answer about `claude` to the on-open verify", as
     await handleRequestStatus(mockContext);
     const result = await mockCapturedVerify!('/proj');
 
-    expect(commandExists).toHaveBeenCalledWith('claude');
-    expect(result).toMatchObject({ claudeCli: { installed: true } });
+    expect(commandExists).toHaveBeenCalledWith('copilot');
+    expect(result).toMatchObject({ agentCli: { installed: true, name: 'Copilot CLI' } });
 });

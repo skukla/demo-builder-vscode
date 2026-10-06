@@ -10,18 +10,18 @@
 jest.mock('@/commands/claudeSessionStore', () => ({
     hasConversation: jest.fn(() => false),
 }));
-// The check also looks for the native installer's binary under the home
-// directory, and this machine may really have one. A module factory, not a
-// spy: a spy on the `os` namespace does not reach the module under test.
-jest.mock('os', () => ({
-    ...jest.requireActual('os'),
-    homedir: () => '/nonexistent-home-for-claude-cli-test',
+// The check also looks at known install locations by file, and this machine may
+// really have one. A module factory, not a spy: a spy on the `fs` namespace does
+// not reach the module under test.
+jest.mock('fs', () => ({
+    ...jest.requireActual('fs'),
+    existsSync: () => false,
 }));
 
 import * as vscode from 'vscode';
 import { OpenInClaudeCommand } from '@/commands/openInClaude';
 import type { StateManager } from '@/core/state/stateManager';
-import { resetClaudeCliCache, type CommandProbe } from '@/features/ai/claudeCliAvailability';
+import { resetAgentCliCache, type CommandProbe } from '@/features/ai/engine/agentCli';
 import {
     claudePresent,
     makeGlobalState,
@@ -48,7 +48,7 @@ function build(probe: CommandProbe): OpenInClaudeCommand {
 
 beforeEach(() => {
     jest.clearAllMocks();
-    resetClaudeCliCache();
+    resetAgentCliCache();
 });
 
 describe('Open in Claude Code when Claude Code is not installed', () => {

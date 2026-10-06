@@ -184,12 +184,12 @@ it('Claude Code not installed → warning that says so, and the data carries it 
         status: 'ok',
         checks: okChecks,
         inventory: emptyInventory,
-        claudeCli: { installed: false },
+        agentCli: { installed: false, name: 'Claude Code' },
     });
 
-    const outcome = (await check.run(makeCtx())) as CheckResult<{ claudeCli?: unknown }>;
+    const outcome = (await check.run(makeCtx())) as CheckResult<{ agentCli?: unknown }>;
 
     expect(outcome.status).toBe('warning');
     expect(outcome.message).toMatch(/Claude Code \(the command-line tool\) is not installed/);
-    expect(outcome.data?.claudeCli).toEqual({ installed: false });
+    expect(outcome.data?.agentCli).toEqual({ installed: false, name: 'Claude Code' });
 });

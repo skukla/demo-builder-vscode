@@ -135,7 +135,7 @@ describe('deriveAiReadyState', () => {
 });
 
 describe('deriveAiReadyState when Claude Code is not installed (AI-4a)', () => {
-    const noCli = { ...healthyVerify, claudeCli: { installed: false } };
+    const noCli = { ...healthyVerify, agentCli: { installed: false, name: 'Claude Code' } };
 
     it('is NOT green when the files are fine but `claude` is missing', () => {
         expect(deriveAiReadyState({ ...idleInputs, verifyResult: noCli })).toEqual({
@@ -146,8 +146,18 @@ describe('deriveAiReadyState when Claude Code is not installed (AI-4a)', () => {
     });
 
     it('stays green when `claude` is installed', () => {
-        const verifyResult = { ...healthyVerify, claudeCli: { installed: true } };
+        const verifyResult = { ...healthyVerify, agentCli: { installed: true, name: 'Claude Code' } };
         expect(deriveAiReadyState({ ...idleInputs, verifyResult }).color).toBe('green');
+    });
+
+    it("names the SC's own agent, not Claude Code, when that is what is missing (AI-12)", () => {
+        const verifyResult = {
+            ...healthyVerify,
+            agentCli: { installed: false, name: 'Copilot CLI' },
+        };
+        expect(deriveAiReadyState({ ...idleInputs, verifyResult }).text).toBe(
+            'Copilot CLI not installed',
+        );
     });
 
     it('stays red when the files are broken too — that is the bigger problem', () => {
