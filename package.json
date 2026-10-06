@@ -250,6 +250,43 @@
                 }
             },
             {
+                "title": "Content Authoring",
+                "properties": {
+                    "demoBuilder.daLive.aemAuthorUrl": {
+                        "type": "string",
+                        "default": "",
+                        "description": "The AEM environment your storefronts use for images and other assets. Demo Builder points each storefront's AEM Assets panel at it when the storefront is created, edited, reset, imported or copied, and the dashboard's More > AEM Assets opens it. Required, with no default. Format: author-pXXXXX-eYYYYY.adobeaemcloud.com",
+                        "order": 1
+                    },
+                    "demoBuilder.daLive.authoringExperience": {
+                        "type": "string",
+                        "enum": [
+                            "da-live-classic",
+                            "experience-workspace"
+                        ],
+                        "enumItemLabels": [
+                            "DA.live Classic",
+                            "Experience Workspace"
+                        ],
+                        "default": "da-live-classic",
+                        "description": "How new storefronts are edited. DA.live Classic opens the da.live document editor. Experience Workspace opens the newer visual canvas. Each project can choose differently on its Configure screen.",
+                        "order": 2
+                    },
+                    "demoBuilder.daLive.IMSOrgId": {
+                        "type": "string",
+                        "default": "demosystem",
+                        "description": "Your Adobe organization's short name, as it appears in experience.adobe.com links (for example demosystem). Used to open the Universal Editor and AEM Assets in the right organization.",
+                        "order": 3
+                    },
+                    "demoBuilder.daLive.ewCanvasBranch": {
+                        "type": "string",
+                        "default": "",
+                        "description": "Advanced. Pins Experience Workspace to a pre-release build by branch name. Leave empty to use the normal release.",
+                        "order": 4
+                    }
+                }
+            },
+            {
                 "title": "Block Libraries",
                 "properties": {
                     "demoBuilder.blockLibraries.defaults": {
@@ -296,7 +333,63 @@
                 }
             },
             {
-                "title": "Demos",
+                "title": "Category Pages",
+                "properties": {
+                    "demoBuilder.categoryPages.autoAdd": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "Add and publish a page for each new Commerce category on the open project's Edge Delivery storefront without asking. Off: Demo Builder offers first. Add-only: it never edits or removes a page, and it runs only while VS Code is open with the project. A project can override this from the notice it shows."
+                    }
+                }
+            },
+            {
+                "title": "Sample Data",
+                "properties": {
+                    "demoBuilder.dataInstaller.enabled": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "Enable the Data Installer surface for browsing and installing Adobe Commerce sample-data datapacks. When off, the panel and its AI tools report the feature as unavailable."
+                    },
+                    "demoBuilder.dataInstaller.apiBaseUrl": {
+                        "scope": "machine",
+                        "type": "string",
+                        "default": "",
+                        "format": "uri",
+                        "description": "Data Installer API base URL, without a trailing action segment. Required — set this to your deployment. There is no default: this repository is public, and a bundled endpoint would ship to every user. Must be https."
+                    }
+                }
+            },
+            {
+                "title": "AI Assistant",
+                "properties": {
+                    "demoBuilder.ai.engine": {
+                        "type": "string",
+                        "enum": [
+                            "claude-code"
+                        ],
+                        "enumItemLabels": [
+                            "Claude Code"
+                        ],
+                        "enumDescriptions": [
+                            "Anthropic's Claude Code (CLI)."
+                        ],
+                        "default": "claude-code",
+                        "description": "Which AI tool Demo Builder launches. Currently only Claude Code is supported; reserved for future engines (e.g. Codex)."
+                    },
+                    "demoBuilder.ai.requireAgentConsent": {
+                        "type": "boolean",
+                        "default": true,
+                        "markdownDescription": "Ask for confirmation in VS Code before an AI agent runs a destructive Demo Builder operation (anything called with `confirm: true` — publish, delete, reset, …). The dialog appears in the window that owns the agent connection, so it protects you even when the agent's own tool permissions are allowlisted. Turn off for unattended/headless use — the agent-side `confirm` convention then remains the only gate."
+                    },
+                    "demoBuilder.ai.enableThirdPartyTools": {
+                        "type": "boolean",
+                        "default": true,
+                        "markdownDescription": "Install third-party AI tooling (currently the Playwright browser-automation MCP) into demo projects. Turning this off is an escape hatch for restricted environments: the tool is not installed, its `.mcp.json` entry is not written, and the skills that drive it (site scraping, authenticated-site connection, visual refinement) are removed with it — atomically. Run **Demo Builder: Regenerate AI Files** after changing this, or accept the prompt that offers it."
+                    }
+                }
+            },
+            {
+                "title": "Shared Demos",
                 "properties": {
                     "demoBuilder.demos.added": {
                         "type": "array",
@@ -310,40 +403,24 @@
                 }
             },
             {
-                "title": "DA.live",
+                "title": "Product Page Overlay",
                 "properties": {
-                    "demoBuilder.daLive.aemAuthorUrl": {
-                        "type": "string",
-                        "default": "",
-                        "description": "AEM Author environment for the DA.live Assets panel, written to each site as aem.repositoryId. Required — set this to your environment. There is no default: a bundled one binds every user to an AEM they may not be able to reach, and reports success while doing it. Leave empty to write no binding at all. Format: author-pXXXXX-eYYYYY.adobeaemcloud.com"
+                    "demoBuilder.byom.enabled": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "Register the PDP overlay action on each EDS storefront created by this extension. When off, no overlay is registered (storefronts behave as if BYOM didn't exist)."
                     },
-                    "demoBuilder.daLive.IMSOrgId": {
+                    "demoBuilder.byom.overlayUrl": {
+                        "scope": "machine",
                         "type": "string",
-                        "default": "demosystem",
-                        "description": "Adobe IMS organization ID for Universal Editor access. Used to generate editor.path for DA.live sites."
-                    },
-                    "demoBuilder.daLive.authoringExperience": {
-                        "type": "string",
-                        "enum": [
-                            "da-live-classic",
-                            "experience-workspace"
-                        ],
-                        "enumItemLabels": [
-                            "DA.live Classic",
-                            "Experience Workspace"
-                        ],
-                        "default": "da-live-classic",
-                        "description": "Default AEM authoring experience for new EDS projects. DA.live Classic opens the da.live doc editor (with the Universal Editor punch-out for Sidekick Edit); Experience Workspace uses the da.live-native canvas. Override per project from the project's Configure screen."
-                    },
-                    "demoBuilder.daLive.ewCanvasBranch": {
-                        "type": "string",
-                        "default": "",
-                        "description": "da-nx branch the Experience Workspace canvas loads from (the `?nx=` override). Leave empty to use the current param-less production canvas; set a branch only to pin a specific pre-release build."
+                        "default": "https://285361-249darkllama-stage.adobeioruntime.net/api/v1/web/accs-discovery/render-pdp",
+                        "format": "uri",
+                        "description": "PDP overlay endpoint. Defaults to the team's deployed instance; override to point at a custom deployment (staging, dev)."
                     }
                 }
             },
             {
-                "title": "ACCS Discovery",
+                "title": "Store Structure Detection",
                 "properties": {
                     "demoBuilder.accsDiscovery.services": {
                         "scope": "machine",
@@ -377,79 +454,6 @@
                             }
                         ],
                         "description": "ACCS Discovery Services for cross-org store structure auto-detection. Each entry maps a Commerce org to its App Builder discovery service."
-                    }
-                }
-            },
-            {
-                "title": "BYOM Overlay",
-                "properties": {
-                    "demoBuilder.byom.enabled": {
-                        "type": "boolean",
-                        "default": true,
-                        "description": "Register the PDP overlay action on each EDS storefront created by this extension. When off, no overlay is registered (storefronts behave as if BYOM didn't exist)."
-                    },
-                    "demoBuilder.byom.overlayUrl": {
-                        "scope": "machine",
-                        "type": "string",
-                        "default": "https://285361-249darkllama-stage.adobeioruntime.net/api/v1/web/accs-discovery/render-pdp",
-                        "format": "uri",
-                        "description": "PDP overlay endpoint. Defaults to the team's deployed instance; override to point at a custom deployment (staging, dev)."
-                    }
-                }
-            },
-            {
-                "title": "Category Pages",
-                "properties": {
-                    "demoBuilder.categoryPages.autoAdd": {
-                        "type": "boolean",
-                        "default": false,
-                        "description": "Add and publish a page for each new Commerce category on the open project's Edge Delivery storefront without asking. Off: Demo Builder offers first. Add-only: it never edits or removes a page, and it runs only while VS Code is open with the project. A project can override this from the notice it shows."
-                    }
-                }
-            },
-            {
-                "title": "AI",
-                "properties": {
-                    "demoBuilder.ai.engine": {
-                        "type": "string",
-                        "enum": [
-                            "claude-code"
-                        ],
-                        "enumItemLabels": [
-                            "Claude Code"
-                        ],
-                        "enumDescriptions": [
-                            "Anthropic's Claude Code (CLI)."
-                        ],
-                        "default": "claude-code",
-                        "description": "Which AI tool Demo Builder launches. Currently only Claude Code is supported; reserved for future engines (e.g. Codex)."
-                    },
-                    "demoBuilder.ai.requireAgentConsent": {
-                        "type": "boolean",
-                        "default": true,
-                        "markdownDescription": "Ask for confirmation in VS Code before an AI agent runs a destructive Demo Builder operation (anything called with `confirm: true` — publish, delete, reset, …). The dialog appears in the window that owns the agent connection, so it protects you even when the agent's own tool permissions are allowlisted. Turn off for unattended/headless use — the agent-side `confirm` convention then remains the only gate."
-                    },
-                    "demoBuilder.ai.enableThirdPartyTools": {
-                        "type": "boolean",
-                        "default": true,
-                        "markdownDescription": "Install third-party AI tooling (currently the Playwright browser-automation MCP) into demo projects. Turning this off is an escape hatch for restricted environments: the tool is not installed, its `.mcp.json` entry is not written, and the skills that drive it (site scraping, authenticated-site connection, visual refinement) are removed with it — atomically. Run **Demo Builder: Regenerate AI Files** after changing this, or accept the prompt that offers it."
-                    }
-                }
-            },
-            {
-                "title": "Data Installer",
-                "properties": {
-                    "demoBuilder.dataInstaller.enabled": {
-                        "type": "boolean",
-                        "default": true,
-                        "description": "Enable the Data Installer surface for browsing and installing Adobe Commerce sample-data datapacks. When off, the panel and its AI tools report the feature as unavailable."
-                    },
-                    "demoBuilder.dataInstaller.apiBaseUrl": {
-                        "scope": "machine",
-                        "type": "string",
-                        "default": "",
-                        "format": "uri",
-                        "description": "Data Installer API base URL, without a trailing action segment. Required — set this to your deployment. There is no default: this repository is public, and a bundled endpoint would ship to every user. Must be https."
                     }
                 }
             }
