@@ -77,8 +77,8 @@ describe('ActionGrid', () => {
 
     describe('Labelled rows (owner, 2026-10-06)', () => {
         it.each([
-            ['a non-EDS', () => defaultProps, ['Open', 'Build', 'Share']],
-            ['an EDS', () => edsProps, ['Open', 'Storefront', 'Build', 'Share']],
+            ['a non-EDS', () => defaultProps, ['Open', 'Build', 'Share', 'Consoles']],
+            ['an EDS', () => edsProps, ['Open', 'Storefront', 'Build', 'Share', 'Consoles']],
         ])('gives %s project one headed row per job, in order', (_label, props, expected) => {
             render(<ActionGrid {...props()} />);
 
@@ -91,6 +91,7 @@ describe('ActionGrid', () => {
             ['open', 'Open'],
             ['build', 'Build'],
             ['share', 'Share'],
+            ['consoles', 'Consoles'],
         ])('names the %s row by its heading, so it is announced as a group', (zone, title) => {
             const { container } = render(<ActionGrid {...defaultProps} />);
 
@@ -133,15 +134,14 @@ describe('ActionGrid', () => {
             expect(within(getZone(container, 'build')).queryByText('Integrations')).not.toBeInTheDocument();
         });
 
-        it('lists AEM Assets and Dev Console beside the cards, not as cards', () => {
-            const { container } = render(<ActionGrid {...edsProps} />);
+        it('lists AEM Assets and Dev Console under Consoles, last, so the Open row stays inside the content band', () => {
+            const { container } = render(<ActionGrid {...edsProps} hasAdobeContext />);
 
-            const aside = getZone(container, 'open').querySelector(
-                '.dashboard-card-row > .dashboard-compact-list'
-            );
             expect(
-                Array.from(aside?.querySelectorAll('.icon-label') ?? []).map((n) => n.textContent)
+                Array.from(getZone(container, 'consoles').querySelectorAll('.icon-label')).map((n) => n.textContent)
             ).toEqual(['AEM Assets', 'Dev Console']);
+            expect(within(getZone(container, 'open')).queryByText('AEM Assets')).not.toBeInTheDocument();
+            expect(within(getZone(container, 'open')).queryByText('Dev Console')).not.toBeInTheDocument();
         });
 
         it('names a card by its title alone', () => {
@@ -156,7 +156,7 @@ describe('ActionGrid', () => {
             const compact = Array.from(
                 container.querySelectorAll('.dashboard-zone-section--compact')
             ).map((n) => n.getAttribute('data-zone'));
-            expect(compact).toEqual(['storefront', 'build', 'share']);
+            expect(compact).toEqual(['storefront', 'build', 'share', 'consoles']);
             expect(getZone(container, 'open').className).not.toContain('--compact');
         });
 

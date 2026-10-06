@@ -1,7 +1,5 @@
-import Code from '@spectrum-icons/workflow/Code';
 import Edit from '@spectrum-icons/workflow/Edit';
 import Globe from '@spectrum-icons/workflow/Globe';
-import ImageAlbum from '@spectrum-icons/workflow/ImageAlbum';
 import PlayCircle from '@spectrum-icons/workflow/PlayCircle';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import StopCircle from '@spectrum-icons/workflow/StopCircle';
@@ -64,8 +62,8 @@ const NOOP = (): void => undefined;
 /**
  * The Open zone — where the SC goes. The cards are the in-demo destinations (see
  * it as a customer, author it, manage it as an admin, its integrations), each
- * saying in one line where it leads; the setup-time ones (AEM Assets, Dev
- * Console) sit beside them as a compact list. Every tile opens a surface; none
+ * saying in one line where it leads. The setup-time consoles (AEM Assets, Dev
+ * Console) are the Consoles list below. Every tile opens a surface; none
  * changes the project.
  *
  * Extracted whole: its conditionals were most of ActionGrid's complexity budget
@@ -88,8 +86,6 @@ export function OpenZone({
     handleOpenLiveSite,
     handleOpenDaLive,
     handleOpenAdminPanel,
-    handleOpenAemAssets,
-    handleOpenDevConsole,
     integrations,
 }: {
     isEds: boolean;
@@ -108,35 +104,11 @@ export function OpenZone({
     handleOpenLiveSite?: () => void;
     handleOpenDaLive?: () => void;
     handleOpenAdminPanel: () => void;
-    handleOpenAemAssets: () => void;
-    handleOpenDevConsole: () => void;
     /** The Integrations card, built by the caller (it owns the status inputs). Last card. */
     integrations?: React.ReactNode;
 }): React.ReactElement {
     return (
-        <DashboardZone
-            id="open"
-            title="Open"
-            aside={
-                <>
-                    {/* AEM Assets (EDS-21) — every project type: the bound AEM is a
-                        Demo Builder setting, not a property of the project, and the
-                        host offers the setting when none is bound. */}
-                    <DashboardTile
-                        label="AEM Assets"
-                        icon={<ImageAlbum size="L" />}
-                        onPress={handleOpenAemAssets}
-                        tooltip="Open the AEM environment your storefronts use for images and assets"
-                    />
-                    <DashboardTile
-                        label="Dev Console"
-                        icon={<Code size="L" />}
-                        onPress={handleOpenDevConsole}
-                        tooltip="Open this project in the Adobe Developer Console"
-                    />
-                </>
-            }
-        >
+        <DashboardZone id="open" title="Open">
             {!isEds && (
                 <LifecycleTile
                     isRunning={isRunning}

@@ -1,7 +1,7 @@
 /**
  * ActionGrid Component
  *
- * Displays the project dashboard actions as four labelled rows of tiles, one per
+ * Displays the project dashboard actions as labelled groups of tiles, one per
  * job the SC is doing (owner, 2026-10-06). Headings came back because the actions
  * no longer fit one row: they were dropped on 2026-07-09 when a single strip of
  * self-describing tiles needed no captions, and the overflow that grew instead
@@ -9,8 +9,8 @@
  *
  *  - Open (cards): where you go to use the project. Start/Stop + Restart
  *    (non-EDS), Open in Browser, Author Content (EDS), Manage Commerce,
- *    Integrations, each saying where it leads, with AEM Assets and Dev Console
- *    listed beside them. Every one opens a surface; none changes the project.
+ *    Integrations, each saying where it leads. Every one opens a surface; none
+ *    changes the project.
  *    Integrations moved up from Build on 2026-10-06 (owner): it is a
  *    destination of the same weight as the other three.
  *  - Storefront (EDS only): keeping the site itself in shape. Republish (the
@@ -19,8 +19,12 @@
  *    values), Datapacks, then — set apart — Reset and Delete.
  *  - Share: moving a demo between people. Export, Save as Package (EDS),
  *    Change Source (only for a project built on an added demo).
+ *  - Consoles: the Adobe web consoles behind the demo, AEM Assets and Dev
+ *    Console. They sat beside the Open cards until Integrations made four cards
+ *    and the list ran past the content band; as the fourth list it lines up
+ *    under the fourth card.
  *
- * Storefront, Build and Share are compact lists, where a status dot sits
+ * Storefront, Build, Share and Consoles are compact lists, where a status dot sits
  * beside the label with its word ("Needed", "Error") rather than in a corner.
  * An Open card with a status shows the dot and word as its second line, in
  * place of its description.
@@ -84,6 +88,7 @@ import Revert from '@spectrum-icons/workflow/Revert';
 import Settings from '@spectrum-icons/workflow/Settings';
 import React from 'react';
 import type { MeshStatus, StatusDisplay } from '../hooks/useDashboardStatus';
+import { ConsolesZone } from './ConsolesZone';
 import { DashboardTile } from './DashboardTile';
 import { DashboardZone } from './DashboardZone';
 import { DataInstallerTile } from './DataInstallerTile';
@@ -379,8 +384,6 @@ export function ActionGrid({
                 handleOpenLiveSite={handleOpenLiveSite}
                 handleOpenDaLive={handleOpenDaLive}
                 handleOpenAdminPanel={handleOpenAdminPanel}
-                handleOpenAemAssets={handleOpenAemAssets}
-                handleOpenDevConsole={handleOpenDevConsole}
                 integrations={
                     // Renders nothing without an Adobe org.
                     <IntegrationsSummaryTile
@@ -415,6 +418,10 @@ export function ActionGrid({
                 handleExportProject={handleExportProject}
                 handleSaveDemoPackage={handleSaveDemoPackage}
                 handleChangeDemoSource={handleChangeDemoSource}
+            />
+            <ConsolesZone
+                handleOpenAemAssets={handleOpenAemAssets}
+                handleOpenDevConsole={handleOpenDevConsole}
             />
             </div>
         </div>

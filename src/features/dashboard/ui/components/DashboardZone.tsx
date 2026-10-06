@@ -11,20 +11,17 @@ import { DashboardTile } from './DashboardTile';
  *
  * `compact` renders the tiles as a short list of icon-beside-label rows: the
  * secondary tier under the Open cards, so eighteen actions stop reading as
- * eighteen equals. `aside` is a compact list placed beside the tiles, inside the
- * same group.
+ * eighteen equals.
  */
 export function DashboardZone({
     id,
     title,
     compact = false,
-    aside,
     children,
 }: {
     id: string;
     title: string;
     compact?: boolean;
-    aside?: React.ReactNode;
     children: React.ReactNode;
 }): React.ReactElement {
     return (
@@ -37,10 +34,7 @@ export function DashboardZone({
             {compact ? (
                 <div className="dashboard-zone-grid dashboard-compact-list">{children}</div>
             ) : (
-                <div className="dashboard-zone-grid dashboard-card-row">
-                    {children}
-                    {aside ? <div className="dashboard-compact-list">{aside}</div> : null}
-                </div>
+                <div className="dashboard-zone-grid dashboard-card-row">{children}</div>
             )}
         </section>
     );
