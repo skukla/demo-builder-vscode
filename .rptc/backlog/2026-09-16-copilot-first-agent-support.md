@@ -60,3 +60,4 @@ Two things break rather than degrade:
 - 2026-09-16  chore(backlog): record step 04 on AI-9 (`8480f5837`)
 - 2026-10-06  Merge feature/copilot-agent-support into the release candidate (`97a556792`)
 - 2026-10-06  feat(ai): the Chat launch serves the SC's agent — Claude Code, Copilot CLI or Copilot in VS Code (`22aa84bfe`)
+- 2026-10-06  feat(ai): Copilot in VS Code is the default agent; a permissions level for terminal agents (`0381c3795`)
