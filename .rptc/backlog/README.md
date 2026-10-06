@@ -345,7 +345,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-26o` | feature | └ [Screen redesign 2 — lists](2026-09-24-erp-ui-lists.md) | AB-26k | med | shipped |
 | `AB-26p` | feature | └ [Screen redesign 3 — documents](2026-09-24-erp-ui-documents.md) | AB-26j, AB-26k | med | shipped |
 | `AB-26q` | feature | └ [Screen redesign 4 — settings and journal](2026-09-24-erp-ui-settings-journal.md) | AB-26j | med | shipped |
-| `AB-26r` | feature | └ [Credit memo and Repeat order — the way back from invoiced and cancelled](2026-09-24-erp-credit-memo.md) | AB-26g | med | built |
+| `AB-26r` | feature | └ [Credit memo and Repeat order — the way back from invoiced and cancelled](2026-09-24-erp-credit-memo.md) | AB-26g | med | shipped |
 | `AB-26s` | feature | └ [Order to cash — the payment leg (incoming payment, open items, company balance)](2026-09-24-erp-payment-leg.md) | AB-26b, AB-26r | med | built |
 | `AB-26t` | feature | └ [The routing integration — one Commerce order split across ERP pairs](2026-09-24-erp-routing-integration.md) | AB-16, AB-26j | high | superseded |
 | `AB-26u` | feature | └ [The walk-through — what to look at in the ERP, what to look at in Commerce, and how each relates](2026-09-24-erp-walkthrough.md) | AB-26e, AB-26m, AB-26l | high | shipped |
@@ -375,13 +375,13 @@ each item's own file; what has already landed against an item is in its
 | `AB-59` | feature | └ [The ERP's Settings screen should be settings: a form an ERP user edits, not panels of text](2026-10-02-erp-settings-screen-is-a-form.md) | — | med | built |
 | `AB-60` | question | └ [How fine-grained can events be, in each direction?](2026-10-02-event-payload-granularity.md) | — | med | open |
 | `AB-61` | fix | └ [Reset ERPs stops when the integration's undo takes longer than 60 seconds](2026-10-02-erp-reset-outruns-sixty-seconds.md) | — | high | built |
-| `AB-62` | fix | └ [A second ERP edit to a product can lose to the first edit's echo](2026-10-02-erp-edit-lost-to-its-own-echo.md) | — | med | built |
-| `AB-63` | fix | └ [The ERP's on-hand stock does not drop when it posts a shipment](2026-10-02-erp-stock-does-not-drop-at-goods-issue.md) | — | med | built |
+| `AB-62` | fix | └ [A second ERP edit to a product can lose to the first edit's echo](2026-10-02-erp-edit-lost-to-its-own-echo.md) | — | med | shipped |
+| `AB-63` | fix | └ [The ERP's on-hand stock does not drop when it posts a shipment](2026-10-02-erp-stock-does-not-drop-at-goods-issue.md) | — | med | shipped |
 | `AB-64` | feature | └ [An ERP can own the products sold on named websites](2026-10-02-erp-owns-products-by-website.md) | — | med | built |
-| `AB-65` | fix | └ [A stray dot after the first editable number in the ERP's Number Series table](2026-10-03-erp-number-series-stray-dot.md) | — | low | built |
-| `AB-66` | fix | └ [A checkout invoice's event arriving late could tell an ERP to invoice an order it has not confirmed](2026-10-03-checkout-invoice-event-race.md) | — | med | built |
+| `AB-65` | fix | └ [A stray dot after the first editable number in the ERP's Number Series table](2026-10-03-erp-number-series-stray-dot.md) | — | low | shipped |
+| `AB-66` | fix | └ [A checkout invoice's event arriving late could tell an ERP to invoice an order it has not confirmed](2026-10-03-checkout-invoice-event-race.md) | — | med | shipped |
 | `AB-29` | feature | [Commerce test data cleanup tools](2026-09-24-commerce-test-data-cleanup-tools.md) | — | med | built |
-| `AB-30` | feature | [The ERP integration's Commerce Admin page uses the Commerce back-office design system](2026-09-24-erp-admin-page-commerce-design-system.md) | — | med | built |
+| `AB-30` | feature | [The ERP integration's Commerce Admin page uses the Commerce back-office design system](2026-09-24-erp-admin-page-commerce-design-system.md) | — | med | shipped |
 | `AB-33` | fix | [Removing an integration reports Runtime packages left behind in a workspace it then deletes](2026-09-26-remove-integration-leaves-runtime-packages.md) | — | med | built |
 | `AB-34` | fix | [add_integration's answer names the catalog entry, not the name the SC gave](2026-09-26-add-integration-answer-names-catalog-entry.md) | — | low | built |
 | `AB-39` | question | [Loop branch labels use AB-16 sub-ids that are not their backlog items](2026-09-29-erp-branch-label-id-divergence.md) | — | low | shipped |

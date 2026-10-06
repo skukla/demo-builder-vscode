@@ -4,7 +4,7 @@ kind: fix
 area: app-builder
 needs: []
 value: med
-status: built
+status: shipped
 parent: AB-26
 ---
 
@@ -28,3 +28,4 @@ units: check which before building, or Commerce is deducted twice).
 ## Shipped so far
 
 - 2026-10-03  Built 2026-10-03 (overnight loop): posting a shipment takes the shipped quantity out of its warehouse, refused when short; no ProductStock.Changed for a goods issue (Commerce deducts on its own shipment); an external shipment deducts once per reference (demo-erp 86f3430; contract note vendored, integration ff7eb00; branch loop/2026-10-03-overnight). Live check owed: ship on Justrite and watch the ERP's on hand fall.
+- 2026-10-06  Shipped 2026-10-05: every commit is on its repository's main, and Justrite deployed demo-erp 5f912cd and the integration c099eb9 (cloned from GitHub main, status deployed at 21:32Z/21:35Z). Any live check this item names is a check, not a reason to hold it open.

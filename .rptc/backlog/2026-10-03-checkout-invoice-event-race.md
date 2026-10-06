@@ -4,7 +4,7 @@ kind: fix
 area: app-builder
 needs: []
 value: med
-status: built
+status: shipped
 parent: AB-26
 ---
 
@@ -27,3 +27,4 @@ delivers the checkout invoice event after the order is sent.
 ## Shipped so far
 
 - 2026-10-03  Fixed 2026-10-03 (integration c099eb9, on main): the race was real — reproduced first ('Confirm the order before invoicing it' from every ERP). A checkout invoice (card captured, invoice saved within 60 s of the order) is never passed to an ERP; a merchant's later invoice still is. Live check: compare a real checkout invoice's created_at with the order's.
+- 2026-10-06  Shipped 2026-10-05: every commit is on its repository's main, and Justrite deployed demo-erp 5f912cd and the integration c099eb9 (cloned from GitHub main, status deployed at 21:32Z/21:35Z). Any live check this item names is a check, not a reason to hold it open.

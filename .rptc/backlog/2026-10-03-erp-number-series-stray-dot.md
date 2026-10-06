@@ -4,7 +4,7 @@ kind: fix
 area: app-builder
 needs: []
 value: low
-status: built
+status: shipped
 parent: AB-26
 ---
 
@@ -21,3 +21,4 @@ was the body). Likely a TableView focus marker on the first interactive cell; un
 
 - 2026-10-03  Fixed 2026-10-03: the dot was the first dot of a clipped ellipsis — the Next no. column was 140 px and a ten-digit number needs up to 113 (demo-erp 86f3430; a screen test asserts no clipped cell). The same measure flags Customers 'Edit credit limit' and Settings 'Edit sales organization' buttons: not checked visually.
 - 2026-10-03  2026-10-03: the two other clipped places are fixed (Customers columns and headings, Sales Organizations, the order lines table; demo-erp c7c0837, 8b35e9f). Left: an order with both a discount and a closable line still scrolls about 120 px; shorter headings ('Qty', 'Unit') would fix it — an owner wording call.
+- 2026-10-06  Shipped 2026-10-05: every commit is on its repository's main, and Justrite deployed demo-erp 5f912cd and the integration c099eb9 (cloned from GitHub main, status deployed at 21:32Z/21:35Z). Any live check this item names is a check, not a reason to hold it open.
