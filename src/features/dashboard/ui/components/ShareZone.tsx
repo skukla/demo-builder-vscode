@@ -22,7 +22,7 @@ export function ShareZone({
     handleChangeDemoSource?: () => void;
 }): React.ReactElement {
     return (
-        <DashboardZone id="share" title="Share">
+        <DashboardZone id="share" title="Share" compact>
             <DashboardTile
                 label="Export"
                 icon={<ExportIcon size="L" />}

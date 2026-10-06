@@ -99,24 +99,32 @@ describe('ActionGrid', () => {
     });
 
     describe('Open row', () => {
-        it('holds AEM Assets and Dev Console as accented tiles, after Manage Commerce', () => {
+        it('keeps the big tiles to the in-demo destinations', () => {
             const { container } = render(<ActionGrid {...edsProps} />);
 
             const labels = Array.from(
                 getZone(container, 'open').querySelectorAll('.icon-label')
             ).map((n) => n.textContent);
-            expect(labels).toEqual([
-                'Open in Browser',
-                'Author Content',
-                'Manage Commerce',
-                'AEM Assets',
-                'Dev Console',
-            ]);
-            for (const label of ['Author Content', 'Manage Commerce', 'AEM Assets', 'Dev Console']) {
-                expect(screen.getByText(label).closest('button')?.className).not.toContain(
-                    'dashboard-action-button--hero'
-                );
-            }
+            expect(labels).toEqual(['Open in Browser', 'Author Content', 'Manage Commerce']);
+        });
+
+        it('lists AEM Assets and Dev Console in Build, before More', () => {
+            const { container } = render(<ActionGrid {...edsProps} />);
+
+            const labels = Array.from(
+                getZone(container, 'build').querySelectorAll('.icon-label')
+            ).map((n) => n.textContent);
+            expect(labels.slice(-3)).toEqual(['AEM Assets', 'Dev Console', 'More']);
+        });
+
+        it('renders only Open as big tiles; the other groups are compact lists', () => {
+            const { container } = render(<ActionGrid {...edsProps} />);
+
+            const compact = Array.from(
+                container.querySelectorAll('.dashboard-zone-section--compact')
+            ).map((n) => n.getAttribute('data-zone'));
+            expect(compact).toEqual(['storefront', 'build', 'share']);
+            expect(getZone(container, 'open').className).not.toContain('--compact');
         });
 
         it.each([

@@ -1,5 +1,5 @@
-import UploadToCloud from '@spectrum-icons/workflow/UploadToCloud';
 import Sync from '@spectrum-icons/workflow/Sync';
+import UploadToCloud from '@spectrum-icons/workflow/UploadToCloud';
 import UserGroup from '@spectrum-icons/workflow/UserGroup';
 import ViewGrid from '@spectrum-icons/workflow/ViewGrid';
 import React from 'react';
@@ -28,7 +28,7 @@ export function StorefrontZone({
     handleOpenSiteAccess?: () => void;
 }): React.ReactElement {
     return (
-        <DashboardZone id="storefront" title="Storefront">
+        <DashboardZone id="storefront" title="Storefront" compact>
             {handleRepublishContent && (
                 <RemedyTile
                     label="Republish"

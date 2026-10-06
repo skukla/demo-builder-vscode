@@ -133,20 +133,21 @@
     padding: 8px; /* Shadow overflow padding */
 }
 
-/* Labelled groups, two per row (Open beside Storefront, Build beside Share) so
-   the dashboard fits without scrolling; one per row when the panel is narrow.
-   Columns size to their content, so tiles never stretch. */
+/* Two tiers: the Open zone's big tiles on top, then the secondary groups
+   (Storefront, Build, Share) side by side as compact lists beneath it. A clear
+   first place to look is what makes eighteen actions stop feeling like a wall. */
 .dashboard-zones {
-    display: grid;
-    grid-template-columns: repeat(2, max-content);
-    gap: 24px 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
     width: fit-content;
 }
 
-@media (max-width: 1100px) {
-    .dashboard-zones {
-        grid-template-columns: max-content;
-    }
+.dashboard-zones-secondary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 24px 48px;
 }
 
 /* One labelled group per job (Open, Storefront, Build, Share), laid out by
@@ -177,6 +178,57 @@
     display: flex;
     flex-flow: row wrap;
     gap: var(--dashboard-tile-gap);
+}
+
+/* Compact groups: one row per action, icon beside label, no border until
+   hovered — the secondary tier, deliberately quieter than the Open tiles. Every
+   rule is scoped to the compact section, so DashboardTile stays one component. */
+.dashboard-zone-section--compact .dashboard-zone-grid {
+    flex-flow: column nowrap;
+    gap: 2px;
+    /* Pull the rows left by their own padding + border so each icon lines up
+       under the group heading, while the hover fill still has room. */
+    margin-left: -11px;
+}
+
+.dashboard-zone-section--compact .dashboard-action-button {
+    width: 180px;
+    height: 32px;
+    aspect-ratio: auto;
+    padding: 0 10px;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 10px;
+    position: relative;
+    background: transparent;
+    border-color: transparent;
+}
+
+.dashboard-zone-section--compact .dashboard-action-button:hover,
+.dashboard-zone-section--compact .dashboard-action-button:focus {
+    background: var(--spectrum-global-color-gray-100);
+    border-color: transparent;
+    transform: none;
+    box-shadow: none;
+}
+
+.dashboard-zone-section--compact .dashboard-action-button svg {
+    width: 16px;
+    height: 16px;
+    flex: none;
+}
+
+.dashboard-zone-section--compact .dashboard-action-button .icon-label {
+    margin-top: 0;
+    -webkit-line-clamp: 1;
+    text-align: left;
+    font-size: 13px;
+}
+
+.dashboard-zone-section--compact .integrations-tile-dot {
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
 }
 
 /* ===========================================

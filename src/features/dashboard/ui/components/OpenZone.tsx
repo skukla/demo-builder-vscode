@@ -1,7 +1,5 @@
-import Code from '@spectrum-icons/workflow/Code';
 import Edit from '@spectrum-icons/workflow/Edit';
 import Globe from '@spectrum-icons/workflow/Globe';
-import ImageAlbum from '@spectrum-icons/workflow/ImageAlbum';
 import PlayCircle from '@spectrum-icons/workflow/PlayCircle';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import StopCircle from '@spectrum-icons/workflow/StopCircle';
@@ -61,9 +59,10 @@ function LifecycleTile({
 const NOOP = (): void => undefined;
 
 /**
- * The Open zone — where you go to use the project: see it as a customer, edit
- * it as a creator, manage it as an admin, and reach its assets and its Adobe
- * project. Every tile opens a surface; none changes the project.
+ * The Open zone — the big tiles, and the only ones: where the SC goes DURING a
+ * demo — see it as a customer, author it, manage it as an admin. Every tile opens
+ * a surface; none changes the project. Setup-time destinations (AEM Assets, Dev
+ * Console) live in the compact Build list instead, so this row stays short.
  *
  * Extracted whole: its conditionals were most of ActionGrid's complexity budget
  * (eslint counts every `&&`/`?:`), and a zone is a cohesive unit.
@@ -85,8 +84,6 @@ export function OpenZone({
     handleOpenLiveSite,
     handleOpenDaLive,
     handleOpenAdminPanel,
-    handleOpenAemAssets,
-    handleOpenDevConsole,
 }: {
     isEds: boolean;
     isRunning: boolean;
@@ -104,8 +101,6 @@ export function OpenZone({
     handleOpenLiveSite?: () => void;
     handleOpenDaLive?: () => void;
     handleOpenAdminPanel: () => void;
-    handleOpenAemAssets: () => void;
-    handleOpenDevConsole: () => void;
 }): React.ReactElement {
     return (
         <DashboardZone id="open" title="Open">
@@ -162,23 +157,6 @@ export function OpenZone({
                 label="Manage Commerce"
                 icon={<UserAdmin size="L" />}
                 onPress={handleOpenAdminPanel}
-            />
-
-            {/* AEM Assets (EDS-21) — every project type: the bound AEM is a
-                Demo Builder setting, not a property of the project, and the
-                host offers the setting when none is bound. */}
-            <DashboardTile
-                label="AEM Assets"
-                icon={<ImageAlbum size="L" />}
-                onPress={handleOpenAemAssets}
-                tooltip="Open the AEM environment your storefronts use for images and assets"
-            />
-
-            <DashboardTile
-                label="Dev Console"
-                icon={<Code size="L" />}
-                onPress={handleOpenDevConsole}
-                tooltip="Open this project in the Adobe Developer Console"
             />
         </DashboardZone>
     );

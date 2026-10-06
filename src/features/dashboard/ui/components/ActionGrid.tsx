@@ -73,7 +73,9 @@
  */
 
 import { ActionButton, Item, Menu, MenuTrigger, Text } from '@adobe/react-spectrum';
+import Code from '@spectrum-icons/workflow/Code';
 import Edit from '@spectrum-icons/workflow/Edit';
+import ImageAlbum from '@spectrum-icons/workflow/ImageAlbum';
 import More from '@spectrum-icons/workflow/More';
 import Settings from '@spectrum-icons/workflow/Settings';
 import React from 'react';
@@ -263,7 +265,8 @@ function EditTile({
 }
 
 /**
- * The Build zone — what the demo contains, plus the small More holding the two
+ * The Build zone — what the demo contains and where it is set up (AEM Assets,
+ * Dev Console), plus the small More holding the two
  * rare, destructive actions. Delete is last, per the overflow-menu convention;
  * the confirm dialog behind it remains the real safety net.
  */
@@ -277,6 +280,8 @@ function BuildZone({
     meshStatus,
     handleEditProject,
     handleConfigure,
+    handleOpenAemAssets,
+    handleOpenDevConsole,
     handleResetProject,
     handleDeleteProject,
 }: {
@@ -289,13 +294,15 @@ function BuildZone({
     meshStatus?: MeshStatus;
     handleEditProject?: () => void;
     handleConfigure: () => void;
+    handleOpenAemAssets: () => void;
+    handleOpenDevConsole: () => void;
     handleResetProject: () => void;
     handleDeleteProject: () => void;
 }): React.ReactElement {
     const handleOverflowAction = (key: React.Key): void =>
         dispatchOverflow(key, { reset: handleResetProject, delete: handleDeleteProject });
     return (
-        <DashboardZone id="build" title="Build">
+        <DashboardZone id="build" title="Build" compact>
             {handleEditProject && <EditTile canEdit={canEdit} onPress={handleEditProject} />}
 
             <DashboardTile
@@ -317,6 +324,23 @@ function BuildZone({
 
             {/* Datapacks — the global catalog, opened beside the dashboard. */}
             {dataInstallerAvailable && <DataInstallerTile />}
+
+            {/* AEM Assets (EDS-21) — every project type: the bound AEM is a
+                Demo Builder setting, not a property of the project, and the
+                host offers the setting when none is bound. */}
+            <DashboardTile
+                label="AEM Assets"
+                icon={<ImageAlbum size="L" />}
+                onPress={handleOpenAemAssets}
+                tooltip="Open the AEM environment your storefronts use for images and assets"
+            />
+
+            <DashboardTile
+                label="Dev Console"
+                icon={<Code size="L" />}
+                onPress={handleOpenDevConsole}
+                tooltip="Open this project in the Adobe Developer Console"
+            />
 
             <MenuTrigger>
                 <ActionButton
@@ -406,9 +430,8 @@ export function ActionGrid({
                 handleOpenLiveSite={handleOpenLiveSite}
                 handleOpenDaLive={handleOpenDaLive}
                 handleOpenAdminPanel={handleOpenAdminPanel}
-                handleOpenAemAssets={handleOpenAemAssets}
-                handleOpenDevConsole={handleOpenDevConsole}
             />
+            <div className="dashboard-zones-secondary">
             {isEds && (
                 <StorefrontZone
                     needsRepublish={needsRepublish}
@@ -428,6 +451,8 @@ export function ActionGrid({
                 meshStatus={meshStatus}
                 handleEditProject={handleEditProject}
                 handleConfigure={handleConfigure}
+                handleOpenAemAssets={handleOpenAemAssets}
+                handleOpenDevConsole={handleOpenDevConsole}
                 handleResetProject={handleResetProject}
                 handleDeleteProject={handleDeleteProject}
             />
@@ -437,6 +462,7 @@ export function ActionGrid({
                 handleSaveDemoPackage={handleSaveDemoPackage}
                 handleChangeDemoSource={handleChangeDemoSource}
             />
+            </div>
         </div>
     );
 }

@@ -6,20 +6,30 @@ import React from 'react';
 import { DashboardTile } from './DashboardTile';
 
 /**
- * One labelled row. The heading is what makes four rows read as four jobs; the
- * `data-zone` hook is what tests and styling key on.
+ * One labelled group. The heading is what makes the groups read as separate
+ * jobs; the `data-zone` hook is what tests and styling key on.
+ *
+ * `compact` renders the tiles as a short list of icon-beside-label rows: the
+ * secondary tier under the big Open tiles, so eighteen actions stop reading as
+ * eighteen equals.
  */
 export function DashboardZone({
     id,
     title,
+    compact = false,
     children,
 }: {
     id: string;
     title: string;
+    compact?: boolean;
     children: React.ReactNode;
 }): React.ReactElement {
     return (
-        <section className="dashboard-zone-section" data-zone={id} aria-label={title}>
+        <section
+            className={compact ? 'dashboard-zone-section dashboard-zone-section--compact' : 'dashboard-zone-section'}
+            data-zone={id}
+            aria-label={title}
+        >
             <h2 className="dashboard-zone-heading">{title}</h2>
             <div className="dashboard-zone-grid">{children}</div>
         </section>
