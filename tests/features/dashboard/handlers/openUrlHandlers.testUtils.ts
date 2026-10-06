@@ -19,3 +19,10 @@ export function settingReads(value: unknown): void {
         get: jest.fn().mockReturnValue(value),
     });
 }
+
+/** Make `getConfiguration(...).get(key)` answer per key; unlisted keys read undefined. */
+export function settingsByKey(values: Record<string, unknown>): void {
+    (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+        get: jest.fn((key: string) => values[key]),
+    });
+}

@@ -186,15 +186,19 @@ describe('handleGetProjectUrls', () => {
             });
         }
 
-        it('returns the Assets console on the bound author when the setting is set', async () => {
-            settingReads('author-p1-e1.adobeaemcloud.com');
+        it('returns Assets View on the bound author when the setting is set', async () => {
+            vscode.workspace.getConfiguration.mockReturnValue({
+                get: jest.fn((key: string) =>
+                    key === 'aemAuthorUrl' ? 'author-p1-e1.adobeaemcloud.com' : undefined
+                ),
+            });
             const { mockContext } = setupMocks();
 
             const urls = urlsOf(await run(mockContext));
 
             expect(vscode.workspace.getConfiguration).toHaveBeenCalledWith('demoBuilder.daLive');
             expect(urls.aemAssets).toBe(
-                'https://author-p1-e1.adobeaemcloud.com/assets.html/content/dam'
+                'https://experience.adobe.com/?repoId=author-p1-e1.adobeaemcloud.com#/assets/browse/content/dam'
             );
         });
 

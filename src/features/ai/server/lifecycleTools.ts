@@ -60,7 +60,7 @@ const TARGET_HINTS: Record<(typeof URL_TARGETS)[number], string> = {
     commerceAdmin: 'the Commerce admin panel',
     devConsole: 'the Adobe Developer Console for this workspace',
     aemAssets:
-        "the bound AEM author's Assets console (only when demoBuilder.daLive.aemAuthorUrl is set)",
+        "the bound AEM author in Assets View (only when demoBuilder.daLive.aemAuthorUrl is set)",
 };
 
 /**

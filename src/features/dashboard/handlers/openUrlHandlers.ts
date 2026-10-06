@@ -163,32 +163,43 @@ export const handleOpenAdminPanel: MessageHandler = async (context) => {
 };
 
 /**
- * The bound AEM author's Assets console (EDS-21). `demoBuilder.daLive.aemAuthorUrl` is
- * the AEM host the Assets panel is bound to — the same value `daLiveSiteConfig.ts` writes
- * as `aem.repositoryId` — stored as a bare host, though a full origin is tolerated.
- * Undefined when the setting is unset: there is no AEM to open.
+ * The bound AEM author in Assets View on experience.adobe.com (EDS-21) — the same
+ * place the DA.live asset picker's "Open in AEM Assets" goes, not the classic
+ * `assets.html` console. `demoBuilder.daLive.aemAuthorUrl` is the AEM host the Assets
+ * panel is bound to — the same value `daLiveSiteConfig.ts` writes as
+ * `aem.repositoryId` — stored as a bare host, though a full origin is tolerated; it
+ * becomes `?repoId=`. `demoBuilder.daLive.IMSOrgId` is the Unified Shell tenant
+ * (`#/@<org>`); without it the shell uses the signed-in org.
+ * Undefined when the author is unset: there is no AEM to open.
  */
-export function resolveAemAssetsUrl(aemAuthorUrl: string | undefined): string | undefined {
+export function resolveAemAssetsUrl(
+    aemAuthorUrl: string | undefined,
+    imsOrg?: string,
+): string | undefined {
     const host = (aemAuthorUrl ?? '')
         .trim()
         .replace(/^https?:\/\//iu, '')
         .replace(/\/+$/u, '');
-    return host ? `https://${host}/assets.html/content/dam` : undefined;
+    if (!host) return undefined;
+    const org = (imsOrg ?? '').trim();
+    const tenant = org ? `@${encodeURIComponent(org)}/` : '';
+    return `https://experience.adobe.com/?repoId=${encodeURIComponent(host)}#/${tenant}assets/browse/content/dam`;
 }
 
-/** The setting, read where the handler runs (the webview cannot read settings). */
-function configuredAemAuthorUrl(): string | undefined {
-    return vscode.workspace.getConfiguration('demoBuilder.daLive').get<string>('aemAuthorUrl');
+/** The settings, read where the handler runs (the webview cannot read settings). */
+function configuredAemAssetsUrl(): string | undefined {
+    const daLive = vscode.workspace.getConfiguration('demoBuilder.daLive');
+    return resolveAemAssetsUrl(daLive.get<string>('aemAuthorUrl'), daLive.get<string>('IMSOrgId'));
 }
 
 /**
- * Handle 'openAemAssets' message - Open the bound AEM author's Assets console.
+ * Handle 'openAemAssets' message - Open the bound AEM author in Assets View.
  *
  * Mirrors {@link handleOpenAdminPanel}: when nothing is bound, a notification offers
  * the setting instead of failing.
  */
 export const handleOpenAemAssets: MessageHandler = async (context) => {
-    const url = resolveAemAssetsUrl(configuredAemAuthorUrl());
+    const url = configuredAemAssetsUrl();
 
     if (!url) {
         // Fire-and-forget — the notification must not block the handler response.
@@ -390,7 +401,7 @@ export const handleGetProjectUrls: MessageHandler = async (context) => {
     urls.devConsole = resolveDevConsoleUrl(project, context);
 
     // AEM Assets — the bound AEM author's console; absent when no AEM is bound (setting unset).
-    const aemAssets = resolveAemAssetsUrl(configuredAemAuthorUrl());
+    const aemAssets = configuredAemAssetsUrl();
     if (aemAssets) urls.aemAssets = aemAssets;
 
     return { success: true, data: { urls } };

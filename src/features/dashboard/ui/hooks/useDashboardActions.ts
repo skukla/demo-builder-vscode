@@ -57,7 +57,7 @@ export interface UseDashboardActionsReturn {
     handleEditProject: () => void;
     /** Open Adobe Developer Console */
     handleOpenDevConsole: () => void;
-    /** Open the bound AEM author's Assets console (URL resolved backend-side from the setting) */
+    /** Open the bound AEM author in Assets View (URL resolved backend-side from the setting) */
     handleOpenAemAssets: () => void;
     /** Opens the Site access webview (EDS storefronts). */
     handleOpenSiteAccess: () => void;
