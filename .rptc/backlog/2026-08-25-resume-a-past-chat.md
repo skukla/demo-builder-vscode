@@ -5,7 +5,7 @@ area: ai
 parent: AI-4
 needs: []
 value: med
-status: built
+status: shipped
 layer: D
 ---
 # The Chat tile can only reach the MOST RECENT conversation

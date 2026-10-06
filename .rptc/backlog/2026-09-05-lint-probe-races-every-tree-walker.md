@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: med
-status: built
+status: shipped
 parent: PL-41
 ---
 
