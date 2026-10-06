@@ -255,7 +255,7 @@
                     "demoBuilder.daLive.aemAuthorUrl": {
                         "type": "string",
                         "default": "",
-                        "description": "The AEM environment your storefronts use for images and other assets. Demo Builder points each storefront's AEM Assets panel at it when the storefront is created, edited, reset, imported or copied, and the dashboard's More > AEM Assets opens it. Required, with no default. Format: author-pXXXXX-eYYYYY.adobeaemcloud.com",
+                        "description": "The AEM environment your storefronts use for images and other assets. Demo Builder points each storefront's AEM Assets panel at it when the storefront is created, edited, reset, imported or copied, and the dashboard's AEM Assets tile opens it. Required, with no default. Format: author-pXXXXX-eYYYYY.adobeaemcloud.com",
                         "order": 1
                     },
                     "demoBuilder.daLive.authoringExperience": {

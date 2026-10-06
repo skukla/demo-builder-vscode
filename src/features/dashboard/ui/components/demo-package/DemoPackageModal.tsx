@@ -1,7 +1,7 @@
 /**
  * DemoPackageModal — "Save as demo package": turn the storefront you built into a
  * card on your own Welcome step, the way Isle5 is one, so new projects can be
- * built from it. Its own door on the More menu (owner, 2026-09-13: saving a
+ * built from it. Its own tile in the Share row (owner, 2026-09-13: saving a
  * package is about you; Export is about handing an artifact to someone else).
  * The core Modal in a DialogContainer, mounted only while open.
  *

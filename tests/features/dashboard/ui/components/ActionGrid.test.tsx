@@ -75,43 +75,90 @@ describe('ActionGrid', () => {
         });
     });
 
-    describe('Primary Cluster', () => {
-        it('renders NO visible zone heading (grouping is structural, via spacing)', () => {
-            const { container } = render(<ActionGrid {...defaultProps} />);
+    describe('Labelled rows (owner, 2026-10-06)', () => {
+        it.each([
+            ['a non-EDS', () => defaultProps, ['Open', 'Build', 'Share']],
+            ['an EDS', () => edsProps, ['Open', 'Storefront', 'Build', 'Share']],
+        ])('gives %s project one headed row per job, in order', (_label, props, expected) => {
+            render(<ActionGrid {...props()} />);
 
-            const primary = getZone(container, 'primary');
-            expect(primary).toBeInTheDocument();
-            expect(within(primary).queryByText('Primary')).not.toBeInTheDocument();
+            expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(
+                expected
+            );
         });
 
-        it('should place Start in the primary cluster when not running (non-EDS)', () => {
+        it.each([
+            ['open', 'Open'],
+            ['build', 'Build'],
+            ['share', 'Share'],
+        ])('names the %s row by its heading, so it is announced as a group', (zone, title) => {
+            const { container } = render(<ActionGrid {...defaultProps} />);
+
+            expect(getZone(container, zone)).toHaveAttribute('aria-label', title);
+        });
+    });
+
+    describe('Open row', () => {
+        it('holds AEM Assets and Dev Console as accented tiles, after Manage Commerce', () => {
+            const { container } = render(<ActionGrid {...edsProps} />);
+
+            const labels = Array.from(
+                getZone(container, 'open').querySelectorAll('.icon-label')
+            ).map((n) => n.textContent);
+            expect(labels).toEqual([
+                'Open in Browser',
+                'Author Content',
+                'Manage Commerce',
+                'AEM Assets',
+                'Dev Console',
+            ]);
+            for (const label of ['AEM Assets', 'Dev Console']) {
+                expect(screen.getByText(label).closest('button')?.className).toContain(
+                    'dashboard-action-button--hero'
+                );
+            }
+        });
+
+        it.each([
+            ['AEM Assets', 'handleOpenAemAssets'],
+            ['Dev Console', 'handleOpenDevConsole'],
+        ] as const)('runs its handler when %s is pressed', async (label, prop) => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            render(<ActionGrid {...defaultProps} />);
+
+            await user.click(screen.getByText(label));
+
+            expect(defaultProps[prop]).toHaveBeenCalled();
+        });
+
+        it('should place Start in the Open row when not running (non-EDS)', () => {
             const { container } = render(<ActionGrid {...defaultProps} isRunning={false} />);
 
-            const primary = getZone(container, 'primary');
+            const primary = getZone(container, 'open');
             expect(primary).toBeInTheDocument();
             expect(within(primary).getByText('Start')).toBeInTheDocument();
             expect(within(primary).queryByText('Stop')).not.toBeInTheDocument();
         });
 
-        it('should place Stop in the primary cluster when running (non-EDS)', () => {
+        it('should place Stop in the Open row when running (non-EDS)', () => {
             const { container } = render(<ActionGrid {...defaultProps} isRunning={true} />);
 
-            const primary = getZone(container, 'primary');
+            const primary = getZone(container, 'open');
             expect(within(primary).getByText('Stop')).toBeInTheDocument();
             expect(within(primary).queryByText('Start')).not.toBeInTheDocument();
         });
 
-        it('should place Open in Browser in the primary cluster', () => {
+        it('should place Open in Browser in the Open row', () => {
             const { container } = render(<ActionGrid {...defaultProps} />);
 
-            const primary = getZone(container, 'primary');
+            const primary = getZone(container, 'open');
             expect(within(primary).getByText('Open in Browser')).toBeInTheDocument();
         });
 
-        it('should place the Author button in the primary cluster for EDS projects', () => {
+        it('should place the Author button in the Open row for EDS projects', () => {
             const { container } = render(<ActionGrid {...edsProps} />);
 
-            const primary = getZone(container, 'primary');
+            const primary = getZone(container, 'open');
             expect(within(primary).getByText('Author Content')).toBeInTheDocument();
         });
 
@@ -144,27 +191,27 @@ describe('ActionGrid', () => {
             expect(authorButton?.className).toContain('dashboard-action-button--hero');
         });
 
-        it('should not render Start/Stop in the primary cluster for EDS projects', () => {
+        it('should not render Start/Stop in the Open row for EDS projects', () => {
             const { container } = render(<ActionGrid {...edsProps} />);
 
-            const primary = getZone(container, 'primary');
+            const primary = getZone(container, 'open');
             expect(within(primary).queryByText('Start')).not.toBeInTheDocument();
             expect(within(primary).queryByText('Stop')).not.toBeInTheDocument();
         });
     });
 
     describe('Manage Commerce Tile', () => {
-        it('should place Manage Commerce in the primary cluster (non-EDS)', () => {
+        it('should place Manage Commerce in the Open row (non-EDS)', () => {
             const { container } = render(<ActionGrid {...defaultProps} />);
 
-            const primary = getZone(container, 'primary');
+            const primary = getZone(container, 'open');
             expect(within(primary).getByText('Manage Commerce')).toBeInTheDocument();
         });
 
-        it('should place Manage Commerce in the primary cluster for EDS projects', () => {
+        it('should place Manage Commerce in the Open row for EDS projects', () => {
             const { container } = render(<ActionGrid {...edsProps} />);
 
-            const primary = getZone(container, 'primary');
+            const primary = getZone(container, 'open');
             expect(within(primary).getByText('Manage Commerce')).toBeInTheDocument();
         });
 
@@ -204,18 +251,24 @@ describe('ActionGrid', () => {
             expect(getZone(container, 'storefront')).toBeInTheDocument();
         });
 
-        it('renders NO visible zone heading (tile labels carry the meaning)', () => {
-            const { container } = render(<ActionGrid {...edsProps} />);
+        it('orders Republish, Sync Storefront, Refresh Block Library, Site Access', () => {
+            const { container } = render(
+                <ActionGrid
+                    {...edsProps}
+                    handleRefreshBlockLibrary={jest.fn()}
+                    handleOpenSiteAccess={jest.fn()}
+                />
+            );
 
-            const storefront = getZone(container, 'storefront');
-            expect(within(storefront).queryByText('Storefront')).not.toBeInTheDocument();
-        });
-
-        it('no longer holds Sync Storefront — that moved to the More menu', () => {
-            const { container } = render(<ActionGrid {...edsProps} />);
-
-            const storefront = getZone(container, 'storefront');
-            expect(within(storefront).queryByText('Sync Storefront')).not.toBeInTheDocument();
+            const labels = Array.from(
+                getZone(container, 'storefront').querySelectorAll('.icon-label')
+            ).map((n) => n.textContent);
+            expect(labels).toEqual([
+                'Republish',
+                'Sync Storefront',
+                'Refresh Block Library',
+                'Site Access',
+            ]);
         });
 
         it('should not place the Author button in the storefront zone', () => {
@@ -231,7 +284,7 @@ describe('ActionGrid', () => {
             expect(screen.queryByText('Sync Storefront')).not.toBeInTheDocument();
         });
 
-        it('survives without handleSyncStorefront — Republish is what the zone is for now', () => {
+        it('survives without handleSyncStorefront — a tile with no handler is absent', () => {
             const { handleSyncStorefront: _handleSyncStorefront, ...edsNoSync } = edsProps;
             const { container } = render(<ActionGrid {...edsNoSync} />);
 
@@ -241,12 +294,6 @@ describe('ActionGrid', () => {
     });
 
     describe('Build Zone', () => {
-        it('renders NO visible zone heading (grouping is structural, via spacing)', () => {
-            const { container } = render(<ActionGrid {...defaultProps} />);
-
-            const build = getZone(container, 'build');
-            expect(within(build).queryByText('Build')).not.toBeInTheDocument();
-        });
 
         it('should place Configure in the build zone', () => {
             const { container } = render(<ActionGrid {...defaultProps} />);

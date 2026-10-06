@@ -133,9 +133,8 @@
     padding: 8px; /* Shadow overflow padding */
 }
 
-/* Stacked, labeled rows + isolated delete footer. No fixed width — the zones
-   take their intrinsic content width and sit left within the standard band (a
-   compact action cluster); the delete divider spans that cluster, not the band. */
+/* Stacked, labelled rows. No fixed width — the zones take their intrinsic
+   content width and sit left within the standard band (a compact action cluster). */
 .dashboard-zones {
     display: flex;
     flex-direction: column;
@@ -143,21 +142,24 @@
     width: fit-content;
 }
 
-/* The action row lays its groups (Primary + Storefront + Build) side by side.
-   Wraps only if the viewport is too narrow. Inter-group gap EQUALS the tile
-   gap (2026-07-09): with the zone headings gone, the row reads as one even
-   strip — grouping semantics are not communicated visually. */
-.dashboard-zone-row {
-    display: flex;
-    flex-flow: row wrap;
-    gap: var(--dashboard-tile-gap);
-    align-items: flex-start;
-}
-
+/* One labelled row per job (Open, Storefront, Build, Share), stacked by
+   .dashboard-zones. The headings came back on 2026-10-06: they were dropped on
+   2026-07-09 when everything fit one strip, and the actions no longer do. */
 .dashboard-zone-section {
     display: flex;
     flex-direction: column;
     gap: 8px;
+}
+
+/* Same voice as the masthead's status labels (11px uppercase, gray-700), so a
+   row caption reads as a caption rather than a second title. */
+.dashboard-zone-heading {
+    margin: 0;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--spectrum-global-color-gray-700);
 }
 
 /* Each zone lays its tiles out in a horizontal row, wrapping only if the

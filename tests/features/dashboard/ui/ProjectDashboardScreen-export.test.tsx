@@ -30,7 +30,7 @@ describe('ProjectDashboardScreen - export and save as demo package', () => {
         setupTestContext();
     });
 
-    it('opens Export from the More menu for every project and closes it', () => {
+    it('opens Export from its tile for every project and closes it', () => {
         renderDashboard({ isEds: false });
         fireEvent.click(screen.getByText('Export'));
         expect(screen.getByRole('dialog', { name: 'Export' })).toBeInTheDocument();
@@ -40,11 +40,11 @@ describe('ProjectDashboardScreen - export and save as demo package', () => {
 
     it('offers Save as demo package to an Edge Delivery project only, and opens its own dialog', () => {
         const headless = renderDashboard({ isEds: false });
-        expect(screen.queryByText('Save as demo package')).not.toBeInTheDocument();
+        expect(screen.queryByText('Save as Demo Package')).not.toBeInTheDocument();
         headless.unmount();
 
         renderDashboard({ isEds: true });
-        fireEvent.click(screen.getByText('Save as demo package'));
+        fireEvent.click(screen.getByText('Save as Demo Package'));
         expect(screen.getByRole('dialog', { name: 'Save as demo package' })).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: 'Close package' }));
         expect(screen.queryByRole('dialog', { name: 'Save as demo package' })).not.toBeInTheDocument();
