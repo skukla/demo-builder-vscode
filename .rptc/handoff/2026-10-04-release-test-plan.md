@@ -25,7 +25,7 @@ matters most.
 
 | | Do this | Expect | Result |
 |---|---|---|---|
-| ★ | Sidebar → Chat → **Pick an earlier chat** | Claude Code opens its own list of past chats in a new tab [AI-4b] |  |
+| ★ | Sidebar → Chat → **Pick an earlier chat** | Claude Code opens its own list of past chats in a new tab [AI-4b] | pass (2026-10-06) |
 | | On a machine (or user) without Claude Code, click **Open in Claude Code** | A message says it isn't installed, with a **How to install** button; the AI badge isn't green [AI-4a] |  |
 
 ## 2. Your Projects
