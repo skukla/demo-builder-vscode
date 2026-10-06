@@ -67,6 +67,8 @@ export interface UseDashboardActionsReturn {
     handleNavigateBack: () => void;
     /** Re-authenticate with Adobe (after session expired) */
     handleReAuthenticate: () => void;
+    /** Re-run the org check (and the other re-runnable status checks) — no sign-in */
+    handleVerifyOrg: () => void;
     /** Forced Adobe account/org switch (after an org mismatch); resolves when the round-trip completes */
     handleSwitchOrg: () => Promise<void>;
 }
@@ -158,6 +160,12 @@ export function useDashboardActions({
         webviewClient.postMessage('reAuthenticate');
     }, []);
 
+    // A status request re-runs every re-runnable on-open check, the org check
+    // included — the same path a switch or re-auth ends in, minus the sign-in.
+    const handleVerifyOrg = useCallback(() => {
+        webviewClient.postMessage('requestStatus');
+    }, []);
+
     // Request (not fire-and-forget) so the caller gets a definitive completion
     // edge for the forced login + re-verify round-trip — used to drive the
     // banner's in-flight "Switching…" state across every outcome (success,
@@ -181,6 +189,7 @@ export function useDashboardActions({
         handleOpenSiteAccess,
         handleNavigateBack,
         handleReAuthenticate,
+        handleVerifyOrg,
         handleSwitchOrg,
     };
 }

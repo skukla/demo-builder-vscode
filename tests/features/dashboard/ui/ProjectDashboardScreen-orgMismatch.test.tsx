@@ -5,8 +5,9 @@
  * `checkResult` message (checkId `org-context`): a `pending` telegraph then an
  * `ok` / `warning` (mismatch) / `unknown` outcome.
  *  - the "IMS Org" STATUS BADGE — ambient health: blue "Checking" → green with
- *    the org name (ok) / red with the (wrong) org name (mismatch) / gray "Not
- *    checked" + a "Sign in to check" action (unknown). Shown only for Adobe projects.
+ *    the org name (ok) / red with the (wrong) org name (mismatch) / yellow
+ *    "Signed out" + Sign in, or yellow "Not verified" + Verify (unknown). Shown
+ *    only for Adobe projects.
  *  - the mismatch BANNER — the actionable half: appears only on mismatch with a
  *    forced "Switch IMS Org" recovery (+ a no-loop tab hint after a failed switch).
  */
@@ -47,11 +48,18 @@ describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
             status: 'ok',
             data: { currentOrg: 'Project Org' },
         });
-    const emitOrgUnknown = () =>
+    const emitOrgSignedOut = () =>
         ctx.triggerMessage('checkResult', {
             checkId: 'org-context',
             status: 'unknown',
-            message: 'Sign in to check organization',
+            message: 'Signed out of Adobe',
+            data: { signedOut: true },
+        });
+    const emitOrgUnverified = () =>
+        ctx.triggerMessage('checkResult', {
+            checkId: 'org-context',
+            status: 'unknown',
+            message: 'Adobe organization not verified',
         });
 
     /** The "IMS Org" status badge element, if present. */
@@ -107,33 +115,52 @@ describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
         expect(screen.queryByText(/Switch IMS Org/i)).not.toBeInTheDocument();
     });
 
-    it('resolves to a gray badge with a "Sign in to check" action (no banner) on unknown', async () => {
-        // P1: when the check can't run non-interactively on open (no token / SDK
-        // cold), it degrades to `unknown` — a quiet sign-in affordance, never a
-        // surprise browser or a mismatch banner.
+    it('resolves to a yellow "Signed out" badge with Sign in (no banner) when signed out', async () => {
+        // P1: when the check can't run non-interactively on open, it never opens a
+        // surprise browser or shows a mismatch banner.
         renderDashboard({ hasAdobeContext: true });
 
-        emitOrgUnknown();
+        emitOrgSignedOut();
         advancePastOrgCheckGate();
 
         await waitFor(() => {
-            expect(imsOrgBadge()).toHaveAttribute('data-color', 'gray');
+            expect(imsOrgBadge()).toHaveAttribute('data-color', 'yellow');
         });
-        expect(screen.getByText('Sign in to check')).toBeInTheDocument();
+        expect(imsOrgBadge()).toHaveTextContent(/Signed out/);
+        expect(screen.getByText('Sign in')).toBeInTheDocument();
         expect(screen.queryByText(/Switch IMS Org/i)).not.toBeInTheDocument();
     });
 
-    it('requests reAuthenticate when "Sign in to check" is clicked (user-initiated)', async () => {
+    it('requests reAuthenticate when Sign in is clicked (user-initiated)', async () => {
         const { webviewClient } = require('@/core/ui/utils/WebviewClient');
         renderDashboard({ hasAdobeContext: true });
 
-        emitOrgUnknown();
+        emitOrgSignedOut();
         advancePastOrgCheckGate();
 
-        const signIn = await screen.findByText('Sign in to check');
-        fireEvent.click(signIn);
+        fireEvent.click(await screen.findByText('Sign in'));
 
         expect(webviewClient.postMessage).toHaveBeenCalledWith('reAuthenticate');
+    });
+
+    it('resolves to a yellow "Not verified" badge with Verify when signed in but unconfirmed', async () => {
+        const { webviewClient } = require('@/core/ui/utils/WebviewClient');
+        renderDashboard({ hasAdobeContext: true });
+
+        emitOrgUnverified();
+        advancePastOrgCheckGate();
+
+        await waitFor(() => {
+            expect(imsOrgBadge()).toHaveTextContent(/Not verified/);
+        });
+        expect(imsOrgBadge()).toHaveAttribute('data-color', 'yellow');
+        webviewClient.postMessage.mockClear();
+
+        fireEvent.click(screen.getByText('Verify'));
+
+        // Verify re-runs the checks; it must never start a sign-in.
+        expect(webviewClient.postMessage).toHaveBeenCalledWith('requestStatus');
+        expect(webviewClient.postMessage).not.toHaveBeenCalledWith('reAuthenticate');
     });
 
     it('shows no IMS Org badge or banner for a project without an Adobe org', async () => {

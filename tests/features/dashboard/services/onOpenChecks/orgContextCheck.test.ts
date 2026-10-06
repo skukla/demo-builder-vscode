@@ -5,7 +5,7 @@
  * (`isAuthenticated` token check + SDK-only org read) and maps to ok / warning /
  * unknown. It must NEVER call the interactive auth guard or the CLI org-list
  * fallback (the two paths that launch a browser / stall ~14.5s). A degraded
- * state (no token, SDK cold) resolves to `unknown` ("sign in to check"), never a
+ * state (no token, SDK cold) resolves to `unknown` (signed out / not verified), never a
  * prompt. The canonical `detectProjectOrgMismatch` / `ensureOrgContext` logic is
  * exercised for real (pure given an injected org list).
  */
@@ -100,7 +100,7 @@ it('valid token + mismatch → warning with orgMismatch banner data', async () =
     expect(outcome.data?.orgMismatch?.currentOrg).toBe('Org One');
 });
 
-it('absent/expired token → unknown; SDK read NOT attempted, no interactive login', async () => {
+it('absent/expired token → unknown + signedOut; SDK read NOT attempted, no interactive login', async () => {
     const auth = makeOrgContextAuth({
         isAuthenticated: jest.fn().mockResolvedValue(false),
     });
@@ -110,14 +110,16 @@ it('absent/expired token → unknown; SDK read NOT attempted, no interactive log
     const outcome = await orgContextCheck.run(ctx);
 
     expect(outcome.status).toBe('unknown');
-    expect(outcome.message).toMatch(/sign in/i);
+    expect(outcome.message).toBe('Signed out of Adobe');
+    expect(outcome.data).toEqual({ signedOut: true });
     expect(auth.getOrganizationsSdkOnly).not.toHaveBeenCalled();
     expect(auth.loginAndRestoreProjectContext).not.toHaveBeenCalled();
 });
 
-it('SDK unavailable (undefined SDK-only read) → unknown; no CLI fallback fired', async () => {
-    // `undefined` means the SDK could not answer (cold, timeout, error) — that is
-    // the only case where "Sign in to check" is honest.
+it('SDK unavailable (undefined SDK-only read) → unknown, NOT signed out; no CLI fallback fired', async () => {
+    // `undefined` means the SDK could not answer (cold, timeout, error). The token
+    // is valid, so the badge must not say "Signed out" — it says "Not verified" and
+    // offers Verify, which re-runs this check.
     const auth = makeOrgContextAuth({
         isAuthenticated: jest.fn().mockResolvedValue(true),
         getOrganizationsSdkOnly: jest.fn().mockResolvedValue(undefined),
@@ -128,6 +130,8 @@ it('SDK unavailable (undefined SDK-only read) → unknown; no CLI fallback fired
     const outcome = await orgContextCheck.run(ctx);
 
     expect(outcome.status).toBe('unknown');
+    expect(outcome.message).toBe('Adobe organization not verified');
+    expect(outcome.data).toBeUndefined();
     expect(auth.getOrganizations).not.toHaveBeenCalled();
 });
 

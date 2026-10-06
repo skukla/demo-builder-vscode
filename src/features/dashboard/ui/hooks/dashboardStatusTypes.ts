@@ -128,12 +128,14 @@ export interface UseDashboardStatusProps {
  * Org-context check lifecycle for the dashboard notice:
  * - `checking`: the proactive check is expected to run but hasn't resolved yet.
  * - `mismatch`: the token reaches a different org than the project (warning).
- * - `unknown`: the check couldn't run non-interactively (no token / SDK cold) —
- *   surfaces a quiet "Sign in to check" affordance instead of launching a browser.
+ * - `signed-out`: no valid Adobe token — "Signed out" with a Sign in action.
+ * - `unverified`: signed in, but the org could not be confirmed without
+ *   interaction (SDK cold or failing, or the check errored) — "Not verified" with
+ *   a Verify action that re-runs the check. Neither launches a browser by itself.
  * - `ok`: resolved and the org is reachable (drives a transient success banner).
  * - `none`: no check applies (project has no Adobe org).
  */
-export type OrgCheckState = 'checking' | 'mismatch' | 'unknown' | 'ok' | 'none';
+export type OrgCheckState = 'checking' | 'mismatch' | 'signed-out' | 'unverified' | 'ok' | 'none';
 
 /**
  * Return type for the useDashboardStatus hook

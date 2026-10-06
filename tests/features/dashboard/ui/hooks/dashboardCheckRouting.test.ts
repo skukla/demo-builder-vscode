@@ -22,6 +22,7 @@ function createActions(): jest.Mocked<CheckRoutingActions> {
         setOrgStatus: jest.fn(),
         setOrgMismatch: jest.fn(),
         setOrgCurrentName: jest.fn(),
+        setOrgSignedOut: jest.fn(),
         setMcpHealing: jest.fn(),
         setAiToolingMissing: jest.fn(),
         setProjectStatus: jest.fn(),
@@ -69,6 +70,17 @@ describe('routeCheckOutcome', () => {
             expect(actions.setOrgStatus).toHaveBeenCalledWith('pending');
             expect(actions.setOrgMismatch).toHaveBeenCalledWith(undefined);
             expect(actions.setOrgCurrentName).toHaveBeenCalledWith(undefined);
+            expect(actions.setOrgSignedOut).toHaveBeenCalledWith(false);
+        });
+
+        it.each([
+            [{ signedOut: true }, true],
+            [undefined, false],
+        ])('records signedOut from an unknown outcome (%o → %s)', (data, signedOut) => {
+            const actions = createActions();
+            routeCheckOutcome({ checkId: CHECK_IDS.ORG_CONTEXT, status: 'unknown', data }, actions);
+
+            expect(actions.setOrgSignedOut).toHaveBeenCalledWith(signedOut);
         });
 
         it('should record the resolved outcome with mismatch and org name', () => {

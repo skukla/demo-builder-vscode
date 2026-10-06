@@ -40,10 +40,12 @@ export interface DashboardStatusHeaderProps {
     aiReady: AiReadyState;
     /** "IMS Org" badge (null when N/A — non-Adobe project). */
     imsOrgDisplay: StatusDisplay | null;
-    /** Org-context check lifecycle — drives the `unknown` "Sign in to check". */
+    /** Org-context check lifecycle — drives the badge's Sign in / Verify action. */
     orgCheckState: OrgCheckState;
-    /** User-initiated re-auth (mesh `needs-auth` / org `unknown`). */
+    /** User-initiated re-auth (org `signed-out`). */
     onReAuthenticate: () => void;
+    /** Re-run the org check without signing in (org `unverified`). */
+    onVerifyOrg: () => void;
     /** Regenerate AI files (AI badge red/yellow remediation). */
     onRegenerateAi: () => void;
     /** Open the AI capability catalog. */
@@ -62,6 +64,17 @@ function offersRegenerate(aiReady: AiReadyState): boolean {
     return aiReady.color === 'red' || aiReady.color === 'yellow';
 }
 
+/** The IMS Org badge's one action, when its state has one. */
+function orgBadgeAction(
+    state: OrgCheckState,
+    onReAuthenticate: () => void,
+    onVerifyOrg: () => void,
+): { label: string; onPress: () => void } | undefined {
+    if (state === 'signed-out') return { label: 'Sign in', onPress: onReAuthenticate };
+    if (state === 'unverified') return { label: 'Verify', onPress: onVerifyOrg };
+    return undefined;
+}
+
 /**
  * Renders the dashboard's full-width status masthead row.
  *
@@ -72,6 +85,7 @@ export function DashboardStatusHeader({
     imsOrgDisplay,
     orgCheckState,
     onReAuthenticate,
+    onVerifyOrg,
     onRegenerateAi,
     onViewCapabilities,
     onNavigateBack,
@@ -102,10 +116,10 @@ export function DashboardStatusHeader({
 
                                         IMS Org status — ambient org-context health (blue checking →
                                         green org name / red wrong org). Shown only for Adobe projects.
-                                        The `unknown` case (couldn't check non-interactively on open)
-                                        surfaces a quiet "Sign in to check" via StatusCard.action — a
-                                        user-initiated sign-in (allowed to open a browser). The
-                                        actionable mismatch banner is separate (below). */}
+                                        Signed out offers Sign in (user-initiated, so it may open a
+                                        browser); Not verified offers Verify, which only re-runs the
+                                        check — the user IS signed in, so a sign-in would change
+                                        nothing. The actionable mismatch banner is separate (below). */}
                                     {imsOrgDisplay && (
                                         <StatusCard
                                             label="IMS Org"
@@ -113,14 +127,7 @@ export function DashboardStatusHeader({
                                             color={imsOrgDisplay.color}
                                             size="S"
                                             className="dashboard-status-badge"
-                                            action={
-                                                orgCheckState === 'unknown'
-                                                    ? {
-                                                          label: 'Sign in to check',
-                                                          onPress: onReAuthenticate,
-                                                      }
-                                                    : undefined
-                                            }
+                                            action={orgBadgeAction(orgCheckState, onReAuthenticate, onVerifyOrg)}
                                         />
                                     )}
 

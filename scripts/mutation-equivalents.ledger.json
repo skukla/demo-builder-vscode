@@ -7987,7 +7987,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 238,
+            "line": 244,
             "mutants": 1,
             "category": "other",
             "reason": "The mount effect's empty dependency list. Stryker replaces it with a one-element array of its own constant string, which React compares equal to itself on every render \u2014 so the effect still runs exactly once, subscribes once and cleans up once.",
@@ -8024,7 +8024,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 266,
+            "line": 272,
             "mutants": 1,
             "category": "other",
             "reason": "runVerify's empty useCallback dependency list, with the same Stryker filler-array substitution: a constant string array is equal to itself across renders, so the callback keeps its identity and every memo built on it is unchanged.",
@@ -11292,7 +11292,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 131,
+            "line": 133,
             "mutants": 10,
             "category": "other",
             "reason": "Twelve handlers in this hook are memoised with an EMPTY dependency list (handleSyncStorefront, handleRefreshBlockLibrary, handleOpenAdminPanel, handleConfigure, handleEditProject, handleOpenDevConsole, handleDeleteProject, handleRepublishContent, handleResetProject, handleNavigateBack, handleReAuthenticate, handleSwitchOrg), and their closing lines are textually identical so they cannot be anchored apart \u2014 this row covers the one mutant on each. Stryker does not empty these lists; it replaces the empty array with a one-element array holding a constant string. React compares dependency lists element by element with Object.is, and that constant is identical on every render, so the callback is created once and never recreated \u2014 exactly as with the empty list. Each of these handlers also closes over nothing but the imported webviewClient, so there is no captured value that could go stale even if the memo did invalidate. No sequence of renders, messages or payloads can distinguish the two. (2026-09-24, develop merged: three of the twelve \u2014 delete, republish, reset \u2014 left this hook for the Export dialog and the reset flow; nine remain. 2026-09-30, EDS-21: handleOpenAemAssets joins them, same shape; ten.)",

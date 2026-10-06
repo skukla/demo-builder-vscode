@@ -72,12 +72,15 @@ function deriveOrgCheckState(
     orgChecked: boolean,
     hasAdobeContext: boolean,
     minDisplayElapsed: boolean,
+    signedOut: boolean,
 ): OrgCheckState {
     if (!hasAdobeContext) return 'none';
     if (!orgChecked || !minDisplayElapsed) return 'checking';
     if (orgStatus === 'warning') return 'mismatch';
-    // unknown OR an unexpected error both degrade to the quiet "sign in" affordance.
-    if (orgStatus === 'unknown' || orgStatus === 'error') return 'unknown';
+    // An unexpected error reads as not verified: we know nothing about the org.
+    if (orgStatus === 'unknown' || orgStatus === 'error') {
+        return signedOut ? 'signed-out' : 'unverified';
+    }
     return 'ok';
 }
 
@@ -129,6 +132,8 @@ export function useDashboardStatus(
     const [orgStatus, setOrgStatus] = useState<CheckStatus | undefined>(undefined);
     // Name of the org the token currently reaches — shown in the "IMS Org" badge.
     const [orgCurrentName, setOrgCurrentName] = useState<string | undefined>(undefined);
+    // True when the org check found no valid Adobe token (vs. merely unverified).
+    const [orgSignedOut, setOrgSignedOut] = useState(false);
     // True while the mcp-health check is visibly auto-healing stale MCP paths
     // (checkResult{mcp-health, warning} → true; ok/error → false). Drives the AI
     // badge's "Updating AI configuration…" telegraph (replaces the silent failure).
@@ -204,6 +209,7 @@ export function useDashboardStatus(
                 setOrgStatus,
                 setOrgMismatch,
                 setOrgCurrentName,
+                setOrgSignedOut,
                 setMcpHealing,
                 setAiToolingMissing,
                 setProjectStatus,
@@ -317,6 +323,7 @@ export function useDashboardStatus(
         orgChecked,
         Boolean(hasAdobeContext),
         orgCheckMinElapsed,
+        orgSignedOut,
     );
     const displayName = projectStatus?.name || '';
 
@@ -332,10 +339,12 @@ export function useDashboardStatus(
                 return { color: 'green', text: orgCurrentName || 'Connected' };
             case 'mismatch':
                 return { color: 'red', text: orgCurrentName || 'Wrong org' };
-            case 'unknown':
-                // Couldn't check non-interactively — neutral badge; the "Sign in to
-                // check" action (rendered on the badge) is the recovery affordance.
-                return { color: 'gray', text: 'Not checked' };
+            // Yellow, not gray: a gray dot beside "IMS Org" reads as fine. Not red
+            // either — every Adobe action re-checks the org before it runs.
+            case 'signed-out':
+                return { color: 'yellow', text: 'Signed out' };
+            case 'unverified':
+                return { color: 'yellow', text: 'Not verified' };
             default:
                 return null;
         }

@@ -15,7 +15,10 @@
  *                 is a real answer, and only the forced "Switch IMS Org" login with
  *                 its account/org chooser can change it; a non-forced sign-in
  *                 silently reuses the same browser SSO session — 2026-08-13),
- *   - `unknown` — no valid token OR the SDK couldn't answer ("sign in to check").
+ *   - `unknown` — not confirmed, for one of two reasons the badge words differently:
+ *                 no valid token (`signedOut` → "Signed out" · Sign in), or a valid
+ *                 token the SDK could not answer for ("Not verified" · Verify, which
+ *                 re-runs this check — a sign-in would change nothing).
  *
  * The browser only ever opens from a USER action (Switch IMS Org / Sign in) —
  * never from this automatic open-time check.
@@ -40,14 +43,23 @@ export interface OrgContextCheckData {
     orgMismatch?: OrgMismatchInfo;
     /** Name of the org the token currently reaches — drives the "IMS Org" badge. */
     currentOrg?: string;
+    /** On `unknown` only: true when there is no valid Adobe token at all. */
+    signedOut?: boolean;
 }
 
-const SIGN_IN_MESSAGE = 'Sign in to check organization';
+const SIGNED_OUT_MESSAGE = 'Signed out of Adobe';
+const NOT_VERIFIED_MESSAGE = 'Adobe organization not verified';
 const ORG_MISMATCH_MESSAGE = 'This project is configured for a different Adobe organization';
 
-const unknownOutcome = (): CheckResult<OrgContextCheckData> => ({
+const signedOutOutcome = (): CheckResult<OrgContextCheckData> => ({
     status: 'unknown',
-    message: SIGN_IN_MESSAGE,
+    message: SIGNED_OUT_MESSAGE,
+    data: { signedOut: true },
+});
+
+const notVerifiedOutcome = (): CheckResult<OrgContextCheckData> => ({
+    status: 'unknown',
+    message: NOT_VERIFIED_MESSAGE,
 });
 
 /**
@@ -136,11 +148,11 @@ export function createOrgContextCheck(deps: OrgContextCheckDeps): OnOpenCheck {
     
             // P1: token-only check — no browser. No valid token → unknown.
             if (!(await deps.authManager.isAuthenticated())) {
-                return unknownOutcome();
+                return signedOutOutcome();
             }
 
             // P1: SDK-only org read — never the CLI fallback. `undefined` means the
-            // SDK could not answer → unknown ("sign in to check"). An EMPTY list is a
+            // SDK could not answer → not verified (the token is valid). An EMPTY list is a
             // real answer — the token reaches no Console orgs — and flows into the
             // detector below, which resolves it as unreachable → the mismatch warning
             // whose forced "Switch IMS Org" login (account/org chooser) is the only
@@ -148,7 +160,7 @@ export function createOrgContextCheck(deps: OrgContextCheckDeps): OnOpenCheck {
             // sign-in offered by `unknown` reuses the browser SSO session and loops).
             const orgs = await deps.authManager.getOrganizationsSdkOnly();
             if (orgs === undefined) {
-                return unknownOutcome();
+                return notVerifiedOutcome();
             }
 
             // Reuse the canonical detector with an SDK-only org source (no CLI path).
@@ -163,7 +175,7 @@ export function createOrgContextCheck(deps: OrgContextCheckDeps): OnOpenCheck {
             if (!result) {
                 // The detector saw the org list — possibly EMPTY, which is the point of this
                 // change — and still could not resolve a mismatch.
-                return unknownOutcome();
+                return notVerifiedOutcome();
             }
 
             if (result.reachable) {

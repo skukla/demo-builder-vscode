@@ -157,6 +157,7 @@ export function ProjectDashboardScreen({
         handleRestartDemo,
         handleNavigateBack,
         handleReAuthenticate,
+        handleVerifyOrg,
         handleSwitchOrg,
     } = useDashboardActions({
         isOpeningBrowser,
@@ -239,6 +240,7 @@ export function ProjectDashboardScreen({
                                 imsOrgDisplay={imsOrgDisplay}
                                 orgCheckState={orgCheckState}
                                 onReAuthenticate={handleReAuthenticate}
+                                onVerifyOrg={handleVerifyOrg}
                                 onRegenerateAi={() => {
                                     void regenerateAiFiles();
                                 }}

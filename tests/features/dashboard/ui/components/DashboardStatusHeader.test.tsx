@@ -82,6 +82,7 @@ function makeProps(
         imsOrgDisplay: { color: 'green', text: 'Adobe Demo System' },
         orgCheckState: 'ok',
         onReAuthenticate: jest.fn(),
+        onVerifyOrg: jest.fn(),
         onRegenerateAi: jest.fn(),
         onViewCapabilities: jest.fn(),
         onNavigateBack: jest.fn(),
@@ -140,20 +141,32 @@ describe('DashboardStatusHeader — the IMS Org badge', () => {
     });
 });
 
-describe('DashboardStatusHeader — the org "Sign in to check" remediation', () => {
-    it('offers it when the check could not run, wired to onReAuthenticate', async () => {
+describe('DashboardStatusHeader — the IMS Org badge action', () => {
+    it('offers Sign in when signed out, wired to onReAuthenticate', async () => {
         const user = setupUser();
-        const props = makeProps({ orgCheckState: 'unknown' });
+        const props = makeProps({ orgCheckState: 'signed-out' });
         render(<DashboardStatusHeader {...props} />);
 
         expect(cardFor('IMS Org')?.action).toEqual({
-            label: 'Sign in to check',
+            label: 'Sign in',
             onPress: props.onReAuthenticate,
         });
 
-        await user.click(screen.getByText('Sign in to check'));
+        await user.click(screen.getByText('Sign in'));
         expect(props.onReAuthenticate).toHaveBeenCalledTimes(1);
-        expect(props.onRegenerateAi).not.toHaveBeenCalled();
+        expect(props.onVerifyOrg).not.toHaveBeenCalled();
+    });
+
+    it('offers Verify when signed in but unverified, wired to onVerifyOrg — never a sign-in', async () => {
+        const user = setupUser();
+        const props = makeProps({ orgCheckState: 'unverified' });
+        render(<DashboardStatusHeader {...props} />);
+
+        expect(cardFor('IMS Org')?.action).toEqual({ label: 'Verify', onPress: props.onVerifyOrg });
+
+        await user.click(screen.getByText('Verify'));
+        expect(props.onVerifyOrg).toHaveBeenCalledTimes(1);
+        expect(props.onReAuthenticate).not.toHaveBeenCalled();
     });
 
     it.each<OrgCheckState>(['ok', 'checking', 'mismatch', 'none'])(
@@ -162,7 +175,6 @@ describe('DashboardStatusHeader — the org "Sign in to check" remediation', () 
             render(<DashboardStatusHeader {...makeProps({ orgCheckState })} />);
 
             expect(cardFor('IMS Org')?.action).toBeUndefined();
-            expect(screen.queryByText('Sign in to check')).not.toBeInTheDocument();
         }
     );
 });
