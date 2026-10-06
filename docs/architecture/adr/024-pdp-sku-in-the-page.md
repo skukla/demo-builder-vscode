@@ -44,6 +44,10 @@ It does not rely on the URL to identify the product: its page template writes
 `getProductSku()` as `getMetadata('sku') || getSkuFromUrl()` — the tag first.
 Canonical `getProductLink` already cleans both segments with `sanitizeName`.
 
+How the rest of our pipeline compares with the reference — what matches, what
+differs on purpose, and the one demo-only piece (the smart-404 snippet) — is laid
+out in [eds-byom-pdp-routing.md § Is this what a merchant would run?](../eds-byom-pdp-routing.md#is-this-what-a-merchant-would-run).
+
 Canonical was never wrong. What it lacked in our setup was the tag: the
 `render-pdp` overlay served the authored `/products/default` markup verbatim, so
 the URL fallback was the only source, and the fallback is lossy.
