@@ -185,8 +185,16 @@ ${SMART_404_MARKER_START}
       r = await tryTrigger();
     }
     if (r && r.ok) {
-      const sep = lc.includes('?') ? '&' : '?';
-      window.location.replace(\`\${lc}\${sep}\${RETRY_FLAG}=1\`);
+      // The action publishes the product at its one canonical path and says
+      // where; an older link form (or any path Helix would clean) lands there.
+      let target = lc;
+      try {
+        const body = await r.json();
+        if (body && typeof body.path === 'string' && /^\\/products\\/[^/?#]+\\/[^/?#]+$/.test(body.path)) {
+          target = body.path;
+        }
+      } catch (_) { /* keep the requested path */ }
+      window.location.replace(\`\${target}?\${RETRY_FLAG}=1\`);
       return;
     }
     // Action failed after retry — the SKU has no publishable PDP

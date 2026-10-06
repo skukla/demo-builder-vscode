@@ -5,7 +5,7 @@
 **Decision Maker**: Project Owner
 **Implementer**: Phase 1 ship 2026-06-09 (this slice). Phase 2 ship 2026-06-09 (later same day; verified live on `citisignal-b2b`).
 
-Related: [ADR-007](007-pdp-sku-url-encoding.md) — reversible SKU URL encoding (the `/products/{urlKey}/{sku}` path's SKU segment).
+Related: [ADR-024](024-pdp-sku-in-the-page.md) — the `/products/{urlKey}/{sku}` path is Helix-clean and the page carries the real SKU (supersedes ADR-007's URL encoding).
 
 ---
 

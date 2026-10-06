@@ -209,9 +209,8 @@ describe('probeStorefrontDelivery', () => {
  * `/products/default` cannot fail for a prerender reason (it is the overlay's
  * input). A path built for a SKU the catalog just confirmed exists can: the
  * request goes through overlay registration, `render-pdp`, the authored-template
- * fetch, and the content-bus write. It is also the only automated check that the
- * three hand-written copies of `encodeSkuForUrl` still agree — our copy builds
- * the path, their code serves it.
+ * fetch, and the content-bus write. It is also the only live check on the path
+ * contract (ADR-024) — `pdpPathFor` builds the path, the storefront serves it.
  */
 describe('probeStorefrontDelivery — real SKU leg', () => {
     const SKU = 'VA19-SI-NA';

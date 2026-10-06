@@ -247,11 +247,10 @@ describe('prewarmCatalog — happy path', () => {
         );
     });
 
-    it('underscore-escapes SKUs with spaces/special chars so the path matches getProductLink (ADR-007)', async () => {
-        // A prose SKU (spaces) must be encoded with the same _HH scheme the
-        // storefront's getProductLink uses, or the prewarmed/published path
-        // won't match the link the browser requests. Raw spaces would also be
-        // CDN-rejected by aem.live. urlKey is sanitized like sanitizeName.
+    it('cleans SKUs with spaces/underscores the way Helix and getProductLink do (ADR-024)', async () => {
+        // Helix stores every published page under a cleaned path, and the
+        // storefront's canonical getProductLink links to that same path. Any
+        // other spelling publishes a page no link reaches.
         (global.fetch as jest.Mock)
             .mockResolvedValueOnce({
                 ok: true,
@@ -261,7 +260,7 @@ describe('prewarmCatalog — happy path', () => {
                             items: [
                                 {
                                     productView: {
-                                        sku: 'Yale UNOplus-Series A',
+                                        sku: 'Yale UNOplus_Series A',
                                         urlKey: 'CMLodestar',
                                     },
                                 },
@@ -283,7 +282,7 @@ describe('prewarmCatalog — happy path', () => {
             mockLogger
         );
 
-        const expectedPath = '/products/cmlodestar/yale_20unoplus-series_20a';
+        const expectedPath = '/products/cmlodestar/yale-unoplus-series-a';
         expect(publisher.previewAndPublishPage).toHaveBeenCalledWith(DA_ORG, DA_SITE, expectedPath);
     });
 
@@ -381,10 +380,9 @@ describe('pickSampleSku', () => {
         global.fetch = jest.fn();
     });
 
-    it('returns the first product with a path built by the shared encoders', async () => {
+    it('returns the first product with its canonical PDP path', async () => {
         // The path must be byte-identical to what the storefront's getProductLink
-        // produces, which is the whole point of building it with the same
-        // sanitizeUrlKey / encodeSkuForUrl rather than by hand.
+        // produces, which is why it is built with pdpPathFor rather than by hand.
         (global.fetch as jest.Mock).mockResolvedValue(
             catalogPage([{ sku: 'VA19-SI-NA', urlKey: 'Cronus Yoga Pant' }])
         );
@@ -401,16 +399,15 @@ describe('pickSampleSku', () => {
         });
     });
 
-    it('escapes a SKU that needs it, matching the URL the storefront will emit', async () => {
-        // A SKU with a space is exactly the case ADR-007 exists for, and the case
-        // where a drifted encoder copy would produce a different URL.
+    it('cleans a SKU that needs it, matching the URL the storefront will emit', async () => {
+        // Spaces, slashes and underscores are the SKUs Helix rewrites on publish.
         (global.fetch as jest.Mock).mockResolvedValue(
-            catalogPage([{ sku: 'AB 12/CD', urlKey: 'Widget' }])
+            catalogPage([{ sku: 'AB 12/CD_e', urlKey: 'Widget' }])
         );
 
         const sample = await pickSampleSku(makeAccsProject(), mockLogger);
 
-        expect(sample?.path).toBe('/products/widget/ab_2012_2fcd');
+        expect(sample?.path).toBe('/products/widget/ab-12-cd-e');
     });
 
     it('issues no POST to prepublish-pdp — this probe must not publish', async () => {

@@ -148,17 +148,11 @@ describe('buildSmart404Snippet', () => {
         expect(snippet).toContain('/products/');
     });
 
-    it('keeps a permissive SKU matcher so _HH-encoded paths still match (ADR-007)', () => {
-        // The SKU segment is reversibly encoded into [a-z0-9_-] (encodeSkuForUrl);
-        // an underscore-encoded SKU like yale_20unoplus must match. The matcher
-        // must stay `([^/]+)` — narrowing it (e.g. to [a-z0-9-]+) would drop the
-        // `_` and silently break the cold-path redirect for prose SKUs.
+    it('keeps a permissive SKU matcher, so an old or uncleaned link still reaches the action', () => {
+        // The action, not the snippet, decides where the product lives. A link
+        // from before ADR-024 (`_5f` escapes) must still match and be redirected.
         const snippet = buildSmart404Snippet(triggerUrl, 'skukla', 'citisignal-b2b');
         expect(snippet).toContain('([^/]+)');
-        const m = '/products/cmlodestar/yale_20unoplus-series_20a'.match(
-            /^\/products\/([^/]+)\/([^/]+)$/
-        );
-        expect(m?.[2]).toBe('yale_20unoplus-series_20a');
     });
 
     it('embeds the infinite-loop guard using the pdpRetry sentinel', () => {
@@ -207,7 +201,7 @@ describe('buildSmart404Snippet', () => {
         // get redirected to template literals.
         expect(snippet).toContain('`/products/${urlKey.toLowerCase()}/${sku.toLowerCase()}`');
         expect(snippet).toContain('encodeURIComponent(lc)');
-        expect(snippet).toContain('${lc}${sep}${RETRY_FLAG}=1');
+        expect(snippet).toContain('${target}?${RETRY_FLAG}=1');
     });
 
     it('outer function IIFE uses inside-parens style (wrap-iife)', () => {
@@ -450,5 +444,69 @@ describe('SMART_404_HEAD_SNIPPET_TEMPLATE', () => {
         expect(SMART_404_HEAD_SNIPPET_TEMPLATE).toContain(
             "s.textContent = 'main { visibility: hidden; }';"
         );
+    });
+});
+
+/**
+ * The snippet RUN, not read: where a shopper is sent after a cold publish.
+ *
+ * Under ADR-007 the snippet redirected to the path it asked to publish. Helix had
+ * stored the page under a cleaned path, so the redirect went nowhere and every SKU
+ * with `_` 404'd. The action now publishes at the canonical path and names it;
+ * these pin that the snippet follows the action's answer, and only a PDP answer.
+ */
+describe('buildSmart404Snippet — cold-publish redirect (executed)', () => {
+    const triggerUrl = 'https://example.adobeioruntime.net/api/v1/web/accs-discovery/prepublish-pdp';
+
+    async function runSnippet(pathname: string, actionBody: unknown, ok = true): Promise<string[]> {
+        const replaced: string[] = [];
+        const fakeWindow = {
+            isErrorPage: true,
+            location: {
+                pathname,
+                search: '',
+                replace: (to: string) => {
+                    replaced.push(to);
+                },
+            },
+        };
+        const fakeDocument = { getElementById: () => null, querySelector: () => null };
+        const fakeFetch = jest.fn(async () => ({
+            ok,
+            status: ok ? 200 : 404,
+            json: async () => actionBody,
+        }));
+        const snippet = buildSmart404Snippet(triggerUrl, 'skukla', 'kukla-justrite');
+        new Function('window', 'document', 'fetch', snippet)(fakeWindow, fakeDocument, fakeFetch);
+        await new Promise((resolve) => setImmediate(resolve));
+        await new Promise((resolve) => setImmediate(resolve));
+        return replaced;
+    }
+
+    it('sends the shopper to the path the action says it published', async () => {
+        const replaced = await runSnippet('/products/sign/rre-805_5fwhite', {
+            success: true,
+            path: '/products/sign/rre-805-white',
+        });
+
+        expect(replaced).toStrictEqual(['/products/sign/rre-805-white?pdpRetry=1']);
+    });
+
+    it('falls back to the requested path when the action names none', async () => {
+        const replaced = await runSnippet('/products/sign/rre-805-white', { success: true });
+
+        expect(replaced).toStrictEqual(['/products/sign/rre-805-white?pdpRetry=1']);
+    });
+
+    it('ignores an answer that is not a product path', async () => {
+        const replaced = await runSnippet('/products/sign/rre-805-white', { success: true, path: 'https://elsewhere.example/x' });
+
+        expect(replaced).toStrictEqual(['/products/sign/rre-805-white?pdpRetry=1']);
+    });
+
+    it('sends the shopper to the native /404 when the action refuses', async () => {
+        const replaced = await runSnippet('/products/gone/gone-1', { success: false }, false);
+
+        expect(replaced).toStrictEqual(['/404']);
     });
 });

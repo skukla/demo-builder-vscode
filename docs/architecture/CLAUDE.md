@@ -50,9 +50,9 @@
   projects are configured based on the selected backend component.
 - [`eds-byom-pdp-routing.md`](eds-byom-pdp-routing.md) — How
   `/products/{urlKey}/{sku}` URLs work for every storefront: shared
-  `render-pdp` overlay, browser-side smart 404, reversible SKU encoding.
+  `render-pdp` overlay, browser-side smart 404, the SKU carried in the page.
   Decision rationale: [ADR-005](adr/005-byom-pdp-routing.md) and
-  [ADR-007](adr/007-pdp-sku-url-encoding.md).
+  [ADR-024](adr/024-pdp-sku-in-the-page.md).
 
 ## Architecture Decision Records (`adr/`)
 

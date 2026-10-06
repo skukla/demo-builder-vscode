@@ -6522,7 +6522,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 479,
+            "line": 475,
             "mutants": 1,
             "category": "block",
             "reason": "publishOne's catch body is a logger.debug and return false. Emptying it drops off the end of the function, which returns undefined - and the single caller does results.filter(Boolean).length, where undefined and false are identical. Per-SKU failures are non-fatal by design, so nothing else reads the value. The failure COUNT is constrained by the test that drives one previewAndPublishPage to reject and asserts attempted 2, succeeded 1, failed 1.",
@@ -6559,7 +6559,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 568,
+            "line": 564,
             "mutants": 1,
             "category": "block",
             "reason": "The else half of the log-severity branch recorded for line 566: one logger.info, followed by the same return on both paths. Emptying it removes an info line and nothing observable. Recorded separately because the ledger keys an entry by module, line and anchor.",
@@ -6584,7 +6584,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 647,
+            "line": 640,
             "mutants": 1,
             "category": "block",
             "reason": "This catch body is a logger.debug and return undefined. Emptying it drops off the end of pickSampleSku, which returns undefined - the same value, and the same one the function's own doc promises for every failure so a Commerce outage cannot colour the storefront verdict. Three tests drive this handler (catalog down, GraphQL errors, enumeration failure) and all three assert undefined, which is what both versions produce.",

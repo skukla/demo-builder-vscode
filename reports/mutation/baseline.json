@@ -6606,20 +6606,6 @@
             "equivalent": 4,
             "openGaps": 0
         },
-        "src/features/eds/services/pdp/pdpUrlEncoding.ts": {
-            "score": 97.22,
-            "killed": 33,
-            "survived": 1,
-            "noCoverage": 0,
-            "timeout": 2,
-            "survivorCategories": {
-                "string": 1
-            },
-            "uncoveredCategories": {},
-            "highValueSurvivors": 0,
-            "equivalent": 0,
-            "openGaps": 0
-        },
         "src/features/eds/services/pdp/publishKeyRegistrar.ts": {
             "score": 77.97,
             "killed": 46,

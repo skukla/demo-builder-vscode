@@ -50,7 +50,7 @@ import {
     type ConfigGeneratorParams,
 } from './configGenerator';
 import { derivePrepublishUrl } from './pdp/pdp404HandlerPublisher';
-import { encodeSkuForUrl, sanitizeUrlKey } from './pdp/pdpUrlEncoding';
+import { pdpPathFor } from './pdp/pdpPath';
 import {
     describeScope,
     fetchServedStorefrontConfig,
@@ -446,13 +446,9 @@ async function enumerateAccsCatalog(
 }
 
 /**
- * Publish one (urlKey, sku) through the AUTHENTICATED Helix path. Builds the
- * path with the SAME transforms the storefront's `getProductLink` applies —
- * `sanitizeUrlKey` for the urlKey and `encodeSkuForUrl` (reversible `_HH`
- * escaping) for the sku — so the published path is byte-identical to the link
- * the browser later requests. Both produce lowercase, Helix-safe `[a-z0-9_-]`
- * output (raw spaces/percent-encoding would be CDN-rejected by aem.live; see
- * ADR-007).
+ * Publish one (urlKey, sku) through the AUTHENTICATED Helix path, at
+ * `pdpPathFor` — the path the storefront's `getProductLink` links to and the
+ * one Helix stores the page under (ADR-024).
  *
  * This used to POST anonymously to the external `prepublish-pdp` action. Once
  * storefront setup began pinning a site admin, any `access.admin` role closed
@@ -472,7 +468,7 @@ async function publishOne(
     skuPath: SkuPath,
     logger: Logger,
 ): Promise<boolean> {
-    const path = `/products/${sanitizeUrlKey(skuPath.urlKey)}/${encodeSkuForUrl(skuPath.sku)}`;
+    const path = pdpPathFor(skuPath.urlKey, skuPath.sku);
     try {
         await publisher.previewAndPublishPage(org, site, path);
         return true;
@@ -592,12 +588,9 @@ async function applyServedScope(
  * chain: overlay registered → `render-pdp` reachable → template fetched → page
  * written to the content bus.
  *
- * It also happens to be the only automated check on the encoder contract.
- * `encodeSkuForUrl` exists in three hand-written copies — here, the
- * `product-link-sku-encoding` patch in `eds-demo-patches`, and
- * `check-sku-exists.js` in `accs-discovery-service` — with no gate comparing
- * them. This builds the path with OUR copy and asks THEIR code to serve it, so
- * drift shows up as a 404.
+ * It is also the only live check on the path contract: this builds the path
+ * with `pdpPathFor` and asks the storefront and `render-pdp` to serve it, so a
+ * disagreement about where a product's page lives shows up as a 404.
  *
  * READ-ONLY. Enumeration is a GraphQL POST to Catalog Service, which is a query;
  * this must never call `prewarmOne`, which POSTs to prepublish-pdp and publishes.
@@ -640,7 +633,7 @@ export async function pickSampleSku(
         return {
             sku: first.sku,
             urlKey: first.urlKey,
-            path: `/products/${sanitizeUrlKey(first.urlKey)}/${encodeSkuForUrl(first.sku)}`,
+            path: pdpPathFor(first.urlKey, first.sku),
             scopeSource: scoped.scopeSource,
             scopeDivergence: scoped.scopeDivergence,
         };

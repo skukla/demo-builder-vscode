@@ -5,7 +5,7 @@
 **Decision Maker**: Project Owner (confirmed 2026-06-10 on the audit findings)
 **Implementer**: In progress — see [Implementation Status](#implementation-status) below for which steps are live on develop vs. gated on external work.
 
-Related: [ADR-007](007-pdp-sku-url-encoding.md) — the PDP SKU URL encoding ships through this code-patch ledger.
+Related: [ADR-024](024-pdp-sku-in-the-page.md) — PDP links use canonical `getProductLink` unpatched (the ADR-007 encoding patches were removed from this ledger).
 
 ---
 

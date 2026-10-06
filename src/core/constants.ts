@@ -271,7 +271,9 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // holds the "category | page" rows that link the menu to it. Same unreleased version again
 // (EDS-27): both skills name check_category_pages / add_category_pages for a category added
 // after setup, and author-commerce-data says Demo Builder looks by itself while the project
-// is open and that the autoAdd setting is the SC's to turn on.
+// is open and that the autoAdd setting is the SC's to turn on. Same unreleased version
+// (ADR-024): AGENTS.md says render-pdp writes the real SKU into each product page and that
+// custom blocks link to products with getProductLink.
 export const AI_CONTEXT_VERSION = 37;
 
 /**

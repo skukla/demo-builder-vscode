@@ -2083,5 +2083,6 @@ It records one moment and is not edited afterwards; when a decision changes, a n
 supersedes it. The index is [docs/architecture/adr/README.md](../architecture/adr/README.md).
 
 Reach for one when a rule here looks arbitrary and you are about to remove it. That is
-what they are for. ADR-007 exists because the obvious way to encode a product URL
-silently breaks every product page — the rule alone would not have told you that.
+what they are for. ADR-024 exists because a product-URL encoding that passed every
+request probe broke every page it published — the rule alone would not have told you
+that, and the superseded ADR-007 shows why a probe is not a publish.
