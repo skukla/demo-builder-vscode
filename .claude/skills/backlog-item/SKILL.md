@@ -23,6 +23,7 @@ node $B stale                 # advisory: WIP items with nothing recorded
 node $B leftovers             # advisory: finished items whose body still names work
 node $B unlogged              # commits that NAME an item but never reached it
 node $B unlogged --write      # ...and record them, no typing
+node $B readiness             # built items vs the release test plan: ready / failed / unchecked / no row
 ```
 
 ## Name the item in the commit
@@ -228,6 +229,19 @@ in** (`skukla/demo-erp`, `skukla/commerce-erp-integration`: they ship by being o
 and deployed (owner, 2026-10-03). The 2026-10-03 reconcile found about thirty such
 items that the tag rule could never have moved out of `built`. An item with
 commits in BOTH this repository and those still waits for the Demo Builder tag.
+
+**Ready to ship is a third question, and the release test plan answers it.**
+`built` says code landed and `shipped` says a tag holds it; neither says anyone
+used it. Each row of `.rptc/handoff/*-release-test-plan.md` names its items in
+`[brackets]` and has a **Result** cell: `pass`, `fail …`, or `gate` for work with
+nothing to click (tooling, tests, docs, research), whose green gate is the proof.
+`readiness` joins the plan to the backlog. An item is ready when every row naming
+it passed, or, with no row, when its log already records a live run (`LIVE`,
+`Live on`, `proven live`, `Verified live`; never "live check owed"). Any fail
+makes it failed; a row with no result, or in a table with no Result column, is
+unchecked. The release is ready to cut when nothing failed, no ★ row is
+unchecked, and every built item has a row. A built item with no row is the gap
+to close first: write its row, or a `gate` row if there is nothing to click.
 
 **`spiked` is not `planned`.** Feasibility answered with no decision to build is
 its own state; calling it `planned` implies an intent nobody has formed.

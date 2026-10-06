@@ -28,6 +28,8 @@
  *   stale                 advisory: work-in-progress items with nothing recorded
  *   leftovers             advisory: finished items whose own body still names work
  *   unlogged [--since R]  commits that NAME an item but were never logged to it
+ *   readiness [--plan F]  built items against the release test plan's Result column:
+ *                         ready / failed / not checked / no row, and a cut verdict
  *
  *   filters: --area X --status S --layer L --kind K --value V --grep TERM
  *   output:  --json  (every read command; this is the agent-facing form)
@@ -386,6 +388,78 @@ function syncReadme(items) {
     return missing;
 }
 
+// ── release readiness ────────────────────────────────────────────────────────
+//
+// `built` says code landed; it cannot say anyone has used it, and a tag only
+// says it was released. The release test plan is where use gets recorded: each
+// row names its items in [brackets] and carries a Result cell the owner fills
+// in — pass, fail, or `gate` for work with nothing to click, whose green gate
+// IS the proof. This joins the two so "what is ready to ship" is read off the
+// record instead of remembered.
+
+const PLAN_DIR = '.rptc/handoff';
+const ID_IN_BRACKETS = /\[([^\]]+)\]/g;
+const ITEM_ID = /\b[A-Z]{2,3}-\d+[a-z]?\b/g;
+// Lines in `## Shipped so far` that already record a live run, in the wordings
+// used before the Result column existed. "Live check owed" is the opposite.
+const LIVE_LOG = /\bVerified live\b|\bLIVE\b|^Live[: ]|\bLive on\b|\bproven live\b/;
+const NOT_LIVE = /\bowed\b|not yet (run|seen) live/i;
+
+function latestPlan() {
+    if (!existsSync(PLAN_DIR)) return null;
+    const plans = readdirSync(PLAN_DIR).filter((f) => f.endsWith('release-test-plan.md')).sort();
+    return plans.length ? join(PLAN_DIR, plans[plans.length - 1]) : null;
+}
+
+export function readPlan(text) {
+    const rows = [];
+    let inTable = false, resultCol = -1, tables = 0, withResult = 0;
+    for (const line of text.split('\n')) {
+        if (!line.startsWith('|')) { inTable = false; continue; }
+        const cells = line.split('|').slice(1, -1).map((c) => c.trim());
+        if (cells.every((c) => /^:?-+:?$/.test(c))) continue;
+        if (!inTable) {
+            // The first row of a table is its header.
+            inTable = true;
+            tables++;
+            resultCol = cells.findIndex((c) => /^result$/i.test(c));
+            if (resultCol >= 0) withResult++;
+            continue;
+        }
+        const ids = [];
+        for (const m of line.matchAll(ID_IN_BRACKETS)) ids.push(...(m[1].match(ITEM_ID) ?? []));
+        const raw = resultCol >= 0 ? (cells[resultCol] ?? '') : '';
+        const result = /^(pass|✅|gate)\b/i.test(raw) ? 'pass' : /^(fail|❌)\b/i.test(raw) ? 'fail' : '';
+        rows.push({ star: cells[0].includes('★'), ids, result, raw, what: cells[1] ?? '' });
+    }
+    return { rows, tables, withResult };
+}
+
+function liveLogged(item) {
+    const body = readFileSync(item.path, 'utf8');
+    const i = body.indexOf('## Shipped so far');
+    if (i < 0) return false;
+    return body.slice(i).split('\n')
+        .map((l) => l.replace(/^- \d{4}-\d{2}-\d{2}\s+/, ''))
+        .some((l) => LIVE_LOG.test(l) && !NOT_LIVE.test(l));
+}
+
+export function readiness(items, plan) {
+    const built = items.filter((i) => i.status === 'built');
+    const out = { ready: [], failed: [], unchecked: [], noRow: [] };
+    for (const item of built) {
+        const rows = plan.rows.filter((r) => r.ids.includes(item.id));
+        const entry = { id: item.id, title: item.title, star: rows.some((r) => r.star), live: liveLogged(item) };
+        if (rows.some((r) => r.result === 'fail')) out.failed.push(entry);
+        else if (rows.length && rows.every((r) => r.result === 'pass')) out.ready.push({ ...entry, by: 'plan' });
+        else if (rows.length) out.unchecked.push(entry);
+        else if (entry.live) out.ready.push({ ...entry, by: 'live log' });
+        else out.noRow.push(entry);
+    }
+    const blocking = out.failed.length + out.unchecked.filter((e) => e.star).length;
+    return { ...out, built: built.length, blocking };
+}
+
 // ── cli ──────────────────────────────────────────────────────────────────────
 
 function parseArgv(argv) {
@@ -564,6 +638,32 @@ function main() {
                         `${r.homed} have a child or superseded-by (skipped), ` +
                         `${r.historyOnly} name a remainder only as history (skipped)` +
                         '\n  for each: file the remainder as a child item, or reword it as history if it is done.');
+            return;
+        }
+        case 'readiness': {
+            // Advisory: exits 0 whatever it finds, like `leftovers`. The verdict
+            // line is the answer; a failing exit would be read as a broken tool.
+            const path = opt.plan ?? latestPlan() ?? die(`no *release-test-plan.md in ${PLAN_DIR}; pass --plan <file>`);
+            const plan = readPlan(readFileSync(path, 'utf8'));
+            const r = readiness(items, plan);
+            if (opt.json) return console.log(JSON.stringify({ plan: path, ...r }, null, 2));
+            const line = (e, note = '') =>
+                console.log(`  ${e.star ? '★' : ' '} ${e.id.padEnd(7)} ${note.padEnd(9)} ${e.title}`);
+            const group = (name, list, note) => {
+                console.log(`\n${name} (${list.length})`);
+                for (const e of [...list].sort((a, b) => Number(b.star) - Number(a.star))) line(e, note(e));
+            };
+            group('READY', r.ready, (e) => e.by);
+            group('FAILED — each fail becomes a new item', r.failed, () => '');
+            group('NOT CHECKED — has a row, no result yet', r.unchecked, (e) => (e.live ? 'live once' : ''));
+            group('NO ROW — add one, or a `gate` row if there is nothing to click', r.noRow, () => '');
+            console.log(`\n  verdict: ${r.blocking === 0 && r.noRow.length === 0
+                ? 'ready to cut — no failures, no unchecked ★ rows'
+                : `not ready — ${r.failed.length} failed, ${r.unchecked.filter((e) => e.star).length} ★ unchecked, ${r.noRow.length} with no row`}`);
+            // The control. A plan whose Result column was never added reads as
+            // "nothing checked", not as "nothing to check".
+            console.log(`  control: ${path}: ${plan.tables} table(s), ${plan.withResult} with a Result column, ` +
+                        `${plan.rows.length} row(s); ${r.built} built item(s)`);
             return;
         }
         case 'unlogged': {

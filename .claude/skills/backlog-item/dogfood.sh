@@ -233,6 +233,46 @@ rm -f .rptc/backlog/*-leftover-*.md
 exits 0 "check passes with the planted items gone"    -- "${T[@]}" check
 
 echo
+echo "READINESS — built items against the release test plan's Result column"
+# One planted item per bucket, because each bucket has its own way to be wrong.
+plant ZZ-7  ready-passed   built "Passed its row."
+plant ZZ-8  ready-failed   built "Failed its row."
+plant ZZ-9  ready-unrun    built "Has a row nobody ran."
+plant ZZ-10 ready-livelog  built "No row."
+plant ZZ-11 ready-norow    built "No row and no live log."
+plant ZZ-12 ready-owed     built "No row."
+plant ZZ-13 ready-oldtable built "Its only row is in a table with no Result column."
+"${T[@]}" log ZZ-10 "LIVE on the scratch project: it worked" >/dev/null 2>&1
+"${T[@]}" log ZZ-12 "Built. Live check owed: run it on the scratch project" >/dev/null 2>&1
+exits 1 "readiness refuses when there is no plan to read" -- "${T[@]}" readiness
+mkdir -p .rptc/handoff
+cat > .rptc/handoff/2026-01-01-release-test-plan.md <<'PLAN'
+| | Do this | Expect | Result |
+|---|---|---|---|
+| ★ | a | b [ZZ-7] | pass |
+| | a | b [ZZ-8] | fail: the button is missing |
+| | a | b [ZZ-8, ZZ-13x] | pass |
+| ★ | a | b [ZZ-9] |  |
+
+| | Do this | Expect |
+|---|---|---|
+| | a | b [ZZ-13] |
+PLAN
+RJ() { "${T[@]}" readiness --json | node -e "const r=JSON.parse(require('fs').readFileSync(0));const b=$1;process.stdout.write(b)"; }
+exits 0 "readiness runs, and never fails the build"   -- "${T[@]}" readiness
+says   "POSITIVE CONTROL: a passed row makes its item ready" "ZZ-7:plan" -- RJ "r.ready.map(e=>e.id+':'+e.by).join()"
+says   "a fail wins over a pass on another row"       "^ZZ-8$" -- RJ "r.failed.map(e=>e.id).join()"
+says   "a blank Result is unchecked"                  "ZZ-9" -- RJ "r.unchecked.map(e=>e.id).join()"
+says   "a row in a table with no Result column is unchecked, never passed" "ZZ-13" -- RJ "r.unchecked.map(e=>e.id).join()"
+says   "a live log line with no row counts as ready" "ZZ-10:live log" -- RJ "r.ready.map(e=>e.id+':'+e.by).join()"
+says   "NEGATIVE CONTROL: 'Live check owed' is not a live run" "ZZ-12" -- RJ "r.noRow.map(e=>e.id).join()"
+says   "no row and no live log is reported as such"   "ZZ-11" -- RJ "r.noRow.map(e=>e.id).join()"
+says   "an unchecked ★ row blocks the cut"            "not ready" -- "${T[@]}" readiness
+says   "the control line counts the Result columns"   "2 table(s), 1 with a Result column, 5 row(s)" -- "${T[@]}" readiness
+rm -rf .rptc/handoff; rm -f .rptc/backlog/*-ready-*.md
+exits 0 "check passes with the planted items gone"    -- "${T[@]}" check
+
+echo
 echo "UNLOGGED — commits that name an item but never reached its record"
 # This needs a REAL git repo, so the sandbox becomes one. Mocking git here would
 # test the mock: the thing under test is trailer parsing against `git log` output.
