@@ -70,7 +70,10 @@ import { registerValidateSelectionTool } from '@/features/ai/server/validateSele
 import { registerViewTools } from '@/features/ai/server/viewTools';
 import { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { sweepCommerceSecrets } from '@/features/components/services/commerceSecretSweep';
-import { shouldAutoReopenProjectsList } from '@/features/dashboard/commands/showDashboard';
+import {
+    ProjectDashboardWebviewCommand,
+    shouldAutoReopenProjectsList,
+} from '@/features/dashboard/commands/showDashboard';
 import { seedDefaultAiPrompts } from '@/features/dashboard/services/defaultPromptsSeeder';
 import { cleanupDaLiveSitesCommand } from '@/features/eds/commands/cleanupDaLiveSites';
 import { manageGitHubReposCommand } from '@/features/eds/commands/manageGitHubRepos';
@@ -448,6 +451,14 @@ export async function activate(context: vscode.ExtensionContext) {
             // The SHARED token service: its validation cache is per-instance, so
             // building a fresh one downstream would cost a GitHub round trip.
             githubTokenService: getGitHubServices(context.secrets).tokenService,
+            onReapplied: async (project) => {
+                const current = await stateManager.getCurrentProject();
+                if (current?.path === project.path) {
+                    await ProjectDashboardWebviewCommand.sendAuthoringExperienceUpdate(
+                        ProjectDashboardWebviewCommand.authoringUrlFor(project),
+                    );
+                }
+            },
         }),
             // Step 7 of the third-party-tooling item: re-enabling must install.
             registerThirdPartyToolingSettingListener(

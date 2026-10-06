@@ -465,6 +465,48 @@ describe('registerEwSettingChangeListener', () => {
         expect(mockApplyAuthoringExperienceFlip).not.toHaveBeenCalled();
     });
 
+    it('tells the host about each project it re-applied, so an open dashboard can swap its Author link', async () => {
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Republish');
+        mockApplyAuthoringExperienceFlip
+            .mockRejectedValueOnce(new Error('DA.live 403'))
+            .mockResolvedValueOnce({ editorPath: 'ok', quickEdit: 'ok', configRegen: 'ok' });
+        const onReapplied = jest.fn().mockResolvedValue(undefined);
+        registerEwSettingChangeListener({
+            context: mockContext,
+            stateManager: buildStateManager([
+                { name: 'failed', eds: true },
+                { name: 'flipped', eds: true },
+            ]),
+            logger: mockLogger,
+            githubTokenService: {} as GitHubTokenService,
+            onReapplied,
+        });
+
+        fireChange('demoBuilder.daLive.authoringExperience');
+        await flushDebounce();
+
+        expect(onReapplied).toHaveBeenCalledTimes(1);
+        expect((onReapplied.mock.calls[0][0] as Project).name).toBe('flipped');
+    });
+
+    it('a failing dashboard refresh does not turn a successful re-apply into a failure', async () => {
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Republish');
+        registerEwSettingChangeListener({
+            context: mockContext,
+            stateManager: buildStateManager([{ name: 'justrite', eds: true }]),
+            logger: mockLogger,
+            githubTokenService: {} as GitHubTokenService,
+            onReapplied: jest.fn().mockRejectedValue(new Error('panel gone')),
+        });
+
+        fireChange('demoBuilder.daLive.authoringExperience');
+        await flushDebounce();
+
+        expect(vscode.window.showInformationMessage).toHaveBeenLastCalledWith(
+            'Re-applied Experience Workspace config to justrite'
+        );
+    });
+
     it('dispose() removes the subscription', () => {
         const disposable = register(buildStateManager([]));
         disposable.dispose();

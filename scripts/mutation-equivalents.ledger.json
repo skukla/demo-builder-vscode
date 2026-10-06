@@ -7665,7 +7665,7 @@
             "anchors": [
                 "if (debounceTimer) {"
             ],
-            "line": 81,
+            "line": 89,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing the test true makes the body run with debounceTimer undefined, and clearTimeout(undefined) is a documented no-op in Node and under jest fake timers alike. The very next statement then overwrites debounceTimer with a fresh handle either way, so the coalescing behaviour the debounce test pins is unchanged and no observable differs \u2014 the guard only avoids a pointless call.",
@@ -7678,7 +7678,7 @@
             "anchors": [
                 "if (debounceTimer) {"
             ],
-            "line": 98,
+            "line": 106,
             "mutants": 1,
             "category": "branch",
             "reason": "The dispose copy of the same guard. With the test forced true and no timer pending, clearTimeout(undefined) does nothing and debounceTimer is reassigned undefined when it is already undefined, after which subscription.dispose() runs exactly as before. The cancelling behaviour that matters \u2014 disposing before the debounce fires must stop the handler \u2014 is pinned by its own test and is unaffected by the guard.",
@@ -7691,7 +7691,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 143,
+            "line": 155,
             "mutants": 1,
             "category": "block",
             "reason": "The per-project catch body extracts a message and logs a warning; it does not rethrow, does not touch successCount and does not alter the loop. Emptying it still swallows the failure, so the remaining projects are still republished and the completion toast still reports the partial count \u2014 which the failing-flip test now asserts. The only thing the mutant removes is the warning text.",
@@ -7704,7 +7704,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 150,
+            "line": 162,
             "mutants": 1,
             "category": "block",
             "reason": "The outer catch body extracts a message and logs an error. Emptying it still absorbs the failure, so handleEwSettingChange still resolves, no prompt appears and no flip runs \u2014 which the enumeration-failure test asserts. Since the handler is invoked as void and returns nothing, there is no value or side effect left for a test to see beyond the log line.",
@@ -7851,7 +7851,7 @@
             "anchors": [
                 "const panel = BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard');"
             ],
-            "line": 317,
+            "line": 316,
             "mutants": 1,
             "category": "branch",
             "reason": "Same shape as the Configure command's copy: forcing the following 'if (panel)' true calls dispose() on undefined, and the TypeError lands in the try/catch already there for the already-disposed case. Both paths end as a no-op. The false variant is killed by the test that asserts an open panel is disposed.",
@@ -8627,7 +8627,7 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 782,
+            "line": 793,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here the step is starting the in-extension MCP server, whose failure must never abort activation.",
@@ -8652,7 +8652,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 516,
+            "line": 527,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a logger.error plus a showErrorMessage whose text is built from the error. Activation's own tests assert showErrorMessage was NOT called on every success path, which is the observable half; the wording of the message when it IS called is the rest.",
@@ -8665,7 +8665,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 873,
+            "line": 884,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here it is the manifest-format sweep.",

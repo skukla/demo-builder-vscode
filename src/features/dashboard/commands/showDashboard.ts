@@ -168,8 +168,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand<Dashboard
         // Detect EDS projects and get URLs (using shared typeGuards functions)
         const isEds = isEdsProject(project);
         const edsLiveUrl = getEdsLiveUrl(project);
-        const authoringExperience = resolveProjectAuthoringExperience(project);
-        const edsDaLiveUrl = getEdsDaLiveUrl(project, authoringExperience, getEwCanvasBranch());
+        const edsDaLiveUrl = ProjectDashboardWebviewCommand.authoringUrlFor(project);
 
         // Get EDS storefront status for dynamic display
         const initialEdsStorefrontStatus = project?.edsStorefrontStatusSummary;
@@ -429,6 +428,15 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand<Dashboard
             const payload: AuthoringExperienceUpdatePayload = { edsDaLiveUrl };
             await panel.webview.postMessage({ type: 'authoringExperienceUpdate', payload });
         }
+    }
+
+    /** The Author Content URL for a project, resolved the way the dashboard resolves it on open. */
+    public static authoringUrlFor(project: Project | undefined): string | undefined {
+        return getEdsDaLiveUrl(
+            project,
+            resolveProjectAuthoringExperience(project),
+            getEwCanvasBranch(),
+        );
     }
 
     /**

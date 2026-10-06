@@ -53,6 +53,14 @@ export interface EwSettingChangeListenerDeps {
      * trip. This listener has no use for it itself.
      */
     githubTokenService: GitHubTokenService;
+    /**
+     * Called after each project is re-applied, so an open dashboard can swap its
+     * Author Content link. Without it the dashboard kept the URL it was opened
+     * with, and Author Content went on opening the OLD editor (release testing,
+     * 2026-10-06). The Configure save path already pushes; this was the other
+     * door to the same flip.
+     */
+    onReapplied?: (project: Project) => Promise<void>;
 }
 
 /**
@@ -113,7 +121,7 @@ async function handleEwSettingChange(
     deps: EwSettingChangeListenerDeps,
     flags: ChangeFlags,
 ): Promise<void> {
-    const { context, stateManager, logger, githubTokenService } = deps;
+    const { context, stateManager, logger, githubTokenService, onReapplied } = deps;
     try {
         const affected = await findAffectedProjects(stateManager, flags);
         if (affected.length === 0) {
@@ -140,6 +148,10 @@ async function handleEwSettingChange(
                     githubTokenService,
                 });
                 successCount++;
+                await onReapplied?.(project).catch((error: unknown) => {
+                    const message = error instanceof Error ? error.message : String(error);
+                    logger.warn(`[EWSettingChange] Dashboard refresh failed for ${project.name}: ${message}`);
+                });
             } catch (error) {
                 const message = error instanceof Error ? error.message : String(error);
                 logger.warn(`[EWSettingChange] Republish failed for ${project.name}: ${message}`);
