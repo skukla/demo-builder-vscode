@@ -54,7 +54,7 @@ matters most.
 
 | | Do this | Expect | Result |
 |---|---|---|---|
-| | Look for the **AEM Assets** tile | It opens AEM Assets for this project [EDS-21] |  |
+| | Click **AEM Assets** in the Build list (after Datapacks) | It opens AEM Assets for this project [EDS-21] |  |
 | ★ | Run the **Storefront Report** on a storefront forked from our template | It says what it's built on and which fixes fit. If the template has newer code, it offers to bring it in, and the default is No [EDS-13f] |  |
 | | Run any long operation (deploy, reset) | The progress window says what it's doing at each stage, not just a spinner [PL-59] |  |
 
@@ -159,6 +159,9 @@ branch is the check; `gate` in the Result cell records that it ran (2026-10-05, 
 - **Guest prices on Justrite show $0.00.** Signed-in company buyers see prices; guests and the
   General group get none, while a request with no group gets list prices. Under investigation, not
   caused by the page work.
+- **Signed-out visitors can't open product pages on Justrite** (they land on Not Found). Commerce's
+  `products(skus:)` returns nothing for the guest group while search works — the same catalog bug as
+  the $0.00 prices, reported to the product team. Signed-in buyers are fine.
 - An expired DA.live sign-in can read as "no publishable pages" on Republish, and as still signed
   in [EDS-29, EDS-30, filed].
 - Optimizer support (PL-60) and app-only projects (AB-1b) are designs only.
