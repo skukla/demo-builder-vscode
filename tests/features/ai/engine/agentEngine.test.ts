@@ -5,50 +5,39 @@
  * These assert what a caller is handed, not how the module is written.
  */
 
+import * as os from 'os';
+import * as path from 'path';
 import {
     describeEngine,
+    globalMcpConfigPaths,
     resolveEngine,
-    type AgentEngine,
 } from '@/features/ai/engine/agentEngine';
 
-const BOTH = { claudeCode: true, copilotCli: true };
-const NEITHER = { claudeCode: false, copilotCli: false };
-
 describe('resolveEngine', () => {
-    it.each<AgentEngine>(['claude-code', 'copilot-cli', 'copilot-vscode'])(
-        'obeys an explicit %s even when that CLI is absent',
-        (engine) => {
-            expect(resolveEngine(engine, NEITHER)).toBe(engine);
+    it('obeys an explicit claude-code', () => {
+        expect(resolveEngine('claude-code')).toBe('claude-code');
+    });
+
+    it("defaults to VS Code's own chat", () => {
+        // The panel is the experience Demo Builder promotes (owner, 2026-10-06).
+        expect(resolveEngine(undefined)).toBe('copilot-vscode');
+        expect(resolveEngine('copilot-vscode')).toBe('copilot-vscode');
+    });
+
+    it.each(['copilot-cli', 'auto', 'something-else', 42])(
+        'answers the default for %p — a value an earlier beta accepted, or none we know',
+        (stale) => {
+            // An SC's settings.json can still hold these; the Chat button must work.
+            expect(resolveEngine(stale)).toBe('copilot-vscode');
         },
     );
-
-    it('prefers Copilot when both CLIs are installed — it is the one colleagues must use', () => {
-        expect(resolveEngine('auto', BOTH)).toBe('copilot-cli');
-    });
-
-    it('answers Claude Code when it is the only CLI installed', () => {
-        expect(resolveEngine('auto', { claudeCode: true, copilotCli: false })).toBe('claude-code');
-    });
-
-    it("answers VS Code's own agent when no CLI is installed", () => {
-        // The one engine that needs nothing on the PATH, so it is the honest default
-        // for a machine that has neither.
-        expect(resolveEngine('auto', NEITHER)).toBe('copilot-vscode');
-    });
-
-    it("defaults to VS Code's own chat even when both CLIs are installed", () => {
-        // The panel is the experience Demo Builder promotes (owner, 2026-10-06).
-        expect(resolveEngine(undefined, BOTH)).toBe('copilot-vscode');
-    });
 });
 
 describe('describeEngine', () => {
-    it('gives Claude Code its own config file, hooks and terminal command', () => {
+    it('gives Claude Code its terminal command', () => {
         expect(describeEngine('claude-code')).toStrictEqual({
             id: 'claude-code',
             displayName: 'Claude Code',
-            globalMcpConfigPath: '.claude.json',
-            hookFormat: 'claude',
             launch: {
                 kind: 'terminal',
                 command: 'claude',
@@ -58,35 +47,26 @@ describe('describeEngine', () => {
         });
     });
 
-    it('gives Copilot CLI its own config file and command', () => {
-        expect(describeEngine('copilot-cli')).toStrictEqual({
-            id: 'copilot-cli',
-            displayName: 'Copilot CLI',
-            globalMcpConfigPath: '.copilot/mcp-config.json',
-            hookFormat: 'copilot',
-            launch: {
-                kind: 'terminal',
-                command: 'copilot',
-                terminalName: 'Copilot',
-                installUrl:
-                    'https://docs.github.com/en/copilot/how-tos/copilot-cli/set-up-copilot-cli/install-copilot-cli',
-            },
-        });
-    });
-
-    it('gives Copilot in VS Code no global config file and a chat launch', () => {
-        // VS Code takes its servers from the workspace file and from extensions, so
-        // there is no user-level file for us to write.
+    it('gives Copilot in VS Code a chat launch', () => {
         expect(describeEngine('copilot-vscode')).toStrictEqual({
             id: 'copilot-vscode',
             displayName: 'Copilot',
-            hookFormat: 'copilot',
             launch: { kind: 'vscode-chat' },
         });
     });
+});
 
-    it('never answers a Claude hook format for a Copilot engine', () => {
-        expect(describeEngine('copilot-cli').hookFormat).toBe('copilot');
-        expect(describeEngine('copilot-vscode').hookFormat).toBe('copilot');
+describe('globalMcpConfigPaths', () => {
+    it("names both agent CLIs' user configs — Copilot CLI too, though Chat no longer opens it", () => {
+        expect(globalMcpConfigPaths()).toEqual([
+            path.join(os.homedir(), '.claude.json'),
+            path.join(os.homedir(), '.copilot/mcp-config.json'),
+        ]);
+    });
+
+    it('names only the agents asked for', () => {
+        expect(globalMcpConfigPaths(['copilot'])).toEqual([
+            path.join(os.homedir(), '.copilot/mcp-config.json'),
+        ]);
     });
 });

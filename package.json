@@ -365,25 +365,19 @@
                     "demoBuilder.ai.engine": {
                         "type": "string",
                         "enum": [
-                            "auto",
-                            "claude-code",
-                            "copilot-cli",
-                            "copilot-vscode"
+                            "copilot-vscode",
+                            "claude-code"
                         ],
                         "enumItemLabels": [
-                            "Detect automatically",
-                            "Claude Code",
-                            "Copilot CLI",
-                            "Copilot in VS Code"
+                            "Copilot in VS Code",
+                            "Claude Code"
                         ],
                         "enumDescriptions": [
-                            "Use whichever agent is installed, preferring Copilot.",
-                            "Anthropic's Claude Code (CLI).",
-                            "GitHub Copilot in the terminal (the `copilot` CLI).",
-                            "GitHub Copilot Chat inside VS Code."
+                            "GitHub Copilot's chat panel inside VS Code, in agent mode.",
+                            "Anthropic's Claude Code, in a terminal tab (needs the `claude` CLI and your own Claude account)."
                         ],
                         "default": "copilot-vscode",
-                        "description": "Which AI agent Demo Builder serves: where it writes MCP config, which hook format it installs, and what the Chat button opens."
+                        "description": "Which AI agent the Chat button opens. Demo Builder's tools are available to both, and to Copilot CLI if you run `copilot` yourself."
                     },
                     "demoBuilder.ai.permissions": {
                         "type": "string",
@@ -399,11 +393,11 @@
                         ],
                         "enumDescriptions": [
                             "The agent asks before running tools or editing files.",
-                            "Routine actions run without asking. Claude Code: `--permission-mode auto`. Copilot CLI: `--allow-all-tools` (paths and URLs are still checked).",
-                            "Nothing is asked. Claude Code: `--dangerously-skip-permissions`. Copilot CLI: `--allow-all`."
+                            "Routine actions run without asking (`--permission-mode auto`).",
+                            "Nothing is asked (`--dangerously-skip-permissions`)."
                         ],
                         "default": "ask",
-                        "markdownDescription": "How much the agent may do without asking, applied when the Chat button starts Claude Code or Copilot CLI in a terminal. Copilot in VS Code uses VS Code's own setting instead — the permissions picker in the chat box, or `#chat.permissions.default#`. Demo Builder's own consent prompt for destructive operations (`#demoBuilder.ai.requireAgentConsent#`) still applies at every level."
+                        "markdownDescription": "How much Claude Code may do without asking, applied when the Chat button starts it in a terminal. Copilot in VS Code uses VS Code's own setting instead — the permissions picker in the chat box, or `#chat.permissions.default#`. Demo Builder's own consent prompt for destructive operations (`#demoBuilder.ai.requireAgentConsent#`) still applies at every level."
                     },
                     "demoBuilder.ai.requireAgentConsent": {
                         "type": "boolean",

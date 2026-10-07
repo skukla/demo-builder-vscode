@@ -22,7 +22,7 @@ export type SidebarContext =
 
 /**
  * Pushed as `aiChatMenu`: whether the Chat tile offers New / Pick-earlier.
- * True only for a terminal agent; VS Code's chat panel has its own.
+ * True only for the terminal agent (Claude Code); VS Code's chat panel has its own.
  */
 export interface SidebarAiChatMenu {
     menu: boolean;

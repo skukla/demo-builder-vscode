@@ -51,8 +51,8 @@ describe('registerGlobalMcp — the engines that keep a user-level config', () =
     const read = async (rel: string): Promise<Record<string, unknown>> =>
         JSON.parse(await fsPromises.readFile(path.join(home, rel), 'utf-8'));
 
-    it('writes the same entry to each named engine, and answers what it wrote', async () => {
-        const written = await registerGlobalMcp(DIST, NODE, ['claude-code', 'copilot-cli']);
+    it('writes the same entry to each named agent CLI, and answers what it wrote', async () => {
+        const written = await registerGlobalMcp(DIST, NODE, ['claude', 'copilot']);
 
         expect(written).toStrictEqual([
             path.join(home, '.claude.json'),
@@ -66,7 +66,7 @@ describe('registerGlobalMcp — the engines that keep a user-level config', () =
     });
 
     it('creates the Copilot config directory when it does not exist yet', async () => {
-        await registerGlobalMcp(DIST, NODE, ['copilot-cli']);
+        await registerGlobalMcp(DIST, NODE, ['copilot']);
 
         expect((await read('.copilot/mcp-config.json')).mcpServers).toBeDefined();
     });
@@ -78,7 +78,7 @@ describe('registerGlobalMcp — the engines that keep a user-level config', () =
             JSON.stringify({ mcpServers: { other: { command: 'x' } }, somethingElse: 1 }),
         );
 
-        await registerGlobalMcp(DIST, NODE, ['copilot-cli']);
+        await registerGlobalMcp(DIST, NODE, ['copilot']);
 
         const config = await read('.copilot/mcp-config.json');
         expect(config.somethingElse).toBe(1);
@@ -88,19 +88,20 @@ describe('registerGlobalMcp — the engines that keep a user-level config', () =
         ]);
     });
 
-    it('writes nothing for an engine that keeps no user-level config', async () => {
-        // VS Code takes its servers from the workspace file and from extensions.
-        const written = await registerGlobalMcp(DIST, NODE, ['copilot-vscode']);
+    it('writes Copilot CLI by default — it is no Chat choice, but an SC may run `copilot` themselves', async () => {
+        const written = await registerGlobalMcp(DIST, NODE);
 
-        expect(written).toStrictEqual([]);
-        await expect(fsPromises.readdir(home)).resolves.toStrictEqual([]);
+        expect(written).toStrictEqual([
+            path.join(home, '.claude.json'),
+            path.join(home, '.copilot/mcp-config.json'),
+        ]);
     });
 
     it('refuses a malformed Copilot config rather than overwriting it', async () => {
         await fsPromises.mkdir(path.join(home, '.copilot'), { recursive: true });
         await fsPromises.writeFile(path.join(home, '.copilot/mcp-config.json'), '{ not json');
 
-        await expect(registerGlobalMcp(DIST, NODE, ['copilot-cli'])).rejects.toThrow(/malformed/);
+        await expect(registerGlobalMcp(DIST, NODE, ['copilot'])).rejects.toThrow(/malformed/);
         await expect(
             fsPromises.readFile(path.join(home, '.copilot/mcp-config.json'), 'utf-8'),
         ).resolves.toBe('{ not json');

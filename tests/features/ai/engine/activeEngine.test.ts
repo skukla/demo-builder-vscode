@@ -36,29 +36,28 @@ describe('resolveActiveEngine', () => {
         expect(vscode.workspace.getConfiguration).toHaveBeenCalledWith('demoBuilder.ai');
     });
 
-    it('lets an explicit setting decide alone, and reports its CLI missing', async () => {
-        setEngine('copilot-cli');
-        const probe = only('claude');
+    it('obeys claude-code, and reports its CLI missing', async () => {
+        setEngine('claude-code');
+        const probe = only('copilot');
 
         const active = await resolveActiveEngine(probe);
 
-        expect(active.descriptor.id).toBe('copilot-cli');
+        expect(active.descriptor.id).toBe('claude-code');
         expect(active.installed).toBe(false);
-        expect(probe.commandExists).not.toHaveBeenCalledWith('claude');
+        expect(probe.commandExists).toHaveBeenCalledWith('claude');
     });
 
-    it.each([
-        [['claude', 'copilot'], 'copilot-cli'],
-        [['claude'], 'claude-code'],
-        [[], 'copilot-vscode'],
-    ])('under auto with %j installed, picks %s', async (installed, expected) => {
-        setEngine('auto');
+    it.each(['copilot-cli', 'auto'])(
+        "serves VS Code's chat for %s, a value an earlier beta accepted",
+        async (stale) => {
+            setEngine(stale);
 
-        const active = await resolveActiveEngine(only(...installed));
+            const active = await resolveActiveEngine(only('claude', 'copilot'));
 
-        expect(active.descriptor.id).toBe(expected);
-        expect(active.installed).toBe(true);
-    });
+            expect(active.descriptor.id).toBe('copilot-vscode');
+            expect(active.installed).toBe(true);
+        },
+    );
 });
 
 describe('resolveActiveEngine — defaults', () => {
@@ -92,12 +91,18 @@ describe('resolveActiveEngine — defaults', () => {
 describe('agentCliStatus', () => {
     beforeEach(() => resetAgentCliCache());
 
-    it("names the SC's chosen agent, not Claude Code", async () => {
-        setEngine('copilot-cli');
+    it("names the SC's chosen agent when its CLI is missing", async () => {
+        setEngine('claude-code');
 
         await expect(agentCliStatus(only())).resolves.toEqual({
             installed: false,
-            name: 'Copilot CLI',
+            name: 'Claude Code',
         });
+    });
+
+    it('answers installed for Copilot in VS Code, which needs no CLI', async () => {
+        setEngine(undefined);
+
+        await expect(agentCliStatus(only())).resolves.toEqual({ installed: true, name: 'Copilot' });
     });
 });

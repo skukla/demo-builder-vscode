@@ -379,11 +379,10 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     /**
      * Tell the webview whether the Chat tile needs its New / Pick-earlier menu.
      *
-     * Only a terminal agent (Claude Code, Copilot CLI) needs it: Demo Builder is
-     * the only thing that can start a new process or open that CLI's resume
-     * picker. VS Code's own chat panel already has both as buttons, so for
-     * Copilot in VS Code the tile is a plain "open the panel in agent mode"
-     * button (owner, 2026-10-06).
+     * Only the terminal agent (Claude Code) needs it: Demo Builder is the only
+     * thing that can start a new process or open its resume picker. VS Code's
+     * own chat panel already has both as buttons, so for Copilot in VS Code the
+     * tile is a plain "open the panel in agent mode" button (owner, 2026-10-06).
      */
     private async sendAiChatMenu(): Promise<void> {
         try {

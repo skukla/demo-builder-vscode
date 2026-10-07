@@ -44,25 +44,31 @@ CLI 1.0.91:
 ## Decision
 
 **`demoBuilder.ai.engine` names the agent, and one module resolves it.**
-`src/features/ai/engine/agentEngine.ts` describes each engine (config file, hook format,
-launch); `src/features/ai/engine/activeEngine.ts` reads the setting and the installed CLIs
-and answers which one this window serves. The Chat launch (`src/commands/openInClaude.ts`)
+`src/features/ai/engine/agentEngine.ts` describes each engine (its launch) and resolves the
+setting; `src/features/ai/engine/activeEngine.ts` reads it and answers which one this window
+serves and whether it can start. The Chat launch (`src/commands/openInClaude.ts`)
 and the "AI Ready" badge both ask it, so they cannot disagree.
 
 | Engine | Chat opens | MCP config it reads |
 |---|---|---|
 | `copilot-vscode` (**default**) | VS Code's chat panel, agent mode, prompt submitted | the projects root's `.mcp.json` |
-| `copilot-cli` | a "Copilot" terminal: `copilot -i '<prompt>'`, resuming this folder's newest session by id | `.mcp.json` (trusted folders); `~/.copilot/mcp-config.json` when registered globally |
 | `claude-code` | a "Claude Code" terminal: `claude -- '<prompt>'` (ADR-019, unchanged) | `.mcp.json`; `~/.claude.json` when registered globally |
-| `auto` | whichever CLI is installed, Copilot first; VS Code's chat when neither | — |
 
-**Copilot in VS Code is the default even when a CLI is installed** (owner, 2026-10-06):
-the panel is the experience Demo Builder promotes; `auto` is opt-in.
+**Copilot in VS Code is the default even when Claude Code is installed** (owner,
+2026-10-06): the panel is the experience Demo Builder promotes.
 
-**`demoBuilder.ai.permissions` (`ask` | `auto` | `full`) sets how much a terminal agent may
-do without asking**, as each CLI's own flags (`--permission-mode auto` /
-`--dangerously-skip-permissions` for Claude Code, `--allow-all-tools` / `--allow-all` for
-Copilot CLI). VS Code's chat takes no launch argument for it, so the panel follows VS
+**Copilot CLI is not a Chat engine** (owner, 2026-10-06). It shipped as a third option, with
+`auto` to choose between the CLIs, and both were removed the same day: same subscription and
+models as the panel, so to an SC it was a technical choice they should not have to make.
+Any value but `claude-code` — including a stale `copilot-cli` or `auto` — resolves to the
+default. Its tools still reach an SC who runs `copilot` themselves: it reads the projects
+root's `.mcp.json` in a trusted folder, and "Register Global MCP" writes
+`~/.copilot/mcp-config.json` (`GLOBAL_MCP_CONFIGS` — a list of agent CLIs, deliberately
+not the engine list).
+
+**`demoBuilder.ai.permissions` (`ask` | `auto` | `full`) sets how much Claude Code may do
+without asking**, as its own flags (`--permission-mode auto` /
+`--dangerously-skip-permissions`). VS Code's chat takes no launch argument for it, so the panel follows VS
 Code's own `chat.permissions.default`.
 
 **Consent is unchanged, and agent-independent.** A destructive call is asked about in the

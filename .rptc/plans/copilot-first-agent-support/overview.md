@@ -35,8 +35,11 @@ Written 2026-09-16. Built: 01, 02, 03, 04, 09 (on `feature/copilot-agent-support
 release candidate 2026-10-06) and 08 (2026-10-06; live run passed in Copilot in VS Code). 06 closed by measurement 2026-10-06 — tool
 search defers all 158 tools, no cap applies. 05 not needed while the window is homed at the projects
 root (its `.mcp.json` connects). 07 closed by measurement 2026-10-06 — the chain already asks once.
-10 done 2026-10-06 (ADR-025, `docs/systems/ai-agents.md`). Owed live: a destructive call from the
-panel and from interactive Copilot CLI.
+10 done 2026-10-06 (ADR-025, `docs/systems/ai-agents.md`). Same day, after the build: `copilot-cli`
+and `auto` removed as engines (owner — two Copilots was a choice SCs should not have to make), and
+the sidebar's Chat menu shown only for Claude Code; Copilot CLI keeps its global MCP registration.
+Decision 1's engine list is therefore `copilot-vscode` and `claude-code`. Owed live: a destructive
+call from the panel.
 Step 01 is the only one that fixes something that can break a user today; the rest are additive.
 
 ## Steps

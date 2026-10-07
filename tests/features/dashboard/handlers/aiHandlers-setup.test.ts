@@ -167,13 +167,12 @@ describe('aiHandlers — setup & verification', () => {
 
             // A terminal engine is the one with a CLI to ask about.
             jest.mocked(vscode.workspace.getConfiguration).mockReturnValue({
-                get: jest.fn((key: string) => (key === 'engine' ? 'copilot-cli' : undefined)),
+                get: jest.fn((key: string) => (key === 'engine' ? 'claude-code' : undefined)),
             } as unknown as vscode.WorkspaceConfiguration);
             const result = await handleVerifyAiSetup(createAiHandlerContext());
 
-            // No engine set means auto, and auto prefers Copilot when both are installed.
-            expect(commandExists).toHaveBeenCalledWith('copilot');
-            expect(result.agentCli).toEqual({ installed: true, name: 'Copilot CLI' });
+            expect(commandExists).toHaveBeenCalledWith('claude');
+            expect(result.agentCli).toEqual({ installed: true, name: 'Claude Code' });
         });
 
         it('returns error when stateManager has no current project', async () => {

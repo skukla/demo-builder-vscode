@@ -51,11 +51,11 @@ it("adds the command executor's answer about the SC's agent to the on-open verif
 
     // A terminal engine is the one with a CLI to ask about.
     jest.mocked(vscode.workspace.getConfiguration).mockReturnValue({
-        get: jest.fn((key: string) => (key === 'engine' ? 'copilot-cli' : undefined)),
+        get: jest.fn((key: string) => (key === 'engine' ? 'claude-code' : undefined)),
     } as unknown as vscode.WorkspaceConfiguration);
     await handleRequestStatus(mockContext);
     const result = await mockCapturedVerify!('/proj');
 
-    expect(commandExists).toHaveBeenCalledWith('copilot');
-    expect(result).toMatchObject({ agentCli: { installed: true, name: 'Copilot CLI' } });
+    expect(commandExists).toHaveBeenCalledWith('claude');
+    expect(result).toMatchObject({ agentCli: { installed: true, name: 'Claude Code' } });
 });

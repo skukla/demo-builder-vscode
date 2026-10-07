@@ -23,9 +23,9 @@ import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { resolveNodePath } from './mcpConfigWriter';
 import {
-    FILE_BACKED_ENGINES,
+    GLOBAL_MCP_AGENTS,
     globalMcpConfigPaths,
-    type AgentEngine,
+    type GlobalMcpAgent,
 } from '@/features/ai/engine/agentEngine';
 
 /**
@@ -70,15 +70,14 @@ async function upsertServerEntry(
 /**
  * Register (or refresh) the global `demo-builder` MCP entry.
  *
- * Written for EVERY engine named that keeps a user-level config, because a machine
- * can have both agents and "make the tools reachable" does not mean "from one of
- * them". An engine with no such file (Copilot in VS Code, which takes its servers
- * from the workspace file and from extensions) is skipped.
+ * Written for EVERY agent CLI named, because a machine can have both and "make the
+ * tools reachable" does not mean "from one of them". Copilot in VS Code keeps no
+ * such file; it takes its servers from the workspace `.mcp.json`.
  *
  * @param extensionDistPath Absolute path to the extension's `dist/` directory.
  * @param nodePath Node binary for the entry; resolved via `resolveNodePath`
  *                 when omitted (tests inject it to stay hermetic).
- * @param engines Which engines to register for; defaults to every file-backed one.
+ * @param agents Which agent CLIs to register for; defaults to all of them.
  * @returns The paths written, in order (for user-facing messaging).
  * @throws When a config file exists but is malformed — never overwrite a
  *         valid-but-unreadable user-curated config.
@@ -86,7 +85,7 @@ async function upsertServerEntry(
 export async function registerGlobalMcp(
     extensionDistPath: string,
     nodePath?: string,
-    engines: AgentEngine[] = FILE_BACKED_ENGINES,
+    agents: GlobalMcpAgent[] = GLOBAL_MCP_AGENTS,
 ): Promise<string[]> {
     const resolvedNode = nodePath ?? (await resolveNodePath());
     // Deliberately NO env: an explicit DEMO_BUILDER_MCP_SOCKET would pin the
@@ -97,7 +96,7 @@ export async function registerGlobalMcp(
     };
 
     const written: string[] = [];
-    for (const configPath of globalMcpConfigPaths(engines)) {
+    for (const configPath of globalMcpConfigPaths(agents)) {
         await upsertServerEntry(configPath, entry);
         written.push(configPath);
     }
@@ -146,7 +145,7 @@ export async function refreshGlobalMcpIfPresent(
     // Every agent that keeps a user-level config can hold a stale entry, and an
     // extension update invalidates all of them at once.
     let repaired = false;
-    for (const configPath of globalMcpConfigPaths(FILE_BACKED_ENGINES)) {
+    for (const configPath of globalMcpConfigPaths()) {
         if (await refreshOneConfig(configPath, extensionDistPath, nodePath)) {
             repaired = true;
         }

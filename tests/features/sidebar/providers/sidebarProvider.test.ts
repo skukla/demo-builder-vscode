@@ -303,7 +303,7 @@ describe('SidebarProvider', () => {
         it.each([
             ['copilot-vscode', false],
             [undefined, false],
-            ['copilot-cli', true],
+            ['copilot-cli', false],
             ['claude-code', true],
         ])('engine %s → menu %s, sent after the context', async (engine, menu) => {
             engineIs(engine);

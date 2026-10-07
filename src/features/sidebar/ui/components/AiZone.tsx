@@ -33,15 +33,15 @@ export interface AiZoneProps {
      * Called to start a FRESH conversation.
      *
      * OPTIONAL, and it is what turns the Chat tile into a menu. Every launch
-     * otherwise resumes the terminal agent's last session, and a resumed conversation
+     * otherwise resumes Claude Code's last session, and a resumed conversation
      * never re-reads `AGENTS.md` — so it keeps whatever guidance it was born
      * with, however many bundle versions ago. This is the only way onto the
      * current bundle.
      */
     onNewAiChat?: () => void;
     /**
-     * Called to pick an EARLIER conversation in the terminal agent's own picker
-     * (`claude --resume` / `copilot --resume`). Optional; adds a third Chat menu item when given.
+     * Called to pick an EARLIER conversation in Claude Code's own picker
+     * (`claude --resume`). Optional; adds a third Chat menu item when given.
      */
     onPickAiChat?: () => void;
 }

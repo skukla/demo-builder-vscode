@@ -28,9 +28,9 @@ matters most.
 | ★ | Sidebar → Chat → **Pick an earlier chat** | Claude Code opens its own list of past chats in a new tab [AI-4b] | pass (2026-10-06) |
 | ★ | With **AI Assistant → Engine** (`demoBuilder.ai.engine`) left at its default (Copilot in VS Code), Sidebar → **Chat**, ask "list my projects" | VS Code's chat panel opens in agent mode and answers from the demo-builder tools; no terminal opens [AI-12] | pass (2026-10-06) |
 | ★ | From the dashboard's **Prompts**, pick any prompt | It is sent in VS Code's chat panel and runs [AI-12] |  |
-| | Chat → **New Chat**, then Chat → **Pick an earlier chat** | A fresh chat with the prompt; then VS Code's agent sessions list [AI-12] |  |
-| | Set **Engine** to Copilot CLI, click **Chat** | A "Copilot" terminal tab runs the prompt; the first time, Copilot asks to trust the projects folder; `/mcp` lists demo-builder. Pick an earlier chat runs `copilot --resume` [AI-12] |  |
-| | Set **AI Assistant → Permissions** to Auto, then Full access, and start Claude Code or Copilot CLI | The terminal's command line carries `--permission-mode auto` / `--dangerously-skip-permissions` (Claude) or `--allow-all-tools` / `--allow-all` (Copilot) [AI-12] |  |
+| | With Engine at Copilot in VS Code, look at the sidebar's **Chat**; then set Engine to Claude Code | A plain button (no menu) that opens the panel; with Claude Code it becomes the Continue / Pick earlier / New menu, without a reload [AI-12] |  |
+| | In a terminal at the projects root, run `copilot` yourself and type `/mcp` | demo-builder is listed (trust the folder when asked) — Copilot CLI is no Chat choice, but its tools still work [AI-12] |  |
+| | Set **AI Assistant → Permissions** to Auto, then Full access, and start Claude Code | The terminal's command line carries `--permission-mode auto` / `--dangerously-skip-permissions` [AI-12] |  |
 | | On a scratch project, ask Copilot in the panel to delete it | Demo Builder asks once in the chat, naming the project; declining changes nothing [AI-12] |  |
 | | On a machine (or user) without Claude Code, click **Open in Claude Code** | A message says it isn't installed, with a **How to install** button; the AI badge isn't green [AI-4a] |  |
 

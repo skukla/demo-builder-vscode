@@ -16,7 +16,6 @@ import {
     type AgentPermissions,
     type ConversationProbes,
 } from '@/features/ai/engine/chatLaunch';
-import { latestCopilotSession } from '@/features/ai/engine/copilotSessionStore';
 import { refreshHomeAgentsMd } from '@/features/project-creation/services/aiBundle/homeAiContextWriter';
 import { sanitizeTemplateValue } from '@/features/project-creation/services/sanitization';
 import type { Project } from '@/types/base';
@@ -68,10 +67,9 @@ export function isClaudeChatOpen(): boolean {
     return findLiveClaudeTerminal() !== undefined;
 }
 
-/** Where each engine's earlier conversations are found. */
+/** Where Claude Code's earlier conversations are found. */
 const CONVERSATION_PROBES: ConversationProbes = {
     claudeHasConversation: hasClaudeConversation,
-    copilotLatestSession: latestCopilotSession,
 };
 
 /**
@@ -128,7 +126,7 @@ export function buildRehomePrefix(currentProjectName?: string): string {
 
 /**
  * OpenInClaudeCommand — opens the SC's agent chat. Which agent is decided by the
- * engine seam (`demoBuilder.ai.engine`, AI-12): Claude Code or Copilot CLI run in a
+ * engine seam (`demoBuilder.ai.engine`, AI-12): Claude Code runs in a
  * VS Code integrated terminal placed as a tab in the active editor group (next to
  * Project Dashboard); Copilot in VS Code opens VS Code's own chat in agent mode.
  *
@@ -251,8 +249,7 @@ export class OpenInClaudeCommand extends BaseCommand {
     }
 
     /**
-     * Open the agent's own session picker (`claude --resume` / `copilot --resume`
-     * with no value) so the SC can return to an EARLIER conversation, not just the
+     * Open Claude Code's own session picker (`claude --resume` with no value) so the SC can return to an EARLIER conversation, not just the
      * most recent one a plain launch lands on (AI-4b).
      *
      * The list is the agent's, not ours: it owns the transcript format, so a
@@ -325,12 +322,12 @@ export class OpenInClaudeCommand extends BaseCommand {
 
     /**
      * Launch the agent CLI in an integrated terminal at `cwd`, reusing that
-     * engine's terminal ("Claude Code", "Copilot") if one is still alive. What is
+     * engine's terminal ("Claude Code") if one is still alive. What is
      * typed comes from `buildChatCommand`, beside the engine seam.
      *
      * When `prompt` is provided, delivery depends on spawn vs reuse:
-     *   - Spawn: pass the prompt to the CLI (`claude --continue -- <prompt>`,
-     *     `copilot --resume <id> -i <prompt>`) as a launch argument. Race-free — claude receives it the moment it starts, with
+     *   - Spawn: pass the prompt to the CLI (`claude --continue -- <prompt>`) as a
+     *     launch argument. Race-free — claude receives it the moment it starts, with
      *     no waiting for the REPL and nothing to drop. claude runs it
      *     immediately (auto-submits).
      *   - Reuse: claude is already running and can't take a new launch arg, so
@@ -438,7 +435,7 @@ export class OpenInClaudeCommand extends BaseCommand {
     /**
      * Inject the prompt into the active terminal via bracketed-paste escape
      * sequences (CSI 200~ / CSI 201~). Bracketed-paste tells the receiving
-     * REPL (claude ≥ 2.1.108, copilot) that the input is pasted content — preserves
+     * REPL (claude ≥ 2.1.108) that the input is pasted content — preserves
      * multi-line and does not auto-submit. The user reviews and hits Enter.
      */
     private injectPromptViaBracketedPaste(prompt: string): void {

@@ -1,17 +1,16 @@
 /**
- * The shell command that opens an agent's chat in a terminal — per engine.
+ * The shell command that opens the terminal agent's chat — Claude Code.
  *
  * The launch path (`commands/openInClaude`) owns the terminal; this owns what is
- * typed into it, so the engine-specific spelling lives beside the engine seam and
- * nowhere else.
+ * typed into it, so the CLI spelling lives beside the engine seam and nowhere else.
  *
- * | | Claude Code | Copilot CLI |
- * |---|---|---|
- * | prompt | `claude -- '<p>'` | `copilot -i '<p>'` |
- * | resume | `--continue` (Claude scopes it to the directory) | `--resume <id>` of the newest session in the directory |
- * | earlier chats | `claude --resume` | `copilot --resume` |
- * | `auto` permissions | `--permission-mode auto` | `--allow-all-tools` |
- * | `full` permissions | `--dangerously-skip-permissions` | `--allow-all` |
+ * | | Claude Code |
+ * |---|---|
+ * | prompt | `claude -- '<p>'` |
+ * | resume | `--continue` (Claude scopes it to the directory) |
+ * | earlier chats | `claude --resume` |
+ * | `auto` permissions | `--permission-mode auto` |
+ * | `full` permissions | `--dangerously-skip-permissions` |
  *
  * @module features/ai/engine/chatLaunch
  */
@@ -23,15 +22,12 @@ export type AgentPermissions = 'ask' | 'auto' | 'full';
 
 const PERMISSION_FLAGS: Record<TerminalLaunch['command'], Record<AgentPermissions, string>> = {
     claude: { ask: '', auto: ' --permission-mode auto', full: ' --dangerously-skip-permissions' },
-    copilot: { ask: '', auto: ' --allow-all-tools', full: ' --allow-all' },
 };
 
-/** Where each engine's saved conversations are looked up. Handed in, so tests can say. */
+/** Where saved conversations are looked up. Handed in, so tests can say. */
 export interface ConversationProbes {
     /** Claude Code: whether any transcript exists for this directory. */
     claudeHasConversation(cwd: string): boolean;
-    /** Copilot CLI: the newest session that ran in this directory. */
-    copilotLatestSession(cwd: string): string | undefined;
 }
 
 export interface ChatCommand {
@@ -68,21 +64,12 @@ export function buildChatCommand(
     probes: ConversationProbes,
 ): ChatCommand {
     const { prompt, fresh, rehome, permissions } = options;
-    let resumeArgs = '';
-    let promptFlag: string;
     const binary = launch.command;
-    if (binary === 'claude') {
-        // `claude --continue` with nothing to continue exits at once, leaving a dead tab.
-        if (!fresh && probes.claudeHasConversation(cwd)) resumeArgs = ' --continue';
-        // `--` ends the options, so a prompt starting with a dash stays text.
-        promptFlag = '--';
-    } else {
-        const session = fresh ? undefined : probes.copilotLatestSession(cwd);
-        if (session) resumeArgs = ` --resume ${quoteForShell(session)}`;
-        // `-i` starts the interactive chat AND runs the prompt; `-p` would exit after.
-        promptFlag = '-i';
-    }
-    const resumed = resumeArgs !== '';
+    // `claude --continue` with nothing to continue exits at once, leaving a dead tab.
+    const resumed = !fresh && probes.claudeHasConversation(cwd);
+    const resumeArgs = resumed ? ' --continue' : '';
+    // `--` ends the options, so a prompt starting with a dash stays text.
+    const promptFlag = '--';
     const text = prompt && resumed ? rehome(prompt) : prompt;
     const head = `${binary}${PERMISSION_FLAGS[binary][permissions]}${resumeArgs}`;
     const line = text ? `${head} ${promptFlag} ${quoteForShell(text)}` : head;
@@ -90,7 +77,7 @@ export function buildChatCommand(
 }
 
 /**
- * The command that opens the engine's own list of earlier chats, or `undefined`
+ * The command that opens Claude Code's own list of earlier chats, or `undefined`
  * when this directory has none to show.
  */
 export function buildPastChatPickerCommand(
@@ -100,9 +87,7 @@ export function buildPastChatPickerCommand(
     probes: ConversationProbes,
 ): string | undefined {
     const binary = launch.command;
-    const exists =
-        binary === 'claude'
-            ? probes.claudeHasConversation(cwd)
-            : probes.copilotLatestSession(cwd) !== undefined;
-    return exists ? `${binary}${PERMISSION_FLAGS[binary][permissions]} --resume` : undefined;
+    return probes.claudeHasConversation(cwd)
+        ? `${binary}${PERMISSION_FLAGS[binary][permissions]} --resume`
+        : undefined;
 }

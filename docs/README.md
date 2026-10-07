@@ -98,7 +98,7 @@ Enforced by `tests/sop/doc-module-refs.test.ts` — each area's front door must 
 - [systems/mcp-tools.md](systems/mcp-tools.md) — the tool catalogue. **Generated**
   by `npm run docs:tools`.
 - [systems/ai-agents.md](systems/ai-agents.md) — which agents the Chat button opens
-  (Copilot in VS Code by default, Copilot CLI, Claude Code), their permissions and readiness.
+  (Copilot in VS Code by default, or Claude Code), their permissions and readiness.
 - [systems/agent-alerts.md](systems/agent-alerts.md) ·
   [systems/erp-integration.md](systems/erp-integration.md) ·
   [systems/data-installer.md](systems/data-installer.md) ·
