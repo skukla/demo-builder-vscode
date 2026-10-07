@@ -12,8 +12,8 @@
  * Laid out like the other collection screens (owner, 2026-10-07: the first cut
  * "does not follow the same design system"): `PageLayout` + `PageHeader`, the
  * two lists as `ViewSwitcher` tabs (the Data Installer's), a `SearchHeader` band
- * (count, filter, refresh) like Integrations and Your Projects, a card per
- * person with Remove in its ⋮ menu, and adding as the dashed card that opens a
+ * (count, filter, refresh) like Integrations and Your Projects, a row per
+ * person with Remove in its ⋮ menu, and adding as the dashed row that opens a
  * dialog. `InlineNotice` for every notice, `LoadingDisplay` while something
  * runs, and the shared `Modal` to confirm a removal.
  *
@@ -23,7 +23,7 @@
 import { Button, DialogContainer, Flex, Text, TextField, View } from '@adobe/react-spectrum';
 import React, { useEffect, useMemo, useState } from 'react';
 import { AddPersonModal } from './AddPersonModal';
-import { PeopleGrid } from './PeopleGrid';
+import { PeopleList } from './PeopleList';
 import { SiteAccessNoticeView } from './SiteAccessNoticeView';
 import { useSiteAccess, type ChangeType, type SiteTarget } from './useSiteAccess';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
@@ -193,7 +193,7 @@ export function SiteAccessScreen({ projectName, hasStorefront }: SiteAccessScree
                         {list.people.length === 0 && !list.canManage ? (
                             <Text UNSAFE_className="text-gray-600">Nobody has access yet.</Text>
                         ) : (
-                            <PeopleGrid
+                            <PeopleList
                                 people={people}
                                 canManage={list.canManage}
                                 addLabel={isFiltering ? undefined : copy.addLabel}

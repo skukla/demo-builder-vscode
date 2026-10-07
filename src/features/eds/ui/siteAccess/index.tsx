@@ -18,13 +18,13 @@ import '@/core/ui/styles/vscode-theme.css';
 import '@/core/ui/styles/utilities.css';
 // .modal-* — the shared Modal shell that confirms a removal.
 import '@/core/ui/styles/modal.css';
-// The shared UI vocabulary — status text, the projects grid, the search band.
+// The shared UI vocabulary — status text, the search band.
 import '@/core/ui/styles/shared-ui.css';
 // .inline-notice-* — every notice on this screen.
 import '@/core/ui/styles/inline-controls.css';
-// .integration-card* — each person is drawn as the house card.
+// .integration-row* — each person is drawn as the house list row.
 import '@/core/ui/styles/integration-cards.css';
-// .add-card — the dashed "Add a site admin" card.
+// .add-card — the dashed "Add a site admin" row.
 import '@/core/ui/styles/add-card.css';
 // .view-switcher — the Site admins / Content readers tabs.
 import '@/core/ui/styles/view-switcher.css';

@@ -1,5 +1,5 @@
 /**
- * The dialog the dashed add card opens: one email field, Add and Cancel.
+ * The dialog the dashed add row opens: one email field, Add and Cancel.
  *
  * Hosts its own `DialogContainer` (the modal-hosting SOP). The form is a child
  * that mounts only while open, so each opening starts with an empty field.
