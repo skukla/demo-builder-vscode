@@ -39,16 +39,35 @@ intends; it fills in new resources and says so in one line each:
 
 Most SCs click Continue. Nothing about repositories or workspaces needs explaining.
 
-**One guard for those who press Change:** in the repository and App Builder
-pickers, anything another project on this machine already uses is tagged
-**"Used by Justrite"**. Choosing it says what follows in plain words: "Both demos
-will share it. Changes to one show in the other, and deleting either can remove
-it for both."
+**Labels for those who press Change.** Two things belong to one demo and must
+not be shared by accident: the storefront's GitHub repository, and the Adobe
+project its integrations deploy into. In both pickers, every entry another project
+on this machine already uses carries a label, whichever project that is:
+
+> kukla-justrite — *Used by Justrite*
+
+Picking a labelled entry warns in one sentence: "Justrite already uses this. Both
+demos would share it, so changes to one appear in the other." Unused entries carry
+no label.
+
+| What | Safe to share? | Labelled? |
+|---|---|---|
+| Storefront repository | No: each demo publishes its own site from it | Yes |
+| Integration's source code | Yes: downloaded read-only, like a template | No |
+| Integration's Adobe project | No: deploying replaces the other demo's integration | Yes |
+
+Only the storefront creates a GitHub repository per project (`githubRepoOperations`,
+`storefrontSetupPhase1`); an integration clones a shared source and never writes
+back, so there is no integration repository to label.
 
 Final Review ends with one sentence: "Creates a new repository and a new Adobe
 project. Nothing in Justrite changes."
 
 ## What was considered and left out
+
+**Telling the SC which repository the original used.** Rejected: they do not need
+it to build the copy, and naming it invites picking it, which is what happened in
+the test above. The wizard's "Import Project" title is context enough.
 
 **"Make a copy" vs "Pick up where it left off" as a question at the start.**
 Rejected as more than an SC needs. Restoring a project on a new laptop is rare,
@@ -68,10 +87,11 @@ machine uses it" cannot tell a restore from someone else's demo.
 2. Pre-fill "create new" for the repository (`<github-user>-<project-name>`) and for
    the App Builder project (`<project title>`), shown as one line with Change.
 3. A "used by" lookup over local projects: repository from
-   `componentInstances['eds-storefront'].metadata.githubRepo`, workspace from
-   `adobe.workspace`. Tag the matching rows in both pickers.
+   `componentInstances['eds-storefront'].metadata.githubRepo`, Adobe project from
+   `adobe.projectId`. Label the matching rows in the repository picker and the
+   App Builder project picker, and warn in one sentence when one is picked.
 4. The Final Review sentence.
 5. Same treatment for Copy from existing, which takes the same path.
 
-Tests: the import seed carries no Adobe project/workspace; each picker tags a row
+Tests: the import seed carries no Adobe project/workspace; each picker labels a row
 used by a local project; a copy's defaults never equal the source's.
