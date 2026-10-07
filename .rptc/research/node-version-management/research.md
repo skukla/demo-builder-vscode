@@ -189,3 +189,28 @@ move fresh machines to the next LTS on its own; lowest rises only when a range's
 **Not yet verified (needs live runs).** headless-commerce-mesh and commerce-eds-mesh deploying on
 24 (only one mesh was tried in step 0); the headless storefront running on 24 (the catalog says
 24 today, so likely, not proven); reading ranges when offline or rate-limited.
+
+### Live verification, 2026-10-07 (owner-approved)
+
+All on Node 24.21.0 from Demo Builder's own store (`~/.demo-builder/node`), set up the way the
+extension now does it: `fnm install 24`, then `npm install -g @adobe/aio-cli` (11.1.4) and
+`aio plugins:install @adobe/aio-cli-plugin-api-mesh` (5.7.3), no engine warnings.
+
+| Check | Result |
+|---|---|
+| headless-commerce-mesh: npm install, build, deploy, query | PASS. Built; provisioned in a throwaway workspace (zzNode24Mesh2, Kukla Justrite); a custom resolver answered and a catalog query reached the Commerce search service |
+| commerce-eds-mesh: same | PASS. Provisioned; `storeConfig` answered with real store data |
+| citisignal-nextjs (headless storefront): npm install, `next dev` | PASS. Ready in 1.3s, home page served (HTTP 200) |
+| Cleanup | Both meshes deleted; the workspace deleted by a script that refused any other name; the project's three real workspaces untouched |
+
+**Ranges fixed in the repos (owner-approved, pushed):** headless-commerce-mesh `>=20` (`f35b082`)
+and commerce-eds-mesh `>=20` (`596d916`): Demo Builder ran every mesh on Node 20 for months, they
+passed on 24 today, and their own aio-cli dependency needs 20+. citisignal-nextjs `>=24`
+(`6b26bbc`): what it has always run on and passed on today. **After the fix the probe resolves
+one Node for everything: 24.21.0.**
+
+**New finding: aio plugins are per USER, not per Node.** `aio plugins:install` writes to
+`~/.local/share/@adobe/aio-cli`, which every `aio` on the machine shares, whatever Node runs it.
+So "install the mesh plugin beside the CLI under each Node" (step 5's plugin loop) installs the
+same plugin into the same place once per Node. Harmless, but the per-Node plugin logic models
+something that does not exist; the plan should simplify it to "once".
