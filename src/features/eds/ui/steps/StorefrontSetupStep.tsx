@@ -547,10 +547,13 @@ export function StorefrontSetupStep({
     return (
         <div className="flex-column h-full w-full">
             <div className="flex-1 flex w-full">
-                <SingleColumnLayout>
+                {/* A column as tall as the pane, so each state below centres in the
+                    PANE (`fill`) rather than in a 350px box pinned to the top: the
+                    install steps are taller than 350px (owner, 2026-10-07). */}
+                <SingleColumnLayout className="flex-column">
                     {/* Active state - loading indicator with progress */}
                     {showsProgress && (
-                        <CenteredFeedbackContainer>
+                        <CenteredFeedbackContainer fill>
                             <LoadingDisplay
                                 size="L"
                                 message={setupState.message}
@@ -563,7 +566,7 @@ export function StorefrontSetupStep({
 
                     {/* GitHub App installation required state */}
                     {setupState.phase === 'github-app' && setupState.githubAppData && (
-                        <CenteredFeedbackContainer>
+                        <CenteredFeedbackContainer fill>
                             <GitHubAppInstallDialog
                                 owner={setupState.githubAppData.owner}
                                 repo={setupState.githubAppData.repo}
@@ -576,7 +579,7 @@ export function StorefrontSetupStep({
 
                     {/* Error state - show error message with recovery options */}
                     {setupState.phase === 'error' && (
-                        <CenteredFeedbackContainer>
+                        <CenteredFeedbackContainer fill>
                             <Flex
                                 direction="column"
                                 gap="size-200"
@@ -608,7 +611,7 @@ export function StorefrontSetupStep({
 
                     {/* Success state - show completion message */}
                     {setupState.phase === 'completed' && (
-                        <CenteredFeedbackContainer>
+                        <CenteredFeedbackContainer fill>
                             <Flex
                                 direction="column"
                                 gap="size-200"
