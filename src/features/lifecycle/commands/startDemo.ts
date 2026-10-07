@@ -5,6 +5,7 @@ import { BaseCommand } from '@/core/base/baseCommand';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
+import { fnmTerminalCommand } from '@/core/shell/nodeStore';
 import { ProcessCleanup } from '@/core/shell/processCleanup';
 import { updateFrontendState } from '@/core/state/projectStateSync';
 import { ExecutionLock } from '@/core/utils/executionLock';
@@ -301,7 +302,7 @@ export class StartDemoCommand extends BaseCommand {
                 
                 // Navigate to frontend directory and start
                 terminal.sendText(`cd "${frontendPath}"`);
-                terminal.sendText(`eval "$(fnm env)" && fnm use ${nodeVersion} && npm run dev`);
+                terminal.sendText(fnmTerminalCommand(nodeVersion, 'npm run dev'));
 
                 // Wait for demo to actually start (poll until port is in use)
                 const started = await this.waitForPortInUse(port);

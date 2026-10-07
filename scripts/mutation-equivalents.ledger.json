@@ -1424,35 +1424,9 @@
         {
             "module": "src/features/prerequisites/handlers/perNodeVersionStatus.ts",
             "anchors": [
-                "const installedVersions = fnmListResult.stdout"
-            ],
-            "line": 86,
-            "mutants": 2,
-            "category": "other",
-            "reason": "Both mutants concern blank lines in fnm list output. Dropping .trim() leaves a trailing empty entry after split, and the .filter on the next line removes it; dropping that .filter leaves the empty entry in the array, and the loop below matches each entry against /v?(\\d+)/, which cannot match an empty or whitespace-only string, so no major is added either way. installedVersions is read by nothing but that loop, so a difference in its length is unobservable.",
-            "decision": "Ledger. A test covering the whole-line reading of fnm output was added and kills what IS observable here.",
-            "recorded": "2026-09-04",
-            "source": "PL-22 MUT-01, 2026-09-04"
-        },
-        {
-            "module": "src/features/prerequisites/handlers/perNodeVersionStatus.ts",
-            "anchors": [
-                ".filter((v) => v.trim());"
-            ],
-            "line": 89,
-            "mutants": 1,
-            "category": "other",
-            "reason": "Replacing v.trim() with v keeps whitespace-only entries in the list instead of dropping them. The only reader is the loop below, which matches each entry against /v?(\\d+)/; a whitespace-only entry matches nothing and contributes no major, so the set of installed majors is identical with the entry present or absent.",
-            "decision": "Ledger. The filter is a tidiness guard over a list whose only consumer already ignores what it removes.",
-            "recorded": "2026-09-04",
-            "source": "PL-22 MUT-01, 2026-09-04"
-        },
-        {
-            "module": "src/features/prerequisites/handlers/perNodeVersionStatus.ts",
-            "anchors": [
                 "if (prereq.check.parseVersion) {"
             ],
-            "line": 136,
+            "line": 122,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true runs the parse block for a prerequisite that declares no parseVersion. new RegExp(undefined) is the empty pattern, which matches at position zero with no capture group, so match[1] is undefined and the || '' fallback leaves cliVersion as the empty string it was initialised to. createVersionStatus therefore receives the same three arguments on both routes.",
@@ -1465,7 +1439,7 @@
             "anchors": [
                 "if (match) cliVersion = match[1] || '';"
             ],
-            "line": 139,
+            "line": 125,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true reads match[1] when the regex did not match, so match is null and the read throws a TypeError. That throw is caught by the enclosing try in the same block, whose catch comments that regex parse errors are ignored, leaving cliVersion as the empty string the unmutated path also leaves it. The exception never escapes and no collaborator sees a different call.",
@@ -1478,7 +1452,7 @@
             "anchors": [
                 "const duration = Date.now() - startTime;"
             ],
-            "line": 160,
+            "line": 146,
             "mutants": 1,
             "category": "other",
             "reason": "duration is read on the very next statement and nowhere else, and that statement is a context.logger.debug call whose message reports how long the parallel check took. Adding the two clocks instead of subtracting them changes a number inside one debug line; the function's return value, every collaborator call and every status it produces are untouched.",
@@ -2063,7 +2037,7 @@
             "anchors": [
                 "const duration = Date.now() - startTime;"
             ],
-            "line": 75,
+            "line": 78,
             "mutants": 1,
             "category": "other",
             "reason": "duration is read at exactly two places, lines 77 and 79, and both are logger.debug template arguments. Flipping the subtraction to addition changes the number formatDuration renders inside a log line and nothing else: the returned object is { satisfied, matchingVersion }, neither of which is derived from duration. Killing it would mean asserting a logger argument, which pins wording rather than behaviour.",
@@ -2076,7 +2050,7 @@
             "anchors": [
                 "if (satisfied) {"
             ],
-            "line": 76,
+            "line": 70,
             "mutants": 3,
             "category": "branch",
             "reason": "Both arms of this if are a single logger.debug call and nothing else, so forcing the condition true, forcing it false, or emptying the then-block all select which debug line prints. The value the function returns is built on line 82 from satisfied directly, not from this branch, so no caller and no collaborator can observe the difference. The only distinguishing assertion available is on logger wording.",
@@ -2089,7 +2063,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 78,
+            "line": 72,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying the else-block removes the not-satisfied debug line on line 79. Execution then falls straight to the return on line 82, which is unchanged because it reads satisfied and matchingVersion from the some() above, never from this block. No return value, no collaborator call and no thrown error differs; only the log output does.",
@@ -2102,7 +2076,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 83,
+            "line": 77,
             "mutants": 1,
             "category": "other",
             "reason": "The duration computed on line 84 inside this catch is read only by the logger.warn template on line 85; flipping its subtraction to addition changes the elapsed figure that warning prints. The handler's observable result is the fixed safe default { satisfied: false } on line 86, which nothing derived from duration can reach, so the only test able to tell the two apart would assert warning text \u2014 wording, not behaviour.",
@@ -3957,42 +3931,6 @@
         {
             "module": "src/features/prerequisites/handlers/continueHandler.ts",
             "anchors": [
-                "const installedVersions = fnmListResult.stdout.trim().split('\\n').filter(v => v.trim());"
-            ],
-            "mutants": 3,
-            "category": "other",
-            "reason": "Both the trim and the filter only remove entries that the very next step already discards. Each surviving line is fed to /v?(\\d+)/ and only contributes when it contains a digit, so a trailing empty entry (what trim prevents) and a whitespace-only entry (what the filter drops) both add nothing either way. Dropping either call, or weakening the filter predicate to v => v, leaves installedMajors identical for every possible fnm output.",
-            "decision": "none \u2014 the two calls are defensive and say what fnm output is expected; nothing downstream can observe them",
-            "recorded": "2026-09-04",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/prerequisites/handlers/continueHandler.ts",
-            "anchors": [
-                "if (prereq.check.parseVersion) {"
-            ],
-            "mutants": 1,
-            "category": "branch",
-            "reason": "Forcing the guard true cannot change the outcome. It is only distinguishable when parseVersion is absent, and then new RegExp(undefined) is the empty pattern /(?:)/, whose exec matches an empty string at position 0 with no capture group, so match[1] is undefined and cliVersion falls back to '' \u2014 exactly what the skipped branch leaves it as. No prerequisite shape produces a different component value.",
-            "decision": "none \u2014 the guard avoids constructing a pointless RegExp per Node major",
-            "recorded": "2026-09-04",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/prerequisites/handlers/continueHandler.ts",
-            "anchors": [
-                "if (match) cliVersion = match[1] || '';"
-            ],
-            "mutants": 1,
-            "category": "branch",
-            "reason": "Forcing this guard true is swallowed by the try/catch it sits inside. With a null match the assignment throws a TypeError, the surrounding catch ignores it, and cliVersion is left at '' \u2014 the same value the untaken branch leaves. The catch exists for malformed parseVersion patterns, and it absorbs this mutant too, so no stdout can make the two paths differ.",
-            "decision": "none \u2014 the guard is the readable form; the catch is there for a different failure",
-            "recorded": "2026-09-04",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/prerequisites/handlers/continueHandler.ts",
-            "anchors": [
                 "return { perNodeVariantMissing: false, missingVariantMajors: [], perNodeVersionStatus: [] };"
             ],
             "mutants": 1,
@@ -4103,7 +4041,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 124,
+            "line": 134,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying the catch BODY does not remove the catch clause, so a failing fnm list-remote is still swallowed and the function still returns the null on the last line. The body holds one logger.warn and nothing else, so the mutant is observable only as a missing log line, which is exactly what the ratchet refuses to reward a test for pinning.",

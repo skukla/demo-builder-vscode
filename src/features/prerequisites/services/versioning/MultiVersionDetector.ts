@@ -7,6 +7,7 @@
 import { buildMajorToFullVersionMap, parseMajorVersions, isValidVersionFamily } from './NodeVersionParser';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
+import { fnmStoreProcessEnv } from '@/core/shell/nodeStore';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { Logger } from '@/types/logger';
 
@@ -14,6 +15,25 @@ export interface NodeVersionStatus {
     version: string;
     component: string;
     installed: boolean;
+}
+
+/**
+ * `fnm list` against Demo Builder's own Node store (PR-1a): the one reader of what
+ * is installed. Every check asks the store, because every install lands there; the
+ * user's own fnm answering would report a Node the store does not have.
+ */
+export async function readStoreFnmList(commandManager: Pick<CommandExecutor, 'execute'>): Promise<string> {
+    const { stdout } = await commandManager.execute('fnm list', {
+        timeout: TIMEOUTS.PREREQUISITE_CHECK,
+        shell: DEFAULT_SHELL, // Add shell context for fnm availability (fixes ENOENT errors)
+        env: fnmStoreProcessEnv(),
+    });
+    return stdout;
+}
+
+/** The Node majors in Demo Builder's store, ascending. */
+export async function listStoreMajors(commandManager: Pick<CommandExecutor, 'execute'>): Promise<string[]> {
+    return parseMajorVersions(await readStoreFnmList(commandManager));
 }
 
 /**
@@ -30,12 +50,7 @@ export async function checkMultipleNodeVersions(
     const results: NodeVersionStatus[] = [];
 
     try {
-        const fnmListResult = await commandManager.execute('fnm list', {
-            timeout: TIMEOUTS.PREREQUISITE_CHECK,
-            shell: DEFAULT_SHELL, // Add shell context for fnm availability (fixes ENOENT errors)
-        });
-
-        const majorToFullVersion = buildMajorToFullVersionMap(fnmListResult.stdout);
+        const majorToFullVersion = buildMajorToFullVersionMap(await readStoreFnmList(commandManager));
 
         // Check each required version
         for (const [version, componentName] of Object.entries(versionToComponentMapping)) {
@@ -73,12 +88,7 @@ export async function getInstalledNodeVersions(
     logger: Logger,
 ): Promise<string[]> {
     try {
-        const fnmListResult = await commandManager.execute('fnm list', {
-            timeout: TIMEOUTS.PREREQUISITE_CHECK,
-            shell: DEFAULT_SHELL,
-        });
-
-        return parseMajorVersions(fnmListResult.stdout);
+        return await listStoreMajors(commandManager);
     } catch (error) {
         logger.warn(`[Prerequisites] Could not get installed Node versions: ${error}`);
         return [];

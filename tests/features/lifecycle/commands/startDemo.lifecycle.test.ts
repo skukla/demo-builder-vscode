@@ -18,6 +18,7 @@ import {
 } from './startDemo.testUtils';
 import { ServiceLocator as _ServiceLocator } from '@/core/di/serviceLocator';
 import type { StateManager } from '@/types/state';
+import { fnmTerminalCommand } from '@/core/shell/nodeStore';
 import * as vscode from 'vscode';
 
 describe('StartDemoCommand - Lifecycle', () => {
@@ -182,7 +183,7 @@ describe('StartDemoCommand - Lifecycle', () => {
     });
 
     describe('Test 1.5: fnm env initialization', () => {
-        it('should prepend eval "$(fnm env)" before fnm use in terminal command', async () => {
+        it("should run the dev server on the frontend's Node from Demo Builder's store", async () => {
             // Given: Project with Node 24 requirement
             mockStateManager.getCurrentProject.mockResolvedValue({
                 name: 'test-project',
@@ -215,14 +216,11 @@ describe('StartDemoCommand - Lifecycle', () => {
             await jest.advanceTimersByTimeAsync(3000);
             await executePromise;
 
-            // Then: terminal sendText includes fnm env initialization
+            // Then: the terminal runs it under fnm, pointed at the store (PR-1a)
             const sendTextCalls = mockTerminal.sendText.mock.calls.map((c: string[]) => c[0]);
             const fnmCommand = sendTextCalls.find((cmd: string) => cmd.includes('fnm'));
 
-            expect(fnmCommand).toBeDefined();
-            expect(fnmCommand).toContain('eval "$(fnm env)"');
-            expect(fnmCommand).toContain('fnm use 24');
-            expect(fnmCommand).toContain('npm run dev');
+            expect(fnmCommand).toBe(fnmTerminalCommand('24', 'npm run dev'));
         });
     });
 });

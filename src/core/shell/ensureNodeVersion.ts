@@ -28,7 +28,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { CommandExecutor } from './commandExecutor';
 import { EnvironmentSetup } from './environmentSetup';
-import { fnmStoreEnv } from './nodeStore';
+import { fnmStoreProcessEnv } from './nodeStore';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
@@ -66,7 +66,7 @@ export async function ensureFnmNodeVersion(
         timeout: TIMEOUTS.LONG,
         enhancePath: true,
         // Into Demo Builder's store, never the user's fnm.
-        env: { ...process.env, ...fnmStoreEnv() },
+        env: fnmStoreProcessEnv(),
         // Without a shell the executor hands the whole string to the spawner
         // as one binary name and nothing runs (code undefined — measured live).
         shell: DEFAULT_SHELL,

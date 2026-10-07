@@ -21,6 +21,7 @@ import type { StartDemoHarness } from './startDemo.testUtils';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { nodeForComponent } from '@/features/components/services/nodeRequirements';
 import type { Project } from '@/types/base';
+import { fnmTerminalCommand } from '@/core/shell/nodeStore';
 
 const executeCommand = () => vscode.commands.executeCommand as jest.Mock;
 
@@ -109,7 +110,7 @@ describe('the Node version', () => {
 
         await run();
 
-        expect(fnmLine()).toBe(`eval "$(fnm env)" && fnm use ${nodeForComponent('headless')} && npm run dev`);
+        expect(fnmLine()).toBe(fnmTerminalCommand(nodeForComponent('headless'), 'npm run dev'));
     });
 
     it("defaults to the frontend's catalog version when the recorded one is not a string", async () => {
@@ -117,7 +118,7 @@ describe('the Node version', () => {
 
         await run();
 
-        expect(fnmLine()).toBe(`eval "$(fnm env)" && fnm use ${nodeForComponent('headless')} && npm run dev`);
+        expect(fnmLine()).toBe(fnmTerminalCommand(nodeForComponent('headless'), 'npm run dev'));
     });
 });
 

@@ -5,6 +5,7 @@
  * for multi-version prerequisite scenarios.
  */
 
+import { demoBuilderFnmDir } from '@/core/shell/nodeStore';
 import { createTestableProgressUnifier } from '../../../helpers/progressUnifierTestHelpers';
 import { createMockStep, createProgressCollector, createMockLogger } from './testUtils';
 
@@ -125,6 +126,23 @@ describe('ProgressUnifier - Node Version Handling', () => {
             expect(hasNode18).toBe(true);
             expect(hasNode20).toBe(true);
             expect(hasNode24).toBe(true);
+        });
+    });
+    describe("running in Demo Builder's own Node store (PR-1a)", () => {
+        it('wraps the command in fnm exec on the named Node, with the store on the child', async () => {
+            const { onProgress } = progressCollectorFactory();
+            const { progressUnifier, advanceTime, mocks } = createTestableProgressUnifier(mockLogger);
+            const step = createMockStep('Install for Node {version}', 'Installing...', 'immediate', 'npm install -g x');
+
+            const executePromise = progressUnifier.executeStep(step, 0, 1, onProgress, { nodeVersion: '24' });
+            await new Promise(resolve => setImmediate(resolve));
+            await advanceTime(2000);
+            await executePromise;
+
+            const [command, , options] = mocks.spawn.mock.calls[0];
+            expect(command).toBe('eval "$(fnm env)" && fnm exec --using=24 npm install -g x');
+            expect(options.env.FNM_DIR).toBe(demoBuilderFnmDir());
+            expect(options.env.PATH).toBe(process.env.PATH);
         });
     });
 });

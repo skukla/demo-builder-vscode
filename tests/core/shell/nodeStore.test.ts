@@ -9,6 +9,8 @@ import {
     demoBuilderFnmDir,
     fnmExecCommand,
     fnmStoreEnv,
+    fnmStoreProcessEnv,
+    fnmTerminalCommand,
     getAdobeCliNodeVersion,
     setAdobeCliNodeVersion,
 } from '@/core/shell/nodeStore';
@@ -23,6 +25,19 @@ describe('nodeStore', () => {
         expect(fnmExecCommand('/opt/homebrew/bin/fnm', '24', 'aio --version')).toBe(
             '/opt/homebrew/bin/fnm exec --using=24 aio --version',
         );
+    });
+
+    it('points a terminal command at the store with a shell assignment', () => {
+        expect(fnmTerminalCommand('24', 'npm run dev')).toBe(
+            `FNM_DIR="${demoBuilderFnmDir()}" fnm exec --using=24 npm run dev`,
+        );
+    });
+
+    it("gives a bare fnm call the store while keeping the rest of the environment", () => {
+        const env = fnmStoreProcessEnv();
+        expect(env.FNM_DIR).toBe(demoBuilderFnmDir());
+        // An env without PATH runs nothing.
+        expect(env.PATH).toBe(process.env.PATH);
     });
 
     it("holds the Adobe CLI's Node once activation sets it", () => {

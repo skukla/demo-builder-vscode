@@ -6,9 +6,9 @@
  */
 
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { formatDuration } from '@/core/utils/timeFormatting';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { listStoreMajors } from '@/features/prerequisites/services/versioning/MultiVersionDetector';
 import { HandlerContext } from '@/types/handlers';
 
 /**
@@ -79,21 +79,7 @@ export async function checkPerNodeVersionStatus(
 
     // CRITICAL: Get list of actually installed Node versions FIRST
     // This prevents false positives when fnm falls back to other versions
-    const fnmListResult = await commandManager.execute('fnm list', {
-        timeout: TIMEOUTS.PREREQUISITE_CHECK,
-        shell: DEFAULT_SHELL, // Add shell context for fnm availability (fixes ENOENT errors)
-    });
-    const installedVersions = fnmListResult.stdout
-        .trim()
-        .split('\n')
-        .filter((v) => v.trim());
-    const installedMajors = new Set<string>();
-    for (const version of installedVersions) {
-        const match = /v?(\d+)/.exec(version);
-        if (match) {
-            installedMajors.add(match[1]);
-        }
-    }
+    const installedMajors = new Set(await listStoreMajors(commandManager));
 
     // Helper to create version status object
     const createVersionStatus = (major: string, installed: boolean, component = '') => ({

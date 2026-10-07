@@ -36,6 +36,20 @@ export function fnmExecCommand(fnmPath: string, major: string, command: string):
     return `${fnmPath} exec --using=${major} ${command}`;
 }
 
+/**
+ * The same form for a VS Code terminal, which has no env option per command: the
+ * store goes in front as a shell assignment, so it reaches fnm and nothing after it.
+ * Plain `fnm`, because a terminal finds it on the user's PATH.
+ */
+export function fnmTerminalCommand(major: string, command: string): string {
+    return `FNM_DIR="${demoBuilderFnmDir()}" ${fnmExecCommand('fnm', major, command)}`;
+}
+
+/** The env for a bare `fnm` call (`fnm list`, `fnm install`) that must read or write the store. */
+export function fnmStoreProcessEnv(): NodeJS.ProcessEnv {
+    return { ...process.env, ...fnmStoreEnv() };
+}
+
 /** The Adobe CLI's Node, set once at activation from the register (core cannot import it). */
 let adobeCliNode: string | undefined;
 

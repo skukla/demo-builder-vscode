@@ -19,6 +19,7 @@ import type {
     ProgressHandler,
     ExecutionContext,
 } from './types';
+import { fnmExecCommand, fnmStoreProcessEnv } from '@/core/shell/nodeStore';
 import { formatElapsed } from '@/core/utils/timeFormatting';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
@@ -585,9 +586,10 @@ export class ProgressUnifier {
         }
 
         // Wrap commands with fnm if Node version specified
-        if (options?.nodeVersion && commands.length > 0) {
+        const nodeVersion = options?.nodeVersion;
+        if (nodeVersion && commands.length > 0) {
             commands = commands.map(cmd =>
-                cmd.startsWith('fnm ') ? cmd : `fnm exec --using ${options.nodeVersion} ${cmd}`,
+                cmd.startsWith('fnm ') ? cmd : fnmExecCommand('fnm', nodeVersion, cmd),
             );
         }
 
@@ -647,7 +649,8 @@ export class ProgressUnifier {
         return this.processSpawner(actualCommand, [], {
             shell: true,
             env: {
-                ...process.env,
+                // Demo Builder's own Node store (PR-1a): installs land there.
+                ...fnmStoreProcessEnv(),
                 NO_COLOR: '1',
                 FORCE_COLOR: '0',
             },
