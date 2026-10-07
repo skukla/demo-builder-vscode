@@ -4,7 +4,8 @@
 an integration removal: keep the register's Node, every installed component's recorded Node,
 and every outside integration's recorded Node, across EVERY project Demo Builder knows about;
 `fnm uninstall` the rest from the folder (the Adobe CLI inside goes with it). No prompt:
-everything there is Demo Builder's and comes back when needed. Logged, and listed in Diagnostics.
+everything there is Demo Builder's and comes back when needed. Shown as a status-bar line and a
+User Logs line, and listed in Diagnostics (step 12).
 
 Three rules (owner walk-through, 2026-10-07: an outside repo needs Node 26, the project is
 deleted):

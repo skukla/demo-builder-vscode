@@ -1,7 +1,37 @@
 # Step 12: What the SC sees
 
-Every Node and Adobe CLI install is said on screen at the moment it happens, in the surface the
-SC is already using. No new screen.
+**Owner rule (2026-10-07): every Node install, update and cleanup is shown to the SC, through a
+surface Demo Builder already uses, so they can see what is happening and when.** No new screen,
+no new kind of notice.
+
+## The surfaces (all exist today)
+
+| Surface | Where it lives |
+|---|---|
+| Wizard prerequisites step | `features/prerequisites/ui/steps` |
+| Operation progress window, with "Run in background" to a progress notification | PL-59; `operationBackgroundNotice.ts`, `OPERATION_STAGES` |
+| Progress notification for a long operation started outside a window | `core/vscode/progressRegister.ts` |
+| Dashboard notice (inline, one sentence, one action) | `OrgContextNotice.tsx` pattern (`spectrum-webview-ui`) |
+| Status-bar line on success | the same close path as `operationBackgroundNotice` |
+| "Demo Builder: User Logs" (timestamped, the SC-facing log, NOT Debug Logs) | `debugLogger.ts` |
+| Diagnostics | the Diagnostics command |
+
+## Every Node event, and where it is shown
+
+| Event | Shown in | What it says |
+|---|---|---|
+| First Node and Adobe CLI install (wizard) | Prerequisites step rows + their install progress | "Node 24, in Demo Builder's own folder"; "Adobe I/O CLI for Node 24" |
+| First Node install outside the wizard (an agent or a dashboard action got there first) | That operation's progress window stage, else the progress notification | "Installing Node 24 and the Adobe CLI: a few minutes, the first time only" |
+| An integration from the SC's own repo needs another Node | The add confirmation BEFORE it runs, then the add's progress window stage | "This integration needs Node 26. Demo Builder will install it, and the Adobe CLI, in its own folder" |
+| A release moves the shared Node (24 to 26) | Progress notification right after the update, then a status-bar line | "Updating Demo Builder's Node to 26: a few minutes, one time" / "Demo Builder now runs on Node 26" |
+| A storefront installed under an older Node | Dashboard notice with a Reinstall action (step 9) | "Installed under Node 24; this release uses 26. Reinstall?" |
+| Reinstall or update moves a component | That operation's progress window stage | "Reinstalling on Node 26" |
+| Cleanup removes an unused Node from the folder | Status-bar line + User Logs | "Removed Node 26 from Demo Builder's folder: no project uses it" |
+| The one-time cleanup of the SC's own fnm | A confirmation listing each version, then a progress notification, then a result listing what was removed and anything that failed | as step 11 |
+| Any install or removal fails | The surface that was narrating it turns into a warning with the reason and Debug Logs (the existing failure path) | the reason, in plain words |
+| At any time | Diagnostics: Demo Builder's Nodes, what uses each, the last install and the last removal, with dates | |
+
+Every row also writes one line to **User Logs**, so the order of events can be read back later.
 
 **The wizard's prerequisites step stays** (PR-1 D4: it always renders). It shows ONE Node line,
 "Node 24, in Demo Builder's own folder", and the Adobe CLI with its mesh plugin under it. Because
@@ -27,14 +57,14 @@ not a check on every start, only after an update that changed the Node.
 
 **Start** shows the reinstall notice from step 9.
 
-**Cleanup** has no pop-up (step 11). Diagnostics lists Demo Builder's Nodes, what uses each, and
-what was removed last. It lists the SC's own fnm today, which says nothing about what Demo Builder
-runs on; fixed here.
+**Diagnostics** lists the SC's own fnm today, which says nothing about what Demo Builder runs on;
+fixed here.
 
 **PR-1 consequence.** With one shared Node, Node and the Adobe CLI become extension-wide tools in
 PR-1's terms (Tier 1), not project-specific ones. PR-1's project tier shrinks to the Nodes outside
 repos need, which the add door already handles. Note this on PR-1.
 
-**Tests:** the prerequisites step lists one Node line and the CLI under it; the add confirmation
+**Tests:** each row of the table above has a test that the event reaches its surface (and User
+Logs); the prerequisites step lists one Node line and the CLI under it; the add confirmation
 names the Node only when a new one is needed; the progress stage text for each case; the
 post-update preparation runs only when the Node changed; Diagnostics lists the folder.
