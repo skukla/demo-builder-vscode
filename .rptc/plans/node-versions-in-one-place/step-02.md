@@ -1,4 +1,10 @@
-# Step 2: Ensure a Node and the Adobe CLI under it, in one call
+# Step 2: Demo Builder's own Node store, and ensure a Node and the Adobe CLI under it
+
+**The store.** `~/.demo-builder/node/`, created on first need. Every fnm call Demo Builder makes
+carries `FNM_DIR=<store>` (fnm's own setting: `--fnm-dir` / `FNM_DIR`; measured 2026-10-07, an
+empty one lists only `system`). One function, `demoBuilderFnmDir()`, owns the path. The
+user's fnm, its versions and its default are never read or written by Demo Builder again,
+except by step 8's one-time cleanup.
 
 **Today:** `ensureFnmNodeVersion` (`core/shell/ensureNodeVersion.ts`) runs `fnm install <major>`
 and nothing else. The Adobe CLI is installed per Node only by the prerequisites screen
@@ -8,8 +14,8 @@ machine shows (24.21.0 has no `aio`).
 
 **Change:** `ensureNode(executor, thingId, logger)` in the same module:
 
-1. `fnm install <nodeFor(thingId)>` (as today).
-2. When `needsAdobeCli(thingId)`: check `aio --version` under that Node
+1. `fnm install <nodeFor(thingId)>` into the store.
+2. When `needsAdobeCli(thingId)`: check `aio --version` under the store's Node
    (`useNodeVersion: major`); when missing, run the install steps from `prerequisites.json`'s
    `aio-cli` entry and its required plugins, under that Node. Read the steps from the
    prerequisites config rather than restating them, so there is one definition of "install the

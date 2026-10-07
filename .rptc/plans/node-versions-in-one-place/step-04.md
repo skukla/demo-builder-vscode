@@ -1,6 +1,8 @@
 # Step 4: One runner and one validator
 
-- **Runner.** `CommandExecutor.wrapCommandWithFnm` (`fnm exec --using=N`) is the one form.
+- **Runner.** `CommandExecutor.wrapCommandWithFnm` is the one form, and it always carries
+  Demo Builder's store: `FNM_DIR=<store> fnm exec --using=N cmd` (env on the child, so the
+  user's shell is untouched).
   `ProgressUnifier` (`progressUnifier/ProgressUnifier.ts:588-591`) builds its own
   `fnm exec --using N` with a bare `fnm`; it calls a shared `fnmExec(major, command)` helper
   instead, using the located fnm path.

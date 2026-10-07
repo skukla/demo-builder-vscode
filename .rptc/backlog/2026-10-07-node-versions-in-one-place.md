@@ -36,26 +36,22 @@ register; "ensure at the door" for later choices calls it too.
    2025-04-30; its `ora@9` likely needs 20 already (unverified). Needs one live run on 24.
 3. **Prerequisites prepare only what a project has chosen.** Later choices keep "ensure at
    the door".
+4. **Demo Builder keeps its own Node store** (`~/.demo-builder/node/`, fnm's `FNM_DIR`): all of
+   it is Demo Builder's, so removal is always safe and the user's fnm is never touched. Replaces
+   PR-1 D13/D15 ("never uninstall") for Node. fnm records what is installed, not who installed
+   it (checked 2026-10-07), which is why a separate store and not a ledger.
+5. **Earlier releases' versions are removed once from the shared fnm**: every version of a major
+   Demo Builder ever required (18, 20, 22, 24, from git history), ticked by default in one
+   confirmation; the user's fnm default listed but not ticked. The Adobe CLI under a version goes
+   with it. (Early releases ran `fnm default` for a week in September 2025, `7f27cc83a`, so a
+   default of 20 may be Demo Builder's too.)
 
 ## Migration
 
-Nothing is uninstalled (PR-1 D13/D15): fnm keeps old majors side by side, and the user's
-default Node is never changed.
-
-- **The machine.** The first command that needs a newly declared Node ensures it, and ensures
-  the Adobe CLI and its plugins under it, once. Today `ensureFnmNodeVersion` installs Node
-  only; ensuring the CLI under it is new work. Measured on the owner's machine 2026-10-07: aio
-  is installed under 18.20.8, 20.19.6 and 24.12.0 but NOT under 24.21.0, which is what
-  `fnm exec --using=24` picks. How deploys under 24 found aio anyway (likely `enhancePath`
-  putting another version's bin first) is unverified.
-- **Projects.** The only Node recorded in a project is `metadata.nodeVersion` on installed
-  components (integrations, the headless frontend, and a `.node-version` file beside them).
-  Both real projects read 2026-10-07 record 24 on their integrations and nothing on the
-  storefront. Start and update must read ONE value: when the declared version differs from the
-  recorded one, the next update or reset reinstalls under the declared version and records
-  it, and start uses the record until then.
-- **AI tools.** Already moved by AI-13 through the AI bundle sweep (AI_CONTEXT_VERSION 39).
-- **Undo.** Change the one declared value back; the old Node is still installed.
+In the plan's overview (`.rptc/plans/node-versions-in-one-place/overview.md`, "Migration of an
+existing installation"): Node 24 and the Adobe CLI arrive in the store at first need; installed
+components run unchanged (they were built on 24); the AI bundle is rewritten to the store by the
+sweep; the shared fnm is cleaned once (step 8); the store is deleted on uninstall.
 
 ## Related
 
