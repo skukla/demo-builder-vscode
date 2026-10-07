@@ -62,3 +62,4 @@ Two things break rather than degrade:
 - 2026-10-06  feat(ai): the Chat launch serves the SC's agent — Claude Code, Copilot CLI or Copilot in VS Code (`22aa84bfe`)
 - 2026-10-06  feat(ai): Copilot in VS Code is the default agent; a permissions level for terminal agents (`0381c3795`)
 - 2026-10-06  docs(rptc): AI-12 step 06 measured — Copilot defers all 158 tools behind tool_search, no cap to build for (`ddf3237dc`)
+- 2026-10-06  docs(ai): ADR-025 — Demo Builder serves the SC's agent, Copilot in VS Code by default (`bf661d46b`)
