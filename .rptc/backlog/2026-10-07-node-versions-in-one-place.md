@@ -87,3 +87,5 @@ the register), [[PL-36]] (an untested Node-version sort in the prerequisites ins
 - 2026-10-07  docs(research): component-declared Node ranges verified live on Node 24 (`d1a43cbc5`)
 - 2026-10-07  docs(research): read Node versions from each component, keep none in Demo Builder (`4215d3333`)
 - 2026-10-07  feat(node): Demo Builder's Node comes from the generated file; catalog numbers removed (`d31b7c549`)
+- 2026-10-07  fix(app-builder): an integration installs on the same Node it deploys on (`42ceda860`)
+- 2026-10-07  feat(app-builder): an SC's own integration repo gets the Node its range needs (`cbdd5c8ed`)
