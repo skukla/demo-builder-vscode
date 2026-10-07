@@ -6,6 +6,7 @@
  */
 
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import {
@@ -230,6 +231,35 @@ export async function copySettingsFromProject(context: HandlerContext): Promise<
     }
 }
 
+export const OPEN_EXPORT = 'Open File';
+
+/** VS Code's own label for revealFileInOS on each platform. */
+export function revealLabel(platform: NodeJS.Platform = process.platform): string {
+    if (platform === 'darwin') return 'Reveal in Finder';
+    if (platform === 'win32') return 'Reveal in File Explorer';
+    return 'Open Containing Folder';
+}
+
+function displayPath(fsPath: string): string {
+    const home = os.homedir();
+    return home && fsPath.startsWith(home + path.sep) ? `~${fsPath.slice(home.length)}` : fsPath;
+}
+
+/** Says where the file went and offers to open it or show it in the OS. */
+async function announceExport(projectName: string, uri: vscode.Uri): Promise<void> {
+    const reveal = revealLabel();
+    const choice = await vscode.window.showInformationMessage(
+        `${projectName} exported to ${displayPath(uri.fsPath)}`,
+        OPEN_EXPORT,
+        reveal,
+    );
+    if (choice === OPEN_EXPORT) {
+        await vscode.commands.executeCommand('vscode.open', uri);
+    } else if (choice === reveal) {
+        await vscode.commands.executeCommand('revealFileInOS', uri);
+    }
+}
+
 /**
  * Export project settings to a file
  *
@@ -273,7 +303,7 @@ export async function exportProjectSettings(
 
         // A plain message, not a progress bar with a sleep in it: nothing is in
         // progress, and the SC dismisses it when they have read it.
-        void vscode.window.showInformationMessage(`${project.name} exported.`);
+        void announceExport(project.name, saveUri);
 
         return {
             success: true,

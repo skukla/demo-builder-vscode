@@ -10,6 +10,8 @@
 
 const mockShowSaveDialog = jest.fn();
 const mockWriteFile = jest.fn();
+const mockShowInfo = jest.fn();
+const mockExecuteCommand = jest.fn();
 jest.mock(
     'vscode',
     () => ({
@@ -18,8 +20,9 @@ jest.mock(
         },
         window: {
             showSaveDialog: (...args: unknown[]) => mockShowSaveDialog(...args),
-            showInformationMessage: jest.fn(),
+            showInformationMessage: (...args: unknown[]) => mockShowInfo(...args),
         },
+        commands: { executeCommand: (...args: unknown[]) => mockExecuteCommand(...args) },
         workspace: {
             fs: { writeFile: (...args: unknown[]) => mockWriteFile(...args) },
         },
@@ -28,7 +31,12 @@ jest.mock(
     { virtual: true },
 );
 
-import { exportProjectSettings } from '@/features/projects-dashboard/services/settingsTransferService';
+import * as os from 'os';
+import {
+    exportProjectSettings,
+    OPEN_EXPORT,
+    revealLabel,
+} from '@/features/projects-dashboard/services/settingsTransferService';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../helpers/projectFake';
 
@@ -48,6 +56,7 @@ describe('exportProjectSettings (save dialog)', () => {
         jest.clearAllMocks();
         mockShowSaveDialog.mockResolvedValue({ fsPath: '/anywhere/out.json' });
         mockWriteFile.mockResolvedValue(undefined);
+        mockShowInfo.mockResolvedValue(undefined);
     });
 
     it('suggests <name>.project.demo-builder.json under the "Demo Builder project" filter', async () => {
@@ -86,5 +95,65 @@ describe('exportProjectSettings (save dialog)', () => {
 
         expect(result).toEqual({ success: true, data: { success: false, error: 'cancelled' } });
         expect(mockWriteFile).not.toHaveBeenCalled();
+    });
+
+    describe('the confirmation', () => {
+        const flush = () => new Promise((resolve) => setImmediate(resolve));
+
+        it('names where the file went, shortening the home folder to ~', async () => {
+            const saved = `${os.homedir()}/Downloads/my-demo.project.demo-builder.json`;
+            mockShowSaveDialog.mockResolvedValue({ fsPath: saved });
+
+            await exportProjectSettings(createMockHandlerContext(), PROJECT);
+
+            expect(mockShowInfo).toHaveBeenCalledWith(
+                'My Demo exported to ~/Downloads/my-demo.project.demo-builder.json',
+                OPEN_EXPORT,
+                revealLabel(),
+            );
+        });
+
+        it('keeps a path outside the home folder whole', async () => {
+            await exportProjectSettings(createMockHandlerContext(), PROJECT);
+
+            expect(mockShowInfo.mock.calls[0][0]).toBe('My Demo exported to /anywhere/out.json');
+        });
+
+        it('opens the file in the editor when asked', async () => {
+            mockShowInfo.mockResolvedValue(OPEN_EXPORT);
+
+            await exportProjectSettings(createMockHandlerContext(), PROJECT);
+            await flush();
+
+            expect(mockExecuteCommand).toHaveBeenCalledWith('vscode.open', {
+                fsPath: '/anywhere/out.json',
+            });
+        });
+
+        it('shows the file in the OS file manager when asked', async () => {
+            mockShowInfo.mockResolvedValue(revealLabel());
+
+            await exportProjectSettings(createMockHandlerContext(), PROJECT);
+            await flush();
+
+            expect(mockExecuteCommand).toHaveBeenCalledWith('revealFileInOS', {
+                fsPath: '/anywhere/out.json',
+            });
+        });
+
+        it('does nothing more when dismissed', async () => {
+            await exportProjectSettings(createMockHandlerContext(), PROJECT);
+            await flush();
+
+            expect(mockExecuteCommand).not.toHaveBeenCalled();
+        });
+
+        it.each([
+            ['darwin', 'Reveal in Finder'],
+            ['win32', 'Reveal in File Explorer'],
+            ['linux', 'Open Containing Folder'],
+        ] as const)('labels the reveal button the way VS Code does on %s', (platform, label) => {
+            expect(revealLabel(platform)).toBe(label);
+        });
     });
 });
