@@ -1,0 +1,38 @@
+---
+id: AI-13
+kind: fix
+area: ai
+needs: []
+value: med
+status: backlog
+---
+
+# The AI tools install and run on whatever Node is first on the PATH
+
+Filed 2026-10-07 from the owner's import test: "I also still see an EBADENGINE issue when
+triggering an AI tools update."
+
+## What the logs show (justrite-copy import, 2026-10-07 13:26)
+
+`aiDefaultsInstaller.ts` runs `npm install` in `<project>/.demo-builder-mcp/` with no
+`useNodeVersion`, so on the owner's machine it ran on Node 18.20.8:
+
+- `@adobe-commerce/commerce-extensibility-tools@3.6.0` requires Node >=22.0.0
+- `playwright@1.64.0-alpha` and `playwright-core` (from `@playwright/mcp`) require Node >=20
+- `@dropins/mcp@1.1.3` is deprecated: "Renamed to @dropins/ai-tools"
+
+## Why it is more than a warning
+
+The servers also RUN on that Node. `.mcp.json` names the binary `resolveNodePath()` finds
+(`which node`, then realpath, in `mcpConfigWriter.ts`), so commerce-extensibility-tools runs
+on Node 18, which it does not support. The integration path does not have this problem: the
+ERP install the same minute ran "npm install with Node 24" through fnm (`ensureFnmNodeVersion`).
+
+## What to do
+
+1. Pick the Node the AI tools need (the highest engine floor among ai-defaults packages,
+   today 22) and use the managed one, as integrations do, for BOTH the install and the
+   `.mcp.json` command. Decide what happens when fnm cannot provide it.
+2. Move `@dropins/mcp` to `@dropins/ai-tools` (check the new package's bin path and tools).
+3. Both change the generated AI bundle, so follow `ai-context-authoring`: all four seams and
+   an `AI_CONTEXT_VERSION` bump, so existing projects pick it up.
