@@ -39,6 +39,7 @@ import '@/core/ui/styles/shared-ui.css';
 import '@/core/ui/styles/drawer.css';
 // Feature-scoped: this is the ONLY entry that loads it, so its classes exist in
 // this bundle and nowhere else.
+import '@/core/ui/styles/view-switcher.css';
 import './styles/data-installer.css';
 
 const container = document.getElementById('root');

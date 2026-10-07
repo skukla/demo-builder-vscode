@@ -6,7 +6,7 @@
  * would only duplicate work every view already does.
  *
  * A composition of the shared vocabulary, per `reuse-first`: `PageLayout` +
- * `PageHeader` for the shell, `ViewSwitcher` (feature-local — see its docstring)
+ * `PageHeader` for the shell, `ViewSwitcher` (shared with Site access)
  * for the view strip.
  *
  * **The connectivity line is gone.** It called `check-datapack-service` on mount
@@ -22,7 +22,7 @@
  */
 
 import React, { useState } from 'react';
-import { ViewSwitcher, type SwitchableView } from './components/ViewSwitcher';
+import { ViewSwitcher, type SwitchableView } from '@/core/ui/components/navigation/ViewSwitcher';
 import { DatapackActivityView } from './views/DatapackActivityView';
 import { DatapackCatalogView } from './views/DatapackCatalogView';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';

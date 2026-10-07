@@ -5279,7 +5279,7 @@
             "equivalent": 13,
             "openGaps": 0
         },
-        "src/features/data-installer/ui/components/ViewSwitcher.tsx": {
+        "src/core/ui/components/navigation/ViewSwitcher.tsx": {
             "score": 100,
             "killed": 18,
             "survived": 0,

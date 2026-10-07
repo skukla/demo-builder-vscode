@@ -9,6 +9,7 @@ import '../../../../helpers/webviewClientMock';
 import { mockRequest, webviewClientHandlers } from '../../../../helpers/webviewClientMock';
 import React from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 
@@ -51,28 +52,37 @@ function renderScreen(hasStorefront: boolean) {
     );
 }
 
+function setupUser() {
+    return userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+}
+
 beforeEach(() => {
     mockRequest.mockReset();
 });
 
 describe('SiteAccessScreen', () => {
-    it('with a storefront, loads and shows both lists', async () => {
+    it('with a storefront, loads the admins tab, and the readers tab shows the readers', async () => {
         answer({ getSiteAccess: () => ({ success: true, data: VIEW }) });
 
         renderScreen(true);
 
         expect(await screen.findByText('owner@x.example')).toBeInTheDocument();
-        expect(screen.getByText('reader@x.example')).toBeInTheDocument();
+        expect(screen.getByText('2 people on acme/shop')).toBeInTheDocument();
+        expect(screen.queryByText('reader@x.example')).not.toBeInTheDocument();
         expect(mockRequest).toHaveBeenCalledWith('getSiteAccess', { target: undefined }, undefined);
+
+        fireEvent.click(screen.getByRole('button', { name: 'Content readers' }));
+        expect(screen.getByText('reader@x.example')).toBeInTheDocument();
+        expect(screen.queryByText('owner@x.example')).not.toBeInTheDocument();
     });
 
-    it('offers Remove only for rows that can be removed', async () => {
+    it('offers Remove, in the card menu, only for people who can be removed', async () => {
         answer({ getSiteAccess: () => ({ success: true, data: VIEW }) });
 
         renderScreen(true);
 
-        expect(await screen.findByRole('button', { name: 'Remove owner@x.example' })).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Remove lead@x.example' })).not.toBeInTheDocument();
+        expect(await screen.findByRole('button', { name: 'More actions for owner@x.example' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'More actions for lead@x.example' })).not.toBeInTheDocument();
     });
 
     it('without a storefront, asks for the org and site before reading anything', async () => {
@@ -105,11 +115,13 @@ describe('SiteAccessScreen', () => {
             removeSiteAdmin: () => ({ success: true, data: after }),
         });
         renderScreen(true);
+        const user = setupUser();
 
-        fireEvent.click(await screen.findByRole('button', { name: 'Remove owner@x.example' }));
+        await user.click(await screen.findByRole('button', { name: 'More actions for owner@x.example' }));
+        await user.click(await screen.findByRole('menuitem', { name: 'Remove' }));
         const dialog = await screen.findByRole('dialog');
         expect(mockRequest).not.toHaveBeenCalledWith('removeSiteAdmin', expect.anything(), undefined);
-        fireEvent.click(within(dialog).getByRole('button', { name: 'Remove' }));
+        await user.click(within(dialog).getByRole('button', { name: 'Remove' }));
 
         expect(await screen.findByText(after.notice.message)).toBeInTheDocument();
         expect(mockRequest).toHaveBeenCalledWith(
@@ -119,19 +131,24 @@ describe('SiteAccessScreen', () => {
         );
     });
 
-    it('a refusal envelope becomes a notice, not a crash', async () => {
+    it('adds through the dashed card and its dialog; a refusal becomes a notice, not a crash', async () => {
         answer({
             getSiteAccess: () => ({ success: true, data: VIEW }),
             addContentReader: () => ({ success: false, error: 'That is not an email address.' }),
         });
         renderScreen(true);
+        const user = setupUser();
 
-        const field = await screen.findByLabelText('Add a content reader');
-        fireEvent.change(field, { target: { value: 'nope' } });
-        const section = field.closest('section') ?? document.body;
-        fireEvent.click(within(section as HTMLElement).getAllByRole('button', { name: 'Add' }).pop()!);
+        await user.click(await screen.findByRole('button', { name: 'Content readers' }));
+        await user.click(screen.getByRole('button', { name: /Add a content reader/ }));
+        const dialog = await screen.findByRole('dialog');
+        const add = within(dialog).getByRole('button', { name: 'Add' });
+        expect(add).toHaveAttribute('aria-disabled', 'true');
+        await user.type(within(dialog).getByLabelText('Email'), 'nope');
+        await user.click(add);
 
         expect(await screen.findByText('That is not an email address.')).toBeInTheDocument();
+        expect(mockRequest).toHaveBeenCalledWith('addContentReader', { email: 'nope', target: undefined }, undefined);
     });
 
     it('a list that cannot be changed shows why, with the fix and the wait', async () => {
@@ -158,7 +175,7 @@ describe('SiteAccessScreen', () => {
 
         fireEvent.click(await screen.findByRole('button', { name: 'Open Code Sync App' }));
         expect(mockRequest).toHaveBeenCalledWith('openSiteAccessLink', { id: 'code-sync-app' }, undefined);
-        expect(screen.queryByLabelText('Add a configuration admin')).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /Add a site admin/ })).not.toBeInTheDocument();
 
         fireEvent.click(screen.getByRole('button', { name: /check access/ }));
         expect(await screen.findByText('Waiting for site access')).toBeInTheDocument();
