@@ -27,7 +27,7 @@ matters most.
 |---|---|---|---|
 | ★ | Sidebar → Chat → **Pick an earlier chat** | Claude Code opens its own list of past chats in a new tab [AI-4b] | pass (2026-10-06) |
 | ★ | With **AI Assistant → Engine** (`demoBuilder.ai.engine`) left at its default (Copilot in VS Code), Sidebar → **Chat**, ask "list my projects" | VS Code's chat panel opens in agent mode and answers from the demo-builder tools; no terminal opens [AI-12] | pass (2026-10-06) |
-| ★ | From the dashboard's **Prompts**, pick any prompt | It is sent in VS Code's chat panel and runs [AI-12] |  |
+| ★ | From the dashboard's **Prompts**, pick any prompt | It is sent in VS Code's chat panel and runs [AI-12] | Pass 2026-10-06: sent with the active-project preamble; 3 tool steps, answered "justrite (active)" |
 | | With Engine at Copilot in VS Code, look at the sidebar's **Chat**; then set Engine to Claude Code | A plain button (no menu) that opens the panel; with Claude Code it becomes the Continue / Pick earlier / New menu, without a reload [AI-12] |  |
 | | In a terminal at the projects root, run `copilot` yourself and type `/mcp` | demo-builder is listed (trust the folder when asked) — Copilot CLI is no Chat choice, but its tools still work [AI-12] |  |
 | | Set **AI Assistant → Permissions** to Auto, then Full access, and start Claude Code | The terminal's command line carries `--permission-mode auto` / `--dangerously-skip-permissions` [AI-12] |  |
