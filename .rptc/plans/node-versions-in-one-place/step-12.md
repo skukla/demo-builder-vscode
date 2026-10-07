@@ -52,8 +52,12 @@ can need another Node.
 **When a release moves the shared Node** (24 to 26), the first thing that needs it would wait
 minutes, possibly mid-demo. After an extension update that changes it, Demo Builder prepares the
 new Node in the background with a progress notification ("Updating Demo Builder's Node to 26: a
-few minutes, one time"). Owner to confirm against PR-1 D14 (no activation-time checks): this is
-not a check on every start, only after an update that changed the Node.
+few minutes, one time"). **Owner approved 2026-10-07**, as an exception to PR-1 D14 (no
+activation-time checks): it runs only after an update that changed the Node, never on an ordinary
+start. Three guards: it never blocks the SC (background, they keep working); offline or failed,
+it warns through the usual failure path and the first thing that needs the Node tries again; and
+it goes through the one ensure call (step 2), so an operation needing the same Node at the same
+time waits for it instead of installing twice (test this: today's ensure has no lock).
 
 **Start** shows the reinstall notice from step 9.
 
