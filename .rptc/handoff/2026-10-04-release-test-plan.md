@@ -40,7 +40,7 @@ matters most.
 | | Do this | Expect | Result |
 |---|---|---|---|
 | ★ | Look at Your Projects in grid view and list view | No header "New" button. A dashed **New project** card is last; it opens New / Copy from existing / Import from file. It hides while you filter [PL-62] | Pass 2026-10-06: dashed card last, menu offers all three, hidden while filtering |
-| ★ | **Export** Justrite | The file is named `justrite.project.demo-builder.json`. Open it: no passwords, keys or tokens anywhere [PL-56c] |  |
+| ★ | **Export** Justrite | The file is named `justrite.project.demo-builder.json`. Open it: no passwords, keys or tokens anywhere [PL-56c] | Pass 2026-10-06: right name; only endpoints, store codes and Adobe ids — no secrets. Notice now names the path with Open File / Reveal in Finder |
 | ★ | **Import from file** using that export (into a new name) | It asks you to sign in to GitHub and DA.live like a new project does. It gets its own repository. Integrations, datapack, store setup and settings all come back [PL-56d] |  |
 | | **Copy from existing** on Justrite | The wizard opens with Justrite's choices, datapack and store structure, no credentials, and a new repository [PL-56e] |  |
 | | **Edit** a project | Its own values are kept, and the datapack and store structure are filled in [PL-56e] |  |
