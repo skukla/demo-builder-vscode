@@ -16,7 +16,6 @@ import {
     sublineFor,
     toIntegrationCards,
 } from '@/features/project-creation/ui/components/integration-flow/integrationCards';
-import type { IntegrationCardModel } from '@/core/ui/components/integrations/integrationCardModel.types';
 import type { IntegrationRow } from '@/features/project-creation/ui/components/integration-flow/integrationRows';
 
 function row(overrides: Partial<IntegrationRow> = {}): IntegrationRow {
@@ -189,49 +188,22 @@ describe('toIntegrationCards', () => {
 });
 
 describe('sublineFor', () => {
-    // The count replaces the row's collapsible "APIs in use · N" list. Losing the
-    // count would be a regression — it is the only pre-build signal that an
-    // integration will provision anything. Losing the expanded NAMES is not: the
-    // kebab's Manage APIs opens the picker, which lists them.
-    it('joins the source line and the API count', () => {
+    // No API count on the card face (owner, 2026-10-07): the kebab's Manage APIs
+    // opens the picker, which lists them.
+    it('shows the source line and no API count', () => {
         expect(sublineFor(toIntegrationCards([row()])[0])).toBe(
-            'Custom integration · acme/erp-sync · 2 APIs'
-        );
-    });
-
-    it('singularises a lone API', () => {
-        expect(
-            sublineFor(toIntegrationCards([row({ apis: ['AdobeIOManagementAPISDK'] })])[0])
-        ).toBe('Custom integration · acme/erp-sync · 1 API');
-    });
-
-    it('says what comes with the integration when the row names a companion', () => {
-        expect(sublineFor(toIntegrationCards([row()])[0], 'Acme ERP')).toBe(
-            'Custom integration · acme/erp-sync · 2 APIs · Comes with Acme ERP'
-        );
-    });
-
-    it('drops the source segment when the row has none', () => {
-        expect(sublineFor(toIntegrationCards([row({ sourceLine: '' })])[0])).toBe('2 APIs');
-    });
-
-    // Every row carries at least the baseline (integrationRows.apiCodesFor), so
-    // this is unreachable from the resolver — pinned so the helper degrades
-    // honestly rather than printing "0 APIs" if that ever changes.
-    it('drops the API segment when there are none', () => {
-        expect(sublineFor(toIntegrationCards([row({ apis: [] })])[0])).toBe(
             'Custom integration · acme/erp-sync'
         );
     });
 
-    // `apis` is OPTIONAL on IntegrationCardModel — the dashboard's producer omits
-    // it entirely on cards that provision nothing — so the helper has to survive
-    // a card that carries no key at all, not merely an empty array.
-    it('survives a card with no apis key at all', () => {
-        const { apis: _apis, ...withoutApis } = toIntegrationCards([row()])[0];
-        const card: IntegrationCardModel = withoutApis;
+    it('says what comes with the integration when the row names a companion', () => {
+        expect(sublineFor(toIntegrationCards([row()])[0], 'Acme ERP')).toBe(
+            'Custom integration · acme/erp-sync · Comes with Acme ERP'
+        );
+    });
 
-        expect(sublineFor(card)).toBe('Custom integration · acme/erp-sync');
+    it('is empty when the row has no source and nothing else to say', () => {
+        expect(sublineFor(toIntegrationCards([row({ sourceLine: '' })])[0])).toBe('');
     });
 
     it('explains a required mesh — the card with no kebab must say why', () => {

@@ -201,12 +201,11 @@ describe('IntegrationsStep — result cards from state', () => {
         expect(document.querySelectorAll('.integration-card').length).toBeGreaterThan(1);
     });
 
-    it('puts the source line and API count in the card subline', async () => {
+    it('puts the source line, and no API count, in the card subline', async () => {
         await renderStep(baseState({ ...CUSTOM_ADDED, ...COMMITTED_DEST }));
         const custom = row('widget');
-        expect(
-            within(custom).getByText(/Custom integration · acme\/widget · 1 API$/)
-        ).toBeInTheDocument();
+        expect(within(custom).getByText(/Custom integration · acme\/widget$/)).toBeInTheDocument();
+        expect(within(custom).queryByText(/\d APIs?$/)).not.toBeInTheDocument();
         expect(screen.queryByText('API access enabled')).not.toBeInTheDocument();
     });
 
@@ -214,7 +213,7 @@ describe('IntegrationsStep — result cards from state', () => {
         await renderStep(baseState({ selectedAppBuilderComponents: ['cat-reco'] }));
         const reco = row('Recommendations');
         expect(
-            within(reco).getByText(/Personalized product recommendations · 2 APIs$/)
+            within(reco).getByText(/^Personalized product recommendations$/)
         ).toBeInTheDocument();
     });
 
@@ -225,26 +224,7 @@ describe('IntegrationsStep — result cards from state', () => {
         expect(row('Custom Integration')).not.toBeNull();
     });
 
-    // The count replaces the old collapsible "APIs in use" list. The NAMES now
-    // live one click away in the picker (Manage APIs), so only the count is
-    // pinned on the face.
-    it('counts baseline + picks on a custom card', async () => {
-        await renderStep(
-            baseState({
-                ...CUSTOM_ADDED,
-                selectedConsoleApis: { 'acme-widget': ['AnalyticsSDK', 'CampaignSDK'] },
-            })
-        );
-        // baseline + 2 picks
-        expect(within(row('widget')).getByText(/· 3 APIs$/)).toBeInTheDocument();
-    });
-
-    it('counts baseline + requiredApis on a catalog card', async () => {
-        await renderStep(baseState({ selectedAppBuilderComponents: ['cat-reco'] }));
-        expect(within(row('Recommendations')).getByText(/· 2 APIs$/)).toBeInTheDocument();
-    });
-
-    it('counts a committed mesh without ever subscribing', async () => {
+    it('shows a committed mesh without ever subscribing', async () => {
         await renderStep(
             baseState({
                 selectedAppBuilderComponents: [MESH_ID],
@@ -252,7 +232,7 @@ describe('IntegrationsStep — result cards from state', () => {
                 ...COMMITTED_DEST,
             })
         );
-        expect(within(row(MESH_NAME)).getByText(/· 2 APIs$/)).toBeInTheDocument();
+        expect(row(MESH_NAME)).not.toBeNull();
         // The step must NOT issue a subscribe (re-mounting via Continue→Back
         // would otherwise "re-enable").
         expect(mockRequest).not.toHaveBeenCalledWith(
@@ -585,10 +565,10 @@ describe('IntegrationsStep — mesh add commits without subscribing', () => {
             );
         });
 
-        // A single Add press commits + closes; the card appears with its API count.
+        // A single Add press commits + closes; the card appears.
         await press(within(dialog).getByRole('button', { name: 'Add Integration' }));
         await waitFor(() => {
-            expect(within(row(MESH_NAME)).getByText(/· 2 APIs$/)).toBeInTheDocument();
+            expect(row(MESH_NAME)).not.toBeNull();
         });
 
         // The modal provisions nothing — the APIs subscribe later, at the rebuild.

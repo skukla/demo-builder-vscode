@@ -115,25 +115,20 @@ export function toIntegrationCards(rows: IntegrationRow[]): IntegrationCardModel
 }
 
 /**
- * The card's one quiet line: where the integration came from, and how many APIs
- * it will provision.
+ * The card's one quiet line: where the integration came from.
  *
- * The count replaces the old row's collapsible "APIs in use · N" list. The count
- * is the part worth keeping on the face — it is the only pre-build signal that an
- * integration provisions anything. The NAMES are one click away behind the
+ * No API count (owner, 2026-10-07): the APIs are one click away behind the
  * kebab's Manage APIs, which opens the picker that lists them.
  *
- * Each segment is dropped when it has nothing to say, so the line never reads
- * "· 0 APIs" or opens with a stray separator.
+ * Each segment is dropped when it has nothing to say, so the line never opens
+ * with a stray separator.
  *
  * @param card - a card model from {@link toIntegrationCards}
  * @returns the subline text
  */
 export function sublineFor(card: IntegrationCardModel, companion?: string): string {
-    const count = card.apis?.length ?? 0;
     const segments = [
         card.sourceLine,
-        count > 0 ? `${count} ${count === 1 ? 'API' : 'APIs'}` : undefined,
         // The system that comes with this integration (the ERP): the wizard has
         // no second card for it, so the pair is said here (decision 2).
         companion ? `Comes with ${companion}` : undefined,
