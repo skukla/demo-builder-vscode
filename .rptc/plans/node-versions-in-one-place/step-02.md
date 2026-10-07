@@ -26,7 +26,7 @@ machine shows (24.21.0 has no `aio`).
 
 **Callers moved to `ensureNode`:** the App Builder add door (`appBuilderComponentRunner` runAdd
 and deploy), the AI tools install and update (AI-13, thing `ai-tools`), the mesh deploy
-entry point, the ingestion tool's run.
+entry point.
 
 **Tests:** the CLI is installed only when missing and only for things that need it; a failed
 install returns the reason; Node-only things never touch `aio`.

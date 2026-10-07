@@ -14,7 +14,8 @@ once it is no longer needed.
 ## Decisions this plan carries out (owner, 2026-10-07)
 
 1. Adobe's CLI runs on one Node, 24, for every call, mesh included.
-2. The data ingestion tool moves to 24.
+2. The data ingestion tool waits on [[DI-4]] (Data Installer superseded it?). This plan does not
+   touch it; if it survives, it declares 24.
 3. Prerequisites prepare only what a project has chosen; later choices are ensured at the door.
 4. **Demo Builder keeps its own Node store**, `~/.demo-builder/node/`, passed to fnm as
    `FNM_DIR` on every call it makes. Everything in it is Demo Builder's by construction, so

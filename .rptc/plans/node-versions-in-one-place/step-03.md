@@ -9,7 +9,6 @@ suite name each caller.
 | `useNodeVersion: 'auto'` (runtimeNamespace, erpCredential, executorAppBuilderPhase, appBuilderComponentTeardown) and `APP_NODE_VERSION = 'auto'` | `nodeFor('adobe-cli')` |
 | bare `aio` commands with no version (`CommandExecutor` forces `null` + `enhancePath`) | default `useNodeVersion` for any `aio ` command = `nodeFor('adobe-cli')` |
 | the aio-cli refresh in `appDeployment.ts:205` ("default node" on purpose) | under `nodeFor('adobe-cli')`, so the refreshed CLI is the one deploys run |
-| `toolManager.ts` `NODE_VERSION = '18'` | `nodeFor('commerce-demo-ingestion')` |
 | fallback "20" in `installHandler.ts`, `DependencyResolver.ts`, `startDemo.ts`, `meshConfig.ts` | deleted; the register throws for an undeclared thing |
 
 Then delete what nothing calls: `'auto'` in `NodeVersionValidator` and `resolveAutoNodeVersion`,

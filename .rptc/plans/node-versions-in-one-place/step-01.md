@@ -9,7 +9,6 @@ App Builder, AI and lifecycle all read it; ADR-015: pure functions over imported
 | Catalog | Entry | Value |
 |---|---|---|
 | `components.json` | `infrastructure.adobe-cli` | "24" (new; decision 1) |
-| `components.json` | `tools.commerce-demo-ingestion` | "18" → "24" (decision 2) |
 | `components.json` | the three mesh entries | removed: the mesh runs through the Adobe CLI, so it uses the CLI's (decision 1) |
 | `components.json` | `frontends.headless` | "24", unchanged |
 | `app-builder-components.json` | three entries | "24", unchanged |

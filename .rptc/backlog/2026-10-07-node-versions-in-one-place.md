@@ -32,8 +32,10 @@ register; "ensure at the door" for later choices calls it too.
    11.1.4 needs Node >=20 and its app plugin >=20.17; the api-mesh plugin accepts >=18; Node 20
    reached end of life 2026-04-30 and Node 24 is supported to 2028-04-30. Needs one live mesh
    deploy on 24 before the switch.
-2. **The data ingestion tool moves to 24.** Its package says `engines >=18`; Node 18 ended
-   2025-04-30; its `ora@9` likely needs 20 already (unverified). Needs one live run on 24.
+2. **The data ingestion tool: waits on [[DI-4]].** Step 0 found it unreachable (nothing calls
+   it) and its data source gone; it installs and starts on Node 24. Whether it is deleted or
+   revived is DI-4's question (has the Data Installer superseded it for ACO). PR-1a does not
+   touch it; if it survives, it declares 24 like everything else.
 3. **Prerequisites prepare only what a project has chosen.** Later choices keep "ensure at
    the door".
 4. **Demo Builder keeps its own Node store** (`~/.demo-builder/node/`, fnm's `FNM_DIR`): all of
