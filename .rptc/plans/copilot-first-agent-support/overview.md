@@ -32,7 +32,9 @@ is launched. Everything else reads that seam rather than branching on its own.
 ## Plan status
 
 Written 2026-09-16. Built: 01, 02, 03, 04, 09 (on `feature/copilot-agent-support`, merged into the
-release candidate 2026-10-06) and 08 (2026-10-06, awaiting its live run). Open: 05, 06, 07, 10.
+release candidate 2026-10-06) and 08 (2026-10-06; live run passed in Copilot in VS Code). 06 closed by measurement 2026-10-06 — tool
+search defers all 158 tools, no cap applies. 05 not needed while the window is homed at the projects
+root (its `.mcp.json` connects). Open: 07, 10.
 Step 01 is the only one that fixes something that can break a user today; the rest are additive.
 
 ## Steps
@@ -44,7 +46,7 @@ Step 01 is the only one that fixes something that can break a user today; the re
 | 03 | The engine seam (`step-03-engine-seam.md`) | — | — |
 | 04 | Config delivery per engine (`step-04-config-delivery.md`) | 03 | — |
 | 05 | VS Code registers the server itself (`step-05-vscode-registration.md`) | 03 | admin: MCP allowlist |
-| 06 | The tool budget (`step-06-tool-budget.md`) | — | owner: a Copilot seat to measure with |
+| 06 | The tool budget (`step-06-tool-budget.md`) — measured 2026-10-06, nothing to build | — | owner: a Copilot seat to measure with |
 | 07 | One consent prompt, not three (`step-07-consent.md`) | 03 | owner: live run |
 | 08 | Launching a chat without Claude (`step-08-launch.md`) — built 2026-10-06 | 03 | owner: live run |
 | 09 | Readiness and diagnostics read both (`step-09-readiness.md`) | 03, 04 | — |

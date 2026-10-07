@@ -24,7 +24,34 @@ On a storefront project in Copilot agent mode, with our server connected:
 
 Record the numbers in this step file, dated, the way the ERP spike recorded its four unknowns.
 
-## Then choose
+## Measured 2026-10-06 (VS Code 1.140, built-in Copilot, GPT-6.1 Sol, agent mode)
+
+Source: the saved chat session (`workspaceStorage/<ws>/chatSessions/<id>.jsonl`) for "List my
+projects" in the projects-root window, plus the built-in Copilot extension's own code
+(`extensions/copilot/dist/extension.js`).
+
+1. **All 158 of our tools reach the request, deferred.** The prompt carried an
+   `availableDeferredTools` list of 187 names — 158 `mcp_demo-builder_*` and 29 of VS Code's own.
+   The agent called `tool_search` ("demo-builder list_projects list all Demo Builder projects"),
+   then `mcp_demo-builder_list_projects`; three steps, 13 s. Nothing was missing or dropped.
+2. **Virtual tool groups were not used.** No `activate_*` tool appeared. Grouping
+   (`github.copilot.chat.virtualTools.threshold`, default 128) is the fallback for a model WITHOUT
+   tool search; it groups tools behind `activate_<group>` and still drops none.
+3. **Copilot's own tools share the list** but its core tools are never deferred
+   (`nonDeferred`), so they cost nothing against ours.
+
+Which models search: `supportsToolSearch = capabilities.supports.tool_search ?? I8e(model)` —
+GPT-5.4/5.5 and newer families, Claude 4.5 and newer. The hard error "Cannot have more than 128
+tools per request" exists only on the `vscode.lm` extension-API path, and only for a model without
+tool search; agent mode does not take it.
+
+**Decision: build none of the three options below.** The cap does not bind; what matters with
+deferred tools is that a semantic search finds the right one, i.e. the tool DESCRIPTIONS — the same
+thing Claude Code's ToolSearch already depends on, and already what `mcp-tool-authoring` governs.
+Revisit only if a live run shows a tool the search cannot find, or an SC on a model without tool
+search reports degraded calling.
+
+## Then choose (not taken — see the decision above)
 
 - **Tool sets** — publish groups (storefront, Adobe Console, content, diagnostics, project) so a
   user enables what the task needs. Least code, most user action.
