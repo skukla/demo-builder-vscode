@@ -5,7 +5,10 @@
     "infrastructure": {
         "adobe-cli": {
             "name": "Adobe I/O CLI & SDK",
-            "description": "Command-line interface and SDK for Adobe I/O services"
+            "description": "Command-line interface and SDK for Adobe I/O services",
+            "configuration": {
+                "nodeVersion": "24"
+            }
         }
     },
 
@@ -142,7 +145,6 @@
                 }
             },
             "configuration": {
-                "nodeVersion": "20",
                 "buildScript": "build",
                 "requiresDeployment": true,
                 "deploymentTarget": "adobe-io",
@@ -176,7 +178,6 @@
                 }
             },
             "configuration": {
-                "nodeVersion": "20",
                 "buildScript": "build",
                 "requiresDeployment": true,
                 "deploymentTarget": "adobe-io",
@@ -207,7 +208,6 @@
                 }
             },
             "configuration": {
-                "nodeVersion": "20",
                 "buildScript": "build",
                 "requiresDeployment": true,
                 "deploymentTarget": "adobe-io",
