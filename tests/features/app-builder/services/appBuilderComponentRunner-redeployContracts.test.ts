@@ -30,6 +30,7 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
 
 import { deployAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
 import { MESH_ENTRY, createDeps, createProject } from './appBuilderComponentRunner.testUtils';
+import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
 
 const ID = MESH_ENTRY.id;
 
@@ -143,13 +144,13 @@ describe('deployAppBuilderComponent — Node preparation', () => {
         );
     });
 
-    it('never touches fnm for an entry that declares no Node version', async () => {
+    it("prepares the Adobe CLI's Node for an entry that declares none (PR-1a)", async () => {
         const ensureNodeVersion = jest.fn().mockResolvedValue(undefined);
         const deps = createDeps({ ensureNodeVersion });
 
         await deployAppBuilderComponent(deployedMeshProject(), ID, deps);
 
-        expect(ensureNodeVersion).not.toHaveBeenCalled();
+        expect(ensureNodeVersion).toHaveBeenCalledWith(adobeCliNodeVersion());
     });
 
     it('a Node preparation failure aborts the redeploy with fnm’s own reason', async () => {

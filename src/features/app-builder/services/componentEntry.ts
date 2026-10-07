@@ -13,6 +13,7 @@
 
 import { buildCustomIntegrationEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { pairedInstanceId } from '@/features/components/services/appBuilderComponentLinks';
+import { nodeForAppBuilderEntry } from '@/features/components/services/nodeRequirements';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState, Project } from '@/types/base';
 
@@ -92,4 +93,16 @@ export function entryFromState(
         kind: state.kind,
         providesEnvVars: state.providesEnvVars ? Object.keys(state.providesEnvVars) : undefined,
     };
+}
+
+/**
+ * The Node a component installs and deploys on: the entry's own version, else the
+ * Adobe CLI's (the register, PR-1a). Here beside the entry lookup because every
+ * caller that has an entry asks this next.
+ *
+ * @param entry - the catalog entry (from {@link catalogEntryFor})
+ * @returns the Node major
+ */
+export function nodeVersionOf(entry: Pick<AppBuilderComponentCatalogEntry, 'nodeVersion'>): string {
+    return nodeForAppBuilderEntry(entry);
 }

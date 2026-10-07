@@ -5,6 +5,7 @@ import { CommandResultCache } from './commandResultCache';
 import { CommandSequencer } from './commandSequencer';
 import { EnvironmentSetup } from './environmentSetup';
 import { FileWatcher } from './fileWatcher';
+import { fnmExecCommand, fnmStoreEnv } from './nodeStore';
 import { buildAioConsoleEnv, getActiveOrgContext, needsOrgTargeting } from './orgContextEnv';
 import { PollingService } from './pollingService';
 import { isPortAvailable } from './portChecker';
@@ -166,12 +167,15 @@ export class CommandExecutor {
     ): void {
         const fnmPath = this.environmentSetup.findFnmPath();
         if (fnmPath && nodeVersion !== 'current') {
-            state.finalCommand = `${fnmPath} exec --using=${nodeVersion} ${state.finalCommand}`;
+            state.finalCommand = fnmExecCommand(fnmPath, nodeVersion, state.finalCommand);
             state.finalOptions.shell = '/bin/zsh';
         } else if (nodeVersion === 'current') {
             state.finalCommand = `eval "$(fnm env)" && ${state.finalCommand}`;
             state.finalOptions.shell = '/bin/zsh';
         }
+        // Demo Builder's own Node store (PR-1a), on the child only. The full
+        // environment is kept: an `env` without PATH runs nothing.
+        state.finalOptions.env = { ...process.env, ...state.finalOptions.env, ...fnmStoreEnv() };
     }
 
     /**

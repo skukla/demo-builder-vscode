@@ -15,7 +15,6 @@
 import * as vscode from 'vscode';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
-import { ensureFnmNodeVersion } from '@/core/shell/ensureNodeVersion';
 import type { CachedOrgRef } from '@/core/shell/orgContextEnv';
 import { resolveDesiredApis } from '@/core/state/componentApiPicks';
 import { formatDuration } from '@/core/utils/timeFormatting';
@@ -51,6 +50,7 @@ import { buildS2SDeployEnv } from '@/features/app-builder/services/s2sDeployEnv'
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { ComponentManager } from '@/features/components/services/componentManager';
+import { ensureNode } from '@/features/components/services/nodeEnsure';
 import { ensureDaLiveAuth } from '@/features/eds/handlers/edsHelpers';
 import { republishStorefrontConfig } from '@/features/eds/services/storefront/storefrontRepublishService';
 import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
@@ -194,10 +194,10 @@ export function buildDefaultRunnerDeps(
         // The ONE isolating deploy seam (ADR-011 D3 Step 03) — every deploy routes
         // through it, so no un-isolated deploy survives.
         deployApp: deployAppComponentIsolated,
-        // Choice-dependent node versions resolve at the add door — the one
-        // chokepoint the wizard's early prerequisites screen cannot cover.
+        // Choice-dependent node versions resolve at the add door (the wizard's early
+        // prerequisites cannot), with the Adobe CLI under it: every add runs `aio`.
         ensureNodeVersion: (version) =>
-            ensureFnmNodeVersion(ctx.commandManager, version, ctx.logger),
+            ensureNode(ctx.commandManager, { major: version, adobeCli: true }, ctx.logger),
         // Post-deploy install for app-management lifecycle apps (automatic with
         // hands-back — owner decision 2026-08-27). The runner records the
         // outcome; a failure never fails the deploy.

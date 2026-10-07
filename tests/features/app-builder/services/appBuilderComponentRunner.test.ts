@@ -428,7 +428,9 @@ describe('addAppBuilderComponent partial-failure', () => {
 
         // The env-file write reports its own step ahead of the tail's — it runs
         // before the deploy and is otherwise silent time.
+        // Every add prepares its Node first (PR-1a).
         expect(seen).toEqual([
+            OPERATION_STAGES.preparingNode.label,
             OPERATION_STAGES.subscribingApis.label,
             OPERATION_STAGES.gettingCode.label,
             OPERATION_STAGES.generatingMeshConfig.label,
@@ -462,8 +464,8 @@ describe('addAppBuilderComponent partial-failure', () => {
             },
         });
 
-        const { subscribingApis, gettingCode } = OPERATION_STAGES;
-        expect(seen).toEqual([subscribingApis.label, gettingCode.label, 'Building…']);
+        const { preparingNode, subscribingApis, gettingCode } = OPERATION_STAGES;
+        expect(seen).toEqual([preparingNode.label, subscribingApis.label, gettingCode.label, 'Building…']);
     });
 
     // BEHAVIOUR CHANGE (2026-08-04 consolidation): a redeploy used to REPLACE the

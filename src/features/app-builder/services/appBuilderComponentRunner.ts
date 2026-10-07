@@ -57,7 +57,7 @@ import type {
     AppManagementInstallOptions,
     AppManagementInstallResult,
 } from './appManagementUpgrade';
-import { catalogEntryFor, entryFromState, pairedEntry } from './componentEntry';
+import { catalogEntryFor, entryFromState, nodeVersionOf, pairedEntry } from './componentEntry';
 import {
     entriesSharingWorkspace,
     releaseWorkspaces,
@@ -462,10 +462,10 @@ function buildDefinition(entry: AppBuilderComponentCatalogEntry): TransformedCom
         configuration: {
             requiresDeployment: true,
             deploymentTarget: 'adobe-io',
-            // The entry's declared node feeds the existing fnm machinery in
+            // The register's node for the entry feeds the fnm machinery in
             // ComponentDependencies; strictInstall makes a refused npm install
             // abort the add with npm's own error (AB-3).
-            nodeVersion: entry.nodeVersion,
+            nodeVersion: nodeVersionOf(entry),
             strictInstall: true,
         },
     } as TransformedComponentDefinition;
@@ -838,7 +838,7 @@ async function dispatchDeploy(
         deps.logger,
         {
             onProgress: deps.onProgress,
-            nodeVersion: entry.nodeVersion,
+            nodeVersion: nodeVersionOf(entry),
             layout: entry.layout,
             confirmToolchainRefresh: deps.confirmToolchainRefresh,
             extraEnv: Object.keys(extraEnv).length > 0 ? extraEnv : undefined,
@@ -995,13 +995,15 @@ async function runAdd(
     }
 
     try {
-        if (entry.nodeVersion) {
-            // Visible, not silent: a first-time fnm install takes ~30s and the
-            // progress channel is the surface every add path already has.
+        {
+            // Every entry, from the register (PR-1a): its own version, else the
+            // Adobe CLI's. Visible, not silent: a first-time install takes a while
+            // and the progress channel is the surface every add path already has.
             // "Installing … (one-time install)" was said even when Node was already
             // there — every add of a pair said it twice (2026-09-21).
-            deps.onProgress?.(OPERATION_STAGES.preparingNode.label, `Node ${entry.nodeVersion}`);
-            const nodeError = await deps.ensureNodeVersion?.(entry.nodeVersion);
+            const node = nodeVersionOf(entry);
+            deps.onProgress?.(OPERATION_STAGES.preparingNode.label, `Node ${node}`);
+            const nodeError = await deps.ensureNodeVersion?.(node);
             if (nodeError) {
                 return { success: false, error: nodeError };
             }
@@ -1246,12 +1248,10 @@ export async function deployAppBuilderComponent(
         existing.error = undefined;
         await deps.saveProject(project);
 
-        if (entry.nodeVersion) {
-            deps.onProgress?.(
-                OPERATION_STAGES.preparingNode.label,
-                `Installing Node ${entry.nodeVersion} (one-time install)`,
-            );
-            const nodeError = await deps.ensureNodeVersion?.(entry.nodeVersion);
+        {
+            const node = nodeVersionOf(entry);
+            deps.onProgress?.(OPERATION_STAGES.preparingNode.label, `Node ${node}`);
+            const nodeError = await deps.ensureNodeVersion?.(node);
             if (nodeError) {
                 // Thrown so the catch below records it — the marker is already saved.
                 throw new Error(nodeError);

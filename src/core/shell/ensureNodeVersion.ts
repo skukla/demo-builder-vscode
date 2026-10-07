@@ -15,11 +15,20 @@
  * the latest patch — which matters: kit dependencies pinned patch-level
  * floors (`^24.15.0`) that an older already-installed v24 failed.
  *
+ * Everything installs into Demo Builder's own store (`nodeStore.ts`, PR-1a), never
+ * the user's fnm. `ensureNodeWithAdobeCli` adds the Adobe CLI under the same Node
+ * when it is missing: installing Node alone left a store Node 24 with no `aio`
+ * under it (the owner's machine, 2026-10-07: aio under 24.12.0, none under 24.21.0,
+ * which is what `fnm exec --using=24` picks).
+ *
  * @module core/shell/ensureNodeVersion
  */
 
+import * as fs from 'fs';
+import * as path from 'path';
 import type { CommandExecutor } from './commandExecutor';
 import { EnvironmentSetup } from './environmentSetup';
+import { fnmStoreEnv } from './nodeStore';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
@@ -56,6 +65,8 @@ export async function ensureFnmNodeVersion(
     const result = await executor.execute(`${fnmPath} install ${major}`, {
         timeout: TIMEOUTS.LONG,
         enhancePath: true,
+        // Into Demo Builder's store, never the user's fnm.
+        env: { ...process.env, ...fnmStoreEnv() },
         // Without a shell the executor hands the whole string to the spawner
         // as one binary name and nothing runs (code undefined — measured live).
         shell: DEFAULT_SHELL,
@@ -72,6 +83,51 @@ export async function ensureFnmNodeVersion(
         );
     }
 
-    logger.debug(`[EnsureNode] Node ${major} available via fnm`);
+    logger.debug(`[EnsureNode] Node ${major} available in Demo Builder's store`);
+    return undefined;
+}
+
+/**
+ * Whether the Adobe CLI is installed under the store's Node `<major>`: the `aio`
+ * file beside that Node's own binary, not whatever `aio` the PATH would find.
+ */
+export async function adobeCliInstalledUnder(executor: CommandExecutor, major: string): Promise<boolean> {
+    const result = await executor.execute(`node -p "require('path').dirname(process.execPath)"`, {
+        useNodeVersion: major,
+        shell: DEFAULT_SHELL,
+        timeout: TIMEOUTS.NORMAL,
+    });
+    if (result.code !== 0) return false;
+    return fs.existsSync(path.join(result.stdout.trim(), 'aio'));
+}
+
+/**
+ * Ensure Node `<major>` in the store and, when it is missing, the Adobe CLI under
+ * it, by running `installCommands` (the prerequisites' own `aio-cli` steps and its
+ * plugins', handed in by the caller so there is one definition of "install the
+ * Adobe CLI"). Returns an error string, or undefined to proceed.
+ */
+export async function ensureNodeWithAdobeCli(
+    executor: CommandExecutor,
+    major: string,
+    installCommands: readonly string[],
+    logger: Pick<Logger, 'debug'>,
+): Promise<string | undefined> {
+    const nodeError = await ensureFnmNodeVersion(executor, major, logger);
+    if (nodeError) return nodeError;
+    if (await adobeCliInstalledUnder(executor, major)) return undefined;
+
+    logger.debug(`[EnsureNode] Installing the Adobe CLI under Node ${major} in Demo Builder's store`);
+    for (const command of installCommands) {
+        const result = await executor.execute(command, {
+            useNodeVersion: major,
+            shell: DEFAULT_SHELL,
+            timeout: TIMEOUTS.VERY_LONG,
+        });
+        if (result.code !== 0) {
+            const detail = result.stderr?.trim().split('\n').slice(-3).join(' ') || `exit code ${result.code}`;
+            return `The Adobe CLI could not be installed under Node ${major}: ${detail}`;
+        }
+    }
     return undefined;
 }

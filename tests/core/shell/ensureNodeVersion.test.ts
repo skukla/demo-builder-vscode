@@ -13,7 +13,11 @@ jest.mock('@/core/shell/environmentSetup', () => ({
 }));
 let mockFnmPath: string | null = '/opt/homebrew/bin/fnm';
 
-import { ensureFnmNodeVersion } from '@/core/shell/ensureNodeVersion';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import { adobeCliInstalledUnder, ensureFnmNodeVersion, ensureNodeWithAdobeCli } from '@/core/shell/ensureNodeVersion';
+import { demoBuilderFnmDir } from '@/core/shell/nodeStore';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -101,7 +105,7 @@ describe('ensureFnmNodeVersion', () => {
     // Each of these was measured live: without a shell the whole string is handed
     // over as one binary name and nothing runs, and without the enhanced PATH fnm's
     // own node shims are invisible to the subprocess.
-    it('runs the install with a long timeout, an enhanced PATH and a shell', async () => {
+    it("runs the install with a long timeout, an enhanced PATH, a shell, and Demo Builder's store", async () => {
         const executor = executorReturning(0);
 
         await ensureFnmNodeVersion(executor, '24', logger);
@@ -110,6 +114,7 @@ describe('ensureFnmNodeVersion', () => {
             timeout: TIMEOUTS.LONG,
             enhancePath: true,
             shell: DEFAULT_SHELL,
+            env: expect.objectContaining({ FNM_DIR: demoBuilderFnmDir(), PATH: process.env.PATH }),
         });
     });
 
@@ -144,5 +149,78 @@ describe('ensureFnmNodeVersion', () => {
 
             expect(error).toContain('exit code unknown (command did not run)');
         });
+    });
+});
+
+// ---- PR-1a step 2: the Adobe CLI under the store's Node -------------------
+// Measured on the owner's machine 2026-10-07: aio under 24.12.0, none under
+// 24.21.0 (what `fnm exec --using=24` picks), so ensuring Node alone was not enough.
+
+let binDir: string;
+
+beforeEach(() => {
+    binDir = fs.mkdtempSync(path.join(os.tmpdir(), 'node-bin-'));
+});
+
+afterEach(() => {
+    fs.rmSync(binDir, { recursive: true, force: true });
+});
+
+/** An executor whose `node -p` answers the bin dir; everything else succeeds. */
+function executor(installCode = 0): { exec: CommandExecutor; calls: string[] } {
+    const calls: string[] = [];
+    const execute = jest.fn(async (command: string) => {
+        calls.push(command);
+        if (command.startsWith('node -p')) return { code: 0, stdout: `${binDir}\n`, stderr: '' };
+        if (command.startsWith('npm install -g')) return { code: installCode, stdout: '', stderr: 'E403 forbidden' };
+        return { code: 0, stdout: '', stderr: '' };
+    });
+    return { exec: createMockCommandExecutor({ execute }), calls };
+}
+
+describe('adobeCliInstalledUnder', () => {
+    it('reads the aio file beside that Node, not whatever the PATH finds', async () => {
+        const { exec } = executor();
+        expect(await adobeCliInstalledUnder(exec, '24')).toBe(false);
+
+        fs.writeFileSync(path.join(binDir, 'aio'), '');
+        expect(await adobeCliInstalledUnder(exec, '24')).toBe(true);
+    });
+
+    it('asks under the named Node', async () => {
+        const { exec } = executor();
+        await adobeCliInstalledUnder(exec, '24');
+        expect(exec.execute).toHaveBeenCalledWith(expect.stringContaining('node -p'), expect.objectContaining({ useNodeVersion: '24' }));
+    });
+});
+
+describe('ensureNodeWithAdobeCli', () => {
+    const INSTALL = ['npm install -g @adobe/aio-cli', 'aio plugins:install @adobe/aio-cli-plugin-api-mesh'];
+
+    it('installs the Adobe CLI and its plugins under that Node when it is missing', async () => {
+        const { exec, calls } = executor();
+
+        expect(await ensureNodeWithAdobeCli(exec, '24', INSTALL, logger)).toBeUndefined();
+
+        expect(calls.filter((c) => INSTALL.includes(c))).toStrictEqual(INSTALL);
+        expect(exec.execute).toHaveBeenCalledWith(INSTALL[0], expect.objectContaining({ useNodeVersion: '24' }));
+    });
+
+    it('installs nothing when the Adobe CLI is already there', async () => {
+        fs.writeFileSync(path.join(binDir, 'aio'), '');
+        const { exec, calls } = executor();
+
+        await ensureNodeWithAdobeCli(exec, '24', INSTALL, logger);
+
+        expect(calls.some((c) => INSTALL.includes(c))).toBe(false);
+    });
+
+    it('fails with the install’s own reason, and stops there', async () => {
+        const { exec, calls } = executor(1);
+
+        const error = await ensureNodeWithAdobeCli(exec, '24', INSTALL, logger);
+
+        expect(error).toBe('The Adobe CLI could not be installed under Node 24: E403 forbidden');
+        expect(calls).not.toContain(INSTALL[1]);
     });
 });

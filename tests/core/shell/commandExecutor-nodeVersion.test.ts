@@ -13,6 +13,7 @@
  */
 
 import { CommandExecutor } from '@/core/shell/commandExecutor';
+import { demoBuilderFnmDir } from '@/core/shell/nodeStore';
 import { createFakeCommandExecutorDeps } from '../../helpers/commandExecutorDepsFake';
 import { runThroughExeca } from './commandExecutor.testUtils';
 
@@ -48,6 +49,17 @@ describe('an explicit Node version', () => {
 
         expect(execaCommand).toBe(`${FNM} exec --using=20 npm install`);
         expect(execaOptions.shell).toBe('/bin/zsh');
+    });
+
+    it("points fnm at Demo Builder's own store, keeping the rest of the environment (PR-1a)", async () => {
+        const { execaOptions } = await runThroughExeca(executorWith(), mockExeca, 'npm install', {
+            useNodeVersion: '24',
+        });
+
+        const env = execaOptions.env as NodeJS.ProcessEnv;
+        expect(env.FNM_DIR).toBe(demoBuilderFnmDir());
+        // An env without PATH runs nothing.
+        expect(env.PATH).toBe(process.env.PATH);
     });
 
     it('runs the command AS TYPED when fnm cannot be found', async () => {
