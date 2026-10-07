@@ -15,8 +15,8 @@
  * argued for stays at 640px in `.sidebar-view` — it was raised for real slack,
  * not for that tile specifically.
  *
- * When `onNewAiChat` is absent the Chat tile stays a plain button, so callers
- * that predate it are unaffected.
+ * When `onNewAiChat` is absent the Chat tile stays a plain button — the entry
+ * omits it for Copilot in VS Code, whose chat panel has its own New and history.
  */
 
 import { ActionButton, Flex, Item, Menu, MenuTrigger, Text } from '@adobe/react-spectrum';
@@ -25,7 +25,7 @@ import MagicWand from '@spectrum-icons/workflow/MagicWand';
 import React, { useCallback, useEffect, useRef } from 'react';
 
 export interface AiZoneProps {
-    /** Called when the Chat tile is pressed — opens/focuses the Claude terminal. */
+    /** Called when the Chat tile is pressed — opens the SC's agent (panel or terminal). */
     onOpenAiChat: () => void;
     /** Called when the Prompts tile is pressed — shows the prompt picker. */
     onShowPrompts: () => void;
@@ -33,15 +33,15 @@ export interface AiZoneProps {
      * Called to start a FRESH conversation.
      *
      * OPTIONAL, and it is what turns the Chat tile into a menu. Every launch
-     * otherwise resumes via `claude --continue`, and a resumed conversation
+     * otherwise resumes the terminal agent's last session, and a resumed conversation
      * never re-reads `AGENTS.md` — so it keeps whatever guidance it was born
      * with, however many bundle versions ago. This is the only way onto the
      * current bundle.
      */
     onNewAiChat?: () => void;
     /**
-     * Called to pick an EARLIER conversation in Claude Code's own picker
-     * (`claude --resume`). Optional; adds a third Chat menu item when given.
+     * Called to pick an EARLIER conversation in the terminal agent's own picker
+     * (`claude --resume` / `copilot --resume`). Optional; adds a third Chat menu item when given.
      */
     onPickAiChat?: () => void;
 }

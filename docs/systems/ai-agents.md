@@ -35,6 +35,11 @@ does not use it for Claude Code users.
 A resumed conversation does not re-read `AGENTS.md`, so its prompt starts with a line
 naming the active project.
 
+The sidebar's Chat tile offers New Chat and Pick an earlier chat only for the two terminal
+agents. With Copilot in VS Code it is a plain button that opens the panel in agent mode:
+the panel has its own New Chat (**+**) and history, and Copilot keeps its own sessions. The
+two commands stay in the Command Palette for every agent.
+
 ## How much the agent may do without asking
 
 `demoBuilder.ai.permissions`, for the two terminal agents:

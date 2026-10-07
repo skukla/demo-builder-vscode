@@ -7,7 +7,7 @@
 
 import * as crypto from 'crypto';
 import * as vscode from 'vscode';
-import type { SidebarContext } from '../types';
+import type { SidebarAiChatMenu, SidebarContext } from '../types';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import {
     createWebviewCommunication,
@@ -15,6 +15,8 @@ import {
 } from '@/core/communication/webviewCommunicationManager';
 import { LAST_UPDATE_CHECK } from '@/core/constants';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { resolveActiveEngine } from '@/features/ai/engine/activeEngine';
+import type { CommandProbe } from '@/features/ai/engine/agentCli';
 import { toggleLogsPanel } from '@/features/lifecycle/services/lifecycleService';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
@@ -67,7 +69,9 @@ interface CommandButton {
  * forwarder runs them all, so each logs and swallows a failure the same way.
  *
  * `openAiChat` resumes; `newAiChat` starts fresh — the only path onto the current
- * generated `AGENTS.md`; `pickAiChat` opens Claude Code's picker of earlier chats.
+ * generated `AGENTS.md`; `pickAiChat` opens the agent's own picker of earlier
+ * chats. The webview offers the last two only for a terminal agent — see
+ * `sendAiChatMenu`.
  */
 const COMMAND_BUTTONS = new Map<string, CommandButton>(Object.entries({
     createProject: { label: 'Create project', command: 'demoBuilder.createProject' },
@@ -118,6 +122,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         private _context: vscode.ExtensionContext,
         private stateManager: StateManager,
         private logger: Logger,
+        private cliProbe: CommandProbe,
     ) {
         this.extensionUri = _context.extensionUri;
     }
@@ -175,8 +180,14 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             this.logger.debug('[Sidebar] webview did not complete the handshake');
         });
 
+        // The Chat menu depends on which agent is set, so follow the setting.
+        const engineWatch = vscode.workspace.onDidChangeConfiguration((event) => {
+            if (event.affectsConfiguration('demoBuilder.ai')) void this.sendAiChatMenu();
+        });
+
         // Clean up on dispose
         webviewView.onDidDispose(() => {
+            engineWatch.dispose();
             this.comm?.dispose();
             this.comm = undefined;
             this.view = undefined;
@@ -362,6 +373,28 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         await this.sendMessage('contextResponse', {
             context,
         });
+        await this.sendAiChatMenu();
+    }
+
+    /**
+     * Tell the webview whether the Chat tile needs its New / Pick-earlier menu.
+     *
+     * Only a terminal agent (Claude Code, Copilot CLI) needs it: Demo Builder is
+     * the only thing that can start a new process or open that CLI's resume
+     * picker. VS Code's own chat panel already has both as buttons, so for
+     * Copilot in VS Code the tile is a plain "open the panel in agent mode"
+     * button (owner, 2026-10-06).
+     */
+    private async sendAiChatMenu(): Promise<void> {
+        try {
+            const { descriptor } = await resolveActiveEngine(this.cliProbe);
+            const menu: SidebarAiChatMenu = { menu: descriptor.launch.kind === 'terminal' };
+            await this.sendMessage('aiChatMenu', menu);
+        } catch (error) {
+            this.logger.debug(
+                `[Sidebar] could not resolve the AI engine for the Chat menu: ${error instanceof Error ? error.message : String(error)}`,
+            );
+        }
     }
 
     /**

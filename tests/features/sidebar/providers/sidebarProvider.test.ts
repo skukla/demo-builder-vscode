@@ -10,10 +10,13 @@ import { toggleLogsPanel } from '@/features/lifecycle/services/lifecycleService'
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockProject } from '../../../helpers/projectFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import type { CommandProbe } from '@/features/ai/engine/agentCli';
 import {
     createMockExtensionContext,
     createStatefulGlobalState,
 } from '../../../helpers/extensionContextFake';
+
+const noAgentCli: CommandProbe = { commandExists: async () => false };
 
 // Mock the lifecycle toggle chokepoint so the sidebar's openLogs handler can
 // be asserted without touching the real VS Code panel/session state.
@@ -45,6 +48,7 @@ jest.mock('vscode', () => ({
         getConfiguration: jest.fn().mockReturnValue({
             get: jest.fn().mockReturnValue(true),
         }),
+        onDidChangeConfiguration: jest.fn(() => ({ dispose: jest.fn() })),
     },
     ColorThemeKind: {
         Light: 1,
@@ -146,7 +150,7 @@ describe('SidebarProvider', () => {
         // Create mock logger
         mockLogger = createMockLogger();
 
-        provider = new SidebarProvider(mockContext, mockStateManager, mockLogger);
+        provider = new SidebarProvider(mockContext, mockStateManager, mockLogger, noAgentCli);
     });
 
     afterEach(() => {
@@ -271,6 +275,73 @@ describe('SidebarProvider', () => {
         });
     });
 
+    // The Chat tile's New / Pick-earlier menu is for terminal agents only; VS
+    // Code's chat panel has its own (owner, 2026-10-06).
+    describe('aiChatMenu', () => {
+        let mockWebviewView: MockWebviewView;
+        const engineIs = (engine: string | undefined) =>
+            (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+                get: jest.fn((key: string) => (key === 'engine' ? engine : undefined)),
+            });
+        const chatMenuPayloads = () =>
+            mockWebviewView.webview.postMessage.mock.calls
+                .map(([m]) => m as { type: string; payload?: unknown })
+                .filter((m) => m.type === 'aiChatMenu')
+                .map((m) => m.payload);
+
+        beforeEach(() => {
+            mockWebviewView = createMockWebviewView();
+            resolveAndAnnounce(provider, mockWebviewView);
+        });
+
+        afterEach(() => {
+            (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+                get: jest.fn().mockReturnValue(true),
+            });
+        });
+
+        it.each([
+            ['copilot-vscode', false],
+            [undefined, false],
+            ['copilot-cli', true],
+            ['claude-code', true],
+        ])('engine %s → menu %s, sent after the context', async (engine, menu) => {
+            engineIs(engine);
+
+            await mockWebviewView.deliver!({ type: 'getContext' });
+
+            expect(chatMenuPayloads()).toEqual([{ menu }]);
+            const types = mockWebviewView.webview.postMessage.mock.calls.map(
+                ([m]) => (m as { type: string }).type,
+            );
+            expect(types.indexOf('aiChatMenu')).toBeGreaterThan(types.indexOf('contextResponse'));
+        });
+
+        it('re-sends when a demoBuilder.ai setting changes, and ignores other settings', async () => {
+            const onChange = vscode.workspace.onDidChangeConfiguration as jest.Mock;
+            const listener = onChange.mock.calls.at(-1)![0] as (e: {
+                affectsConfiguration: (s: string) => boolean;
+            }) => void;
+            engineIs('claude-code');
+
+            listener({ affectsConfiguration: (s) => s === 'demoBuilder.autoUpdate' });
+            listener({ affectsConfiguration: (s) => s === 'demoBuilder.ai' });
+            await new Promise((r) => setImmediate(r));
+
+            expect(chatMenuPayloads()).toEqual([{ menu: true }]);
+        });
+
+        it('stops following the setting when the view is disposed', () => {
+            const watch = (vscode.workspace.onDidChangeConfiguration as jest.Mock).mock.results.at(-1)!
+                .value as { dispose: jest.Mock };
+            const onDispose = mockWebviewView.onDidDispose.mock.calls[0][0] as () => void;
+
+            onDispose();
+
+            expect(watch.dispose).toHaveBeenCalled();
+        });
+    });
+
     describe('sendMessage', () => {
         let mockWebviewView: MockWebviewView;
 
@@ -290,7 +361,7 @@ describe('SidebarProvider', () => {
 
         it('should not throw when webview is not available', async () => {
             // Create provider without resolving view
-            const newProvider = new SidebarProvider(mockContext, mockStateManager, mockLogger);
+            const newProvider = new SidebarProvider(mockContext, mockStateManager, mockLogger, noAgentCli);
 
             // Should not throw
             await expect(
@@ -351,7 +422,7 @@ describe('SidebarProvider', () => {
                 '/mock/extension/path'
             );
 
-            provider = new SidebarProvider(mockContext, mockStateManager, mockLogger);
+            provider = new SidebarProvider(mockContext, mockStateManager, mockLogger, noAgentCli);
 
             mockWebviewView = createMockWebviewView();
 

@@ -39,7 +39,7 @@ surface (`dashboard/commands/showDashboard.ts::dispose`).
 
 Two tiles. **Chat** is a `MenuTrigger` offering *Continue chat* / *Pick an earlier
 chat* / *New chat*, in that order so the two ways back sit together (the middle one
-opens Claude Code's own `claude --resume` picker, AI-4b, and appears only when
+opens the terminal agent's own `--resume` picker, AI-4b, and appears only when
 `onPickAiChat` is supplied). Each action waits until the closing menu has returned
 focus to the tile, so the terminal it opens keeps the keyboard;
 **Prompts** is a plain button opening the QuickPick. The zone label carries no
@@ -49,7 +49,12 @@ nothing on either surface while this file still described it as shared with the
 dashboard.
 
 Supplying `onNewAiChat` is what turns Chat into a menu — without it the tile stays
-a plain button, so a caller predating the menu is unaffected.
+a plain button. The entry supplies it only while the extension's `aiChatMenu`
+message says `{ menu: true }`, which `SidebarProvider` sends after every
+`contextResponse` and on any `demoBuilder.ai` settings change: true for a
+terminal agent (Claude Code, Copilot CLI), false for Copilot in VS Code, whose
+chat panel has its own New Chat and history (owner, 2026-10-06). Until the message
+arrives the tile is plain, matching the shipped default.
 
 **Why New chat exists at all.** Every launch otherwise resumes, and a resumed
 conversation never re-reads `AGENTS.md` — so it keeps whatever generated guidance it
@@ -128,6 +133,7 @@ Handlers follow Pattern B: they return a result, never push a message back.
 |---------|-----------|---------|
 | `getContext` | UI → Extension | — (answered by `contextResponse`) |
 | `contextResponse` / `contextUpdate` | Extension → UI | `{ context }` |
+| `aiChatMenu` | Extension → UI | `{ menu }` — whether Chat offers New / Pick-earlier |
 | `setContext` | UI → Extension | `{ context }` |
 | `navigate` | UI → Extension | `{ target }` |
 | `back` | UI → Extension | — |

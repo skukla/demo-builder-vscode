@@ -280,7 +280,9 @@ export async function activate(context: vscode.ExtensionContext) {
 
         // Register Sidebar WebviewView EARLY to minimize blank sidebar time
         // The sidebar only needs stateManager and logger to render
-        const sidebarProvider = new SidebarProvider(context, stateManager, logger);
+        const sidebarProvider = new SidebarProvider(context, stateManager, logger, {
+            commandExists: (name) => ServiceLocator.getCommandExecutor().commandExists(name),
+        });
         context.subscriptions.push(
             vscode.window.registerWebviewViewProvider(sidebarProvider.viewId, sidebarProvider, {
                 webviewOptions: {
