@@ -25,7 +25,7 @@ const VIEW: SiteAccessView = {
         canManage: true,
         people: [
             { email: 'owner@x.example', role: 'Site admin', removable: true },
-            { email: 'lead@x.example', role: 'Org admin — every site', removable: false },
+            { email: 'lead@x.example', role: 'Org admin', removable: false },
         ],
     },
     readers: {

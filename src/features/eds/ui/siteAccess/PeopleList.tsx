@@ -46,7 +46,7 @@ function PersonRow({ person, canRemove, onRemove }: PersonRowProps): React.React
                 <div className="integration-row-name" title={person.email}>
                     {person.email}
                 </div>
-                <span className="integration-row-kind">{person.role}</span>
+                <span className="text-md text-gray-700">{person.role}</span>
             </div>
             {/* The menu button's height is kept even on a row without one (an org
                 admin), so every row is the same height. */}

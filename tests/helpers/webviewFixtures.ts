@@ -222,7 +222,7 @@ export function buildSiteAccessView(project: Project): SiteAccessView {
             canManage: true,
             people: [
                 { email: 'owner@example.com', role: 'Site admin', removable: true },
-                { email: 'lead@example.com', role: 'Org admin — every site', removable: false },
+                { email: 'lead@example.com', role: 'Org admin', removable: false },
             ],
         },
         readers: {

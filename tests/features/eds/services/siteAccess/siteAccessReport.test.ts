@@ -44,7 +44,7 @@ describe('adminListOf', () => {
             canManage: true,
             people: [
                 { email: 'a@x.example', role: 'Site admin', removable: true },
-                { email: 'b@x.example', role: 'Org admin — every site', removable: false },
+                { email: 'b@x.example', role: 'Org admin', removable: false },
             ],
             notice: undefined,
         });

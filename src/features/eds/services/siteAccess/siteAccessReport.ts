@@ -59,7 +59,7 @@ export function adminListOf(listing: SiteAccessListing, owner: string): SiteAcce
             ...siteAdmins.map((email) => ({ email, role: 'Site admin', removable: true })),
             ...(listing.orgAdmins ?? [])
                 .filter((email) => !isSiteAdmin(email))
-                .map((email) => ({ email, role: 'Org admin — every site', removable: false })),
+                .map((email) => ({ email, role: 'Org admin', removable: false })),
         ],
         notice: adminRefusal(listing, owner),
     };

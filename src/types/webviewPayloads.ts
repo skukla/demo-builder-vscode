@@ -76,7 +76,7 @@ export interface SiteAccessLink {
 /** One person on one of the two lists. */
 export interface SiteAccessPerson {
     email: string;
-    /** What they hold, in words: "Site admin", "Org admin — every site", "Reads", "Writes". */
+    /** What they hold, in words: "Site admin", "Org admin", "Reads", "Writes". */
     role: string;
     /** Whether Remove is offered. Org admins and writers are shown but not removable here. */
     removable: boolean;
