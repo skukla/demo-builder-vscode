@@ -489,7 +489,8 @@ export async function executeStorefrontSetupPhases(
                     : 'Content publish complete',
             progress: 100,
         } satisfies StorefrontSetupProgressPayload);
-        return { success: true, ...repoInfo };
+        const { brokenLinks } = patchReport;
+        return { success: true, ...repoInfo, ...(brokenLinks?.length ? { brokenLinks } : {}) };
     } catch (error) {
         logger.error(`[Storefront Setup] Failed: ${(error as Error).message}`);
         return { success: false, error: (error as Error).message, ...repoInfo };

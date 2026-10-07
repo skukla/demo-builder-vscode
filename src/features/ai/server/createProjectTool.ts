@@ -500,6 +500,8 @@ async function createEds(
     // an added demo's caveats and the offer of Demo Builder's fixes (EDS-13f). The
     // agent never heard them before; the card was the only reader.
     const caveats = lastCompleteData(events)?.warnings as StorefrontSetupCompletePayload['warnings'];
+    // Recorded on the project for the Storefront Report, as the wizard does.
+    const brokenLinks = lastCompleteData(events)?.brokenLinks as StorefrontSetupCompletePayload['brokenLinks'];
 
     // Phase 2: create the project, with preflight results threaded in.
     const wizardState: ProjectConfigSource = {
@@ -526,6 +528,7 @@ async function createEds(
             contentPatches: storefront.contentPatches,
             repoUrl,
             preflightComplete: true,
+            ...(brokenLinks?.length ? { brokenLinks } : {}),
         },
     };
 

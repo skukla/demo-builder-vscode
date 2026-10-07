@@ -311,6 +311,8 @@ export function StorefrontSetupStep({
                     ...edsConfigRef.current,
                     repoUrl: data.githubRepo,
                     preflightComplete: true,
+                    // Recorded on the project at creation, for the Storefront Report.
+                    brokenLinks: data.brokenLinks,
                 },
             });
         },

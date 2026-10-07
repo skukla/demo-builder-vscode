@@ -328,6 +328,8 @@ export const handleOpenDataInstaller = openBesideDashboard('demoBuilder.showData
  * no project at all, from the palette.
  */
 export const handleOpenSiteAccess = openBesideDashboard('demoBuilder.manageSiteAccess', 'Site Access');
+/** Handle 'openStorefrontReport' — the report opens as a document beside the dashboard. */
+export const handleOpenStorefrontReport = openBesideDashboard('demoBuilder.storefrontReport', 'the Storefront Report');
 
 // ============================================================================
 // Handler Map Export (Step 3: Handler Registry Simplification)
@@ -364,6 +366,7 @@ export const dashboardHandlers = defineHandlers({
     setViewModeOverride: handleSetViewModeOverride,
     openDataInstaller: handleOpenDataInstaller,
     openSiteAccess: handleOpenSiteAccess,
+    openStorefrontReport: handleOpenStorefrontReport,
     showProjectDashboard: handleShowProjectDashboard,
 
     // Mesh handlers

@@ -23,6 +23,7 @@ import type { LkgSource } from '../patches/lkgReader';
 import { fixGroupsLabel, resolveFixLedger, STOREFRONT_FIX_IDS } from '../patches/loadBearingPatches';
 import { checkFixes, type FixOutcome, type FixState } from '../patches/storefrontFixes';
 import { SMART_404_MARKER_START } from '../pdp/pdp404Snippet';
+import { readBrokenLinks } from './brokenLinksRecord';
 import { readRepoBoilerplate, type ReadOutcome } from './storefrontOrigin';
 import {
     asLineage,
@@ -42,7 +43,8 @@ import {
     type StorefrontBoilerplate,
     type StorefrontLineage,
 } from '@/types/projectFile';
-import { getEdsRepoParts } from '@/types/typeGuards';
+import { getEdsDaLiveTarget, getEdsRepoParts } from '@/types/typeGuards';
+import type { StorefrontBrokenLink } from '@/types/webviewPayloads';
 
 /** Whether a file Demo Builder writes is in the repository. */
 export type Presence = 'present' | 'absent' | 'unreadable';
@@ -61,6 +63,13 @@ export interface StorefrontReport {
     fixes: FixOutcome[];
     /** Fixes that fit an added demo tied to our templates: what the SC may accept. */
     offer?: string[];
+    /**
+     * Links in the content to pages its content source does not have either,
+     * from the last create or reset (`brokenLinksRecord`). Absent when none.
+     */
+    brokenLinks?: StorefrontBrokenLink[];
+    /** The DA.live site the content is edited in, for the "open" links. */
+    contentSite?: { org: string; site: string };
 }
 
 export interface StorefrontReportDeps {
@@ -99,6 +108,8 @@ export async function readStorefrontReport(
         fixSet ? checkFixes(deps, { ...repository, branch: 'main' }, fixSet.ids, fixSet.source) : Promise.resolve([]),
     ]);
     const offer = origin.kind === 'added' && origin.match ? fixes.filter((f) => f.state === 'fits').map((f) => f.patchId) : [];
+    const brokenLinks = readBrokenLinks(project);
+    const contentSite = getEdsDaLiveTarget(project);
     return {
         repository,
         boilerplate,
@@ -107,6 +118,8 @@ export async function readStorefrontReport(
         written,
         fixes,
         ...(offer.length ? { offer } : {}),
+        ...(brokenLinks.length ? { brokenLinks } : {}),
+        ...(contentSite ? { contentSite } : {}),
     };
 }
 
@@ -216,7 +229,34 @@ export function storefrontReportLines(report: StorefrontReport): string[] {
         `Demo package description: ${PRESENCE_WORDS[report.written.description]}.`,
         "## Demo Builder's fixes",
         ...fixLines(report.fixes),
+        ...brokenLinkLines(report),
     ];
+}
+
+/**
+ * The content's links to pages that do not exist, each with the page it sits
+ * on, linked to that page in the DA.live editor so it can be fixed there.
+ * Nothing when there are none: the section only appears when it has news.
+ */
+function brokenLinkLines(report: StorefrontReport): string[] {
+    const links = report.brokenLinks ?? [];
+    if (links.length === 0) return [];
+    const site = report.contentSite;
+    const pageLink = (page: string): string =>
+        site ? `[${page}](${daLiveEditUrl(site, page)})` : page;
+    return [
+        "## Links to pages that don't exist",
+        'The content was copied with these links, and the site it came from has no such pages either. ' +
+            'Nothing was left out of the copy. To fix one, edit the page it is on in DA.live.',
+        ...links.map(({ link, pages }) =>
+            pages.length ? `- ${link}, on ${pages.map(pageLink).join(', ')}` : `- ${link}`,
+        ),
+    ];
+}
+
+/** A page in the DA.live editor. The path is extensionless (`/footer`), as the editor needs. */
+function daLiveEditUrl(site: { org: string; site: string }, page: string): string {
+    return `https://da.live/edit#/${site.org}/${site.site}${page.startsWith('/') ? page : `/${page}`}`;
 }
 
 function boilerplateLine(report: StorefrontReport): string {

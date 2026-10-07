@@ -270,7 +270,10 @@ repository and sending the link.
 ## For agents
 
 `get_storefront_report` answers the storefront report for the open project, as data and in
-the SC's words, including `offer`, the fixes that fit an added demo. `reset_project` and
+the SC's words, including `offer`, the fixes that fit an added demo, and `brokenLinks`: links in
+the copied content to pages the colleague's site does not have either, each with the pages it is
+on. The dashboard's **Storefront Report** tile opens the same report and wears a dot when there
+are any. `reset_project` and
 `create_project` take `applyFixes:true` to apply them, only when the user said yes.
 
 The same doors exist as tools, in [mcp-tools.md](mcp-tools.md): `probe_shared_demo` reads

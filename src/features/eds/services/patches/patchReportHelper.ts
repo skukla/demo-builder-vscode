@@ -25,6 +25,7 @@ import type { CodePatchResult } from './codePatchRegistry';
 import type { ContentPatchResult } from './contentPatchRegistry';
 import { OBSOLETE_MISS_THRESHOLD, trackPatchMisses } from './patchMissTracker';
 import type { Logger } from '@/types/logger';
+import type { StorefrontBrokenLink } from '@/types/webviewPayloads';
 
 /**
  * Normalized per-patch entry. Content and code results are merged onto
@@ -67,6 +68,20 @@ export interface PatchReport {
      * audit everything, so the default stays loud.
      */
     deferredReferencePrefixes?: string[];
+    /**
+     * Each internal link a copied page carries, and the copied pages carrying
+     * it. Filled while copying, so the audit can say WHERE a broken link is,
+     * which is what someone fixing it needs.
+     */
+    linkedFrom?: Map<string, Set<string>>;
+    /** Source paths the content site answered 404 for: they do not exist there. */
+    missingOnSource?: Set<string>;
+    /**
+     * Links to pages the source lacks too (2026-10-07). Not a gap in the copy,
+     * so never in the toast: the caller records them on the project, and the
+     * Storefront Report lists them.
+     */
+    brokenLinks?: StorefrontBrokenLink[];
 }
 
 /**
@@ -127,6 +142,30 @@ export function addReferenceResult(report: PatchReport, target: string, reason?:
         applied: false,
         reason,
     });
+}
+
+/** Remember that `page` (a copied page) links to `link`. */
+export function addLinkedFrom(report: PatchReport, link: string, page: string): void {
+    report.linkedFrom ??= new Map();
+    const pages = report.linkedFrom.get(link) ?? new Set<string>();
+    pages.add(page);
+    report.linkedFrom.set(link, pages);
+}
+
+/** Remember that the content site has no page at `path` (it answered 404). */
+export function addMissingOnSource(report: PatchReport, path: string): void {
+    report.missingOnSource ??= new Set();
+    report.missingOnSource.add(path);
+}
+
+/**
+ * Record `link` as broken: the source has no such page either. The pages
+ * carrying it come from `linkedFrom`, sorted, so the record is stable.
+ */
+export function addBrokenLink(report: PatchReport, link: string): void {
+    const pages = [...(report.linkedFrom?.get(link) ?? [])].sort();
+    report.brokenLinks ??= [];
+    report.brokenLinks.push({ link, pages });
 }
 
 /** Filter to entries where `applied` is false. */

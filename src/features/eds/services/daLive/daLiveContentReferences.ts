@@ -17,6 +17,7 @@
  */
 
 import {
+    addBrokenLink,
     addReferenceResult,
     isDeferredReference,
     type PatchReport,
@@ -116,14 +117,20 @@ export function extractReferencedPaths(html: string, sourceBaseUrl: string): str
 }
 
 /**
- * Completeness audit: report every internal document referenced by copied
- * content but not itself copied (e.g. a fragment that 404s on source).
+ * Completeness audit: every internal document referenced by copied content
+ * but not itself copied.
  *
- * Surfaced via the proceed-and-warn report — the loud signal for the
- * "silently-dropped content" class even if discovery missed a shape. The demo
- * still proceeds; this never fails the copy. References a later stage is
- * configured to supply are not gaps — see `deferredReferencePrefixes`. Skipping
- * them keeps this channel worth reading.
+ * Two kinds, said differently (2026-10-07):
+ * - The source has no such page either (it answered 404): a broken link in
+ *   the source, carried over. Nothing was left out, so it is not a warning:
+ *   it goes to `patchReport.brokenLinks`, which the caller records on the
+ *   project for the Storefront Report.
+ * - Anything else (the source has it and the copy failed, or discovery
+ *   stopped before reaching it): a real gap, surfaced via the proceed-and-warn
+ *   report. The demo still proceeds; this never fails the copy.
+ *
+ * References a later stage is configured to supply are not gaps — see
+ * `deferredReferencePrefixes`. Skipping them keeps this channel worth reading.
  */
 export function auditUncopiedReferences(
     logger: Logger,
@@ -133,15 +140,15 @@ export function auditUncopiedReferences(
 ): void {
     const copiedSet = new Set(copiedFiles);
     for (const ref of discoveredPaths) {
-        if (!copiedSet.has(ref) && !isDeferredReference(patchReport, ref)) {
-            logger.warn(`[DA.live] Completeness audit — referenced document not copied: ${ref}`);
-            if (patchReport) {
-                addReferenceResult(
-                    patchReport,
-                    ref,
-                    'referenced by copied content but not found on source',
-                );
-            }
+        if (copiedSet.has(ref) || isDeferredReference(patchReport, ref)) continue;
+        if (patchReport?.missingOnSource?.has(ref)) {
+            logger.info(`[DA.live] Broken link carried over from the source: ${ref} (no such page there)`);
+            addBrokenLink(patchReport, ref);
+            continue;
+        }
+        logger.warn(`[DA.live] Completeness audit — referenced document not copied: ${ref}`);
+        if (patchReport) {
+            addReferenceResult(patchReport, ref, 'referenced by copied content but could not be copied');
         }
     }
 }

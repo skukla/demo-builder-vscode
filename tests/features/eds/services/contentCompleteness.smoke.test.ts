@@ -42,6 +42,11 @@ interface PackageProfile {
     expectCopied: string[];
     /** Referenced docs the audit MUST flag as not copied (empty for a healthy package). */
     expectDangling: string[];
+    /**
+     * Referenced docs the source does not have either (404): recorded as broken
+     * links for the Storefront Report rather than warned about (2026-10-07).
+     */
+    expectBrokenLinks: string[];
 }
 
 // A B2B-shaped package on the index-fallback path (user not in the source DA.live
@@ -59,10 +64,13 @@ const B2B_HEALTHY: PackageProfile = {
     authPlainHtmlPresent: ['/customer/account'],
     expectCopied: ['/about', '/customer/account', '/customer/nav'],
     expectDangling: [],
+    expectBrokenLinks: [],
 };
 
 // Same shape, but the referenced nav fragment is missing on source — the audit
 // must surface it instead of the demo silently shipping an empty account menu.
+// The source lacks it too, so it surfaces as a broken link in the Storefront
+// Report (a dot on its dashboard tile), not as a pop-up (2026-10-07).
 const B2B_BROKEN: PackageProfile = {
     ...B2B_HEALTHY,
     name: 'b2b (broken: account references a missing /customer/nav)',
@@ -72,7 +80,8 @@ const B2B_BROKEN: PackageProfile = {
         // /customer/nav intentionally absent → 404 on source
     },
     expectCopied: ['/about', '/customer/account'],
-    expectDangling: ['/customer/nav'],
+    expectDangling: [],
+    expectBrokenLinks: ['/customer/nav'],
 };
 
 const PROFILES: PackageProfile[] = [B2B_HEALTHY, B2B_BROKEN];
@@ -136,5 +145,6 @@ describe('content-completeness smoke (per-package)', () => {
             .map((u) => u.target)
             .sort();
         expect(danglingReported).toEqual([...profile.expectDangling].sort());
+        expect((report.brokenLinks ?? []).map((b) => b.link).sort()).toEqual([...profile.expectBrokenLinks].sort());
     });
 });

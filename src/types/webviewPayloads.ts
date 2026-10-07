@@ -337,6 +337,11 @@ export interface DashboardStatusUpdatePayload {
     frontendConfigChanged: boolean;
     mesh?: MeshStatusInfo;
     edsStorefrontStatus?: Project['edsStorefrontStatusSummary'];
+    /**
+     * How many links in the storefront's content go to pages that do not exist
+     * (`brokenLinksRecord`). Above zero, the Storefront Report tile wears a dot.
+     */
+    brokenLinkCount?: number;
 }
 
 /** `meshStatusUpdate` — mesh-only status push (deploy flows). */
@@ -739,6 +744,19 @@ export interface StorefrontSetupProgressPayload {
     repoName?: string;
 }
 
+/**
+ * A link in a storefront's copied content to a page the content site it was
+ * copied from does not have either: a broken link in the source, carried over.
+ * Recorded on the project (`metadata.brokenLinks`) and shown in the Storefront
+ * Report, never as a pop-up: nothing was left out of the copy.
+ */
+export interface StorefrontBrokenLink {
+    /** The address the link points at: "/fr". */
+    link: string;
+    /** The copied pages that carry the link: ["/footer"]. */
+    pages: string[];
+}
+
 /** `storefront-setup-complete` — the pipeline finished. */
 export interface StorefrontSetupCompletePayload {
     message: string;
@@ -749,6 +767,8 @@ export interface StorefrontSetupCompletePayload {
     repoName?: string;
     /** Present when setup finished with caveats (e.g. PDP routing degraded). */
     warnings?: string[];
+    /** Links the copied content carries to pages the source lacks; the project records them. */
+    brokenLinks?: StorefrontBrokenLink[];
 }
 
 /** `storefront-setup-error` — the pipeline failed; the wizard offers Retry. */

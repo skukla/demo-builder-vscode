@@ -20,6 +20,7 @@ import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { detectB2bReadiness } from '@/features/eds/services/b2bReadinessDetection';
 import { extractConfigParamsFromConfigs } from '@/features/eds/services/configGenerator';
 import { syncConfigToRemote } from '@/features/eds/services/configSyncService';
+import { writeBrokenLinks } from '@/features/eds/services/storefront/brokenLinksRecord';
 import { readRepoBoilerplate } from '@/features/eds/services/storefront/storefrontOrigin';
 import { resolveTemplateCommitSha } from '@/features/eds/services/templateCommitResolver';
 import { ensureEdsContent } from '@/features/project-creation/services/edsContentSetup';
@@ -118,6 +119,12 @@ export async function populateEdsMetadata(
         ...(lkgSource ? { lkgSource } : {}),
         ...(boilerplate ? { boilerplate } : {}),
     };
+    // What the wizard's storefront setup found while copying the content: links
+    // to pages the source lacks too, for the Storefront Report. Only when setup
+    // reported some: an edit copies nothing, and must not wipe the record.
+    if (typedConfig.edsConfig.brokenLinks?.length) {
+        writeBrokenLinks(project, typedConfig.edsConfig.brokenLinks);
+    }
     await context.stateManager.saveProject(project);
     context.logger.debug(
         `[Project Creation] Populated EDS metadata for ${COMPONENT_IDS.EDS_STOREFRONT}: githubRepo=${edsInstance.metadata?.githubRepo}`,
@@ -245,6 +252,8 @@ export async function setupEdsContent(
     typedConfig: ProjectCreationConfig,
     isEdsStack: boolean,
     progressTracker: ProgressTracker,
+    /** Receives the copy's broken links, recorded for the Storefront Report. */
+    project?: import('@/types/base').Project,
 ): Promise<void> {
     if (!isEdsStack || !typedConfig.edsConfig?.contentSource || !typedConfig.edsConfig?.repoUrl) {
         return;
@@ -293,6 +302,9 @@ export async function setupEdsContent(
                 logger: context.logger,
                 secrets: context.context.secrets,
                 extensionContext: context.context,
+                onBrokenLinks: (links) => {
+                    if (project) writeBrokenLinks(project, links);
+                },
             },
             (message, subMessage) =>
                 progressTracker(OPERATION_STAGES.settingUpContent.label, 95, subMessage || message),
@@ -300,6 +312,7 @@ export async function setupEdsContent(
 
         if (contentCopied) {
             context.logger.info('[Phase 5b] Storefront content populated and published');
+            if (project) await context.stateManager.saveProject(project);
         }
     } catch (error) {
         context.logger.warn(`[Phase 5b] Content setup failed: ${(error as Error).message}`);

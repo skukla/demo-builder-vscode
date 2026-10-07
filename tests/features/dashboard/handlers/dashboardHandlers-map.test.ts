@@ -292,7 +292,9 @@ describe('dashboardHandlers', () => {
             // 2026-10-05): storefront setup, reset and republish write the category pages.
             // openSiteAccess (84 → 85, 2026-10-05): the More menu opens the Site access
             // webview beside the dashboard, as openDataInstaller does.
-            expect(types).toHaveLength(85);
+            // openStorefrontReport (85 → 86, 2026-10-07): the Storefront Report tile
+            // opens the report beside the dashboard.
+            expect(types).toHaveLength(86);
         });
 
         it('should have handlers as functions', () => {

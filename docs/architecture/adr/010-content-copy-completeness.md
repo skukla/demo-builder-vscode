@@ -59,7 +59,11 @@ completeness after** the copy.
   the canonical source, no fork required.
 - A **post-copy completeness audit** reports references that were discovered but
   never landed, so a future drop surfaces as a logged warning instead of a silent
-  empty UI.
+  empty UI. Amended 2026-10-07: a reference the SOURCE answers 404 for is a broken
+  link in the source, carried over, not a gap in the copy. It is recorded on the
+  project (`metadata.brokenLinks`, with the pages carrying it) and listed in the
+  Storefront Report, whose dashboard tile wears a dot, instead of the warning pop-up.
+  Only a page the source has and the copy could not take still warns.
 - For **branded forks** whose own content legitimately lacks the B2B account pages
   (e.g. CitiSignal), an **account-chrome overlay** (`overlayAccountChrome`, driven
   by a package's `accountContentSource`) copies just the `/customer/*` auth/account

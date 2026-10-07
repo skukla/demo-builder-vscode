@@ -14,7 +14,8 @@
  *    Integrations moved up from Build on 2026-10-06 (owner): it is a
  *    destination of the same weight as the other three.
  *  - Storefront (EDS only): keeping the site itself in shape. Republish (the
- *    remedy carrying the drift dot), Sync Storefront, Refresh Blocks, Site Access.
+ *    remedy carrying the drift dot), Sync Storefront, Refresh Blocks, Site Access,
+ *    Storefront Report (a dot when its content has broken links).
  *  - Build: what the demo contains. Edit (what it HAS), Configure (their
  *    values), Datapacks and AEM Assets (the products, then their images), then
  *    — set apart — Reset and Delete.
@@ -168,6 +169,10 @@ export interface ActionGridProps {
     handleSyncStorefront?: () => void;
     /** Handler for the Site Access tile (EDS projects only) */
     handleOpenSiteAccess?: () => void;
+    /** Handler for the Storefront Report tile (EDS projects only) */
+    handleOpenStorefrontReport?: () => void;
+    /** Links in the content to pages that do not exist; above zero, the report tile wears a dot. */
+    brokenLinkCount?: number;
     /** Handler for the Refresh Block Library tile (EDS projects only) */
     handleRefreshBlockLibrary?: () => void;
     /** Handler for the Republish tile (EDS projects only) */
@@ -358,6 +363,8 @@ export function ActionGrid({
     handleConfigure,
     handleOpenAemAssets,
     handleOpenSiteAccess,
+    handleOpenStorefrontReport,
+    brokenLinkCount = 0,
     handleEditProject,
     handleExportProject,
     handleChangeDemoSource,
@@ -417,6 +424,8 @@ export function ActionGrid({
                     handleSyncStorefront={handleSyncStorefront}
                     handleRefreshBlockLibrary={handleRefreshBlockLibrary}
                     handleOpenSiteAccess={handleOpenSiteAccess}
+                    handleOpenStorefrontReport={handleOpenStorefrontReport}
+                    brokenLinkCount={brokenLinkCount}
                 />
             )}
             <BuildZone

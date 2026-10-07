@@ -412,7 +412,7 @@ export async function executeProjectCreation(
         progressTracker,
     );
 
-    await setupEdsContent(context, typedConfig, isEdsStack, progressTracker);
+    await setupEdsContent(context, typedConfig, isEdsStack, progressTracker, project);
 
     // ========================================================================
     // PHASE 5c: SAMPLE DATA

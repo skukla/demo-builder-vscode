@@ -16,7 +16,12 @@
  * @module features/eds/services/daLive/daLiveFileCopy
  */
 
-import { addContentResult, type PatchReport } from '../patches/patchReportHelper';
+import {
+    addContentResult,
+    addLinkedFrom,
+    addMissingOnSource,
+    type PatchReport,
+} from '../patches/patchReportHelper';
 import { DaLiveAuthError } from '../types';
 import type { DaLiveApiClient } from './daLiveApiClient';
 import { DA_LIVE_BASE_URL, MAX_RETRY_ATTEMPTS, getRetryDelay } from './daLiveConstants';
@@ -88,6 +93,7 @@ async function processHtmlContent(
     if (discoveredPaths) {
         for (const ref of extractReferencedPaths(htmlText, sourceBaseUrl)) {
             discoveredPaths.add(ref);
+            if (patchReport) addLinkedFrom(patchReport, ref, sourcePath);
         }
     }
 
@@ -144,6 +150,11 @@ async function attemptCopy(
         // 404 is expected for blocks without doc pages on the CDN — log at debug
         const logLevel = sourceResponse.status === 404 ? 'debug' : 'warn';
         logger[logLevel](`[DA.live] Failed to fetch source ${sourcePath}: ${sourceResponse.status}`);
+        // Told apart for the completeness audit: a 404 means the source has no
+        // such page, so a link to it is a broken link there, not a failed copy.
+        if (sourceResponse.status === 404 && copy.patchReport) {
+            addMissingOnSource(copy.patchReport, sourcePath);
+        }
         return false;
     }
 

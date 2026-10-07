@@ -544,6 +544,7 @@ function buildProjectEdsConfig(wizardState: ProjectConfigSource) {
         ...pickStorefrontDerived(eds),
         repoUrl: eds.repoUrl,
         preflightComplete: eds.preflightComplete,
+        ...(eds.brokenLinks?.length ? { brokenLinks: eds.brokenLinks } : {}),
     };
 }
 

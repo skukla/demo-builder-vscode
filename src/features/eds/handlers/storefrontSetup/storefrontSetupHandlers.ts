@@ -314,6 +314,7 @@ export async function handleStartStorefrontSetup(
                 daLiveSite: `https://da.live/${edsConfig.daLiveOrg}/${edsConfig.daLiveSite}`,
                 repoOwner: result.repoOwner,
                 repoName: result.repoName,
+                ...(result.brokenLinks?.length ? { brokenLinks: result.brokenLinks } : {}),
                 // Note: previewUrl/liveUrl not sent - derived from githubRepo by typeGuards
             } satisfies StorefrontSetupCompletePayload);
             return { success: true, data: result };

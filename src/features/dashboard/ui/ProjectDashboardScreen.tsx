@@ -117,6 +117,7 @@ export function ProjectDashboardScreen({
     // Status management via extracted hook
     const {
         isRunning,
+        projectStatus,
         isTransitioning,
         setIsTransitioning,
         demoStatusDisplay,
@@ -153,6 +154,7 @@ export function ProjectDashboardScreen({
         handleEditProject,
         handleOpenAemAssets,
         handleOpenSiteAccess,
+        handleOpenStorefrontReport,
         handleRestartDemo,
         handleNavigateBack,
         handleReAuthenticate,
@@ -298,6 +300,10 @@ export function ProjectDashboardScreen({
                                     handleConfigure={handleConfigure}
                                     handleOpenAemAssets={handleOpenAemAssets}
                                     handleOpenSiteAccess={isEdsStable ? handleOpenSiteAccess : undefined}
+                                    handleOpenStorefrontReport={
+                                        isEdsStable ? handleOpenStorefrontReport : undefined
+                                    }
+                                    brokenLinkCount={projectStatus?.brokenLinkCount ?? 0}
                                     handleEditProject={handleEditProject}
                                     handleExportProject={handover.openExport}
                                     handleSaveDemoPackage={handover.openDemoPackage}

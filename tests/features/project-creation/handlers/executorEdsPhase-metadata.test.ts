@@ -81,3 +81,33 @@ describe('populateEdsMetadata — the boilerplate (EDS-13f)', () => {
         expect(metadata).toMatchObject({ githubRepo: 'steve/bodea-demo', templateRepo: 'boilerplate-b2b-template' });
     });
 });
+
+describe('populateEdsMetadata — broken links found by storefront setup (2026-10-07)', () => {
+    beforeEach(() => getFileContent.mockRejectedValue(new Error('not needed here')));
+
+    it('records the links the setup copy found, for the Storefront Report', async () => {
+        const target = project();
+        const withLinks = {
+            ...CONFIG,
+            edsConfig: { ...CONFIG.edsConfig!, brokenLinks: [{ link: '/fr', pages: ['/footer'] }] },
+        };
+
+        await populateEdsMetadata(context(), target, withLinks, true);
+
+        expect(target.componentInstances?.['eds-storefront']?.metadata?.brokenLinks).toStrictEqual([
+            { link: '/fr', pages: ['/footer'] },
+        ]);
+    });
+
+    it('leaves an existing record alone when setup reported none (an edit copies nothing)', async () => {
+        const target = project();
+        const instance = target.componentInstances!['eds-storefront'];
+        instance.metadata = { ...instance.metadata, brokenLinks: [{ link: '/old', pages: [] }] };
+
+        await populateEdsMetadata(context(), target, CONFIG, true);
+
+        expect(target.componentInstances?.['eds-storefront']?.metadata?.brokenLinks).toStrictEqual([
+            { link: '/old', pages: [] },
+        ]);
+    });
+});

@@ -162,7 +162,7 @@ describe('copyContentFromSource — reference-following discovery', () => {
         expect(result.copiedFiles).not.toContain('/dead-link');
     });
 
-    it('completeness audit reports a referenced doc that could not be copied', async () => {
+    it('completeness audit reports a referenced doc the source has but the copy could not take', async () => {
         mockFetch.mockImplementation(async (url: string, options?: RequestInit) => {
             const method = options?.method ?? 'GET';
             if (url.includes('/list/')) return status(404);
@@ -172,7 +172,9 @@ describe('copyContentFromSource — reference-following discovery', () => {
             if (url === `${sourceBase}/customer/account.plain.html`) {
                 return htmlResponse('<body><main><div><a href="/customer/nav">n</a></div></main></body>');
             }
-            return status(404); // /customer/nav.plain.html → 404 (genuinely missing)
+            // The source HAS it (not a 404) but answers an error: a real gap in the copy.
+            if (url === `${sourceBase}/customer/nav.plain.html`) return status(500);
+            return status(404);
         });
 
         const { createPatchReport, getUnapplied } = await import('@/features/eds/services/patches/patchReportHelper');
@@ -214,10 +216,9 @@ describe('copyContentFromSource — reference-following discovery', () => {
         expect(mockLogger.warn).not.toHaveBeenCalledWith(
             expect.stringContaining('referenced document not copied: /customer/nav'),
         );
-        // The audit still does its job for everything else.
-        expect(unapplied.some((u) => u.kind === 'reference' && u.target === '/brand-page')).toBe(true);
-        expect(mockLogger.warn).toHaveBeenCalledWith(
-            expect.stringContaining('referenced document not copied: /brand-page'),
-        );
+        // The audit still does its job for everything else: /brand-page 404s on the
+        // source too, so it is a broken link carried over, recorded for the
+        // Storefront Report rather than warned about.
+        expect(report.brokenLinks).toStrictEqual([{ link: '/brand-page', pages: ['/customer/account'] }]);
     });
 });

@@ -37,6 +37,7 @@ import type { GitHubFileOperations } from '../github/githubFileOperations';
 import type { GitHubTokenService } from '../github/githubTokenService';
 import { HelixService } from '../helix/helixService';
 import { createPatchReport, addCodeResult, reportUnapplied } from '../patches/patchReportHelper';
+import { writeBrokenLinks } from '../storefront/brokenLinksRecord';
 import { migrateStorefrontNamingIfNeeded } from '../storefront/storefrontNameMigration';
 import { updateStorefrontState } from '../storefront/storefrontStalenessDetector';
 import { GitHubAppNotInstalledError } from '../types';
@@ -244,6 +245,12 @@ async function runContentPipeline(
             // Headless callers (MCP/AI reset) get warn-level logging only; UI
             // callers can wrap this function and inject `showWarning` later.
             await reportUnapplied(patchReport, context.logger);
+            // The content was copied afresh, so its broken links replace the last
+            // ones; kept content was not, and its record still stands. Saved with
+            // the project by finalizeReset.
+            if (!params.keepContent && contentSourceConfig) {
+                writeBrokenLinks(project, patchReport.brokenLinks);
+            }
 
             context.logger.info('[EdsReset] Content pipeline completed successfully');
             return pipelineResult.contentFilesCopied;

@@ -465,7 +465,7 @@ describe('DaLiveContentCopy.copyContentFromSource', () => {
     });
 
     describe('completeness audit', () => {
-        it('records a referenced document that was never copied', async () => {
+        it('records a link to a page the source does not have as a broken link, not a warning', async () => {
             h.discoveryOps.getContentPathsFromDaLive.mockResolvedValue(['/account']);
             routeFetch([
                 { when: (_u, i) => i?.method === 'HEAD', respond: mockResponse(404) },
@@ -487,15 +487,43 @@ describe('DaLiveContentCopy.copyContentFromSource', () => {
                 report
             );
 
+            expect(report.results).toStrictEqual([]);
+            expect(report.brokenLinks).toStrictEqual([{ link: '/customer/nav', pages: ['/account'] }]);
+        });
+
+        it('warns about a referenced document the source has but the copy could not take', async () => {
+            h.discoveryOps.getContentPathsFromDaLive.mockResolvedValue(['/account']);
+            routeFetch([
+                { when: (_u, i) => i?.method === 'HEAD', respond: mockResponse(404) },
+                {
+                    when: (u) => u === `${LIVE}/account.plain.html`,
+                    respond: mockResponse(200, '<a href="/customer/nav">nav</a>', 'text/html'),
+                },
+                { when: (u) => u === `${LIVE}/customer/nav.plain.html`, respond: mockResponse(500) },
+                { when: () => true, respond: mockResponse(404) },
+            ]);
+            const report = createPatchReport();
+
+            await h.copy.copyContentFromSource(
+                SOURCE,
+                'dest-org',
+                'dest-site',
+                undefined,
+                undefined,
+                undefined,
+                report
+            );
+
             expect(report.results).toEqual([
                 {
                     kind: 'reference',
                     patchId: '/customer/nav',
                     target: '/customer/nav',
                     applied: false,
-                    reason: 'referenced by copied content but not found on source',
+                    reason: 'referenced by copied content but could not be copied',
                 },
             ]);
+            expect(report.brokenLinks).toBeUndefined();
         });
 
         it('says nothing about a reference a later stage is configured to supply', async () => {

@@ -47,6 +47,8 @@ describe.each([
     ['openDataInstaller', 'demoBuilder.showDataInstaller'],
     // Site access works with no project, so it opens beside the dashboard too.
     ['openSiteAccess', 'demoBuilder.manageSiteAccess'],
+    // The Storefront Report opens as a document beside the dashboard.
+    ['openStorefrontReport', 'demoBuilder.storefrontReport'],
 ] as const)('%s', (type, commandId) => {
     it('is registered — positive control for the assertions below', () => {
         expect(dashboardHandlers[type]).toBeInstanceOf(Function);

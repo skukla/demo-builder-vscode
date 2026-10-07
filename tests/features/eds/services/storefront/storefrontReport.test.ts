@@ -161,6 +161,7 @@ describe('readStorefrontReport — a colleague’s storefront', () => {
                 { patchId: 'commerce-account-sidebar-selector-race', target: 'blocks/commerce-account-sidebar/commerce-account-sidebar.js', state: 'applied' },
             ],
             offer: ['product-link-sku-encoding', 'product-link-sku-slash-encoding', 'product-teaser-sku-encoding', 'pdp-empty-data-redirect'],
+            contentSite: { org: 'steve', site: 'aistore-copy' },
         });
     });
 
@@ -264,5 +265,37 @@ describe('storefrontReportLines — the SC-facing rendering', () => {
         const lines = storefrontReportLines(await read(shipped, deps()));
 
         expect(lines).toContain("Demo Builder's Bodea storefront, made from adobe-commerce/boilerplate-b2b-template at abcdef0.");
+    });
+});
+
+describe('broken links — links in the content to pages that do not exist (2026-10-07)', () => {
+    const WITH_LINKS = project({}, { brokenLinks: [{ link: '/fr', pages: ['/footer', '/index'] }, { link: '/old', pages: [] }] });
+
+    it('carries the recorded links and the DA.live site they are edited in', async () => {
+        const report = await read(WITH_LINKS, deps());
+
+        expect(report.brokenLinks).toStrictEqual([
+            { link: '/fr', pages: ['/footer', '/index'] },
+            { link: '/old', pages: [] },
+        ]);
+        expect(report.contentSite).toStrictEqual({ org: 'steve', site: 'aistore-copy' });
+    });
+
+    it('lists each with the pages it is on, linked to the DA.live editor', async () => {
+        const lines = storefrontReportLines(await read(WITH_LINKS, deps()));
+        const start = lines.indexOf("## Links to pages that don't exist");
+
+        expect(start).toBeGreaterThan(-1);
+        expect(lines.slice(start + 2)).toStrictEqual([
+            '- /fr, on [/footer](https://da.live/edit#/steve/aistore-copy/footer), ' +
+                '[/index](https://da.live/edit#/steve/aistore-copy/index)',
+            '- /old',
+        ]);
+    });
+
+    it('has no section at all when there are none', async () => {
+        const lines = storefrontReportLines(await read(COLLEAGUE, deps()));
+
+        expect(lines.join('\n')).not.toMatch(/Links to pages/);
     });
 });

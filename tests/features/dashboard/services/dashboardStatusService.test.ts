@@ -57,6 +57,7 @@ describe('dashboardStatusService', () => {
                 adobeProject: 'Adobe Project',
                 frontendConfigChanged: false,
                 mesh: undefined,
+                brokenLinkCount: 0,
             });
         });
 

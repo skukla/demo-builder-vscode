@@ -540,6 +540,8 @@ export interface EDSConfig {
     preflightComplete?: boolean;
     /** GitHub repository URL from preflight */
     repoUrl?: string;
+    /** Links the preflight content copy found to pages the source lacks (Storefront Report). */
+    brokenLinks?: import('./webviewPayloads').StorefrontBrokenLink[];
     // Note: previewUrl and liveUrl are NOT stored - they are derived from githubRepo
     // by getEdsPreviewUrl() and getEdsLiveUrl() in typeGuards.ts
     /** Whether to skip content copy (e.g., when using existing content) */

@@ -15,6 +15,7 @@ import type { GitHubFileOperations } from '../../services/github/githubFileOpera
 import type { GitHubRepoOperations } from '../../services/github/githubRepoOperations';
 import type { HelixService } from '../../services/helix/helixService';
 import type { TemplateSyncService } from '@/features/updates/services/templateSyncService';
+import type { StorefrontBrokenLink } from '@/types/webviewPayloads';
 
 /**
  * Result of storefront setup phase execution
@@ -29,6 +30,8 @@ export interface StorefrontSetupResult {
     pdpCaveats?: string[];
     /** See {@link RepoInfo.demoCaveats} — spread in from the threaded repoInfo. */
     demoCaveats?: string[];
+    /** Links the content copy found to pages the source lacks; the project records them. */
+    brokenLinks?: StorefrontBrokenLink[];
     // Note: previewUrl/liveUrl not included - derived from githubRepo by typeGuards
 }
 

@@ -26,6 +26,7 @@ import type { GitHubTokenService } from '@/features/eds/services/github/githubTo
 import type { SitePublishProgress } from '@/features/eds/services/helix/helixSiteContent';
 import { createPatchReport, reportUnapplied } from '@/features/eds/services/patches/patchReportHelper';
 import type { Logger } from '@/types/logger';
+import type { StorefrontBrokenLink } from '@/types/webviewPayloads';
 
 interface EdsContentConfig {
     repoUrl: string;
@@ -72,6 +73,11 @@ interface EdsContentDeps {
     logger: Logger;
     secrets: import('vscode').SecretStorage;
     extensionContext: import('vscode').ExtensionContext;
+    /**
+     * Receives the copy's broken links (links to pages the source lacks too), so
+     * the caller can record them on the project for the Storefront Report.
+     */
+    onBrokenLinks?: (links: StorefrontBrokenLink[]) => void;
     /**
      * Helix seam. Defaults to a service built from this call's logger and the
      * GitHub/DA.live credentials it derives; production never passes it.
@@ -306,6 +312,7 @@ export async function ensureEdsContent(
     // Surface unapplied content patches via the unified toast — same D1 contract
     // as the create/reset pipeline. No-op when nothing failed precondition.
     await reportUnapplied(patchReport, logger, vscode.window.showWarningMessage);
+    deps.onBrokenLinks?.(patchReport.brokenLinks ?? []);
 
     return true;
 }
