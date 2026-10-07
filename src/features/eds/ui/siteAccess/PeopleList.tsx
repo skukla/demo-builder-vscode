@@ -1,62 +1,59 @@
 /**
- * One Site access list — who administers the site, or who reads its content —
- * as one row per person: the email, the role beside it, Remove in the row's ⋮
- * menu (`CardActionsMenu`), and adding as the dashed `AddCard` row at the end
- * (PL-62).
+ * Who has access: one row per person, with everything they hold beside the
+ * email, removals in the row's ⋮ menu (`CardActionsMenu`), and giving access as
+ * the dashed `AddCard` row at the end (PL-62).
  *
  * Rows, not cards (owner, 2026-10-07): a person is one line of facts, emails are
- * long, and a list of people is scanned top to bottom. Rows only, with no
- * cards/rows toggle, since cards would never be the better view here.
+ * long, and a list of people is scanned top to bottom.
  *
- * The row stays local rather than reusing `IntegrationRow`: that one is driven
- * by an integration model (deploy status, rename, setup steps) a person has none
- * of. It borrows the same row shape instead (`integration-row*`, from
- * `integration-cards.css`), so a person reads like an integration in its list
- * view rather than as a box of its own.
+ * The row borrows the house list-row shape (`integration-row*`, from
+ * `integration-cards.css`) rather than reusing `IntegrationRow`, which is driven
+ * by an integration model a person has none of. `site-access-row` takes away the
+ * pointer and hover lift: the row opens nothing, so it must not look as if it
+ * does. Only the menu is a control.
  *
  * @module features/eds/ui/siteAccess/PeopleList
  */
 
 import { Item, View } from '@adobe/react-spectrum';
 import React from 'react';
+import type { AccessRemoval, AccessRow } from './accessRows';
 import { AddCard } from '@/core/ui/components/ui/AddCard';
 import { CardActionsMenu } from '@/core/ui/components/ui/CardActionsMenu';
-import type { SiteAccessPerson } from '@/types/webviewPayloads';
 
 export interface PeopleListProps {
-    people: SiteAccessPerson[];
-    /** Whether this identity can add and remove here. */
-    canManage: boolean;
-    /** The add row's words, "Add a site admin". Omit while a filter narrows the list. */
-    addLabel?: string;
-    onAdd: () => void;
-    onRemove: (email: string) => void;
+    rows: AccessRow[];
+    /** Whether the Give access row shows: this identity can grant something. */
+    canGive: boolean;
+    onGive: () => void;
+    onRemove: (email: string, removal: AccessRemoval) => void;
 }
 
-interface PersonRowProps {
-    person: SiteAccessPerson;
-    canRemove: boolean;
-    onRemove: (email: string) => void;
-}
-
-function PersonRow({ person, canRemove, onRemove }: PersonRowProps): React.ReactElement {
+function PersonRow({ row, onRemove }: { row: AccessRow; onRemove: PeopleListProps['onRemove'] }) {
+    const removalOf = (key: React.Key): AccessRemoval | undefined =>
+        row.removals.find((removal) => removal.type === key);
     return (
-        <div className="integration-row">
+        <div className="integration-row site-access-row">
             <div className="integration-row-main">
-                <div className="integration-row-name" title={person.email}>
-                    {person.email}
+                <div className="integration-row-name" title={row.email}>
+                    {row.email}
                 </div>
-                <span className="text-md text-gray-700">{person.role}</span>
+                <span className="text-md text-gray-700">{row.roles.join(', ')}</span>
             </div>
-            {/* The menu button's height is kept even on a row without one (an org
-                admin), so every row is the same height. */}
+            {/* The menu button's height is kept on a row without one, so every
+                row is the same height. */}
             <View UNSAFE_className="integration-row-trailing" minHeight="size-400">
-                {canRemove ? (
+                {row.removals.length > 0 ? (
                     <CardActionsMenu
-                        ariaLabel={`More actions for ${person.email}`}
-                        onAction={() => onRemove(person.email)}
+                        ariaLabel={`More actions for ${row.email}`}
+                        onAction={(key) => {
+                            const removal = removalOf(key);
+                            if (removal) onRemove(row.email, removal);
+                        }}
                     >
-                        <Item key="remove">Remove</Item>
+                        {row.removals.map((removal) => (
+                            <Item key={removal.type}>{removal.label}</Item>
+                        ))}
                     </CardActionsMenu>
                 ) : null}
             </View>
@@ -64,26 +61,13 @@ function PersonRow({ person, canRemove, onRemove }: PersonRowProps): React.React
     );
 }
 
-export function PeopleList({
-    people,
-    canManage,
-    addLabel,
-    onAdd,
-    onRemove,
-}: PeopleListProps): React.ReactElement {
+export function PeopleList({ rows, canGive, onGive, onRemove }: PeopleListProps): React.ReactElement {
     return (
         <div className="integration-row-list">
-            {people.map((person) => (
-                <PersonRow
-                    key={person.email}
-                    person={person}
-                    canRemove={canManage && person.removable}
-                    onRemove={onRemove}
-                />
+            {rows.map((row) => (
+                <PersonRow key={row.email} row={row} onRemove={onRemove} />
             ))}
-            {canManage && addLabel ? (
-                <AddCard name={addLabel} onOpen={onAdd} cardClassName="integration-row" />
-            ) : null}
+            {canGive ? <AddCard name="Give access" onOpen={onGive} cardClassName="integration-row" /> : null}
         </div>
     );
 }

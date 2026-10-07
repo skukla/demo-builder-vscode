@@ -24,10 +24,10 @@ import '@/core/ui/styles/shared-ui.css';
 import '@/core/ui/styles/inline-controls.css';
 // .integration-row* — each person is drawn as the house list row.
 import '@/core/ui/styles/integration-cards.css';
-// .add-card — the dashed "Add a site admin" row.
+// .add-card — the dashed "Give access" row.
 import '@/core/ui/styles/add-card.css';
-// .view-switcher — the Site admins / Content readers tabs.
-import '@/core/ui/styles/view-switcher.css';
+// Feature-scoped: only this entry loads it.
+import './styles/site-access.css';
 
 const container = document.getElementById('root');
 if (!container) {

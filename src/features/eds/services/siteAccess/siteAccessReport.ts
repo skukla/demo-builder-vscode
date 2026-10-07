@@ -56,7 +56,7 @@ export function adminListOf(listing: SiteAccessListing, owner: string): SiteAcce
         site: listing.site ?? '',
         canManage: listing.status === 'ok' && listing.canManage,
         people: [
-            ...siteAdmins.map((email) => ({ email, role: 'Site admin', removable: true })),
+            ...siteAdmins.map((email) => ({ email, role: 'Configuration admin', removable: true })),
             ...(listing.orgAdmins ?? [])
                 .filter((email) => !isSiteAdmin(email))
                 .map((email) => ({ email, role: 'Org admin', removable: false })),
@@ -154,8 +154,8 @@ export function readerListOf(listing: ContentAccessListing): SiteAccessList {
         canManage: listing.status === 'ok',
         people: (listing.readers ?? []).map((reader) =>
             reader.actions === 'read'
-                ? { email: reader.email, role: 'Reads', removable: true }
-                : { email: reader.email, role: 'Writes', removable: false },
+                ? { email: reader.email, role: 'Reads content', removable: true }
+                : { email: reader.email, role: 'Edits content', removable: false },
         ),
         notice: listing.status === 'ok' ? undefined : readerRefusal(listing),
     };

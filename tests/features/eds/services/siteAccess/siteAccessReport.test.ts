@@ -43,7 +43,7 @@ describe('adminListOf', () => {
             site: SITE,
             canManage: true,
             people: [
-                { email: 'a@x.example', role: 'Site admin', removable: true },
+                { email: 'a@x.example', role: 'Configuration admin', removable: true },
                 { email: 'b@x.example', role: 'Org admin', removable: false },
             ],
             notice: undefined,
@@ -56,7 +56,7 @@ describe('adminListOf', () => {
             'acme',
         );
 
-        expect(list.people).toEqual([{ email: 'A@x.example', role: 'Site admin', removable: true }]);
+        expect(list.people).toEqual([{ email: 'A@x.example', role: 'Configuration admin', removable: true }]);
     });
 
     it('says a project with no storefront has nothing to manage', () => {
@@ -148,8 +148,8 @@ describe('readerListOf', () => {
             site: 'acme/storefront',
             canManage: true,
             people: [
-                { email: 'r@x.example', role: 'Reads', removable: true },
-                { email: 'w@x.example', role: 'Writes', removable: false },
+                { email: 'r@x.example', role: 'Reads content', removable: true },
+                { email: 'w@x.example', role: 'Edits content', removable: false },
             ],
             notice: undefined,
         });

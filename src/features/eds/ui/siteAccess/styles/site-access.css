@@ -1,0 +1,16 @@
+/* Site access, loaded only by the siteAccess bundle. */
+
+@layer theme {
+    /* A person's row opens nothing, so it keeps the house row's shape
+       (`.integration-row`) without the pointer and hover lift that promise a
+       click. Only the row's menu is a control. */
+    .integration-row.site-access-row {
+        cursor: default;
+    }
+
+    .integration-row.site-access-row:hover {
+        background: var(--spectrum-global-color-gray-50);
+        border-color: var(--spectrum-global-color-gray-300);
+        box-shadow: none;
+    }
+}

@@ -1,85 +1,58 @@
 /**
- * Site access — who administers a storefront and who reads its content.
+ * Site access — give someone access to a storefront, or give it back to yourself.
  *
- * Replaced the Manage Site Access QuickPick, which put two lists, an add, a
- * remove, a GitHub remedy and a two-minute wait into a chain of pickers and
- * toasts. Here they sit on one page and stay there between actions.
+ * Two kinds of access, held in two systems: configuration admin (the AEM
+ * Configuration Service entry, which Republish needs to register the product
+ * page overlay) and reading the content (the DA.live permissions sheet, which a
+ * colleague needs to copy the storefront's blocks and pages, EDS-22). The SC
+ * thinks in people, so the screen is ONE list: each person once, with what they
+ * hold (`accessRows`), and one Give access dialog that offers both.
  *
- * With a project storefront open it shows both lists for that site. Without
- * one, only the content half applies, for an org and site the SC types: the
- * person sharing a storefront need not have built it with Demo Builder.
+ * Giving it back to yourself is the refusal notice at the TOP: the admin role
+ * cannot be granted over the API to someone who lacks it, so the notice carries
+ * the steps (reinstall AEM Code Sync on GitHub) and "check access".
  *
- * Laid out like the other collection screens (owner, 2026-10-07: the first cut
- * "does not follow the same design system"): `PageLayout` + `PageHeader`, the
- * two lists as `ViewSwitcher` tabs (the Data Installer's), a `SearchHeader` band
- * (count, filter, refresh) like Integrations and Your Projects, a row per
- * person with Remove in its ⋮ menu, and adding as the dashed row that opens a
- * dialog. `InlineNotice` for every notice, `LoadingDisplay` while something
- * runs, and the shared `Modal` to confirm a removal.
+ * Without a project storefront only the content half applies, for an org and
+ * site the SC types: the person sharing need not have built it here.
+ *
+ * Shared pieces: `PageLayout` + `PageHeader`, `InlineNotice` (via
+ * `SiteAccessNoticeView`), `LoadingDisplay` above the list while something runs
+ * (the list stays on screen), `EmptyState`, `AddCard`, `CardActionsMenu`, `Modal`.
  *
  * @module features/eds/ui/siteAccess/SiteAccessScreen
  */
 
 import { Button, DialogContainer, Flex, Text, TextField, View } from '@adobe/react-spectrum';
 import React, { useEffect, useMemo, useState } from 'react';
-import { AddPersonModal } from './AddPersonModal';
+import { accessRowsOf, grantChoicesOf, type AccessRemoval } from './accessRows';
+import { GiveAccessModal, type Grant } from './GiveAccessModal';
 import { PeopleList } from './PeopleList';
 import { SiteAccessNoticeView } from './SiteAccessNoticeView';
-import { useSiteAccess, type ChangeType, type SiteTarget } from './useSiteAccess';
+import { useSiteAccess, type SiteTarget } from './useSiteAccess';
+import { EmptyState } from '@/core/ui/components/feedback/EmptyState';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { PageLayout } from '@/core/ui/components/layout/PageLayout';
-import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
-import { ViewSwitcher, type SwitchableView } from '@/core/ui/components/navigation/ViewSwitcher';
 import { Modal } from '@/core/ui/components/ui/Modal';
-import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
-import type { SiteAccessInitialData, SiteAccessList, SiteAccessView } from '@/types/webviewPayloads';
+import type { SiteAccessInitialData, SiteAccessNotice, SiteAccessView } from '@/types/webviewPayloads';
 
 export type SiteAccessScreenProps = Partial<SiteAccessInitialData>;
 
-type ListId = 'admins' | 'readers';
-
-/** What each tab says and sends. Admins need no typed target; readers carry it. */
-const LISTS: Record<ListId, {
-    label: string;
-    addLabel: string;
-    add: ChangeType;
-    remove: Extract<ChangeType, 'removeSiteAdmin' | 'removeContentReader'>;
-    what: string;
-}> = {
-    admins: {
-        label: 'Site admins',
-        addLabel: 'Add a site admin',
-        add: 'addSiteAdmin',
-        remove: 'removeSiteAdmin',
-        what: 'a configuration admin',
-    },
-    readers: {
-        label: 'Content readers',
-        addLabel: 'Add a content reader',
-        add: 'addContentReader',
-        remove: 'removeContentReader',
-        what: 'a content reader',
-    },
-};
-
-const PERSON_SEARCH_FIELDS = ['email', 'role'] as const;
-
 interface PendingRemoval {
-    list: ListId;
     email: string;
+    removal: AccessRemoval;
 }
 
-/** The tabs the view has lists for, in order. */
-function tabsFor(view: SiteAccessView | null): SwitchableView[] {
-    const ids: ListId[] = ['admins', 'readers'];
-    return ids.filter((id) => view?.[id]).map((id) => ({ id, label: LISTS[id].label }));
+/** "3 people have access". */
+function countLine(n: number): string {
+    return n === 1 ? '1 person has access' : `${n} people have access`;
 }
 
-/** "2 people on acme/shop". */
-function countLine(list: SiteAccessList): string {
-    const n = list.people.length;
-    return `${n} ${n === 1 ? 'person' : 'people'} on ${list.site}`;
+/** Why a list cannot be read or changed, each said once, in list order. */
+function listNotices(view: SiteAccessView | null): SiteAccessNotice[] {
+    return [view?.admins?.notice, view?.readers?.notice].filter(
+        (notice): notice is SiteAccessNotice => Boolean(notice),
+    );
 }
 
 /** The DA.live org and site to show, when no project storefront names one. */
@@ -91,7 +64,7 @@ function SiteTargetForm({ isBusy, onShow }: {
     const [site, setSite] = useState('');
     const isEmpty = org.trim() === '' || site.trim() === '';
     return (
-        <Flex gap="size-100" alignItems="end" wrap marginBottom="size-200">
+        <Flex gap="size-100" alignItems="end" wrap marginBottom="size-300">
             <TextField label="DA.live organization" value={org} onChange={setOrg} isDisabled={isBusy} />
             <TextField label="Site" value={site} onChange={setSite} isDisabled={isBusy} />
             <Button
@@ -108,44 +81,33 @@ function SiteTargetForm({ isBusy, onShow }: {
 export function SiteAccessScreen({ projectName, hasStorefront }: SiteAccessScreenProps): React.ReactElement {
     const { view, notice, busy, progress, load, change, waitForAccess, openLink, repair } = useSiteAccess();
     const [target, setTarget] = useState<SiteTarget | undefined>(undefined);
-    const [chosenTab, setChosenTab] = useState<ListId>('admins');
-    const [query, setQuery] = useState('');
-    const [adding, setAdding] = useState(false);
+    const [giving, setGiving] = useState(false);
     const [pending, setPending] = useState<PendingRemoval | null>(null);
 
     useEffect(() => {
         if (hasStorefront) void load();
     }, [hasStorefront, load]);
 
-    const tabs = tabsFor(view);
-    // The chosen tab, or the first list the view has when that one is absent.
-    const tab: ListId = view?.[chosenTab] ? chosenTab : ((tabs[0]?.id as ListId) ?? chosenTab);
-    const list = view?.[tab];
-    const copy = LISTS[tab];
-    const people = useMemo(
-        () => (list?.people ?? []).filter((person) => matchesSearchFields(person, PERSON_SEARCH_FIELDS, query)),
-        [list, query],
-    );
-    const isFiltering = query.trim().length > 0;
+    const rows = useMemo(() => accessRowsOf(view), [view]);
+    const choices = grantChoicesOf(view);
+    const canGive = choices.admin || choices.read;
     const isBusy = busy !== null;
     const noticeActions = { isBusy, onOpenLink: openLink, onWait: () => void waitForAccess(), onRepair: repair };
+    const notices = [...(notice ? [notice] : []), ...listNotices(view)];
 
     const showSite = (typed: SiteTarget): void => {
         setTarget(typed);
         void load(typed);
     };
-    const selectTab = (id: string): void => {
-        setChosenTab(id as ListId);
-        setQuery('');
-    };
-    const addPerson = (email: string): void => {
-        setAdding(false);
-        void change(copy.add, email, tab === 'readers' ? target : undefined);
+    const give = async ({ email, admin, read }: Grant): Promise<void> => {
+        setGiving(false);
+        if (admin && !(await change('addSiteAdmin', email))) return;
+        if (read) await change('addContentReader', email, target);
     };
     const confirmRemoval = (): void => {
         if (!pending) return;
         setPending(null);
-        void change(LISTS[pending.list].remove, pending.email, pending.list === 'readers' ? target : undefined);
+        void change(pending.removal.type, pending.email, target);
     };
 
     return (
@@ -160,68 +122,55 @@ export function SiteAccessScreen({ projectName, hasStorefront }: SiteAccessScree
             backgroundColor="var(--spectrum-global-color-gray-50)"
         >
             <div className="page-container-padded pb-6">
-                {!hasStorefront && <SiteTargetForm isBusy={isBusy} onShow={showSite} />}
-                <ViewSwitcher views={tabs} activeId={tab} onSelect={selectTab} />
-                {notice && (
-                    <View marginBottom="size-200">
-                        <SiteAccessNoticeView notice={notice} {...noticeActions} />
-                    </View>
-                )}
-                {busy && <LoadingDisplay message={busy} subMessage={progress ?? undefined} />}
-                {!busy && list && (
-                    <>
-                        <SearchHeader
-                            searchQuery={query}
-                            onSearchQueryChange={setQuery}
-                            searchPlaceholder="Filter people"
-                            searchThreshold={0}
-                            totalCount={list.people.length}
-                            filteredCount={people.length}
-                            itemNoun="person"
-                            itemNounPlural="people"
-                            countText={countLine(list)}
-                            onRefresh={() => void load(target)}
-                            refreshAriaLabel="Refresh site access"
-                            hasLoadedOnce
-                            alwaysShowCount
-                        />
-                        {list.notice && (
+                {/* Off the header's rule, as the other pages' first band sits. */}
+                <View paddingTop="size-300">
+                    {!hasStorefront && <SiteTargetForm isBusy={isBusy} onShow={showSite} />}
+                    {notices.map((shown) => (
+                        <View key={shown.message} marginBottom="size-200">
+                            <SiteAccessNoticeView notice={shown} {...noticeActions} />
+                        </View>
+                    ))}
+                    {busy && <LoadingDisplay message={busy} subMessage={progress ?? undefined} />}
+                    {view && (
+                        <>
                             <View marginBottom="size-200">
-                                <SiteAccessNoticeView notice={list.notice} {...noticeActions} />
+                                <Text UNSAFE_className="text-sm text-gray-600">{countLine(rows.length)}</Text>
                             </View>
-                        )}
-                        {list.people.length === 0 && !list.canManage ? (
-                            <Text UNSAFE_className="text-gray-600">Nobody has access yet.</Text>
-                        ) : (
-                            <PeopleList
-                                people={people}
-                                canManage={list.canManage}
-                                addLabel={isFiltering ? undefined : copy.addLabel}
-                                onAdd={() => setAdding(true)}
-                                onRemove={(email) => setPending({ list: tab, email })}
-                            />
-                        )}
-                    </>
-                )}
+                            {rows.length === 0 && !canGive ? (
+                                <EmptyState
+                                    title="Nobody to show"
+                                    description="No one has access you can see, and you cannot give access here."
+                                />
+                            ) : (
+                                <PeopleList
+                                    rows={rows}
+                                    canGive={canGive && !isBusy}
+                                    onGive={() => setGiving(true)}
+                                    onRemove={(email, removal) => setPending({ email, removal })}
+                                />
+                            )}
+                        </>
+                    )}
+                </View>
             </div>
-            <AddPersonModal
-                isOpen={adding}
-                title={copy.addLabel}
-                onAdd={addPerson}
-                onClose={() => setAdding(false)}
+            <GiveAccessModal
+                isOpen={giving}
+                choices={choices}
+                onGive={(grant) => void give(grant)}
+                onClose={() => setGiving(false)}
             />
             <DialogContainer type="modal" onDismiss={() => setPending(null)}>
                 {pending && (
                     <Modal
-                        title={`Remove ${pending.email}?`}
+                        title={`${pending.removal.label}?`}
                         size="S"
                         onClose={() => setPending(null)}
                         closeLabel="Cancel"
                         actionButtons={[{ label: 'Remove', variant: 'negative', onPress: confirmRemoval }]}
                     >
                         <Text>
-                            {pending.email} will no longer be {LISTS[pending.list].what}. You can add them back at
-                            any time.
+                            {pending.email} will no longer {pending.removal.consequence}. You can give it back at any
+                            time.
                         </Text>
                     </Modal>
                 )}

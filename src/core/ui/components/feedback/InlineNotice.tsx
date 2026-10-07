@@ -37,6 +37,12 @@ export interface InlineNoticeProps {
     hint?: React.ReactNode;
     /** Optional right-hand action — a Button, typically. Never shrinks. */
     action?: React.ReactNode;
+    /**
+     * Put the action UNDER the text instead of beside it. For a long message
+     * with several buttons, where the side column squeezes the text into a
+     * narrow strip (Site access's "reinstall Code Sync" steps, 2026-10-07).
+     */
+    actionBelow?: boolean;
     /** Hook for tests and for callers that need to find their own banner. */
     testId?: string;
 }
@@ -53,6 +59,7 @@ export function InlineNotice({
     tone = 'warning',
     hint,
     action,
+    actionBelow = false,
     testId,
 }: InlineNoticeProps): React.ReactElement {
     const Icon = tone === 'info' ? InfoOutline : AlertCircle;
@@ -67,8 +74,9 @@ export function InlineNotice({
                 <Text UNSAFE_className="inline-notice-title">{title}</Text>
                 <Text UNSAFE_className="status-text">{children}</Text>
                 {hint && <Text UNSAFE_className="inline-notice-hint">{hint}</Text>}
+                {action && actionBelow && <div className="inline-notice-actions">{action}</div>}
             </div>
-            {action && <div className="inline-notice-actions">{action}</div>}
+            {action && !actionBelow && <div className="inline-notice-actions">{action}</div>}
         </div>
     );
 }

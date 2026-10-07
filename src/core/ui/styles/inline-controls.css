@@ -83,6 +83,11 @@
     flex-shrink: 0;
 }
 
+/* `actionBelow`: the buttons sit under the text, inside the body column. */
+.inline-notice-body > .inline-notice-actions {
+    margin-top: 8px;
+}
+
 /* In-flight spinner inside the "Switching…" button — small gap before the label. */
 .inline-notice-spinner {
     margin-right: 6px;

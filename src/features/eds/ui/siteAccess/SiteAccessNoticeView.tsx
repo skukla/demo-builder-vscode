@@ -41,6 +41,7 @@ export function SiteAccessNoticeView({
             title={TITLES[notice.tone]}
             tone={notice.tone === 'success' ? 'info' : 'warning'}
             testId="site-access-notice"
+            actionBelow
             action={
                 hasActions ? (
                     <Flex gap="size-100" wrap>

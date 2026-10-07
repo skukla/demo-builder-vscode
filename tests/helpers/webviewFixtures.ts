@@ -221,7 +221,7 @@ export function buildSiteAccessView(project: Project): SiteAccessView {
             site,
             canManage: true,
             people: [
-                { email: 'owner@example.com', role: 'Site admin', removable: true },
+                { email: 'owner@example.com', role: 'Configuration admin', removable: true },
                 { email: 'lead@example.com', role: 'Org admin', removable: false },
             ],
         },
@@ -229,8 +229,8 @@ export function buildSiteAccessView(project: Project): SiteAccessView {
             site,
             canManage: true,
             people: [
-                { email: 'colleague@example.com', role: 'Reads', removable: true },
-                { email: 'author@example.com', role: 'Writes', removable: false },
+                { email: 'colleague@example.com', role: 'Reads content', removable: true },
+                { email: 'author@example.com', role: 'Edits content', removable: false },
             ],
         },
     };
