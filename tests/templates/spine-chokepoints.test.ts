@@ -235,12 +235,15 @@ describe('spine choke-points', () => {
         // missed them — the reason this list is a test, not a comment. The
         // load-bearing half is the NEGATIVE: settingsTools.ts documents that
         // MCP tools must never call getConfiguration().update() — this makes
-        // that sentence mechanical.
+        // that sentence mechanical. Added 2026-10-06: the engine-choice warning's
+        // "Use Copilot in VS Code" button (engineChoiceWatch) — an SC's click,
+        // not a tool, clearing the one setting it warned about.
         const primitive = /\.update\(\s*['"`]|getConfiguration\([^)]*\)\.update\(/;
         const settingsContext = /getConfiguration\(/;
         const spine = [
             'commands/commandManager.ts',
             'commands/openInClaude.ts',
+            'features/ai/engine/engineChoiceWatch.ts',
             'features/project-creation/commands/createProject.ts',
             'features/updates/commands/checkUpdates.ts',
         ];

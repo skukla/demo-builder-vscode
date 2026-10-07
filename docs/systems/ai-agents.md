@@ -85,7 +85,10 @@ The dashboard's **AI** badge reads Ready when the bundle is current and the chos
 start. With Claude Code chosen and `claude` missing it reads "Claude Code not installed", and
 the Chat button says so — and points at Copilot in VS Code, which needs nothing installed —
 instead of opening a terminal that says `command not found`. Demo Builder does not help
-install Claude Code: an SC who chooses it brings their own. **View AI Capabilities** lists the skills
+install Claude Code: an SC who chooses it brings their own. Choosing Claude Code in Settings
+without `claude` installed warns at once (`engineChoiceWatch.ts`), with a **Use Copilot in VS
+Code** action that clears the choice — VS Code's Settings editor itself cannot show an error
+that depends on the machine. **View AI Capabilities** lists the skills
 and MCP servers the agent gets.
 
 ## What an admin may have blocked

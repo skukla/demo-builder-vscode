@@ -18,6 +18,7 @@ import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { EnvFileWatcherService } from '@/core/vscode/envFileWatcherService';
 import { WorkspaceWatcherManager } from '@/core/vscode/workspaceWatcherManager';
+import { watchEngineChoice } from '@/features/ai/engine/engineChoiceWatch';
 import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
 import { registerAddedDemoTools } from '@/features/ai/server/addedDemoTools';
 import { registerAdobeResourceTools } from '@/features/ai/server/adobeResourceTools';
@@ -280,9 +281,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
         // Register Sidebar WebviewView EARLY to minimize blank sidebar time
         // The sidebar only needs stateManager and logger to render
-        const sidebarProvider = new SidebarProvider(context, stateManager, logger, {
-            commandExists: (name) => ServiceLocator.getCommandExecutor().commandExists(name),
-        });
+        const agentCliProbe = {
+            commandExists: (name: string) => ServiceLocator.getCommandExecutor().commandExists(name),
+        };
+        const sidebarProvider = new SidebarProvider(context, stateManager, logger, agentCliProbe);
+        context.subscriptions.push(watchEngineChoice(agentCliProbe));
         context.subscriptions.push(
             vscode.window.registerWebviewViewProvider(sidebarProvider.viewId, sidebarProvider, {
                 webviewOptions: {

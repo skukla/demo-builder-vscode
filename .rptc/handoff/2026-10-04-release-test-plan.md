@@ -32,6 +32,7 @@ matters most.
 | | In a terminal at the projects root, run `copilot` yourself and type `/mcp` | demo-builder is listed (trust the folder when asked) — Copilot CLI is no Chat choice, but its tools still work [AI-12] |  |
 | | Set **AI Assistant → Permissions** to Auto, then Full access, and start Claude Code | The terminal's command line carries `--permission-mode auto` / `--dangerously-skip-permissions` [AI-12] |  |
 | | On a scratch project, ask Copilot in the panel to delete it | Demo Builder asks once in the chat, naming the project; declining changes nothing [AI-12] |  |
+| | On a machine (or user) without Claude Code, set **Engine** to Claude Code | A warning appears at once, "Claude Code (the command-line tool) is not installed…"; **Use Copilot in VS Code** sets Engine back to the default [AI-12] |  |
 | | On a machine (or user) without Claude Code, click **Open in Claude Code** | A message says it isn't installed and points at Copilot in VS Code (no install button); the AI badge isn't green [AI-4a] |  |
 
 ## 2. Your Projects

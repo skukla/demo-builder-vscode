@@ -8603,7 +8603,7 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 795,
+            "line": 798,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here the step is starting the in-extension MCP server, whose failure must never abort activation.",
@@ -8628,7 +8628,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 529,
+            "line": 532,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a logger.error plus a showErrorMessage whose text is built from the error. Activation's own tests assert showErrorMessage was NOT called on every success path, which is the observable half; the wording of the message when it IS called is the rest.",
@@ -8641,7 +8641,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 886,
+            "line": 889,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here it is the manifest-format sweep.",
