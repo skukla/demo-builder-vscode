@@ -216,6 +216,31 @@ describe('useProjectBuilder — naming the ERP pair', () => {
         });
     });
 
+    it('renaming the pair re-derives BOTH names and keeps its other inputs', () => {
+        const { result, updateState } = setup({
+            selectedAppBuilderComponents: ['erp-integration'],
+            componentConfigs: {
+                'erp-integration': {
+                    ERP_BASE_URL: 'x',
+                    INTEGRATION_DISPLAY_NAME: 'Acme Integration',
+                    ERP_DISPLAY_NAME: 'Acme ERP',
+                },
+            },
+        });
+        act(() => {
+            result.current.onRenameAppBuilderComponent('erp-integration', 'Justrite');
+        });
+        expect(updateState).toHaveBeenCalledWith({
+            componentConfigs: {
+                'erp-integration': {
+                    ERP_BASE_URL: 'x',
+                    INTEGRATION_DISPLAY_NAME: 'Justrite Integration',
+                    ERP_DISPLAY_NAME: 'Justrite ERP',
+                },
+            },
+        });
+    });
+
     it('an entry that brings no system records no names', () => {
         const { result, updateState } = setup();
         act(() => {

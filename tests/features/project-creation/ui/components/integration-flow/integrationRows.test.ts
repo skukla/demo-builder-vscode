@@ -196,6 +196,51 @@ describe('resolveIntegrationRows — catalog rows', () => {
         expect(alone[0]).not.toHaveProperty('companion');
     });
 
+    it('a pair reads its chosen names and is renamable; one with no names set falls back to the catalog names', () => {
+        const pairEntry: AppBuilderComponentCatalogEntry = { ...ERP_ENTRY, nameFromEnvVar: 'INTEGRATION_DISPLAY_NAME' };
+        const erpSystem: AppBuilderComponentCatalogEntry = {
+            id: 'demo-erp',
+            name: 'ERP',
+            description: 'the ERP',
+            kind: 'system',
+            boundTo: 'erp-sync',
+            nameFromEnvVar: 'ERP_DISPLAY_NAME',
+            source: { owner: 'skukla', repo: 'demo-erp', branch: 'main' },
+        };
+        const catalog = [...CATALOG.filter((entry) => entry.id !== 'erp-sync'), pairEntry, erpSystem];
+        const named = resolveIntegrationRows(
+            state({
+                selectedAppBuilderComponents: ['erp-sync'],
+                componentConfigs: {
+                    'erp-sync': { INTEGRATION_DISPLAY_NAME: 'Justrite Integration', ERP_DISPLAY_NAME: 'Justrite ERP' },
+                },
+            }),
+            MESH_ENTRY,
+            catalog
+        );
+        expect(named[0]).toMatchObject({ name: 'Justrite Integration', companion: 'Justrite ERP', renamable: true });
+
+        const unnamed = resolveIntegrationRows(state({ selectedAppBuilderComponents: ['erp-sync'] }), MESH_ENTRY, catalog);
+        expect(unnamed[0]).toMatchObject({ name: pairEntry.name, companion: 'ERP', renamable: true });
+    });
+
+    it('a catalog entry whose system has no name input is not renamable', () => {
+        const erpSystem: AppBuilderComponentCatalogEntry = {
+            id: 'demo-erp',
+            name: 'ERP',
+            description: 'the ERP',
+            kind: 'system',
+            boundTo: 'erp-sync',
+            source: { owner: 'skukla', repo: 'demo-erp', branch: 'main' },
+        };
+        const rows = resolveIntegrationRows(
+            state({ selectedAppBuilderComponents: ['erp-sync'] }),
+            MESH_ENTRY,
+            [...CATALOG, erpSystem]
+        );
+        expect(rows[0]).not.toHaveProperty('renamable');
+    });
+
     it('catalog sourceLine falls back to "Catalog · {name}" when the description is empty', () => {
         const bare = { ...ERP_ENTRY, description: '' };
         const rows = resolveIntegrationRows(

@@ -338,6 +338,7 @@ export function IntegrationsStep({
      * lives here: `InlineRenameField` already cancels an empty or unchanged name
      * before calling this, so an "enter a name" branch would be unreachable.
      * Display name only — the id, its API picks, and the selection are immutable.
+     * For the ERP pair the typed name renames both halves (`pairNames`).
      */
     const commitRename = useCallback(
         async (id: string, raw: string): Promise<string | null> => {

@@ -420,13 +420,27 @@ export function useProjectBuilder(
         (id: string, name: string) => {
             const sources = state.appBuilderComponentSources ?? {};
             const record = sources[id];
-            // Only sourced rows (AI-built instances) carry a renamable name.
-            if (!record) return;
+            if (record) {
+                updateState({
+                    appBuilderComponentSources: { ...sources, [id]: { ...record, name } },
+                });
+                return;
+            }
+            // A pair (the ERP integration) is renamed by re-deriving BOTH names
+            // from the typed one — the same rule the add used. Safe before
+            // creation: neither id depends on the name.
+            const catalog = getAppBuilderComponentCatalog();
+            const entry = catalog.find((candidate) => candidate.id === id);
+            const names = entry && pairNameInputs(entry, catalog, name);
+            if (!names) return;
             updateState({
-                appBuilderComponentSources: { ...sources, [id]: { ...record, name } },
+                componentConfigs: {
+                    ...(state.componentConfigs ?? {}),
+                    [id]: { ...(state.componentConfigs?.[id] ?? {}), ...names },
+                },
             });
         },
-        [state.appBuilderComponentSources, updateState],
+        [state.appBuilderComponentSources, state.componentConfigs, updateState],
     );
 
     const onRemoveAppBuilderComponent = useCallback(
