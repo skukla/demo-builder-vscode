@@ -335,12 +335,15 @@ ERP** adds the key to the link in the extension (`systemScreen.ts`), so it never
 webview, a log, the project file or an agent. An ERP deployed before the screen existed
 answers "Redeploy it to add one."
 
-**One typed name names the pair** (`pairNames.ts`). The SC types a brand when the pair is
-added; a trailing "ERP" or "Integration" is dropped, and the rest names both: "Justrite" (or
-"Justrite ERP Integration") gives the integration **Justrite Integration** and its ERP
-**Justrite ERP**, and nothing typed gives **Acme Integration** and **Acme ERP**. The add screen
-previews both. The dashboard add, `add_integration` and the wizard all record the two names
-the same way, as the integration's inputs `INTEGRATION_DISPLAY_NAME` and `ERP_DISPLAY_NAME`.
+**The SC names the ERP; the integration keeps its catalog name** (`pairNames.ts`). One
+integration serves several ERPs (Add another ERP), so naming it after the first stopped being
+true at the second (owner, 2026-10-06; it used to give "Justrite Integration"). The add
+screen's field is "ERP name": a trailing "ERP" or "Integration" is dropped and "ERP" added,
+so "Justrite" (or "Justrite ERP Integration") gives the ERP **Justrite ERP** beside **ERP
+Integration**, and nothing typed gives **Acme ERP**. The dashboard add, `add_integration` and
+the wizard all record the two names the same way, as the integration's inputs
+`INTEGRATION_DISPLAY_NAME` and `ERP_DISPLAY_NAME`. Before the project is created the wizard
+can still change either: the card's pencil renames the integration, its Settings the ERP.
 
 The ERP's name is an input of the ERP integration ("ERP name"). The ERP reads the
 integration's value, so the name is set in one place; it names the ERP's row and the ERP

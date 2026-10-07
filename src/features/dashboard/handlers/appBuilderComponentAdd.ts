@@ -263,10 +263,10 @@ function addLabel(project: Project, entry: AppBuilderComponentCatalogEntry): str
 }
 
 /**
- * Name a PAIRED entry and the system it brings from the one name the SC typed:
- * "Justrite" → "Justrite Integration" and "Justrite ERP" (`pairNames`). Every add
- * records both, so an untyped add is "Acme Integration" and "Acme ERP" rather than
- * whatever each default happens to be.
+ * Name a PAIRED entry and the system it brings: the system from the name the SC
+ * typed ("Justrite" → "Justrite ERP"), the integration by its catalog name ("ERP
+ * Integration"; `pairNames`). Every add records both, so an untyped add is "ERP
+ * Integration" and "Acme ERP" rather than whatever each default happens to be.
  *
  * Recorded against the INTEGRATION's id because that is the owner
  * `resolveDeployInputs` reads first for a bound pair, so the system picks it up

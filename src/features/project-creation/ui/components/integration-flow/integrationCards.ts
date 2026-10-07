@@ -56,6 +56,10 @@ export function isApiEditable(kind: IntegrationRow['kind']): boolean {
  */
 function menuActionsFor(row: IntegrationRow): CardAction[] {
     const actions: CardAction[] = isApiEditable(row.kind) ? ['manage-apis'] : [];
+    // The ERP's name, the one thing about the pair that is fixed once it is deployed.
+    if (row.companionRenamable) {
+        actions.push('settings');
+    }
     if (!row.required) {
         actions.push('remove');
     }

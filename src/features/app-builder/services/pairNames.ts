@@ -1,16 +1,16 @@
 /**
- * pairNames — the two names ONE typed name gives a paired integration and the
- * system it brings, and the one rule every door applies (owner, 2026-10-05).
+ * pairNames — the names a paired integration and the system it brings get when the
+ * pair is added, and the one rule every door applies.
  *
- * "Justrite" → the integration "Justrite Integration" and its ERP "Justrite ERP".
- * The SC types one name; the screen used to call it "Name" with the integration's
- * default as the placeholder while it actually named the ERP, so "Multi-ERP
- * Integration" became an ERP called "...Integration" beside an integration still
- * called "ERP Integration". A typed name that already ends in either word gives the
- * same pair, and an empty one gives the defaults, "Acme Integration" and "Acme ERP".
+ * The SC names the SYSTEM; the integration keeps its catalog name. "Justrite" →
+ * the ERP "Justrite ERP" beside "ERP Integration". One integration serves several
+ * ERPs (Add another ERP), so naming it after the first one stopped being true at
+ * the second (owner, 2026-10-06; it used to give "Justrite Integration"). A
+ * trailing "ERP" or "Integration" on what was typed is dropped first, and nothing
+ * typed gives "Acme ERP". The integration is renamed on its own afterwards.
  *
- * Shared by the add screen (its preview), the wizard (what it records), and the
- * extension's add doors (what they enforce), so the three cannot disagree.
+ * Shared by the wizard (what it records) and the extension's add doors (what they
+ * enforce), so they cannot disagree.
  *
  * @module features/app-builder/services/pairNames
  */
@@ -38,15 +38,20 @@ function stripTrailing(typed: string | undefined, words: string[]): string {
 }
 
 /**
- * The two names one typed name gives a pair.
+ * The two names a pair is added with.
  *
- * @param typed - what the SC typed, if anything
+ * @param typed - what the SC typed for the system, if anything
  * @param systemWord - what the system is ("ERP")
+ * @param integrationName - the integration's own name (its catalog name)
  * @returns the integration's name and its system's
  */
-export function pairNames(typed: string | undefined, systemWord: string): { integration: string; system: string } {
+export function pairNames(
+    typed: string | undefined,
+    systemWord: string,
+    integrationName: string,
+): { integration: string; system: string } {
     const base = stripTrailing(typed, [INTEGRATION_WORD, systemWord]) || DEFAULT_PAIR_BASE;
-    return { integration: `${base} ${INTEGRATION_WORD}`, system: `${base} ${systemWord}` };
+    return { integration: integrationName, system: `${base} ${systemWord}` };
 }
 
 /**
@@ -116,7 +121,7 @@ export function pairNameInputs(
 ): Record<string, string> | undefined {
     const system = pairedSystemOf(entry, catalog);
     if (!system?.nameFromEnvVar) return undefined;
-    const names = pairNames(typed, systemWordOf(system));
+    const names = pairNames(typed, systemWordOf(system), entry.name);
     return {
         ...(entry.nameFromEnvVar ? { [entry.nameFromEnvVar]: names.integration } : {}),
         [system.nameFromEnvVar]: names.system,

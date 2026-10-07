@@ -513,6 +513,31 @@ describe('IntegrationsStep — Remove routing', () => {
     });
 });
 
+describe('IntegrationsStep — the ERP pair before creation', () => {
+    const ERP_NAMED = baseState({
+        selectedAppBuilderComponents: ['erp-integration'],
+        componentConfigs: {
+            'erp-integration': { INTEGRATION_DISPLAY_NAME: 'ERP Integration', ERP_DISPLAY_NAME: 'Acme ERP' },
+        },
+    });
+
+    it('shows the names it was given, and its Settings renames the ERP', async () => {
+        const { updateState } = await renderStep(ERP_NAMED);
+        expect(within(row('ERP Integration')).getByText(/Comes with Acme ERP/)).toBeInTheDocument();
+
+        await pickMenuItem(row('ERP Integration'), /Settings/i);
+        const dialog = await screen.findByRole('dialog');
+        await change(within(dialog).getByLabelText(/^ERP name/), 'Justrite');
+        await press(within(dialog).getByRole('button', { name: /^Save$/ }));
+
+        expect(updateState).toHaveBeenCalledWith({
+            componentConfigs: {
+                'erp-integration': { INTEGRATION_DISPLAY_NAME: 'ERP Integration', ERP_DISPLAY_NAME: 'Justrite ERP' },
+            },
+        });
+    });
+});
+
 describe('IntegrationsStep — mesh add commits without subscribing', () => {
     /** Hosts the step over REAL useState so the modal's finish commits re-render rows. */
     function StatefulStep(): React.ReactElement {

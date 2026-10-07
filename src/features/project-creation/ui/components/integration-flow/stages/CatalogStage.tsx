@@ -19,34 +19,27 @@ import React, { useState } from 'react';
 import { ChoiceCard } from '../../ChoiceCard';
 import { OptionalNameField } from '../OptionalNameField';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
-import {
-    DEFAULT_PAIR_BASE,
-    pairNames,
-    pairedSystemOf,
-    systemWordOf,
-} from '@/features/app-builder/services/pairNames';
+import { DEFAULT_PAIR_BASE, pairedSystemOf, systemWordOf } from '@/features/app-builder/services/pairNames';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 
-/** Said under the name before a pre-built integration is added. */
-export const NAME_IS_FIXED = "Can't be renamed later.";
+/**
+ * Said under the name before a pre-built integration is added. Until the project
+ * is created the wizard can still change it (the card's pencil, or Settings for
+ * the ERP); once deployed it is fixed.
+ */
+export const NAME_IS_FIXED = "Can't be renamed once deployed.";
 
 /**
- * What the name field says under it. For an entry that brings a system, the two
- * names the typed one gives (`pairNames`), so "Justrite" visibly becomes
- * "Justrite Integration" and "Justrite ERP" before anything is added.
+ * What the name field is. For an entry that brings a system, the field names the
+ * SYSTEM ("ERP name", "Acme ERP"); the integration keeps its catalog name
+ * (`pairNames`).
  */
-function nameField(
-    entry: AppBuilderComponentCatalogEntry | undefined,
-    label: string | undefined,
-): { defaultLabel: string; description: string } {
+function nameField(entry: AppBuilderComponentCatalogEntry | undefined): { fieldLabel?: string; defaultLabel: string } {
     const system = entry && pairedSystemOf(entry, getAppBuilderComponentCatalog());
-    if (!system) return { defaultLabel: entry?.name ?? '', description: NAME_IS_FIXED };
-    const names = pairNames(label, systemWordOf(system));
-    return {
-        defaultLabel: DEFAULT_PAIR_BASE,
-        description: `Adds “${names.integration}” and “${names.system}”. ${NAME_IS_FIXED}`,
-    };
+    if (!system) return { defaultLabel: entry?.name ?? '' };
+    const word = systemWordOf(system);
+    return { fieldLabel: `${word} name (optional)`, defaultLabel: `${DEFAULT_PAIR_BASE} ${word}` };
 }
 
 /** Show the catalog filter only once the gallery is big enough to warrant it. */
@@ -95,7 +88,7 @@ export function CatalogStage({
     const q = query.trim().toLowerCase();
     const filtered = q ? catalog.filter((entry) => matchesQuery(entry, q)) : catalog;
     const selectedEntry = catalog.find((entry) => entry.id === selectedId);
-    const naming = nameField(selectedEntry, label);
+    const naming = nameField(selectedEntry);
     return (
         <div className="intflow-catalog">
             <SearchHeader
@@ -117,14 +110,13 @@ export function CatalogStage({
                             key={entry.id}
                             variant="tile"
                             name={entry.name}
+                            description={entry.description}
                             // Disclose tool cost BEFORE the choice binds: the add
                             // door auto-installs the declared Node via fnm, and a
-                            // one-time ~30s install should never be a surprise.
-                            description={
-                                entry.nodeVersion
-                                    ? `${entry.description} Installs Node ${entry.nodeVersion} on first use.`
-                                    : entry.description
-                            }
+                            // one-time ~30s install should never be a surprise. A
+                            // note rather than part of the description, which the
+                            // tile clips.
+                            note={entry.nodeVersion ? `Installs Node ${entry.nodeVersion} on first use.` : undefined}
                             selected={entry.id === selectedId}
                             onSelect={() => onPick(entry.id)}
                         />
@@ -135,13 +127,13 @@ export function CatalogStage({
                 whole dialog grow under the SC's cursor (owner, 2026-09-21). */}
             <OptionalNameField
                 label={label}
+                fieldLabel={naming.fieldLabel}
                 defaultLabel={naming.defaultLabel}
                 onLabelChange={onLabelChange}
                 disabledHint={selectedEntry ? undefined : 'Pick an integration first'}
-                // A pre-built integration cannot be renamed once added (the rename handler
-                // refuses catalog entries), and a pair's name is fixed at creation
-                // (owner, 2026-09-25): say so before the name is committed, not after.
-                description={naming.description}
+                // A pre-built integration's name is fixed once it is deployed (owner,
+                // 2026-09-25): say so before the name is committed, not after.
+                description={NAME_IS_FIXED}
             />
         </div>
     );

@@ -73,18 +73,22 @@ describe('CatalogStage', () => {
     describe('a pair, read against the real catalog', () => {
         const erpIntegration = getAppBuilderComponentCatalog().find((e) => e.id === 'erp-integration')!;
 
-        it('shows the two names the typed one gives', () => {
-            renderStage({ catalog: [erpIntegration], selectedId: 'erp-integration', label: 'JustRite ERP Integration' });
-            expect(
-                screen.getByText(`Adds “JustRite Integration” and “JustRite ERP”. ${NAME_IS_FIXED}`),
-            ).toBeInTheDocument();
+        it('names the ERP, not the integration, and says only that it is fixed once deployed', () => {
+            renderStage({ catalog: [erpIntegration], selectedId: 'erp-integration', label: 'JustRite' });
+            expect(screen.getByLabelText(/^ERP name \(optional\)/)).toHaveValue('JustRite');
+            expect(screen.getByText(NAME_IS_FIXED)).toBeInTheDocument();
+            expect(screen.queryByText(/Adds “/)).not.toBeInTheDocument();
         });
 
-        it('with nothing typed, previews and suggests the default', () => {
+        it('with nothing typed, suggests the default ERP name', () => {
             renderStage({ catalog: [erpIntegration], selectedId: 'erp-integration' });
-            expect(screen.getByText(`Adds “Acme Integration” and “Acme ERP”. ${NAME_IS_FIXED}`)).toBeInTheDocument();
-            expect(screen.getByPlaceholderText('Acme')).toBeInTheDocument();
+            expect(screen.getByPlaceholderText('Acme ERP')).toBeInTheDocument();
         });
+    });
+
+    it('an entry with no paired system keeps the plain "Name (optional)" field', () => {
+        renderStage({ selectedId: 'acme-b' });
+        expect(screen.getByLabelText(/^Name \(optional\)/)).toBeInTheDocument();
     });
 
     it('says nothing about the name before a pick', () => {
@@ -252,6 +256,8 @@ describe('node-version disclosure', () => {
             ],
         });
 
-        expect(screen.getByText(/Installs Node 24 on first use/)).toBeInTheDocument();
+        // A note of its own, so the tile's clipped description never cuts it off.
+        expect(screen.getByText('Installs Node 24 on first use.')).toHaveClass('choice-card-note');
+        expect(screen.getByText('Sync scaffolding.')).toBeInTheDocument();
     });
 });

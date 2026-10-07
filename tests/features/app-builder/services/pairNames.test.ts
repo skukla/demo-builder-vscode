@@ -7,7 +7,7 @@ import {
 } from '@/features/app-builder/services/pairNames';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 
-describe('pairNames — one typed name, two names', () => {
+describe('pairNames — the SC names the system; the integration keeps its own name', () => {
     it.each([
         ['JustRite ERP Integration', 'JustRite'],
         ['JustRite Integration ERP', 'JustRite'],
@@ -15,19 +15,25 @@ describe('pairNames — one typed name, two names', () => {
         ['  JustRite   erp  ', 'JustRite'],
         ['JustRite integration', 'JustRite'],
         ['Multi-ERP Integration', 'Multi-ERP'],
-    ])('%p → "%s Integration" and "%s ERP"', (typed, base) => {
-        expect(pairNames(typed, 'ERP')).toEqual({ integration: `${base} Integration`, system: `${base} ERP` });
+    ])('%p → "%s ERP", beside the integration\'s own name', (typed, base) => {
+        expect(pairNames(typed, 'ERP', 'ERP Integration')).toEqual({
+            integration: 'ERP Integration',
+            system: `${base} ERP`,
+        });
     });
 
     it.each([[undefined], [''], ['   '], ['ERP Integration'], ['Integration'], ['ERP']])(
-        '%p gives the defaults',
+        '%p gives the default ERP name',
         (typed) => {
-            expect(pairNames(typed, 'ERP')).toEqual({ integration: 'Acme Integration', system: 'Acme ERP' });
+            expect(pairNames(typed, 'ERP', 'ERP Integration')).toEqual({
+                integration: 'ERP Integration',
+                system: 'Acme ERP',
+            });
         },
     );
 
     it('does not strip the system word from inside a word', () => {
-        expect(pairNames('Enterprise', 'ERP').system).toBe('Enterprise ERP');
+        expect(pairNames('Enterprise', 'ERP', 'ERP Integration').system).toBe('Enterprise ERP');
     });
 });
 
@@ -56,7 +62,7 @@ describe('pairNameInputs — against the real catalog', () => {
 
     it('records both names under the inputs each side deploys from', () => {
         expect(pairNameInputs(integration!, catalog, 'JustRite ERP Integration')).toEqual({
-            INTEGRATION_DISPLAY_NAME: 'JustRite Integration',
+            INTEGRATION_DISPLAY_NAME: integration!.name,
             ERP_DISPLAY_NAME: 'JustRite ERP',
         });
     });

@@ -3512,7 +3512,7 @@
             "anchors": [
                 "[],"
             ],
-            "line": 185,
+            "line": 192,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback whose dependency array is empty is stable for the component's whole life. The mutant replaces it with a one-element array holding the SAME string literal on every render, and React compares dependencies with Object.is per element, so the callback is still created once and never recreated. Nothing observable differs.",
@@ -3525,7 +3525,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 195,
+            "line": 202,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback whose dependency array is empty is stable for the component's whole life. The mutant replaces it with a one-element array holding the SAME string literal on every render, and React compares dependencies with Object.is per element, so the callback is still created once and never recreated. Nothing observable differs.",
@@ -5090,7 +5090,7 @@
             "anchors": [
                 "const ids = state.selectedAppBuilderComponents ?? [];"
             ],
-            "line": 199,
+            "line": 204,
             "mutants": 1,
             "category": "ArrayDeclaration",
             "reason": "Stryker fills the ?? [] fallback with a one-element array of its own marker string. Every id the loop cannot resolve is dropped: no source record is keyed by it, components.find returns undefined, and the iteration hits continue. The marker id therefore adds no row and the result is identical to the empty fallback.",

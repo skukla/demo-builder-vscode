@@ -23,7 +23,7 @@ import { withSelectedAppBuilderComponent } from '../wizard/appBuilderComponentSe
 import { buildEdsConfigFromStorefront } from './edsConfigFromStorefront';
 import { isMeshComponentId } from '@/core/constants';
 import { vscode } from '@/core/ui/utils/vscode-api';
-import { pairNameInputs } from '@/features/app-builder/services/pairNames';
+import { pairNameInputs, pairedSystemOf } from '@/features/app-builder/services/pairNames';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import {
     getNativeBlockLibraries,
@@ -90,11 +90,17 @@ export interface UseProjectBuilderReturn {
     onRemoveAppBuilderComponent: (id: string) => void;
     /**
      * Rename an AI-built instance: updates `appBuilderComponentSources[id].name`
-     * IN PLACE. Display name only — the id (folder, ow.package, keyed key),
-     * selection, and API picks are immutable. No-op for ids without a source
-     * record (catalog / legacy fixed-id blank selections have no name home).
+     * IN PLACE, or a paired catalog integration's own name input (the ERP
+     * integration's, which the dashboard renames too). Display name only — the id
+     * (folder, ow.package, keyed key), selection, and API picks are immutable.
+     * No-op for any other id (they have no name home).
      */
     onRenameAppBuilderComponent: (id: string, name: string) => void;
+    /**
+     * Rename the system a paired integration brings (its ERP), by the rule the
+     * add used. Only before creation: after it, the ERP's name is fixed.
+     */
+    onRenamePairedSystem: (id: string, name: string) => void;
 }
 
 /**
@@ -416,6 +422,19 @@ export function useProjectBuilder(
         [selectedAppBuilderComponents, state.appBuilderComponentSources, updateState],
     );
 
+    // Names before creation are inputs on the integration (safe to change: no id
+    // depends on them); the rest of its inputs are kept.
+    const writeNameInputs = useCallback(
+        (id: string, inputs: Record<string, string>) =>
+            updateState({
+                componentConfigs: {
+                    ...(state.componentConfigs ?? {}),
+                    [id]: { ...(state.componentConfigs?.[id] ?? {}), ...inputs },
+                },
+            }),
+        [state.componentConfigs, updateState],
+    );
+
     const onRenameAppBuilderComponent = useCallback(
         (id: string, name: string) => {
             const sources = state.appBuilderComponentSources ?? {};
@@ -426,21 +445,24 @@ export function useProjectBuilder(
                 });
                 return;
             }
-            // A pair (the ERP integration) is renamed by re-deriving BOTH names
-            // from the typed one — the same rule the add used. Safe before
-            // creation: neither id depends on the name.
             const catalog = getAppBuilderComponentCatalog();
             const entry = catalog.find((candidate) => candidate.id === id);
-            const names = entry && pairNameInputs(entry, catalog, name);
-            if (!names) return;
-            updateState({
-                componentConfigs: {
-                    ...(state.componentConfigs ?? {}),
-                    [id]: { ...(state.componentConfigs?.[id] ?? {}), ...names },
-                },
-            });
+            if (!entry?.nameFromEnvVar || !pairedSystemOf(entry, catalog)) return;
+            writeNameInputs(id, { [entry.nameFromEnvVar]: name });
         },
-        [state.appBuilderComponentSources, state.componentConfigs, updateState],
+        [state.appBuilderComponentSources, writeNameInputs, updateState],
+    );
+
+    const onRenamePairedSystem = useCallback(
+        (id: string, name: string) => {
+            const catalog = getAppBuilderComponentCatalog();
+            const entry = catalog.find((candidate) => candidate.id === id);
+            const systemKey = entry && pairedSystemOf(entry, catalog)?.nameFromEnvVar;
+            const names = entry && pairNameInputs(entry, catalog, name);
+            if (!systemKey || !names) return;
+            writeNameInputs(id, { [systemKey]: names[systemKey] });
+        },
+        [writeNameInputs],
     );
 
     const onRemoveAppBuilderComponent = useCallback(
@@ -506,5 +528,6 @@ export function useProjectBuilder(
         onAddCustomAppBuilderComponent,
         onRemoveAppBuilderComponent,
         onRenameAppBuilderComponent,
+        onRenamePairedSystem,
     };
 }

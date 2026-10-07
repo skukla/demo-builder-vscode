@@ -39,10 +39,10 @@ const addIntegrationSchema = {
         .string()
         .optional()
         .describe(
-            'For the ERP integration: the brand that names it AND its first ERP, e.g. "Justrite" ' +
-                'gives "Justrite Integration" and "Justrite ERP" (a trailing "ERP"/"Integration" is ' +
-                'dropped first; default "Acme"); fixed after the add. For a custom/blank instance: its ' +
-                'display name (defaults to the repo name).',
+            'For the ERP integration: the name of its first ERP, e.g. "Justrite" gives "Justrite ERP" ' +
+                '(a trailing "ERP"/"Integration" is dropped first; default "Acme ERP"); fixed after the ' +
+                'add. The integration itself is called "ERP Integration" (rename it with ' +
+                'rename_integration). For a custom/blank instance: its display name (defaults to the repo name).',
         ),
     instanceId: z
         .string()

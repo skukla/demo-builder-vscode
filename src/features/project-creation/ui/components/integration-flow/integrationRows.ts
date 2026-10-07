@@ -59,6 +59,11 @@ export interface IntegrationRow {
      */
     companion?: string;
     /**
+     * True when the companion's name can still be changed (the ERP, before the
+     * project is created) — the card's Settings opens it. Absent otherwise.
+     */
+    companionRenamable?: boolean;
+    /**
      * True when the package's resolved mesh requirement locks this row in the
      * build (mesh rows only; `requiresMesh` with the storefront override
      * honoured). The card layer withholds Remove and says why.
@@ -251,7 +256,7 @@ export function resolveIntegrationRows(
             // row/card lock the required mesh does.
             required: entry.requirement === 'required',
             ...(companion ? { companion } : {}),
-            ...(pair ? { renamable: true } : {}),
+            ...(pair ? { renamable: true, companionRenamable: true } : {}),
         });
     }
 

@@ -218,7 +218,12 @@ describe('resolveIntegrationRows — catalog rows', () => {
             MESH_ENTRY,
             catalog
         );
-        expect(named[0]).toMatchObject({ name: 'Justrite Integration', companion: 'Justrite ERP', renamable: true });
+        expect(named[0]).toMatchObject({
+            name: 'Justrite Integration',
+            companion: 'Justrite ERP',
+            renamable: true,
+            companionRenamable: true,
+        });
 
         const unnamed = resolveIntegrationRows(state({ selectedAppBuilderComponents: ['erp-sync'] }), MESH_ENTRY, catalog);
         expect(unnamed[0]).toMatchObject({ name: pairEntry.name, companion: 'ERP', renamable: true });
@@ -239,6 +244,7 @@ describe('resolveIntegrationRows — catalog rows', () => {
             [...CATALOG, erpSystem]
         );
         expect(rows[0]).not.toHaveProperty('renamable');
+        expect(rows[0]).not.toHaveProperty('companionRenamable');
     });
 
     it('catalog sourceLine falls back to "Catalog · {name}" when the description is empty', () => {

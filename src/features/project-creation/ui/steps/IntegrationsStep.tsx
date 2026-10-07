@@ -21,7 +21,8 @@
  * button opens it in `add` mode; the destination line's Set up / Change opens it
  * in `destination` mode; a card press or its Manage APIs opens it in `api-edit`
  * mode. Rename is the card's own inline pencil (the dashboard's treatment), which
- * is why there is no rename modal here any more.
+ * is why there is no rename modal here any more. The ERP integration's ERP is
+ * named in the card's Settings ({@link PairedSystemNameDialog}).
  *
  * The destination is rendered ONCE above the list rather than on every card —
  * it is one project and one workspace for the whole build.
@@ -57,6 +58,11 @@ import type { FlowMode } from '@/features/project-creation/ui/components/integra
 import { buildReservedIds } from '@/features/project-creation/ui/components/integration-flow/instanceId';
 import { isApiEditable, sublineFor, toIntegrationCards } from '@/features/project-creation/ui/components/integration-flow/integrationCards';
 import { resolveIntegrationRows, type IntegrationRow } from '@/features/project-creation/ui/components/integration-flow/integrationRows';
+import {
+    PairedSystemNameDialog,
+    pairedSystemTarget,
+    type PairedSystemNameTarget,
+} from '@/features/project-creation/ui/components/integration-flow/PairedSystemNameDialog';
 import type { ApiEditTarget } from '@/features/project-creation/ui/components/integration-flow/useIntegrationFlow';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { DemoPackage } from '@/types/demoPackages';
@@ -168,6 +174,7 @@ export function IntegrationsStep({
         onAppBuilderComponentToggle,
         onRemoveAppBuilderComponent,
         onRenameAppBuilderComponent,
+        onRenamePairedSystem,
     } = builder;
 
     // The one modal, opened in 'add' (launchpad), 'destination' (row Set up/Change),
@@ -206,6 +213,8 @@ export function IntegrationsStep({
         [state.selectedConsoleApis],
     );
     const closeModal = useCallback((): void => setModalOpen(false), []);
+    const [settingsTarget, setSettingsTarget] = useState<PairedSystemNameTarget | null>(null);
+    const closeSettings = useCallback((): void => setSettingsTarget(null), []);
 
     const meshComponent = useMemo(
         () => meshComponentForStack(state, packages, stacks),
@@ -326,9 +335,13 @@ export function IntegrationsStep({
             }
             if (action === 'manage-apis') {
                 openEditApis(row);
+                return;
+            }
+            if (action === 'settings') {
+                setSettingsTarget(pairedSystemTarget(row, integrationEntries));
             }
         },
-        [rowsById, onRemoveRow, openEditApis],
+        [rowsById, onRemoveRow, openEditApis, integrationEntries],
     );
 
     /**
@@ -338,7 +351,8 @@ export function IntegrationsStep({
      * lives here: `InlineRenameField` already cancels an empty or unchanged name
      * before calling this, so an "enter a name" branch would be unreachable.
      * Display name only — the id, its API picks, and the selection are immutable.
-     * For the ERP pair the typed name renames both halves (`pairNames`).
+     * For the ERP pair it renames the integration alone; its ERP is renamed in
+     * the card's Settings.
      */
     const commitRename = useCallback(
         async (id: string, raw: string): Promise<string | null> => {
@@ -421,6 +435,7 @@ export function IntegrationsStep({
                 builder={builder}
                 onSignIn={signIn}
             />
+            <PairedSystemNameDialog target={settingsTarget} onClose={closeSettings} onSave={onRenamePairedSystem} />
         </>
     );
 }

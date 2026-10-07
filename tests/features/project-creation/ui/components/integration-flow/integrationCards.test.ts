@@ -106,6 +106,14 @@ describe('toIntegrationCards', () => {
             expect(card.menuActions).toEqual(expected);
         });
 
+        it('offers Settings on a pair whose ERP can still be named, before Remove', () => {
+            const [card] = toIntegrationCards([
+                row({ kind: 'catalog', companion: 'Acme ERP', renamable: true, companionRenamable: true }),
+            ]);
+            expect(card.menuActions).toEqual(['settings', 'remove']);
+            expect(card.canRename).toBe(true);
+        });
+
         it('always offers Remove — every non-required row can be dropped from the build', () => {
             for (const kind of ['mesh', 'catalog', 'blank', 'custom'] as const) {
                 const [card] = toIntegrationCards([row({ kind })]);
