@@ -32,7 +32,10 @@ ERP install the same minute ran "npm install with Node 24" through fnm (`ensureF
 
 1. Pick the Node the AI tools need (the highest engine floor among ai-defaults packages,
    today 22) and use the managed one, as integrations do, for BOTH the install and the
-   `.mcp.json` command. Decide what happens when fnm cannot provide it.
+   `.mcp.json` command. Decide what happens when fnm cannot provide it. Reuse [[AB-3]]'s
+   mechanism rather than a second one: a catalog entry's `nodeVersion`, ensured through
+   `ensureFnmNodeVersion` and passed as `useNodeVersion`. [[AB-22]]'s "read the Node version
+   from `engines` / `.nvmrc`" could later derive the version for both.
 2. Move `@dropins/mcp` to `@dropins/ai-tools` (check the new package's bin path and tools).
 3. Both change the generated AI bundle, so follow `ai-context-authoring`: all four seams and
    an `AI_CONTEXT_VERSION` bump, so existing projects pick it up.
