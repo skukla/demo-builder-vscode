@@ -290,6 +290,12 @@ export type SetupCheckOutcome = 'passed' | 'failed' | 'unknown';
 export interface AppBuilderComponentState {
     kind: AppBuilderComponentKind;
     /**
+     * The Node this component installs and deploys on, recorded only when it is NOT
+     * Demo Builder's own: an integration from an SC's own repo whose `engines.node`
+     * range excludes it (PR-1a). Redeploy, update, teardown and cleanup read it back.
+     */
+    nodeVersion?: string;
+    /**
      * `'deploying'` is TRANSIENT: written when a deploy starts so pollers
      * (agents reading get_project, the grid) can tell an in-flight run from a
      * stale prior outcome — the previous error used to sit there looking

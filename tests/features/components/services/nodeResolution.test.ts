@@ -9,6 +9,8 @@ import {
     engineRangeOf,
     excludedNodeSources,
     listNodeSources,
+    nodeForRepoRange,
+    parseFnmReleases,
     type NodeRelease,
 } from '@/features/components/services/nodeResolution';
 
@@ -116,3 +118,40 @@ describe('chooseNode: the lowest long-term release every range accepts', () => {
         expect(result).toStrictEqual({ ok: false, blocking: ['old-mesh (^14 || ^16 || ^18)'] });
     });
 });
+
+describe('parseFnmReleases', () => {
+    it('reads versions and marks a codename as LTS', () => {
+        expect(parseFnmReleases('v22.23.3 (Jod)\nv25.9.0\nnot a line\n')).toStrictEqual([
+            { version: 'v22.23.3', lts: 'Jod' },
+            { version: 'v25.9.0', lts: false },
+        ]);
+    });
+});
+
+describe('nodeForRepoRange: an integration from an SC\'s own repo', () => {
+    it('takes Demo Builder\'s Node when the range accepts it (>=18 with a shared 24)', () => {
+        expect(nodeForRepoRange('>=18', '24', [], RELEASES)).toStrictEqual({ ok: true, major: '24' });
+    });
+
+    it('takes Demo Builder\'s Node when the repo declares no range', () => {
+        expect(nodeForRepoRange(undefined, '24', [], RELEASES)).toStrictEqual({ ok: true, major: '24' });
+    });
+
+    it('reuses a Node already in the folder before installing one (^22 with 22 in the folder)', () => {
+        expect(nodeForRepoRange('^22', '24', ['22', '24'], RELEASES)).toStrictEqual({ ok: true, major: '22' });
+    });
+
+    it('installs the lowest release the range accepts when nothing in the folder fits', () => {
+        expect(nodeForRepoRange('^22', '24', ['24'], RELEASES)).toStrictEqual({ ok: true, major: '22' });
+        expect(nodeForRepoRange('>=26', '24', ['24'], RELEASES)).toStrictEqual({ ok: true, major: '26' });
+    });
+
+    it('refuses a range no release satisfies, naming it', () => {
+        expect(nodeForRepoRange('>=99', '24', ['24'], RELEASES)).toStrictEqual({ ok: false, range: '>=99' });
+    });
+
+    it('still answers offline, from the range alone', () => {
+        expect(nodeForRepoRange('>=20', '24', [], [])).toStrictEqual({ ok: true, major: '24' });
+    });
+});
+

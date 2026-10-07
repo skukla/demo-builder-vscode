@@ -166,6 +166,36 @@ describe('addAppBuilderComponent — the definition handed to the installer', ()
 });
 
 // =============================================================================
+// An SC's own repo that needs another Node (PR-1a step 8)
+// =============================================================================
+
+describe('addAppBuilderComponent — an own repo\'s Node', () => {
+    it('ensures, installs on and records the Node the repo needs', async () => {
+        const ensureNodeVersion = jest.fn().mockResolvedValue(undefined);
+        const deps = createDeps({
+            resolveOwnRepoNode: jest.fn().mockResolvedValue({ ok: true, major: '26' }),
+            ensureNodeVersion,
+        });
+        const project = createProject();
+
+        await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps);
+
+        expect(ensureNodeVersion).toHaveBeenCalledWith('26');
+        expect(deps.componentManager.installComponent.mock.calls[0][2]).toStrictEqual({ nodeVersion: '26' });
+        expect(project.appBuilderComponents?.[INTEGRATION_ENTRY.id]?.nodeVersion).toBe('26');
+    });
+
+    it('refuses the add before anything runs when no Node meets the repo\'s range', async () => {
+        const deps = createDeps({ resolveOwnRepoNode: jest.fn().mockResolvedValue({ ok: false, range: '>=99' }) });
+
+        const result = await addAppBuilderComponent(createProject(), INTEGRATION_ENTRY, deps);
+
+        expect(result).toStrictEqual({ success: false, error: expect.stringContaining('asks for Node >=99') });
+        expect(deps.componentManager.installComponent).not.toHaveBeenCalled();
+    });
+});
+
+// =============================================================================
 // findMissingProvider — the guard must also LET THROUGH
 // =============================================================================
 

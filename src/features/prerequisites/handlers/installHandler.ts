@@ -237,12 +237,12 @@ async function executeInstallSteps(
 }
 
 /**
- * Install all plugins for a prerequisite across the appropriate Node versions.
- * A per-Node tool's plugins go beside it, under exactly the Nodes the tool was just
- * installed for (`toolVersions`, already limited to Nodes in the store and never
- * empty here: an empty list returns before installing). Before PR-1a a plugin chose
- * its own versions by matching component ids against display names, which never
- * matched, so it fell back to the first version.
+ * Install a prerequisite's plugins, ONCE. `aio plugins:install` writes to the SC's
+ * user folder (`~/.local/share/@adobe/aio-cli`), which every `aio` on the machine
+ * shares whatever Node runs it (verified 2026-10-07), so one install under any Node
+ * the tool was just installed for (`toolVersions`, never empty here) serves them all.
+ * Before PR-1a a plugin chose its own versions by matching component ids against
+ * display names, which never matched, so it fell back to the first version.
  */
 async function installPlugins(
     context: HandlerContext,
@@ -261,7 +261,7 @@ async function installPlugins(
         }
 
         const versionsToInstall: (string | undefined)[] = prereq.perNodeVersion && toolVersions?.length
-            ? toolVersions
+            ? [toolVersions[0]]
             : [undefined];
 
         for (const nodeVer of versionsToInstall) {

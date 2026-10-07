@@ -2,14 +2,11 @@
  * Default deps factory for the deploy-contract runner (Step 08).
  *
  * The runner ({@link appBuilderComponentRunner}) is pure orchestration with every external
- * boundary injected. This factory wires the REAL implementations — the existing
- * deploy tails (`deployMeshComponent`/`deployAppComponent`, NOT forked), the
- * step-07 API subscriber, and the step-04 storefront republish — so callers
- * (D2 dashboard/wizard wiring) get a ready-to-use deps bundle.
+ * boundary injected. This factory wires the REAL implementations (the deploy tails, NOT
+ * forked; the API subscriber; the storefront republish) into a ready-to-use bundle.
  *
- * This is the cross-feature orchestration seam: it imports from `@/features/mesh`
- * and `@/features/eds` here (orchestration layer), keeping `appBuilderComponentRunner.ts`
- * itself free of cross-feature deploy imports.
+ * The cross-feature orchestration seam: it imports `@/features/mesh` and `@/features/eds`
+ * so `appBuilderComponentRunner.ts` itself carries no cross-feature deploy imports.
  */
 
 import * as vscode from 'vscode';
@@ -45,13 +42,14 @@ import {
     fastForwardClone,
     type GitRunner,
 } from '@/features/app-builder/services/integrationSourceUpdate';
+import { githubRepoTextReader, ownRepoNodeResolver } from '@/features/app-builder/services/ownRepoNode';
 import { deleteUndeclaredActions } from '@/features/app-builder/services/runtimeUndeclaredActions';
 import { buildS2SDeployEnv } from '@/features/app-builder/services/s2sDeployEnv';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { ComponentManager } from '@/features/components/services/componentManager';
 import { ensureNode } from '@/features/components/services/nodeEnsure';
-import { ensureDaLiveAuth } from '@/features/eds/handlers/edsHelpers';
+import { ensureDaLiveAuth, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { republishStorefrontConfig } from '@/features/eds/services/storefront/storefrontRepublishService';
 import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
 import {
@@ -194,10 +192,12 @@ export function buildDefaultRunnerDeps(
         // The ONE isolating deploy seam (ADR-011 D3 Step 03) — every deploy routes
         // through it, so no un-isolated deploy survives.
         deployApp: deployAppComponentIsolated,
-        // Choice-dependent node versions resolve at the add door (the wizard's early
-        // prerequisites cannot), with the Adobe CLI under it: every add runs `aio`.
+        // The add door's Node, with the Adobe CLI under it (every add runs `aio`); an SC's
+        // own repo's Node is read from its package.json, GitHub clients built only then.
         ensureNodeVersion: (version) =>
             ensureNode(ctx.commandManager, { major: version, adobeCli: true }, ctx.logger),
+        resolveOwnRepoNode: (source) => ownRepoNodeResolver(githubRepoTextReader(
+            getGitHubServices(ctx.secrets).fileOperations), ctx.commandManager, ctx.logger)(source),
         // Post-deploy install for app-management lifecycle apps (automatic with
         // hands-back — owner decision 2026-08-27). The runner records the
         // outcome; a failure never fails the deploy.

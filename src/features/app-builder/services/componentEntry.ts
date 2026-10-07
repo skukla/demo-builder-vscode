@@ -11,9 +11,10 @@
  * @module features/app-builder/services/componentEntry
  */
 
-import { buildCustomIntegrationEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
+import { buildCustomIntegrationEntry , getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { pairedInstanceId } from '@/features/components/services/appBuilderComponentLinks';
-import { nodeForAppBuilderEntry } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode, nodeForAppBuilderEntry } from '@/features/components/services/nodeRequirements';
+import type { RepoNodeChoice } from '@/features/components/services/nodeResolution';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState, Project } from '@/types/base';
 
@@ -90,6 +91,7 @@ export function entryFromState(
     );
     return {
         ...entry,
+        ...(state.nodeVersion ? { nodeVersion: state.nodeVersion } : {}),
         kind: state.kind,
         providesEnvVars: state.providesEnvVars ? Object.keys(state.providesEnvVars) : undefined,
     };
@@ -106,3 +108,37 @@ export function entryFromState(
 export function nodeVersionOf(entry: Pick<AppBuilderComponentCatalogEntry, 'nodeVersion'>): string {
     return nodeForAppBuilderEntry(entry);
 }
+
+/** Reads an SC's own repo's Node range and picks its Node (`ownRepoNode.ts` builds it). */
+export type OwnRepoNodeResolver = (source: { owner: string; repo: string; branch?: string }) => Promise<RepoNodeChoice>;
+
+/** A repo the bundled catalog ships: its range is already part of Demo Builder's Node. */
+function isCatalogRepo(source: { owner: string; repo: string }): boolean {
+    return getAppBuilderComponentCatalog().some(
+        (entry) => entry.source.owner === source.owner && entry.source.repo === source.repo,
+    );
+}
+
+/**
+ * The entry to add, carrying the Node its repo needs when that is not Demo Builder's
+ * own (PR-1a step 8). Only an SC's own repo is read: every catalog repo's range is
+ * already part of the generated Node. An entry that already carries one (a redeploy
+ * from its record) keeps it.
+ *
+ * @returns the entry, or the reason the repo's range cannot be met
+ */
+export async function withOwnRepoNode(
+    entry: AppBuilderComponentCatalogEntry,
+    resolve: OwnRepoNodeResolver | undefined,
+): Promise<{ entry: AppBuilderComponentCatalogEntry } | { error: string }> {
+    if (!resolve || entry.nodeVersion || isCatalogRepo(entry.source)) return { entry };
+    const choice = await resolve(entry.source);
+    if (!choice.ok) {
+        return {
+            error: `${entry.source.owner}/${entry.source.repo} asks for Node ${choice.range}, and no Node release `
+                + 'satisfies it. Fix "engines.node" in its package.json, then add it again.',
+        };
+    }
+    return { entry: choice.major === demoBuilderNode() ? entry : { ...entry, nodeVersion: choice.major } };
+}
+

@@ -151,6 +151,24 @@ describe('which Node versions a plugin is installed for', () => {
         expect(result).toEqual(expect.objectContaining({ success: true }));
     });
 
+    it('installs the plugin ONCE when the tool goes under several Nodes (plugins are per user)', async () => {
+        // `aio plugins:install` writes to the SC's user folder, shared by every aio
+        // whatever Node runs it, so a second install would only repeat the first.
+        jest.spyOn(shared, 'perNodeToolMajors').mockReturnValue(['20', CLI_NODE]);
+        (shared.checkPerNodeVersionStatus as jest.Mock).mockResolvedValue({
+            perNodeVersionStatus: [],
+            perNodeVariantMissing: true,
+            missingVariantMajors: ['20', CLI_NODE],
+        });
+        aim(prereqWithPlugin({}, ['React App']));
+
+        await handleInstallPrerequisite(context, { prereqId: 0 });
+
+        expect((context.progressUnifier!.executeStep as jest.Mock).mock.calls.map((c) => c[4]))
+            .toEqual([{ nodeVersion: '20' }, { nodeVersion: CLI_NODE }]);
+        expect(pluginRunVersions(execute, PLUGIN_CMD)).toStrictEqual(['20']);
+    });
+
     it('runs the plugin command with the long timeout', async () => {
         aim(prereqWithPlugin({}, ['React App']));
 

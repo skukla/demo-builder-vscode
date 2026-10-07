@@ -213,3 +213,46 @@ export function chooseNode(ranges: Array<{ id: string; range?: string }>, releas
             .map((r) => `${r.id} (${r.range})`),
     };
 }
+
+/** `fnm list-remote` output as releases: a line is `v24.21.0 (Krypton)`, the codename marking LTS. */
+export function parseFnmReleases(stdout: string): NodeRelease[] {
+    return stdout
+        .split('\n')
+        .map((line) => /^\s*(v\d+\.\d+\.\d+)(?:\s+\(([^)]+)\))?/.exec(line))
+        .filter((match): match is RegExpExecArray => match !== null)
+        .map((match) => ({ version: match[1], lts: match[2] ?? false }));
+}
+
+/**
+ * The newest release of `major` satisfies `range`. With no release list for that major
+ * (offline), whether the range admits any of it at all.
+ */
+function majorFits(major: string, range: string, releases: NodeRelease[]): boolean {
+    const newest = releases
+        .filter((release) => String(semver.major(release.version)) === major)
+        .sort((a, b) => semver.rcompare(a.version, b.version))[0];
+    return newest ? semver.satisfies(newest.version, range) : semver.intersects(range, `${major}.x`);
+}
+
+export type RepoNodeChoice = { ok: true; major: string } | { ok: false; range: string };
+
+/**
+ * The Node an integration from an SC's own repo runs on (PR-1a step 8): Demo Builder's
+ * own if the repo's range accepts it; else a Node already in Demo Builder's folder that
+ * it accepts (lowest first); else the lowest release it accepts (`chooseNode`). A repo
+ * with no range takes Demo Builder's. A range nothing satisfies is refused, named.
+ */
+export function nodeForRepoRange(
+    range: string | undefined,
+    shared: string,
+    storeMajors: string[],
+    releases: NodeRelease[],
+): RepoNodeChoice {
+    if (!range || majorFits(shared, range, releases)) return { ok: true, major: shared };
+    const inStore = [...storeMajors]
+        .sort((a, b) => Number(a) - Number(b))
+        .find((major) => majorFits(major, range, releases));
+    if (inStore) return { ok: true, major: inStore };
+    const choice = chooseNode([{ id: 'repo', range }], releases);
+    return choice.ok ? choice : { ok: false, range };
+}

@@ -57,7 +57,14 @@ import type {
     AppManagementInstallOptions,
     AppManagementInstallResult,
 } from './appManagementUpgrade';
-import { catalogEntryFor, entryFromState, nodeVersionOf, pairedEntry } from './componentEntry';
+import {
+    catalogEntryFor,
+    entryFromState,
+    nodeVersionOf,
+    pairedEntry,
+    withOwnRepoNode,
+    type OwnRepoNodeResolver,
+} from './componentEntry';
 import {
     entriesSharingWorkspace,
     releaseWorkspaces,
@@ -354,6 +361,8 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
     fetchComponentSource?: (componentPath: string, branch: string) => Promise<SourceUpdateResult>;
     /** Whether a clone's branch has newer commits (integrationSourceUpdate); update check only. */
     checkComponentSource?: (componentPath: string, branch: string) => Promise<UpdateCheckResult>;
+    /** Reads an SC's own repo's Node range at the add door (PR-1a step 8); absent = Demo Builder's Node. */
+    resolveOwnRepoNode?: OwnRepoNodeResolver;
     /** npm install (and build) in an existing clone, on `nodeVersion`; update only. */
     installComponentDependencies?: (
         componentPath: string,
@@ -931,9 +940,13 @@ function atPairPosition(
  */
 export async function addAppBuilderComponent(
     project: Project,
-    entry: AppBuilderComponentCatalogEntry,
+    requested: AppBuilderComponentCatalogEntry,
     deps: AppBuilderComponentRunnerDeps,
 ): Promise<RunnerResult> {
+    // An SC's own repo may need a Node other than Demo Builder's (PR-1a step 8).
+    const resolved = await withOwnRepoNode(requested, deps.resolveOwnRepoNode);
+    if ('error' in resolved) return { success: false, error: resolved.error };
+    const { entry } = resolved;
     const boundSystem = await addBoundSystemFirst(project, entry, deps);
     if (!boundSystem.success) return { success: false, error: boundSystem.error };
     // After its system, the entry is the pair's second member.
@@ -1068,6 +1081,7 @@ async function runAdd(
                 ...(workspace ? { workspace } : {}),
                 ...(listId ? { listId } : {}),
                 ...(entry.catalogId ? { catalogId: entry.catalogId } : {}),
+                ...(entry.nodeVersion ? { nodeVersion: entry.nodeVersion } : {}),
                 kind: entry.kind,
                 status: 'deploying',
                 name: resolveDisplayName(entry, resolveDeployInputs(project, entry)),
