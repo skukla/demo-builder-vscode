@@ -30,7 +30,7 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
 
 import { deployAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
 import { MESH_ENTRY, createDeps, createProject } from './appBuilderComponentRunner.testUtils';
-import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 
 const ID = MESH_ENTRY.id;
 
@@ -150,7 +150,7 @@ describe('deployAppBuilderComponent — Node preparation', () => {
 
         await deployAppBuilderComponent(deployedMeshProject(), ID, deps);
 
-        expect(ensureNodeVersion).toHaveBeenCalledWith(adobeCliNodeVersion());
+        expect(ensureNodeVersion).toHaveBeenCalledWith(demoBuilderNode());
     });
 
     it('a Node preparation failure aborts the redeploy with fnm’s own reason', async () => {

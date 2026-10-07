@@ -8,7 +8,7 @@ import { buildComponent } from '@/core/shell/buildComponent';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 import type { MeshDeploymentResult } from '@/features/mesh/services/types';
 import type { Logger } from '@/types/logger';
 import { parseJSON, toError } from '@/types/typeGuards';
@@ -39,7 +39,7 @@ async function buildMeshComponent(
         componentPath,
         commandManager,
         {
-            nodeVersion: adobeCliNodeVersion(),
+            nodeVersion: demoBuilderNode(),
             kind: 'mesh',
             buildArgs: '-- --force',
             logPrefix: '[Mesh Deployment]',
@@ -182,7 +182,7 @@ export async function deployMeshComponent(
                         }
                     },
                     configureTelemetry: false,
-                    useNodeVersion: adobeCliNodeVersion(),
+                    useNodeVersion: demoBuilderNode(),
                     enhancePath: true,
                 },
             );

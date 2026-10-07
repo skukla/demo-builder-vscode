@@ -5,10 +5,7 @@
     "infrastructure": {
         "adobe-cli": {
             "name": "Adobe I/O CLI & SDK",
-            "description": "Command-line interface and SDK for Adobe I/O services",
-            "configuration": {
-                "nodeVersion": "24"
-            }
+            "description": "Command-line interface and SDK for Adobe I/O services"
         }
     },
 
@@ -62,7 +59,6 @@
                 "dark": "nextjs-file-icon-dark.svg"
             },
             "configuration": {
-                "nodeVersion": "24",
                 "requiredEnvVars": [
                     "ADOBE_COMMERCE_URL",
                     "ADOBE_COMMERCE_ENVIRONMENT_ID",
@@ -274,7 +270,6 @@
                 }
             },
             "configuration": {
-                "nodeVersion": "18",
                 "requiredEnvVars": [
                     "ACO_API_URL",
                     "ACO_API_KEY",

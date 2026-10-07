@@ -18,7 +18,7 @@ import {
     getAppBuilderComponentEntry,
     buildCustomIntegrationEntry,
 } from '@/features/components/services/appBuilderComponentCatalogLoader';
-import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { HandlerContext } from '@/types/handlers';
 import type { OperationPosition } from '@/types/webviewPayloads';
@@ -81,7 +81,7 @@ export async function ensureWorkspaceRuntimeReady(
     // The namespace check runs via CLI (needs withOrgContext targeting); the SDK
     // `createRuntimeNamespace` provision takes explicit ids (targeting-agnostic).
     await withOrgContext(target, () =>
-        ensureWorkspaceRuntime(commandManager, context.logger, adobeCliNodeVersion(), () =>
+        ensureWorkspaceRuntime(commandManager, context.logger, demoBuilderNode(), () =>
             authService.ensureWorkspaceRuntimeNamespace(organization, projectId, workspace),
         ),
     );

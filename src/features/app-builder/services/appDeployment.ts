@@ -39,7 +39,7 @@ import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 import type { Logger } from '@/types/logger';
 import { toError } from '@/types/typeGuards';
 
@@ -47,7 +47,7 @@ export type { AppDeploymentResult };
 
 /** The entry's node from the register (its own, else the Adobe CLI's), PR-1a. */
 function resolveNodeVersion(declared?: string): string {
-    return declared || adobeCliNodeVersion();
+    return declared || demoBuilderNode();
 }
 
 type ProgressCallback = (message: string, subMessage?: string) => void;
@@ -193,7 +193,7 @@ async function refreshGlobalAioCli(
         shell: DEFAULT_SHELL,
         timeout: TIMEOUTS.VERY_LONG,
         enhancePath: true,
-        useNodeVersion: adobeCliNodeVersion(),
+        useNodeVersion: demoBuilderNode(),
     });
     if (result.code !== 0) {
         const detail =

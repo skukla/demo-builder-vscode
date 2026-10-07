@@ -14,6 +14,7 @@ import * as path from 'path';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 import { TransformedComponentDefinition } from '@/types/components';
 import type { Logger } from '@/types/logger';
 
@@ -53,11 +54,11 @@ export class ComponentDependencies {
         this.logger.debug(`[ComponentManager] Installing dependencies for ${componentDef.name}`);
 
         const commandManager = this.commandManager;
-        const nodeVersion = componentDef.configuration?.nodeVersion;
+        const nodeVersion = demoBuilderNode();
         const installCommand = 'npm install';
 
         this.logger.debug(
-            `[ComponentManager] Running: ${installCommand} with Node ${nodeVersion || 'default'} in ${componentPath}`,
+            `[ComponentManager] Running: ${installCommand} with Node ${nodeVersion} in ${componentPath}`,
         );
 
         const installTimeout = componentDef.source?.timeouts?.install || TIMEOUTS.VERY_LONG;
@@ -66,7 +67,7 @@ export class ComponentDependencies {
             cwd: componentPath,
             timeout: installTimeout,
             enhancePath: true,
-            useNodeVersion: nodeVersion || null,
+            useNodeVersion: nodeVersion,
             shell: DEFAULT_SHELL,
         });
 
@@ -89,7 +90,7 @@ export class ComponentDependencies {
             cwd: componentPath,
             timeout: TIMEOUTS.LONG,
             enhancePath: true,
-            useNodeVersion: nodeVersion || null,
+            useNodeVersion: nodeVersion,
             shell: DEFAULT_SHELL,
         });
 

@@ -19,6 +19,7 @@ import {
     mockFs,
     resetDoubles,
 } from './componentInstallation.testUtils';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 
 /**
  * Answer each git command by NAME rather than by call order.
@@ -153,25 +154,25 @@ describe('detectVersion — strategy 3, the commit hash', () => {
 });
 
 describe('the Node version the component runs on', () => {
-    const withNode = () =>
-        makeDef({ configuration: { nodeVersion: '20.11.0' } } as Record<string, unknown>);
-
-    it('records the configured version in the instance metadata, keeping what was there', async () => {
+    it("records Demo Builder's Node in the instance metadata, keeping what was there", async () => {
         const existing = instance({ metadata: { daLiveOrg: 'acme' } });
 
-        const result = await install(withNode(), {}, existing);
+        const result = await install(makeDef(), {}, existing);
 
-        expect(result.component?.metadata).toEqual({ daLiveOrg: 'acme', nodeVersion: '20.11.0' });
+        expect(result.component?.metadata).toEqual({
+            daLiveOrg: 'acme',
+            nodeVersion: demoBuilderNode(),
+        });
     });
 
-    it('leaves metadata alone when no Node version is configured', async () => {
-        const result = await install();
+    it('leaves metadata alone for a component that installs nothing', async () => {
+        const result = await install(makeDef({ configuration: { skipNpmInstall: true } }));
 
         expect(result.component?.metadata).toBeUndefined();
     });
 
     it('writes no .node-version file: the project record is the one record (PR-1a)', async () => {
-        await install(withNode());
+        await install();
 
         expect(mockFs.writeFile).not.toHaveBeenCalled();
     });

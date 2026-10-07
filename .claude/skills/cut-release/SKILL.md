@@ -27,6 +27,12 @@ branch-protection notice, **not** a failure.
 3. `gh` is authenticated (as `skukla`). `gh auth status` if in doubt.
 4. Determine `<N>`: current `package.json` version is `1.0.0-beta.<prev>`; the new
    one is `<prev>+1` unless the user says otherwise.
+5. **The Node Demo Builder ships on is current:** `npm run node:resolve -- --check`. It
+   re-reads every shipped component's own `engines.node` and fails if the generated
+   `node-version.generated.json` no longer matches, or if the ranges stopped overlapping
+   (it names the components that block). Out of date: run `npm run node:resolve`, review
+   the changed Node and its sources, and commit it before cutting. A conflict is fixed in
+   the component's own repo, never by editing the generated file (PR-1a).
 
 ## Out-of-band passes (offer BEFORE cutting, once the tree is clean)
 

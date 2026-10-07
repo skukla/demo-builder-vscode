@@ -10,7 +10,7 @@
  */
 
 import type { ComponentRegistryManager } from './ComponentRegistryManager';
-import { nodeForComponent } from './nodeRequirements';
+import { demoBuilderNode } from './nodeRequirements';
 import { isMeshComponentId } from '@/core/constants';
 import type { TransformedComponentDefinition } from '@/types/components';
 import { ProjectConfig } from '@/types/handlers';
@@ -207,7 +207,7 @@ export class DependencyResolver {
         config.frontend = {
             id: frontend.id,
             port: frontend.configuration?.port || defaultPort,
-            nodeVersion: nodeForComponent(frontend.id),
+            nodeVersion: demoBuilderNode(),
         };
         config.backend = {
             id: backend.id,

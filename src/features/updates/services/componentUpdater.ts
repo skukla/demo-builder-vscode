@@ -8,6 +8,7 @@ import { classifyTransience, extractErrorMessage } from '@/core/errors';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 import { Project } from '@/types/base';
 import type { TransformedComponentDefinition } from '@/types/components';
 import type { Logger } from '@/types/logger';
@@ -22,9 +23,12 @@ import { parseJSON } from '@/types/typeGuards';
  */
 const BUILD_OUTPUT_LOG_LIMIT = 500;
 
-/** The node version a catalog entry asks for, or null when it does not say. */
+/**
+ * The Node a component installs under: Demo Builder's own (PR-1a), or null for one
+ * that installs nothing (an EDS storefront) or that the catalog does not know.
+ */
 function nodeVersionOf(componentDef: TransformedComponentDefinition | undefined): string | null {
-    return componentDef?.configuration?.nodeVersion || null;
+    return componentDef && componentDef.configuration?.skipNpmInstall !== true ? demoBuilderNode() : null;
 }
 
 export class ComponentUpdater {

@@ -1,6 +1,5 @@
 {
   "$schema": "./ai-defaults.schema.json",
-  "nodeVersion": "24",
   "mcpServers": [
     {
       "id": "commerce-extensibility",

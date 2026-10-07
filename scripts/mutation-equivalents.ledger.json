@@ -6470,7 +6470,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 321,
+            "line": 324,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying the catch in the private directoryExists() makes it return undefined instead of false. All three call sites read the result in boolean position only \u2014 'forceReinstall && toolExists', '!toolExists || forceReinstall', '!dataRepoExists' \u2014 and the method is private with no other reference, so undefined and false are the same value to every consumer. No test can observe the difference.",
@@ -9899,19 +9899,6 @@
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/components/services/ComponentRegistryManager.ts",
-            "anchors": [
-                "if (frontendId) {"
-            ],
-            "line": 354,
-            "mutants": 1,
-            "category": "branch",
-            "reason": "Forcing this guard true is unobservable: the body then calls getComponentById(undefined), which searches the flattened component list for an entry whose id equals undefined. No component has one, so the lookup returns undefined and the optional chain on the next line skips exactly as the guard would have - the guard saves a scan of the list, not a wrong answer. Forcing it FALSE is killed, by the test that this selection reaches the map.",
-            "decision": "Recorded as equivalent. The lookup's own miss is what makes the guard redundant.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
             "module": "src/features/mesh/services/meshVerifier.ts",
             "anchors": [
                 "if (!output || output.trim().length === 0) {"
@@ -10142,7 +10129,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 169,
+            "line": 170,
             "mutants": 1,
             "category": "block",
             "reason": "The else body is a single logger.warn. Emptying it changes which log line prints and nothing else: componentInstance.version is already left unset on this path, and the install result is identical either way.",
@@ -10155,7 +10142,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 235,
+            "line": 236,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger.debug. Emptying it leaves detectedVersion untouched and falls through to the commit-hash strategy exactly as before; only the log line differs.",

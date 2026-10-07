@@ -35,6 +35,7 @@ import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { ensureFnmNodeVersion } from '@/core/shell/ensureNodeVersion';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 import type { AiDefaults } from '@/types/aiDefaults';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
@@ -46,7 +47,7 @@ const aiDefaults: AiDefaults = aiDefaultsConfig as AiDefaults;
  * One value, read by the installer, the update path (`adobeMcpUpdateCore`) and
  * the launch line (`mcpConfigWriter`), so the three cannot disagree.
  */
-export const AI_TOOLS_NODE_VERSION = aiDefaults.nodeVersion;
+export const AI_TOOLS_NODE_VERSION = demoBuilderNode();
 
 /** Isolated MCP tools directory name, at the project root (outside any git repo). */
 const MCP_TOOLS_DIRNAME = '.demo-builder-mcp';

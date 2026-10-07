@@ -12,6 +12,7 @@
 
 import * as fs from 'fs/promises';
 import { ComponentDependencies } from '@/features/components/services/componentDependencies';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { TransformedComponentDefinition } from '@/types/components';
@@ -41,7 +42,7 @@ function componentDef(
     return {
         id: 'demo',
         name: 'Demo Component',
-        configuration: { nodeVersion: '20' },
+        configuration: {},
         ...overrides,
     } as TransformedComponentDefinition;
 }
@@ -67,7 +68,7 @@ describe('ComponentDependencies', () => {
         it.each([
             ['installNpmDependencies', false],
             ['installDependenciesForComponent', true],
-        ])('%s runs npm install with the component Node version', async (method, needsSkipArg) => {
+        ])("%s runs npm install on Demo Builder's Node", async (method, needsSkipArg) => {
             packageJsonExists(true);
             const deps = new ComponentDependencies(logger(), executor);
 
@@ -81,7 +82,7 @@ describe('ComponentDependencies', () => {
                 'npm install',
                 expect.objectContaining({
                     cwd: '/p',
-                    useNodeVersion: '20',
+                    useNodeVersion: demoBuilderNode(),
                     enhancePath: true,
                     timeout: TIMEOUTS.VERY_LONG,
                 })
@@ -109,7 +110,7 @@ describe('ComponentDependencies', () => {
 
             await deps.installNpmDependencies(
                 '/p',
-                componentDef({ configuration: { nodeVersion: '20', buildScript: 'build' } })
+                componentDef({ configuration: { buildScript: 'build' } })
             );
 
             expect(mockExecute).toHaveBeenNthCalledWith(1, 'npm install', expect.anything());
@@ -155,7 +156,7 @@ describe('ComponentDependencies', () => {
 
             await new ComponentDependencies(log, executor).installNpmDependencies(
                 '/p',
-                componentDef({ configuration: { nodeVersion: '20', buildScript: 'build' } })
+                componentDef({ configuration: { buildScript: 'build' } })
             );
 
             expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('Build failed'));
@@ -274,7 +275,7 @@ describe('strictInstall', () => {
 // any one of them throws a TypeError mid-install; measured 2026-09-06, no test
 // entered any of those shapes.
 describe('component definitions that omit a block', () => {
-    it('installs with the default Node when the definition has no configuration', async () => {
+    it("installs on Demo Builder's Node when the definition has no configuration", async () => {
         packageJsonExists(true);
 
         await new ComponentDependencies(logger(), executor).installNpmDependencies(
@@ -284,7 +285,7 @@ describe('component definitions that omit a block', () => {
 
         expect(mockExecute).toHaveBeenCalledWith(
             'npm install',
-            expect.objectContaining({ useNodeVersion: null })
+            expect.objectContaining({ useNodeVersion: demoBuilderNode() })
         );
     });
 
@@ -317,9 +318,9 @@ describe('component definitions that omit a block', () => {
 
 describe('the build step', () => {
     const withBuild = () =>
-        componentDef({ configuration: { nodeVersion: '20', buildScript: 'build' } });
+        componentDef({ configuration: { buildScript: 'build' } });
 
-    it('runs under the component Node version, on an enhanced PATH, in the default shell', async () => {
+    it("runs under Demo Builder's Node, on an enhanced PATH, in the default shell", async () => {
         packageJsonExists(true);
 
         await new ComponentDependencies(logger(), executor).installNpmDependencies(
@@ -332,7 +333,7 @@ describe('the build step', () => {
             'npm run build',
             expect.objectContaining({
                 enhancePath: true,
-                useNodeVersion: '20',
+                useNodeVersion: demoBuilderNode(),
                 shell: DEFAULT_SHELL,
             })
         );

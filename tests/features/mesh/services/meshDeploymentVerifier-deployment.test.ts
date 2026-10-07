@@ -1,5 +1,5 @@
 import { waitForMeshDeployment } from '@/features/mesh/services/meshDeploymentVerifier';
-import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
     createMockCommandManager,
@@ -164,7 +164,7 @@ describe('MeshDeploymentVerifier - Deployment Verification', () => {
             expect(mockCommandManager.execute).toHaveBeenNthCalledWith(2, 'aio api-mesh:describe', {
                 timeout: TIMEOUTS.NORMAL,
                 configureTelemetry: false,
-                useNodeVersion: adobeCliNodeVersion(),
+                useNodeVersion: demoBuilderNode(),
                 enhancePath: true,
             });
         });

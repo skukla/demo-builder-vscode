@@ -16,6 +16,7 @@ import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateGitHubDownloadURL } from '@/core/validation/URLValidator';
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 import { createMockProject } from '../../../helpers/projectFake';
 
 const DOWNLOAD = 'https://github.com/test/repo/archive/v1.0.0.zip';
@@ -242,27 +243,24 @@ describe('ComponentUpdater — plumbing', () => {
             expect(h.executor.execute).toHaveBeenNthCalledWith(
                 2,
                 'npm install --no-fund',
-                npmOpts(null)
+                npmOpts(demoBuilderNode())
             );
         });
 
-        it('runs the configured build with the node version from the catalog', async () => {
-            registryAnswers({
-                id: 'test-component',
-                configuration: { buildScript: 'build', nodeVersion: '20' },
-            });
+        it("runs the configured build on Demo Builder's Node", async () => {
+            registryAnswers({ id: 'test-component', configuration: { buildScript: 'build' } });
 
             await h.updater.updateComponent(h.project, 'test-component', DOWNLOAD, '1.0.0');
 
             expect(h.executor.execute).toHaveBeenNthCalledWith(
                 2,
                 'npm install --no-fund',
-                npmOpts('20')
+                npmOpts(demoBuilderNode())
             );
             expect(h.executor.execute).toHaveBeenNthCalledWith(
                 3,
                 'npm run build -- --force',
-                npmOpts('20')
+                npmOpts(demoBuilderNode())
             );
         });
 
@@ -323,16 +321,18 @@ describe('ComponentUpdater — plumbing', () => {
     });
 
     describe('the recorded Node version (PR-1a)', () => {
-        it('rewrites the record to the version it was just installed under', async () => {
-            registryAnswers({ id: 'test-component', configuration: { nodeVersion: '24' } });
+        it('rewrites the record to the Node it was just installed under', async () => {
+            registryAnswers({ id: 'test-component', configuration: {} });
 
             await h.updater.updateComponent(h.project, 'test-component', DOWNLOAD, '1.0.0');
 
-            expect(h.project.componentInstances?.['test-component'].metadata?.nodeVersion).toBe('24');
+            expect(h.project.componentInstances?.['test-component'].metadata?.nodeVersion).toBe(
+                demoBuilderNode()
+            );
         });
 
-        it('leaves the record alone for a component that declares no version', async () => {
-            registryAnswers({ id: 'test-component', configuration: {} });
+        it('leaves the record alone for a component that installs nothing', async () => {
+            registryAnswers({ id: 'test-component', configuration: { skipNpmInstall: true } });
             const before = h.project.componentInstances?.['test-component'].metadata;
 
             await h.updater.updateComponent(h.project, 'test-component', DOWNLOAD, '1.0.0');
@@ -342,8 +342,8 @@ describe('ComponentUpdater — plumbing', () => {
     });
 
     describe('rollback', () => {
-        it('removes the broken tree recursively before restoring, then reinstalls with the catalog node version', async () => {
-            registryAnswers({ id: 'test-component', configuration: { nodeVersion: '20' } });
+        it("removes the broken tree recursively before restoring, then reinstalls on Demo Builder's Node", async () => {
+            registryAnswers({ id: 'test-component', configuration: {} });
             shellAnswers(h, { code: 1, stderr: 'unzip: bad zip' });
 
             await rejection(h);
@@ -351,7 +351,7 @@ describe('ComponentUpdater — plumbing', () => {
             expect(fs.rm).toHaveBeenNthCalledWith(2, COMPONENT, RM_OPTS);
             expect(h.executor.execute).toHaveBeenLastCalledWith(
                 'npm install --no-fund',
-                npmOpts('20')
+                npmOpts(demoBuilderNode())
             );
             expect(h.logger.warn).not.toHaveBeenCalled();
         });

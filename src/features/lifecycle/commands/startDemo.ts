@@ -12,7 +12,7 @@ import { ExecutionLock } from '@/core/utils/executionLock';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateNodeVersion } from '@/core/validation/validators/NodeVersionValidator';
-import { nodeForComponent } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 import { getComponentIds, getComponentInstancesByType, getComponentInstanceValues } from '@/types/typeGuards';
 import type { DemoStateChangedPayload } from '@/types/webviewPayloads';
 
@@ -275,7 +275,7 @@ export class StartDemoCommand extends BaseCommand {
                 const frontendPath = frontendComponent.path;
                 // Extract nodeVersion from metadata with proper type coercion
                 const rawNodeVersion = frontendComponent.metadata?.nodeVersion;
-                const nodeVersion = typeof rawNodeVersion === 'string' ? rawNodeVersion : nodeForComponent(frontendComponent.id);
+                const nodeVersion = typeof rawNodeVersion === 'string' ? rawNodeVersion : demoBuilderNode();
 
                 // SECURITY: Validate nodeVersion before using in terminal command
                 // Prevents command injection (CWE-77) if project state is corrupted

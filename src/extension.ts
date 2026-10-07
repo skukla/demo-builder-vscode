@@ -72,7 +72,7 @@ import { registerValidateSelectionTool } from '@/features/ai/server/validateSele
 import { registerViewTools } from '@/features/ai/server/viewTools';
 import { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { sweepCommerceSecrets } from '@/features/components/services/commerceSecretSweep';
-import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 import {
     ProjectDashboardWebviewCommand,
     shouldAutoReopenProjectsList,
@@ -207,7 +207,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // The Node every `aio` command runs on, from the register (PR-1a). Core cannot
     // import the catalogs, so the value is handed to the command runner here.
-    setAdobeCliNodeVersion(adobeCliNodeVersion());
+    setAdobeCliNodeVersion(demoBuilderNode());
 
     // Name the build BEFORE anything else can fail: with several checkouts on one
     // machine, F5 binds to whichever window had focus, and "which dist/ is this?"

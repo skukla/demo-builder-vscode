@@ -33,7 +33,7 @@ jest.mock('@/features/prerequisites/services/versioning/MultiVersionDetector', (
     getInstalledNodeVersions: jest.fn(),
 }));
 
-import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 import { handleInstallPrerequisite } from '@/features/prerequisites/handlers/installHandler';
 import { getInstalledNodeVersions } from '@/features/prerequisites/services/versioning/MultiVersionDetector';
 import type { HandlerContext } from '@/types/handlers';
@@ -46,7 +46,7 @@ import {
 } from './installHandler.testUtils';
 
 /** The Node the CLI and its plugins live under (`perNodeToolMajors`). */
-const CLI_NODE = adobeCliNodeVersion();
+const CLI_NODE = demoBuilderNode();
 
 const PLUGIN_COMMANDS = {
     message: 'Installing API Mesh plugin',

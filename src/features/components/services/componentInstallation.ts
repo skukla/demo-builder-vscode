@@ -15,6 +15,7 @@ import * as vscode from 'vscode';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 import type {
     ComponentInstallOptions,
     ComponentInstallResult,
@@ -172,11 +173,11 @@ export class ComponentInstallation {
             );
         }
 
-        // Store Node version in metadata for runtime use
-        if (componentDef.configuration?.nodeVersion) {
+        // Record the Node it was installed under, for Start and cleanup (PR-1a)
+        if (componentDef.configuration?.skipNpmInstall !== true) {
             componentInstance.metadata = {
                 ...componentInstance.metadata,
-                nodeVersion: componentDef.configuration.nodeVersion,
+                nodeVersion: demoBuilderNode(),
             };
         }
 

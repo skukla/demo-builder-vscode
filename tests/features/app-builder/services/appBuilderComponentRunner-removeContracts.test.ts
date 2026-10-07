@@ -37,7 +37,7 @@ import { removeAppBuilderComponent } from '@/features/app-builder/services/appBu
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 import {
     INTEGRATION_ENTRY,
     MESH_ENTRY,
@@ -122,7 +122,7 @@ describe('removeAppBuilderComponent — the teardown command', () => {
         expect(deps.commandManager.execute).toHaveBeenCalledWith('aio app undeploy', {
             cwd: `/proj/components/${APP_ID}`,
             streaming: true,
-            useNodeVersion: adobeCliNodeVersion(),
+            useNodeVersion: demoBuilderNode(),
             enhancePath: true,
             shell: true,
             timeout: TIMEOUTS.LONG,
@@ -137,7 +137,7 @@ describe('removeAppBuilderComponent — the teardown command', () => {
 
         expect(deps.commandManager.execute).toHaveBeenCalledWith(MESH_DELETE_COMMAND, {
             cwd: `/proj/components/${MESH_ID}`,
-            useNodeVersion: adobeCliNodeVersion(),
+            useNodeVersion: demoBuilderNode(),
             enhancePath: true,
             streaming: true,
             shell: true,

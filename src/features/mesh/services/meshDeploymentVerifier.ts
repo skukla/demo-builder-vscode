@@ -8,7 +8,7 @@ import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateMeshId } from '@/core/validation/validators/AdobeResourceValidator';
-import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 import type { Logger } from '@/types/logger';
 import { parseJSON } from '@/types/typeGuards';
 
@@ -153,7 +153,7 @@ export async function waitForMeshDeployment(
             const verifyResult = await commandManager.execute('aio api-mesh get', {
                 timeout: TIMEOUTS.NORMAL,
                 configureTelemetry: false,
-                useNodeVersion: adobeCliNodeVersion(),
+                useNodeVersion: demoBuilderNode(),
                 enhancePath: true,
                 shell: true,
             });
@@ -196,7 +196,7 @@ async function getEndpoint(
             {
                 timeout: TIMEOUTS.NORMAL,
                 configureTelemetry: false,
-                useNodeVersion: adobeCliNodeVersion(),
+                useNodeVersion: demoBuilderNode(),
                 enhancePath: true,
             },
         );

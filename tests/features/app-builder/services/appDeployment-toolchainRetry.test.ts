@@ -38,7 +38,7 @@ import {
     isToolchainStalenessError,
 } from '@/features/app-builder/services/appDeployment';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
-import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
@@ -273,7 +273,7 @@ describe('the CLI refresh command', () => {
             shell: DEFAULT_SHELL,
             timeout: 3000,
             enhancePath: true,
-            useNodeVersion: adobeCliNodeVersion(),
+            useNodeVersion: demoBuilderNode(),
         });
     });
 

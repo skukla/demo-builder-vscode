@@ -63,6 +63,7 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 }));
 
 // Import after mocks
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 import type { ToolManager } from '@/features/eds/services/toolManager';
 import type { ACOConfig } from '@/features/eds/services/types';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
@@ -323,17 +324,12 @@ describe('ToolManager', () => {
             expect(result.success).toBe(true);
         });
 
-        it('should use Node 18+ for tool execution', async () => {
-            // Given: Tool is installed
-            // When: Executing any tool command
+        it("runs the tool on Demo Builder's Node", async () => {
             await toolManager.executeAcoIngestion();
 
-            // Then: Should use Node 18+ (useNodeVersion option)
             expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 expect.any(String),
-                expect.objectContaining({
-                    useNodeVersion: expect.stringMatching(/^18|^20|^22|auto/),
-                })
+                expect.objectContaining({ useNodeVersion: demoBuilderNode() })
             );
         });
 

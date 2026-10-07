@@ -4,7 +4,7 @@ import {
     fetchRuntimeCredentials,
     readRuntimeCredentials,
 } from '@/features/app-builder/services/runtimeCredentials';
-import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 
 /**
  * deployAppComponent Test Suite
@@ -152,7 +152,7 @@ describe('deployAppComponent', () => {
                     streaming: true,
                     shell: true,
                     timeout: 180000,
-                    useNodeVersion: adobeCliNodeVersion(),
+                    useNodeVersion: demoBuilderNode(),
                     enhancePath: true,
                 })
             );
@@ -476,7 +476,7 @@ describe('deployAppComponent', () => {
                 cwd: '/app',
                 shell: true,
                 timeout: 180000,
-                useNodeVersion: adobeCliNodeVersion(),
+                useNodeVersion: demoBuilderNode(),
                 enhancePath: true,
                 env: {
                     AIO_RUNTIME_NAMESPACE: 'test-namespace',
@@ -557,14 +557,14 @@ describe('extension layout: workspace config import', () => {
         expect(optionsFor('aio console workspace download')).toEqual({
             shell: true,
             timeout: 180000,
-            useNodeVersion: adobeCliNodeVersion(),
+            useNodeVersion: demoBuilderNode(),
             enhancePath: true,
         });
         expect(optionsFor('aio app use')).toEqual({
             cwd: '/app',
             shell: true,
             timeout: 180000,
-            useNodeVersion: adobeCliNodeVersion(),
+            useNodeVersion: demoBuilderNode(),
             enhancePath: true,
         });
     });

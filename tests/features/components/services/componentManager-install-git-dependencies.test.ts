@@ -13,6 +13,7 @@
  */
 
 import { ComponentManager } from '@/features/components/services/componentManager';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 import { Project } from '@/types/base';
 import { TransformedComponentDefinition } from '@/types/components';
 import { Logger } from '@/types/logger';
@@ -36,7 +37,7 @@ describe('ComponentManager - Installation (Git Dependencies)', () => {
     });
 
     describe('Node version management', () => {
-        it('should use correct Node version for npm install', async () => {
+        it("runs npm install on Demo Builder's Node", async () => {
             mockFileExists();
 
             const componentDef: TransformedComponentDefinition = {
@@ -47,9 +48,6 @@ describe('ComponentManager - Installation (Git Dependencies)', () => {
                     type: 'git',
                     url: 'https://github.com/test/repo.git'
                 },
-                configuration: {
-                    nodeVersion: '18.19.0'
-                }
             };
 
             await componentManager.installComponent(mockProject, componentDef);
@@ -59,7 +57,7 @@ describe('ComponentManager - Installation (Git Dependencies)', () => {
                 call => call[0].includes('npm install')
             );
             expect(npmInstallCall[1]).toMatchObject({
-                useNodeVersion: '18.19.0'
+                useNodeVersion: demoBuilderNode(),
             });
         });
     });

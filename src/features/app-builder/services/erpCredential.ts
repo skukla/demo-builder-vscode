@@ -20,7 +20,7 @@ import type { ErpAuth } from './erpList';
 import { fetchWorkspaceS2SCredential } from './runtimeCredentials';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { buildOrgTargetFromProjectAdobe, withOrgContext, type CachedOrgRef } from '@/core/shell/orgContextEnv';
-import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 import type { AppBuilderComponentState, Project } from '@/types/base';
 
 type Workspace = NonNullable<AppBuilderComponentState['workspace']>;
@@ -43,7 +43,7 @@ export function erpCredentialReader(
 ): ErpCredentialRead {
     return async (workspace) => {
         const target = { ...buildOrgTargetFromProjectAdobe(project.adobe, cachedOrg), workspaceId: workspace.id };
-        const credential = await withOrgContext(target, () => fetchWorkspaceS2SCredential(commandManager, adobeCliNodeVersion()));
+        const credential = await withOrgContext(target, () => fetchWorkspaceS2SCredential(commandManager, demoBuilderNode()));
         if (!credential) {
             throw new Error(`the ${workspace.name} workspace has no OAuth server-to-server credential`);
         }

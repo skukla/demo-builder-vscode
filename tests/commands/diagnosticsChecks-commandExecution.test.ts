@@ -17,7 +17,7 @@
 
 import { mockExecute, ranCommands } from './diagnosticsChecks.testUtils';
 import { checkCommand, checkTools, testAdobeLogin } from '@/commands/diagnosticsChecks';
-import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 
 /** Options the executor was handed for the named command. */
 function optionsFor(command: string): unknown {
@@ -55,7 +55,7 @@ describe('checkCommand — executor options per tool class', () => {
         expect(optionsFor('aio --version')).toEqual({
             enhancePath: true,
             configureTelemetry: true,
-            useNodeVersion: adobeCliNodeVersion(),
+            useNodeVersion: demoBuilderNode(),
         });
     });
 

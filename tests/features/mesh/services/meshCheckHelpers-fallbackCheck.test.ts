@@ -7,7 +7,7 @@
 import { fallbackMeshCheck } from '@/features/mesh/services/meshCheckHelpers';
 import { CommandExecutor } from '@/core/shell/commandExecutor';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
-import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 
 describe('fallbackMeshCheck', () => {
     let mockCommandExecutor: jest.Mocked<CommandExecutor>;
@@ -36,7 +36,7 @@ describe('fallbackMeshCheck', () => {
                 meshExists: false,
             });
             expect(mockCommandExecutor.execute).toHaveBeenCalledWith('aio api-mesh get --active', {
-                useNodeVersion: adobeCliNodeVersion(),
+                useNodeVersion: demoBuilderNode(),
             });
         });
 

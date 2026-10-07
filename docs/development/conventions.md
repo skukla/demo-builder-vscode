@@ -66,7 +66,7 @@ it means the rule rests on somebody noticing.
 | A credential environment variable is registered as a secret. |  |  | `credential-env-vars-registered.test.ts` |
 | A setting that receives credentials is scoped to the user, never the workspace. |  |  | `credential-sink-settings-scoped.test.ts` |
 | Whoever names a content site names its index path. The catalog, the project row and a description file all state where a site lists its pages; every reader (the copy step, the import path, the reset door) takes the stated path from `contentIndex.ts` and none guesses one. Only the Add a demo package probe looks a path up, for a repository that names a site with no path, and it records what it found. |  |  | `content-index-path.test.ts` |
-| A Node version is stated only in a catalog's `nodeVersion` field (`components.json`, `app-builder-components.json`, `ai-defaults.json`), and every reader asks `nodeRequirements.ts`. A thing that declares none runs on the Adobe CLI's Node; nothing else carries a fallback of its own. |  |  | `node-versions-from-catalogs.test.ts` |
+| Demo Builder states no Node version of its own. Each component declares the Node it accepts in its own repo (`engines.node`); `npm run node:resolve` reads them all at a release cut and writes the one Node they accept to `node-version.generated.json`, and every reader asks `nodeRequirements.ts`. The only other Node is one an SC's own integration repo needs, worked out when it is added. |  |  | `node-versions-from-components.test.ts` |
 
 ## 5. What survives between calls
 

@@ -10,7 +10,7 @@
 import './installHandler.mocks';
 
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 import * as shared from '@/features/prerequisites/handlers/shared';
 import { handleInstallPrerequisite } from '@/features/prerequisites/handlers/installHandler';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -40,7 +40,7 @@ function pluginRunVersions(execute: jest.Mock, command: string): (string | undef
 
 const PLUGIN_CMD = 'aio plugins:install @adobe/aio-cli-plugin-api-mesh';
 /** The Node a per-Node tool and its plugins live under (`perNodeToolMajors`). */
-const CLI_NODE = adobeCliNodeVersion();
+const CLI_NODE = demoBuilderNode();
 
 function prereqWithPlugin(over: Partial<PrerequisiteDefinition> = {}, requiredFor?: string[]): PrerequisiteDefinition {
     return {

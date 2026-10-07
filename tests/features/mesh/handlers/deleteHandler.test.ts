@@ -25,7 +25,7 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
-import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 // Record the target rather than stubbing it out — the assertion IS the target.
 // buildOrgTargetFromProjectAdobe is pure, so the real one is used.
 const mockWithOrgContext = jest.fn((_target: unknown, fn: () => Promise<unknown>) => fn());
@@ -83,7 +83,7 @@ describe('handleDeleteApiMesh — org targeting', () => {
         expect(mockCommandExecutor.execute).toHaveBeenCalledWith(MESH_DELETE_COMMAND, {
             timeout: TIMEOUTS.NORMAL,
             configureTelemetry: false,
-            useNodeVersion: adobeCliNodeVersion(),
+            useNodeVersion: demoBuilderNode(),
             enhancePath: true,
         });
     });

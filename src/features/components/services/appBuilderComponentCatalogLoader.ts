@@ -204,7 +204,6 @@ function seedCapabilityFields(
     return {
         layout: seed.layout,
         lifecycle: seed.lifecycle,
-        nodeVersion: seed.nodeVersion,
         requiredApis: seed.requiredApis,
         compatibleBackends: seed.compatibleBackends,
         compatibleFrontends: seed.compatibleFrontends,
@@ -229,10 +228,10 @@ function seedCapabilityFields(
  * SEED RECOGNITION: a source matching an AUTHORED catalog entry (owner+repo,
  * exact — a fork is deliberately not recognized, same rule as
  * {@link isBlankSource}) inherits that entry's CAPABILITY fields —
- * layout/lifecycle/nodeVersion/requiredApis/axes. Without this, "start a custom
+ * layout/lifecycle/requiredApis/axes. Without this, "start a custom
  * app from the starter kit" produced an entry the deploy path would treat as a
- * standalone app: ow-package rewrite applied, workspace config never imported,
- * Node version unknown — a broken deploy from a correct repo.
+ * standalone app: ow-package rewrite applied and workspace config never
+ * imported — a broken deploy from a correct repo.
  *
  * @param source - The GitHub source ({owner, repo, branch?, name?})
  * @param id - Optional explicit instance id (the sources-map key)

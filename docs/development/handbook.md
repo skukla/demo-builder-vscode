@@ -300,14 +300,16 @@ check says so and names the file.
 > the copy step knew better — found live, 2026-09-12.
 > Enforced by `tests/sop/content-index-path.test.ts`.
 
-> **Convention.** A Node version is stated only in a catalog's `nodeVersion` field
-> (`components.json`, `app-builder-components.json`, `ai-defaults.json`), and every reader asks
-> `nodeRequirements.ts`. A thing that declares none runs on the Adobe CLI's Node; nothing else
-> carries a fallback of its own.
-> *Why:* before PR-1a, versions lived in four files, two constants and five hardcoded "20"s, and
-> the mesh's two lookups asked VS Code for the extension under a name it does not have, so mesh
-> ran on the fallback for months while every test passed.
-> Enforced by `tests/sop/node-versions-from-catalogs.test.ts`.
+> **Convention.** Demo Builder states no Node version of its own. Each component declares the
+> Node it accepts in its own repo (`engines.node`); `npm run node:resolve` reads them all at a
+> release cut and writes the one Node they accept to `node-version.generated.json`, and every
+> reader asks `nodeRequirements.ts`. The only other Node is one an SC's own integration repo
+> needs, worked out when it is added.
+> *Why:* before PR-1a the same "24" was typed into four catalogs and backed by five hardcoded
+> "20"s, and the mesh's two lookups asked VS Code for the extension under a name it does not
+> have, so mesh ran on the fallback for months while every test passed. A number nobody types
+> cannot drift from the components it describes.
+> Enforced by `tests/sop/node-versions-from-components.test.ts`.
 
 ## 5. What survives between calls
 

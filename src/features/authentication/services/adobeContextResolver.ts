@@ -28,7 +28,7 @@ import type {
 import { getLogger } from '@/core/logging/debugLogger';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 import { parseJSON } from '@/types/typeGuards';
 
 /**
@@ -61,7 +61,7 @@ export class AdobeContextResolver {
             const result = await this.commandManager.execute('aio console where --json', {
                 encoding: 'utf8',
                 timeout: TIMEOUTS.NORMAL,
-                useNodeVersion: adobeCliNodeVersion(),
+                useNodeVersion: demoBuilderNode(),
             });
 
             if (result.code === 0 && result.stdout) {

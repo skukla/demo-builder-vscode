@@ -20,7 +20,7 @@ import {
 } from '@/features/app-builder/services/runtimeCredentials';
 import { sleep } from '@/core/utils/sleep';
 import type { Logger } from '@/types/logger';
-import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
@@ -115,13 +115,13 @@ describe('fetchRuntimeCredentials', () => {
         executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
         (fsPromises.readFile as jest.Mock).mockResolvedValue(WORKSPACE_JSON);
 
-        const creds = await fetchRuntimeCredentials(commandManager, logger, adobeCliNodeVersion());
+        const creds = await fetchRuntimeCredentials(commandManager, logger, demoBuilderNode());
 
         expect(executeMock).toHaveBeenCalledWith(
             expect.stringMatching(/^aio console workspace download "/),
             // `shell: true` is what makes the quoted path survive the call; without it
             // the aio CLI is handed a path it cannot write to.
-            expect.objectContaining({ shell: true, useNodeVersion: adobeCliNodeVersion(), enhancePath: true })
+            expect.objectContaining({ shell: true, useNodeVersion: demoBuilderNode(), enhancePath: true })
         );
         expect(creds).toEqual({
             namespace: '12345-myproject-stage',
@@ -133,7 +133,7 @@ describe('fetchRuntimeCredentials', () => {
         executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
         (fsPromises.readFile as jest.Mock).mockResolvedValue(WORKSPACE_WITH_S2S);
 
-        const creds = await fetchRuntimeCredentials(commandManager, logger, adobeCliNodeVersion());
+        const creds = await fetchRuntimeCredentials(commandManager, logger, demoBuilderNode());
 
         expect(creds.imsOAuthS2SEnv).toStrictEqual({
             IMS_OAUTH_S2S_CLIENT_ID: 's2s-client',
@@ -149,7 +149,7 @@ describe('fetchRuntimeCredentials', () => {
         executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
         (fsPromises.readFile as jest.Mock).mockResolvedValue(WORKSPACE_JSON);
 
-        const creds = await fetchRuntimeCredentials(commandManager, logger, adobeCliNodeVersion());
+        const creds = await fetchRuntimeCredentials(commandManager, logger, demoBuilderNode());
 
         expect(creds.imsOAuthS2SEnv).toBeUndefined();
     });
@@ -158,7 +158,7 @@ describe('fetchRuntimeCredentials', () => {
         executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
         (fsPromises.readFile as jest.Mock).mockResolvedValue(WORKSPACE_JSON);
 
-        await fetchRuntimeCredentials(commandManager, logger, adobeCliNodeVersion());
+        await fetchRuntimeCredentials(commandManager, logger, demoBuilderNode());
 
         const allLogged = [logger.info, logger.debug, logger.warn, logger.error]
             .flatMap((fn) => (fn as jest.Mock).mock.calls.flat())
@@ -171,7 +171,7 @@ describe('fetchRuntimeCredentials', () => {
         executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
         (fsPromises.readFile as jest.Mock).mockRejectedValue(new Error('ENOENT'));
 
-        await expect(fetchRuntimeCredentials(commandManager, logger, adobeCliNodeVersion())).rejects.toThrow();
+        await expect(fetchRuntimeCredentials(commandManager, logger, demoBuilderNode())).rejects.toThrow();
 
         expect(fsPromises.rm).toHaveBeenCalledWith(
             '/tmp/db-ws-abc',
@@ -185,7 +185,7 @@ describe('fetchRuntimeCredentials', () => {
             JSON.stringify({ project: { workspace: { details: { runtime: { namespaces: [] } } } } })
         );
 
-        await expect(fetchRuntimeCredentials(commandManager, logger, adobeCliNodeVersion())).rejects.toThrow(
+        await expect(fetchRuntimeCredentials(commandManager, logger, demoBuilderNode())).rejects.toThrow(
             /no Adobe I\/O Runtime namespace/
         );
     });
@@ -203,7 +203,7 @@ describe('fetchRuntimeCredentials', () => {
             })
         );
 
-        await expect(fetchRuntimeCredentials(commandManager, logger, adobeCliNodeVersion())).rejects.toThrow(
+        await expect(fetchRuntimeCredentials(commandManager, logger, demoBuilderNode())).rejects.toThrow(
             /no Adobe I\/O Runtime namespace/
         );
     });
@@ -211,7 +211,7 @@ describe('fetchRuntimeCredentials', () => {
     it('reports the exit code when the failing command wrote no error line', async () => {
         executeMock.mockResolvedValue({ code: 7, stdout: '', stderr: '- spinner only\n' });
 
-        await expect(fetchRuntimeCredentials(commandManager, logger, adobeCliNodeVersion())).rejects.toThrow(
+        await expect(fetchRuntimeCredentials(commandManager, logger, demoBuilderNode())).rejects.toThrow(
             /exit code 7/
         );
     });
@@ -223,7 +223,7 @@ describe('fetchRuntimeCredentials', () => {
             stderr: '- Downloading Workspace config...\n ›   Error: 404 - Not Found',
         });
 
-        await expect(fetchRuntimeCredentials(commandManager, logger, adobeCliNodeVersion())).rejects.toThrow(
+        await expect(fetchRuntimeCredentials(commandManager, logger, demoBuilderNode())).rejects.toThrow(
             /404 - Not Found/
         );
     });
@@ -246,7 +246,7 @@ describe('fetchWorkspaceS2SCredential', () => {
         });
         (fsPromises.readFile as jest.Mock).mockResolvedValue(JSON.stringify(config));
 
-        await expect(fetchWorkspaceS2SCredential(commandManager, adobeCliNodeVersion())).resolves.toStrictEqual({
+        await expect(fetchWorkspaceS2SCredential(commandManager, demoBuilderNode())).resolves.toStrictEqual({
             clientId: 's2s-client',
             clientSecret: 'fake-test-pw-not-a-secret-1',
             orgId: 'ABC123@AdobeOrg',
@@ -261,13 +261,13 @@ describe('fetchWorkspaceS2SCredential', () => {
     it('answers undefined for a workspace with no S2S credential, Runtime or not', async () => {
         (fsPromises.readFile as jest.Mock).mockResolvedValue(JSON.stringify({ project: {} }));
 
-        await expect(fetchWorkspaceS2SCredential(commandManager, adobeCliNodeVersion())).resolves.toBeUndefined();
+        await expect(fetchWorkspaceS2SCredential(commandManager, demoBuilderNode())).resolves.toBeUndefined();
     });
 
     it('throws the aio error when the download fails', async () => {
         executeMock.mockResolvedValue({ code: 2, stdout: '', stderr: ' ›   Error: 404 - Not Found' });
 
-        await expect(fetchWorkspaceS2SCredential(commandManager, adobeCliNodeVersion())).rejects.toThrow(/404 - Not Found/);
+        await expect(fetchWorkspaceS2SCredential(commandManager, demoBuilderNode())).rejects.toThrow(/404 - Not Found/);
     });
 });
 
@@ -284,12 +284,12 @@ describe('workspaceHasRuntime', () => {
 
     it('is true when the workspace has a Runtime namespace', async () => {
         (fsPromises.readFile as jest.Mock).mockResolvedValue(WORKSPACE_JSON);
-        await expect(workspaceHasRuntime(commandManager, adobeCliNodeVersion())).resolves.toBe(true);
+        await expect(workspaceHasRuntime(commandManager, demoBuilderNode())).resolves.toBe(true);
     });
 
     it('is false when the workspace has none', async () => {
         (fsPromises.readFile as jest.Mock).mockResolvedValue(NO_NS_JSON);
-        await expect(workspaceHasRuntime(commandManager, adobeCliNodeVersion())).resolves.toBe(false);
+        await expect(workspaceHasRuntime(commandManager, demoBuilderNode())).resolves.toBe(false);
     });
 
     // The download JSON is read defensively at six levels, and every one of them is a
@@ -308,7 +308,7 @@ describe('workspaceHasRuntime', () => {
         ],
     ])('is false, not a crash, when the download has %s', async (_label, raw) => {
         (fsPromises.readFile as jest.Mock).mockResolvedValue(raw);
-        await expect(workspaceHasRuntime(commandManager, adobeCliNodeVersion())).resolves.toBe(false);
+        await expect(workspaceHasRuntime(commandManager, demoBuilderNode())).resolves.toBe(false);
     });
 });
 
@@ -323,7 +323,7 @@ describe('ensureWorkspaceRuntime (provision-if-missing)', () => {
         (fsPromises.readFile as jest.Mock).mockResolvedValue(WORKSPACE_JSON);
         const provision = jest.fn().mockResolvedValue(undefined);
 
-        await ensureWorkspaceRuntime(commandManager, logger, adobeCliNodeVersion(), provision, 0);
+        await ensureWorkspaceRuntime(commandManager, logger, demoBuilderNode(), provision, 0);
 
         expect(provision).not.toHaveBeenCalled();
     });
@@ -335,7 +335,7 @@ describe('ensureWorkspaceRuntime (provision-if-missing)', () => {
             .mockResolvedValue(WORKSPACE_JSON);
         const provision = jest.fn().mockResolvedValue(undefined);
 
-        await ensureWorkspaceRuntime(commandManager, logger, adobeCliNodeVersion(), provision, 0);
+        await ensureWorkspaceRuntime(commandManager, logger, demoBuilderNode(), provision, 0);
 
         expect(provision).toHaveBeenCalledTimes(1);
     });
@@ -345,7 +345,7 @@ describe('ensureWorkspaceRuntime (provision-if-missing)', () => {
         const provision = jest.fn().mockResolvedValue(undefined);
 
         await expect(
-            ensureWorkspaceRuntime(commandManager, logger, adobeCliNodeVersion(), provision, 0)
+            ensureWorkspaceRuntime(commandManager, logger, demoBuilderNode(), provision, 0)
         ).rejects.toThrow(/Could not provision an Adobe I\/O Runtime namespace/);
         expect(provision).toHaveBeenCalledTimes(1);
     });
@@ -359,7 +359,7 @@ describe('ensureWorkspaceRuntime (provision-if-missing)', () => {
         const provision = jest.fn().mockResolvedValue(undefined);
 
         await expect(
-            ensureWorkspaceRuntime(commandManager, logger, adobeCliNodeVersion(), provision, 0)
+            ensureWorkspaceRuntime(commandManager, logger, demoBuilderNode(), provision, 0)
         ).resolves.toBeUndefined();
     });
 
@@ -368,7 +368,7 @@ describe('ensureWorkspaceRuntime (provision-if-missing)', () => {
         const provision = jest.fn().mockResolvedValue(undefined);
 
         await expect(
-            ensureWorkspaceRuntime(commandManager, logger, adobeCliNodeVersion(), provision, 250)
+            ensureWorkspaceRuntime(commandManager, logger, demoBuilderNode(), provision, 250)
         ).rejects.toThrow();
 
         // Three attempts, two gaps. A pause after the final attempt delays the failure

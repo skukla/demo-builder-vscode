@@ -21,7 +21,7 @@ import type { ErrorLogger } from '@/core/logging/errorLogger';
 import type { ProgressUnifier } from '@/core/utils/progressUnifier/ProgressUnifier';
 import type { StepLogger } from '@/core/logging/stepLogger';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 import { createMockHandlerContext as createMockHandlerContextBase } from '../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
@@ -107,7 +107,7 @@ export function setupMockCommandExecutor() {
         if (command === 'fnm list') {
             // Installed Node versions: 18, 20 and the Adobe CLI's own Node
             return Promise.resolve({
-                stdout: `v18.20.8\nv20.19.5\nv${adobeCliNodeVersion()}.1.0\n`,
+                stdout: `v18.20.8\nv20.19.5\nv${demoBuilderNode()}.1.0\n`,
                 stderr: '',
                 code: 0,
                 duration: 100,

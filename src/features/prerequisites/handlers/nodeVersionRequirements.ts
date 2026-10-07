@@ -5,9 +5,7 @@
  * component registry, and the one set a per-Node tool is installed under.
  */
 
-import { componentRegistryFrom } from '@/features/components/services/componentRegistryAccess';
-import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
-import { ComponentSelection } from '@/types/components';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 import { HandlerContext } from '@/types/handlers';
 
 /**
@@ -48,33 +46,13 @@ export function getNodeVersionKeys(mapping: NodeVersionMapping): string[] {
  * CLI under it at its add door (`nodeEnsure.ts`), not here.
  */
 export function perNodeToolMajors(): string[] {
-    return [adobeCliNodeVersion()];
+    return [demoBuilderNode()];
 }
 
 /**
- * Helper to extract component selection parameters for registry manager calls
- */
-function getComponentSelectionParams(
-    selection: ComponentSelection,
-): [string | undefined, string | undefined, string[] | undefined, string[] | undefined] {
-    return [selection.frontend, selection.backend, selection.dependencies, selection.integrations];
-}
-
-/**
- * Get Node version mapping from component selection
- *
- * Returns a map of Node major versions to component names that require them.
- * Component-driven approach: versions are determined by what components need.
- *
- * @param context - Handler context with component selection
- * @returns Mapping of Node major version to component name (e.g., {'18': 'frontend', '20': 'backend'})
- *
- * @example
- * // User selected:
- * // - frontend: headless (requires Node 18)
- * // - backend: adobe-commerce-paas (requires Node 20)
- * const mapping = await getNodeVersionMapping(context);
- * // Returns: { '18': 'headless', '20': 'adobe-commerce-paas' }
+ * The Node a project's prerequisites prepare, labelled for the prerequisites screen:
+ * one entry, Demo Builder's own Node, which every component it ships runs on (PR-1a).
+ * Empty before a stack is chosen, as before.
  */
 export async function getNodeVersionMapping(
     context: HandlerContext,
@@ -82,19 +60,5 @@ export async function getNodeVersionMapping(
     if (!context.sharedState.currentComponentSelection) {
         return {};
     }
-
-    try {
-        const registryManager = componentRegistryFrom(context);
-        const params = getComponentSelectionParams(context.sharedState.currentComponentSelection);
-        const mapping = await registryManager.getNodeVersionToComponentMapping(...params);
-
-        return mapping;
-    } catch (error) {
-        // INTENTIONALLY RETURNS EMPTY: If component registry fails to load,
-        // prerequisites check proceeds without Node version mapping. This is
-        // acceptable because Node versions will still be detected via system
-        // check - we just lose the component-to-version association display.
-        context.logger.warn('Failed to get Node version mapping:', error as Error);
-        return {};
-    }
+    return { [demoBuilderNode()]: 'Demo Builder' };
 }

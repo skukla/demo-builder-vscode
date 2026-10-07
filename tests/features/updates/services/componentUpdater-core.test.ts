@@ -16,6 +16,7 @@ import {
     setupUpdater,
 } from './componentUpdater.testUtils';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types/base';
 
@@ -250,7 +251,6 @@ describe('ComponentUpdater - Core Workflow', () => {
                     name: 'Commerce Mesh',
                     configuration: {
                         buildScript: 'build',
-                        nodeVersion: '20',
                     },
                 }),
             }));
@@ -288,7 +288,7 @@ describe('ComponentUpdater - Core Workflow', () => {
                 'npm install --no-fund',
                 expect.objectContaining({
                     cwd: '/path/to/project/components/commerce-mesh',
-                    useNodeVersion: '20',
+                    useNodeVersion: demoBuilderNode(),
                 })
             );
 
@@ -297,7 +297,7 @@ describe('ComponentUpdater - Core Workflow', () => {
                 'npm run build -- --force',
                 expect.objectContaining({
                     cwd: '/path/to/project/components/commerce-mesh',
-                    useNodeVersion: '20',
+                    useNodeVersion: demoBuilderNode(),
                 })
             );
         });
@@ -353,7 +353,6 @@ describe('ComponentUpdater - Core Workflow', () => {
                     name: 'Commerce Mesh',
                     configuration: {
                         buildScript: 'build',
-                        nodeVersion: '20',
                     },
                 }),
             }));
@@ -416,7 +415,6 @@ describe('ComponentUpdater - Core Workflow', () => {
                     name: 'Commerce Mesh',
                     configuration: {
                         buildScript: 'build',
-                        nodeVersion: '20',
                     },
                 }),
             }));

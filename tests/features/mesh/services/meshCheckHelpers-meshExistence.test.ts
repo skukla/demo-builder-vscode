@@ -7,7 +7,7 @@
 import { checkMeshExistence } from '@/features/mesh/services/meshCheckHelpers';
 import { CommandExecutor } from '@/core/shell/commandExecutor';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
-import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 
 describe('checkMeshExistence', () => {
     let mockCommandExecutor: jest.Mocked<CommandExecutor>;
@@ -35,7 +35,7 @@ describe('checkMeshExistence', () => {
                 meshExists: false,
             });
             expect(mockCommandExecutor.execute).toHaveBeenCalledWith('aio api-mesh get', {
-                useNodeVersion: adobeCliNodeVersion(),
+                useNodeVersion: demoBuilderNode(),
             });
         });
 

@@ -11,7 +11,7 @@
 import { getActiveOrgContext, type OrgContextTarget } from '@/core/shell/orgContextEnv';
 import { erpCredentialReader } from '@/features/app-builder/services/erpCredential';
 import { fetchWorkspaceS2SCredential } from '@/features/app-builder/services/runtimeCredentials';
-import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 import { createMockProject } from '../../../helpers/projectFake';
 
@@ -45,7 +45,7 @@ describe('erpCredentialReader', () => {
 
         await expect(read(CONTOSO_WS)).resolves.toStrictEqual(CREDENTIAL);
 
-        expect(fetchMock).toHaveBeenCalledWith(commandManager, adobeCliNodeVersion());
+        expect(fetchMock).toHaveBeenCalledWith(commandManager, demoBuilderNode());
         expect(ranUnder).toMatchObject({ orgId: 'org-1', orgCode: 'FAKE@AdobeOrg', projectId: 'proj-1', workspaceId: 'ws-contoso' });
     });
 

@@ -1,20 +1,25 @@
 /**
- * A Node version is stated only in the catalogs (PR-1a).
+ * Demo Builder states no Node version of its own (PR-1a, owner 2026-10-07).
  *
- * Before PR-1a, versions were declared in four files, copied into two constants
- * and backed by five hardcoded "20"s in code, and the mesh's two lookups never
- * found their file, so mesh ran on the fallback for months with nothing failing.
- * The register (`nodeRequirements.ts`) now reads every answer from a catalog's
- * `nodeVersion` field, and this suite fails the build when a source file spells a
- * Node version of its own again: a quoted version on a line that talks about
- * Node, or a version written straight into an fnm command. No other enforcer here
- * looks at Node versions; `magic-timeouts` is the nearest in shape (a banned
- * literal) and covers durations only.
+ * Each component declares the Node it accepts in its own repo (`engines.node`);
+ * `npm run node:resolve` reads them all at a release cut and writes the one Node
+ * they accept to `node-version.generated.json`. Before, the same "24" was typed
+ * into four catalogs and backed by five hardcoded "20"s, and the mesh's lookups
+ * never found their file, so mesh ran on the fallback for months with nothing
+ * failing.
+ *
+ * Two halves. No source file spells a Node version (a quoted version on a line that
+ * talks about Node, or one written into an fnm command). And the generated file
+ * covers exactly the sources the resolver reads today, offline: a component added
+ * to a catalog without re-running the resolver fails here. No other enforcer looks
+ * at Node versions; `magic-timeouts` is the nearest in shape and covers durations.
  */
 
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { ROOT, workingTreeFiles } from './architectureScan';
+import generated from '@/features/components/config/node-version.generated.json';
+import { excludedNodeSources, listNodeSources } from '@/features/components/services/nodeResolution';
 
 /** A quoted major or full version, e.g. '24' or "20.11.0". */
 const QUOTED_VERSION = /['"`]\d{1,2}(?:\.\d+\.\d+)?['"`]/;
@@ -47,7 +52,7 @@ function literalsIn(file: string, source: string): string[] {
 
 const SOURCES = workingTreeFiles('src/**/*.ts', 'src/**/*.tsx');
 
-describe('a Node version is stated only in the catalogs', () => {
+describe('Demo Builder states no Node version of its own', () => {
     it('CONTROL: the scan sees a planted literal of each shape', () => {
         expect(literalsIn('planted.ts', "const nodeVersion = '20';")).toStrictEqual(['planted.ts:1']);
         expect(literalsIn('planted.ts', 'run(`fnm use 18 && npm start`);')).toStrictEqual(['planted.ts:1']);
@@ -61,5 +66,17 @@ describe('a Node version is stated only in the catalogs', () => {
             literalsIn(file, readFileSync(join(ROOT, file), 'utf8')),
         );
         expect(offenders).toStrictEqual([]);
+    });
+});
+
+describe('the generated Node covers every component that ships', () => {
+    it('reads exactly the sources the resolver would read from the catalogs today', async () => {
+        const listed = (await listNodeSources()).map((s) => s.ref).sort();
+        expect(listed.length).toBeGreaterThan(5);
+        expect(generated.sources.map((s) => s.ref).sort()).toStrictEqual(listed);
+    });
+
+    it('excludes exactly what the resolver excludes', () => {
+        expect(generated.excluded).toStrictEqual(excludedNodeSources());
     });
 });

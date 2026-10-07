@@ -9,7 +9,7 @@
  * and message a prerequisite gets from its installation state.
  */
 
-import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 import {
     determinePrerequisiteStatus,
     formatProgressMessage,
@@ -64,7 +64,7 @@ describe('hasNodeVersions / getNodeVersionKeys', () => {
 describe('perNodeToolMajors', () => {
     it("is the Adobe CLI's own Node major, and only that", () => {
         // The one set every per-Node check, install and plugin install reads.
-        expect(perNodeToolMajors()).toStrictEqual([adobeCliNodeVersion()]);
+        expect(perNodeToolMajors()).toStrictEqual([demoBuilderNode()]);
     });
 });
 

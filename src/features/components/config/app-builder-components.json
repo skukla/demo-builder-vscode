@@ -10,7 +10,6 @@
       "seed": true,
       "layout": "extension",
       "lifecycle": "app-management",
-      "nodeVersion": "24",
       "compatibleBackends": [
         "adobe-commerce-paas",
         "adobe-commerce-accs"
@@ -44,7 +43,6 @@
       "kind": "system",
       "boundTo": "erp-integration",
       "systemType": "ERP",
-      "nodeVersion": "24",
       "requiredApis": [
         "AppBuilderDataServicesSDK"
       ],
@@ -257,7 +255,6 @@
       "lifecycle": "app-management",
       "fillsSystem": true,
       "addOnce": true,
-      "nodeVersion": "24",
       "compatibleBackends": [
         "adobe-commerce-paas",
         "adobe-commerce-accs"

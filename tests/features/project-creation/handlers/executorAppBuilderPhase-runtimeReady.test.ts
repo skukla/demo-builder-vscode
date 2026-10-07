@@ -71,7 +71,7 @@ jest.mock('@/core/di/serviceLocator', () => ({
 
 import type { AdobeConfig } from '@/types/base';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
-import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import {
     ensureWorkspaceRuntimeReady,
@@ -183,7 +183,7 @@ describe('ensureWorkspaceRuntimeReady — when a deployable app is selected', ()
         expect(mockEnsureWorkspaceRuntime).toHaveBeenCalledWith(
             mockCommandExecutor,
             context.logger,
-            adobeCliNodeVersion(),
+            demoBuilderNode(),
             expect.any(Function),
         );
     });
