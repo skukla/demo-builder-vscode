@@ -146,7 +146,7 @@ and copy a number that can drift. PR-1a steps 1 to 6 built a register over hand-
 `nodeVersion` fields; this revision replaces those fields with what each component already
 declares.
 
-**Evidence (2026-10-07, `engines-probe.js` beside this file, read-only).** Every component we
+**Evidence (2026-10-07, a read-only probe, since replaced by `npm run node:resolve` (`scripts/resolve-node-version.mjs`)).** Every component we
 ship already declares a Node range in its own `package.json` `engines.node`:
 
 | Component | Declared range | Read from |

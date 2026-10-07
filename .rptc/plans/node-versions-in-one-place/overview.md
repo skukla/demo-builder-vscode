@@ -43,7 +43,7 @@ On Node 24 from `~/.demo-builder/node`: both older mesh repos built, deployed an
 queries in a throwaway workspace (deleted after); the headless storefront served its home page;
 the Adobe CLI 11.1.4 and mesh plugin 5.7.3 installed with no engine warnings. The two mesh repos'
 ranges were out of date (14 to 18 only) and the storefront declared none; fixed in the repos
-(`f35b082`, `596d916`, `6b26bbc`). The probe (`engines-probe.js` beside the research) now
+(`f35b082`, `596d916`, `6b26bbc`). The probe (`npm run node:resolve`, `scripts/resolve-node-version.mjs`) now
 resolves ONE Node, 24.21.0, for everything.
 
 ## Steps
