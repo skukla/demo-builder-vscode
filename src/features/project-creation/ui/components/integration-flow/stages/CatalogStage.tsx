@@ -29,8 +29,7 @@ import { getAppBuilderComponentCatalog } from '@/features/components/services/ap
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 
 /** Said under the name before a pre-built integration is added. */
-export const NAME_IS_FIXED =
-    "The name can't be changed later. To use a different name, remove it and add it again.";
+export const NAME_IS_FIXED = "Can't be renamed later.";
 
 /**
  * What the name field says under it. For an entry that brings a system, the two
@@ -43,11 +42,10 @@ function nameField(
 ): { defaultLabel: string; description: string } {
     const system = entry && pairedSystemOf(entry, getAppBuilderComponentCatalog());
     if (!system) return { defaultLabel: entry?.name ?? '', description: NAME_IS_FIXED };
-    const word = systemWordOf(system);
-    const names = pairNames(label, word);
+    const names = pairNames(label, systemWordOf(system));
     return {
         defaultLabel: DEFAULT_PAIR_BASE,
-        description: `Adds “${names.integration}” and its ${word} “${names.system}”. ${NAME_IS_FIXED}`,
+        description: `Adds “${names.integration}” and “${names.system}”. ${NAME_IS_FIXED}`,
     };
 }
 

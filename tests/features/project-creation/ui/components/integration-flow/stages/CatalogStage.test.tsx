@@ -76,13 +76,13 @@ describe('CatalogStage', () => {
         it('shows the two names the typed one gives', () => {
             renderStage({ catalog: [erpIntegration], selectedId: 'erp-integration', label: 'JustRite ERP Integration' });
             expect(
-                screen.getByText(`Adds “JustRite Integration” and its ERP “JustRite ERP”. ${NAME_IS_FIXED}`),
+                screen.getByText(`Adds “JustRite Integration” and “JustRite ERP”. ${NAME_IS_FIXED}`),
             ).toBeInTheDocument();
         });
 
         it('with nothing typed, previews and suggests the default', () => {
             renderStage({ catalog: [erpIntegration], selectedId: 'erp-integration' });
-            expect(screen.getByText(`Adds “Acme Integration” and its ERP “Acme ERP”. ${NAME_IS_FIXED}`)).toBeInTheDocument();
+            expect(screen.getByText(`Adds “Acme Integration” and “Acme ERP”. ${NAME_IS_FIXED}`)).toBeInTheDocument();
             expect(screen.getByPlaceholderText('Acme')).toBeInTheDocument();
         });
     });
