@@ -5,7 +5,7 @@ area: prerequisites
 parent: PR-1
 needs: []
 value: med
-status: backlog
+status: planned
 ---
 
 # Node versions in one place: one register, one resolver, one runner
@@ -62,3 +62,7 @@ default Node is never changed.
 [[AB-3]] (integration `nodeVersion`, the mechanism to generalise), [[AI-13]] (the AI tools,
 already on it), [[AB-22]] (read `engines` / `.nvmrc` from an imported repo, a later source for
 the register), [[PL-36]] (an untested Node-version sort in the prerequisites installer).
+
+## Shipped so far
+
+- 2026-10-07  2026-10-07 Planned: .rptc/plans/node-versions-in-one-place/ (steps 0-8). Found while planning: getMeshNodeVersion and getInfrastructureNodeVersion look the extension up as adobe-demo-team.adobe-demo-builder (it is skukla.adobe-demo-builder), so mesh always falls back to a hardcoded 20; step 1 removes both.

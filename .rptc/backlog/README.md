@@ -409,7 +409,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-23` | feature | [Graph-based dependency system](2026-08-30-graph-based-dependencies.md) | — | low | dropped |
 | `PL-36` | fix | [The third Node-version sort in installHandler is untested](2026-09-02-install-handler-target-version-sort.md) | — | med | built |
 | `PR-1` | epic | [Reframe prerequisites: extension-wide tools vs project-shape requirements (Path A)](2026-06-11-prereqs-architecture-reframe.md) | — | low | backlog |
-| `PR-1a` | feature | └ [Node versions in one place: one register, one resolver, one runner](2026-10-07-node-versions-in-one-place.md) | — | med | backlog |
+| `PR-1a` | feature | └ [Node versions in one place: one register, one resolver, one runner](2026-10-07-node-versions-in-one-place.md) | — | med | planned |
 
 ### platform  (72)
 
