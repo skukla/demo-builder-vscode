@@ -115,19 +115,22 @@ export function toIntegrationCards(rows: IntegrationRow[]): IntegrationCardModel
 }
 
 /**
- * The card's one quiet line: where the integration came from.
+ * The card's quiet lines under its name, one fact per line: where the
+ * integration came from, what comes with it, and why it cannot be removed.
  *
- * No API count (owner, 2026-10-07): the APIs are one click away behind the
- * kebab's Manage APIs, which opens the picker that lists them.
+ * One line each rather than one line joined by separators (owner, 2026-10-07):
+ * the ERP's name is the fact the SC must check before building, since it cannot
+ * change afterwards, so it gets a line of its own. No API count: the APIs are
+ * one click away behind the kebab's Manage APIs.
  *
- * Each segment is dropped when it has nothing to say, so the line never opens
- * with a stray separator.
+ * A line with nothing to say is dropped.
  *
  * @param card - a card model from {@link toIntegrationCards}
- * @returns the subline text
+ * @param companion - the name of the system that comes with it (the ERP), if any
+ * @returns the lines, in order
  */
-export function sublineFor(card: IntegrationCardModel, companion?: string): string {
-    const segments = [
+export function sublineFor(card: IntegrationCardModel, companion?: string): string[] {
+    const lines = [
         card.sourceLine,
         // The system that comes with this integration (the ERP): the wizard has
         // no second card for it, so the pair is said here (decision 2).
@@ -136,5 +139,5 @@ export function sublineFor(card: IntegrationCardModel, companion?: string): stri
         // where the missing affordance gets its explanation.
         card.required ? 'Required by this package' : undefined,
     ];
-    return segments.filter(Boolean).join(' · ');
+    return lines.filter((line): line is string => Boolean(line));
 }

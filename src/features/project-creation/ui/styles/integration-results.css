@@ -102,8 +102,12 @@
 }
 
 /* The subline is prose here, not a status pair, so it keeps the muted
-   statusline metrics without the dot's leading gap. */
+   statusline metrics without the dot's leading gap. One fact per line
+   (sublineFor), so the lines stack instead of sitting in a row. */
 .int-results > .integration-card .integration-card-statusline {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
     font-size: var(--spectrum-global-dimension-font-size-75);
     color: var(--spectrum-global-color-gray-600);
 }

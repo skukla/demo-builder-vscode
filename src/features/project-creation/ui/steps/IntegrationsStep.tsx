@@ -404,7 +404,9 @@ export function IntegrationsStep({
                             model={card}
                             onAction={handleCardAction}
                             onRename={commitRename}
-                            subline={sublineFor(card, row?.companion)}
+                            subline={sublineFor(card, row?.companion).map((line) => (
+                                <span key={line}>{line}</span>
+                            ))}
                             onOpen={
                                 row && isApiEditable(row.kind)
                                     ? () => handleCardAction(card, 'manage-apis')

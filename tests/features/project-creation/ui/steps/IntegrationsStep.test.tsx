@@ -503,7 +503,7 @@ describe('IntegrationsStep — the ERP pair before creation', () => {
 
     it('shows the names it was given, and its Settings renames the ERP', async () => {
         const { updateState } = await renderStep(ERP_NAMED);
-        expect(within(row('ERP Integration')).getByText(/Comes with Acme ERP/)).toBeInTheDocument();
+        expect(within(row('ERP Integration')).getByText('Comes with Acme ERP')).toBeInTheDocument();
 
         await pickMenuItem(row('ERP Integration'), /Settings/i);
         const dialog = await screen.findByRole('dialog');

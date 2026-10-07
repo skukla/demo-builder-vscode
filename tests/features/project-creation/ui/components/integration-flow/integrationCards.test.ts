@@ -188,25 +188,26 @@ describe('toIntegrationCards', () => {
 });
 
 describe('sublineFor', () => {
-    // No API count on the card face (owner, 2026-10-07): the kebab's Manage APIs
-    // opens the picker, which lists them.
-    it('shows the source line and no API count', () => {
-        expect(sublineFor(toIntegrationCards([row()])[0])).toBe(
-            'Custom integration · acme/erp-sync'
-        );
+    // One fact per line (owner, 2026-10-07), and no API count: the kebab's
+    // Manage APIs opens the picker, which lists them.
+    it('gives the source line alone, with no API count', () => {
+        expect(sublineFor(toIntegrationCards([row()])[0])).toEqual([
+            'Custom integration · acme/erp-sync',
+        ]);
     });
 
-    it('says what comes with the integration when the row names a companion', () => {
-        expect(sublineFor(toIntegrationCards([row()])[0], 'Acme ERP')).toBe(
-            'Custom integration · acme/erp-sync · Comes with Acme ERP'
-        );
+    it('puts what comes with the integration on its own line', () => {
+        expect(sublineFor(toIntegrationCards([row()])[0], 'Acme ERP')).toEqual([
+            'Custom integration · acme/erp-sync',
+            'Comes with Acme ERP',
+        ]);
     });
 
-    it('is empty when the row has no source and nothing else to say', () => {
-        expect(sublineFor(toIntegrationCards([row({ sourceLine: '' })])[0])).toBe('');
+    it('drops a line with nothing to say', () => {
+        expect(sublineFor(toIntegrationCards([row({ sourceLine: '' })])[0])).toStrictEqual([]);
     });
 
-    it('explains a required mesh — the card with no kebab must say why', () => {
+    it('explains a required mesh on its own line — the card with no kebab must say why', () => {
         const [card] = toIntegrationCards([
             row({
                 kind: 'mesh',
@@ -215,6 +216,6 @@ describe('sublineFor', () => {
                 apis: [],
             }),
         ]);
-        expect(sublineFor(card)).toBe('Commerce data via API Mesh · Required by this package');
+        expect(sublineFor(card)).toEqual(['Commerce data via API Mesh', 'Required by this package']);
     });
 });
