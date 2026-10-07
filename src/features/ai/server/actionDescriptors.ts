@@ -85,8 +85,9 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             'Pass a catalog `id` (from list_components) OR a custom GitHub `source`. Adding a ' +
             'catalog id the project already has adds a numbered copy in its own workspace; a ' +
             'project has one mesh and one ERP integration (a second ERP is add_erp). Adding the ' +
-            'ERP integration also adds its first ERP; one `name` names both ("Justrite" → Justrite ' +
-            'Integration + Justrite ERP) and cannot be changed once added, so ask the user. ' +
+            'ERP integration also adds its first ERP; `name` names that ERP ("Justrite" → Justrite ' +
+            'ERP), which cannot be changed once added, so ask the user. The integration keeps ' +
+            '"ERP Integration" (rename_integration can change it later). ' +
             'Takes about a minute. Returns the id to use with deploy_integration / ' +
             'remove_integration. Confirm the choice with the user first.',
         map: dashboardHandlers,
