@@ -78,3 +78,11 @@ the register), [[PL-36]] (an untested Node-version sort in the prerequisites ins
 - 2026-10-07  fix(updates): record the Node a component was just updated onto (`f023df873`)
 - 2026-10-07  refactor(components): stop writing .node-version into components (`4ab31fb4b`)
 - 2026-10-07  2026-10-07 Owner chose to read Node versions from each component's own engines range instead of hand-kept catalog numbers. Verified live on Node 24 from the store: headless-commerce-mesh and commerce-eds-mesh deployed and answered (throwaway workspace zzNode24Mesh2, deleted), citisignal-nextjs served its home page. Ranges fixed in the repos: headless-commerce-mesh >=20 (f35b082), commerce-eds-mesh >=20 (596d916), citisignal-nextjs >=24 (6b26bbc). Probe now resolves one Node, 24.21.0. Finding: aio plugins install per user, not per Node.
+- 2026-10-07  feat(node): resolve Demo Builder's Node from each component's own range (`3ab435741`)
+- 2026-10-07  docs(plans): PR-1a owner approves preparing a new Node after an update (`a768b8ec1`)
+- 2026-10-07  docs(plans): PR-1a every Node event mapped to an existing surface (`f24ff1ebc`)
+- 2026-10-07  docs(plans): PR-1a cleanup rules and what the SC sees (`51d696af6`)
+- 2026-10-07  docs(plans): PR-1a replanned around component-declared Node ranges (`996089e26`)
+- 2026-10-07  docs(backlog): PR-1a live verification of component-declared Node ranges (`bd9c1a6ed`)
+- 2026-10-07  docs(research): component-declared Node ranges verified live on Node 24 (`d1a43cbc5`)
+- 2026-10-07  docs(research): read Node versions from each component, keep none in Demo Builder (`4215d3333`)
