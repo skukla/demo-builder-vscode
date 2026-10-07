@@ -95,3 +95,8 @@ machine uses it" cannot tell a restore from someone else's demo.
 
 Tests: the import seed carries no Adobe project/workspace; each picker labels a row
 used by a local project; a copy's defaults never equal the source's.
+
+## Shipped so far
+
+- 2026-10-06  PL-56h: label shared repos and Adobe projects; integrations' source needs none (`1b03bfc54`)
+- 2026-10-06  File PL-56h: an import/copy gets its own storefront and Adobe project (`92d318d14`)
