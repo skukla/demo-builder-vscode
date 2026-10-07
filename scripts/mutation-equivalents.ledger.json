@@ -1396,32 +1396,6 @@
             "source": "PL-22 batch MUT-08, stopDemo focus run"
         },
         {
-            "module": "src/features/prerequisites/handlers/nodeVersionRequirements.ts",
-            "anchors": [
-                "if (allPluginRequired.length > 0) {"
-            ],
-            "line": 68,
-            "mutants": 2,
-            "category": "branch",
-            "reason": "Forcing this guard true assigns requiredForComponents = [...new Set([])], which is an EMPTY array, and the return statement below rejects an empty array by exactly the same test it applies to undefined (requiredForComponents && requiredForComponents.length > 0). So both the mutated and the original route end at getNodeVersionKeys over the whole mapping. The false variant of the same guard IS killed by the two union tests, which is what shows the pair apart.",
-            "decision": "Ledger. The union tests already pin the branch that has an observable effect; this direction cannot have one.",
-            "recorded": "2026-09-04",
-            "source": "PL-22 MUT-01, 2026-09-04"
-        },
-        {
-            "module": "src/features/prerequisites/handlers/nodeVersionRequirements.ts",
-            "anchors": [
-                "hasSelection: false,"
-            ],
-            "line": 216,
-            "mutants": 1,
-            "category": "branch",
-            "reason": "This is a field of the object literal handed to context.debugLogger.debug on the line above, and that call is its only reader. Flipping it changes one key in a debug payload; no collaborator is called differently and the function still returns an empty list. The classifier reads a bounded window of the enclosing statement and cannot see the debug call four lines up, so it lands here as a branch rather than as log presentation.",
-            "decision": "Ledger. Killing it would mean asserting a logger call's arguments, which the ratchet and the enforcer both refuse.",
-            "recorded": "2026-09-04",
-            "source": "PL-22 MUT-01, 2026-09-04"
-        },
-        {
             "module": "src/features/prerequisites/handlers/perNodeVersionStatus.ts",
             "anchors": [
                 "if (prereq.check.parseVersion) {"
@@ -1478,7 +1452,7 @@
             "anchors": [
                 "(prereq.id === 'node' && nodeMissing)"
             ],
-            "line": 209,
+            "line": 208,
             "mutants": 3,
             "category": "branch",
             "reason": "nodeMissing can only ever be true for the 'node' prerequisite: it is assigned solely inside the `prereq.id === 'node'` guard on line 198 and initialised false otherwise. So mutating this operand \u2014 to true, to false, or to !== \u2014 cannot change the value of the disjunction for any input.",
@@ -1491,7 +1465,7 @@
             "anchors": [
                 "if (!prereq) continue;"
             ],
-            "line": 317,
+            "line": 315,
             "mutants": 1,
             "category": "branch",
             "reason": "`if (false)` removes a guard that the loop bound already makes unreachable: i is strictly less than prerequisites.length, so prerequisites?.[i] is never undefined for a dense array. The guard exists to satisfy the optional-index type, not to handle a reachable state.",
@@ -1504,7 +1478,7 @@
             "anchors": [
                 "if (checkResult.installed) {"
             ],
-            "line": 363,
+            "line": 361,
             "mutants": 4,
             "category": "branch",
             "reason": "Both arms of this if/else do nothing but call context.stepLogger.log \u2014 one with a tick and a version suffix, one with a cross. Flipping the condition, emptying either block, changes only WHICH step-log line prints. Killing it would mean asserting a logger call's arguments, which pins wording rather than behaviour.",
@@ -1517,7 +1491,7 @@
             "anchors": [
                 "for (let i = 0; i < (prerequisites?.length ?? 0); i++) {"
             ],
-            "line": 315,
+            "line": 313,
             "mutants": 1,
             "category": "branch",
             "reason": "`<` to `<=` runs one extra iteration at i === length, where `prerequisites?.[i]` is undefined and the very next line (`if (!prereq) continue;`) skips it. No collaborator is called and no message is sent on that iteration, so no test can observe it.",
@@ -1543,7 +1517,7 @@
             "anchors": [
                 "return { perNodeVariantMissing: false, missingVariantMajors: [], perNodeVersionStatus: [] };"
             ],
-            "line": 157,
+            "line": 156,
             "mutants": 1,
             "category": "other",
             "reason": "The `missingVariantMajors: []` literal is unobservable on this early-return path: it is read only by getPrerequisiteDisplayMessage's 'missing in Node X' arm, which is gated on perNodeVariantMissing \u2014 returned false here. Filling the array changes no message.",
@@ -1556,7 +1530,7 @@
             "anchors": [
                 "if (prereq.id === 'node' && nodeVersionStatus && nodeVersionStatus.length > 0) {"
             ],
-            "line": 198,
+            "line": 197,
             "mutants": 3,
             "category": "branch",
             "reason": "Each surviving mutant weakens one operand into a condition the OTHER operands already enforce. `prereq.id === 'node'` to true: nodeVersionStatus is assigned only inside the id === 'node' arm of the check loop, so it is undefined for every other prerequisite and the conjunction still short-circuits. `length > 0` to true or to >= 0: the only case they admit is an empty array, where the body's `some(v => !v.installed)` is false anyway, so nodeMissing does not move.",
@@ -1569,7 +1543,7 @@
             "anchors": [
                 "const userOptionalDeps = payload?.selectedOptionalDependencies ?? [];"
             ],
-            "line": 240,
+            "line": 239,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "This line sits inside `if (payload?.selectedStack)`, so payload is known truthy by the time it runs. Dropping the optional chain cannot throw.",
@@ -1582,7 +1556,7 @@
             "anchors": [
                 "const prereq = prerequisites?.[i];"
             ],
-            "line": 316,
+            "line": 314,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "The loop bound is `i < (prerequisites?.length ?? 0)`, so the body runs only when prerequisites is truthy. Dropping the optional chain cannot throw.",
@@ -1608,7 +1582,7 @@
             "anchors": [
                 "const cachedResults = context.prereqManager?.getCacheManager().getPerVersionResults(prereq.id);"
             ],
-            "line": 168,
+            "line": 167,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Reaching this line requires the check loop to be running over a non-empty prerequisite list, and that list comes from `context.prereqManager?.resolveDependencies(...)` earlier in the SAME invocation. A context whose prereqManager is undefined therefore never gets here \u2014 the loop has nothing to iterate. So no input can distinguish the optional chain from a plain member access.",
@@ -1621,7 +1595,7 @@
             "anchors": [
                 "checkResult = prereq ? await context.prereqManager?.checkPrerequisite(prereq) : undefined;"
             ],
-            "line": 340,
+            "line": 338,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Reaching this line requires the check loop to be running over a non-empty prerequisite list, and that list comes from `context.prereqManager?.resolveDependencies(...)` earlier in the SAME invocation. A context whose prereqManager is undefined therefore never gets here \u2014 the loop has nothing to iterate. So no input can distinguish the optional chain from a plain member access.",
@@ -1777,7 +1751,7 @@
             "anchors": [
                 "if (!targetVersions || targetVersions.length === 0) {"
             ],
-            "line": 127,
+            "line": 124,
             "mutants": 1,
             "category": "branch",
             "reason": "targetVersions comes from getTargetNodeVersions, which returns sortedMissingMajors only when its length is above zero, otherwise [version] or undefined. It can never hand back an EMPTY array, so the second half of this guard has no input that makes it decide anything the first half did not.",
@@ -1790,7 +1764,7 @@
             "anchors": [
                 "if (installableVersions.length < missingNodeVersions.length) {"
             ],
-            "line": 160,
+            "line": 155,
             "mutants": 5,
             "category": "branch",
             "reason": "The whole block is one context.logger.debug call naming the versions that will actually be installed. Flipping the comparison, forcing it either way, or emptying the block changes which debug line prints; targetVersions is computed on the next line from installableVersions regardless.",
@@ -1803,7 +1777,7 @@
             "anchors": [
                 "if (defaultSteps.length > 0) {"
             ],
-            "line": 230,
+            "line": 225,
             "mutants": 2,
             "category": "branch",
             "reason": "Forcing this guard true when there are no default steps computes lastVersion, logs it, and then iterates an empty array \u2014 no step runs and no message is pushed. The only difference is one debug line, and lastVersion cannot throw because this arm is already inside `targetVersions?.length`.",
@@ -1814,48 +1788,9 @@
         {
             "module": "src/features/prerequisites/handlers/installHandler.ts",
             "anchors": [
-                "const requiredForComponents = plugin.requiredFor || [];"
-            ],
-            "line": 254,
-            "mutants": 1,
-            "category": "other",
-            "reason": "The array is used only for `includes(componentId)` against the component ids in nodeVersionMapping. Seeding it with a string no component is ever named after matches nothing, exactly as the empty default matches nothing, so no plugin resolves to a different set of Node versions.",
-            "decision": "Kept as the empty default a missing requiredFor deserves.",
-            "recorded": "2026-09-04",
-            "source": "PL-22 MUT-01, 2026-09-04"
-        },
-        {
-            "module": "src/features/prerequisites/handlers/installHandler.ts",
-            "anchors": [
-                "if (installablePluginVersions.length > 0) {"
-            ],
-            "line": 288,
-            "mutants": 2,
-            "category": "branch",
-            "reason": "Forcing this guard true or admitting zero assigns versionsToInstall the SAME empty array the else arm was there to reject, and installPlugins then iterates it zero times \u2014 no command runs and no status is pushed, which is what returning null achieves. The two paths differ only in one debug line.",
-            "decision": "Kept: the else arm's early return is what makes the skip explicit at the call site.",
-            "recorded": "2026-09-04",
-            "source": "PL-22 MUT-01, 2026-09-04"
-        },
-        {
-            "module": "src/features/prerequisites/handlers/installHandler.ts",
-            "anchors": [
-                "} else if (targetVersions?.length) {"
-            ],
-            "line": 294,
-            "mutants": 2,
-            "category": "branch",
-            "reason": "This arm is reached only for a per-node-version prerequisite with a non-empty Node mapping, and for exactly those the caller has already assigned targetVersions from resolvePerNodeTargetVersions, which early-returns rather than hand back an empty or absent list. So targetVersions is always a non-empty array here: neither forcing the condition true nor dropping the optional chain can change or throw.",
-            "decision": "Kept: the guard states a contract the caller happens to satisfy rather than one this function can see.",
-            "recorded": "2026-09-04",
-            "source": "PL-22 MUT-01, 2026-09-04"
-        },
-        {
-            "module": "src/features/prerequisites/handlers/installHandler.ts",
-            "anchors": [
                 "if (dependents && dependents.length > 0) {"
             ],
-            "line": 367,
+            "line": 306,
             "mutants": 2,
             "category": "branch",
             "reason": "dependents is the result of Array.filter, so it is either undefined (when currentPrerequisites is absent, which the first operand already catches) or an array. Admitting a length of zero enters a forEach over nothing. No cache entry is invalidated either way.",
@@ -1868,7 +1803,7 @@
             "anchors": [
                 "if (isTimeoutErr) {"
             ],
-            "line": 388,
+            "line": 327,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying the THEN arm removes three logging calls and nothing else \u2014 the warning payload built below reads isTimeoutErr again for its message, so the branch itself has no other effect. The ELSE arm is not equivalent and is killed by a test asserting that a non-timeout failure reaches the error logger.",
@@ -1881,7 +1816,7 @@
             "anchors": [
                 "if (overallInstalled) {"
             ],
-            "line": 470,
+            "line": 409,
             "mutants": 4,
             "category": "branch",
             "reason": "Anchored at 463 and covering the else at 469 too. Both arms of this if/else do nothing but call logger.info/logger.warn and debugLogger.debug; overallInstalled is read again below for the status, installed and canInstall fields of the payload, which tests do pin. Flipping or emptying either arm changes only which line is logged.",
@@ -1894,7 +1829,7 @@
             "anchors": [
                 "const index = resolved?.findIndex((p) => p.id === payload.prerequisiteId) ?? -1;"
             ],
-            "line": 523,
+            "line": 462,
             "mutants": 1,
             "category": "other",
             "reason": "The -1 default applies only when resolved is undefined, and the very next line returns undefined on `!resolved` regardless of the index. findIndex itself returns -1 rather than undefined when it finds nothing, so the coalesce never fires on a defined list.",
@@ -1907,7 +1842,7 @@
             "anchors": [
                 "if (typeof payload.prereqId !== 'number') return undefined;"
             ],
-            "line": 531,
+            "line": 470,
             "mutants": 1,
             "category": "branch",
             "reason": "Removing the guard reads currentPrerequisiteStates.get(undefined), which is undefined, so the function returns undefined exactly as the guard would have \u2014 and the caller's error message is chosen from the payload, not from how the resolution failed. No payload distinguishes the two.",
@@ -1920,7 +1855,7 @@
             "anchors": [
                 "const pluginCommands = await context.prereqManager?.getPluginInstallCommands(prereq.id, plugin.id);"
             ],
-            "line": 317,
+            "line": 257,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Reaching this line requires an install plan, and the plan comes from `context.prereqManager?.getInstallSteps(...)` earlier in the SAME invocation \u2014 a context with no manager gets undefined there and throws \"No installation steps defined\" before any of this runs. So no input can distinguish the optional chain from a plain member access.",
@@ -1933,7 +1868,7 @@
             "anchors": [
                 "context.prereqManager?.getCacheManager().invalidate(prereq.id);"
             ],
-            "line": 361,
+            "line": 300,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Reaching this line requires an install plan, and the plan comes from `context.prereqManager?.getInstallSteps(...)` earlier in the SAME invocation \u2014 a context with no manager gets undefined there and throws \"No installation steps defined\" before any of this runs. So no input can distinguish the optional chain from a plain member access.",
@@ -1946,7 +1881,7 @@
             "anchors": [
                 "context.prereqManager?.getCacheManager().invalidate(dep.id);"
             ],
-            "line": 369,
+            "line": 308,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Reaching this line requires an install plan, and the plan comes from `context.prereqManager?.getInstallSteps(...)` earlier in the SAME invocation \u2014 a context with no manager gets undefined there and throws \"No installation steps defined\" before any of this runs. So no input can distinguish the optional chain from a plain member access.",
@@ -1959,7 +1894,7 @@
             "anchors": [
                 "installResult = prereq ? await context.prereqManager?.checkPrerequisite(prereq) : undefined;"
             ],
-            "line": 651,
+            "line": 588,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Reaching this line requires an install plan, and the plan comes from `context.prereqManager?.getInstallSteps(...)` earlier in the SAME invocation \u2014 a context with no manager gets undefined there and throws \"No installation steps defined\" before any of this runs. So no input can distinguish the optional chain from a plain member access.",
@@ -1972,7 +1907,7 @@
             "anchors": [
                 "finalNodeVersionStatus = await context.prereqManager?.checkMultipleNodeVersions(mapping);"
             ],
-            "line": 667,
+            "line": 604,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Reaching this line requires an install plan, and the plan comes from `context.prereqManager?.getInstallSteps(...)` earlier in the SAME invocation \u2014 a context with no manager gets undefined there and throws \"No installation steps defined\" before any of this runs. So no input can distinguish the optional chain from a plain member access.",
@@ -9968,37 +9903,11 @@
             "anchors": [
                 "if (frontendId) {"
             ],
-            "line": 417,
+            "line": 354,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true is unobservable: the body then calls getComponentById(undefined), which searches the flattened component list for an entry whose id equals undefined. No component has one, so the lookup returns undefined and the optional chain on the next line skips exactly as the guard would have - the guard saves a scan of the list, not a wrong answer. Forcing it FALSE is killed, by the test that this selection reaches the map.",
             "decision": "Recorded as equivalent. The lookup's own miss is what makes the guard redundant.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/components/services/ComponentRegistryManager.ts",
-            "anchors": [
-                "if (backendId) {"
-            ],
-            "line": 520,
-            "mutants": 1,
-            "category": "branch",
-            "reason": "Forcing this guard true is unobservable: the body then calls getComponentById(undefined), which searches the flattened component list for an entry whose id equals undefined. No component has one, so the lookup returns undefined and the optional chain on the next line skips exactly as the guard would have - the guard saves a scan of the list, not a wrong answer. Forcing it FALSE is killed, by the test that this selection reaches the map.",
-            "decision": "Recorded as equivalent. The lookup's own miss is what makes the guard redundant.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/components/services/ComponentRegistryManager.ts",
-            "anchors": [
-                "if (registry.infrastructure) {"
-            ],
-            "line": 503,
-            "mutants": 1,
-            "category": "branch",
-            "reason": "transformToGroupedStructure always assigns infrastructure an array - it builds a local [] and pushes into it only when raw.infrastructure exists - so this guard tests a value that is never falsy, and forcing it true iterates an empty array instead of skipping it. A registry with no infrastructure section reaches this line with [] rather than undefined, which is covered. The narrowing mutant is killed by the infrastructure-version tests.",
-            "decision": "Recorded as equivalent. The transform in front of it cannot emit the shape the guard tests for.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
         },

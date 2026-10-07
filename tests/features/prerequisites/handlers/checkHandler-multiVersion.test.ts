@@ -113,9 +113,10 @@ describe('Prerequisites Check Handler - Multi-Version Node.js Support', () => {
 
         await handleCheckPrerequisites(context);
 
+        // The CLI's own Node, not the stack's 18
         expect(shared.checkPerNodeVersionStatus).toHaveBeenCalledWith(
             mockAdobeCliPrereq,
-            ['18'],
+            shared.perNodeToolMajors(),
             context
         );
     });

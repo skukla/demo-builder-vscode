@@ -906,7 +906,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: false,
         readOnly: false,
         description:
-            'Install one missing prerequisite (Node, aio CLI, plugins) by its prereqId from ' +
+            'Install one missing prerequisite (Node into Demo Builder\'s own store, aio CLI, plugins) by its prereqId from ' +
             'check_prerequisites. Runs a package manager — confirm with the user first. Some ' +
             'prerequisites can only be installed by hand; those answer with a URL to relay.',
         map: prerequisitesHandlers,

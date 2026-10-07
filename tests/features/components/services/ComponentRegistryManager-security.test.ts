@@ -1,11 +1,11 @@
 /**
  * ComponentRegistryManager - Version Validation and Injection Tests
  *
- * Every one of these thirteen tests also existed in
- * `ComponentRegistryManager-validation.test.ts`, which was deleted on 2026-08-31.
- * Nine bodies were byte-identical; the other four differed only in that this file
- * uses the shared `createMaliciousRegistry` helper where the twin inlined the same
- * construction. Both drove the identical ten-payload list, checked before deleting.
+ * These tests once also existed in `ComponentRegistryManager-validation.test.ts`,
+ * deleted on 2026-08-31 as a byte-for-byte twin. They targeted
+ * `getRequiredNodeVersions` too until that was removed (PR-1a); the format checks
+ * it carried now run against `getNodeVersionToComponentMapping`, which validates
+ * through the same `validateAndMapNodeVersion`.
  */
 
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
@@ -35,115 +35,6 @@ describe('Component Registry Manager - Security Validation', () => {
         jest.clearAllMocks();
         manager = new ComponentRegistryManager('/fake/extension/path');
         mockLoader = getMockLoader();
-    });
-
-    describe('getRequiredNodeVersions - security validation', () => {
-        it('should accept valid numeric versions from components.json', async () => {
-            // Given: components.json has valid numeric versions
-            mockLoader.load.mockResolvedValue(mockRawRegistry);
-
-            // When: getRequiredNodeVersions() is called with components that have nodeVersion
-            const versions = await manager.getRequiredNodeVersions(
-                'headless'                // Node 24
-            );
-
-            // Then: All versions returned without error
-            expect(versions.size).toBe(1);
-            expect(versions.has('24')).toBe(true);  // headless
-        });
-
-        it('should accept valid semantic versions', async () => {
-            // Given: Component with semantic version
-            const registryWithSemver = {
-                ...mockRawRegistry,
-                frontends: {
-                    ...mockRawRegistry.frontends,
-                    eds: {
-                        ...mockRawRegistry.frontends!.eds,
-                        configuration: {
-                            ...mockRawRegistry.frontends!.eds.configuration,
-                            nodeVersion: '20.11.0'
-                        }
-                    }
-                }
-            };
-            mockLoader.load.mockResolvedValue(registryWithSemver);
-
-            // When: getRequiredNodeVersions() is called
-            const versions = await manager.getRequiredNodeVersions('eds');
-
-            // Then: Semantic version accepted
-            expect(versions.has('20.11.0')).toBe(true);
-        });
-
-        it('should throw error for injection payload in nodeVersion', async () => {
-            // Given: components.json manually edited with malicious version
-            const maliciousRegistry = createMaliciousRegistry('frontends.eds', '20; rm -rf /');
-            mockLoader.load.mockResolvedValue(maliciousRegistry);
-
-            // When & Then: Validation error thrown
-            await expect(
-                manager.getRequiredNodeVersions('eds')
-            ).rejects.toThrow(/Invalid Node/);
-        });
-
-        it('should throw error for invalid version format with v prefix', async () => {
-            // Given: Component with "v" prefix (invalid)
-            const invalidRegistry = createMaliciousRegistry('frontends.eds', 'v20');
-            mockLoader.load.mockResolvedValue(invalidRegistry);
-
-            // When & Then: Validation error thrown
-            await expect(
-                manager.getRequiredNodeVersions('eds')
-            ).rejects.toThrow(/Invalid Node/);
-        });
-
-        it('should throw error for invalid version format "latest"', async () => {
-            // Given: Component with "latest" keyword (invalid - not in allowlist)
-            const invalidRegistry = createMaliciousRegistry('frontends.eds', 'latest');
-            mockLoader.load.mockResolvedValue(invalidRegistry);
-
-            // When & Then: Validation error thrown
-            await expect(
-                manager.getRequiredNodeVersions('eds')
-            ).rejects.toThrow(/Invalid Node/);
-        });
-
-        it('should validate all 9 injection payloads', async () => {
-            // Given: All known injection payloads from security agent
-            // When & Then: Each payload rejected
-            for (const payload of injectionPayloads) {
-                const maliciousRegistry = createMaliciousRegistry('frontends.eds', payload);
-                mockLoader.load.mockResolvedValue(maliciousRegistry);
-
-                await expect(
-                    manager.getRequiredNodeVersions('eds')
-                ).rejects.toThrow(/Invalid Node/);
-            }
-        });
-
-        it('should validate nodeVersion in backend component', async () => {
-            // Given: Backend with malicious version
-            const maliciousRegistry = createMaliciousRegistry('backends.adobe-commerce-paas', '20; rm -rf /');
-            mockLoader.load.mockResolvedValue(maliciousRegistry);
-
-            // When & Then: Validation error thrown
-            await expect(
-                manager.getRequiredNodeVersions(undefined, 'adobe-commerce-paas')
-            ).rejects.toThrow(/Invalid Node/);
-        });
-
-        it('should validate nodeVersion in dependencies', async () => {
-            // Given: Dependency with malicious version
-            const maliciousRegistry = createMaliciousRegistry('dependencies.test-tool', '20; rm -rf /');
-            mockLoader.load.mockResolvedValue(maliciousRegistry);
-
-            // When & Then: Validation error thrown
-            await expect(
-                manager.getRequiredNodeVersions(undefined, undefined, ['test-tool'])
-            ).rejects.toThrow(/Invalid Node/);
-        });
-
     });
 
     describe('getNodeVersionToComponentMapping - security validation', () => {
@@ -203,6 +94,59 @@ describe('Component Registry Manager - Security Validation', () => {
             // Then: Mapping returned without errors
             expect(Object.keys(mapping)).toHaveLength(1);
             expect(mapping['24']).toBeDefined();  // headless
+        });
+
+        it('should accept valid semantic versions', async () => {
+            // Given: Component with semantic version
+            const registryWithSemver = {
+                ...mockRawRegistry,
+                frontends: {
+                    ...mockRawRegistry.frontends,
+                    eds: {
+                        ...mockRawRegistry.frontends!.eds,
+                        configuration: {
+                            ...mockRawRegistry.frontends!.eds.configuration,
+                            nodeVersion: '20.11.0'
+                        }
+                    }
+                }
+            };
+            mockLoader.load.mockResolvedValue(registryWithSemver);
+
+            const mapping = await manager.getNodeVersionToComponentMapping('eds');
+
+            // Then: Semantic version accepted
+            expect(mapping['20.11.0']).toBeDefined();
+        });
+
+        it('should throw error for invalid version format with v prefix', async () => {
+            const invalidRegistry = createMaliciousRegistry('frontends.eds', 'v20');
+            mockLoader.load.mockResolvedValue(invalidRegistry);
+
+            await expect(
+                manager.getNodeVersionToComponentMapping('eds')
+            ).rejects.toThrow(/Invalid Node/);
+        });
+
+        it('should throw error for invalid version format "latest"', async () => {
+            // "latest" is a keyword, not in the allowlist
+            const invalidRegistry = createMaliciousRegistry('frontends.eds', 'latest');
+            mockLoader.load.mockResolvedValue(invalidRegistry);
+
+            await expect(
+                manager.getNodeVersionToComponentMapping('eds')
+            ).rejects.toThrow(/Invalid Node/);
+        });
+
+        it('should validate all injection payloads', async () => {
+            for (const payload of injectionPayloads) {
+                const maliciousRegistry = createMaliciousRegistry('frontends.eds', payload);
+                mockLoader.load.mockResolvedValue(maliciousRegistry);
+
+                await expect(
+                    manager.getNodeVersionToComponentMapping('eds')
+                ).rejects.toThrow(/Invalid Node/);
+            }
         });
     });
 });

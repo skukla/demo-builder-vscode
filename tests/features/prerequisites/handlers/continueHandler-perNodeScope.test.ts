@@ -1,20 +1,14 @@
 /**
  * continueHandler — per-node variant SCOPE must match checkHandler's.
  *
- * The 2026-08-27 dedup sweep adjudicated the check/continue pair as variants
- * and found this in the differences: check resolves the required Node majors
- * through `resolveRequiredMajors` (narrowed by the prereq's `requiredFor` /
- * plugin `requiredFor` component ids), while continue demanded the tool on
- * EVERY major in the mapping. Live case: aio-cli's plugins are requiredFor
- * the mesh components only, and the headless stack runs its frontend on
- * Node 24 with the mesh on Node 20 — so check passed green (aio-cli on 20)
- * and Continue then flagged Node 24 as a missing variant and flipped the
- * prerequisite to 'error'. Green check, blocking continue, no visible reason.
+ * The 2026-08-27 dedup sweep found check and continue requiring the tool on
+ * different Node majors: green check, blocking continue, no visible reason.
+ * Both now read one set, `perNodeToolMajors()` (the Adobe CLI's own Node), and
+ * ignore the prereq's and its plugins' `requiredFor`.
  *
- * These tests pin the scope agreement. Mock discipline: the shared module is
- * requireActual with ONLY the two mapping getters overridden (they read the
- * component registry via extensionPath, absent in this harness), and the
- * command executor answers fnm/tool checks per major.
+ * Mock discipline: the shared module is requireActual with ONLY the mapping
+ * getter overridden (it reads the component registry, absent in this
+ * harness), and the command executor answers fnm/tool checks per major.
  */
 
 import type { PrerequisiteStatusPayload } from '@/types/webviewPayloads';
@@ -25,21 +19,20 @@ jest.mock('@/core/di/serviceLocator', () => ({
 }));
 
 const mockGetNodeVersionMapping = jest.fn();
-const mockGetNodeVersionIdMapping = jest.fn();
 jest.mock('@/features/prerequisites/handlers/shared', () => ({
     ...jest.requireActual('@/features/prerequisites/handlers/shared'),
     getNodeVersionMapping: (...a: unknown[]) => mockGetNodeVersionMapping(...a),
-    getNodeVersionIdMapping: (...a: unknown[]) => mockGetNodeVersionIdMapping(...a),
 }));
 
 import { handleContinuePrerequisites } from '@/features/prerequisites/handlers/continueHandler';
+import { perNodeToolMajors } from '@/features/prerequisites/handlers/shared';
 import type { HandlerContext } from '@/types/handlers';
 import type { PrerequisiteDefinition } from '@/features/prerequisites/services/types';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
 /**
- * aio-cli's real shape: per-node tool whose plugins serve the mesh only. The
- * plugin is copied from `prerequisites.json` (only `requiredFor` is read here).
+ * aio-cli's real shape: per-node tool whose plugin names the mesh in
+ * `requiredFor`. Copied from `prerequisites.json`; the scope ignores it.
  */
 const MESH_SCOPED_PREREQ: PrerequisiteDefinition = {
     id: 'aio-cli',
@@ -82,21 +75,26 @@ function makeContext(): HandlerContext {
     });
 }
 
-beforeEach(() => {
-    jest.clearAllMocks();
-    // The headless stack's real shape: mesh on 20, frontend on 24.
-    mockGetNodeVersionMapping.mockResolvedValue({ '20': 'API Mesh', '24': 'Headless' });
-    mockGetNodeVersionIdMapping.mockResolvedValue({ '20': 'eds-commerce-mesh', '24': 'headless' });
+/** The CLI's own Node major; the mesh's Node 20 is never it. */
+const [CLI_MAJOR] = perNodeToolMajors();
+
+/** fnm has both Nodes; the tool answers only under the given majors. */
+function toolUnder(...majors: string[]) {
     mockExecute.mockImplementation(async (command: string, opts?: { useNodeVersion?: string }) => {
         if (command === 'fnm list') {
-            return { code: 0, stdout: 'v20.11.0\nv24.1.0', stderr: '' };
+            return { code: 0, stdout: `v20.11.0\nv${CLI_MAJOR}.1.0`, stderr: '' };
         }
-        // The tool exists under Node 20 (where the mesh needs it) and NOT 24.
-        if (opts?.useNodeVersion === '20') {
+        if (opts?.useNodeVersion && majors.includes(opts.useNodeVersion)) {
             return { code: 0, stdout: '@adobe/aio-cli/10.0.0', stderr: '' };
         }
         return { code: 1, stdout: '', stderr: 'not found' };
     });
+}
+
+beforeEach(() => {
+    jest.clearAllMocks();
+    // A stack with the mesh on Node 20 beside the CLI's own Node.
+    mockGetNodeVersionMapping.mockResolvedValue({ '20': 'API Mesh', [CLI_MAJOR]: 'Adobe I/O CLI' });
 });
 
 function lastStatusFor(context: HandlerContext, name: string): PrerequisiteStatusPayload {
@@ -108,29 +106,23 @@ function lastStatusFor(context: HandlerContext, name: string): PrerequisiteStatu
 }
 
 describe('continue per-node variant scope (the check/continue agreement)', () => {
-    it('requires the variant only on the majors the prereq is requiredFor — not every major', async () => {
+    it("requires the tool on the CLI's own Node, not the major a plugin's requiredFor points at", async () => {
+        toolUnder(CLI_MAJOR);
         const context = makeContext();
 
         const result = await handleContinuePrerequisites(context, { fromIndex: 0 });
 
         expect(result.success).toBe(true);
         const status = lastStatusFor(context, 'Adobe I/O CLI');
-        // The mesh needs Node 20 only; the tool is there. Node 24 belongs to
-        // the frontend, which never asked for this tool — continue must not
-        // flip a green check to 'error' over it.
+        // Missing under the mesh's Node 20 does not matter; that is not a per-Node tool major.
         expect(status.status).not.toBe('error');
         expect(status.installed).toBe(true);
     });
 
-    it('still fails the variant check when a REQUIRED major lacks the tool', async () => {
+    it("fails the variant check when the CLI's own Node lacks the tool", async () => {
+        // Present under the mesh's Node 20 only: requiredFor no longer rescues it.
+        toolUnder('20');
         const context = makeContext();
-        // Now the tool is missing on 20 too — the one major that IS required.
-        mockExecute.mockImplementation(async (command: string) => {
-            if (command === 'fnm list') {
-                return { code: 0, stdout: 'v20.11.0\nv24.1.0', stderr: '' };
-            }
-            return { code: 1, stdout: '', stderr: 'not found' };
-        });
 
         await handleContinuePrerequisites(context, { fromIndex: 0 });
 

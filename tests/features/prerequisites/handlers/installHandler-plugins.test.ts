@@ -11,10 +11,9 @@
  * It is not dead code. `aio-cli` ships one plugin — `api-mesh` — and that is the
  * API Mesh CLI plugin the extension's mesh deployment depends on.
  *
- * The branch that production actually takes is the LAST one: the shipped plugin
- * declares no `requiredFor`, so no node version maps to it and the resolver falls
- * through to `targetVersions[0]`. The `requiredFor` branches are covered too, but
- * the fixture keeps the shipped shape so the common path is the honest one.
+ * A per-Node tool's plugins install under the tool's own Node (`perNodeToolMajors`),
+ * when fnm has it. They used to be placed by matching `requiredFor` ids against
+ * display names, which never matched and fell back to the first target version.
  */
 
 // Mock all dependencies (MUST be at top before imports)
@@ -22,7 +21,6 @@ jest.mock('@/features/prerequisites/handlers/shared', () => {
     const actual = jest.requireActual('@/features/prerequisites/handlers/shared');
     return {
         ...actual,
-        getRequiredNodeVersions: jest.fn(),
         getNodeVersionMapping: jest.fn(),
         checkPerNodeVersionStatus: jest.fn(),
         hasNodeVersions: jest.fn(),
@@ -35,6 +33,7 @@ jest.mock('@/features/prerequisites/services/versioning/MultiVersionDetector', (
     getInstalledNodeVersions: jest.fn(),
 }));
 
+import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
 import { handleInstallPrerequisite } from '@/features/prerequisites/handlers/installHandler';
 import { getInstalledNodeVersions } from '@/features/prerequisites/services/versioning/MultiVersionDetector';
 import type { HandlerContext } from '@/types/handlers';
@@ -45,6 +44,9 @@ import {
     setupMockCommandExecutor,
     setupSharedUtilityMocks,
 } from './installHandler.testUtils';
+
+/** The Node the CLI and its plugins live under (`perNodeToolMajors`). */
+const CLI_NODE = adobeCliNodeVersion();
 
 const PLUGIN_COMMANDS = {
     message: 'Installing API Mesh plugin',
@@ -66,19 +68,16 @@ describe('Install Handler - plugins', () => {
         states.set(0, { prereq: mockAioCliWithPlugin, result: mockNodeResult });
         mockContext.sharedState.currentPrerequisiteStates = states;
 
-        (getInstalledNodeVersions as jest.Mock).mockResolvedValue(['18', '20']);
+        (getInstalledNodeVersions as jest.Mock).mockResolvedValue(['18', '20', CLI_NODE]);
 
         // The shared-utility default reports NOTHING missing, which makes the handler
         // return early — before installPlugins is ever reached. Plugins are installed
         // as part of an install, so there has to be something to install.
         const shared = jest.requireMock('@/features/prerequisites/handlers/shared');
         (shared.checkPerNodeVersionStatus as jest.Mock).mockResolvedValue({
-            perNodeVersionStatus: [
-                { version: 'Node 18', component: '', installed: false },
-                { version: 'Node 20', component: '10.0.0', installed: true },
-            ],
+            perNodeVersionStatus: [{ version: `Node ${CLI_NODE}`, component: '', installed: false }],
             perNodeVariantMissing: true,
-            missingVariantMajors: ['18'],
+            missingVariantMajors: [CLI_NODE],
         });
     });
 
@@ -171,30 +170,31 @@ describe('Install Handler - plugins', () => {
         );
     });
 
-    it('skips the plugin entirely when its Node versions are not in fnm', async () => {
+    it('installs the plugin beside the tool when the caller names a Node', async () => {
         (mockContext.prereqManager!.getPluginInstallCommands as jest.Mock).mockResolvedValue(
             PLUGIN_COMMANDS
         );
-        // requiredFor maps the plugin to a node version fnm does not have.
-        const prereq = {
-            ...mockAioCliWithPlugin,
-            plugins: [{ id: 'api-mesh', name: 'API Mesh Plugin', requiredFor: ['React App'] }],
-        };
-        const states = new Map();
-        states.set(0, { prereq, result: mockNodeResult });
-        mockContext.sharedState.currentPrerequisiteStates = states;
-        (getInstalledNodeVersions as jest.Mock).mockResolvedValue(['22']); // not 18
+        // The tool installs under the Node the caller named; the plugin follows it.
+        const shared = jest.requireMock('@/features/prerequisites/handlers/shared');
+        (shared.checkPerNodeVersionStatus as jest.Mock).mockResolvedValue({
+            perNodeVersionStatus: [],
+            perNodeVariantMissing: true,
+            missingVariantMajors: ['20'],
+        });
+        (getInstalledNodeVersions as jest.Mock).mockResolvedValue(['18', '20']);
 
-        await handleInstallPrerequisite(mockContext, { prereqId: 0 });
+        await handleInstallPrerequisite(mockContext, { prereqId: 0, version: '20' });
 
-        expect(pluginCommandsRun()).toStrictEqual([]);
+        expect(mockContext.progressUnifier!.executeStep).toHaveBeenCalled();
+        const call = mockExecute.mock.calls.find(([cmd]) => (cmd as string).includes('plugins:install'));
+        expect(call?.[1]).toEqual(expect.objectContaining({ useNodeVersion: '20' }));
     });
 
-    it('installs for the Node version the plugin is required for', async () => {
+    it("installs under the CLI's own Node, whatever component requiredFor names", async () => {
         (mockContext.prereqManager!.getPluginInstallCommands as jest.Mock).mockResolvedValue(
             PLUGIN_COMMANDS
         );
-        // 'React App' maps to Node 18 in the shared-utility mock's mapping.
+        // 'React App' maps to Node 18 in the shared-utility mock; that no longer matters.
         const prereq = {
             ...mockAioCliWithPlugin,
             plugins: [{ id: 'api-mesh', name: 'API Mesh Plugin', requiredFor: ['React App'] }],
@@ -208,29 +208,21 @@ describe('Install Handler - plugins', () => {
         const call = mockExecute.mock.calls.find(([cmd]) =>
             (cmd as string).includes('plugins:install')
         );
-        expect(call?.[1]).toEqual(expect.objectContaining({ useNodeVersion: '18' }));
+        expect(call?.[1]).toEqual(expect.objectContaining({ useNodeVersion: CLI_NODE }));
     });
 
-    /**
-     * WHICH Node version a plugin lands on when nothing says.
-     *
-     * The shipped `api-mesh` plugin declares no `requiredFor`, so no Node version maps
-     * to it and the resolver falls through to the first version being installed. That
-     * fallback is the branch production actually takes; without it the plugin installs
-     * against the ambient Node rather than the one just set up.
-     */
-    it('installs a plugin with no version mapping against the first version being installed', async () => {
+    it("installs the shipped plugin (no requiredFor) under the CLI's own Node", async () => {
         (mockContext.prereqManager!.getPluginInstallCommands as jest.Mock).mockResolvedValue(
             PLUGIN_COMMANDS
         );
-        // The shipped shape: no `requiredFor`. Node 18 is the one missing, so it is the
-        // version the install targets.
+
         await handleInstallPrerequisite(mockContext, { prereqId: 0 });
 
-        const call = mockExecute.mock.calls.find(([cmd]) =>
+        const calls = mockExecute.mock.calls.filter(([cmd]) =>
             (cmd as string).includes('plugins:install')
         );
-        expect(call?.[1]).toEqual(expect.objectContaining({ useNodeVersion: '18' }));
+        expect(calls.map(([, opts]) => (opts as { useNodeVersion?: string }).useNodeVersion))
+            .toStrictEqual([CLI_NODE]);
     });
 
     /**
@@ -287,75 +279,4 @@ describe('Install Handler - plugins', () => {
         ).mock.calls.map(([, , , , options]) => (options as { nodeVersion?: string })?.nodeVersion);
         expect(versionsInstalledFor).toEqual(['8', '10', '20']);
     });
-
-
-    /**
-     * A PLUGIN NEEDED BY SOMETHING THE PROJECT DEPENDS ON.
-     *
-     * A plugin says which components need it. Those components can be selected
-     * directly, or pulled in as a DEPENDENCY of something else selected — the API Mesh
-     * plugin is needed because a mesh was added, not because anyone picked the plugin.
-     * The dependency branch collects the Node versions of those indirect needs.
-     *
-     * No test entered it at all: sixteen mutants here had no coverage, which is what
-     * "nothing ever runs this" looks like in a mutation report rather than a survivor.
-     */
-    describe('a plugin required by a dependency rather than a direct selection', () => {
-        beforeEach(() => {
-            (mockContext.prereqManager!.getPluginInstallCommands as jest.Mock).mockResolvedValue(
-                PLUGIN_COMMANDS
-            );
-        });
-
-        function pluginNeededBy(requiredFor: string[], dependencies: string[]) {
-            const states = new Map();
-            states.set(0, {
-                prereq: {
-                    ...mockAioCliWithPlugin,
-                    plugins: [{ id: 'api-mesh', name: 'API Mesh Plugin', requiredFor }],
-                },
-                result: mockNodeResult,
-            });
-            mockContext.sharedState.currentPrerequisiteStates = states;
-            mockContext.sharedState.currentComponentSelection = { dependencies };
-        }
-
-        /** Every Node version the plugin was installed against. */
-        function nodeVersionsUsed(): unknown[] {
-            return mockExecute.mock.calls
-                .filter(([cmd]) => (cmd as string).includes('plugins:install'))
-                .map(([, opts]) => (opts as { useNodeVersion?: string }).useNodeVersion);
-        }
-
-        it('installs the plugin for the Node version of a dependency that needs it', async () => {
-            // 'Node Backend' maps to Node 20 in the shared mock's mapping, and is pulled
-            // in as a dependency rather than chosen.
-            pluginNeededBy(['Node Backend'], ['Node Backend']);
-
-            await handleInstallPrerequisite(mockContext, { prereqId: 0 });
-
-            expect(nodeVersionsUsed()).toEqual(['20']);
-        });
-
-        it('ignores a dependency the plugin does not name', async () => {
-            // The dependency is present but the plugin does not need it, so it must not
-            // drag in that dependency's Node version.
-            pluginNeededBy(['React App'], ['Node Backend']);
-
-            await handleInstallPrerequisite(mockContext, { prereqId: 0 });
-
-            // Node 18 only — from 'React App', which the plugin DOES name.
-            expect(nodeVersionsUsed()).toEqual(['18']);
-        });
-
-        it('does not install the plugin twice when a dependency repeats a version already collected', async () => {
-            // 'React App' is named directly AND arrives as a dependency. One install.
-            pluginNeededBy(['React App'], ['React App']);
-
-            await handleInstallPrerequisite(mockContext, { prereqId: 0 });
-
-            expect(nodeVersionsUsed()).toEqual(['18']);
-        });
-    });
-
 });

@@ -1,7 +1,4 @@
-import {
-    getNodeVersionIdMapping,
-    getNodeVersionMapping,
-} from '@/features/prerequisites/handlers/shared';
+import { getNodeVersionMapping } from '@/features/prerequisites/handlers/shared';
 import { createPrereqHandlerContext, createComponentSelection } from './testHelpers';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -16,12 +13,10 @@ import type { HandlerContext } from '@/types/handlers';
 
 // Mock ComponentRegistryManager module
 const mockGetNodeVersionToComponentMapping = jest.fn();
-const mockGetNodeVersionToComponentIdMapping = jest.fn();
 
 jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
     ComponentRegistryManager: jest.fn().mockImplementation(() => ({
         getNodeVersionToComponentMapping: mockGetNodeVersionToComponentMapping,
-        getNodeVersionToComponentIdMapping: mockGetNodeVersionToComponentIdMapping,
     })),
 }));
 
@@ -146,63 +141,5 @@ describe('Prerequisites Handlers - getNodeVersionMapping', () => {
 
         expect(mockGetNodeVersionToComponentMapping).not.toHaveBeenCalled();
         expect(context.logger.warn).not.toHaveBeenCalled();
-    });
-});
-
-describe('Prerequisites Handlers - getNodeVersionIdMapping', () => {
-    beforeEach(() => {
-        jest.clearAllMocks();
-    });
-
-    it('returns the id mapping the registry builds from the whole selection', async () => {
-        mockGetNodeVersionToComponentIdMapping.mockResolvedValue({
-            '20': 'commerce-mesh',
-            '24': 'headless',
-        });
-        const context = createPrereqHandlerContext({
-            sharedState: {
-                isAuthenticating: false,
-                currentComponentSelection: createComponentSelection({
-                    frontend: 'headless',
-                    backend: 'adobe-commerce-paas',
-                    dependencies: ['commerce-mesh'],
-                    integrations: ['aem-assets'],
-                }),
-            },
-        });
-
-        const mapping = await getNodeVersionIdMapping(context);
-
-        expect(mapping).toEqual({ '20': 'commerce-mesh', '24': 'headless' });
-        expect(mockGetNodeVersionToComponentIdMapping).toHaveBeenCalledWith(
-            'headless',
-            'adobe-commerce-paas',
-            ['commerce-mesh'],
-            ['aem-assets']
-        );
-    });
-
-    it('is empty without a selection, and the registry is not asked', async () => {
-        const context = createPrereqHandlerContext();
-
-        expect(await getNodeVersionIdMapping(context)).toStrictEqual({});
-        expect(mockGetNodeVersionToComponentIdMapping).not.toHaveBeenCalled();
-        // Having no selection yet is a normal state, not a degraded one: the empty
-        // result must come from the early return, never from the catch. Both look
-        // identical in the return value, and the warning is what separates them.
-        expect(context.logger.warn).not.toHaveBeenCalled();
-    });
-
-    it('is empty when the registry fails, so the check proceeds without the association', async () => {
-        mockGetNodeVersionToComponentIdMapping.mockRejectedValue(new Error('registry unavailable'));
-        const context = createPrereqHandlerContext({
-            sharedState: {
-                isAuthenticating: false,
-                currentComponentSelection: createComponentSelection({ frontend: 'headless' }),
-            },
-        });
-
-        expect(await getNodeVersionIdMapping(context)).toStrictEqual({});
-        expect(context.logger.warn).toHaveBeenCalledTimes(1);
     });
 });

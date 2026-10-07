@@ -10,7 +10,7 @@
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getStackById } from '@/features/components/services/demoPackageLoader';
-import { getNodeVersionMapping, getNodeVersionIdMapping, checkPerNodeVersionStatus, areDependenciesInstalled, handlePrerequisiteCheckError, determinePrerequisiteStatus, getPrerequisiteDisplayMessage, formatProgressMessage, formatVersionSuffix, hasNodeVersions, resolveRequiredMajors } from '@/features/prerequisites/handlers/shared';
+import { getNodeVersionMapping, checkPerNodeVersionStatus, areDependenciesInstalled, handlePrerequisiteCheckError, determinePrerequisiteStatus, getPrerequisiteDisplayMessage, formatProgressMessage, formatVersionSuffix, hasNodeVersions, perNodeToolMajors } from '@/features/prerequisites/handlers/shared';
 import type { PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/PrerequisitesManager';
 import { ErrorCode } from '@/types/errorCodes';
 import { HandlerContext, type PrerequisiteCheckState } from '@/types/handlers';
@@ -147,7 +147,6 @@ async function detectPerNodeVariantStatus(
     prereq: PrerequisiteDefinition,
     checkResult: { installed: boolean },
     nodeVersionMapping: Record<string, string>,
-    nodeVersionIdMapping: Record<string, string>,
 ): Promise<{
     perNodeVariantMissing: boolean;
     missingVariantMajors: string[];
@@ -157,7 +156,7 @@ async function detectPerNodeVariantStatus(
         return { perNodeVariantMissing: false, missingVariantMajors: [], perNodeVersionStatus: [] };
     }
 
-    const requiredMajors = resolveRequiredMajors(prereq, nodeVersionMapping, nodeVersionIdMapping);
+    const requiredMajors = perNodeToolMajors();
 
     if (!checkResult.installed) {
         const result = buildUninstalledPerNodeStatus(requiredMajors);
@@ -307,7 +306,6 @@ export async function handleCheckPrerequisites(
         const prerequisites = context.sharedState.currentPrerequisites;
         const prerequisiteStates = context.sharedState.currentPrerequisiteStates as Map<number, PrerequisiteCheckState>;
         const nodeVersionMapping = await getNodeVersionMapping(context);
-        const nodeVersionIdMapping = await getNodeVersionIdMapping(context);
 
         await sendPrerequisitesListToUI(context, prerequisites, nodeVersionMapping);
 
@@ -349,7 +347,7 @@ export async function handleCheckPrerequisites(
             // Detect per-node-version variant status
             const variantStatus = await detectPerNodeVariantStatus(
                 context, prereq, checkResult,
-                nodeVersionMapping, nodeVersionIdMapping,
+                nodeVersionMapping,
             );
 
             // Store state for this prerequisite

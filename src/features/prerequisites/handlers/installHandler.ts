@@ -20,8 +20,7 @@ import { classifyTransience } from '@/core/errors';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import { stageLine } from '@/core/utils/stageLine';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
-import { getRequiredNodeVersions, getNodeVersionMapping, checkPerNodeVersionStatus, determinePrerequisiteStatus, hasNodeVersions, getNodeVersionKeys } from '@/features/prerequisites/handlers/shared';
+import { getNodeVersionMapping, perNodeToolMajors, checkPerNodeVersionStatus, determinePrerequisiteStatus, hasNodeVersions, getNodeVersionKeys } from '@/features/prerequisites/handlers/shared';
 import type { InstallStep, PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/PrerequisitesManager';
 import { getInstalledNodeVersions } from '@/features/prerequisites/services/versioning/MultiVersionDetector';
 import { ErrorCode } from '@/types/errorCodes';
@@ -60,8 +59,8 @@ function getTargetNodeVersions(
 /**
  * Determine which Node versions to pass to getInstallSteps.
  *
- * - Per-node-version prerequisites (e.g. Adobe CLI): every required Node version, or a
- *   single fallback when the project requires none
+ * - Per-node-version prerequisites (e.g. Adobe CLI): the version the caller named, else
+ *   the per-Node tool's set (`perNodeToolMajors`)
  * - Everything else: no nodeVersions needed
  *
  * THE NODE PREREQUISITE NEVER REACHES HERE, which is why it has no case. Its only
@@ -78,12 +77,10 @@ function getTargetNodeVersions(
  */
 function determineNodeVersionsForInstall(
     prereq: { perNodeVersion?: boolean },
-    nodeVersions: string[],
     version?: string,
 ): string[] | undefined {
-    // Per-node-version prerequisites need to install for all Node versions
     if (prereq.perNodeVersion) {
-        return nodeVersions.length ? nodeVersions : [version || adobeCliNodeVersion()];
+        return version ? [version] : perNodeToolMajors();
     }
 
     return undefined;
@@ -140,12 +137,10 @@ async function resolveNodeTargetVersions(
 async function resolvePerNodeTargetVersions(
     context: HandlerContext,
     prereq: PrerequisiteDefinition,
-    nodeVersions: string[],
     prereqId: number,
     version?: string,
 ): Promise<{ targetVersions: string[] | undefined; earlyReturn: boolean }> {
-    const versionsToCheck = nodeVersions.length ? nodeVersions : [version || adobeCliNodeVersion()];
-    versionsToCheck.sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+    const versionsToCheck = version ? [version] : perNodeToolMajors();
 
     const perNodeStatus = await checkPerNodeVersionStatus(prereq, versionsToCheck, context);
     const missingNodeVersions = perNodeStatus.missingVariantMajors;
@@ -242,77 +237,22 @@ async function executeInstallSteps(
 }
 
 /**
- * Determine which Node versions a plugin should be installed for.
- */
-async function resolvePluginNodeVersions(
-    context: HandlerContext,
-    prereq: PrerequisiteDefinition,
-    plugin: { id: string; requiredFor?: string[] },
-    nodeVersionMapping: Record<string, string>,
-    targetVersions: string[] | undefined,
-): Promise<(string | undefined)[] | null> {
-    const requiredForComponents = plugin.requiredFor || [];
-    let versionsToInstall: (string | undefined)[] = [undefined];
-
-    if (!prereq.perNodeVersion || !hasNodeVersions(nodeVersionMapping)) {
-        return versionsToInstall;
-    }
-
-    const pluginNodeVersions: string[] = [];
-
-    for (const [nodeVersion, componentId] of Object.entries(nodeVersionMapping)) {
-        if (requiredForComponents.includes(componentId)) {
-            pluginNodeVersions.push(nodeVersion);
-            context.debugLogger.debug(`[Prerequisites] Plugin ${plugin.id} needed for ${componentId} (Node ${nodeVersion})`);
-        }
-    }
-
-    // A second pass over `currentComponentSelection.dependencies` used to sit here,
-    // looking up each dependency that appears in `requiredFor` and adding its Node
-    // version. It could never add one: it found its version with
-    // `.find(([_, compId]) => compId === dep)`, so the mapping entry it landed on had
-    // `componentId === dep`, and `dep` was already known to be in `requiredFor` — which
-    // is exactly the condition the loop above tests for every mapping entry. Its
-    // `!pluginNodeVersions.includes(...)` guard was therefore always false. Ten mutants
-    // sat behind it that no test could reach. Removed 2026-09-04; the same finding as
-    // the two blocks the docstrings above record.
-
-    if (pluginNodeVersions.length > 0) {
-        const fnmVersions = await getInstalledNodeVersions(
-            ServiceLocator.getCommandExecutor(),
-            context.logger,
-        );
-        const fnmSet = new Set(fnmVersions);
-        const installablePluginVersions = pluginNodeVersions.filter(v => fnmSet.has(v));
-
-        if (installablePluginVersions.length > 0) {
-            versionsToInstall = installablePluginVersions;
-        } else {
-            context.logger.debug(`[Prerequisites] Plugin ${plugin.id}: Node versions not in fnm, skipping`);
-            return null; // Signal to skip this plugin
-        }
-    } else if (targetVersions?.length) {
-        versionsToInstall = [targetVersions[0]];
-        context.debugLogger.debug(`[Prerequisites] Plugin ${plugin.id}: no specific version mapping, using ${targetVersions[0]}`);
-    }
-
-    return versionsToInstall;
-}
-
-/**
  * Install all plugins for a prerequisite across the appropriate Node versions.
+ * A per-Node tool's plugins go beside it, under exactly the Nodes the tool was just
+ * installed for (`toolVersions`, already limited to Nodes in the store and never
+ * empty here: an empty list returns before installing). Before PR-1a a plugin chose
+ * its own versions by matching component ids against display names, which never
+ * matched, so it fell back to the first version.
  */
 async function installPlugins(
     context: HandlerContext,
     prereq: PrerequisiteDefinition,
     prereqId: number,
-    targetVersions: string[] | undefined,
+    toolVersions: string[] | undefined,
 ): Promise<void> {
     if (!prereq.plugins || prereq.plugins.length === 0) return;
 
     context.logger.debug(`[Prerequisites] ${prereq.name} has ${prereq.plugins.length} plugin(s) to check`);
-    const nodeVersionMapping = await getNodeVersionMapping(context);
-
     for (const plugin of prereq.plugins) {
         const pluginCommands = await context.prereqManager?.getPluginInstallCommands(prereq.id, plugin.id);
         if (!pluginCommands) {
@@ -320,10 +260,9 @@ async function installPlugins(
             continue;
         }
 
-        const versionsToInstall = await resolvePluginNodeVersions(
-            context, prereq, plugin, nodeVersionMapping, targetVersions,
-        );
-        if (versionsToInstall === null) continue; // Skip this plugin
+        const versionsToInstall: (string | undefined)[] = prereq.perNodeVersion && toolVersions?.length
+            ? toolVersions
+            : [undefined];
 
         for (const nodeVer of versionsToInstall) {
             const versionLabel = nodeVer ? ` for Node ${nodeVer}` : '';
@@ -583,8 +522,6 @@ export async function handleInstallPrerequisite(
         context.logger.debug(`[Prerequisites] User initiated install for: ${prereq.name}`);
         context.debugLogger.debug('[Prerequisites] install-prerequisite payload', { id: prereqId, name: prereq.name, version });
 
-        const nodeVersions = await getRequiredNodeVersions(context);
-
         // Determine target versions for Node.js
         let targetVersions: string[] | undefined = undefined;
         if (prereq.id === 'node') {
@@ -595,7 +532,7 @@ export async function handleInstallPrerequisite(
 
         // Generate install steps
         const installPlan = context.prereqManager?.getInstallSteps(prereq, {
-            nodeVersions: targetVersions || determineNodeVersionsForInstall(prereq, nodeVersions, version),
+            nodeVersions: targetVersions || determineNodeVersionsForInstall(prereq, version),
         });
 
         if (!installPlan) {
@@ -631,7 +568,7 @@ export async function handleInstallPrerequisite(
 
         // Resolve per-node-version target versions
         if (prereq.perNodeVersion) {
-            const perNodeResult = await resolvePerNodeTargetVersions(context, prereq, nodeVersions, prereqId, version);
+            const perNodeResult = await resolvePerNodeTargetVersions(context, prereq, prereqId, version);
             if (perNodeResult.earlyReturn) return { success: true };
             targetVersions = perNodeResult.targetVersions;
         }
@@ -667,12 +604,8 @@ export async function handleInstallPrerequisite(
                 finalNodeVersionStatus = await context.prereqManager?.checkMultipleNodeVersions(mapping);
             }
         } else if (prereq.perNodeVersion) {
-            const mapping = await getNodeVersionMapping(context);
-            const requiredMajors = getNodeVersionKeys(mapping);
-            if (requiredMajors.length > 0) {
-                const postCheckStatus = await checkPerNodeVersionStatus(prereq, requiredMajors, context);
-                finalPerNodeVersionStatus = postCheckStatus.perNodeVersionStatus;
-            }
+            const postCheckStatus = await checkPerNodeVersionStatus(prereq, perNodeToolMajors(), context);
+            finalPerNodeVersionStatus = postCheckStatus.perNodeVersionStatus;
         }
 
         await sendFinalInstallStatus(

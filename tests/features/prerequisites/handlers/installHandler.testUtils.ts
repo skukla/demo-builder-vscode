@@ -21,6 +21,7 @@ import type { ErrorLogger } from '@/core/logging/errorLogger';
 import type { ProgressUnifier } from '@/core/utils/progressUnifier/ProgressUnifier';
 import type { StepLogger } from '@/core/logging/stepLogger';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
 import { createMockHandlerContext as createMockHandlerContextBase } from '../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
@@ -104,9 +105,9 @@ export const mockNodeResult: PrerequisiteStatus = {
 export function setupMockCommandExecutor() {
     const mockExecute = jest.fn().mockImplementation((command: string) => {
         if (command === 'fnm list') {
-            // Return installed Node versions
+            // Installed Node versions: 18, 20 and the Adobe CLI's own Node
             return Promise.resolve({
-                stdout: 'v18.20.8\nv20.19.5\n',
+                stdout: `v18.20.8\nv20.19.5\nv${adobeCliNodeVersion()}.1.0\n`,
                 stderr: '',
                 code: 0,
                 duration: 100,
@@ -160,7 +161,6 @@ export function setupMockCommandExecutor() {
  */
 export function setupSharedUtilityMocks() {
     const shared = require('@/features/prerequisites/handlers/shared');
-    (shared.getRequiredNodeVersions as jest.Mock).mockResolvedValue(['18', '20']);
     (shared.getNodeVersionMapping as jest.Mock).mockResolvedValue({
         '18': 'React App',
         '20': 'Node Backend',

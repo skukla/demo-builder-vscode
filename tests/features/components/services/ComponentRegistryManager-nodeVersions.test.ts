@@ -32,48 +32,6 @@ describe('Component Registry Manager - Node Version Resolution', () => {
         mockLoader.load.mockResolvedValue(mockRawRegistry);
     });
 
-    describe('node version resolution', () => {
-        it('should return empty set when frontend and backend have no Node requirements', async () => {
-            // Given: EDS and PaaS don't require Node (they're remote services)
-            // When: Getting required Node versions
-            const versions = await manager.getRequiredNodeVersions('eds', 'adobe-commerce-paas');
-
-            // Then: No Node versions are required
-            expect(versions.size).toBe(0);
-        });
-
-        it('should resolve node version from headless frontend', async () => {
-            // Given: Headless (Next.js) requires Node 24 for local development
-            const versions = await manager.getRequiredNodeVersions('headless');
-
-            expect(versions.size).toBe(1);
-            expect(versions.has('24')).toBe(true);
-        });
-
-        it('should return empty for dependencies without nodeVersion', async () => {
-            // Given: test-tool is a browser overlay without Node requirement
-            const versions = await manager.getRequiredNodeVersions('eds', 'adobe-commerce-paas', ['test-tool']);
-
-            // Then: No Node versions required
-            expect(versions.size).toBe(0);
-        });
-
-        it('should include mesh node versions when passed as dependency', async () => {
-            // Given: EDS + PaaS with commerce-mesh (Node 20)
-            const versions = await manager.getRequiredNodeVersions('eds', 'adobe-commerce-paas', ['commerce-mesh']);
-
-            // Then: commerce-mesh's Node 20 is required
-            expect(versions.size).toBe(1);
-            expect(versions.has('20')).toBe(true);
-        });
-
-        it('should return empty set when no components specified', async () => {
-            const versions = await manager.getRequiredNodeVersions();
-
-            expect(versions.size).toBe(0);
-        });
-    });
-
     describe('node version to component mapping', () => {
         it('should return empty mapping when no components have Node requirements', async () => {
             // Given: EDS and PaaS don't require Node

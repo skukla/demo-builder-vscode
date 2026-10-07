@@ -30,7 +30,7 @@ server IS — transport, lifecycle, scoping, security — is in
 | `end_erp_downtime` |  | End the demo ERP's simulated downtime now (start_erp_downtime), so it answers again. |
 | `export_project_settings` |  | Export the current project's settings to a JSON file on disk (selections, |
 | `install_integration` |  | Re-run the Commerce install/associate pass for a DEPLOYED App Management |
-| `install_prerequisite` | **confirm** | Install one missing prerequisite (Node, aio CLI, plugins) by its prereqId from |
+| `install_prerequisite` | **confirm** | Install one missing prerequisite (Node into Demo Builder\ |
 | `invoke_runtime_action` | **confirm** | Run one deployed action in this project's Adobe I/O Runtime namespace (or the |
 | `load_erp_demo_data` | **confirm** | Load demo data into the ERPs the ERP integration serves: copy Commerce's |
 | `open_erp_screen` | **confirm** | Open the ERP's own screen (products, partners, pricing, orders, events) in a private |
@@ -317,7 +317,7 @@ server IS — transport, lifecycle, scoping, security — is in
 | Tool | | What it does |
 |---|---|---|
 | `check_github_app` | read | Is the AEM Code Sync GitHub App installed on a repo. First thing to check when EDS publishing silently fails. |
-| `check_prerequisites` | read | Check the tools a stack needs (Node versions, aio CLI, plugins) and whether each is installed. Requires a stack id from list_stacks. |
+| `check_prerequisites` | read | Check the tools a stack needs (Node versions in Demo Builder\ |
 | `check_repo_readiness` | read | Can this GitHub repo serve as an EDS storefront. Returns a readiness verdict, or "undetermined" with a reason. |
 | `discover_store_structure` | read | Fetch the LIVE Commerce store hierarchy (websites, stores, store views). Use before setting store scope; get_store_structure only reads what was already saved. |
 

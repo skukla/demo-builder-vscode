@@ -58,6 +58,10 @@ describe('Prerequisites Install Handler', () => {
                 execute: mockExecute,
             });
 
+            // The shared module is automocked: the per-Node tool's set is whatever this says.
+            // Two majors, so a post-check that read a different set would show.
+            (shared.perNodeToolMajors as jest.Mock).mockReturnValue(['18', '20']);
+
             // Spy on checkPerNodeVersionStatus
             const checkPerNodeVersionStatusSpy = jest.spyOn(shared, 'checkPerNodeVersionStatus');
 
@@ -90,7 +94,7 @@ describe('Prerequisites Install Handler', () => {
             expect(checkPerNodeVersionStatusSpy).toHaveBeenNthCalledWith(
                 1,
                 mockAdobeCliPrereq,
-                ['18', '20'], // Node versions from getRequiredNodeVersions
+                ['18', '20'], // perNodeToolMajors()
                 mockContext
             );
 
@@ -98,7 +102,7 @@ describe('Prerequisites Install Handler', () => {
             expect(checkPerNodeVersionStatusSpy).toHaveBeenNthCalledWith(
                 2,
                 mockAdobeCliPrereq,
-                ['18', '20'], // Same Node versions for post-check
+                ['18', '20'], // The same set, re-read for the post-check
                 mockContext
             );
 

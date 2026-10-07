@@ -18,15 +18,12 @@ import type { PrerequisiteDefinition } from '../services/PrerequisitesManager';
 import { HandlerContext } from '@/types/handlers';
 
 export {
-    getNodeVersionIdMapping,
     getNodeVersionKeys,
     getNodeVersionMapping,
-    getPluginNodeVersions,
-    getRequiredNodeVersions,
     hasNodeVersions,
-    resolveRequiredMajors,
+    perNodeToolMajors,
 } from './nodeVersionRequirements';
-export type { NodeVersionIdMapping, NodeVersionMapping } from './nodeVersionRequirements';
+export type { NodeVersionMapping } from './nodeVersionRequirements';
 export {
     determinePrerequisiteStatus,
     formatProgressMessage,

@@ -111,62 +111,6 @@ describe('getComponentById', () => {
 });
 
 describe('reading a node version off a component that is not there', () => {
-    it('skips a frontend id nothing in the registry matches', async () => {
-        const manager = managerFor();
-
-        await expect(manager.getRequiredNodeVersions('renamed-away')).resolves.toEqual(new Set());
-    });
-
-    it('skips a backend id nothing matches', async () => {
-        const manager = managerFor();
-
-        await expect(
-            manager.getRequiredNodeVersions(undefined, 'renamed-away'),
-        ).resolves.toEqual(new Set());
-    });
-
-    it('skips a dependency id nothing matches', async () => {
-        const manager = managerFor();
-
-        await expect(
-            manager.getRequiredNodeVersions(undefined, undefined, ['renamed-away']),
-        ).resolves.toEqual(new Set());
-    });
-
-    it('skips a component carrying no configuration block', async () => {
-        const manager = managerFor();
-
-        await expect(
-            manager.getRequiredNodeVersions(undefined, undefined, ['test-tool']),
-        ).resolves.toEqual(new Set());
-    });
-
-    it('skips a FRONTEND that carries no configuration block', async () => {
-        const manager = managerFor(NO_CONFIGURATION_BLOCK);
-
-        await expect(manager.getRequiredNodeVersions('bare-frontend')).resolves.toEqual(new Set());
-    });
-
-    it('skips a BACKEND that carries no configuration block', async () => {
-        const manager = managerFor(NO_CONFIGURATION_BLOCK);
-
-        await expect(
-            manager.getRequiredNodeVersions(undefined, 'bare-backend'),
-        ).resolves.toEqual(new Set());
-    });
-
-    it('still collects the versions of the selections that ARE present', async () => {
-        // The complement: without this, "skips everything" would pass against a
-        // reader that had stopped collecting anything at all.
-        const manager = managerFor();
-
-        await expect(
-            manager.getRequiredNodeVersions('headless', 'renamed-away', ['commerce-mesh']),
-        ).resolves.toEqual(new Set(['24', '20']));
-    });
-});
-
-describe('the NAME mapping reads through the same chain', () => {
     it('skips a frontend id nothing matches', async () => {
         const manager = managerFor();
 

@@ -150,25 +150,6 @@ describe('ComponentRegistryManager - Section-Based Structure', () => {
 
     });
 
-    describe('getRequiredNodeVersions', () => {
-        it('should return empty set for eds + paas (no Node requirements)', async () => {
-            mockLoader.load.mockResolvedValue(mockRawRegistry);
-
-            const versions = await manager.getRequiredNodeVersions('eds', 'adobe-commerce-paas');
-
-            expect(versions.size).toBe(0);
-        });
-
-        it('should return node versions for headless frontend', async () => {
-            mockLoader.load.mockResolvedValue(mockRawRegistry);
-
-            const versions = await manager.getRequiredNodeVersions('headless');
-
-            expect(versions.has('24')).toBe(true); // headless
-            expect(versions.size).toBe(1);
-        });
-    });
-
     describe('getFrontends/getBackends', () => {
         it('should return all frontends', async () => {
             mockLoader.load.mockResolvedValue(mockRawRegistry);

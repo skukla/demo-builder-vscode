@@ -21,6 +21,7 @@ jest.mock('@/features/prerequisites/handlers/shared', () => {
         areDependenciesInstalled: jest.fn(),
         hasNodeVersions: jest.fn(),
         getNodeVersionKeys: jest.fn(),
+        perNodeToolMajors: jest.fn(),
         // Keep handlePrerequisiteCheckError as the real implementation
     };
 });
@@ -146,6 +147,9 @@ export function setupContinueHandler(): ContinueHandlerHarness {
         '18': 'React App',
         '20': 'Node Backend',
     });
+    // Two majors, so the per-major probe is visible. The real set (the CLI's own
+    // Node) is pinned in continueHandler-perNodeScope.
+    (shared.perNodeToolMajors as jest.Mock).mockReturnValue(['18', '20']);
     (shared.areDependenciesInstalled as jest.Mock).mockReturnValue(true);
     (shared.hasNodeVersions as jest.Mock).mockImplementation(
         (mapping: Record<string, string>) => Boolean(mapping) && Object.keys(mapping).length > 0
