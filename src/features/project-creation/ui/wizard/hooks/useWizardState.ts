@@ -127,6 +127,29 @@ function recordableDatapack(datapack: ImportedSettings['datapack']): WizardState
     return datapack?.version ? { name: datapack.name, version: datapack.version } : undefined;
 }
 
+/**
+ * The project's choices, seeded the same from every door that starts from saved
+ * settings — Edit, Import from file and Copy from existing. Each door used to
+ * list these by hand, and the import list lacked `selectedBackend`, so an
+ * imported project opened with neither backend card chosen.
+ */
+function choicesFromSettings(settings: ImportedSettings): Partial<WizardState> {
+    return {
+        selectedPackage: settings.selectedPackage,
+        demo: settings.demo,
+        selectedStack: settings.selectedStack,
+        // The Commerce → Backend cards read `selectedBackend` (e.g.
+        // 'adobe-commerce-accs' for a SaaS project), not `components.backend`.
+        selectedBackend: settings.selections?.backend,
+        selectedAddons: settings.selectedAddons,
+        selectedBlockLibraries: settings.selectedBlockLibraries,
+        customBlockLibraries: settings.customBlockLibraries,
+        ...integrationStateFromSettings(settings),
+        datapack: recordableDatapack(settings.datapack),
+        storeDiscoveryData: settings.commerceStoreStructure,
+    };
+}
+
 /** Build Adobe context objects from edit settings */
 function buildEditModeAdobeContext(adobe: ImportedSettings['adobe']) {
     return {
@@ -197,22 +220,7 @@ function buildEditModeState(firstStep: WizardStep, editProject: EditProjectConfi
         adobeOrg: adobeContext.org,
         adobeProject: adobeContext.project,
         adobeWorkspace: adobeContext.workspace,
-        selectedPackage: editSettings.selectedPackage,
-        demo: editSettings.demo,
-        selectedStack: editSettings.selectedStack,
-        // Restore the backend selection so the Commerce → Backend cards show the
-        // project's backend pre-selected on edit (the cards read `selectedBackend`,
-        // e.g. 'adobe-commerce-accs' for a SaaS project). Without this the step
-        // opens with neither card highlighted.
-        selectedBackend: editSettings.selections?.backend,
-        selectedAddons: editSettings.selectedAddons,
-        selectedBlockLibraries: editSettings.selectedBlockLibraries,
-        customBlockLibraries: editSettings.customBlockLibraries,
-        ...integrationStateFromSettings(editSettings),
-        // Seeded as Import seeds them (PL-56e): Edit opened with neither, so its
-        // Datapacks step showed nothing recorded and Finish sent neither back.
-        datapack: recordableDatapack(editSettings.datapack),
-        storeDiscoveryData: editSettings.commerceStoreStructure,
+        ...choicesFromSettings(editSettings),
         edsConfig: editSettings.edsConfig
             ? buildEditModeEdsConfig(editSettings.edsConfig)
             : undefined,
@@ -269,17 +277,9 @@ function computeInitialState(
         adobeOrg: adobeContext.org,
         adobeProject: adobeContext.project,
         adobeWorkspace: adobeContext.workspace,
-        selectedPackage: importedSettings?.selectedPackage,
-        demo: importedSettings?.demo,
-        selectedStack: importedSettings?.selectedStack,
-        selectedAddons: importedSettings?.selectedAddons,
-        selectedBlockLibraries: importedSettings?.selectedBlockLibraries,
-        customBlockLibraries: importedSettings?.customBlockLibraries,
         // The same seeding edit mode runs (PL-56d): an import used to open with
-        // no integrations and no mesh whatever the file said.
-        ...(importedSettings ? integrationStateFromSettings(importedSettings) : {}),
-        datapack: recordableDatapack(importedSettings?.datapack),
-        storeDiscoveryData: importedSettings?.commerceStoreStructure,
+        // no integrations, no mesh and no backend whatever the file said.
+        ...(importedSettings ? choicesFromSettings(importedSettings) : {}),
         // No storefront and no sign-in state: the receiver creates their own
         // repository and site, and GitHub and DA.live are asked exactly as for a
         // new project. A file's repository is the sender's (provenance only), and

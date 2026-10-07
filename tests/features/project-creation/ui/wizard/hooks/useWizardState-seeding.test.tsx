@@ -274,6 +274,19 @@ describe('mode, name and selections', () => {
         expect(stateFor({ editProject: editProjectWith({}) }).selectedBackend).toBeUndefined();
     });
 
+    it('restores the backend selection on import too, so the Commerce cards open pre-selected', () => {
+        const state = stateFor({
+            importedSettings: { selections: { backend: 'adobe-commerce-accs' } },
+        });
+
+        expect(state.wizardMode).toBe('import');
+        expect(state.selectedBackend).toBe('adobe-commerce-accs');
+    });
+
+    it('chooses no backend when creating from nothing', () => {
+        expect(stateFor({}).selectedBackend).toBeUndefined();
+    });
+
     it('takes the component defaults when creating with no import', () => {
         const defaults = {
             frontend: 'eds-storefront',

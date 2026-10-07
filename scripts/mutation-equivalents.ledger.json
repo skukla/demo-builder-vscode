@@ -2349,7 +2349,7 @@
             "anchors": [
                 "hasSelections: !!editSettings.selections,"
             ],
-            "line": 168,
+            "line": 191,
             "mutants": 2,
             "category": "branch",
             "reason": "This is a field of the object literal handed to log.info as its second argument, and nothing else reads it. Dropping or adding the negation changes one boolean inside a development-only log line \u2014 the wizard state returned from buildEditModeState is built further down from editSettings.selections itself, never from this flag. Telling the two apart would mean asserting the logger's payload, which pins wording rather than behaviour.",
@@ -2362,7 +2362,7 @@
             "anchors": [
                 "hasAdobe: !!editSettings.adobe,"
             ],
-            "line": 169,
+            "line": 192,
             "mutants": 2,
             "category": "branch",
             "reason": "This is a field of the object literal handed to log.info as its second argument, and nothing else reads it. Dropping or adding the negation changes one boolean inside a development-only log line \u2014 the wizard state returned from buildEditModeState is built further down from editSettings.adobe itself, never from this flag. Telling the two apart would mean asserting the logger's payload, which pins wording rather than behaviour.",
@@ -2375,7 +2375,7 @@
             "anchors": [
                 "hasConfigs: !!editSettings.configs,"
             ],
-            "line": 170,
+            "line": 193,
             "mutants": 2,
             "category": "branch",
             "reason": "This is a field of the object literal handed to log.info as its second argument, and nothing else reads it. Dropping or adding the negation changes one boolean inside a development-only log line \u2014 the wizard state returned from buildEditModeState is built further down from editSettings.configs itself, never from this flag. Telling the two apart would mean asserting the logger's payload, which pins wording rather than behaviour.",
@@ -2388,7 +2388,7 @@
             "anchors": [
                 "hasEdsConfig: !!editSettings.edsConfig,"
             ],
-            "line": 171,
+            "line": 194,
             "mutants": 2,
             "category": "branch",
             "reason": "This is a field of the object literal handed to log.info as its second argument, and nothing else reads it. Dropping or adding the negation changes one boolean inside a development-only log line \u2014 the wizard state returned from buildEditModeState is built further down from editSettings.edsConfig itself, never from this flag. Telling the two apart would mean asserting the logger's payload, which pins wording rather than behaviour.",
@@ -2401,7 +2401,7 @@
             "anchors": [
                 "if (editSettings.edsConfig) {"
             ],
-            "line": 174,
+            "line": 197,
             "mutants": 2,
             "category": "branch",
             "reason": "Both arms of this if are a single log call \u2014 an info listing the stored EDS fields, or a warn that none were found. The state actually built from editSettings.edsConfig is decided much further down, on its own separate check at the end of buildEditModeState, so forcing this condition false or emptying its block moves only what is printed in development.",
@@ -2414,7 +2414,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 181,
+            "line": 204,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this else-block removes the warn that fires when a project stored no EDS config. Execution continues to the adobeContext build on the next line either way, and the returned state's edsConfig is computed from its own check lower down. No returned field, no collaborator call and no render differs.",
@@ -2427,7 +2427,7 @@
             "anchors": [
                 "if (importedSettings) {"
             ],
-            "line": 250,
+            "line": 258,
             "mutants": 2,
             "category": "branch",
             "reason": "The body of this if is one log.info and nothing more. Every value it reports \u2014 the selections, the Adobe block, the configs, the generated name \u2014 was computed on the four lines above it and is returned from computeInitialState regardless of whether this branch runs. Forcing it false or emptying it changes only development output.",
@@ -2440,7 +2440,7 @@
             "anchors": [
                 "hasSelections: !!importedSettings.selections,"
             ],
-            "line": 252,
+            "line": 260,
             "mutants": 2,
             "category": "branch",
             "reason": "A field of the object literal passed to log.info, read by nothing else. The initial state returned below takes importedSettings.selections directly, not this boolean, so dropping or adding the negation moves one value inside a development-only log line and nothing in the wizard. Separating the two would require asserting the log payload.",
@@ -2453,7 +2453,7 @@
             "anchors": [
                 "hasAdobe: !!importedSettings.adobe,"
             ],
-            "line": 253,
+            "line": 261,
             "mutants": 2,
             "category": "branch",
             "reason": "A field of the object literal passed to log.info, read by nothing else. The initial state returned below takes importedSettings.adobe directly, not this boolean, so dropping or adding the negation moves one value inside a development-only log line and nothing in the wizard. Separating the two would require asserting the log payload.",
@@ -2466,7 +2466,7 @@
             "anchors": [
                 "hasConfigs: !!importedSettings.configs,"
             ],
-            "line": 254,
+            "line": 262,
             "mutants": 2,
             "category": "branch",
             "reason": "A field of the object literal passed to log.info, read by nothing else. The initial state returned below takes importedSettings.configs directly, not this boolean, so dropping or adding the negation moves one value inside a development-only log line and nothing in the wizard. Separating the two would require asserting the log payload.",
@@ -2479,7 +2479,7 @@
             "anchors": [
                 "configKeys: importedSettings.configs ? Object.keys(importedSettings.configs) : [],"
             ],
-            "line": 255,
+            "line": 263,
             "mutants": 1,
             "category": "other",
             "reason": "The empty fallback here is the else arm of a field inside the log.info payload; it is reached only when the import carried no configs, and it is printed rather than used. componentConfigs on the returned state comes from importedSettings?.configs || {} further down, which this expression cannot reach. Any test able to see the difference would be asserting log content.",
