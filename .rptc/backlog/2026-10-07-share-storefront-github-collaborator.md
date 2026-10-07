@@ -52,3 +52,17 @@ Answer the goal question first: copying (public repo, nothing to grant) or co-ed
 collaborator grant, write permission). If co-editing, build it as a third tab on Site access
 with its own add dialog asking for a GitHub username and the permission, plus an agent tool
 pair like `set_content_reader`.
+
+## Answered 2026-10-07 (owner)
+
+The goal is COPYING into the colleague's own Demo Builder project, not co-editing: they need
+the content (DA.live read, EDS-22) to get every block and page, and the code (the repo, with its
+blocks, theme and look) to add the storefront as a brand template.
+
+Read against the code the same day: "Add a demo by link" already is that brand template
+(`addSharedDemoHandler.ts` remembers the row as a Welcome card; project creation copies the
+source repo into the colleague's own, `createRepoFromSource` in `edsGitHubHandlers.ts`). Demo
+Builder creates storefront repos PUBLIC by default (`isPrivate ?? false`), so for those the code
+needs no grant. A GitHub grant is needed only for a PRIVATE source repo, and then READ
+(`pull`), not write. So the collaborator option belongs in the give-access flow only when the
+repository is private.
