@@ -77,3 +77,4 @@ the register), [[PL-36]] (an untested Node-version sort in the prerequisites ins
 - 2026-10-07  refactor(prerequisites): one Node set for the Adobe CLI and its plugins (`dbfc15806`)
 - 2026-10-07  fix(updates): record the Node a component was just updated onto (`f023df873`)
 - 2026-10-07  refactor(components): stop writing .node-version into components (`4ab31fb4b`)
+- 2026-10-07  2026-10-07 Owner chose to read Node versions from each component's own engines range instead of hand-kept catalog numbers. Verified live on Node 24 from the store: headless-commerce-mesh and commerce-eds-mesh deployed and answered (throwaway workspace zzNode24Mesh2, deleted), citisignal-nextjs served its home page. Ranges fixed in the repos: headless-commerce-mesh >=20 (f35b082), commerce-eds-mesh >=20 (596d916), citisignal-nextjs >=24 (6b26bbc). Probe now resolves one Node, 24.21.0. Finding: aio plugins install per user, not per Node.
