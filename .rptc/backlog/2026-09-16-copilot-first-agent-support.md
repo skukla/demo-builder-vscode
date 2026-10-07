@@ -65,3 +65,4 @@ Two things break rather than degrade:
 - 2026-10-06  docs(ai): ADR-025 — Demo Builder serves the SC's agent, Copilot in VS Code by default (`bf661d46b`)
 - 2026-10-06  feat(sidebar): Chat is a plain button for Copilot in VS Code (`6e50b5e66`)
 - 2026-10-06  feat(ai): Copilot CLI is no longer a Chat engine — Copilot in VS Code or Claude Code (`26e40019f`)
+- 2026-10-06  feat(ai): no Claude Code install help — the missing-CLI message points at Copilot (`d160381a3`)
