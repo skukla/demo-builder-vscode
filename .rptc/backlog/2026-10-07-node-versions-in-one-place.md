@@ -73,3 +73,7 @@ the register), [[PL-36]] (an untested Node-version sort in the prerequisites ins
 - 2026-10-07  docs(plans): Node versions in one place, steps 0-8 (PR-1a) (`04b1c85dc`)
 - 2026-10-07  docs(backlog): PR-1a records the three Node decisions and the migration (`a1bf84e48`)
 - 2026-10-07  docs(research): Node versions in one place; filed as PR-1a under the prerequisites reframe (`3df62804f`)
+- 2026-10-07  refactor(node): one runner form, one reader of what is installed (`f91d2ea11`)
+- 2026-10-07  refactor(prerequisites): one Node set for the Adobe CLI and its plugins (`dbfc15806`)
+- 2026-10-07  fix(updates): record the Node a component was just updated onto (`f023df873`)
+- 2026-10-07  refactor(components): stop writing .node-version into components (`4ab31fb4b`)
