@@ -3,7 +3,7 @@
 **Item:** [[PR-1a]] (child of [[PR-1]]). **Research:**
 `.rptc/research/node-version-management/research.md` (see "Revision, 2026-10-07" and "Live
 verification"). **Status:** steps 0 to 6 built 2026-10-07; replanned the same day around
-component-declared ranges (owner); steps 7 to 13 to build.
+component-declared ranges (owner); steps 7 to 14 to build.
 
 ## Goal
 
@@ -62,8 +62,9 @@ resolves ONE Node, 24.21.0, for everything.
 | 9 | **Start notices a component installed under an older Node and offers a reinstall** | to build | no |
 | 10 | The AI bundle and terminals use the folder (was step 7) | to build | no |
 | 11 | **Cleanup: unused Nodes in the folder, the one-time shared-fnm cleanup, uninstall** | to build | no (local, confirmed where it touches the SC's fnm) |
-| 12 | Docs, skills, backlog | to build | no |
-| 13 | Live verification on the owner's machine | to build | yes, with the owner's OK |
+| 12 | **What the SC sees: the prerequisites step, the add confirmation and progress, the post-update Node, Diagnostics** | to build | no |
+| 13 | Docs, skills, backlog | to build | no |
+| 14 | Live verification on the owner's machine | to build | yes, with the owner's OK |
 
 Each step is a commit with the gate green.
 
