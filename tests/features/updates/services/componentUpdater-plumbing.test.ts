@@ -322,6 +322,30 @@ describe('ComponentUpdater — plumbing', () => {
         });
     });
 
+    describe('the recorded Node version (PR-1a)', () => {
+        const nodeVersionWrites = () => (fs.writeFile as jest.Mock).mock.calls
+            .filter(([file]) => file === `${COMPONENT}/.node-version`);
+
+        it('rewrites the record and .node-version to the version it was just installed under', async () => {
+            registryAnswers({ id: 'test-component', configuration: { nodeVersion: '24' } });
+
+            await h.updater.updateComponent(h.project, 'test-component', DOWNLOAD, '1.0.0');
+
+            expect(h.project.componentInstances?.['test-component'].metadata?.nodeVersion).toBe('24');
+            expect(nodeVersionWrites()).toStrictEqual([[`${COMPONENT}/.node-version`, '24\n', 'utf-8']]);
+        });
+
+        it('leaves the record alone for a component that declares no version', async () => {
+            registryAnswers({ id: 'test-component', configuration: {} });
+            const before = h.project.componentInstances?.['test-component'].metadata;
+
+            await h.updater.updateComponent(h.project, 'test-component', DOWNLOAD, '1.0.0');
+
+            expect(h.project.componentInstances?.['test-component'].metadata).toBe(before);
+            expect(nodeVersionWrites()).toStrictEqual([]);
+        });
+    });
+
     describe('rollback', () => {
         it('removes the broken tree recursively before restoring, then reinstalls with the catalog node version', async () => {
             registryAnswers({ id: 'test-component', configuration: { nodeVersion: '20' } });
