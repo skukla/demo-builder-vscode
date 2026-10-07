@@ -23,14 +23,10 @@ import execa from 'execa';
 const mockExeca = execa as jest.MockedFunction<typeof execa>;
 const FNM = '/usr/local/bin/fnm';
 
-/** An executor whose environment reports the named fnm path and auto version. */
-function executorWith({
-    fnmPath = FNM as string | null,
-    autoVersion = '18' as string | null,
-} = {}) {
+/** An executor whose environment reports the named fnm path. */
+function executorWith({ fnmPath = FNM as string | null } = {}) {
     const deps = createFakeCommandExecutorDeps();
     (deps.environmentSetup.findFnmPath as jest.Mock).mockReturnValue(fnmPath);
-    (deps.environmentSetup.findAdobeCLINodeVersion as jest.Mock).mockResolvedValue(autoVersion);
     return new CommandExecutor(deps);
 }
 
@@ -130,53 +126,10 @@ describe('no Node version asked for', () => {
     });
 });
 
-describe('the AUTO version', () => {
-    it('resolves the Adobe CLI version and wraps with it', async () => {
-        const { execaCommand } = await runThroughExeca(
-            executorWith({ autoVersion: '22' }),
-            mockExeca,
-            'aio console where',
-            { useNodeVersion: 'auto', configureTelemetry: false },
-        );
-
-        expect(execaCommand).toBe(`${FNM} exec --using=22 aio console where`);
-    });
-
-    it('runs the command UNWRAPPED when no Adobe CLI version can be resolved', async () => {
-        // findAdobeCLINodeVersion returns null when fnm has no install matching
-        // the CLI. Wrapping anyway would run `fnm exec --using=null aio ...`.
-        const { execaCommand } = await runThroughExeca(
-            executorWith({ autoVersion: null }),
-            mockExeca,
-            'aio console where',
-            { useNodeVersion: 'auto', configureTelemetry: false },
-        );
-
-        expect(execaCommand).toBe('aio console where');
-    });
-
-    it('uses the eval form when the resolved version is CURRENT', async () => {
-        const { execaCommand } = await runThroughExeca(
-            executorWith({ autoVersion: 'current' }),
-            mockExeca,
-            'aio console where',
-            { useNodeVersion: 'auto', configureTelemetry: false },
-        );
-
-        expect(execaCommand).toBe('eval "$(fnm env)" && aio console where');
-    });
-
-    it('refuses a resolved version carrying shell metacharacters', async () => {
-        // CWE-77: the resolved version is interpolated into a shell command, and
-        // it comes from the environment rather than from the caller, so the
-        // caller-side validation above it cannot have covered it.
-        const executor = executorWith({ autoVersion: '20; rm -rf /' });
-
+describe('a version that is not a Node version', () => {
+    it("refuses 'auto', which was removed (PR-1a)", async () => {
         await expect(
-            executor.execute('aio console where', {
-                useNodeVersion: 'auto',
-                configureTelemetry: false,
-            }),
+            executorWith().execute('npm install', { useNodeVersion: 'auto' }),
         ).rejects.toThrow('Invalid Node.js version format');
         expect(mockExeca).not.toHaveBeenCalled();
     });

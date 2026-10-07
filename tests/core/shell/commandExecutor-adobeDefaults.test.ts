@@ -14,6 +14,7 @@
 
 import { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
+import { setAdobeCliNodeVersion } from '@/core/shell/nodeStore';
 import { createFakeCommandExecutorDeps } from '../../helpers/commandExecutorDepsFake';
 import {
     createMockExecaSubprocess,
@@ -77,47 +78,41 @@ describe('the shell an aio command runs in', () => {
 });
 
 describe('the Adobe CLI Node version', () => {
-    it('is ensured before an ordinary aio command', async () => {
-        const { deps, executor } = build();
+    afterEach(() => {
+        setAdobeCliNodeVersion(undefined);
+    });
 
-        await runThroughExeca(executor, mockExeca, 'aio console where', {
+    it("runs an aio command that names no Node on the Adobe CLI's Node (PR-1a)", async () => {
+        setAdobeCliNodeVersion('24');
+        const { executor } = build();
+
+        const { execaCommand } = await runThroughExeca(executor, mockExeca, 'aio console where', {
             configureTelemetry: false,
         });
 
-        expect(deps.environmentSetup.ensureAdobeCLINodeVersion).toHaveBeenCalled();
+        expect(execaCommand).toBe('/usr/local/bin/fnm exec --using=24 aio console where');
     });
 
-    it('is NOT ensured for a bare version probe', async () => {
-        // `aio -v` exists to be cheap. Ensuring the Node version first would run
-        // another aio invocation to answer a question about aio.
-        const { deps, executor } = build();
+    it('keeps a Node the caller named', async () => {
+        setAdobeCliNodeVersion('24');
+        const { executor } = build();
 
-        await runThroughExeca(executor, mockExeca, 'aio -v', { configureTelemetry: false });
+        const { execaCommand } = await runThroughExeca(executor, mockExeca, 'aio console where', {
+            configureTelemetry: false,
+            useNodeVersion: '22',
+        });
 
-        expect(deps.environmentSetup.ensureAdobeCLINodeVersion).not.toHaveBeenCalled();
+        expect(execaCommand).toBe('/usr/local/bin/fnm exec --using=22 aio console where');
     });
 
-    it('is AWAITED — the command does not start until it finishes', async () => {
-        const { deps, executor } = build();
-        let release!: () => void;
-        (deps.environmentSetup.ensureAdobeCLINodeVersion as jest.Mock).mockReturnValue(
-            new Promise<void>((resolve) => {
-                release = resolve;
-            }),
-        );
-        const subprocess = createMockExecaSubprocess();
-        mockExeca.mockReturnValue(subprocess);
+    it('runs the command as written before activation has set a version', async () => {
+                const { executor } = build();
 
-        const promise = executor.execute('aio console where', { configureTelemetry: false });
-        await settle();
-        expect(mockExeca).not.toHaveBeenCalled();
+        const { execaCommand } = await runThroughExeca(executor, mockExeca, 'aio console where', {
+            configureTelemetry: false,
+        });
 
-        release();
-        await settle();
-        simulateSubprocessComplete(subprocess, 'ok', '', 0);
-        await promise;
-
-        expect(mockExeca).toHaveBeenCalled();
+        expect(execaCommand).toBe('aio console where');
     });
 });
 

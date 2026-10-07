@@ -10,6 +10,7 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getLogger, initializeLogger } from '@/core/logging/debugLogger';
 import { CommandExecutor } from '@/core/shell/commandExecutor';
 import { createCommandExecutorDeps } from '@/core/shell/commandExecutorDeps';
+import { setAdobeCliNodeVersion } from '@/core/shell/nodeStore';
 import { sweepManifestFormat } from '@/core/state/manifestFormatSweep';
 import { StateManager } from '@/core/state/stateManager';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
@@ -71,6 +72,7 @@ import { registerValidateSelectionTool } from '@/features/ai/server/validateSele
 import { registerViewTools } from '@/features/ai/server/viewTools';
 import { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { sweepCommerceSecrets } from '@/features/components/services/commerceSecretSweep';
+import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
 import {
     ProjectDashboardWebviewCommand,
     shouldAutoReopenProjectsList,
@@ -202,6 +204,10 @@ export async function activate(context: vscode.ExtensionContext) {
             .getConfiguration('demoBuilder')
             .get<boolean>('ai.enableThirdPartyTools', true),
     );
+
+    // The Node every `aio` command runs on, from the register (PR-1a). Core cannot
+    // import the catalogs, so the value is handed to the command runner here.
+    setAdobeCliNodeVersion(adobeCliNodeVersion());
 
     // Name the build BEFORE anything else can fail: with several checkouts on one
     // machine, F5 binds to whichever window had focus, and "which dist/ is this?"

@@ -25,6 +25,7 @@ import { withOrgContext, type OrgContextTarget } from '@/core/shell/orgContextEn
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { explainMissingDeveloperAccess } from '@/features/authentication/services/authenticationErrorFormatter';
+import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState, Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
@@ -279,7 +280,7 @@ export async function teardownRemote(
         await withOrgContext(target, () =>
             deps.commandManager.execute(MESH_DELETE_COMMAND, {
                 cwd: componentPath,
-                useNodeVersion: 'auto',
+                useNodeVersion: adobeCliNodeVersion(),
                 enhancePath: true,
                 streaming: true,
                 shell: true,

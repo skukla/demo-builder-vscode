@@ -21,6 +21,7 @@ import { extractAioErrorDetail, fetchRuntimeCredentials } from './runtimeCredent
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { CommandResult } from '@/core/shell/types';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
 import type { Logger } from '@/types/logger';
 import { parseJSON } from '@/types/typeGuards';
 
@@ -45,7 +46,7 @@ export interface RuntimeNamespaceEnv {
 export async function runtimeNamespaceEnv(
     deps: RuntimeNamespaceDeps,
 ): Promise<RuntimeNamespaceEnv> {
-    const creds = await fetchRuntimeCredentials(deps.commandManager, deps.logger, 'auto');
+    const creds = await fetchRuntimeCredentials(deps.commandManager, deps.logger, adobeCliNodeVersion());
     return { AIO_RUNTIME_NAMESPACE: creds.namespace, AIO_RUNTIME_AUTH: creds.auth };
 }
 
@@ -66,7 +67,7 @@ export function runInNamespace(
     return deps.commandManager.execute(command, {
         ...(options.cwd ? { cwd: options.cwd } : {}),
         ...(options.streaming ? { streaming: true } : {}),
-        useNodeVersion: 'auto',
+        useNodeVersion: adobeCliNodeVersion(),
         enhancePath: true,
         shell: true,
         timeout: TIMEOUTS.LONG,

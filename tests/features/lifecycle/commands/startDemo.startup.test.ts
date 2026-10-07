@@ -19,6 +19,7 @@ import {
 } from './startDemo.testUtils';
 import type { StartDemoHarness } from './startDemo.testUtils';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
+import { nodeForComponent } from '@/features/components/services/nodeRequirements';
 import type { Project } from '@/types/base';
 
 const executeCommand = () => vscode.commands.executeCommand as jest.Mock;
@@ -103,20 +104,20 @@ describe('the guards', () => {
 });
 
 describe('the Node version', () => {
-    it('defaults to 20 when the frontend has no metadata', async () => {
+    it("defaults to the frontend's catalog version when it has no metadata", async () => {
         setup(withFrontend({ metadata: undefined }));
 
         await run();
 
-        expect(fnmLine()).toBe('eval "$(fnm env)" && fnm use 20 && npm run dev');
+        expect(fnmLine()).toBe(`eval "$(fnm env)" && fnm use ${nodeForComponent('headless')} && npm run dev`);
     });
 
-    it('defaults to 20 when the recorded version is not a string', async () => {
+    it("defaults to the frontend's catalog version when the recorded one is not a string", async () => {
         setup(withFrontend({ metadata: { nodeVersion: 24 } }));
 
         await run();
 
-        expect(fnmLine()).toBe('eval "$(fnm env)" && fnm use 20 && npm run dev');
+        expect(fnmLine()).toBe(`eval "$(fnm env)" && fnm use ${nodeForComponent('headless')} && npm run dev`);
     });
 });
 

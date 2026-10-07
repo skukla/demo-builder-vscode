@@ -2,34 +2,10 @@ import { execSync } from 'child_process';
 import * as fsSync from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import * as vscode from 'vscode';
+import { demoBuilderFnmDir } from './nodeStore';
 import type { CommandResult, ExecuteOptions } from './types';
 import { getLogger } from '@/core/logging/debugLogger';
-import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-
-/**
- * Components data structure from components.json
- */
-interface ComponentsData {
-    infrastructure?: Record<string, { nodeVersion?: string }>;
-}
-
-/**
- * Get infrastructure node version from components data
- *
- * SOP §4: Extracted deep optional chain to named helper
- *
- * @param componentsData - Parsed components.json data
- * @param component - Infrastructure component ID (e.g., 'adobe-cli')
- * @returns Node version string or undefined
- */
-function getInfrastructureNodeVersion(
-    componentsData: ComponentsData | undefined,
-    component: string,
-): string | undefined {
-    return componentsData?.infrastructure?.[component]?.nodeVersion;
-}
 
 /**
  * Manages environment setup for command execution
@@ -38,51 +14,12 @@ function getInfrastructureNodeVersion(
 export class EnvironmentSetup {
     private logger = getLogger();
 
-    // Cache for Adobe CLI Node version
-    private cachedAdobeCLINodeVersion: string | null | undefined = undefined;
-
     // Cache for fnm path (Fix #4 + #8 from beta releases)
     private cachedFnmPath: string | null | undefined = undefined;
-
-    // Session-level Node version setup
-    private isAdobeCLINodeVersionSet = false;
-    private sessionNodeVersion: string | null = null;
-    private nodeVersionSetupLock: Promise<void> | null = null;
 
     // Telemetry configuration tracking (static to persist across instances)
     private static telemetryConfigured = false;
     private static checkingTelemetry = false;
-
-    /**
-     * Helper: Scan node version manager directory for Adobe CLI installation
-     * Reduces duplication between fnm and nvm scanning logic (SOP §10 compliance)
-     *
-     * @param basePath - Base directory of the node manager (e.g., fnm node-versions or nvm versions)
-     * @param binSubpath - Path to aio binary relative to version directory (e.g., 'installation/bin/aio' for fnm)
-     * @returns Major version number if found, null otherwise
-     */
-    private scanNodeManagerForAio(basePath: string, binSubpath: string): string | null {
-        if (!fsSync.existsSync(basePath)) return null;
-
-        try {
-            const versions = fsSync.readdirSync(basePath);
-            for (const version of versions) {
-                const aioPath = path.join(basePath, version, binSubpath);
-                if (fsSync.existsSync(aioPath)) {
-                    // Extract major version number
-                    const match = /v?(\d+)/.exec(version);
-                    if (match) {
-                        this.logger.debug(`[Env Setup] Found Adobe CLI in Node ${version}, using version family: ${match[1]}`);
-                        return match[1];
-                    }
-                    return version;
-                }
-            }
-        } catch {
-            // Ignore errors
-        }
-        return null;
-    }
 
     /**
      * Helper: Find paths for a node version manager (fnm or nvm)
@@ -172,11 +109,9 @@ export class EnvironmentSetup {
         const paths: string[] = [];
         const homeDir = os.homedir();
 
-        // Check fnm paths
-        // Fix #7 (01b94d6): Support FNM_DIR environment variable for dynamic path discovery
-        const fnmBase = process.env.FNM_DIR
-            ? path.join(process.env.FNM_DIR, 'node-versions')
-            : path.join(homeDir, '.local/share/fnm/node-versions');
+        // Demo Builder's own Node store (PR-1a), never the user's fnm: its
+        // versions' bins are what an unwrapped command can fall back on.
+        const fnmBase = path.join(demoBuilderFnmDir(), 'node-versions');
         const fnmPaths = this.findNodeManagerPaths(fnmBase, [
             'installation/bin',
             'installation/lib/node_modules/.bin',
@@ -204,182 +139,6 @@ export class EnvironmentSetup {
         }
 
         return paths;
-    }
-
-    /**
-     * Get infrastructure-defined Node version for a component
-     * Reads from components.json infrastructure section
-     *
-     * @param component - Component identifier (e.g., 'adobe-cli')
-     * @returns Node version string if defined, null otherwise
-     */
-    async getInfrastructureNodeVersion(component: string): Promise<string | null> {
-        try {
-            const extension = vscode.extensions.getExtension('adobe-demo-team.adobe-demo-builder');
-            if (!extension) {
-                this.logger.debug('[Env Setup] Extension not found, cannot read infrastructure config');
-                return null;
-            }
-
-            const componentsPath = path.join(extension.extensionPath, 'src', 'features', 'components', 'config', 'components.json');
-
-            if (!fsSync.existsSync(componentsPath)) {
-                this.logger.debug('[Env Setup] components.json not found');
-                return null;
-            }
-
-            const componentsData: ComponentsData = JSON.parse(fsSync.readFileSync(componentsPath, 'utf8'));
-            const nodeVersion = getInfrastructureNodeVersion(componentsData, component);
-
-            if (nodeVersion) {
-                this.logger.debug(`[Env Setup] Infrastructure Node version for ${component}: ${nodeVersion}`);
-                return String(nodeVersion);
-            }
-
-            return null;
-        } catch (error) {
-            this.logger.debug(`[Env Setup] Failed to read infrastructure Node version: ${error instanceof Error ? error.message : String(error)}`);
-            return null;
-        }
-    }
-
-    /**
-     * Find which Node version has Adobe CLI installed
-     *
-     * PRIORITY ORDER (Infrastructure-First):
-     * 1. Infrastructure-defined version (from components.json)
-     * 2. Project-configured version (from .nvmrc or project manifest)
-     * 3. Scan for installed aio-cli (fallback)
-     */
-    async findAdobeCLINodeVersion(): Promise<string | null> {
-        // Return cached value if already looked up
-        if (this.cachedAdobeCLINodeVersion !== undefined) {
-            return this.cachedAdobeCLINodeVersion;
-        }
-
-        // PRIORITY 1: Infrastructure-defined version (even without project context)
-        const infraVersion = await this.getInfrastructureNodeVersion('adobe-cli');
-        if (infraVersion) {
-            this.logger.debug(`[Env Setup] Using infrastructure-defined Node ${infraVersion} for Adobe CLI`);
-            this.cachedAdobeCLINodeVersion = infraVersion;
-            return infraVersion;
-        }
-
-        // PRIORITY 2: Scan for installed aio-cli (fallback)
-        const homeDir = os.homedir();
-
-        // Try fnm (Fix #7: Support FNM_DIR environment variable)
-        const fnmBase = process.env.FNM_DIR
-            ? path.join(process.env.FNM_DIR, 'node-versions')
-            : path.join(homeDir, '.local/share/fnm/node-versions');
-        const fnmVersion = this.scanNodeManagerForAio(fnmBase, 'installation/bin/aio');
-        if (fnmVersion) {
-            this.cachedAdobeCLINodeVersion = fnmVersion;
-            return fnmVersion;
-        }
-
-        // Try nvm
-        const nvmBase = path.join(homeDir, '.nvm/versions/node');
-        const nvmVersion = this.scanNodeManagerForAio(nvmBase, 'bin/aio');
-        if (nvmVersion) {
-            this.cachedAdobeCLINodeVersion = nvmVersion;
-            return nvmVersion;
-        }
-
-        // Cache null result
-        this.logger.debug('[Env Setup] No Adobe CLI installation found');
-        this.cachedAdobeCLINodeVersion = null;
-        return null;
-    }
-
-    /**
-     * Ensure Adobe CLI Node version is set once per session
-     */
-    async ensureAdobeCLINodeVersion(executeCommand: (command: string, options?: ExecuteOptions) => Promise<CommandResult>): Promise<void> {
-        // Skip if already set for this session
-        if (this.isAdobeCLINodeVersionSet) {
-            return;
-        }
-
-        // If setup is already in progress, wait for it
-        if (this.nodeVersionSetupLock) {
-            await this.nodeVersionSetupLock;
-            return;
-        }
-
-        // Create lock and start setup
-        this.nodeVersionSetupLock = this.doNodeVersionSetup(executeCommand);
-
-        try {
-            await this.nodeVersionSetupLock;
-        } finally {
-            this.nodeVersionSetupLock = null;
-        }
-    }
-
-    /**
-     * Perform Node version setup
-     */
-    private async doNodeVersionSetup(executeCommand: (command: string, options?: ExecuteOptions) => Promise<CommandResult>): Promise<void> {
-        try {
-            // Find required Node version
-            const requiredVersion = await this.findAdobeCLINodeVersion();
-            if (!requiredVersion) {
-                this.isAdobeCLINodeVersionSet = true;
-                return;
-            }
-
-            // Check if we need to switch versions
-            const isFnmAvailable = await this.checkFnmAvailable(executeCommand);
-            if (isFnmAvailable) {
-                const currentVersion = await this.getCurrentFnmVersion(executeCommand);
-                if (!currentVersion?.includes(requiredVersion)) {
-                    this.logger.debug(`[Env Setup] Switching to Node v${requiredVersion}`);
-                    await executeCommand(`fnm use ${requiredVersion} --silent-if-unchanged`, {
-                        timeout: TIMEOUTS.NORMAL,
-                    });
-                }
-            }
-
-            // Mark as set for the session
-            this.sessionNodeVersion = requiredVersion;
-            this.isAdobeCLINodeVersionSet = true;
-
-        } catch (error) {
-            this.logger.warn(`[Env Setup] Failed to set Node version: ${error instanceof Error ? error.message : String(error)}`);
-            // Continue anyway - Adobe CLI might work with current version
-            this.isAdobeCLINodeVersionSet = true;
-        }
-    }
-
-    /**
-     * Check if fnm is available
-     */
-    private async checkFnmAvailable(executeCommand: (command: string, options?: ExecuteOptions) => Promise<CommandResult>): Promise<boolean> {
-        try {
-            await executeCommand('fnm --version', {
-                timeout: TIMEOUTS.QUICK,
-                shell: DEFAULT_SHELL,  // Fixes ENOENT in Dock-launched VS Code
-            });
-            return true;
-        } catch {
-            return false;
-        }
-    }
-
-    /**
-     * Get current fnm version
-     */
-    private async getCurrentFnmVersion(executeCommand: (command: string, options?: ExecuteOptions) => Promise<CommandResult>): Promise<string | null> {
-        try {
-            const result = await executeCommand('fnm current', {
-                timeout: TIMEOUTS.QUICK,
-                shell: DEFAULT_SHELL,  // Fixes ENOENT in Dock-launched VS Code
-            });
-            return result.stdout?.trim() || null;
-        } catch {
-            return null;
-        }
     }
 
     /**
@@ -426,58 +185,9 @@ export class EnvironmentSetup {
     }
 
     /**
-     * Build command with environment setup
-     */
-    buildCommandWithEnvironment(
-        command: string,
-        options: {
-            useNodeVersion?: string | 'auto' | null;
-            currentFnmVersion?: string | null;
-        },
-    ): string {
-        let finalCommand = command;
-
-        // Handle Node version management
-        if (options.useNodeVersion !== null && options.useNodeVersion !== undefined) {
-            const nodeVersion = options.useNodeVersion;
-
-            if (nodeVersion === 'current') {
-                // Use fnm env for current version
-                finalCommand = `eval "$(fnm env)" && ${finalCommand}`;
-            } else if (nodeVersion && nodeVersion !== 'auto') {
-                // Check if we're already on target version
-                if (options.currentFnmVersion?.includes(nodeVersion)) {
-                    // No fnm needed
-                } else {
-                    // Use specific version
-                    finalCommand = `fnm use ${nodeVersion} --silent-if-unchanged && ${finalCommand}`;
-                }
-            }
-        }
-
-        return finalCommand;
-    }
-
-    /**
-     * Get session Node version
-     */
-    getSessionNodeVersion(): string | null {
-        return this.sessionNodeVersion;
-    }
-
-    /**
-     * Check if session Node version is set
-     */
-    isSessionNodeVersionSet(): boolean {
-        return this.isAdobeCLINodeVersionSet;
-    }
-
-    /**
      * Reset session state (for testing)
      */
     resetSession(): void {
-        this.isAdobeCLINodeVersionSet = false;
-        this.sessionNodeVersion = null;
-        this.nodeVersionSetupLock = null;
+        this.cachedFnmPath = undefined;
     }
 }

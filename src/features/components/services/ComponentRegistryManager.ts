@@ -47,7 +47,7 @@ export class ComponentRegistryManager {
     ): Error {
         return new Error(
             `Invalid Node version in ${componentType} "${componentName}": ${originalError.message}\n` +
-            `Please edit src/features/components/config/components.json and ensure nodeVersion uses valid format (e.g., "20", "20.11.0").`,
+            `Please edit src/features/components/config/components.json and ensure nodeVersion is a major version or a full x.y.z version.`,
         );
     }
 

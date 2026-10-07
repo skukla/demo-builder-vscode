@@ -5,7 +5,7 @@ import { CommandResultCache } from './commandResultCache';
 import { CommandSequencer } from './commandSequencer';
 import { EnvironmentSetup } from './environmentSetup';
 import { FileWatcher } from './fileWatcher';
-import { fnmExecCommand, fnmStoreEnv } from './nodeStore';
+import { fnmExecCommand, fnmStoreEnv, getAdobeCliNodeVersion } from './nodeStore';
 import { buildAioConsoleEnv, getActiveOrgContext, needsOrgTargeting } from './orgContextEnv';
 import { PollingService } from './pollingService';
 import { isPortAvailable } from './portChecker';
@@ -101,20 +101,12 @@ export class CommandExecutor {
 
     /**
      * Apply Adobe CLI default options when auto-detected.
-     * Returns a promise only when async Node version setup is needed, null otherwise.
      */
     private applyAdobeCLIDefaults(
         command: string,
         options: ExecuteOptions,
         finalOptions: ExecOptions,
-    ): Promise<void> | null {
-        const isVersionCheck = command.includes('--version') || command.includes('-v');
-        let asyncWork: Promise<void> | null = null;
-
-        if (!isVersionCheck) {
-            asyncWork = this.environmentSetup.ensureAdobeCLINodeVersion(this.execute.bind(this));
-        }
-
+    ): void {
         if (!finalOptions.shell) {
             finalOptions.shell = DEFAULT_SHELL;
         }
@@ -148,14 +140,16 @@ export class CommandExecutor {
         if (options.enhancePath === undefined) {
             options.enhancePath = true;
         }
+        // Every `aio` call runs on the Adobe CLI's Node from Demo Builder's store
+        // (PR-1a), set at activation from the register. It replaced 'auto', which
+        // meant "the first fnm folder that happens to contain aio" (Node 18 on the
+        // owner's machine), and a session-wide `fnm use` that changed nothing.
         if (options.useNodeVersion === undefined) {
-            options.useNodeVersion = null;
+            options.useNodeVersion = getAdobeCliNodeVersion() ?? null;
         }
         if (!options.retryStrategy) {
             options.retryStrategy = this.retryManager.getStrategy('adobe-cli');
         }
-
-        return asyncWork;
     }
 
     /**
@@ -179,55 +173,19 @@ export class CommandExecutor {
     }
 
     /**
-     * Resolve Node version and wrap command with fnm if needed.
-     * Returns synchronously when no async resolution is required.
+     * Wrap the command with fnm when a Node version is named.
      */
     private resolveNodeVersion(
         options: ExecuteOptions,
         state: { finalCommand: string; finalOptions: ExecOptions },
-    ): string | null | Promise<string | null> {
+    ): string | null {
         if (options.useNodeVersion === null || options.useNodeVersion === undefined) {
-            return options.useNodeVersion ?? null;
+            return null;
         }
-
-        // SECURITY FIX (CWE-77): Validate nodeVersion BEFORE resolving "auto"
+        // SECURITY FIX (CWE-77): validate before it reaches a shell command.
         validateNodeVersion(options.useNodeVersion);
-
-        if (options.useNodeVersion === 'auto') {
-            return this.resolveAutoNodeVersion(options, state);
-        }
-
-        const nodeVersion = options.useNodeVersion;
-
-        // SECURITY FIX (CWE-77): Defense-in-depth validation for resolved version
-        if (nodeVersion !== 'current') {
-            validateNodeVersion(nodeVersion);
-        }
-
-        this.wrapCommandWithFnm(nodeVersion, state);
-
-        return nodeVersion;
-    }
-
-    /**
-     * Resolve "auto" Node version asynchronously
-     */
-    private async resolveAutoNodeVersion(
-        options: ExecuteOptions,
-        state: { finalCommand: string; finalOptions: ExecOptions },
-    ): Promise<string | null> {
-        const nodeVersion = await this.environmentSetup.findAdobeCLINodeVersion();
-
-        // SECURITY FIX (CWE-77): Defense-in-depth validation for resolved version
-        if (nodeVersion && nodeVersion !== 'current') {
-            validateNodeVersion(nodeVersion);
-        }
-
-        if (nodeVersion) {
-            this.wrapCommandWithFnm(nodeVersion, state);
-        }
-
-        return nodeVersion;
+        this.wrapCommandWithFnm(options.useNodeVersion, state);
+        return options.useNodeVersion;
     }
 
     /**
@@ -310,10 +268,7 @@ export class CommandExecutor {
         // Auto-detect Adobe CLI commands and automatically apply required defaults
         const isAdobeCLI = command.startsWith('aio ') || command.startsWith('aio-');
         if (isAdobeCLI) {
-            const adobeDefaultsPromise = this.applyAdobeCLIDefaults(command, options, state.finalOptions);
-            if (adobeDefaultsPromise) {
-                await adobeDefaultsPromise;
-            }
+            this.applyAdobeCLIDefaults(command, options, state.finalOptions);
         }
 
         // Step 1: Handle telemetry configuration for Adobe CLI (only await when needed)
@@ -322,11 +277,8 @@ export class CommandExecutor {
             await telemetryPromise;
         }
 
-        // Step 2: Handle Node version management and resolve "auto" to actual version
-        const nodeVersionResult = this.resolveNodeVersion(options, state);
-        const effectiveNodeVersion = nodeVersionResult instanceof Promise
-            ? await nodeVersionResult
-            : nodeVersionResult;
+        // Step 2: Run on the named Node from Demo Builder's store
+        const effectiveNodeVersion = this.resolveNodeVersion(options, state);
 
         // Step 2.5: Check cache for Adobe CLI commands
         if (isAdobeCLI) {
@@ -523,7 +475,6 @@ export class CommandExecutor {
                     exclusive: config.resource,
                     configureTelemetry: command.startsWith('aio '),
                     enhancePath: command.startsWith('aio '),
-                    useNodeVersion: command.startsWith('aio ') ? 'auto' : undefined,
                 });
             },
             stopOnError,
@@ -541,7 +492,6 @@ export class CommandExecutor {
                     ...config.options,
                     configureTelemetry: command.startsWith('aio '),
                     enhancePath: command.startsWith('aio '),
-                    useNodeVersion: command.startsWith('aio ') ? 'auto' : undefined,
                 });
             },
         );

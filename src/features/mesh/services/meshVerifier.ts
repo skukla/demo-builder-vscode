@@ -9,8 +9,8 @@
 import { getLogger } from '@/core/logging/debugLogger';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { getMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
-import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
 import type { MeshVerificationResult } from '@/features/mesh/services/types';
 import { ComponentInstance, Project, type AppBuilderComponentState } from '@/types/base';
 import type { Logger } from '@/types/logger';
@@ -86,7 +86,7 @@ async function fetchMeshInfoFromAdobeIOImpl(
             {
                 timeout: TIMEOUTS.NORMAL,
                 configureTelemetry: false,
-                useNodeVersion: getMeshNodeVersion(),
+                useNodeVersion: adobeCliNodeVersion(),
                 enhancePath: true,
             },
         );
@@ -212,7 +212,7 @@ async function verifyMeshDeploymentImpl(
             {
                 timeout: TIMEOUTS.NORMAL,
                 configureTelemetry: false,
-                useNodeVersion: getMeshNodeVersion(),
+                useNodeVersion: adobeCliNodeVersion(),
                 enhancePath: true,
             },
         );

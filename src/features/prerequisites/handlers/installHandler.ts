@@ -20,6 +20,7 @@ import { classifyTransience } from '@/core/errors';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import { stageLine } from '@/core/utils/stageLine';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
 import { getRequiredNodeVersions, getNodeVersionMapping, checkPerNodeVersionStatus, determinePrerequisiteStatus, hasNodeVersions, getNodeVersionKeys } from '@/features/prerequisites/handlers/shared';
 import type { InstallStep, PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/PrerequisitesManager';
 import { getInstalledNodeVersions } from '@/features/prerequisites/services/versioning/MultiVersionDetector';
@@ -82,7 +83,7 @@ function determineNodeVersionsForInstall(
 ): string[] | undefined {
     // Per-node-version prerequisites need to install for all Node versions
     if (prereq.perNodeVersion) {
-        return nodeVersions.length ? nodeVersions : [version || '20'];
+        return nodeVersions.length ? nodeVersions : [version || adobeCliNodeVersion()];
     }
 
     return undefined;
@@ -143,7 +144,7 @@ async function resolvePerNodeTargetVersions(
     prereqId: number,
     version?: string,
 ): Promise<{ targetVersions: string[] | undefined; earlyReturn: boolean }> {
-    const versionsToCheck = nodeVersions.length ? nodeVersions : [version || '20'];
+    const versionsToCheck = nodeVersions.length ? nodeVersions : [version || adobeCliNodeVersion()];
     versionsToCheck.sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
 
     const perNodeStatus = await checkPerNodeVersionStatus(prereq, versionsToCheck, context);

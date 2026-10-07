@@ -40,6 +40,7 @@ import {
     runtimeNamespaceEnv,
 } from '@/features/app-builder/services/runtimeNamespace';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 import { createFailureResult, createSuccessResult } from '../../../helpers/commandResultFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
@@ -66,7 +67,7 @@ describe('runtimeNamespaceEnv', () => {
         expect(mockFetchRuntimeCredentials).toHaveBeenCalledWith(
             deps.commandManager,
             deps.logger,
-            'auto'
+            adobeCliNodeVersion()
         );
     });
 
@@ -93,7 +94,7 @@ describe('runInNamespace', () => {
                 {
                     cwd: '/app',
                     streaming: true,
-                    useNodeVersion: 'auto',
+                    useNodeVersion: adobeCliNodeVersion(),
                     enhancePath: true,
                     shell: true,
                     timeout: TIMEOUTS.LONG,
@@ -103,7 +104,7 @@ describe('runInNamespace', () => {
             [
                 'aio runtime package list --json',
                 {
-                    useNodeVersion: 'auto',
+                    useNodeVersion: adobeCliNodeVersion(),
                     enhancePath: true,
                     shell: true,
                     timeout: TIMEOUTS.LONG,

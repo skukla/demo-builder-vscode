@@ -211,7 +211,7 @@ export async function fetchDeployedMeshConfig(
 ): Promise<Record<string, string> | null> {
     try {
         const { TIMEOUTS } = await import('@/core/utils/timeoutConfig');
-        const { getMeshNodeVersion } = await import('@/core/utils/meshConfig');
+        const { adobeCliNodeVersion } = await import('@/features/components/services/nodeRequirements');
         const commandManager = deps.commandManager;
 
         logger.debug('[Mesh Staleness] Fetching deployed mesh config from Adobe I/O');
@@ -234,7 +234,7 @@ export async function fetchDeployedMeshConfig(
         // Query the deployed mesh configuration
         const result = await commandManager.execute('aio api-mesh:get --active --json', {
             timeout: TIMEOUTS.NORMAL,
-            useNodeVersion: getMeshNodeVersion(),
+            useNodeVersion: adobeCliNodeVersion(),
         });
 
         // Parse the JSON response

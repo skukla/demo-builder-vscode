@@ -1,5 +1,5 @@
 import { waitForMeshDeployment } from '@/features/mesh/services/meshDeploymentVerifier';
-import { getMeshNodeVersion } from '@/core/utils/meshConfig';
+import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
     createMockCommandManager,
@@ -200,7 +200,7 @@ describe('MeshDeploymentVerifier - Status and Polling', () => {
             expect(mockCommandManager.execute).toHaveBeenNthCalledWith(1, 'aio api-mesh get', {
                 timeout: TIMEOUTS.NORMAL,
                 configureTelemetry: false,
-                useNodeVersion: getMeshNodeVersion(),
+                useNodeVersion: adobeCliNodeVersion(),
                 enhancePath: true,
                 shell: true,
             });

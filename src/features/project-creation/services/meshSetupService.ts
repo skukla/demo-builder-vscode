@@ -9,9 +9,9 @@
 
 import { ProgressTracker } from '../handlers/shared';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
-import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
+import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
 import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
 import { extractAndParseJSON } from '@/features/mesh/utils/meshHelpers';
 import { generateComponentEnvFile } from '@/features/project-creation/helpers/envFileGenerator';
@@ -76,7 +76,7 @@ async function fetchMeshInfoFromDescribe(
         const describeResult = await commandManager.execute('aio api-mesh:describe', {
             timeout: TIMEOUTS.NORMAL,
             configureTelemetry: false,
-            useNodeVersion: getMeshNodeVersion(),
+            useNodeVersion: adobeCliNodeVersion(),
             enhancePath: true,
         });
 

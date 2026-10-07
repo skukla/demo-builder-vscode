@@ -16,6 +16,7 @@ import './installHandler.mocks';
 
 // Mock all dependencies (MUST be at top before imports)
 
+import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
 import { handleInstallPrerequisite } from '@/features/prerequisites/handlers/installHandler';
 import * as shared from '@/features/prerequisites/handlers/shared';
 import {
@@ -151,20 +152,20 @@ describe('Install Handler - Node Versions Parameter Passing', () => {
             });
         }
 
-        it('falls back to Node 20 when the caller names no version either', async () => {
+        it("falls back to the Adobe CLI's Node when the caller names no version either", async () => {
             usePerNodeWithNoRequiredVersions();
 
             await handleInstallPrerequisite(mockContext, { prereqId: 0 });
 
             expect(shared.checkPerNodeVersionStatus).toHaveBeenCalledWith(
                 mockAdobeCliPrereq,
-                ['20'],
+                [adobeCliNodeVersion()],
                 mockContext
             );
             // The SECOND copy of the same decision, read by the install planner.
             expect(mockContext.prereqManager?.getInstallSteps).toHaveBeenCalledWith(
                 mockAdobeCliPrereq,
-                { nodeVersions: ['20'] }
+                { nodeVersions: [adobeCliNodeVersion()] }
             );
         });
 

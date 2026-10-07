@@ -17,6 +17,7 @@
 
 import { mockExecute, ranCommands } from './diagnosticsChecks.testUtils';
 import { checkCommand, checkTools, testAdobeLogin } from '@/commands/diagnosticsChecks';
+import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
 
 /** Options the executor was handed for the named command. */
 function optionsFor(command: string): unknown {
@@ -48,13 +49,13 @@ describe('checkCommand — executor options per tool class', () => {
         expect(optionsFor('npm --version')).toEqual({ useNodeVersion: 'current' });
     });
 
-    it('runs aio with the enhanced PATH, telemetry opt-out and auto node', async () => {
+    it('runs aio with the enhanced PATH, telemetry opt-out and the Adobe CLI Node', async () => {
         await checkCommand('aio --version');
 
         expect(optionsFor('aio --version')).toEqual({
             enhancePath: true,
             configureTelemetry: true,
-            useNodeVersion: 'auto',
+            useNodeVersion: adobeCliNodeVersion(),
         });
     });
 

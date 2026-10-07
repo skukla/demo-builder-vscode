@@ -29,6 +29,7 @@ import { removeAppBuilderComponent } from '@/features/app-builder/services/appBu
 import { deriveOwPackage } from '@/features/app-builder/services/owPackageName';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
 import { createDeps, createProject } from './appBuilderComponentRunner.testUtils';
 
 const ID = 'app-builder-shell';
@@ -250,7 +251,7 @@ describe('post-undeploy runtime verification', () => {
         expect(deps.commandManager.execute).toHaveBeenCalledWith(
             'aio runtime package list --json',
             {
-                useNodeVersion: 'auto',
+                useNodeVersion: adobeCliNodeVersion(),
                 enhancePath: true,
                 shell: true,
                 timeout: TIMEOUTS.LONG,
@@ -271,7 +272,7 @@ describe('post-undeploy runtime verification', () => {
         expect(deps.commandManager.execute).toHaveBeenCalledWith(
             `aio runtime package delete ${owPackage} --recursive`,
             {
-                useNodeVersion: 'auto',
+                useNodeVersion: adobeCliNodeVersion(),
                 enhancePath: true,
                 shell: true,
                 timeout: TIMEOUTS.LONG,

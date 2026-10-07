@@ -26,6 +26,7 @@ import {
 import { getLogger } from '@/core/logging/debugLogger';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { nodeForComponent } from '@/features/components/services/nodeRequirements';
 import type { Logger } from '@/types/logger';
 
 // ==========================================================
@@ -46,8 +47,8 @@ const DATA_REPO_CONFIG = {
     branch: 'accs',
 };
 
-/** Node version for tool execution (LTS) */
-const NODE_VERSION = '18';
+/** The tool's Node, from its components.json entry (the register, PR-1a; its future is DI-4). */
+const NODE_VERSION = nodeForComponent('commerce-demo-ingestion');
 
 /** npm install flags for faster installation */
 const NPM_INSTALL_FLAGS = '--no-fund';

@@ -27,9 +27,6 @@ jest.mock('@/core/di/serviceLocator');
 // Uses the real @/core/utils/timeoutConfig (pure constants) — a partial config-leaf
 // mock here would omit keys (e.g. UI.MIN_LOADING) that the @/core/shell import graph
 // reads at module load, and violates the no-config-leaf-mocks SOP.
-jest.mock('@/core/utils/meshConfig', () => ({
-    getMeshNodeVersion: () => '20',
-}));
 jest.mock('fs', () => ({
     promises: {
         mkdir: jest.fn().mockResolvedValue(undefined),

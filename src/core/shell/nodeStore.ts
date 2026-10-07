@@ -39,8 +39,8 @@ export function fnmExecCommand(fnmPath: string, major: string, command: string):
 /** The Adobe CLI's Node, set once at activation from the register (core cannot import it). */
 let adobeCliNode: string | undefined;
 
-/** Wire the Adobe CLI's Node in (activation); tests may set it too. */
-export function setAdobeCliNodeVersion(major: string): void {
+/** Wire the Adobe CLI's Node in (activation); tests may set or clear it. */
+export function setAdobeCliNodeVersion(major: string | undefined): void {
     adobeCliNode = major;
 }
 

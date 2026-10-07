@@ -27,8 +27,8 @@ import type {
 } from './types';
 import { getLogger } from '@/core/logging/debugLogger';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
-import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
 import { parseJSON } from '@/types/typeGuards';
 
 /**
@@ -61,7 +61,7 @@ export class AdobeContextResolver {
             const result = await this.commandManager.execute('aio console where --json', {
                 encoding: 'utf8',
                 timeout: TIMEOUTS.NORMAL,
-                useNodeVersion: getMeshNodeVersion(),
+                useNodeVersion: adobeCliNodeVersion(),
             });
 
             if (result.code === 0 && result.stdout) {

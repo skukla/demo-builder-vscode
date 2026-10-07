@@ -39,29 +39,15 @@ import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
 import type { Logger } from '@/types/logger';
 import { toError } from '@/types/typeGuards';
 
 export type { AppDeploymentResult };
 
-/**
- * Node version for App Builder app commands.
- *
- * 'auto' resolves to the Node version the Adobe `aio` CLI runs under
- * (findAdobeCLINodeVersion in CommandExecutor) — the same resolution `aio`
- * commands use by default across the codebase. This avoids hardcoding a version
- * and keeps the app on whatever Node hosts the CLI/runtime toolchain.
- *
- * DEFERRED: if an app ever needs a build under its OWN declared Node version
- * (distinct from the CLI's), resolve it from the app's configuration.nodeVersion
- * / detected `.node-version` at that point — most naturally once the curated
- * catalog (slice 2) gives app components a configured version.
- */
-const APP_NODE_VERSION = 'auto';
-
-/** The entry's declared node (e.g. '24'), falling back to the CLI default. */
+/** The entry's node from the register (its own, else the Adobe CLI's), PR-1a. */
 function resolveNodeVersion(declared?: string): string {
-    return declared || APP_NODE_VERSION;
+    return declared || adobeCliNodeVersion();
 }
 
 type ProgressCallback = (message: string, subMessage?: string) => void;
@@ -194,9 +180,10 @@ const TOOLCHAIN_REMEDY_HINT =
     '`refreshCli: true` to do that automatically.';
 
 /**
- * Refresh the global Adobe CLI — the hand-verified fix from 2026-08-27 (same
- * CLI version, freshly resolved dependency tree). Runs under the default
- * node deliberately: that is the silo the executor's `aio` resolves from.
+ * Refresh the Adobe CLI — the hand-verified fix from 2026-08-27 (same CLI
+ * version, freshly resolved dependency tree). Under the Adobe CLI's Node in
+ * Demo Builder's store (PR-1a), so the refreshed CLI is the one every `aio`
+ * call runs; it used to refresh the default Node's while deploys ran under 24.
  */
 async function refreshGlobalAioCli(
     commandManager: CommandExecutor,
@@ -206,6 +193,7 @@ async function refreshGlobalAioCli(
         shell: DEFAULT_SHELL,
         timeout: TIMEOUTS.VERY_LONG,
         enhancePath: true,
+        useNodeVersion: adobeCliNodeVersion(),
     });
     if (result.code !== 0) {
         const detail =

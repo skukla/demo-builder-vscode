@@ -47,7 +47,7 @@ export async function ensureFnmNodeVersion(
     logger: Pick<Logger, 'debug'>,
 ): Promise<string | undefined> {
     if (!/^\d+$/.test(major)) {
-        return `Invalid Node version "${major}" — expected a major version like "24".`;
+        return `Invalid Node version "${major}" — expected a whole-number major version.`;
     }
 
     // The extension host's PATH does not carry fnm (measured live 2026-08-27:

@@ -14,7 +14,7 @@ import type { AdobeEntityReads } from '@/features/authentication/services/adobeE
 jest.mock('@/types/typeGuards');
 
 import { getLogger } from '@/core/logging/debugLogger';
-import { getMeshNodeVersion } from '@/core/utils/meshConfig';
+import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { parseJSON } from '@/types/typeGuards';
 import { createMockLogger } from '../../../helpers/loggerFake';
@@ -347,7 +347,7 @@ describe('AdobeContextResolver', () => {
             expect(mockCommandExecutor.execute).toHaveBeenCalledWith('aio console where --json', {
                 encoding: 'utf8',
                 timeout: TIMEOUTS.NORMAL,
-                useNodeVersion: getMeshNodeVersion(),
+                useNodeVersion: adobeCliNodeVersion(),
             });
         });
 

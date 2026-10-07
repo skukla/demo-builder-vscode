@@ -24,7 +24,8 @@ jest.mock('child_process', () => ({
 }));
 
 const HOME = '/mock/home';
-const FNM_BASE = path.join(HOME, '.local/share/fnm/node-versions');
+// Demo Builder's own Node store (PR-1a), never the user's shared fnm.
+const FNM_BASE = path.join(HOME, '.demo-builder/node/node-versions');
 const NVM_BASE = path.join(HOME, '.nvm/versions/node');
 
 const mockedExists = fsSync.existsSync as jest.Mock;
@@ -35,15 +36,6 @@ const mockedExecSync = execSync as jest.Mock;
 function onlyTheseExist(...paths: string[]): void {
     const set = new Set(paths);
     mockedExists.mockImplementation((p: string) => set.has(p));
-}
-
-/** Reach the private scanner directly — the two callers only vary its arguments. */
-function scan(setup: EnvironmentSetup, base: string, binSubpath: string): string | null {
-    return (
-        setup as unknown as {
-            scanNodeManagerForAio(b: string, s: string): string | null;
-        }
-    ).scanNodeManagerForAio(base, binSubpath);
 }
 
 /** Reach the private path collector directly, for the same reason. */
@@ -74,45 +66,6 @@ describe('EnvironmentSetup — discovery decisions', () => {
     afterEach(() => {
         if (fnmDir === undefined) delete process.env.FNM_DIR;
         else process.env.FNM_DIR = fnmDir;
-    });
-
-    describe('scanning a version manager for aio', () => {
-        it('does not read a directory that is not there', () => {
-            onlyTheseExist();
-
-            expect(scan(environmentSetup, FNM_BASE, 'installation/bin/aio')).toBeNull();
-            expect(mockedReaddir).not.toHaveBeenCalled();
-        });
-
-        it('picks the version that actually holds aio, not the first one listed', () => {
-            mockedReaddir.mockReturnValue(['v18.0.0', 'v20.11.0']);
-            onlyTheseExist(FNM_BASE, path.join(FNM_BASE, 'v20.11.0', 'installation/bin/aio'));
-
-            expect(scan(environmentSetup, FNM_BASE, 'installation/bin/aio')).toBe('20');
-        });
-
-        it('reads the major version out of a directory named without a leading v', () => {
-            mockedReaddir.mockReturnValue(['20.11.0']);
-            onlyTheseExist(FNM_BASE, path.join(FNM_BASE, '20.11.0', 'installation/bin/aio'));
-
-            expect(scan(environmentSetup, FNM_BASE, 'installation/bin/aio')).toBe('20');
-        });
-
-        it('falls back to the directory name when it carries no number', () => {
-            mockedReaddir.mockReturnValue(['system']);
-            onlyTheseExist(FNM_BASE, path.join(FNM_BASE, 'system', 'installation/bin/aio'));
-
-            expect(scan(environmentSetup, FNM_BASE, 'installation/bin/aio')).toBe('system');
-        });
-
-        it('answers null when reading the directory throws', () => {
-            onlyTheseExist(FNM_BASE);
-            mockedReaddir.mockImplementation(() => {
-                throw new Error('EACCES');
-            });
-
-            expect(scan(environmentSetup, FNM_BASE, 'installation/bin/aio')).toBeNull();
-        });
     });
 
     describe('collecting a version manager’s bin directories', () => {

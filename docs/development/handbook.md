@@ -300,6 +300,15 @@ check says so and names the file.
 > the copy step knew better — found live, 2026-09-12.
 > Enforced by `tests/sop/content-index-path.test.ts`.
 
+> **Convention.** A Node version is stated only in a catalog's `nodeVersion` field
+> (`components.json`, `app-builder-components.json`, `ai-defaults.json`), and every reader asks
+> `nodeRequirements.ts`. A thing that declares none runs on the Adobe CLI's Node; nothing else
+> carries a fallback of its own.
+> *Why:* before PR-1a, versions lived in four files, two constants and five hardcoded "20"s, and
+> the mesh's two lookups asked VS Code for the extension under a name it does not have, so mesh
+> ran on the fallback for months while every test passed.
+> Enforced by `tests/sop/node-versions-from-catalogs.test.ts`.
+
 ## 5. What survives between calls
 
 **Position.** Anything cached exists once per session, is built on first use, and can be
@@ -1730,11 +1739,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 25 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 58 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 59 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 126 conventions. 125 of them are enforced; 1 is not.**
+**This handbook states 127 conventions. 126 of them are enforced; 1 is not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a

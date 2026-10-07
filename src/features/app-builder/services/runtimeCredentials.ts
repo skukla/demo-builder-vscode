@@ -155,7 +155,7 @@ function imsOAuthS2SEnvOf(config: WorkspaceJson | undefined): Record<string, str
  * @param commandManager - Executor for the aio CLI call.
  * @param logger - Logger (namespace is logged; auth never is).
  * @param nodeVersion - Node resolution for the aio call (same value the
- *   deploy uses, e.g. 'auto').
+ *   deploy uses).
  * @throws With an actionable message when the download fails or the workspace
  *   has no Runtime namespace (Runtime not enabled on the workspace).
  */

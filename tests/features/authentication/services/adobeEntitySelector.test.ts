@@ -16,17 +16,14 @@ import type { AuthCacheManager } from '@/features/authentication/services/authCa
 import { getLogger } from '@/core/logging/debugLogger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
+import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
 
 // The node version is asserted as an ARGUMENT below, so it is pinned to a value the
 // real resolver never returns: a selector that hardcoded a version instead of asking
-// `getMeshNodeVersion` would otherwise pass. The literal is inline because a mock
+// `adobeCliNodeVersion` would otherwise pass. The literal is inline because a mock
 // factory is hoisted above every const in this file.
-jest.mock('@/core/utils/meshConfig', () => ({
-    getMeshNodeVersion: jest.fn(() => '99'),
-}));
-
 /** Exactly the options every `aio config delete` call must carry. */
-const EXPECTED_OPTIONS = { encoding: 'utf8', useNodeVersion: '99' };
+const EXPECTED_OPTIONS = { encoding: 'utf8', useNodeVersion: adobeCliNodeVersion() };
 
 describe('AdobeEntitySelector', () => {
     let selector: AdobeEntitySelector;

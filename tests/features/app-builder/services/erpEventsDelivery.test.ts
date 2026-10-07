@@ -15,6 +15,7 @@ import { erpEventsEnvResolver, resolveErpEventsEnv } from '@/features/app-builde
 import { fetchWorkspaceS2SCredential } from '@/features/app-builder/services/runtimeCredentials';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState, Project } from '@/types/base';
+import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 import { createMockProject } from '../../../helpers/projectFake';
 
@@ -179,7 +180,7 @@ describe('erpEventsEnvResolver (the production wiring)', () => {
 
         const result = await resolve(bodea(), CONTOSO);
 
-        expect(fetchMock).toHaveBeenCalledWith(commandManager, 'auto');
+        expect(fetchMock).toHaveBeenCalledWith(commandManager, adobeCliNodeVersion());
         expect(ranUnder).toMatchObject({ orgId: 'org-1', projectId: 'proj-1', workspaceId: 'ws-project' });
         expect(result.env.EVENTS_AUTH_CLIENT_ID).toBe('fake-integration-client');
     });

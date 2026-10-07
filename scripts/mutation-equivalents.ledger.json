@@ -1803,7 +1803,7 @@
             "anchors": [
                 "if (!targetVersions || targetVersions.length === 0) {"
             ],
-            "line": 126,
+            "line": 127,
             "mutants": 1,
             "category": "branch",
             "reason": "targetVersions comes from getTargetNodeVersions, which returns sortedMissingMajors only when its length is above zero, otherwise [version] or undefined. It can never hand back an EMPTY array, so the second half of this guard has no input that makes it decide anything the first half did not.",
@@ -1816,7 +1816,7 @@
             "anchors": [
                 "if (installableVersions.length < missingNodeVersions.length) {"
             ],
-            "line": 159,
+            "line": 160,
             "mutants": 5,
             "category": "branch",
             "reason": "The whole block is one context.logger.debug call naming the versions that will actually be installed. Flipping the comparison, forcing it either way, or emptying the block changes which debug line prints; targetVersions is computed on the next line from installableVersions regardless.",
@@ -1829,7 +1829,7 @@
             "anchors": [
                 "if (defaultSteps.length > 0) {"
             ],
-            "line": 229,
+            "line": 230,
             "mutants": 2,
             "category": "branch",
             "reason": "Forcing this guard true when there are no default steps computes lastVersion, logs it, and then iterates an empty array \u2014 no step runs and no message is pushed. The only difference is one debug line, and lastVersion cannot throw because this arm is already inside `targetVersions?.length`.",
@@ -1842,7 +1842,7 @@
             "anchors": [
                 "const requiredForComponents = plugin.requiredFor || [];"
             ],
-            "line": 253,
+            "line": 254,
             "mutants": 1,
             "category": "other",
             "reason": "The array is used only for `includes(componentId)` against the component ids in nodeVersionMapping. Seeding it with a string no component is ever named after matches nothing, exactly as the empty default matches nothing, so no plugin resolves to a different set of Node versions.",
@@ -1855,7 +1855,7 @@
             "anchors": [
                 "if (installablePluginVersions.length > 0) {"
             ],
-            "line": 287,
+            "line": 288,
             "mutants": 2,
             "category": "branch",
             "reason": "Forcing this guard true or admitting zero assigns versionsToInstall the SAME empty array the else arm was there to reject, and installPlugins then iterates it zero times \u2014 no command runs and no status is pushed, which is what returning null achieves. The two paths differ only in one debug line.",
@@ -1868,7 +1868,7 @@
             "anchors": [
                 "} else if (targetVersions?.length) {"
             ],
-            "line": 293,
+            "line": 294,
             "mutants": 2,
             "category": "branch",
             "reason": "This arm is reached only for a per-node-version prerequisite with a non-empty Node mapping, and for exactly those the caller has already assigned targetVersions from resolvePerNodeTargetVersions, which early-returns rather than hand back an empty or absent list. So targetVersions is always a non-empty array here: neither forcing the condition true nor dropping the optional chain can change or throw.",
@@ -1881,7 +1881,7 @@
             "anchors": [
                 "if (dependents && dependents.length > 0) {"
             ],
-            "line": 366,
+            "line": 367,
             "mutants": 2,
             "category": "branch",
             "reason": "dependents is the result of Array.filter, so it is either undefined (when currentPrerequisites is absent, which the first operand already catches) or an array. Admitting a length of zero enters a forEach over nothing. No cache entry is invalidated either way.",
@@ -1894,7 +1894,7 @@
             "anchors": [
                 "if (isTimeoutErr) {"
             ],
-            "line": 387,
+            "line": 388,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying the THEN arm removes three logging calls and nothing else \u2014 the warning payload built below reads isTimeoutErr again for its message, so the branch itself has no other effect. The ELSE arm is not equivalent and is killed by a test asserting that a non-timeout failure reaches the error logger.",
@@ -1907,7 +1907,7 @@
             "anchors": [
                 "if (overallInstalled) {"
             ],
-            "line": 469,
+            "line": 470,
             "mutants": 4,
             "category": "branch",
             "reason": "Anchored at 463 and covering the else at 469 too. Both arms of this if/else do nothing but call logger.info/logger.warn and debugLogger.debug; overallInstalled is read again below for the status, installed and canInstall fields of the payload, which tests do pin. Flipping or emptying either arm changes only which line is logged.",
@@ -1920,7 +1920,7 @@
             "anchors": [
                 "const index = resolved?.findIndex((p) => p.id === payload.prerequisiteId) ?? -1;"
             ],
-            "line": 522,
+            "line": 523,
             "mutants": 1,
             "category": "other",
             "reason": "The -1 default applies only when resolved is undefined, and the very next line returns undefined on `!resolved` regardless of the index. findIndex itself returns -1 rather than undefined when it finds nothing, so the coalesce never fires on a defined list.",
@@ -1933,7 +1933,7 @@
             "anchors": [
                 "if (typeof payload.prereqId !== 'number') return undefined;"
             ],
-            "line": 530,
+            "line": 531,
             "mutants": 1,
             "category": "branch",
             "reason": "Removing the guard reads currentPrerequisiteStates.get(undefined), which is undefined, so the function returns undefined exactly as the guard would have \u2014 and the caller's error message is chosen from the payload, not from how the resolution failed. No payload distinguishes the two.",
@@ -1946,7 +1946,7 @@
             "anchors": [
                 "const pluginCommands = await context.prereqManager?.getPluginInstallCommands(prereq.id, plugin.id);"
             ],
-            "line": 316,
+            "line": 317,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Reaching this line requires an install plan, and the plan comes from `context.prereqManager?.getInstallSteps(...)` earlier in the SAME invocation \u2014 a context with no manager gets undefined there and throws \"No installation steps defined\" before any of this runs. So no input can distinguish the optional chain from a plain member access.",
@@ -1959,7 +1959,7 @@
             "anchors": [
                 "context.prereqManager?.getCacheManager().invalidate(prereq.id);"
             ],
-            "line": 360,
+            "line": 361,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Reaching this line requires an install plan, and the plan comes from `context.prereqManager?.getInstallSteps(...)` earlier in the SAME invocation \u2014 a context with no manager gets undefined there and throws \"No installation steps defined\" before any of this runs. So no input can distinguish the optional chain from a plain member access.",
@@ -1972,7 +1972,7 @@
             "anchors": [
                 "context.prereqManager?.getCacheManager().invalidate(dep.id);"
             ],
-            "line": 368,
+            "line": 369,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Reaching this line requires an install plan, and the plan comes from `context.prereqManager?.getInstallSteps(...)` earlier in the SAME invocation \u2014 a context with no manager gets undefined there and throws \"No installation steps defined\" before any of this runs. So no input can distinguish the optional chain from a plain member access.",
@@ -1985,7 +1985,7 @@
             "anchors": [
                 "installResult = prereq ? await context.prereqManager?.checkPrerequisite(prereq) : undefined;"
             ],
-            "line": 650,
+            "line": 651,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Reaching this line requires an install plan, and the plan comes from `context.prereqManager?.getInstallSteps(...)` earlier in the SAME invocation \u2014 a context with no manager gets undefined there and throws \"No installation steps defined\" before any of this runs. So no input can distinguish the optional chain from a plain member access.",
@@ -1998,7 +1998,7 @@
             "anchors": [
                 "finalNodeVersionStatus = await context.prereqManager?.checkMultipleNodeVersions(mapping);"
             ],
-            "line": 666,
+            "line": 667,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Reaching this line requires an install plan, and the plan comes from `context.prereqManager?.getInstallSteps(...)` earlier in the SAME invocation \u2014 a context with no manager gets undefined there and throws \"No installation steps defined\" before any of this runs. So no input can distinguish the optional chain from a plain member access.",
@@ -6597,7 +6597,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 320,
+            "line": 321,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying the catch in the private directoryExists() makes it return undefined instead of false. All three call sites read the result in boolean position only \u2014 'forceReinstall && toolExists', '!toolExists || forceReinstall', '!dataRepoExists' \u2014 and the method is private with no other reference, so undefined and false are the same value to every consumer. No test can observe the difference.",
@@ -8603,7 +8603,7 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 798,
+            "line": 804,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here the step is starting the in-extension MCP server, whose failure must never abort activation.",
@@ -8628,7 +8628,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 532,
+            "line": 538,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a logger.error plus a showErrorMessage whose text is built from the error. Activation's own tests assert showErrorMessage was NOT called on every success path, which is the observable half; the wording of the message when it IS called is the rest.",
@@ -8641,7 +8641,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 889,
+            "line": 895,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here it is the manifest-format sweep.",
@@ -9796,7 +9796,7 @@
             "anchors": [
                 "installed: false,"
             ],
-            "line": 84,
+            "line": 85,
             "mutants": 1,
             "category": "branch",
             "reason": "Flipping this initialiser to true is unobservable for the same reason the literal itself is: 'adobe.installed = aioTool.installed' runs unconditionally two statements later and aioTool.installed is always a boolean. No caller can see the value between the two assignments, since checkAdobeCLI builds the object locally and returns it only at the end.",
@@ -9857,7 +9857,7 @@
             "anchors": [
                 "const result: CommandResultWithContext = {"
             ],
-            "line": 327,
+            "line": 328,
             "mutants": 1,
             "category": "other",
             "reason": "This object exists only to be handed to getLogger().logCommand; nothing reads it afterwards and checkCommand builds its RETURN value separately from the same locals. Emptying it to {} therefore changes only the text of a debug-log line, and the one assertion that could separate the two would pin the logger's arguments, which this repo forbids because it fixes wording rather than behaviour.",
@@ -9870,7 +9870,7 @@
             "anchors": [
                 "const result: CommandResultWithContext = {"
             ],
-            "line": 357,
+            "line": 358,
             "mutants": 1,
             "category": "other",
             "reason": "The catch path's log record, same as its success-path twin: built solely as the second argument to getLogger().logCommand and never read again, while the value checkCommand returns is assembled independently from err.message, err.code and the duration. Emptying it moves no field the caller can see, and the only test that would notice asserts on logger arguments.",
@@ -9897,42 +9897,6 @@
         {
             "module": "src/core/shell/commandExecutor.ts",
             "anchors": [
-                "return options.useNodeVersion ?? null;"
-            ],
-            "mutants": 1,
-            "category": "branch",
-            "reason": "Swapping ?? for && changes the answer only when useNodeVersion is undefined rather than null, and that value is returned only from inside the guard that just tested for both. The returned version is used for the Adobe CLI cache key, and every Adobe CLI command reaches this line with useNodeVersion already normalised to null by applyAdobeCLIDefaults, which runs first and sets it whenever it was undefined. For every non-Adobe command the return value is never read at all.",
-            "decision": "Recorded as equivalent. The two values are indistinguishable downstream because the only consumer is gated on isAdobeCLI, and applyAdobeCLIDefaults has already replaced undefined with null on that path.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/core/shell/commandExecutor.ts",
-            "anchors": [
-                "if (nodeVersion !== 'current') {"
-            ],
-            "mutants": 4,
-            "category": "branch",
-            "reason": "This is the defense-in-depth validation named in the comment above it, and the first validation is what makes it unobservable: validateNodeVersion(options.useNodeVersion) runs six lines earlier on the SAME value, since the 'auto' case has already returned by here. So an invalid version has thrown before this line is reached, and validateNodeVersion accepts 'current' anyway - it is one of the allowed keywords. Skipping it, forcing it, or inverting its comparison all leave every reachable input with the same outcome.",
-            "decision": "Recorded as equivalent. Kept as defence in depth against a future path that reaches wrapCommandWithFnm without the caller-side check; the resolved-version twin in resolveAutoNodeVersion IS killed, because that value comes from the environment.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/core/shell/commandExecutor.ts",
-            "anchors": [
-                "if (nodeVersion && nodeVersion !== 'current') {"
-            ],
-            "mutants": 3,
-            "category": "branch",
-            "reason": "Three of the four mutants on this guard widen it, and validateNodeVersion accepts both values the guard exists to exclude: it returns immediately for null or undefined, and 'current' matches its allowlist. So validating when the guard said not to changes nothing on any reachable input. The fourth mutant, which SKIPS the validation, is killed by the test that a resolved version carrying shell metacharacters is refused - that is the case this guard is actually protecting.",
-            "decision": "Recorded as equivalent. Only the narrowing mutant is observable, and it is killed.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/core/shell/commandExecutor.ts",
-            "anchors": [
                 "if (command === 'aio plugins') {",
                 "} else if (command === 'aio plugins') {"
             ],
@@ -9948,7 +9912,7 @@
             "anchors": [
                 "(options.useNodeVersion === undefined && command.startsWith('aio '));"
             ],
-            "line": 258,
+            "line": 216,
             "mutants": 2,
             "category": "branch",
             "reason": "This clause can never be true. It asks whether useNodeVersion is still undefined on a command starting 'aio ' - but every such command has already been through applyAdobeCLIDefaults, which sets useNodeVersion to null when it was undefined. For any other command the startsWith half is false. So forcing the clause false, or reading the command from its END instead of its start, changes no decision: shouldEnhance is decided entirely by options.enhancePath. The three mutants that WIDEN the clause are killed by the enhancePath:false case, because widening makes it fire where it never did.",
@@ -9961,7 +9925,7 @@
             "anchors": [
                 "(options.configureTelemetry || (command.startsWith('aio ') && options.configureTelemetry !== false));"
             ],
-            "line": 294,
+            "line": 252,
             "mutants": 2,
             "category": "branch",
             "reason": "The second clause here is unreachable-true for the same reason as its sibling on line 254: a command starting 'aio ' has already passed through applyAdobeCLIDefaults, which sets configureTelemetry to a boolean, so 'configureTelemetry !== false' is false whenever startsWith is true - and when configureTelemetry is true the first operand has short-circuited already. Forcing the clause false, or reading the command from its end, therefore leaves needsTelemetry decided by options.configureTelemetry alone, which is what it is decided by today.",
@@ -9974,7 +9938,7 @@
             "anchors": [
                 "if (isAdobeCLI) {"
             ],
-            "line": 332,
+            "line": 284,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true runs checkAdobeCLICache for a non-Adobe command, and that helper compares the command against the two literals 'aio --version' and 'aio plugins' before touching the cache at all. A command that is not Adobe CLI matches neither, so the helper returns undefined and execution continues exactly as it would have. There is no input for which the guard and the helper's own comparisons disagree.",
@@ -9987,7 +9951,7 @@
             "anchors": [
                 "if (isAdobeCLI) {"
             ],
-            "line": 357,
+            "line": 309,
             "mutants": 1,
             "category": "branch",
             "reason": "The write-side twin of the cache-read guard: forcing it true calls cacheAdobeCLIResult for a non-Adobe command, and that helper returns early on a non-zero code and otherwise compares the command against the same two literals before storing anything. A non-Adobe command matches neither, so nothing is written and nothing downstream can observe the difference.",
@@ -11112,97 +11076,6 @@
             "category": "branch",
             "reason": "Forcing this guard false means continuing with an undefined target. It cannot be reached: the only caller is PromptGrid, which renders exactly one card per entry of the same userPrompts array this line searches, and the callback's dependency list keeps that array current - a point tests now pin from the other side, by acting on a prompt that appeared after mount. So `find` cannot miss for any id the UI can produce, and the guard has no reachable false arm. Its true arm is covered: a spec pins the second card and asserts the whole prompt was saved with pinned true.",
             "decision": "none - defensive against an id the composed UI cannot emit; the guard's other arm is tested",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-04, 2026-09-05"
-        },
-        {
-            "module": "src/core/shell/environmentSetup.ts",
-            "anchors": [
-                "return componentsData?.infrastructure?.[component]?.nodeVersion;"
-            ],
-            "line": 31,
-            "mutants": 3,
-            "category": "optionalChain",
-            "reason": "Each surviving mutant drops one link of the chain, so a missing intermediate throws a TypeError instead of short-circuiting to undefined. The only caller wraps this in a try/catch that answers null, and undefined here also becomes null two lines later, so every shape of components.json - null, no infrastructure section, no entry for the component - produces the same null from getInfrastructureNodeVersion whether the chain is guarded or not. Three specs cover those shapes; none can separate the two versions.",
-            "decision": "none - the caller's catch turns the TypeError the mutant causes into the same null the guard produces",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-04, 2026-09-05"
-        },
-        {
-            "module": "src/core/shell/environmentSetup.ts",
-            "anchors": [
-                "if (!extension) {"
-            ],
-            "line": 219,
-            "mutants": 2,
-            "category": "block",
-            "reason": "Both survivors let a missing extension through. The next statement then reads extensionPath off undefined, which throws a TypeError that this method's own catch answers null to - the same null the guard returns. A spec proves the filesystem is never touched in this case, and that holds for the mutant too, because the throw happens before any fs call. What is left is which of two debug lines is written.",
-            "decision": "none - the guard and the swallowed TypeError produce the same null and the same absence of filesystem work",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-04, 2026-09-05"
-        },
-        {
-            "module": "src/core/shell/environmentSetup.ts",
-            "anchors": [
-                "if (nvmVersion) {"
-            ],
-            "line": 284,
-            "mutants": 1,
-            "category": "branch",
-            "reason": "Forced true, the guard caches and returns nvmVersion when it is null - which assigns null to the cache and returns null, exactly what the three statements below it do when the guard is false. The scan either found a version, in which case both spellings return it, or it did not, in which case both cache null and answer null. Only a debug line separates them.",
-            "decision": "none - the fall-through path assigns and returns the same null the mutant returns directly",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-04, 2026-09-05"
-        },
-        {
-            "module": "src/core/shell/environmentSetup.ts",
-            "anchors": [
-                "} catch {"
-            ],
-            "line": 365,
-            "mutants": 1,
-            "category": "block",
-            "reason": "Emptying this catch body removes `return false`, so the method answers undefined instead. Its single caller uses the result as an if-condition, where undefined and false are the same falsy value, and the declared return type is Promise<boolean> so nothing downstream reads it any other way. A spec proves that when fnm is missing no further fnm command is run, and it passes identically for both.",
-            "decision": "none - the caller treats the mutant's undefined and the original's false the same way",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-04, 2026-09-05"
-        },
-        {
-            "module": "src/core/shell/environmentSetup.ts",
-            "anchors": [
-                "return result.stdout?.trim() || null;"
-            ],
-            "line": 379,
-            "mutants": 2,
-            "category": "other",
-            "reason": "Two survivors here. Dropping the optional chain makes an absent stdout throw, which the catch on the next line answers null to - the same null the expression produces. Dropping trim leaves surrounding whitespace on the value, and the only consumer is a substring test against the required major version: whitespace cannot change whether \"20\" appears, and a whitespace-only stdout is falsy after trim and fails the substring test without it, so both spellings decide to switch. Specs cover a matching version, a mismatching one, and a failed lookup.",
-            "decision": "none - both mutants funnel into the same substring decision the caller makes",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-04, 2026-09-05"
-        },
-        {
-            "module": "src/core/shell/environmentSetup.ts",
-            "anchors": [
-                "} catch {"
-            ],
-            "line": 380,
-            "mutants": 1,
-            "category": "block",
-            "reason": "Emptying this catch removes `return null`, so a failed `fnm current` answers undefined instead. The single caller writes `!currentVersion?.includes(required)`, and undefined and null short-circuit that chain identically to undefined, so both make the negation true and both switch versions. A spec drives exactly that failure and asserts the switch happens.",
-            "decision": "none - null and undefined take the same branch through the optional chain that reads this value",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-04, 2026-09-05"
-        },
-        {
-            "module": "src/core/shell/environmentSetup.ts",
-            "anchors": [
-                "if (options.useNodeVersion !== null && options.useNodeVersion !== undefined) {"
-            ],
-            "line": 441,
-            "mutants": 4,
-            "category": "branch",
-            "reason": "This outer guard is redundant, which is why nothing can kill its mutants. Forcing it true - by either operand or as a whole - lets null or undefined into the body, where the first test is `nodeVersion === 'current'` (false) and the second is `nodeVersion && nodeVersion !== 'auto'` (false because the value is falsy). Neither branch runs, the command is returned unmodified, and that is precisely what the guard achieves by skipping the body. Specs pin the unmodified command for undefined, for null, and for an empty string.",
-            "decision": "none - the inner falsy check already covers every value this guard excludes",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-04, 2026-09-05"
         },
@@ -15002,7 +14875,7 @@
             "anchors": [
                 "if (!adobe?.organization || !adobe?.projectId || !adobe?.workspace) {"
             ],
-            "line": 67,
+            "line": 68,
             "mutants": 2,
             "category": "optionalChain",
             "reason": "Stryker drops the `?.` from the SECOND and THIRD operands (`adobe.projectId`, `adobe.workspace`). Either would throw only when `adobe` is nullish \u2014 and when it is, `!adobe?.organization` is true and the `||` short-circuits before those operands are ever evaluated. So no input reaches the difference: the operands run only on an object, where `adobe.x` and `adobe?.x` are identical. Verified by planting both mutations on 2026-09-07: the 18 tests in the two executorAppBuilderPhase suites still passed, including the one that calls the phase with no `adobe` block at all. The first operand's own optional-chain mutant IS killable and IS killed by that test.",

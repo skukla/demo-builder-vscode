@@ -37,7 +37,7 @@ jest.mock('@/features/app-builder/services/ensureMeshApiSubscribed', () => ({
     ensureMeshApiSubscribed: (...args: unknown[]) => mockEnsureSubscribed(...args),
 }));
 
-import { getMeshNodeVersion } from '@/core/utils/meshConfig';
+import { adobeCliNodeVersion } from '@/features/components/services/nodeRequirements';
 import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
 import { updateMeshState } from '@/features/mesh/services/stalenessDetector';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -141,7 +141,7 @@ describe('meshSetupService deployNewMesh', () => {
             expect(commandExecutor.execute).toHaveBeenCalledWith('aio api-mesh:describe', {
                 timeout: TIMEOUTS.NORMAL,
                 configureTelemetry: false,
-                useNodeVersion: getMeshNodeVersion(),
+                useNodeVersion: adobeCliNodeVersion(),
                 enhancePath: true,
             });
         });

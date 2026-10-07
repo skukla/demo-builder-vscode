@@ -195,11 +195,9 @@ describe('EnvironmentSetup - Path Discovery', () => {
     });
 
     describe('findNpmGlobalPaths', () => {
-        it('should find fnm node version paths', () => {
-            // Ensure FNM_DIR is not set
-            delete process.env.FNM_DIR;
-
-            const fnmBase = path.join(mockHomeDir, '.local/share/fnm/node-versions');
+        it("should find the Node store's version paths", () => {
+            // Demo Builder's own Node store (PR-1a).
+            const fnmBase = path.join(mockHomeDir, '.demo-builder/node/node-versions');
             const nvmBase = path.join(mockHomeDir, '.nvm/versions/node');
             const installationBinPath = path.join(fnmBase, 'v18.0.0/installation/bin');
             const nodeModulesBinPath = path.join(fnmBase, 'v18.0.0/installation/lib/node_modules/.bin');
@@ -264,27 +262,19 @@ describe('EnvironmentSetup - Path Discovery', () => {
             expect(result).toContain(path.join(nvmBase, 'v18.0.0/bin'));
         });
 
-        it('should respect FNM_DIR environment variable', () => {
-            const customFnmDir = '/custom/fnm';
-            process.env.FNM_DIR = customFnmDir;
-
-            const fnmBase = path.join(customFnmDir, 'node-versions');
+        it("ignores the user's own FNM_DIR: the store is Demo Builder's (PR-1a)", () => {
+            process.env.FNM_DIR = '/custom/fnm';
+            const userBase = path.join('/custom/fnm', 'node-versions');
 
             (fsSync.existsSync as jest.Mock).mockImplementation((checkPath: string) => {
-                return checkPath === fnmBase ||
-                       checkPath === path.join(fnmBase, 'v18.0.0/installation/bin');
+                return checkPath === userBase ||
+                       checkPath === path.join(userBase, 'v18.0.0/installation/bin');
             });
-
-            (fsSync.readdirSync as jest.Mock).mockImplementation((dir: string) => {
-                if (dir === fnmBase) {
-                    return ['v18.0.0'];
-                }
-                return [];
-            });
+            (fsSync.readdirSync as jest.Mock).mockReturnValue(['v18.0.0']);
 
             const result = environmentSetup.findNpmGlobalPaths();
 
-            expect(result).toContain(path.join(fnmBase, 'v18.0.0/installation/bin'));
+            expect(result).not.toContain(path.join(userBase, 'v18.0.0/installation/bin'));
 
             delete process.env.FNM_DIR;
         });
