@@ -2,7 +2,29 @@
 
 Depends on step 03. Gated on a live run.
 
-## The problem
+## Measured 2026-10-06 — nothing to build
+
+- **The premise was wrong: there are never three of OUR prompts.** The chain asks the chat
+  first and opens the modal only when the chat cannot be asked (`'unavailable'`), so Demo
+  Builder raises one prompt per destructive call. The agent's own approval is the only
+  other one.
+- **Copilot CLI** identifies as `clientInfo.name: "copilot-cli"` (1.0.91) and declares
+  `elicitation: { form, url }`. Headless `copilot -p` answered a stub server's elicitation
+  with `decline` at once — the call refuses, it does not hang (stub at the time in a temp
+  dir; same shape as the 2026-08-28 `claude -p` measurement).
+- **VS Code** identifies as its product name (`clientInfo.name` = `nameLong`, "Visual Studio
+  Code") and renders a form elicitation as a question carousel in the chat panel. Its
+  Autopilot auto-answers the model's own `ask_user` tool; the local MCP elicitation path has
+  no such branch (read in the 1.140 workbench bundle, not yet watched live).
+- **Skipping our ask for Copilot would remove the only prompt that survives Autopilot and
+  `--allow-all`**, the levels `demoBuilder.ai.permissions` now offers. So the chain stays as
+  it is for every client; at the `ask` level a destructive call gets the agent's generic
+  approval plus ours, which names the blast radius. Recorded in ADR-025.
+
+Still owed, live: one destructive call from the VS Code panel and one from interactive
+Copilot CLI, counting the prompts. Both touch real resources, so they run with the owner.
+
+## The problem (as first written)
 
 A destructive tool can now be confirmed three times: Copilot's own MCP confirmation (it asks for
 any tool not marked `readOnlyHint`), our elicitation ask in the chat, and our modal dialog. Three

@@ -669,9 +669,17 @@ extension-side in `agentOperationNotifier.ts`:
 
 - **Destructive calls need consent** (2026-08-24). Any call carrying
   `confirm: true` — the surface's own destructive marker, checked by the
-  descriptor registrar and every direct destructive tool — first raises a
-  MODAL VS Code dialog in the window that owns the socket
-  (`createAgentConsentGate`, injected as `consentGate`). This converts the
+  descriptor registrar and every direct destructive tool — is first asked about
+  IN THE CHAT by MCP elicitation (`consentViaChat.ts`); anything but an explicit
+  accept is a refusal. Only when the client cannot be asked (no elicitation
+  capability, a failed or timed-out ask) does it fall back to a MODAL VS Code
+  dialog in the window that owns the socket (`createAgentConsentGate`, injected
+  as `consentGate`). Per agent: interactive Claude Code renders the ask (measured
+  2026-08-25); headless `claude -p` (2026-08-28) and `copilot -p` (2026-10-06)
+  both declare elicitation and decline at once, so a headless destructive call
+  refuses instead of hanging; VS Code's chat renders it in the panel (read in
+  the 1.140 source). Interactive Copilot CLI and the VS Code panel are not yet
+  watched live with a destructive call (ADR-025). This converts the
   agent-supplied honor-system parameter into consent that survives a
   harness-side tool allowlist. A decline answers a prose refusal (the
   operation never ran); the handler and the progress notification are never
@@ -808,13 +816,20 @@ config when a project is created (and on "Regenerate AI files"):
 
 Additionally, the **Demo Builder: Register Global MCP** palette command
 (`src/features/project-creation/services/aiBundle/globalMcpRegistration.ts`) upserts a
-`demo-builder` entry into the user-scope `~/.claude.json` — same command/args
-but **no** socket env, so the proxy discovers a running window at launch (see
-§5). Explicit opt-in only; it merge-preserves everything else in the file and
-refuses to overwrite a malformed one.
+`demo-builder` entry into the user-scope config of every agent that keeps one
+(`FILE_BACKED_ENGINES`: `~/.claude.json` and `~/.copilot/mcp-config.json`) — same
+command/args but **no** socket env, so the proxy discovers a running window at
+launch (see §5). Explicit opt-in only; it merge-preserves everything else in the
+file and refuses to overwrite a malformed one.
 
-Cursor and Codex read `.mcp.json` natively, so no per-tool config files are
-written.
+**Which agent reads what** (ADR-025). The window is homed at the projects root,
+so its `.mcp.json` is the one every agent meets: VS Code's chat discovers it as a
+workspace server (Copilot in VS Code, the default — no user-level file exists to
+write), Copilot CLI reads it in a trusted folder, Claude Code reads it directly.
+Cursor and Codex read `.mcp.json` natively too, so no per-tool config files are
+written. Copilot hands our tools to the model deferred, behind `tool_search`, so
+the 128-tools-per-request cap does not bind; see
+[ai-agents.md](ai-agents.md).
 
 ---
 

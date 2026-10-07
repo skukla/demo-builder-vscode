@@ -1,7 +1,8 @@
 # ADR-004: Claude Code (CLI) as the AI Harness
 
-**Status**: Accepted — original decision (Claude Code CLI is the harness) STILL STANDS.
-Its delivery mechanics are **superseded by [ADR-019](019-claude-code-delivery-terminal-only.md)**.
+**Status**: Superseded by [ADR-025](025-demo-builder-serves-the-scs-agent.md) (2026-10-06) —
+Claude Code is now one of three agents, and Copilot in VS Code is the default. Its delivery
+mechanics were already **superseded by [ADR-019](019-claude-code-delivery-terminal-only.md)**.
 
 > **Read ADR-019 for what is true today. EVERYTHING below this line is the May 2026
 > record** — the Decision and Consequences sections included, not only the amendments.
@@ -20,8 +21,8 @@ Its delivery mechanics are **superseded by [ADR-019](019-claude-code-delivery-te
 > in-extension server. In-place amendment puts the oldest text where it reads as
 > current; that is the failure mode, and it is why ADR-019 exists as a separate record.
 >
-> Kept whole, as the history it is. One live claim survives all of it, and it is the one
-> in the title: Claude Code (CLI) is the harness.
+> Kept whole, as the history it is. The one claim that survived all of it — the title's,
+> that Claude Code (CLI) is the harness — was superseded on 2026-10-06 by ADR-025.
 **Date**: 2026-05-21
 **Decision Maker**: Project Team
 **Implementer**: AI Layer Pivot — Cycles A (2026-05-19), B (2026-05-20), C (2026-05-20), D (2026-05-21)
@@ -533,8 +534,10 @@ removed as the AI harness changed shape. `src/commands/aiMenu.ts`, `AiSetupTab`,
 `revealSessionsBrowser`, `maybeOpenSessionsBrowserOnce`, `maybeShowFirstLaunchDialog`,
 `maybeShowMismatchWarning`, `maybeOfferExtensionSurface`, `maybeOfferDockToRight`,
 `handleMissingExtensionDialog`, `openProjectAsWorkspace`, `replayPendingClaudeLaunch`,
-`migrateHarnessSetting`, `ensureGlobalMcpRegistration`, `extensionInstalled` and
-`helixToken` resolve nowhere today.
+`migrateHarnessSetting`, `ensureGlobalMcpRegistration`, `extensionInstalled`,
+`helixToken` and `quotePromptForShell` resolve nowhere today. (`quotePromptForShell` became
+`quoteForShell` in `src/features/ai/engine/chatLaunch.ts` when the launch learned a second
+CLI, ADR-025.)
 
 That is a symptom, not a filing error: a 500-line document with eight stacked amendments
 accumulates names faster than anyone reconciles them. The audit

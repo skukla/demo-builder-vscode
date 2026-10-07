@@ -64,6 +64,14 @@ NOT a fifth seam: it lives inside `aiDefaultsEntryApplies` via an injected resol
 
 Orchestrated by `generateAIContextFiles` (creation phase 6 + regenerate + update post-step).
 
+**Name no agent outside the engine seam** (ADR-025). The bundle serves Claude Code, Copilot
+CLI and Copilot in VS Code alike: `.mcp.json` is the one file all three read, `AGENTS.md`
+is read by all three, and anything agent-specific — a user-level config path, a hook
+format, a launch command — is a field on the descriptor in
+`src/features/ai/engine/agentEngine.ts`, read by asking `describeEngine`. A writer that
+hard-codes `~/.claude.json` or a Claude-only hook shape has quietly opted the other two
+out.
+
 ## Test pins that move
 
 - `skillsWriter.hashAndSkip.test.ts` / `skillsWriter.toolGating.test.ts` — these pin the

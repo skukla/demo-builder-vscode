@@ -1,8 +1,9 @@
 # ADR-019: Claude Code delivery is terminal-only, and the MCP server runs in-extension
 
-**Status**: Accepted (2026-08-30). Supersedes the amendment chain of
-[ADR-004](004-claude-code-harness.md); ADR-004's original decision — that Claude Code
-(CLI) is the harness — still stands and is not superseded.
+**Status**: Accepted (2026-08-30); narrowed by [ADR-025](025-demo-builder-serves-the-scs-agent.md)
+(2026-10-06) — terminal-only delivery holds for Claude Code and Copilot CLI, while Copilot in
+VS Code (the default) opens VS Code's chat panel. Supersedes the amendment chain of
+[ADR-004](004-claude-code-harness.md).
 
 **Date**: 2026-08-30
 

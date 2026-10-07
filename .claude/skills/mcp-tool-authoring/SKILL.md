@@ -41,6 +41,11 @@ Gates the Evaluation Mode dry run, the chat's opening line and the phase sinks.
 Missing means "assume it writes" — over-blocked under a dry run, which is the safe
 direction. Set `destructiveHint` true when the tool is in `AGENT_ALERT_COPY`.
 
+**`readOnlyHint` also decides whether the AGENT asks.** Copilot (VS Code's chat and the
+CLI) puts its own approval prompt in front of every tool not marked read-only, at the SC's
+default permission level. A read tool wrongly declared writable becomes a prompt on every
+call; the annotation test is the guard (ADR-025).
+
 **Declare what the tool IS AS EXPOSED, not what the handler could do.**
 `check_github_app` declares `readOnly: true` even though its handler fires a Helix code
 sync on a 404, because `argDefaults: { skipTrigger: true }` makes that unreachable. That
@@ -84,6 +89,15 @@ line, not an error, so the dialog quietly stops saying which thing it is about. 
 the first fifteen were wrong that way. `agentAlertTargets.test.ts` now catches it.
 And show what a human can CHECK: `delete_adobe_project` declares `projectId` first and
 must show only `projectName` — nobody can verify a 19-digit id.
+
+### The description is how the tool is FOUND
+
+Copilot hands our tools to the model deferred: the model sees the names and calls
+`tool_search` with a phrase, which matches against the descriptions; Claude Code's
+ToolSearch works the same way. So the 128-tools-per-request cap does not bind (measured
+2026-10-06, `.rptc/plans/copilot-first-agent-support/step-06-tool-budget.md`), but a tool
+whose description does not say what an SC would ask for is a tool nobody loads. Lead the
+description with the job in plain words, not the implementation.
 
 ## The response shape — never build it by hand
 
