@@ -41,8 +41,6 @@ export interface TerminalLaunch {
     command: 'claude';
     /** The terminal tab's name — also how a live chat is found again. */
     terminalName: string;
-    /** Where the SC is sent when the command is missing. */
-    installUrl: string;
 }
 
 const DESCRIPTORS: Record<AgentEngine, AgentEngineDescriptor> = {
@@ -53,7 +51,6 @@ const DESCRIPTORS: Record<AgentEngine, AgentEngineDescriptor> = {
             kind: 'terminal',
             command: 'claude',
             terminalName: 'Claude Code',
-            installUrl: 'https://claude.com/code',
         },
     },
     'copilot-vscode': {

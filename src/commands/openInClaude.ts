@@ -39,9 +39,6 @@ export type Engine = AgentEngine;
  */
 const CLIPBOARD_FALLBACK_TIP_SHOWN_KEY = 'demoBuilder.ai.clipboardFallbackTipShown';
 
-/** The one action on the not-installed message. */
-const HOW_TO_INSTALL = 'How to install';
-
 /**
  * Find a live agent chat terminal, if one is open. "Live" means a terminal whose
  * name matches and whose `exitStatus` is `undefined` (the shell is still
@@ -283,19 +280,20 @@ export class OpenInClaudeCommand extends BaseCommand {
         this.logger.info(`[Open in Claude] opened the earlier-chat picker (${command})`);
     }
 
-    /** Tell the user the agent's CLI is not installed, and offer the install page. */
+    /**
+     * Tell the user the agent's CLI is not installed, and name the default agent.
+     *
+     * No install help: Copilot in VS Code is what Demo Builder promotes, and an SC
+     * who chose Claude Code brings their own (owner, 2026-10-06).
+     */
     private async explainMissingCli(displayName: string, launch: TerminalLaunch): Promise<void> {
         this.logger.warn(
             `[Open in Claude] \`${launch.command}\` not found — the chat was not opened`,
         );
-        const choice = await vscode.window.showWarningMessage(
+        await vscode.window.showWarningMessage(
             `${displayName} (the command-line tool) is not installed, so the chat cannot open. ` +
-                'Install it, then try again.',
-            HOW_TO_INSTALL,
+                'Set AI Assistant → Engine to Copilot in VS Code, which needs nothing installed.',
         );
-        if (choice === HOW_TO_INSTALL) {
-            await vscode.env.openExternal(vscode.Uri.parse(launch.installUrl));
-        }
     }
 
     /**

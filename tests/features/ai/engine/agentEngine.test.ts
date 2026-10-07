@@ -42,7 +42,6 @@ describe('describeEngine', () => {
                 kind: 'terminal',
                 command: 'claude',
                 terminalName: 'Claude Code',
-                installUrl: 'https://claude.com/code',
             },
         });
     });

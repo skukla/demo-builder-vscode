@@ -83,8 +83,9 @@ right tool is found is its description.
 
 The dashboard's **AI** badge reads Ready when the bundle is current and the chosen agent can
 start. With Claude Code chosen and `claude` missing it reads "Claude Code not installed", and
-the Chat button explains how to install it instead of
-opening a terminal that says `command not found`. **View AI Capabilities** lists the skills
+the Chat button says so — and points at Copilot in VS Code, which needs nothing installed —
+instead of opening a terminal that says `command not found`. Demo Builder does not help
+install Claude Code: an SC who chooses it brings their own. **View AI Capabilities** lists the skills
 and MCP servers the agent gets.
 
 ## What an admin may have blocked

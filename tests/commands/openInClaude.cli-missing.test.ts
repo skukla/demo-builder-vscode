@@ -62,25 +62,17 @@ describe('Open in Claude Code when Claude Code is not installed', () => {
         expect(mocks.clipboardWriteMock).not.toHaveBeenCalled();
     });
 
-    it('says plainly what is missing, with a way to the install page', async () => {
+    it('says plainly what is missing and names the default agent — no install help', async () => {
         const mocks = setupVscodeMocks();
 
         await build(claudeMissing()).execute();
 
         expect(mocks.showWarningMessageMock).toHaveBeenCalledWith(
-            expect.stringMatching(/Claude Code \(the command-line tool\) is not installed/),
-            'How to install',
+            expect.stringMatching(
+                /^Claude Code \(the command-line tool\) is not installed.*Copilot in VS Code/,
+            ),
         );
-    });
-
-    it('opens the official install page when asked', async () => {
-        const mocks = setupVscodeMocks();
-        mocks.showWarningMessageMock.mockResolvedValue('How to install');
-
-        await build(claudeMissing()).execute();
-
-        expect(vscode.Uri.parse).toHaveBeenCalledWith('https://claude.com/code');
-        expect(vscode.env.openExternal).toHaveBeenCalledTimes(1);
+        expect(vscode.env.openExternal).not.toHaveBeenCalled();
     });
 
     it('asks the command executor about `claude`', async () => {
