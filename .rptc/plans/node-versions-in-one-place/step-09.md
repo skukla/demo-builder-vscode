@@ -1,9 +1,13 @@
-# Step 9: Docs, skills, backlog
+# Step 9: Start notices an older install
 
-- `docs/architecture/working-directory-and-node-version.md`: the register, `ensureNode`, one
-  runner; "auto" removed.
-- `docs/systems/prerequisites-system.md`: prerequisites read `nodesFor(project)`.
-- `src/core/shell/README.md` and `src/features/prerequisites/README.md` (fix the stale `api-mesh`
-  claim).
-- `appbuilder-component-authoring` skill: an entry's `nodeVersion` is read through the register.
-- Log PR-1a; PL-36 closed by step 5; note on PR-1 that its project tier now has its data.
+A component's record (`metadata.nodeVersion`) is the Node it was last installed under. When it
+differs from what the register now answers, Start still runs it on the recorded Node (its
+installed packages were built for it) and shows one notice: "Installed under Node 20; this
+release uses 24. Reinstall now?" Reinstall runs the existing update/reinstall path, which moves
+the record (step 6). A project with no record reads as the current Node, as today.
+
+House notice pattern (`spectrum-webview-ui` dashboard notices), and the same answer reaches an
+agent through `get_project_status`.
+
+**Tests:** same Node, no notice; older record, notice and still starts on the recorded Node;
+reinstall moves the record.
