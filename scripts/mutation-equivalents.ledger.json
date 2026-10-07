@@ -4836,7 +4836,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 113,
+            "line": 114,
             "mutants": 1,
             "category": "block",
             "reason": "readOrUndefined's catch body is a single 'return undefined'. Emptying the block makes control fall off the end of the function, which returns undefined as well \u2014 the two versions produce the identical value for the identical inputs, and the function has no other effect. There is no input, and no collaborator, that can tell them apart.",

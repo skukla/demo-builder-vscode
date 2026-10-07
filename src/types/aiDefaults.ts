@@ -43,5 +43,10 @@ export interface AiDefaultsMcpServer {
 }
 
 export interface AiDefaults {
+    /**
+     * Node.js MAJOR version every server here is installed and run under,
+     * through fnm (AI-13). The PATH's Node is whatever the machine has.
+     */
+    nodeVersion: string;
     mcpServers: AiDefaultsMcpServer[];
 }

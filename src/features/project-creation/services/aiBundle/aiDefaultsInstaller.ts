@@ -33,6 +33,7 @@ import aiDefaultsConfig from '../../config/ai-defaults.json';
 import { aiDefaultsEntryApplies } from './aiToolingGate';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
+import { ensureFnmNodeVersion } from '@/core/shell/ensureNodeVersion';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AiDefaults } from '@/types/aiDefaults';
 import type { Project } from '@/types/base';
@@ -153,6 +154,15 @@ export async function installAiDefaultsMcpTools(
     }
 
     const executor = commandManager;
+    // The Node these tools need, not the PATH's (AI-13, 2026-10-07): the PATH had
+    // Node 18 while commerce-extensibility-tools requires 22, and npm only warned
+    // (EBADENGINE). Same mechanism as an integration's `nodeVersion` (AB-3): fnm
+    // supplies the major, and npm runs under it. The servers then RUN under it too
+    // (mcpConfigWriter launches them through fnm).
+    const nodeError = await ensureFnmNodeVersion(executor, aiDefaults.nodeVersion, {
+        debug: (message: string) => logger?.debug(message),
+    });
+    if (nodeError) return { success: false, error: nodeError };
     try {
         // Stream npm's own output into the caller's progress line — real
         // progress instead of one opaque block with a guessed duration
@@ -163,6 +173,7 @@ export async function installAiDefaultsMcpTools(
             cwd: toolsDir,
             timeout: TIMEOUTS.VERY_LONG,
             enhancePath: true,
+            useNodeVersion: aiDefaults.nodeVersion,
             shell: DEFAULT_SHELL,
             ...(onProgress
                 ? {

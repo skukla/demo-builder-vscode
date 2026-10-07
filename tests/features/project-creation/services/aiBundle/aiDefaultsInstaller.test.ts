@@ -33,6 +33,13 @@ jest.mock('fs/promises', () => ({
     readFile: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
 }));
 
+// The Node the tools need, via fnm (AI-13). Stubbed: it would run a real
+// `fnm install` through the executor, and this suite counts executor calls.
+const mockEnsureNode = jest.fn();
+jest.mock('@/core/shell/ensureNodeVersion', () => ({
+    ensureFnmNodeVersion: (...a: unknown[]) => mockEnsureNode(...a),
+}));
+
 const executeMock = jest.fn();
 /**
  * CONVERTED 2026-08-28 (ADR-015): the executor is handed IN, so this suite no
@@ -122,8 +129,26 @@ describe('installAiDefaultsMcpTools', () => {
         expect(deps).toEqual({
             '@adobe-commerce/commerce-extensibility-tools': '^3.4.0',
             '@playwright/mcp': '~0.0.79',
-            '@dropins/mcp': '^1.1.2',
+            '@dropins/ai-tools': '^1.0.0',
         });
+    });
+
+    it('installs on the Node the tools need (24, through fnm), not the PATH Node (AI-13)', async () => {
+        executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
+
+        await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT, executor);
+
+        expect(mockEnsureNode).toHaveBeenCalledWith(executor, '24', expect.anything());
+        expect(executeMock).toHaveBeenCalledWith('npm install', expect.objectContaining({ useNodeVersion: '24' }));
+    });
+
+    it('fails with fnm\'s reason, and runs no npm, when that Node cannot be had', async () => {
+        mockEnsureNode.mockResolvedValueOnce('Node 24 is required but fnm was not found.');
+
+        const result = await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT, executor);
+
+        expect(result).toStrictEqual({ success: false, error: 'Node 24 is required but fnm was not found.' });
+        expect(executeMock).not.toHaveBeenCalled();
     });
 
     it('marks the tools package.json private with a stable name', async () => {

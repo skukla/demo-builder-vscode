@@ -5,12 +5,18 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
+    "nodeVersion",
     "mcpServers"
   ],
   "properties": {
     "$schema": {
       "type": "string",
       "description": "Pointer to this schema (editor tooling)"
+    },
+    "nodeVersion": {
+      "type": "string",
+      "pattern": "^\\d+$",
+      "description": "Node.js MAJOR version every MCP server here is installed and run under, through fnm (e.g. \"24\"). At least the highest engines floor among the packages (commerce-extensibility-tools needs >=22). Not the PATH Node: that is whatever the machine has, and was Node 18 when this was added (AI-13, 2026-10-07)."
     },
     "mcpServers": {
       "type": "array",

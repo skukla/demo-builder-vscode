@@ -786,12 +786,14 @@ config when a project is created (and on "Regenerate AI files"):
   a usable Node. The ai-defaults MCPs are appended per each entry's `requires`
   gate (aiToolingGate.ts): the Commerce Extensibility Developer Agent for any
   App Builder-adjacent project (EDS storefront, mesh, or attached App Builder
-  component); Playwright and the Adobe dropins MCP (`@dropins/mcp` — drop-in
-  component discovery/scaffolding/health tooling whose project-touching tools
-  take an explicit `projectDir`) for EDS storefronts only. Anchored to the per-project
-  isolated MCP tools dir
+  component); Playwright and the Adobe dropins MCP (`@dropins/ai-tools`, formerly
+  `@dropins/mcp` — drop-in component discovery/scaffolding/health tooling whose
+  project-touching tools take an explicit `projectDir`) for EDS storefronts only.
+  Anchored to the per-project isolated MCP tools dir
   (`<project>/.demo-builder-mcp/node_modules/`) — decoupled from the storefront's
   own `node_modules` so they install even when the storefront's `npm install` can't.
+  They install and run on ai-defaults' `nodeVersion` (24) through fnm, launched as
+  `fnm exec --using=24 node <script>`, not on the PATH's Node (AI-13).
 - **`.claude/settings.json`** — a `PostToolUse` git-sync hook for EDS projects
   (commit/push storefront edits the agent makes). Skipped if the path contains
   shell metacharacters. The extractor reads the tool-call JSON on **stdin** and

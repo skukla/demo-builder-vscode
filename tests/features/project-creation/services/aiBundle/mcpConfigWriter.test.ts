@@ -12,7 +12,7 @@
  * pick up `.mcp.json` natively and need no per-tool file.
  */
 
-import { fsPromises, writeMcpConfigs } from './mcpConfigWriter.testUtils';
+import { FAKE_FNM, fsPromises, mockFindFnmPath, writeMcpConfigs } from './mcpConfigWriter.testUtils';
 import { makeEdsProject, EDS_STOREFRONT_PATH, makeHeadlessProject } from './aiBundleFixtures';
 import * as path from 'path';
 import { makeTestWriter } from './generatedFileWriter.testUtils';
@@ -140,13 +140,29 @@ describe('MCP config content', () => {
         const entry = config.mcpServers['commerce-extensibility'];
 
         expect(entry).toBeDefined();
-        expect(entry.command).toBe('node');
+        // Run on the Node the tools were installed for, through fnm (AI-13).
+        expect(entry.command).toBe(FAKE_FNM);
         // MCP tools install into the per-project isolated dir, decoupled from the
         // storefront manifest (whose `npm install` can fail on b2b dropins).
         expect(entry.args).toEqual([
+            'exec',
+            '--using=24',
+            'node',
             `${project.path}/.demo-builder-mcp/node_modules/@adobe-commerce/commerce-extensibility-tools/index.js`,
         ]);
-        expect(entry.args[0]).not.toContain(EDS_STOREFRONT_PATH);
+        expect(entry.args[3]).not.toContain(EDS_STOREFRONT_PATH);
+    });
+
+    it('keeps the plain node launch when fnm cannot be found (AI-13)', async () => {
+        mockFindFnmPath.mockReturnValueOnce(null);
+        const project = makeEdsProject();
+        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, makeTestWriter('/projects/test'), NODE_PATH);
+
+        const config = captureWrittenConfig('.claude/mcp.json') as {
+            mcpServers: Record<string, { command: string; args: string[] }>;
+        };
+        expect(config.mcpServers['commerce-extensibility'].command).toBe('node');
+        expect(config.mcpServers['commerce-extensibility'].args).toHaveLength(1);
     });
 
     it('omits ai-defaults MCP entries for bare projects (no storefront, mesh, or app-builder component)', async () => {

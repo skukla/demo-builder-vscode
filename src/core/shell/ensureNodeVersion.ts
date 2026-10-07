@@ -35,7 +35,7 @@ import type { Logger } from '@/types/logger';
 export async function ensureFnmNodeVersion(
     executor: CommandExecutor,
     major: string,
-    logger: Logger,
+    logger: Pick<Logger, 'debug'>,
 ): Promise<string | undefined> {
     if (!/^\d+$/.test(major)) {
         return `Invalid Node version "${major}" — expected a major version like "24".`;

@@ -134,8 +134,10 @@ describe('AI_CONTEXT_VERSION', () => {
     // never receive it.
     // v37: category pages are written at storefront setup (EDS-24); two skills say so.
     // v38: the bundle stops naming one agent (Copilot support).
-    it('is 38 (the bundle stops naming one agent)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(38);
+    // v39: the ai-defaults tools install and run on Node 24 through fnm, and
+    // @dropins/mcp became @dropins/ai-tools (AI-13).
+    it('is 39 (the AI tools run on the Node they need)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(39);
     });
 });
 

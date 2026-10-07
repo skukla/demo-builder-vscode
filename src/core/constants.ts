@@ -279,7 +279,12 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // the agent to reach for `ToolSearch` with an `mcp__server__` prefix — Claude Code's
 // mechanism; Copilot spells an MCP tool `server-tool`. Existing projects only get the
 // neutral text because of this bump.
-export const AI_CONTEXT_VERSION = 38;
+// v39 (2026-10-07, AI-13): the ai-defaults tools install and RUN on the Node they need
+// (ai-defaults `nodeVersion`, 24, through fnm) instead of the PATH's: .mcp.json launches each
+// node server as `fnm exec --using=24 node <script>`. And `@dropins/mcp` became
+// `@dropins/ai-tools` (npm's rename; the same 16 tools). Existing projects get both at the
+// next sweep only because of this bump.
+export const AI_CONTEXT_VERSION = 39;
 
 /**
  * Component IDs for standardized component instance access

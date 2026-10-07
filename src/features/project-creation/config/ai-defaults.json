@@ -1,5 +1,6 @@
 {
   "$schema": "./ai-defaults.schema.json",
+  "nodeVersion": "24",
   "mcpServers": [
     {
       "id": "commerce-extensibility",
@@ -26,13 +27,13 @@
     },
     {
       "id": "dropins",
-      "package": "@dropins/mcp",
-      "version": "^1.1.2",
+      "package": "@dropins/ai-tools",
+      "version": "^1.0.0",
       "command": "node",
       "args": [
-        "node_modules/@dropins/mcp/dist/index.js"
+        "node_modules/@dropins/ai-tools/dist/index.js"
       ],
-      "description": "Adobe Commerce dropins MCP \u2014 21 tools for the boilerplate storefront's drop-in components: registry discovery (list_slots, list_events, list_containers, list_api_functions, list_design_tokens, list_graphql_queries), scaffolding (scaffold_block, scaffold_slot, scaffold_extension), health (analyze_project, check_config, check_block_health, get_upgrade_diff), and docs search. Project-touching tools take a required projectDir argument \u2014 pass the EDS storefront component path, not the project root.",
+      "description": "Adobe Commerce drop-ins MCP (@dropins/ai-tools, formerly @dropins/mcp) \u2014 tools for the boilerplate storefront's drop-in components: registry discovery (list_slots, list_events, list_containers, list_api_functions, list_design_tokens, list_graphql_queries, list_models, list_init_config), scaffolding (scaffold_block, scaffold_slot), health (analyze_project, check_config, check_block_health, get_upgrade_diff), and docs search (search_docs, search_commerce_docs). Project-touching tools take a required projectDir argument \u2014 pass the EDS storefront component path, not the project root.",
       "requires": "eds-storefront"
     }
   ]

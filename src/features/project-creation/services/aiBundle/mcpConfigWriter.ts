@@ -31,6 +31,7 @@ import {
 } from './claudeSettingsWriter';
 import type { GeneratedFileWriter } from './generatedFileWriter';
 import { getLogger } from '@/core/logging/debugLogger';
+import { EnvironmentSetup } from '@/core/shell/environmentSetup';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 import type { AiDefaults } from '@/types/aiDefaults';
 import type { Project } from '@/types/base';
@@ -203,15 +204,28 @@ async function buildMcpConfig(
     // applies to any App Builder-adjacent project (storefront, mesh, or
     // attached component); Playwright stays storefront-only.
     const toolsDir = resolveMcpToolsDir(project.path);
+    const fnmPath = new EnvironmentSetup().findFnmPath();
     for (const entry of aiDefaults.mcpServers) {
         if (!aiDefaultsEntryApplies(entry, project)) continue;
-        mcpServers[entry.id] = {
-            command: entry.command,
-            args: entry.args.map((arg) => (path.isAbsolute(arg) ? arg : path.join(toolsDir, arg))),
-        };
+        const args = entry.args.map((arg) => (path.isAbsolute(arg) ? arg : path.join(toolsDir, arg)));
+        mcpServers[entry.id] = launchUnderNode(entry.command, args, fnmPath);
     }
 
     return { mcpServers };
+}
+
+/**
+ * How an ai-defaults server is launched: a `node` server runs on the Node the
+ * tools were installed for (`aiDefaults.nodeVersion`, AI-13), through fnm, as
+ * `fnm exec --using=<major> node <script>`. Not an absolute path to that Node:
+ * fnm's patch directories come and go as it updates, and `fnm exec` resolves the
+ * major each time. Measured 2026-10-07: it runs with a bare environment (no fnm
+ * shell setup), which is how an agent spawns a server. Without fnm the entry
+ * keeps its declared command, as before; the install will already have said why.
+ */
+function launchUnderNode(command: string, args: string[], fnmPath: string | null): McpServerEntry {
+    if (command !== 'node' || !fnmPath) return { command, args };
+    return { command: fnmPath, args: ['exec', `--using=${aiDefaults.nodeVersion}`, 'node', ...args] };
 }
 
 /**
