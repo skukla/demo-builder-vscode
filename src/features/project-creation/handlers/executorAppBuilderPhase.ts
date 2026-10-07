@@ -10,15 +10,17 @@
  */
 
 import { buildDeployOrgTarget } from './executorMeshPhase';
-import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import type { ProgressTracker } from './shared';
 import { withOrgContext } from '@/core/shell/orgContextEnv';
+import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
+import { OPERATION_STAGES, detailFor } from '@/core/utils/operationStages';
 import {
     getAppBuilderComponentEntry,
     buildCustomIntegrationEntry,
 } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { HandlerContext } from '@/types/handlers';
+import type { OperationPosition } from '@/types/webviewPayloads';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 
 /**
@@ -123,10 +125,14 @@ export async function executeAppBuilderIntegrationsPhase(
     const { addAppBuilderComponent } = await import(
         '@/features/app-builder/services/appBuilderComponentRunner'
     );
-    const deps = buildDefaultRunnerDeps(await buildRunnerDepsContext(context, project, {
-                    authManager: ServiceLocator.getAuthenticationService(),
-                    commandManager: ServiceLocator.getCommandExecutor(),
-                }));
+    const { report, nested } = integrationProgress(progressTracker);
+    const deps = buildDefaultRunnerDeps(
+        await buildRunnerDepsContext(context, project, {
+            authManager: ServiceLocator.getAuthenticationService(),
+            commandManager: ServiceLocator.getCommandExecutor(),
+        }),
+        report,
+    );
 
     // The runner's first step per integration is the union API subscribe — surface
     // it once up front so the user sees API access being provisioned at build time
@@ -134,9 +140,42 @@ export async function executeAppBuilderIntegrationsPhase(
     progressTracker(OPERATION_STAGES.deployingIntegrations.label, 69, 'Enabling API access');
     for (const entry of entries) {
         progressTracker(OPERATION_STAGES.deployingIntegrations.label, 70, `Deploying ${entry.name}`);
-        const result = await addAppBuilderComponent(project, entry, deps);
+        const result = await withPhaseSinks([nested], () => addAppBuilderComponent(project, entry, deps));
         if (!result.success) {
             throw new Error(result.error || 'App Builder integration deployment failed');
         }
     }
+}
+
+/**
+ * The runner's own stage reports, onto the creation screen (owner, 2026-10-07).
+ *
+ * The runner names each stage as it starts ("Adding Adobe services", "Installing
+ * into Commerce", "Loading ERP demo data") with the step under it and which ERP
+ * of a pair it is on, and the Integrations screen's progress window shows all of
+ * that. Creation passed no reporter, so a ten-minute ERP add read "Deploying ERP
+ * Integration" throughout. Same stages here: the stage is the heading (so the
+ * screen's expectation line is the stage's own), and the step, prefixed with the
+ * ERP's name when there is one, is the line under it. Plain lines from deeper in
+ * (the Commerce installer's steps) arrive through the phase sink as the step of the
+ * stage in progress, as they do in the progress window.
+ */
+function integrationProgress(progressTracker: ProgressTracker): {
+    report: (stage: string, step?: string, position?: OperationPosition) => void;
+    nested: (message: string) => void;
+} {
+    let current: { stage: string; name?: string } | undefined;
+    const show = (stage: string, step: string | undefined, name: string | undefined): void => {
+        const line = step || detailFor(stage);
+        progressTracker(stage, 70, name && line ? `${name}: ${line}` : (line ?? name));
+    };
+    return {
+        report: (stage, step, position) => {
+            current = { stage, name: position?.name };
+            show(stage, step, position?.name);
+        },
+        nested: (message) => {
+            if (current) show(current.stage, message, current.name);
+        },
+    };
 }

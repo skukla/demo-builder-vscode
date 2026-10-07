@@ -58,6 +58,7 @@ jest.mock('@/core/di/serviceLocator', () => ({
 }));
 
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { createMockProject } from '../../../helpers/projectFake';
 import {
@@ -107,7 +108,7 @@ describe('executeAppBuilderIntegrationsPhase', () => {
             authManager: mockAuthService,
             commandManager: mockCommandExecutor,
         });
-        expect(mockBuildDefaultRunnerDeps).toHaveBeenCalledWith({ _ctx: true });
+        expect(mockBuildDefaultRunnerDeps).toHaveBeenCalledWith({ _ctx: true }, expect.any(Function));
         expect(mockAddAppBuilderComponent).toHaveBeenCalledTimes(1);
         expect(mockAddAppBuilderComponent).toHaveBeenCalledWith(
             project,
@@ -252,5 +253,58 @@ describe('executeAppBuilderIntegrationsPhase', () => {
                 progressTracker
             )
         ).rejects.toThrow('clone failed');
+    });
+
+    describe("the runner's stages reach the creation screen (2026-10-07)", () => {
+        type Report = (stage: string, step?: string, position?: { index: number; total: number; name?: string }) => void;
+
+        it('shows each stage as the heading, and the step under it with the ERP it is on', async () => {
+            mockGetAppBuilderComponentEntry.mockReturnValue(INTEGRATION_ENTRY);
+            mockAddAppBuilderComponent.mockImplementation(async () => {
+                const report = (mockBuildDefaultRunnerDeps.mock.calls[0] as unknown[])[1] as Report;
+                report(OPERATION_STAGES.installingIntoCommerce.label, 'Registering webhooks', {
+                    index: 2,
+                    total: 2,
+                    name: 'Justrite ERP',
+                });
+                return { success: true };
+            });
+
+            await executeAppBuilderIntegrationsPhase(
+                context,
+                project,
+                config({ selectedAppBuilderComponents: ['erp-sync'] }),
+                progressTracker
+            );
+
+            expect(progressTracker).toHaveBeenCalledWith(
+                OPERATION_STAGES.installingIntoCommerce.label,
+                expect.any(Number),
+                'Justrite ERP: Registering webhooks'
+            );
+        });
+
+        it('shows a plain line from deeper in as the step of the stage in progress', async () => {
+            mockGetAppBuilderComponentEntry.mockReturnValue(INTEGRATION_ENTRY);
+            mockAddAppBuilderComponent.mockImplementation(async () => {
+                const report = (mockBuildDefaultRunnerDeps.mock.calls[0] as unknown[])[1] as Report;
+                report(OPERATION_STAGES.loadingErpDemoData.label);
+                reportPhase('Reading Commerce companies');
+                return { success: true };
+            });
+
+            await executeAppBuilderIntegrationsPhase(
+                context,
+                project,
+                config({ selectedAppBuilderComponents: ['erp-sync'] }),
+                progressTracker
+            );
+
+            expect(progressTracker).toHaveBeenLastCalledWith(
+                OPERATION_STAGES.loadingErpDemoData.label,
+                expect.any(Number),
+                'Reading Commerce companies'
+            );
+        });
     });
 });
