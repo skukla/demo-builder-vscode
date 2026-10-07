@@ -282,7 +282,7 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // v39 (2026-10-07, AI-13): the ai-defaults tools install and RUN on the Node they need
 // (ai-defaults `nodeVersion`, 24, through fnm) instead of the PATH's: .mcp.json launches each
 // node server as `fnm exec --using=24 node <script>`. And `@dropins/mcp` became
-// `@dropins/ai-tools` (npm's rename; the same 16 tools). Existing projects get both at the
+// `@dropins/ai-tools` (npm's rename; its server lists 20 tools, measured 2026-10-07). Existing projects get both at the
 // next sweep only because of this bump.
 export const AI_CONTEXT_VERSION = 39;
 

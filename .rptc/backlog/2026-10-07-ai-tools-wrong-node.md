@@ -4,7 +4,7 @@ kind: fix
 area: ai
 needs: []
 value: med
-status: backlog
+status: built
 ---
 
 # The AI tools install and run on whatever Node is first on the PATH
@@ -39,3 +39,10 @@ ERP install the same minute ran "npm install with Node 24" through fnm (`ensureF
 2. Move `@dropins/mcp` to `@dropins/ai-tools` (check the new package's bin path and tools).
 3. Both change the generated AI bundle, so follow `ai-context-authoring`: all four seams and
    an `AI_CONTEXT_VERSION` bump, so existing projects pick it up.
+
+## Shipped so far
+
+- 2026-10-07  2026-10-07 Proven live on justrite-copy: Regenerate AI Files installed on Node 24 via fnm with 0 npm warnings (7 EBADENGINE lines before); .mcp.json launches all three servers as fnm exec --using=24 node; each started from a bare environment and listed its tools (commerce-extensibility 11, Playwright 25, dropins-ai-tools 20). @dropins/mcp replaced by @dropins/ai-tools.
+- 2026-10-07  fix(ai): the AI tools install and run on the Node they need, through fnm (`3737f9b41`)
+- 2026-10-07  docs(backlog): AI-13 reuses the per-integration Node mechanism from AB-3 (`1ec2e103b`)
+- 2026-10-07  docs(backlog): AI-13, the AI tools install and run on the PATH's Node (`47fdf9f71`)
