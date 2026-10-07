@@ -1,10 +1,7 @@
 /**
- * ViewSwitcher — a free switch between a panel's views, drawn as tabs on a rule.
+ * ViewSwitcher — a free switch between the Data Installer panel's views.
  *
- * Used by the Data Installer (Catalog, Activity) and Site access (Site admins,
- * Content readers); promoted from the Data Installer when Site access became its
- * second surface (2026-10-07). Its styles are `core/ui/styles/view-switcher.css`,
- * which a bundle rendering it must import. What was considered and rejected:
+ * Feature-local by intent, per `reuse-first`. What was considered and rejected:
  *
  *   - `navigation/StepRail` — a *step* rail, where `upcoming` and `locked` are
  *     non-actionable by design. These views are all reachable all the time, so
@@ -13,18 +10,20 @@
  *     mean a second tab vocabulary beside `StepRail` for one panel.
  *
  * Toggle semantics come from `aria-pressed`, the treatment `ChoiceCard` already
- * uses for a pressed choice.
+ * uses for a pressed choice. It promotes to `core/ui` when a second surface wants
+ * it, not before.
  *
  * Presentational and fully controlled: the parent owns `activeId`. A switcher for
  * a single view is chrome with nothing to switch, so it renders nothing — which is
  * what lets the catalog ship alone and the installed/activity views arrive later
  * without a placeholder tab in between.
  *
- * @module core/ui/components/navigation/ViewSwitcher
+ * @module features/data-installer/ui/components/ViewSwitcher
  */
 
 import { ActionButton } from '@adobe/react-spectrum';
 import React from 'react';
+import { cn } from '@/core/ui/utils/classNames';
 
 /** One switchable view. */
 export interface SwitchableView {
@@ -59,9 +58,10 @@ export function ViewSwitcher({
                     key={view.id}
                     isQuiet
                     aria-pressed={view.id === activeId}
-                    UNSAFE_className={
-                        view.id === activeId ? 'view-switcher-button is-active' : 'view-switcher-button'
-                    }
+                    UNSAFE_className={cn(
+                        'view-switcher-button',
+                        view.id === activeId && 'is-active',
+                    )}
                     onPress={() => onSelect(view.id)}
                 >
                     {view.label}

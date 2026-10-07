@@ -4,7 +4,7 @@ kind: question
 area: eds
 needs: []
 value: med
-status: open
+status: dropped
 ---
 
 # Sharing a storefront: should Site access also make someone a GitHub collaborator?
@@ -66,3 +66,7 @@ Builder creates storefront repos PUBLIC by default (`isPrivate ?? false`), so fo
 needs no grant. A GitHub grant is needed only for a PRIVATE source repo, and then READ
 (`pull`), not write. So the collaborator option belongs in the give-access flow only when the
 repository is private.
+
+## Shipped so far
+
+- 2026-10-07  2026-10-07 Dropped (owner): sharing is copying, Demo Builder repos are public by default, so Site access stays a give-access screen for the configuration admin role and DA.live content read. No GitHub option.

@@ -43,7 +43,6 @@ The counterpart index for hooks is `../hooks/CLAUDE.md`.
 | Numbered how-to steps | `ui/NumberedInstructions` | an `<ol>` |
 | Wizard config summary / step status | `wizard/ConfigurationSummary`, `StatusSection` | a bespoke summary |
 | Horizontal strip of step tabs | `navigation/StepRail` | a bespoke tablist |
-| Tabs between peer views, always reachable (no steps) | `navigation/ViewSwitcher` (+ `styles/view-switcher.css`) | a second tab style; borrowing `StepRail` |
 | Area shell: rail strip over a swapping view | `layout/StepAreaShell` | inlining `.step-nav` + `.step-view` |
 
 Auth surfaces have a house treatment too: **signed-out is never a Retry.** It is a

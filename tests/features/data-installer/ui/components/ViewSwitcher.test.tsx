@@ -16,7 +16,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { ViewSwitcher } from '@/core/ui/components/navigation/ViewSwitcher';
+import { ViewSwitcher } from '@/features/data-installer/ui/components/ViewSwitcher';
 
 const VIEWS = [
     { id: 'catalog', label: 'Catalog' },
