@@ -311,6 +311,24 @@ describe('RepoSelectionInline — creating a repository', () => {
             });
         });
 
+        it('keeps what was typed in the field and shows the GitHub name beneath it', async () => {
+            await renderStateful(stateWith({ repoName: '' }));
+
+            fireEvent.change(nameField(), { target: { value: 'Kukla Just Rite ' } });
+            await settle();
+
+            // Not rewritten under the cursor, as the project-name field is not.
+            expect(nameField()).toHaveValue('Kukla Just Rite ');
+            expect(lastConfigPatch()).toMatchObject({ repoName: 'kukla-just-rite' });
+            expect(screen.getByText(/kukla-just-rite$/)).toBeInTheDocument();
+        });
+
+        it('shows the stored name when it no longer comes from what was typed', async () => {
+            await renderStateful(stateWith({ repoName: 'from-elsewhere' }));
+
+            expect(nameField()).toHaveValue('from-elsewhere');
+        });
+
         it('reports the name error on blur, without changing state', async () => {
             await renderInline(stateWith({ repoName: '-bad-' }));
 

@@ -5389,7 +5389,7 @@
             "anchors": [
                 "setRepoCreationState({"
             ],
-            "line": 230,
+            "line": 239,
             "mutants": 3,
             "category": "other",
             "reason": "The body of the missing-template guard above, and unreachable for the same reason: the Create button is disabled whenever templateOwner or templateRepo is absent, so this branch never executes and its three mutants (the object literal, and both boolean fields) change nothing any test or user can see. Reported by Stryker as NoCoverage rather than Survived, which is the same fact stated the other way.",
@@ -5414,7 +5414,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 181,
+            "line": 189,
             "mutants": 1,
             "category": "other",
             "reason": "The mutant replaces resetLocalState's empty dependency array with a one-element array built fresh on every render. That makes useCallback return a NEW function each render instead of a stable one, which cascades to handleCreateNew and handleUseExisting (both list it as a dependency) - but all three are used only as onPress handlers, never as dependencies of an effect and never compared. Re-creating them costs identity churn and changes no behaviour any test or user can observe.",
@@ -5427,7 +5427,7 @@
             "anchors": [
                 "}, [updateEdsConfig, resetLocalState]);"
             ],
-            "line": 200,
+            "line": 208,
             "mutants": 1,
             "category": "other",
             "reason": "Emptying handleCreateNew's dependency array pins it to the first updateEdsConfig, and so to the edsConfig present at mount. Its patch cannot show that: handleCreateNew explicitly sets repoMode, repoName, selectedRepo, existingRepo, resetToTemplate, createdRepo and daLiveSite - every field a repository selection or a name keystroke can change between mount and the press. Whatever stale config it spreads is overwritten field for field by the patch itself, so no input distinguishes the stale closure from a fresh one. The sibling handler (handleUseExisting) does NOT overwrite repoName, which is why its equivalent mutant is killed by a test rather than recorded here.",
@@ -5465,7 +5465,7 @@
             "anchors": [
                 "}, [repoMode, selectedRepo]);"
             ],
-            "line": 366,
+            "line": 375,
             "mutants": 3,
             "category": "block",
             "reason": "The effect this closes resets the App status when the repo mode or selection changes. On mount it writes exactly the initial state, so it is a no-op there. On a change it is immediately followed by the Code Sync probe for the new selection, which sets isChecking true - measured while writing these tests, that probe fires even when the new repository's readiness has not landed, because the effect reads the previous selection's readiness. So the reset and the probe land in the same commit from any assertion's point of view, and emptying the effect body, emptying its write, or emptying this dependency array all leave the same observable sequence.",
@@ -11331,7 +11331,7 @@
             "anchors": [
                 "existingNames: string[] = [],"
             ],
-            "line": 159,
+            "line": 160,
             "mutants": 1,
             "category": "other",
             "reason": "Stryker replaces the default empty list of existing project names with a one-element list holding the constant 'Stryker was here'. That default is read at exactly one place \u2014 existingNames.includes(trimmedName) at the end of the function \u2014 and a name only reaches that line after passing PROJECT_NAME_PATTERN, which admits lowercase letters, digits and hyphens only. 'Stryker was here' contains capitals and spaces, so no name that reaches the includes() call can ever equal it, and the two defaults return the same answer for every possible argument.",

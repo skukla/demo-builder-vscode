@@ -68,7 +68,7 @@ export function normalizeProjectName(input: string): string {
  * - Converts spaces and underscores to hyphens
  * - Removes special characters (keeps a-z, 0-9, hyphens, dots)
  * - Collapses multiple consecutive hyphens to single hyphen
- * - Trims leading hyphens only
+ * - Trims leading and trailing hyphens and dots
  * - Ensures name starts with alphanumeric character
  *
  * @example
@@ -83,7 +83,8 @@ export function normalizeRepositoryName(input: string): string {
         .replace(/[\s_]+/g, '-')       // Convert spaces and underscores to hyphens
         .replace(/[^a-z0-9.-]/g, '')   // Remove special chars (keep dots for GitHub)
         .replace(/-+/g, '-')           // Collapse multiple hyphens
-        .replace(/^[^a-z0-9]+/, '');   // Trim leading non-alphanumeric chars
+        .replace(/^[^a-z0-9]+/, '')    // Trim leading non-alphanumeric chars
+        .replace(/[.-]+$/, '');        // Trim trailing ones: a typed trailing space is not part of the name
 }
 
 /**

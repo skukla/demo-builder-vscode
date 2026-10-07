@@ -193,6 +193,7 @@ function describeRepoTarget(
  */
 export function NewRepoForm({
     repoName,
+    repoNameInput,
     githubUser,
     repoNameError,
     repoCreationState,
@@ -202,7 +203,10 @@ export function NewRepoForm({
     onUseExisting,
     onCreateRepository,
 }: {
+    /** The GitHub name, derived from what was typed. */
     repoName: string;
+    /** What the SC typed; defaults to `repoName`. */
+    repoNameInput?: string;
     githubUser?: { login: string };
     repoNameError?: string;
     repoCreationState: RepoCreationState;
@@ -220,7 +224,7 @@ export function NewRepoForm({
 
             <TextField
                 label="Repository Name"
-                value={repoName}
+                value={repoNameInput ?? repoName}
                 onChange={onRepoNameChange}
                 onBlur={onRepoNameBlur}
                 // The field that did the work says so. Creation left it grey and

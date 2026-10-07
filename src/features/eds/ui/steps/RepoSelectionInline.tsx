@@ -108,6 +108,14 @@ export function RepoSelectionInline({
         readRepoSelection(edsConfig);
 
     const [repoNameError, setRepoNameError] = useState<string | undefined>();
+    // What the SC typed, kept as typed: the field shows it and the line beneath
+    // shows the GitHub name derived from it, as the project-name field does.
+    // Normalizing under the cursor turned "Kukla Just Rite" into
+    // "kukla-just-rite" mid-word. The typed text is shown only while it still
+    // derives the stored name, so a name set from anywhere else wins.
+    const [typedRepoName, setTypedRepoName] = useState(repoName);
+    const repoNameInput =
+        normalizeRepositoryName(typedRepoName) === repoName ? typedRepoName : repoName;
     const [repoCreationState, setRepoCreationState] = useState<RepoCreationState>({
         isCreating: false,
         isCreated: hasCreatedRepo,
@@ -208,6 +216,7 @@ export function RepoSelectionInline({
 
     const handleRepoNameChange = useCallback(
         (value: string) => {
+            setTypedRepoName(value);
             const normalized = normalizeRepositoryName(value);
             // DA.live site name is locked to the GitHub repo name — see backlog
             // 2026-06-08-unify-da-site-and-repo-name for why the dual-identifier
@@ -405,6 +414,7 @@ export function RepoSelectionInline({
             {repoMode === 'new' && (
                 <NewRepoForm
                     repoName={repoName}
+                    repoNameInput={repoNameInput}
                     githubUser={githubUser}
                     repoNameError={repoNameError}
                     repoCreationState={repoCreationState}
