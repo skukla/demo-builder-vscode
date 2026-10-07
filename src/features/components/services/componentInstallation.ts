@@ -180,9 +180,6 @@ export class ComponentInstallation {
             };
         }
 
-        // Create .node-version file if configured (enables fnm auto-switching)
-        await this.createNodeVersionFile(componentDef, componentPath);
-
         return {
             success: true,
             component: componentInstance,
@@ -257,28 +254,6 @@ export class ComponentInstallation {
         }
 
         return detectedVersion;
-    }
-
-    /**
-     * Create .node-version file if configured (enables fnm auto-switching)
-     */
-    private async createNodeVersionFile(
-        componentDef: TransformedComponentDefinition,
-        componentPath: string,
-    ): Promise<void> {
-        const configuredNodeVersion = componentDef.configuration?.nodeVersion;
-        if (!configuredNodeVersion) {
-            return;
-        }
-
-        const nodeVersionFile = path.join(componentPath, '.node-version');
-        try {
-            // Check if file already exists
-            await fs.access(nodeVersionFile);
-        } catch {
-            // File doesn't exist, create it
-            await fs.writeFile(nodeVersionFile, `${configuredNodeVersion}\n`, 'utf-8');
-        }
     }
 
     /**

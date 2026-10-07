@@ -170,26 +170,8 @@ describe('the Node version the component runs on', () => {
         expect(result.component?.metadata).toBeUndefined();
     });
 
-    it('writes .node-version so fnm switches automatically', async () => {
+    it('writes no .node-version file: the project record is the one record (PR-1a)', async () => {
         await install(withNode());
-
-        expect(mockFs.writeFile).toHaveBeenCalledWith(
-            `${COMPONENT_PATH}/.node-version`,
-            '20.11.0\n',
-            'utf-8'
-        );
-    });
-
-    it('does NOT overwrite an existing .node-version', async () => {
-        mockFs.access.mockResolvedValue(undefined);
-
-        await install(withNode());
-
-        expect(mockFs.writeFile).not.toHaveBeenCalled();
-    });
-
-    it('writes nothing when no Node version is configured', async () => {
-        await install();
 
         expect(mockFs.writeFile).not.toHaveBeenCalled();
     });

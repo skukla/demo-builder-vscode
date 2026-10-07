@@ -10155,7 +10155,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 238,
+            "line": 235,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger.debug. Emptying it leaves detectedVersion untouched and falls through to the commit-hash strategy exactly as before; only the log line differs.",

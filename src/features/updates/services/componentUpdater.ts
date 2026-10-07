@@ -118,7 +118,7 @@ export class ComponentUpdater {
                 await this.mergeEnvFiles(component.path, envFiles);
 
                 // 6.5. Record the Node it was just installed under, so Start Demo runs it there
-                await this.recordNodeVersion(project, componentId, component.path);
+                await this.recordNodeVersion(project, componentId);
 
                 // 7. Update version tracking ONLY after successful verification
                 if (!project.componentVersions) {
@@ -287,18 +287,17 @@ export class ComponentUpdater {
     }
 
     /**
-     * Rewrite the component's recorded Node (`metadata.nodeVersion` and its
-     * `.node-version` file) to the catalog's current declaration (PR-1a). The update
+     * Rewrite the component's recorded Node (`metadata.nodeVersion`) to the
+     * catalog's current declaration (PR-1a). The update
      * has just installed under that version; Start Demo reads the record, so without
      * this a raised version moved the install and left `npm run dev` on the old one.
      * A component that declares no version keeps whatever it had.
      */
-    private async recordNodeVersion(project: Project, componentId: string, componentPath: string): Promise<void> {
+    private async recordNodeVersion(project: Project, componentId: string): Promise<void> {
         const declared = nodeVersionOf(await this.componentDefinition(componentId));
         const instance = project.componentInstances?.[componentId];
         if (!declared || !instance) return;
         instance.metadata = { ...instance.metadata, nodeVersion: declared };
-        await fs.writeFile(path.join(componentPath, '.node-version'), `${declared}\n`, 'utf-8');
     }
 
     /**

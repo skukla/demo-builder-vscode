@@ -6,8 +6,8 @@
  * above the imports of the module it appears in, NOT across modules.
  *
  * `fs/promises` is replaced with doubles a spec can re-program per test: the
- * module's three filesystem decisions (is there a stale clone directory, is
- * there a package.json, is there already a .node-version) are all read from
+ * module's two filesystem decisions (is there a stale clone directory, is
+ * there a package.json) are both read from
  * whether `access` resolves or rejects, so a fixed factory can only ever
  * exercise one side of each.
  */
