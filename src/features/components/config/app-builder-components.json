@@ -40,7 +40,7 @@
     {
       "id": "demo-erp",
       "name": "ERP",
-      "description": "A stand-in ERP the integration talks to: products, business partners, contract prices and sales orders, every record resettable, with its own screen. Comes with the ERP integration and goes with it.",
+      "description": "A stand-in ERP with products, customers, prices and orders you can reset.",
       "kind": "system",
       "boundTo": "erp-integration",
       "systemType": "ERP",
@@ -251,7 +251,7 @@
           "then": "Finish Sandbox onboarding first, and keep Payment mode at Sandbox so no real card is charged."
         }
       ],
-      "description": "Adobe Commerce and an ERP, on the Commerce integration starter kit: orders get an ERP number, price, stock and order-status changes in the ERP land in Commerce, contract prices apply in the cart, and a screen inside the Commerce Admin shows it all. Comes with its own ERP.",
+      "description": "Connects Commerce to an ERP: orders, prices and stock stay in sync.",
       "kind": "integration",
       "layout": "extension",
       "lifecycle": "app-management",
