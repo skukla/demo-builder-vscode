@@ -22,7 +22,7 @@ import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { promisify } from 'util';
 import aiDefaultsConfig from '../../config/ai-defaults.json';
-import { resolveMcpToolsDir } from './aiDefaultsInstaller';
+import { AI_TOOLS_NODE_VERSION, resolveMcpToolsDir } from './aiDefaultsInstaller';
 import { aiDefaultsEntryApplies } from './aiToolingGate';
 import {
     generateClaudeSettings,
@@ -216,7 +216,7 @@ async function buildMcpConfig(
 
 /**
  * How an ai-defaults server is launched: a `node` server runs on the Node the
- * tools were installed for (`aiDefaults.nodeVersion`, AI-13), through fnm, as
+ * tools were installed for (`AI_TOOLS_NODE_VERSION`, AI-13), through fnm, as
  * `fnm exec --using=<major> node <script>`. Not an absolute path to that Node:
  * fnm's patch directories come and go as it updates, and `fnm exec` resolves the
  * major each time. Measured 2026-10-07: it runs with a bare environment (no fnm
@@ -225,7 +225,7 @@ async function buildMcpConfig(
  */
 function launchUnderNode(command: string, args: string[], fnmPath: string | null): McpServerEntry {
     if (command !== 'node' || !fnmPath) return { command, args };
-    return { command: fnmPath, args: ['exec', `--using=${aiDefaults.nodeVersion}`, 'node', ...args] };
+    return { command: fnmPath, args: ['exec', `--using=${AI_TOOLS_NODE_VERSION}`, 'node', ...args] };
 }
 
 /**

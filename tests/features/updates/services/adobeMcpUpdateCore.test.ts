@@ -31,6 +31,13 @@ jest.mock('@/features/project-creation/services/aiBundle/aiDefaultsInstaller', (
     // The MCP packages live in a per-project ISOLATED tools dir, never the
     // storefront's node_modules — this resolver is the single source of truth.
     resolveMcpToolsDir: (projectPath: string) => `${projectPath}/.demo-builder-mcp`,
+    AI_TOOLS_NODE_VERSION: '24',
+}));
+
+// The tools' Node, via fnm (AI-13). Stubbed: a real one runs `fnm install`.
+const mockEnsureNode = jest.fn();
+jest.mock('@/core/shell/ensureNodeVersion', () => ({
+    ensureFnmNodeVersion: (...a: unknown[]) => mockEnsureNode(...a),
 }));
 
 const generateMock = generateAIContextFiles as jest.Mock;
@@ -70,6 +77,25 @@ describe('applyAdobeMcpUpdate', () => {
                 enhancePath: true,
             })
         );
+    });
+
+    it('updates on the Node the tools run on (24, through fnm), not the PATH Node (AI-13)', async () => {
+        await applyAdobeMcpUpdate(project, PKG, '2.0.0', ctx);
+
+        expect(mockEnsureNode).toHaveBeenCalledWith(executor, '24', ctx.logger);
+        expect(executeMock).toHaveBeenCalledWith(
+            `npm update ${PKG} --no-fund`,
+            expect.objectContaining({ useNodeVersion: '24' })
+        );
+    });
+
+    it("throws fnm's reason, and runs no npm, when that Node cannot be had", async () => {
+        mockEnsureNode.mockResolvedValueOnce('Node 24 is required but fnm was not found.');
+
+        await expect(applyAdobeMcpUpdate(project, PKG, '2.0.0', ctx)).rejects.toThrow(
+            'Node 24 is required but fnm was not found.'
+        );
+        expect(executeMock).not.toHaveBeenCalled();
     });
 
     it('throws with the npm output when the update exits non-zero (no regenerate)', async () => {

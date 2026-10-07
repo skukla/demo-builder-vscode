@@ -52,6 +52,11 @@ jest.mock('@/features/project-creation/services/aiBundle/aiDefaultsInstaller', (
     // storefront's node_modules — `aiDefaultsInstaller` calls this resolver
     // "the single source of truth" for that location.
     resolveMcpToolsDir: (projectPath: string) => `${projectPath}/.demo-builder-mcp`,
+    AI_TOOLS_NODE_VERSION: '24',
+}));
+// The tools' Node via fnm (AI-13): stubbed, or it runs a real `fnm install`.
+jest.mock('@/core/shell/ensureNodeVersion', () => ({
+    ensureFnmNodeVersion: jest.fn(async () => undefined),
 }));
 /**
  * CONVERTED 2026-08-28 (ADR-015): the executor arrives in the context, so this
