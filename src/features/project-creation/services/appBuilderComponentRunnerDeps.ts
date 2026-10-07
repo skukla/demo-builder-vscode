@@ -217,8 +217,8 @@ export function buildDefaultRunnerDeps(
             fastForwardClone(componentPath, branch, gitIn),
         checkComponentSource: (componentPath, branch) =>
             checkCloneForUpdate(componentPath, branch, gitIn),
-        installComponentDependencies: (componentPath, definition) =>
-            ctx.componentManager.installNpmDependencies(componentPath, definition),
+        installComponentDependencies: (componentPath, definition, nodeVersion) =>
+            ctx.componentManager.installNpmDependencies(componentPath, definition, nodeVersion),
         // The app's own uninstall API ahead of a remove (the ERP undo and wipe: erpRunnerDeps):
         uninstallAppManagement: (project, componentId, uninstallProgress) =>
             uninstallAppManagementApp(project, componentId, deployedUrlsOf(project, componentId), {

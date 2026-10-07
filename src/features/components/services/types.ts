@@ -15,6 +15,11 @@ export interface ComponentInstallOptions {
      * If not provided, defaults to `<projectPath>/components`.
      */
     componentsDir?: string;
+    /**
+     * The Node to install under when it is not Demo Builder's own: only an integration
+     * from an SC's own repo that needs another Node (PR-1a). Omitted = `demoBuilderNode()`.
+     */
+    nodeVersion?: string;
 }
 
 /**

@@ -8,6 +8,7 @@ import { updateAppBuilderComponent } from '@/features/app-builder/services/appBu
 import type { SourceUpdateResult } from '@/features/app-builder/services/integrationSourceUpdate';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 import { createDeps, createProject } from './appBuilderComponentRunner.testUtils';
 
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
@@ -87,8 +88,10 @@ describe('updateAppBuilderComponent', () => {
             PATH,
             expect.objectContaining({
                 id: ENTRY.id,
-                configuration: expect.objectContaining({ nodeVersion: '24', strictInstall: true }),
+                configuration: expect.objectContaining({ strictInstall: true }),
             }),
+            // The entry's own Node, the one its deploy runs on (PR-1a).
+            ENTRY.nodeVersion ?? demoBuilderNode(),
         );
         expect(deps.deployApp).toHaveBeenCalledTimes(1);
         expect(project.appBuilderComponents?.[ENTRY.id]?.installation).toMatchObject({

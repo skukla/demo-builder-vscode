@@ -50,11 +50,11 @@ export class ComponentDependencies {
     private async runInstallAndBuild(
         componentPath: string,
         componentDef: TransformedComponentDefinition,
+        nodeVersion: string,
     ): Promise<string | undefined> {
         this.logger.debug(`[ComponentManager] Installing dependencies for ${componentDef.name}`);
 
         const commandManager = this.commandManager;
-        const nodeVersion = demoBuilderNode();
         const installCommand = 'npm install';
 
         this.logger.debug(
@@ -110,6 +110,7 @@ export class ComponentDependencies {
     async installNpmDependencies(
         componentPath: string,
         componentDef: TransformedComponentDefinition,
+        nodeVersion: string = demoBuilderNode(),
     ): Promise<{ success: boolean; error?: string }> {
         const packageJsonPath = path.join(componentPath, 'package.json');
 
@@ -121,7 +122,7 @@ export class ComponentDependencies {
             return { success: true };
         }
 
-        const fatal = await this.runInstallAndBuild(componentPath, componentDef);
+        const fatal = await this.runInstallAndBuild(componentPath, componentDef, nodeVersion);
         if (fatal) {
             return { success: false, error: fatal };
         }
@@ -138,6 +139,7 @@ export class ComponentDependencies {
         componentPath: string,
         componentDef: TransformedComponentDefinition,
         skipDependencies: boolean,
+        nodeVersion: string = demoBuilderNode(),
     ): Promise<{ success: boolean; error?: string }> {
         const packageJsonPath = path.join(componentPath, 'package.json');
 
@@ -152,7 +154,7 @@ export class ComponentDependencies {
             return { success: true };
         }
 
-        const fatal = await this.runInstallAndBuild(componentPath, componentDef);
+        const fatal = await this.runInstallAndBuild(componentPath, componentDef, nodeVersion);
         return fatal ? { success: false, error: fatal } : { success: true };
     }
 }

@@ -177,7 +177,7 @@ export class ComponentInstallation {
         if (componentDef.configuration?.skipNpmInstall !== true) {
             componentInstance.metadata = {
                 ...componentInstance.metadata,
-                nodeVersion: demoBuilderNode(),
+                nodeVersion: options.nodeVersion ?? demoBuilderNode(),
             };
         }
 

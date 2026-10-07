@@ -354,10 +354,11 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
     fetchComponentSource?: (componentPath: string, branch: string) => Promise<SourceUpdateResult>;
     /** Whether a clone's branch has newer commits (integrationSourceUpdate); update check only. */
     checkComponentSource?: (componentPath: string, branch: string) => Promise<UpdateCheckResult>;
-    /** npm install (and build) in an existing clone; update only. */
+    /** npm install (and build) in an existing clone, on `nodeVersion`; update only. */
     installComponentDependencies?: (
         componentPath: string,
-        definition: TransformedComponentDefinition
+        definition: TransformedComponentDefinition,
+        nodeVersion: string,
     ) => Promise<{ success: boolean; error?: string }>;
     /**
      * Union-reconcile API subscriber (step 07). `onStep` carries its own short
@@ -462,13 +463,11 @@ function buildDefinition(entry: AppBuilderComponentCatalogEntry): TransformedCom
         configuration: {
             requiresDeployment: true,
             deploymentTarget: 'adobe-io',
-            // The register's node for the entry feeds the fnm machinery in
-            // ComponentDependencies; strictInstall makes a refused npm install
-            // abort the add with npm's own error (AB-3).
-            nodeVersion: nodeVersionOf(entry),
+            // strictInstall makes a refused npm install abort the add with npm's
+            // own error (AB-3). The Node travels as an install option (cloneAndInstall).
             strictInstall: true,
         },
-    } as TransformedComponentDefinition;
+    };
 }
 
 /** Clone + install the catalog entry; return its local path or an error. */
@@ -477,7 +476,11 @@ async function cloneAndInstall(
     entry: AppBuilderComponentCatalogEntry,
     deps: AppBuilderComponentRunnerDeps,
 ): Promise<{ path: string } | { error: string }> {
-    const result = await deps.componentManager.installComponent(project, buildDefinition(entry));
+    // The entry's own Node (an SC's own repo that needs another), else Demo Builder's:
+    // the same one the deploy runs on, so install and deploy cannot disagree.
+    const result = await deps.componentManager.installComponent(project, buildDefinition(entry), {
+        nodeVersion: nodeVersionOf(entry),
+    });
     if (!result.success || !result.component?.path) {
         return { error: result.error || 'Component installation failed.' };
     }
@@ -1369,6 +1372,7 @@ export async function updateAppBuilderComponent(
         const dependencies = await deps.installComponentDependencies(
             componentPath,
             buildDefinition(entry),
+            nodeVersionOf(entry),
         );
         if (!dependencies.success) {
             return {

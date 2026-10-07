@@ -36,6 +36,7 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
 
 import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 import {
     MESH_ENTRY,
     INTEGRATION_ENTRY,
@@ -145,6 +146,22 @@ describe('addAppBuilderComponent — the definition handed to the installer', ()
             url: 'https://github.com/acme/erp-bridge.git',
             branch: 'release/2026-09',
         });
+    });
+
+    it('installs on the entry\'s own Node, the one its deploy runs on (PR-1a)', async () => {
+        const deps = createDeps();
+
+        await addAppBuilderComponent(createProject(), { ...INTEGRATION_ENTRY, nodeVersion: '26' }, deps);
+
+        expect(deps.componentManager.installComponent.mock.calls[0][2]).toStrictEqual({ nodeVersion: '26' });
+    });
+
+    it('installs on Demo Builder\'s Node when the entry has none of its own', async () => {
+        const deps = createDeps();
+
+        await addAppBuilderComponent(createProject(), INTEGRATION_ENTRY, deps);
+
+        expect(deps.componentManager.installComponent.mock.calls[0][2]).toStrictEqual({ nodeVersion: demoBuilderNode() });
     });
 });
 
