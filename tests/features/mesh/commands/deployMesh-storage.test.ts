@@ -48,10 +48,8 @@ jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
 }));
 
 // Mock dynamic imports
-jest.mock('@/features/dashboard/commands/showDashboard', () => ({
-    ProjectDashboardWebviewCommand: {
-        sendMeshStatusUpdate: jest.fn().mockResolvedValue(undefined),
-    },
+jest.mock('@/features/dashboard/services/projectPanelPushes', () => ({
+    sendMeshStatusUpdate: jest.fn().mockResolvedValue(undefined),
 }));
 // A FAITHFUL double. The previous one simulated behaviour production had already
 // retired — it wrote the legacy `meshState` singleton and nothing else — and the

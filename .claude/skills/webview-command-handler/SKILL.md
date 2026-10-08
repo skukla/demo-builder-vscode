@@ -23,9 +23,9 @@ description: Add a webview message handler/command end-to-end (MessageType → h
 
 Two traps that fail SILENTLY — nothing throws, nothing logs, the UI just never updates:
 
-- **Static push senders address ONE panel id.** The senders in
-  `showDashboard.ts` (`sendMeshStatusUpdate`, `sendAppBuilderComponentStatusUpdate`,
-  `sendAppBuilderComponentsSnapshot`, …) look up `getActivePanel('demoBuilder.projectDashboard')`.
+- **Push senders must not address ONE panel id.** The senders in
+  `dashboard/services/projectPanelPushes.ts` (`sendMeshStatusUpdate`, `sendAppBuilderComponentStatusUpdate`,
+  `sendAppBuilderComponentsSnapshot`, …) once looked up `getActivePanel('demoBuilder.projectDashboard')`.
   Surfaces open by tab REPLACEMENT — the dashboard panel is disposed — so on a new
   project-scoped surface every push reaches nobody. Resolve whichever panel is live
   (`getLiveProjectPanel()`), preferring one so a push renders once. Symptom: the surface

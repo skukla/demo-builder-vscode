@@ -21,6 +21,7 @@ import {
 } from '@/features/components/services/commerceSecretMigration';
 import { getComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
 import { withEnvVarKeys } from '@/features/components/services/componentTransforms';
+import { sendAuthoringExperienceUpdate } from '@/features/dashboard/services/projectPanelPushes';
 import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,
@@ -327,7 +328,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
                         data.authoringExperience,
                         getEwCanvasBranch(),
                     );
-                    await ProjectDashboardWebviewCommand.sendAuthoringExperienceUpdate(
+                    await sendAuthoringExperienceUpdate(
                         edsDaLiveUrl,
                     );
                 } catch (error) {

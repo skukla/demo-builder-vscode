@@ -93,20 +93,22 @@ export const mockSendProjectDestinationUpdate = jest.fn();
  * refresh happens — and, for rename, that it does not.
  */
 export const mockHandleRequestStatus = jest.fn().mockResolvedValue({ success: true });
-jest.mock('@/features/dashboard/handlers/dashboardHandlers', () => ({
+jest.mock('@/features/dashboard/handlers/statusHandlers', () => ({
     handleRequestStatus: (...a: unknown[]) => mockHandleRequestStatus(...a),
 }));
 
 jest.mock('@/features/dashboard/commands/showDashboard', () => ({
     ProjectDashboardWebviewCommand: {
-        sendAppBuilderComponentStatusUpdate: (...a: unknown[]) =>
-            mockSendAppBuilderComponentStatusUpdate(...a),
-        sendAppBuilderComponentsSnapshot: (...a: unknown[]) =>
-            mockSendAppBuilderComponentsSnapshot(...a),
-        sendMeshStatusUpdate: (...a: unknown[]) => mockSendMeshStatusUpdate(...a),
-        sendProjectDestinationUpdate: (...a: unknown[]) => mockSendProjectDestinationUpdate(...a),
         refreshStatus: jest.fn(),
     },
+}));
+jest.mock('@/features/dashboard/services/projectPanelPushes', () => ({
+    sendAppBuilderComponentStatusUpdate: (...a: unknown[]) =>
+        mockSendAppBuilderComponentStatusUpdate(...a),
+    sendAppBuilderComponentsSnapshot: (...a: unknown[]) =>
+        mockSendAppBuilderComponentsSnapshot(...a),
+    sendMeshStatusUpdate: (...a: unknown[]) => mockSendMeshStatusUpdate(...a),
+    sendProjectDestinationUpdate: (...a: unknown[]) => mockSendProjectDestinationUpdate(...a),
 }));
 
 export {
@@ -118,9 +120,6 @@ export {
     handleRemoveAppBuilderComponent,
     handleRenameAppBuilderComponent,
     postComponentsSnapshot,
-    postDestination,
-    postMeshStatus,
-    postRowStatus,
     resolveAddEntry,
     resolveComponentTarget,
     runGuards,

@@ -99,15 +99,17 @@ jest.mock('@/features/authentication/services/detectProjectOrgMismatch', () => (
 }));
 
 // ---- dashboard channels (imported by the shared handler module) ------------
-jest.mock('@/features/dashboard/handlers/dashboardHandlers', () => ({
+jest.mock('@/features/dashboard/handlers/statusHandlers', () => ({
     handleRequestStatus: jest.fn().mockResolvedValue({ success: true }),
 }));
 jest.mock('@/features/dashboard/commands/showDashboard', () => ({
     ProjectDashboardWebviewCommand: {
-        sendAppBuilderComponentStatusUpdate: jest.fn(),
-        sendAppBuilderComponentsSnapshot: jest.fn(),
         refreshStatus: jest.fn(),
     },
+}));
+jest.mock('@/features/dashboard/services/projectPanelPushes', () => ({
+    sendAppBuilderComponentStatusUpdate: jest.fn(),
+    sendAppBuilderComponentsSnapshot: jest.fn(),
 }));
 
 import {

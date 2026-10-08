@@ -821,7 +821,7 @@ config when a project is created (and on "Regenerate AI files"):
 Additionally, the **Demo Builder: Register Global MCP** palette command
 (`src/features/project-creation/services/aiBundle/globalMcpRegistration.ts`) upserts a
 `demo-builder` entry into the user-scope config of every agent that keeps one
-(`FILE_BACKED_ENGINES`: `~/.claude.json` and `~/.copilot/mcp-config.json`) — same
+(`GLOBAL_MCP_CONFIGS`: `~/.claude.json` and `~/.copilot/mcp-config.json`) — same
 command/args but **no** socket env, so the proxy discovers a running window at
 launch (see §5). Explicit opt-in only; it merge-preserves everything else in the
 file and refuses to overwrite a malformed one.

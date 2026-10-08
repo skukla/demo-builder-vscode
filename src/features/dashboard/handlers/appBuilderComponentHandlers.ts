@@ -40,7 +40,7 @@ import {
     resolveComponentTarget,
     type GuardableResult,
 } from './appBuilderComponentOperation';
-import { postComponentsSnapshot, postRowStatus, refreshProjectStatus } from './appBuilderComponentPush';
+import { postComponentsSnapshot, refreshProjectStatus } from './appBuilderComponentPush';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
@@ -48,6 +48,9 @@ import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operatio
 import { deployAppBuilderComponent } from '@/features/app-builder/services/appBuilderRedeployRun';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { strandedSystem, strandedSystemMessage } from '@/features/components/services/appBuilderComponentLinks';
+import {
+    sendAppBuilderComponentStatusUpdate,
+} from '@/features/dashboard/services/projectPanelPushes';
 import {
     buildDefaultRunnerDeps,
     buildRunnerDepsContext,
@@ -68,13 +71,7 @@ export {
     withComponentProgress,
     type GuardableResult,
 } from './appBuilderComponentOperation';
-export {
-    postComponentsSnapshot,
-    postDestination,
-    postMeshStatus,
-    postRowStatus,
-    refreshProjectStatus,
-} from './appBuilderComponentPush';
+export { postComponentsSnapshot, refreshProjectStatus } from './appBuilderComponentPush';
 export { handleRemoveAppBuilderComponent } from './appBuilderComponentRemove';
 export { handleRenameAppBuilderComponent } from './appBuilderComponentRename';
 
@@ -141,7 +138,7 @@ async function deployById(
         },
     );
     const status = result.success ? 'deployed' : 'error';
-    await postRowStatus(
+    await sendAppBuilderComponentStatusUpdate(
         id,
         status,
         result.success ? undefined : result.error || 'Deployment failed',

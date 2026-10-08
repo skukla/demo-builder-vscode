@@ -52,7 +52,7 @@ It is already built.
 2. **One typed push channel.** `componentOperationProgress` in `src/types/webviewPayloads.ts`:
    `{ id, stage, step?, expectation?, state: 'running' | 'succeeded' | 'failed', error? }`.
    Sent through the existing live-panel lookup in `showDashboard.ts`
-   (`getLiveProjectPanel`, beside `sendAppBuilderComponentStatusUpdate`).
+   (`getLiveProjectPanel`, beside `sendAppBuilderComponentStatusUpdate`, now in `dashboard/services/projectPanelPushes.ts`).
 3. **The source is `withComponentProgress`** (`appBuilderComponentHandlers.ts`). All four
    operations and the App Management install already go through it. It gets
    `(stage, step)` instead of a single collapsed string. The handler currently flattens them

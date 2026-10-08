@@ -31,13 +31,8 @@ import {
     mockGetAppBuilderComponentEntry,
     mockSendAppBuilderComponentStatusUpdate,
     mockSendAppBuilderComponentsSnapshot,
-    mockSendMeshStatusUpdate,
-    mockSendProjectDestinationUpdate,
     mockTestDeveloperPermissions,
     postComponentsSnapshot,
-    postDestination,
-    postMeshStatus,
-    postRowStatus,
     resetHandlerMocks,
     resolveAddEntry,
     resolveComponentTarget,
@@ -404,34 +399,7 @@ describe('resolveComponentTarget', () => {
     });
 });
 
-describe('the four push channels', () => {
-    it('posts a row status with its id, status, message and name', async () => {
-        await postRowStatus('erp-sync', 'deploying', 'Cloning…', 'ERP Sync');
-
-        expect(mockSendAppBuilderComponentStatusUpdate).toHaveBeenCalledWith(
-            'erp-sync',
-            'deploying',
-            'Cloning…',
-            'ERP Sync'
-        );
-    });
-
-    it('posts mesh status on the MESH channel — a row push reaches nothing', async () => {
-        await postMeshStatus('deploying', 'Building the mesh…');
-
-        expect(mockSendMeshStatusUpdate).toHaveBeenCalledWith('deploying', 'Building the mesh…');
-        expect(mockSendAppBuilderComponentStatusUpdate).not.toHaveBeenCalled();
-    });
-
-    it('posts the destination titles for the header crumb', async () => {
-        await postDestination({ projectTitle: 'Acme', workspaceTitle: 'Stage' });
-
-        expect(mockSendProjectDestinationUpdate).toHaveBeenCalledWith({
-            projectTitle: 'Acme',
-            workspaceTitle: 'Stage',
-        });
-    });
-
+describe('the components snapshot push', () => {
     it('posts the project persisted components map', async () => {
         const components = {
             'erp-sync': {
@@ -479,7 +447,6 @@ describe('withComponentProgress', () => {
             'erp-sync',
             'deploying',
             expect.any(String),
-            undefined
         );
     });
 

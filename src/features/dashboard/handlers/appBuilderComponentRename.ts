@@ -11,18 +11,20 @@
 
 import * as vscode from 'vscode';
 import { resolveComponentTarget } from './appBuilderComponentOperation';
-import { postComponentsSnapshot, postRowStatus } from './appBuilderComponentPush';
+import { postComponentsSnapshot } from './appBuilderComponentPush';
 import {
     getAppBuilderComponent,
     listAppBuilderComponents,
     setAppBuilderComponent,
 } from '@/core/state/appBuilderComponentState';
 import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
+import {
+    sendAppBuilderComponentStatusUpdate,
+} from '@/features/dashboard/services/projectPanelPushes';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { MessageHandler } from '@/types/handlers';
-
 
 /**
  * validateInput for the rename input box: reject empty/whitespace-only names
@@ -140,7 +142,7 @@ export const handleRenameAppBuilderComponent: MessageHandler<{
     await context.stateManager.saveProject(renamed);
     // Same per-row channel the deploy path pushes — the status is unchanged
     // (the entry's current one); the name rides along to refresh the row label.
-    await postRowStatus(id, entry.status, undefined, name);
+    await sendAppBuilderComponentStatusUpdate(id, entry.status, undefined, name);
     await postComponentsSnapshot(context);
     const note = commerceRenameNote(catalogEntry, name);
     // Not awaited: an agent's rename must not wait on a notification nobody clicks.

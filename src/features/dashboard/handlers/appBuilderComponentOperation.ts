@@ -10,12 +10,14 @@
  */
 
 import * as vscode from 'vscode';
-import { postRowStatus } from './appBuilderComponentPush';
 import { stageLine } from '@/core/utils/stageLine';
 import { cardInFlightLabel, timedSteps } from '@/core/vscode/progressRegister';
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
 import type { RuntimeCleanupSummary } from '@/features/app-builder/services/appBuilderComponentRunner';
 import type { CommerceDetachResult } from '@/features/app-builder/services/erpDetach';
+import {
+    sendAppBuilderComponentStatusUpdate,
+} from '@/features/dashboard/services/projectPanelPushes';
 import type { Project, AppBuilderComponentKind } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -221,7 +223,7 @@ export async function withComponentProgress<T extends GuardableResult>(
             inModal,
             cardLabel: cardInFlightLabel(title, noun),
             pushCardStatus: (cardLabel) => {
-                void postRowStatus(id, 'deploying', cardLabel);
+                void sendAppBuilderComponentStatusUpdate(id, 'deploying', cardLabel);
             },
         },
         (report) =>

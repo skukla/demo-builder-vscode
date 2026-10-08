@@ -42,6 +42,7 @@ import { getProvidedEnvVars } from '@/core/state/appBuilderComponentState';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { cardInFlightLabel } from '@/core/vscode/progressRegister';
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
+import { sendMeshStatusUpdate } from '@/features/dashboard/services/projectPanelPushes';
 import type { Project } from '@/types/base';
 import { toError } from '@/types/typeGuards';
 
@@ -97,9 +98,6 @@ export async function deployMeshWithFeedback(
     deps: DeployMeshWithFeedbackDeps,
     options: DeployMeshFeedbackOptions = {},
 ): Promise<DeployMeshHeadlessResult> {
-    const { ProjectDashboardWebviewCommand } = await import(
-        '@/features/dashboard/commands/showDashboard'
-    );
     const inModal = options.progress === 'modal';
 
     return withOperationProgress(
@@ -109,7 +107,7 @@ export async function deployMeshWithFeedback(
             inModal,
             cardLabel: CARD_IN_FLIGHT_LABEL,
             pushCardStatus: (label) => {
-                void ProjectDashboardWebviewCommand.sendMeshStatusUpdate('deploying', label);
+                void sendMeshStatusUpdate('deploying', label);
             },
         },
         async (report) => {
@@ -126,14 +124,14 @@ export async function deployMeshWithFeedback(
                 // deploy resolves.
                 onStatus: (status, message, endpoint) => {
                     if (status === 'deploying') {
-                        return ProjectDashboardWebviewCommand.sendMeshStatusUpdate(
+                        return sendMeshStatusUpdate(
                             status,
                             CARD_IN_FLIGHT_LABEL,
                         );
                     }
                     return endpoint === undefined
-                        ? ProjectDashboardWebviewCommand.sendMeshStatusUpdate(status, message)
-                        : ProjectDashboardWebviewCommand.sendMeshStatusUpdate(
+                        ? sendMeshStatusUpdate(status, message)
+                        : sendMeshStatusUpdate(
                               status,
                               message,
                               endpoint,

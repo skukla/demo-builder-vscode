@@ -17,7 +17,7 @@ import {
     kindNoun,
     type GuardableResult,
 } from './appBuilderComponentOperation';
-import { postComponentsSnapshot, postRowStatus, refreshProjectStatus } from './appBuilderComponentPush';
+import { postComponentsSnapshot, refreshProjectStatus } from './appBuilderComponentPush';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
@@ -35,6 +35,9 @@ import {
     copyForAdd,
     listedSystemOf,
 } from '@/features/components/services/appBuilderComponentLinks';
+import {
+    sendAppBuilderComponentStatusUpdate,
+} from '@/features/dashboard/services/projectPanelPushes';
 import {
     buildDefaultRunnerDeps,
     buildRunnerDepsContext,
@@ -337,7 +340,7 @@ async function reportAddOutcome(
     if (result.blocked) {
         return { success: false, error: result.error };
     }
-    await postRowStatus(
+    await sendAppBuilderComponentStatusUpdate(
         entry.id,
         result.success ? 'deployed' : 'error',
         result.success ? undefined : result.error || 'Deployment failed',

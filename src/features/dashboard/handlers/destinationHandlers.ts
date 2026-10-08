@@ -18,13 +18,7 @@
  */
 
 import * as vscode from 'vscode';
-import {
-    postComponentsSnapshot,
-    postDestination,
-    postMeshStatus,
-    postRowStatus,
-    runGuards,
-} from './appBuilderComponentHandlers';
+import { postComponentsSnapshot, runGuards } from './appBuilderComponentHandlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { DESTINATION_OPERATION_ID } from '@/core/utils/operationIds';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
@@ -32,6 +26,11 @@ import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operatio
 import { withOperationProgress, type ReportStage } from '@/core/vscode/withOperationProgress';
 import { moveAppBuilderComponentsToDestination } from '@/features/app-builder/services/appBuilderComponentMigration';
 import { ownWorkspaceGroups } from '@/features/app-builder/services/componentRelocation';
+import {
+    sendAppBuilderComponentStatusUpdate,
+    sendMeshStatusUpdate,
+    sendProjectDestinationUpdate,
+} from '@/features/dashboard/services/projectPanelPushes';
 import {
     buildDefaultRunnerDeps,
     buildRunnerDepsContext,
@@ -235,7 +234,7 @@ async function applyDestination(
     // Immediately after the write, not after the move: `project.adobe` already
     // names the new target, every deploy below goes there, and a header still
     // showing the old one would be wrong for the whole run.
-    await postDestination(project.adobe);
+    await sendProjectDestinationUpdate(project.adobe);
 
     if (movingIds.length === 0) {
         return { success: true, data: { destination: project.adobe, previous } };
@@ -287,7 +286,7 @@ async function applyDestination(
     if (!move.success) {
         // The migration pointed the project back; the header must follow, or it
         // keeps naming a destination the project no longer uses.
-        await postDestination(project.adobe);
+        await sendProjectDestinationUpdate(project.adobe);
         const cause = move.failed.map((f) => `${f.id} (${f.error})`).join(', ');
         // Once an integration's old side is gone the project is NOT pointed back,
         // and there is no previous destination still serving it to point at.
@@ -386,8 +385,8 @@ async function routeCardStatus(
     message?: string,
 ): Promise<void> {
     if (project.appBuilderComponents?.[id]?.kind === 'mesh') {
-        await postMeshStatus(status, message);
+        await sendMeshStatusUpdate(status, message);
         return;
     }
-    await postRowStatus(id, status, message);
+    await sendAppBuilderComponentStatusUpdate(id, status, message);
 }

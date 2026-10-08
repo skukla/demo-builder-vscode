@@ -326,7 +326,6 @@ describe('handleAddAppBuilderComponent', () => {
             'erp-sync',
             'error',
             expect.stringContaining('clone failed'),
-            undefined
         );
     });
 });

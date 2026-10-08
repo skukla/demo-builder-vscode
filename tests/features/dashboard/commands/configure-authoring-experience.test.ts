@@ -103,10 +103,12 @@ jest.mock('@/features/eds/services/github/githubTokenService', () => ({
 const mockSendAuthoringExperienceUpdate = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/features/dashboard/commands/showDashboard', () => ({
     ProjectDashboardWebviewCommand: {
-        sendAuthoringExperienceUpdate: (...args: unknown[]) =>
-            mockSendAuthoringExperienceUpdate(...args),
         refreshStatus: jest.fn().mockResolvedValue(undefined),
     },
+}));
+jest.mock('@/features/dashboard/services/projectPanelPushes', () => ({
+    sendAuthoringExperienceUpdate: (...args: unknown[]) =>
+        mockSendAuthoringExperienceUpdate(...args),
 }));
 
 const NO_REPO = Symbol('no-repo');

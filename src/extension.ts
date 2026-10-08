@@ -84,6 +84,7 @@ import {
     shouldAutoReopenProjectsList,
 } from '@/features/dashboard/commands/showDashboard';
 import { seedDefaultAiPrompts } from '@/features/dashboard/services/defaultPromptsSeeder';
+import { sendAuthoringExperienceUpdate } from '@/features/dashboard/services/projectPanelPushes';
 import { cleanupDaLiveSitesCommand } from '@/features/eds/commands/cleanupDaLiveSites';
 import { manageGitHubReposCommand } from '@/features/eds/commands/manageGitHubRepos';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
@@ -472,7 +473,7 @@ export async function activate(context: vscode.ExtensionContext) {
             onReapplied: async (project) => {
                 const current = await stateManager.getCurrentProject();
                 if (current?.path === project.path) {
-                    await ProjectDashboardWebviewCommand.sendAuthoringExperienceUpdate(
+                    await sendAuthoringExperienceUpdate(
                         ProjectDashboardWebviewCommand.authoringUrlFor(project),
                     );
                 }

@@ -23,7 +23,6 @@
 import {
     guardOrBlock,
     postComponentsSnapshot,
-    postRowStatus,
     refreshProjectStatus,
     withComponentProgress,
     type GuardableResult,
@@ -38,6 +37,9 @@ import { updateAppBuilderComponent } from '@/features/app-builder/services/appBu
 import { checkIntegrationUpdates } from '@/features/app-builder/services/integrationUpdateCheck';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { integrationUsing, systemsUsedBy } from '@/features/components/services/appBuilderComponentLinks';
+import {
+    sendAppBuilderComponentStatusUpdate,
+} from '@/features/dashboard/services/projectPanelPushes';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
@@ -97,12 +99,12 @@ function nameOf(project: Project, id: string): string {
 
 /** Update one component, telegraphing its row. */
 async function updateOne(project: Project, id: string, deps: AppBuilderComponentRunnerDeps): Promise<UpdateResult> {
-    await postRowStatus(id, 'deploying', 'Updating');
+    await sendAppBuilderComponentStatusUpdate(id, 'deploying', 'Updating');
     const result = await updateAppBuilderComponent(project, id, deps);
     if (result.success) {
-        await postRowStatus(id, 'deployed');
+        await sendAppBuilderComponentStatusUpdate(id, 'deployed');
     } else {
-        await postRowStatus(id, 'error', result.error);
+        await sendAppBuilderComponentStatusUpdate(id, 'error', result.error);
     }
     return result;
 }
@@ -130,7 +132,7 @@ async function updatePair(
     // wait their turn (owner, 2026-09-18). The clicked card is not assumed to be
     // the one running.
     for (const waiting of order.slice(1)) {
-        await postRowStatus(waiting, 'deploying', 'Waiting to update');
+        await sendAppBuilderComponentStatusUpdate(waiting, 'deploying', 'Waiting to update');
     }
     let last: UpdateResult = { success: true };
     for (const [index, memberId] of order.entries()) {
@@ -156,7 +158,7 @@ async function updatePair(
 async function releaseWaiting(project: Project, ids: string[], failedName: string): Promise<void> {
     for (const id of ids) {
         const status = getAppBuilderComponent(project, id)?.status ?? 'not-deployed';
-        await postRowStatus(id, status, `Left as it is: ${failedName} did not update.`);
+        await sendAppBuilderComponentStatusUpdate(id, status, `Left as it is: ${failedName} did not update.`);
     }
 }
 

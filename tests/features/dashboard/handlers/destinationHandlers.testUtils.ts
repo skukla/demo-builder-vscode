@@ -35,16 +35,18 @@ export const mockRunGuards = jest.fn();
 /** Typed with rest args so a suite can read the progress relay it is handed. */
 export const mockBuildDefaultRunnerDeps = jest.fn((..._a: unknown[]) => ({ catalog: [] }));
 export const mockBuildRunnerDepsContext = jest.fn(async (..._a: unknown[]) => ({}));
-export const mockPostRowStatus = jest.fn(async () => undefined);
+export const mockSendRowStatus = jest.fn(async () => undefined);
 export const mockPostComponentsSnapshot = jest.fn(async () => undefined);
-export const mockPostDestination = jest.fn(async () => undefined);
-export const mockPostMeshStatus = jest.fn(async () => undefined);
+export const mockSendDestination = jest.fn(async () => undefined);
+export const mockSendMeshStatus = jest.fn(async () => undefined);
 jest.mock('@/features/dashboard/handlers/appBuilderComponentHandlers', () => ({
     runGuards: (...a: unknown[]) => mockRunGuards(...a),
-    postRowStatus: (...a: unknown[]) => mockPostRowStatus(...(a as [])),
     postComponentsSnapshot: (...a: unknown[]) => mockPostComponentsSnapshot(...(a as [])),
-    postDestination: (...a: unknown[]) => mockPostDestination(...(a as [])),
-    postMeshStatus: (...a: unknown[]) => mockPostMeshStatus(...(a as [])),
+}));
+jest.mock('@/features/dashboard/services/projectPanelPushes', () => ({
+    sendAppBuilderComponentStatusUpdate: (...a: unknown[]) => mockSendRowStatus(...(a as [])),
+    sendProjectDestinationUpdate: (...a: unknown[]) => mockSendDestination(...(a as [])),
+    sendMeshStatusUpdate: (...a: unknown[]) => mockSendMeshStatus(...(a as [])),
 }));
 jest.mock('@/features/project-creation/services/appBuilderComponentRunnerDeps', () => ({
     buildDefaultRunnerDeps: (...a: unknown[]) => mockBuildDefaultRunnerDeps(...(a as [])),

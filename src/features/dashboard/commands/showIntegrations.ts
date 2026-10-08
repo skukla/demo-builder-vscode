@@ -19,7 +19,7 @@
  * registered here.
  *
  * Live updates arrive on the same push channels the dashboard uses; their
- * senders resolve whichever project panel is live (`getLiveProjectPanel`), so
+ * senders (`projectPanelPushes.ts`) resolve whichever project panel is live, so
  * they reach this surface once the dashboard panel is disposed by the swap.
  *
  * @module features/dashboard/commands/showIntegrations

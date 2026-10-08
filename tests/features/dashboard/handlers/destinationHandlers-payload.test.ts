@@ -19,7 +19,7 @@ import {
     mockBuildDefaultRunnerDeps,
     mockBuildRunnerDepsContext,
     mockMove,
-    mockPostRowStatus,
+    mockSendRowStatus,
     mockWithProgress,
     reportedSteps,
     resetDestinationMocks,
@@ -252,7 +252,7 @@ describe('handleSetProjectDestination — what the move is handed and what it sa
         ) => void;
         onCardStatus('gone-from-the-map', 'deploying');
 
-        expect(mockPostRowStatus).toHaveBeenCalledWith('gone-from-the-map', 'deploying', undefined);
+        expect(mockSendRowStatus).toHaveBeenCalledWith('gone-from-the-map', 'deploying', undefined);
     });
 
     it('returns the move outcome and the previous destination on success', async () => {

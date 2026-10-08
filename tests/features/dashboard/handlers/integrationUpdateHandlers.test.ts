@@ -61,7 +61,7 @@ jest.mock('@/features/authentication/services/detectProjectOrgMismatch', () => (
     detectProjectOrgMismatch: jest.fn().mockResolvedValue({ reachable: true }),
 }));
 
-jest.mock('@/features/dashboard/handlers/dashboardHandlers', () => ({
+jest.mock('@/features/dashboard/handlers/statusHandlers', () => ({
     handleRequestStatus: jest.fn().mockResolvedValue({ success: true }),
 }));
 const mockSendStatus = jest.fn();
@@ -69,10 +69,12 @@ const mockSendSnapshot = jest.fn();
 const mockSendOperationProgress = jest.fn();
 jest.mock('@/features/dashboard/commands/showDashboard', () => ({
     ProjectDashboardWebviewCommand: {
-        sendAppBuilderComponentStatusUpdate: (...a: unknown[]) => mockSendStatus(...a),
-        sendAppBuilderComponentsSnapshot: (...a: unknown[]) => mockSendSnapshot(...a),
         refreshStatus: jest.fn(),
     },
+}));
+jest.mock('@/features/dashboard/services/projectPanelPushes', () => ({
+    sendAppBuilderComponentStatusUpdate: (...a: unknown[]) => mockSendStatus(...a),
+    sendAppBuilderComponentsSnapshot: (...a: unknown[]) => mockSendSnapshot(...a),
 }));
 
 // Below the mocks on purpose: they hoist above these imports. The shared wall
@@ -191,7 +193,7 @@ describe('handleUpdateAppBuilderComponent', () => {
         expect(result).toEqual({ success: true, detail: 'Updated the integration from a to b.' });
         expect(mockUpdate).toHaveBeenCalledTimes(1);
         expect(mockUpdate).toHaveBeenCalledWith(mockProject, 'erp-integration', expect.anything());
-        expect(mockSendStatus).toHaveBeenCalledWith('erp-integration', 'deployed', undefined, undefined);
+        expect(mockSendStatus).toHaveBeenCalledWith('erp-integration', 'deployed');
         expect(mockSendSnapshot).toHaveBeenCalled();
     });
 
@@ -229,7 +231,7 @@ describe('handleUpdateAppBuilderComponent', () => {
             code: undefined,
         });
         expect(mockUpdate).toHaveBeenCalledTimes(1);
-        expect(mockSendStatus).toHaveBeenCalledWith('demo-erp', 'error', 'npm ERR! ERESOLVE', undefined);
+        expect(mockSendStatus).toHaveBeenCalledWith('demo-erp', 'error', 'npm ERR! ERESOLVE');
     });
 
     // The pair updates as a unit from EITHER card (owner, 2026-09-18): its code
@@ -313,7 +315,6 @@ describe('handleUpdateAppBuilderComponent', () => {
             'erp-integration',
             'deployed',
             'Left as it is: Nordwind did not update.',
-            undefined,
         );
     });
 
@@ -328,7 +329,6 @@ describe('handleUpdateAppBuilderComponent', () => {
             'erp-integration',
             'error',
             'The integration folder has changes of its own (a.js).',
-            undefined,
         );
     });
 

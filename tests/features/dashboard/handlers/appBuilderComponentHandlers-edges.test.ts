@@ -301,7 +301,6 @@ describe('the deploy path', () => {
             'erp-sync',
             'deploying',
             expect.any(String),
-            undefined
         );
     });
 
@@ -360,7 +359,6 @@ describe('the deploy path', () => {
             'erp-sync',
             'error',
             'aio app deploy exited 1',
-            undefined
         );
     });
 
@@ -375,7 +373,6 @@ describe('the deploy path', () => {
             'erp-sync',
             'error',
             'Deployment failed',
-            undefined
         );
     });
 
@@ -389,7 +386,6 @@ describe('the deploy path', () => {
             'erp-sync',
             'deployed',
             undefined,
-            undefined
         );
     });
 
@@ -459,7 +455,6 @@ describe('the remove path', () => {
             'erp-sync',
             'deploying',
             expect.any(String),
-            undefined
         );
     });
 
