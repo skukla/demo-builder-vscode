@@ -14,12 +14,15 @@
 import { mockWithOrgContext } from './appBuilderComponentRunner.orgContextMock';
 import './appBuilderComponentRunner.runtimeMock';
 import type { Project } from '@/types/base';
+import { ErrorCode } from '@/types/errorCodes';
 
 jest.setTimeout(5000);
 
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
     detectAppLayout: jest.fn().mockResolvedValue('standalone'),
     listDeclaredPackageNames: jest.fn().mockResolvedValue([]),
+    // The app declares an Admin UI SDK point, so the registry check has something to look for.
+    listDeclaredExtensionPoints: jest.fn().mockResolvedValue(['commerce/backend-ui/1']),
     listDeclaredTriggersAndRules: jest.fn().mockResolvedValue({ triggers: [], rules: [] }),
 }));
 
@@ -110,6 +113,68 @@ describe('leftovers in a workspace of its own', () => {
 
         expect(order).toStrictEqual(['key', 'delete']);
         expect(release.watchNamespaceRemoval).toHaveBeenCalledWith(KEY, 'Shell');
+    });
+});
+
+/** The undeploy itself is refused, and Runtime keeps the package: the app is still serving. */
+function undeployRefused(deps: ReturnType<typeof createDeps>): void {
+    const owPackage = deriveOwPackage(ID);
+    (deps.commandManager.execute as jest.Mock).mockImplementation(async (command: string) => {
+        if (command.includes('app undeploy')) return { code: 2, stdout: '', stderr: 'IMS token expired' };
+        if (command.includes('package list')) return { code: 0, stdout: JSON.stringify([{ name: owPackage }]), stderr: '' };
+        if (command.includes('package delete')) return { code: 1, stdout: '', stderr: 'Conflict (409)' };
+        return { code: 0, stdout: '', stderr: '' };
+    });
+}
+
+// Deleting the workspace takes its Runtime namespace, and nothing else. When the
+// UNDEPLOY failed, what the deploy published (the Admin UI SDK registration behind a
+// Commerce grid column) is still there, and it is not in the namespace: letting the
+// workspace "take" the leftovers would leave a registration nothing can reach. Found
+// 2026-10-08 on the Justrite sandbox, which showed its ERP columns twice.
+describe('leftovers in a workspace of its own, when the undeploy itself failed', () => {
+    it('stops and keeps the card, the folder and the workspace', async () => {
+        const deps = createDeps(releaseDeps());
+        undeployRefused(deps);
+
+        const result = await removeAppBuilderComponent(project(), ID, deps);
+
+        expect(result).toMatchObject({ success: false, code: ErrorCode.COMPONENT_REMOVAL_STOPPED });
+        expect(result.runtimeCleanup?.note).toContain('Commerce Admin registration');
+        expect(result.runtimeCleanup?.goneWithWorkspace).toBeUndefined();
+        expect(deps.deleteComponentWorkspace).not.toHaveBeenCalled();
+        expect(deps.componentManager.removeComponent).not.toHaveBeenCalled();
+        const saved = deps.saveProject.mock.calls.at(-1)?.[0] as Project;
+        expect(saved.appBuilderComponents?.[ID]).toBeDefined();
+        expect(saved.appBuilderComponents?.[ID]?.removalStopped).toBeDefined();
+    });
+
+    it('Remove anyway goes on and deletes the workspace', async () => {
+        const deps = createDeps(releaseDeps());
+        undeployRefused(deps);
+
+        const result = await removeAppBuilderComponent(project(), ID, deps, { force: true });
+
+        expect(result.success).toBe(true);
+        expect(deps.deleteComponentWorkspace).toHaveBeenCalledWith(expect.anything(), OWN);
+    });
+
+    // The registry is what decides, when it can be read: a registration shown gone leaves
+    // only Runtime leftovers, which the workspace takes as before.
+    it('lets the workspace take the leftovers when the registry shows the registration gone', async () => {
+        const registry = {
+            workspaceExtensionPointsOf: jest.fn(async () => []),
+            removeWorkspaceExtensionPoints: jest.fn(async () => []),
+        };
+        const deps = createDeps({ ...releaseDeps(), ...registry });
+        undeployRefused(deps);
+
+        const result = await removeAppBuilderComponent(project(), ID, deps);
+
+        expect(result.success).toBe(true);
+        expect(registry.workspaceExtensionPointsOf).toHaveBeenCalledWith(expect.anything(), OWN);
+        expect(result.runtimeCleanup?.goneWithWorkspace).toBe('Shell');
+        expect(deps.deleteComponentWorkspace).toHaveBeenCalledWith(expect.anything(), OWN);
     });
 });
 

@@ -1,4 +1,5 @@
 import * as path from 'path';
+import type { WorkspaceOpTarget } from './adobeConsoleExtensionPoints';
 import type { RemoteRenameResult } from './adobeConsoleProjectOps';
 import { isValidTokenResponse } from './authPredicates';
 import { withOrgContext, type OrgContextTarget } from './orgContextEnv';
@@ -624,6 +625,35 @@ export class AuthenticationService {
         return withTiming('deleteWorkspace', async () => {
             const { projectOps } = await this.ensureEntities();
             return projectOps.deleteWorkspace(workspaceId, target);
+        });
+    }
+
+    /**
+     * The extension points a workspace has published in Adobe's registry (the Admin UI
+     * SDK registration behind a Commerce grid column is one), or a ConsoleOpFailure.
+     */
+    async listWorkspaceExtensionPoints(
+        workspaceId: string,
+        target?: WorkspaceOpTarget,
+    ): Promise<string[] | ConsoleOpFailure> {
+        return withTiming('listWorkspaceExtensionPoints', async () => {
+            const { extensionPoints } = await this.ensureEntities();
+            return extensionPoints.listWorkspaceExtensionPoints(workspaceId, target);
+        });
+    }
+
+    /**
+     * Unpublish extension points from a workspace, answering what the registry holds on
+     * a re-read (`remaining`), or a ConsoleOpFailure naming the real reason.
+     */
+    async removeWorkspaceExtensionPoints(
+        workspaceId: string,
+        keys: string[],
+        target?: WorkspaceOpTarget,
+    ): Promise<{ remaining: string[] } | ConsoleOpFailure> {
+        return withTiming('removeWorkspaceExtensionPoints', async () => {
+            const { extensionPoints } = await this.ensureEntities();
+            return extensionPoints.removeWorkspaceExtensionPoints(workspaceId, keys, target);
         });
     }
 

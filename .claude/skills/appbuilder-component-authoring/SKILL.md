@@ -57,6 +57,20 @@ routes `selectedAppBuilderComponents` through the same runner but **filters
 what prevents double-deploys. Custom-URL entries synthesize via
 `buildCustomIntegrationEntry`.
 
+**One Adobe project holds one ERP of a given name** (owner, 2026-10-08). Every door into
+`addAppBuilderComponent` (the dashboard add, `add_erp`, creation's integrations phase) first
+runs `replaceDeployedElsewhere` (`dashboard/handlers/`), which loads the other local projects
+and asks `pairWithSameErpElsewhere`: another project deployed into the same `adobe.projectId`
+a pair whose ERP system has the name this one will get (an integration with no system is
+unique by its own name). A hit REMOVES that project's integration through the normal removal,
+not forced; a removal that stops, stops the add. Different ERP names coexist.
+
+**Removal reads the registry.** After `aio app undeploy` (exit 0 whether or not it
+unpublished), `undeployAndCheck` lists the component's workspace in Adobe's extension-point
+registry (`listWorkspaceExtensionPoints`), unpublishes what `app.config.yaml` declared under
+`extensions:` (`listDeclaredExtensionPoints`) and re-reads; a point still there stops the
+removal (`registrationLeft`), and a workspace of the component's own must not take it.
+
 ## The subscription contract (load-bearing)
 
 - `subscribeRequiredApis` (`apiSubscriber.ts`) reconciles the **UNION** of the scoped

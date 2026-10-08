@@ -60,6 +60,7 @@ import {
 } from '@/features/mesh/services/stalenessDetector';
 import { regenerateComponentEnvFile } from '@/features/project-creation/helpers/envFileGenerator';
 import { erpRunnerDeps } from '@/features/project-creation/services/erpRunnerDeps';
+import { buildWorkspaceRegistryDeps } from '@/features/project-creation/services/workspaceRegistryDeps';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';
 import type { ComponentRegistry } from '@/types/components';
@@ -268,19 +269,8 @@ export function buildDefaultRunnerDeps(
             ctx,
             (message) => void vscode.window.showWarningMessage(message),
         ),
-        deleteComponentWorkspace: async (project, workspace) => {
-            const result = await ctx.authManager.deleteWorkspace(workspace.id, {
-                orgId: project.adobe?.organization,
-                projectId: project.adobe?.projectId,
-                workspaceName: workspace.name,
-            });
-            // Adobe's own words reach the log rather than a guess. The one refusal the AB-2
-            // spike predicted here — a workspace still holding live event registrations
-            // answering 409 — has never been seen: three deletes on 2026-09-20 answered 200
-            // in about three seconds, none holding registrations. If it starts happening,
-            // the project teardown's registration sweep is the thing to reuse.
-            return 'error' in result ? { error: result.error } : undefined;
-        },
+        // The workspace deps: delete on removal, and the registry read and unpublish.
+        ...buildWorkspaceRegistryDeps(ctx.authManager),
         // The runner's dep contract is void — swallow the returned API list.
         subscribeRequiredApis: async (appBuilderComponents, project, onStep, scope) => {
             const started = Date.now();

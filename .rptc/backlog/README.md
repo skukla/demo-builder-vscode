@@ -276,7 +276,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-32` | question | [Sharing a storefront: should Site access also make someone a GitHub collaborator?](2026-10-07-share-storefront-github-collaborator.md) | — | med | dropped |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | built |
 
-### app-builder  (113)
+### app-builder  (114)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -392,6 +392,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-53` | epic | [JustRite from nothing: wipe the Adobe I/O project, rebuild on Khalil's storefront, one data model](2026-09-30-justrite-from-nothing-fresh-project-khalil-storefront.md) | AB-51 | high | active |
 | `AB-67` | fix | [An agent cannot name the first ERP when it adds the ERP integration](2026-10-04-add-integration-names-its-first-erp.md) | — | med | built |
 | `AB-68` | feature | [Remember custom integration repos across projects](2026-10-06-remember-custom-integration-repos.md) | — | med | active |
+| `AB-69` | fix | [One deployment per Adobe project](2026-10-08-one-deployment-per-adobe-project.md) | — | med | backlog |
 | `PL-24` | feature | [Component updates cannot follow an environment-variable rename](2026-08-30-env-var-rename-migration.md) | — | med | built |
 
 ### data-installer  (4)
@@ -636,7 +637,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — built
 
-*236 item(s) sit outside the A–G chain.*
+*237 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

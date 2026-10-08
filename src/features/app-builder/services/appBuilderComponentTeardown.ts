@@ -227,6 +227,17 @@ export async function checkRuntimeLeftovers(
 }
 
 /**
+ * A removal stopped AFTER its undeploy, for a reason already in words (a leftover Runtime
+ * holds, a registration Adobe kept): the same code the card and the agent act on.
+ *
+ * @param reason - why it stopped, in plain words
+ * @returns the failed result
+ */
+export function stoppedAfterUndeploy(reason: string): { success: false; error: string; code: ErrorCode } {
+    return { success: false, error: reason, code: ErrorCode.COMPONENT_REMOVAL_STOPPED };
+}
+
+/**
  * The words for a removal that stopped: nothing was undeployed, and why.
  *
  * @param unfinished - what did not finish

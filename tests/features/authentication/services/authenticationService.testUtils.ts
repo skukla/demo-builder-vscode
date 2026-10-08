@@ -105,6 +105,7 @@ export const createMockEntityServices = (): {
     const credentials = {} as unknown as jest.Mocked<EntityServices['credentials']>;
     const orgServices = {} as unknown as jest.Mocked<EntityServices['orgServices']>;
     const projectOps = {} as unknown as jest.Mocked<EntityServices['projectOps']>;
+    const extensionPoints = {} as unknown as jest.Mocked<EntityServices['extensionPoints']>;
 
     const resolver = {
         getCurrentOrganization: jest.fn().mockResolvedValue(mockOrg),
@@ -120,7 +121,7 @@ export const createMockEntityServices = (): {
     } as unknown as jest.Mocked<EntityServices['selector']>;
 
     return {
-        entities: { reads, credentials, orgServices, projectOps, resolver, selector },
+        entities: { reads, credentials, orgServices, projectOps, extensionPoints, resolver, selector },
         reads,
         credentials,
         orgServices,

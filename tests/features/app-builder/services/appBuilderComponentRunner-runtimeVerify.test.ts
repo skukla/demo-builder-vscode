@@ -22,6 +22,7 @@ const mockListDeclaredTriggersAndRules = jest.fn();
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
     detectAppLayout: jest.fn().mockResolvedValue('standalone'),
     listDeclaredPackageNames: (...a: unknown[]) => mockListDeclaredPackageNames(...a),
+    listDeclaredExtensionPoints: jest.fn().mockResolvedValue([]),
     listDeclaredTriggersAndRules: (...a: unknown[]) => mockListDeclaredTriggersAndRules(...a),
 }));
 
@@ -308,7 +309,14 @@ describe('post-undeploy runtime verification', () => {
 
         const result = await removeAppBuilderComponent(integrationProject(), ID, deps);
 
-        expect(result.runtimeCleanup).toEqual({ verified: true, deleted: [owPackage], failed: [] });
+        // The leftovers go; what the failed undeploy left UNKNOWN is said, not assumed gone:
+        // this component has no workspace of its own, so its registration cannot be read.
+        expect(result.runtimeCleanup).toEqual({
+            verified: true,
+            deleted: [owPackage],
+            failed: [],
+            note: 'The undeploy itself failed, and its Commerce Admin registration could not be checked.',
+        });
     });
 
     // 2026-09-21: the ERP's one-minute timer and its rule outlived a failed undeploy,

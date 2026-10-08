@@ -36,6 +36,7 @@ import {
     mergeCleanup,
     checkRuntimeLeftovers,
     removalStopped,
+    stoppedAfterUndeploy,
     teardownRemote,
     type CleanupOutcome,
     type TeardownDeps,
@@ -49,6 +50,7 @@ import {
 } from './appBuilderDeployOutcome';
 import {
     detectAppLayout,
+    listDeclaredExtensionPoints,
     listDeclaredPackageNames,
     listDeclaredTriggersAndRules,
     type AppConfigLayout,
@@ -404,6 +406,28 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
         project: Project,
         workspace: { id: string; name: string }
     ) => Promise<{ error: string } | undefined>;
+    /**
+     * The extension points a workspace has published in Adobe's registry, by id. The
+     * Admin UI SDK registration behind a Commerce grid column is one of these; `aio app
+     * deploy` publishes it and `aio app undeploy` is what unpublishes it, exit 0 either
+     * way. A removal reads the registry after the undeploy rather than believing it
+     * (2026-10-08: two deployments of one integration showed its columns twice). Optional:
+     * bare tests and the mesh, which publishes nothing, never need it.
+     */
+    workspaceExtensionPointsOf?: (
+        project: Project,
+        workspace: { id: string; name: string }
+    ) => Promise<string[] | { error: string }>;
+    /**
+     * Unpublish extension points from a workspace, answering what the registry holds on a
+     * RE-READ. One of `keys` still in the answer means Adobe kept it, and the removal
+     * stops rather than assume. Optional, with the read above.
+     */
+    removeWorkspaceExtensionPoints?: (
+        project: Project,
+        workspace: { id: string; name: string },
+        keys: string[]
+    ) => Promise<string[] | { error: string }>;
     /** Storefront config regen + republish (step 04 generalized providesEnvVars path). */
     republishStorefront: (
         input: RepublishInput
@@ -1582,26 +1606,143 @@ async function undeployAndCheck(
     id: string,
     state: AppBuilderComponentState,
     deps: AppBuilderComponentRunnerDeps,
-): Promise<Awaited<ReturnType<typeof checkRuntimeLeftovers>> | undefined> {
+): Promise<UndeployCheck | undefined> {
     const componentPath = project.componentInstances?.[id]?.path;
     const app = state.kind !== 'mesh';
     const declared =
         app && componentPath ? await readDeclaredRuntime(componentPath) : NO_DECLARED_RUNTIME;
+    // Read before the local delete too: the extensions map names what the deploy published.
+    const declaredPoints =
+        app && componentPath ? await listDeclaredExtensionPoints(componentPath).catch(() => []) : [];
     const shownName = shownNameOf(project, id, state);
     deps.onProgress?.(OPERATION_STAGES.removing.label, `Undeploying ${shownName}`);
+    let undeployFailed = false;
     try {
         await teardownRemote(targetFor(project, deps, id), componentPath, state.kind, deps);
     } catch (error) {
+        // The leftover check below decides what a failed undeploy means for Runtime:
+        // nothing left means the app was already gone (pinned since 2026-09-26). What
+        // the deploy PUBLISHED (the Admin UI SDK registration behind a Commerce grid
+        // column) is not in the namespace; the registry check below reads that.
+        undeployFailed = true;
         deps.logger.warn(
             `[AppBuilderComponent Runner] remote teardown warning: ${toError(error).message}`,
         );
     }
     if (!app) return undefined;
     deps.onProgress?.(OPERATION_STAGES.checkingLeftovers.label);
-    return checkRuntimeLeftovers(targetFor(project, deps, id), id, declared, shownName, deps);
+    const checked = await checkRuntimeLeftovers(targetFor(project, deps, id), id, declared, shownName, deps);
+    const registration = await checkRegistration(
+        project,
+        state,
+        declaredPoints,
+        shownName,
+        undeployFailed,
+        deps,
+    );
+    return withRegistration(checked, registration);
 }
 
 const NO_DECLARED_RUNTIME: DeclaredRuntime = { packages: [], triggers: [], rules: [] };
+
+/**
+ * What the undeploy step answers: the leftover check's verdict, plus whether the
+ * component's Commerce Admin registration is still published, or could not be shown
+ * gone. When it is, a workspace of the component's own must NOT take the leftovers with
+ * it: a registration is not in the workspace's namespace, and deleting the workspace
+ * would leave one nothing can reach (2026-10-08).
+ */
+type UndeployCheck = Awaited<ReturnType<typeof checkRuntimeLeftovers>> & {
+    registrationLeft?: boolean;
+};
+
+/** What the registry check found, for the summary and for the removal's verdict. */
+interface RegistrationCheck {
+    /** Still published, or not shown gone. */
+    registrationLeft: boolean;
+    /** The line the cleanup summary carries, when there is something to say. */
+    note?: string;
+    /** Why the removal must stop, when it must. */
+    reason?: string;
+}
+
+/**
+ * After the undeploy: whether the registry still publishes what the app declared, and if
+ * so, unpublish it and read again. Each step is confirmed by reading back, never assumed.
+ * Nothing to read (a standalone app, a component in the project's workspace, or deps that
+ * do not reach the registry) answers from the undeploy alone: a failed undeploy then
+ * leaves the registration unknown, and unknown is treated as left.
+ */
+async function checkRegistration(
+    project: Project,
+    state: AppBuilderComponentState,
+    declaredPoints: string[],
+    shownName: string,
+    undeployFailed: boolean,
+    deps: AppBuilderComponentRunnerDeps,
+): Promise<RegistrationCheck> {
+    const workspace = state.workspace;
+    const { workspaceExtensionPointsOf: read, removeWorkspaceExtensionPoints: unpublish } = deps;
+    if (!workspace || !read || !unpublish || declaredPoints.length === 0) {
+        return undeployFailed
+            ? {
+                  registrationLeft: true,
+                  note: 'The undeploy itself failed, and its Commerce Admin registration could not be checked.',
+              }
+            : { registrationLeft: false };
+    }
+    deps.onProgress?.(OPERATION_STAGES.checkingLeftovers.label, 'Checking its Commerce Admin registration');
+    const published = await read(project, workspace);
+    if (!Array.isArray(published)) {
+        return registrationLeft(shownName, workspace, [], `could not be checked (${published.error})`);
+    }
+    const still = published.filter((key) => declaredPoints.includes(key));
+    if (still.length === 0) return { registrationLeft: false };
+    deps.onProgress?.(OPERATION_STAGES.checkingLeftovers.label, 'Removing its Commerce Admin registration');
+    const remaining = await unpublish(project, workspace, still);
+    const left = Array.isArray(remaining) ? remaining.filter((key) => still.includes(key)) : still;
+    if (left.length === 0) {
+        return {
+            registrationLeft: false,
+            note: 'Its Commerce Admin registration was still published and was removed.',
+        };
+    }
+    const why = Array.isArray(remaining) ? 'is still published' : `is still published (${remaining.error})`;
+    return registrationLeft(shownName, workspace, left, why);
+}
+
+/** The verdict for a registration that is still there, or cannot be shown gone. */
+function registrationLeft(
+    shownName: string,
+    workspace: { name: string; title?: string },
+    points: string[],
+    why: string,
+): RegistrationCheck {
+    const named = points.length > 0 ? ` (${points.join(', ')})` : '';
+    return {
+        registrationLeft: true,
+        note: `Its Commerce Admin registration ${why}.`,
+        reason:
+            `${shownName} was undeployed, but its Commerce Admin registration${named} in the ` +
+            `${workspace.title ?? workspace.name} workspace ${why}; removing anyway leaves it ` +
+            'published, so Commerce Admin keeps its columns. Its card, folder and Adobe workspace ' +
+            'are kept so nothing is left behind unseen. Remove again to retry, or remove anyway.',
+    };
+}
+
+/** The leftover verdict with the registry's added: a note on the summary, a stop when it must. */
+function withRegistration(
+    checked: Awaited<ReturnType<typeof checkRuntimeLeftovers>>,
+    registration: RegistrationCheck,
+): UndeployCheck {
+    if (registration.note) {
+        checked.cleanup.note = [checked.cleanup.note, registration.note].filter(Boolean).join(' ');
+    }
+    const stopped = registration.reason
+        ? stoppedAfterUndeploy([checked.stopped?.error, registration.reason].filter(Boolean).join(' '))
+        : checked.stopped;
+    return { ...checked, ...(stopped ? { stopped } : {}), registrationLeft: registration.registrationLeft };
+}
 
 /** The name a person reads for a component: its own, else its instance's, else its id. */
 function shownNameOf(project: Project, id: string, state: AppBuilderComponentState): string {
@@ -1700,21 +1841,24 @@ function cleanUpUnlessDone(
 /**
  * Leftovers Runtime would not delete, or a namespace that could not be checked: a workspace
  * of the component's own takes them with it when the removal deletes it (owner, 2026-09-27),
- * and the summary says which. Anywhere else the removal stops and keeps the card, the folder
- * and the workspace, so nothing is orphaned and Remove again picks up there (2026-09-26).
+ * and the summary says which. Not when its Commerce Admin registration is still published,
+ * or could not be shown gone: that is in Adobe's registry, not the namespace, and deleting
+ * the workspace would leave it where nothing reaches it (2026-10-08). Anywhere else the
+ * removal stops and keeps the card, the folder and the workspace, so nothing is orphaned
+ * and Remove again picks up there (2026-09-26).
  */
 async function keepOrLetWorkspaceTake(
     project: Project,
     id: string,
     removing: string[],
-    checked: Awaited<ReturnType<typeof checkRuntimeLeftovers>> | undefined,
+    checked: UndeployCheck | undefined,
     options: RemoveOptions,
     deps: AppBuilderComponentRunnerDeps,
 ): Promise<RunnerResult | undefined> {
     const state = project.appBuilderComponents?.[id];
     const own =
         state && workspaceTakesLeftovers(project, id, removing) ? state.workspace : undefined;
-    if (!own || !checked?.stopped) {
+    if (!own || !checked?.stopped || checked.registrationLeft) {
         return state ? keepForRetry(project, state, checked, options, deps) : undefined;
     }
     checked.cleanup.goneWithWorkspace = own.title ?? own.name;
@@ -1728,7 +1872,7 @@ async function keepOrLetWorkspaceTake(
 async function keepForRetry(
     project: Project,
     state: AppBuilderComponentState,
-    checked: Awaited<ReturnType<typeof checkRuntimeLeftovers>> | undefined,
+    checked: UndeployCheck | undefined,
     options: RemoveOptions,
     deps: AppBuilderComponentRunnerDeps,
 ): Promise<RunnerResult | undefined> {

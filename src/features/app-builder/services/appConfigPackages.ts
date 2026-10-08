@@ -109,6 +109,18 @@ export async function detectAppLayout(componentPath: string): Promise<AppConfigL
 }
 
 /**
+ * The extension points an app declares: the keys of the root `extensions:` map
+ * (`commerce/backend-ui/<n>` for an Admin UI SDK app). `aio app deploy` publishes these
+ * on the workspace in Adobe's registry, and `aio app undeploy` is what unpublishes them,
+ * so a removal reads them BEFORE the local folder goes to know what to look for there.
+ * A standalone app, or an unreadable config, declares none.
+ */
+export async function listDeclaredExtensionPoints(componentPath: string): Promise<string[]> {
+    const extensions = (await readConfigDoc(componentPath))?.extensions;
+    return extensions && typeof extensions === 'object' ? Object.keys(extensions) : [];
+}
+
+/**
  * Rewrite a standalone app's `app.config.yaml` so its runtime packages carry the
  * derived distinct `owPackage` (the isolation transform above). No-op when there
  * are no standalone packages to rename — that case is caught at the add door, and

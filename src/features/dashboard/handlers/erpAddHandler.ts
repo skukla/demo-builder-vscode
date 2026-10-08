@@ -34,6 +34,7 @@ import {
 } from './appBuilderComponentHandlers';
 import { giveAddedErpItsOwnTheme, type ErpAddTheme } from './erpAddTheme';
 import { sentence } from './erpCall';
+import { replaceDeployedElsewhere } from './replaceDeployedElsewhere';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
@@ -355,11 +356,16 @@ async function deployUnlessDone(
     if (plan.deployed) return { success: true };
     await recordName(context, plan);
     report(OPERATION_STAGES.addingSystem.label, `Adding ${plan.name}`);
+    const services = {
+        authManager: ServiceLocator.getAuthenticationService(),
+        commandManager: ServiceLocator.getCommandExecutor(),
+    };
+    // One Adobe project holds one ERP of this name (2026-10-08): another local project's
+    // goes first, or this add does not run.
+    const replaced = await replaceDeployedElsewhere(context, plan.project, plan.entry, services, report);
+    if (replaced) return { success: false, error: replaced.error };
     const deps = buildDefaultRunnerDeps(
-        await buildRunnerDepsContext(context, plan.project, {
-            authManager: ServiceLocator.getAuthenticationService(),
-            commandManager: ServiceLocator.getCommandExecutor(),
-        }),
+        await buildRunnerDepsContext(context, plan.project, services),
         (message, subMessage) => report(message, subMessage),
         buildToolchainConsent(context, false),
     );

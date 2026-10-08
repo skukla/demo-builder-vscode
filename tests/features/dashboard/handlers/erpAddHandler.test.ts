@@ -18,10 +18,11 @@ jest.mock('@/features/project-creation/services/appBuilderComponentRunnerDeps', 
 }));
 
 const mockAdd = jest.fn();
+const mockRemove = jest.fn();
 jest.mock('@/features/app-builder/services/appBuilderComponentRunner', () => ({
     addAppBuilderComponent: (...a: unknown[]) => mockAdd(...a),
     deployAppBuilderComponent: jest.fn(),
-    removeAppBuilderComponent: jest.fn(),
+    removeAppBuilderComponent: (...a: unknown[]) => mockRemove(...a),
 }));
 
 const mockSync = jest.fn();
@@ -92,6 +93,7 @@ import { handleAddErp } from '@/features/dashboard/handlers/erpAddHandler';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { ErpOwnershipOptions, ErpOwnsRule } from '@/types/erpOwnership';
 import { ErrorCode } from '@/types/errorCodes';
+import { createMockProject } from '../../../helpers/projectFake';
 
 const CACHED_ORG = { id: 'org-1', code: 'ABC@AdobeOrg', name: 'Fake Org' };
 const EXECUTOR = { execute: jest.fn() };
@@ -508,5 +510,71 @@ describe('handleAddErp', () => {
 
         expect(result.success).toBe(false);
         expect(mockAdd).not.toHaveBeenCalled();
+    });
+
+    // One Adobe project holds one ERP of a given name (owner, 2026-10-08). The agent's
+    // `add_erp` dispatches into this same handler.
+    describe('an ERP of this name another local project deployed into the same Adobe project', () => {
+        /** Another local project whose pair's first ERP is `erpName`, in Adobe project `adobeProjectId`. */
+        function otherPair(erpName: string, adobeProjectId = 'project123'): Project {
+            return createMockProject({
+                name: 'justrite',
+                path: '/projects/justrite',
+                adobe: { projectId: adobeProjectId, organization: 'org123' },
+                appBuilderComponents: {
+                    'erp-integration': { kind: 'integration', status: 'deployed', name: 'ERP Integration', systems: ['demo-erp'], source: { owner: 'skukla', repo: 'commerce-erp-integration' } },
+                    'demo-erp': { kind: 'system', status: 'deployed', name: erpName, usedBy: 'erp-integration', source: { owner: 'skukla', repo: 'demo-erp' } },
+                },
+            });
+        }
+
+        function setupWith(other: Project) {
+            const mocks = setup();
+            const stateManager = mocks.mockContext.stateManager as unknown as { getAllProjects: jest.Mock; loadProjectFromPath: jest.Mock };
+            stateManager.getAllProjects = jest.fn().mockResolvedValue([{ name: other.name, path: other.path, lastModified: new Date() }]);
+            stateManager.loadProjectFromPath = jest.fn().mockResolvedValue(other);
+            mockRemove.mockResolvedValue({ success: true });
+            return mocks;
+        }
+
+        it("removes that project's pair, through its integration, before the new ERP deploys", async () => {
+            const other = otherPair('Brand B ERP');
+            const { mockContext } = setupWith(other);
+
+            const result = await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP', owns: OWN_ATTRIBUTE });
+
+            expect(result.success).toBe(true);
+            expect(mockRemove).toHaveBeenCalledWith(other, 'erp-integration', expect.anything());
+            expect(mockRemove.mock.invocationCallOrder[0]).toBeLessThan(mockAdd.mock.invocationCallOrder[0]);
+        });
+
+        it('stops before deploying, with the reason, when that removal did not finish', async () => {
+            const { mockContext } = setupWith(otherPair('Brand B ERP'));
+            mockRemove.mockResolvedValue({ success: false, error: 'Nothing was removed. Commerce still has it.' });
+
+            const result = await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP', owns: OWN_ATTRIBUTE });
+
+            expect(result.success).toBe(false);
+            expect(result.error).toContain("justrite's Brand B ERP is still deployed");
+            expect(mockAdd).not.toHaveBeenCalled();
+        });
+
+        it('deploys beside an ERP of a different name', async () => {
+            const { mockContext } = setupWith(otherPair('Justrite ERP'));
+
+            const result = await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP', owns: OWN_ATTRIBUTE });
+
+            expect(result.success).toBe(true);
+            expect(mockRemove).not.toHaveBeenCalled();
+        });
+
+        it('leaves a same-named ERP in a different Adobe project alone', async () => {
+            const { mockContext } = setupWith(otherPair('Brand B ERP', 'another-adobe-project'));
+
+            await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP', owns: OWN_ATTRIBUTE });
+
+            expect(mockRemove).not.toHaveBeenCalled();
+            expect(mockAdd).toHaveBeenCalledTimes(1);
+        });
     });
 });

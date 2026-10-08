@@ -18,6 +18,7 @@ import {
     type GuardableResult,
 } from './appBuilderComponentOperation';
 import { postComponentsSnapshot, postRowStatus, refreshProjectStatus } from './appBuilderComponentPush';
+import { replaceDeployedElsewhere } from './replaceDeployedElsewhere';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
@@ -241,11 +242,16 @@ function runAdd(
             // The deploy tails report every step; hand them the reporter so a slow add
             // narrates itself instead of sitting on one static title for the ~70s of
             // subscribe + install + build + deploy.
+            const services = {
+                authManager: ServiceLocator.getAuthenticationService(),
+                commandManager: ServiceLocator.getCommandExecutor(),
+            };
+            // One Adobe project holds one deployment of this name (2026-10-08): the one
+            // another local project put there goes first, or this add does not run.
+            const replaced = await replaceDeployedElsewhere(context, project, entry, services, report);
+            if (replaced) return { success: false, error: replaced.error };
             const deps = buildDefaultRunnerDeps(
-                await buildRunnerDepsContext(context, project, {
-                    authManager: ServiceLocator.getAuthenticationService(),
-                    commandManager: ServiceLocator.getCommandExecutor(),
-                }),
+                await buildRunnerDepsContext(context, project, services),
                 (message, subMessage, position) => report(message, subMessage, position),
                 buildToolchainConsent(context, payload.refreshCli),
             );

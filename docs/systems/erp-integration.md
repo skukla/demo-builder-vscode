@@ -59,6 +59,14 @@ records, which would then come back on a re-add. A Runtime package either undepl
 ERP that failed after its integration was removed, and a missing local folder are reported
 beside a removal that goes ahead.
 
+After the undeploy the removal also reads the integration's workspace in Adobe's
+extension-point registry, where the Admin UI SDK registration behind the Orders grid's
+columns lives; it unpublishes what the app declared and reads again, and a registration
+still there stops the removal (card, folder and workspace kept). One Adobe project holds
+one ERP of a given name: adding a pair whose ERP has the name another local project (a
+copy, say) already deployed into that Adobe project removes that project's pair first,
+through the same removal, and does not deploy if it did not finish (2026-10-08).
+
 The link between the two is stored on the project (`systems` on the integration, `usedBy`
 on the ERP), so removal and the cards follow it rather than the catalog. A project saved
 before links were stored reads the catalog pairing until its next add.

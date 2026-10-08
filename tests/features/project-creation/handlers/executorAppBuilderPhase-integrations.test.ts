@@ -26,12 +26,16 @@ const mockBuildCustomIntegrationEntry = jest.fn();
 jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
     getAppBuilderComponentEntry: (...a: unknown[]) => mockGetAppBuilderComponentEntry(...a),
     buildCustomIntegrationEntry: (...a: unknown[]) => mockBuildCustomIntegrationEntry(...a),
+    // The replace-first check reads the pair's bound system from here; none for these entries.
+    getAppBuilderComponentCatalog: () => [],
 }));
 
 // ---- Model B runner (the live engine — fully mocked) -----------------------
 const mockAddAppBuilderComponent = jest.fn();
+const mockRemoveAppBuilderComponent = jest.fn();
 jest.mock('@/features/app-builder/services/appBuilderComponentRunner', () => ({
     addAppBuilderComponent: (...a: unknown[]) => mockAddAppBuilderComponent(...a),
+    removeAppBuilderComponent: (...a: unknown[]) => mockRemoveAppBuilderComponent(...a),
 }));
 
 // ---- runner deps factory + context builder ---------------------------------
@@ -61,6 +65,8 @@ import { createMockHandlerContext } from '../../../helpers/handlerContextTestHel
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { createMockProject } from '../../../helpers/projectFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import type { Project } from '@/types/base';
 import {
     executeAppBuilderIntegrationsPhase,
     creationConfig as config,
@@ -305,6 +311,63 @@ describe('executeAppBuilderIntegrationsPhase', () => {
                 expect.any(Number),
                 'Reading Commerce companies'
             );
+        });
+    });
+
+    // A copied project deploys its integrations here, into the Adobe project its original
+    // already deployed to (owner, 2026-10-08): the original's same-named deployment goes first.
+    describe('a same-named deployment another local project put into the same Adobe project', () => {
+        function other(name: string, adobeProjectId = project.adobe?.projectId): Project {
+            return createMockProject({
+                name: 'justrite',
+                path: '/projects/justrite',
+                adobe: { projectId: adobeProjectId, organization: 'org' },
+                appBuilderComponents: {
+                    'erp-sync': { kind: 'integration', status: 'deployed', name, source: { owner: 'acme', repo: 'erp-sync' } },
+                },
+            });
+        }
+
+        function contextWith(held: Project) {
+            return createMockHandlerContext({
+                stateManager: createMockStateManager({
+                    getAllProjects: jest.fn().mockResolvedValue([{ name: held.name, path: held.path, lastModified: new Date() }]),
+                    loadProjectFromPath: jest.fn().mockResolvedValue(held),
+                }),
+            });
+        }
+
+        beforeEach(() => {
+            mockGetAppBuilderComponentEntry.mockReturnValue(INTEGRATION_ENTRY);
+            mockRemoveAppBuilderComponent.mockResolvedValue({ success: true });
+        });
+
+        it('removes it from that project before this one deploys', async () => {
+            const held = other('ERP Sync');
+
+            await executeAppBuilderIntegrationsPhase(contextWith(held), project, config({ selectedAppBuilderComponents: ['erp-sync'] }), progressTracker);
+
+            expect(mockRemoveAppBuilderComponent).toHaveBeenCalledWith(held, 'erp-sync', expect.anything());
+            expect(mockRemoveAppBuilderComponent.mock.invocationCallOrder[0]).toBeLessThan(
+                mockAddAppBuilderComponent.mock.invocationCallOrder[0],
+            );
+        });
+
+        it('fails the creation, with the reason, when that removal did not finish', async () => {
+            mockRemoveAppBuilderComponent.mockResolvedValue({ success: false, error: 'Nothing was removed.' });
+
+            await expect(
+                executeAppBuilderIntegrationsPhase(contextWith(other('ERP Sync')), project, config({ selectedAppBuilderComponents: ['erp-sync'] }), progressTracker),
+            ).rejects.toThrow("justrite's ERP Sync is still deployed");
+            expect(mockAddAppBuilderComponent).not.toHaveBeenCalled();
+        });
+
+        it('deploys beside a deployment of a different name, and one in a different Adobe project', async () => {
+            await executeAppBuilderIntegrationsPhase(contextWith(other('Sync B')), project, config({ selectedAppBuilderComponents: ['erp-sync'] }), progressTracker);
+            await executeAppBuilderIntegrationsPhase(contextWith(other('ERP Sync', 'another-adobe-project')), project, config({ selectedAppBuilderComponents: ['erp-sync'] }), progressTracker);
+
+            expect(mockRemoveAppBuilderComponent).not.toHaveBeenCalled();
+            expect(mockAddAppBuilderComponent).toHaveBeenCalledTimes(2);
         });
     });
 });

@@ -7938,7 +7938,7 @@
             "anchors": [
                 "success: false,"
             ],
-            "line": 229,
+            "line": 230,
             "mutants": 1,
             "category": "branch",
             "reason": "The Configure route's inner success flag never reaches a caller: the outer handler matches result.blocked first and returns its own { success: false, error }. Flipping it changes a value that is overwritten one frame later. Re-anchored 2026-09-10 (474 -> 475): unchanged code, shifted by the AB-7 cleanup-reporting block added to handleRemoveAppBuilderComponent.",
@@ -8809,19 +8809,6 @@
         {
             "module": "src/features/app-builder/services/appBuilderComponentRunner.ts",
             "anchors": [
-                "} catch (error) {"
-            ],
-            "line": 1594,
-            "mutants": 1,
-            "category": "block",
-            "reason": "The catch body is a single deps.logger.warn. Emptying it leaves the catch itself in place, so a failing remote teardown is swallowed exactly as before and the removal continues to clear local state - which the remove-contracts suite asserts directly with a rejecting executor. Only the log line differs.",
-            "decision": "none - log-only catch body; the swallow itself is asserted.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-02"
-        },
-        {
-            "module": "src/features/app-builder/services/appBuilderComponentRunner.ts",
-            "anchors": [
                 "? { componentApiPicks: { ...project.componentApiPicks } }",
                 "...(project.componentConfigs ? { componentConfigs: { ...project.componentConfigs } } : {}),"
             ],
@@ -8837,7 +8824,7 @@
             "anchors": [
                 "if (cleared.componentApiPicks) {"
             ],
-            "line": 1839,
+            "line": 1983,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true assigns cleared.componentApiPicks onto the caller's project when it is undefined. cleared is spread from that same project, so an undefined value there means the caller's field was already undefined and the assignment writes back exactly what was there. The mutation is a no-op for every input on which the guard was false.",
@@ -8850,7 +8837,7 @@
             "anchors": [
                 "if (cleared.componentConfigs) {"
             ],
-            "line": 1842,
+            "line": 1986,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true assigns cleared.componentConfigs onto the caller's project when it is undefined. cleared is spread from that same project, so an undefined value there means the caller's field was already undefined and the assignment writes back exactly what was there. The mutation is a no-op for every input on which the guard was false.",
@@ -13199,7 +13186,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 205,
+            "line": 217,
             "mutants": 1,
             "category": "other",
             "reason": "Emptying the include-read catch drops its continue, leaving raw unassigned when the file cannot be read; the next statement is yaml.parse(raw), whose TypeError on undefined lands in the parse-catch immediately below and continues from there. An unreadable include is skipped by either route.",
@@ -13212,7 +13199,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 215,
+            "line": 227,
             "mutants": 1,
             "category": "other",
             "reason": "Emptying the extension-config parse-catch drops its continue, leaving extDoc undefined; the very next statement reads it through an optional chain with a '?? {}' fallback, so the loop adds no names and moves on. An unparseable included config contributes nothing either way.",

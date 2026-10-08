@@ -30,6 +30,7 @@
  */
 
 import { AdobeCliFallback } from './adobeCliFallback';
+import { AdobeConsoleExtensionPoints } from './adobeConsoleExtensionPoints';
 import { AdobeConsoleProjectOps } from './adobeConsoleProjectOps';
 import { AdobeContextResolver } from './adobeContextResolver';
 import { AdobeEntityReads } from './adobeEntityReads';
@@ -44,12 +45,13 @@ import type { StepLogger } from '@/core/logging/stepLogger';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { Logger } from '@/types/logger';
 
-/** The four services that talk to Adobe about entities, credentials and APIs. */
+/** The five services that talk to Adobe about entities, credentials, APIs and the registry. */
 export interface EntityCollaborators {
     reads: AdobeEntityReads;
     credentials: AdobeWorkspaceCredentials;
     orgServices: AdobeOrgServices;
     projectOps: AdobeConsoleProjectOps;
+    extensionPoints: AdobeConsoleExtensionPoints;
 }
 
 export interface EntityServices extends EntityCollaborators {
@@ -94,7 +96,8 @@ export function createEntityCollaborators(
         (orgId, projectId) => reads.fetchWorkspaces(orgId, projectId),
         new DeletedWorkspaceNames(config.savedState),
     );
-    return { reads, credentials, orgServices, projectOps };
+    const extensionPoints = new AdobeConsoleExtensionPoints(sdkClient, cacheManager);
+    return { reads, credentials, orgServices, projectOps, extensionPoints };
 }
 
 /**

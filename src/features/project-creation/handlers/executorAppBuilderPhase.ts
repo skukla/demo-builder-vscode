@@ -125,20 +125,25 @@ export async function executeAppBuilderIntegrationsPhase(
     const { addAppBuilderComponent } = await import(
         '@/features/app-builder/services/appBuilderComponentRunner'
     );
-    const { report, nested } = integrationProgress(progressTracker);
-    const deps = buildDefaultRunnerDeps(
-        await buildRunnerDepsContext(context, project, {
-            authManager: ServiceLocator.getAuthenticationService(),
-            commandManager: ServiceLocator.getCommandExecutor(),
-        }),
-        report,
+    const { replaceDeployedElsewhere } = await import(
+        '@/features/dashboard/handlers/replaceDeployedElsewhere'
     );
+    const { report, nested } = integrationProgress(progressTracker);
+    const services = {
+        authManager: ServiceLocator.getAuthenticationService(),
+        commandManager: ServiceLocator.getCommandExecutor(),
+    };
+    const deps = buildDefaultRunnerDeps(await buildRunnerDepsContext(context, project, services), report);
 
     // The runner's first step per integration is the union API subscribe — surface
     // it once up front so the user sees API access being provisioned at build time
     // (the Add-Integration modal no longer subscribes anything itself).
     progressTracker(OPERATION_STAGES.deployingIntegrations.label, 69, 'Enabling API access');
     for (const entry of entries) {
+        // A copied project deploys here, into the Adobe project its original already
+        // deployed to (2026-10-08): the original's same-named deployment goes first.
+        const replaced = await replaceDeployedElsewhere(context, project, entry, services, report);
+        if (replaced) throw new Error(replaced.error);
         progressTracker(OPERATION_STAGES.deployingIntegrations.label, 70, `Deploying ${entry.name}`);
         const result = await withPhaseSinks([nested], () => addAppBuilderComponent(project, entry, deps));
         if (!result.success) {
