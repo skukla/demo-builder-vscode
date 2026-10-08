@@ -93,7 +93,7 @@ judgement in this feature:
 
 ## Stage 3 (export)
 
-Implemented (`handlers/exportHandlers.ts`, `services/dataInstallerWriteClient.ts`). A
+Implemented (`handlers/exportHandlers.ts`, `services/dataInstallerExportClient.ts`). A
 probe on 2026-08-14 found it authenticating and connecting but storing nothing
 ("MongoDB connection URI required"). That investigation is in
 [`.rptc/research/data-installer/stage-3-export-probe-2026-08-14.md`](../../.rptc/research/data-installer/stage-3-export-probe-2026-08-14.md),

@@ -11,15 +11,15 @@
  * **The response never carries the secret.** The webview needs "done", not the
  * values — they are already where the next dry run reads them.
  *
- * Strict TDD: written BEFORE the handler exists.
+ * Strict TDD: written BEFORE the handler exists. The handler lives in
+ * `provisionAccsHandler.ts` since the 2026-10-08 split; the OFFER that leads to
+ * it is the import spine's and is pinned in `importHandlers-accsOffer.test.ts`.
  */
 
-// The family helper owns the module wall AND re-exports the handler. It must be
-// imported BEFORE anything it mocks, and the handler must come from it — a direct
-// import of the SUT loads the real module before these mocks register.
-import { importHandlers } from './importHandlers.testUtils';
 import * as vscode from 'vscode';
+import { provisionAccsHandlers } from '@/features/data-installer/handlers/provisionAccsHandler';
 import { provisionAccsCredentials } from '@/features/data-installer/services/accsCredentialProvisioner';
+import { downloadWorkspaceConfigJson } from '@/features/data-installer/services/workspaceConfigDownload';
 import type { Project } from '@/types/base';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
@@ -110,7 +110,7 @@ describe('provision-accs-credentials', () => {
     it('targets the PROJECT its own Adobe binding', async () => {
         const { context } = makeImportHarness();
 
-        await importHandlers['provision-accs-credentials'](context);
+        await provisionAccsHandlers['provision-accs-credentials'](context);
 
         expect(mockedProvision).toHaveBeenCalledWith(expect.anything(), {
             orgId: '285361',
@@ -122,7 +122,7 @@ describe('provision-accs-credentials', () => {
     it('writes the pair into the DECLARED fields and saves — where a pasted pair lives', async () => {
         const { context, saved } = makeImportHarness(accsProject());
 
-        const result = await importHandlers['provision-accs-credentials'](context);
+        const result = await provisionAccsHandlers['provision-accs-credentials'](context);
 
         expect(result.success).toBe(true);
         const project = saved[0] as Project;
@@ -132,10 +132,24 @@ describe('provision-accs-credentials', () => {
         });
     });
 
+    it('keeps the ACCS config the project already had beside the new pair', async () => {
+        // The pair is ADDED to the declared block. Replacing the block would drop
+        // the GraphQL endpoint the import target is derived from.
+        const { context, saved } = makeImportHarness(accsProject());
+
+        await provisionAccsHandlers['provision-accs-credentials'](context);
+
+        const project = saved[0] as Project;
+        expect(project.componentConfigs?.['adobe-commerce-accs']).toMatchObject({
+            ACCS_GRAPHQL_ENDPOINT: 'https://x.api.commerce.adobe.com/t/graphql',
+            ACCS_OAUTH_CLIENT_ID: 'cid-1',
+        });
+    });
+
     it('never puts the secret in the response', async () => {
         const { context } = makeImportHarness();
 
-        const result = await importHandlers['provision-accs-credentials'](context);
+        const result = await provisionAccsHandlers['provision-accs-credentials'](context);
 
         expect(JSON.stringify(result)).not.toContain('fake-test-secret-not-a-secret');
         expect(JSON.stringify(result)).not.toContain('cid-1');
@@ -145,17 +159,27 @@ describe('provision-accs-credentials', () => {
         mockedProvision.mockResolvedValue({ ok: false, reason: 'no secret in the workspace' });
         const { context, saved } = makeImportHarness();
 
-        const result = await importHandlers['provision-accs-credentials'](context);
+        const result = await provisionAccsHandlers['provision-accs-credentials'](context);
 
         expect(result.success).toBe(false);
         expect(result.error).toContain('no secret in the workspace');
         expect(saved).toHaveLength(0);
     });
 
+    it('refuses with no project open, naming the missing project', async () => {
+        const { context } = makeImportHarness(null);
+
+        const result = await provisionAccsHandlers['provision-accs-credentials'](context);
+
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('Open a project first.');
+        expect(mockedProvision).not.toHaveBeenCalled();
+    });
+
     it('refuses a project with no Adobe binding, naming the gap', async () => {
         const { context } = makeImportHarness({ ...accsProject(), adobe: undefined });
 
-        const result = await importHandlers['provision-accs-credentials'](context);
+        const result = await provisionAccsHandlers['provision-accs-credentials'](context);
 
         expect(result.success).toBe(false);
         expect(result.error).toMatch(/adobe project/i);
@@ -168,7 +192,7 @@ describe('provision-accs-credentials', () => {
 
         const { context } = makeImportHarness(project);
 
-        const result = await importHandlers['provision-accs-credentials'](context);
+        const result = await provisionAccsHandlers['provision-accs-credentials'](context);
 
         expect(mockedProvision).not.toHaveBeenCalled();
         expect(result.success).toBe(false);
@@ -181,7 +205,7 @@ describe('provision-accs-credentials', () => {
         // A headless caller has no authManager; provisioning cannot run without one.
         (ctx as { authManager?: unknown }).authManager = undefined;
 
-        const result = await importHandlers['provision-accs-credentials'](ctx);
+        const result = await provisionAccsHandlers['provision-accs-credentials'](ctx);
 
         expect(mockedProvision).not.toHaveBeenCalled();
         expect(result).toMatchObject({ success: false, error: 'Adobe sign-in is required.' });
@@ -192,7 +216,7 @@ describe('provision-accs-credentials', () => {
         mockedProvision.mockResolvedValue({ ok: true, clientId: 'cid', clientSecret: 'sec' });
         const { context: ctx } = makeImportHarness(project);
 
-        await importHandlers['provision-accs-credentials'](ctx);
+        await provisionAccsHandlers['provision-accs-credentials'](ctx);
 
         const deps = mockedProvision.mock.calls[0][0];
         // Each auth call reaches the unit that owns it (decompose-god-file, 2026-10-08).
@@ -209,7 +233,11 @@ describe('provision-accs-credentials', () => {
             'i',
             [],
         );
-        expect(typeof deps.downloadWorkspaceJson).toBe('function');
+        // The downloader is the targeted one: the target the provisioner names
+        // reaches `downloadWorkspaceConfigJson`, with the executor ahead of it.
+        const target = { orgId: 'o', projectId: 'p', workspaceId: 'w' };
+        await deps.downloadWorkspaceJson(target);
+        expect(downloadWorkspaceConfigJson).toHaveBeenCalledWith(expect.anything(), target);
         // The WIRING is the claim, not the wording.
         deps.log?.('a provisioning line');
         expect(ctx.debugLogger.debug).toHaveBeenCalled();
@@ -221,7 +249,7 @@ describe('provision-accs-credentials', () => {
         mockedProvision.mockResolvedValue({ ok: true, clientId: 'cid', clientSecret: 'sec' });
         const { context: ctx } = makeImportHarness(project);
 
-        const result = await importHandlers['provision-accs-credentials'](ctx);
+        const result = await provisionAccsHandlers['provision-accs-credentials'](ctx);
 
         expect(result.success).toBe(true);
         expect(ctx.stateManager.saveProject).toHaveBeenCalled();
@@ -233,138 +261,9 @@ describe('provision-accs-credentials', () => {
             componentSelections: { backend: 'adobe-commerce-paas' },
         });
 
-        const result = await importHandlers['provision-accs-credentials'](context);
+        const result = await provisionAccsHandlers['provision-accs-credentials'](context);
 
         expect(result.success).toBe(false);
         expect(mockedProvision).not.toHaveBeenCalled();
-    });
-});
-
-describe('the needs-accs-credentials refusal carries its flag', () => {
-    beforeEach(() => {
-        jest.clearAllMocks();
-        // The access guard runs before credentials — without settings the
-        // refusal is "no URL configured" and never reaches the credential branch.
-        (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
-            get: jest.fn((key: string) =>
-                key === 'apiBaseUrl'
-                    ? 'https://example-namespace.adobeioruntime.net/api/v1/web/data-installer-api'
-                    : true
-            ),
-        });
-    });
-
-    it('marks the credential refusal so the UI can offer provisioning', async () => {
-        const { context } = makeImportHarness(); // ACCS, no OAuth pair in configs
-
-        const result = await importHandlers['validate-datapack-import'](context, {
-            datapackName: 'bodea',
-            version: 'main',
-            commerceInstance: 'inst',
-            dataTypes: ['categories'],
-        });
-
-        expect(result.success).toBe(false);
-        expect(result.data).toMatchObject({ needsAccsCredentials: true });
-    });
-});
-
-/**
- * The flag is an OFFER, and an offer must be honourable.
- *
- * `needsAccsCredentials: true` is the only thing that puts "Set up credentials
- * automatically" in front of the user. The button calls
- * `provision-accs-credentials`, which refuses without
- * `adobe.organization`/`projectId`/`workspace` — so on a project with no Adobe
- * binding the modal offered a button whose only possible outcome was a second
- * refusal.
- *
- * A datapack write needs an OAuth S2S pair, and one can exist only inside an
- * Adobe I/O workspace. A project that selected no App Builder components has no
- * workspace to create it in. That is a real limitation, not a UI bug, and the
- * honest surface for it is the plain "credentials are missing" message with no
- * button — not a button that cannot work.
- *
- * The predicate is now shared with the guard it has to agree with, so the two
- * cannot drift apart.
- */
-describe('the offer appears only where provisioning could actually run', () => {
-    beforeEach(() => {
-        jest.clearAllMocks();
-        (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
-            get: jest.fn((key: string) =>
-                key === 'apiBaseUrl'
-                    ? 'https://example-namespace.adobeioruntime.net/api/v1/web/data-installer-api'
-                    : true
-            ),
-        });
-    });
-
-    async function refusalFor(project: unknown) {
-        const { context } = makeImportHarness(project);
-        return importHandlers['validate-datapack-import'](context, {
-            datapackName: 'bodea',
-            version: 'main',
-            commerceInstance: 'inst',
-            dataTypes: ['categories'],
-        });
-    }
-
-    it('still refuses when the project has no Adobe binding — positive control', async () => {
-        const result = await refusalFor({ ...accsProject(), adobe: undefined });
-
-        expect(result.success).toBe(false);
-    });
-
-    it('withholds the offer when there is no Adobe project binding at all', async () => {
-        const result = await refusalFor({ ...accsProject(), adobe: undefined });
-
-        expect(result.data).toMatchObject({ needsAccsCredentials: false });
-    });
-
-    it('withholds the offer when the binding names no workspace', async () => {
-        const result = await refusalFor({
-            ...accsProject(),
-            adobe: { organization: '285361', projectId: 'proj-1', authenticated: true },
-        });
-
-        expect(result.data).toMatchObject({ needsAccsCredentials: false });
-    });
-
-    it('withholds the offer when the binding names no project', async () => {
-        const result = await refusalFor({
-            ...accsProject(),
-            adobe: { organization: '285361', workspace: 'ws-1', authenticated: true },
-        });
-
-        expect(result.data).toMatchObject({ needsAccsCredentials: false });
-    });
-
-    /** The full binding is exactly what the provisioning guard demands. */
-    it('withholds the offer for a PaaS gap, even on a fully-bound project', async () => {
-        // A complete Adobe binding is only HALF the condition. The other half is
-        // that the gap is one provisioning can close — a PaaS project missing its
-        // admin username and password is not, and a button offering to create an
-        // OAuth pair would fix nothing.
-        const paasWithBinding = {
-            name: 'demo-paas',
-            componentSelections: { backend: 'adobe-commerce-paas' },
-            componentConfigs: { 'adobe-commerce-paas': {} },
-            adobe: {
-                organization: 'org-1',
-                projectId: 'proj-1',
-                workspace: 'ws-1',
-            },
-        };
-
-        const result = await refusalFor(paasWithBinding);
-
-        expect(result.data).toMatchObject({ needsAccsCredentials: false });
-    });
-
-    it('offers when the binding is complete', async () => {
-        const result = await refusalFor(accsProject());
-
-        expect(result.data).toMatchObject({ needsAccsCredentials: true });
     });
 });

@@ -1,5 +1,6 @@
 /**
- * The export half of the write client — Stage 3.
+ * The export client — Stage 3. Split from the write client's suite when the
+ * export moved to `dataInstallerExportClient.ts` (2026-10-08).
  *
  * Every contract below was measured against the live service on 2026-08-14, and
  * several contradict the vendor docs. The expensive ones:
@@ -27,7 +28,7 @@
  * Strict TDD: written BEFORE the methods exist.
  */
 
-import { BASE, bodyOf, makeClient, ok, raw } from './dataInstallerWriteClient.testUtils';
+import { BASE, bodyOf, makeExportClient, ok, raw } from './dataInstallerWriteClient.testUtils';
 
 
 const ACCS_EXPORT = {
@@ -54,20 +55,24 @@ describe('listExportItems', () => {
     it('GETs with data_type as a QUERY parameter, not a path segment', async () => {
         const fetchImpl = ok(PAGE);
 
-        await makeClient(fetchImpl).listExportItems(ACCS_EXPORT, 'attribute_sets');
+        await makeExportClient(fetchImpl).listExportItems(ACCS_EXPORT, 'attribute_sets');
 
         const [url, init] = fetchImpl.mock.calls[0];
         // Runtime routes on the last path segment: `/get-export-items/attribute_sets`
         // routes nowhere and the action never sees a data_type.
         expect(String(url)).toContain(`${BASE}/get-export-items?`);
         expect(String(url)).toContain('data_type=attribute_sets');
+        // One page of everything: the picker shows the whole list.
+        expect(String(url)).toContain('page=1');
+        expect(String(url)).toContain('page_size=1000');
         expect(init.method ?? 'GET').toBe('GET');
+        expect(init.headers.Authorization).toBe('Bearer ims-token');
     });
 
     it('sends the REST BASE URL as the instance, not the tenant id', async () => {
         const fetchImpl = ok(PAGE);
 
-        await makeClient(fetchImpl).listExportItems(ACCS_EXPORT, 'attribute_sets');
+        await makeExportClient(fetchImpl).listExportItems(ACCS_EXPORT, 'attribute_sets');
 
         const { headers } = fetchImpl.mock.calls[0][1];
         expect(headers['x-commerce-instance']).toBe(ACCS_EXPORT.restBaseUrl);
@@ -76,7 +81,7 @@ describe('listExportItems', () => {
     it('sends the credential pair AND the scope ACCS needs', async () => {
         const fetchImpl = ok(PAGE);
 
-        await makeClient(fetchImpl).listExportItems(ACCS_EXPORT, 'attribute_sets');
+        await makeExportClient(fetchImpl).listExportItems(ACCS_EXPORT, 'attribute_sets');
 
         const { headers } = fetchImpl.mock.calls[0][1];
         expect(headers['x-client-id']).toBe('cid-1');
@@ -92,7 +97,7 @@ describe('listExportItems', () => {
     it('returns the items, the total and what the service excluded', async () => {
         const fetchImpl = ok(PAGE);
 
-        const page = await makeClient(fetchImpl).listExportItems(ACCS_EXPORT, 'attribute_sets');
+        const page = await makeExportClient(fetchImpl).listExportItems(ACCS_EXPORT, 'attribute_sets');
 
         expect(page.items).toEqual([{ id: 10, displayName: 'Accessories' }]);
         expect(page.totalCount).toBe(8);
@@ -104,7 +109,7 @@ describe('listExportItems', () => {
     it('uses the admin pair for PaaS instead of the client headers', async () => {
         const fetchImpl = ok(PAGE);
 
-        await makeClient(fetchImpl).listExportItems(
+        await makeExportClient(fetchImpl).listExportItems(
             {
                 ...ACCS_EXPORT,
                 credentials: { kind: 'paas', username: 'admin', password: 'fake-test-pw-not-a-secret' },
@@ -122,7 +127,7 @@ describe('listExportItems', () => {
         const fetchImpl = ok({ success: false, error: 'Instance unreachable' }, 500);
 
         await expect(
-            makeClient(fetchImpl).listExportItems(ACCS_EXPORT, 'attribute_sets'),
+            makeExportClient(fetchImpl).listExportItems(ACCS_EXPORT, 'attribute_sets'),
         ).rejects.toMatchObject({
             message: 'Instance unreachable',
             status: 500,
@@ -134,7 +139,7 @@ describe('listExportItems', () => {
         const fetchImpl = raw('<html>gateway</html>', 502);
 
         await expect(
-            makeClient(fetchImpl).listExportItems(ACCS_EXPORT, 'attribute_sets'),
+            makeExportClient(fetchImpl).listExportItems(ACCS_EXPORT, 'attribute_sets'),
         ).rejects.toThrow('Could not list attribute_sets to export (HTTP 502).');
     });
 
@@ -146,7 +151,7 @@ describe('listExportItems', () => {
     it('drops rows with no id and counts what is left when the service sent no pagination', async () => {
         const fetchImpl = ok({ items: [null, { display_name: 'no id' }, { id: 7 }] });
 
-        const page = await makeClient(fetchImpl).listExportItems(ACCS_EXPORT, 'attribute_sets');
+        const page = await makeExportClient(fetchImpl).listExportItems(ACCS_EXPORT, 'attribute_sets');
 
         expect(page.items).toEqual([{ id: 7, displayName: '7' }]);
         expect(page.totalCount).toBe(1);
@@ -169,9 +174,10 @@ describe('startExport', () => {
     it('sends operation_mode export with the identity and types', async () => {
         const fetchImpl = ok(RESULT);
 
-        await makeClient(fetchImpl).startExport(ACCS_EXPORT);
+        await makeExportClient(fetchImpl).startExport(ACCS_EXPORT);
 
         expect(String(fetchImpl.mock.calls[0][0])).toBe(`${BASE}/process-datapack`);
+        expect(fetchImpl.mock.calls[0][1].method).toBe('POST');
         expect(bodyOf(fetchImpl)).toMatchObject({
             datapack_name: 'captured-pack',
             version: 'v1',
@@ -185,7 +191,7 @@ describe('startExport', () => {
     it('ALWAYS asks for verbose output', async () => {
         const fetchImpl = ok(RESULT);
 
-        await makeClient(fetchImpl).startExport(ACCS_EXPORT);
+        await makeExportClient(fetchImpl).startExport(ACCS_EXPORT);
 
         expect(bodyOf(fetchImpl).verbose).toBe('full');
     });
@@ -193,7 +199,7 @@ describe('startExport', () => {
     it('never sends a MONGO_URI, whatever the service asks for', async () => {
         const fetchImpl = ok(RESULT);
 
-        await makeClient(fetchImpl).startExport(ACCS_EXPORT);
+        await makeExportClient(fetchImpl).startExport(ACCS_EXPORT);
 
         expect(JSON.stringify(bodyOf(fetchImpl))).not.toContain('MONGO_URI');
         expect(JSON.stringify(bodyOf(fetchImpl))).not.toContain('mongodb');
@@ -202,7 +208,7 @@ describe('startExport', () => {
     it('passes selections through when the user picked items', async () => {
         const fetchImpl = ok(RESULT);
 
-        await makeClient(fetchImpl).startExport({
+        await makeExportClient(fetchImpl).startExport({
             ...ACCS_EXPORT,
             selections: { attribute_sets: { attribute_set_id: [10, 11] } },
         });
@@ -215,7 +221,7 @@ describe('startExport', () => {
     it('omits selections entirely when nothing was picked', async () => {
         const fetchImpl = ok(RESULT);
 
-        await makeClient(fetchImpl).startExport(ACCS_EXPORT);
+        await makeExportClient(fetchImpl).startExport(ACCS_EXPORT);
 
         expect(bodyOf(fetchImpl)).not.toHaveProperty('selections');
     });
@@ -223,7 +229,7 @@ describe('startExport', () => {
     it('reports per-type counts from the export response shape', async () => {
         const fetchImpl = ok(RESULT);
 
-        const outcome = await makeClient(fetchImpl).startExport(ACCS_EXPORT);
+        const outcome = await makeExportClient(fetchImpl).startExport(ACCS_EXPORT);
 
         expect(outcome.success).toBe(true);
         expect(outcome.perType).toEqual([
@@ -255,7 +261,7 @@ describe('startExport', () => {
             ],
         });
 
-        const outcome = await makeClient(fetchImpl).startExport(ACCS_EXPORT);
+        const outcome = await makeExportClient(fetchImpl).startExport(ACCS_EXPORT);
 
         expect(outcome.success).toBe(false);
         expect(outcome.perType[0].reason).toContain('MongoDB connection URI required');
@@ -264,7 +270,7 @@ describe('startExport', () => {
     it('sends the IMS bearer for the service itself', async () => {
         const fetchImpl = ok(RESULT);
 
-        await makeClient(fetchImpl).startExport(ACCS_EXPORT);
+        await makeExportClient(fetchImpl).startExport(ACCS_EXPORT);
 
         expect(fetchImpl.mock.calls[0][1].headers.Authorization).toBe('Bearer ims-token');
         expect(fetchImpl.mock.calls[0][1].headers['Content-Type']).toBe('application/json');
@@ -273,7 +279,7 @@ describe('startExport', () => {
     it('surfaces the service reason when the export is refused outright', async () => {
         const fetchImpl = ok({ success: false, error: 'Datapack name already taken' }, 502);
 
-        await expect(makeClient(fetchImpl).startExport(ACCS_EXPORT)).rejects.toMatchObject({
+        await expect(makeExportClient(fetchImpl).startExport(ACCS_EXPORT)).rejects.toMatchObject({
             message: 'Datapack name already taken',
             status: 502,
             action: 'process-datapack',
@@ -283,7 +289,7 @@ describe('startExport', () => {
     it('falls back to its own wording when the refusal carried no reason', async () => {
         const fetchImpl = raw('gateway timeout', 504);
 
-        await expect(makeClient(fetchImpl).startExport(ACCS_EXPORT)).rejects.toThrow(
+        await expect(makeExportClient(fetchImpl).startExport(ACCS_EXPORT)).rejects.toThrow(
             'The export could not be started (HTTP 504).',
         );
     });
@@ -291,17 +297,25 @@ describe('startExport', () => {
     it('reports no per-type rows when the service returned no results at all', async () => {
         const fetchImpl = ok({ success: true });
 
-        const outcome = await makeClient(fetchImpl).startExport(ACCS_EXPORT);
+        const outcome = await makeExportClient(fetchImpl).startExport(ACCS_EXPORT);
 
         // An invented row would read as a type that ran and exported nothing,
         // which is a different claim from "the service said nothing about it".
         expect(outcome.perType).toStrictEqual([]);
     });
 
+    it('reads a row that names no data type as an empty name, not an invented one', async () => {
+        const fetchImpl = ok({ success: false, results: [{ success: false }] });
+
+        const outcome = await makeExportClient(fetchImpl).startExport(ACCS_EXPORT);
+
+        expect(outcome.perType[0].dataType).toBe('');
+    });
+
     it('reads a bare result row as a failure that exported nothing', async () => {
         const fetchImpl = ok({ success: false, results: [{ data_type: 'orders', success: false }] });
 
-        const outcome = await makeClient(fetchImpl).startExport(ACCS_EXPORT);
+        const outcome = await makeExportClient(fetchImpl).startExport(ACCS_EXPORT);
 
         expect(outcome.perType).toEqual([
             { dataType: 'orders', success: false, exported: 0, excluded: 0 },
@@ -329,7 +343,7 @@ describe('startExport', () => {
             ],
         });
 
-        const outcome = await makeClient(fetchImpl).startExport(ACCS_EXPORT);
+        const outcome = await makeExportClient(fetchImpl).startExport(ACCS_EXPORT);
 
         expect(outcome.perType[0].reason).toBe('the reason a user can read');
     });

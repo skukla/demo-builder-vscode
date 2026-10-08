@@ -64,6 +64,18 @@ def body_start(src: str, i: int) -> int | None:
             angle -= 1
         elif c == '{':
             if angle == 0 and brace == 0:
+                # A `{` at depth zero is the body — unless it opens an object TYPE
+                # (`: { stage: string } {` or `: | { a } | { b } {`), in which case
+                # the body is whatever follows its matching `}`. The third run of
+                # this tool (2026-10-08) read `same` for datapackStage after its
+                # filter had changed, because both versions were compared on the
+                # return type's text; readInput and readTarget had passed the same
+                # way, vacuously.
+                k = matching_brace(src, j)
+                rest = src[k + 1:].lstrip()
+                if rest.startswith('{') or rest.startswith('|') or rest.startswith('&'):
+                    j = k + 1
+                    continue
                 return j
             brace += 1
         elif c == '}':
@@ -72,6 +84,18 @@ def body_start(src: str, i: int) -> int | None:
             return None
         j += 1
     return None
+
+
+def matching_brace(src: str, i: int) -> int:
+    """Index of the `}` matching the `{` at `i`."""
+    depth, j = 0, i
+    while j < len(src):
+        depth += src[j] == '{'
+        depth -= src[j] == '}'
+        if depth == 0:
+            return j
+        j += 1
+    return len(src) - 1
 
 
 def functions(src: str) -> dict[str, str]:

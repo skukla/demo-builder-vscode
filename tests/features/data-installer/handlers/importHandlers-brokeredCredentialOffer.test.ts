@@ -1,7 +1,7 @@
 /**
  * What the import spine does once a shared credential can exist.
  *
- * `provisionAccsHandler.test.ts` pins that the "Set up credentials automatically"
+ * `importHandlers-accsOffer.test.ts` pins that the "Set up credentials automatically"
  * offer appears only where Console provisioning could run. That is still true and
  * unchanged. What it does NOT pin is the broker, and since the broker landed those
  * tests have been exercising it BY ACCIDENT: the shared vscode mock answers the

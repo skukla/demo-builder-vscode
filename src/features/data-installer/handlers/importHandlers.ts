@@ -22,7 +22,6 @@
  * @module features/data-installer/handlers/importHandlers
  */
 
-import { provisionAccsCredentials } from '../services/accsCredentialProvisioner';
 import { canProvisionAccsCredentials } from '../services/accsProvisionEligibility';
 import { resolveProjectCredentials } from '../services/commerceCredentialBroker';
 import {
@@ -30,34 +29,18 @@ import {
     type ImportRequest,
     type ImportTarget,
 } from '../services/dataInstallerWriteClient';
-import { deriveImportInstance } from '../services/importInstance';
-import { watchImportJob } from '../services/importJobRunner';
-import {
-    buildScopeDiscoveryParams,
-    groupStoreViewsByWebsite,
-} from '../services/importScopeDiscovery';
 import { resolveInstallTarget } from '../services/sampleDataInstall';
-import { downloadWorkspaceConfigJson } from '../services/workspaceConfigDownload';
-import { IMPORT_PROGRESS_MESSAGE, type ImportJobRecord } from '../types';
+import type { ImportJobRecord } from '../types';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import { exportHandlers } from './exportHandlers';
-import { ServiceLocator } from '@/core/di/serviceLocator';
-import { PollingService } from '@/core/shell/pollingService';
+import { JOB_KEY, runAndWatch } from './importJobWatch';
+import { importTargetHandlers } from './importTargetHandlers';
+import { provisionAccsHandlers } from './provisionAccsHandler';
 import { TransientStateManager } from '@/core/state/transientStateManager';
-import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
-import {
-    handleBackgroundOperation,
-    pushOperationProgress,
-} from '@/core/vscode/operationProgress';
+import { handleBackgroundOperation } from '@/core/vscode/operationProgress';
 import { handleAnswerOperationPrompt } from '@/core/vscode/operationPrompt';
-import { migrateDeclaredSecrets } from '@/features/components/services/commerceSecretMigration';
-import { discoverStoreStructure } from '@/features/eds/services/commerceStoreDiscovery';
-import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
-
-/** Where the in-flight/last import is recorded. One per extension host. */
-const JOB_KEY = 'dataInstaller.import.current';
 
 /** Wording for each credential gap. The service module returns reasons only. */
 const CREDENTIAL_MESSAGES: Record<string, string> = {
@@ -103,8 +86,11 @@ export const importHandlers = defineHandlers({
     // a prerequisite missing, a merge needing a decision (PL-59, owner 2026-09-20).
     answerOperationPrompt: handleAnswerOperationPrompt,
     // Stage 3 lives in its own module; merged here so the panel and the tests
-    // keep ONE handler map to reach for.
+    // keep ONE handler map to reach for. The modal's prefill reads and the
+    // Console provisioning button were split out the same way (2026-10-08).
     ...exportHandlers,
+    ...importTargetHandlers,
+    ...provisionAccsHandlers,
     'start-datapack-import': async (
         context: HandlerContext,
         payload?: StartImportPayload,
@@ -209,208 +195,6 @@ export const importHandlers = defineHandlers({
         });
     },
 
-    /**
-     * What the import modal should prefill as the target, and where it came from.
-     *
-     * The field started empty because a spike could not PROVE the target was
-     * derivable — none of the instances with Data Installer history matched a local
-     * project, so a derived value had nothing to be checked against, and guessing a
-     * write target with no undo was the wrong trade.
-     *
-     * Both halves of that reasoning have since expired. `checkCredentials` tests an
-     * instance read-only, so a derived value is now verifiable before anything is
-     * written. And the derivation already existed: `ACCS_ENDPOINT_PATTERN` has been
-     * pulling the tenant id out of `ACCS_GRAPHQL_ENDPOINT` all along to build the
-     * admin URL, and that id is a 21–22 character base62 nanoid — the shape the
-     * spike measured for `commerce_instance`.
-     *
-     * **This answers; it does not decide.** It reports the instance the project
-     * implies and nothing else — the field stays editable, and a dry run is what
-     * checks a seeded value before an import writes with it.
-     */
-    'get-datapack-import-target': async (context: HandlerContext): Promise<HandlerResponse> => {
-        // No guard and no client: this reads project state only. A missing project
-        // is not a failure — the catalog is browsable without one, and the modal
-        // simply asks the user to type the target.
-        const project: Project | undefined = await context.stateManager.getCurrentProject();
-        const configs = project?.componentConfigs ?? {};
-        // The id is what the service needs and what nobody can read. The project
-        // name is the only human-recognisable handle on the same target, so it
-        // rides along for the modal to lead with.
-        const projectName = project?.name;
-        // The sample data this project was CREATED to hold, recorded by the
-        // wizard's Sample Data area and never imported there. Reported here so
-        // the panel can offer it directly instead of making the user re-find it
-        // in a 25-name catalog.
-        const datapack = project?.datapack;
-
-        // The website/store view the project recorded, from the SAME resolver the
-        // build path uses. The modal used to seed its pickers from live discovery
-        // instead, preferring a website named `base` — which is simply wrong on a
-        // project configured for another one, and made a modal-driven reset
-        // target a different scope than the project reset. The project is the
-        // definitive source; this is where it gets asked.
-        //
-        // `resolveInstallTarget` returns the store VIEW code, not the store group:
-        // the service's `store_code` is a view code. Both codes or neither.
-        const scope = resolveInstallTarget({
-            componentSelections: project?.componentSelections,
-            componentConfigs: configs,
-        });
-
-        // Shared with the build's sample-data phase — see `deriveImportInstance`.
-        // Two derivations would let the same pack land in different places
-        // depending on which surface asked, with nothing to report the difference.
-        const instance = deriveImportInstance(configs);
-        if (instance) {
-            return {
-                success: true,
-                data: { instance, projectName, datapack, ...(scope && { scope }) },
-            };
-        }
-
-        return { success: true, data: { datapack, ...(scope && { scope }) } };
-    },
-
-    /**
-     * The websites and store views a pack can be imported onto.
-     *
-     * Targeting is the INTENDED path (the service author, 2026-08-14: create the
-     * website first, "then you can specify site and store on the data pack
-     * import"). This is what fills that picker.
-     *
-     * **Discovery runs here, not in the webview.** The wizard's
-     * `useStoreDiscovery` posts PaaS admin credentials from the panel because
-     * the wizard holds them in form state; this feature deliberately keeps the
-     * pair extension-side. So the structure is discovered where the credentials
-     * already live and only the codes travel back.
-     *
-     * Optional by design: no project, no credentials or a failed discovery all
-     * leave the user with a manual import onto the service's default. Only a
-     * discovery that actively failed is worth an error — the rest is an empty
-     * list.
-     */
-    'list-datapack-import-scopes': async (context: HandlerContext): Promise<HandlerResponse> => {
-        const project = await context.stateManager.getCurrentProject();
-        if (!project) {
-            return { success: true, data: { websites: [] } };
-        }
-
-        const credentials = await resolveProjectCredentials(context, project);
-        if (!credentials.ok) {
-            // Not an error: the import still works, it just lands on the default.
-            return { success: true, data: { websites: [] } };
-        }
-
-        const params = await buildScopeDiscoveryParams(context, project, credentials.credentials);
-        if (!params) {
-            return { success: true, data: { websites: [] } };
-        }
-
-        const result = await discoverStoreStructure(params);
-        if (!result.success) {
-            return { success: false, error: result.error };
-        }
-        return { success: true, data: { websites: groupStoreViewsByWebsite(result.data) } };
-    },
-
-    /**
-     * Console-free ACCS credential provisioning — the loop proven live
-     * 2026-08-13, wired to THIS project's own Adobe binding.
-     *
-     * On success the pair lands in `componentConfigs['adobe-commerce-accs']` —
-     * the DECLARED fields, exactly where a hand-pasted pair lives — and the
-     * project is saved. One storage path, not two. The response never carries
-     * the values; the next dry run reads them where everything else does.
-     *
-     * Panel-only by construction (never in the MCP maps): it creates a
-     * credential in the user's Console workspace.
-     */
-    'provision-accs-credentials': async (context: HandlerContext): Promise<HandlerResponse> => {
-        const project = await context.stateManager.getCurrentProject();
-        if (!project) {
-            return { success: false, error: 'Open a project first.', code: ErrorCode.PROJECT_NOT_FOUND };
-        }
-        if (project.componentSelections?.backend !== 'adobe-commerce-accs') {
-            return {
-                success: false,
-                error: 'Automatic setup applies to ACCS backends only — PaaS uses the admin username and password.',
-                code: ErrorCode.INVALID_OPERATION,
-            };
-        }
-        const adobe = project.adobe;
-        // Same predicate the OFFER uses. Kept shared so the button and the
-        // guard behind it cannot disagree — they did, and the disagreement was
-        // a button that could only ever refuse.
-        if (!canProvisionAccsCredentials(adobe)) {
-            return {
-                success: false,
-                error: 'This project has no Adobe project binding, so there is no workspace to provision in.',
-                code: ErrorCode.INVALID_OPERATION,
-            };
-        }
-        if (!context.authManager) {
-            return { success: false, error: 'Adobe sign-in is required.', code: ErrorCode.AUTH_REQUIRED };
-        }
-
-        const executor = ServiceLocator.getCommandExecutor();
-        const authManager = context.authManager;
-        const units = () => authManager.getEntityServices();
-        const result = await provisionAccsCredentials(
-            {
-                // Each call goes to the unit that owns it.
-                auth: {
-                    getWorkspaceS2SCredential: async (orgId, projectId, workspaceId) =>
-                        (await units()).credentials.getWorkspaceS2SCredential(orgId, projectId, workspaceId),
-                    createWorkspaceS2SCredentialFor: async (orgId, projectId, workspaceId) =>
-                        (await units()).credentials.createWorkspaceS2SCredentialFor(
-                            orgId,
-                            projectId,
-                            workspaceId,
-                        ),
-                    getSubscribedServiceCodes: async (orgId, idIntegration) =>
-                        (await units()).orgServices.getSubscribedServiceCodes(orgId, idIntegration),
-                    subscribeOAuthServerToServerIntegrationToServices: async (orgId, idIntegration, info) =>
-                        (await units()).orgServices.subscribeOAuthServerToServerIntegrationToServices(
-                            orgId,
-                            idIntegration,
-                            info,
-                        ),
-                },
-                downloadWorkspaceJson: (target) => downloadWorkspaceConfigJson(executor, target),
-                log: (line) => context.debugLogger.debug(`[Data Installer] provisioning: ${line}`),
-            },
-            { orgId: adobe.organization, projectId: adobe.projectId, workspaceId: adobe.workspace },
-        );
-        if (!result.ok) {
-            return { success: false, error: result.reason, code: ErrorCode.UNKNOWN };
-        }
-
-        project.componentConfigs = project.componentConfigs ?? {};
-        project.componentConfigs['adobe-commerce-accs'] = {
-            ...project.componentConfigs['adobe-commerce-accs'],
-            ACCS_OAUTH_CLIENT_ID: result.clientId,
-            ACCS_OAUTH_CLIENT_SECRET: result.clientSecret,
-        };
-
-        // Route the freshly-provisioned secret to SecretStorage before the project
-        // is saved. Without this the one path that CREATES a credential is the one
-        // path that writes it to the manifest in the clear — the migration would
-        // only clean it up on some later save, and until then a public-repo
-        // manifest holds an org-wide Commerce write credential.
-        const migration = await migrateDeclaredSecrets(
-            project.componentConfigs,
-            project.path,
-            context.context?.secrets,
-            (line: string) => context.debugLogger.debug(`[Data Installer] ${line}`),
-        );
-        project.componentConfigs = migration.sanitizedConfigs as typeof project.componentConfigs;
-
-        await context.stateManager.saveProject(project);
-
-        return { success: true };
-    },
-
     'get-datapack-import-status': async (context: HandlerContext): Promise<HandlerResponse> => {
         const transient = new TransientStateManager(context.context);
         const record = await transient.get<ImportJobRecord | null>(JOB_KEY, null);
@@ -495,229 +279,6 @@ async function prepareImport(
             credentials: credentials.credentials,
         },
     };
-}
-
-/**
- * Watch to a terminal outcome and record it.
- *
- * Runs after its caller has returned, so nothing is awaiting it and a throw could
- * only become an unhandled rejection.
- *
- * **Every exit writes the record.** This used to return silently when the guard
- * refused, and warn to a log channel when the runner threw — and in both cases the
- * record stayed `watching`, so the panel showed "Importing…" forever for a job
- * nobody was watching. A failure that reaches no one is also a failure no test can
- * catch: exactly that shape hid a logger fault which killed every watch through
- * five green gates. The import itself is unaffected — it is already running
- * server-side — so this reports a lost WATCH, never a failed import.
- */
-/**
- * The stage line a datapack job shows on the SHARED progress channel: the verb,
- * and how far through the types it is. The modal shows each type; a notification
- * has room for one line (PL-59 wording).
- */
-function datapackStage(
-    operation: ImportJobRecord['operation'],
-    perType: ImportJobRecord['perType'],
-): { stage: string; position?: { index: number; total: number } } {
-    const total = Object.keys(perType ?? {}).length;
-    const done = Object.values(perType ?? {}).filter(
-        (entry) => (entry as { status?: string })?.status === 'success',
-    ).length;
-    const stage = operation === 'reset' ? 'Removing the sample data' : 'Importing the sample data';
-    return total > 0 ? { stage, position: { index: Math.max(1, done), total } } : { stage };
-}
-
-async function watchAndRecord(
-    context: HandlerContext,
-    transient: TransientStateManager,
-    record: ImportJobRecord,
-): Promise<void> {
-    const access = await resolveDataInstallerAccess(context);
-    if (!access.ok) {
-        await stopWatching(
-            transient,
-            record,
-            'The Data Installer could not be reached to watch this job.',
-        );
-        return;
-    }
-    try {
-        const result = await watchImportJob({
-            client: access.client,
-            activationId: record.activationId,
-            requestedTypes: record.dataTypes,
-            polling: new PollingService(),
-            ...(record.operation ? { operation: record.operation } : {}),
-            // Each poll goes straight to the modal. Without this the webview
-            // learns nothing until the job ends, which on a fourteen-type pack
-            // is minutes of an unexplained spinner.
-            onProgress: (perType) => {
-                void context.sendMessage(IMPORT_PROGRESS_MESSAGE, {
-                    activationId: record.activationId,
-                    operation: record.operation,
-                    perType,
-                });
-                // The SAME progress on the shared channel, so closing the modal
-                // can hand the job to a notification that keeps narrating
-                // (PL-59 R8). The modal's own view is richer — per type, with
-                // counts — and stays where it is.
-                void pushOperationProgress({
-                    id: DATAPACK_OPERATION_ID,
-                    state: 'running',
-                    ...datapackStage(record.operation, perType),
-                });
-            },
-        });
-        await pushOperationProgress(
-            result.outcome === 'success'
-                ? { id: DATAPACK_OPERATION_ID, state: 'succeeded' }
-                : {
-                      id: DATAPACK_OPERATION_ID,
-                      state: 'failed',
-                      error: result.reason ?? 'The job did not finish.',
-                  },
-        );
-        await transient.set(JOB_KEY, {
-            ...record,
-            outcome: result.outcome,
-            perType: result.perType,
-            ...(result.reason ? { reason: result.reason } : {}),
-            ...(result.processingTimeMs !== undefined
-                ? { processingTimeMs: result.processingTimeMs }
-                : {}),
-        });
-    } catch (error) {
-        const reason = error instanceof Error ? error.message : String(error);
-        context.logger.warn(
-            `[Data Installer] Stopped watching import ${record.activationId}: ${reason}`,
-        );
-        await stopWatching(transient, record, reason);
-    }
-}
-
-/**
- * Record that the watch ended without an answer.
- *
- * The reason IS the payload: "we stopped looking" is not actionable without
- * saying why, and this is the only place the cause exists.
- */
-async function stopWatching(
-    transient: TransientStateManager,
-    record: ImportJobRecord,
-    reason: string,
-): Promise<void> {
-    await transient.set(JOB_KEY, { ...record, outcome: 'unwatchable', reason });
-}
-
-/**
- * Validate, begin, record, and detach the watch — the half import and reset share.
- *
- * These two handlers were a verbatim 35-line copy of each other, differing only
- * in which client method they call and two message strings. `prepareImport` was
- * already extracted at the second caller because "the two paths have to agree
- * byte for byte"; the RECORDING half was not, and it is the half that already
- * drifted once — `operation` was added to `ImportJobRecord` precisely because a
- * reset announced itself as "Import finished" in front of a user.
- *
- * The watch is DETACHED on purpose: awaiting it would hold the webview request
- * open for the ten minutes a long install can take, and tie the job's life to
- * the panel's.
- */
-async function runAndWatch(
-    context: HandlerContext,
-    writeClient: DataInstallerWriteClient,
-    request: ImportRequest,
-    spec: {
-        operation: ImportJobRecord['operation'];
-        begin: () => Promise<{ activationId: string }>;
-        /** Wording when the service refuses the request shape. */
-        rejected: string;
-        /** Wording when the call itself fails. */
-        failed: string;
-    },
-): Promise<HandlerResponse> {
-    try {
-        const verdict = await writeClient.validateImport(request);
-        if (!verdict.valid) {
-            return { success: false, error: verdict.reason ?? spec.rejected };
-        }
-
-        const started = await spec.begin();
-        const record: ImportJobRecord = {
-            activationId: started.activationId,
-            datapackName: request.id.name,
-            operation: spec.operation,
-            version: request.id.version,
-            commerceInstance: request.commerceInstance,
-            dataTypes: request.dataTypes,
-            startedAt: new Date().toISOString(),
-            outcome: 'watching',
-            perType: {},
-        };
-        const transient = new TransientStateManager(context.context);
-        await transient.set(JOB_KEY, record);
-
-        await recordDatapackOnProject(context, spec.operation, request);
-
-        void watchAndRecord(context, transient, record);
-
-        return { success: true, data: { activationId: started.activationId } };
-    } catch (error) {
-        return {
-            success: false,
-            error: error instanceof Error ? error.message : spec.failed,
-            code: ErrorCode.UNKNOWN,
-        };
-    }
-}
-
-/**
- * Record on the PROJECT which datapack its instance now holds — or no longer does.
- *
- * `project.datapack` was written only by the wizard's Sample Data step, so a pack
- * imported from this modal left no trace on the project. `confirmSampleDataRemoval`
- * gates on exactly that field, so reset silently never offered to remove data the
- * user had just imported. Found live 2026-08-16: an import succeeded, and the
- * following reset asked nothing.
- *
- * **Recorded when the service ACCEPTS, not when the job finishes.** A partial
- * import still puts data on the instance, and a record written only on full
- * success would leave that data with nothing pointing at it — the failure mode
- * worth avoiding. The opposite error (recording a pack whose import then failed
- * entirely) costs one removal that reports nothing to remove.
- *
- * A reset CLEARS it: the manifest is rebuilt from the project on every write
- * (`projectConfigWriter`, "no merging needed"), so `undefined` genuinely removes
- * the field rather than leaving the old value behind.
- *
- * Never fatal. The import has already been accepted by the service by this point,
- * and failing the handler over a bookkeeping write would report a started job as
- * a failed one.
- */
-async function recordDatapackOnProject(
-    context: HandlerContext,
-    operation: ImportJobRecord['operation'],
-    request: ImportRequest,
-): Promise<void> {
-    try {
-        const project = await context.stateManager.getCurrentProject();
-        if (!project) {
-            return;
-        }
-        project.datapack =
-            operation === 'reset' ? undefined : { name: request.id.name, version: request.id.version };
-        await context.stateManager.saveProject(project);
-        context.debugLogger.debug(
-            `[Data Installer] project datapack ${operation === 'reset' ? 'cleared' : `recorded as ${request.id.name}@${request.id.version}`}`,
-        );
-    } catch (error) {
-        context.debugLogger.debug(
-            `[Data Installer] could not record the datapack on the project: ${
-                error instanceof Error ? error.message : String(error)
-            }`,
-        );
-    }
 }
 
 

@@ -14,7 +14,7 @@
  *   `get-export-items` refuses it and needs the REST base URL, because the
  *   deployment config that enables the id shorthand is not set for that action.
  *   {@link deriveRestBaseUrl} produces the second from the project.
- * - **`verbose` is mandatory**, enforced in the write client: without it a
+ * - **`verbose` is mandatory**, enforced in the export client: without it a
  *   failed export returns an all-zero summary and no reason at all.
  * - **A failed export is a VERDICT**, not a failed call — `success: true` with
  *   the per-type reasons in `data`, matching the dry run's shape.
@@ -29,10 +29,10 @@
 import { canProvisionAccsCredentials } from '../services/accsProvisionEligibility';
 import { resolveProjectCredentials } from '../services/commerceCredentialBroker';
 import {
-    DataInstallerWriteClient,
+    DataInstallerExportClient,
     type ExportRequest,
     type ExportOutcome,
-} from '../services/dataInstallerWriteClient';
+} from '../services/dataInstallerExportClient';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import { ACCS_GRAPHQL_ENDPOINT, PAAS_URL } from '@/core/config/envVarKeys';
 import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
@@ -94,7 +94,7 @@ export const exportHandlers = defineHandlers({
      *
      * A failed export is a VERDICT, not a failed call: `success: true` with the
      * per-type reasons in `data`, the same shape the dry run uses. The reason
-     * only exists because the client asks for `verbose` — see the write client.
+     * only exists because the client asks for `verbose` — see the export client.
      */
     'start-datapack-export': async (
         context: HandlerContext,
@@ -170,7 +170,7 @@ async function prepareExport(
     context: HandlerContext,
     payload: ExportPayload | undefined,
 ): Promise<
-    { writeClient: DataInstallerWriteClient; request: ExportRequest } | { response: HandlerResponse }
+    { writeClient: DataInstallerExportClient; request: ExportRequest } | { response: HandlerResponse }
 > {
     const name = payload?.datapackName;
     const version = payload?.version;
@@ -219,7 +219,7 @@ async function prepareExport(
     }
 
     return {
-        writeClient: new DataInstallerWriteClient({
+        writeClient: new DataInstallerExportClient({
             baseUrl: access.baseUrl,
             getToken: access.getToken,
             log: (line) => context.debugLogger.debug(`[Data Installer] ${line}`),

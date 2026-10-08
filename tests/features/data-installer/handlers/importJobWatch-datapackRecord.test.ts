@@ -1,5 +1,6 @@
 /**
- * An import from the modal must leave a mark on the PROJECT.
+ * An import from the modal must leave a mark on the PROJECT (`recordDatapackOnProject`
+ * in `importJobWatch.ts`, driven through the merged handler map).
  *
  * `project.datapack` was written only by the wizard's Sample Data step. A pack
  * imported from the Data Installer modal left the project unchanged — and

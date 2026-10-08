@@ -17,27 +17,17 @@
  * and where that came from; the modal shows the source and keeps the field
  * editable, because a derived write target still has to be checkable by a human.
  *
- * Deliberately in `importHandlers` rather than the read map: the read map is
- * mirrored by the MCP read descriptors, and this is the import modal's own prefill
- * rather than something an agent needs.
+ * Deliberately merged into `importHandlers` rather than the read map: the read map
+ * is mirrored by the MCP read descriptors, and this is the import modal's own
+ * prefill rather than something an agent needs. Lives in `importTargetHandlers.ts`
+ * since the 2026-10-08 split.
  *
  * Strict TDD: written BEFORE the handler exists.
  */
 
-// The family helper owns the module wall AND re-exports the handler. It must be
-// imported BEFORE anything it mocks, and the handler must come from it — a direct
-// import of the SUT loads the real module before these mocks register.
-import { importHandlers } from './importHandlers.testUtils';
-import * as vscode from 'vscode';
+import { importTargetHandlers } from '@/features/data-installer/handlers/importTargetHandlers';
 import type { Project } from '@/types/base';
-import { createMockStateManager } from '../../../helpers/stateManagerFake';
-import { createMockLogger } from '../../../helpers/loggerFake';
-import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
-import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
-import {
-    createStatefulGlobalState,
-    createMockExtensionContext,
-} from '../../../helpers/extensionContextFake';
+import { makeTargetHarness } from './importTargetHandlers.testUtils';
 
 /** The 22-character base62 tenant id the endpoint carries. */
 const TENANT = 'UoGYsHrcxMyeoVd2zUktZi';
@@ -62,24 +52,8 @@ const PAAS_PROJECT: Partial<Project> = {
     },
 };
 
-function makeImportHarness(project: unknown) {
-    return createMockHandlerContext({
-        logger: createMockLogger(),
-        debugLogger: createMockLogger(),
-        panel: {} as vscode.WebviewPanel,
-        context: createMockExtensionContext({
-            globalState: createStatefulGlobalState().globalState,
-            secrets: createMockSecretStorage().secrets,
-        }),
-        stateManager: createMockStateManager({
-            getCurrentProject: jest.fn().mockResolvedValue(project),
-        }),
-        sendMessage: jest.fn(),
-    });
-}
-
 async function target(project: unknown) {
-    const result = await importHandlers['get-datapack-import-target'](makeImportHarness(project));
+    const result = await importTargetHandlers['get-datapack-import-target'](makeTargetHarness(project));
     return result.data as {
         instance?: string;
         projectName?: string;
@@ -216,8 +190,8 @@ describe('get-datapack-import-target', () => {
     // along and the modal leads with it.
     describe('the human-readable handle', () => {
         it('reports the read as successful when it has an instance to offer', async () => {
-        const result = await importHandlers['get-datapack-import-target'](
-            makeImportHarness(ACCS_PROJECT)
+        const result = await importTargetHandlers['get-datapack-import-target'](
+            makeTargetHarness(ACCS_PROJECT)
         );
 
         expect(result.success).toBe(true);
@@ -268,8 +242,8 @@ describe('get-datapack-import-target', () => {
         });
 
         it('succeeds with no instance when no project is open', async () => {
-            const result = await importHandlers['get-datapack-import-target'](
-                makeImportHarness(null)
+            const result = await importTargetHandlers['get-datapack-import-target'](
+                makeTargetHarness(null)
             );
 
             // Not a failure: the catalog is browsable with no project, and the

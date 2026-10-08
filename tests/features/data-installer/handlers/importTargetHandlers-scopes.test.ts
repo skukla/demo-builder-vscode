@@ -15,25 +15,17 @@
  * fetched) and belongs to another team's stage service. `discoverStoreStructure`
  * is three-level, admin-stripped at the seam, and ours to fix.
  *
- * Strict TDD: written BEFORE the handler exists.
+ * Strict TDD: written BEFORE the handler exists. Lives in `importTargetHandlers.ts`
+ * since the 2026-10-08 split.
  */
 
-// The write-client and job-runner mocks, and the handlers loaded after them, come
-// from the family helper (PL-51): a direct import would bind the real modules.
-import { importHandlers } from './importHandlers.testUtils';
+import { importTargetHandlers } from '@/features/data-installer/handlers/importTargetHandlers';
 import { discoverStoreStructure } from '@/features/eds/services/commerceStoreDiscovery';
 import { resolveCommerceCredentials } from '@/features/data-installer/services/commerceCredentials';
 import type { Project } from '@/types/base';
 import type { CommerceStoreStructure } from '@/types/commerceStore';
-import { createMockStateManager } from '../../../helpers/stateManagerFake';
-import { createMockLogger } from '../../../helpers/loggerFake';
-import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
-import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
-import {
-    createStatefulGlobalState,
-    createMockExtensionContext,
-} from '../../../helpers/extensionContextFake';
 import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
+import { makeTargetHarness } from './importTargetHandlers.testUtils';
 
 jest.mock('@/features/eds/services/commerceStoreDiscovery', () => ({
     discoverStoreStructure: jest.fn(),
@@ -96,22 +88,12 @@ function paasProject(): Partial<Project> {
 }
 
 function makeImportHarness(project: unknown = paasProject()) {
-    return createMockHandlerContext({
-        logger: createMockLogger(),
-        debugLogger: createMockLogger(),
+    return makeTargetHarness(project, {
         authManager: createMockAuthenticationService({
             getTokenManager: jest.fn().mockReturnValue({
                 inspectToken: jest.fn().mockResolvedValue({ valid: true, token: 'tok' }),
             }),
         }),
-        context: createMockExtensionContext({
-            globalState: createStatefulGlobalState().globalState,
-            secrets: createMockSecretStorage().secrets,
-        }),
-        stateManager: createMockStateManager({
-            getCurrentProject: jest.fn().mockResolvedValue(project),
-        }),
-        sendMessage: jest.fn(),
     });
 }
 
@@ -133,7 +115,7 @@ describe('list-datapack-import-scopes', () => {
     it('returns each website with the store views that belong to it', async () => {
         const context = makeImportHarness();
 
-        const result = await importHandlers['list-datapack-import-scopes'](context);
+        const result = await importTargetHandlers['list-datapack-import-scopes'](context);
 
         expect(result.success).toBe(true);
         expect(websitesOf(result)).toEqual([
@@ -157,7 +139,7 @@ describe('list-datapack-import-scopes', () => {
     it('never puts credentials in the response', async () => {
         const context = makeImportHarness();
 
-        const result = await importHandlers['list-datapack-import-scopes'](context);
+        const result = await importTargetHandlers['list-datapack-import-scopes'](context);
 
         expect(JSON.stringify(result)).not.toContain('fake-test-pw-not-a-secret');
         expect(JSON.stringify(result)).not.toContain('admin');
@@ -170,7 +152,7 @@ describe('list-datapack-import-scopes', () => {
         });
         const context = makeImportHarness();
 
-        const result = await importHandlers['list-datapack-import-scopes'](context);
+        const result = await importTargetHandlers['list-datapack-import-scopes'](context);
 
         expect(result.success).toBe(false);
         expect(result.error).toContain('Connection timed out.');
@@ -187,7 +169,7 @@ describe('list-datapack-import-scopes', () => {
         // then asserts the no-project path against a project.
         const context = makeImportHarness(null);
 
-        const result = await importHandlers['list-datapack-import-scopes'](context);
+        const result = await importTargetHandlers['list-datapack-import-scopes'](context);
 
         expect(result.success).toBe(true);
         expect(websitesOf(result)).toStrictEqual([]);
@@ -208,7 +190,7 @@ describe('list-datapack-import-scopes', () => {
             componentConfigs: { 'adobe-commerce-paas': {} },
         });
 
-        const result = await importHandlers['list-datapack-import-scopes'](context);
+        const result = await importTargetHandlers['list-datapack-import-scopes'](context);
 
         expect(result.success).toBe(true);
         expect(websitesOf(result)).toStrictEqual([]);
@@ -219,7 +201,7 @@ describe('list-datapack-import-scopes', () => {
         mockedCredentials.mockResolvedValue({ ok: false, reason: 'missing-paas-admin' });
         const context = makeImportHarness();
 
-        const result = await importHandlers['list-datapack-import-scopes'](context);
+        const result = await importTargetHandlers['list-datapack-import-scopes'](context);
 
         expect(result.success).toBe(true);
         expect(websitesOf(result)).toStrictEqual([]);

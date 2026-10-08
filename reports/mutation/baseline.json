@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "EDS-8 2026-10-08: helixSiteContent.ts split by job. The old file had no row and its unsplit measure was stopped (the focus run fell back to 335 import-graph suites), so there is no before number. After, each with a direct suite of its own: the site-publish policy remainder 82.76, helixBulkPublish 84.55, helixPageDiscovery 92.31. Survivors are log and progress wording plus two ledgered double guards in the path conversion; openGaps 0 on all three.",
+    "_note": "EDS-8 2026-10-08: the three data-installer files that share tests and callers split by job. importHandlers.ts 89.57 (row of 2026-09-05) -> 90.45 for the import/validate/reset spine; its watch half is importJobWatch.ts, measured on its own for the first time: 48.96 before gap-closing, 87.37 after — the shared-channel push (datapackStage, pushOperationProgress; landed 2026-09-20, after the row) had no test, and the stage counter read .status off plain status strings so done was always 0 (fixed, pinned). provisionAccsHandler.ts 93.10 (downloader wiring + the kept ACCS config pinned) and importTargetHandlers.ts 100.00 are its other pieces. dataInstallerWriteClient.ts 90.48 -> 91.67 (import/validate/delete; the no-activation-id errors now name their action); the export half is dataInstallerExportClient.ts 97.37. dataInstallerClient.ts 95.65 -> 98.53 (read endpoints, each now pinned to its action path); its wire layer is dataInstallerTransport.ts 96.81. Remaining survivors are log and message text, plus the ledgered guard/catch in recordDatapackOnProject and the ledgered checkShape branch.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -4661,26 +4661,23 @@
             "openGaps": 0
         },
         "src/features/data-installer/handlers/importHandlers.ts": {
-            "score": 89.57,
-            "killed": 292,
-            "survived": 31,
-            "noCoverage": 3,
+            "score": 90.45,
+            "killed": 142,
+            "survived": 13,
+            "noCoverage": 2,
             "timeout": 0,
             "survivorCategories": {
-                "string": 8,
-                "logPresentation": 15,
-                "block": 2,
-                "branch": 1,
+                "string": 6,
+                "logPresentation": 2,
                 "optionalChain": 4,
                 "other": 1
             },
             "uncoveredCategories": {
-                "logPresentation": 1,
                 "string": 1,
                 "other": 1
             },
-            "highValueSurvivors": 3,
-            "equivalent": 9,
+            "highValueSurvivors": 0,
+            "equivalent": 6,
             "openGaps": 0
         },
         "src/features/data-installer/services/accsCredentialProvisioner.ts": {
@@ -4732,22 +4729,17 @@
             "openGaps": 0
         },
         "src/features/data-installer/services/dataInstallerClient.ts": {
-            "score": 95.65,
-            "killed": 154,
-            "survived": 6,
-            "noCoverage": 1,
+            "score": 98.53,
+            "killed": 67,
+            "survived": 1,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "string": 3,
-                "branch": 1,
-                "other": 1,
-                "block": 1
-            },
-            "uncoveredCategories": {
                 "string": 1
             },
-            "highValueSurvivors": 2,
-            "equivalent": 3,
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
             "openGaps": 0
         },
         "src/features/data-installer/services/dataInstallerConfig.ts": {
@@ -4793,21 +4785,18 @@
             "openGaps": 0
         },
         "src/features/data-installer/services/dataInstallerWriteClient.ts": {
-            "score": 90.48,
-            "killed": 209,
-            "survived": 18,
-            "noCoverage": 4,
+            "score": 91.67,
+            "killed": 110,
+            "survived": 10,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "string": 17,
+                "string": 9,
                 "block": 1
             },
-            "uncoveredCategories": {
-                "string": 3,
-                "other": 1
-            },
+            "uncoveredCategories": {},
             "highValueSurvivors": 1,
-            "equivalent": 2,
+            "equivalent": 1,
             "openGaps": 0
         },
         "src/features/data-installer/services/datapackCatalog.ts": {
@@ -9746,6 +9735,81 @@
             "uncoveredCategories": {},
             "highValueSurvivors": 0,
             "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/data-installer/handlers/provisionAccsHandler.ts": {
+            "score": 93.1,
+            "killed": 54,
+            "survived": 3,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 3
+            },
+            "uncoveredCategories": {
+                "logPresentation": 1
+            },
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/data-installer/services/dataInstallerExportClient.ts": {
+            "score": 97.37,
+            "killed": 111,
+            "survived": 0,
+            "noCoverage": 3,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {
+                "string": 2,
+                "other": 1
+            },
+            "highValueSurvivors": 0,
+            "equivalent": 1,
+            "openGaps": 0
+        },
+        "src/features/data-installer/handlers/importJobWatch.ts": {
+            "score": 87.37,
+            "killed": 83,
+            "survived": 12,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 9,
+                "block": 2,
+                "branch": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 3,
+            "equivalent": 3,
+            "openGaps": 0
+        },
+        "src/features/data-installer/handlers/importTargetHandlers.ts": {
+            "score": 100,
+            "killed": 59,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/data-installer/services/dataInstallerTransport.ts": {
+            "score": 96.81,
+            "killed": 91,
+            "survived": 3,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 1,
+                "branch": 1,
+                "other": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 1,
+            "equivalent": 3,
             "openGaps": 0
         }
     }
