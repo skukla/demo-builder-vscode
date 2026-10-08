@@ -11,10 +11,14 @@
  * @module features/app-builder/services/componentEntry
  */
 
-import { buildCustomIntegrationEntry , getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
+import type { RepoNodeChoice } from '@/core/shell/nodeRangeRule';
+import {
+    buildCustomIntegrationEntry,
+    getAppBuilderComponentCatalog,
+    isSameRepo,
+} from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { pairedInstanceId } from '@/features/components/services/appBuilderComponentLinks';
-import { demoBuilderNode, nodeForAppBuilderEntry } from '@/core/shell/demoBuilderNode';
-import type { RepoNodeChoice } from '@/features/components/services/nodeResolution';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState, Project } from '@/types/base';
 
@@ -97,26 +101,15 @@ export function entryFromState(
     };
 }
 
-/**
- * The Node a component installs and deploys on: the entry's own version, else the
- * Adobe CLI's (the register, PR-1a). Here beside the entry lookup because every
- * caller that has an entry asks this next.
- *
- * @param entry - the catalog entry (from {@link catalogEntryFor})
- * @returns the Node major
- */
-export function nodeVersionOf(entry: Pick<AppBuilderComponentCatalogEntry, 'nodeVersion'>): string {
-    return nodeForAppBuilderEntry(entry);
-}
+/** A component's Node, from core: re-exported so the runner reads it beside its entry. */
+export { nodeForAppBuilderEntry } from '@/core/shell/demoBuilderNode';
 
 /** Reads an SC's own repo's Node range and picks its Node (`ownRepoNode.ts` builds it). */
 export type OwnRepoNodeResolver = (source: { owner: string; repo: string; branch?: string }) => Promise<RepoNodeChoice>;
 
 /** A repo the bundled catalog ships: its range is already part of Demo Builder's Node. */
 function isCatalogRepo(source: { owner: string; repo: string }): boolean {
-    return getAppBuilderComponentCatalog().some(
-        (entry) => entry.source.owner === source.owner && entry.source.repo === source.repo,
-    );
+    return getAppBuilderComponentCatalog().some((entry) => isSameRepo(entry.source, source));
 }
 
 /**

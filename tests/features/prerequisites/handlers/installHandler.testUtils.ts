@@ -212,7 +212,6 @@ export function createInstallHandlerContext(overrides?: Partial<HandlerContext>)
             getPrerequisiteById: jest.fn(),
             getRequiredPrerequisites: jest.fn().mockReturnValue([]),
             checkAllPrerequisites: jest.fn().mockResolvedValue([]),
-            getLatestInFamily: jest.fn(),
             loadConfig: jest.fn(),
             getInstallSteps: jest.fn().mockReturnValue({
                 steps: [

@@ -4,7 +4,7 @@
  * Detects and manages multiple Node.js versions installed via fnm.
  */
 
-import { buildMajorToFullVersionMap, parseMajorVersions, isValidVersionFamily } from './NodeVersionParser';
+import { buildMajorToFullVersionMap, parseMajorVersions } from './NodeVersionParser';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { fnmStoreProcessEnv } from '@/core/shell/nodeStore';
@@ -93,46 +93,4 @@ export async function getInstalledNodeVersions(
         logger.warn(`[Prerequisites] Could not get installed Node versions: ${error}`);
         return [];
     }
-}
-
-/**
- * Get the latest available version in a version family from fnm remote list
- * @param versionFamily - Version family (e.g., '20' for 20.x)
- * @param logger - Logger instance
- * @returns Latest version string or null if not found
- */
-export async function getLatestInFamily(
-    versionFamily: string,
-    commandManager: CommandExecutor,
-    logger: Logger,
-): Promise<string | null> {
-    // SECURITY: Validate versionFamily to prevent command injection
-    // Only allow digits (e.g., "18", "20", "22")
-    if (!isValidVersionFamily(versionFamily)) {
-        logger.warn(`[Prerequisites] Invalid version family rejected: ${versionFamily}`);
-        return null;
-    }
-
-    try {
-        // SECURITY: Use Node.js string processing instead of shell pipes
-        // Eliminates shell injection risk entirely (defense-in-depth)
-        const { stdout } = await commandManager.execute('fnm list-remote', {
-            timeout: TIMEOUTS.PREREQUISITE_CHECK,
-        });
-
-        if (stdout) {
-            // Filter versions using Node.js (no shell involved)
-            const versions = stdout
-                .split('\n')
-                .filter(line => line.trim().startsWith(`v${versionFamily}.`));
-
-            if (versions.length > 0) {
-                // Return first match (latest)
-                return versions[0].trim().replace('v', '');
-            }
-        }
-    } catch (error) {
-        logger.warn(`Could not get latest version for Node ${versionFamily}: ${error}`);
-    }
-    return null;
 }

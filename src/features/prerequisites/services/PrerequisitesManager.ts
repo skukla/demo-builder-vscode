@@ -17,7 +17,7 @@ import { formatDuration } from '@/core/utils/timeFormatting';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getInstallSteps } from '@/features/prerequisites/services/installation/InstallStepBuilder';
 import { resolveDependencies } from '@/features/prerequisites/services/versioning/DependencyResolver';
-import { checkMultipleNodeVersions, getInstalledNodeVersions, getLatestInFamily } from '@/features/prerequisites/services/versioning/MultiVersionDetector';
+import { checkMultipleNodeVersions, getInstalledNodeVersions } from '@/features/prerequisites/services/versioning/MultiVersionDetector';
 import { checkVersionSatisfaction } from '@/features/prerequisites/services/versioning/VersionSatisfactionChecker';
 import { Logger } from '@/types/logger';
 import type { InstallStep, ProgressMilestone } from '@/types/prerequisites';
@@ -427,11 +427,6 @@ export class PrerequisitesManager {
             commands,
             message: firstStep?.message || (plugin.install as { message?: string }).message,
         };
-    }
-
-    // Delegate to extracted module
-    async getLatestInFamily(versionFamily: string): Promise<string | null> {
-        return getLatestInFamily(versionFamily, this.commandManager, this.logger);
     }
 
     // Delegate to extracted module

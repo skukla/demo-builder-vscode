@@ -85,7 +85,7 @@
         "tests/features/prerequisites/handlers/shared-per-node-status.test.ts": 1,
         "tests/features/prerequisites/services/PrerequisitesManager-checking.test.ts": 1,
         "tests/features/prerequisites/services/prerequisitesCacheManager-collaborators.test.ts": 2,
-        "tests/features/prerequisites/services/versioning/MultiVersionDetector.test.ts": 2,
+        "tests/features/prerequisites/services/versioning/MultiVersionDetector.test.ts": 1,
         "tests/features/prerequisites/services/versioning/VersionSatisfactionChecker.test.ts": 2,
         "tests/features/project-creation/commands/createProject-initialData.test.ts": 1,
         "tests/features/project-creation/handlers/createHandler-cancellation.test.ts": 2,

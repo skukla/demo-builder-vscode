@@ -60,7 +60,7 @@ import type {
 import {
     catalogEntryFor,
     entryFromState,
-    nodeVersionOf,
+    nodeForAppBuilderEntry,
     pairedEntry,
     withOwnRepoNode,
     type OwnRepoNodeResolver,
@@ -488,7 +488,7 @@ async function cloneAndInstall(
     // The entry's own Node (an SC's own repo that needs another), else Demo Builder's:
     // the same one the deploy runs on, so install and deploy cannot disagree.
     const result = await deps.componentManager.installComponent(project, buildDefinition(entry), {
-        nodeVersion: nodeVersionOf(entry),
+        nodeVersion: nodeForAppBuilderEntry(entry),
     });
     if (!result.success || !result.component?.path) {
         return { error: result.error || 'Component installation failed.' };
@@ -850,7 +850,7 @@ async function dispatchDeploy(
         deps.logger,
         {
             onProgress: deps.onProgress,
-            nodeVersion: nodeVersionOf(entry),
+            nodeVersion: nodeForAppBuilderEntry(entry),
             layout: entry.layout,
             confirmToolchainRefresh: deps.confirmToolchainRefresh,
             extraEnv: Object.keys(extraEnv).length > 0 ? extraEnv : undefined,
@@ -1017,7 +1017,7 @@ async function runAdd(
             // and the progress channel is the surface every add path already has.
             // "Installing … (one-time install)" was said even when Node was already
             // there — every add of a pair said it twice (2026-09-21).
-            const node = nodeVersionOf(entry);
+            const node = nodeForAppBuilderEntry(entry);
             deps.onProgress?.(OPERATION_STAGES.preparingNode.label, `Node ${node}`);
             const nodeError = await deps.ensureNodeVersion?.(node);
             if (nodeError) {
@@ -1266,7 +1266,7 @@ export async function deployAppBuilderComponent(
         await deps.saveProject(project);
 
         {
-            const node = nodeVersionOf(entry);
+            const node = nodeForAppBuilderEntry(entry);
             deps.onProgress?.(OPERATION_STAGES.preparingNode.label, `Node ${node}`);
             const nodeError = await deps.ensureNodeVersion?.(node);
             if (nodeError) {
@@ -1386,7 +1386,7 @@ export async function updateAppBuilderComponent(
         const dependencies = await deps.installComponentDependencies(
             componentPath,
             buildDefinition(entry),
-            nodeVersionOf(entry),
+            nodeForAppBuilderEntry(entry),
         );
         if (!dependencies.success) {
             return {

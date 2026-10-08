@@ -75,7 +75,7 @@ import { registerViewTools } from '@/features/ai/server/viewTools';
 import { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { sweepCommerceSecrets } from '@/features/components/services/commerceSecretSweep';
 import { ComponentManager } from '@/features/components/services/componentManager';
-import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
+import { getComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
 import { ensureNode } from '@/features/components/services/nodeEnsure';
 import { bareDefinition, sweepOntoDemoBuilderNode } from '@/features/components/services/nodeMigration';
 import {
@@ -823,13 +823,14 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
  * two rather than three because the duplicate carries a SIDE EFFECT that is easy
  * to miss: `loadProjectFromPath` defaults to `persistAfterLoad: true`, so each
  * copy re-saves every project and moves `currentProject`. Two copies did that
- * twice per activation.
+ * twice per activation. A sweep that saves only what it changed passes
+ * `persistAfterLoad: false` (the Node sweep).
  */
-async function loadAllProjects(): Promise<Project[]> {
+async function loadAllProjects(options: { persistAfterLoad?: boolean } = {}): Promise<Project[]> {
     const summaries = await stateManager.getAllProjects();
     const projects: Project[] = [];
     for (const summary of summaries) {
-        const project = await stateManager.loadProjectFromPath(summary.path);
+        const project = await stateManager.loadProjectFromPath(summary.path, undefined, options);
         if (project) projects.push(project);
     }
     return projects;
@@ -915,12 +916,9 @@ async function sweepDemoBuilderNode(context: vscode.ExtensionContext): Promise<v
     try {
         const node = demoBuilderNode();
         const installer = new ComponentManager(logger, externalCommandManager);
-        const registry = new ComponentRegistryManager(context.extensionPath);
-        const summaries = await stateManager.getAllProjects();
-        const loaded = await Promise.all(summaries.map((s) =>
-            stateManager.loadProjectFromPath(s.path, undefined, { persistAfterLoad: false })));
+        const registry = getComponentRegistryManager(context.extensionPath);
         const result = await sweepOntoDemoBuilderNode({
-            projects: loaded.filter((project): project is Project => project !== null),
+            projects: await loadAllProjects({ persistAfterLoad: false }),
             node,
             nodeReady: async () => (await listStoreMajors(externalCommandManager)).includes(node)
                 && adobeCliInstalledUnder(externalCommandManager, node),

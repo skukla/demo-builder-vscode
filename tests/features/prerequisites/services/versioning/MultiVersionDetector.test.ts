@@ -25,7 +25,6 @@ const executor = createMockCommandExecutor({ execute: mockExecute });
 import {
     checkMultipleNodeVersions,
     getInstalledNodeVersions,
-    getLatestInFamily,
 } from '@/features/prerequisites/services/versioning/MultiVersionDetector';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
@@ -45,8 +44,6 @@ const FNM_LIST = [
 ].join('\n');
 
 /** Real `fnm list-remote` shape: newest last in fnm's own ordering. */
-const FNM_REMOTE = ['v20.19.4', 'v20.19.5', 'v20.19.6', 'v22.21.1'].join('\n');
-
 function makeLogger(): Logger {
     return createMockLogger() as unknown as Logger;
 }
@@ -125,46 +122,3 @@ describe('getInstalledNodeVersions', () => {
     });
 });
 
-describe('getLatestInFamily', () => {
-    it('REJECTS a non-numeric family without touching the executor (injection guard)', async () => {
-        const logger = makeLogger();
-
-        await expect(getLatestInFamily('20; rm -rf /', executor, logger)).resolves.toBeNull();
-
-        // The guard's whole point: no command is built at all.
-        expect(mockExecute).not.toHaveBeenCalled();
-        expect(logger.warn).toHaveBeenCalledWith(
-            expect.stringContaining('Invalid version family rejected')
-        );
-    });
-
-    it('returns the first matching version in the family, without the v prefix', async () => {
-        mockExecute.mockResolvedValue({ stdout: FNM_REMOTE });
-
-        await expect(getLatestInFamily('20', executor, makeLogger())).resolves.toBe('20.19.4');
-        expect(mockExecute).toHaveBeenCalledWith('fnm list-remote', {
-            timeout: TIMEOUTS.PREREQUISITE_CHECK,
-        });
-    });
-
-    it('answers null when the family has no remote versions', async () => {
-        mockExecute.mockResolvedValue({ stdout: FNM_REMOTE });
-
-        await expect(getLatestInFamily('19', executor, makeLogger())).resolves.toBeNull();
-    });
-
-    it('matches and returns a padded remote line as the bare version', async () => {
-        // Both trims in this function are load-bearing on the same input: the
-        // one in the filter decides whether the line matches the family at all,
-        // and the one on the way out decides what the caller is handed.
-        mockExecute.mockResolvedValue({ stdout: ['  v20.19.4', '  v20.19.5'].join('\n') });
-
-        await expect(getLatestInFamily('20', executor, makeLogger())).resolves.toBe('20.19.4');
-    });
-
-    it('answers null when the remote list cannot be fetched', async () => {
-        mockExecute.mockRejectedValue(new Error('offline'));
-
-        await expect(getLatestInFamily('20', executor, makeLogger())).resolves.toBeNull();
-    });
-});

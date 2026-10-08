@@ -3950,33 +3950,9 @@
         {
             "module": "src/features/prerequisites/services/versioning/MultiVersionDetector.ts",
             "anchors": [
-                "if (stdout) {"
-            ],
-            "mutants": 1,
-            "category": "branch",
-            "reason": "Forcing this guard true returns null either way. An empty stdout splits to one empty line, matches no family and falls through to the same return; an undefined stdout makes .split throw, and the catch four lines below turns that into the identical null. The only difference between the two paths is whether a warning naming the family is written to the debug channel.",
-            "decision": "none \u2014 the guard keeps a shell that answered nothing out of the warning log",
-            "recorded": "2026-09-04",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/prerequisites/services/versioning/MultiVersionDetector.ts",
-            "anchors": [
-                "if (versions.length > 0) {"
-            ],
-            "mutants": 2,
-            "category": "branch",
-            "reason": "Both mutants admit the empty array, and reading versions[0] off it throws a TypeError that the enclosing catch converts into the same null this guard falls through to. There is no stdout for which the caller sees a different value; only the warning line differs, and it names an error rather than the absence the code actually found.",
-            "decision": "none \u2014 the guard reports 'no version in this family' as null rather than as a caught TypeError",
-            "recorded": "2026-09-04",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/prerequisites/services/versioning/MultiVersionDetector.ts",
-            "anchors": [
                 "} catch (error) {"
             ],
-            "line": 134,
+            "line": 92,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying the catch BODY does not remove the catch clause, so a failing fnm list-remote is still swallowed and the function still returns the null on the last line. The body holds one logger.warn and nothing else, so the mutant is observable only as a missing log line, which is exactly what the ratchet refuses to reward a test for pinning.",
@@ -8514,7 +8490,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 902,
+            "line": 903,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here it is the manifest-format sweep.",
@@ -10142,7 +10118,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 236,
+            "line": 234,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger.debug. Emptying it leaves detectedVersion untouched and falls through to the commit-hash strategy exactly as before; only the log line differs.",
@@ -14785,7 +14761,7 @@
             "anchors": [
                 "return firstInstalled?.component || undefined;"
             ],
-            "line": 474,
+            "line": 469,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "extractVersionFromPerNodeStatus is called from exactly one place, under `if (anyInstalled)`, and anyInstalled is `perNodeVersionStatus.some(v => v.installed)` over the same array this searches. So the find always hits and firstInstalled is never undefined when the line runs.",

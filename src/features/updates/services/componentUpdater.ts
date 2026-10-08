@@ -7,8 +7,8 @@ import { isMeshComponentId } from '@/core/constants';
 import { classifyTransience, extractErrorMessage } from '@/core/errors';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
+import { nodeForInstall } from '@/core/shell/demoBuilderNode';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { Project } from '@/types/base';
 import type { TransformedComponentDefinition } from '@/types/components';
 import type { Logger } from '@/types/logger';
@@ -22,14 +22,6 @@ import { parseJSON } from '@/types/typeGuards';
  * these should find the same shape wherever a build or deploy step failed.
  */
 const BUILD_OUTPUT_LOG_LIMIT = 500;
-
-/**
- * The Node a component installs under: Demo Builder's own (PR-1a), or null for one
- * that installs nothing (an EDS storefront) or that the catalog does not know.
- */
-function nodeVersionOf(componentDef: TransformedComponentDefinition | undefined): string | null {
-    return componentDef && componentDef.configuration?.skipNpmInstall !== true ? demoBuilderNode() : null;
-}
 
 export class ComponentUpdater {
     private logger: Logger;
@@ -165,7 +157,7 @@ export class ComponentUpdater {
                     // During rollback, we just want to get dependencies installed
                     let nodeVersion: string | null = null;
                     try {
-                        nodeVersion = nodeVersionOf(await this.componentDefinition(componentId));
+                        nodeVersion = nodeForInstall(await this.componentDefinition(componentId));
                     } catch (_error) {
                         this.logger.debug('[Updates] Could not determine node version from registry, using default');
                     }
@@ -298,7 +290,7 @@ export class ComponentUpdater {
      * A component that declares no version keeps whatever it had.
      */
     private async recordNodeVersion(project: Project, componentId: string): Promise<void> {
-        const declared = nodeVersionOf(await this.componentDefinition(componentId));
+        const declared = nodeForInstall(await this.componentDefinition(componentId));
         const instance = project.componentInstances?.[componentId];
         if (!declared || !instance) return;
         instance.metadata = { ...instance.metadata, nodeVersion: declared };
@@ -314,7 +306,7 @@ export class ComponentUpdater {
     private async runPostUpdateBuild(componentPath: string, componentId: string): Promise<void> {
         const componentDef = await this.componentDefinition(componentId);
 
-        const nodeVersion = nodeVersionOf(componentDef);
+        const nodeVersion = nodeForInstall(componentDef);
         const skipNpmInstall = componentDef?.configuration?.skipNpmInstall === true;
         const buildScript = componentDef?.configuration?.buildScript;
 

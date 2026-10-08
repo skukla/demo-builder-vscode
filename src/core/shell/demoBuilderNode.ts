@@ -15,8 +15,8 @@
  * @module core/shell/demoBuilderNode
  */
 
-import { validateNodeVersion } from '@/core/validation/validators/NodeVersionValidator';
 import generated from './config/node-version.generated.json';
+import { validateNodeVersion } from '@/core/validation/validators/NodeVersionValidator';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 
 // The value reaches shell commands; a hand-edited file must fail here, at load, not there.
@@ -33,4 +33,13 @@ export function demoBuilderNode(): string {
  */
 export function nodeForAppBuilderEntry(entry: Pick<AppBuilderComponentCatalogEntry, 'nodeVersion'>): string {
     return entry.nodeVersion ?? demoBuilderNode();
+}
+
+/**
+ * The Node a component installs its packages under: Demo Builder's Node, or null for
+ * one that installs none (`skipNpmInstall`, an EDS storefront) or that no definition
+ * describes. The one rule the installer's record and the updater both follow.
+ */
+export function nodeForInstall(definition: { configuration?: { skipNpmInstall?: boolean } } | undefined): string | null {
+    return definition && definition.configuration?.skipNpmInstall !== true ? demoBuilderNode() : null;
 }
