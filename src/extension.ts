@@ -72,6 +72,7 @@ import { registerValidateSelectionTool } from '@/features/ai/server/validateSele
 import { registerViewTools } from '@/features/ai/server/viewTools';
 import { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { sweepCommerceSecrets } from '@/features/components/services/commerceSecretSweep';
+import { moveToNodeIfItMoved } from '@/features/components/services/nodeMoveOnUpdate';
 import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 import {
     ProjectDashboardWebviewCommand,
@@ -436,6 +437,11 @@ export async function activate(context: vscode.ExtensionContext) {
                 void sweepPublishKeyRenewals(context);
             }),
         );
+
+        // A release that moved Demo Builder's Node: prepare it and move installed
+        // components to it in the background, before anyone reaches Start (PR-1a).
+        void moveToNodeIfItMoved(context, stateManager, externalCommandManager, logger).catch((error) =>
+            logger.warn(`[Node] Moving to Demo Builder's Node stopped: ${String(error)}`));
 
         // Register file watchers early (before loading projects)
         // This ensures the initializeFileHashes command exists when we need it
