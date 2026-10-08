@@ -8,11 +8,14 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/dashboard/ui/integrationsSurface/IntegrationsScreen.tsx",
-        "src/features/dashboard/ui/integrationsSurface/IntegrationsActionBand.tsx",
-        "src/features/dashboard/ui/integrationsSurface/useIntegrationCards.ts",
-        "src/features/dashboard/ui/integrationsSurface/useIntegrationCardSearch.ts",
-        "src/features/dashboard/ui/integrationsSurface/useIntegrationsScreenActions.ts"
+        "src/features/eds/services/reset/edsResetService.ts",
+        "src/features/eds/services/reset/edsResetCodeSyncStep.ts",
+        "src/features/eds/services/reset/edsResetContentStep.ts",
+        "src/features/eds/services/reset/edsResetFinalize.ts",
+        "src/features/eds/services/reset/edsResetUI.ts",
+        "src/features/eds/services/reset/edsResetPreflight.ts",
+        "src/features/eds/services/reset/edsResetNotifications.ts",
+        "src/features/eds/services/reset/edsResetSampleData.ts"
     ],
     "reporters": [
         "clear-text",

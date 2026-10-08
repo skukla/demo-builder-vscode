@@ -17,7 +17,7 @@ import {
     fakeGitHubAppService,
 } from './edsResetUI.testUtils';
 import type { DemoSourceCheck } from '@/features/eds/services/reset/demoSourceCheck';
-import type { EdsResetResult } from '@/features/eds/services/reset/edsResetService';
+import type { EdsResetResult } from '@/features/eds/services/reset/edsResetParams';
 import type { Project, ProjectStatus } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -25,6 +25,9 @@ jest.setTimeout(5000);
 
 jest.mock('@/features/eds/services/reset/edsResetService', () => ({
     executeEdsReset: jest.fn(),
+}));
+jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
+    ...jest.requireActual('@/features/eds/services/reset/edsResetParams'),
     extractResetParams: jest.fn().mockReturnValue({
         success: true,
         params: { repoOwner: 'test-owner', repoName: 'test-repo' },
@@ -172,6 +175,40 @@ describe('reset of a project built on an added demo — the source check', () =>
 
         expect(result).toEqual({ success: false, cancelled: true });
         expect(mockedReset).not.toHaveBeenCalled();
+    });
+
+    // Found by the first mutation run of edsResetUI on its own (EDS-8, 2026-10-08).
+    it('never checks a source for a project that is not built on an added demo', async () => {
+        mockedReset.mockResolvedValue({ success: true });
+        const project = createProject();
+        delete project.demo;
+
+        await resetEdsProjectWithUI({
+            githubAppService: fakeGitHubAppService,
+            meshDeps,
+            project,
+            context: createContext(),
+            repoOperations,
+        });
+
+        expect(mockedCheck).not.toHaveBeenCalled();
+        expect(mockedReset).toHaveBeenCalledTimes(1);
+    });
+
+    it("names the demo in the keep-content offer when the check gave no sentence of its own", async () => {
+        mockedCheck.mockResolvedValue({ ...CONTENT_GONE, contentMessage: undefined });
+        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValueOnce(undefined);
+        const project = createProject();
+
+        await run();
+
+        expect(vscode.window.showWarningMessage).toHaveBeenNthCalledWith(
+            1,
+            `The ${project.demo!.name} demo's pages can't be reached right now. ` +
+                'You can reset the code and keep the content this site has now.',
+            { modal: true },
+            { title: 'Keep current content' },
+        );
     });
 
     it('never sends keepContent for a reachable content site', async () => {

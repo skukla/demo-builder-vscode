@@ -1,4 +1,9 @@
 /**
+ * RENAMED from `edsResetService-finalize.test.ts` on 2026-10-08 (EDS-8 split by job):
+ * the final steps and the result moved to `edsResetFinalize.ts`.
+ * A suite is paired with the module it is named for. Still driven through the
+ * public entry point; no assertion changed in the rename.
+ *
  * EDS Reset Service — the final steps and the RESULT.
  *
  * CDN verification, the optional mesh redeploy, state persistence, the
@@ -349,5 +354,20 @@ describe('executeEdsReset - the synced commit record', () => {
 
         expect(result.success).toBe(true);
         expect(project.componentInstances).toStrictEqual({});
+    });
+
+    // Found by the first mutation run of edsResetFinalize on its own (EDS-8,
+    // 2026-10-08): every project above carried a componentInstances record, so the
+    // guard for a project with none at all was never reached.
+    it('records nothing, and still succeeds, for a project with no component instances', async () => {
+        const boilerplate = { name: '@adobe/aem-boilerplate-commerce', version: '6.0.0' };
+        mockResetRepoToTemplate.mockResolvedValue({ ...REPO_RESULT, templateCommitSha: RESET_SHA, boilerplate });
+        const project = createMockProject({ selectedPackage: 'citisignal', selectedStack: 'eds-paas' });
+        delete project.componentInstances;
+
+        const { result } = await runReset({ project });
+
+        expect(result.success).toBe(true);
+        expect(project.componentInstances).toBeUndefined();
     });
 });

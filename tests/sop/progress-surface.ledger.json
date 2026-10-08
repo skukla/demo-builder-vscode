@@ -36,10 +36,10 @@
         "src/features/lifecycle/services/projectResetService.ts:404": "Gates: delete the components and reinstall them from scratch? Configuration and integrations survive, the rest does not.",
         "src/features/updates/commands/templateConflictPrompt.ts:47": "Gates: which side wins where an update and the SC's own edits touched the same file? The update cannot proceed until someone chooses.",
         "src/features/ai/server/agentOperationNotifier.ts:164": "Gates: let the agent run this tool? A cloud write an agent proposes is confirmed by a person before it happens.",
-        "src/features/eds/services/reset/edsResetUI.ts:470": "Gates: reset this storefront to the template and re-copy demo content? Hand edits are lost.",
-        "src/features/eds/services/reset/edsResetUI.ts:726": "Gates: also reset the Commerce backend, which takes several minutes and is not needed for a storefront reset? A separate, costlier choice inside the same flow.",
+        "src/features/eds/services/reset/edsResetUI.ts:201": "Gates: reset this storefront to the template and re-copy demo content? Hand edits are lost.",
+        "src/features/eds/services/reset/edsResetSampleData.ts:103": "Gates: also remove the datapack this project imported from the Commerce instance, which takes several minutes and is not needed for a storefront reset? A separate, costlier choice inside the same flow.",
         "src/features/eds/handlers/forgetAddedDemoHandler.ts:174": "Gates: take an added demo's card off the Welcome step \u2014 and, for a demo added from a zip, whether the repository made from it goes too. Modal because the detail names what stays and what goes before the click (develop, merged 2026-09-24).",
         "src/features/eds/handlers/forgetAddedDemoHandler.ts:187": "Gates: delete the repository made from the zip file. Irreversible, so it is asked on its own, after the first choice, and only when that choice included it (develop, merged 2026-09-24).",
-        "src/features/eds/services/reset/edsResetUI.ts:633": "Gates: keep the site's current content when the demo's source pages cannot be reached \u2014 the SC chooses between resetting code only and an empty site. A decision only they can make, asked before the reset starts (develop, merged 2026-09-24)."
+        "src/features/eds/services/reset/edsResetUI.ts:364": "Gates: keep the site's current content when the demo's source pages cannot be reached \u2014 the SC chooses between resetting code only and an empty site. A decision only they can make, asked before the reset starts (develop, merged 2026-09-24)."
     }
 }

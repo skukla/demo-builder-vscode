@@ -1,17 +1,18 @@
 /**
  * EDS Reset UI Orchestration
  *
- * Handles the full reset flow with user-facing UI elements:
- * - Confirmation dialog
- * - Authentication checks (DA.live, Adobe I/O)
- * - GitHub App installation check
- * - Progress notification
- * - Success/error notifications
+ * The full reset flow with user-facing UI elements, in order:
+ * - the added-demo source check (refuses, or offers to keep the content)
+ * - the confirmation dialog, and the separate sample-data question
+ * - the progress window, with the pre-flight checks inside it
+ * - the reset itself (executeEdsReset), then the result notifications
+ *
+ * The pieces live beside it: the pre-flight checks in `edsResetPreflight`, the
+ * sample-data step in `edsResetSampleData`, the result notifications in
+ * `edsResetNotifications` (EDS-8, 2026-10-08).
  *
  * Both dashboard and projects-dashboard handlers use resetEdsProjectWithUI()
  * as the single entry point for resetting EDS projects with UI.
- *
- * Extracted from edsResetService.ts for file size management.
  *
  * @module features/eds/services/reset/edsResetUI
  */
@@ -20,22 +21,28 @@ import type { GitHubAppService } from '../github/githubAppService';
 import type { GitHubRepoOperations } from '../github/githubRepoOperations';
 import { checkDemoSource, type DemoSourceCheck } from './demoSourceCheck';
 import type { MeshRedeployDeps } from './edsResetMeshHelper';
+import { showResetResultNotifications } from './edsResetNotifications';
 import {
-    executeEdsReset,
     extractResetParams,
     type EdsResetParams,
     type EdsResetResult,
-} from './edsResetService';
-import { COMPONENT_IDS } from '@/core/constants';
+} from './edsResetParams';
+import {
+    checkAdobeAuth,
+    checkDaLiveAuth,
+    checkGitHubAppInstallation,
+    checkOrgContext,
+} from './edsResetPreflight';
+import {
+    beginSampleDataCredentialCheck,
+    confirmSampleDataRemoval,
+    removeProjectSampleData,
+} from './edsResetSampleData';
+import { executeEdsReset } from './edsResetService';
 import { resetOperationId } from '@/core/utils/operationIds';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
-import { askDuringOperation } from '@/core/vscode/operationPrompt';
-import {
-    withOperationProgress,
-    type ReportStage,
-} from '@/core/vscode/withOperationProgress';
-import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
-import type { Project, ProjectStatus } from '@/types/base';
+import { withOperationProgress } from '@/core/vscode/withOperationProgress';
+import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
 // ==========================================================
@@ -94,282 +101,6 @@ export interface EdsResetWithUIOptions {
     repoOperations?: Pick<GitHubRepoOperations, 'getRepository'>;
     /** The published-index probe for the demo's content site; defaults to global fetch. */
     fetchImpl?: typeof fetch;
-}
-
-// ==========================================================
-// Auth Checks
-// ==========================================================
-
-/**
- * Check DA.live authentication, prompting sign-in if expired.
- * @returns null if authenticated, or an EdsResetResult if auth failed/cancelled.
- */
-async function checkDaLiveAuth(
-    context: HandlerContext,
-    project: Project,
-    originalStatus: ProjectStatus,
-    logPrefix: string,
-): Promise<EdsResetResult | null> {
-    const { ensureDaLiveAuth } = await import('../../handlers/edsHelpers');
-    // The org hands the guard its server probe target: a locally-valid token
-    // the server refuses is caught HERE, before the three-minute pipeline,
-    // instead of surfacing as 52 "missing permission" 403s mid-reset.
-    const probeOrg = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata
-        ?.daLiveOrg as string | undefined;
-    const result = await ensureDaLiveAuth(context, logPrefix, probeOrg);
-
-    if (result.authenticated) return null;
-
-    project.status = originalStatus;
-    await context.stateManager.saveProject(project);
-    return {
-        success: false,
-        error: result.error || 'DA.live authentication required',
-        errorType: 'DALIVE_AUTH_REQUIRED',
-        cancelled: result.cancelled,
-    };
-}
-
-/**
- * Check Adobe I/O authentication for mesh projects, prompting sign-in if expired.
- * @returns null if authenticated (or no mesh), or an EdsResetResult if auth failed/cancelled.
- */
-async function checkAdobeAuth(
-    project: Project,
-    context: HandlerContext,
-    originalStatus: ProjectStatus,
-    logPrefix: string,
-    authService: AuthenticationService,
-): Promise<EdsResetResult | null> {
-    const { ensureAdobeIOAuth } = await import('@/core/auth/adobeAuthGuard');
-
-    const result = await ensureAdobeIOAuth({
-        authManager: authService,
-        logger: context.logger,
-        logPrefix,
-        projectContext: {
-            organization: project.adobe?.organization,
-            projectId: project.adobe?.projectId,
-            workspace: project.adobe?.workspace,
-        },
-        warningMessage: 'Your Adobe I/O session has expired. Please sign in to continue.',
-    });
-
-    if (result.authenticated) return null;
-
-    project.status = originalStatus;
-    await context.stateManager.saveProject(project);
-    return {
-        success: false,
-        error: 'Adobe I/O authentication required',
-        errorType: 'ADOBE_AUTH_REQUIRED',
-        cancelled: result.cancelled,
-    };
-}
-
-/**
- * Ensure the current token reaches the project's Adobe org before the
- * (destructive) reset, recovering INLINE on mismatch. Uses the canonical
- * action-time gate ensureProjectOrgContext — it shows a "Switch IMS Org" / Cancel
- * prompt right here, does the forced sign-in, re-verifies, and lets the reset
- * continue once the right org is active (no dependency on the passive dashboard
- * banner, which hides when the token can't be checked). Self-skips when the
- * project has no Adobe org.
- *
- * @returns null when the org is reachable (proceed), or an EdsResetResult when the
- *   user cancelled or the switch didn't land in the right org (status restored).
- */
-async function checkOrgContext(
-    project: Project,
-    context: HandlerContext,
-    originalStatus: ProjectStatus,
-    logPrefix: string,
-    authService: AuthenticationService,
-): Promise<EdsResetResult | null> {
-    const { ensureProjectOrgContext } = await import(
-        '@/features/authentication/services/ensureProjectOrgContext'
-    );
-    const result = await ensureProjectOrgContext({
-        authManager: authService,
-        project,
-        logger: context.logger,
-        logPrefix,
-    });
-    if (result.reachable) return null;
-
-    context.logger.warn(
-        `${logPrefix} resetEds: aborted — project org not reachable (cancelled=${result.cancelled})`,
-    );
-    project.status = originalStatus;
-    await context.stateManager.saveProject(project);
-    return {
-        success: false,
-        error: 'Adobe organization mismatch',
-        errorType: 'ORG_MISMATCH',
-        cancelled: result.cancelled,
-    };
-}
-
-/**
- * Check GitHub App installation and prompt user if not installed.
- * @returns null if installed or user chose to continue, or an EdsResetResult if cancelled.
- */
-async function checkGitHubAppInstallation(
-    vscode: typeof import('vscode'),
-    context: HandlerContext,
-    repoOwner: string,
-    repoName: string,
-    project: Project,
-    originalStatus: ProjectStatus,
-    logPrefix: string,
-    injectedAppService?: GitHubAppService,
-): Promise<EdsResetResult | null> {
-    const { getGitHubServices } = await import('../../handlers/edsHelpers');
-    const { tokenService: preCheckTokenService } = getGitHubServices(context.context.secrets);
-    const { GitHubAppService } = await import('../github/githubAppService');
-    // The DA.live session rides along: a site carrying any `access.admin` role
-    // refuses the GitHub token outright, and storefront setup now pins one on
-    // every project it registers.
-    const { tryCreateDaLiveTokenProvider } = await import('../../handlers/edsHelpers');
-    const appService =
-        injectedAppService ??
-        new GitHubAppService(
-            preCheckTokenService,
-            context.logger,
-            tryCreateDaLiveTokenProvider(context.context),
-        );
-    const { resolveAppInstallation } = await import('../appInstallationResolver');
-    const outcome = await resolveAppInstallation(
-        appService,
-        { repoOwner, repoName, repoUrl: '' },
-        context.logger,
-    );
-
-    if (outcome.kind === 'installed') {
-        return null;
-    }
-
-    // AEM never answered. Warning that the App "is not installed" would be a
-    // claim the evidence does not support — the same false statement that had a
-    // user reinstall a working App eleven times. Report the real cause and let
-    // the reset continue; the check is advisory here, not a gate.
-    if (outcome.kind === 'undetermined') {
-        // An inner 400 is an answer that cannot say (EDS-23), not a missing response.
-        const answered = outcome.codeStatus !== undefined
-            ? `code.status ${outcome.codeStatus}`
-            : `HTTP ${outcome.httpStatus ?? 'no response'}`;
-        context.logger.warn(
-            `${logPrefix} Could not verify AEM Code Sync on ${repoOwner}/${repoName} ` +
-                `(${answered}) — continuing; this is a failed ` +
-                `check, not a missing App.`,
-        );
-        return null;
-    }
-
-    context.logger.warn(`${logPrefix} AEM Code Sync app not installed on ${repoOwner}/${repoName}`);
-
-    const appWarning = await askDuringOperation(
-        'The AEM Code Sync GitHub App is not installed on this repository. ' +
-            'Without it, code changes will not sync to the CDN and the site may not work correctly.',
-        'Install App',
-        'Continue Anyway',
-    );
-
-    if (appWarning === 'Install App') {
-        const installUrl = appService.getInstallUrl(repoOwner, repoName);
-        await vscode.env.openExternal(vscode.Uri.parse(installUrl));
-
-        const afterInstall = await askDuringOperation(
-            'After installing the app, click Continue to proceed with the reset.',
-            'Continue',
-            'Cancel',
-        );
-        if (afterInstall === 'Continue') {
-            return null;
-        }
-        context.logger.info(`${logPrefix} resetEds: User cancelled after app installation prompt`);
-    } else if (appWarning === 'Continue Anyway') {
-        return null;
-    } else {
-        context.logger.info(`${logPrefix} resetEds: User cancelled at app check`);
-    }
-
-    project.status = originalStatus;
-    await context.stateManager.saveProject(project);
-    return { success: false, cancelled: true };
-}
-
-// ==========================================================
-// Notifications
-// ==========================================================
-
-/** The reset result's button to the storefront report, where the fixes that fit are offered. */
-const SEE_REPORT = 'See the storefront report';
-
-/** Show result notifications after reset completes. */
-async function showResetResultNotifications(
-    vscode: typeof import('vscode'),
-    result: EdsResetResult,
-    projectName: string,
-    showLogsOnError: boolean,
-    inModal: boolean,
-): Promise<void> {
-    if (result.success) {
-        // No timed success toast: a success closes the modal, and the notification
-        // it may have handed over to ends with "— done" (PL-59 R6). It used to sit
-        // on screen for its own timer after the work had finished.
-        if (result.errorType === 'CONFIG_WRITE_FAILED') {
-            // A dialog, not a progress line: `report()` writes to the single-line
-            // notification that steps 8-11 overwrite within seconds, so the
-            // remedy was gone before it could be read.
-            vscode.window.showWarningMessage(result.error ?? 'Site configuration incomplete.');
-        }
-
-        if (result.errorType === 'MESH_REDEPLOY_FAILED') {
-            vscode.window.showWarningMessage(
-                `${result.error} Commerce features may not work until mesh is manually redeployed.`,
-            );
-        }
-
-        // The fix pass's lines for an added demo (D23, EDS-13f): the same sentences
-        // the wizard's completion card shows, on the reset's own surface. When fixes
-        // fit, the one door to accept them is the storefront report.
-        if (result.demoCaveats?.length) {
-            const message = `A few things to know about this demo: ${result.demoCaveats.join(' ')}`;
-            if (result.demoFixes?.offered?.length) {
-                void vscode.window.showWarningMessage(message, SEE_REPORT).then((choice) => {
-                    if (choice === SEE_REPORT) void vscode.commands.executeCommand('demoBuilder.storefrontReport');
-                });
-            } else {
-                vscode.window.showWarningMessage(message);
-            }
-        }
-    } else if (result.errorType === 'GITHUB_APP_NOT_INSTALLED') {
-        const selection = await vscode.window.showErrorMessage(
-            `Cannot reset EDS project: The AEM Code Sync GitHub App is not installed on ${result.errorDetails?.owner}/${result.errorDetails?.repo}. ` +
-                `Please install the app and try again.`,
-            'Install GitHub App',
-        );
-        if (selection === 'Install GitHub App' && result.errorDetails?.installUrl) {
-            await vscode.env.openExternal(
-                vscode.Uri.parse(result.errorDetails.installUrl as string),
-            );
-        }
-    } else if (result.error && !inModal) {
-        // In a modal the reason is already on screen, with Debug Logs beside it.
-        if (showLogsOnError) {
-            const { getLogger } = await import('@/core/logging/debugLogger');
-            vscode.window
-                .showErrorMessage(`Failed to reset EDS project: ${result.error}`, 'Show Logs')
-                .then((sel) => {
-                    if (sel === 'Show Logs') {
-                        getLogger().show(false);
-                    }
-                });
-        } else {
-            vscode.window.showErrorMessage(`Failed to reset EDS project: ${result.error}`);
-        }
-    }
 }
 
 // ==========================================================
@@ -634,160 +365,4 @@ async function offerToKeepContent(
         keepButton,
     );
     return answer?.title === keepButton.title ? true : undefined;
-}
-
-/**
- * Can this project's sample data actually be removed? Started early, awaited late.
- *
- * Answering needs a Commerce credential, and getting one is the slow part of this
- * dialog — not the HTTP call (130-230ms measured) but the IMS token behind it,
- * which `tokenManager.inspectToken` reads by spawning the whole `aio` CLI when its
- * inspection cache is cold. Kicking it off before the reset confirmation spends
- * that time against a dialog the user is already reading.
- *
- * Returns undefined when there is no pack — nothing to ask about, so nothing to
- * spend. **Never rejects**: this is held unawaited across a modal, where a
- * rejection would surface as an unhandled promise rather than as a failed reset.
- *
- * Checked BEFORE the prompt rather than during the reset. Measured live
- * 2026-08-16: this asked, ran the full ~3-minute storefront reset, and only then
- * reported "no usable Commerce credentials" — three minutes spent on a question
- * that could not be honoured. The original gate was `datapack` alone, justified by
- * "no network call in front of a modal"; that rule was really about not adding
- * failure modes, and a bounded GET that degrades silently removes one.
- */
-function beginSampleDataCredentialCheck(
-    project: Project,
-    context: HandlerContext,
-): Promise<boolean> | undefined {
-    if (!project.datapack) {
-        return undefined;
-    }
-
-    // Through the shared resolver, which owns the `stackBackend` mapping. This
-    // site passed a raw Project through `as never`, so the dispatch matched
-    // neither backend and the prompt never appeared for any project — see
-    // `resolveProjectCredentials` for the three sites that made that mistake.
-    return (async () => {
-        const { resolveProjectCredentials } = await import(
-            '@/features/data-installer/services/commerceCredentialBroker'
-        );
-        const credentials = await resolveProjectCredentials(context, project);
-        return credentials.ok;
-    })().catch(() => false);
-}
-
-/**
- * Ask whether to remove the imported sample data, when there is any to remove.
- *
- * ONE question with one action. A restore (remove, then import the same pack
- * again) was offered here for part of a day and taken out before release: it
- * roughly tripled the tail of an already three-minute operation, and it made
- * "reset" mean two different things depending on a button. Reset means what it
- * has always meant — put the storefront back, and optionally clear the data.
- *
- * Opt IN: anything other than the explicit button keeps the data. Someone
- * resetting code must not lose a catalog by pressing Escape, which is why the
- * dismissal path and the "keep" path are the same path.
- *
- * The duration is in the prompt because it is the surprising part — a six-type
- * removal was measured at 470 seconds, so a modal that says "this is quick" by
- * omission would be lying.
- */
-async function confirmSampleDataRemoval(
-    project: Project,
-    vscode: typeof import('vscode'),
-    canRemove: Promise<boolean> | undefined,
-): Promise<boolean> {
-    // One condition, not a guard and then an await: `canRemove` is undefined
-    // exactly when `datapack` is (the check above gates on the same field), so a
-    // separate `!canRemove` test could never be the deciding one.
-    const { datapack } = project;
-    if (!datapack || !(await canRemove)) {
-        return false;
-    }
-
-    const removeButton: import('vscode').MessageItem = { title: 'Remove Datapack' };
-    // `isCloseAffordance` REPLACES the modal's automatic "Cancel" button.
-    // "Cancel" here read as "abort the whole reset" when it actually meant
-    // "keep the data and continue" (user-reported 2026-08-23) — this question
-    // is a yes/no about the datapack only, and its buttons now say so. Esc
-    // maps to Keep Data: dismissal takes the safe branch.
-    const keepButton: import('vscode').MessageItem = { title: 'Keep Data', isCloseAffordance: true };
-    // "anything you added by hand stays": pack-scoped removal confirmed by the
-    // Data Installer service owner 2026-08-22 — a removal takes only what the
-    // pack imported, so the reassurance is a fact, not a guess (backlog item
-    // 2026-08-17-what-does-a-datapack-removal-actually-delete, now archived).
-    const answer = await vscode.window.showWarningMessage(
-        `Also remove the datapack this project imported (${datapack.name}@${datapack.version})? ` +
-            'This deletes the data this pack imported from the Commerce instance — ' +
-            'anything you added by hand stays — and can take several minutes. ' +
-            'Resetting the storefront does not require it.',
-        { modal: true },
-        removeButton,
-        keepButton,
-    );
-    return answer?.title === removeButton.title;
-}
-
-/**
- * Restore it — remove, then import the same pack again — reporting rather than
- * throwing.
- *
- * The storefront reset is the thing the user asked for, so no outcome here may
- * turn a good reset into a failed one. Everything is a log line.
- *
- * **Reported at three levels, because they mean different things.** A clean
- * restore says nothing. A refusal (no credentials, no pack, nothing stored) is a
- * warning. Data removed and NOT reinstalled is an ERROR: the instance is now
- * empty, which is a worse state than the user started in and the one case where
- * they must go and do something about it.
- */
-async function removeProjectSampleData(
-    project: Project,
-    context: HandlerContext,
-    report: ReportStage,
-): Promise<void> {
-    try {
-        report('Removing the sample data');
-
-        const { removeSampleData } = await import(
-            '@/features/data-installer/services/sampleDataInstall'
-        );
-        const { buildSampleDataDeps } = await import(
-            '@/features/data-installer/services/sampleDataInstallDeps'
-        );
-
-        // The mode phrases the progress line; the poller's per-phase label comes
-        // from the runner, which knows which half of a restore is running.
-        const result = await removeSampleData(
-            project,
-            buildSampleDataDeps(
-                context,
-                project,
-                (sd) =>
-                    report(
-                        'Removing the sample data',
-                        sd.processing.length > 0 ? sd.processing.join(', ') : undefined,
-                        { index: sd.done, total: sd.total },
-                    ),
-                'remove',
-            ),
-        );
-
-        if (result.ran && result.outcome !== 'success') {
-            context.logger.error(
-                `[EdsReset] Sample data was NOT removed: ${result.reason ?? 'no reason given'}`,
-            );
-            return;
-        }
-        if (!result.ran) {
-            context.logger.warn(
-                `[EdsReset] Sample data was not removed: ${result.reason ?? 'no reason given'}`,
-            );
-        }
-    } catch (error) {
-        const reason = error instanceof Error ? error.message : String(error);
-        context.logger.warn(`[EdsReset] Sample data removal failed, reset stands: ${reason}`);
-    }
 }

@@ -16,9 +16,6 @@
  * Page"/"Check Installation") for the same three GitHub screens, so a user who
  * met both was told to press buttons that do not exist on the other.
  *
- * `edsResetService` already names this failure mode for its own remedy text:
- * "Two remedy texts one line apart is the drift, not the fix for it."
- *
  * @module features/eds/ui/helpers/codeSyncInstallContent
  */
 

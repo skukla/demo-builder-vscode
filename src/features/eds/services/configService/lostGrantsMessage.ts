@@ -4,9 +4,7 @@
  * Five surfaces report this — the wizard toast, the reset's step-7 line, the
  * reset's step-0 migration line, the repair command, and the service's own log —
  * and they had already drifted in wording ("was written" / "updated" / "Site
- * configuration updated"). `edsResetService` names this exact failure mode for
- * its BYOM text: "Two remedy texts one line apart is the drift, not the fix for
- * it." Rule of Three was well past.
+ * configuration updated"). Rule of Three was well past.
  *
  * Why the message matters more than most: the grants are gone and nothing in the
  * app can restore them, because the access endpoint requires the very role that

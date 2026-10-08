@@ -1,10 +1,15 @@
 /**
+ * RENAMED from `edsResetUI-adobeIoAuth.test.ts` on 2026-10-08 (EDS-8 split by job):
+ * the Adobe sign-in check moved to `edsResetPreflight.ts`.
+ * A suite is paired with the module it is named for. Still driven through the
+ * public entry point; no assertion changed in the rename.
+ *
  * RENAMED from `edsResetService-auth.test.ts` on 2026-09-07 (PL-45). Every test
  * here drives `resetEdsProjectWithUI`, which is declared in `edsResetUI.ts`; the
  * old name paired the suite with `edsResetService.ts`, so all three were scored
  * against a module they never constrain.
  *
- * Named `-adobeIoAuth` rather than `-auth` because `edsResetUI-auth.test.ts`
+ * Named `-adobeIoAuth` rather than `-auth` because `edsResetPreflight-auth.test.ts`
  * already exists and covers the same function from a different setup; merging the
  * two would mean harmonising two fixture styles for no gain.
  */

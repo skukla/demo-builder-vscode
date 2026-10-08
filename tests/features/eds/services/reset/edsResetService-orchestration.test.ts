@@ -4,7 +4,7 @@
  * The name migration, the repo reset, the code sync, the permission grant, the
  * config step and the content pipeline, each asserted by the arguments it
  * receives and the progress the caller sees. The result of a reset and the
- * final steps live in `edsResetService-finalize.test.ts`.
+ * final steps live in `edsResetFinalize.test.ts`.
  */
 
 import {

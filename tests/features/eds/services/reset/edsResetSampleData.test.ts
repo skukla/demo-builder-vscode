@@ -1,4 +1,9 @@
 /**
+ * RENAMED from `edsResetUI-sampleData.test.ts` on 2026-10-08 (EDS-8 split by job):
+ * the sample-data step moved to `edsResetSampleData.ts`.
+ * A suite is paired with the module it is named for. Still driven through the
+ * public entry point; no assertion changed in the rename.
+ *
  * Reset and the imported sample data.
  *
  * Reset has always meant "put the STOREFRONT back": repo to template, CDN sync,
@@ -20,7 +25,7 @@
  * a network call in front of a modal adds a failure mode to a dialog, and the
  * removal itself reports when there was nothing there.
  *
- * The mock environment mirrors edsResetUI-auth.test.ts. Copied rather than
+ * The mock environment mirrors edsResetPreflight-auth.test.ts. Copied rather than
  * shared because `jest.mock` is hoisted within the file that imports the SUT, so
  * a mock living in another module registers too late.
  */
@@ -44,9 +49,9 @@ jest.setTimeout(5000);
 
 jest.mock('@/features/eds/services/reset/edsResetService', () => ({
     executeEdsReset: jest.fn().mockResolvedValue({ success: true, filesReset: 1 }),
-    // Lives in edsResetService too — mocking the module with only executeEdsReset
-    // wipes it, and the SUT dies on a missing function before reaching anything
-    // this file is about.
+}));
+jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
+    ...jest.requireActual('@/features/eds/services/reset/edsResetParams'),
     extractResetParams: jest.fn().mockReturnValue({
         success: true,
         params: { repoOwner: 'test-owner', repoName: 'test-repo' },

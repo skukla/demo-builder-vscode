@@ -1175,7 +1175,7 @@
             "source": "reports/mutation/focus.json run of 2026-09-03 (componentApiPicks, MUT-06)"
         },
         {
-            "module": "src/features/eds/services/reset/edsResetUI.ts",
+            "module": "src/features/eds/services/reset/edsResetPreflight.ts",
             "anchors": [
                 "organization: project.adobe?.organization,",
                 "projectId: project.adobe?.projectId,",
@@ -1183,31 +1183,31 @@
             ],
             "mutants": 3,
             "category": "optionalChain",
-            "reason": "Stryker drops each `?.`, which would throw only if `project.adobe` were undefined. checkAdobeAuth is called from exactly one site, inside `if (project.adobe?.organization)`, so by these lines `project.adobe` is always an object; the `?.` exist because the Project type declares `adobe` optional and the narrowing does not cross the function boundary. A test cannot hand the function a project without `adobe` except by calling it directly, and it is module-private.",
+            "reason": "Stryker drops each `?.`, which would throw only if `project.adobe` were undefined. checkAdobeAuth is called from exactly one site, inside `if (project.adobe?.organization)`, so by these lines `project.adobe` is always an object; the `?.` exist because the Project type declares `adobe` optional and the narrowing does not cross the function boundary. A test cannot hand the function a project without `adobe` except by calling it directly, which would test a call production never makes. Re-homed 2026-10-08 (EDS-8): the check moved to edsResetPreflight.ts and is exported only so the reset door in edsResetUI.ts can call it; that door is still its one caller, behind the same guard.",
             "decision": "none \u2014 the guard is what the type requires at a call the compiler cannot narrow",
             "recorded": "2026-09-03",
             "source": "PL-22 batch MUT-07, edsResetUI focus run"
         },
         {
-            "module": "src/features/eds/services/reset/edsResetUI.ts",
+            "module": "src/features/eds/services/reset/edsResetPreflight.ts",
             "anchors": [
                 "context.logger.info(`${logPrefix} resetEds: User cancelled at app check`);"
             ],
             "mutants": 1,
             "category": "block",
-            "reason": "The final `else` of the App prompt holds one info line and nothing else; the cancelled result, the untouched status and the un-run reset are all decided after the if/else and are pinned by the dismiss test in edsResetUI-appCheck. Emptying the block changes what is logged and nothing observable. The worklist's own filter skips log-only bodies; the ratchet counts the block because it classifies the `} else {` line.",
+            "reason": "The final `else` of the App prompt holds one info line and nothing else; the cancelled result, the untouched status and the un-run reset are all decided after the if/else and are pinned by the dismiss test in edsResetUI-appCheck. Emptying the block changes what is logged and nothing observable. The worklist's own filter skips log-only bodies; the ratchet counts the block because it classifies the `} else {` line. Re-homed 2026-10-08 (EDS-8): the App check moved to edsResetPreflight.ts; the dismiss test is unchanged.",
             "decision": "none \u2014 the line is the Debug Logs trace of a user cancel, which debug-log-triage reads",
             "recorded": "2026-09-03",
             "source": "PL-22 batch MUT-07, edsResetUI focus run"
         },
         {
-            "module": "src/features/eds/services/reset/edsResetUI.ts",
+            "module": "src/features/eds/services/reset/edsResetSampleData.ts",
             "anchors": [
                 "})().catch(() => false);"
             ],
             "mutants": 1,
             "category": "other",
-            "reason": "The catch handler's value reaches one consumer, confirmSampleDataRemoval, which tests it with `!(await canRemove)`; `false` and `undefined` take the same branch and no prompt appears either way. The sampleData suite's CONTROL (a lookup that throws asks nothing) holds against both. Making the difference observable would mean giving the promise a third state the caller does not need.",
+            "reason": "The catch handler's value reaches one consumer, confirmSampleDataRemoval, which tests it with `!(await canRemove)`; `false` and `undefined` take the same branch and no prompt appears either way. The edsResetSampleData suite's CONTROL (a lookup that throws asks nothing) holds against both. Making the difference observable would mean giving the promise a third state the caller does not need. Re-homed 2026-10-08 (EDS-8): the credential check moved to edsResetSampleData.ts with its consumer.",
             "decision": "none \u2014 `false` says what a failed lookup means; the mutant only removes the word",
             "recorded": "2026-09-03",
             "source": "PL-22 batch MUT-07, edsResetUI focus run"
@@ -1262,13 +1262,13 @@
             "source": "PL-22 batch MUT-07, edsResetRepoHelper focus run"
         },
         {
-            "module": "src/features/eds/services/reset/edsResetService.ts",
+            "module": "src/features/eds/services/reset/edsResetCodeSyncStep.ts",
             "anchors": [
                 "context.logger.warn('[EdsReset] No user email available for permissions');"
             ],
             "mutants": 1,
             "category": "block",
-            "reason": "The else taken when DA.live returns no user email holds one warn line and nothing else. The orchestration suite pins the decision itself \u2014 configureDaLivePermissions is not called and the reset still succeeds \u2014 so emptying this body changes what is logged and nothing a collaborator receives. Asserting the log is what no-logger-wording-assertions forbids.",
+            "reason": "The else taken when DA.live returns no user email holds one warn line and nothing else. The orchestration suite and edsResetCodeSyncStep.test.ts pin the decision itself \u2014 configureDaLivePermissions is not called and the reset still succeeds \u2014 so emptying this body changes what is logged and nothing a collaborator receives. Asserting the log is what no-logger-wording-assertions forbids. Re-homed 2026-10-08 (EDS-8): steps 4-5 moved to edsResetCodeSyncStep.ts.",
             "decision": "none \u2014 the line is the Debug Logs trace of a skipped permission grant, which debug-log-triage reads",
             "recorded": "2026-09-03",
             "source": "PL-22 batch MUT-07, edsResetService focus run"
@@ -15595,6 +15595,30 @@
             "decision": "none \u2014 the only observable difference is which log line prints, and asserting logger arguments is banned (no-logger-wording-assertions)",
             "recorded": "2026-10-08",
             "source": "EDS-8 adobeEntityReads cut"
+        },
+        {
+            "module": "src/features/eds/services/reset/edsResetPreflight.ts",
+            "anchors": [
+                "const answered = outcome.codeStatus !== undefined"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The ternary only chooses which words the undetermined App check's warn line uses (`code.status 400` against `HTTP 503` or `no response`); both branches then log and return null, so the reset carries on identically and no collaborator receives anything different. The three undetermined cases in edsResetUI-appCheck pin the decision that matters (no install prompt, the reset runs). Asserting which status the log names is what no-logger-wording-assertions forbids.",
+            "decision": "none \u2014 the line is the Debug Logs evidence for EDS-23 (an inner 400 is not a missing App), which debug-log-triage reads",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 reset split, edsResetPreflight first focus run"
+        },
+        {
+            "module": "src/features/eds/services/reset/edsResetSampleData.ts",
+            "anchors": [
+                "sd.processing.length > 0 ? sd.processing.join(', ') : undefined,"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "The two survivors make the empty case pass `''` (an empty join) where the code passes undefined. Both surfaces read those the same: a screen's modal shows `step || detailFor(stage)`, so an empty step falls back to the stage's own detail exactly as an absent one does, and a notification drops the step entirely. The non-empty case, the join separator and the position are pinned by the modal-narration test in edsResetSampleData-removalReporting.",
+            "decision": "none \u2014 undefined says there is no step; the mutant only changes how nothing is spelled",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 reset split, edsResetSampleData first focus run"
         }
     ]
 }

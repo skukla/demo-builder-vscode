@@ -1,4 +1,9 @@
 /**
+ * RENAMED from `edsResetService-daLiveReauth.test.ts` on 2026-10-08 (EDS-8 split by job):
+ * the content pipeline and its re-auth retry moved to `edsResetContentStep.ts`.
+ * A suite is paired with the module it is named for. Still driven through the
+ * public entry point; no assertion changed in the rename.
+ *
  * EDS Reset Service - DA.live Mid-Pipeline Re-Auth Tests
  *
  * Regression: When DA.live token expires during the content pipeline (steps 4-6),

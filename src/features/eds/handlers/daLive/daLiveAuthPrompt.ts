@@ -152,7 +152,7 @@ export interface DaLiveGuardResult {
  * Ensure DA.live authentication, prompting sign-in if expired.
  *
  * Shared pause-and-prompt guard used by:
- * - EDS project reset (edsResetUI.ts)
+ * - EDS project reset (edsResetPreflight.ts)
  * - Storefront setup pre-flight (storefrontSetupHandlers.ts)
  * - Storefront setup mid-pipeline recovery (storefrontSetupPhases.ts)
  */

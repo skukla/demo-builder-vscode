@@ -2,7 +2,7 @@
  * EDS Content Pipeline
  *
  * Shared pipeline that orchestrates the content/publish sequence used by both
- * the setup flow (storefrontSetupHandlers) and the reset flow (edsResetService).
+ * the setup flow (storefrontSetupHandlers) and the reset flow (edsResetContentStep).
  *
  * Operations executed in order:
  * 0. Clear existing DA.live content and unpublish CDN pages (gated by clearExistingContent)

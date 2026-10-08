@@ -1,4 +1,9 @@
 /**
+ * RENAMED from `edsResetUI-auth.test.ts` on 2026-10-08 (EDS-8 split by job):
+ * the pre-flight checks moved to `edsResetPreflight.ts`.
+ * A suite is paired with the module it is named for. Still driven through the
+ * public entry point; no assertion changed in the rename.
+ *
  * EDS Reset UI - Auth Guard Refactor Tests
  *
  * Tests for the refactored checkDaLiveAuth and checkAdobeAuth functions
@@ -29,6 +34,9 @@ jest.setTimeout(5000);
 
 jest.mock('@/features/eds/services/reset/edsResetService', () => ({
     executeEdsReset: jest.fn().mockResolvedValue({ success: true }),
+}));
+jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
+    ...jest.requireActual('@/features/eds/services/reset/edsResetParams'),
     extractResetParams: jest.fn().mockReturnValue({
         success: true,
         params: {
@@ -297,6 +305,7 @@ describe('edsResetUI - checkAdobeAuth (refactored to use ensureAdobeIOAuth)', ()
         // Then: Should return ADOBE_AUTH_REQUIRED
         expect(result.success).toBe(false);
         expect(result.errorType).toBe('ADOBE_AUTH_REQUIRED');
+        expect(result.error).toBe('Adobe I/O authentication required');
         expect(result.cancelled).toBe(true);
     });
 
@@ -365,6 +374,7 @@ describe('edsResetUI - checkAdobeAuth (refactored to use ensureAdobeIOAuth)', ()
         // Then: aborted before any destructive work
         expect(result.success).toBe(false);
         expect(result.errorType).toBe('ORG_MISMATCH');
+        expect(result.error).toBe('Adobe organization mismatch');
         expect(result.cancelled).toBe(true);
         expect(executeEdsReset).not.toHaveBeenCalled();
     });

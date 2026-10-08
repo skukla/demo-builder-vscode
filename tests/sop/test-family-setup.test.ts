@@ -2,7 +2,7 @@
  * Split test families share their setup (ADR-016 / PL-14).
  *
  * A "family" is 2+ suites for one subject in one directory
- * (`edsResetService-auth.test.ts` + `edsResetService-meshAuth.test.ts` …).
+ * (`edsResetService-orchestration.test.ts` + `edsResetService-meshAuth.test.ts` …).
  * When such a family has no shared `<subject>.testUtils.*`, every suite
  * re-declares the same mock scaffold — the pattern behind BOTH measured
  * problems: the tests-tree duplication (160 clones) and the bulk stale-mock

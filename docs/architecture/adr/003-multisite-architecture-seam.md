@@ -207,7 +207,7 @@ No code changes in this ADR. When multisite work happens, the implementing PR(s)
 
 - Add `buildSiteConfigParamsForEnvironments(repoOwner, repoName, environments)` returning `SiteRegistrationParams[]`.
 - Setup flow (`handlers/configServiceRegistration.ts::registerConfigurationService`) becomes `Promise.all(envs.map(env => configService.registerSite(...)))`.
-- Reset flow (`edsResetService.ts::publishConfigAndRegisterSite`) same pattern.
+- Reset flow (`edsResetConfigStep.ts::publishConfigAndRegisterSite`) same pattern.
 
 ### Step 3 — Mesh per-env deployment
 

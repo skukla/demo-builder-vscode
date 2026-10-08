@@ -1,7 +1,12 @@
 /**
+ * RENAMED from `edsResetUI-removalReporting.test.ts` on 2026-10-08 (EDS-8 split by job):
+ * the sample-data step moved to `edsResetSampleData.ts`.
+ * A suite is paired with the module it is named for. Still driven through the
+ * public entry point; no assertion changed in the rename.
+ *
  * How the datapack removal is asked for, narrated and reported.
  *
- * The sibling suite (`edsResetUI-sampleData.test.ts`) pins WHEN the question is
+ * The sibling suite (`edsResetSampleData.test.ts`) pins WHEN the question is
  * asked and that a refusal cannot fail the reset. This one pins the rest, which
  * mutation testing (PL-22, batch MUT-07) found unconstrained:
  *
@@ -27,6 +32,9 @@ jest.setTimeout(5000);
 
 jest.mock('@/features/eds/services/reset/edsResetService', () => ({
     executeEdsReset: jest.fn().mockResolvedValue({ success: true }),
+}));
+jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
+    ...jest.requireActual('@/features/eds/services/reset/edsResetParams'),
     extractResetParams: jest.fn().mockReturnValue({
         success: true,
         params: { repoOwner: 'test-owner', repoName: 'test-repo' },
@@ -45,6 +53,7 @@ jest.mock('@/features/data-installer/services/commerceCredentials', () => ({
     }),
 }));
 
+import { startModalRun } from '@/core/vscode/operationProgress';
 import { removeSampleData } from '@/features/data-installer/services/sampleDataInstall';
 import { buildSampleDataDeps } from '@/features/data-installer/services/sampleDataInstallDeps';
 import { createMeshDepsFake } from '../../../../helpers/meshDepsFake';
@@ -158,6 +167,39 @@ describe('the removal narration', () => {
 
         relay({ verb: 'Removing', done: 3, total: 3, processing: [] });
         expect(report).toHaveBeenLastCalledWith({ message: 'Removing the sample data (3 of 3)' });
+    });
+});
+
+// Found by the first mutation run of edsResetSampleData on its own (EDS-8,
+// 2026-10-08): the types being worked on are the STEP under the stage, which only
+// a screen's modal shows (a notification shows the stage line alone), so no test
+// above could see it.
+describe('the removal narration in a screen\'s modal', () => {
+    it('shows the types being removed right now as the step under the stage', async () => {
+        const send = jest.fn().mockResolvedValue(undefined);
+        startModalRun('reset-modal', send);
+
+        await resetEdsProjectWithUI({
+            githubAppService: fakeGitHubAppService,
+            meshDeps,
+            project: createProject(),
+            context: createContext(),
+            progress: 'modal',
+            operationId: 'reset-modal',
+        });
+        const relay = mockedDeps.mock.calls[0][2] as (p: SampleDataProgress) => void;
+        relay({ verb: 'Removing', done: 1, total: 3, processing: ['Products', 'Categories'] });
+
+        expect(send).toHaveBeenLastCalledWith(
+            'operationProgress',
+            expect.objectContaining({
+                id: 'reset-modal',
+                state: 'running',
+                stage: 'Removing the sample data',
+                step: 'Products, Categories',
+                position: { index: 1, total: 3 },
+            }),
+        );
     });
 });
 

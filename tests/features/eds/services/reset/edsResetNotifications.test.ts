@@ -1,4 +1,9 @@
 /**
+ * RENAMED from `edsResetUI-notifications.test.ts` on 2026-10-08 (EDS-8 split by job):
+ * the result notifications moved to `edsResetNotifications.ts`.
+ * A suite is paired with the module it is named for. Still driven through the
+ * public entry point; no assertion changed in the rename.
+ *
  * What the user is TOLD when a reset finishes.
  *
  * `showResetResultNotifications` had no test at all before PL-22 batch MUT-07:
@@ -19,7 +24,7 @@ import {
     vscode,
     fakeGitHubAppService,
 } from './edsResetUI.testUtils';
-import type { EdsResetResult } from '@/features/eds/services/reset/edsResetService';
+import type { EdsResetResult } from '@/features/eds/services/reset/edsResetParams';
 import type { Project, ProjectStatus } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -27,6 +32,9 @@ jest.setTimeout(5000);
 
 jest.mock('@/features/eds/services/reset/edsResetService', () => ({
     executeEdsReset: jest.fn(),
+}));
+jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
+    ...jest.requireActual('@/features/eds/services/reset/edsResetParams'),
     extractResetParams: jest.fn().mockReturnValue({
         success: true,
         params: { repoOwner: 'test-owner', repoName: 'test-repo' },
@@ -227,5 +235,34 @@ describe('reset notifications — failure', () => {
         await flush();
 
         expect(mockShowLogs).not.toHaveBeenCalled();
+    });
+});
+
+// Found by the first mutation run of edsResetNotifications on its own (EDS-8,
+// 2026-10-08). The way to the storefront report is pinned in
+// edsResetUI-addedDemo.test.ts; what it does when NOT taken was not.
+describe('reset notifications — an added demo', () => {
+    const CAVEAT = 'Product links may not work.';
+    const MESSAGE = `A few things to know about this demo: ${CAVEAT}`;
+
+    it('opens nothing when the storefront report offer is dismissed', async () => {
+        (vscode.window.showWarningMessage as jest.Mock)
+            .mockResolvedValueOnce(RESET)
+            .mockResolvedValueOnce(undefined);
+
+        await run({ success: true, demoCaveats: [CAVEAT], demoFixes: { offered: ['pdp-fix'] } });
+        await flush();
+
+        expect(vscode.window.showWarningMessage).toHaveBeenLastCalledWith(
+            MESSAGE,
+            'See the storefront report',
+        );
+        expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+    });
+
+    it('offers no report when the fix pass applied fixes but offered none', async () => {
+        await run({ success: true, demoCaveats: [CAVEAT], demoFixes: { applied: ['pdp-fix'] } });
+
+        expect(vscode.window.showWarningMessage).toHaveBeenLastCalledWith(MESSAGE);
     });
 });

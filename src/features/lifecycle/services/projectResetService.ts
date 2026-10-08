@@ -382,7 +382,7 @@ function asHandlerResponse({ success, error }: ProjectResetOutcome): HandlerResp
 /**
  * Reset a headless project with full UI flow.
  *
- * Pattern mirrors edsResetService.resetEdsProjectWithUI:
+ * Pattern mirrors edsResetUI.resetEdsProjectWithUI:
  * 1. Confirmation dialog
  * 2. Stop demo if running
  * 3. Set status to 'resetting'
