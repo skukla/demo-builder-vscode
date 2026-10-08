@@ -1,8 +1,8 @@
 /**
  * Prerequisite Handlers - Node version requirements
  *
- * Which Node major versions the selected components need, read from the
- * component registry, and the one set a per-node-version prerequisite is installed under.
+ * The Node a project's prerequisites prepare (Demo Builder's Node, one for everything
+ * it ships, PR-1a), and the one set a per-node-version prerequisite is installed under.
  */
 
 import { demoBuilderNode } from '@/core/shell/demoBuilderNode';

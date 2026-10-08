@@ -283,11 +283,11 @@ export class ComponentUpdater {
     }
 
     /**
-     * Rewrite the component's recorded Node (`metadata.nodeVersion`) to the
-     * catalog's current declaration (PR-1a). The update
-     * has just installed under that version; Start Demo reads the record, so without
-     * this a raised version moved the install and left `npm run dev` on the old one.
-     * A component that declares no version keeps whatever it had.
+     * Rewrite the component's recorded Node (`metadata.nodeVersion`) to the Node the
+     * update just installed it under (`nodeForInstall`: Demo Builder's Node, PR-1a).
+     * Start Demo reads the record, so without this a moved Node moved the install
+     * and left `npm run dev` on the old one. A component that installs nothing (an
+     * EDS storefront) keeps whatever it had.
      */
     private async recordNodeVersion(project: Project, componentId: string): Promise<void> {
         const declared = nodeForInstall(await this.componentDefinition(componentId));

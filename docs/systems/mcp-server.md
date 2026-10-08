@@ -792,8 +792,10 @@ config when a project is created (and on "Regenerate AI files"):
   Anchored to the per-project isolated MCP tools dir
   (`<project>/.demo-builder-mcp/node_modules/`) — decoupled from the storefront's
   own `node_modules` so they install even when the storefront's `npm install` can't.
-  They install and run on ai-defaults' `nodeVersion` (24) through fnm, launched as
-  `fnm exec --using=24 node <script>`, not on the PATH's Node (AI-13).
+  They install into, and run from, Demo Builder's Node folder (`~/.demo-builder/node`)
+  on Demo Builder's Node (`demoBuilderNode()`, generated from every component's own
+  `engines.node` range, PR-1a): launched as `fnm exec --using=<major> node <script>` with
+  the entry's `env.FNM_DIR` pointing at that folder, not on the PATH's Node (AI-13).
 - **`.claude/settings.json`** — a `PostToolUse` git-sync hook for EDS projects
   (commit/push storefront edits the agent makes). Skipped if the path contains
   shell metacharacters. The extractor reads the tool-call JSON on **stdin** and

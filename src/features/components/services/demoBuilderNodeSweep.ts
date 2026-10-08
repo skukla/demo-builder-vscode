@@ -8,7 +8,8 @@
  * last run: when the Node is ready and nothing is behind it does nothing and shows
  * nothing. Otherwise it prepares the Node (with the Adobe CLI) and reinstalls each
  * component recorded under another Node, moving its record. Safe by construction: the
- * release check guarantees every shipped component accepts the new Node.
+ * release check (`npm run node:resolve -- --check`, a `cut-release` precondition)
+ * stops a release whose components do not all accept the new Node.
  *
  * Left alone: a custom integration's component that carries its own Node, a component
  * with no record (it reads as the current Node), every component of a project whose
