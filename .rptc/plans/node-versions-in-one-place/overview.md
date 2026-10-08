@@ -59,7 +59,7 @@ resolves ONE Node, 24.21.0, for everything.
 | 6 | Update records the Node it installed under; `.node-version` no longer written | done | no |
 | 7 | **The release-time resolver and generated file; catalog `nodeVersion` fields deleted** | to build | no (reads GitHub/npm) |
 | 8 | **Outside repos at runtime; plugins installed once** | to build | no |
-| 9 | **Start notices a component installed under an older Node and offers a reinstall** | to build | no |
+| 9 | **A release that moves the Node moves installed components with it, in the background** | to build | no |
 | 10 | The AI bundle and terminals use the folder (was step 7) | to build | no |
 | 11 | **Cleanup: unused Nodes in the folder, the one-time shared-fnm cleanup, uninstall** | to build | no (local, confirmed where it touches the SC's fnm) |
 | 12 | **What the SC sees: the prerequisites step, the add confirmation and progress, the post-update Node, Diagnostics** | to build | no |
@@ -82,7 +82,7 @@ file").
 | What | How it moves | Step |
 |---|---|---|
 | The machine | The first command that needs the shared Node installs it, with the Adobe CLI, into the folder | 2 (done) |
-| Installed components | Keep running on the Node they were installed under; Start offers a reinstall when that is older than the shared Node; update and reset move them | 6, 9 |
+| Installed components | Moved to the new Node in the background right after the update that moves it (a running demo catches up after it stops); until then, and if a reinstall fails, they keep running on the Node they were installed under | 6, 9 |
 | The AI bundle | Rewritten by the activation sweep (`AI_CONTEXT_VERSION` bump) | 10 |
 | Adobe sign-in and plugins | Carry over: both live in the SC's user folders, not in a Node (verified 2026-10-07) | none |
 | The SC's own fnm | One confirmation removes what Demo Builder used to install there | 11 |

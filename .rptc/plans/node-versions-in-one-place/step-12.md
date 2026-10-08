@@ -24,7 +24,8 @@ no new kind of notice.
 | First Node install outside the wizard (an agent or a dashboard action got there first) | That operation's progress window stage, else the progress notification | "Installing Node 24 and the Adobe CLI: a few minutes, the first time only" |
 | An integration from the SC's own repo needs another Node | The add confirmation BEFORE it runs, then the add's progress window stage | "This integration needs Node 26. Demo Builder will install it, and the Adobe CLI, in its own folder" |
 | A release moves the shared Node (24 to 26) | Progress notification right after the update, then a status-bar line | "Updating Demo Builder's Node to 26: a few minutes, one time" / "Demo Builder now runs on Node 26" |
-| A storefront installed under an older Node | Dashboard notice with a Reinstall action (step 9) | "Installed under Node 24; this release uses 26. Reinstall?" |
+| A component the post-update move could not reinstall (step 9) | Dashboard notice with a Retry action | "Could not move the storefront to Node 26; it still runs on 24. Retry?" |
+| The post-update move itself | The same progress notification as the Node preparation, one line per project; a status-bar line when done | "Moving installed components to Node 26: citisignal (2 of 3)" |
 | Reinstall or update moves a component | That operation's progress window stage | "Reinstalling on Node 26" |
 | Cleanup removes an unused Node from the folder | Status-bar line + User Logs | "Removed Node 26 from Demo Builder's folder: no project uses it" |
 | The one-time cleanup of the SC's own fnm | A confirmation listing each version, then a progress notification, then a result listing what was removed and anything that failed | as step 11 |
@@ -59,7 +60,7 @@ it warns through the usual failure path and the first thing that needs the Node 
 it goes through the one ensure call (step 2), so an operation needing the same Node at the same
 time waits for it instead of installing twice (test this: today's ensure has no lock).
 
-**Start** shows the reinstall notice from step 9.
+**Start** asks nothing: it runs each component on its recorded Node (step 9 moves them ahead of time).
 
 **Diagnostics** lists the SC's own fnm today, which says nothing about what Demo Builder runs on;
 fixed here.
