@@ -33,6 +33,15 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
 /**
+ * The site-config object's address, `/config/{org}/sites/{site}.json`. Register, delete and
+ * the overlay read-back all address the same object; this file is the pinned owner of that
+ * path (spine-chokepoints, "config-service PATHS"), so the builder lives here, once.
+ */
+function siteConfigUrl(org: string, site: string): string {
+    return `${HELIX_ADMIN_URL}/config/${encodeURIComponent(org)}/sites/${encodeURIComponent(site)}.json`;
+}
+
+/**
  * Strip query string and fragment from a URL before logging.
  *
  * The BYOM overlay URL is user-supplied via the `demoBuilder.byom.overlayUrl`
@@ -82,7 +91,7 @@ export class ConfigurationService {
      */
     async registerSite(params: SiteRegistrationParams): Promise<ConfigServiceResult> {
         const { org, site, codeOwner, codeRepo, contentSourceUrl, contentOverlayUrl } = params;
-        const url = `${HELIX_ADMIN_URL}/config/${encodeURIComponent(org)}/sites/${encodeURIComponent(site)}.json`;
+        const url = siteConfigUrl(org, site);
 
         this.logger.info(`[ConfigService] Registering site: ${org}/${site}`);
         this.logger.debug(
@@ -183,7 +192,7 @@ export class ConfigurationService {
      * @returns Result with success/error status
      */
     async deleteSiteConfig(org: string, site: string): Promise<ConfigServiceResult> {
-        const url = `${HELIX_ADMIN_URL}/config/${encodeURIComponent(org)}/sites/${encodeURIComponent(site)}.json`;
+        const url = siteConfigUrl(org, site);
 
         this.logger.info(`[ConfigService] Deleting site config: ${org}/${site}`);
 
@@ -207,7 +216,7 @@ export class ConfigurationService {
         org: string,
         site: string,
     ): Promise<{ readable: boolean; overlayUrl?: string }> {
-        const url = `${HELIX_ADMIN_URL}/config/${encodeURIComponent(org)}/sites/${encodeURIComponent(site)}.json`;
+        const url = siteConfigUrl(org, site);
         try {
             const token = await getImsToken(this.tokenProvider);
             const response = await fetch(url, {
