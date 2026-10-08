@@ -15287,6 +15287,31 @@
             "decision": "none \u2014 NaN compares false",
             "recorded": "2026-10-08",
             "source": "EDS-8 split, 2026-10-08"
+        },
+        {
+            "module": "src/features/eds/services/helix/helixPageDiscovery.ts",
+            "anchors": [
+                "if (webPath === '/index' || webPath.endsWith('/index')) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "The first clause is a subset of the second: '/index' ends with '/index'. Forcing it off, or blanking its literal, changes nothing the second clause does not already decide.",
+            "decision": "none \u2014 kept as the readable statement of the root case",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 split, 2026-10-08"
+        },
+        {
+            "module": "src/features/eds/services/helix/helixPageDiscovery.ts",
+            "anchors": [
+                "webPath = webPath.slice(0, -6) || '/';",
+                "return webPath || '/';"
+            ],
+            "mutants": 2,
+            "category": "string",
+            "reason": "Two guards for one case: the root index slices to '' and the first fallback fills '/'; blank that fallback and the return's fallback fills it instead. The return's own fallback is then reachable only by a document whose path is the site prefix itself, which a listing of that site never yields.",
+            "decision": "none \u2014 a double guard, not a defect",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 split, 2026-10-08"
         }
     ]
 }

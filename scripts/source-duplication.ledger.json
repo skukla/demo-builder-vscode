@@ -3,7 +3,7 @@
     "_scan": "npx jscpd src --min-lines 8 --min-tokens 60 --ignore '**/*.test.*,**/*.spec.*,**/*.json'",
     "_why_not_zero": "Zero is deliberately not the target. The remainder is adjudicated variants and two-instance pairs below the Rule of Three, and forcing those into one shape welds together things that change independently. The rule this serves is that duplication may not GROW unnoticed.",
     "_json_ignored": "Registry and schema files duplicate their own structure -- 7 such pairs on 2026-09-11 -- an inert floor that moves when config is edited and says nothing about copy-paste in code.",
-    "_recorded": "40 on 2026-10-08: the exit-code decision the four progress reporters each carried became settleStep (stepExit.ts), clearing the exactProgress/milestoneProgress pair. 2026-09-11, verified deterministic first: two consecutive runs gave the same count and the same fragment set (symmetric difference 0).",
+    "_recorded": "40 on 2026-10-08 (unchanged): the helixSiteContent self-pair (bulk preview vs bulk publish, a known two-instance pair) moved with the code to helixBulkPublish.ts in the EDS-8 cut. 40 on 2026-10-08: the exit-code decision the four progress reporters each carried became settleStep (stepExit.ts), clearing the exactProgress/milestoneProgress pair. 2026-09-11, verified deterministic first: two consecutive runs gave the same count and the same fragment set (symmetric difference 0).",
     "cloneCeiling": 40,
     "filePairs": [
         "src/core/communication/webviewCommunicationManager.ts <-> src/core/ui/utils/WebviewClient.ts",
@@ -32,8 +32,8 @@
         "src/features/eds/services/github/githubAppService.ts <-> src/features/project-creation/handlers/checkGitHubAppHandler.ts",
         "src/features/eds/services/github/githubHelpers.ts <-> src/features/eds/services/github/githubTokenService.ts",
         "src/features/eds/services/helix/helixApiKeys.ts <-> src/features/eds/services/helix/helixApiKeys.ts",
+        "src/features/eds/services/helix/helixBulkPublish.ts <-> src/features/eds/services/helix/helixBulkPublish.ts",
         "src/features/eds/services/helix/helixPageContent.ts <-> src/features/eds/services/helix/helixPageContent.ts",
-        "src/features/eds/services/helix/helixSiteContent.ts <-> src/features/eds/services/helix/helixSiteContent.ts",
         "src/features/lifecycle/services/projectResetService.ts <-> src/features/project-creation/handlers/executorComponentLoading.ts",
         "src/features/prerequisites/handlers/checkHandler.ts <-> src/features/prerequisites/handlers/continueHandler.ts",
         "src/features/prerequisites/services/PrerequisitesManager.ts <-> src/features/prerequisites/services/PrerequisitesManager.ts",

@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "EDS-8 2026-10-08: ProgressUnifier.ts split by job. The old file had no row; measured unsplit through its five public-API suites at 43.96 before the cut. After: the orchestration remainder 87.32 (its eight survivors and one uncovered default are two guards with the same synthetic fallback, a finally nothing reads and a NaN compare, all ledgered); exactProgress 94.51, milestoneProgress 90.57, timedProgress 94.53, fnmCommands 95.92, each with a direct suite of its own; survivors left are trace-line wording plus ledgered equivalents.",
+    "_note": "EDS-8 2026-10-08: helixSiteContent.ts split by job. The old file had no row and its unsplit measure was stopped (the focus run fell back to 335 import-graph suites), so there is no before number. After, each with a direct suite of its own: the site-publish policy remainder 82.76, helixBulkPublish 84.55, helixPageDiscovery 92.31. Survivors are log and progress wording plus two ledgered double guards in the path conversion; openGaps 0 on all three.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -9698,6 +9698,54 @@
             "uncoveredCategories": {},
             "highValueSurvivors": 2,
             "equivalent": 3,
+            "openGaps": 0
+        },
+        "src/features/eds/services/helix/helixPageDiscovery.ts": {
+            "score": 92.31,
+            "killed": 60,
+            "survived": 4,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 1,
+                "branch": 1,
+                "string": 2
+            },
+            "uncoveredCategories": {
+                "string": 1
+            },
+            "highValueSurvivors": 1,
+            "equivalent": 4,
+            "openGaps": 0
+        },
+        "src/features/eds/services/helix/helixBulkPublish.ts": {
+            "score": 84.55,
+            "killed": 104,
+            "survived": 19,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 18,
+                "string": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/eds/services/helix/helixSiteContent.ts": {
+            "score": 82.76,
+            "killed": 71,
+            "survived": 15,
+            "noCoverage": 0,
+            "timeout": 1,
+            "survivorCategories": {
+                "logPresentation": 10,
+                "string": 5
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
             "openGaps": 0
         }
     }

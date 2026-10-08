@@ -137,6 +137,14 @@ bookkeeping, and because "the tests passed" cannot see a line no test constrains
    npm run test:mutation:focus
    node scripts/checkMutationBaseline.mjs --report reports/mutation/focus.json
    ```
+   **Write (or rename) the mirrored suite for every piece BEFORE pointing the focus run at
+   it, and read the suite list it prints.** `focusModule.mjs` selects suites by name; a
+   piece with no suite named for it falls back to jest's import graph, which for a
+   service many things reach is hundreds of suites, each re-run per mutant. On 2026-10-08
+   that turned a three-minute measurement of `helixSiteContent.ts` into one that had to be
+   killed after twenty: 335 suites selected, because its tests still carried the old
+   `helixService` name. More than about 20 suites in the printed list is a finding to
+   report, not a run to start.
    The old file usually has a row in `reports/mutation/baseline.json` already; that row IS
    the "before", so do not re-measure the unsplit file (on 2026-10-08 one such run took 15
    of a 40-minute sitting and told us a number the record already held). Measure before

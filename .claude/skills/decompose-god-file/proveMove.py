@@ -176,6 +176,10 @@ def main() -> int:
         # Take the first function that exists in both, change one token, expect DIFFERS.
         for path, fns in new_files.items():
             for name, body in fns.items():
+                # A body with no call in it cannot take the plant; skip it, or the
+                # control passes vacuously (it did, on a one-line getter, 2026-10-08).
+                if '(' not in body:
+                    continue
                 if renames.get(name, name) in old and normalise(old[renames.get(name, name)]) == normalise(body):
                     planted = {path: {name: body.replace('(', '( /*planted*/ 1 +', 1)}}
                     n = compare(old, planted, renames)

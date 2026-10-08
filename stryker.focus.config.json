@@ -8,11 +8,9 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/utils/progressUnifier/ProgressUnifier.ts",
-        "src/core/utils/progressUnifier/exactProgress.ts",
-        "src/core/utils/progressUnifier/milestoneProgress.ts",
-        "src/core/utils/progressUnifier/timedProgress.ts",
-        "src/core/utils/progressUnifier/fnmCommands.ts"
+        "src/features/eds/services/helix/helixSiteContent.ts",
+        "src/features/eds/services/helix/helixBulkPublish.ts",
+        "src/features/eds/services/helix/helixPageDiscovery.ts"
     ],
     "reporters": [
         "clear-text",
