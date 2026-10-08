@@ -8,7 +8,10 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/authentication/services/adobeSignIn.ts"
+        "src/features/eds/services/github/githubFileOperations.ts",
+        "src/features/eds/services/github/githubTreeCommits.ts",
+        "src/features/eds/services/github/githubRepoArchive.ts",
+        "src/features/eds/services/github/githubAuthenticatedOperations.ts"
     ],
     "reporters": [
         "clear-text",

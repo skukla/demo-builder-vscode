@@ -14,8 +14,10 @@ import { DaLiveAuthService } from '../services/daLive/daLiveAuthService';
 import { createDaLiveServiceTokenProvider } from '../services/daLive/daLiveContentOperations';
 import { GitHubFileOperations } from '../services/github/githubFileOperations';
 import { GitHubOAuthService } from '../services/github/githubOAuthService';
+import type { GitHubRepoArchive } from '../services/github/githubRepoArchive';
 import { GitHubRepoOperations } from '../services/github/githubRepoOperations';
 import { GitHubTokenService } from '../services/github/githubTokenService';
+import type { GitHubTreeCommits } from '../services/github/githubTreeCommits';
 import { HelixService } from '../services/helix/helixService';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getLogger } from '@/core/logging/debugLogger';
@@ -27,6 +29,10 @@ export interface GitHubServices {
     tokenService: GitHubTokenService;
     repoOperations: GitHubRepoOperations;
     fileOperations: GitHubFileOperations;
+    /** The Git Data unit the file operations build: trees, blobs, commits, the ref. */
+    treeCommits: GitHubTreeCommits;
+    /** The archive unit the file operations build: a repository's zip, the template reset. */
+    repoArchive: GitHubRepoArchive;
     oauthService: GitHubOAuthService;
 }
 
@@ -68,6 +74,8 @@ export function getGitHubServices(secrets: vscode.SecretStorage): GitHubServices
             tokenService,
             repoOperations,
             fileOperations,
+            treeCommits: fileOperations.treeCommits,
+            repoArchive: fileOperations.repoArchive,
             oauthService,
         };
         logger.debug('[EDS:ServiceCache] GitHub services created and cached');

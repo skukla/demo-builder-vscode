@@ -24,6 +24,7 @@ import type { AddonSource } from '@/types/demoPackages';
 import {
     createBlockFileEntries,
     setupBlockCollectionMocks,
+    type MockGithubFileOps,
 } from './blockCollectionHelpers.testUtils';
 
 const DEST_OWNER = 'dest-owner';
@@ -40,7 +41,7 @@ type Group = {
 };
 
 describe('the component-definition merge — shapes it must survive', () => {
-    let mockGithubFileOps: jest.Mocked<GitHubFileOperations>;
+    let mockGithubFileOps: MockGithubFileOps;
     let mockLogger: jest.Mocked<Logger>;
 
     beforeEach(() => {
@@ -210,7 +211,7 @@ describe('the component-definition merge — shapes it must survive', () => {
  * a `plugins` object with no `da`, a destination group with no components.
  */
 describe('the unsafeHTML enrichment pass', () => {
-    let mockGithubFileOps: jest.Mocked<GitHubFileOperations>;
+    let mockGithubFileOps: MockGithubFileOps;
     let mockLogger: jest.Mocked<Logger>;
 
     beforeEach(() => {

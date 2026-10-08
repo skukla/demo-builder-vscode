@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "2026-10-08 adobeSignIn.ts measured on its own suite (new): 44.74%, every remaining survivor is debug text or a ?. the CommandResult type makes unreachable",
+    "_note": "EDS-8 2026-10-08: githubFileOperations.ts split by job. The old file's row (84.67, measured 2026-09-05) is replaced by the Contents-API remainder at 95.92; the three new units get their first rows: githubTreeCommits 88.10, githubRepoArchive 69.17 (its survivors are the log lines of a six-step orchestration plus two ledgered decisions: the symlink guard and the blob counter; the symlink path gained a test), githubAuthenticatedOperations 100.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -6318,24 +6318,18 @@
             "openGaps": 0
         },
         "src/features/eds/services/github/githubFileOperations.ts": {
-            "score": 84.67,
-            "killed": 231,
-            "survived": 38,
-            "noCoverage": 4,
-            "timeout": 1,
+            "score": 95.92,
+            "killed": 94,
+            "survived": 4,
+            "noCoverage": 0,
+            "timeout": 0,
             "survivorCategories": {
                 "string": 2,
-                "optionalChain": 2,
-                "branch": 5,
-                "logPresentation": 28,
-                "block": 1
+                "logPresentation": 2
             },
-            "uncoveredCategories": {
-                "string": 3,
-                "logPresentation": 1
-            },
-            "highValueSurvivors": 6,
-            "equivalent": 8,
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
             "openGaps": 0
         },
         "src/features/eds/services/github/githubHelpers.ts": {
@@ -9575,6 +9569,57 @@
             "uncoveredCategories": {},
             "highValueSurvivors": 3,
             "equivalent": 9,
+            "openGaps": 0
+        },
+        "src/features/eds/services/github/githubRepoArchive.ts": {
+            "score": 69.17,
+            "killed": 83,
+            "survived": 36,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 23,
+                "branch": 9,
+                "string": 1,
+                "other": 1,
+                "block": 2
+            },
+            "uncoveredCategories": {
+                "string": 1
+            },
+            "highValueSurvivors": 11,
+            "equivalent": 12,
+            "openGaps": 0
+        },
+        "src/features/eds/services/github/githubTreeCommits.ts": {
+            "score": 88.1,
+            "killed": 73,
+            "survived": 7,
+            "noCoverage": 3,
+            "timeout": 1,
+            "survivorCategories": {
+                "optionalChain": 2,
+                "branch": 1,
+                "logPresentation": 4
+            },
+            "uncoveredCategories": {
+                "string": 2,
+                "logPresentation": 1
+            },
+            "highValueSurvivors": 1,
+            "equivalent": 3,
+            "openGaps": 0
+        },
+        "src/features/eds/services/github/githubAuthenticatedOperations.ts": {
+            "score": 100,
+            "killed": 11,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
             "openGaps": 0
         }
     }

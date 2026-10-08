@@ -11,12 +11,12 @@
  */
 
 import * as path from 'path';
-import { Octokit } from '@octokit/core';
 import type {
     GitHubRepo,
     GitHubApiError,
 } from '../types';
-import { createAuthenticatedOctokit, injectTokenIntoUrl } from './githubHelpers';
+import { GitHubAuthenticatedOperations } from './githubAuthenticatedOperations';
+import { injectTokenIntoUrl } from './githubHelpers';
 import { explainOrgRefusal } from './githubOrgRefusal';
 import { toGitHubRepo } from './githubRepoRecord';
 import type { GitHubTokenService } from './githubTokenService';
@@ -51,10 +51,8 @@ const ERROR_MESSAGES = {
 } as const;
 
 
-export class GitHubRepoOperations {
+export class GitHubRepoOperations extends GitHubAuthenticatedOperations {
     private logger: Logger;
-    private tokenService: GitHubTokenService;
-    private octokit: InstanceType<typeof Octokit> | null = null;
 
     /**
      * ADR-015: the executor precedes the optional logger — a required parameter
@@ -65,7 +63,7 @@ export class GitHubRepoOperations {
         private commandManager: CommandExecutor,
         logger?: Logger,
     ) {
-        this.tokenService = tokenService;
+        super(tokenService);
         this.logger = logger ?? getLogger();
     }
 
@@ -549,28 +547,5 @@ export class GitHubRepoOperations {
         }
 
         this.logger.debug(`[GitHub] Clone completed successfully`);
-    }
-
-    /**
-     * Ensure we have an authenticated Octokit instance
-     */
-    private async ensureAuthenticated(): Promise<InstanceType<typeof Octokit>> {
-        const token = await this.tokenService.getToken();
-        if (!token) {
-            throw new Error(ERROR_MESSAGES.NOT_AUTHENTICATED);
-        }
-
-        if (!this.octokit) {
-            this.octokit = createAuthenticatedOctokit(token.token);
-        }
-
-        return this.octokit;
-    }
-
-    /**
-     * Invalidate cached Octokit instance (call after token changes)
-     */
-    invalidateOctokit(): void {
-        this.octokit = null;
     }
 }

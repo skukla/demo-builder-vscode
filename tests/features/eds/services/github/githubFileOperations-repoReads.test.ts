@@ -307,83 +307,6 @@ describe('deleteFile', () => {
     });
 });
 
-describe('getBranchInfo', () => {
-    it('returns the branch tree and its head commit', async () => {
-        mockRequest.mockResolvedValue({
-            data: { commit: { sha: 'commit-sha', commit: { tree: { sha: 'tree-sha' } } } },
-        });
-
-        await expect(ops().getBranchInfo('me', 'shop', 'develop')).resolves.toEqual({
-            treeSha: 'tree-sha',
-            commitSha: 'commit-sha',
-        });
-        expect(optionsSentTo('/branches/{branch}')?.branch).toBe('develop');
-    });
-
-    it('defaults to the main branch', async () => {
-        mockRequest.mockResolvedValue({
-            data: { commit: { sha: 'commit-sha', commit: { tree: { sha: 'tree-sha' } } } },
-        });
-
-        await ops().getBranchInfo('me', 'shop');
-
-        expect(optionsSentTo('/branches/{branch}')?.branch).toBe('main');
-    });
-
-    it('does not swallow a missing branch — the bulk path needs to know', async () => {
-        mockRequest.mockRejectedValue(notFound());
-
-        await expect(ops().getBranchInfo('me', 'shop')).rejects.toThrow('Not Found');
-    });
-});
-
-describe('createTree', () => {
-    const entries = [
-        { path: 'head.html', mode: '100644' as const, type: 'blob' as const, content: '<head/>' },
-    ];
-
-    it('bases the tree on an existing one when told to', async () => {
-        mockRequest.mockResolvedValue({ data: { sha: 'new-tree' } });
-
-        await expect(ops().createTree('me', 'shop', entries, 'base-tree')).resolves.toBe('new-tree');
-        expect(optionsSentTo('/git/trees')).toEqual({
-            owner: 'me',
-            repo: 'shop',
-            tree: entries,
-            base_tree: 'base-tree',
-        });
-    });
-
-    it('omits base_tree entirely when there is none — a based tree keeps stale files', async () => {
-        mockRequest.mockResolvedValue({ data: { sha: 'new-tree' } });
-
-        await ops().createTree('me', 'shop', entries);
-
-        expect(optionsSentTo('/git/trees')).toEqual({
-            owner: 'me',
-            repo: 'shop',
-            tree: entries,
-        });
-    });
-});
-
-describe('createCommit', () => {
-    it('commits the tree onto exactly one parent', async () => {
-        mockRequest.mockResolvedValue({ data: { sha: 'commit-sha' } });
-
-        await expect(
-            ops().createCommit('me', 'shop', 'chore: x', 'tree-sha', 'parent-sha'),
-        ).resolves.toBe('commit-sha');
-        expect(optionsSentTo('/git/commits')).toEqual({
-            owner: 'me',
-            repo: 'shop',
-            message: 'chore: x',
-            tree: 'tree-sha',
-            parents: ['parent-sha'],
-        });
-    });
-});
-
 describe('getBlobContent', () => {
     it('decodes what GitHub sends as base64', async () => {
         mockRequest.mockResolvedValue({
@@ -396,5 +319,49 @@ describe('getBlobContent', () => {
             repo: 'shop',
             file_sha: 'blob-1',
         });
+    });
+});
+
+/**
+ * The three forwarders kept by the 2026-10-08 split (EDS-8). Each is reached by
+ * callers handed this object whole; the job lives in the unit it names. The
+ * default-branch case goes through the REAL unit — a forwarder that re-declared
+ * the default would be a second place for it to drift.
+ */
+describe('kept forwarders', () => {
+    it('getBranchInfo is answered by the tree-commits unit, with its main default', async () => {
+        mockRequest.mockResolvedValue({
+            data: { commit: { sha: 'commit-sha', commit: { tree: { sha: 'tree-sha' } } } },
+        });
+
+        await expect(ops().getBranchInfo('me', 'shop')).resolves.toEqual({
+            treeSha: 'tree-sha',
+            commitSha: 'commit-sha',
+        });
+        expect(optionsSentTo('/branches/{branch}')?.branch).toBe('main');
+    });
+
+    it('commitTreeToBranch hands every argument to the tree-commits unit', async () => {
+        const service = ops();
+        const owned = jest.spyOn(service.treeCommits, 'commitTreeToBranch').mockResolvedValue('c1');
+        const entries = [{ path: 'a.js', mode: '100644' as const, type: 'blob' as const, content: 'x' }];
+
+        await expect(service.commitTreeToBranch('me', 'shop', 'main', entries, 'chore: x')).resolves.toBe('c1');
+
+        expect(owned).toHaveBeenCalledWith('me', 'shop', 'main', entries, 'chore: x');
+    });
+
+    it('resetRepoToTemplate hands every argument to the archive unit, the pinned ref included', async () => {
+        const service = ops();
+        const owned = jest
+            .spyOn(service.repoArchive, 'resetRepoToTemplate')
+            .mockResolvedValue({ commitSha: 'c1', fileCount: 2 });
+        const overrides = new Map([['fstab.yaml', 'x']]);
+
+        await expect(
+            service.resetRepoToTemplate('t', 'tpl', 'me', 'shop', overrides, 'a1b2c3d4e5f6789012345678901234567890abcd'),
+        ).resolves.toEqual({ commitSha: 'c1', fileCount: 2 });
+
+        expect(owned).toHaveBeenCalledWith('t', 'tpl', 'me', 'shop', overrides, 'a1b2c3d4e5f6789012345678901234567890abcd');
     });
 });

@@ -32,7 +32,7 @@
 import type { GitHubTreeInput } from '@/features/eds/services/types';
 import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
 
-import { GitHubFileOperations, mockRequest } from './githubFileOperations.testUtils';
+import { GitHubTreeCommits, mockRequest } from './githubFileOperations.testUtils';
 
 const tokenService = {
     getToken: jest.fn().mockResolvedValue({ token: 'gh-token' }),
@@ -53,7 +53,7 @@ beforeEach(() => {
 
 describe('updateBranchRef', () => {
     it('does NOT force by default — a caller that means it has to say so', async () => {
-        const ops = new GitHubFileOperations(tokenService);
+        const ops = new GitHubTreeCommits(tokenService);
 
         await ops.updateBranchRef('owner', 'repo', 'main', 'new-commit-sha');
 
@@ -63,7 +63,7 @@ describe('updateBranchRef', () => {
     it('forces when the caller explicitly asks', async () => {
         // Replacing a repository's history is a real operation; this keeps it
         // available, just not free.
-        const ops = new GitHubFileOperations(tokenService);
+        const ops = new GitHubTreeCommits(tokenService);
 
         await ops.updateBranchRef('owner', 'repo', 'main', 'new-commit-sha', true);
 
@@ -71,7 +71,7 @@ describe('updateBranchRef', () => {
     });
 
     it('still targets the branch ref the caller named', async () => {
-        const ops = new GitHubFileOperations(tokenService);
+        const ops = new GitHubTreeCommits(tokenService);
 
         await ops.updateBranchRef('skukla', 'storefront', 'main', 'abc123');
 
@@ -83,46 +83,6 @@ describe('updateBranchRef', () => {
                 branch: 'main',
                 sha: 'abc123',
             })
-        );
-    });
-});
-
-describe('resetRepoToTemplate — the one caller that means to rewrite history', () => {
-    it('asks for force explicitly', async () => {
-        // Assert the ARGUMENT, not the outcome: `updateBranchRef` is stubbed
-        // here, and a stub moves no ref whatever it is handed. What is under
-        // test is what reset ASKS for — and after the default flipped, a reset
-        // that stays silent would quietly stop replacing history.
-        const ops = new GitHubFileOperations(tokenService);
-        const updateBranchRef = jest.spyOn(ops, 'updateBranchRef').mockResolvedValue(undefined);
-        jest.spyOn(ops, 'getBranchInfo').mockResolvedValue({
-            commitSha: 'parent-sha',
-            treeSha: 'parent-tree',
-        } as Awaited<ReturnType<GitHubFileOperations['getBranchInfo']>>);
-        (ops as unknown as { downloadRepoContents: jest.Mock }).downloadRepoContents = jest
-            .fn()
-            .mockResolvedValue(new Map([['index.html', { data: Buffer.from('<html></html>'), mode: '100644' }]]));
-        (ops as unknown as { createTree: jest.Mock }).createTree = jest
-            .fn()
-            .mockResolvedValue('new-tree-sha');
-        (ops as unknown as { createCommit: jest.Mock }).createCommit = jest
-            .fn()
-            .mockResolvedValue('new-commit-sha');
-
-        await ops.resetRepoToTemplate(
-            'hlxsites',
-            'aem-boilerplate-commerce',
-            'user',
-            'user-storefront',
-            new Map()
-        );
-
-        expect(updateBranchRef).toHaveBeenCalledWith(
-            'user',
-            'user-storefront',
-            'main',
-            'new-commit-sha',
-            true
         );
     });
 });
@@ -157,14 +117,14 @@ describe('commitTreeToBranch', () => {
         Object.assign(new Error('Update is not a fast forward'), { status: 422 });
 
     function opsWith(refUpdates: Array<Error | undefined>) {
-        const ops = new GitHubFileOperations(tokenService);
+        const ops = new GitHubTreeCommits(tokenService);
         let read = 0;
         jest.spyOn(ops, 'getBranchInfo').mockImplementation(async () => {
             read += 1;
             return {
                 commitSha: `head-${read}`,
                 treeSha: `tree-${read}`,
-            } as Awaited<ReturnType<GitHubFileOperations['getBranchInfo']>>;
+            } as Awaited<ReturnType<GitHubTreeCommits['getBranchInfo']>>;
         });
         const createTree = jest
             .spyOn(ops, 'createTree')

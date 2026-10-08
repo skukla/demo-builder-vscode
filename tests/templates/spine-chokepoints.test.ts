@@ -352,16 +352,19 @@ describe('spine choke-points', () => {
     it('github MUTATIONS: repo/content writes go through the two eds owners only', () => {
         // Audited 2026-08-22: a clean split — githubRepoOperations owns
         // repo-level mutations (create-from-template, delete, settings PATCH),
-        // githubFileOperations owns content mutations (file put/delete and the
-        // tree/commit/ref bulk-reset machinery). The four other files touching
-        // api.github.com (component install, patch fetcher, updates, auto-
-        // updater) are read-only — verified: no mutating method anywhere in
+        // githubFileOperations owns content mutations (file put/delete). The
+        // tree/commit/ref machinery those two shared a file with until
+        // 2026-10-08 is githubTreeCommits (EDS-8 split by job); the template
+        // reset drives it and makes no request of its own. The four other files
+        // touching api.github.com (component install, patch fetcher, updates,
+        // auto-updater) are read-only — verified: no mutating method anywhere in
         // them. Mutations ride octokit.request with a verb-prefixed route,
         // which is what the pattern anchors on.
         const primitive = /octokit\.request\(\s*['"`](POST|DELETE|PATCH|PUT) /;
         const spine = [
             'features/eds/services/github/githubFileOperations.ts',
             'features/eds/services/github/githubRepoOperations.ts',
+            'features/eds/services/github/githubTreeCommits.ts',
         ];
 
         const hits = filesTouchingPrimitive(primitive);

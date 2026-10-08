@@ -110,13 +110,20 @@ bookkeeping, and because "the tests passed" cannot see a line no test constrains
    rest, diff each moved function against the pre-split commit:
    ```bash
    python3 .claude/skills/decompose-god-file/proveMove.py HEAD~1 <old-file> <new-file>... \
-       [--rename oldName=newName] [--control]
+       [--rename oldName=newName] [--via field] [--control]
    ```
    It ignores whitespace, `this.x`/`deps.x`, the `deps` destructure and wrapped commas, and
    prints a diff for anything else. **Every `DIFFERS` is read by a person and named in the
    commit message** — on the first run (2026-10-08) two of three were real: a timing wrapper
    that moved off two reads, which the agent's report had described as a side effect.
-   `--control` plants a one-token change and must report `DIFFERS`.
+   `--control` plants a one-token change and must report `DIFFERS`. `--via treeCommits`
+   says a moved method now reaches its former siblings through that field, so
+   `this.treeCommits.createTree` reads as `this.createTree` did; run it WITHOUT the flag
+   first and confirm the prefix is the only difference. A forwarder the split keeps is
+   `DIFFERS` by definition — name it as one. The second run (same day) found the tool
+   taking the `{` inside `Promise<{ treeSha: string }>` for a body, so two forwarders with
+   object-literal return types read `same` against the ten-line methods they replaced;
+   the return type is now skipped at bracket depth.
 3. **Full checks, not the scoped gate alone:** full jest, `tsc --noEmit`, `typecheck:tests`,
    whole-repo lint, compile. State each exit code.
 4. **Mutation score before and after**, so the tests still guard what moved:

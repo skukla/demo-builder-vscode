@@ -1,7 +1,9 @@
 /**
- * The Octokit stub both githubFileOperations suites install.
+ * The Octokit stub the GitHub operations suites install — file operations, tree
+ * commits and the repo archive (split by job on 2026-10-08, EDS-8), plus the
+ * base class they share.
  *
- * `GitHubFileOperations` news up its own Octokit through the plugin factory, so
+ * Each operations class news up its own Octokit through the plugin factory, so
  * the mock has to provide that shape rather than an instance. The two suites
  * wrote it differently — one wrapped `plugin` in a `jest.fn()`, the other did
  * not; one passed the request mock directly, the other closed over it — and the
@@ -39,3 +41,6 @@ jest.mock('@octokit/core', () => ({
 // branchRef suite did exactly that on the first attempt: every request went to
 // the real client shape and `force` came back undefined.
 export { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
+export { GitHubAuthenticatedOperations } from '@/features/eds/services/github/githubAuthenticatedOperations';
+export { GitHubRepoArchive } from '@/features/eds/services/github/githubRepoArchive';
+export { GitHubTreeCommits } from '@/features/eds/services/github/githubTreeCommits';

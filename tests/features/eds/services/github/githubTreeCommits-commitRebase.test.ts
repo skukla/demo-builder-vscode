@@ -12,7 +12,7 @@
  * the same 422 and cannot succeed however many times it is repeated.
  */
 
-import { GitHubFileOperations, mockRequest } from './githubFileOperations.testUtils';
+import { GitHubTreeCommits, mockRequest } from './githubFileOperations.testUtils';
 import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
 import type { GitHubTreeInput } from '@/features/eds/services/types';
 
@@ -72,7 +72,7 @@ describe('commitTreeToBranch', () => {
             heads: [{ commitSha: 'head-1', treeSha: 'tree-1' }],
             refResults: [undefined],
         });
-        const ops = new GitHubFileOperations(tokenService);
+        const ops = new GitHubTreeCommits(tokenService);
 
         const sha = await ops.commitTreeToBranch('me', 'shop', 'main', ENTRIES, 'chore: x');
 
@@ -88,7 +88,7 @@ describe('commitTreeToBranch', () => {
             ],
             refResults: [staleRef(), undefined],
         });
-        const ops = new GitHubFileOperations(tokenService);
+        const ops = new GitHubTreeCommits(tokenService);
 
         const sha = await ops.commitTreeToBranch('me', 'shop', 'main', ENTRIES, 'chore: x');
 
@@ -102,7 +102,7 @@ describe('commitTreeToBranch', () => {
             heads: [{ commitSha: 'head-1', treeSha: 'tree-1' }],
             refResults: [staleRef()],
         });
-        const ops = new GitHubFileOperations(tokenService);
+        const ops = new GitHubTreeCommits(tokenService);
 
         await expect(
             ops.commitTreeToBranch('me', 'shop', 'main', ENTRIES, 'chore: x'),
@@ -122,7 +122,7 @@ describe('commitTreeToBranch', () => {
                 }),
             ],
         });
-        const ops = new GitHubFileOperations(tokenService);
+        const ops = new GitHubTreeCommits(tokenService);
 
         await expect(
             ops.commitTreeToBranch('me', 'shop', 'main', ENTRIES, 'chore: x'),
@@ -140,7 +140,7 @@ describe('commitTreeToBranch', () => {
             heads: [{ commitSha: 'head-1', treeSha: 'tree-1' }],
             refResults: [Object.assign(new Error('Bad credentials'), { status: 401 })],
         });
-        const ops = new GitHubFileOperations(tokenService);
+        const ops = new GitHubTreeCommits(tokenService);
 
         await expect(
             ops.commitTreeToBranch('me', 'shop', 'main', ENTRIES, 'chore: x'),

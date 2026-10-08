@@ -15,7 +15,7 @@
  */
 
 import AdmZip from 'adm-zip';
-import { GitHubFileOperations, mockRequest } from './githubFileOperations.testUtils';
+import { GitHubRepoArchive, GitHubTreeCommits, mockRequest } from './githubFileOperations.testUtils';
 import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
 
 const tokenService = {
@@ -39,6 +39,11 @@ function archive(): Buffer {
     zip.addFile('me-template-abc123/public/favicon.png', PNG, '', 0o644);
     zip.addFile('me-template-abc123/.husky/pre-commit', Buffer.from('#!/bin/sh\nnpx lint-staged\n'), '', 0o755);
     zip.addFile('me-template-abc123/README.md', Buffer.from('# Demo\n'), '', 0o644);
+    // A symlink: its bytes are the target path. adm-zip's numeric attr only sets
+    // permission bits (the type is forced to a regular file), so the stored mode
+    // is written onto the entry directly, as GitHub's own archives carry it.
+    zip.addFile('me-template-abc123/scripts/alias.js', Buffer.from('scripts/scripts.js'), '', 0o644);
+    (zip.getEntry('me-template-abc123/scripts/alias.js') as { attr: number }).attr = (0o120777 << 16) >>> 0;
     return zip.toBuffer();
 }
 
@@ -74,6 +79,16 @@ beforeEach(() => {
     mockRequest.mockReset();
 });
 
+/** The archive over a REAL tree-commits unit, so blobs and trees reach mockRequest. */
+const reset = (overrides = new Map<string, string>()) =>
+    new GitHubRepoArchive(tokenService, new GitHubTreeCommits(tokenService)).resetRepoToTemplate(
+        'me',
+        'template',
+        'steve',
+        'site',
+        overrides,
+    );
+
 describe('resetRepoToTemplate — binary files and file modes', () => {
     it('CONTROL: the PNG bytes do not survive a UTF-8 decode, so inline content would corrupt them', () => {
         expect(Buffer.from(PNG.toString('utf-8'), 'utf-8').equals(PNG)).toBe(false);
@@ -82,7 +97,7 @@ describe('resetRepoToTemplate — binary files and file modes', () => {
     it('uploads a binary file as a blob of its exact bytes and points the tree entry at it', async () => {
         const { trees, blobs } = stubGitHub();
 
-        await new GitHubFileOperations(tokenService).resetRepoToTemplate('me', 'template', 'steve', 'site', new Map());
+        await reset();
 
         const favicon = trees.find((entry) => entry.path === 'public/favicon.png');
         expect(favicon).toEqual({ path: 'public/favicon.png', mode: '100644', type: 'blob', sha: 'blob-1' });
@@ -93,7 +108,7 @@ describe('resetRepoToTemplate — binary files and file modes', () => {
     it('keeps an executable file executable, and sends text inline', async () => {
         const { trees } = stubGitHub();
 
-        await new GitHubFileOperations(tokenService).resetRepoToTemplate('me', 'template', 'steve', 'site', new Map());
+        await reset();
 
         expect(trees.find((entry) => entry.path === '.husky/pre-commit')).toEqual({
             path: '.husky/pre-commit',
@@ -112,13 +127,7 @@ describe('resetRepoToTemplate — binary files and file modes', () => {
     it('an override replaces a template file as text and keeps that file\'s mode', async () => {
         const { trees } = stubGitHub();
 
-        await new GitHubFileOperations(tokenService).resetRepoToTemplate(
-            'me',
-            'template',
-            'steve',
-            'site',
-            new Map([['.husky/pre-commit', '#!/bin/sh\necho demo\n']]),
-        );
+        await reset(new Map([['.husky/pre-commit', '#!/bin/sh\necho demo\n']]));
 
         expect(trees.find((entry) => entry.path === '.husky/pre-commit')).toEqual({
             path: '.husky/pre-commit',
@@ -126,5 +135,20 @@ describe('resetRepoToTemplate — binary files and file modes', () => {
             type: 'blob',
             content: '#!/bin/sh\necho demo\n',
         });
+    });
+
+    it('keeps a symlink a symlink: its content is the target path, and it is never a blob', async () => {
+        const { trees, blobs } = stubGitHub();
+
+        await reset();
+
+        expect(trees.find((entry) => entry.path === 'scripts/alias.js')).toEqual({
+            path: 'scripts/alias.js',
+            mode: '120000',
+            type: 'blob',
+            content: 'scripts/scripts.js',
+        });
+        // The favicon is the only blob; the link travelled inline.
+        expect(blobs).toHaveLength(1);
     });
 });

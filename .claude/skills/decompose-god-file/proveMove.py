@@ -3,7 +3,7 @@
 proveMove.py: is a decomposition a MOVE, or did the code change on the way?
 
     python3 .claude/skills/decompose-god-file/proveMove.py <ref> <old-file> <new-file>... \
-        [--rename old=new ...]
+        [--rename old=new ...] [--via field ...]
 
 For every top-level function and class method in each NEW file (working tree), find
 the function of the same name in the OLD file as it was at <ref> (a commit, usually
@@ -39,6 +39,41 @@ NOT_A_FUNCTION = {'if', 'for', 'while', 'switch', 'catch', 'return', 'constructo
                   'await', 'new', 'typeof', 'import', 'export', 'else', 'do', 'try'}
 
 
+def body_start(src: str, i: int) -> int | None:
+    """Index of a definition's opening brace, given the index just past its parameter list.
+
+    A definition's `)` is followed by `{`, or by `: <type> {`. The type is skipped at
+    bracket depth, not by regex: `Promise<{ treeSha: string }>` holds a brace of its
+    own, and the first cut of this tool took THAT for the body — so two forwarders
+    with object-literal return types were reported `same` against the ten-line
+    methods they replaced (found 2026-10-08, the second time the tool ran). A `;`
+    or `=` at depth zero means this was a call or a field, not a definition.
+    """
+    m = re.match(r'\s*(:|\{)', src[i:i + 50])
+    if not m:
+        return None
+    if m.group(1) == '{':
+        return i + m.end() - 1
+    angle = brace = 0
+    j = i + m.end()
+    while j < len(src):
+        c = src[j]
+        if c == '<':
+            angle += 1
+        elif c == '>':
+            angle -= 1
+        elif c == '{':
+            if angle == 0 and brace == 0:
+                return j
+            brace += 1
+        elif c == '}':
+            brace -= 1
+        elif c in ';=' and angle == 0 and brace == 0:
+            return None
+        j += 1
+    return None
+
+
 def functions(src: str) -> dict[str, str]:
     """name -> body text (from the opening brace to its match)."""
     out: dict[str, str] = {}
@@ -52,11 +87,9 @@ def functions(src: str) -> dict[str, str]:
             depth += src[i] == '('
             depth -= src[i] == ')'
             i += 1
-        rest = src[i:i + 200]
-        body_at = re.match(r'\s*(?::\s*[^{;=]+?)?\s*\{', rest)
-        if not body_at:
+        start = body_start(src, i)
+        if start is None:
             continue
-        start = i + body_at.end() - 1
         depth, j = 0, start
         while j < len(src):
             depth += src[j] == '{'
@@ -69,8 +102,16 @@ def functions(src: str) -> dict[str, str]:
     return out
 
 
+VIA: list[str] = []
+
+
 def normalise(body: str) -> list[str]:
     body = re.sub(r'\b(?:this|deps|self)\.', '', body)
+    # A method moved into a unit reaches its former siblings through a named field
+    # (`this.treeCommits.createTree` where it read `this.createTree`). Named per run
+    # with --via, so the default output still shows the prefix as a difference.
+    for field in VIA:
+        body = re.sub(r'\b' + re.escape(field) + r'\.', '', body)
     # A moved function reads its collaborators off `deps` instead of `this`; the
     # destructure that does so is not a change.
     body = re.sub(r'const\s*\{[^}]*\}\s*=\s*deps;', '', body)
@@ -113,7 +154,10 @@ def main() -> int:
     p.add_argument('new_files', nargs='+')
     p.add_argument('--rename', action='append', default=[], metavar='OLD=NEW')
     p.add_argument('--control', action='store_true', help='plant a change and require DIFFERS')
+    p.add_argument('--via', action='append', default=[], metavar='FIELD',
+                   help='a field a moved method now reaches siblings through; its prefix is not a change')
     a = p.parse_args()
+    VIA.extend(a.via)
     renames = {}
     for r in a.rename:
         old, new = r.split('=', 1)

@@ -42,7 +42,8 @@ const repoOperations = {
     waitForContent: jest.fn().mockResolvedValue(true),
     setTemplateFlag: jest.fn().mockResolvedValue(undefined),
 };
-const fileOperations = {};
+/** The tree-commit unit the push takes; the handler hands it on untouched. */
+const treeCommits = {};
 
 const STOREFRONT = new Map<string, Buffer>([
     ['scripts/scripts.js', Buffer.from('x')],
@@ -59,7 +60,7 @@ function ctx() {
 
 beforeEach(() => {
     jest.clearAllMocks();
-    mockServices.mockReturnValue({ repoOperations, fileOperations, tokenService });
+    mockServices.mockReturnValue({ repoOperations, treeCommits, tokenService });
     tokenService.validateToken.mockResolvedValue({ valid: true, user: { login: 'steve' } });
     mockRead.mockReturnValue({ files: STOREFRONT, rootName: 'citisignal-b2b-summit-main', dropped: 7 });
     repoOperations.createEmptyRepository.mockResolvedValue({ fullName: 'steve/citisignal-b2b-summit', name: 'citisignal-b2b-summit', defaultBranch: 'main' });
@@ -82,7 +83,7 @@ describe('handleImportStorefrontZip', () => {
         expect(mockOpen).not.toHaveBeenCalled();
         expect(repoOperations.createEmptyRepository).toHaveBeenCalledWith('citisignal-b2b-summit', false);
         expect(repoOperations.waitForContent).toHaveBeenCalledWith('steve', 'citisignal-b2b-summit');
-        expect(mockPush).toHaveBeenCalledWith(fileOperations, 'steve', 'citisignal-b2b-summit', STOREFRONT, 'Add storefront from a zip file', expect.anything(), expect.any(Function));
+        expect(mockPush).toHaveBeenCalledWith(treeCommits, 'steve', 'citisignal-b2b-summit', STOREFRONT, 'Add storefront from a zip file', expect.anything(), expect.any(Function));
         expect(repoOperations.setTemplateFlag).toHaveBeenCalledWith('steve', 'citisignal-b2b-summit', true);
         expect(result).toEqual({
             success: true,

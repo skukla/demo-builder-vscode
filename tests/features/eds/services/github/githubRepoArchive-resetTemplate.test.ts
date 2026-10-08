@@ -11,10 +11,8 @@
  * (`owner-repo-sha/`) is asserted rather than assumed.
  */
 
-import { GitHubFileOperations, mockRequest } from './githubFileOperations.testUtils';
-import { batchTreeEntries } from '@/features/eds/services/github/githubFileOperations';
+import { GitHubRepoArchive, GitHubTreeCommits, mockRequest } from './githubFileOperations.testUtils';
 import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
-import type { GitHubTreeInput } from '@/features/eds/services/types';
 
 const mockZipEntries = jest.fn();
 jest.mock('adm-zip', () => ({
@@ -83,44 +81,8 @@ beforeEach(() => {
     mockZipEntries.mockReset();
 });
 
-const ops = () => new GitHubFileOperations(tokenService);
-
-describe('batchTreeEntries', () => {
-    const entry = (path: string, content: string): GitHubTreeInput => ({
-        path,
-        mode: '100644',
-        type: 'blob',
-        content,
-    });
-    const sizeOf = (e: GitHubTreeInput) => JSON.stringify(e).length;
-
-    it('keeps entries together while they fit the budget exactly', () => {
-        const a = entry('a.txt', 'x'.repeat(100));
-        const b = entry('b.txt', 'x'.repeat(100));
-        // The budget is the combined size to the byte: the guard splits on
-        // exceeding it, not on reaching it.
-        const budget = sizeOf(a) + sizeOf(b);
-
-        expect(batchTreeEntries([a, b], budget)).toEqual([[a, b]]);
-    });
-
-    it('starts a new batch as soon as one more entry would exceed the budget', () => {
-        const a = entry('a.txt', 'x'.repeat(100));
-        const b = entry('b.txt', 'x'.repeat(100));
-
-        expect(batchTreeEntries([a, b], sizeOf(a) + sizeOf(b) - 1)).toEqual([[a], [b]]);
-    });
-
-    it('never splits a single entry, however far over the budget it is', () => {
-        const huge = entry('huge.bin', 'x'.repeat(5000));
-
-        expect(batchTreeEntries([huge], 10)).toEqual([[huge]]);
-    });
-
-    it('produces no batches for no entries', () => {
-        expect(batchTreeEntries([])).toStrictEqual([]);
-    });
-});
+/** The archive over a REAL tree-commits unit, so every request below reaches mockRequest. */
+const ops = () => new GitHubRepoArchive(tokenService, new GitHubTreeCommits(tokenService));
 
 describe('resetRepoToTemplate — what lands in the tree', () => {
     it('strips the archive root folder and keeps every template file', async () => {
@@ -321,7 +283,7 @@ describe('resetRepoToTemplate — when the archive cannot be fetched', () => {
         } as unknown as GitHubTokenService;
 
         await expect(
-            new GitHubFileOperations(noToken).resetRepoToTemplate(
+            new GitHubRepoArchive(noToken, new GitHubTreeCommits(noToken)).resetRepoToTemplate(
                 'me',
                 'template',
                 'me',
