@@ -73,7 +73,7 @@ describe('ensureFnmNodeVersion', () => {
 
         const error = await ensureFnmNodeVersion(executor, '24', logger);
 
-        expect(error).toBe('Demo Builder could not install Node 24. Check your internet connection and try again.');
+        expect(error).toBe('Could not install Node 24. See Debug Logs for details.');
         expect(logger.debug).toHaveBeenCalled();
     });
 
@@ -212,7 +212,7 @@ describe('ensureNodeWithAdobeCli', () => {
         const error = await ensureNodeWithAdobeCli(exec, '24', INSTALL, logger);
 
         expect(error).toBe(
-            'Demo Builder could not install the Adobe CLI for Node 24. Check your internet connection and try again.',
+            'Could not install the Adobe CLI for Node 24. See Debug Logs for details.',
         );
         expect(calls).not.toContain(INSTALL[1]);
     });

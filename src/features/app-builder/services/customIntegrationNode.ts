@@ -12,14 +12,14 @@
  */
 
 import type { CustomIntegrationNodeResolver } from './componentEntry';
+import { nodeRangeOfRepo } from './integrationRepoReader';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
-import { nodeFolderProcessEnv } from '@/core/shell/nodeFolder';
-import { engineRangeOf, nodeForRepoRange, parseFnmReleases } from '@/core/shell/nodeRangeRule';
+import { nodeFolderProcessEnv , listNodeFolderMajors } from '@/core/shell/nodeFolder';
+import { nodeForRepoRange, parseFnmReleases } from '@/core/shell/nodeRangeRule';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { publicRepoReaders } from '@/features/eds/services/github/publicGitHubReads';
-import { listNodeFolderMajors } from '@/features/prerequisites/services/versioning/MultiVersionDetector';
 import type { Logger } from '@/types/logger';
 
 /** Reads one file of a repo at a ref, or undefined when it is not there or not readable. */
@@ -46,14 +46,13 @@ export function customIntegrationNodeResolver(
     logger: Pick<Logger, 'debug'>,
 ): CustomIntegrationNodeResolver {
     return async (source) => {
-        const text = await readRepoText(source.owner, source.repo, 'package.json', source.branch);
-        const range = text === undefined ? undefined : engineRangeOf(text);
+        const range = await nodeRangeOfRepo((file) => readRepoText(source.owner, source.repo, file, source.branch));
         if (!range) return { ok: true, major: demoBuilderNode() };
-        const [storeMajors, releases] = await Promise.all([
+        const [folderMajors, releases] = await Promise.all([
             listNodeFolderMajors(commandManager).catch(() => []),
             releasesFrom(commandManager, logger),
         ]);
-        return nodeForRepoRange(range, demoBuilderNode(), storeMajors, releases);
+        return nodeForRepoRange(range, demoBuilderNode(), folderMajors, releases);
     };
 }
 

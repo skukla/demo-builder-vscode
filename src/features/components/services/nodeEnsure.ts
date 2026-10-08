@@ -1,6 +1,7 @@
 /**
  * Ensure the Node a thing runs on, and the Adobe CLI under it when the thing uses
- * `aio` (PR-1a step 2): the one "make sure" call every door uses.
+ * `aio` (PR-1a step 2): what the add door and the Node sweep call. (The AI tools
+ * install calls `ensureFnmNodeVersion` directly: they need no Adobe CLI.)
  *
  * The version comes from `demoBuilderNode()` (core/shell/demoBuilderNode.ts); the Adobe CLI's
  * install commands come from the prerequisites' own `aio-cli` entry and its

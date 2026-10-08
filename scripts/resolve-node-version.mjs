@@ -11,7 +11,8 @@
  *
  * Fails, writing nothing, when the ranges do not overlap (naming the ones that block)
  * or a source cannot be read. The rule and the source list live in typechecked,
- * tested code (`src/features/components/services/nodeResolution.ts`); this file only
+ * tested code (`nodeResolution.ts` lists the sources, `src/core/shell/nodeRangeRule.ts` holds
+ * the rule, re-exported through it); this file only
  * fetches and writes, so it bundles that module with esbuild rather than copying it.
  * A generator, like `docs:tools`, not a check: it reads the network, so it runs at a
  * release cut (`cut-release`), never in the gate.

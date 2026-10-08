@@ -7,9 +7,9 @@
 
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { toolInstalledUnder } from '@/core/shell/ensureNodeVersion';
+import { listNodeFolderMajors } from '@/core/shell/nodeFolder';
 import { formatDuration } from '@/core/utils/timeFormatting';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { listNodeFolderMajors } from '@/features/prerequisites/services/versioning/MultiVersionDetector';
 import { HandlerContext } from '@/types/handlers';
 
 /**

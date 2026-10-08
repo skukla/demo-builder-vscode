@@ -1011,18 +1011,16 @@ async function runAdd(
     }
 
     try {
-        {
-            // Every entry, from demoBuilderNode() (PR-1a): its own version, else
-            // Demo Builder's. Visible, not silent: a first-time install takes a while
-            // and the progress channel is the surface every add path already has.
-            // "Installing … (one-time install)" was said even when Node was already
-            // there — every add of a pair said it twice (2026-09-21).
-            const node = nodeForAppBuilderEntry(entry);
-            deps.onProgress?.(OPERATION_STAGES.preparingNode.label, `Node ${node}`);
-            const nodeError = await deps.ensureNodeVersion?.(node);
-            if (nodeError) {
-                return { success: false, error: nodeError };
-            }
+        // Every entry, from demoBuilderNode() (PR-1a): its own version, else
+        // Demo Builder's. Visible, not silent: a first-time install takes a while
+        // and the progress channel is the surface every add path already has.
+        // "Installing … (one-time install)" was said even when Node was already
+        // there — every add of a pair said it twice (2026-09-21).
+        const node = nodeForAppBuilderEntry(entry);
+        deps.onProgress?.(OPERATION_STAGES.preparingNode.label, `Node ${node}`);
+        const nodeError = await deps.ensureNodeVersion?.(node);
+        if (nodeError) {
+            return { success: false, error: nodeError };
         }
 
         // The workspace comes BEFORE the subscribe, and that order is the whole
@@ -1265,14 +1263,12 @@ export async function deployAppBuilderComponent(
         existing.error = undefined;
         await deps.saveProject(project);
 
-        {
-            const node = nodeForAppBuilderEntry(entry);
-            deps.onProgress?.(OPERATION_STAGES.preparingNode.label, `Node ${node}`);
-            const nodeError = await deps.ensureNodeVersion?.(node);
-            if (nodeError) {
-                // Thrown so the catch below records it — the marker is already saved.
-                throw new Error(nodeError);
-            }
+        const node = nodeForAppBuilderEntry(entry);
+        deps.onProgress?.(OPERATION_STAGES.preparingNode.label, `Node ${node}`);
+        const nodeError = await deps.ensureNodeVersion?.(node);
+        if (nodeError) {
+            // Thrown so the catch below records it — the marker is already saved.
+            throw new Error(nodeError);
         }
 
         // App Management redeploys re-run the union subscribe (adds always did):

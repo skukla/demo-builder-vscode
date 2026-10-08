@@ -35,6 +35,7 @@ function deps(projects: Project[], overrides: Partial<NodeSweepDeps> = {}) {
         saveProject: jest.fn(async () => undefined),
         withProgress,
         log: jest.fn(),
+        logDetail: jest.fn(),
         ...overrides,
     };
     return { d, progressLines, titles };
@@ -114,6 +115,8 @@ describe('sweepOntoDemoBuilderNode', () => {
         expect(project.componentInstances?.headless.metadata?.nodeVersion).toBe('24');
         expect(d.saveProject).not.toHaveBeenCalled();
         expect(result.failed).toStrictEqual([{ component: 'p: headless', error: 'npm ERR! engine' }]);
+        // npm's own words go to Debug Logs only (ADR-023).
+        expect(d.logDetail).toHaveBeenCalled();
     });
 
     it('moves nothing when the Node cannot be prepared', async () => {

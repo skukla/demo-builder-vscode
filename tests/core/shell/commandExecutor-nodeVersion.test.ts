@@ -92,6 +92,14 @@ describe('an explicit Node version', () => {
         expect(execaOptions.shell).toBe('/bin/zsh');
     });
 
+    it("reads CURRENT from Demo Builder's Node folder, so the Node check reports what Demo Builder runs on (PR-1a)", async () => {
+        const { execaOptions } = await runThroughExeca(executorWith(), mockExeca, 'node --version', {
+            useNodeVersion: 'current',
+        });
+
+        expect((execaOptions.env as NodeJS.ProcessEnv).FNM_DIR).toBe(nodeFolderPath());
+    });
+
     it('still uses the eval form for CURRENT when fnm is not on the PATH', async () => {
         // The eval branch asks fnm for its own environment, so it does not need
         // the binary's location the way `fnm exec` does.

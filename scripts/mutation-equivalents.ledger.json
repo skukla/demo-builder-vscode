@@ -3952,7 +3952,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 92,
+            "line": 71,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying the catch BODY does not remove the catch clause, so a failing fnm list-remote is still swallowed and the function still returns the null on the last line. The body holds one logger.warn and nothing else, so the mutant is observable only as a missing log line, which is exactly what the ratchet refuses to reward a test for pinning.",
@@ -8660,7 +8660,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 1612,
+            "line": 1608,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single deps.logger.warn. Emptying it leaves the catch itself in place, so a failing remote teardown is swallowed exactly as before and the removal continues to clear local state - which the remove-contracts suite asserts directly with a rejecting executor. Only the log line differs.",
@@ -8686,7 +8686,7 @@
             "anchors": [
                 "if (cleared.componentApiPicks) {"
             ],
-            "line": 1857,
+            "line": 1853,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true assigns cleared.componentApiPicks onto the caller's project when it is undefined. cleared is spread from that same project, so an undefined value there means the caller's field was already undefined and the assignment writes back exactly what was there. The mutation is a no-op for every input on which the guard was false.",
@@ -8699,7 +8699,7 @@
             "anchors": [
                 "if (cleared.componentConfigs) {"
             ],
-            "line": 1860,
+            "line": 1856,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true assigns cleared.componentConfigs onto the caller's project when it is undefined. cleared is spread from that same project, so an undefined value there means the caller's field was already undefined and the assignment writes back exactly what was there. The mutation is a no-op for every input on which the guard was false.",

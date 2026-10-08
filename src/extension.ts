@@ -12,6 +12,7 @@ import { CommandExecutor } from '@/core/shell/commandExecutor';
 import { createCommandExecutorDeps } from '@/core/shell/commandExecutorDeps';
 import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { adobeCliInstalledUnder } from '@/core/shell/ensureNodeVersion';
+import { listNodeFolderMajors } from '@/core/shell/nodeFolder';
 import { sweepManifestFormat } from '@/core/state/manifestFormatSweep';
 import { StateManager } from '@/core/state/stateManager';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
@@ -96,7 +97,6 @@ import { registerEwSettingChangeListener } from '@/features/eds/services/ewSetti
 import { HelixService } from '@/features/eds/services/helix/helixService';
 import { renewPublishKeys } from '@/features/eds/services/pdp/publishKeyRenewalSweep';
 import { getPrerequisitesManager } from '@/features/prerequisites/services/prerequisitesManagerInstance';
-import { listNodeFolderMajors } from '@/features/prerequisites/services/versioning/MultiVersionDetector';
 import { refreshAiBundlesOnActivation } from '@/features/project-creation/services/aiBundle/aiBundleActivationRefresh';
 import { setThirdPartyToolsResolver } from '@/features/project-creation/services/aiBundle/aiToolingGate';
 import { refreshGlobalMcpIfPresent } from '@/features/project-creation/services/aiBundle/globalMcpRegistration';
@@ -906,7 +906,7 @@ async function sweepManifestFormats(): Promise<void> {
 }
 
 /**
- * Glue for the Node sweep (nodeMigration.ts, PR-1a step 9): loads every project the
+ * Glue for the Node sweep (demoBuilderNodeSweep.ts, PR-1a step 9): loads every project the
  * careful way (persistAfterLoad: false, like the manifest sweep), saves through
  * saveProjectConfigOnly, and is the one place it is shown to the SC: the shared
  * progress notification while it works, then a status-bar line, or a warning naming
@@ -937,17 +937,18 @@ async function sweepDemoBuilderNode(context: vscode.ExtensionContext): Promise<v
             saveProject: (project) => stateManager.saveProjectConfigOnly(project),
             withProgress: (title, run) => withProgressRegister({ title }, run),
             log: (line) => logger.info(`[Node] ${line}`),
+            logDetail: (line) => logger.debug(`[Node] ${line}`),
         });
         if (!result.ran) return;
         if (result.nodeError) {
             void vscode.window.showWarningMessage(`Demo Builder could not prepare Node ${node}. It will try again the `
-                + 'next time VS Code starts. Details are in "Demo Builder: User Logs".');
+                + 'next time VS Code starts. See Debug Logs for details.');
             return;
         }
         vscode.window.setStatusBarMessage(`$(check) Demo Builder now runs on Node ${node}`, TIMEOUTS.STATUS_BAR_SUCCESS);
         if (result.failed.length > 0) {
             void vscode.window.showWarningMessage(`Could not move ${result.failed.map((f) => f.component).join(', ')} `
-                + `to Node ${node}. They still run on their old Node. Details are in "Demo Builder: User Logs".`);
+                + `to Node ${node}. They still run on their old Node. See Debug Logs for details.`);
         }
     } catch (error) {
         logger.debug(`[Node] Sweep skipped: ${(error as Error).message}`);

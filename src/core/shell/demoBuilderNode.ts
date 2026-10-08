@@ -4,7 +4,7 @@
  * Demo Builder keeps no Node version of its own. Each component declares the Node it
  * accepts in its own repo (`engines.node`); at a release cut `npm run node:resolve`
  * reads every one of those ranges and writes the one Node they all accept to
- * `node-version.generated.json` (`nodeResolution.ts` holds the rule). This module only
+ * `node-version.generated.json` (the rule is `nodeRangeRule.ts`). This module only
  * reads that answer. Before, the same "24" was typed into four catalogs, copied into
  * two constants and backed by five hardcoded "20"s, and the mesh's lookups never found
  * their file.

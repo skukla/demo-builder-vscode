@@ -17,7 +17,7 @@
  *
  * Everything installs into Demo Builder's Node folder (`nodeFolder.ts`, PR-1a), never
  * the user's fnm. `ensureNodeWithAdobeCli` adds the Adobe CLI under the same Node
- * when it is missing: installing Node alone left a store Node 24 with no `aio`
+ * when it is missing: installing Node alone left a folder Node 24 with no `aio`
  * under it (the owner's machine, 2026-10-07: aio under 24.12.0, none under 24.21.0,
  * which is what `fnm exec --using=24` picks).
  *
@@ -91,7 +91,7 @@ export async function ensureFnmNodeVersion(
         // The SC reads the sentence; fnm's own words go to the log (ADR-023). A manual
         // `fnm install` would land in the SC's own fnm, which Demo Builder does not read.
         logger.debug(`[EnsureNode] fnm install ${major} failed: ${detail}`);
-        return `Demo Builder could not install Node ${major}. Check your internet connection and try again.`;
+        return `Could not install Node ${major}. See Debug Logs for details.`;
     }
 
     logger.debug(`[EnsureNode] Node ${major} available in Demo Builder's Node folder`);
@@ -148,9 +148,8 @@ export async function ensureNodeWithAdobeCli(
             timeout: TIMEOUTS.VERY_LONG,
         });
         if (result.code !== 0) {
-            const detail = result.stderr?.trim().split('\n').slice(-3).join(' ') || `exit code ${result.code}`;
-            logger.debug(`[EnsureNode] "${command}" failed under Node ${major}: ${detail}`);
-            return `Demo Builder could not install the Adobe CLI for Node ${major}. Check your internet connection and try again.`;
+            logger.debug(`[EnsureNode] "${command}" failed under Node ${major}: ${failureDetail(result)}`);
+            return `Could not install the Adobe CLI for Node ${major}. See Debug Logs for details.`;
         }
     }
     return undefined;

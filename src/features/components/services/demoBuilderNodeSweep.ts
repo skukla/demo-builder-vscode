@@ -43,7 +43,10 @@ export interface NodeSweepDeps {
     saveProject: (project: Project) => Promise<void>;
     /** Runs the work behind the progress notification; `report` writes one line. */
     withProgress: <T>(title: string, run: (report: (line: string) => void) => Promise<T>) => Promise<T>;
+    /** One line for User Logs: what happened, in plain words. */
     log: (line: string) => void;
+    /** Raw tool output, for Debug Logs only (ADR-023). */
+    logDetail: (line: string) => void;
 }
 
 export interface NodeSweepResult {
@@ -88,7 +91,8 @@ async function moveProject(
         const error = await deps.reinstall(id, component, deps.node);
         if (error) {
             result.failed.push({ component: label, error });
-            deps.log(`Could not reinstall ${label} on Node ${deps.node}; it still runs on its old Node: ${error}`);
+            deps.log(`Could not reinstall ${label} on Node ${deps.node}; it still runs on its old Node`);
+            deps.logDetail(`Reinstalling ${label} on Node ${deps.node}: ${error}`);
             continue;
         }
         component.metadata = { ...component.metadata, nodeVersion: deps.node };

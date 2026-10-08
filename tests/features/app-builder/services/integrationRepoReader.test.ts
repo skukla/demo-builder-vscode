@@ -85,7 +85,7 @@ describe('readIntegrationRepo', () => {
             hasAppConfig: true,
             layout: 'extension',
             lifecycle: 'app-management',
-            nodeVersion: '24',
+            nodeRange: '^24.0.0',
             requiredApis: ['commerceeventing', 'CloudIntegrationSDK'],
             inputs: [
                 { name: 'AIO_COMMERCE_AUTH_IMS_CLIENT_ID' },
@@ -102,14 +102,14 @@ describe('readIntegrationRepo', () => {
         expect(facts.inputs.map((input) => input.name)).not.toContain('UNUSED');
     });
 
-    it('reads a standalone repo, with the Node major from .nvmrc when package.json names none', async () => {
+    it('reads a standalone repo, with the Node pinned in .nvmrc when package.json names none', async () => {
         const facts = await readIntegrationRepo(repo(STANDALONE));
 
         expect(facts).toEqual({
             hasAppConfig: true,
             layout: 'standalone',
             lifecycle: 'deploy-only',
-            nodeVersion: '22',
+            nodeRange: '22.11.0',
             requiredApis: [],
             inputs: [{ name: 'ERP_ID' }],
         });

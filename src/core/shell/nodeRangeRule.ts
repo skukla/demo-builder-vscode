@@ -18,6 +18,15 @@ export function engineRangeOf(packageJsonText: string): string | undefined {
     }
 }
 
+/**
+ * A `.nvmrc` / `.node-version` pin (`v22.11.0`, `22`) as a range, or undefined for one
+ * that is not a version (`lts/*`, `node`).
+ */
+export function pinAsRange(pin: string | undefined): string | undefined {
+    const text = pin?.trim().replace(/^v/, '');
+    return text && semver.validRange(text) ? text : undefined;
+}
+
 /** One entry of nodejs.org's release index (`dist/index.json`). */
 export interface NodeRelease {
     version: string;
@@ -99,14 +108,14 @@ export type RepoNodeChoice = { ok: true; major: string } | { ok: false; range: s
 export function nodeForRepoRange(
     range: string | undefined,
     shared: string,
-    storeMajors: string[],
+    folderMajors: string[],
     releases: NodeRelease[],
 ): RepoNodeChoice {
     if (!range || majorFits(shared, range, releases)) return { ok: true, major: shared };
-    const inStore = [...storeMajors]
+    const inFolder = [...folderMajors]
         .sort((a, b) => Number(a) - Number(b))
         .find((major) => majorFits(major, range, releases));
-    if (inStore) return { ok: true, major: inStore };
+    if (inFolder) return { ok: true, major: inFolder };
     const choice = chooseNode([{ id: 'repo', range }], releases);
     return choice.ok ? choice : { ok: false, range };
 }

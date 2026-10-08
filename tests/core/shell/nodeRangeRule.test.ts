@@ -9,6 +9,7 @@ import {
     engineRangeOf,
     nodeForRepoRange,
     parseFnmReleases,
+    pinAsRange,
     type NodeRelease,
 } from '@/core/shell/nodeRangeRule';
 
@@ -101,6 +102,15 @@ describe('nodeForRepoRange: a custom integration', () => {
 
     it('still answers offline, from the range alone', () => {
         expect(nodeForRepoRange('>=20', '24', [], [])).toStrictEqual({ ok: true, major: '24' });
+    });
+});
+
+describe('pinAsRange', () => {
+    it('reads a .nvmrc pin as a range, and refuses one that is not a version', () => {
+        expect(pinAsRange('v22.11.0\n')).toBe('22.11.0');
+        expect(pinAsRange('24')).toBe('24');
+        expect(pinAsRange('lts/*')).toBeUndefined();
+        expect(pinAsRange(undefined)).toBeUndefined();
     });
 });
 

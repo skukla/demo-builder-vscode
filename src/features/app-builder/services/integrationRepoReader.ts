@@ -27,6 +27,7 @@
 
 import * as path from 'path';
 import { parse } from 'yaml';
+import { engineRangeOf, pinAsRange } from '@/core/shell/nodeRangeRule';
 
 /** Reads a repository-relative file; `undefined` when it is absent. */
 export type RepoFileReader = (relativePath: string) => Promise<string | undefined>;
@@ -45,7 +46,8 @@ export interface IntegrationRepoFacts {
     hasAppConfig: boolean;
     layout?: 'standalone' | 'extension';
     lifecycle: 'deploy-only' | 'app-management';
-    nodeVersion?: string;
+    /** The Node range the repo declares (`nodeRangeOfRepo`). */
+    nodeRange?: string;
     requiredApis: string[];
     /** Sorted by name, each once. */
     inputs: DiscoveredInput[];
@@ -68,7 +70,7 @@ export async function readIntegrationRepo(read: RepoFileReader): Promise<Integra
     const appConfigText = await read(APP_CONFIG);
     const appConfig = parseYaml(appConfigText);
     const lifecycle = (await anyExists(read, COMMERCE_CONFIGS)) ? 'app-management' : 'deploy-only';
-    const nodeVersion = await nodeMajorOf(read);
+    const nodeRange = await nodeRangeOfRepo(read);
     const requiredApis = apisOf(parseYaml(await read('install.yaml')));
     const names = appConfigText === undefined ? new Set<string>() : await inputNames(read, APP_CONFIG);
     const samples = await envSamples(read);
@@ -77,7 +79,7 @@ export async function readIntegrationRepo(read: RepoFileReader): Promise<Integra
         hasAppConfig: appConfigText !== undefined,
         ...(layoutOf(appConfig) ? { layout: layoutOf(appConfig) } : {}),
         lifecycle,
-        ...(nodeVersion ? { nodeVersion } : {}),
+        ...(nodeRange ? { nodeRange } : {}),
         requiredApis,
         inputs,
     };
@@ -110,30 +112,20 @@ async function anyExists(read: RepoFileReader, paths: string[]): Promise<boolean
     return false;
 }
 
-/** The first number in a version range or pin (`^24.0.0`, `v22.11.0`, `>=20`). */
-function majorOf(version: string | undefined): string | undefined {
-    return version?.match(/(\d+)/)?.[1];
-}
-
-async function nodeMajorOf(read: RepoFileReader): Promise<string | undefined> {
-    const pkg = parseJson(await read('package.json'));
-    const engines = isRecord(pkg) && isRecord(pkg.engines) ? pkg.engines.node : undefined;
-    const fromEngines = typeof engines === 'string' ? majorOf(engines) : undefined;
+/**
+ * The Node range a repo declares: `package.json` `engines.node`, else a version pinned in
+ * `.nvmrc` or `.node-version`. The range itself, never a major taken from it: `>=18` must
+ * be able to run on Demo Builder's Node, which a bare "18" could not (PR-1a). The one
+ * reader of a repo's Node, for the add door (`customIntegrationNode.ts`) and here.
+ */
+export async function nodeRangeOfRepo(read: RepoFileReader): Promise<string | undefined> {
+    const fromEngines = engineRangeOf((await read('package.json')) ?? '');
     if (fromEngines) return fromEngines;
     for (const file of ['.nvmrc', '.node-version']) {
-        const major = majorOf((await read(file))?.trim());
-        if (major) return major;
+        const pinned = pinAsRange(await read(file));
+        if (pinned) return pinned;
     }
     return undefined;
-}
-
-function parseJson(text: string | undefined): unknown {
-    if (text === undefined) return undefined;
-    try {
-        return JSON.parse(text);
-    } catch {
-        return undefined;
-    }
 }
 
 function apisOf(install: unknown): string[] {

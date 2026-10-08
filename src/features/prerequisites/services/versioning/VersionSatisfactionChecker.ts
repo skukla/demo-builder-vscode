@@ -5,9 +5,9 @@
  */
 
 import * as semver from 'semver';
-import { readNodeFolderList } from './MultiVersionDetector';
 import { parseInstalledVersions, isValidVersionFamily } from './NodeVersionParser';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { readNodeFolderList } from '@/core/shell/nodeFolder';
 import { formatDuration } from '@/core/utils/timeFormatting';
 import { Logger } from '@/types/logger';
 

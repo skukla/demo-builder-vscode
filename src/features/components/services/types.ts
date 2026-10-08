@@ -16,8 +16,8 @@ export interface ComponentInstallOptions {
      */
     componentsDir?: string;
     /**
-     * The Node to install under when it is not Demo Builder's own: only an integration
-     * a custom integration that needs another Node (PR-1a). Omitted = `demoBuilderNode()`.
+     * The Node to install under when it is not Demo Builder's own: only a custom
+     * integration that needs another Node (PR-1a). Omitted = `demoBuilderNode()`.
      */
     nodeVersion?: string;
 }
