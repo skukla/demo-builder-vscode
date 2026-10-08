@@ -105,3 +105,5 @@ the register), [[PL-36]] (an untested Node-version sort in the prerequisites ins
 - 2026-10-08  refactor(dashboard): project panel pushes get their own module, ending the last three import cycles (`df44020fe`)
 - 2026-10-08  refactor(core): move getMeshEndpointUrl beside the mesh state it reads, ending the typeGuards cycle (`2fdd83acc`)
 - 2026-10-08  refactor(app-builder): split appBuilderComponentRunner into add, redeploy and remove runs (`04d373365`)
+- 2026-10-08  docs: the god-file ratchet no longer cites the runner as a cohesive long file; log PR-1a and EDS-8 (`a6f122009`)
+- 2026-10-08  test(sop): a new import cycle in src fails the build (`e6ff8d1d9`)

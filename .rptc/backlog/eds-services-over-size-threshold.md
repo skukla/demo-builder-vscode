@@ -355,3 +355,4 @@ date and what happened; a failure becomes its own `fix` item.
 - 2026-10-04  refactor: prerequisites shared.ts split by job; six duplicate cache tests removed (EDS-8, PL-42) (`e598c5d5e`)
 - 2026-10-08  PR-1a cut app-builder/services/appBuilderComponentRunner.ts (1944 -> 370, the contract types) into add, redeploy and remove runs plus deploy steps, kind dispatch, removal cleanup and removal state; callers moved, no forwarders (`04d373365`). godFileCandidates 59 -> 58. Re-measured the work list the same day: 22 coupled files, worst authenticationService.ts (924/400, 52 public surface).
 - 2026-10-08  refactor(authentication): authenticationService keeps the session; sign-in moves to adobeSignIn, forwarders deleted (`46714daa5`)
+- 2026-10-08  chore(decompose-god-file): the per-file routine, with a move checker and a re-measure script; adobeSignIn gets its own suite (`7b154d557`)
