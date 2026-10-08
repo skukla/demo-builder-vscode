@@ -93,8 +93,12 @@ find src -name "*.tsx" -not -name "*.test.tsx" -exec wc -l {} + | awk '$1 > 350'
 
 ## The per-file routine (EDS-8, the owner's standing order of 2026-10-08)
 
-**Every file over its limit gets split by job, one file per sitting, one commit per file**, until
-`godFileCandidates` reads 0. The two-number rule above still decides HOW: a file a reader judges
+**Every file over its limit gets split by job, one commit per file**, until
+`godFileCandidates` reads 0. One file per sitting is the default; small files that share a
+directory, tests and callers (the helix, daLive and github families) go in one sitting, because
+the ledger edits and the check cycle are the same work whether they cover one file or three.
+The full check set runs ONCE per sitting (the agent's run; the push gate is the independent
+repeat, and git enforces it), and the branch is pushed every few files, not every file. The two-number rule above still decides HOW: a file a reader judges
 to be one job (`edsPipeline.ts`: 976 lines, one export) is not cut to move a number; it gets a
 dated verdict on `EDS-8` saying what was read and why it stays whole, and the next re-measure
 can revisit it. The routine exists because each of the first nine cuts rediscovered the same
@@ -126,13 +130,19 @@ bookkeeping, and because "the tests passed" cannot see a line no test constrains
    the return type is now skipped at bracket depth.
 3. **Full checks, not the scoped gate alone:** full jest, `tsc --noEmit`, `typecheck:tests`,
    whole-repo lint, compile. State each exit code.
-4. **Mutation score before and after**, so the tests still guard what moved:
+4. **Mutation score after (and before only when there is no record)**, so the tests still
+   guard what moved:
    ```bash
    node scripts/focusModule.mjs <old-file> <new-file>...   # one run, every piece
    npm run test:mutation:focus
    node scripts/checkMutationBaseline.mjs --report reports/mutation/focus.json
    ```
-   The old file has a baseline row; compare per module, never on the total. A new file has no
+   The old file usually has a row in `reports/mutation/baseline.json` already; that row IS
+   the "before", so do not re-measure the unsplit file (on 2026-10-08 one such run took 15
+   of a 40-minute sitting and told us a number the record already held). Measure before
+   only when the row is missing or older than the file's last substantive change
+   (`git log -1 --format=%cs -- <file>` against the row's note). Compare per module, never
+   on the total. A new file has no
    row, and the check reports it as a regression until one exists: read its survivors first
    (`reports/mutation/focus.json`, by `mutatorName`: string and log mutants are text, the
    rest are decisions), fix what is a real gap, THEN `checkMutationBaseline.mjs --write

@@ -84,7 +84,7 @@ interface Violation {
  * A closing `}, N);` is only a per-test argument when it belongs to an
  * `it`/`test` call, so this walks back for the nearest opener at the SAME
  * indentation. Without that anchor a `setTimeout(fn, 100)` callback closing on
- * its own line looks identical — `progressUnifier/configDriven.test.ts` has
+ * its own line looks identical — `progressUnifier/ProgressUnifier-configDriven.test.ts` has
  * seventeen of those and not one real per-test argument.
  *
  * @param lines - the file's lines

@@ -8,10 +8,11 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/github/githubFileOperations.ts",
-        "src/features/eds/services/github/githubTreeCommits.ts",
-        "src/features/eds/services/github/githubRepoArchive.ts",
-        "src/features/eds/services/github/githubAuthenticatedOperations.ts"
+        "src/core/utils/progressUnifier/ProgressUnifier.ts",
+        "src/core/utils/progressUnifier/exactProgress.ts",
+        "src/core/utils/progressUnifier/milestoneProgress.ts",
+        "src/core/utils/progressUnifier/timedProgress.ts",
+        "src/core/utils/progressUnifier/fnmCommands.ts"
     ],
     "reporters": [
         "clear-text",

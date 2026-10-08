@@ -48,7 +48,6 @@ The seven are not all the same problem, and the ledger says so per row:
 | `commands/ResetAllCommand.ts`, `commands/ResetAiOnboardingCommand.ts` | **Misplaced, not miswritten.** A command orchestrating features is doing its job; it is in the wrong directory. Fix by moving to `src/commands/` |
 | `di/serviceLocator.ts` | `import type` only — no runtime coupling, no cycle. Move the two interfaces to `@/types`, or ratify: a locator has to name what it locates |
 | `state/apiOwners.ts`, `state/projectFileLoader.ts`, `state/projectStateSync.ts` | Real runtime crossings into `features/components` |
-| `utils/progressUnifier/ProgressUnifier.ts` | Imports `InstallStep`, which looks like a TYPE — probably clears with `import type` alone |
 
 Cross-boundary imports also use the path alias, never a relative path, enforced by
 `no-restricted-imports` in `eslint.config.mjs`.

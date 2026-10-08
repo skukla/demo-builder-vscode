@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "EDS-8 2026-10-08: githubFileOperations.ts split by job. The old file's row (84.67, measured 2026-09-05) is replaced by the Contents-API remainder at 95.92; the three new units get their first rows: githubTreeCommits 88.10, githubRepoArchive 69.17 (its survivors are the log lines of a six-step orchestration plus two ledgered decisions: the symlink guard and the blob counter; the symlink path gained a test), githubAuthenticatedOperations 100.",
+    "_note": "EDS-8 2026-10-08: ProgressUnifier.ts split by job. The old file had no row; measured unsplit through its five public-API suites at 43.96 before the cut. After: the orchestration remainder 87.32 (its eight survivors and one uncovered default are two guards with the same synthetic fallback, a finally nothing reads and a NaN compare, all ledgered); exactProgress 94.51, milestoneProgress 90.57, timedProgress 94.53, fnmCommands 95.92, each with a direct suite of its own; survivors left are trace-line wording plus ledgered equivalents.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -9620,6 +9620,84 @@
             "uncoveredCategories": {},
             "highValueSurvivors": 0,
             "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/core/utils/progressUnifier/ProgressUnifier.ts": {
+            "score": 87.32,
+            "killed": 61,
+            "survived": 8,
+            "noCoverage": 1,
+            "timeout": 1,
+            "survivorCategories": {
+                "block": 1,
+                "string": 4,
+                "branch": 3
+            },
+            "uncoveredCategories": {
+                "branch": 1
+            },
+            "highValueSurvivors": 4,
+            "equivalent": 9,
+            "openGaps": 0
+        },
+        "src/core/utils/progressUnifier/exactProgress.ts": {
+            "score": 94.51,
+            "killed": 82,
+            "survived": 5,
+            "noCoverage": 0,
+            "timeout": 4,
+            "survivorCategories": {
+                "string": 1,
+                "logPresentation": 4
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 1,
+            "openGaps": 0
+        },
+        "src/core/utils/progressUnifier/fnmCommands.ts": {
+            "score": 95.92,
+            "killed": 47,
+            "survived": 2,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 2
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 2,
+            "equivalent": 2,
+            "openGaps": 0
+        },
+        "src/core/utils/progressUnifier/milestoneProgress.ts": {
+            "score": 90.57,
+            "killed": 44,
+            "survived": 5,
+            "noCoverage": 0,
+            "timeout": 4,
+            "survivorCategories": {
+                "other": 1,
+                "logPresentation": 4
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 1,
+            "openGaps": 0
+        },
+        "src/core/utils/progressUnifier/timedProgress.ts": {
+            "score": 94.53,
+            "killed": 111,
+            "survived": 7,
+            "noCoverage": 0,
+            "timeout": 10,
+            "survivorCategories": {
+                "logPresentation": 4,
+                "other": 1,
+                "branch": 2
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 2,
+            "equivalent": 3,
             "openGaps": 0
         }
     }

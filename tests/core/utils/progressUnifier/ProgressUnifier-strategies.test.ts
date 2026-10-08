@@ -88,7 +88,7 @@ describe('ProgressUnifier - Progress Tracking Strategies', () => {
 
             // Verify no elapsed time is shown in any progress updates
             const progressWithElapsedTime = progressUpdates.find((p) =>
-                p.command?.detail?.match(/\(\d+s\)/)
+                p.command?.detail?.match(/\(\d+ seconds?\)/)
             );
 
             expect(progressWithElapsedTime).toBeUndefined();

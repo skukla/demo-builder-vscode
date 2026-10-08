@@ -19,7 +19,7 @@ as a hang. Each install step declares how its progress is derived:
 |---|---|---|
 | `exact` | tools that print a real percentage — fnm | a named `progressParser` reads `Downloading: 75%` from the output |
 | `milestones` | tools with recognisable stages — Homebrew, npm | declared output patterns advance the bar a step at a time |
-| `synthetic` | **the default** — tools that print nothing useful | `ProgressUnifier` runs a time-based curve from `estimatedDuration` |
+| `synthetic` | **the default** — tools that print nothing useful | `ProgressUnifier` dispatches to `timedProgress.ts`, which runs a time-based curve from `estimatedDuration` |
 | `immediate` | steps too fast to be worth animating | jumps straight to complete |
 
 The values are `exact`, `milestones`, `synthetic`, `immediate` — the enum in

@@ -15175,6 +15175,118 @@
             "decision": "none \u2014 a log-only counter",
             "recorded": "2026-10-08",
             "source": "EDS-8 split, 2026-10-08"
+        },
+        {
+            "module": "src/core/utils/progressUnifier/exactProgress.ts",
+            "anchors": [
+                "let lastDetail = '';"
+            ],
+            "mutants": 1,
+            "category": "string",
+            "reason": "The seed of the last-detail de-duplicator. Replacing the empty string with a sentinel only changes behaviour if the tool's FIRST output line is that sentinel, which no command prints; every real first line differs from both and is reported the same way.",
+            "decision": "none \u2014 a seed no output can equal",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 split, 2026-10-08"
+        },
+        {
+            "module": "src/core/utils/progressUnifier/milestoneProgress.ts",
+            "anchors": [
+                "const milestones = step.milestones || [];"
+            ],
+            "mutants": 1,
+            "category": "ArrayDeclaration",
+            "reason": "The fallback for a step with no milestones. Stryker fills it with a string; `text.includes(milestone.pattern)` then reads `.pattern` off a string as undefined and `includes(undefined)` looks for the text 'undefined', so the loop reports nothing either way. The no-milestones test pins the empty result.",
+            "decision": "none \u2014 a fallback whose only reachable outcome is 'no milestone'",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 split, 2026-10-08"
+        },
+        {
+            "module": "src/core/utils/progressUnifier/timedProgress.ts",
+            "anchors": [
+                "const progressTimeouts: NodeJS.Timeout[] = [];"
+            ],
+            "mutants": 1,
+            "category": "ArrayDeclaration",
+            "reason": "The list of scheduled 20/50/80 timeouts. Seeded with a string, clearTimeout('Stryker was here') is a no-op in Node and in the fake, and the three real handles are still pushed and cleared after it; the pending-timers assertion sees the same set.",
+            "decision": "none \u2014 clearTimeout ignores a non-handle",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 split, 2026-10-08"
+        },
+        {
+            "module": "src/core/utils/progressUnifier/timedProgress.ts",
+            "anchors": [
+                "if (!commandCompleted) {",
+                "commandCompleted = true;"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "The guard that stops a 20/50/80 report landing after the command exited. Every scheduled timeout is cleared on close (the pending-timers test pins that), so the guard only matters for a timeout already dispatched in the same tick as the close event; the fake timer cannot interleave one, and neither can Node's queue in a way a test can force.",
+            "decision": "none \u2014 belt-and-braces behind the clear",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 split, 2026-10-08"
+        },
+        {
+            "module": "src/core/utils/progressUnifier/fnmCommands.ts",
+            "anchors": [
+                "if (nodeVersion && commands.length > 0) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Forcing the condition true or widening it to >= 0 only admits an empty command list, and mapping an empty list yields an empty list. The nodeVersion-and-no-commands test pins the empty result either way.",
+            "decision": "none \u2014 an empty map",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 split, 2026-10-08"
+        },
+        {
+            "module": "src/core/utils/progressUnifier/ProgressUnifier.ts",
+            "anchors": [
+                "if (!strategyType) return 'synthetic';",
+                "if (['exact', 'milestones', 'synthetic', 'immediate'].includes(strategyType)) {",
+                "return 'synthetic';",
+                "case 'synthetic':"
+            ],
+            "mutants": 6,
+            "category": "branch",
+            "reason": "normalizeProgressType and the switch in executeWithProgress both land on the synthetic reporter for anything that is not one of the three other names: emptying any 'synthetic' literal, dropping the empty-type guard, or letting an unknown name through all reach the switch's default, which runs executeSynthetic. The unknown-strategy test pins that outcome; no input separates the two routes to it.",
+            "decision": "none \u2014 two guards with the same fallback",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 split, 2026-10-08"
+        },
+        {
+            "module": "src/core/utils/progressUnifier/ProgressUnifier.ts",
+            "anchors": [
+                "default:"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The switch's default is unreachable by construction: normalizeProgressType only returns the four cased names. Uncovered, and only a test driving executeWithProgress with a value the normaliser cannot produce would cover it.",
+            "decision": "none \u2014 unreachable fallback kept for the type's sake",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 split, 2026-10-08"
+        },
+        {
+            "module": "src/core/utils/progressUnifier/ProgressUnifier.ts",
+            "anchors": [
+                "this.startTime = undefined;"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The finally that clears the step's start time. startTime is read only by enhanceDetailWithElapsedTime, which only runs inside executeStep, which sets startTime first; leaving a stale value behind is never observed.",
+            "decision": "none \u2014 tidy-up nothing reads",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 split, 2026-10-08"
+        },
+        {
+            "module": "src/core/utils/progressUnifier/ProgressUnifier.ts",
+            "anchors": [
+                "if (!this.startTime) return detail;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing the guard off makes elapsed NaN when no step is running, and NaN > threshold is false, so the detail comes back undecorated either way.",
+            "decision": "none \u2014 NaN compares false",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 split, 2026-10-08"
         }
     ]
 }

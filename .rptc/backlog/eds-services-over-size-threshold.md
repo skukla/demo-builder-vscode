@@ -348,6 +348,96 @@ about it, and what (if anything) the owner has to decide.
   in a later "tail" over the log. Worked around by pushing in a command of its own.
   **Decide:** tighten the push rule to the git-push clause only, or leave it.
 
+- 2026-10-08  The backup push of this branch was refused by the CSS baseline check: the
+  branch inherits 10 stylesheet changes from the PR-1a base (your dashboard, integration
+  card and site-access work, never pushed, so never captured). This loop changes no
+  stylesheet (checked: zero CSS files in its own commits). Pushed with the hook's own
+  CSS_BASELINE_BYPASS and that reason; every other gate ran. **Decide / do:** capture a
+  visual baseline at HEAD (webview-visual-baseline skill) before this branch or PR-1a
+  merges, so the inherited CSS changes are recorded once.
+
+## Triage of the untangled files (2026-10-08, read by a Sonnet agent, verdicts are LEADS)
+
+The 36 files over their limit with no coupling signal were read by job. 19 are to be
+split; 17 are one job. Each split goes through the per-file routine; each one-job
+verdict is recorded here so the file stays whole on purpose, and is re-read before the
+end-of-loop walkthrough. **For the owner:** with 17 files judged one job, the count
+cannot reach 0 without either splitting cohesive files to move a number, or changing
+the rule to count code lines rather than raw lines (several are over by 6 to 41 raw lines,
+and three of them are more than 40% comments). Decide which.
+
+**Split, in sitting order (worst first; files that share suites go in one sitting):**
+1. `project-creation/helpers/envFileGenerator.ts` (701/300): env value resolution; the
+   `.env` write and regenerate; config-file dispatch (json and EDS `config.json`).
+2. `eds/services/reset/edsResetUI.ts` (794/400): preflight auth checks; result
+   notifications; sample-data prompt and removal; the reset orchestrator.
+3. `eds/ui/steps/StorefrontSetupStep.tsx` (657/350): the setup-lifecycle hook; error and
+   completed views; phase and config helpers.
+4. `mesh/services/stalenessDetector.ts` (688/400): env var catalog and file reader;
+   deployed-config fetch; source hash; change detection; frontend env change check.
+5. `eds/services/configGenerator.ts` (609/400) then `eds/services/catalogPrewarmService.ts`
+   (647/400): params extraction vs `config.json` render; prewarm publish, catalog
+   enumeration, sample-SKU picker, storefront identity guard.
+6. `projects-dashboard/services/projectDeletionService.ts` (616/400): confirmation
+   dialogs; EDS external cleanup; the delete orchestrator. Check first whether its DA.live
+   and GitHub auth checks duplicate `edsResetUI`'s (unverified).
+7. `eds/services/blockCollectionHelpers.ts` (593/400): discovery and install commit vs
+   the merge of definition, filters and models.
+8. `data-installer/services/dataInstallerWriteClient.ts` (579/400): import/validate/delete
+   vs export (its suites are already split that way). A doc comment near line 166 sits
+   on the wrong function; fix in the same sitting.
+9. `data-installer/ui/components/ImportDatapackModal.tsx` (504/350): view-state helpers
+   vs the modal component.
+10. `eds/services/storefront/storefrontRepublishService.ts` (567/400): config republish vs
+    full content republish.
+11. `eds/ui/steps/repoSelectionInline.helpers.tsx` (440/350) then
+    `eds/ui/steps/RepoSelectionInline.tsx` (490/350): pure verdict functions vs form and
+    notice components; repo-creation hook, repo-readiness hook, selection component.
+12. `authentication/services/adobeConsoleProjectOps.ts` (555/400): Console project
+    create/rename/delete vs workspace create/delete/namespace.
+13. `updates/services/updateApplyService.ts` (543/400): selection computation vs the
+    appliers and apply loop.
+14. `eds/handlers/daLive/daLiveAuthPrompt.ts` (666/500): token validation; input prompts;
+    the sign-in flow and guard.
+15. `dashboard/ui/components/ActionGrid.tsx` (451/350): `BuildZone` and `EditTile` out,
+    beside the sibling zones.
+16. `eds/services/errorFormatters.ts` (511/400): one pattern matcher; GitHub errors; DA.live
+    and Helix tables. **Verified duplication:** `formatDaLiveError` (372 to 419) and
+    `formatHelixError` (468 to 511) are the same function apart from the table and a field
+    name; `formatGitHubError` was not checked. Fold them in the same sitting.
+17. `core/ui/components/selection/ApiAccessPicker.tsx` (393/350): pure family and filter
+    logic vs the picker and rows. Low value.
+
+**One job, left whole (dated verdicts):**
+- `eds/services/edsPipeline.ts` (976): confirmed; one entry looping a step table of
+  private helpers tested only through it.
+- `core/utils/timeoutConfig.ts` (436): one registry of constants, about 100 code lines.
+  Its header promises "deprecated aliases" that do not exist; the sentence is stale
+  (fix in passing).
+- `authentication/services/adobeWorkspaceCredentials.ts` (578): every credential
+  operation on one workspace; already cut once from the entity fetcher.
+- `updates/services/componentUpdater.ts` (533): updating one component over private steps.
+- `prerequisites/handlers/installHandler.ts` (649): one handler for one message; the only
+  seam (Node target-version helpers, ~130 lines) leaves it over the limit anyway.
+- `project-creation/ui/steps/IntegrationsStep.tsx` (444): one step; children already
+  extracted; 290 code lines.
+- `eds/services/configService/configServiceAccess.ts` (488): the 2026-08-15 verdict
+  stands; 43% comments, 237 code lines.
+- `project-creation/services/aiBundle/claudeSettingsWriter.ts` (461): 50% comments,
+  191 code lines, one settings file.
+- `project-creation/ui/steps/ReviewStep.tsx` (395): one screen; derivation already in
+  `reviewStepHelpers.tsx`.
+- `data-installer/ui/views/DatapackCatalogView.tsx` (391): one view, 232 code lines.
+- `projects-dashboard/utils/projectStatusUtils.ts` (335): 164 code lines, 146 comment lines.
+- `project-creation/services/meshSetupService.ts` (444): one job, 313 code lines.
+- `lifecycle/services/projectResetService.ts` (442): one orchestrator plus its UI wrapper.
+- `updates/services/templateSyncService.ts` (427): one class syncing a storefront with
+  its template over git.
+- `authentication/handlers/authenticationHandlers.ts` (525): two entry points sharing
+  five helpers; 25 raw lines over.
+- `core/ui/components/forms/FieldHelpButton.tsx` (360): 10 lines over.
+- `authentication/ui/components/AdobeEntityFields.tsx` (356): 6 lines over.
+
 ## Needs a live check
 
 The automated checks prove a move did not change what the tests constrain. What they
@@ -369,6 +459,14 @@ date and what happened; a failure becomes its own `fix` item.
       message; (3) Export Demo Bundle — the zip in the bundle opens and holds the
       storefront. Each drives `treeCommits` / `repoArchive` handed out by
       `getGitHubServices`, which no test constructs for real.
+- [ ] **Install-step progress in the wizard's Prerequisites step** (the
+      `ProgressUnifier.ts` split, uncommitted on `refactor/eds-8-god-files`): run the
+      prerequisites install against a machine missing a Node major so all four reporters
+      run for real — fnm's download percentages (exact, `exactProgress.ts`), a brew/npm
+      step's phase messages (milestones), a step with no useful output showing the
+      elapsed clock after 30 s (synthetic, `timedProgress.ts`), and "Configure fnm shell"
+      completing at once (immediate). Every reporter now reaches the spawner and clock
+      through `ProgressReporterDeps`, which the suites fake.
 
 ## Shipped so far
 
@@ -390,3 +488,4 @@ date and what happened; a failure becomes its own `fix` item.
 - 2026-10-08  chore(decompose-god-file): the per-file routine, with a move checker and a re-measure script; adobeSignIn gets its own suite (`7b154d557`)
 - 2026-10-08  githubFileOperations.ts (917 -> 367) split by job, uncommitted on refactor/eds-8-god-files. The 2026-08-24 'one domain' verdict is overridden by a read by job: the Contents API (one file at a time) stays in githubFileOperations.ts; the Git Data primitives and the rebase-on-race commit are githubTreeCommits.ts (326); the archive download and the template reset are githubRepoArchive.ts (317); the per-instance Octokit cache the file AND repository classes carried verbatim (a pinned clone pair) is githubAuthenticatedOperations.ts (48), which both now extend. githubTreePush was already a second orchestrator over the same primitives from outside the class, which is what made the tree unit real. Callers moved: the zip import, app-repo promotion and the demo export take treeCommits / repoArchive from getGitHubServices; createBlob/createTree/createCommit/updateBranchRef/downloadRepoArchive are retired from the facade. Three forwarders KEPT (getBranchInfo, commitTreeToBranch, resetRepoToTemplate): installBlockCollections, installInspectorTagging, storefrontFixes, storefrontSetupPhase2 and edsResetRepoHelper take one GitHubFileOperations and need Contents reads plus a tree write on it, so retiring them is a parameter split across ~15 production and 53 test files, not a move. proveMove: every function in the three new files a pure move (--via treeCommits); the only DIFFERS are the three forwarders. Mutation: old file 82.62 measured before the cut (pinned 84.67 predated the 2026-09-15 binary path) -> remainder 95.92; treeCommits 88.10, repoArchive 69.17 (log lines of a six-step orchestration; symlink guard and blob counter ledgered; the symlink path gained its first test), base 100; openGaps 0 on all four. Pins: godFileCandidates 57 -> 56, godFileCoupled 21 -> 20, cloneCeiling 42 -> 41 (the fileOps<->repoOps pair cleared). Found on the way and fixed: proveMove took the { inside Promise<{...}> for a body (two forwarders read 'same' against ten-line methods); the concurrent-run hook rule counted a status-watcher shell whose text names the test binary as a live run (ps-side twin of its 2026-09-08 command-side fix, proof case added).
 - 2026-10-08  refactor(eds): githubFileOperations keeps the Contents API; tree commits and the archive reset get their own units (`7ec31f682`)
+- 2026-10-08  ProgressUnifier.ts (661 -> 200) split by job, uncommitted on refactor/eds-8-god-files. The step loop, the reporter choice and the elapsed clock stay in ProgressUnifier.ts; the output-parsing reporter is exactProgress.ts (141), the pattern reporter milestoneProgress.ts (75), the two clock-driven reporters timedProgress.ts (195), and command resolution + fnm wrapping + spawning fnmCommands.ts (99). Reporters reach the spawner and clock through a ProgressReporterDeps the unifier builds once; no forwarders (the private methods had no outside caller). proveMove: every moved function a pure move; the one DIFFERS is executeWithProgress, whose four cases now pass the deps. Mutation: the old file had no row, measured 43.96 unsplit -> remainder 87.32 (openGaps 0; two guards with one synthetic fallback, a finally nothing reads and a NaN compare ledgered); exactProgress 94.51, milestoneProgress 90.57, timedProgress 94.53, fnmCommands 95.92, each with a direct suite. Found on the way and fixed: the 'no elapsed time for quick operations' test matched /\(\d+s\)/ against 'N seconds', so it could never fail. Pins: godFileCandidates 56 -> 55, godFileCoupled 20 -> 19; cloneCeiling stays 41 (the self-pair's four clones re-homed in the ledger). The five public-API suites renamed under the ProgressUnifier stem so the mirror rule finds them.
