@@ -136,11 +136,6 @@ export interface StateManager {
     ): Promise<Project | null>;
 
     /**
-     * Read a project's manifest without opening it: no current-project change, no save.
-     */
-    readProject(projectPath: string): Promise<Project | null>;
-
-    /**
      * Get all projects from projects directory
      */
     getAllProjects(): Promise<{ name: string; path: string; lastModified: Date }[]>;

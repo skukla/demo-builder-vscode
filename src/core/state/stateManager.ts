@@ -449,15 +449,6 @@ export class StateManager implements StateManagerInterface {
         return project;
     }
 
-    /**
-     * Read a project's manifest WITHOUT opening it: no current-project change, no save,
-     * no recent-projects entry. For background work across every project (the Node move
-     * after an update, PR-1a), where `loadProjectFromPath` would switch the SC's project.
-     */
-    public async readProject(projectPath: string): Promise<Project | null> {
-        return this.projectFileLoader.loadProject(projectPath);
-    }
-
     // Project Directory Scanning (delegated)
 
     /**

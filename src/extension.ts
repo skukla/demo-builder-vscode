@@ -10,6 +10,7 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getLogger, initializeLogger } from '@/core/logging/debugLogger';
 import { CommandExecutor } from '@/core/shell/commandExecutor';
 import { createCommandExecutorDeps } from '@/core/shell/commandExecutorDeps';
+import { adobeCliInstalledUnder } from '@/core/shell/ensureNodeVersion';
 import { setAdobeCliNodeVersion } from '@/core/shell/nodeStore';
 import { sweepManifestFormat } from '@/core/state/manifestFormatSweep';
 import { StateManager } from '@/core/state/stateManager';
@@ -18,6 +19,7 @@ import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { EnvFileWatcherService } from '@/core/vscode/envFileWatcherService';
+import { withProgressRegister } from '@/core/vscode/progressRegister';
 import { WorkspaceWatcherManager } from '@/core/vscode/workspaceWatcherManager';
 import { watchEngineChoice } from '@/features/ai/engine/engineChoiceWatch';
 import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
@@ -72,7 +74,10 @@ import { registerValidateSelectionTool } from '@/features/ai/server/validateSele
 import { registerViewTools } from '@/features/ai/server/viewTools';
 import { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { sweepCommerceSecrets } from '@/features/components/services/commerceSecretSweep';
-import { moveToNodeIfItMoved } from '@/features/components/services/nodeMoveOnUpdate';
+import { ComponentManager } from '@/features/components/services/componentManager';
+import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
+import { ensureNode } from '@/features/components/services/nodeEnsure';
+import { bareDefinition, sweepOntoDemoBuilderNode } from '@/features/components/services/nodeMigration';
 import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 import {
     ProjectDashboardWebviewCommand,
@@ -91,6 +96,7 @@ import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive
 import { registerEwSettingChangeListener } from '@/features/eds/services/ewSettingChangeListener';
 import { HelixService } from '@/features/eds/services/helix/helixService';
 import { renewPublishKeys } from '@/features/eds/services/pdp/publishKeyRenewalSweep';
+import { listStoreMajors } from '@/features/prerequisites/services/versioning/MultiVersionDetector';
 import { refreshAiBundlesOnActivation } from '@/features/project-creation/services/aiBundle/aiBundleActivationRefresh';
 import { setThirdPartyToolsResolver } from '@/features/project-creation/services/aiBundle/aiToolingGate';
 import { refreshGlobalMcpIfPresent } from '@/features/project-creation/services/aiBundle/globalMcpRegistration';
@@ -269,6 +275,10 @@ export async function activate(context: vscode.ExtensionContext) {
             // disk instead of converted on every read forever. Must stay IN this
             // sequential chain — it saves whole manifests, same as the others.
             await sweepManifestFormats();
+            // Demo Builder's Node (PR-1a): a release that moved it moves installed
+            // components onto it here, before anyone reaches Start. It reinstalls and
+            // saves whole manifests too, so it belongs in this chain, last.
+            await sweepDemoBuilderNode(context);
         })().catch((error) => {
             logger.warn(`[Activation] Project upkeep sweep failed: ${(error as Error).message}`);
         });
@@ -437,11 +447,6 @@ export async function activate(context: vscode.ExtensionContext) {
                 void sweepPublishKeyRenewals(context);
             }),
         );
-
-        // A release that moved Demo Builder's Node: prepare it and move installed
-        // components to it in the background, before anyone reaches Start (PR-1a).
-        void moveToNodeIfItMoved(context, stateManager, externalCommandManager, logger).catch((error) =>
-            logger.warn(`[Node] Moving to Demo Builder's Node stopped: ${String(error)}`));
 
         // Register file watchers early (before loading projects)
         // This ensures the initializeFileHashes command exists when we need it
@@ -900,6 +905,53 @@ async function sweepManifestFormats(): Promise<void> {
         });
     } catch (error) {
         logger.debug(`[ManifestFormat] Sweep skipped: ${(error as Error).message}`);
+    }
+}
+
+/**
+ * Glue for the Node sweep (nodeMigration.ts, PR-1a step 9): loads every project the
+ * careful way (persistAfterLoad: false, like the manifest sweep), saves through
+ * saveProjectConfigOnly, and is the one place it is shown to the SC: the shared
+ * progress notification while it works, then a status-bar line, or a warning naming
+ * anything that could not move.
+ */
+async function sweepDemoBuilderNode(context: vscode.ExtensionContext): Promise<void> {
+    try {
+        const node = demoBuilderNode();
+        const installer = new ComponentManager(logger, externalCommandManager);
+        const registry = new ComponentRegistryManager(context.extensionPath);
+        const summaries = await stateManager.getAllProjects();
+        const loaded = await Promise.all(summaries.map((s) =>
+            stateManager.loadProjectFromPath(s.path, undefined, { persistAfterLoad: false })));
+        const result = await sweepOntoDemoBuilderNode({
+            projects: loaded.filter((project): project is Project => project !== null),
+            node,
+            nodeReady: async () => (await listStoreMajors(externalCommandManager)).includes(node)
+                && adobeCliInstalledUnder(externalCommandManager, node),
+            ensureNode: (major) => ensureNode(externalCommandManager, { major, adobeCli: true }, logger),
+            reinstall: async (componentId, component, major) => {
+                if (!component.path) return 'it has no folder on disk';
+                const definition = (await registry.getComponentById(componentId)) ?? bareDefinition(componentId, component);
+                const installed = await installer.installNpmDependencies(component.path, definition, major);
+                return installed.success ? undefined : (installed.error ?? 'the reinstall failed');
+            },
+            saveProject: (project) => stateManager.saveProjectConfigOnly(project),
+            withProgress: (title, run) => withProgressRegister({ title }, run),
+            log: (line) => logger.info(`[Node] ${line}`),
+        });
+        if (!result.ran) return;
+        if (result.nodeError) {
+            void vscode.window.showWarningMessage(`Demo Builder could not prepare Node ${node}. It will try again the `
+                + 'next time VS Code starts. Details are in "Demo Builder: User Logs".');
+            return;
+        }
+        vscode.window.setStatusBarMessage(`$(check) Demo Builder now runs on Node ${node}`, TIMEOUTS.STATUS_BAR_SUCCESS);
+        if (result.failed.length > 0) {
+            void vscode.window.showWarningMessage(`Could not move ${result.failed.map((f) => f.component).join(', ')} `
+                + `to Node ${node}. They still run on their old Node. Details are in "Demo Builder: User Logs".`);
+        }
+    } catch (error) {
+        logger.debug(`[Node] Sweep skipped: ${(error as Error).message}`);
     }
 }
 

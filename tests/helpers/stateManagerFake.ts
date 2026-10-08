@@ -59,7 +59,6 @@ export function createMockStateManager(
         addToRecentProjects: jest.fn().mockResolvedValue(undefined),
         removeFromRecentProjects: jest.fn().mockResolvedValue(undefined),
         loadProjectFromPath: jest.fn().mockResolvedValue(null),
-        readProject: jest.fn().mockResolvedValue(null),
         getAllProjects: jest.fn().mockResolvedValue([]),
         onProjectChanged: jest.fn(),
         markDirty: jest.fn(),

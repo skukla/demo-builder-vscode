@@ -1,11 +1,12 @@
 /**
- * Moving installed components when a release moves Demo Builder's Node (PR-1a step 9).
- * Every collaborator is handed in, so each rule is read off the arguments.
+ * The Node sweep (PR-1a step 9): one of the activation upkeep sweeps. Every
+ * collaborator is handed in, so each rule is read off the arguments.
  */
 
 import {
-    moveInstalledComponentsToNode,
-    type NodeMigrationDeps,
+    bareDefinition,
+    sweepOntoDemoBuilderNode,
+    type NodeSweepDeps,
 } from '@/features/components/services/nodeMigration';
 import type { ComponentInstance, Project } from '@/types/base';
 import { createMockProject } from '../../../helpers/projectFake';
@@ -18,96 +19,116 @@ const component = (id: string, nodeVersion?: string): ComponentInstance => ({
     ...(nodeVersion ? { metadata: { nodeVersion } } : {}),
 });
 
-function deps(projects: Project[], overrides: Partial<NodeMigrationDeps> = {}) {
-    return {
-        knownProjects: jest.fn(async () => projects),
+function deps(projects: Project[], overrides: Partial<NodeSweepDeps> = {}) {
+    const progressLines: string[] = [];
+    const titles: string[] = [];
+    const withProgress: NodeSweepDeps['withProgress'] = (title, run) => {
+        titles.push(title);
+        return run((line) => progressLines.push(line));
+    };
+    const d = {
+        projects,
+        node: '26',
+        nodeReady: jest.fn(async () => true),
         ensureNode: jest.fn(async (): Promise<string | undefined> => undefined),
         reinstall: jest.fn(async (): Promise<string | undefined> => undefined),
         saveProject: jest.fn(async () => undefined),
-        report: jest.fn(),
+        withProgress,
+        log: jest.fn(),
         ...overrides,
     };
+    return { d, progressLines, titles };
 }
 
-describe('moveInstalledComponentsToNode', () => {
+describe('sweepOntoDemoBuilderNode', () => {
     it('reinstalls a component recorded under the old Node on the new one, and moves its record', async () => {
         const project = createMockProject({ name: 'citisignal', componentInstances: { headless: component('headless', '24') } });
-        const d = deps([project]);
+        const { d, titles } = deps([project]);
 
-        const result = await moveInstalledComponentsToNode('26', d);
+        const result = await sweepOntoDemoBuilderNode(d);
 
+        expect(titles).toStrictEqual(["Updating Demo Builder's Node to 26"]);
         expect(d.ensureNode).toHaveBeenCalledWith('26');
-        expect(d.reinstall).toHaveBeenCalledWith(project, 'headless', project.componentInstances?.headless, '26');
+        expect(d.reinstall).toHaveBeenCalledWith('headless', project.componentInstances?.headless, '26');
         expect(project.componentInstances?.headless.metadata?.nodeVersion).toBe('26');
         expect(d.saveProject).toHaveBeenCalledWith(project);
-        expect(result).toStrictEqual({ moved: ['citisignal: headless'], failed: [], running: [] });
+        expect(result).toStrictEqual({ ran: true, moved: ['citisignal: headless'], failed: [], running: [] });
     });
 
-    it('leaves alone a component already on the Node, one with no record, and an own-repo one', async () => {
+    it('does nothing and shows nothing when the Node is ready and nothing is behind', async () => {
+        const { d, titles } = deps([createMockProject({ componentInstances: { headless: component('headless', '26') } })]);
+
+        expect((await sweepOntoDemoBuilderNode(d)).ran).toBe(false);
+        expect(titles).toStrictEqual([]);
+    });
+
+    it('prepares the Node when it is missing, even with nothing behind', async () => {
+        const { d } = deps([createMockProject({ componentInstances: {} })], { nodeReady: jest.fn(async () => false) });
+
+        expect((await sweepOntoDemoBuilderNode(d)).ran).toBe(true);
+        expect(d.ensureNode).toHaveBeenCalledWith('26');
+    });
+
+    it('leaves a new SC alone: no projects, nothing prepared (the prerequisites do it)', async () => {
+        const { d } = deps([], { nodeReady: jest.fn(async () => false) });
+
+        expect((await sweepOntoDemoBuilderNode(d)).ran).toBe(false);
+        expect(d.ensureNode).not.toHaveBeenCalled();
+    });
+
+    it('leaves alone a component with no record and one from an own repo with its own Node', async () => {
         const project = createMockProject({
-            componentInstances: {
-                current: component('current', '26'),
-                unrecorded: component('unrecorded'),
-                'acme-bridge': component('acme-bridge', '22'),
-            },
+            componentInstances: { unrecorded: component('unrecorded'), 'acme-bridge': component('acme-bridge', '22') },
             appBuilderComponents: {
-                'acme-bridge': {
-                    kind: 'integration',
-                    status: 'deployed',
-                    source: { owner: 'acme', repo: 'bridge' },
-                    nodeVersion: '22',
-                },
+                'acme-bridge': { kind: 'integration', status: 'deployed', source: { owner: 'acme', repo: 'bridge' }, nodeVersion: '22' },
             },
         });
-        const d = deps([project]);
+        const { d } = deps([project]);
 
-        await moveInstalledComponentsToNode('26', d);
+        await sweepOntoDemoBuilderNode(d);
 
         expect(d.reinstall).not.toHaveBeenCalled();
-        expect(d.saveProject).not.toHaveBeenCalled();
     });
 
-    it('skips every component of a project whose demo is running', async () => {
-        const project = createMockProject({
-            name: 'live',
-            status: 'running',
-            componentInstances: { headless: component('headless', '24') },
-        });
-        const d = deps([project]);
+    it('skips every component of a running demo, and says so', async () => {
+        const project = createMockProject({ name: 'live', status: 'running', componentInstances: { headless: component('headless', '24') } });
+        const { d, progressLines } = deps([project]);
 
-        const result = await moveInstalledComponentsToNode('26', d);
+        const result = await sweepOntoDemoBuilderNode(d);
 
         expect(d.reinstall).not.toHaveBeenCalled();
-        expect(project.componentInstances?.headless.metadata?.nodeVersion).toBe('24');
         expect(result.running).toStrictEqual(['live']);
+        expect(progressLines).toContain('live is running; it moves to Node 26 after it stops');
     });
 
     it('keeps the old record when a reinstall fails, and reports it', async () => {
         const project = createMockProject({ name: 'p', componentInstances: { headless: component('headless', '24') } });
-        const d = deps([project], { reinstall: jest.fn(async () => 'npm ERR! engine') });
+        const { d } = deps([project], { reinstall: jest.fn(async () => 'npm ERR! engine') });
 
-        const result = await moveInstalledComponentsToNode('26', d);
+        const result = await sweepOntoDemoBuilderNode(d);
 
         expect(project.componentInstances?.headless.metadata?.nodeVersion).toBe('24');
         expect(d.saveProject).not.toHaveBeenCalled();
         expect(result.failed).toStrictEqual([{ component: 'p: headless', error: 'npm ERR! engine' }]);
     });
 
-    it('moves nothing when the new Node cannot be prepared', async () => {
+    it('moves nothing when the Node cannot be prepared', async () => {
         const project = createMockProject({ componentInstances: { headless: component('headless', '24') } });
-        const d = deps([project], { ensureNode: jest.fn(async () => 'offline') });
+        const { d } = deps([project], { ensureNode: jest.fn(async () => 'offline') });
 
-        const result = await moveInstalledComponentsToNode('26', d);
+        const result = await sweepOntoDemoBuilderNode(d);
 
         expect(result.nodeError).toBe('offline');
-        expect(d.knownProjects).not.toHaveBeenCalled();
         expect(d.reinstall).not.toHaveBeenCalled();
     });
+});
 
-    it('prepares the new Node even when nothing is behind', async () => {
-        const d = deps([]);
-
-        expect(await moveInstalledComponentsToNode('26', d)).toStrictEqual({ moved: [], failed: [], running: [] });
-        expect(d.ensureNode).toHaveBeenCalledWith('26');
+describe('bareDefinition', () => {
+    it('describes a component the catalog does not define by its id and name', () => {
+        expect(bareDefinition('demo-erp', component('demo-erp'))).toStrictEqual({
+            id: 'demo-erp',
+            name: 'demo-erp',
+            type: 'app-builder',
+        });
     });
 });

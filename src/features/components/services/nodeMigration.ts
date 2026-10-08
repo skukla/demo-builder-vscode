@@ -1,39 +1,50 @@
 /**
- * Move installed components to Demo Builder's Node when a release moves it (PR-1a
- * step 9, owner 2026-10-07).
+ * Converge every project's installed components onto Demo Builder's Node, one of the
+ * activation upkeep sweeps (PR-1a step 9, owner 2026-10-07).
  *
  * The only thing that ever puts an installed component behind is a release that moves
- * Demo Builder's Node, so this runs at that moment, in the background, and Start never
- * has to ask. For every known project it reinstalls the packages of each component
- * recorded under another Node and rewrites the record. Safe by construction: the
+ * Demo Builder's Node, so this runs on the activation path and Start never has to ask.
+ * Like the other sweeps it decides from what is on disk, not from a record of its own
+ * last run: when the Node is ready and nothing is behind it does nothing and shows
+ * nothing. Otherwise it prepares the Node (with the Adobe CLI) and reinstalls each
+ * component recorded under another Node, moving its record. Safe by construction: the
  * release check guarantees every shipped component accepts the new Node.
  *
  * Left alone: a component of an SC's own repo that carries its own Node, a component
- * with no record (it reads as the current Node), and every component of a project whose
- * demo is running (it catches up at the next activation). A failed reinstall keeps its
+ * with no record (it reads as the current Node), every component of a project whose
+ * demo is running (it catches up next activation), and every project when there are
+ * none yet (a new SC's prerequisites prepare the Node). A failed reinstall keeps its
  * old record, so it goes on running on the old Node, which still works.
  *
- * Pure orchestration: every collaborator arrives in `deps` (`nodeMigrationDeps.ts`).
+ * UI-free: the progress surface and every collaborator arrive in `deps`, and the
+ * glue (`extension.ts`, `sweepDemoBuilderNode`) runs it in the sequential upkeep chain.
  *
  * @module features/components/services/nodeMigration
  */
 
 import type { ComponentInstance, Project } from '@/types/base';
+import type { TransformedComponentDefinition } from '@/types/components';
 
-export interface NodeMigrationDeps {
-    /** Every project Demo Builder knows about, read without opening any. */
-    knownProjects(): Promise<Project[]>;
+export interface NodeSweepDeps {
+    projects: Project[];
+    /** Demo Builder's Node (`demoBuilderNode()`). */
+    node: string;
+    /** The Node is in Demo Builder's folder with the Adobe CLI under it. */
+    nodeReady: () => Promise<boolean>;
     /** Make the Node available with the Adobe CLI under it; an error string, or undefined. */
-    ensureNode(major: string): Promise<string | undefined>;
+    ensureNode: (major: string) => Promise<string | undefined>;
     /** Reinstall one component's packages (and its build step) on `major`. */
-    reinstall(project: Project, componentId: string, component: ComponentInstance, major: string): Promise<string | undefined>;
-    /** Persist a changed project without opening it. */
-    saveProject(project: Project): Promise<void>;
-    /** One step, for the progress notification and User Logs. */
-    report(line: string): void;
+    reinstall: (componentId: string, component: ComponentInstance, major: string) => Promise<string | undefined>;
+    /** Persists a project whose records moved. Only called for changed ones. */
+    saveProject: (project: Project) => Promise<void>;
+    /** Runs the work behind the progress notification; `report` writes one line. */
+    withProgress: <T>(title: string, run: (report: (line: string) => void) => Promise<T>) => Promise<T>;
+    log: (line: string) => void;
 }
 
-export interface NodeMigrationResult {
+export interface NodeSweepResult {
+    /** Nothing was needed, so nothing ran and nothing was shown. */
+    ran: boolean;
     /** The Node could not be prepared; nothing moved. */
     nodeError?: string;
     moved: string[];
@@ -42,27 +53,37 @@ export interface NodeMigrationResult {
     running: string[];
 }
 
-/** The components of `project` recorded under a Node other than `major`, that may move. */
-function componentsBehind(project: Project, major: string): Array<[string, ComponentInstance]> {
+/** A component the catalog does not define (an App Builder one): it needs only its packages. */
+export function bareDefinition(componentId: string, component: ComponentInstance): TransformedComponentDefinition {
+    return { id: componentId, name: component.name || componentId, type: 'app-builder' };
+}
+
+/** The components of `project` recorded under a Node other than `node`, that may move. */
+function componentsBehind(project: Project, node: string): Array<[string, ComponentInstance]> {
     return Object.entries(project.componentInstances ?? {}).filter(([id, component]) => {
         const recorded = component.metadata?.nodeVersion;
         const ownNode = project.appBuilderComponents?.[id]?.nodeVersion;
-        return typeof recorded === 'string' && recorded !== major && !ownNode;
+        return typeof recorded === 'string' && recorded !== node && !ownNode;
     });
 }
 
-async function moveProject(project: Project, major: string, deps: NodeMigrationDeps, result: NodeMigrationResult) {
+async function moveProject(
+    project: Project,
+    deps: NodeSweepDeps,
+    report: (line: string) => void,
+    result: NodeSweepResult,
+): Promise<void> {
     let changed = false;
-    for (const [id, component] of componentsBehind(project, major)) {
-        const label = `${project.name}: ${component.name ?? id}`;
-        deps.report(`Moving ${label} to Node ${major}`);
-        const error = await deps.reinstall(project, id, component, major);
+    for (const [id, component] of componentsBehind(project, deps.node)) {
+        const label = `${project.name}: ${component.name || id}`;
+        report(`Moving ${label} to Node ${deps.node}`);
+        const error = await deps.reinstall(id, component, deps.node);
         if (error) {
             result.failed.push({ component: label, error });
-            deps.report(`Could not move ${label} to Node ${major}; it still runs on its old Node: ${error}`);
+            report(`Could not move ${label}; it still runs on its old Node: ${error}`);
             continue;
         }
-        component.metadata = { ...component.metadata, nodeVersion: major };
+        component.metadata = { ...component.metadata, nodeVersion: deps.node };
         result.moved.push(label);
         changed = true;
     }
@@ -70,27 +91,34 @@ async function moveProject(project: Project, major: string, deps: NodeMigrationD
 }
 
 /**
- * Prepare `major` (with the Adobe CLI), then move every known project's components to it.
+ * Prepare Demo Builder's Node and move every project's components onto it, when
+ * anything needs it.
  *
- * @returns what moved, what failed and why, and which projects were left running
+ * @returns what ran, what moved, what failed and why, and which projects were running
  */
-export async function moveInstalledComponentsToNode(major: string, deps: NodeMigrationDeps): Promise<NodeMigrationResult> {
-    const result: NodeMigrationResult = { moved: [], failed: [], running: [] };
-    // First, and whether or not anything is behind: the new Node is what every command
-    // now runs on, so it is prepared here rather than in the middle of someone's demo.
-    deps.report(`Preparing Node ${major}`);
-    const nodeError = await deps.ensureNode(major);
-    if (nodeError) return { ...result, nodeError };
+export async function sweepOntoDemoBuilderNode(deps: NodeSweepDeps): Promise<NodeSweepResult> {
+    const result: NodeSweepResult = { ran: false, moved: [], failed: [], running: [] };
+    if (deps.projects.length === 0) return result;
+    const behind = deps.projects.filter((project) => componentsBehind(project, deps.node).length > 0);
+    if (behind.length === 0 && (await deps.nodeReady())) return result;
 
-    const projects = (await deps.knownProjects()).filter((project) => componentsBehind(project, major).length > 0);
-
-    for (const project of projects) {
-        if (project.status === 'running') {
-            result.running.push(project.name);
-            deps.report(`${project.name} is running; it moves to Node ${major} after it stops`);
-            continue;
+    return deps.withProgress(`Updating Demo Builder's Node to ${deps.node}`, async (progress) => {
+        const report = (line: string): void => {
+            progress(line);
+            deps.log(line);
+        };
+        result.ran = true;
+        report(`Preparing Node ${deps.node}`);
+        const nodeError = await deps.ensureNode(deps.node);
+        if (nodeError) return { ...result, nodeError };
+        for (const project of behind) {
+            if (project.status === 'running') {
+                result.running.push(project.name);
+                report(`${project.name} is running; it moves to Node ${deps.node} after it stops`);
+                continue;
+            }
+            await moveProject(project, deps, report, result);
         }
-        await moveProject(project, major, deps, result);
-    }
-    return result;
+        return result;
+    });
 }
