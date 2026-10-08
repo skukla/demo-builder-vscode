@@ -19,7 +19,7 @@ import React from 'react';
 import { render, screen, within } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
-import { StepFooterArea } from '@/features/project-creation/ui/steps/ProjectCreationStep';
+import { StepFooterArea } from '@/features/project-creation/ui/steps/projectCreationStepFooter';
 
 const BASE = {
     isActive: false,

@@ -29,8 +29,8 @@ interface UseMessageListenersProps {
  *
  * No `onGitHubAppRequired` callback either: it was a SECOND implementation
  * of the GITHUB_APP_NOT_INSTALLED reaction that no caller ever wired — the
- * LIVE one is ProjectCreationStep's own creationFailed listener, which opens
- * GitHubAppInstallDialog. This hook's creationFailed listener only does the
+ * LIVE one is the creationFailed listener in `useGitHubAppPreflight` (the
+ * step's pre-flight hook), which opens GitHubAppInstallDialog. This hook's creationFailed listener only does the
  * generic progress-state update, same as it always effectively did.
  */
 export function useMessageListeners({ setState }: UseMessageListenersProps): void {
@@ -59,8 +59,8 @@ export function useMessageListeners({ setState }: UseMessageListenersProps): voi
         const unsubscribe = vscode.onMessage('creationFailed', (data: unknown) => {
             const failedData = data as Partial<CreationFailedPayload>;
 
-            // GITHUB_APP_NOT_INSTALLED gets its special UI from
-            // ProjectCreationStep's OWN creationFailed listener (the
+            // GITHUB_APP_NOT_INSTALLED gets its special UI from the
+            // creationFailed listener in `useGitHubAppPreflight` (the
             // GitHubAppInstallDialog); this listener always does the generic
             // progress-state update regardless of errorType.
             setState((prev) => ({

@@ -2951,7 +2951,7 @@
             "source": "PL-22 batch MUT-03"
         },
         {
-            "module": "src/features/project-creation/ui/steps/ProjectCreationStep.tsx",
+            "module": "src/features/project-creation/ui/hooks/useGitHubAppPreflight.ts",
             "anchors": [
                 "if (!edsConfig) return {};"
             ],
@@ -2963,7 +2963,7 @@
             "source": "PL-22 batch MUT-03"
         },
         {
-            "module": "src/features/project-creation/ui/steps/ProjectCreationStep.tsx",
+            "module": "src/features/project-creation/ui/hooks/useGitHubAppPreflight.ts",
             "anchors": [
                 "if (edsConfig.repoName && authenticatedUser) {"
             ],
@@ -2975,7 +2975,7 @@
             "source": "PL-22 batch MUT-03"
         },
         {
-            "module": "src/features/project-creation/ui/steps/ProjectCreationStep.tsx",
+            "module": "src/features/project-creation/ui/steps/projectCreationStepContent.tsx",
             "anchors": [
                 "if (phase === 'creating' && !progress) {"
             ],
@@ -2987,21 +2987,21 @@
             "source": "PL-22 batch MUT-03"
         },
         {
-            "module": "src/features/project-creation/ui/steps/ProjectCreationStep.tsx",
+            "module": "src/features/project-creation/ui/hooks/useGitHubAppPreflight.ts",
             "anchors": [
                 "}, [state.selectedStack]);",
-                "}, [needsGitHubAppCheck, state.edsConfig]);",
-                "}, [checkGitHubApp, state, importedSettings, packages]);"
+                "}, [needsGitHubAppCheck, state.edsConfig, setPhase]);",
+                "}, [checkGitHubApp, state, importedSettings, packages, setPhase]);"
             ],
             "mutants": 3,
             "category": "other",
-            "reason": "Emptying these three dependency lists cannot be observed because the memo and the two callbacks they guard are consumed only by the mount effect, which runs once with an empty dependency list of its own. A stale checkGitHubApp or runPreFlightChecks is therefore never called a second time, so recomputing them or not produces the same single run. The one dependency list here that IS observable \u2014 handleGitHubAppInstalled's, which the install dialog calls later \u2014 is killed by a test that renames the project after mount.",
+            "reason": "Emptying these three dependency lists cannot be observed because the memo and the two callbacks they guard are consumed only by the mount effect, which runs once with an empty dependency list of its own. A stale checkGitHubApp or runPreFlightChecks is therefore never called a second time, so recomputing them or not produces the same single run. The one dependency list here that IS observable \u2014 handleGitHubAppInstalled's, which the install dialog calls later \u2014 is killed by a test that renames the project after mount. Re-homed 2026-10-08 (EDS-8): the lists now also name setPhase, the step's useState setter handed into the hook; a setter is identity-stable, so the argument is unchanged.",
             "decision": "none \u2014 nothing re-invokes these after mount, so a stale closure is never used.",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-03"
         },
         {
-            "module": "src/features/project-creation/ui/steps/ProjectCreationStep.tsx",
+            "module": "src/features/project-creation/ui/hooks/useGitHubAppPreflight.ts",
             "anchors": [
                 "}, []); // eslint-disable-line react-hooks/exhaustive-deps"
             ],
@@ -3013,20 +3013,19 @@
             "source": "PL-22 batch MUT-03"
         },
         {
-            "module": "src/features/project-creation/ui/steps/ProjectCreationStep.tsx",
+            "module": "src/features/project-creation/ui/hooks/useGitHubAppPreflight.ts",
             "anchors": [
-                "}, []);"
+                "}, [setPhase]);"
             ],
-            "line": 440,
             "mutants": 1,
             "category": "other",
-            "reason": "Both mount effects declare an empty dependency list, so Stryker's replacement is a constant one-element array rather than an emptying. React compares dependencies element by element with Object.is, and that constant is identical on every render, so the effect still runs exactly once \u2014 the same as with no dependencies at all. There is no render sequence in which the two forms differ.",
+            "reason": "Both mount effects declare an empty dependency list, so Stryker's replacement is a constant one-element array rather than an emptying. React compares dependencies element by element with Object.is, and that constant is identical on every render, so the effect still runs exactly once \u2014 the same as with no dependencies at all. There is no render sequence in which the two forms differ. Re-homed 2026-10-08 (EDS-8): the listener effect's list now names setPhase, the step's useState setter handed into the hook; a setter is identity-stable, so Stryker's replacement still never changes between renders and the listener is registered exactly once.",
             "decision": "none \u2014 a constant dependency never changes, so the effect count is unchanged.",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-03"
         },
         {
-            "module": "src/features/project-creation/ui/steps/ProjectCreationStep.tsx",
+            "module": "src/features/project-creation/ui/hooks/useCreationProgressPhase.ts",
             "anchors": [
                 "phase === 'creating' && isProgressActive(progress, isCancelled, isFailed, isCompleted);"
             ],
@@ -3038,13 +3037,13 @@
             "source": "PL-22 batch MUT-03"
         },
         {
-            "module": "src/features/project-creation/ui/steps/ProjectCreationStep.tsx",
+            "module": "src/features/project-creation/ui/hooks/useCreationProgressPhase.ts",
             "anchors": [
                 "(progress?.error || isCancelled || isFailed) && phase !== 'github-app-install';"
             ],
-            "mutants": 1,
+            "mutants": 2,
             "category": "branch",
-            "reason": "Forcing the second half of this conjunction to true only matters while the phase IS the install phase and progress simultaneously reports an error or a cancellation. That combination cannot be held: the phase effect re-derives the phase from progress whenever either changes, and an error always resolves to 'failed', so the install phase is overwritten on the very next commit.",
+            "reason": "Forcing the second half of this conjunction to true only matters while the phase IS the install phase and progress simultaneously reports an error or a cancellation. That combination cannot be held: the phase effect re-derives the phase from progress whenever either changes, and an error always resolves to 'failed', so the install phase is overwritten on the very next commit. The phase name on the same line is the second mutant (2026-10-08, measured after the EDS-8 move): blanking it makes the comparison always true, which is the same forced-true second half.",
             "decision": "none \u2014 the phase effect makes the excluded combination unrepresentable.",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-03"
@@ -15300,6 +15299,31 @@
             "decision": "none \u2014 a double guard, not a defect",
             "recorded": "2026-10-08",
             "source": "EDS-8 split, 2026-10-08"
+        },
+        {
+            "module": "src/features/project-creation/ui/hooks/useGitHubAppPreflight.ts",
+            "anchors": [
+                "setPhase('creating');"
+            ],
+            "line": 180,
+            "mutants": 1,
+            "category": "string",
+            "reason": "The phase written here is the one the step already holds: the initial phase is 'creating', and the only other value the pre-flight assigns ('github-app-install') returns before this line. When progress has already moved the phase on (a completed event at mount), the phase effect re-derives it from progress on the next commit whatever this writes, so a blanked or unchanged value renders the same settled screen.",
+            "decision": "none \u2014 the write re-affirms the value the step starts in, and the phase effect owns every later value.",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 ProjectCreationStep cut"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/projectCreationStepContent.tsx",
+            "anchors": [
+                "expectationFor(progress.currentOperation ?? '') ??"
+            ],
+            "mutants": 1,
+            "category": "string",
+            "reason": "CreationProgress.currentOperation is a required string (src/types/webview.ts), so the nullish fallback is never taken and the empty string it supplies is never looked up. Reaching it needs a fixture that violates the type.",
+            "decision": "none \u2014 the type makes the fallback unreachable; it is reported as uncovered, not survived.",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 ProjectCreationStep cut"
         }
     ]
 }

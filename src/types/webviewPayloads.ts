@@ -488,7 +488,7 @@ export interface CreationFailedPayload {
     error: string;
     isTimeout?: boolean;
     elapsed?: string;
-    /** The one special-cased type; ProjectCreationStep opens the install dialog on it. */
+    /** The one special-cased type; `useGitHubAppPreflight` opens the install dialog on it. */
     errorType?: 'GITHUB_APP_NOT_INSTALLED';
     errorDetails?: { owner: string; repo: string; installUrl: string };
 }

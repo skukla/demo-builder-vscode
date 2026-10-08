@@ -8,8 +8,11 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/github/githubRepoOperations.ts",
-        "src/features/eds/services/github/githubRepoLifecycle.ts"
+        "src/features/project-creation/ui/steps/ProjectCreationStep.tsx",
+        "src/features/project-creation/ui/hooks/useCreationProgressPhase.ts",
+        "src/features/project-creation/ui/hooks/useGitHubAppPreflight.ts",
+        "src/features/project-creation/ui/steps/projectCreationStepContent.tsx",
+        "src/features/project-creation/ui/steps/projectCreationStepFooter.tsx"
     ],
     "reporters": [
         "clear-text",

@@ -85,8 +85,8 @@ async function handleStepBackendCalls(
         }
     }
 
-    // Note: Project creation is now triggered by ProjectCreationStep's pre-flight checks
-    // (after mesh and GitHub app checks pass), not here during navigation
+    // Note: Project creation is now triggered by the step's pre-flight hook
+    // (`useGitHubAppPreflight`, after the GitHub App check passes), not here during navigation
 }
 
 /**

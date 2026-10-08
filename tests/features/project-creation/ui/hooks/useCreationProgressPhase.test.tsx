@@ -1,6 +1,8 @@
 /**
- * Which view the final wizard step shows for each shape of creation progress,
- * and what its two buttons actually do.
+ * `useCreationProgressPhase`, driven through the step that calls it: which view
+ * the final wizard step shows for each shape of creation progress, and what its
+ * two buttons actually do. (Moved from ProjectCreationStep-phases on 2026-10-08
+ * when the hook left the step, EDS-8; the assertions are unchanged.)
  *
  * The step derives its phase from one field — `creationProgress.currentOperation`
  * — plus `creationProgress.error`, and every screen the SC sees at the end of a
@@ -82,7 +84,7 @@ const renderStep = async (progress: WizardState['creationProgress']) => {
  */
 const errorDetails = (container: HTMLElement) => container.querySelectorAll('.text-gray-600');
 
-describe('ProjectCreationStep phases', () => {
+describe('useCreationProgressPhase (through ProjectCreationStep)', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         mockOnMessage.mockReturnValue(jest.fn());
@@ -95,6 +97,20 @@ describe('ProjectCreationStep phases', () => {
 
             expect(screen.getByText('Initializing')).toBeInTheDocument();
             expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+        });
+
+        it('should start in the creating phase on the very first render, before the pre-flight answers', async () => {
+            // The pre-flight writes `creating` again once its check resolves, so a
+            // wrong INITIAL phase is corrected within a tick and every settled
+            // assertion passes. The SC sees that tick: it is the beat in which the
+            // footer vanished on the way in from Publish Storefront (2026-08-20).
+            // So assert before settling, then settle so the mount effects flush
+            // inside act().
+            render(step(stateWith(undefined)));
+
+            expect(screen.getByText('Initializing')).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+            await settle();
         });
 
         it('should show the running operation while creation is active', async () => {

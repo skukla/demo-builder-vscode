@@ -1,7 +1,9 @@
 /**
- * The pre-flight half of the final wizard step: which repository the GitHub App
- * check is asked about, what each answer does, and the install dialog the
- * extension can push the step into after creation has already failed.
+ * `useGitHubAppPreflight`, driven through the step that calls it: which repository
+ * the GitHub App check is asked about, what each answer does, and the install
+ * dialog the extension can push the step into after creation has already failed.
+ * (Moved from ProjectCreationStep-preflight on 2026-10-08 when the hook left the
+ * step, EDS-8; the assertions are unchanged.)
  *
  * None of this ran before — the whole `extractGitHubRepoInfo` /
  * `checkGitHubApp` / `handleCreationFailedMessage` path was uncovered, so the
@@ -94,7 +96,7 @@ const renderStep = (state: WizardState) =>
 const checkedRepo = () =>
     mockWebviewClientRequest.mock.calls.find((call) => call[0] === 'check-github-app')?.[1];
 
-describe('ProjectCreationStep pre-flight GitHub App check', () => {
+describe('useGitHubAppPreflight (through ProjectCreationStep)', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         mockWebviewClientRequest.mockReset();
