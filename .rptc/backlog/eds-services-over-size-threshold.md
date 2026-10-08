@@ -465,6 +465,11 @@ and three of them are more than 40% comments). Decide which.
   tool by hand, and does the Data Installer cover ACO? If both answers point to delete, deleting
   it removes an oversized file and its cleanup path in one change.
 
+- 2026-10-08  `prerequisites/services/PrerequisitesManager.ts` (490/400, coupled) is held back,
+  not judged: PR-1a ("Node versions in one place", steps 11 to 14 still open) is reshaping the
+  prerequisites area this branch is built on, and a split now would collide with it. Take it
+  after PR-1a merges. No decision needed from the owner; recorded so the gap is explained.
+
 ## Needs a live check
 
 The automated checks prove a move did not change what the tests constrain. What they
