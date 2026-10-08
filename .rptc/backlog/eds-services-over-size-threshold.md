@@ -341,6 +341,13 @@ about it, and what (if anything) the owner has to decide.
   guard and the ownership check should take a narrower interface (one sitting; no behaviour
   change) or stay as they are.
 
+- 2026-10-08  Two hook rules misfired on command TEXT during the loop: the jest-concurrency
+  rule (15) counted a progress-watch shell whose script text named the jest binary as a
+  live run (fixed in this branch, with proof cases); the push rule (21) refuses any push
+  command that also contains the two-character short flag for line count anywhere, even
+  in a later "tail" over the log. Worked around by pushing in a command of its own.
+  **Decide:** tighten the push rule to the git-push clause only, or leave it.
+
 ## Needs a live check
 
 The automated checks prove a move did not change what the tests constrain. What they
@@ -382,3 +389,4 @@ date and what happened; a failure becomes its own `fix` item.
 - 2026-10-08  refactor(authentication): authenticationService keeps the session; sign-in moves to adobeSignIn, forwarders deleted (`46714daa5`)
 - 2026-10-08  chore(decompose-god-file): the per-file routine, with a move checker and a re-measure script; adobeSignIn gets its own suite (`7b154d557`)
 - 2026-10-08  githubFileOperations.ts (917 -> 367) split by job, uncommitted on refactor/eds-8-god-files. The 2026-08-24 'one domain' verdict is overridden by a read by job: the Contents API (one file at a time) stays in githubFileOperations.ts; the Git Data primitives and the rebase-on-race commit are githubTreeCommits.ts (326); the archive download and the template reset are githubRepoArchive.ts (317); the per-instance Octokit cache the file AND repository classes carried verbatim (a pinned clone pair) is githubAuthenticatedOperations.ts (48), which both now extend. githubTreePush was already a second orchestrator over the same primitives from outside the class, which is what made the tree unit real. Callers moved: the zip import, app-repo promotion and the demo export take treeCommits / repoArchive from getGitHubServices; createBlob/createTree/createCommit/updateBranchRef/downloadRepoArchive are retired from the facade. Three forwarders KEPT (getBranchInfo, commitTreeToBranch, resetRepoToTemplate): installBlockCollections, installInspectorTagging, storefrontFixes, storefrontSetupPhase2 and edsResetRepoHelper take one GitHubFileOperations and need Contents reads plus a tree write on it, so retiring them is a parameter split across ~15 production and 53 test files, not a move. proveMove: every function in the three new files a pure move (--via treeCommits); the only DIFFERS are the three forwarders. Mutation: old file 82.62 measured before the cut (pinned 84.67 predated the 2026-09-15 binary path) -> remainder 95.92; treeCommits 88.10, repoArchive 69.17 (log lines of a six-step orchestration; symlink guard and blob counter ledgered; the symlink path gained its first test), base 100; openGaps 0 on all four. Pins: godFileCandidates 57 -> 56, godFileCoupled 21 -> 20, cloneCeiling 42 -> 41 (the fileOps<->repoOps pair cleared). Found on the way and fixed: proveMove took the { inside Promise<{...}> for a body (two forwarders read 'same' against ten-line methods); the concurrent-run hook rule counted a status-watcher shell whose text names the test binary as a live run (ps-side twin of its 2026-09-08 command-side fix, proof case added).
+- 2026-10-08  refactor(eds): githubFileOperations keeps the Contents API; tree commits and the archive reset get their own units (`7ec31f682`)
