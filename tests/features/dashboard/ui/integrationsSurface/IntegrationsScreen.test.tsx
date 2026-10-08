@@ -13,15 +13,12 @@ import {
     DEPLOYED,
     IntegrationsScreen,
     asDisplayName,
-    filterCards,
-    formatDestination,
     captureHandlers,
     getClient,
     resetIntegrationsScreenMocks,
     settleStatus,
 } from './IntegrationsScreen.testUtils';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
-import type { IntegrationCardModel } from '@/features/dashboard/ui/components/integrations/integrationCardModel';
 
 beforeEach(() => {
     resetIntegrationsScreenMocks();
@@ -91,23 +88,6 @@ describe('IntegrationsScreen', () => {
 
             expect(screen.getByTestId('grid')).toBeInTheDocument();
             expect(screen.getByTestId('card-a')).toBeInTheDocument();
-        });
-    });
-
-    describe('formatDestination', () => {
-        // Each integration has its own workspace (AB-23); the project-wide one was
-        // wrong for all of them, so the line names the Adobe project only.
-        it('names the Adobe project alone, never a workspace', () => {
-            // The destination the screen is handed carries its workspace too.
-            const destination = { projectTitle: 'Kukla Mesh', workspaceTitle: 'Stage' };
-            expect(formatDestination(destination)).toBe('Kukla Mesh');
-        });
-
-        // Undefined, not an empty string — the caller hides the line on undefined,
-        // so returning '' here would render an empty labelled row.
-        it('returns undefined when neither part is known', () => {
-            expect(formatDestination({})).toBeUndefined();
-            expect(formatDestination(undefined)).toBeUndefined();
         });
     });
 
@@ -456,23 +436,6 @@ describe('IntegrationsScreen', () => {
             expect(screen.getByTestId('card-a')).toBeInTheDocument();
         });
     });
-    describe('filterCards', () => {
-        const CARDS = [
-            { id: 'a', name: 'ERP Sync', kindLabel: 'Integration', sourceLine: 'acme/erp-sync' },
-            { id: 'b', name: 'Order Flow', kindLabel: 'Integration', sourceLine: 'acme/order' },
-        ] as unknown as IntegrationCardModel[];
-
-        it('matches a query against the card fields', () => {
-            expect(filterCards(CARDS, 'order').map((c) => c.id)).toStrictEqual(['b']);
-        });
-
-        // TRIMMED, not merely truthy: a query of spaces is an empty query. Handing
-        // it to the contains-walk instead would match nothing and blank the grid.
-        it('treats a whitespace-only query as no query at all', () => {
-            expect(filterCards(CARDS, '   ').map((c) => c.id)).toStrictEqual(['a', 'b']);
-        });
-    });
-
     describe('the add flow modal', () => {
         it('is closed until something opens it', () => {
             const handlers = captureHandlers();

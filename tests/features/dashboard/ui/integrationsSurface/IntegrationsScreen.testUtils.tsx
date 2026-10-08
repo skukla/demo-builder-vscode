@@ -203,11 +203,7 @@ import { asDisplayName } from '@/core/utils/projectDisplayName';
 
 // Re-exported so specs never import the subject directly: a spec's own import
 // could execute before this module and bind to UNMOCKED collaborators.
-export {
-    filterCards,
-    formatDestination,
-    IntegrationsScreen,
-} from '@/features/dashboard/ui/integrationsSurface/IntegrationsScreen';
+export { IntegrationsScreen } from '@/features/dashboard/ui/integrationsSurface/IntegrationsScreen';
 export { asDisplayName };
 
 export function getClient() {

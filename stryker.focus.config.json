@@ -8,10 +8,11 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/authentication/services/adobeEntityReads.ts",
-        "src/features/authentication/services/adobeOrgReads.ts",
-        "src/features/authentication/services/adobeProjectReads.ts",
-        "src/features/authentication/services/adobeWorkspaceReads.ts"
+        "src/features/dashboard/ui/integrationsSurface/IntegrationsScreen.tsx",
+        "src/features/dashboard/ui/integrationsSurface/IntegrationsActionBand.tsx",
+        "src/features/dashboard/ui/integrationsSurface/useIntegrationCards.ts",
+        "src/features/dashboard/ui/integrationsSurface/useIntegrationCardSearch.ts",
+        "src/features/dashboard/ui/integrationsSurface/useIntegrationsScreenActions.ts"
     ],
     "reporters": [
         "clear-text",

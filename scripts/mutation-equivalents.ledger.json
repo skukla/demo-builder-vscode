@@ -11138,20 +11138,20 @@
             "source": "PL-22 batch MUT-06"
         },
         {
-            "module": "src/features/dashboard/ui/integrationsSurface/IntegrationsScreen.tsx",
+            "module": "src/features/dashboard/ui/integrationsSurface/useIntegrationsScreenActions.ts",
             "anchors": [
                 "}, []);"
             ],
-            "line": 249,
+            "line": 89,
             "mutants": 1,
             "category": "other",
-            "reason": "A useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The callback identity, and therefore everything downstream of it, is byte-for-byte the same either way. Verified by planting all eight at once: the five suites pass unchanged, and no assertion could distinguish them because there is nothing to distinguish.",
+            "reason": "A useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The callback identity, and therefore everything downstream of it, is byte-for-byte the same either way. Verified by planting all eight at once: the five suites pass unchanged, and no assertion could distinguish them because there is nothing to distinguish. Re-homed 2026-10-08 (EDS-8): the callbacks moved unchanged from IntegrationsScreen.tsx into useIntegrationsScreenActions.ts, and the cold focused run there reported the same survivors.",
             "decision": "none \u2014 [] is the correct dependency list; these callbacks close over nothing",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/dashboard/ui/integrationsSurface/IntegrationsScreen.tsx",
+            "module": "src/features/dashboard/ui/integrationsSurface/useIntegrationsScreenActions.ts",
             "anchors": [
                 "const openAdd = useCallback((): void => setAddOpen(true), []);",
                 "const closeAdd = useCallback((): void => setAddOpen(false), []);",
@@ -11160,10 +11160,61 @@
             ],
             "mutants": 4,
             "category": "other",
-            "reason": "A useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The callback identity, and therefore everything downstream of it, is byte-for-byte the same either way. Verified by planting all eight at once: the five suites pass unchanged, and no assertion could distinguish them because there is nothing to distinguish.",
+            "reason": "A useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The callback identity, and therefore everything downstream of it, is byte-for-byte the same either way. Verified by planting all eight at once: the five suites pass unchanged, and no assertion could distinguish them because there is nothing to distinguish. Re-homed 2026-10-08 (EDS-8): the callbacks moved unchanged from IntegrationsScreen.tsx into useIntegrationsScreenActions.ts, and the cold focused run there reported the same survivors.",
             "decision": "none \u2014 [] is the correct dependency list; these callbacks close over nothing",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/dashboard/ui/integrationsSurface/useIntegrationsScreenActions.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 75,
+            "mutants": 1,
+            "category": "other",
+            "reason": "The dependency array of the once-per-visit update-check effect holds no variables, so React compares a literal ['Stryker was here'] element-wise with Object.is against the same literal on every render and never re-runs or re-creates it, exactly as with []. Nothing observable differs: the useIntegrationsScreenActions suite asserts the update check is posted once across a re-render and that the handlers keep their identity, and both still pass under the mutant (cold focused run, 2026-10-08). Survived on IntegrationsScreen.tsx before the EDS-8 split too, unledgered there.",
+            "decision": "none \u2014 [] is the correct dependency list; the body closes over nothing that changes",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 IntegrationsScreen split"
+        },
+        {
+            "module": "src/features/dashboard/ui/integrationsSurface/useIntegrationsScreenActions.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 79,
+            "mutants": 1,
+            "category": "other",
+            "reason": "The dependency array of handleBack holds no variables, so React compares a literal ['Stryker was here'] element-wise with Object.is against the same literal on every render and never re-runs or re-creates it, exactly as with []. Nothing observable differs: the useIntegrationsScreenActions suite asserts the update check is posted once across a re-render and that the handlers keep their identity, and both still pass under the mutant (cold focused run, 2026-10-08). Survived on IntegrationsScreen.tsx before the EDS-8 split too, unledgered there.",
+            "decision": "none \u2014 [] is the correct dependency list; the body closes over nothing that changes",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 IntegrationsScreen split"
+        },
+        {
+            "module": "src/features/dashboard/ui/integrationsSurface/useIntegrationsScreenActions.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 93,
+            "mutants": 1,
+            "category": "other",
+            "reason": "The dependency array of handleRefresh holds no variables, so React compares a literal ['Stryker was here'] element-wise with Object.is against the same literal on every render and never re-runs or re-creates it, exactly as with []. Nothing observable differs: the useIntegrationsScreenActions suite asserts the update check is posted once across a re-render and that the handlers keep their identity, and both still pass under the mutant (cold focused run, 2026-10-08). Survived on IntegrationsScreen.tsx before the EDS-8 split too, unledgered there.",
+            "decision": "none \u2014 [] is the correct dependency list; the body closes over nothing that changes",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 IntegrationsScreen split"
+        },
+        {
+            "module": "src/features/dashboard/ui/integrationsSurface/IntegrationsActionBand.tsx",
+            "anchors": [
+                "project={destination?.projectTitle}"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "This line renders only inside `destinationLabel ? (...) : undefined`, and destinationLabel is formatDestination(destination), which returns undefined whenever destination is undefined. So on every path that reaches the line destination is defined, and `destination.projectTitle` reads the same value as `destination?.projectTitle`. No input can make the two differ; the band suite's no-destination control renders no row at all. Survived identically on IntegrationsScreen.tsx before the EDS-8 split.",
+            "decision": "none \u2014 the ?. is redundant but harmless; removing it would trade a dead guard for a type error the compiler cannot see through the ternary",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 IntegrationsScreen split"
         },
         {
             "module": "src/features/dashboard/ui/configure/ConfigureScreen.tsx",

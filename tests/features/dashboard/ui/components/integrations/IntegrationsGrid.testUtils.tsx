@@ -228,7 +228,7 @@ import {
 } from '@/features/dashboard/ui/components/integrations/SetupGuideModal';
 import { OperationProgressModal } from '@/core/ui/components/feedback/OperationProgressModal';
 import { useComponentOperation } from '@/features/dashboard/ui/hooks/useComponentOperation';
-import { MESH_OPERATION } from '@/features/dashboard/ui/integrationsSurface/IntegrationsScreen';
+import { MESH_OPERATION } from '@/features/dashboard/ui/integrationsSurface/useIntegrationsScreenActions';
 import {
     buildIntegrationCards,
     deriveMeshCard,
@@ -321,7 +321,7 @@ export interface RenderOptions {
 
 /**
  * Derive the cards the way the SCREEN does, then hand them to the presentational
- * grid. Card derivation moved to IntegrationsScreen (the screen owns and filters
+ * grid. Card derivation moved to the screen (`useIntegrationCards`; the screen owns and filters
  * the data, the grid renders it), so this harness stands in for that half —
  * which keeps every existing grid test expressed in its original inputs
  * (appBuilderComponents + mesh props) rather than hand-built card models.
