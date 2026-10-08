@@ -14,15 +14,16 @@
 import type { OwnRepoNodeResolver } from './componentEntry';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { fnmStoreProcessEnv } from '@/core/shell/nodeStore';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { engineRangeOf, nodeForRepoRange, parseFnmReleases } from '@/features/components/services/nodeResolution';
+import { publicRepoReaders } from '@/features/eds/services/github/publicGitHubReads';
 import { listStoreMajors } from '@/features/prerequisites/services/versioning/MultiVersionDetector';
 import type { Logger } from '@/types/logger';
 
 /** Reads one file of a repo at a ref, or undefined when it is not there or not readable. */
-export type RepoTextReader = (owner: string, repo: string, path: string, ref: string) => Promise<string | undefined>;
+export type RepoTextReader = (owner: string, repo: string, path: string, ref?: string) => Promise<string | undefined>;
 
 async function releasesFrom(commandManager: Pick<CommandExecutor, 'execute'>, logger: Pick<Logger, 'debug'>) {
     try {
@@ -45,7 +46,7 @@ export function ownRepoNodeResolver(
     logger: Pick<Logger, 'debug'>,
 ): OwnRepoNodeResolver {
     return async (source) => {
-        const text = await readRepoText(source.owner, source.repo, 'package.json', source.branch ?? 'HEAD');
+        const text = await readRepoText(source.owner, source.repo, 'package.json', source.branch);
         const range = text === undefined ? undefined : engineRangeOf(text);
         if (!range) return { ok: true, major: demoBuilderNode() };
         const [storeMajors, releases] = await Promise.all([
@@ -56,27 +57,31 @@ export function ownRepoNodeResolver(
     };
 }
 
+/** One way to read a file from GitHub (the signed-in and the anonymous reader share it). */
+type FileReader = {
+    getFileContent(owner: string, repo: string, path: string, ref?: string): Promise<{ content: string } | null>;
+};
+
 /**
- * A repo reader over GitHub: the SC's GitHub session first (a private repo), then an
- * anonymous read (a public one, or no session). Not there or unreadable: undefined,
- * which the rule reads as "declares no range", so the add carries on with
+ * A repo reader over the two GitHub readers the codebase already has: the SC's
+ * GitHub session first (a private repo), then the anonymous public reader
+ * (`publicRepoReaders`, with its timeout). Not there or unreadable by either:
+ * undefined, which the rule reads as "declares no range", so the add carries on with
  * Demo Builder's Node rather than failing on a read.
  */
 export function githubRepoTextReader(
-    fileOps: { getFileContent(owner: string, repo: string, path: string, ref?: string): Promise<{ content: string } | null> },
+    signedIn: FileReader,
+    anonymous: FileReader = publicRepoReaders().fileOps,
 ): RepoTextReader {
     return async (owner, repo, path, ref) => {
-        try {
-            const file = await fileOps.getFileContent(owner, repo, path, ref);
-            if (file) return file.content;
-        } catch {
-            // No GitHub session, or no access: try it as a public repo.
+        for (const reader of [signedIn, anonymous]) {
+            try {
+                const file = await reader.getFileContent(owner, repo, path, ref);
+                if (file) return file.content;
+            } catch {
+                // No session, no access, or no answer: try the next reader.
+            }
         }
-        try {
-            const res = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/${ref}/${path}`);
-            return res.ok ? await res.text() : undefined;
-        } catch {
-            return undefined;
-        }
+        return undefined;
     };
 }

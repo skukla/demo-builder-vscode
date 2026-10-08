@@ -4,23 +4,25 @@
  */
 
 import { githubRepoTextReader, ownRepoNodeResolver } from '@/features/app-builder/services/ownRepoNode';
-import type { CommandResult } from '@/core/shell/types';
 import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
+import type { CommandResult } from '@/core/shell/types';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
+import { createSuccessResult } from '../../../helpers/commandResultFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
-const logger = { debug: jest.fn() };
+const logger = createMockLogger();
 const SOURCE = { owner: 'acme', repo: 'erp-bridge', branch: 'main' };
 
-const ran = (stdout: string): CommandResult => ({ stdout, stderr: '', code: 0, duration: 1 });
 
 /** An executor answering `fnm list` and `fnm list-remote` with what it is given. */
 function executorAnswering(list: string, remote: string | Error) {
-    return {
+    return createMockCommandExecutor({
         execute: jest.fn(async (command: string): Promise<CommandResult> => {
-            if (command !== 'fnm list-remote') return ran(list);
+            if (command !== 'fnm list-remote') return createSuccessResult(list);
             if (remote instanceof Error) throw remote;
-            return ran(remote);
+            return createSuccessResult(remote);
         }),
-    };
+    });
 }
 
 const REMOTE = 'v22.23.3 (Jod)\nv24.21.0 (Krypton)\nv26.11.0\n';
@@ -53,32 +55,32 @@ describe('ownRepoNodeResolver', () => {
 });
 
 describe('githubRepoTextReader', () => {
-    const realFetch = global.fetch;
-    afterEach(() => {
-        global.fetch = realFetch;
+    const reader = (answer: { content: string } | null | Error) => ({
+        getFileContent: jest.fn(async () => {
+            if (answer instanceof Error) throw answer;
+            return answer;
+        }),
     });
 
     it('reads through the SC\'s GitHub session first', async () => {
-        const fileOps = { getFileContent: jest.fn().mockResolvedValue({ content: 'text' }) };
-        global.fetch = jest.fn();
+        const signedIn = reader({ content: 'text' });
+        const anonymous = reader({ content: 'public' });
 
-        expect(await githubRepoTextReader(fileOps)('acme', 'r', 'package.json', 'main')).toBe('text');
-        expect(fileOps.getFileContent).toHaveBeenCalledWith('acme', 'r', 'package.json', 'main');
-        expect(global.fetch).not.toHaveBeenCalled();
+        expect(await githubRepoTextReader(signedIn, anonymous)('acme', 'r', 'package.json', 'main')).toBe('text');
+        expect(signedIn.getFileContent).toHaveBeenCalledWith('acme', 'r', 'package.json', 'main');
+        expect(anonymous.getFileContent).not.toHaveBeenCalled();
     });
 
-    it('falls back to an anonymous read of a public repo when there is no session', async () => {
-        const fileOps = { getFileContent: jest.fn().mockRejectedValue(new Error('not signed in')) };
-        global.fetch = jest.fn().mockResolvedValue({ ok: true, text: async () => 'public' });
+    it('falls back to the anonymous public reader when there is no session', async () => {
+        const anonymous = reader({ content: 'public' });
 
-        expect(await githubRepoTextReader(fileOps)('acme', 'r', 'package.json', 'main')).toBe('public');
-        expect(global.fetch).toHaveBeenCalledWith('https://raw.githubusercontent.com/acme/r/main/package.json');
+        expect(await githubRepoTextReader(reader(new Error('not signed in')), anonymous)('acme', 'r', 'package.json'))
+            .toBe('public');
+        expect(anonymous.getFileContent).toHaveBeenCalledWith('acme', 'r', 'package.json', undefined);
     });
 
-    it('answers nothing when neither route can read it', async () => {
-        const fileOps = { getFileContent: jest.fn().mockResolvedValue(null) };
-        global.fetch = jest.fn().mockResolvedValue({ ok: false, text: async () => '' });
-
-        expect(await githubRepoTextReader(fileOps)('acme', 'r', 'package.json', 'main')).toBeUndefined();
+    it('answers nothing when neither reader has the file', async () => {
+        expect(await githubRepoTextReader(reader(null), reader(new Error('404')))('acme', 'r', 'package.json'))
+            .toBeUndefined();
     });
 });
