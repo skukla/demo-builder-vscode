@@ -21,7 +21,7 @@ export {
     getNodeVersionKeys,
     getNodeVersionMapping,
     hasNodeVersions,
-    perNodeToolMajors,
+    perNodeVersionMajors,
 } from './nodeVersionRequirements';
 export type { NodeVersionMapping } from './nodeVersionRequirements';
 export {

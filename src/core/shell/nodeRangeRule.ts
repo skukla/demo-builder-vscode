@@ -91,8 +91,8 @@ function majorFits(major: string, range: string, releases: NodeRelease[]): boole
 export type RepoNodeChoice = { ok: true; major: string } | { ok: false; range: string };
 
 /**
- * The Node an integration from an SC's own repo runs on (PR-1a step 8): Demo Builder's
- * own if the repo's range accepts it; else a Node already in Demo Builder's folder that
+ * The Node a custom integration runs on (PR-1a step 8): Demo Builder's
+ * own if the repo's range accepts it; else a Node already in Demo Builder's Node folder that
  * it accepts (lowest first); else the lowest release it accepts (`chooseNode`). A repo
  * with no range takes Demo Builder's. A range nothing satisfies is refused, named.
  */

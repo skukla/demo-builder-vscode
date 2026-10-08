@@ -7,7 +7,7 @@
 import { buildMajorToFullVersionMap, parseMajorVersions } from './NodeVersionParser';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
-import { fnmStoreProcessEnv } from '@/core/shell/nodeStore';
+import { nodeFolderProcessEnv } from '@/core/shell/nodeFolder';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { Logger } from '@/types/logger';
 
@@ -18,22 +18,22 @@ export interface NodeVersionStatus {
 }
 
 /**
- * `fnm list` against Demo Builder's own Node store (PR-1a): the one reader of what
- * is installed. Every check asks the store, because every install lands there; the
- * user's own fnm answering would report a Node the store does not have.
+ * `fnm list` against Demo Builder's Node folder (PR-1a): the one reader of what
+ * is installed. Every check asks that folder, because every install lands there; the
+ * SC's own fnm answering would report a Node the folder does not have.
  */
-export async function readStoreFnmList(commandManager: Pick<CommandExecutor, 'execute'>): Promise<string> {
+export async function readNodeFolderList(commandManager: Pick<CommandExecutor, 'execute'>): Promise<string> {
     const { stdout } = await commandManager.execute('fnm list', {
         timeout: TIMEOUTS.PREREQUISITE_CHECK,
         shell: DEFAULT_SHELL, // Add shell context for fnm availability (fixes ENOENT errors)
-        env: fnmStoreProcessEnv(),
+        env: nodeFolderProcessEnv(),
     });
     return stdout;
 }
 
-/** The Node majors in Demo Builder's store, ascending. */
-export async function listStoreMajors(commandManager: Pick<CommandExecutor, 'execute'>): Promise<string[]> {
-    return parseMajorVersions(await readStoreFnmList(commandManager));
+/** The Node majors in Demo Builder's Node folder, ascending. */
+export async function listNodeFolderMajors(commandManager: Pick<CommandExecutor, 'execute'>): Promise<string[]> {
+    return parseMajorVersions(await readNodeFolderList(commandManager));
 }
 
 /**
@@ -50,7 +50,7 @@ export async function checkMultipleNodeVersions(
     const results: NodeVersionStatus[] = [];
 
     try {
-        const majorToFullVersion = buildMajorToFullVersionMap(await readStoreFnmList(commandManager));
+        const majorToFullVersion = buildMajorToFullVersionMap(await readNodeFolderList(commandManager));
 
         // Check each required version
         for (const [version, componentName] of Object.entries(versionToComponentMapping)) {
@@ -88,7 +88,7 @@ export async function getInstalledNodeVersions(
     logger: Logger,
 ): Promise<string[]> {
     try {
-        return await listStoreMajors(commandManager);
+        return await listNodeFolderMajors(commandManager);
     } catch (error) {
         logger.warn(`[Prerequisites] Could not get installed Node versions: ${error}`);
         return [];

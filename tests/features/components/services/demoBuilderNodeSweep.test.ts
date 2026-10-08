@@ -7,7 +7,7 @@ import {
     bareDefinition,
     sweepOntoDemoBuilderNode,
     type NodeSweepDeps,
-} from '@/features/components/services/nodeMigration';
+} from '@/features/components/services/demoBuilderNodeSweep';
 import type { ComponentInstance, Project } from '@/types/base';
 import { createMockProject } from '../../../helpers/projectFake';
 
@@ -78,7 +78,7 @@ describe('sweepOntoDemoBuilderNode', () => {
         expect(d.ensureNode).not.toHaveBeenCalled();
     });
 
-    it('leaves alone a component with no record and one from an own repo with its own Node', async () => {
+    it('leaves alone a component with no record and a custom integration with its own Node', async () => {
         const project = createMockProject({
             componentInstances: { unrecorded: component('unrecorded'), 'acme-bridge': component('acme-bridge', '22') },
             appBuilderComponents: {

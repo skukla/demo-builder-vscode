@@ -144,7 +144,7 @@ describe('deployAppBuilderComponent — Node preparation', () => {
         );
     });
 
-    it("prepares the Adobe CLI's Node for an entry that declares none (PR-1a)", async () => {
+    it("prepares Demo Builder's Node for an entry that declares none (PR-1a)", async () => {
         const ensureNodeVersion = jest.fn().mockResolvedValue(undefined);
         const deps = createDeps({ ensureNodeVersion });
 

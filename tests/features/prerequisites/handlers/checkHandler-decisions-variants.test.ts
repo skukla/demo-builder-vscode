@@ -18,7 +18,7 @@ jest.mock('@/features/prerequisites/handlers/shared', () => {
         areDependenciesInstalled: jest.fn(),
         hasNodeVersions: jest.fn(),
         getNodeVersionKeys: jest.fn(),
-        perNodeToolMajors: jest.fn(),
+        perNodeVersionMajors: jest.fn(),
         handlePrerequisiteCheckError: jest.fn(),
     };
 });
@@ -41,8 +41,8 @@ beforeEach(() => {
     jest.clearAllMocks();
     (shared.getNodeVersionMapping as jest.Mock).mockResolvedValue({});
     (shared.areDependenciesInstalled as jest.Mock).mockReturnValue(true);
-    (shared.perNodeToolMajors as jest.Mock).mockReturnValue(
-        jest.requireActual('@/features/prerequisites/handlers/shared').perNodeToolMajors(),
+    (shared.perNodeVersionMajors as jest.Mock).mockReturnValue(
+        jest.requireActual('@/features/prerequisites/handlers/shared').perNodeVersionMajors(),
     );
     (shared.hasNodeVersions as jest.Mock).mockImplementation(
         (m: Record<string, string>) => !!m && Object.keys(m).length > 0,
@@ -60,7 +60,7 @@ describe('detectPerNodeVariantStatus', () => {
     beforeEach(() => {
         (shared.getNodeVersionMapping as jest.Mock).mockResolvedValue({ '20': 'Mesh', '22': 'Storefront' });
         // Two majors, so the per-major cache and missing-variant logic is visible
-        (shared.perNodeToolMajors as jest.Mock).mockReturnValue(['20', '22']);
+        (shared.perNodeVersionMajors as jest.Mock).mockReturnValue(['20', '22']);
     });
 
     it('reports no variant status for a prerequisite that is not per-node-version', async () => {
@@ -269,7 +269,7 @@ describe('detectPerNodeVariantStatus', () => {
         expect(result.installed).toBe(true);
     });
 
-    it('requires the per-Node tool majors whatever the prerequisite or its plugins declare', async () => {
+    it('requires the per-node-version prerequisite majors whatever the prerequisite or its plugins declare', async () => {
         const scoped = {
             ...AIO_PREREQ,
             requiredFor: ['mesh'],
@@ -390,7 +390,7 @@ describe('plugin results for a per-node-version prerequisite', () => {
             status({ id: 'aio', name: 'Adobe I/O CLI', installed: true, plugins }),
         );
         (context.prereqManager!.getCacheManager().getPerVersionResults as jest.Mock).mockReturnValue(
-            shared.perNodeToolMajors().map((major) => (
+            shared.perNodeVersionMajors().map((major) => (
                 { version: `Node ${major}`, major, component: 'Mesh', installed: true }
             )),
         );

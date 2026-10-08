@@ -29,7 +29,7 @@ import {
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import type { Logger } from '@/types/logger';
-import { demoBuilderFnmDir } from '@/core/shell/nodeStore';
+import { nodeFolderPath } from '@/core/shell/nodeFolder';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../../helpers/commandExecutorFake';
 
@@ -62,8 +62,8 @@ describe('checkMultipleNodeVersions', () => {
         expect(mockExecute).toHaveBeenCalledWith('fnm list', {
             timeout: TIMEOUTS.PREREQUISITE_CHECK,
             shell: DEFAULT_SHELL,
-            // Demo Builder's own Node store (PR-1a), not the user's fnm.
-            env: expect.objectContaining({ FNM_DIR: demoBuilderFnmDir() }),
+            // Demo Builder's Node folder (PR-1a), not the user's fnm.
+            env: expect.objectContaining({ FNM_DIR: nodeFolderPath() }),
         });
     });
 
@@ -108,8 +108,8 @@ describe('getInstalledNodeVersions', () => {
         expect(mockExecute).toHaveBeenCalledWith('fnm list', {
             timeout: TIMEOUTS.PREREQUISITE_CHECK,
             shell: DEFAULT_SHELL,
-            // Demo Builder's own Node store (PR-1a), not the user's fnm.
-            env: expect.objectContaining({ FNM_DIR: demoBuilderFnmDir() }),
+            // Demo Builder's Node folder (PR-1a), not the user's fnm.
+            env: expect.objectContaining({ FNM_DIR: nodeFolderPath() }),
         });
     });
 

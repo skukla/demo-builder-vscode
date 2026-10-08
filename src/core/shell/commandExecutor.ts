@@ -3,10 +3,10 @@ import execa, { type ExecaError, type ExecaChildProcess } from 'execa';
 import { CommandQueue } from './commandQueue';
 import { CommandResultCache } from './commandResultCache';
 import { CommandSequencer } from './commandSequencer';
+import { demoBuilderNode } from './demoBuilderNode';
 import { EnvironmentSetup } from './environmentSetup';
 import { FileWatcher } from './fileWatcher';
-import { demoBuilderNode } from './demoBuilderNode';
-import { fnmExecCommand, fnmStoreEnv } from './nodeStore';
+import { fnmExecCommand, nodeFolderEnv } from './nodeFolder';
 import { buildAioConsoleEnv, getActiveOrgContext, needsOrgTargeting } from './orgContextEnv';
 import { PollingService } from './pollingService';
 import { isPortAvailable } from './portChecker';
@@ -172,9 +172,9 @@ export class CommandExecutor {
             state.finalCommand = `eval "$(fnm env)" && ${state.finalCommand}`;
             state.finalOptions.shell = '/bin/zsh';
         }
-        // Demo Builder's own Node store (PR-1a), on the child only. The full
+        // Demo Builder's Node folder (PR-1a), on the child only. The full
         // environment is kept: an `env` without PATH runs nothing.
-        state.finalOptions.env = { ...process.env, ...state.finalOptions.env, ...fnmStoreEnv() };
+        state.finalOptions.env = { ...process.env, ...state.finalOptions.env, ...nodeFolderEnv() };
     }
 
     /**
@@ -282,7 +282,7 @@ export class CommandExecutor {
             await telemetryPromise;
         }
 
-        // Step 2: Run on the named Node from Demo Builder's store
+        // Step 2: Run on the named Node from Demo Builder's Node folder
         const effectiveNodeVersion = this.resolveNodeVersion(options, state);
 
         // Step 2.5: Check cache for Adobe CLI commands

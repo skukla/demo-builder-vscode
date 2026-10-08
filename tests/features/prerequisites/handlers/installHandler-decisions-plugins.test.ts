@@ -39,7 +39,7 @@ function pluginRunVersions(execute: jest.Mock, command: string): (string | undef
 }
 
 const PLUGIN_CMD = 'aio plugins:install @adobe/aio-cli-plugin-api-mesh';
-/** The Node a per-Node tool and its plugins live under (`perNodeToolMajors`). */
+/** The Node a per-node-version prerequisite and its plugins live under (`perNodeVersionMajors`). */
 const CLI_NODE = demoBuilderNode();
 
 function prereqWithPlugin(over: Partial<PrerequisiteDefinition> = {}, requiredFor?: string[]): PrerequisiteDefinition {
@@ -103,7 +103,7 @@ describe('which Node versions a plugin is installed for', () => {
 
         await handleInstallPrerequisite(context, { prereqId: 0 });
 
-        expect(pluginRunVersions(execute, PLUGIN_CMD)).toStrictEqual(shared.perNodeToolMajors());
+        expect(pluginRunVersions(execute, PLUGIN_CMD)).toStrictEqual(shared.perNodeVersionMajors());
         expect(shared.getNodeVersionMapping).not.toHaveBeenCalled();
     });
 
@@ -154,7 +154,7 @@ describe('which Node versions a plugin is installed for', () => {
     it('installs the plugin ONCE when the tool goes under several Nodes (plugins are per user)', async () => {
         // `aio plugins:install` writes to the SC's user folder, shared by every aio
         // whatever Node runs it, so a second install would only repeat the first.
-        jest.spyOn(shared, 'perNodeToolMajors').mockReturnValue(['20', CLI_NODE]);
+        jest.spyOn(shared, 'perNodeVersionMajors').mockReturnValue(['20', CLI_NODE]);
         (shared.checkPerNodeVersionStatus as jest.Mock).mockResolvedValue({
             perNodeVersionStatus: [],
             perNodeVariantMissing: true,

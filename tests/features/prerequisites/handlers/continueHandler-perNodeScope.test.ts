@@ -3,7 +3,7 @@
  *
  * The 2026-08-27 dedup sweep found check and continue requiring the tool on
  * different Node majors: green check, blocking continue, no visible reason.
- * Both now read one set, `perNodeToolMajors()` (the Adobe CLI's own Node), and
+ * Both now read one set, `perNodeVersionMajors()` (the Adobe CLI's own Node), and
  * ignore the prereq's and its plugins' `requiredFor`.
  *
  * Mock discipline: the shared module is requireActual with ONLY the mapping
@@ -32,7 +32,7 @@ jest.mock('@/features/prerequisites/handlers/shared', () => ({
 }));
 
 import { handleContinuePrerequisites } from '@/features/prerequisites/handlers/continueHandler';
-import { perNodeToolMajors } from '@/features/prerequisites/handlers/shared';
+import { perNodeVersionMajors } from '@/features/prerequisites/handlers/shared';
 import type { HandlerContext } from '@/types/handlers';
 import type { PrerequisiteDefinition } from '@/features/prerequisites/services/types';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
@@ -83,7 +83,7 @@ function makeContext(): HandlerContext {
 }
 
 /** The CLI's own Node major; the mesh's Node 20 is never it. */
-const [CLI_MAJOR] = perNodeToolMajors();
+const [CLI_MAJOR] = perNodeVersionMajors();
 
 /** fnm has both Nodes; the tool answers only under the given majors. */
 function toolUnder(...majors: string[]) {
@@ -121,7 +121,7 @@ describe('continue per-node variant scope (the check/continue agreement)', () =>
 
         expect(result.success).toBe(true);
         const status = lastStatusFor(context, 'Adobe I/O CLI');
-        // Missing under the mesh's Node 20 does not matter; that is not a per-Node tool major.
+        // Missing under the mesh's Node 20 does not matter; that is not a per-node-version prerequisite major.
         expect(status.status).not.toBe('error');
         expect(status.installed).toBe(true);
     });

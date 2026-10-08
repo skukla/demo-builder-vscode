@@ -2,7 +2,7 @@ import { execSync } from 'child_process';
 import * as fsSync from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { demoBuilderFnmDir } from './nodeStore';
+import { nodeFolderPath } from './nodeFolder';
 import type { CommandResult, ExecuteOptions } from './types';
 import { getLogger } from '@/core/logging/debugLogger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -109,9 +109,9 @@ export class EnvironmentSetup {
         const paths: string[] = [];
         const homeDir = os.homedir();
 
-        // Demo Builder's own Node store (PR-1a), never the user's fnm: its
+        // Demo Builder's Node folder (PR-1a), never the user's fnm: its
         // versions' bins are what an unwrapped command can fall back on.
-        const fnmBase = path.join(demoBuilderFnmDir(), 'node-versions');
+        const fnmBase = path.join(nodeFolderPath(), 'node-versions');
         const fnmPaths = this.findNodeManagerPaths(fnmBase, [
             'installation/bin',
             'installation/lib/node_modules/.bin',

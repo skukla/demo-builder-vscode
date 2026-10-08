@@ -31,6 +31,7 @@ import {
     ensureComponentWorkspace,
 } from '@/features/app-builder/services/componentWorkspace';
 import { buildWorkspaceReleaseDeps } from '@/features/app-builder/services/componentWorkspaceRelease';
+import { githubRepoTextReader, customIntegrationNodeResolver } from '@/features/app-builder/services/customIntegrationNode';
 import { deployAppComponentIsolated } from '@/features/app-builder/services/deployAppIsolated';
 import { displayNameInProject } from '@/features/app-builder/services/deployInputs';
 import { subscriberTarget } from '@/features/app-builder/services/ensureMeshApiSubscribed';
@@ -39,7 +40,6 @@ import {
     fastForwardClone,
     type GitRunner,
 } from '@/features/app-builder/services/integrationSourceUpdate';
-import { githubRepoTextReader, ownRepoNodeResolver } from '@/features/app-builder/services/ownRepoNode';
 import { deleteUndeclaredActions } from '@/features/app-builder/services/runtimeUndeclaredActions';
 import { buildS2SDeployEnv } from '@/features/app-builder/services/s2sDeployEnv';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
@@ -194,7 +194,7 @@ export function buildDefaultRunnerDeps(
         // The add door's Node and the Adobe CLI under it; a custom integration's Node from its package.json.
         ensureNodeVersion: (version) =>
             ensureNode(ctx.commandManager, ctx.prerequisites, { major: version, adobeCli: true }, ctx.logger),
-        resolveOwnRepoNode: (source) => ownRepoNodeResolver(githubRepoTextReader(
+        resolveCustomIntegrationNode: (source) => customIntegrationNodeResolver(githubRepoTextReader(
             getGitHubServices(ctx.secrets).fileOperations), ctx.commandManager, ctx.logger)(source),
         // Post-deploy install for app-management lifecycle apps (automatic with
         // hands-back — owner decision 2026-08-27). The runner records the

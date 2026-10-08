@@ -9,7 +9,7 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { toolInstalledUnder } from '@/core/shell/ensureNodeVersion';
 import { formatDuration } from '@/core/utils/timeFormatting';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { listStoreMajors } from '@/features/prerequisites/services/versioning/MultiVersionDetector';
+import { listNodeFolderMajors } from '@/features/prerequisites/services/versioning/MultiVersionDetector';
 import { HandlerContext } from '@/types/handlers';
 
 /**
@@ -80,7 +80,7 @@ export async function checkPerNodeVersionStatus(
 
     // CRITICAL: Get list of actually installed Node versions FIRST
     // This prevents false positives when fnm falls back to other versions
-    const installedMajors = new Set(await listStoreMajors(commandManager));
+    const installedMajors = new Set(await listNodeFolderMajors(commandManager));
 
     // Helper to create version status object
     const createVersionStatus = (major: string, installed: boolean, component = '') => ({

@@ -195,8 +195,8 @@ describe('EnvironmentSetup - Path Discovery', () => {
     });
 
     describe('findNpmGlobalPaths', () => {
-        it("should find the Node store's version paths", () => {
-            // Demo Builder's own Node store (PR-1a).
+        it("should find the Node folder's version paths", () => {
+            // Demo Builder's Node folder (PR-1a).
             const fnmBase = path.join(mockHomeDir, '.demo-builder/node/node-versions');
             const nvmBase = path.join(mockHomeDir, '.nvm/versions/node');
             const installationBinPath = path.join(fnmBase, 'v18.0.0/installation/bin');
@@ -262,7 +262,7 @@ describe('EnvironmentSetup - Path Discovery', () => {
             expect(result).toContain(path.join(nvmBase, 'v18.0.0/bin'));
         });
 
-        it("ignores the user's own FNM_DIR: the store is Demo Builder's (PR-1a)", () => {
+        it("ignores the user's own FNM_DIR: the Node folder is Demo Builder's (PR-1a)", () => {
             process.env.FNM_DIR = '/custom/fnm';
             const userBase = path.join('/custom/fnm', 'node-versions');
 

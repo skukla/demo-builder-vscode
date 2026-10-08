@@ -23,7 +23,7 @@ import {
     ensureNodeWithAdobeCli,
     failureDetail,
 } from '@/core/shell/ensureNodeVersion';
-import { demoBuilderFnmDir } from '@/core/shell/nodeStore';
+import { nodeFolderPath } from '@/core/shell/nodeFolder';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -68,7 +68,7 @@ describe('ensureFnmNodeVersion', () => {
         expect(executor.execute).not.toHaveBeenCalled();
     });
 
-    it('answers a plain sentence when fnm install fails, and logs fnm\'s own words', async () => {
+    it("answers a plain sentence when fnm install fails, and logs fnm's own words", async () => {
         const executor = executorReturning(1, 'error: no fnm here');
 
         const error = await ensureFnmNodeVersion(executor, '24', logger);
@@ -100,7 +100,7 @@ describe('ensureFnmNodeVersion', () => {
     // Each of these was measured live: without a shell the whole string is handed
     // over as one binary name and nothing runs, and without the enhanced PATH fnm's
     // own node shims are invisible to the subprocess.
-    it("runs the install with a long timeout, an enhanced PATH, a shell, and Demo Builder's store", async () => {
+    it("runs the install with a long timeout, an enhanced PATH, a shell, and Demo Builder's Node folder", async () => {
         const executor = executorReturning(0);
 
         await ensureFnmNodeVersion(executor, '24', logger);
@@ -109,7 +109,7 @@ describe('ensureFnmNodeVersion', () => {
             timeout: TIMEOUTS.LONG,
             enhancePath: true,
             shell: DEFAULT_SHELL,
-            env: expect.objectContaining({ FNM_DIR: demoBuilderFnmDir(), PATH: process.env.PATH }),
+            env: expect.objectContaining({ FNM_DIR: nodeFolderPath(), PATH: process.env.PATH }),
         });
     });
 
@@ -133,7 +133,7 @@ describe('failureDetail', () => {
     });
 });
 
-// ---- PR-1a step 2: the Adobe CLI under the store's Node -------------------
+// ---- PR-1a step 2: the Adobe CLI under Demo Builder's Node -------------------
 // Measured on the owner's machine 2026-10-07: aio under 24.12.0, none under
 // 24.21.0 (what `fnm exec --using=24` picks), so ensuring Node alone was not enough.
 

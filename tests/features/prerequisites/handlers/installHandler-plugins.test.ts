@@ -11,7 +11,7 @@
  * It is not dead code. `aio-cli` ships one plugin — `api-mesh` — and that is the
  * API Mesh CLI plugin the extension's mesh deployment depends on.
  *
- * A per-Node tool's plugins install under the tool's own Node (`perNodeToolMajors`),
+ * A per-node-version prerequisite's plugins install under the tool's own Node (`perNodeVersionMajors`),
  * when fnm has it. They used to be placed by matching `requiredFor` ids against
  * display names, which never matched and fell back to the first target version.
  */
@@ -45,7 +45,7 @@ import {
     setupSharedUtilityMocks,
 } from './installHandler.testUtils';
 
-/** The Node the CLI and its plugins live under (`perNodeToolMajors`). */
+/** The Node the CLI and its plugins live under (`perNodeVersionMajors`). */
 const CLI_NODE = demoBuilderNode();
 
 const PLUGIN_COMMANDS = {

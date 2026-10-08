@@ -20,7 +20,7 @@ import { classifyTransience } from '@/core/errors';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import { stageLine } from '@/core/utils/stageLine';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { getNodeVersionMapping, perNodeToolMajors, checkPerNodeVersionStatus, determinePrerequisiteStatus, hasNodeVersions, getNodeVersionKeys } from '@/features/prerequisites/handlers/shared';
+import { getNodeVersionMapping, perNodeVersionMajors, checkPerNodeVersionStatus, determinePrerequisiteStatus, hasNodeVersions, getNodeVersionKeys } from '@/features/prerequisites/handlers/shared';
 import type { InstallStep, PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/PrerequisitesManager';
 import { getInstalledNodeVersions } from '@/features/prerequisites/services/versioning/MultiVersionDetector';
 import { ErrorCode } from '@/types/errorCodes';
@@ -60,7 +60,7 @@ function getTargetNodeVersions(
  * Determine which Node versions to pass to getInstallSteps.
  *
  * - Per-node-version prerequisites (e.g. Adobe CLI): the version the caller named, else
- *   the per-Node tool's set (`perNodeToolMajors`)
+ *   the per-node-version prerequisite's set (`perNodeVersionMajors`)
  * - Everything else: no nodeVersions needed
  *
  * THE NODE PREREQUISITE NEVER REACHES HERE, which is why it has no case. Its only
@@ -80,7 +80,7 @@ function determineNodeVersionsForInstall(
     version?: string,
 ): string[] | undefined {
     if (prereq.perNodeVersion) {
-        return version ? [version] : perNodeToolMajors();
+        return version ? [version] : perNodeVersionMajors();
     }
 
     return undefined;
@@ -140,7 +140,7 @@ async function resolvePerNodeTargetVersions(
     prereqId: number,
     version?: string,
 ): Promise<{ targetVersions: string[] | undefined; earlyReturn: boolean }> {
-    const versionsToCheck = version ? [version] : perNodeToolMajors();
+    const versionsToCheck = version ? [version] : perNodeVersionMajors();
 
     const perNodeStatus = await checkPerNodeVersionStatus(prereq, versionsToCheck, context);
     const missingNodeVersions = perNodeStatus.missingVariantMajors;
@@ -604,7 +604,7 @@ export async function handleInstallPrerequisite(
                 finalNodeVersionStatus = await context.prereqManager?.checkMultipleNodeVersions(mapping);
             }
         } else if (prereq.perNodeVersion) {
-            const postCheckStatus = await checkPerNodeVersionStatus(prereq, perNodeToolMajors(), context);
+            const postCheckStatus = await checkPerNodeVersionStatus(prereq, perNodeVersionMajors(), context);
             finalPerNodeVersionStatus = postCheckStatus.perNodeVersionStatus;
         }
 

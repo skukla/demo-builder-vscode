@@ -10,7 +10,7 @@
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getStackById } from '@/features/components/services/demoPackageLoader';
-import { getNodeVersionMapping, checkPerNodeVersionStatus, areDependenciesInstalled, handlePrerequisiteCheckError, determinePrerequisiteStatus, getPrerequisiteDisplayMessage, formatProgressMessage, formatVersionSuffix, hasNodeVersions, perNodeToolMajors } from '@/features/prerequisites/handlers/shared';
+import { getNodeVersionMapping, checkPerNodeVersionStatus, areDependenciesInstalled, handlePrerequisiteCheckError, determinePrerequisiteStatus, getPrerequisiteDisplayMessage, formatProgressMessage, formatVersionSuffix, hasNodeVersions, perNodeVersionMajors } from '@/features/prerequisites/handlers/shared';
 import type { PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/PrerequisitesManager';
 import { ErrorCode } from '@/types/errorCodes';
 import { HandlerContext, type PrerequisiteCheckState } from '@/types/handlers';
@@ -156,7 +156,7 @@ async function detectPerNodeVariantStatus(
         return { perNodeVariantMissing: false, missingVariantMajors: [], perNodeVersionStatus: [] };
     }
 
-    const requiredMajors = perNodeToolMajors();
+    const requiredMajors = perNodeVersionMajors();
 
     if (!checkResult.installed) {
         const result = buildUninstalledPerNodeStatus(requiredMajors);

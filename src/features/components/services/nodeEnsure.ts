@@ -6,7 +6,7 @@
  * install commands come from the prerequisites' own `aio-cli` entry and its
  * plugins, so there is one definition of "install the Adobe CLI" whether the
  * prerequisites screen runs it or a door does. Everything lands in Demo Builder's
- * own Node store (`core/shell/nodeStore.ts`).
+ * Node folder (`core/shell/nodeFolder.ts`).
  *
  * @module features/components/services/nodeEnsure
  */

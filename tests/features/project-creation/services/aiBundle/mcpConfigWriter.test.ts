@@ -16,7 +16,7 @@ import { FAKE_FNM, fsPromises, mockFindFnmPath, writeMcpConfigs } from './mcpCon
 import { makeEdsProject, EDS_STOREFRONT_PATH, makeHeadlessProject } from './aiBundleFixtures';
 import * as path from 'path';
 import { makeTestWriter } from './generatedFileWriter.testUtils';
-import { demoBuilderFnmDir } from '@/core/shell/nodeStore';
+import { nodeFolderPath } from '@/core/shell/nodeFolder';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 
@@ -145,7 +145,7 @@ describe('MCP config content', () => {
         // Run on Demo Builder's Node, through fnm (AI-13), from Demo Builder's Node
         // folder: the tools are installed there, not in the SC's own fnm (PR-1a).
         expect(entry.command).toBe(FAKE_FNM);
-        expect(entry.env).toStrictEqual({ FNM_DIR: demoBuilderFnmDir() });
+        expect(entry.env).toStrictEqual({ FNM_DIR: nodeFolderPath() });
         // MCP tools install into the per-project isolated dir, decoupled from the
         // storefront manifest (whose `npm install` can fail on b2b dropins).
         expect(entry.args).toEqual([

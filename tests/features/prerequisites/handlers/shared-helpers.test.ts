@@ -4,7 +4,7 @@
  *
  * Nothing under tests/features/prerequisites/handlers called these directly;
  * they were reached only through checkHandler, which is measured separately.
- * Each case here pins one decision: which Node majors a per-Node tool is
+ * Each case here pins one decision: which Node majors a per-node-version prerequisite is
  * installed under, how the progress line and version suffix are built, and which status
  * and message a prerequisite gets from its installation state.
  */
@@ -18,7 +18,7 @@ import {
     getPrerequisiteDisplayMessage,
     getPrerequisiteStatusMessage,
     hasNodeVersions,
-    perNodeToolMajors,
+    perNodeVersionMajors,
 } from '@/features/prerequisites/handlers/shared';
 import type { PrerequisiteDefinition } from '@/features/prerequisites/services/PrerequisitesManager';
 
@@ -61,10 +61,10 @@ describe('hasNodeVersions / getNodeVersionKeys', () => {
     });
 });
 
-describe('perNodeToolMajors', () => {
+describe('perNodeVersionMajors', () => {
     it("is the Adobe CLI's own Node major, and only that", () => {
         // The one set every per-Node check, install and plugin install reads.
-        expect(perNodeToolMajors()).toStrictEqual([demoBuilderNode()]);
+        expect(perNodeVersionMajors()).toStrictEqual([demoBuilderNode()]);
     });
 });
 

@@ -9,7 +9,7 @@
  * two constants and backed by five hardcoded "20"s, and the mesh's lookups never found
  * their file.
  *
- * The one exception is an integration from an SC's own repo, which carries the Node
+ * The one exception is a custom integration, which carries the Node
  * worked out for it when it was added (`nodeForAppBuilderEntry`).
  *
  * @module core/shell/demoBuilderNode
@@ -28,8 +28,8 @@ export function demoBuilderNode(): string {
 }
 
 /**
- * The Node an App Builder entry installs and deploys on: the shared Node, unless it is
- * an integration from an SC's own repo that was given its own when it was added.
+ * The Node an App Builder entry installs and deploys on: Demo Builder's Node, unless it is
+ * a custom integration that was given its own when it was added.
  */
 export function nodeForAppBuilderEntry(entry: Pick<AppBuilderComponentCatalogEntry, 'nodeVersion'>): string {
     return entry.nodeVersion ?? demoBuilderNode();

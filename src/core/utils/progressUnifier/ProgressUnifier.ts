@@ -19,7 +19,7 @@ import type {
     ProgressHandler,
     ExecutionContext,
 } from './types';
-import { fnmExecCommand, fnmStoreProcessEnv } from '@/core/shell/nodeStore';
+import { fnmExecCommand, nodeFolderProcessEnv } from '@/core/shell/nodeFolder';
 import { formatElapsed } from '@/core/utils/timeFormatting';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
@@ -649,8 +649,8 @@ export class ProgressUnifier {
         return this.processSpawner(actualCommand, [], {
             shell: true,
             env: {
-                // Demo Builder's own Node store (PR-1a): installs land there.
-                ...fnmStoreProcessEnv(),
+                // Demo Builder's Node folder (PR-1a): installs land there.
+                ...nodeFolderProcessEnv(),
                 NO_COLOR: '1',
                 FORCE_COLOR: '0',
             },

@@ -8,7 +8,7 @@
  * instance. Absent, the id IS the catalog id: every existing project, unchanged.
  */
 
-import { catalogEntryFor, entryFromState, withOwnRepoNode } from '@/features/app-builder/services/componentEntry';
+import { catalogEntryFor, entryFromState, withCustomIntegrationNode } from '@/features/app-builder/services/componentEntry';
 import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState, Project } from '@/types/base';
@@ -76,7 +76,7 @@ describe('catalogEntryFor', () => {
     });
 });
 
-describe('withOwnRepoNode: an SC\'s own repo may need another Node (PR-1a)', () => {
+describe('withCustomIntegrationNode: a custom integration may need another Node (PR-1a)', () => {
     const OWN: AppBuilderComponentCatalogEntry = {
         id: 'acme-erp-bridge',
         name: 'ERP Bridge',
@@ -85,33 +85,33 @@ describe('withOwnRepoNode: an SC\'s own repo may need another Node (PR-1a)', () 
         source: { owner: 'acme', repo: 'erp-bridge', branch: 'main' },
     };
 
-    it('never reads a repo the catalog ships: its range is already in Demo Builder\'s Node', async () => {
+    it("never reads a repo the catalog ships: its range is already in Demo Builder's Node", async () => {
         const resolve = jest.fn();
-        expect(await withOwnRepoNode(DEMO_ERP, resolve)).toStrictEqual({ entry: DEMO_ERP });
+        expect(await withCustomIntegrationNode(DEMO_ERP, resolve)).toStrictEqual({ entry: DEMO_ERP });
         expect(resolve).not.toHaveBeenCalled();
     });
 
-    it('keeps the entry as it is when the repo accepts Demo Builder\'s Node', async () => {
+    it("keeps the entry as it is when the repo accepts Demo Builder's Node", async () => {
         const resolve = jest.fn().mockResolvedValue({ ok: true, major: demoBuilderNode() });
-        expect(await withOwnRepoNode(OWN, resolve)).toStrictEqual({ entry: OWN });
+        expect(await withCustomIntegrationNode(OWN, resolve)).toStrictEqual({ entry: OWN });
         expect(resolve).toHaveBeenCalledWith(OWN.source);
     });
 
     it('carries the Node the repo needs when it is another', async () => {
         const resolve = jest.fn().mockResolvedValue({ ok: true, major: '26' });
-        expect(await withOwnRepoNode(OWN, resolve)).toStrictEqual({ entry: { ...OWN, nodeVersion: '26' } });
+        expect(await withCustomIntegrationNode(OWN, resolve)).toStrictEqual({ entry: { ...OWN, nodeVersion: '26' } });
     });
 
     it('refuses a range nothing satisfies, naming the repo and the range', async () => {
         const resolve = jest.fn().mockResolvedValue({ ok: false, range: '>=99' });
-        const result = await withOwnRepoNode(OWN, resolve);
+        const result = await withCustomIntegrationNode(OWN, resolve);
         expect(result).toStrictEqual({ error: expect.stringContaining('acme/erp-bridge asks for Node >=99') });
     });
 
     it('keeps a Node the entry already carries (a redeploy from its record)', async () => {
         const resolve = jest.fn();
         const recorded = { ...OWN, nodeVersion: '26' };
-        expect(await withOwnRepoNode(recorded, resolve)).toStrictEqual({ entry: recorded });
+        expect(await withCustomIntegrationNode(recorded, resolve)).toStrictEqual({ entry: recorded });
         expect(resolve).not.toHaveBeenCalled();
     });
 

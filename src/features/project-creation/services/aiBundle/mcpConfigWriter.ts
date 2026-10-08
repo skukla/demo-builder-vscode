@@ -31,10 +31,10 @@ import {
 } from './claudeSettingsWriter';
 import type { GeneratedFileWriter } from './generatedFileWriter';
 import { getLogger } from '@/core/logging/debugLogger';
-import { EnvironmentSetup } from '@/core/shell/environmentSetup';
-import { fnmStoreEnv } from '@/core/shell/nodeStore';
-import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
+import { EnvironmentSetup } from '@/core/shell/environmentSetup';
+import { nodeFolderEnv } from '@/core/shell/nodeFolder';
+import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 import type { AiDefaults } from '@/types/aiDefaults';
 import type { Project } from '@/types/base';
 
@@ -220,7 +220,7 @@ async function buildMcpConfig(
  * How an ai-defaults server is launched: a `node` server runs on Demo Builder's Node,
  * the one the tools were installed under (AI-13, PR-1a), as
  * `fnm exec --using=<major> node <script>` with the entry's `env` pointing fnm at
- * Demo Builder's Node folder (`fnmStoreEnv`). Without that env, fnm reads the SC's own
+ * Demo Builder's Node folder (`nodeFolderEnv`). Without that env, fnm reads the SC's own
  * folder, which may not have the Node at all. Not an absolute path to the Node: fnm's
  * patch directories come and go as it updates, and `fnm exec` resolves the major each
  * time. Measured 2026-10-07: it runs with a bare environment (no fnm shell setup),
@@ -232,7 +232,7 @@ function launchUnderNode(command: string, args: string[], fnmPath: string | null
     return {
         command: fnmPath,
         args: ['exec', `--using=${demoBuilderNode()}`, 'node', ...args],
-        env: fnmStoreEnv(),
+        env: nodeFolderEnv(),
     };
 }
 

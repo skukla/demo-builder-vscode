@@ -10,7 +10,7 @@
  * component recorded under another Node, moving its record. Safe by construction: the
  * release check guarantees every shipped component accepts the new Node.
  *
- * Left alone: a component of an SC's own repo that carries its own Node, a component
+ * Left alone: a custom integration's component that carries its own Node, a component
  * with no record (it reads as the current Node), every component of a project whose
  * demo is running (it catches up next activation), and every project when there are
  * none yet (a new SC's prerequisites prepare the Node). A failed reinstall keeps its
@@ -19,7 +19,7 @@
  * UI-free: the progress surface and every collaborator arrive in `deps`, and the
  * glue (`extension.ts`, `sweepDemoBuilderNode`) runs it in the sequential upkeep chain.
  *
- * @module features/components/services/nodeMigration
+ * @module features/components/services/demoBuilderNodeSweep
  */
 
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
@@ -32,7 +32,7 @@ export interface NodeSweepDeps {
     projects: Project[];
     /** Demo Builder's Node (`demoBuilderNode()`). */
     node: string;
-    /** The Node is in Demo Builder's folder with the Adobe CLI under it. */
+    /** The Node is in Demo Builder's Node folder with the Adobe CLI under it. */
     nodeReady: () => Promise<boolean>;
     /** Make the Node available with the Adobe CLI under it; an error string, or undefined. */
     ensureNode: (major: string) => Promise<string | undefined>;

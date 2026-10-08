@@ -122,8 +122,8 @@ describe('Install Handler - Node Versions Parameter Passing', () => {
     /**
      * WHICH Node versions a per-version tool (the Adobe CLI) is checked and installed for.
      *
-     * The version the caller named, else the per-Node tool's own set
-     * (`perNodeToolMajors`) — never the majors the project's components need. Get it
+     * The version the caller named, else the per-node-version prerequisite's own set
+     * (`perNodeVersionMajors`) — never the majors the project's components need. Get it
      * wrong and the tool installs against a runtime nothing runs it on, silently,
      * since the install still succeeds.
      *
@@ -143,7 +143,7 @@ describe('Install Handler - Node Versions Parameter Passing', () => {
             });
         }
 
-        it("uses the per-Node tool's majors, not the project's, when the caller names none", async () => {
+        it("uses the per-node-version prerequisite's majors, not the project's, when the caller names none", async () => {
             // The shared setup's project needs Node 18 and 20.
             usePerNodeTool();
 
@@ -152,13 +152,13 @@ describe('Install Handler - Node Versions Parameter Passing', () => {
             expect(shared.checkPerNodeVersionStatus).toHaveBeenNthCalledWith(
                 1,
                 mockAdobeCliPrereq,
-                shared.perNodeToolMajors(),
+                shared.perNodeVersionMajors(),
                 mockContext
             );
             // The SECOND reader of the same decision: the install planner.
             expect(mockContext.prereqManager?.getInstallSteps).toHaveBeenCalledWith(
                 mockAdobeCliPrereq,
-                { nodeVersions: shared.perNodeToolMajors() }
+                { nodeVersions: shared.perNodeVersionMajors() }
             );
         });
 

@@ -62,8 +62,8 @@ import {
     entryFromState,
     nodeForAppBuilderEntry,
     pairedEntry,
-    withOwnRepoNode,
-    type OwnRepoNodeResolver,
+    withCustomIntegrationNode,
+    type CustomIntegrationNodeResolver,
 } from './componentEntry';
 import {
     entriesSharingWorkspace,
@@ -361,8 +361,8 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
     fetchComponentSource?: (componentPath: string, branch: string) => Promise<SourceUpdateResult>;
     /** Whether a clone's branch has newer commits (integrationSourceUpdate); update check only. */
     checkComponentSource?: (componentPath: string, branch: string) => Promise<UpdateCheckResult>;
-    /** Reads an SC's own repo's Node range at the add door (PR-1a step 8); absent = Demo Builder's Node. */
-    resolveOwnRepoNode?: OwnRepoNodeResolver;
+    /** Reads a custom integration's Node range at the add door (PR-1a step 8); absent = Demo Builder's Node. */
+    resolveCustomIntegrationNode?: CustomIntegrationNodeResolver;
     /** npm install (and build) in an existing clone, on `nodeVersion`; update only. */
     installComponentDependencies?: (
         componentPath: string,
@@ -485,7 +485,7 @@ async function cloneAndInstall(
     entry: AppBuilderComponentCatalogEntry,
     deps: AppBuilderComponentRunnerDeps,
 ): Promise<{ path: string } | { error: string }> {
-    // The entry's own Node (an SC's own repo that needs another), else Demo Builder's:
+    // The entry's own Node (a custom integration that needs another), else Demo Builder's:
     // the same one the deploy runs on, so install and deploy cannot disagree.
     const result = await deps.componentManager.installComponent(project, buildDefinition(entry), {
         nodeVersion: nodeForAppBuilderEntry(entry),
@@ -943,8 +943,8 @@ export async function addAppBuilderComponent(
     requested: AppBuilderComponentCatalogEntry,
     deps: AppBuilderComponentRunnerDeps,
 ): Promise<RunnerResult> {
-    // An SC's own repo may need a Node other than Demo Builder's (PR-1a step 8).
-    const resolved = await withOwnRepoNode(requested, deps.resolveOwnRepoNode);
+    // A custom integration may need a Node other than Demo Builder's (PR-1a step 8).
+    const resolved = await withCustomIntegrationNode(requested, deps.resolveCustomIntegrationNode);
     if ('error' in resolved) return { success: false, error: resolved.error };
     const { entry } = resolved;
     const boundSystem = await addBoundSystemFirst(project, entry, deps);
@@ -1012,8 +1012,8 @@ async function runAdd(
 
     try {
         {
-            // Every entry, from the register (PR-1a): its own version, else the
-            // Adobe CLI's. Visible, not silent: a first-time install takes a while
+            // Every entry, from demoBuilderNode() (PR-1a): its own version, else
+            // Demo Builder's. Visible, not silent: a first-time install takes a while
             // and the progress channel is the surface every add path already has.
             // "Installing … (one-time install)" was said even when Node was already
             // there — every add of a pair said it twice (2026-09-21).

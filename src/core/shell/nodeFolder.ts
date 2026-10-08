@@ -1,5 +1,5 @@
 /**
- * Demo Builder's own Node store (PR-1a, owner 2026-10-07).
+ * Demo Builder's Node folder (PR-1a, owner 2026-10-07).
  *
  * Every Node version Demo Builder installs and runs lives in `~/.demo-builder/node/`,
  * handed to fnm as `FNM_DIR` on each call. Everything in it is Demo Builder's by
@@ -11,25 +11,25 @@
  * The env goes on each child process, never into the extension host's own
  * environment, so nothing else in VS Code sees it.
  *
- * @module core/shell/nodeStore
+ * @module core/shell/nodeFolder
  */
 
 import * as os from 'os';
 import * as path from 'path';
 
-/** The store's folder, beside Demo Builder's projects and state. */
-export function demoBuilderFnmDir(): string {
+/** Demo Builder's Node folder, beside its projects and state. */
+export function nodeFolderPath(): string {
     return path.join(os.homedir(), '.demo-builder', 'node');
 }
 
-/** The env that points an fnm call at the store. */
-export function fnmStoreEnv(): { FNM_DIR: string } {
-    return { FNM_DIR: demoBuilderFnmDir() };
+/** The env that points an fnm call at Demo Builder's Node folder. */
+export function nodeFolderEnv(): { FNM_DIR: string } {
+    return { FNM_DIR: nodeFolderPath() };
 }
 
 /**
- * Run `command` on Node `major` from the store: `fnm exec --using=<major> <command>`.
- * The caller supplies `fnmStoreEnv()` on the child process. The one form every
+ * Run `command` on Node `major` from Demo Builder's Node folder: `fnm exec --using=<major> <command>`.
+ * The caller supplies `nodeFolderEnv()` on the child process. The one form every
  * command, terminal and launch line uses, so they cannot disagree.
  */
 export function fnmExecCommand(fnmPath: string, major: string, command: string): string {
@@ -42,10 +42,10 @@ export function fnmExecCommand(fnmPath: string, major: string, command: string):
  * Plain `fnm`, because a terminal finds it on the user's PATH.
  */
 export function fnmTerminalCommand(major: string, command: string): string {
-    return `FNM_DIR="${demoBuilderFnmDir()}" ${fnmExecCommand('fnm', major, command)}`;
+    return `FNM_DIR="${nodeFolderPath()}" ${fnmExecCommand('fnm', major, command)}`;
 }
 
-/** The env for a bare `fnm` call (`fnm list`, `fnm install`) that must read or write the store. */
-export function fnmStoreProcessEnv(): NodeJS.ProcessEnv {
-    return { ...process.env, ...fnmStoreEnv() };
+/** The env for a bare `fnm` call (`fnm list`, `fnm install`) that must read or write Demo Builder's Node folder. */
+export function nodeFolderProcessEnv(): NodeJS.ProcessEnv {
+    return { ...process.env, ...nodeFolderEnv() };
 }

@@ -17,18 +17,18 @@ describe('demoBuilderNode', () => {
 });
 
 describe('nodeForAppBuilderEntry', () => {
-    it('gives a bundled entry, which carries no Node of its own, the shared Node', () => {
+    it("gives a bundled entry, which carries no Node of its own, Demo Builder's Node", () => {
         const shell = getAppBuilderComponentEntry('app-builder-shell');
 
         expect(shell?.nodeVersion).toBeUndefined();
         expect(shell && nodeForAppBuilderEntry(shell)).toBe(demoBuilderNode());
     });
 
-    it("keeps the Node an integration from an SC's own repo was given when it was added", () => {
+    it("keeps the Node a custom integration was given when it was added", () => {
         expect(nodeForAppBuilderEntry({ nodeVersion: '22.11.0' })).toBe('22.11.0');
     });
 
-    it('falls back to the shared Node when the entry says nothing', () => {
+    it("falls back to Demo Builder's Node when the entry says nothing", () => {
         expect(nodeForAppBuilderEntry({})).toBe(demoBuilderNode());
     });
 });

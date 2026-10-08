@@ -2,7 +2,7 @@
  * Prerequisite Handlers - Node version requirements
  *
  * Which Node major versions the selected components need, read from the
- * component registry, and the one set a per-Node tool is installed under.
+ * component registry, and the one set a per-node-version prerequisite is installed under.
  */
 
 import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
@@ -37,7 +37,7 @@ export function getNodeVersionKeys(mapping: NodeVersionMapping): string[] {
 }
 
 /**
- * The Node majors a per-Node tool (the Adobe CLI and its plugins) must be installed
+ * The Node majors a per-node-version prerequisite (the Adobe CLI and its plugins) must be installed
  * under: the Adobe CLI's own (PR-1a). Every check, install, post-install check and
  * plugin install reads this one set. Before, there were three: the check narrowed by
  * plugin `requiredFor` ids, the install post-check took every major, and the plugin
@@ -45,7 +45,7 @@ export function getNodeVersionKeys(mapping: NodeVersionMapping): string[] {
  * the first version. An App Builder component that declares its own Node gets the
  * CLI under it at its add door (`nodeEnsure.ts`), not here.
  */
-export function perNodeToolMajors(): string[] {
+export function perNodeVersionMajors(): string[] {
     return [demoBuilderNode()];
 }
 

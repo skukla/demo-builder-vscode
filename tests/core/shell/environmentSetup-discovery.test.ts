@@ -24,7 +24,7 @@ jest.mock('child_process', () => ({
 }));
 
 const HOME = '/mock/home';
-// Demo Builder's own Node store (PR-1a), never the user's shared fnm.
+// Demo Builder's Node folder (PR-1a), never the user's shared fnm.
 const FNM_BASE = path.join(HOME, '.demo-builder/node/node-versions');
 const NVM_BASE = path.join(HOME, '.nvm/versions/node');
 

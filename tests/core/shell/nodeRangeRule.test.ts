@@ -77,12 +77,12 @@ describe('parseFnmReleases', () => {
     });
 });
 
-describe('nodeForRepoRange: an integration from an SC\'s own repo', () => {
-    it('takes Demo Builder\'s Node when the range accepts it (>=18 with a shared 24)', () => {
+describe('nodeForRepoRange: a custom integration', () => {
+    it("takes Demo Builder's Node when the range accepts it (>=18 with a shared 24)", () => {
         expect(nodeForRepoRange('>=18', '24', [], RELEASES)).toStrictEqual({ ok: true, major: '24' });
     });
 
-    it('takes Demo Builder\'s Node when the repo declares no range', () => {
+    it("takes Demo Builder's Node when the repo declares no range", () => {
         expect(nodeForRepoRange(undefined, '24', [], RELEASES)).toStrictEqual({ ok: true, major: '24' });
     });
 

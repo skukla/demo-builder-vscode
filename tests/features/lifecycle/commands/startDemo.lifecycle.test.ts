@@ -18,7 +18,7 @@ import {
 } from './startDemo.testUtils';
 import { ServiceLocator as _ServiceLocator } from '@/core/di/serviceLocator';
 import type { StateManager } from '@/types/state';
-import { fnmTerminalCommand } from '@/core/shell/nodeStore';
+import { fnmTerminalCommand } from '@/core/shell/nodeFolder';
 import * as vscode from 'vscode';
 
 describe('StartDemoCommand - Lifecycle', () => {
@@ -183,7 +183,7 @@ describe('StartDemoCommand - Lifecycle', () => {
     });
 
     describe('Test 1.5: fnm env initialization', () => {
-        it("should run the dev server on the frontend's Node from Demo Builder's store", async () => {
+        it("should run the dev server on the frontend's Node from Demo Builder's Node folder", async () => {
             // Given: Project with Node 24 requirement
             mockStateManager.getCurrentProject.mockResolvedValue({
                 name: 'test-project',
@@ -216,7 +216,7 @@ describe('StartDemoCommand - Lifecycle', () => {
             await jest.advanceTimersByTimeAsync(3000);
             await executePromise;
 
-            // Then: the terminal runs it under fnm, pointed at the store (PR-1a)
+            // Then: the terminal runs it under fnm, pointed at Demo Builder's Node folder (PR-1a)
             const sendTextCalls = mockTerminal.sendText.mock.calls.map((c: string[]) => c[0]);
             const fnmCommand = sendTextCalls.find((cmd: string) => cmd.includes('fnm'));
 

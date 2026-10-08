@@ -21,7 +21,7 @@ import type { StartDemoHarness } from './startDemo.testUtils';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import type { Project } from '@/types/base';
-import { fnmTerminalCommand } from '@/core/shell/nodeStore';
+import { fnmTerminalCommand } from '@/core/shell/nodeFolder';
 
 const executeCommand = () => vscode.commands.executeCommand as jest.Mock;
 

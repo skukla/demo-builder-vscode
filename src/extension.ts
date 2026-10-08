@@ -76,8 +76,8 @@ import { AuthenticationService } from '@/features/authentication/services/authen
 import { sweepCommerceSecrets } from '@/features/components/services/commerceSecretSweep';
 import { ComponentManager } from '@/features/components/services/componentManager';
 import { getComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
+import { bareDefinition, sweepOntoDemoBuilderNode } from '@/features/components/services/demoBuilderNodeSweep';
 import { ensureNode } from '@/features/components/services/nodeEnsure';
-import { bareDefinition, sweepOntoDemoBuilderNode } from '@/features/components/services/nodeMigration';
 import {
     ProjectDashboardWebviewCommand,
     shouldAutoReopenProjectsList,
@@ -96,7 +96,7 @@ import { registerEwSettingChangeListener } from '@/features/eds/services/ewSetti
 import { HelixService } from '@/features/eds/services/helix/helixService';
 import { renewPublishKeys } from '@/features/eds/services/pdp/publishKeyRenewalSweep';
 import { getPrerequisitesManager } from '@/features/prerequisites/services/prerequisitesManagerInstance';
-import { listStoreMajors } from '@/features/prerequisites/services/versioning/MultiVersionDetector';
+import { listNodeFolderMajors } from '@/features/prerequisites/services/versioning/MultiVersionDetector';
 import { refreshAiBundlesOnActivation } from '@/features/project-creation/services/aiBundle/aiBundleActivationRefresh';
 import { setThirdPartyToolsResolver } from '@/features/project-creation/services/aiBundle/aiToolingGate';
 import { refreshGlobalMcpIfPresent } from '@/features/project-creation/services/aiBundle/globalMcpRegistration';
@@ -920,7 +920,7 @@ async function sweepDemoBuilderNode(context: vscode.ExtensionContext): Promise<v
         const result = await sweepOntoDemoBuilderNode({
             projects: await loadAllProjects({ persistAfterLoad: false }),
             node,
-            nodeReady: async () => (await listStoreMajors(externalCommandManager)).includes(node)
+            nodeReady: async () => (await listNodeFolderMajors(externalCommandManager)).includes(node)
                 && adobeCliInstalledUnder(externalCommandManager, node),
             ensureNode: (major) => ensureNode(
                 externalCommandManager,

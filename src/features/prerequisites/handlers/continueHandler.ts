@@ -7,7 +7,7 @@
  * - Updates UI with current status
  */
 
-import { getNodeVersionMapping, areDependenciesInstalled, handlePrerequisiteCheckError, determinePrerequisiteStatus, getPrerequisiteStatusMessage, hasNodeVersions, perNodeToolMajors, checkPerNodeVersionStatus } from '@/features/prerequisites/handlers/shared';
+import { getNodeVersionMapping, areDependenciesInstalled, handlePrerequisiteCheckError, determinePrerequisiteStatus, getPrerequisiteStatusMessage, hasNodeVersions, perNodeVersionMajors, checkPerNodeVersionStatus } from '@/features/prerequisites/handlers/shared';
 import type { PrerequisiteDefinition } from '@/features/prerequisites/services/PrerequisitesManager';
 import { ErrorCode } from '@/types/errorCodes';
 import { HandlerContext } from '@/types/handlers';
@@ -33,8 +33,8 @@ async function checkContinuePerNodeVariants(
         return { perNodeVariantMissing: false, missingVariantMajors: [], perNodeVersionStatus: [] };
     }
 
-    // The SAME scope check applies — see perNodeToolMajors' docstring.
-    const requiredMajors = perNodeToolMajors();
+    // The SAME scope check applies — see perNodeVersionMajors' docstring.
+    const requiredMajors = perNodeVersionMajors();
     if (!checkResult.installed) {
         const perNodeVersionStatus = requiredMajors.map(
             (major) => ({ version: `Node ${major}`, major, component: '', installed: false }),

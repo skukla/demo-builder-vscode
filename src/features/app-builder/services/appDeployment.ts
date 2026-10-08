@@ -37,15 +37,15 @@ import type { AppDeploymentResult } from './types';
 import { buildComponent } from '@/core/shell/buildComponent';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import type { Logger } from '@/types/logger';
 import { toError } from '@/types/typeGuards';
 
 export type { AppDeploymentResult };
 
-/** The entry's node from the register (its own, else the Adobe CLI's), PR-1a. */
+/** The entry's Node (its own, else Demo Builder's), PR-1a. */
 function resolveNodeVersion(declared?: string): string {
     return declared || demoBuilderNode();
 }
@@ -181,8 +181,8 @@ const TOOLCHAIN_REMEDY_HINT =
 
 /**
  * Refresh the Adobe CLI — the hand-verified fix from 2026-08-27 (same CLI
- * version, freshly resolved dependency tree). Under the Adobe CLI's Node in
- * Demo Builder's store (PR-1a), so the refreshed CLI is the one every `aio`
+ * version, freshly resolved dependency tree). Under Demo Builder's Node in
+ * Demo Builder's Node folder (PR-1a), so the refreshed CLI is the one every `aio`
  * call runs; it used to refresh the default Node's while deploys ran under 24.
  */
 async function refreshGlobalAioCli(

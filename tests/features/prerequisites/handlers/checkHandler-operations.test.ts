@@ -237,7 +237,7 @@ describe('Prerequisites Check Handler - Core Operations', () => {
  * Per-Node-Version Prerequisite Scope Tests
  *
  * A per-node-version prerequisite (the Adobe I/O CLI) is checked under the
- * per-Node tool's own majors (`perNodeToolMajors`), whatever its `requiredFor`
+ * per-node-version prerequisite's own majors (`perNodeVersionMajors`), whatever its `requiredFor`
  * names and whatever other majors the stack's components need.
  */
 describe('Prerequisites Check Handler - Per-Node-Version Scope', () => {
@@ -281,7 +281,7 @@ describe('Prerequisites Check Handler - Per-Node-Version Scope', () => {
         });
         (context.prereqManager!.getCacheManager as jest.Mock).mockReturnValue({
             getPerVersionResults: jest.fn().mockReturnValue(
-                ['18', '20', ...shared.perNodeToolMajors()].map((major) => ({
+                ['18', '20', ...shared.perNodeVersionMajors()].map((major) => ({
                     version: `Node ${major}`, major, component: '10.0.0', installed: true,
                 })),
             ),
@@ -299,20 +299,20 @@ describe('Prerequisites Check Handler - Per-Node-Version Scope', () => {
         return lastStatusCall[1].nodeVersionStatus.map((v: { major: string }) => v.major);
     }
 
-    it('checks the CLI\'s own Node, not the major requiredFor points at', async () => {
-        expect(await majorsCheckedFor({ requiredFor: ['commerce-paas'] })).toStrictEqual(shared.perNodeToolMajors());
+    it("checks the CLI's own Node, not the major requiredFor points at", async () => {
+        expect(await majorsCheckedFor({ requiredFor: ['commerce-paas'] })).toStrictEqual(shared.perNodeVersionMajors());
     });
 
-    it('checks the CLI\'s own Node when requiredFor names nothing in the stack', async () => {
-        expect(await majorsCheckedFor({ requiredFor: ['api-mesh'] })).toStrictEqual(shared.perNodeToolMajors());
+    it("checks the CLI's own Node when requiredFor names nothing in the stack", async () => {
+        expect(await majorsCheckedFor({ requiredFor: ['api-mesh'] })).toStrictEqual(shared.perNodeVersionMajors());
     });
 
-    it('checks the CLI\'s own Node, not every major, when requiredFor is absent', async () => {
-        expect(await majorsCheckedFor({})).toStrictEqual(shared.perNodeToolMajors());
+    it("checks the CLI's own Node, not every major, when requiredFor is absent", async () => {
+        expect(await majorsCheckedFor({})).toStrictEqual(shared.perNodeVersionMajors());
     });
 
     it('ignores plugin requiredFor lists too', async () => {
         const plugins = [{ id: 'api-mesh', name: 'API Mesh', requiredFor: ['commerce-paas'] }];
-        expect(await majorsCheckedFor({ plugins })).toStrictEqual(shared.perNodeToolMajors());
+        expect(await majorsCheckedFor({ plugins })).toStrictEqual(shared.perNodeVersionMajors());
     });
 });

@@ -291,7 +291,7 @@ export interface AppBuilderComponentState {
     kind: AppBuilderComponentKind;
     /**
      * The Node this component installs and deploys on, recorded only when it is NOT
-     * Demo Builder's own: an integration from an SC's own repo whose `engines.node`
+     * Demo Builder's own: a custom integration whose `engines.node`
      * range excludes it (PR-1a). Redeploy, update, teardown and cleanup read it back.
      */
     nodeVersion?: string;

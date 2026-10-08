@@ -14,7 +14,7 @@
 
 import { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
-import { demoBuilderFnmDir } from '@/core/shell/nodeStore';
+import { nodeFolderPath } from '@/core/shell/nodeFolder';
 import { createFakeCommandExecutorDeps } from '../../helpers/commandExecutorDepsFake';
 import { runThroughExeca } from './commandExecutor.testUtils';
 
@@ -57,13 +57,13 @@ describe('an explicit Node version', () => {
         expect(execaOptions.shell).toBe('/bin/sh');
     });
 
-    it("points fnm at Demo Builder's own store, keeping the rest of the environment (PR-1a)", async () => {
+    it("points fnm at Demo Builder's Node folder, keeping the rest of the environment (PR-1a)", async () => {
         const { execaOptions } = await runThroughExeca(executorWith(), mockExeca, 'npm install', {
             useNodeVersion: '24',
         });
 
         const env = execaOptions.env as NodeJS.ProcessEnv;
-        expect(env.FNM_DIR).toBe(demoBuilderFnmDir());
+        expect(env.FNM_DIR).toBe(nodeFolderPath());
         // An env without PATH runs nothing.
         expect(env.PATH).toBe(process.env.PATH);
     });

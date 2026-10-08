@@ -5,7 +5,7 @@
  */
 
 import * as semver from 'semver';
-import { readStoreFnmList } from './MultiVersionDetector';
+import { readNodeFolderList } from './MultiVersionDetector';
 import { parseInstalledVersions, isValidVersionFamily } from './NodeVersionParser';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { formatDuration } from '@/core/utils/timeFormatting';
@@ -52,7 +52,7 @@ export async function checkVersionSatisfaction(
     }
 
     try {
-        const installedVersions = parseInstalledVersions(await readStoreFnmList(commandManager));
+        const installedVersions = parseInstalledVersions(await readNodeFolderList(commandManager));
         const semverRange = `${requiredFamily}.x`;
 
         // Check if any installed version satisfies the required family

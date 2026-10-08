@@ -104,8 +104,8 @@ export function entryFromState(
 /** A component's Node, from core: re-exported so the runner reads it beside its entry. */
 export { nodeForAppBuilderEntry } from '@/core/shell/demoBuilderNode';
 
-/** Reads an SC's own repo's Node range and picks its Node (`ownRepoNode.ts` builds it). */
-export type OwnRepoNodeResolver = (source: { owner: string; repo: string; branch?: string }) => Promise<RepoNodeChoice>;
+/** Reads a custom integration's Node range and picks its Node (`customIntegrationNode.ts` builds it). */
+export type CustomIntegrationNodeResolver = (source: { owner: string; repo: string; branch?: string }) => Promise<RepoNodeChoice>;
 
 /** A repo the bundled catalog ships: its range is already part of Demo Builder's Node. */
 function isCatalogRepo(source: { owner: string; repo: string }): boolean {
@@ -114,15 +114,15 @@ function isCatalogRepo(source: { owner: string; repo: string }): boolean {
 
 /**
  * The entry to add, carrying the Node its repo needs when that is not Demo Builder's
- * own (PR-1a step 8). Only an SC's own repo is read: every catalog repo's range is
+ * own (PR-1a step 8). Only a custom integration's repo is read: every catalog repo's range is
  * already part of the generated Node. An entry that already carries one (a redeploy
  * from its record) keeps it.
  *
  * @returns the entry, or the reason the repo's range cannot be met
  */
-export async function withOwnRepoNode(
+export async function withCustomIntegrationNode(
     entry: AppBuilderComponentCatalogEntry,
-    resolve: OwnRepoNodeResolver | undefined,
+    resolve: CustomIntegrationNodeResolver | undefined,
 ): Promise<{ entry: AppBuilderComponentCatalogEntry } | { error: string }> {
     if (!resolve || entry.nodeVersion || isCatalogRepo(entry.source)) return { entry };
     const choice = await resolve(entry.source);

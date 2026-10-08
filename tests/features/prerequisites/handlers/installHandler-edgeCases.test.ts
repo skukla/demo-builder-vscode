@@ -75,7 +75,7 @@ describe('Install Handler - Edge Cases', () => {
         (shared.checkPerNodeVersionStatus as jest.Mock).mockResolvedValue({
             perNodeVersionStatus: [],
             perNodeVariantMissing: true,
-            missingVariantMajors: shared.perNodeToolMajors(),
+            missingVariantMajors: shared.perNodeVersionMajors(),
         });
         const execute = setupMockCommandExecutor();
         const base = execute.getMockImplementation()!;

@@ -1,9 +1,9 @@
 /**
- * Reading an SC's own repo for the Node it needs (PR-1a step 8): the repo reader's
+ * Reading a custom integration's repo for the Node it needs (PR-1a step 8): the repo reader's
  * two routes, and the resolver composed from it and the executor.
  */
 
-import { githubRepoTextReader, ownRepoNodeResolver } from '@/features/app-builder/services/ownRepoNode';
+import { githubRepoTextReader, customIntegrationNodeResolver } from '@/features/app-builder/services/customIntegrationNode';
 import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import type { CommandResult } from '@/core/shell/types';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
@@ -27,10 +27,10 @@ function executorAnswering(list: string, remote: string | Error) {
 
 const REMOTE = 'v22.23.3 (Jod)\nv24.21.0 (Krypton)\nv26.11.0\n';
 
-describe('ownRepoNodeResolver', () => {
-    it('answers Demo Builder\'s Node for a repo with no range, without asking fnm', async () => {
+describe('customIntegrationNodeResolver', () => {
+    it("answers Demo Builder's Node for a repo with no range, without asking fnm", async () => {
         const executor = executorAnswering('', REMOTE);
-        const resolve = ownRepoNodeResolver(async () => '{"name":"x"}', executor, logger);
+        const resolve = customIntegrationNodeResolver(async () => '{"name":"x"}', executor, logger);
 
         expect(await resolve(SOURCE)).toStrictEqual({ ok: true, major: demoBuilderNode() });
         expect(executor.execute).not.toHaveBeenCalled();
@@ -38,14 +38,14 @@ describe('ownRepoNodeResolver', () => {
 
     it('reads the repo at its branch, and picks the Node its range needs', async () => {
         const read = jest.fn(async () => '{"engines":{"node":">=26"}}');
-        const resolve = ownRepoNodeResolver(read, executorAnswering('* v24.21.0 default\n', REMOTE), logger);
+        const resolve = customIntegrationNodeResolver(read, executorAnswering('* v24.21.0 default\n', REMOTE), logger);
 
         expect(await resolve(SOURCE)).toStrictEqual({ ok: true, major: '26' });
         expect(read).toHaveBeenCalledWith('acme', 'erp-bridge', 'package.json', 'main');
     });
 
     it('still answers when fnm cannot list releases (offline)', async () => {
-        const resolve = ownRepoNodeResolver(
+        const resolve = customIntegrationNodeResolver(
             async () => '{"engines":{"node":">=20"}}',
             executorAnswering('', new Error('offline')),
             logger,
@@ -62,7 +62,7 @@ describe('githubRepoTextReader', () => {
         }),
     });
 
-    it('reads through the SC\'s GitHub session first', async () => {
+    it("reads through the SC's GitHub session first", async () => {
         const signedIn = reader({ content: 'text' });
         const anonymous = reader({ content: 'public' });
 
