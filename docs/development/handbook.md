@@ -303,7 +303,7 @@ check says so and names the file.
 > **Convention.** Demo Builder states no Node version of its own. Each component declares the
 > Node it accepts in its own repo (`engines.node`); `npm run node:resolve` reads them all at a
 > release cut and writes the one Node they accept to `node-version.generated.json`, and every
-> reader asks `nodeRequirements.ts`. The only other Node is one an SC's own integration repo
+> reader asks `core/shell/demoBuilderNode.ts`. The only other Node is one a custom integration
 > needs, worked out when it is added.
 > *Why:* before PR-1a the same "24" was typed into four catalogs and backed by five hardcoded
 > "20"s, and the mesh's two lookups asked VS Code for the extension under a name it does not

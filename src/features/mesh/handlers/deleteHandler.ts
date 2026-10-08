@@ -9,7 +9,7 @@ import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
 import { buildOrgTargetFromProjectAdobe, withOrgContext, type OrgContextTarget } from '@/core/shell/orgContextEnv';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateWorkspaceId } from '@/core/validation/validators/AdobeResourceValidator';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { ensureAuthenticated } from '@/features/mesh/handlers/shared';
 import { ErrorCode } from '@/types/errorCodes';
 import { HandlerContext } from '@/types/handlers';

@@ -20,7 +20,7 @@ import {
 } from '@/features/app-builder/services/runtimeCredentials';
 import { sleep } from '@/core/utils/sleep';
 import type { Logger } from '@/types/logger';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 

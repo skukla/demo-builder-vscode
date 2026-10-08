@@ -11,8 +11,6 @@ import {
     fnmStoreEnv,
     fnmStoreProcessEnv,
     fnmTerminalCommand,
-    getAdobeCliNodeVersion,
-    setAdobeCliNodeVersion,
 } from '@/core/shell/nodeStore';
 
 describe('nodeStore', () => {
@@ -38,10 +36,5 @@ describe('nodeStore', () => {
         expect(env.FNM_DIR).toBe(demoBuilderFnmDir());
         // An env without PATH runs nothing.
         expect(env.PATH).toBe(process.env.PATH);
-    });
-
-    it("holds the Adobe CLI's Node once activation sets it", () => {
-        setAdobeCliNodeVersion('24');
-        expect(getAdobeCliNodeVersion()).toBe('24');
     });
 });

@@ -119,7 +119,9 @@ describe('when the PATH is left alone', () => {
             { enhancePath: false, configureTelemetry: false },
         );
 
-        expect(execaOptions.env).toBeUndefined();
+        // The env carries only Demo Builder's Node folder (every aio command runs on
+        // Demo Builder's Node, PR-1a); the PATH is the process's own, not enhanced.
+        expect((execaOptions.env as NodeJS.ProcessEnv).PATH).toBe(process.env.PATH);
     });
 
     it('sends no env when the environment found no npm global directories', async () => {

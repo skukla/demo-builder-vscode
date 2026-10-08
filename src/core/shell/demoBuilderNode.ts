@@ -12,11 +12,11 @@
  * The one exception is an integration from an SC's own repo, which carries the Node
  * worked out for it when it was added (`nodeForAppBuilderEntry`).
  *
- * @module features/components/services/nodeRequirements
+ * @module core/shell/demoBuilderNode
  */
 
 import { validateNodeVersion } from '@/core/validation/validators/NodeVersionValidator';
-import generated from '@/features/components/config/node-version.generated.json';
+import generated from './config/node-version.generated.json';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 
 // The value reaches shell commands; a hand-edited file must fail here, at load, not there.

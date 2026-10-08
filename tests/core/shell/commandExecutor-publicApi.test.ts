@@ -15,7 +15,7 @@
 
 import { CommandExecutor } from '@/core/shell/commandExecutor';
 import { CommandSequencer } from '@/core/shell/commandSequencer';
-import { setAdobeCliNodeVersion } from '@/core/shell/nodeStore';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { createFakeCommandExecutorDeps } from '../../helpers/commandExecutorDepsFake';
 import { createMockExecaSubprocess, simulateSubprocessComplete } from './commandExecutor.testUtils';
@@ -39,7 +39,6 @@ function execaCalls(): Array<{ command: string; options: Record<string, unknown>
 }
 
 beforeEach(() => {
-    setAdobeCliNodeVersion('24');
     jest.clearAllMocks();
     // Every subprocess completes cleanly on the next tick, so a batch can run
     // several without the test choreographing each one.
@@ -164,9 +163,9 @@ describe('executeSequence', () => {
 
         await executor.executeSequence([{ command: 'aio console where' }]);
 
-        // The Adobe CLI's Node, set at activation, wraps it (PR-1a).
+        // Demo Builder's Node wraps it (PR-1a).
         expect(execaCalls()[0].command).toBe(
-            '/usr/local/bin/fnm exec --using=24 aio console where',
+            `/usr/local/bin/fnm exec --using=${demoBuilderNode()} aio console where`,
         );
         // enhancePath:true — the npm global bin directories are prepended.
         expect((execaCalls()[0].options.env as NodeJS.ProcessEnv).PATH).toContain(
@@ -218,7 +217,7 @@ describe('executeParallel', () => {
         await executor.executeParallel([{ command: 'aio console where' }]);
 
         expect(execaCalls()[0].command).toBe(
-            '/usr/local/bin/fnm exec --using=24 aio console where',
+            `/usr/local/bin/fnm exec --using=${demoBuilderNode()} aio console where`,
         );
         expect((execaCalls()[0].options.env as NodeJS.ProcessEnv).PATH).toContain(
             '/usr/local/lib/node_modules/.bin',

@@ -5,7 +5,7 @@
  * component registry, and the one set a per-Node tool is installed under.
  */
 
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { HandlerContext } from '@/types/handlers';
 
 /**

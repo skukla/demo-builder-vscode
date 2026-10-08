@@ -2,7 +2,7 @@
  * Ensure the Node a thing runs on, and the Adobe CLI under it when the thing uses
  * `aio` (PR-1a step 2): the one "make sure" call every door uses.
  *
- * The version comes from the register (`nodeRequirements.ts`); the Adobe CLI's
+ * The version comes from `demoBuilderNode()` (core/shell/demoBuilderNode.ts); the Adobe CLI's
  * install commands come from the prerequisites' own `aio-cli` entry and its
  * plugins, so there is one definition of "install the Adobe CLI" whether the
  * prerequisites screen runs it or a door does. Everything lands in Demo Builder's

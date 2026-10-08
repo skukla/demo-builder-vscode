@@ -16,7 +16,7 @@ import {
     setupUpdater,
 } from './componentUpdater.testUtils';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types/base';
 

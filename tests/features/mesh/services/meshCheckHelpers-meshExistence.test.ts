@@ -7,7 +7,7 @@
 import { checkMeshExistence } from '@/features/mesh/services/meshCheckHelpers';
 import { CommandExecutor } from '@/core/shell/commandExecutor';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 
 describe('checkMeshExistence', () => {
     let mockCommandExecutor: jest.Mocked<CommandExecutor>;

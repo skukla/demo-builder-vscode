@@ -3,9 +3,9 @@
  *
  * `useNodeVersion` decides whether the command runs as typed, wrapped in
  * `fnm exec --using=<version>`, or wrapped in `eval "$(fnm env)" &&` — and each
- * wrapper also forces the shell to /bin/zsh, because `eval` and `$(...)` are
- * shell syntax that execa's default shell:false would hand to the kernel as
- * part of a binary name.
+ * wrapper needs a shell, because execa's default shell:false would hand the
+ * whole string to the kernel as a binary name. `fnm exec` keeps the caller's
+ * shell, else the platform's; the `eval` form uses zsh.
  *
  * Everything here asserts the ARGUMENTS execa receives. The subprocess is a
  * mock and answers the same whatever it is handed, so a test that read the
@@ -13,6 +13,7 @@
  */
 
 import { CommandExecutor } from '@/core/shell/commandExecutor';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { demoBuilderFnmDir } from '@/core/shell/nodeStore';
 import { createFakeCommandExecutorDeps } from '../../helpers/commandExecutorDepsFake';
 import { runThroughExeca } from './commandExecutor.testUtils';
@@ -35,7 +36,7 @@ beforeEach(() => {
 });
 
 describe('an explicit Node version', () => {
-    it('wraps the command in `fnm exec --using=<version>` and switches to zsh', async () => {
+    it('wraps the command in `fnm exec --using=<version>` and runs it in the platform shell', async () => {
         const { execaCommand, execaOptions } = await runThroughExeca(
             executorWith(),
             mockExeca,
@@ -44,7 +45,16 @@ describe('an explicit Node version', () => {
         );
 
         expect(execaCommand).toBe(`${FNM} exec --using=20 npm install`);
-        expect(execaOptions.shell).toBe('/bin/zsh');
+        expect(execaOptions.shell).toBe(DEFAULT_SHELL);
+    });
+
+    it('keeps a shell the caller named', async () => {
+        const { execaOptions } = await runThroughExeca(executorWith(), mockExeca, 'npm install', {
+            useNodeVersion: '20',
+            shell: '/bin/sh',
+        });
+
+        expect(execaOptions.shell).toBe('/bin/sh');
     });
 
     it("points fnm at Demo Builder's own store, keeping the rest of the environment (PR-1a)", async () => {

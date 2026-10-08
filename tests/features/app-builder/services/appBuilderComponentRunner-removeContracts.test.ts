@@ -37,7 +37,7 @@ import { removeAppBuilderComponent } from '@/features/app-builder/services/appBu
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import {
     INTEGRATION_ENTRY,
     MESH_ENTRY,

@@ -10,7 +10,7 @@
 import './installHandler.mocks';
 
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import * as shared from '@/features/prerequisites/handlers/shared';
 import { handleInstallPrerequisite } from '@/features/prerequisites/handlers/installHandler';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';

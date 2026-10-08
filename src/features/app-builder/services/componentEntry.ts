@@ -13,7 +13,7 @@
 
 import { buildCustomIntegrationEntry , getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { pairedInstanceId } from '@/features/components/services/appBuilderComponentLinks';
-import { demoBuilderNode, nodeForAppBuilderEntry } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode, nodeForAppBuilderEntry } from '@/core/shell/demoBuilderNode';
 import type { RepoNodeChoice } from '@/features/components/services/nodeResolution';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState, Project } from '@/types/base';

@@ -10,7 +10,7 @@
  */
 
 import type { ComponentRegistryManager } from './ComponentRegistryManager';
-import { demoBuilderNode } from './nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { isMeshComponentId } from '@/core/constants';
 import type { TransformedComponentDefinition } from '@/types/components';
 import { ProjectConfig } from '@/types/handlers';

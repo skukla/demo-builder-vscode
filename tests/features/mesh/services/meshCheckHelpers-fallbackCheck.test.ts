@@ -7,7 +7,7 @@
 import { fallbackMeshCheck } from '@/features/mesh/services/meshCheckHelpers';
 import { CommandExecutor } from '@/core/shell/commandExecutor';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 
 describe('fallbackMeshCheck', () => {
     let mockCommandExecutor: jest.Mocked<CommandExecutor>;

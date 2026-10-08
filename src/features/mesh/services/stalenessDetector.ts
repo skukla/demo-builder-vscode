@@ -211,7 +211,7 @@ export async function fetchDeployedMeshConfig(
 ): Promise<Record<string, string> | null> {
     try {
         const { TIMEOUTS } = await import('@/core/utils/timeoutConfig');
-        const { demoBuilderNode } = await import('@/features/components/services/nodeRequirements');
+        const { demoBuilderNode } = await import('@/core/shell/demoBuilderNode');
         const commandManager = deps.commandManager;
 
         logger.debug('[Mesh Staleness] Fetching deployed mesh config from Adobe I/O');

@@ -1,5 +1,5 @@
 import { waitForMeshDeployment } from '@/features/mesh/services/meshDeploymentVerifier';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
     createMockCommandManager,

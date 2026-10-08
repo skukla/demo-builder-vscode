@@ -18,7 +18,7 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { ROOT, workingTreeFiles } from './architectureScan';
-import generated from '@/features/components/config/node-version.generated.json';
+import generated from '@/core/shell/config/node-version.generated.json';
 import { excludedNodeSources, listNodeSources } from '@/features/components/services/nodeResolution';
 
 /** A quoted major or full version, e.g. '24' or "20.11.0". */

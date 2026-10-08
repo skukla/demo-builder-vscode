@@ -14,7 +14,7 @@ import type { AdobeEntityReads } from '@/features/authentication/services/adobeE
 jest.mock('@/types/typeGuards');
 
 import { getLogger } from '@/core/logging/debugLogger';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { parseJSON } from '@/types/typeGuards';
 import { createMockLogger } from '../../../helpers/loggerFake';

@@ -16,7 +16,7 @@ import type { AuthCacheManager } from '@/features/authentication/services/authCa
 import { getLogger } from '@/core/logging/debugLogger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 
 // The node version is asserted as an ARGUMENT below, so it is pinned to a value the
 // real resolver never returns: a selector that hardcoded a version instead of asking

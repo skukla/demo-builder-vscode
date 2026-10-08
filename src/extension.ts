@@ -11,7 +11,6 @@ import { getLogger, initializeLogger } from '@/core/logging/debugLogger';
 import { CommandExecutor } from '@/core/shell/commandExecutor';
 import { createCommandExecutorDeps } from '@/core/shell/commandExecutorDeps';
 import { adobeCliInstalledUnder } from '@/core/shell/ensureNodeVersion';
-import { setAdobeCliNodeVersion } from '@/core/shell/nodeStore';
 import { sweepManifestFormat } from '@/core/state/manifestFormatSweep';
 import { StateManager } from '@/core/state/stateManager';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
@@ -78,7 +77,7 @@ import { ComponentManager } from '@/features/components/services/componentManage
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import { ensureNode } from '@/features/components/services/nodeEnsure';
 import { bareDefinition, sweepOntoDemoBuilderNode } from '@/features/components/services/nodeMigration';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import {
     ProjectDashboardWebviewCommand,
     shouldAutoReopenProjectsList,
@@ -211,10 +210,6 @@ export async function activate(context: vscode.ExtensionContext) {
             .getConfiguration('demoBuilder')
             .get<boolean>('ai.enableThirdPartyTools', true),
     );
-
-    // The Node every `aio` command runs on, from the register (PR-1a). Core cannot
-    // import the catalogs, so the value is handed to the command runner here.
-    setAdobeCliNodeVersion(demoBuilderNode());
 
     // Name the build BEFORE anything else can fail: with several checkouts on one
     // machine, F5 binds to whichever window had focus, and "which dist/ is this?"

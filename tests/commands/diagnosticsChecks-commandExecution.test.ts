@@ -17,7 +17,7 @@
 
 import { mockExecute, ranCommands } from './diagnosticsChecks.testUtils';
 import { checkCommand, checkTools, testAdobeLogin } from '@/commands/diagnosticsChecks';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 
 /** Options the executor was handed for the named command. */
 function optionsFor(command: string): unknown {

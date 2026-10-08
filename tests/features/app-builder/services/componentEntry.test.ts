@@ -9,7 +9,7 @@
  */
 
 import { catalogEntryFor, entryFromState, withOwnRepoNode } from '@/features/app-builder/services/componentEntry';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState, Project } from '@/types/base';
 import { createMockProject } from '../../../helpers/projectFake';

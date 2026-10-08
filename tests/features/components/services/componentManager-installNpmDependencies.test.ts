@@ -12,7 +12,7 @@
  */
 
 import { ComponentManager } from '@/features/components/services/componentManager';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { TransformedComponentDefinition } from '@/types/components';
 import { Logger } from '@/types/logger';
 import { CommandExecutor } from '@/core/shell/commandExecutor';

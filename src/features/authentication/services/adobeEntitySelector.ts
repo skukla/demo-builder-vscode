@@ -18,7 +18,7 @@
 import type { AuthCacheManager } from './authCacheManager';
 import { getLogger } from '@/core/logging/debugLogger';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 
 /**
  * Clears Adobe CLI console context (token-preserving).

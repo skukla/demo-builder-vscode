@@ -5,7 +5,8 @@ import { CommandResultCache } from './commandResultCache';
 import { CommandSequencer } from './commandSequencer';
 import { EnvironmentSetup } from './environmentSetup';
 import { FileWatcher } from './fileWatcher';
-import { fnmExecCommand, fnmStoreEnv, getAdobeCliNodeVersion } from './nodeStore';
+import { demoBuilderNode } from './demoBuilderNode';
+import { fnmExecCommand, fnmStoreEnv } from './nodeStore';
 import { buildAioConsoleEnv, getActiveOrgContext, needsOrgTargeting } from './orgContextEnv';
 import { PollingService } from './pollingService';
 import { isPortAvailable } from './portChecker';
@@ -140,12 +141,12 @@ export class CommandExecutor {
         if (options.enhancePath === undefined) {
             options.enhancePath = true;
         }
-        // Every `aio` call runs on the Adobe CLI's Node from Demo Builder's store
-        // (PR-1a), set at activation from the register. It replaced 'auto', which
-        // meant "the first fnm folder that happens to contain aio" (Node 18 on the
-        // owner's machine), and a session-wide `fnm use` that changed nothing.
+        // Every `aio` call runs on Demo Builder's Node, from its Node folder (PR-1a).
+        // It replaced 'auto', which meant "the first fnm folder that happens to
+        // contain aio" (Node 18 on the owner's machine), and a session-wide
+        // `fnm use` that changed nothing.
         if (options.useNodeVersion === undefined) {
-            options.useNodeVersion = getAdobeCliNodeVersion() ?? null;
+            options.useNodeVersion = demoBuilderNode();
         }
         if (!options.retryStrategy) {
             options.retryStrategy = this.retryManager.getStrategy('adobe-cli');
@@ -162,7 +163,11 @@ export class CommandExecutor {
         const fnmPath = this.environmentSetup.findFnmPath();
         if (fnmPath && nodeVersion !== 'current') {
             state.finalCommand = fnmExecCommand(fnmPath, nodeVersion, state.finalCommand);
-            state.finalOptions.shell = '/bin/zsh';
+            // `fnm exec` needs a shell, not zsh in particular: keep the one the caller
+            // named, else the platform's. Forcing zsh overrode both for every `aio`
+            // command once they all ran on Demo Builder's Node (PR-1a).
+            const chosen = state.finalOptions.shell;
+            state.finalOptions.shell = typeof chosen === 'string' ? chosen : DEFAULT_SHELL;
         } else if (nodeVersion === 'current') {
             state.finalCommand = `eval "$(fnm env)" && ${state.finalCommand}`;
             state.finalOptions.shell = '/bin/zsh';

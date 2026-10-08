@@ -21,7 +21,7 @@ import type { ErrorLogger } from '@/core/logging/errorLogger';
 import type { ProgressUnifier } from '@/core/utils/progressUnifier/ProgressUnifier';
 import type { StepLogger } from '@/core/logging/stepLogger';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { createMockHandlerContext as createMockHandlerContextBase } from '../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 

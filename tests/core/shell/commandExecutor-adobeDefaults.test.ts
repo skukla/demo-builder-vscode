@@ -14,7 +14,7 @@
 
 import { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
-import { setAdobeCliNodeVersion } from '@/core/shell/nodeStore';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { createFakeCommandExecutorDeps } from '../../helpers/commandExecutorDepsFake';
 import {
     createMockExecaSubprocess,
@@ -77,24 +77,18 @@ describe('the shell an aio command runs in', () => {
     });
 });
 
-describe('the Adobe CLI Node version', () => {
-    afterEach(() => {
-        setAdobeCliNodeVersion(undefined);
-    });
-
-    it("runs an aio command that names no Node on the Adobe CLI's Node (PR-1a)", async () => {
-        setAdobeCliNodeVersion('24');
+describe("Demo Builder's Node for aio commands", () => {
+    it('runs an aio command that names no Node on Demo Builder\'s Node (PR-1a)', async () => {
         const { executor } = build();
 
         const { execaCommand } = await runThroughExeca(executor, mockExeca, 'aio console where', {
             configureTelemetry: false,
         });
 
-        expect(execaCommand).toBe('/usr/local/bin/fnm exec --using=24 aio console where');
+        expect(execaCommand).toBe(`/usr/local/bin/fnm exec --using=${demoBuilderNode()} aio console where`);
     });
 
     it('keeps a Node the caller named', async () => {
-        setAdobeCliNodeVersion('24');
         const { executor } = build();
 
         const { execaCommand } = await runThroughExeca(executor, mockExeca, 'aio console where', {
@@ -103,16 +97,6 @@ describe('the Adobe CLI Node version', () => {
         });
 
         expect(execaCommand).toBe('/usr/local/bin/fnm exec --using=22 aio console where');
-    });
-
-    it('runs the command as written before activation has set a version', async () => {
-                const { executor } = build();
-
-        const { execaCommand } = await runThroughExeca(executor, mockExeca, 'aio console where', {
-            configureTelemetry: false,
-        });
-
-        expect(execaCommand).toBe('aio console where');
     });
 });
 

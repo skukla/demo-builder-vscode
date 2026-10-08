@@ -11,7 +11,7 @@
 import { getActiveOrgContext, type OrgContextTarget } from '@/core/shell/orgContextEnv';
 import { erpCredentialReader } from '@/features/app-builder/services/erpCredential';
 import { fetchWorkspaceS2SCredential } from '@/features/app-builder/services/runtimeCredentials';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 import { createMockProject } from '../../../helpers/projectFake';
 

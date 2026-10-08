@@ -9,7 +9,7 @@
  * and message a prerequisite gets from its installation state.
  */
 
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import {
     determinePrerequisiteStatus,
     formatProgressMessage,

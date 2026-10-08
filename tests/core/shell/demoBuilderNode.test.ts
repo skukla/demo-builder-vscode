@@ -3,12 +3,12 @@
  * and the REAL App Builder catalog: an edit that changes an answer fails here.
  */
 
-import generated from '@/features/components/config/node-version.generated.json';
+import generated from '@/core/shell/config/node-version.generated.json';
 import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import {
     demoBuilderNode,
     nodeForAppBuilderEntry,
-} from '@/features/components/services/nodeRequirements';
+} from '@/core/shell/demoBuilderNode';
 
 describe('demoBuilderNode', () => {
     it('answers the node the release script wrote to the generated file', () => {

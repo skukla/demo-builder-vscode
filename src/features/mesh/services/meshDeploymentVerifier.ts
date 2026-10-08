@@ -8,7 +8,7 @@ import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateMeshId } from '@/core/validation/validators/AdobeResourceValidator';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import type { Logger } from '@/types/logger';
 import { parseJSON } from '@/types/typeGuards';
 

@@ -4,7 +4,7 @@
  * (PR-1a). Nobody types the number: this reads every source `listNodeSources()` names
  * (each GitHub repo at the ref Demo Builder installs, each npm package it installs),
  * applies `chooseNode()`'s rule, and writes the answer with its evidence to
- * `src/features/components/config/node-version.generated.json`.
+ * `src/core/shell/config/node-version.generated.json`.
  *
  *   npm run node:resolve             write the file
  *   npm run node:resolve -- --check  compare only; exit 1 on any difference
@@ -24,7 +24,7 @@ import { join } from 'path';
 import { pathToFileURL } from 'url';
 import semver from 'semver';
 
-const OUT = 'src/features/components/config/node-version.generated.json';
+const OUT = 'src/core/shell/config/node-version.generated.json';
 const CHECK = process.argv.includes('--check');
 
 async function loadResolution() {

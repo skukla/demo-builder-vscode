@@ -18,7 +18,7 @@ import * as path from 'path';
 import { makeTestWriter } from './generatedFileWriter.testUtils';
 import { demoBuilderFnmDir } from '@/core/shell/nodeStore';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 

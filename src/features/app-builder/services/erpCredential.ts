@@ -20,7 +20,7 @@ import type { ErpAuth } from './erpList';
 import { fetchWorkspaceS2SCredential } from './runtimeCredentials';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { buildOrgTargetFromProjectAdobe, withOrgContext, type CachedOrgRef } from '@/core/shell/orgContextEnv';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import type { AppBuilderComponentState, Project } from '@/types/base';
 
 type Workspace = NonNullable<AppBuilderComponentState['workspace']>;

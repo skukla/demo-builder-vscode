@@ -33,7 +33,7 @@ jest.mock('@/features/prerequisites/services/versioning/MultiVersionDetector', (
     getInstalledNodeVersions: jest.fn(),
 }));
 
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { handleInstallPrerequisite } from '@/features/prerequisites/handlers/installHandler';
 import { getInstalledNodeVersions } from '@/features/prerequisites/services/versioning/MultiVersionDetector';
 import type { HandlerContext } from '@/types/handlers';

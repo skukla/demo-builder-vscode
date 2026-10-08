@@ -49,19 +49,3 @@ export function fnmTerminalCommand(major: string, command: string): string {
 export function fnmStoreProcessEnv(): NodeJS.ProcessEnv {
     return { ...process.env, ...fnmStoreEnv() };
 }
-
-/** The Adobe CLI's Node, set once at activation from the register (core cannot import it). */
-let adobeCliNode: string | undefined;
-
-/** Wire the Adobe CLI's Node in (activation); tests may set or clear it. */
-export function setAdobeCliNodeVersion(major: string | undefined): void {
-    adobeCliNode = major;
-}
-
-/**
- * The Node every `aio` command runs on when its caller names none. Undefined until
- * activation sets it, which leaves the command as its caller wrote it.
- */
-export function getAdobeCliNodeVersion(): string | undefined {
-    return adobeCliNode;
-}

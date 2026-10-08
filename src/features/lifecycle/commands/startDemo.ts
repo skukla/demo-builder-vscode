@@ -12,7 +12,7 @@ import { ExecutionLock } from '@/core/utils/executionLock';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateNodeVersion } from '@/core/validation/validators/NodeVersionValidator';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { getComponentIds, getComponentInstancesByType, getComponentInstanceValues } from '@/types/typeGuards';
 import type { DemoStateChangedPayload } from '@/types/webviewPayloads';
 

@@ -6,7 +6,7 @@
  */
 
 import { CommandExecutor } from '@/core/shell/commandExecutor';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { getMeshStatusCategory, extractAndParseJSON } from '@/features/mesh/utils/meshHelpers';
 
 /**

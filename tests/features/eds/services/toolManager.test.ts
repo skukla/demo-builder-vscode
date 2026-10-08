@@ -63,7 +63,7 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 }));
 
 // Import after mocks
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import type { ToolManager } from '@/features/eds/services/toolManager';
 import type { ACOConfig } from '@/features/eds/services/types';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';

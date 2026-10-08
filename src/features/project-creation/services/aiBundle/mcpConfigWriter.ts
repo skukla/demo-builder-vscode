@@ -34,7 +34,7 @@ import { getLogger } from '@/core/logging/debugLogger';
 import { EnvironmentSetup } from '@/core/shell/environmentSetup';
 import { fnmStoreEnv } from '@/core/shell/nodeStore';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import type { AiDefaults } from '@/types/aiDefaults';
 import type { Project } from '@/types/base';
 

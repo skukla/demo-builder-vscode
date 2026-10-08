@@ -37,7 +37,7 @@ jest.mock('@/features/app-builder/services/ensureMeshApiSubscribed', () => ({
     ensureMeshApiSubscribed: (...args: unknown[]) => mockEnsureSubscribed(...args),
 }));
 
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
 import { updateMeshState } from '@/features/mesh/services/stalenessDetector';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';

@@ -29,7 +29,7 @@ import { removeAppBuilderComponent } from '@/features/app-builder/services/appBu
 import { deriveOwPackage } from '@/features/app-builder/services/owPackageName';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { createDeps, createProject } from './appBuilderComponentRunner.testUtils';
 
 const ID = 'app-builder-shell';

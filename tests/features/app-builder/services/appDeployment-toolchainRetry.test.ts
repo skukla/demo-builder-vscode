@@ -38,7 +38,7 @@ import {
     isToolchainStalenessError,
 } from '@/features/app-builder/services/appDeployment';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 

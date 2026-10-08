@@ -16,7 +16,7 @@ import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateGitHubDownloadURL } from '@/core/validation/URLValidator';
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { createMockProject } from '../../../helpers/projectFake';
 
 const DOWNLOAD = 'https://github.com/test/repo/archive/v1.0.0.zip';

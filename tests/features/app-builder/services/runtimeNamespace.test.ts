@@ -40,7 +40,7 @@ import {
     runtimeNamespaceEnv,
 } from '@/features/app-builder/services/runtimeNamespace';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 import { createFailureResult, createSuccessResult } from '../../../helpers/commandResultFake';
 import { createMockLogger } from '../../../helpers/loggerFake';

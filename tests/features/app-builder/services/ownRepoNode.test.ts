@@ -5,7 +5,7 @@
 
 import { githubRepoTextReader, ownRepoNodeResolver } from '@/features/app-builder/services/ownRepoNode';
 import type { CommandResult } from '@/core/shell/types';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 
 const logger = { debug: jest.fn() };
 const SOURCE = { owner: 'acme', repo: 'erp-bridge', branch: 'main' };

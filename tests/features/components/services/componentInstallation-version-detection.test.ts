@@ -19,7 +19,7 @@ import {
     mockFs,
     resetDoubles,
 } from './componentInstallation.testUtils';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 
 /**
  * Answer each git command by NAME rather than by call order.

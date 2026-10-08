@@ -4,7 +4,7 @@ import {
     fetchRuntimeCredentials,
     readRuntimeCredentials,
 } from '@/features/app-builder/services/runtimeCredentials';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 
 /**
  * deployAppComponent Test Suite

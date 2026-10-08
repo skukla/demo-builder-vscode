@@ -30,7 +30,7 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
 
 import { deployAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
 import { MESH_ENTRY, createDeps, createProject } from './appBuilderComponentRunner.testUtils';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 
 const ID = MESH_ENTRY.id;
 

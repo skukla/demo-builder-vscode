@@ -19,7 +19,7 @@ import {
 } from './startDemo.testUtils';
 import type { StartDemoHarness } from './startDemo.testUtils';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import type { Project } from '@/types/base';
 import { fnmTerminalCommand } from '@/core/shell/nodeStore';
 

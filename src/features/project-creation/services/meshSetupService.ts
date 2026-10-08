@@ -11,7 +11,7 @@ import { ProgressTracker } from '../handlers/shared';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
 import { extractAndParseJSON } from '@/features/mesh/utils/meshHelpers';
 import { generateComponentEnvFile } from '@/features/project-creation/helpers/envFileGenerator';

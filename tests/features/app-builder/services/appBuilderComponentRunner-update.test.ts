@@ -8,7 +8,7 @@ import { updateAppBuilderComponent } from '@/features/app-builder/services/appBu
 import type { SourceUpdateResult } from '@/features/app-builder/services/integrationSourceUpdate';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { createDeps, createProject } from './appBuilderComponentRunner.testUtils';
 
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({

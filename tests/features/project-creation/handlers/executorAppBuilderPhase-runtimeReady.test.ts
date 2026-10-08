@@ -71,7 +71,7 @@ jest.mock('@/core/di/serviceLocator', () => ({
 
 import type { AdobeConfig } from '@/types/base';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import {
     ensureWorkspaceRuntimeReady,

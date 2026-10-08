@@ -1,5 +1,5 @@
 import { getNodeVersionMapping } from '@/features/prerequisites/handlers/shared';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { createPrereqHandlerContext, createComponentSelection } from './testHelpers';
 
 /**

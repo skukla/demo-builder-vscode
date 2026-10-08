@@ -18,7 +18,7 @@ import {
     getAppBuilderComponentEntry,
     buildCustomIntegrationEntry,
 } from '@/features/components/services/appBuilderComponentCatalogLoader';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { HandlerContext } from '@/types/handlers';
 import type { OperationPosition } from '@/types/webviewPayloads';

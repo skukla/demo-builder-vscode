@@ -15,7 +15,7 @@ import { erpEventsEnvResolver, resolveErpEventsEnv } from '@/features/app-builde
 import { fetchWorkspaceS2SCredential } from '@/features/app-builder/services/runtimeCredentials';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState, Project } from '@/types/base';
-import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 import { createMockProject } from '../../../helpers/projectFake';
 
