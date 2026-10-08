@@ -13,50 +13,52 @@
 
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { ensureFnmNodeVersion, ensureNodeWithAdobeCli } from '@/core/shell/ensureNodeVersion';
-import prerequisitesConfig from '@/features/prerequisites/config/prerequisites.json';
+import type { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
+import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 
-interface InstallStep {
-    commands?: string[];
-    [key: string]: unknown;
-}
-
-interface CliEntry {
-    id: string;
-    install?: { steps?: InstallStep[] };
-    plugins?: Array<{ install?: { steps?: InstallStep[] } }>;
-}
+/** The prerequisites reader the Adobe CLI's install commands come from (its one definition). */
+export type AdobeCliPrerequisites = Pick<
+    PrerequisitesManager,
+    'getPrerequisiteById' | 'getInstallSteps' | 'getPluginInstallCommands'
+>;
 
 const ADOBE_CLI_PREREQUISITE = 'aio-cli';
 
-function commandsOf(steps: InstallStep[] | undefined): string[] {
-    return (steps ?? []).flatMap((step) => step.commands ?? []);
+/** A handler context's prerequisites manager; every real one carries it (handlerContextFactory, headlessHandlerContext). */
+export function prerequisitesOf(context: Pick<HandlerContext, 'prereqManager'>): AdobeCliPrerequisites {
+    if (!context.prereqManager) throw new Error('This handler context has no prerequisites manager');
+    return context.prereqManager;
 }
 
 /**
- * The Adobe CLI's install commands, then each of its plugins', as the
- * prerequisites declare them.
+ * The Adobe CLI's install commands for Node `major`, then each of its plugins', read
+ * through the prerequisites manager exactly as the prerequisites screen reads them
+ * (`getInstallSteps`, `getPluginInstallCommands`), so "install the Adobe CLI" has
+ * one definition wherever it runs.
  */
-export function adobeCliInstallCommands(): string[] {
-    const prerequisites: CliEntry[] = prerequisitesConfig.prerequisites;
-    const cli = prerequisites.find((entry) => entry.id === ADOBE_CLI_PREREQUISITE);
+export async function adobeCliInstallCommands(prereqs: AdobeCliPrerequisites, major: string): Promise<string[]> {
+    const cli = await prereqs.getPrerequisiteById(ADOBE_CLI_PREREQUISITE);
     if (!cli) throw new Error(`prerequisites.json has no ${ADOBE_CLI_PREREQUISITE} entry`);
-    return [
-        ...commandsOf(cli.install?.steps),
-        ...(cli.plugins ?? []).flatMap((plugin) => commandsOf(plugin.install?.steps)),
-    ];
+    const steps = prereqs.getInstallSteps(cli, { nodeVersions: [major] })?.steps ?? [];
+    const commands = steps.flatMap((step) => step.commands ?? []);
+    for (const plugin of cli.plugins ?? []) {
+        commands.push(...((await prereqs.getPluginInstallCommands(cli.id, plugin.id))?.commands ?? []));
+    }
+    return commands;
 }
 
 /**
- * Make Node `major` available in Demo Builder's store, and the Adobe CLI under it
- * when `adobeCli`. Returns an error string, or undefined to proceed.
+ * Make Node `major` available in Demo Builder's Node folder, and the Adobe CLI under
+ * it when `adobeCli`. Returns an error string, or undefined to proceed.
  */
-export function ensureNode(
+export async function ensureNode(
     executor: CommandExecutor,
+    prereqs: AdobeCliPrerequisites,
     target: { major: string; adobeCli: boolean },
     logger: Pick<Logger, 'debug'>,
 ): Promise<string | undefined> {
     return target.adobeCli
-        ? ensureNodeWithAdobeCli(executor, target.major, adobeCliInstallCommands(), logger)
+        ? ensureNodeWithAdobeCli(executor, target.major, await adobeCliInstallCommands(prereqs, target.major), logger)
         : ensureFnmNodeVersion(executor, target.major, logger);
 }

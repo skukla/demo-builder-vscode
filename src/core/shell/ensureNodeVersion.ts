@@ -99,17 +99,29 @@ export async function ensureFnmNodeVersion(
 }
 
 /**
- * Whether the Adobe CLI is installed under the store's Node `<major>`: the `aio`
- * file beside that Node's own binary, not whatever `aio` the PATH would find.
+ * Whether a global tool (`binary`, e.g. `aio`) is installed under Demo Builder's Node
+ * `<major>`: the file beside that Node's own binary, not whatever copy the PATH would
+ * find. The ONE answer to "is it installed under this Node": the prerequisites
+ * screen's per-Node check and the add door's ensure both ask it, because running
+ * `aio --version` under the Node also finds an `aio` from any other Node on the PATH.
  */
-export async function adobeCliInstalledUnder(executor: CommandExecutor, major: string): Promise<boolean> {
+export async function toolInstalledUnder(
+    executor: Pick<CommandExecutor, 'execute'>,
+    major: string,
+    binary: string,
+): Promise<boolean> {
     const result = await executor.execute(`node -p "require('path').dirname(process.execPath)"`, {
         useNodeVersion: major,
         shell: DEFAULT_SHELL,
         timeout: TIMEOUTS.NORMAL,
     });
-    if (result.code !== 0) return false;
-    return fs.existsSync(path.join(result.stdout.trim(), 'aio'));
+    if (result.code !== 0 || !result.stdout) return false;
+    return fs.existsSync(path.join(result.stdout.trim(), binary));
+}
+
+/** Whether the Adobe CLI is installed under Demo Builder's Node `<major>`. */
+export function adobeCliInstalledUnder(executor: Pick<CommandExecutor, 'execute'>, major: string): Promise<boolean> {
+    return toolInstalledUnder(executor, major, 'aio');
 }
 
 /**

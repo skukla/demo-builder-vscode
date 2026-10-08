@@ -10,6 +10,7 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getLogger, initializeLogger } from '@/core/logging/debugLogger';
 import { CommandExecutor } from '@/core/shell/commandExecutor';
 import { createCommandExecutorDeps } from '@/core/shell/commandExecutorDeps';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { adobeCliInstalledUnder } from '@/core/shell/ensureNodeVersion';
 import { sweepManifestFormat } from '@/core/state/manifestFormatSweep';
 import { StateManager } from '@/core/state/stateManager';
@@ -77,7 +78,6 @@ import { ComponentManager } from '@/features/components/services/componentManage
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import { ensureNode } from '@/features/components/services/nodeEnsure';
 import { bareDefinition, sweepOntoDemoBuilderNode } from '@/features/components/services/nodeMigration';
-import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import {
     ProjectDashboardWebviewCommand,
     shouldAutoReopenProjectsList,
@@ -95,6 +95,7 @@ import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive
 import { registerEwSettingChangeListener } from '@/features/eds/services/ewSettingChangeListener';
 import { HelixService } from '@/features/eds/services/helix/helixService';
 import { renewPublishKeys } from '@/features/eds/services/pdp/publishKeyRenewalSweep';
+import { getPrerequisitesManager } from '@/features/prerequisites/services/prerequisitesManagerInstance';
 import { listStoreMajors } from '@/features/prerequisites/services/versioning/MultiVersionDetector';
 import { refreshAiBundlesOnActivation } from '@/features/project-creation/services/aiBundle/aiBundleActivationRefresh';
 import { setThirdPartyToolsResolver } from '@/features/project-creation/services/aiBundle/aiToolingGate';
@@ -923,7 +924,12 @@ async function sweepDemoBuilderNode(context: vscode.ExtensionContext): Promise<v
             node,
             nodeReady: async () => (await listStoreMajors(externalCommandManager)).includes(node)
                 && adobeCliInstalledUnder(externalCommandManager, node),
-            ensureNode: (major) => ensureNode(externalCommandManager, { major, adobeCli: true }, logger),
+            ensureNode: (major) => ensureNode(
+                externalCommandManager,
+                getPrerequisitesManager(context.extensionPath, logger, externalCommandManager),
+                { major, adobeCli: true },
+                logger,
+            ),
             reinstall: async (componentId, component, major) => {
                 if (!component.path) return 'it has no folder on disk';
                 const definition = (await registry.getComponentById(componentId)) ?? bareDefinition(componentId, component);

@@ -6,6 +6,7 @@
  */
 
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { toolInstalledUnder } from '@/core/shell/ensureNodeVersion';
 import { formatDuration } from '@/core/utils/timeFormatting';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { listStoreMajors } from '@/features/prerequisites/services/versioning/MultiVersionDetector';
@@ -115,7 +116,10 @@ export async function checkPerNodeVersionStatus(
             // CRITICAL BUG FIX: Check exit code to determine command success
             // Exit code 0 = success, non-zero = failure (e.g., 127 = command not found)
             // Previously used try-catch which incorrectly treated non-zero exit codes as success
-            if (result.code === 0) {
+            // A 0 can come from a copy under ANOTHER Node on the PATH, so it counts only
+            // when the tool sits beside THIS Node (PR-1a: the one answer the ensure uses).
+            const binary = prereq.check.command.trim().split(/\s+/)[0];
+            if (result.code === 0 && (await toolInstalledUnder(commandManager, major, binary))) {
                 // Scenario 2: Tool is installed and working
                 // Parse CLI version if regex provided
                 let cliVersion = '';

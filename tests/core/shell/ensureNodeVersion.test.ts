@@ -18,6 +18,7 @@ import * as os from 'os';
 import * as path from 'path';
 import {
     adobeCliInstalledUnder,
+    toolInstalledUnder,
     ensureFnmNodeVersion,
     ensureNodeWithAdobeCli,
     failureDetail,
@@ -171,6 +172,16 @@ describe('adobeCliInstalledUnder', () => {
         const { exec } = executor();
         await adobeCliInstalledUnder(exec, '24');
         expect(exec.execute).toHaveBeenCalledWith(expect.stringContaining('node -p'), expect.objectContaining({ useNodeVersion: '24' }));
+    });
+});
+
+describe('toolInstalledUnder', () => {
+    it('checks the named binary beside that Node, not any file there', async () => {
+        const { exec } = executor();
+        fs.writeFileSync(path.join(binDir, 'aio'), '');
+
+        expect(await toolInstalledUnder(exec, '24', 'aio')).toBe(true);
+        expect(await toolInstalledUnder(exec, '24', 'other')).toBe(false);
     });
 });
 

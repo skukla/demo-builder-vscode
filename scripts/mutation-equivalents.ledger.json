@@ -1400,7 +1400,7 @@
             "anchors": [
                 "if (prereq.check.parseVersion) {"
             ],
-            "line": 122,
+            "line": 126,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true runs the parse block for a prerequisite that declares no parseVersion. new RegExp(undefined) is the empty pattern, which matches at position zero with no capture group, so match[1] is undefined and the || '' fallback leaves cliVersion as the empty string it was initialised to. createVersionStatus therefore receives the same three arguments on both routes.",
@@ -1413,7 +1413,7 @@
             "anchors": [
                 "if (match) cliVersion = match[1] || '';"
             ],
-            "line": 125,
+            "line": 129,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true reads match[1] when the regex did not match, so match is null and the read throws a TypeError. That throw is caught by the enclosing try in the same block, whose catch comments that regex parse errors are ignored, leaving cliVersion as the empty string the unmutated path also leaves it. The exception never escapes and no collaborator sees a different call.",
@@ -1426,7 +1426,7 @@
             "anchors": [
                 "const duration = Date.now() - startTime;"
             ],
-            "line": 146,
+            "line": 150,
             "mutants": 1,
             "category": "other",
             "reason": "duration is read on the very next statement and nowhere else, and that statement is a context.logger.debug call whose message reports how long the parallel check took. Adding the two clocks instead of subtracting them changes a number inside one debug line; the function's return value, every collaborator call and every status it produces are untouched.",
@@ -8476,7 +8476,7 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 810,
+            "line": 811,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here the step is starting the in-extension MCP server, whose failure must never abort activation.",
@@ -8501,7 +8501,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 544,
+            "line": 545,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a logger.error plus a showErrorMessage whose text is built from the error. Activation's own tests assert showErrorMessage was NOT called on every success path, which is the observable half; the wording of the message when it IS called is the rest.",
@@ -8514,7 +8514,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 901,
+            "line": 902,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here it is the manifest-format sweep.",

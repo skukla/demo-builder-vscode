@@ -26,6 +26,12 @@ jest.mock('@/features/prerequisites/handlers/shared', () => {
     };
 });
 jest.mock('@/core/di/serviceLocator');
+// The per-Node check also asks whether the tool's file sits beside that Node.
+// Default yes, so a check command's exit code decides, as it did before.
+jest.mock('@/core/shell/ensureNodeVersion', () => ({
+    ...jest.requireActual('@/core/shell/ensureNodeVersion'),
+    toolInstalledUnder: jest.fn(() => Promise.resolve(true)),
+}));
 
 export * as shared from '@/features/prerequisites/handlers/shared';
 export { ServiceLocator } from '@/core/di/serviceLocator';

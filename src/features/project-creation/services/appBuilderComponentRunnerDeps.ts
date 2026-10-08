@@ -1,12 +1,9 @@
 /**
  * Default deps factory for the deploy-contract runner (Step 08).
  *
- * The runner ({@link appBuilderComponentRunner}) is pure orchestration with every external
- * boundary injected. This factory wires the REAL implementations (the deploy tails, NOT
- * forked; the API subscriber; the storefront republish) into a ready-to-use bundle.
- *
- * The cross-feature orchestration seam: it imports `@/features/mesh` and `@/features/eds`
- * so `appBuilderComponentRunner.ts` itself carries no cross-feature deploy imports.
+ * The runner ({@link appBuilderComponentRunner}) is pure orchestration with every boundary
+ * injected; this wires the REAL implementations (deploy tails, API subscriber, storefront
+ * republish). The cross-feature seam: it imports mesh and eds so the runner need not.
  */
 
 import * as vscode from 'vscode';
@@ -48,7 +45,7 @@ import { buildS2SDeployEnv } from '@/features/app-builder/services/s2sDeployEnv'
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { ComponentManager } from '@/features/components/services/componentManager';
-import { ensureNode } from '@/features/components/services/nodeEnsure';
+import { ensureNode, prerequisitesOf, type AdobeCliPrerequisites } from '@/features/components/services/nodeEnsure';
 import { ensureDaLiveAuth, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { republishStorefrontConfig } from '@/features/eds/services/storefront/storefrontRepublishService';
 import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
@@ -71,6 +68,8 @@ export interface RunnerDepsContext {
     commandManager: CommandExecutor;
     /** ADR-015: the auth service, so the factory never reaches for it. */
     authManager: AuthenticationService;
+    /** Where the Adobe CLI's install commands come from (`nodeEnsure`). */
+    prerequisites: AdobeCliPrerequisites;
     logger: Logger;
     saveProject: (project: Project) => Promise<void>;
     getCachedOrganization: () => CachedOrgRef | undefined;
@@ -192,10 +191,9 @@ export function buildDefaultRunnerDeps(
         // The ONE isolating deploy seam (ADR-011 D3 Step 03) — every deploy routes
         // through it, so no un-isolated deploy survives.
         deployApp: deployAppComponentIsolated,
-        // The add door's Node, with the Adobe CLI under it (every add runs `aio`); an SC's
-        // own repo's Node is read from its package.json, GitHub clients built only then.
+        // The add door's Node and the Adobe CLI under it; a custom integration's Node from its package.json.
         ensureNodeVersion: (version) =>
-            ensureNode(ctx.commandManager, { major: version, adobeCli: true }, ctx.logger),
+            ensureNode(ctx.commandManager, ctx.prerequisites, { major: version, adobeCli: true }, ctx.logger),
         resolveOwnRepoNode: (source) => ownRepoNodeResolver(githubRepoTextReader(
             getGitHubServices(ctx.secrets).fileOperations), ctx.commandManager, ctx.logger)(source),
         // Post-deploy install for app-management lifecycle apps (automatic with
@@ -368,6 +366,7 @@ export async function buildRunnerDepsContext(
         componentManager: new ComponentManager(context.logger, commandManager),
         commandManager,
         authManager,
+        prerequisites: prerequisitesOf(context),
         logger: context.logger,
         saveProject: (p: Project) => context.stateManager.saveProject(p),
         // Tiers 1+2 and the stamp. Package INSTALLS (tier 3) are not needed

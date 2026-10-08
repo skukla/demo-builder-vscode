@@ -1,5 +1,6 @@
 import { checkPerNodeVersionStatus } from '@/features/prerequisites/handlers/shared';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { toolInstalledUnder } from '@/core/shell/ensureNodeVersion';
 import { createPrereqHandlerContext } from './testHelpers';
 import type { PrerequisiteDefinition } from '@/features/prerequisites/services/PrerequisitesManager';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
@@ -11,8 +12,6 @@ import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake'
  *
  * Tests the checkPerNodeVersionStatus utility function.
  * This function checks prerequisite status for each required Node version.
- *
- * Total tests: 13
  */
 
 // Helper to create mock CommandResult
@@ -32,6 +31,13 @@ jest.mock('@/core/di/serviceLocator', () => ({
         getNodeVersionManager: jest.fn(),
         reset: jest.fn(),
     },
+}));
+
+// The per-Node check also asks whether the tool's file sits beside that Node.
+// Default yes, so a check command's exit code decides, as it did before.
+jest.mock('@/core/shell/ensureNodeVersion', () => ({
+    ...jest.requireActual('@/core/shell/ensureNodeVersion'),
+    toolInstalledUnder: jest.fn(() => Promise.resolve(true)),
 }));
 
 describe('Prerequisites Handlers - checkPerNodeVersionStatus', () => {
@@ -554,6 +560,77 @@ describe('Prerequisites Handlers - checkPerNodeVersionStatus', () => {
             expect(result.perNodeVersionStatus).toEqual([
                 { version: 'Node 20', major: '20', component: '', installed: true },
             ]);
+        });
+    });
+
+    describe('the tool must sit beside THAT Node (PR-1a)', () => {
+        const prereq: PrerequisiteDefinition = {
+            id: 'adobe-cli',
+            name: 'Adobe I/O CLI',
+            perNodeVersion: true,
+            check: { command: 'aio --version', parseVersion: '@adobe/aio-cli/(\\S+)' },
+        } as PrerequisiteDefinition;
+
+        beforeEach(() => {
+            // aio answers 0 under every Node: a copy elsewhere on the PATH would.
+            mockCommandExecutor.execute.mockImplementation((cmd: string) =>
+                Promise.resolve(
+                    createCommandResult(cmd === 'fnm list' ? 'v20.0.0\nv24.0.0' : '@adobe/aio-cli/10.0.0')
+                )
+            );
+        });
+
+        it('a 0 exit from a copy under another Node is NOT installed for this one', async () => {
+            jest.mocked(toolInstalledUnder).mockImplementation((_exec, major) =>
+                Promise.resolve(major === '20')
+            );
+
+            const result = await checkPerNodeVersionStatus(
+                prereq,
+                ['20', '24'],
+                createPrereqHandlerContext()
+            );
+
+            expect(result.perNodeVersionStatus).toEqual([
+                { version: 'Node 20', major: '20', component: '10.0.0', installed: true },
+                { version: 'Node 24', major: '24', component: '', installed: false },
+            ]);
+            expect(result.missingVariantMajors).toEqual(['24']);
+        });
+
+        it('a 0 exit with the tool beside that Node is installed', async () => {
+            jest.mocked(toolInstalledUnder).mockResolvedValue(true);
+
+            const result = await checkPerNodeVersionStatus(prereq, ['24'], createPrereqHandlerContext());
+
+            expect(result.perNodeVersionStatus).toEqual([
+                { version: 'Node 24', major: '24', component: '10.0.0', installed: true },
+            ]);
+            expect(result.missingVariantMajors).toStrictEqual([]);
+        });
+
+        it('asks with the check command\'s binary, that Node\'s major and the same executor', async () => {
+            await checkPerNodeVersionStatus(prereq, ['20', '24'], createPrereqHandlerContext());
+
+            expect(jest.mocked(toolInstalledUnder).mock.calls).toEqual([
+                [mockCommandExecutor, '20', 'aio'],
+                [mockCommandExecutor, '24', 'aio'],
+            ]);
+        });
+
+        it('is not asked when the check command itself fails', async () => {
+            mockCommandExecutor.execute.mockImplementation((cmd: string) =>
+                Promise.resolve(
+                    cmd === 'fnm list'
+                        ? createCommandResult('v24.0.0')
+                        : createCommandResult('', 'aio: command not found', 127)
+                )
+            );
+
+            const result = await checkPerNodeVersionStatus(prereq, ['24'], createPrereqHandlerContext());
+
+            expect(result.missingVariantMajors).toEqual(['24']);
+            expect(toolInstalledUnder).not.toHaveBeenCalled();
         });
     });
 });
