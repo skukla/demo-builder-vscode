@@ -4709,7 +4709,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 114,
+            "line": 116,
             "mutants": 1,
             "category": "block",
             "reason": "readOrUndefined's catch body is a single 'return undefined'. Emptying the block makes control fall off the end of the function, which returns undefined as well \u2014 the two versions produce the identical value for the identical inputs, and the function has no other effect. There is no input, and no collaborator, that can tell them apart.",
@@ -8476,7 +8476,7 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 804,
+            "line": 815,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here the step is starting the in-extension MCP server, whose failure must never abort activation.",
@@ -8501,7 +8501,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 538,
+            "line": 549,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a logger.error plus a showErrorMessage whose text is built from the error. Activation's own tests assert showErrorMessage was NOT called on every success path, which is the observable half; the wording of the message when it IS called is the rest.",
@@ -8514,7 +8514,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 895,
+            "line": 906,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here it is the manifest-format sweep.",

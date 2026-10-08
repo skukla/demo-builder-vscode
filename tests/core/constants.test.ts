@@ -136,8 +136,9 @@ describe('AI_CONTEXT_VERSION', () => {
     // v38: the bundle stops naming one agent (Copilot support).
     // v39: the ai-defaults tools install and run on Node 24 through fnm, and
     // @dropins/mcp became @dropins/ai-tools (AI-13).
-    it('is 39 (the AI tools run on the Node they need)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(39);
+    // v40: the ai-defaults tools launch from Demo Builder's Node folder (FNM_DIR in .mcp.json, PR-1a).
+    it('is 40 (the AI tools launch from Demo Builder\'s Node folder)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(40);
     });
 });
 

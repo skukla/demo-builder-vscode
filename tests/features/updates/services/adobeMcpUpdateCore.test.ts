@@ -31,7 +31,6 @@ jest.mock('@/features/project-creation/services/aiBundle/aiDefaultsInstaller', (
     // The MCP packages live in a per-project ISOLATED tools dir, never the
     // storefront's node_modules — this resolver is the single source of truth.
     resolveMcpToolsDir: (projectPath: string) => `${projectPath}/.demo-builder-mcp`,
-    AI_TOOLS_NODE_VERSION: '24',
 }));
 
 // The tools' Node, via fnm (AI-13). Stubbed: a real one runs `fnm install`.

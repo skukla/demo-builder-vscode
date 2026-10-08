@@ -1,5 +1,10 @@
 # Step 11: Cleanup
 
+**First, before any cleanup:** move the Demo Builder connection and the git-sync hook off the
+SC's PATH Node onto Demo Builder's Node folder (see step 10's note): every `resolveNodePath`
+caller, including the `~/.claude.json` entry and its activation repair (`refreshGlobalMcpEntry`).
+Otherwise the one-time cleanup can delete the Node the connection launches with.
+
 **Unused Nodes in the folder, automatically.** After an extension update, a project delete, or
 an integration removal: keep the register's Node, every installed component's recorded Node,
 and every outside integration's recorded Node, across EVERY project Demo Builder knows about;

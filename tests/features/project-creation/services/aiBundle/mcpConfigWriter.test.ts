@@ -16,7 +16,9 @@ import { FAKE_FNM, fsPromises, mockFindFnmPath, writeMcpConfigs } from './mcpCon
 import { makeEdsProject, EDS_STOREFRONT_PATH, makeHeadlessProject } from './aiBundleFixtures';
 import * as path from 'path';
 import { makeTestWriter } from './generatedFileWriter.testUtils';
+import { demoBuilderFnmDir } from '@/core/shell/nodeStore';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
+import { demoBuilderNode } from '@/features/components/services/nodeRequirements';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -135,18 +137,20 @@ describe('MCP config content', () => {
         );
 
         const config = captureWrittenConfig('.claude/mcp.json') as {
-            mcpServers: Record<string, { command: string; args: string[] }>;
+            mcpServers: Record<string, { command: string; args: string[]; env?: Record<string, string> }>;
         };
         const entry = config.mcpServers['commerce-extensibility'];
 
         expect(entry).toBeDefined();
-        // Run on the Node the tools were installed for, through fnm (AI-13).
+        // Run on Demo Builder's Node, through fnm (AI-13), from Demo Builder's Node
+        // folder: the tools are installed there, not in the SC's own fnm (PR-1a).
         expect(entry.command).toBe(FAKE_FNM);
+        expect(entry.env).toStrictEqual({ FNM_DIR: demoBuilderFnmDir() });
         // MCP tools install into the per-project isolated dir, decoupled from the
         // storefront manifest (whose `npm install` can fail on b2b dropins).
         expect(entry.args).toEqual([
             'exec',
-            '--using=24',
+            `--using=${demoBuilderNode()}`,
             'node',
             `${project.path}/.demo-builder-mcp/node_modules/@adobe-commerce/commerce-extensibility-tools/index.js`,
         ]);

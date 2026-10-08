@@ -12,3 +12,18 @@ activation sweep rewrites every existing project (`ai-context-authoring` skill: 
 
 **Tests:** the launch entries carry the folder and the Node; the proxy no longer uses
 `which node`; the sweep stamp moves.
+
+## Done 2026-10-07, and what moved to step 11
+
+Built: the ai-defaults launch lines carry `env: { FNM_DIR: <Demo Builder's Node folder> }` and
+run on `demoBuilderNode()`; the copied `AI_TOOLS_NODE_VERSION` constant is gone; v40 bump.
+
+**Not moved here, on purpose:** the Demo Builder connection (the MCP proxy entry) and the
+git-sync hook still launch with the SC's PATH Node (`resolveNodePath`: `which node` + realpath,
+else VS Code's own binary). Any Node runs them, so nothing is broken today. But
+`resolveNodePath` has five callers, one of them the entry written into the SC's own
+`~/.claude.json` (`globalMcpRegistration.ts`), so moving it is its own careful change. It MUST
+happen before step 11's one-time cleanup ships: that cleanup removes Node versions from the
+SC's own fnm, which can include the exact Node the connection's path points to. Step 11 starts
+with it.
+
