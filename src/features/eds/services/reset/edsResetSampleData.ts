@@ -9,6 +9,7 @@
  * @module features/eds/services/reset/edsResetSampleData
  */
 
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import type { ReportStage } from '@/core/vscode/withOperationProgress';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
@@ -126,7 +127,7 @@ export async function removeProjectSampleData(
     report: ReportStage,
 ): Promise<void> {
     try {
-        report('Removing the sample data');
+        report(OPERATION_STAGES.removingDatapack.label);
 
         const { removeSampleData } = await import(
             '@/features/data-installer/services/sampleDataInstall'
@@ -144,7 +145,7 @@ export async function removeProjectSampleData(
                 project,
                 (sd) =>
                     report(
-                        'Removing the sample data',
+                        OPERATION_STAGES.removingDatapack.label,
                         sd.processing.length > 0 ? sd.processing.join(', ') : undefined,
                         { index: sd.done, total: sd.total },
                     ),

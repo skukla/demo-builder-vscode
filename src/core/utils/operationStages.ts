@@ -243,6 +243,11 @@ export const OPERATION_STAGES = {
         expectation: 'Minutes, depending on the pack',
         detail: 'Into your Commerce instance',
     },
+    removingDatapack: {
+        label: 'Removing the sample data',
+        expectation: 'Minutes, depending on the pack',
+        detail: 'From your Commerce instance',
+    },
     applyingChanges: {
         label: 'Applying the changes',
         expectation: 'Usually under a minute',

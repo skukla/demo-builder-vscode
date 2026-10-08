@@ -20,6 +20,9 @@ const ROOT = join(__dirname, '..', '..', '..');
  * runner's install/remove stage, and their messages carry live detail (retry rounds).
  */
 const STAGE_REPORTERS = [
+    // The reset's sample-data removal, split out of edsResetUI.ts on 2026-10-08. Until then
+    // it reported a literal, so neither file could be listed here.
+    'src/features/eds/services/reset/edsResetSampleData.ts',
     // Split out of appBuilderComponentRunner.ts (decompose-god-file, 2026-10-07); its
     // stage reports moved with the code, so the rule follows them.
     'src/features/app-builder/services/appBuilderAddRun.ts',
