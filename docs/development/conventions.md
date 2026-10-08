@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **127** conventions, **126** enforced
+- **128** conventions, **127** enforced
 - **31** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -34,6 +34,7 @@ it means the rule rests on somebody noticing.
 | Rule | Why | How | Enforced by |
 |---|---|---|---|
 | Nothing under `src/core/` imports `@/features` or `@/commands`. Enforced by the `layerDirection` ledger in `tests/sop/architecture-rules.exemptions.json` — seven predate the rule and the set may only shrink. |  |  | *named in prose* |
+| No import cycles in `src/`. A module never reaches itself through its own imports, and an `await import()` does not exempt a loop: deferring it keeps load order working and leaves the loop in place. `import type` edges do not count; they are erased at compile. When a handler or service needs something a command owns, the shared piece moves to a module both can import (`dashboard/services/projectPanelPushes.ts` is the worked example); the handler does not import the command, because the command imports the handler map. Enforced by `tests/sop/import-cycles.test.ts`, a ban with no ledger. |  |  | `import-cycles.test.ts` |
 | Features do not import other features; commands may. enforced by eslint. |  |  | `eslint.config.mjs` |
 | A module is imported by the path that DEFINES the symbol. No re-export-only `index.ts` — not in `core/`, not in a feature. **The ledger is CLOSED**: all 43 that predated the rule were retired on 2026-08-31, so this is now a ban with nowhere to write an exception down. Enforced by `tests/sop/architecture-rules.test.ts` through `expectBanned`, which asserts both halves: no violations, AND no ledger key to write one into. > That second half arrived on 2026-09-01, and this entry is why it was needed. It already SAID "a ban with nowhere to write an exception down" while `reExportIndex: {}` and `featureBarrels: {}` sat in the exemptions file — empty, but still keys. An empty ledger already fails a new violation, so nothing was undetected; what remained was the SLOT. The next person to trip the rule could add a row with a reason and stay green, and the rule would quietly go back to being negotiable. Seven rules that had reached zero were in that state; all seven are now banned outright, and re-adding an exemption to any of them fails the build naming the rule. | [ADR](../architecture/adr/022-barrel-files.md) |  | `architecture-rules.test.ts` |
 | A PascalCase `.tsx` exports a component of that name, and an exported ALL-CAPS const is `UPPER_SNAKE_CASE`. Files are otherwise named for their SUBJECT — `WizardContainer.tsx`, `loadingHTML.ts`, `commerceSections.ts`. |  |  | `naming-conventions.test.ts` |
