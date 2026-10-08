@@ -72,6 +72,8 @@ jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
         tokenProvider,
         mockType: 'DaLiveContentOperations',
     })),
+}));
+jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
     createDaLiveTokenProvider: jest.fn().mockReturnValue({
         getAccessToken: jest.fn().mockResolvedValue('mock-token'),
     }),

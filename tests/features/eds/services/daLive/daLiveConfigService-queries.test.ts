@@ -19,7 +19,7 @@ import {
     testToken,
     type MultiSheetConfig,
 } from './daLiveConfigService.testUtils';
-import type { TokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
+import type { TokenProvider } from '@/features/eds/services/daLive/daLiveApiClient';
 
 describe('DaLiveConfigService - queries & access', () => {
     let service: DaLiveConfigService;

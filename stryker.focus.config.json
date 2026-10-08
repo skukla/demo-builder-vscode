@@ -8,11 +8,8 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/ui/wizard/WizardContainer.tsx",
-        "src/features/project-creation/ui/hooks/useWizardSettings.ts",
-        "src/features/project-creation/ui/hooks/useWizardCatalog.ts",
-        "src/features/project-creation/ui/wizard/architectureChange.ts",
-        "src/features/project-creation/ui/wizard/wizardFooter.tsx"
+        "src/features/eds/services/daLive/daLiveContentOperations.ts",
+        "src/features/eds/services/daLive/daLiveTokenProviders.ts"
     ],
     "reporters": [
         "clear-text",

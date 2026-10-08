@@ -22,7 +22,8 @@ import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
-import { DaLiveContentOperations, type TokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { type TokenProvider } from '@/features/eds/services/daLive/daLiveApiClient';
+import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
 import { DaLiveOrgOperations } from '@/features/eds/services/daLive/daLiveOrgOperations';
 import { firstUsableDaLiveToken } from '@/features/eds/services/daLive/daLiveTokenChain';
 import { projectsSharingRepo } from '@/features/eds/services/storefront/sharedRepoProjects';
@@ -352,7 +353,7 @@ export function registerCloudResourceTools(
                                     ctx.context.secrets,
                                     ctx.context.globalState,
                                 ),
-                            makeContentOps: () => ops.content,
+                            makeContentOps: () => ops.content.sourceOps,
                             // A site, not a project, is being acted on (EDS-26).
                             otherProjectsOnRepo: (repo) => projectsSharingRepo(ctx.stateManager, repo),
                         },

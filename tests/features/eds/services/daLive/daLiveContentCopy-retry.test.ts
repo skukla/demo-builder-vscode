@@ -27,10 +27,8 @@ jest.mock('@/core/utils/timeFormatting', () => ({
     formatDuration: jest.fn().mockReturnValue('0ms'),
 }));
 
-import {
-    DaLiveContentOperations,
-    type TokenProvider,
-} from '@/features/eds/services/daLive/daLiveContentOperations';
+import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { type TokenProvider } from '@/features/eds/services/daLive/daLiveApiClient';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
@@ -98,7 +96,7 @@ describe('DaLiveContentCopy — write retry contract', () => {
     it('retries a transient 503 on the DA.live POST with a FRESH FormData and succeeds', async () => {
         const { posts } = setupWithPostStatuses([503, 200]);
 
-        const result = await service.copyContent(source, destination);
+        const result = await service.copyOps.copyContent(source, destination);
 
         expect(result.success).toBe(true);
         expect(posts).toHaveLength(2);
@@ -111,7 +109,7 @@ describe('DaLiveContentCopy — write retry contract', () => {
     it('skips the page on 429 (returns unsuccessful copy) instead of aborting the run', async () => {
         const { posts } = setupWithPostStatuses([429]);
 
-        const result = await service.copyContent(source, destination);
+        const result = await service.copyOps.copyContent(source, destination);
 
         // Page-level tolerance: the copy reports the failure, no throw.
         expect(result.success).toBe(false);
@@ -121,7 +119,7 @@ describe('DaLiveContentCopy — write retry contract', () => {
     it('gives up after exhausting retries on persistent 5xx (no infinite loop)', async () => {
         const { posts } = setupWithPostStatuses([503]);
 
-        const result = await service.copyContent(source, destination);
+        const result = await service.copyOps.copyContent(source, destination);
 
         expect(result.success).toBe(false);
         // MAX_RETRY_ATTEMPTS from daLiveConstants is 3.

@@ -19,10 +19,8 @@
  */
 
 import { mockFetch } from './daLiveContentOperations.testUtils';
-import {
-    DaLiveContentOperations,
-    type TokenProvider,
-} from '@/features/eds/services/daLive/daLiveContentOperations';
+import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { type TokenProvider } from '@/features/eds/services/daLive/daLiveApiClient';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
@@ -30,7 +28,7 @@ global.fetch = mockFetch;
 
 interface FetchCall { 0: string; 1?: RequestInit }
 
-describe('DaLiveContentOperations.appendBlockToLibrary', () => {
+describe('DaLiveContentOperations.blockLibOps.appendBlockToLibrary', () => {
     let service: DaLiveContentOperations;
     let mockTokenProvider: TokenProvider;
     let mockLogger: Logger;
@@ -171,7 +169,7 @@ describe('DaLiveContentOperations.appendBlockToLibrary', () => {
     it('creates new .da/library/blocks.json with one row when sheet does not exist (404)', async () => {
         mockFetch.mockImplementation(buildMockFetch({ existingRows: undefined }));
 
-        const result = await service.appendBlockToLibrary(org, site, {
+        const result = await service.blockLibOps.appendBlockToLibrary(org, site, {
             blockId,
             title,
         });
@@ -196,7 +194,7 @@ describe('DaLiveContentOperations.appendBlockToLibrary', () => {
         ];
         mockFetch.mockImplementation(buildMockFetch({ existingRows }));
 
-        const result = await service.appendBlockToLibrary(org, site, {
+        const result = await service.blockLibOps.appendBlockToLibrary(org, site, {
             blockId,
             title,
         });
@@ -216,7 +214,7 @@ describe('DaLiveContentOperations.appendBlockToLibrary', () => {
         ];
         mockFetch.mockImplementation(buildMockFetch({ existingRows }));
 
-        const result = await service.appendBlockToLibrary(org, site, {
+        const result = await service.blockLibOps.appendBlockToLibrary(org, site, {
             blockId,
             title,
         });
@@ -229,7 +227,7 @@ describe('DaLiveContentOperations.appendBlockToLibrary', () => {
     it('re-invokes updateSiteConfig with title "Blocks" on every call (idempotent registration)', async () => {
         mockFetch.mockImplementation(buildMockFetch({ existingRows: [] }));
 
-        await service.appendBlockToLibrary(org, site, { blockId, title });
+        await service.blockLibOps.appendBlockToLibrary(org, site, { blockId, title });
 
         const configPost = mockFetch.mock.calls.find(
             (call: FetchCall) =>
@@ -253,7 +251,7 @@ describe('DaLiveContentOperations.appendBlockToLibrary', () => {
         ];
         mockFetch.mockImplementation(buildMockFetch({ existingRows }));
 
-        await service.appendBlockToLibrary(org, site, { blockId, title });
+        await service.blockLibOps.appendBlockToLibrary(org, site, { blockId, title });
 
         const deleteCalls = mockFetch.mock.calls.filter(
             (call: FetchCall) => call[1]?.method === 'DELETE',
@@ -267,7 +265,7 @@ describe('DaLiveContentOperations.appendBlockToLibrary', () => {
         );
 
         await expect(
-            service.appendBlockToLibrary(org, site, { blockId, title }),
+            service.blockLibOps.appendBlockToLibrary(org, site, { blockId, title }),
         ).rejects.toThrow();
 
         // No write attempted.
@@ -277,7 +275,7 @@ describe('DaLiveContentOperations.appendBlockToLibrary', () => {
     it('the new row path uses content.da.live/{org}/{site}/.da/library/blocks/{blockId} exactly', async () => {
         mockFetch.mockImplementation(buildMockFetch({ existingRows: [] }));
 
-        await service.appendBlockToLibrary(org, site, {
+        await service.blockLibOps.appendBlockToLibrary(org, site, {
             blockId: 'my-cool-block',
             title: 'My Cool Block',
         });

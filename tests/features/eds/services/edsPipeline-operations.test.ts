@@ -52,23 +52,27 @@ describe('executeEdsPipeline - operations', () => {
         jest.clearAllMocks();
 
         mockDaLiveContentOps = {
-            copyContentFromSource: jest.fn().mockResolvedValue({
-                success: true,
-                totalFiles: 42,
-                copiedFiles: Array(42).fill('/page'),
-                failedFiles: [],
-            }),
-            createBlockLibraryFromTemplate: jest.fn().mockResolvedValue({
-                success: true,
-                blocksCount: 5,
-                paths: ['/.da/library/blocks.json', '/.da/library/blocks/hero'],
-            }),
-            copyContent: jest.fn().mockResolvedValue({
-                success: true,
-                copiedFiles: [],
-                failedFiles: [],
-                totalFiles: 0,
-            }),
+            copyOps: {
+                copyContentFromSource: jest.fn().mockResolvedValue({
+                    success: true,
+                    totalFiles: 42,
+                    copiedFiles: Array(42).fill('/page'),
+                    failedFiles: [],
+                }),
+                copyContent: jest.fn().mockResolvedValue({
+                    success: true,
+                    copiedFiles: [],
+                    failedFiles: [],
+                    totalFiles: 0,
+                }),
+            },
+            blockLibOps: {
+                createBlockLibraryFromTemplate: jest.fn().mockResolvedValue({
+                    success: true,
+                    blocksCount: 5,
+                    paths: ['/.da/library/blocks.json', '/.da/library/blocks/hero'],
+                }),
+            },
         } as unknown as EdsPipelineServices['daLiveContentOps'];
 
         mockGithubFileOps = {
@@ -97,7 +101,7 @@ describe('executeEdsPipeline - operations', () => {
 
             expect(result.success).toBe(true);
             expect(result.contentFilesCopied).toBe(0);
-            expect(mockDaLiveContentOps.copyContentFromSource).not.toHaveBeenCalled();
+            expect(mockDaLiveContentOps.copyOps.copyContentFromSource).not.toHaveBeenCalled();
         });
 
         it('should copy content when source is provided', async () => {
@@ -109,7 +113,7 @@ describe('executeEdsPipeline - operations', () => {
 
             expect(result.success).toBe(true);
             expect(result.contentFilesCopied).toBe(42);
-            expect(mockDaLiveContentOps.copyContentFromSource).toHaveBeenCalledWith(
+            expect(mockDaLiveContentOps.copyOps.copyContentFromSource).toHaveBeenCalledWith(
                 expect.objectContaining({
                     org: 'src-org',
                     site: 'src-site',
@@ -136,7 +140,7 @@ describe('executeEdsPipeline - operations', () => {
             );
 
             expect(result.success).toBe(true);
-            expect(mockDaLiveContentOps.copyContentFromSource).toHaveBeenCalledWith(
+            expect(mockDaLiveContentOps.copyOps.copyContentFromSource).toHaveBeenCalledWith(
                 expect.objectContaining({
                     indexUrl: 'https://main--src-site--src-org.aem.live/custom-index.json',
                 }),
@@ -160,7 +164,7 @@ describe('executeEdsPipeline - operations', () => {
                 services,
             );
 
-            expect(mockDaLiveContentOps.copyContentFromSource).toHaveBeenCalledWith(
+            expect(mockDaLiveContentOps.copyOps.copyContentFromSource).toHaveBeenCalledWith(
                 expect.anything(),
                 expect.anything(),
                 expect.anything(),
@@ -183,7 +187,7 @@ describe('executeEdsPipeline - operations', () => {
         });
 
         it('should fail when content copy returns failure', async () => {
-            (mockDaLiveContentOps.copyContentFromSource as jest.Mock).mockResolvedValue({
+            (mockDaLiveContentOps.copyOps.copyContentFromSource as jest.Mock).mockResolvedValue({
                 success: false,
                 totalFiles: 10,
                 copiedFiles: [],
@@ -209,7 +213,7 @@ describe('executeEdsPipeline - operations', () => {
 
             expect(result.success).toBe(true);
             expect(result.libraryPaths).toStrictEqual([]);
-            expect(mockDaLiveContentOps.createBlockLibraryFromTemplate).not.toHaveBeenCalled();
+            expect(mockDaLiveContentOps.blockLibOps.createBlockLibraryFromTemplate).not.toHaveBeenCalled();
         });
 
         it('should use template repo without blockCollectionIds', async () => {
@@ -219,7 +223,7 @@ describe('executeEdsPipeline - operations', () => {
             );
 
             expect(result.success).toBe(true);
-            expect(mockDaLiveContentOps.createBlockLibraryFromTemplate).toHaveBeenCalledWith(
+            expect(mockDaLiveContentOps.blockLibOps.createBlockLibraryFromTemplate).toHaveBeenCalledWith(
                 'test-org',
                 'test-site',
                 'template-owner',
@@ -238,7 +242,7 @@ describe('executeEdsPipeline - operations', () => {
             );
 
             expect(result.success).toBe(true);
-            expect(mockDaLiveContentOps.createBlockLibraryFromTemplate).toHaveBeenCalledWith(
+            expect(mockDaLiveContentOps.blockLibOps.createBlockLibraryFromTemplate).toHaveBeenCalledWith(
                 'test-org',
                 'test-site',
                 'test-owner',   // user's repo, not template
@@ -260,15 +264,15 @@ describe('executeEdsPipeline - operations', () => {
             );
 
             // copyContent called for each source (DA.live API enumeration)
-            expect(mockDaLiveContentOps.copyContent).toHaveBeenCalledTimes(2);
-            expect(mockDaLiveContentOps.copyContent).toHaveBeenCalledWith(
+            expect(mockDaLiveContentOps.copyOps.copyContent).toHaveBeenCalledTimes(2);
+            expect(mockDaLiveContentOps.copyOps.copyContent).toHaveBeenCalledWith(
                 { org: 'demo-system-stores', site: 'accs-citisignal', path: '.da/library/blocks' },
                 { org: 'test-org', site: 'test-site', path: '.da/library/blocks' },
                 { recursive: true },
             );
 
             // libraryContentSources also forwarded for CDN fallback
-            expect(mockDaLiveContentOps.createBlockLibraryFromTemplate).toHaveBeenCalledWith(
+            expect(mockDaLiveContentOps.blockLibOps.createBlockLibraryFromTemplate).toHaveBeenCalledWith(
                 'test-org', 'test-site', 'template-owner', 'template-repo',
                 expect.any(Function),
                 libraryContentSources,
@@ -277,7 +281,7 @@ describe('executeEdsPipeline - operations', () => {
         });
 
         it('should swallow 403 from copyContent and continue (CDN fallback)', async () => {
-            (mockDaLiveContentOps.copyContent as jest.Mock).mockRejectedValue(
+            (mockDaLiveContentOps.copyOps.copyContent as jest.Mock).mockRejectedValue(
                 new DaLiveError('Access denied when trying to list directory.', 'HTTP_403', 403),
             );
 
@@ -292,7 +296,7 @@ describe('executeEdsPipeline - operations', () => {
             // Pipeline succeeds despite 403
             expect(result.success).toBe(true);
             // createBlockLibraryFromTemplate still called with sources for CDN fallback
-            expect(mockDaLiveContentOps.createBlockLibraryFromTemplate).toHaveBeenCalledWith(
+            expect(mockDaLiveContentOps.blockLibOps.createBlockLibraryFromTemplate).toHaveBeenCalledWith(
                 expect.anything(), expect.anything(), expect.anything(), expect.anything(),
                 expect.any(Function),
                 libraryContentSources,
@@ -301,7 +305,7 @@ describe('executeEdsPipeline - operations', () => {
         });
 
         it('should propagate non-403 errors from copyContent', async () => {
-            (mockDaLiveContentOps.copyContent as jest.Mock).mockRejectedValue(
+            (mockDaLiveContentOps.copyOps.copyContent as jest.Mock).mockRejectedValue(
                 new Error('Network failure'),
             );
 
@@ -321,7 +325,7 @@ describe('executeEdsPipeline - operations', () => {
                 services,
             );
 
-            expect(mockDaLiveContentOps.copyContent).not.toHaveBeenCalled();
+            expect(mockDaLiveContentOps.copyOps.copyContent).not.toHaveBeenCalled();
         });
 
         it('should include library paths in result', async () => {
@@ -483,7 +487,7 @@ describe('executeEdsPipeline - operations', () => {
         });
 
         it('should not publish when no library paths', async () => {
-            (mockDaLiveContentOps.createBlockLibraryFromTemplate as jest.Mock).mockResolvedValue({
+            (mockDaLiveContentOps.blockLibOps.createBlockLibraryFromTemplate as jest.Mock).mockResolvedValue({
                 success: true,
                 blocksCount: 0,
                 paths: [],
@@ -513,7 +517,7 @@ describe('executeEdsPipeline - operations', () => {
     describe('DaLiveAuthError propagation', () => {
         it('should re-throw DaLiveAuthError instead of swallowing it', async () => {
             // Given: Content copy throws DaLiveAuthError (token expired mid-pipeline)
-            (mockDaLiveContentOps.copyContentFromSource as jest.Mock).mockRejectedValue(
+            (mockDaLiveContentOps.copyOps.copyContentFromSource as jest.Mock).mockRejectedValue(
                 new DaLiveAuthError('DA.live token expired during content copy'),
             );
 
@@ -528,7 +532,7 @@ describe('executeEdsPipeline - operations', () => {
 
         it('should still swallow non-auth errors into result', async () => {
             // Given: Content copy throws a generic error
-            (mockDaLiveContentOps.copyContentFromSource as jest.Mock).mockRejectedValue(
+            (mockDaLiveContentOps.copyOps.copyContentFromSource as jest.Mock).mockRejectedValue(
                 new Error('Network failure'),
             );
 

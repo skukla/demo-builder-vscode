@@ -12,7 +12,8 @@ jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(unde
 
 import { mockFetch } from './daLiveContentOperations.testUtils';
 import type { DaLiveContentDiscovery } from '@/features/eds/services/daLive/daLiveContentDiscovery';
-import { DaLiveContentOperations, type TokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { type TokenProvider } from '@/features/eds/services/daLive/daLiveApiClient';
 import { DaLiveAuthError } from '@/features/eds/services/types';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
@@ -103,7 +104,7 @@ describe('DaLiveContentOperations - 401 Token Expiration', () => {
             setupCopySingleFileMock(401);
 
             await expect(
-                service.copyContent(source, destination),
+                service.copyOps.copyContent(source, destination),
             ).rejects.toThrow(DaLiveAuthError);
         });
 
@@ -111,7 +112,7 @@ describe('DaLiveContentOperations - 401 Token Expiration', () => {
             setupCopySingleFileMock(401);
 
             await expect(
-                service.copyContent(source, destination),
+                service.copyOps.copyContent(source, destination),
             ).rejects.toThrow('DA.live token expired during content copy');
         });
 
@@ -119,7 +120,7 @@ describe('DaLiveContentOperations - 401 Token Expiration', () => {
             setupCopySingleFileMock(401);
 
             try {
-                await service.copyContent(source, destination);
+                await service.copyOps.copyContent(source, destination);
             } catch {
                 // Expected to throw
             }
@@ -147,7 +148,7 @@ describe('DaLiveContentOperations - 401 Token Expiration', () => {
                 return mockFetchResponse(404);
             });
 
-            const result = await service.copyContent(source, destination);
+            const result = await service.copyOps.copyContent(source, destination);
 
             // Should have retried (3 attempts = MAX_RETRY_ATTEMPTS)
             const postCalls = mockFetch.mock.calls.filter(
@@ -172,7 +173,7 @@ describe('DaLiveContentOperations - 401 Token Expiration', () => {
                 return mockFetchResponse(404);
             });
 
-            const result = await service.copyContent(source, destination);
+            const result = await service.copyOps.copyContent(source, destination);
 
             const postCalls = mockFetch.mock.calls.filter(
                 (call: [string, RequestInit?]) =>
@@ -196,7 +197,7 @@ describe('DaLiveContentOperations - 401 Token Expiration', () => {
                 return mockFetchResponse(404);
             });
 
-            const result = await service.copyContent(source, destination);
+            const result = await service.copyOps.copyContent(source, destination);
 
             const postCalls = mockFetch.mock.calls.filter(
                 (call: [string, RequestInit?]) =>
@@ -209,7 +210,7 @@ describe('DaLiveContentOperations - 401 Token Expiration', () => {
         it('should return success on 200 response (regression)', async () => {
             setupCopySingleFileMock(200);
 
-            const result = await service.copyContent(source, destination);
+            const result = await service.copyOps.copyContent(source, destination);
 
             expect(result.success).toBe(true);
             expect(result.copiedFiles).toContain('/about');
@@ -218,7 +219,7 @@ describe('DaLiveContentOperations - 401 Token Expiration', () => {
         it('should return false on 400 response without retry (regression)', async () => {
             setupCopySingleFileMock(400);
 
-            const result = await service.copyContent(source, destination);
+            const result = await service.copyOps.copyContent(source, destination);
 
             expect(result.success).toBe(false);
             const postCalls = mockFetch.mock.calls.filter(
@@ -231,7 +232,7 @@ describe('DaLiveContentOperations - 401 Token Expiration', () => {
         it('should return false on 403 response without retry (regression)', async () => {
             setupCopySingleFileMock(403);
 
-            const result = await service.copyContent(source, destination);
+            const result = await service.copyOps.copyContent(source, destination);
 
             expect(result.success).toBe(false);
         });
@@ -239,7 +240,7 @@ describe('DaLiveContentOperations - 401 Token Expiration', () => {
         it('should return false on 500 response without retry (regression)', async () => {
             setupCopySingleFileMock(500);
 
-            const result = await service.copyContent(source, destination);
+            const result = await service.copyOps.copyContent(source, destination);
 
             expect(result.success).toBe(false);
         });
@@ -305,7 +306,7 @@ describe('DaLiveContentOperations - 401 Token Expiration', () => {
             jest.spyOn(discovery, 'getContentPathsFromDaLive').mockResolvedValue(paths);
             setupContentSourceMock(paths);
 
-            await service.copyContentFromSource(source, destOrg, destSite);
+            await service.copyOps.copyContentFromSource(source, destOrg, destSite);
 
             // Should be called exactly 2 times (once per batch)
             expect(mockTokenProvider.getAccessToken).toHaveBeenCalledTimes(2);
@@ -323,7 +324,7 @@ describe('DaLiveContentOperations - 401 Token Expiration', () => {
             jest.spyOn(discovery, 'getContentPathsFromDaLive').mockResolvedValue(paths);
             setupContentSourceMock(paths);
 
-            await service.copyContentFromSource(source, destOrg, destSite);
+            await service.copyOps.copyContentFromSource(source, destOrg, destSite);
 
             // Verify batch 1 used 'token-batch-1' (first 5 POST calls)
             const postCalls = mockFetch.mock.calls.filter(
@@ -350,7 +351,7 @@ describe('DaLiveContentOperations - 401 Token Expiration', () => {
             setupContentSourceMock(paths, 401);
 
             await expect(
-                service.copyContentFromSource(source, destOrg, destSite),
+                service.copyOps.copyContentFromSource(source, destOrg, destSite),
             ).rejects.toThrow(DaLiveAuthError);
         });
 
@@ -361,7 +362,7 @@ describe('DaLiveContentOperations - 401 Token Expiration', () => {
             jest.spyOn(discovery, 'getContentPathsFromDaLive').mockResolvedValue(paths);
             setupContentSourceMock(paths);
 
-            await service.copyContentFromSource(source, destOrg, destSite);
+            await service.copyOps.copyContentFromSource(source, destOrg, destSite);
 
             // Should be called exactly 1 time (one batch)
             expect(mockTokenProvider.getAccessToken).toHaveBeenCalledTimes(1);

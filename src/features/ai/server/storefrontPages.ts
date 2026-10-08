@@ -11,10 +11,8 @@
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { createCatalogMenuSite } from '@/features/eds/services/catalogMenu/catalogMenuSiteDeps';
 import type { CatalogMenuSite } from '@/features/eds/services/catalogMenu/catalogMenuStep';
-import {
-    DaLiveContentOperations,
-    createDaLiveServiceTokenProvider,
-} from '@/features/eds/services/daLive/daLiveContentOperations';
+import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveTokenProviders';
 import { HelixService } from '@/features/eds/services/helix/helixService';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
@@ -97,7 +95,7 @@ export function catalogMenuSiteFor(ctx: HandlerContext, project: Project): Catal
     return createCatalogMenuSite({
         project,
         target,
-        daLive: daLiveOps(ctx),
+        daLive: daLiveOps(ctx).sourceOps,
         helix: helixFor(ctx),
         github: getGitHubServices(ctx.context.secrets).fileOperations,
     });

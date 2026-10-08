@@ -19,7 +19,7 @@
  * @module features/eds/services/daLive/daLiveConfigService
  */
 
-import { DaLiveApiClient } from './daLiveApiClient';
+import { DaLiveApiClient, type TokenProvider } from './daLiveApiClient';
 import type {
     ContentReader,
     GrantAccessResult,
@@ -27,7 +27,6 @@ import type {
     MultiSheetConfig,
 } from './daLiveConfigTypes';
 import { DA_LIVE_BASE_URL } from './daLiveConstants';
-import type { TokenProvider } from './daLiveContentOperations';
 import { DaLiveContentReaders } from './daLiveContentReaders';
 import { DaLiveSiteAccess } from './daLiveSiteAccess';
 import type { Logger } from '@/types/logger';

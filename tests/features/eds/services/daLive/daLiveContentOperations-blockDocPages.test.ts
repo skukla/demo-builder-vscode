@@ -98,7 +98,7 @@ describe('createBlockLibraryFromTemplate', () => {
                 createSucceeds: true,
             }));
 
-            const result = await service.createBlockLibraryFromTemplate(
+            const result = await service.blockLibOps.createBlockLibraryFromTemplate(
                 destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
             );
 
@@ -131,7 +131,7 @@ describe('createBlockLibraryFromTemplate', () => {
                 createSucceeds: true,
             }));
 
-            const result = await service.createBlockLibraryFromTemplate(
+            const result = await service.blockLibOps.createBlockLibraryFromTemplate(
                 destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
             );
 
@@ -155,7 +155,7 @@ describe('createBlockLibraryFromTemplate', () => {
                 createSucceeds: true,
             }));
 
-            const result = await service.createBlockLibraryFromTemplate(
+            const result = await service.blockLibOps.createBlockLibraryFromTemplate(
                 destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
             );
 
@@ -211,7 +211,7 @@ describe('createBlockLibraryFromTemplate', () => {
                 return { ok: true, status: 200 } as Response;
             });
 
-            const result = await service.createBlockLibraryFromTemplate(
+            const result = await service.blockLibOps.createBlockLibraryFromTemplate(
                 destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
             );
 
@@ -263,7 +263,7 @@ describe('createBlockLibraryFromTemplate', () => {
                 return { ok: true, status: 200 } as Response;
             });
 
-            await service.createBlockLibraryFromTemplate(
+            await service.blockLibOps.createBlockLibraryFromTemplate(
                 destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
             );
 

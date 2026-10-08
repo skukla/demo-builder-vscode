@@ -7,7 +7,7 @@
  * constrain. `deleteAllSiteContent` is a method on the class and stayed behind.
  */
 
-import { filterProductOverlays } from '@/features/eds/services/daLive/daLiveContentCopy';
+import { filterProductOverlays } from '@/features/eds/services/daLive/daLiveContentReferences';
 
 describe('filterProductOverlays', () => {
     it('should keep /products/default', () => {

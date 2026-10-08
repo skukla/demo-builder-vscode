@@ -14,7 +14,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getGitHubServices: jest.fn(() => ({ tokenService: { getUserEmails: () => mockGitHubEmails() } })),
 }));
 
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
     createDaLiveServiceTokenProvider: jest.fn(() => ({
         getAccessToken: jest.fn().mockResolvedValue('ims-token'),
     })),
@@ -308,7 +308,7 @@ describe('canManage never contradicts the status', () => {
     it('listSiteAccess reports no_credential rather than a generic failure', async () => {
         // A signed-out user must be told to sign in, not to read the Debug Logs.
         const { createDaLiveServiceTokenProvider } = jest.requireMock(
-            '@/features/eds/services/daLive/daLiveContentOperations',
+            '@/features/eds/services/daLive/daLiveTokenProviders',
         );
         createDaLiveServiceTokenProvider.mockReturnValueOnce({
             getAccessToken: jest.fn().mockResolvedValue(null),

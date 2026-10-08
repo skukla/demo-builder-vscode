@@ -93,7 +93,7 @@ import {
     registerNewCategoryPagesWatch,
 } from '@/features/eds/handlers/newCategoryPagesWatch';
 import { DaLiveAuthService } from '@/features/eds/services/daLive/daLiveAuthService';
-import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveTokenProviders';
 import { registerEwSettingChangeListener } from '@/features/eds/services/ewSettingChangeListener';
 import { HelixService } from '@/features/eds/services/helix/helixService';
 import { renewPublishKeys } from '@/features/eds/services/pdp/publishKeyRenewalSweep';

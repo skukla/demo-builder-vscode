@@ -11,7 +11,7 @@
 
 import * as vscode from 'vscode';
 import { DaLiveAuthService } from '../services/daLive/daLiveAuthService';
-import { createDaLiveServiceTokenProvider } from '../services/daLive/daLiveContentOperations';
+import { createDaLiveServiceTokenProvider } from '../services/daLive/daLiveTokenProviders';
 import { GitHubFileOperations } from '../services/github/githubFileOperations';
 import { GitHubOAuthService } from '../services/github/githubOAuthService';
 import type { GitHubRepoArchive } from '../services/github/githubRepoArchive';

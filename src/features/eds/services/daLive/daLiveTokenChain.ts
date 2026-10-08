@@ -14,7 +14,8 @@
  * @module features/eds/services/daLive/daLiveTokenChain
  */
 
-import { createDaLiveServiceTokenProvider, type TokenProvider } from './daLiveContentOperations';
+import { type TokenProvider } from './daLiveApiClient';
+import { createDaLiveServiceTokenProvider } from './daLiveTokenProviders';
 
 export interface DaLiveTokenSources {
     daLiveSession: () => { getAccessToken(): Promise<string | null> };

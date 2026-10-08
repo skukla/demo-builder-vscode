@@ -21,7 +21,7 @@
 
 import { createMockLogger } from '../../../../helpers/loggerFake';
 import { DaLiveConfigService } from '@/features/eds/services/daLive/daLiveConfigService';
-import type { TokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
+import type { TokenProvider } from '@/features/eds/services/daLive/daLiveApiClient';
 
 /**
  * The global `fetch` stub. This service talks to `admin.da.live` over HTTP and

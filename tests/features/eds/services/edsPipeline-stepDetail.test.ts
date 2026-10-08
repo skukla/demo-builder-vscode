@@ -74,12 +74,20 @@ describe('executeEdsPipeline - step detail', () => {
 
         services = pipelineServices({
             daLiveContentOps: {
-                copyContentFromSource: mockCopyContentFromSource,
-                overlayAccountChrome: mockOverlayAccountChrome,
-                createBlockLibraryFromTemplate: mockCreateBlockLibrary,
-                copyContent: mockCopyContent,
-                readSiteConfigForDiagnostics: mockReadSiteConfig,
-                deleteAllSiteContent: jest.fn(),
+                copyOps: {
+                    copyContentFromSource: mockCopyContentFromSource,
+                    overlayAccountChrome: mockOverlayAccountChrome,
+                    copyContent: mockCopyContent,
+                },
+                blockLibOps: {
+                    createBlockLibraryFromTemplate: mockCreateBlockLibrary,
+                },
+                configOps: {
+                    readSiteConfigForDiagnostics: mockReadSiteConfig,
+                },
+                sourceOps: {
+                    deleteAllSiteContent: jest.fn(),
+                },
             },
             githubFileOps: { getFileContent: mockGetFileContent },
             helixService: {

@@ -26,8 +26,10 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 }));
 
 jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
-    createDaLiveServiceTokenProvider: jest.fn(() => ({})),
     DaLiveContentOperations: jest.fn().mockImplementation(() => ({})),
+}));
+jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
+    createDaLiveServiceTokenProvider: jest.fn(() => ({})),
 }));
 
 const mockInstallQuickEdit = jest.fn().mockResolvedValue({ installed: true });

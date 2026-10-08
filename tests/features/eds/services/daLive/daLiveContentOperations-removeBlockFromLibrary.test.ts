@@ -19,10 +19,8 @@
  */
 
 import { mockFetch } from './daLiveContentOperations.testUtils';
-import {
-    DaLiveContentOperations,
-    type TokenProvider,
-} from '@/features/eds/services/daLive/daLiveContentOperations';
+import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { type TokenProvider } from '@/features/eds/services/daLive/daLiveApiClient';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
@@ -30,7 +28,7 @@ global.fetch = mockFetch;
 
 interface FetchCall { 0: string; 1?: RequestInit }
 
-describe('DaLiveContentOperations.removeBlockFromLibrary', () => {
+describe('DaLiveContentOperations.blockLibOps.removeBlockFromLibrary', () => {
     let service: DaLiveContentOperations;
     let mockTokenProvider: TokenProvider;
     let mockLogger: Logger;
@@ -156,7 +154,7 @@ describe('DaLiveContentOperations.removeBlockFromLibrary', () => {
         ];
         mockFetch.mockImplementation(buildMockFetch({ existingRows, docExists: true }));
 
-        const result = await service.removeBlockFromLibrary(org, site, { blockId });
+        const result = await service.blockLibOps.removeBlockFromLibrary(org, site, { blockId });
 
         expect(result).toEqual({ docPage: 'deleted', sheet: 'removed' });
 
@@ -175,7 +173,7 @@ describe('DaLiveContentOperations.removeBlockFromLibrary', () => {
         const existingRows = [{ name: title, path: blockPath(blockId) }];
         mockFetch.mockImplementation(buildMockFetch({ existingRows, docExists: true }));
 
-        const result = await service.removeBlockFromLibrary(org, site, { blockId });
+        const result = await service.blockLibOps.removeBlockFromLibrary(org, site, { blockId });
 
         expect(result.sheet).toBe('removed');
         const rows = await extractSheetRows(findSheetPostCall()!);
@@ -190,7 +188,7 @@ describe('DaLiveContentOperations.removeBlockFromLibrary', () => {
         ];
         mockFetch.mockImplementation(buildMockFetch({ existingRows, docExists: true }));
 
-        const result = await service.removeBlockFromLibrary(org, site, { blockId });
+        const result = await service.blockLibOps.removeBlockFromLibrary(org, site, { blockId });
 
         expect(result.sheet).toBe('removed');
         const rows = await extractSheetRows(findSheetPostCall()!);
@@ -201,7 +199,7 @@ describe('DaLiveContentOperations.removeBlockFromLibrary', () => {
         const existingRows = [{ name: 'Cards', path: blockPath('cards') }];
         mockFetch.mockImplementation(buildMockFetch({ existingRows, docExists: false }));
 
-        const result = await service.removeBlockFromLibrary(org, site, { blockId });
+        const result = await service.blockLibOps.removeBlockFromLibrary(org, site, { blockId });
 
         expect(result.sheet).toBe('absent');
         expect(findSheetPostCall()).toBeUndefined();
@@ -210,7 +208,7 @@ describe('DaLiveContentOperations.removeBlockFromLibrary', () => {
     it('returns sheet:absent and does NOT rewrite when the sheet is missing (404)', async () => {
         mockFetch.mockImplementation(buildMockFetch({ existingRows: undefined, docExists: false }));
 
-        const result = await service.removeBlockFromLibrary(org, site, { blockId });
+        const result = await service.blockLibOps.removeBlockFromLibrary(org, site, { blockId });
 
         expect(result.sheet).toBe('absent');
         expect(findSheetPostCall()).toBeUndefined();
@@ -222,7 +220,7 @@ describe('DaLiveContentOperations.removeBlockFromLibrary', () => {
             buildMockFetch({ existingRows, docExists: false, docDeleteStatus: 404 }),
         );
 
-        const result = await service.removeBlockFromLibrary(org, site, { blockId });
+        const result = await service.blockLibOps.removeBlockFromLibrary(org, site, { blockId });
 
         expect(result.docPage).toBe('absent');
     });
@@ -233,7 +231,7 @@ describe('DaLiveContentOperations.removeBlockFromLibrary', () => {
             buildMockFetch({ existingRows, docExists: true, docDeleteStatus: 500 }),
         );
 
-        const result = await service.removeBlockFromLibrary(org, site, { blockId });
+        const result = await service.blockLibOps.removeBlockFromLibrary(org, site, { blockId });
 
         expect(result.docPage).toBe('failed');
     });
@@ -242,7 +240,7 @@ describe('DaLiveContentOperations.removeBlockFromLibrary', () => {
         mockFetch.mockImplementation(buildMockFetch({ existingRows: undefined, docExists: false }));
 
         await expect(
-            service.removeBlockFromLibrary(org, site, { blockId }),
+            service.blockLibOps.removeBlockFromLibrary(org, site, { blockId }),
         ).resolves.toEqual({ docPage: 'absent', sheet: 'absent' });
     });
 });

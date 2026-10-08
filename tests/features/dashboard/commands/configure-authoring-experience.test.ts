@@ -65,8 +65,10 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 }));
 
 jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
-    createDaLiveServiceTokenProvider: jest.fn(() => ({})),
     DaLiveContentOperations: jest.fn().mockImplementation(() => ({})),
+}));
+jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
+    createDaLiveServiceTokenProvider: jest.fn(() => ({})),
 }));
 
 // Quick Edit vendoring — flipping to Experience Workspace must vendor Quick Edit

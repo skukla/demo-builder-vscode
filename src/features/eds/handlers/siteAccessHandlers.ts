@@ -33,7 +33,7 @@ import {
     removeContentReader,
     type DaSiteTarget,
 } from '@/features/eds/services/daLive/contentAccessManagerHeadless';
-import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveTokenProviders';
 import { GITHUB_APP_INSTALL_URL } from '@/features/eds/services/github/githubAppService';
 import {
     ACCESS_CONFIRMED,

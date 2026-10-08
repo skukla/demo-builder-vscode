@@ -36,7 +36,7 @@ import {
     readSiteAccess,
     revokeSiteAdmin,
 } from '@/features/eds/services/configService/configServiceAccess';
-import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveTokenProviders';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { getEdsRepoParts } from '@/types/typeGuards';

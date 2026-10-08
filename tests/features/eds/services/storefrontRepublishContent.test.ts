@@ -12,6 +12,8 @@ const mockPublishAllSiteContent = jest.fn(async () => undefined);
 
 jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn(() => ({})),
+}));
+jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
     createDaLiveServiceTokenProvider: jest.fn(() => ({})),
 }));
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({

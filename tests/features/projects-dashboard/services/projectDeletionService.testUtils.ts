@@ -81,20 +81,24 @@ jest.mock('@/features/eds/services/resourceCleanupHelpers', () => ({
 // shared storefront teardown (AI-9): the same four steps the agent's cleanup
 // runs. `mockDeleteDaLiveSite` drives it, keeping every suite's setup intact.
 jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
-    createDaLiveServiceTokenProvider: () => async () => 'token',
     DaLiveContentOperations: class {
-        async deleteAllSiteContent(org: string, site: string) {
-            const result = (await mockDeleteDaLiveSite(org, site)) as
-                | { success?: boolean; error?: string; deletedCount?: number }
-                | undefined;
-            return {
-                success: result?.success ?? true,
-                deletedCount: result?.deletedCount ?? 0,
-                deletedPaths: [],
-                error: result?.error,
-            };
-        }
+        sourceOps = {
+            async deleteAllSiteContent(org: string, site: string) {
+                const result = (await mockDeleteDaLiveSite(org, site)) as
+                    | { success?: boolean; error?: string; deletedCount?: number }
+                    | undefined;
+                return {
+                    success: result?.success ?? true,
+                    deletedCount: result?.deletedCount ?? 0,
+                    deletedPaths: [],
+                    error: result?.error,
+                };
+            },
+        };
     },
+}));
+jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
+    createDaLiveServiceTokenProvider: () => async () => 'token',
 }));
 
 /**

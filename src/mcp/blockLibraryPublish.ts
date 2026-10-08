@@ -13,7 +13,7 @@
  */
 
 import type { PromoteBlockContext } from './blockAuthoring';
-import type { TokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
+import type { TokenProvider } from '@/features/eds/services/daLive/daLiveApiClient';
 import { previewAndPublishPage, unpublishPage } from '@/features/eds/services/helix/helixApiClient';
 import { syncAndPublish } from '@/features/eds/services/storefront/storefrontSyncService';
 

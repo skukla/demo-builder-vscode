@@ -26,10 +26,8 @@ import { prewarmCatalog } from '../catalogPrewarmService';
 import { generateConfigJson, buildConfigGeneratorParams } from '../configGenerator';
 import { syncConfigToRemote, verifyConfigOnCdn } from '../configSyncService';
 import type { DaLiveAuthService } from '../daLive/daLiveAuthService';
-import {
-    DaLiveContentOperations,
-    createDaLiveServiceTokenProvider,
-} from '../daLive/daLiveContentOperations';
+import { DaLiveContentOperations } from '../daLive/daLiveContentOperations';
+import { createDaLiveServiceTokenProvider } from '../daLive/daLiveTokenProviders';
 import type { GitHubFileOperations } from '../github/githubFileOperations';
 import type { GitHubTokenService } from '../github/githubTokenService';
 import { HelixService } from '../helix/helixService';
@@ -501,7 +499,7 @@ export async function republishStorefrontContent(
             createCatalogMenuSite({
                 project,
                 target: { repoOwner, repoName, daLiveOrg, daLiveSite },
-                daLive: daLiveContentOps,
+                daLive: daLiveContentOps.sourceOps,
                 helix: helixService,
                 github: params.githubFiles,
             }),

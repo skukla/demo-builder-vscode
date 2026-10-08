@@ -31,7 +31,7 @@ excluded by the scan's ignore flag and are not among the 40.
 | 5 | eds/services/github/githubHelpers.ts:58-70 | eds/services/github/githubTokenService.ts:218-230 | mapToGitHubUser | EXTRACT | byte-identical; delete the private copy, use the exported one |
 | 6 | eds/services/daLive/daLiveConfigService.ts:203-224 | same file:116-136 | read config, error wrap | EXTRACT | site and org reads differ only in URL and a word; `readConfigAt(url, label)` |
 | 7 | daLiveConfigService.ts:229-249 | same file:141-161 | PUT config via FormData | EXTRACT | same shape for update; `putConfigAt(url, label, config)` |
-| 8 | eds/services/daLive/daLiveBlockLibraryOperations.ts:62-75 | eds/services/daLive/daLiveContentOperations.ts:289-302 | createBlockLibraryFromTemplate signature | VARIANT | a one-line forwarder; only the parameter list repeats |
+| 8 | eds/services/daLive/daLiveBlockLibraryOperations.ts:62-75 | eds/services/daLive/daLiveContentOperations.ts:289-302 | createBlockLibraryFromTemplate signature | GONE | a one-line forwarder; only the parameter list repeated. Retired 2026-10-08 in the EDS-8 cut; callers use `blockLibOps` directly |
 | 9 | eds/services/daLive/daLiveApiClient.ts:125-143 | eds/services/daLive/daLiveOrgOperations.ts:263-281 | HTTP status to error | EXTRACT | `createErrorFromResponse` copied; only the 401 case differs; check every response reaching it passed the 401-throwing wrapper first |
 | 10 | eds/services/configService/siteAccessManagerHeadless.ts:313-325 | same file:274-286 | admin mutation failure mapping | EXTRACT | grant and revoke repeat resolve + "not ok" mapping + confirm; `failedMutation(result, site)`; small gain |
 | 11 | components/ui/hooks/useComponentConfig.ts:321-329 | dashboard/ui/configure/hooks/useConfigureFieldValues.ts:146-155 | updateField start | EXTRACT | the second file's header says it is a moved copy |
@@ -100,3 +100,4 @@ record why publish must not re-prompt.
 ## Shipped so far
 
 - 2026-10-08  The read: 40 pairs, 34 EXTRACT / 5 TWO COPIES / 1 VARIANT, recorded here.
+- 2026-10-08  Pair 8 gone (uncommitted on refactor/eds-8-god-files): the EDS-8 cut of daLiveContentOperations retired the forwarder; cloneCeiling 40 -> 39.

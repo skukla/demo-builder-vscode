@@ -15,11 +15,11 @@
 import * as vscode from 'vscode';
 import { CleanupService } from '../../services/cleanupService';
 import { ConfigurationService } from '../../services/configService/configurationService';
+import { DaLiveOrgOperations } from '../../services/daLive/daLiveOrgOperations';
 import {
     createDaLiveTokenProvider,
     createDaLiveServiceTokenProvider,
-} from '../../services/daLive/daLiveContentOperations';
-import { DaLiveOrgOperations } from '../../services/daLive/daLiveOrgOperations';
+} from '../../services/daLive/daLiveTokenProviders';
 import { ToolManager } from '../../services/toolManager';
 import type { EdsMetadata, EdsCleanupOptions } from '../../services/types';
 import {

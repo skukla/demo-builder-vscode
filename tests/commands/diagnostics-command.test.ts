@@ -50,7 +50,7 @@ jest.mock('@/features/eds/services/configService/configServiceProbe', () => ({
 jest.mock('@/features/eds/services/credentialServiceProbe', () => ({
     probeCredentialService: jest.fn(),
 }));
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
     createDaLiveServiceTokenProvider: jest.fn(() => mockTokenProvider),
 }));
 jest.mock('@/features/eds/services/github/githubCredentialProbe', () => ({

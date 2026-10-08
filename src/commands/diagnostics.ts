@@ -51,7 +51,7 @@ import {
     probeCredentialService,
     type CredentialServiceProbeResult,
 } from '@/features/eds/services/credentialServiceProbe';
-import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveTokenProviders';
 import {
     probeGitHubCredential,
     type CredentialProbeResult,

@@ -120,7 +120,7 @@ export async function applyDaLiveOrgConfigSettings(
         // unreachable by construction.
         const appliedKeys = Object.keys(updates);
 
-        const result = await daLiveContentOps.applySiteConfig(
+        const result = await daLiveContentOps.configOps.applySiteConfig(
             daLiveOrg,
             daLiveSite,
             updates,

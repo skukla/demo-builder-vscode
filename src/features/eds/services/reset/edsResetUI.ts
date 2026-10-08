@@ -410,7 +410,7 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
     const vscode = await import('vscode');
     const { getDaLiveAuthService, resolveByomOverlayConfig } = await import('../../handlers/edsHelpers'
     );
-    const { createDaLiveServiceTokenProvider } = await import('../daLive/daLiveContentOperations');
+    const { createDaLiveServiceTokenProvider } = await import('../daLive/daLiveTokenProviders');
     const { getMeshComponentInstance } = await import('@/types/typeGuards');
 
     // An added demo's source is checked BEFORE the first modal (decided 2026-09-11):

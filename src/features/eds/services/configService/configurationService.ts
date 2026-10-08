@@ -20,7 +20,7 @@
  * @module features/eds/services/configService/configurationService
  */
 
-import type { TokenProvider } from '../daLive/daLiveContentOperations';
+import type { TokenProvider } from '../daLive/daLiveApiClient';
 import { HELIX_ADMIN_URL } from '../helix/helixApiClient';
 import { captureSiteGrants, restoreCapturedGrants } from './siteGrantPreservation';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';

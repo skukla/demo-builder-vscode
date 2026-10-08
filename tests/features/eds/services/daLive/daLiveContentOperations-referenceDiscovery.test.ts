@@ -8,11 +8,9 @@
  * CLASS, which IS declared in this module.
  */
 
-import {
-    DaLiveContentOperations,
-    type DaLiveContentSource,
-    type TokenProvider,
-} from '@/features/eds/services/daLive/daLiveContentOperations';
+import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { type DaLiveContentSource } from '@/features/eds/services/types';
+import { type TokenProvider } from '@/features/eds/services/daLive/daLiveApiClient';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
@@ -117,7 +115,7 @@ describe('copyContentFromSource — reference-following discovery', () => {
     }
 
     it('follows the account page reference and copies the /customer/nav fragment', async () => {
-        const result = await service.copyContentFromSource(source(), destOrg, destSite);
+        const result = await service.copyOps.copyContentFromSource(source(), destOrg, destSite);
 
         // The fragment was fetched from canonical…
         expect(mockFetch).toHaveBeenCalledWith(
@@ -136,7 +134,7 @@ describe('copyContentFromSource — reference-following discovery', () => {
     });
 
     it('copies the account page itself (probe uses .plain.html, not the login-gated bare URL)', async () => {
-        const result = await service.copyContentFromSource(source(), destOrg, destSite);
+        const result = await service.copyOps.copyContentFromSource(source(), destOrg, destSite);
         expect(mockFetch).toHaveBeenCalledWith(`${sourceBase}/customer/account.plain.html`, { method: 'HEAD' });
         expect(result.copiedFiles).toContain('/customer/account');
     });
@@ -156,7 +154,7 @@ describe('copyContentFromSource — reference-following discovery', () => {
             return status(404); // /dead-link.plain.html → 404
         });
 
-        const result = await service.copyContentFromSource(source(), destOrg, destSite);
+        const result = await service.copyOps.copyContentFromSource(source(), destOrg, destSite);
         expect(result.success).toBe(true);
         expect(result.copiedFiles).toContain('/customer/nav');
         expect(result.copiedFiles).not.toContain('/dead-link');
@@ -179,7 +177,7 @@ describe('copyContentFromSource — reference-following discovery', () => {
 
         const { createPatchReport, getUnapplied } = await import('@/features/eds/services/patches/patchReportHelper');
         const report = createPatchReport();
-        await service.copyContentFromSource(source(), destOrg, destSite, undefined, undefined, undefined, report);
+        await service.copyOps.copyContentFromSource(source(), destOrg, destSite, undefined, undefined, undefined, report);
 
         const unapplied = getUnapplied(report);
         expect(unapplied.some((u) => u.kind === 'reference' && u.target === '/customer/nav')).toBe(true);
@@ -209,7 +207,7 @@ describe('copyContentFromSource — reference-following discovery', () => {
         const { createPatchReport, getUnapplied } = await import('@/features/eds/services/patches/patchReportHelper');
         const report = createPatchReport();
         report.deferredReferencePrefixes = ['/customer/'];
-        await service.copyContentFromSource(source(), destOrg, destSite, undefined, undefined, undefined, report);
+        await service.copyOps.copyContentFromSource(source(), destOrg, destSite, undefined, undefined, undefined, report);
 
         const unapplied = getUnapplied(report);
         expect(unapplied.some((u) => u.kind === 'reference' && u.target === '/customer/nav')).toBe(false);

@@ -183,7 +183,7 @@ export class HelixService {
             getDaLiveToken: () => this.auth.getDaLiveToken(),
         });
         this.bulkPublish = new HelixBulkPublish({ logger: this.logger, auth: this.auth });
-        this.pageDiscovery = new HelixPageDiscovery({ logger: this.logger, daLiveOps });
+        this.pageDiscovery = new HelixPageDiscovery({ logger: this.logger, daLiveOps: daLiveOps.sourceOps });
         this.siteContent = new HelixSiteContent({
             logger: this.logger,
             bulk: this.bulkPublish,

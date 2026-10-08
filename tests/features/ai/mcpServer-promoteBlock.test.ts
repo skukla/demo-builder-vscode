@@ -27,9 +27,13 @@ const mockUpsertBlockDocPage = jest.fn();
 
 jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn().mockImplementation(() => ({
-        appendBlockToLibrary: mockAppendBlockToLibrary,
-        upsertBlockDocPage: mockUpsertBlockDocPage,
+        blockLibOps: {
+            appendBlockToLibrary: mockAppendBlockToLibrary,
+            upsertBlockDocPage: mockUpsertBlockDocPage,
+        },
     })),
+}));
+jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
     createDaLiveServiceTokenProvider: jest.fn(),
     createDaLiveTokenProvider: jest.fn(),
 }));

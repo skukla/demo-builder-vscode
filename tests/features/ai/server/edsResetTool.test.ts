@@ -22,7 +22,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
             fromConfigUrl ? `${fromConfigUrl}?org=${org}&site=${site}&key=test-secret` : undefined
     ),
 }));
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
     createDaLiveServiceTokenProvider: jest.fn(() => ({})),
 }));
 jest.mock('@/types/typeGuards', () => ({

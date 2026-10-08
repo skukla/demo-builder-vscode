@@ -1,5 +1,5 @@
 /**
- * Tests for createDaLiveServiceTokenProvider factory
+ * Tests for the DA.live TokenProvider adapters (daLiveTokenProviders.ts)
  *
  * Verifies the factory that wraps a DaLiveAuthService (or any object
  * with getAccessToken) into a TokenProvider interface.
@@ -8,13 +8,8 @@
 import {
     createDaLiveServiceTokenProvider,
     createDaLiveTokenProvider,
-    type TokenProvider,
-} from '@/features/eds/services/daLive/daLiveContentOperations';
-
-// Mock the timeout config (required by daLiveContentOperations module)
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: { NORMAL: 30000, QUICK: 5000 },
-}));
+} from '@/features/eds/services/daLive/daLiveTokenProviders';
+import { type TokenProvider } from '@/features/eds/services/daLive/daLiveApiClient';
 
 describe('createDaLiveServiceTokenProvider', () => {
     it('should return a TokenProvider object', () => {

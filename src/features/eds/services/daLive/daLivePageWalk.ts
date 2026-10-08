@@ -17,7 +17,7 @@
  * @module features/eds/services/daLive/daLivePageWalk
  */
 
-import type { DaLiveContentOperations } from './daLiveContentOperations';
+import type { DaLiveSourceOperations } from './daLiveSourceOperations';
 
 const PAGE_SUFFIX = '.html';
 
@@ -30,7 +30,7 @@ const PAGE_SUFFIX = '.html';
  * @returns the web path of every page document found, in listing order (`/nav`, `/signs/exit`)
  */
 export async function listDaLivePages(
-    daLive: Pick<DaLiveContentOperations, 'listDirectory'>,
+    daLive: Pick<DaLiveSourceOperations, 'listDirectory'>,
     org: string,
     site: string,
     startFolder: string,

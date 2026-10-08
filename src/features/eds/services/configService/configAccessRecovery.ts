@@ -25,7 +25,7 @@
  * @module features/eds/services/configService/configAccessRecovery
  */
 
-import type { TokenProvider } from '../daLive/daLiveContentOperations';
+import type { TokenProvider } from '../daLive/daLiveApiClient';
 import {
     ensureSiteAdmin,
     probeConfigWriteAccess,

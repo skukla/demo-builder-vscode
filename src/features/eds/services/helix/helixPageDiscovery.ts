@@ -12,7 +12,7 @@
  * @module features/eds/services/helix/helixPageDiscovery
  */
 
-import type { DaLiveContentOperations } from '../daLive/daLiveContentOperations';
+import type { DaLiveSourceOperations } from '../daLive/daLiveSourceOperations';
 import type { Logger } from '@/types/logger';
 
 /**
@@ -40,7 +40,7 @@ const EXCLUDED_FOLDERS = [
 /** What page discovery needs: the DA.live listing and somewhere to log. */
 export interface HelixPageDiscoveryDeps {
     logger: Logger;
-    daLiveOps: Pick<DaLiveContentOperations, 'listDirectory'>;
+    daLiveOps: Pick<DaLiveSourceOperations, 'listDirectory'>;
 }
 
 /**

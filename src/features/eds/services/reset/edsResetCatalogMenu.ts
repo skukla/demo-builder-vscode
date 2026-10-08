@@ -59,7 +59,7 @@ export async function takeOutCatalogMenu(
     const site = createCatalogMenuSite({
         project: params.project,
         target: params,
-        daLive: clients.daLiveContentOps,
+        daLive: clients.daLiveContentOps.sourceOps,
         helix: new HelixService(logger, clients.githubTokenService, clients.tokenProvider),
         github: clients.githubFileOps,
     });

@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "EDS-8 cut WizardContainer.tsx (499 -> 328) into useWizardSettings.ts, useWizardCatalog.ts, architectureChange.ts and wizardFooter.tsx; the remainder rose 82.64 -> 90.77 and each new piece has a direct suite. Survivors read: architectureChange's 11 are nine log-wording mutants (assertions banned) and the two ledgered optional chains; the container's six are CSS class strings and the ledgered focus-trap options; the catalog's three and the settings' two are ledgered constant dependency lists and the unreachable dedupe. One real gap closed on the way: emptying the cards memo's dependencies survived, so a demo added mid-session never became a card; pinned.",
+    "_note": "EDS-8 2026-10-08: daLiveContentOperations cut to its wiring (558 -> 102; forwarders retired, 33 -> 3 mutants) and the TokenProvider adapters moved to daLiveTokenProviders.ts (13 mutants, all killed, no survivors to read)",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -6169,7 +6169,7 @@
         },
         "src/features/eds/services/daLive/daLiveContentOperations.ts": {
             "score": 100,
-            "killed": 33,
+            "killed": 3,
             "survived": 0,
             "noCoverage": 0,
             "timeout": 0,
@@ -9922,6 +9922,18 @@
         "src/features/project-creation/ui/wizard/wizardFooter.tsx": {
             "score": 100,
             "killed": 9,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/eds/services/daLive/daLiveTokenProviders.ts": {
+            "score": 100,
+            "killed": 13,
             "survived": 0,
             "noCoverage": 0,
             "timeout": 0,

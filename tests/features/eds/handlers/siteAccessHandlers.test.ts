@@ -31,7 +31,7 @@ import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 jest.mock('@/core/utils/browserUtils', () => ({ openUrl: jest.fn() }));
 jest.mock('@/features/eds/handlers/edsServiceCache', () => ({ getDaLiveAuthService: jest.fn() }));
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
     createDaLiveServiceTokenProvider: jest.fn(() => 'token-provider'),
 }));
 jest.mock('@/features/eds/services/configService/configAccessRecovery', () => ({

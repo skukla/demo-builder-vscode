@@ -32,7 +32,11 @@ jest.mock('@/features/eds/services/daLive/daLiveOrgOperations', () => ({
     DaLiveOrgOperations: jest.fn(() => ({ listOrgSites: mockListOrgSites })),
 }));
 jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
-    DaLiveContentOperations: jest.fn(() => ({ deleteAllSiteContent: mockDeleteAllSiteContent })),
+    DaLiveContentOperations: jest.fn(() => ({
+        sourceOps: { deleteAllSiteContent: mockDeleteAllSiteContent },
+    })),
+}));
+jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
     createDaLiveServiceTokenProvider: (service: { getAccessToken(): Promise<string | null> }) => ({
         getAccessToken: () => service.getAccessToken(),
     }),

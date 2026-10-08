@@ -185,7 +185,7 @@ export async function tearDownStorefront(
     }
 
     onStep?.('Deleting the DA.live content');
-    const contentOps = (deps.makeContentOps ?? ((tp, l) => new DaLiveContentOperations(tp, l)))(
+    const contentOps = (deps.makeContentOps ?? ((tp, l) => new DaLiveContentOperations(tp, l).sourceOps))(
         tokenProvider,
         logger,
     );

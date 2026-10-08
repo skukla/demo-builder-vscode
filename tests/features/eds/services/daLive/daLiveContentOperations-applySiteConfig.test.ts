@@ -20,7 +20,8 @@
  */
 
 import { mockFetch } from './daLiveContentOperations.testUtils';
-import { DaLiveContentOperations, type TokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { type TokenProvider } from '@/features/eds/services/daLive/daLiveApiClient';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
@@ -37,7 +38,7 @@ jest.mock('@/features/eds/services/daLive/daLiveOrgOperations', () => ({
     hasWriteAccess: (...args: unknown[]) => mockHasWriteAccess(...args),
 }));
 
-describe('DaLiveContentOperations.applySiteConfig — site-scoped config write', () => {
+describe('DaLiveContentOperations.configOps.applySiteConfig — site-scoped config write', () => {
     let service: DaLiveContentOperations;
     let mockTokenProvider: TokenProvider;
     let mockLogger: Logger;
@@ -73,7 +74,7 @@ describe('DaLiveContentOperations.applySiteConfig — site-scoped config write',
             json: jest.fn().mockResolvedValue({}),
         });
 
-        const result = await service.applySiteConfig('leahrayard', 'leah-b2b-demo', {
+        const result = await service.configOps.applySiteConfig('leahrayard', 'leah-b2b-demo', {
             'aem.repositoryId': 'author-p158081-e1683323.adobeaemcloud.com',
         });
 
@@ -128,7 +129,7 @@ describe('DaLiveContentOperations.applySiteConfig — site-scoped config write',
             json: jest.fn().mockResolvedValue({}),
         });
 
-        const result = await service.applySiteConfig('leahrayard', 'leah-b2b-demo', {
+        const result = await service.configOps.applySiteConfig('leahrayard', 'leah-b2b-demo', {
             'aem.repositoryId': 'author-p158081-e1683323.adobeaemcloud.com',
         });
 
@@ -165,7 +166,7 @@ describe('DaLiveContentOperations.applySiteConfig — site-scoped config write',
             json: jest.fn().mockResolvedValue({}),
         });
 
-        const result = await service.applySiteConfig('leahrayard', 'leah-b2b-demo', {
+        const result = await service.configOps.applySiteConfig('leahrayard', 'leah-b2b-demo', {
             'aem.repositoryId': 'author-p158081-e1683323.adobeaemcloud.com',
         });
 
@@ -187,7 +188,7 @@ describe('DaLiveContentOperations.applySiteConfig — site-scoped config write',
         });
         mockHasWriteAccess.mockResolvedValueOnce(false);
 
-        const result = await service.applySiteConfig('some-other-org', 'their-site', {
+        const result = await service.configOps.applySiteConfig('some-other-org', 'their-site', {
             'aem.repositoryId': 'author-p158081-e1683323.adobeaemcloud.com',
         });
 
@@ -229,7 +230,7 @@ describe('DaLiveContentOperations.applySiteConfig — site-scoped config write',
             json: jest.fn().mockResolvedValue({}),
         });
 
-        const result = await service.applySiteConfig(
+        const result = await service.configOps.applySiteConfig(
             'leahrayard', 'leah-b2b-demo', {}, ['editor.path'],
         );
 
@@ -275,7 +276,7 @@ describe('DaLiveContentOperations.applySiteConfig — site-scoped config write',
             });
             mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: jest.fn().mockResolvedValue({}) });
 
-            const result = await service.applySiteConfig(
+            const result = await service.configOps.applySiteConfig(
                 'leahrayard', 'leah-b2b-demo', { 'editor.path': '/x=y' }, ['aem.repositoryId'],
             );
 
@@ -296,7 +297,7 @@ describe('DaLiveContentOperations.applySiteConfig — site-scoped config write',
             });
             mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: jest.fn().mockResolvedValue({}) });
 
-            const result = await service.applySiteConfig(
+            const result = await service.configOps.applySiteConfig(
                 'leahrayard', 'leah-b2b-demo', { 'editor.path': '/x=y' }, ['aem.repositoryId'],
             );
 
@@ -334,7 +335,7 @@ describe('DaLiveContentOperations.applySiteConfig — site-scoped config write',
             json: jest.fn().mockResolvedValue({}),
         });
 
-        const result = await service.applySiteConfig(
+        const result = await service.configOps.applySiteConfig(
             'leahrayard', 'leah-b2b-demo', {}, ['editor.path'],
         );
 
@@ -366,7 +367,7 @@ describe('DaLiveContentOperations.applySiteConfig — site-scoped config write',
             }),
         });
 
-        const result = await service.applySiteConfig(
+        const result = await service.configOps.applySiteConfig(
             'leahrayard', 'leah-b2b-demo', {}, ['editor.path'],
         );
 
@@ -397,7 +398,7 @@ describe('DaLiveContentOperations.applySiteConfig — site-scoped config write',
             json: jest.fn().mockResolvedValue({}),
         });
 
-        const result = await service.applySiteConfig(
+        const result = await service.configOps.applySiteConfig(
             'leahrayard', 'leah-b2b-demo',
             { 'aem.repositoryId': 'author-p158081-e1683323.adobeaemcloud.com' },
             ['editor.path'],

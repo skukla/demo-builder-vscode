@@ -22,10 +22,8 @@ import {
     getDaLiveAuthService,
     getGitHubServices,
 } from '@/features/eds/handlers/edsHelpers';
-import {
-    createDaLiveServiceTokenProvider,
-    DaLiveContentOperations,
-} from '@/features/eds/services/daLive/daLiveContentOperations';
+import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveTokenProviders';
 import { executeEdsPipeline } from '@/features/eds/services/edsPipeline';
 import { HelixService } from '@/features/eds/services/helix/helixService';
 import { extractResetParams } from '@/features/eds/services/reset/edsResetParams';

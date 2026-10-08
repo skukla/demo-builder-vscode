@@ -62,9 +62,15 @@ describe('executeEdsPipeline - step gating', () => {
 
         services = pipelineServices({
             daLiveContentOps: {
-                copyContentFromSource: mockCopyContentFromSource,
-                createBlockLibraryFromTemplate: mockCreateBlockLibrary,
-                deleteAllSiteContent: jest.fn(),
+                copyOps: {
+                    copyContentFromSource: mockCopyContentFromSource,
+                },
+                blockLibOps: {
+                    createBlockLibraryFromTemplate: mockCreateBlockLibrary,
+                },
+                sourceOps: {
+                    deleteAllSiteContent: jest.fn(),
+                },
             },
             githubFileOps: { getFileContent: jest.fn().mockResolvedValue({ content: '{}' }) },
             helixService: {
@@ -80,9 +86,8 @@ describe('executeEdsPipeline - step gating', () => {
 
     describe('what an omitted flag defaults to', () => {
         it('does not clear the site', async () => {
-            const deleteAll = (
-                services.daLiveContentOps as unknown as { deleteAllSiteContent: jest.Mock }
-            ).deleteAllSiteContent;
+            const deleteAll = services.daLiveContentOps.sourceOps
+                .deleteAllSiteContent as unknown as jest.Mock;
 
             await executeEdsPipeline({ ...params, skipContent: true }, services);
 

@@ -107,17 +107,21 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 // Note: copyMediaFromContent is no longer called - Admin API downloads images during preview
 jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn().mockImplementation(() => ({
-        copyContentFromSource: jest.fn().mockResolvedValue({
-            success: true,
-            totalFiles: 10,
-            copiedFiles: ['file1', 'file2'],
-            failedFiles: [],
-        }),
-        createBlockLibraryFromTemplate: jest.fn().mockResolvedValue({
-            success: true,
-            blocksCount: 0,
-            paths: [],
-        }),
+        copyOps: {
+            copyContentFromSource: jest.fn().mockResolvedValue({
+                success: true,
+                totalFiles: 10,
+                copiedFiles: ['file1', 'file2'],
+                failedFiles: [],
+            }),
+        },
+        blockLibOps: {
+            createBlockLibraryFromTemplate: jest.fn().mockResolvedValue({
+                success: true,
+                blocksCount: 0,
+                paths: [],
+            }),
+        },
     })),
 }));
 

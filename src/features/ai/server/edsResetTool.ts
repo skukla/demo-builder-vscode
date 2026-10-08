@@ -25,7 +25,7 @@ import {
     getDaLiveAuthService,
     resolveByomOverlayConfig,
 } from '@/features/eds/handlers/edsHelpers';
-import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveTokenProviders';
 import { executeEdsReset, extractResetParams } from '@/features/eds/services/reset/edsResetService';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';

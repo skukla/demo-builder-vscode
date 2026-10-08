@@ -21,7 +21,7 @@ import {
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
 import { ensureDaLiveAuth as ensureDaLiveAuthShared, getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
 import { DaLiveAuthService } from '@/features/eds/services/daLive/daLiveAuthService';
-import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveTokenProviders';
 import { HelixService } from '@/features/eds/services/helix/helixService';
 import {
     isEdsProject,

@@ -443,6 +443,18 @@ and three of them are more than 40% comments). Decide which.
   34 EXTRACT, 5 leave, 1 variant, in 11 sittings the loop takes between splits. One
   behaviour finding for the owner lives there (publish vs preview on an expired session).
 
+- 2026-10-08  From the daLiveContentOperations cut. The `eds-publish-and-config` skill says
+  `editor.path` goes to the ORG config via `applyOrgConfig`; that method no longer exists, and
+  the `daLiveSiteConfig` tests route `editor.path` through `applySiteConfig`. The memory note
+  on DA.live config scope says "`editor.path` stays org-scoped, via `applySiteConfig`", which
+  is itself ambiguous. Not changed by the loop. **Decide:** which scope `editor.path` belongs
+  to; the skill sentence then gets corrected to match. Related: `daLiveSiteConfig.test.ts`
+  still fakes the removed `applyOrgConfig`, so those assertions check nothing; delete them
+  once the scope question is settled.
+- 2026-10-08  `copyDaLiveSite` and `deleteSiteRoot` stay as forwarders on
+  `DaLiveContentOperations` because `MigrationContentOps` spans two services. **Decide:**
+  split that interface (one sitting, no behaviour change) or leave the two forwarders.
+
 ## Needs a live check
 
 The automated checks prove a move did not change what the tests constrain. What they
@@ -531,6 +543,20 @@ date and what happened; a failure becomes its own `fix` item.
       container; only the wizard bundle's real render shows the three settings pushes
       arriving from the host.
 
+- [ ] **DA.live content work after the daLiveContentOperations cut** (uncommitted on
+      `refactor/eds-8-god-files`): the class no longer forwards; every caller now calls the
+      service that owns the job (`sourceOps`, `configOps`, `copyOps`, `blockLibOps`).
+      (1) Create an EDS storefront — content copies, the B2B account chrome overlays on a
+      hybrid package, the block library appears in da.live, and the AEM Assets panel shows
+      (`applySiteConfig`); (2) Reset Storefront with "clear content" — the site empties and
+      refills, and the product pages are taken out first; (3) delete a project with its
+      DA.live content — the site is gone from the org list; (4) the agent's
+      `promote_block_to_library` and `remove_block_from_library`, and a page read/write/delete
+      through the content-authoring tools. Suites drive every one with nested fakes; only a
+      real run proves the wired services are the ones reached. The token adapters moved to
+      `daLiveTokenProviders.ts`, so a DA.live sign-in failing anywhere would show here too.
+
+
 ## Shipped so far
 
 - 2026-09-10  2026-09-10  Gated: god-file-ratchet.test.ts pins 68 candidates / 31 coupled; rule 49 measures on edit (2987e8623)
@@ -564,3 +590,4 @@ date and what happened; a failure becomes its own `fix` item.
 - 2026-10-08  refactor(project-creation): ProjectCreationStep becomes a shell over two hooks and two views (`4b5cba2ec`)
 - 2026-10-08  WizardContainer.tsx (499 -> 328) split by job, uncommitted on refactor/eds-8-god-files (Hook Extraction, ADR-017). The container keeps the shell: it calls the hooks, derives the timeline, and renders the rail, header, content and footer. The three VS Code settings it keeps live (block-library defaults, custom libraries, added demos) with their one onMessage effect and the optimistic add are ui/hooks/useWizardSettings.ts (95); the packages/stacks mount load and the grid's cards (the project's own hidden package, the added-demo cards) are ui/hooks/useWizardCatalog.ts (113; two hooks because stacks must exist before useWizardState and the hidden-package lookup needs its selectedPackage); the stack-change handler is wizard/architectureChange.ts (92; a builder like buildAreaWalk, not a use* — it holds no state and memoising it would change the handler's identity); the Cancel/Back/Continue footer is wizard/wizardFooter.tsx (85). No forwarders; the only caller (wizard/index.tsx) is unchanged; useVSCodeMessage was considered for the settings hook and rejected (it subscribes through webviewClient, a different seam from the vscode.onMessage call every container suite mocks). proveMove: every piece reads 'new' (hook bodies and an inline JSX block), hand-diffed against HEAD with whitespace and comments ignored: useWizardSettings and useWizardCatalog byte-identical; usePackageCards adds setPackages to the lookup effect's deps (a stable setter that now crosses the hook boundary) and returns the memo instead of binding it; buildArchitectureChangeHandler returns the arrow and reads componentConfigs from its parameter instead of state.componentConfigs, and its log channel is 'architectureChange' rather than 'WizardContainer'; WizardFooter reads onCancel/onBack/onNext/stepCount/wizardMode/currentStep as props where the container read its locals. Control reports DIFFERS. proveMove itself was wrong a fourth time — an arrow in a RETURN type (`): (a: string) => void {`) read as a field initialiser, so architectureChange.ts listed nothing at all; fixed in the tool. Mutation: the old row (82.64 of 2026-09-04) is the before; remainder 90.77 after (openGaps 0; the six survivors are five CSS class strings and the ledgered focus-trap options); new rows useWizardSettings 85.71, useWizardCatalog 94.12, architectureChange 65.63 (nine log-wording survivors, assertions banned, plus the two ledgered optional chains), wizardFooter 100, openGaps 0 on all. One real gap closed: emptying the cards memo's dependencies survived, so a demo added mid-session never became a card; pinned in the catalog suite. Suites: WizardContainer-hiddenPackage re-homed as hooks/useWizardCatalog.test.tsx (+5 direct tests), hooks/useWizardSettings.test.tsx (8), wizard/architectureChange.test.ts (6) and wizard/wizardFooter.test.tsx (6) are new; the focus run selected 14 suites by name, none from the import graph. Pins: godFileCandidates 49 -> 48, godFileCoupled 14 -> 13 (25 imports -> 22); cloneCeiling stays 40; 6 mutation-equivalents rows re-homed (the two-effect `}, []);` row split into one per file) and 1 added; stackHelpers' comment names the builder. Checks: full jest 1876/1876 suites (31,968 tests), tsc, typecheck:tests, tsc-blindspots, lint (0 errors, 25 pre-existing warnings), compile, source-duplication, test-file-sizes all 0. Found, not fixed: tests/sop/webviewBundleClasses.ts:71 says three components define classes in a `<style>` block including WizardContainer; only TimelineNav does today. Live check appended above.
 - 2026-10-08  refactor(project-creation): WizardContainer keeps the shell; settings, catalog, the stack-change handler and the footer get their own files (`78d44397e`)
+- 2026-10-08  daLiveContentOperations.ts (558 -> 102) split by job, uncommitted on refactor/eds-8-god-files. It keeps the wiring: it builds the five DA.live services and hands them back as fields. Its sixteen forwarders are gone and callers reach the owning service; the two TokenProvider adapters moved to daLiveTokenProviders.ts (67); copyDaLiveSite and deleteSiteRoot stay (MigrationContentOps spans two services). Pins: godFileCandidates 48 -> 47, godFileCoupled 13 -> 12, cloneCeiling 40 -> 39 (PL-69 pair 8 gone). Mutation: daLiveContentOperations 100% (baseline row 100%, 33 -> 3 mutants), daLiveTokenProviders 100% (13, new row).

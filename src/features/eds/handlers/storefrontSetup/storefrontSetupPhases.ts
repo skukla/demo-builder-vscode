@@ -16,10 +16,8 @@
 import * as vscode from 'vscode';
 import { ConfigurationService } from '../../services/configService/configurationService';
 import { withDaLiveAuthRetry, MAX_REAUTH_ATTEMPTS } from '../../services/daLive/daLiveAuthRetry';
-import {
-    createDaLiveServiceTokenProvider,
-    DaLiveContentOperations,
-} from '../../services/daLive/daLiveContentOperations';
+import { DaLiveContentOperations } from '../../services/daLive/daLiveContentOperations';
+import { createDaLiveServiceTokenProvider } from '../../services/daLive/daLiveTokenProviders';
 import { executeEdsPipeline } from '../../services/edsPipeline';
 import { GitHubAppService } from '../../services/github/githubAppService';
 import { GitHubFileOperations } from '../../services/github/githubFileOperations';

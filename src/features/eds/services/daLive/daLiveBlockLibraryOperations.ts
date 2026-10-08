@@ -8,7 +8,7 @@
  *   - `DaLiveBlockLibrarySheet` — the `.da/library/blocks.json` sheet and its
  *     "Blocks" section in site config
  *   - `DaLiveBlockDocPages` — the per-block doc pages the palette renders
- * The facade constructs one instance and delegates to it.
+ * DaLiveContentOperations constructs one instance and hands it out as `blockLibOps`.
  *
  * Keep this module `vscode`-free (the MCP server constructs the DA.live stack
  * in a separate Node process).
@@ -295,7 +295,7 @@ export class DaLiveBlockLibraryOperations {
 
     // ======================================================================
     // The sheet and the doc pages are their own units; these keep the
-    // methods DaLiveContentOperations and the tests already name.
+    // methods callers (through `blockLibOps`) and the tests already name.
     // ======================================================================
 
     /** Write a DA.live JSON spreadsheet (`DaLiveBlockLibrarySheet.createJsonSpreadsheet`). */

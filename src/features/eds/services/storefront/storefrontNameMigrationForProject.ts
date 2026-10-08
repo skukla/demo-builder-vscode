@@ -37,10 +37,8 @@ import type * as vscode from 'vscode';
 import { COMPONENT_IDS } from '@/core/constants';
 import { getDaLiveAuthService, resolveByomOverlayConfig } from '@/features/eds/handlers/edsHelpers';
 import { ConfigurationService } from '@/features/eds/services/configService/configurationService';
-import {
-    createDaLiveServiceTokenProvider,
-    DaLiveContentOperations,
-} from '@/features/eds/services/daLive/daLiveContentOperations';
+import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveTokenProviders';
 import { registerPublishKey } from '@/features/eds/services/pdp/publishKeyRegistrar';
 import { resolveStorefrontConfig } from '@/features/eds/services/reset/edsResetParams';
 import {

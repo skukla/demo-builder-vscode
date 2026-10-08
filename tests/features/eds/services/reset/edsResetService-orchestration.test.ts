@@ -32,6 +32,7 @@ import type { CodePatchResult } from '@/features/eds/services/patches/codePatchR
 
 import { lostGrantsMessage } from '@/features/eds/services/configService/lostGrantsMessage';
 import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { DaLiveSourceOperations } from '@/features/eds/services/daLive/daLiveSourceOperations';
 import {
     configureDaLivePermissions,
     getDaLiveAuthService,
@@ -346,7 +347,7 @@ describe('executeEdsReset - the product pages the overlay published (EDS-26)', (
             params,
             context,
             expect.objectContaining({
-                daLiveContentOps: expect.any(DaLiveContentOperations),
+                daLiveContentOps: expect.any(DaLiveSourceOperations),
                 tokenProvider: mockTokenProvider,
             }),
             expect.any(Function),

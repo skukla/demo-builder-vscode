@@ -472,7 +472,12 @@ export async function executeEdsReset(
         // Out before the content is re-copied: category pages (EDS-24), product pages (EDS-26).
         const clients = { daLiveContentOps, githubFileOps, githubTokenService, tokenProvider };
         const catalogMenuSite = await takeOutCatalogMenu(params, context.logger, clients, report);
-        const productPages = await takeOutProductPages(params, context, clients, report);
+        const productPages = await takeOutProductPages(
+            params,
+            context,
+            { ...clients, daLiveContentOps: daLiveContentOps.sourceOps },
+            report,
+        );
 
         // Steps 8-11: Content Pipeline (with DA.live re-auth retry)
         contentCopied = await runContentPipeline(

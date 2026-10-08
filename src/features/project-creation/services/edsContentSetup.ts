@@ -164,8 +164,11 @@ export async function ensureEdsContent(
 
     // Create DA.live services upfront — all DA.live API calls require the DA.live token
     // (separate IMS auth from Adobe Console, see storefrontSetupHandlers.ts:440)
-    const { DaLiveContentOperations, createDaLiveServiceTokenProvider } = await import(
+    const { DaLiveContentOperations } = await import(
         '@/features/eds/services/daLive/daLiveContentOperations'
+    );
+    const { createDaLiveServiceTokenProvider } = await import(
+        '@/features/eds/services/daLive/daLiveTokenProviders'
     );
     const { getDaLiveAuthService } = await import('@/features/eds/handlers/edsHelpers');
 
@@ -191,7 +194,7 @@ export async function ensureEdsContent(
     // would silent-debug-log here and the import path would miss the user signal.
     const patchReport = createPatchReport();
 
-    const contentResult = await daLiveContentOps.copyContentFromSource(
+    const contentResult = await daLiveContentOps.copyOps.copyContentFromSource(
         {
             org: contentSource.org,
             site: contentSource.site,
@@ -218,7 +221,7 @@ export async function ensureEdsContent(
     // from the canonical B2B content site on top of the brand content.
     if (config.accountContentSource) {
         onProgress?.('Setting up the content', 'Adding B2B account experience');
-        const overlay = await daLiveContentOps.overlayAccountChrome(
+        const overlay = await daLiveContentOps.copyOps.overlayAccountChrome(
             config.accountContentSource, config.daLiveOrg, config.daLiveSite, patchReport,
         );
         logger.info(`[EDS Content] Account-chrome overlay: ${overlay.totalFiles} file(s) from ${config.accountContentSource.org}/${config.accountContentSource.site}`);
@@ -262,7 +265,7 @@ export async function ensureEdsContent(
         await nonFatal('Block library setup', logger, async () => {
             const { GitHubFileOperations } = await import('@/features/eds/services/github/githubFileOperations');
             const githubFileOps = new GitHubFileOperations(githubTokenService, logger);
-            const libResult = await daLiveContentOps.createBlockLibraryFromTemplate(
+            const libResult = await daLiveContentOps.blockLibOps.createBlockLibraryFromTemplate(
                 config.daLiveOrg,
                 config.daLiveSite,
                 config.templateOwner as string,
