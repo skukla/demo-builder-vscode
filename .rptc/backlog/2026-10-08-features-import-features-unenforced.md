@@ -28,3 +28,7 @@ model). Either way the handbook line must name the real enforcer, and
 
 **Why not inside PR-1a:** the measurement and any exemptions touch every feature, which is
 scope creep for a Node change.
+
+## Shipped so far
+
+- 2026-10-07  docs(backlog): PL-68, the features-import-features rule claims an eslint check that does not exist (`cdd433130`)
