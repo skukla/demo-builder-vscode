@@ -7,6 +7,7 @@
  * Moved out of ProgressUnifier.ts by EDS-8 (2026-10-08); the bodies are unchanged.
  */
 
+import { settleStep } from './stepExit';
 import type { ExecutionContext, ProgressHandler, ProgressReporterDeps } from './types';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { InstallStep } from '@/types/prerequisites';
@@ -77,11 +78,7 @@ export async function executeSynthetic(
                 },
             });
 
-            if (code === 0 || step.continueOnError) {
-                resolve();
-            } else {
-                reject(new Error(`Command failed with code ${code}: ${context.command}`));
-            }
+            settleStep(code, step, context, resolve, reject);
         });
     });
 }
@@ -184,11 +181,7 @@ export async function executeImmediate(
                     },
                 });
 
-                if (commandExitCode === 0 || step.continueOnError) {
-                    resolve();
-                } else {
-                    reject(new Error(`Command failed with code ${commandExitCode}: ${context.command}`));
-                }
+                settleStep(commandExitCode, step, context, resolve, reject);
             }, remainingTime);
         });
     });

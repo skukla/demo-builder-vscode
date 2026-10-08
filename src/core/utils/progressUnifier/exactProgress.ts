@@ -6,6 +6,7 @@
  * Moved out of ProgressUnifier.ts by EDS-8 (2026-10-08); the bodies are unchanged.
  */
 
+import { settleStep } from './stepExit';
 import type { ExecutionContext, ProgressHandler, ProgressReporterDeps } from './types';
 import type { InstallStep } from '@/types/prerequisites';
 
@@ -41,11 +42,7 @@ export async function executeExact(
         });
 
         child.on('close', (code) => {
-            if (code === 0 || step.continueOnError) {
-                resolve();
-            } else {
-                reject(new Error(`Command failed with code ${code}: ${context.command}`));
-            }
+            settleStep(code, step, context, resolve, reject);
         });
     });
 }
