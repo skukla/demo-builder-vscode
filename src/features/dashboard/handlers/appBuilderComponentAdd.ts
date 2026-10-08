@@ -21,7 +21,7 @@ import { postComponentsSnapshot, postRowStatus, refreshProjectStatus } from './a
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
-import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
+import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderAddRun';
 import { resolveDeployInputs, resolveDisplayName } from '@/features/app-builder/services/deployInputs';
 import { pairNameInputs } from '@/features/app-builder/services/pairNames';
 import {

@@ -23,7 +23,8 @@ package are immutable — they are baked into deployed resources.
 
 ## Every deploy goes through the keyed runner
 
-`appBuilderComponentRunner.ts`, behind the per-id handlers. There is no headless
+`appBuilderAddRun.ts`, `appBuilderRedeployRun.ts` and `appBuilderRemoveRun.ts`, behind the
+per-id handlers; `appBuilderComponentRunner.ts` holds what they share. There is no headless
 variant: `deployAppHeadless` was retired once its only caller was replaced, and being
 UI-free turned out to be the wrong goal for an agent-triggered deploy — that is
 precisely when the user needs telling.

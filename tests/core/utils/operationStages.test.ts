@@ -20,7 +20,13 @@ const ROOT = join(__dirname, '..', '..', '..');
  * runner's install/remove stage, and their messages carry live detail (retry rounds).
  */
 const STAGE_REPORTERS = [
-    'src/features/app-builder/services/appBuilderComponentRunner.ts',
+    // Split out of appBuilderComponentRunner.ts (decompose-god-file, 2026-10-07); its
+    // stage reports moved with the code, so the rule follows them.
+    'src/features/app-builder/services/appBuilderAddRun.ts',
+    'src/features/app-builder/services/appBuilderRedeployRun.ts',
+    'src/features/app-builder/services/appBuilderRemoveRun.ts',
+    'src/features/app-builder/services/appBuilderDeploySteps.ts',
+    'src/features/app-builder/services/appBuilderDeployDispatch.ts',
     'src/features/app-builder/services/appDeployment.ts',
     'src/features/dashboard/handlers/appBuilderComponentHandlers.ts',
     // Split out of appBuilderComponentHandlers.ts (EDS-8, 2026-10-04); their stage

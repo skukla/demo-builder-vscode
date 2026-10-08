@@ -23,9 +23,13 @@ import type { AppBuilderComponentState, Project } from '@/types/base';
 export const mockAddAppBuilderComponent = jest.fn();
 export const mockDeployAppBuilderComponent = jest.fn();
 export const mockRemoveAppBuilderComponent = jest.fn();
-jest.mock('@/features/app-builder/services/appBuilderComponentRunner', () => ({
+jest.mock('@/features/app-builder/services/appBuilderAddRun', () => ({
     addAppBuilderComponent: (...a: unknown[]) => mockAddAppBuilderComponent(...a),
+}));
+jest.mock('@/features/app-builder/services/appBuilderRedeployRun', () => ({
     deployAppBuilderComponent: (...a: unknown[]) => mockDeployAppBuilderComponent(...a),
+}));
+jest.mock('@/features/app-builder/services/appBuilderRemoveRun', () => ({
     removeAppBuilderComponent: (...a: unknown[]) => mockRemoveAppBuilderComponent(...a),
 }));
 

@@ -9,8 +9,8 @@
  */
 
 const mockDeploy = jest.fn();
-jest.mock('@/features/app-builder/services/appBuilderComponentRunner', () => ({
-    ...jest.requireActual('@/features/app-builder/services/appBuilderComponentRunner'),
+jest.mock('@/features/app-builder/services/appBuilderRedeployRun', () => ({
+    ...jest.requireActual('@/features/app-builder/services/appBuilderRedeployRun'),
     deployAppBuilderComponent: (...a: unknown[]) => mockDeploy(...a),
 }));
 

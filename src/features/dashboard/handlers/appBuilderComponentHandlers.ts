@@ -45,7 +45,7 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
-import { deployAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
+import { deployAppBuilderComponent } from '@/features/app-builder/services/appBuilderRedeployRun';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { strandedSystem, strandedSystemMessage } from '@/features/components/services/appBuilderComponentLinks';
 import {

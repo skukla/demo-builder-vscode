@@ -21,7 +21,7 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
 }));
 
 import { createDeps, createProject } from './appBuilderComponentRunner.testUtils';
-import { removeAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
+import { removeAppBuilderComponent } from '@/features/app-builder/services/appBuilderRemoveRun';
 import { createSuccessResult } from '../../../helpers/commandResultFake';
 import { MISSING_LICENCE_REFUSAL } from '../../../helpers/adobeConsoleRefusals';
 

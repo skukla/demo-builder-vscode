@@ -33,11 +33,9 @@
  */
 
 import { entriesThatNeedApis } from './apiSubscriber';
+import type { AppBuilderComponentRunnerDeps } from './appBuilderComponentRunner';
+import { deployAppBuilderComponent } from './appBuilderRedeployRun';
 import { ownWorkspaceGroups, relocateGroup, type WorkspaceGroup } from './componentRelocation';
-import {
-    deployAppBuilderComponent,
-    type AppBuilderComponentRunnerDeps,
-} from './appBuilderComponentRunner';
 import type { ProjectAdobeRef } from '@/core/shell/orgContextEnv';
 import { cardInFlightLabel } from '@/core/vscode/progressRegister';
 import type { Project } from '@/types/base';

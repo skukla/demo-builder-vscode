@@ -19,10 +19,8 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
     detectAppLayout: jest.fn().mockResolvedValue('standalone'),
 }));
 
-import {
-    addAppBuilderComponent,
-    deployAppBuilderComponent,
-} from '@/features/app-builder/services/appBuilderComponentRunner';
+import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderAddRun';
+import { deployAppBuilderComponent } from '@/features/app-builder/services/appBuilderRedeployRun';
 import type { ErpEventsEnv } from '@/features/app-builder/services/erpEventsDelivery';
 import type { Project } from '@/types/base';
 import { createDeps, createProject } from './appBuilderComponentRunner.testUtils';

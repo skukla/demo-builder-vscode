@@ -10,7 +10,7 @@
  * unless the SC chose to remove anyway; then the same reasons are reported as
  * what stays behind.
  *
- * Split from `appBuilderComponentRunner`, which orchestrates the removal.
+ * Split from `appBuilderComponentRunner`; `appBuilderRemoveRun` orchestrates the removal.
  *
  * @module features/app-builder/services/appBuilderComponentTeardown
  */
@@ -20,12 +20,12 @@ import { leftoverReason, verifyRuntimeTeardown, type RuntimeCleanupSummary } fro
 import { commandFailure, runInNamespace, runtimeNamespaceEnv, type DeclaredRuntime } from './runtimeNamespace';
 import type { SystemWipeResult } from './systemRecordsWipe';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
 import { withOrgContext, type OrgContextTarget } from '@/core/shell/orgContextEnv';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { explainMissingDeveloperAccess } from '@/features/authentication/services/authenticationErrorFormatter';
-import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState, Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';

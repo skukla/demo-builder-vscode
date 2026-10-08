@@ -101,15 +101,6 @@ export function entryFromState(
     };
 }
 
-
-/**
- * A component's Node, declared in core and re-exported here on purpose: the runner,
- * which reads it beside its entry, sits at the import count the god-file ratchet uses
- * to mark a file for decomposition (`tests/sop/god-file-ratchet.test.ts`), so one more
- * direct import would flag it. Import it from `@/core/shell/demoBuilderNode` anywhere else.
- */
-export { nodeForAppBuilderEntry } from '@/core/shell/demoBuilderNode';
-
 /** Reads a custom integration's Node range and picks its Node (`customIntegrationNode.ts` builds it). */
 export type CustomIntegrationNodeResolver = (source: { owner: string; repo: string; branch?: string }) => Promise<RepoNodeChoice>;
 

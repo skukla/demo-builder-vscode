@@ -22,11 +22,9 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
     detectAppLayout: (...args: unknown[]) => mockDetectAppLayout(...args),
 }));
 
-import {
-    addAppBuilderComponent,
-    deployAppBuilderComponent,
-    removeAppBuilderComponent,
-} from '@/features/app-builder/services/appBuilderComponentRunner';
+import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderAddRun';
+import { deployAppBuilderComponent } from '@/features/app-builder/services/appBuilderRedeployRun';
+import { removeAppBuilderComponent } from '@/features/app-builder/services/appBuilderRemoveRun';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { createDeps, createProject } from './appBuilderComponentRunner.testUtils';
 import { createSuccessResult } from '../../../helpers/commandResultFake';

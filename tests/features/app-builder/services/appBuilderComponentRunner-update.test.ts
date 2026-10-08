@@ -4,7 +4,7 @@
  * handed in; these tests assert what each is asked and what the SC is told.
  */
 
-import { updateAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
+import { updateAppBuilderComponent } from '@/features/app-builder/services/appBuilderRedeployRun';
 import type { SourceUpdateResult } from '@/features/app-builder/services/integrationSourceUpdate';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';

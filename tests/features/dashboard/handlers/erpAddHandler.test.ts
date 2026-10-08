@@ -18,9 +18,13 @@ jest.mock('@/features/project-creation/services/appBuilderComponentRunnerDeps', 
 }));
 
 const mockAdd = jest.fn();
-jest.mock('@/features/app-builder/services/appBuilderComponentRunner', () => ({
+jest.mock('@/features/app-builder/services/appBuilderAddRun', () => ({
     addAppBuilderComponent: (...a: unknown[]) => mockAdd(...a),
+}));
+jest.mock('@/features/app-builder/services/appBuilderRedeployRun', () => ({
     deployAppBuilderComponent: jest.fn(),
+}));
+jest.mock('@/features/app-builder/services/appBuilderRemoveRun', () => ({
     removeAppBuilderComponent: jest.fn(),
 }));
 

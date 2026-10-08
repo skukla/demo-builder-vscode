@@ -24,8 +24,8 @@ machine shows (24.21.0 has no `aio`).
 
 `ensureFnmNodeVersion` stays as the Node-only half and is called by `ensureNode`.
 
-**Callers moved to `ensureNode`:** the App Builder add door (`appBuilderComponentRunner` runAdd
-and deploy), the AI tools install and update (AI-13, thing `ai-tools`), the mesh deploy
+**Callers moved to `ensureNode`:** the App Builder add door (`appBuilderAddRun` runAdd
+and `appBuilderRedeployRun` deploy), the AI tools install and update (AI-13, thing `ai-tools`), the mesh deploy
 entry point.
 
 **Tests:** the CLI is installed only when missing and only for things that need it; a failed

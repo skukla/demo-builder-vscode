@@ -8607,7 +8607,7 @@
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/app-builder/services/appBuilderComponentRunner.ts",
+            "module": "src/features/app-builder/services/appBuilderAddRun.ts",
             "anchors": [
                 "for (const envVar of entry.envSchema ?? []) {"
             ],
@@ -8619,7 +8619,7 @@
             "source": "PL-22 batch MUT-02"
         },
         {
-            "module": "src/features/app-builder/services/appBuilderComponentRunner.ts",
+            "module": "src/features/app-builder/services/appBuilderDeploySteps.ts",
             "anchors": [
                 "if (!deps.refreshAiBundle) return;"
             ],
@@ -8631,7 +8631,7 @@
             "source": "PL-22 batch MUT-02"
         },
         {
-            "module": "src/features/app-builder/services/appBuilderComponentRunner.ts",
+            "module": "src/features/app-builder/services/appBuilderDeploySteps.ts",
             "anchors": [
                 "recordDeployOutcome(project, entry.kind, entry.id, outcome, { create: true });"
             ],
@@ -8643,7 +8643,7 @@
             "source": "PL-22 batch MUT-02"
         },
         {
-            "module": "src/features/app-builder/services/appBuilderComponentRunner.ts",
+            "module": "src/features/app-builder/services/appBuilderDeployDispatch.ts",
             "anchors": [
                 "const meshInstance = project.componentInstances?.[entry.id];",
                 "if (meshInstance) {"
@@ -8656,11 +8656,11 @@
             "source": "PL-22 batch MUT-02"
         },
         {
-            "module": "src/features/app-builder/services/appBuilderComponentRunner.ts",
+            "module": "src/features/app-builder/services/appBuilderRemoveRun.ts",
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 1608,
+            "line": 196,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single deps.logger.warn. Emptying it leaves the catch itself in place, so a failing remote teardown is swallowed exactly as before and the removal continues to clear local state - which the remove-contracts suite asserts directly with a rejecting executor. Only the log line differs.",
@@ -8669,7 +8669,7 @@
             "source": "PL-22 batch MUT-02"
         },
         {
-            "module": "src/features/app-builder/services/appBuilderComponentRunner.ts",
+            "module": "src/features/app-builder/services/appBuilderRemovalState.ts",
             "anchors": [
                 "? { componentApiPicks: { ...project.componentApiPicks } }",
                 "...(project.componentConfigs ? { componentConfigs: { ...project.componentConfigs } } : {}),"
@@ -8682,11 +8682,11 @@
             "source": "PL-22 batch MUT-02"
         },
         {
-            "module": "src/features/app-builder/services/appBuilderComponentRunner.ts",
+            "module": "src/features/app-builder/services/appBuilderRemovalState.ts",
             "anchors": [
                 "if (cleared.componentApiPicks) {"
             ],
-            "line": 1853,
+            "line": 67,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true assigns cleared.componentApiPicks onto the caller's project when it is undefined. cleared is spread from that same project, so an undefined value there means the caller's field was already undefined and the assignment writes back exactly what was there. The mutation is a no-op for every input on which the guard was false.",
@@ -8695,11 +8695,11 @@
             "source": "PL-22 batch MUT-02"
         },
         {
-            "module": "src/features/app-builder/services/appBuilderComponentRunner.ts",
+            "module": "src/features/app-builder/services/appBuilderRemovalState.ts",
             "anchors": [
                 "if (cleared.componentConfigs) {"
             ],
-            "line": 1856,
+            "line": 70,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true assigns cleared.componentConfigs onto the caller's project when it is undefined. cleared is spread from that same project, so an undefined value there means the caller's field was already undefined and the assignment writes back exactly what was there. The mutation is a no-op for every input on which the guard was false.",
@@ -15067,7 +15067,7 @@
             "source": "mutationLedger add"
         },
         {
-            "module": "src/features/app-builder/services/appBuilderComponentRunner.ts",
+            "module": "src/features/app-builder/services/appBuilderDeploySteps.ts",
             "anchors": [
                 "const state = project.appBuilderComponents?.[entry.id];",
                 "if (state) {"

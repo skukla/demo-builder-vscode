@@ -94,7 +94,7 @@ function deployWritingEndpointsExcept(failingId: string) {
         if (instance) {
             instance.status = 'deployed';
             // The mesh tail stamps the NEW workspace's mesh id here
-            // (appBuilderComponentRunner.ts). A mesh id belongs to exactly one
+            // (appBuilderDeployDispatch.ts). A mesh id belongs to exactly one
             // workspace, so this is the field most wrong after an abort.
             instance.metadata = { ...instance.metadata, meshId: `${id}-mesh-id-at-new-ws` };
         }

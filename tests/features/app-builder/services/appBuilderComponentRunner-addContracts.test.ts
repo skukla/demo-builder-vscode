@@ -34,7 +34,7 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
 // Imports (after mocks)
 // =============================================================================
 
-import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
+import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderAddRun';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import {

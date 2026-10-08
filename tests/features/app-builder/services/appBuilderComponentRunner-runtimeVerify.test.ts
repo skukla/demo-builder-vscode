@@ -25,7 +25,7 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
     listDeclaredTriggersAndRules: (...a: unknown[]) => mockListDeclaredTriggersAndRules(...a),
 }));
 
-import { removeAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
+import { removeAppBuilderComponent } from '@/features/app-builder/services/appBuilderRemoveRun';
 import { deriveOwPackage } from '@/features/app-builder/services/owPackageName';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';

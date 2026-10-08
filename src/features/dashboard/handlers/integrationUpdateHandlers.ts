@@ -31,10 +31,10 @@ import {
 import { handlerRunnerDeps as runnerDeps, resolveComponentRecord } from './appManagementInstallHandlers';
 import { getAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
-import {
-    updateAppBuilderComponent,
-    type AppBuilderComponentRunnerDeps,
+import type {
+    AppBuilderComponentRunnerDeps,
 } from '@/features/app-builder/services/appBuilderComponentRunner';
+import { updateAppBuilderComponent } from '@/features/app-builder/services/appBuilderRedeployRun';
 import { checkIntegrationUpdates } from '@/features/app-builder/services/integrationUpdateCheck';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { integrationUsing, systemsUsedBy } from '@/features/components/services/appBuilderComponentLinks';

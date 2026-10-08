@@ -6,8 +6,11 @@
 
 export const mockDeployAppBuilderComponent = jest.fn();
 export const mockTeardownRemote = jest.fn();
-jest.mock('@/features/app-builder/services/appBuilderComponentRunner', () => ({
+jest.mock('@/features/app-builder/services/appBuilderRedeployRun', () => ({
     deployAppBuilderComponent: (...a: unknown[]) => mockDeployAppBuilderComponent(...a),
+}));
+jest.mock('@/features/app-builder/services/appBuilderComponentTeardown', () => ({
+    ...jest.requireActual('@/features/app-builder/services/appBuilderComponentTeardown'),
     teardownRemote: (...a: unknown[]) => mockTeardownRemote(...a),
 }));
 

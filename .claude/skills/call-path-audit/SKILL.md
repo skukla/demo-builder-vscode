@@ -65,7 +65,7 @@ multi-site; skip).
 |---|---|---|---|---|
 | Mesh deploy | `aio api-mesh:create/update` | 1 | `mesh/services/meshDeployment.ts` | **PINNED** (6 doors verified) |
 | App Builder deploy | `aio app deploy` | 1 | `app-builder/services/appDeployment.ts` | **PINNED** |
-| App Builder undeploy | `aio app undeploy` | 1 real (+1 description string) | `app-builder/services/appBuilderComponentRunner.ts` | **PINNED** |
+| App Builder undeploy | `aio app undeploy` | 1 real (+1 description string) | `app-builder/services/appBuilderComponentTeardown.ts` | **PINNED** |
 | Mesh delete | `aio api-mesh:delete` | 3 | `mesh/services/meshDeleteCommand.ts` (verdict: three legitimate doors — dashboard delete, cancel-rollback, removal — sharing ONE command constant; the two spellings unified) | **PINNED** |
 | Adobe sign-in/out | `aio auth login/logout` | 1 each | `authentication/services/authenticationService.ts` (diagnostics' hit is a `--help` capability probe — a read) | **PINNED** |
 | Manifest write | names `.demo-builder.json` AND writes | 2 | `core/state/projectConfigWriter.ts` + `mcp-server.ts` (verdict: TWO doors by design — state serializer vs agent byte-writer; the agent door now refuses malformed JSON + reports schema warnings) | **PINNED** |

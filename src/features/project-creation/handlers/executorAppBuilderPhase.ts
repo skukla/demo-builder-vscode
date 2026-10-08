@@ -11,6 +11,7 @@
 
 import { buildDeployOrgTarget } from './executorMeshPhase';
 import type { ProgressTracker } from './shared';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { withOrgContext } from '@/core/shell/orgContextEnv';
 import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
 import { OPERATION_STAGES, detailFor } from '@/core/utils/operationStages';
@@ -18,7 +19,6 @@ import {
     getAppBuilderComponentEntry,
     buildCustomIntegrationEntry,
 } from '@/features/components/services/appBuilderComponentCatalogLoader';
-import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { HandlerContext } from '@/types/handlers';
 import type { OperationPosition } from '@/types/webviewPayloads';
@@ -124,7 +124,7 @@ export async function executeAppBuilderIntegrationsPhase(
         '@/features/project-creation/services/appBuilderComponentRunnerDeps'
     );
     const { addAppBuilderComponent } = await import(
-        '@/features/app-builder/services/appBuilderComponentRunner'
+        '@/features/app-builder/services/appBuilderAddRun'
     );
     const { report, nested } = integrationProgress(progressTracker);
     const deps = buildDefaultRunnerDeps(

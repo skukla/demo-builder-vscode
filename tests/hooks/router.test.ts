@@ -564,7 +564,7 @@ describe('every rule is reachable through the pre-filter', () => {
         'org-context': () =>
             run(edit(path.join(REPO2, 'src/features/authentication/services/ensureOrgContext.ts')), fresh()),
         'god-file': () =>
-            run(edit(path.join(REPO2, 'src/features/app-builder/services/appBuilderComponentRunner.ts')), fresh()),
+            run(edit(path.join(REPO2, 'src/features/projects-dashboard/services/projectDeletionService.ts')), fresh()),
     };
 
     /** `rule_id=` as declared inside each rule file — the name the table keys on. */

@@ -38,7 +38,7 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
-import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
+import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderAddRun';
 import type { AppManagementAuth } from '@/features/app-builder/services/appManagementClient';
 import { catalogEntryFor } from '@/features/app-builder/services/componentEntry';
 import { erpCredentialReader } from '@/features/app-builder/services/erpCredential';

@@ -25,11 +25,9 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
     detectAppLayout: jest.fn().mockResolvedValue('standalone'),
 }));
 
-import {
-    addAppBuilderComponent,
-    deployAppBuilderComponent,
-    removeAppBuilderComponent,
-} from '@/features/app-builder/services/appBuilderComponentRunner';
+import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderAddRun';
+import { deployAppBuilderComponent } from '@/features/app-builder/services/appBuilderRedeployRun';
+import { removeAppBuilderComponent } from '@/features/app-builder/services/appBuilderRemoveRun';
 import { MESH_ENTRY, createDeps, createProject } from './appBuilderComponentRunner.testUtils';
 
 const ID = MESH_ENTRY.id;
