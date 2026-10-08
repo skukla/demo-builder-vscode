@@ -8,14 +8,9 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/reset/edsResetService.ts",
-        "src/features/eds/services/reset/edsResetCodeSyncStep.ts",
-        "src/features/eds/services/reset/edsResetContentStep.ts",
-        "src/features/eds/services/reset/edsResetFinalize.ts",
-        "src/features/eds/services/reset/edsResetUI.ts",
-        "src/features/eds/services/reset/edsResetPreflight.ts",
-        "src/features/eds/services/reset/edsResetNotifications.ts",
-        "src/features/eds/services/reset/edsResetSampleData.ts"
+        "src/features/eds/services/configService/configurationService.ts",
+        "src/features/eds/services/configService/configServiceRequest.ts",
+        "src/features/eds/services/configService/siteConfigParams.ts"
     ],
     "reporters": [
         "clear-text",

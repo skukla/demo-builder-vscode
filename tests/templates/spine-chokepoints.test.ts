@@ -335,7 +335,9 @@ describe('spine choke-points', () => {
         // top), configServiceAccess owns the admin-role GRANTS object
         // (read-merge-write), configServiceProbe is the read-only diagnostics
         // oracle. Verified: the probe and access-checker GET the site config,
-        // never write it.
+        // never write it. Since 2026-10-08 (EDS-8) configurationService sends
+        // its writes through configServiceRequest, which is handed the URL and
+        // builds no path, so the site-config doors are still the ones pinned here.
         const primitive = /\/config\/\$\{encodeURIComponent\(org\)\}/;
         const spine = [
             'features/eds/services/configService/configServiceAccess.ts',

@@ -29,11 +29,8 @@
 
 import { registerPublishKey, type PublishKeyTokenProvider } from '../pdp/publishKeyRegistrar';
 import { DaLiveAuthError } from '../types';
-import type {
-    buildSiteConfigParams,
-    ConfigServiceResult,
-    SiteRegistrationParams,
-} from './configurationService';
+import type { ConfigServiceResult } from './configServiceRequest';
+import type { buildSiteConfigParams, SiteRegistrationParams } from './siteConfigParams';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';

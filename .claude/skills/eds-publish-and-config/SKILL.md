@@ -15,7 +15,7 @@ Dropin loading, `__dropins__` vendoring, import maps, or `config.json` flag inje
    - **Helix/AEM Config Service** (`admin.hlx.page/config/...`) — what preview/publish/live consult.
    - **DA.live config** (`admin.da.live/config/{org}` and `/config/{org}/{site}`) — what the da.live editor and Library read.
    - The storefront's generated `config.json` — owned by the generator (sibling skill's territory).
-2. **Helix Config Service lookup key = GitHub owner/repo, NEVER the DA.live site name.** Helix looks up `/config/{owner}/sites/{repo}.json` to match its `/preview/{owner}/{repo}/main/...` operations. `contentSourceUrl` (the DA.live location) goes inside the config *body*, not the lookup key. Anchor: `buildSiteConfigParams` in `src/features/eds/services/configService/configurationService.ts`.
+2. **Helix Config Service lookup key = GitHub owner/repo, NEVER the DA.live site name.** Helix looks up `/config/{owner}/sites/{repo}.json` to match its `/preview/{owner}/{repo}/main/...` operations. `contentSourceUrl` (the DA.live location) goes inside the config *body*, not the lookup key. Anchor: `buildSiteConfigParams` in `src/features/eds/services/configService/siteConfigParams.ts`.
 3. **DA.live config scope — write at the level that reads it:**
    - `aem.repositoryId` (AEM Assets binding) → **site** config `/config/{org}/{site}` via `applySiteConfig`.
    - `editor.path` (UE punch-out mapping) → **org** config via `applyOrgConfig`.
@@ -30,7 +30,7 @@ Dropin loading, `__dropins__` vendoring, import maps, or `config.json` flag inje
 ## Gotchas
 
 - **DELETE /live 403 "delete not allowed while source exists"** checks fstab.yaml mountpoints, not Config Service state. Fix is the DA.live Bearer auth (rule 4), nothing else. (`helixAdminAuth.ts:getDeleteAuthHeaders`)
-- **Registering the site config under the DA.live name** makes every bulk preview/publish silently "complete" with zero paths published while live URLs 404 — the job machinery runs but Helix finds no content source under the key it consults. (`configurationService.ts:buildSiteConfigParams`)
+- **Registering the site config under the DA.live name** makes every bulk preview/publish silently "complete" with zero paths published while live URLs 404 — the job machinery runs but Helix finds no content source under the key it consults. (`siteConfigParams.ts:buildSiteConfigParams`)
 - **Writing `aem.repositoryId` to the ORG config succeeds silently** but the da.live Library's AEM Assets panel never appears — the per-site Library only reads the site sheet. Symptom: block library visible, AEM Assets missing. (`daLiveConfigOperations.ts:applySiteConfig`)
 - **An inner `code.status: 400` on `/status` says NOTHING about AEM Code Sync** — it read 400 on skukla/kukla-justrite while the App did not cover the repo AND after it did (code serving 200), with no `x-error` either time. Only the code POST says which: `x-error: [admin] github bot not installed on repository.` means the App is missing. Decide there, never on the 400. (`appInstallationResolver.ts:isAppNotOnRepositoryError`, `storefrontSetupPhase3.ts:confirmCodeSync`; EDS-23)
 - **A `.html`-suffixed canvas URL still RENDERS the page** (iframe shows published content), masking the failure — but the editor doc model never loads, so the Outline shows "No blocks". (`typeGuards.ts:getEdsDaLiveUrl`)

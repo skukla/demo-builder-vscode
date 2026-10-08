@@ -32,7 +32,8 @@
 import { extractRepublishParams } from '../storefront/storefrontRepublishService';
 import { DaLiveAuthError } from '../types';
 import { pinSiteAdmin } from './configAccessRecovery';
-import { buildSiteConfigParams, type ConfigurationService } from './configurationService';
+import type { ConfigurationService } from './configurationService';
+import { buildSiteConfigParams } from './siteConfigParams';
 import { registerSiteConfig } from './siteConfigRegistrar';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';

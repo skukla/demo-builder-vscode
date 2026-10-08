@@ -62,7 +62,7 @@ Multisite needs a map keyed by environment (or locale):
 
 #### 2. `buildSiteConfigParams` — takes one org/site
 
-**File**: `src/features/eds/services/configService/configurationService.ts` (line 65)
+**File**: `src/features/eds/services/configService/siteConfigParams.ts` (in `configurationService.ts` until the 2026-10-08 EDS-8 split)
 
 ```typescript
 export function buildSiteConfigParams(
@@ -275,7 +275,7 @@ This ADR has no implementation, so no test verification. Acceptance criteria for
 - **Adobe pattern**: [Repoless multisite manager](https://www.aem.live/developer/repoless-multisite-manager)
 - **Single-env code locations**:
   - `src/features/eds/services/reset/edsResetParams.ts` (project state shape)
-  - `src/features/eds/services/configService/configurationService.ts` (`buildSiteConfigParams`)
+  - `src/features/eds/services/configService/siteConfigParams.ts` (`buildSiteConfigParams`)
   - `src/features/mesh/services/meshDeployment.ts` (`deployMeshComponent`)
   - `src/features/eds/config/config-template.json` (template URL substitution)
 
