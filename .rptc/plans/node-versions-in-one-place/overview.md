@@ -2,8 +2,9 @@
 
 **Item:** [[PR-1a]] (child of [[PR-1]]). **Research:**
 `.rptc/research/node-version-management/research.md` (see "Revision, 2026-10-07" and "Live
-verification"). **Status:** steps 0 to 6 built 2026-10-07; replanned the same day around
-component-declared ranges (owner); steps 7 to 14 to build.
+verification"). **Status:** steps 0 to 9 built 2026-10-07, step 10 partly (see its note);
+then a pattern audit against the handbook (three reviewers) and its fixes; steps 11 to 14 to
+build. The code's names changed in the audit; this file uses the current ones.
 
 ## Goal
 
@@ -51,16 +52,16 @@ resolves ONE Node, 24.21.0, for everything.
 | # | Step | Status | Cloud? |
 |---|---|---|---|
 | 0 | Live checks on Node 24 | done | yes (approved) |
-| 1 | A register that answers "which Node runs this" | done; step 7 swaps its source | no |
+| 1 | One lookup that answers "which Node runs this" (now `core/shell/demoBuilderNode.ts`) | done; step 7 swapped its source | no |
 | 2 | Demo Builder's own Node folder; one call ensures a Node and the Adobe CLI under it | done | no |
-| 3 | Every caller asks the register; "auto", the directory scan and the fallback "20"s gone | done | no |
+| 3 | Every caller asks that lookup; "auto", the directory scan and the fallback "20"s gone | done | no |
 | 4 | One runner, one reader of what is installed, start uses the folder | done | no |
-| 5 | Prerequisites use one Node set for the CLI and its plugins | done; step 8 simplifies plugins | no |
+| 5 | Prerequisites use one Node set for the CLI and its plugins | done; step 8 simplified plugins | no |
 | 6 | Update records the Node it installed under; `.node-version` no longer written | done | no |
-| 7 | **The release-time resolver and generated file; catalog `nodeVersion` fields deleted** | to build | no (reads GitHub/npm) |
-| 8 | **Outside repos at runtime; plugins installed once** | to build | no |
-| 9 | **A release that moves the Node moves installed components with it, in the background** | to build | no |
-| 10 | The AI bundle and terminals use the folder (was step 7) | to build | no |
+| 7 | **The release-time resolver and generated file; catalog `nodeVersion` fields deleted** | done | no (reads GitHub/npm) |
+| 8 | **Custom integrations at runtime; plugins installed once** | done | no |
+| 9 | **A release that moves the Node moves installed components with it, in the background** | done (an activation upkeep sweep) | no |
+| 10 | The AI bundle and terminals use the folder | AI tool launch lines and terminals done; the Demo Builder connection and git-sync hook moved to step 11 | no |
 | 11 | **Cleanup: unused Nodes in the folder, the one-time shared-fnm cleanup, uninstall** | to build | no (local, confirmed where it touches the SC's fnm) |
 | 12 | **What the SC sees: the prerequisites step, the add confirmation and progress, the post-update Node, Diagnostics** | to build | no |
 | 13 | Docs, skills, backlog | to build | no |
@@ -68,14 +69,19 @@ resolves ONE Node, 24.21.0, for everything.
 
 Each step is a commit with the gate green.
 
-## What steps 1 to 6 keep and what step 7 replaces
+## Where things live now (after the audit)
 
-Kept: the register's interface (`adobeCliNodeVersion`, `nodeForComponent`,
-`nodeForAppBuilderEntry`, `aiToolsNodeVersion`, `nodesFor`), so no caller changes; the folder,
-`ensureNode`, the one runner, `readStoreFnmList`, `perNodeToolMajors`, the update record.
-Replaced: where the register gets its answer (hand-kept catalog `nodeVersion` fields become the
-generated file), and the SOP enforcer's rule ("only in catalogs" becomes "only in the generated
-file").
+| Job | Module |
+|---|---|
+| Demo Builder's Node, and a custom integration's | `core/shell/demoBuilderNode.ts` (`demoBuilderNode`, `nodeForAppBuilderEntry`, `nodeForInstall`) over `core/shell/config/node-version.generated.json` |
+| The rule that picks a Node from ranges | `core/shell/nodeRangeRule.ts` |
+| Which sources the release reads | `features/components/services/nodeResolution.ts` + `scripts/resolve-node-version.mjs` (`npm run node:resolve`) |
+| Demo Builder's Node folder (`~/.demo-builder/node`) and the fnm command forms | `core/shell/nodeFolder.ts` |
+| Ensure a Node and the Adobe CLI under it | `core/shell/ensureNodeVersion.ts` (`toolInstalledUnder` is the one "installed?" check) + `features/components/services/nodeEnsure.ts` (commands from the prerequisites manager) |
+| What is installed in the folder | `readNodeFolderList` / `listNodeFolderMajors` in `MultiVersionDetector.ts` |
+| A custom integration's Node at the add door | `features/app-builder/services/customIntegrationNode.ts` + `withCustomIntegrationNode` |
+| Moving installed components when the Node moves | `features/components/services/demoBuilderNodeSweep.ts`, last in the activation upkeep chain |
+| The house check | `tests/sop/node-versions-from-components.test.ts` |
 
 ## Migration of an existing installation
 

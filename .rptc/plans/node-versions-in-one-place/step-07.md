@@ -14,7 +14,7 @@ source Demo Builder ships, from the catalogs themselves so the list cannot drift
 For each it reads `package.json` `engines.node` (GitHub contents API; npm registry `latest`),
 then applies the rule (lowest LTS major every range accepts, newest patch; LTS list from
 `https://nodejs.org/dist/index.json`). It writes
-`src/features/components/config/node-version.generated.json`:
+`src/core/shell/config/node-version.generated.json`:
 `{ node: "24", sources: [{ id, from, range }] }` so a reviewer sees why. It FAILS, writing
 nothing, when the ranges do not overlap (naming the ranges that block) or a required source is
 unreadable. `--check` compares without writing. A source with no range takes the shared Node and
