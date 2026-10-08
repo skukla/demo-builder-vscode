@@ -101,3 +101,4 @@ the register), [[PL-36]] (an untested Node-version sort in the prerequisites ins
 - 2026-10-07  refactor(node): Demo Builder's Node lives in core; the setter is gone (`745adb317`)
 - 2026-10-07  fix(node): the SC reads plain stage names and sentences; fnm's own words go to the log (`f0c7d7cb8`)
 - 2026-10-07  fix(ai): the AI tools launch from Demo Builder's Node folder (`976f54664`)
+- 2026-10-07  refactor(node): close the re-audit's findings (`39f310ff6`)
