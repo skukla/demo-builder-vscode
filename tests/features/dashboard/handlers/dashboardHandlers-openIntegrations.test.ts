@@ -46,6 +46,7 @@ import type { Project } from '@/types/base';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
+import { poolUnits } from '../../../helpers/authenticationServiceFake';
 const mockExecuteCommand = vscode.commands.executeCommand as jest.Mock;
 const mockTransition = BaseWebviewCommand as unknown as {
     startWebviewTransition: jest.Mock;
@@ -57,10 +58,10 @@ const mockGetTokenStatus = jest.fn().mockResolvedValue({ isAuthenticated: true }
 const mockGetServicesForOrg = jest.fn().mockResolvedValue([]);
 
 function createMockContext(project: Project = PROJECT) {
-    (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue({
+    (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(poolUnits({
         getTokenStatus: mockGetTokenStatus,
         getServicesForOrg: mockGetServicesForOrg,
-    });
+    }));
     // The canonical HandlerContext, with the three members this suite varies. The
     // literal it replaces named those three and reached the handler through
     // `as never` at ten call sites — so the handler was free to read anything.

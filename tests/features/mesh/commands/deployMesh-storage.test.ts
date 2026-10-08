@@ -22,6 +22,7 @@ import type { Project, ComponentInstance } from '@/types/base';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { poolUnits } from '../../../helpers/authenticationServiceFake';
 
 // MUST stay in this file: this spec imports fs/promises directly, and a
 // jest.mock only hoists above the imports of the module it appears in. Moved to
@@ -167,7 +168,7 @@ describe('DeployMeshCommand - Storage Behavior', () => {
 
         // Setup mock AuthManager — org-123 is reachable, matching the project's
         // org, so the canonical detectProjectOrgMismatch check passes.
-        mockAuthManager = {
+        mockAuthManager = poolUnits({
             isAuthenticated: jest.fn().mockResolvedValue(true),
             getOrganizations: jest
                 .fn()
@@ -176,7 +177,7 @@ describe('DeployMeshCommand - Storage Behavior', () => {
             // Read by the deploy core to enrich the org target. Omitted, it throws
             // inside the core's try and every assertion below sees a failed deploy.
             getCachedOrganization: jest.fn().mockReturnValue({ id: 'org-123', name: 'Org 123' }),
-        };
+        });
 
         // Setup mock CommandExecutor
         mockCommandExecutor = {

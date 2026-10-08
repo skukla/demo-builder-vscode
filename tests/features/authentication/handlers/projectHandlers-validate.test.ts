@@ -13,6 +13,7 @@ import {
 import type { EnsureOrgContextResult } from '@/features/authentication/services/ensureOrgContext';
 import { ErrorCode } from '@/types/errorCodes';
 import { createMockContext, mockOrganization } from './projectHandlers.testUtils';
+import { entityServicesOf } from '../../../helpers/authenticationServiceFake';
 
 // Mock dependencies
 jest.mock('@/core/di/serviceLocator');
@@ -90,7 +91,7 @@ describe('projectHandlers - Validation', () => {
 
     describe('Error Message Formatting', () => {
         it('should format timeout errors correctly', async () => {
-            mockContext.authManager.getCurrentOrganization.mockResolvedValue(mockOrganization);
+            entityServicesOf(mockContext.authManager).resolver.getCurrentOrganization.mockResolvedValue(mockOrganization);
             mockContext.authManager.getProjects.mockRejectedValue(
                 new Error('Request timed out. Please check your connection and try again.')
             );
@@ -106,7 +107,7 @@ describe('projectHandlers - Validation', () => {
         });
 
         it('should provide generic error message for non-timeout errors', async () => {
-            mockContext.authManager.getCurrentOrganization.mockResolvedValue(mockOrganization);
+            entityServicesOf(mockContext.authManager).resolver.getCurrentOrganization.mockResolvedValue(mockOrganization);
             mockContext.authManager.getProjects.mockRejectedValue(new Error('Some other error'));
 
             const result = await handleGetProjects(mockContext);

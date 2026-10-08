@@ -67,7 +67,9 @@ export async function handleDeleteApiMesh(
         // reason; the difference is that this one is destructive and runs with
         // --autoConfirmAction, so there is no prompt to catch a wrong target.
         const project = await context.stateManager.getCurrentProject();
-        const cachedOrg = ServiceLocator.getAuthenticationService().getCachedOrganization();
+        const cachedOrg = ServiceLocator.getAuthenticationService()
+            .getCacheManager()
+            .getCachedOrganization();
         const target: OrgContextTarget = buildOrgTargetFromProjectAdobe(
             {
                 organization: project?.adobe?.organization,

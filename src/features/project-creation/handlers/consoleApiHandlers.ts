@@ -62,7 +62,8 @@ export const handleListOrgConsoleApis: MessageHandler<{
     // the canonical "token org is truth" resolution (mirrors testDeveloperPermissions /
     // getOrganizationsSdkOnlyFirstId) — rather than dead-ending on an unrecoverable error.
     const org =
-        authService.getCachedOrganization() ?? (await authService.getOrganizationsSdkOnly())?.[0];
+        authService.getCacheManager().getCachedOrganization() ??
+        (await (await authService.getEntityServices()).reads.getOrganizationsSdkOnly())?.[0];
     if (!org?.id) {
         return {
             success: false,

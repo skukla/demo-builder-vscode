@@ -133,7 +133,8 @@ async function orgOf(
     // Resolved, not read from the cache: the cache is empty until something
     // resolves the org, and after a window reload nothing has (measured
     // 2026-09-30 — the cached read answered undefined and wrote '' again).
-    const signedIn = await context.authManager?.getCurrentOrganization();
+    const signedIn = await context.authManager?.getEntityServices()
+        .then((units) => units.resolver.getCurrentOrganization());
     return { organization: signedIn?.id ?? '', organizationName: signedIn?.name };
 }
 

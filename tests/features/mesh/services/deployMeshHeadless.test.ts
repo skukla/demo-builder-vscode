@@ -134,16 +134,20 @@ describe('deployMeshHeadless', () => {
         // App Builder gate ON left it on for every test declared after it.
         mockRequiresAppBuilder.mockReturnValue(false);
         mockRegenerateComponentEnvFile.mockResolvedValue(undefined);
-        currentAuthManager = createMockAuthenticationService({
-            testDeveloperPermissions: jest.fn().mockResolvedValue({ hasPermissions: true }),
-            // Enriches the org target with code/name when the id matches
-            // (buildOrgTargetFromProjectAdobe).
-            getCachedOrganization: jest.fn(() => ({
-                id: 'org',
-                code: 'ORG@AdobeOrg',
-                name: 'Adobe Demo System',
-            })),
-        });
+        currentAuthManager = createMockAuthenticationService(
+            { testDeveloperPermissions: jest.fn().mockResolvedValue({ hasPermissions: true }) },
+            {
+                cache: {
+                    // Enriches the org target with code/name when the id matches
+                    // (buildOrgTargetFromProjectAdobe).
+                    getCachedOrganization: jest.fn(() => ({
+                        id: 'org',
+                        code: 'ORG@AdobeOrg',
+                        name: 'Adobe Demo System',
+                    })),
+                },
+            }
+        );
         mockPreflight.mockResolvedValue({ ready: true });
         mockFetchInfo.mockResolvedValue({ meshId: 'existing-1', endpoint: 'https://old/graphql' });
         mockDeploy.mockResolvedValue({

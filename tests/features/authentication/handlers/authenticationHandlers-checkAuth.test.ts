@@ -14,6 +14,7 @@ import { handleCheckAuth } from '@/features/authentication/handlers/authenticati
 import type { HandlerContext } from '@/types/handlers';
 import type { AdobeOrg } from '@/features/authentication/services/types';
 import { createAuthHandlerContext, mockOrg, mockProject } from './testUtils';
+import { entityServicesOf } from '../../../helpers/authenticationServiceFake';
 
 describe('authenticationHandlers - handleCheckAuth', () => {
     let mockContext: jest.Mocked<HandlerContext>;
@@ -50,19 +51,19 @@ describe('authenticationHandlers - handleCheckAuth', () => {
 
         it('should check auth and return authenticated with the org when fully configured', async () => {
             (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
-            (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
-            (mockContext.authManager!.getCachedProject as jest.Mock).mockReturnValue(mockProject);
-            (mockContext.authManager!.getValidationCache as jest.Mock).mockReturnValue(null);
+            (mockContext.authManager!.getCacheManager().getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
+            (mockContext.authManager!.getCacheManager().getCachedProject as jest.Mock).mockReturnValue(mockProject);
+            (mockContext.authManager!.getCacheManager().getValidationCache as jest.Mock).mockReturnValue(null);
 
             const result = await handleCheckAuth(mockContext);
 
             expect(result.success).toBe(true);
-            expect(mockContext.authManager!.getCachedOrganization).toHaveBeenCalledTimes(1);
+            expect(mockContext.authManager!.getCacheManager().getCachedOrganization).toHaveBeenCalledTimes(1);
             // The payload carries the ORG only. `project` rode along unread for as
             // long as this message has existed — `useAuthStatus` writes `adobeAuth`
             // and `adobeOrg`, and its own AuthStatusData type never declared the
             // field. So the project is not read here either.
-            expect(mockContext.authManager!.getCachedProject).not.toHaveBeenCalled();
+            expect(mockContext.authManager!.getCacheManager().getCachedProject).not.toHaveBeenCalled();
 
             // Verify final message
             expect(mockContext.sendMessage).toHaveBeenLastCalledWith('auth-status', {
@@ -81,9 +82,9 @@ describe('authenticationHandlers - handleCheckAuth', () => {
 
         it('should check auth and return authenticated with org only (no project)', async () => {
             (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
-            (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
-            (mockContext.authManager!.getCachedProject as jest.Mock).mockReturnValue(undefined);
-            (mockContext.authManager!.getValidationCache as jest.Mock).mockReturnValue(null);
+            (mockContext.authManager!.getCacheManager().getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
+            (mockContext.authManager!.getCacheManager().getCachedProject as jest.Mock).mockReturnValue(undefined);
+            (mockContext.authManager!.getCacheManager().getValidationCache as jest.Mock).mockReturnValue(null);
 
             const result = await handleCheckAuth(mockContext);
 
@@ -104,14 +105,14 @@ describe('authenticationHandlers - handleCheckAuth', () => {
 
         it('should NOT initialize SDK when authenticated (quick check only)', async () => {
             (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
-            (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
-            (mockContext.authManager!.getCachedProject as jest.Mock).mockReturnValue(mockProject);
-            (mockContext.authManager!.getValidationCache as jest.Mock).mockReturnValue(null);
+            (mockContext.authManager!.getCacheManager().getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
+            (mockContext.authManager!.getCacheManager().getCachedProject as jest.Mock).mockReturnValue(mockProject);
+            (mockContext.authManager!.getCacheManager().getValidationCache as jest.Mock).mockReturnValue(null);
 
             await handleCheckAuth(mockContext);
 
             // handleCheckAuth uses cached data only - no SDK initialization
-            expect(mockContext.authManager!.ensureSDKInitialized).not.toHaveBeenCalled();
+            expect(mockContext.authManager!.getSdkClient().ensureInitialized).not.toHaveBeenCalled();
         });
 
         it('should send initial checking status message with correct text', async () => {
@@ -128,9 +129,9 @@ describe('authenticationHandlers - handleCheckAuth', () => {
 
         it('should log performance metrics (check duration)', async () => {
             (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
-            (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
-            (mockContext.authManager!.getCachedProject as jest.Mock).mockReturnValue(mockProject);
-            (mockContext.authManager!.getValidationCache as jest.Mock).mockReturnValue(null);
+            (mockContext.authManager!.getCacheManager().getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
+            (mockContext.authManager!.getCacheManager().getCachedProject as jest.Mock).mockReturnValue(mockProject);
+            (mockContext.authManager!.getCacheManager().getValidationCache as jest.Mock).mockReturnValue(null);
 
             await handleCheckAuth(mockContext);
 
@@ -141,9 +142,9 @@ describe('authenticationHandlers - handleCheckAuth', () => {
 
         it('should log final status message', async () => {
             (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
-            (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
-            (mockContext.authManager!.getCachedProject as jest.Mock).mockReturnValue(mockProject);
-            (mockContext.authManager!.getValidationCache as jest.Mock).mockReturnValue(null);
+            (mockContext.authManager!.getCacheManager().getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
+            (mockContext.authManager!.getCacheManager().getCachedProject as jest.Mock).mockReturnValue(mockProject);
+            (mockContext.authManager!.getCacheManager().getValidationCache as jest.Mock).mockReturnValue(null);
 
             await handleCheckAuth(mockContext);
 
@@ -156,15 +157,15 @@ describe('authenticationHandlers - handleCheckAuth', () => {
 
         it('should use cached data when available (no CLI fetching)', async () => {
             (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
-            (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
-            (mockContext.authManager!.getCachedProject as jest.Mock).mockReturnValue(mockProject);
-            (mockContext.authManager!.getValidationCache as jest.Mock).mockReturnValue(null);
+            (mockContext.authManager!.getCacheManager().getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
+            (mockContext.authManager!.getCacheManager().getCachedProject as jest.Mock).mockReturnValue(mockProject);
+            (mockContext.authManager!.getCacheManager().getValidationCache as jest.Mock).mockReturnValue(null);
 
             await handleCheckAuth(mockContext);
 
             // Uses cached data - no CLI fetching when cache hit
-            expect(mockContext.authManager!.getCurrentOrganization).not.toHaveBeenCalled();
-            expect(mockContext.authManager!.getCurrentProject).not.toHaveBeenCalled();
+            expect(entityServicesOf(mockContext.authManager!).resolver.getCurrentOrganization).not.toHaveBeenCalled();
+            expect(entityServicesOf(mockContext.authManager!).resolver.getCurrentProject).not.toHaveBeenCalled();
         });
     });
 
@@ -184,22 +185,22 @@ describe('authenticationHandlers - handleCheckAuth', () => {
 
         it('should resolve org from the token and OMIT the project when cache is empty', async () => {
             (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
-            (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(
+            (mockContext.authManager!.getCacheManager().getCachedOrganization as jest.Mock).mockReturnValue(
                 undefined
             );
-            (mockContext.authManager!.getCachedProject as jest.Mock).mockReturnValue(undefined);
+            (mockContext.authManager!.getCacheManager().getCachedProject as jest.Mock).mockReturnValue(undefined);
             (mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([]);
-            (mockContext.authManager!.getValidationCache as jest.Mock).mockReturnValue(null);
+            (mockContext.authManager!.getCacheManager().getValidationCache as jest.Mock).mockReturnValue(null);
 
             const result = await handleCheckAuth(mockContext);
 
             // Org comes from the token (getOrganizations), not the stale CLI console org.
             expect(mockContext.authManager!.getOrganizations).toHaveBeenCalledTimes(1);
-            expect(mockContext.authManager!.getCurrentOrganization).not.toHaveBeenCalled();
+            expect(entityServicesOf(mockContext.authManager!).resolver.getCurrentOrganization).not.toHaveBeenCalled();
             // The project is OMITTED on a cache miss: we never pair the freshly
             // resolved token org with getCurrentProject() (the stale CLI console
             // project), which could belong to a DIFFERENT org.
-            expect(mockContext.authManager!.getCurrentProject).not.toHaveBeenCalled();
+            expect(entityServicesOf(mockContext.authManager!).resolver.getCurrentProject).not.toHaveBeenCalled();
 
             // Should succeed - token reaches no org yet, so selection is required.
             expect(result.success).toBe(true);
@@ -217,19 +218,19 @@ describe('authenticationHandlers - handleCheckAuth', () => {
         it('should pair the token org with NO project (never a stale one) on cache miss', async () => {
             const tokenOrg = { id: 'token-org', code: 'TOKENORG@AdobeOrg', name: 'Token Org' };
             (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
-            (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(
+            (mockContext.authManager!.getCacheManager().getCachedOrganization as jest.Mock).mockReturnValue(
                 undefined
             );
-            (mockContext.authManager!.getCachedProject as jest.Mock).mockReturnValue(undefined);
+            (mockContext.authManager!.getCacheManager().getCachedProject as jest.Mock).mockReturnValue(undefined);
             (mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([tokenOrg]);
-            (mockContext.authManager!.getValidationCache as jest.Mock).mockReturnValue(null);
+            (mockContext.authManager!.getCacheManager().getValidationCache as jest.Mock).mockReturnValue(null);
 
             const result = await handleCheckAuth(mockContext);
 
             expect(result.success).toBe(true);
             // Token org cached for the fast path, and NO stale project is fetched/paired.
-            expect(mockContext.authManager!.setCachedOrganization).toHaveBeenCalledWith(tokenOrg);
-            expect(mockContext.authManager!.getCurrentProject).not.toHaveBeenCalled();
+            expect(mockContext.authManager!.getCacheManager().setCachedOrganization).toHaveBeenCalledWith(tokenOrg);
+            expect(entityServicesOf(mockContext.authManager!).resolver.getCurrentProject).not.toHaveBeenCalled();
             expect(mockContext.sendMessage).toHaveBeenLastCalledWith(
                 'auth-status',
                 expect.objectContaining({
@@ -241,9 +242,9 @@ describe('authenticationHandlers - handleCheckAuth', () => {
 
         it('should handle getCachedProject() returning undefined gracefully', async () => {
             (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
-            (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
-            (mockContext.authManager!.getCachedProject as jest.Mock).mockReturnValue(undefined);
-            (mockContext.authManager!.getValidationCache as jest.Mock).mockReturnValue(null);
+            (mockContext.authManager!.getCacheManager().getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
+            (mockContext.authManager!.getCacheManager().getCachedProject as jest.Mock).mockReturnValue(undefined);
+            (mockContext.authManager!.getCacheManager().getValidationCache as jest.Mock).mockReturnValue(null);
 
             const result = await handleCheckAuth(mockContext);
 
@@ -291,16 +292,16 @@ describe('authenticationHandlers - handleCheckAuth', () => {
 
         it('resolves the TOKEN org (getOrganizations()[0]), not the CLI console org, on a cache miss', async () => {
             (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
-            (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(
+            (mockContext.authManager!.getCacheManager().getCachedOrganization as jest.Mock).mockReturnValue(
                 undefined
             );
-            (mockContext.authManager!.getCachedProject as jest.Mock).mockReturnValue(undefined);
+            (mockContext.authManager!.getCacheManager().getCachedProject as jest.Mock).mockReturnValue(undefined);
             (mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([tokenOrg]);
-            (mockContext.authManager!.getCurrentOrganization as jest.Mock).mockResolvedValue(
+            (entityServicesOf(mockContext.authManager!).resolver.getCurrentOrganization as jest.Mock).mockResolvedValue(
                 consoleOrg
             );
-            (mockContext.authManager!.getCurrentProject as jest.Mock).mockResolvedValue(undefined);
-            (mockContext.authManager!.getValidationCache as jest.Mock).mockReturnValue(null);
+            (entityServicesOf(mockContext.authManager!).resolver.getCurrentProject as jest.Mock).mockResolvedValue(undefined);
+            (mockContext.authManager!.getCacheManager().getValidationCache as jest.Mock).mockReturnValue(null);
 
             await handleCheckAuth(mockContext);
 
@@ -310,29 +311,29 @@ describe('authenticationHandlers - handleCheckAuth', () => {
                 expect.objectContaining({ organization: tokenOrg })
             );
             // The stale CLI console org must NOT be consulted for the display org.
-            expect(mockContext.authManager!.getCurrentOrganization).not.toHaveBeenCalled();
+            expect(entityServicesOf(mockContext.authManager!).resolver.getCurrentOrganization).not.toHaveBeenCalled();
         });
 
         it('caches the resolved token org on a cache miss', async () => {
             (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
-            (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(
+            (mockContext.authManager!.getCacheManager().getCachedOrganization as jest.Mock).mockReturnValue(
                 undefined
             );
-            (mockContext.authManager!.getCachedProject as jest.Mock).mockReturnValue(undefined);
+            (mockContext.authManager!.getCacheManager().getCachedProject as jest.Mock).mockReturnValue(undefined);
             (mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([tokenOrg]);
-            (mockContext.authManager!.getCurrentProject as jest.Mock).mockResolvedValue(undefined);
-            (mockContext.authManager!.getValidationCache as jest.Mock).mockReturnValue(null);
+            (entityServicesOf(mockContext.authManager!).resolver.getCurrentProject as jest.Mock).mockResolvedValue(undefined);
+            (mockContext.authManager!.getCacheManager().getValidationCache as jest.Mock).mockReturnValue(null);
 
             await handleCheckAuth(mockContext);
 
-            expect(mockContext.authManager!.setCachedOrganization).toHaveBeenCalledWith(tokenOrg);
+            expect(mockContext.authManager!.getCacheManager().setCachedOrganization).toHaveBeenCalledWith(tokenOrg);
         });
 
         it('does NOT resolve from the token on a cache HIT (perf: no getOrganizations call)', async () => {
             (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
-            (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
-            (mockContext.authManager!.getCachedProject as jest.Mock).mockReturnValue(mockProject);
-            (mockContext.authManager!.getValidationCache as jest.Mock).mockReturnValue(null);
+            (mockContext.authManager!.getCacheManager().getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
+            (mockContext.authManager!.getCacheManager().getCachedProject as jest.Mock).mockReturnValue(mockProject);
+            (mockContext.authManager!.getCacheManager().getValidationCache as jest.Mock).mockReturnValue(null);
 
             await handleCheckAuth(mockContext);
 
@@ -352,12 +353,12 @@ describe('authenticationHandlers - handleCheckAuth', () => {
             // (which can be stale after an org switch). The project is OMITTED here —
             // we never pair the token org with the stale CLI console project.
             (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
-            (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(
+            (mockContext.authManager!.getCacheManager().getCachedOrganization as jest.Mock).mockReturnValue(
                 undefined
             ); // Cache empty (restart)
-            (mockContext.authManager!.getCachedProject as jest.Mock).mockReturnValue(undefined);
+            (mockContext.authManager!.getCacheManager().getCachedProject as jest.Mock).mockReturnValue(undefined);
             (mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]); // Token reaches this org
-            (mockContext.authManager!.getValidationCache as jest.Mock).mockReturnValue(null);
+            (mockContext.authManager!.getCacheManager().getValidationCache as jest.Mock).mockReturnValue(null);
 
             const result = await handleCheckAuth(mockContext);
 
@@ -365,8 +366,8 @@ describe('authenticationHandlers - handleCheckAuth', () => {
 
             // Org from the token; project OMITTED. Stale console org must NOT be read.
             expect(mockContext.authManager!.getOrganizations).toHaveBeenCalledTimes(1);
-            expect(mockContext.authManager!.getCurrentOrganization).not.toHaveBeenCalled();
-            expect(mockContext.authManager!.getCurrentProject).not.toHaveBeenCalled();
+            expect(entityServicesOf(mockContext.authManager!).resolver.getCurrentOrganization).not.toHaveBeenCalled();
+            expect(entityServicesOf(mockContext.authManager!).resolver.getCurrentProject).not.toHaveBeenCalled();
 
             // Should show token org; project omitted (re-selected downstream).
             expect(mockContext.sendMessage).toHaveBeenLastCalledWith('auth-status', {
@@ -392,15 +393,15 @@ describe('authenticationHandlers - handleCheckAuth', () => {
 
         it('should handle authenticated but no cached org and no persisted org', async () => {
             (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
-            (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(
+            (mockContext.authManager!.getCacheManager().getCachedOrganization as jest.Mock).mockReturnValue(
                 undefined
             );
-            (mockContext.authManager!.getCachedProject as jest.Mock).mockReturnValue(undefined);
-            (mockContext.authManager!.getCurrentOrganization as jest.Mock).mockResolvedValue(
+            (mockContext.authManager!.getCacheManager().getCachedProject as jest.Mock).mockReturnValue(undefined);
+            (entityServicesOf(mockContext.authManager!).resolver.getCurrentOrganization as jest.Mock).mockResolvedValue(
                 undefined
             );
-            (mockContext.authManager!.getCurrentProject as jest.Mock).mockResolvedValue(undefined);
-            (mockContext.authManager!.getValidationCache as jest.Mock).mockReturnValue(null);
+            (entityServicesOf(mockContext.authManager!).resolver.getCurrentProject as jest.Mock).mockResolvedValue(undefined);
+            (mockContext.authManager!.getCacheManager().getValidationCache as jest.Mock).mockReturnValue(null);
 
             await handleCheckAuth(mockContext);
 
@@ -420,8 +421,8 @@ describe('authenticationHandlers - handleCheckAuth', () => {
 
         it('should hide cached org if validation failed', async () => {
             (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
-            (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
-            (mockContext.authManager!.getValidationCache as jest.Mock).mockReturnValue({
+            (mockContext.authManager!.getCacheManager().getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
+            (mockContext.authManager!.getCacheManager().getValidationCache as jest.Mock).mockReturnValue({
                 org: mockOrg.code,
                 isValid: false,
             });
@@ -445,9 +446,9 @@ describe('authenticationHandlers - handleCheckAuth', () => {
 
         it('should show cached org if validation passed', async () => {
             (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
-            (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
-            (mockContext.authManager!.getCachedProject as jest.Mock).mockReturnValue(mockProject);
-            (mockContext.authManager!.getValidationCache as jest.Mock).mockReturnValue({
+            (mockContext.authManager!.getCacheManager().getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
+            (mockContext.authManager!.getCacheManager().getCachedProject as jest.Mock).mockReturnValue(mockProject);
+            (mockContext.authManager!.getCacheManager().getValidationCache as jest.Mock).mockReturnValue({
                 org: mockOrg.code,
                 isValid: true,
             });
@@ -471,9 +472,9 @@ describe('authenticationHandlers - handleCheckAuth', () => {
 
         it('should show cached org if no validation cache exists', async () => {
             (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
-            (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
-            (mockContext.authManager!.getCachedProject as jest.Mock).mockReturnValue(mockProject);
-            (mockContext.authManager!.getValidationCache as jest.Mock).mockReturnValue(null);
+            (mockContext.authManager!.getCacheManager().getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
+            (mockContext.authManager!.getCacheManager().getCachedProject as jest.Mock).mockReturnValue(mockProject);
+            (mockContext.authManager!.getCacheManager().getValidationCache as jest.Mock).mockReturnValue(null);
 
             await handleCheckAuth(mockContext);
 
@@ -494,24 +495,24 @@ describe('authenticationHandlers - handleCheckAuth', () => {
 
         it('should NOT fetch a project from the CLI on cache miss (avoids mispairing)', async () => {
             (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
-            (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(
+            (mockContext.authManager!.getCacheManager().getCachedOrganization as jest.Mock).mockReturnValue(
                 undefined
             );
-            (mockContext.authManager!.getCachedProject as jest.Mock).mockReturnValue(undefined);
+            (mockContext.authManager!.getCacheManager().getCachedProject as jest.Mock).mockReturnValue(undefined);
             (mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([]);
-            (mockContext.authManager!.getValidationCache as jest.Mock).mockReturnValue(null);
+            (mockContext.authManager!.getCacheManager().getValidationCache as jest.Mock).mockReturnValue(null);
 
             await handleCheckAuth(mockContext);
 
             // The stale CLI console project is never fetched on a cache miss — we
             // don't pair the token org with a possibly-foreign-org project.
-            expect(mockContext.authManager!.getCurrentProject).not.toHaveBeenCalled();
+            expect(entityServicesOf(mockContext.authManager!).resolver.getCurrentProject).not.toHaveBeenCalled();
         });
     });
     describe('token expiry on a verified check', () => {
         beforeEach(() => {
             (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
-            (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
+            (mockContext.authManager!.getCacheManager().getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
         });
 
         it.each([
@@ -550,8 +551,8 @@ describe('authenticationHandlers - handleCheckAuth', () => {
     describe('the validation cache only hides the org it names', () => {
         it('a failed validation for ANOTHER org leaves the cached org shown', async () => {
             (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
-            (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
-            (mockContext.authManager!.getValidationCache as jest.Mock).mockReturnValue({
+            (mockContext.authManager!.getCacheManager().getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
+            (mockContext.authManager!.getCacheManager().getValidationCache as jest.Mock).mockReturnValue({
                 org: 'SOMEOTHERORG',
                 isValid: false,
             });
@@ -568,12 +569,12 @@ describe('authenticationHandlers - handleCheckAuth', () => {
     describe('a cache miss with no orgs on the token', () => {
         it('caches nothing and asks for org selection', async () => {
             (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
-            (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(undefined);
+            (mockContext.authManager!.getCacheManager().getCachedOrganization as jest.Mock).mockReturnValue(undefined);
             (mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([]);
 
             await handleCheckAuth(mockContext);
 
-            expect(mockContext.authManager!.setCachedOrganization).not.toHaveBeenCalled();
+            expect(mockContext.authManager!.getCacheManager().setCachedOrganization).not.toHaveBeenCalled();
             expect(mockContext.sendMessage).toHaveBeenLastCalledWith(
                 'auth-status',
                 expect.objectContaining({ organization: undefined, subMessage: 'Organization selection required' }),

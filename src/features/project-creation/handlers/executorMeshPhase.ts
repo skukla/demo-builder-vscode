@@ -224,7 +224,7 @@ export function buildDeployOrgTarget(
 ): OrgContextTarget {
     return buildOrgTargetFromProjectAdobe(
         typedConfig.adobe,
-        context.authManager?.getCachedOrganization(),
+        context.authManager?.getCacheManager().getCachedOrganization(),
     );
 }
 

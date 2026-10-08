@@ -125,7 +125,7 @@ export async function resolveAppManagementAuth(
     if (!orgId) {
         return undefined;
     }
-    const cached = authManager.getCachedOrganization();
+    const cached = authManager.getCacheManager().getCachedOrganization();
     const code =
         cached?.id === orgId
             ? cached.code
@@ -143,6 +143,7 @@ export function buildDefaultRunnerDeps(
     onProgress?: (message: string, subMessage?: string, position?: OperationPosition) => void,
     confirmToolchainRefresh?: () => Promise<boolean>,
 ): AppBuilderComponentRunnerDeps {
+    const entities = () => ctx.authManager.getEntityServices();
     // Git in an integration's clone, for update and its check.
     const gitIn: GitRunner = (command, cwd) =>
         ctx.commandManager.execute(command, {
@@ -241,7 +242,7 @@ export function buildDefaultRunnerDeps(
                     'The project has no Adobe org/project/workspace context to resolve credentials from.',
                 );
             }
-            const credentials = await ctx.authManager.getS2SDeployCredentials(
+            const credentials = await (await entities()).credentials.getS2SDeployCredentials(
                 adobe.organization,
                 adobe.projectId,
                 workspaceId,
@@ -252,8 +253,8 @@ export function buildDefaultRunnerDeps(
             ensureComponentWorkspace(project, entry, {
                 onMaking,
                 maker: {
-                    createWorkspace: (title, description, target) =>
-                        ctx.authManager.createWorkspace(title, description, target),
+                    createWorkspace: async (title, description, target) =>
+                        (await entities()).projectOps.createWorkspace(title, description, target),
                 },
                 saveProject: ctx.saveProject,
                 // The name the SC gave it (a rename, else the one typed at add),
@@ -267,7 +268,7 @@ export function buildDefaultRunnerDeps(
             (message) => void vscode.window.showWarningMessage(message),
         ),
         deleteComponentWorkspace: async (project, workspace) => {
-            const result = await ctx.authManager.deleteWorkspace(workspace.id, {
+            const result = await (await entities()).projectOps.deleteWorkspace(workspace.id, {
                 orgId: project.adobe?.organization,
                 projectId: project.adobe?.projectId,
                 workspaceName: workspace.name,
@@ -383,7 +384,7 @@ export async function buildRunnerDepsContext(
             // the files we just wrote as user-edited.
             await context.stateManager.saveProjectConfigOnly(p);
         },
-        getCachedOrganization: () => authManager.getCachedOrganization(),
+        getCachedOrganization: () => authManager.getCacheManager().getCachedOrganization(),
         subscriberClient: createApiSubscriberClient(authManager),
         catalog: resolveCatalog(project),
         secrets: context.context.secrets,

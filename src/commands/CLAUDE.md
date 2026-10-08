@@ -172,9 +172,9 @@ each leg has its own timeout and degrades independently.
 **Authentication is checked before expensive Adobe work, never triggered by
 surprise.** A command that needs Adobe I/O calls `isAuthenticated()` first — a
 token-only check — and on failure asks the user before starting a browser login.
-`isFullyAuthenticated()` also validates the org and is materially slower, so it is
-used only where org validity is the actual question. Silent browser launches are the
-failure this prevents.
+Where the org is the actual question, use `ensureOrgContext` or
+`detectProjectOrgMismatch` (the `adobe-org-context` skill), not a second sign-in check.
+Silent browser launches are the failure this prevents.
 
 **An Adobe CLI timeout is not proof of failure.** The CLI is often slow rather than
 broken, so a catch block that sees success text in `error.stdout` should treat the

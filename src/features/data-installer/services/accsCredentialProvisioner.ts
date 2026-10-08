@@ -32,7 +32,7 @@
 /** The Console service whose subscription grants the Commerce scopes. */
 const ACCS_SERVICE_CODE = 'ACCS-REST-API';
 
-/** The auth surface this loop needs — matched to `AuthenticationService`. */
+/** The auth surface this loop needs — the credential and org-services units' methods. */
 export interface ProvisionerAuth {
     getWorkspaceS2SCredential: (
         orgId: string,

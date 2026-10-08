@@ -22,6 +22,7 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { poolUnits } from '../../../helpers/authenticationServiceFake';
 // Mock dependencies
 jest.mock('@/core/di/serviceLocator');
 // Uses the real @/core/utils/timeoutConfig (pure constants) — a partial config-leaf
@@ -50,11 +51,11 @@ describe('Mesh Handlers - DI Pattern (Step 9)', () => {
         mockLogger = createMockLogger();
 
         // Mock authentication service
-        mockAuthService = {
+        mockAuthService = poolUnits({
             isAuthenticated: jest.fn().mockResolvedValue(true),
             // Org-context targeting reads the cached org to enrich code/name.
             getCachedOrganization: jest.fn().mockReturnValue(undefined),
-        };
+        });
 
         // Mock command executor
         mockCommandExecutor = {

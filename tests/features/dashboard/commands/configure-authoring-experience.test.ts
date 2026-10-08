@@ -179,10 +179,12 @@ function captureSaveHandler(
 beforeEach(() => {
     ServiceLocator.setCommandExecutor(createMockCommandExecutor());
     ServiceLocator.setAuthenticationService(
-        createMockAuthenticationService({
-            getCachedOrganization: jest.fn(),
-            getTokenStatus: jest.fn(async () => ({ isAuthenticated: true, expiresInMinutes: 60 })),
-        })
+        createMockAuthenticationService(
+            {
+                getTokenStatus: jest.fn(async () => ({ isAuthenticated: true, expiresInMinutes: 60 })),
+            },
+            { cache: { getCachedOrganization: jest.fn() } },
+        )
     );
 });
 

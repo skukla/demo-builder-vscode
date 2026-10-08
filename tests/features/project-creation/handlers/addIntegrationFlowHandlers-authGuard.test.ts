@@ -25,7 +25,7 @@ import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
-import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
+import { createMockAuthenticationService, entityServicesOf } from '../../../helpers/authenticationServiceFake';
 
 
 const mockEnsureAdobeIOAuth = jest.fn();
@@ -64,18 +64,26 @@ const AUTH_HANDLERS = ['check-auth', 'authenticate', 'switchOrg'] as const;
 
 function createContext(): jest.Mocked<HandlerContext> {
     return createMockHandlerContext({
-        authManager: createMockAuthenticationService({
-            // If a guard is missing, the handler reaches these — the fetch that
-            // drops to the CLI and opens a browser. They must never be called
-            // while unauthenticated.
-            getProjects: jest.fn().mockResolvedValue([]),
-            // The P1 sibling: no CLI fallback, so a background read cannot open
-            // a browser even with a stale token.
-            getProjectsSdkOnly: jest.fn().mockResolvedValue([]),
-            getWorkspacesSdkOnly: jest.fn().mockResolvedValue([]),
-            getWorkspaces: jest.fn().mockResolvedValue([]),
-            getCurrentOrganization: jest.fn().mockResolvedValue({ name: 'Org' }),
-        }),
+        authManager: createMockAuthenticationService(
+            {
+                // If a guard is missing, the handler reaches these — the fetch that
+                // drops to the CLI and opens a browser. They must never be called
+                // while unauthenticated.
+                getProjects: jest.fn().mockResolvedValue([]),
+            },
+            {
+                entities: {
+                    reads: {
+                        // The P1 sibling: no CLI fallback, so a background read cannot
+                        // open a browser even with a stale token.
+                        getProjectsSdkOnly: jest.fn().mockResolvedValue([]),
+                        getWorkspacesSdkOnly: jest.fn().mockResolvedValue([]),
+                        getWorkspaces: jest.fn().mockResolvedValue([]),
+                    },
+                    resolver: { getCurrentOrganization: jest.fn().mockResolvedValue({ name: 'Org' }) },
+                },
+            },
+        ),
         stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(undefined) }),
     });
 }
@@ -119,7 +127,7 @@ describe('Adobe entity handlers refuse before fetching when sign-in is declined'
         const context = createContext();
         await addIntegrationFlowHandlers['get-workspaces'](context, {});
 
-        expect(context.authManager?.getWorkspaces).not.toHaveBeenCalled();
+        expect(entityServicesOf(context.authManager).reads.getWorkspaces).not.toHaveBeenCalled();
     });
 
     it('returns AUTH_REQUIRED so the picker offers Sign In rather than Retry', async () => {
@@ -217,7 +225,7 @@ describe('quiet reads neither prompt nor shell out', () => {
 
         await addIntegrationFlowHandlers['get-projects'](context, { quiet: true });
 
-        expect(context.authManager?.getProjectsSdkOnly).toHaveBeenCalledTimes(1);
+        expect(entityServicesOf(context.authManager).reads.getProjectsSdkOnly).toHaveBeenCalledTimes(1);
         expect(context.authManager?.getProjects).not.toHaveBeenCalled();
     });
 
@@ -237,7 +245,7 @@ describe('quiet reads neither prompt nor shell out', () => {
 
         expect(mockEnsureAdobeIOAuth).toHaveBeenCalledTimes(1);
         expect(context.authManager?.getProjects).toHaveBeenCalledTimes(1);
-        expect(context.authManager?.getProjectsSdkOnly).not.toHaveBeenCalled();
+        expect(entityServicesOf(context.authManager).reads.getProjectsSdkOnly).not.toHaveBeenCalled();
     });
 });
 

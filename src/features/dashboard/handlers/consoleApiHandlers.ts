@@ -220,7 +220,7 @@ async function reconcileExtras(
     const client = createApiSubscriberClient(authService);
     const orgTarget = buildOrgTargetFromProjectAdobe(
         project.adobe,
-        authService.getCachedOrganization(),
+        authService.getCacheManager().getCachedOrganization(),
     );
     try {
         // The subscribe's own lines, on the shared channel: this step reads the

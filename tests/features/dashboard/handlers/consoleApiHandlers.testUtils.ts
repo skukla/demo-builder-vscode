@@ -20,6 +20,7 @@ import type { HandlerContext } from '@/types/handlers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { poolUnits } from '../../../helpers/authenticationServiceFake';
 
 jest.mock('@/features/dashboard/handlers/appBuilderComponentHandlers', () => ({
     runGuards: jest.fn().mockResolvedValue(undefined),
@@ -63,9 +64,11 @@ jest.mock('@/core/shell/orgContextEnv', () => ({
 }));
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
-        getAuthenticationService: jest.fn(() => ({
-            getCachedOrganization: jest.fn().mockReturnValue(undefined),
-        })),
+        getAuthenticationService: jest.fn(() =>
+            poolUnits({
+                getCachedOrganization: jest.fn().mockReturnValue(undefined),
+            }),
+        ),
     },
 }));
 

@@ -16,6 +16,7 @@ rule_match() {
         */services/detectProjectOrgMismatch.ts) return 0 ;;
         */orgContextEnv.ts) return 0 ;;
         */services/authenticationService.ts) return 0 ;;
+        */services/adobeSignIn.ts) return 0 ;;
     esac
     return 1
 }

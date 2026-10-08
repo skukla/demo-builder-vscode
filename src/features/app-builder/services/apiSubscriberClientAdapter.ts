@@ -1,7 +1,8 @@
 /**
  * ApiSubscriberClient adapter (D2 Track A, Step 02)
  *
- * A thin closure over `AuthenticationService` that satisfies the
+ * A thin closure over `AuthenticationService`'s entity services (its
+ * `orgServices` and `credentials`) that satisfies the
  * `ApiSubscriberClient` interface the D1 subscriber (`apiSubscriber.ts`) expects.
  * It reconciles two signature mismatches:
  *   1. `ensureOAuthCredentialId(target: OrgTarget)` → the service takes explicit
@@ -17,33 +18,58 @@ import type { ApiSubscriberClient, OrgTarget } from '@/features/app-builder/serv
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 
 export function createApiSubscriberClient(service: AuthenticationService): ApiSubscriberClient {
+    // Each call goes to the unit that owns it: org services or credentials.
+    const orgServices = async () => (await service.getEntityServices()).orgServices;
+    const credentials = async () => (await service.getEntityServices()).credentials;
     return {
-        getServicesForOrg: (orgId, sdkCodes) => service.getServicesForOrg(orgId, sdkCodes),
+        getServicesForOrg: async (orgId, sdkCodes) =>
+            (await orgServices()).getServicesForOrg(orgId, sdkCodes),
 
-        getSubscribedServiceCodes: (orgId, idIntegration) =>
-            service.getSubscribedServiceCodes(orgId, idIntegration),
+        getSubscribedServiceCodes: async (orgId, idIntegration) =>
+            (await orgServices()).getSubscribedServiceCodes(orgId, idIntegration),
 
-        getSubscribedServices: (orgId, idIntegration) =>
-            service.getSubscribedServices(orgId, idIntegration),
+        getSubscribedServices: async (orgId, idIntegration) =>
+            (await orgServices()).getSubscribedServices(orgId, idIntegration),
 
-        listCredentialIds: (target: OrgTarget) =>
-            service.listCredentialIds(target.orgId, target.projectId, target.workspaceId),
+        listCredentialIds: async (target: OrgTarget) =>
+            (await credentials()).listCredentialIds(
+                target.orgId,
+                target.projectId,
+                target.workspaceId,
+            ),
 
-        ensureOAuthCredentialId: (target: OrgTarget) =>
-            service.ensureOAuthCredentialId(target.orgId, target.projectId, target.workspaceId),
+        ensureOAuthCredentialId: async (target: OrgTarget) =>
+            (await credentials()).ensureOAuthCredentialId(
+                target.orgId,
+                target.projectId,
+                target.workspaceId,
+            ),
 
         createAdobeIdCredential: async (orgId, projectId, workspaceId, input) => {
-            const id = await service.createAdobeIdCredential(orgId, projectId, workspaceId, input);
+            const id = await (await credentials()).createAdobeIdCredential(
+                orgId,
+                projectId,
+                workspaceId,
+                input,
+            );
             if (!id) {
                 throw new Error('createAdobeIdCredential: no id_integration returned for the apiKey credential');
             }
             return id;
         },
 
-        subscribeAdobeIdIntegrationToServices: (orgId, idIntegration, serviceInfo) =>
-            service.subscribeAdobeIdIntegrationToServices(orgId, idIntegration, serviceInfo),
+        subscribeAdobeIdIntegrationToServices: async (orgId, idIntegration, serviceInfo) =>
+            (await orgServices()).subscribeAdobeIdIntegrationToServices(
+                orgId,
+                idIntegration,
+                serviceInfo,
+            ),
 
-        subscribeOAuthServerToServerIntegrationToServices: (orgId, idIntegration, serviceInfo) =>
-            service.subscribeOAuthServerToServerIntegrationToServices(orgId, idIntegration, serviceInfo),
+        subscribeOAuthServerToServerIntegrationToServices: async (orgId, idIntegration, serviceInfo) =>
+            (await orgServices()).subscribeOAuthServerToServerIntegrationToServices(
+                orgId,
+                idIntegration,
+                serviceInfo,
+            ),
     };
 }

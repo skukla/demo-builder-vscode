@@ -1,4 +1,5 @@
 import type { MeshRedeployDeps } from '@/features/eds/services/reset/edsResetMeshHelper';
+import { poolUnits } from './authenticationServiceFake';
 /**
  * The collaborators mesh-touching code receives (ADR-015): a shell executor and
  * an auth service.
@@ -19,10 +20,10 @@ import type { MeshRedeployDeps } from '@/features/eds/services/reset/edsResetMes
 
 /** A fake auth service carrying every method the mesh paths have asked for. */
 function defaultAuthManager() {
-    return {
+    return poolUnits({
         getTokenStatus: jest.fn(async () => ({ isAuthenticated: true })),
         getCachedOrganization: jest.fn(),
-    };
+    });
 }
 
 /**

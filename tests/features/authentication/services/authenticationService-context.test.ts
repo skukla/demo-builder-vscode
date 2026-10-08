@@ -79,7 +79,7 @@ describe('AuthenticationService - Context Validation and SDK', () => {
             mockSDKClient.ensureInitialized.mockResolvedValue(true);
 
             // When: ensuring SDK initialization
-            const result = await authService.ensureSDKInitialized();
+            const result = await authService.getSdkClient().ensureInitialized();
 
             // Then: should return success
             expect(result).toBe(true);
@@ -174,9 +174,9 @@ describe('AuthenticationService - Context Validation and SDK', () => {
     describe('cache passthroughs', () => {
         it('exposes the one cache manager the service reads and writes through', () => {
             authService.getCacheManager().setCachedOrganization(mockOrg);
-            expect(authService.getCachedOrganization()).toEqual(mockOrg);
+            expect(authService.getCacheManager().getCachedOrganization()).toEqual(mockOrg);
 
-            authService.setCachedOrganization(undefined);
+            authService.getCacheManager().setCachedOrganization(undefined);
             expect(authService.getCacheManager().getCachedOrganization()).toBeUndefined();
         });
 
@@ -185,17 +185,9 @@ describe('AuthenticationService - Context Validation and SDK', () => {
             cache.setCachedProject(mockProject);
             cache.setValidationCache(mockOrg.id, false);
 
-            expect(authService.getCachedProject()).toEqual(mockProject);
-            expect(authService.getValidationCache()).toBeDefined();
-            expect(authService.getValidationCache()).toEqual(cache.getValidationCache());
-        });
-
-        it('the org-rejected flag round-trips', () => {
-            expect(authService.wasOrgClearedDueToValidation()).toBe(false);
-
-            authService.setOrgRejectedFlag();
-
-            expect(authService.wasOrgClearedDueToValidation()).toBe(true);
+            expect(authService.getCacheManager().getCachedProject()).toEqual(mockProject);
+            expect(authService.getCacheManager().getValidationCache()).toBeDefined();
+            expect(authService.getCacheManager().getValidationCache()).toEqual(cache.getValidationCache());
         });
 
         it('exposes the token manager the auth checks answer through', () => {

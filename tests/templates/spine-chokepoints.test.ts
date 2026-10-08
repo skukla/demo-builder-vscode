@@ -181,15 +181,20 @@ describe('spine choke-points', () => {
         expect(hits.filter((f) => !spine.includes(f))).toStrictEqual([]);
     });
 
-    it('adobe SIGN-IN/OUT: aio auth login/logout run only in authenticationService', () => {
+    it('adobe SIGN-IN/OUT: aio auth login/logout run only in the auth service and its sign-in unit', () => {
         // Audited 2026-08-22: one login site (forced/normal ternary) and one
         // logout site, both in the service every auth door routes through.
+        // 2026-10-08 (decompose-god-file): the login site moved, unchanged, to
+        // adobeSignIn.ts, which only the service's sign-in gate calls; logout stayed.
         // Excluded by the pattern: diagnostics' `aio auth login --help`
         // capability probe (a read, not a sign-in — the lookahead skips it)
         // and ResetAllCommand's "run: aio auth logout" instruction text in a
         // log message (not quote-prefixed, so it never matches).
         const primitive = /['"`]aio (auth )?(login|logout)(?! --help)/;
-        const spine = ['features/authentication/services/authenticationService.ts'];
+        const spine = [
+            'features/authentication/services/authenticationService.ts',
+            'features/authentication/services/adobeSignIn.ts',
+        ];
 
         const hits = filesTouchingPrimitive(primitive);
 

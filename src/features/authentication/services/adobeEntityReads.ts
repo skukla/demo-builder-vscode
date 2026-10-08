@@ -18,6 +18,7 @@ import type { AdobeCliFallback } from './adobeCliFallback';
 import { mapOrganizations, mapProjects, mapWorkspaces } from './adobeEntityMapper';
 import type { AdobeSDKClient } from './adobeSDKClient';
 import type { AuthCacheManager } from './authCacheManager';
+import { withTiming } from './performanceTracker';
 import type {
     AdobeOrg,
     AdobeProject,
@@ -154,9 +155,14 @@ export class AdobeEntityReads {
     }
 
     /**
-     * Get list of organizations (SDK with CLI fallback)
+     * Get list of organizations (SDK with CLI fallback). Timed: a slow read is
+     * reported on the debug channel (`performanceTracker`).
      */
     async getOrganizations(): Promise<AdobeOrg[]> {
+        return withTiming('getOrganizations', () => this.readOrganizations());
+    }
+
+    private async readOrganizations(): Promise<AdobeOrg[]> {
         const startTime = Date.now();
 
         try {
@@ -329,10 +335,12 @@ export class AdobeEntityReads {
      *   shared global store. Omitting it preserves the prior ambient-context behavior.
      */
     async getProjects(options?: { silent?: boolean; orgId?: string }): Promise<AdobeProject[]> {
-        if (options?.orgId) {
-            return withOrgContext({ orgId: options.orgId }, () => this.fetchProjects(options));
-        }
-        return this.fetchProjects(options);
+        return withTiming('getProjects', async () => {
+            if (options?.orgId) {
+                return withOrgContext({ orgId: options.orgId }, () => this.fetchProjects(options));
+            }
+            return this.fetchProjects(options);
+        });
     }
 
     /**
@@ -417,6 +425,13 @@ export class AdobeEntityReads {
      * nothing is threaded. Mirrors getProjects' org-context targeting.
      */
     async getWorkspaces(target?: {
+        orgId?: string;
+        projectId?: string;
+    }): Promise<AdobeWorkspace[]> {
+        return withTiming('getWorkspaces', () => this.readWorkspaces(target));
+    }
+
+    private async readWorkspaces(target?: {
         orgId?: string;
         projectId?: string;
     }): Promise<AdobeWorkspace[]> {

@@ -61,6 +61,7 @@ import { fetchMeshInfoFromAdobeIO } from '@/features/mesh/services/meshVerifier'
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { poolUnits } from '../../../helpers/authenticationServiceFake';
 
 // MUST stay in this file: this spec imports fs/promises directly, and a
 // jest.mock only hoists above the imports of the module it appears in. Moved to
@@ -120,14 +121,14 @@ describe('DeployMeshCommand - Unification (delegates to deployMeshComponent)', (
             saveProject: jest.fn(),
         }) as unknown as jest.Mocked<StateManager>;
         mockLogger = createMockLogger();
-        mockAuthManager = {
+        mockAuthManager = poolUnits({
             getOrganizations: jest.fn().mockResolvedValue([{ id: 'org-123', name: 'Org 123' }]),
             loginAndRestoreProjectContext: jest.fn().mockResolvedValue(true),
             // The deploy core reads it to enrich the org target. The real service
             // always has it; a fake that omits it throws inside the core's try and
             // the whole deploy reads as a failed one.
             getCachedOrganization: jest.fn().mockReturnValue(null),
-        };
+        });
         mockCommandExecutor = {
             execute: jest.fn().mockResolvedValue({ code: 0, stdout: '', stderr: '' }),
         };

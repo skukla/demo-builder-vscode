@@ -55,6 +55,7 @@ import { createMockLogger } from '../../../../helpers/loggerFake';
 import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
 import { createMockStateManager } from '../../../../helpers/stateManagerFake';
 import { createMockProject } from '../../../../helpers/projectFake';
+import { poolUnits } from '../../../../helpers/authenticationServiceFake';
 
 // =============================================================================
 // Fixtures
@@ -64,12 +65,13 @@ const MESH_PATH = '/p/components/eds-accs-mesh';
 
 /** The auth fake is built here so the suite can assert the deps object by identity. */
 const meshDeps = createMeshDepsFake({
-    authManager: {
+    authManager: poolUnits({
         getTokenStatus: jest.fn(async () => ({ isAuthenticated: true })),
         getCachedOrganization: jest.fn(),
-    },
+    }),
 });
-const cachedOrganization = meshDeps.authManager.getCachedOrganization as jest.Mock;
+const cachedOrganization = meshDeps.authManager.getCacheManager()
+    .getCachedOrganization as jest.Mock;
 
 function makeProject(overrides: Partial<Project> = {}): Project {
     return createMockProject({

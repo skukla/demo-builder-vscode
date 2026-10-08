@@ -142,7 +142,7 @@ export async function redeployApiMesh(
     // org code/name from the cached org on an id match (less leaky than ID-only).
     const target: OrgContextTarget = buildOrgTargetFromProjectAdobe(
         project.adobe,
-        authService.getCachedOrganization(),
+        authService.getCacheManager().getCachedOrganization(),
     );
 
     return withOrgContext(target, () =>

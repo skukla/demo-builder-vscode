@@ -59,7 +59,7 @@ async function buildProjectOrgTarget(
     project: Project,
     authService: AuthenticationService,
 ): Promise<OrgContextTarget> {
-    const cachedOrg = authService.getCachedOrganization();
+    const cachedOrg = authService.getCacheManager().getCachedOrganization();
     return buildOrgTargetFromProjectAdobe(project.adobe, cachedOrg);
 }
 

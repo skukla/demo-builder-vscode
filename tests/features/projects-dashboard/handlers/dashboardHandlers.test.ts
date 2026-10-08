@@ -19,10 +19,7 @@ import { createMockAuthenticationService } from '../../../helpers/authentication
 beforeEach(() => {
     ServiceLocator.setCommandExecutor(createMockCommandExecutor());
     ServiceLocator.setAuthenticationService(
-        createMockAuthenticationService({
-            getCachedOrganization: jest.fn(),
-            getTokenStatus: jest.fn().mockResolvedValue({ isAuthenticated: true }),
-        }),
+        createMockAuthenticationService({ getTokenStatus: jest.fn().mockResolvedValue({ isAuthenticated: true }) }, { cache: { getCachedOrganization: jest.fn() } }),
     );
 });
 

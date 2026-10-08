@@ -15,6 +15,7 @@ import {
     TEST_USER_ID as USER_ID,
 } from '../imsTestTokens';
 import { createMockContext, mockProjects, mockOrganization } from './projectHandlers.testUtils';
+import { entityServicesOf } from '../../../helpers/authenticationServiceFake';
 
 // Mock dependencies
 jest.mock('@/core/di/serviceLocator');
@@ -46,7 +47,7 @@ describe('projectHandlers - Fetch', () => {
 
     describe('handleGetProjects', () => {
         it('should fetch projects successfully', async () => {
-            mockContext.authManager.getCurrentOrganization.mockResolvedValue(mockOrganization);
+            entityServicesOf(mockContext.authManager).resolver.getCurrentOrganization.mockResolvedValue(mockOrganization);
             mockContext.authManager.getProjects.mockResolvedValue(mockProjects);
 
             const result = await handleGetProjects(mockContext);
@@ -59,7 +60,7 @@ describe('projectHandlers - Fetch', () => {
         });
 
         it('stamps deletable=true on projects the token user created', async () => {
-            mockContext.authManager.getCurrentOrganization.mockResolvedValue(mockOrganization);
+            entityServicesOf(mockContext.authManager).resolver.getCurrentOrganization.mockResolvedValue(mockOrganization);
             mockContext.authManager.getProjects.mockResolvedValue([
                 { id: 'mine', name: 'Mine', title: 'Mine', who_created: USER_ID },
                 { id: 'theirs', name: 'Theirs', title: 'Theirs', who_created: OTHER_USER_ID },
@@ -86,7 +87,7 @@ describe('projectHandlers - Fetch', () => {
         });
 
         it('stamps deletable=false on ALL projects when the token is invalid', async () => {
-            mockContext.authManager.getCurrentOrganization.mockResolvedValue(mockOrganization);
+            entityServicesOf(mockContext.authManager).resolver.getCurrentOrganization.mockResolvedValue(mockOrganization);
             mockContext.authManager.getProjects.mockResolvedValue([
                 { id: 'mine', name: 'Mine', title: 'Mine', who_created: USER_ID },
             ]);
@@ -101,7 +102,7 @@ describe('projectHandlers - Fetch', () => {
         });
 
         it('should show loading status before fetching', async () => {
-            mockContext.authManager.getCurrentOrganization.mockResolvedValue(mockOrganization);
+            entityServicesOf(mockContext.authManager).resolver.getCurrentOrganization.mockResolvedValue(mockOrganization);
             mockContext.authManager.getProjects.mockResolvedValue(mockProjects);
 
             await handleGetProjects(mockContext);
@@ -114,7 +115,7 @@ describe('projectHandlers - Fetch', () => {
         });
 
         it('should handle empty project list', async () => {
-            mockContext.authManager.getCurrentOrganization.mockResolvedValue(mockOrganization);
+            entityServicesOf(mockContext.authManager).resolver.getCurrentOrganization.mockResolvedValue(mockOrganization);
             mockContext.authManager.getProjects.mockResolvedValue([]);
 
             const result = await handleGetProjects(mockContext);
@@ -124,7 +125,7 @@ describe('projectHandlers - Fetch', () => {
         });
 
         it('should handle timeout error', async () => {
-            mockContext.authManager.getCurrentOrganization.mockResolvedValue(mockOrganization);
+            entityServicesOf(mockContext.authManager).resolver.getCurrentOrganization.mockResolvedValue(mockOrganization);
             mockContext.authManager.getProjects.mockRejectedValue(
                 new Error('Request timed out. Please check your connection and try again.')
             );
@@ -142,7 +143,7 @@ describe('projectHandlers - Fetch', () => {
 
         it('should handle generic error', async () => {
             const error = new Error('Network error');
-            mockContext.authManager.getCurrentOrganization.mockResolvedValue(mockOrganization);
+            entityServicesOf(mockContext.authManager).resolver.getCurrentOrganization.mockResolvedValue(mockOrganization);
             mockContext.authManager.getProjects.mockRejectedValue(error);
 
             const result = await handleGetProjects(mockContext);
@@ -157,7 +158,7 @@ describe('projectHandlers - Fetch', () => {
 
         it('stamps deletable=false on ALL projects when no token manager is available', async () => {
             // The harness authManager exposes no getTokenManager — fail closed.
-            mockContext.authManager.getCurrentOrganization.mockResolvedValue(mockOrganization);
+            entityServicesOf(mockContext.authManager).resolver.getCurrentOrganization.mockResolvedValue(mockOrganization);
             mockContext.authManager.getProjects.mockResolvedValue([
                 { id: 'mine', name: 'Mine', title: 'Mine', who_created: USER_ID },
             ]);
@@ -172,7 +173,7 @@ describe('projectHandlers - Fetch', () => {
             mockContext.authManager.getOrganizations.mockResolvedValue([
                 { id: 'org-123', code: 'C', name: 'Test Org' },
             ]);
-            mockContext.authManager.getCurrentOrganization.mockResolvedValue(mockOrganization);
+            entityServicesOf(mockContext.authManager).resolver.getCurrentOrganization.mockResolvedValue(mockOrganization);
             mockContext.authManager.getProjects.mockResolvedValue(mockProjects);
 
             const result = await handleGetProjects(mockContext, { orgId: 'org-123' });
@@ -187,7 +188,7 @@ describe('projectHandlers - Fetch', () => {
             mockContext.authManager.getOrganizations.mockResolvedValue([
                 { id: 'org-123', code: 'C', name: 'Test Org' },
             ]);
-            mockContext.authManager.getCurrentOrganization.mockResolvedValue(mockOrganization);
+            entityServicesOf(mockContext.authManager).resolver.getCurrentOrganization.mockResolvedValue(mockOrganization);
             mockContext.authManager.getProjects.mockResolvedValue(mockProjects);
 
             await handleGetProjects(mockContext, { orgId: 'org-123' });
@@ -200,7 +201,7 @@ describe('projectHandlers - Fetch', () => {
             mockContext.authManager.getOrganizations.mockResolvedValue([
                 { id: 'other-org', code: 'O', name: 'Other' },
             ]);
-            mockContext.authManager.getCurrentOrganization.mockResolvedValue(mockOrganization);
+            entityServicesOf(mockContext.authManager).resolver.getCurrentOrganization.mockResolvedValue(mockOrganization);
 
             const result = await handleGetProjects(mockContext, { orgId: 'org-missing' });
 
@@ -221,7 +222,7 @@ describe('projectHandlers - Fetch', () => {
         });
 
         it('sends no loading status when there is no current organization', async () => {
-            mockContext.authManager.getCurrentOrganization.mockResolvedValue(undefined);
+            entityServicesOf(mockContext.authManager).resolver.getCurrentOrganization.mockResolvedValue(undefined);
             mockContext.authManager.getProjects.mockResolvedValue(mockProjects);
 
             const result = await handleGetProjects(mockContext);
@@ -235,7 +236,7 @@ describe('projectHandlers - Fetch', () => {
         });
 
         it('bounds the fetch with the NORMAL timeout and a connection message', async () => {
-            mockContext.authManager.getCurrentOrganization.mockResolvedValue(mockOrganization);
+            entityServicesOf(mockContext.authManager).resolver.getCurrentOrganization.mockResolvedValue(mockOrganization);
             mockContext.authManager.getProjects.mockResolvedValue(mockProjects);
 
             await handleGetProjects(mockContext);
@@ -253,34 +254,34 @@ describe('projectHandlers - Fetch', () => {
         describe('quiet reads (background hydration) take the SDK-only fetch', () => {
             it('with an orgId: getProjectsSdkOnly is targeted and getProjects never runs', async () => {
                 mockContext.authManager.getOrganizations.mockResolvedValue([mockOrganization]);
-                mockContext.authManager.getCurrentOrganization.mockResolvedValue(mockOrganization);
-                mockContext.authManager.getProjectsSdkOnly.mockResolvedValue(mockProjects);
+                entityServicesOf(mockContext.authManager).resolver.getCurrentOrganization.mockResolvedValue(mockOrganization);
+                entityServicesOf(mockContext.authManager).reads.getProjectsSdkOnly.mockResolvedValue(mockProjects);
 
                 const result = await handleGetProjects(mockContext, { orgId: 'org-123', quiet: true });
 
                 expect(result.success).toBe(true);
-                expect(mockContext.authManager.getProjectsSdkOnly).toHaveBeenCalledWith({ orgId: 'org-123' });
+                expect(entityServicesOf(mockContext.authManager).reads.getProjectsSdkOnly).toHaveBeenCalledWith({ orgId: 'org-123' });
                 expect(mockContext.authManager.getProjects).not.toHaveBeenCalled();
             });
 
             it('without an orgId: getProjectsSdkOnly runs untargeted', async () => {
-                mockContext.authManager.getCurrentOrganization.mockResolvedValue(mockOrganization);
-                mockContext.authManager.getProjectsSdkOnly.mockResolvedValue([]);
+                entityServicesOf(mockContext.authManager).resolver.getCurrentOrganization.mockResolvedValue(mockOrganization);
+                entityServicesOf(mockContext.authManager).reads.getProjectsSdkOnly.mockResolvedValue([]);
 
                 await handleGetProjects(mockContext, { quiet: true });
 
-                expect(mockContext.authManager.getProjectsSdkOnly).toHaveBeenCalledWith(undefined);
+                expect(entityServicesOf(mockContext.authManager).reads.getProjectsSdkOnly).toHaveBeenCalledWith(undefined);
                 expect(mockContext.authManager.getProjects).not.toHaveBeenCalled();
             });
 
             it('quiet must be literally true — a truthy string still takes the interactive fetch', async () => {
-                mockContext.authManager.getCurrentOrganization.mockResolvedValue(mockOrganization);
+                entityServicesOf(mockContext.authManager).resolver.getCurrentOrganization.mockResolvedValue(mockOrganization);
                 mockContext.authManager.getProjects.mockResolvedValue(mockProjects);
 
                 await handleGetProjects(mockContext, { quiet: 'yes' as unknown as boolean });
 
                 expect(mockContext.authManager.getProjects).toHaveBeenCalledWith();
-                expect(mockContext.authManager.getProjectsSdkOnly).not.toHaveBeenCalled();
+                expect(entityServicesOf(mockContext.authManager).reads.getProjectsSdkOnly).not.toHaveBeenCalled();
             });
         });
 
@@ -289,7 +290,7 @@ describe('projectHandlers - Fetch', () => {
                 ['an AUTH_EXPIRED failure', 'AUTH_EXPIRED: Your session has expired', 'Your session has expired'],
                 ['an organization failure', 'No organization selected', 'No organization selected'],
             ])('%s passes its own wording through, prefix stripped', async (_what, raised, shown) => {
-                mockContext.authManager.getCurrentOrganization.mockResolvedValue(mockOrganization);
+                entityServicesOf(mockContext.authManager).resolver.getCurrentOrganization.mockResolvedValue(mockOrganization);
                 mockContext.authManager.getProjects.mockRejectedValue(new Error(raised));
 
                 const result = await handleGetProjects(mockContext);
@@ -303,7 +304,7 @@ describe('projectHandlers - Fetch', () => {
         });
 
         it('fetches normally when no orgId is in the payload (back-compat)', async () => {
-            mockContext.authManager.getCurrentOrganization.mockResolvedValue(mockOrganization);
+            entityServicesOf(mockContext.authManager).resolver.getCurrentOrganization.mockResolvedValue(mockOrganization);
             mockContext.authManager.getProjects.mockResolvedValue(mockProjects);
 
             const result = await handleGetProjects(mockContext);

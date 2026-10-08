@@ -8,7 +8,7 @@
 import { handleReDetectContext } from '@/features/authentication/handlers/organizationHandlers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
-import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
+import { createMockAuthenticationService, entityServicesOf } from '../../../helpers/authenticationServiceFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 interface MockCacheManager {
     clearSessionCaches: jest.Mock;
@@ -29,12 +29,14 @@ const createMockCacheManager = (): MockCacheManager => ({
 });
 
 const createMockContext = (cacheManager: MockCacheManager) => {
-    const authManager = createMockAuthenticationService({
-        getCurrentContext: jest.fn().mockResolvedValue({}),
-        getCacheManager: jest.fn().mockReturnValue(cacheManager),
-        // GUARD: must never be called by this handler
-        login: jest.fn(),
-    });
+    const authManager = createMockAuthenticationService(
+        {
+            getCacheManager: jest.fn().mockReturnValue(cacheManager),
+            // GUARD: must never be called by this handler
+            login: jest.fn(),
+        },
+        { entities: { resolver: { getCurrentContext: jest.fn().mockResolvedValue({}) } } },
+    );
     const base = createMockHandlerContext({
         authManager,
         logger: createMockLogger(),
@@ -67,7 +69,7 @@ describe('organizationHandlers', () => {
         });
 
         it('re-reads the current context after clearing caches', async () => {
-            context.authManager.getCurrentContext.mockResolvedValue({
+            entityServicesOf(context.authManager).resolver.getCurrentContext.mockResolvedValue({
                 org: { id: 'o1', name: 'E', code: 'C1' },
             });
 
@@ -75,7 +77,7 @@ describe('organizationHandlers', () => {
 
             // The re-read context itself travels — not an empty object in its place.
             const adobeContext = { org: { id: 'o1', name: 'E', code: 'C1' } };
-            expect(context.authManager.getCurrentContext).toHaveBeenCalled();
+            expect(entityServicesOf(context.authManager).resolver.getCurrentContext).toHaveBeenCalled();
             expect(result).toEqual({ success: true, data: adobeContext });
             expect(context.sendMessage).toHaveBeenCalledWith('re-detect-context', adobeContext);
         });
@@ -91,7 +93,7 @@ describe('organizationHandlers', () => {
         });
 
         it('reports a shaped failure to the UI and the caller when the re-read throws', async () => {
-            context.authManager.getCurrentContext.mockRejectedValue(new Error('console where failed'));
+            entityServicesOf(context.authManager).resolver.getCurrentContext.mockRejectedValue(new Error('console where failed'));
 
             const result = await handleReDetectContext(context);
 

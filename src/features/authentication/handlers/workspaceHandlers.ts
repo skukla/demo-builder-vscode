@@ -29,7 +29,8 @@ export async function handleGetWorkspaces(
 ): Promise<DataResult<AdobeWorkspace[]>> {
     try {
         // Send loading status with sub-message
-        const currentProject = await context.authManager?.getCurrentProject();
+        const currentProject = await context.authManager?.getEntityServices()
+            .then((units) => units.resolver.getCurrentProject());
         if (currentProject) {
             await context.sendMessage('workspace-loading-status', {
                 isLoading: true,
@@ -40,7 +41,8 @@ export async function handleGetWorkspaces(
 
         // Wrap getWorkspaces with timeout (30 seconds). Thread the selected org + project
         // (webview state) so the fetch targets them, not the stale in-memory cache.
-        const workspacesPromise = context.authManager?.getWorkspaces(payload);
+        const workspacesPromise = context.authManager?.getEntityServices()
+            .then((units) => units.reads.getWorkspaces(payload));
         if (!workspacesPromise) {
             throw new Error('Auth manager not available');
         }
@@ -165,7 +167,8 @@ export async function handleCreateAdobeWorkspace(
             return { success: false, error: 'Workspace name is required.' };
         }
 
-        const workspace = await context.authManager.createWorkspace(name, description);
+        const { projectOps } = await context.authManager.getEntityServices();
+        const workspace = await projectOps.createWorkspace(name, description);
         if (isConsoleOpFailure(workspace)) {
             // The service carries Console's own reason now — surface it instead
             // of the old quota guess, which the measured failure never matched.
@@ -184,7 +187,7 @@ export async function handleCreateAdobeWorkspace(
         // to the stale-org CLI.
         let workspaces: AdobeWorkspace[] | undefined;
         try {
-            workspaces = await context.authManager.getWorkspaces({
+            workspaces = await (await context.authManager.getEntityServices()).reads.getWorkspaces({
                 projectId: payload?.projectId,
             });
         } catch (refreshError) {

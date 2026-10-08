@@ -114,7 +114,7 @@ export function registerAdobeResourceTools(
             const target = await resolveAgentOrg(mgr);
             if ('error' in target) return asText(target);
 
-            const project = await mgr.createProject(
+            const project = await (await mgr.getEntityServices()).projectOps.createProject(
                 String(args?.name ?? ''),
                 String(args?.description ?? ''),
                 { orgId: target.orgId },
@@ -154,7 +154,7 @@ export function registerAdobeResourceTools(
             const target = await requireProject(mgr);
             if ('error' in target) return asText(target);
 
-            const workspace = await mgr.createWorkspace(
+            const workspace = await (await mgr.getEntityServices()).projectOps.createWorkspace(
                 String(args?.name ?? ''),
                 String(args?.description ?? ''),
                 { orgId: target.orgId, projectId: target.projectId },
@@ -216,7 +216,8 @@ export function registerAdobeResourceTools(
             const target = await requireProject(mgr);
             if ('error' in target) return asText(target);
 
-            const result = await mgr.deleteWorkspace(workspaceId, {
+            const { projectOps } = await mgr.getEntityServices();
+            const result = await projectOps.deleteWorkspace(workspaceId, {
                 orgId: target.orgId,
                 projectId: target.projectId,
                 workspaceName,

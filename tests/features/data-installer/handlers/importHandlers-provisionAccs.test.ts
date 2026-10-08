@@ -29,7 +29,7 @@ import {
     createStatefulGlobalState,
     createMockExtensionContext,
 } from '../../../helpers/extensionContextFake';
-import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
+import { createMockAuthenticationService, entityServicesOf } from '../../../helpers/authenticationServiceFake';
 
 jest.mock('@/features/data-installer/services/accsCredentialProvisioner', () => ({
     provisionAccsCredentials: jest.fn(),
@@ -195,7 +195,20 @@ describe('provision-accs-credentials', () => {
         await importHandlers['provision-accs-credentials'](ctx);
 
         const deps = mockedProvision.mock.calls[0][0];
-        expect(deps.auth).toBe(ctx.authManager);
+        // Each auth call reaches the unit that owns it (decompose-god-file, 2026-10-08).
+        const units = entityServicesOf(ctx.authManager);
+        await deps.auth.getWorkspaceS2SCredential('o', 'p', 'w');
+        await deps.auth.createWorkspaceS2SCredentialFor('o', 'p', 'w');
+        await deps.auth.getSubscribedServiceCodes('o', 'i');
+        await deps.auth.subscribeOAuthServerToServerIntegrationToServices('o', 'i', []);
+        expect(units.credentials.getWorkspaceS2SCredential).toHaveBeenCalledWith('o', 'p', 'w');
+        expect(units.credentials.createWorkspaceS2SCredentialFor).toHaveBeenCalledWith('o', 'p', 'w');
+        expect(units.orgServices.getSubscribedServiceCodes).toHaveBeenCalledWith('o', 'i');
+        expect(units.orgServices.subscribeOAuthServerToServerIntegrationToServices).toHaveBeenCalledWith(
+            'o',
+            'i',
+            [],
+        );
         expect(typeof deps.downloadWorkspaceJson).toBe('function');
         // The WIRING is the claim, not the wording.
         deps.log?.('a provisioning line');

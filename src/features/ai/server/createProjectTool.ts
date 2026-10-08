@@ -175,7 +175,8 @@ async function requireAdobeWorkspace(ctx: HandlerContext): Promise<
 
     // No session selection — fall back to the resolved context. Correct when the
     // agent never selected anything, and the only answer available then.
-    const workspace = (await mgr.getCurrentWorkspace()) as WizardState['adobeWorkspace'];
+    const { resolver } = await mgr.getEntityServices();
+    const workspace = (await resolver.getCurrentWorkspace()) as WizardState['adobeWorkspace'];
     if (!workspace) {
         return {
             error: {
@@ -184,8 +185,8 @@ async function requireAdobeWorkspace(ctx: HandlerContext): Promise<
         };
     }
     return {
-        org: (await mgr.getCurrentOrganization()) as WizardState['adobeOrg'],
-        project: (await mgr.getCurrentProject()) as WizardState['adobeProject'],
+        org: (await resolver.getCurrentOrganization()) as WizardState['adobeOrg'],
+        project: (await resolver.getCurrentProject()) as WizardState['adobeProject'],
         workspace,
     };
 }

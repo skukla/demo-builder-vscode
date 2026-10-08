@@ -134,16 +134,20 @@ export function reportedSteps(): string[] {
  */
 export function seedServiceLocator(): void {
     ServiceLocator.setAuthenticationService(
-        createMockAuthenticationService({
-            getTokenManager: jest.fn(
-                () =>
-                    ({
-                        inspectToken: jest.fn(async () => ({ valid: false })),
-                    }) as unknown as TokenManager
-            ),
-            getCachedOrganization: jest.fn(),
-            getS2SDeployCredentials: jest.fn(),
-        })
+        createMockAuthenticationService(
+            {
+                getTokenManager: jest.fn(
+                    () =>
+                        ({
+                            inspectToken: jest.fn(async () => ({ valid: false })),
+                        }) as unknown as TokenManager
+                ),
+            },
+            {
+                cache: { getCachedOrganization: jest.fn() },
+                entities: { credentials: { getS2SDeployCredentials: jest.fn() } },
+            }
+        )
     );
     ServiceLocator.setCommandExecutor(createMockCommandExecutor());
 }

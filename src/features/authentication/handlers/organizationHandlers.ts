@@ -31,7 +31,8 @@ export async function handleReDetectContext(
         cacheManager?.clearConsoleWhereCache();
         cacheManager?.clearValidationCache();
 
-        const adobeContext = (await context.authManager?.getCurrentContext()) ?? {};
+        const adobeContext = (await context.authManager?.getEntityServices()
+            .then((units) => units.resolver.getCurrentContext())) ?? {};
         await context.sendMessage('re-detect-context', adobeContext);
         return { success: true, data: adobeContext };
     } catch (error) {

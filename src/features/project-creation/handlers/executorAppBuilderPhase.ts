@@ -81,8 +81,12 @@ export async function ensureWorkspaceRuntimeReady(
     // The namespace check runs via CLI (needs withOrgContext targeting); the SDK
     // `createRuntimeNamespace` provision takes explicit ids (targeting-agnostic).
     await withOrgContext(target, () =>
-        ensureWorkspaceRuntime(commandManager, context.logger, demoBuilderNode(), () =>
-            authService.ensureWorkspaceRuntimeNamespace(organization, projectId, workspace),
+        ensureWorkspaceRuntime(commandManager, context.logger, demoBuilderNode(), async () =>
+            (await authService.getEntityServices()).projectOps.ensureWorkspaceRuntimeNamespace(
+                organization,
+                projectId,
+                workspace,
+            ),
         ),
     );
 }

@@ -354,9 +354,29 @@ export const importHandlers = defineHandlers({
         }
 
         const executor = ServiceLocator.getCommandExecutor();
+        const authManager = context.authManager;
+        const units = () => authManager.getEntityServices();
         const result = await provisionAccsCredentials(
             {
-                auth: context.authManager,
+                // Each call goes to the unit that owns it.
+                auth: {
+                    getWorkspaceS2SCredential: async (orgId, projectId, workspaceId) =>
+                        (await units()).credentials.getWorkspaceS2SCredential(orgId, projectId, workspaceId),
+                    createWorkspaceS2SCredentialFor: async (orgId, projectId, workspaceId) =>
+                        (await units()).credentials.createWorkspaceS2SCredentialFor(
+                            orgId,
+                            projectId,
+                            workspaceId,
+                        ),
+                    getSubscribedServiceCodes: async (orgId, idIntegration) =>
+                        (await units()).orgServices.getSubscribedServiceCodes(orgId, idIntegration),
+                    subscribeOAuthServerToServerIntegrationToServices: async (orgId, idIntegration, info) =>
+                        (await units()).orgServices.subscribeOAuthServerToServerIntegrationToServices(
+                            orgId,
+                            idIntegration,
+                            info,
+                        ),
+                },
                 downloadWorkspaceJson: (target) => downloadWorkspaceConfigJson(executor, target),
                 log: (line) => context.debugLogger.debug(`[Data Installer] provisioning: ${line}`),
             },

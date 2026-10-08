@@ -17,6 +17,7 @@ import type { Project, ComponentInstance } from '@/types/base';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { poolUnits } from '../../../helpers/authenticationServiceFake';
 
 // MUST stay in this file: this spec imports fs/promises directly, and a
 // jest.mock only hoists above the imports of the module it appears in. Moved to
@@ -119,10 +120,10 @@ describe('DeployMeshCommand - pre-deploy subscribe', () => {
             saveProject: jest.fn().mockResolvedValue(undefined),
         }) as unknown as jest.Mocked<StateManager>;
         mockLogger = createMockLogger();
-        mockAuthManager = {
+        mockAuthManager = poolUnits({
             testDeveloperPermissions: jest.fn().mockResolvedValue({ hasPermissions: true }),
             getCachedOrganization: jest.fn().mockReturnValue(undefined),
-        };
+        });
         mockCommandExecutor = {
             execute: jest.fn().mockResolvedValue({ code: 0, stdout: '', stderr: '', duration: 1 }),
         };

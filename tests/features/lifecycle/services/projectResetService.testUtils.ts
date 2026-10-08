@@ -44,9 +44,10 @@ export const MESH_DEF = {
 export const DECOY_DEP = { ...MESH_DEF, id: 'other-dep', name: 'Other' };
 
 export const commandManager = createMockCommandExecutor({ execute: jest.fn() });
-export const authManager = createMockAuthenticationService({
-    getCachedOrganization: jest.fn().mockReturnValue(undefined),
-});
+export const authManager = createMockAuthenticationService(
+    {},
+    { cache: { getCachedOrganization: jest.fn().mockReturnValue(undefined) } }
+);
 
 export function createResetProject(overrides: Partial<Project> = {}): Project {
     return createMockProject({

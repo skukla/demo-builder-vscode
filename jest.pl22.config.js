@@ -39,7 +39,6 @@ module.exports = {
         '**/tests/features/authentication/services/authenticationService-context.test.ts',
         '**/tests/features/authentication/services/authenticationService-entities.test.ts',
         '**/tests/features/authentication/services/authenticationService-operations.test.ts',
-        '**/tests/features/authentication/services/authenticationService-subscriber.test.ts',
         '**/tests/features/updates/services/componentUpdater-core.test.ts',
         '**/tests/features/updates/services/componentUpdater-extended.test.ts',
         '**/tests/features/updates/services/componentUpdater-rollback.test.ts',

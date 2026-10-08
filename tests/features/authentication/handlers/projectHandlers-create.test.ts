@@ -10,6 +10,7 @@ import { handleCreateAdobeProject } from '@/features/authentication/handlers/pro
 import { ErrorCode } from '@/types/errorCodes';
 import { makeJwt, TEST_USER_ID } from '../imsTestTokens';
 import { createMockContext } from './projectHandlers.testUtils';
+import { entityServicesOf } from '../../../helpers/authenticationServiceFake';
 
 jest.mock('@/core/di/serviceLocator');
 jest.mock('@/core/validation/validators/AdobeResourceValidator');
@@ -31,7 +32,7 @@ describe('projectHandlers - Create', () => {
         mockContext.authManager.testDeveloperPermissions = jest
             .fn()
             .mockResolvedValue({ hasPermissions: true });
-        mockContext.authManager.createProject = jest.fn().mockResolvedValue(PROJECT);
+        entityServicesOf(mockContext.authManager).projectOps.createProject = jest.fn().mockResolvedValue(PROJECT);
     });
 
     describe('handleCreateAdobeProject', () => {
@@ -73,14 +74,14 @@ describe('projectHandlers - Create', () => {
 
             expect(result.success).toBe(false);
             expect(result.code).toBe(ErrorCode.AUTH_FORBIDDEN);
-            expect(mockContext.authManager.createProject).not.toHaveBeenCalled();
+            expect(entityServicesOf(mockContext.authManager).projectOps.createProject).not.toHaveBeenCalled();
         });
 
         it('returns an error for an empty name and does NOT create', async () => {
             const result = await handleCreateAdobeProject(mockContext, { name: '   ' });
 
             expect(result.success).toBe(false);
-            expect(mockContext.authManager.createProject).not.toHaveBeenCalled();
+            expect(entityServicesOf(mockContext.authManager).projectOps.createProject).not.toHaveBeenCalled();
         });
 
         /**
@@ -98,7 +99,7 @@ describe('projectHandlers - Create', () => {
          * of Console's own reason; this asserts that reason reaches the user.
          */
         it('surfaces Console\'s own reason when createProject reports a failure', async () => {
-            mockContext.authManager.createProject.mockResolvedValue({
+            entityServicesOf(mockContext.authManager).projectOps.createProject.mockResolvedValue({
                 error: 'Quota exceeded for this organization',
             });
 
@@ -118,7 +119,7 @@ describe('projectHandlers - Create', () => {
 
             expect(result.success).toBe(true);
             expect(result.data).toEqual(PROJECT);
-            expect(mockContext.authManager.createProject).toHaveBeenCalledWith('My Demo', 'A demo');
+            expect(entityServicesOf(mockContext.authManager).projectOps.createProject).toHaveBeenCalledWith('My Demo', 'A demo');
             // The refreshed list goes through the same deletable stamping as
             // get-projects (no token manager on the harness → false).
             expect(result.projects).toEqual([{ ...PROJECT, deletable: false }]);
@@ -169,7 +170,7 @@ describe('projectHandlers - Create', () => {
         });
 
         it('returns an error when createProject throws', async () => {
-            mockContext.authManager.createProject.mockRejectedValue(new Error('boom'));
+            entityServicesOf(mockContext.authManager).projectOps.createProject.mockRejectedValue(new Error('boom'));
 
             const result = await handleCreateAdobeProject(mockContext, { name: 'My Demo' });
 

@@ -30,10 +30,7 @@ const mockGetOrganizations = jest.fn();
 /** CONVERTED 2026-08-28 (ADR-015): the executor is handed in, not fetched. */
 const executor = createMockCommandExecutor({ execute: jest.fn() });
 /** ADR-015: the auth service is handed in too. */
-const authManagerFake = createMockAuthenticationService({
-    getCachedOrganization: mockGetCachedOrganization,
-    getOrganizations: mockGetOrganizations,
-});
+const authManagerFake = createMockAuthenticationService({ getOrganizations: mockGetOrganizations }, { cache: { getCachedOrganization: mockGetCachedOrganization } });
 
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {

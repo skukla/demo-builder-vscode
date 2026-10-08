@@ -10,6 +10,7 @@
 import { handleSelectProject } from '@/features/authentication/handlers/projectHandlers';
 import { createMockContext } from './projectHandlers.testUtils';
 import { validateProjectId } from '@/core/validation/validators/AdobeResourceValidator';
+import { entityServicesOf } from '../../../helpers/authenticationServiceFake';
 
 // Mock dependencies
 jest.mock('@/core/di/serviceLocator');
@@ -43,7 +44,7 @@ describe('projectHandlers - Selection', () => {
     describe('handleSelectProject', () => {
         beforeEach(() => {
             // Mock getCurrentOrganization for context guard
-            mockContext.authManager.getCurrentOrganization.mockResolvedValue({
+            entityServicesOf(mockContext.authManager).resolver.getCurrentOrganization.mockResolvedValue({
                 id: 'org-123',
                 code: 'ORG123@AdobeOrg',
                 name: 'Test Organization'
@@ -76,7 +77,7 @@ describe('projectHandlers - Selection', () => {
 
         it('should fail if no organization is selected', async () => {
             const projectId = 'proj-123';
-            mockContext.authManager.getCurrentOrganization.mockResolvedValue(undefined);
+            entityServicesOf(mockContext.authManager).resolver.getCurrentOrganization.mockResolvedValue(undefined);
 
             await expect(handleSelectProject(mockContext, { projectId })).rejects.toThrow(
                 'No organization selected'
@@ -84,7 +85,7 @@ describe('projectHandlers - Selection', () => {
         });
 
         it('reports the missing org on the error channel with its exact wording', async () => {
-            mockContext.authManager.getCurrentOrganization.mockResolvedValue(undefined);
+            entityServicesOf(mockContext.authManager).resolver.getCurrentOrganization.mockResolvedValue(undefined);
 
             await expect(handleSelectProject(mockContext, { projectId: 'proj-123' })).rejects.toThrow();
 

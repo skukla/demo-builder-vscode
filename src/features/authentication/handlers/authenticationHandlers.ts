@@ -86,7 +86,7 @@ async function getTokenExpiryInfo(
  * Check if cached org is invalidated by validation cache
  */
 function isCachedOrgInvalid(context: HandlerContext, org: AdobeOrg): boolean {
-    const validation = context.authManager?.getValidationCache();
+    const validation = context.authManager?.getCacheManager().getValidationCache();
     if (!validation) return false;
     const orgIdentifier = org.code || org.name;
     return validation.org === orgIdentifier && !validation.isValid;
@@ -102,7 +102,7 @@ function isCachedOrgInvalid(context: HandlerContext, org: AdobeOrg): boolean {
  */
 async function getAuthContext(context: HandlerContext): Promise<{ currentOrg?: AdobeOrg }> {
     // Check cache first (fast - no API calls)
-    const cachedOrg = context.authManager?.getCachedOrganization();
+    const cachedOrg = context.authManager?.getCacheManager().getCachedOrganization();
 
     // Cache miss: resolve the org from the TOKEN — `getOrganizations()[0]`, the org
     // the current IMS token actually reaches (the same source autoSelectSingleOrg and
@@ -114,7 +114,7 @@ async function getAuthContext(context: HandlerContext): Promise<{ currentOrg?: A
         const orgs = await context.authManager?.getOrganizations();
         const currentOrg = orgs?.[0];
         if (currentOrg) {
-            context.authManager?.setCachedOrganization(currentOrg);
+            context.authManager?.getCacheManager().setCachedOrganization(currentOrg);
         }
         return { currentOrg };
     }
@@ -242,7 +242,7 @@ async function resolvePostLoginOrg(context: HandlerContext): Promise<PostLoginOr
     if (!tokenValid) return null;
 
     context.logger.debug('[Auth] Fetching organizations after login');
-    await context.authManager?.ensureSDKInitialized();
+    await context.authManager?.getSdkClient().ensureInitialized();
     await context.sendMessage('auth-status', {
         isChecking: true,
         message: 'Signing in',
@@ -285,7 +285,7 @@ async function autoSelectSingleOrg(
     // (so per-op env targeting can resolve its code/name) WITHOUT mutating the
     // shared `aio` global via selectOrganization (which races concurrent
     // processes). Each `aio` operation targets the org via withOrgContext.
-    context.authManager?.setCachedOrganization(org);
+    context.authManager?.getCacheManager().setCachedOrganization(org);
     context.logger.debug(`[Auth] Auto-selected and cached organization: ${org.name}`);
     return { currentOrg: org, requiresOrgSelection: false, orgLacksAccess: false };
 }
@@ -399,13 +399,14 @@ async function handleAlreadyAuthenticated(context: HandlerContext): Promise<Simp
         isAuthenticated: true,
     });
 
-    await context.authManager?.ensureSDKInitialized();
+    await context.authManager?.getSdkClient().ensureInitialized();
 
-    const currentOrg = await context.authManager?.getCurrentOrganization();
+    const currentOrg = await context.authManager?.getEntityServices()
+        .then((units) => units.resolver.getCurrentOrganization());
     context.sharedState.isAuthenticating = false;
 
     const orgLacksAccess = !currentOrg
-        ? context.authManager?.wasOrgClearedDueToValidation()
+        ? context.authManager?.getCacheManager().wasOrgClearedDueToValidation()
         : false;
 
     await context.sendMessage('auth-status', {

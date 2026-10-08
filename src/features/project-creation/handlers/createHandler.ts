@@ -187,7 +187,7 @@ async function cleanupOrphanedMesh(
             const commandManager = ServiceLocator.getCommandExecutor();
             const target = buildOrgTargetFromProjectAdobe(
                 { ...adobeRef, workspace },
-                context.authManager?.getCachedOrganization(),
+                context.authManager?.getCacheManager().getCachedOrganization(),
             );
             const deleteResult = await withOrgContext(target, () =>
                 commandManager.execute(MESH_DELETE_COMMAND, {

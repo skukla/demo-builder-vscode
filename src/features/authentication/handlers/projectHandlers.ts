@@ -120,7 +120,8 @@ export async function handleGetProjects(
 
     try {
         // Send loading status with sub-message
-        const currentOrg = await context.authManager?.getCurrentOrganization();
+        const currentOrg = await context.authManager?.getEntityServices()
+            .then((units) => units.resolver.getCurrentOrganization());
         if (currentOrg) {
             await context.sendMessage('project-loading-status', {
                 isLoading: true,
@@ -132,7 +133,9 @@ export async function handleGetProjects(
         // Wrap getProjects with timeout (30 seconds). Thread orgId so the fetch
         // runs under org-context targeting (AIO_CONSOLE_* env, no global mutation).
         const projectsPromise = quiet
-            ? context.authManager?.getProjectsSdkOnly(orgId ? { orgId } : undefined)
+            ? context.authManager?.getEntityServices().then((units) =>
+                  units.reads.getProjectsSdkOnly(orgId ? { orgId } : undefined),
+              )
             : orgId
               ? context.authManager?.getProjects({ orgId })
               : context.authManager?.getProjects();
@@ -198,7 +201,8 @@ export async function handleSelectProject(
 
     try {
         // Get org ID for context guard (required for drift protection)
-        const currentOrg = await context.authManager?.getCurrentOrganization();
+        const currentOrg = await context.authManager?.getEntityServices()
+            .then((units) => units.resolver.getCurrentOrganization());
         if (!currentOrg?.id) {
             throw new Error('No organization selected - cannot select project without org context');
         }
@@ -286,7 +290,8 @@ export async function handleCreateAdobeProject(
             return { success: false, error: 'Project name is required.' };
         }
 
-        const project = await context.authManager.createProject(name, description);
+        const { projectOps } = await context.authManager.getEntityServices();
+        const project = await projectOps.createProject(name, description);
         if (isConsoleOpFailure(project)) {
             // The service carries Console's own reason now — surface it instead
             // of the old quota guess, which the measured failure never matched.

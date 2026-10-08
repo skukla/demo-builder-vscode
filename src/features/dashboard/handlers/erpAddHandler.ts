@@ -310,7 +310,11 @@ async function listAndFill(
     const authManager = ServiceLocator.getAuthenticationService();
     const auth = await resolveAppManagementAuth(project, authManager);
     report(OPERATION_STAGES.adding.label, 'Telling the integration about its ERPs');
-    const readCredential = erpCredentialReader(ServiceLocator.getCommandExecutor(), project, authManager.getCachedOrganization());
+    const readCredential = erpCredentialReader(
+        ServiceLocator.getCommandExecutor(),
+        project,
+        authManager.getCacheManager().getCachedOrganization(),
+    );
     const listed = await syncErpList(project, integrationId, auth, { readCredential });
     if (listed.status === 'failed') {
         return {

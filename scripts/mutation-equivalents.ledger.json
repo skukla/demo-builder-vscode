@@ -71,14 +71,13 @@
         {
             "module": "src/features/authentication/services/authenticationService.ts",
             "anchors": [
-                "this.debugLogger.error('[Auth] Quick authentication check failed', error as Error);",
-                "this.debugLogger.error('[Auth] Authentication check failed', error as Error);"
+                "this.debugLogger.error('[Auth] Quick authentication check failed', error as Error);"
             ],
-            "mutants": 7,
+            "mutants": 3,
             "category": "block",
             "reason": "Both authentication checks wrap their token read in a try/catch that logs, caches a brief negative and returns false. Neither catch can be entered: making the CLI config store throw does not reach them because the in-process reader has its own fallback and answers rather than propagating, and TokenManager.isTokenValid adds no catch of its own. Reaching the catch would mean replacing TokenManager, which the service constructs itself.",
             "decision": "none \u2014 a defensive catch around an external read is correct even when the current collaborator cannot trigger it; the reader's fallback is not a contract",
-            "note": "Re-counted 2026-09-03 against a fresh focus run: 7, not the 8 the source note carried \u2014 the quick check catch holds 3 (block, the `false` cached, the `false` returned) and the full check catch holds 4 (block, the formatter options literal, the `false` cached, the `false` returned).",
+            "note": "Re-counted 2026-09-03 against a fresh focus run: 7, not the 8 the source note carried \u2014 the quick check catch holds 3 (block, the `false` cached, the `false` returned) and the full check catch holds 4 (block, the formatter options literal, the `false` cached, the `false` returned). 2026-10-08: the full check (`isFullyAuthenticated`) had no production caller and was deleted in the decompose-god-file cut, taking its catch and its 4 mutants with it; the quick check's 3 remain.",
             "recorded": "2026-09-02",
             "source": ".rptc/handoff/2026-09-02-equivalent-mutants.md"
         },
@@ -348,7 +347,7 @@
             "module": "src/features/authentication/handlers/projectHandlers.ts",
             "anchors": [
                 "if (currentOrg) {",
-                "? context.authManager?.getProjectsSdkOnly(orgId ? { orgId } : undefined)",
+                "? context.authManager?.getEntityServices().then((units) =>",
                 "? context.authManager?.getProjects({ orgId })",
                 ": context.authManager?.getProjects();"
             ],
@@ -480,16 +479,16 @@
             "anchors": [
                 "if (tokenInspection && !tokenInspection.valid) {",
                 "const tokenExpiresIn = tokenInspection.expiresIn;",
-                "const validation = context.authManager?.getValidationCache();",
-                "const cachedOrg = context.authManager?.getCachedOrganization();",
+                "const validation = context.authManager?.getCacheManager().getValidationCache();",
+                "const cachedOrg = context.authManager?.getCacheManager().getCachedOrganization();",
                 "const currentOrg = orgs?.[0];",
-                "context.authManager?.setCachedOrganization(currentOrg);",
+                "context.authManager?.getCacheManager().setCachedOrganization(currentOrg);",
                 "const tokenValid = await checkTokenExpiry(context);",
                 "if (orgs?.length === 1) {",
-                "context.authManager?.setCachedOrganization(org);",
+                "context.authManager?.getCacheManager().setCachedOrganization(org);",
                 "context.logger.debug('[Auth] Already authenticated, skipping login');",
-                "const currentOrg = await context.authManager?.getCurrentOrganization();",
-                "? context.authManager?.wasOrgClearedDueToValidation()"
+                "const currentOrg = await context.authManager?.getEntityServices()",
+                "? context.authManager?.getCacheManager().wasOrgClearedDueToValidation()"
             ],
             "mutants": 16,
             "category": "optionalChain",
@@ -602,18 +601,18 @@
         {
             "module": "src/features/authentication/services/authenticationService.ts",
             "anchors": [
-                "return withTiming('isAuthenticated', async () => {",
-                "return withTiming('isFullyAuthenticated', async () => {"
+                "return withTiming('isAuthenticated', async () => {"
             ],
-            "mutants": 4,
+            "mutants": 2,
             "category": "branch",
             "reason": "Both checks read `{ isAuthenticated, isExpired }` from AuthCacheManager.getCachedAuthStatus and gate on `!isExpired && isAuthenticated !== undefined`. Two mutants per site: `&&` to `||`, and the second term to `true`. The cache manager never produces the state that would tell them apart \u2014 it answers `isAuthenticated: undefined` exactly when `isExpired` is true, and `setCachedAuthStatus` writes the value and the expiry together, so a fresh entry always carries a boolean. Under that contract the second term is implied by the first, and all four rewrites compute the same value on every reachable state. The service constructs its own AuthCacheManager, so no test can hand it one that lies. The pair is pinned from both directions (quick then full, full then quick, cleared, expired negative). Anchors name each method's withTiming line because the condition itself appears twice.",
             "decision": "OPEN for the module \u2014 the second term could be dropped, or the cache manager could answer a single `fresh: boolean`; either is a behaviour-preserving simplification outside this batch",
             "recorded": "2026-09-03",
-            "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationService)"
+            "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationService)",
+            "note": "2026-10-08: the second site (`isFullyAuthenticated`, two mutants) had no production caller and was deleted in the decompose-god-file cut; the quick check's two remain. The pins the reason names that used the full check went with it."
         },
         {
-            "module": "src/features/authentication/services/authenticationService.ts",
+            "module": "src/features/authentication/services/adobeSignIn.ts",
             "anchors": [
                 "operation: 'browser-auth',"
             ],
@@ -625,7 +624,7 @@
             "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationService)"
         },
         {
-            "module": "src/features/authentication/services/authenticationService.ts",
+            "module": "src/features/authentication/services/adobeSignIn.ts",
             "anchors": [
                 "const token = result.stdout?.trim();"
             ],
@@ -637,9 +636,9 @@
             "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationService)"
         },
         {
-            "module": "src/features/authentication/services/authenticationService.ts",
+            "module": "src/features/authentication/services/adobeSignIn.ts",
             "anchors": [
-                "'[Auth] Command succeeded but no valid token in output',",
+                "debugLogger.warn('[Auth] Command succeeded but no valid token in output');",
                 "`[Auth] Output length: ${result.stdout?.length}, first 100 chars: ${result.stdout?.substring(0, 100)}`,",
                 "const exitCode = result?.code ?? 'unknown';"
             ],
@@ -790,8 +789,8 @@
         {
             "module": "src/features/authentication/handlers/deleteAdobeProjectHandler.ts",
             "anchors": [
-                "const cached = context.authManager?.getCachedProject();",
-                "await context.authManager?.clearConsoleContext();",
+                "const cached = context.authManager?.getCacheManager().getCachedProject();",
+                "await context.authManager?.getEntityServices()",
                 "const projects = await context.authManager?.getProjects({ orgId });"
             ],
             "mutants": 3,
@@ -843,8 +842,8 @@
             "category": "optionalChain",
             "mutants": 2,
             "anchors": [
-                "const currentProject = await context.authManager?.getCurrentProject();",
-                "const workspacesPromise = context.authManager?.getWorkspaces(payload);"
+                "const currentProject = await context.authManager?.getEntityServices()",
+                "const workspacesPromise = context.authManager?.getEntityServices()"
             ],
             "reason": "With no authManager, dropping either `?.` throws a TypeError at that read instead of reaching the `if (!workspacesPromise)` guard's own Error. Both land in the same catch, which maps every non-timeout failure to the same user message and UNKNOWN code, pushes the same `get-workspaces` error envelope and returns the same result \u2014 the pinned no-authManager outcome. The only trace is the message inside the logged error object, and asserting that is asserting a log string.",
             "decision": "none \u2014 the guard after them is what carries the absence case, and it is pinned",
@@ -8426,7 +8425,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 694,
+            "line": 714,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is one debugLogger.debug. That the catch EXISTS is tested \u2014 a project write that throws must still report the import as started, because the service has already accepted it \u2014 and emptying the body changes only which line reaches Debug Logs.",
@@ -8439,7 +8438,7 @@
             "anchors": [
                 "if (!project) {"
             ],
-            "line": 685,
+            "line": 705,
             "mutants": 2,
             "category": "branch",
             "reason": "Both mutants are absorbed by the catch two lines below. Removing the guard lets 'project.datapack = ...' throw on a null project; the catch swallows it, logs, and the handler still reports the import as started \u2014 which is exactly what the guard produces. The only difference is a debug line.",
@@ -9459,7 +9458,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 214,
+            "line": 215,
             "mutants": 1,
             "category": "block",
             "reason": "Stryker empties the catch, so a throwing validateToken leaves githubOk unassigned instead of false. Both readings are falsy at the 'if (!githubOk)' below, so the tool returns the same needsAuth:'github' handoff and calls the same collaborators either way. The only difference is the variable's binding, which nothing observes; a test asserting it would have to reach inside the function.",
@@ -9472,7 +9471,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 229,
+            "line": 230,
             "mutants": 1,
             "category": "block",
             "reason": "Stryker empties the catch, so a throwing isAuthenticated leaves daLiveOk unassigned instead of false. Both readings are falsy at the 'if (!daLiveOk)' below, so the tool returns the same needsAuth:'dalive' handoff and calls the same collaborators either way. The only difference is the variable's binding, which nothing observes; a test asserting it would have to reach inside the function.",
@@ -10920,7 +10919,7 @@
             "anchors": [
                 "if (args?.confirm !== true || args?.confirmName !== projectName) {"
             ],
-            "line": 269,
+            "line": 270,
             "mutants": 2,
             "category": "optionalChain",
             "reason": "Both optional chains on this line are unreachable-nullish. Lines 194-198 read args?.projectId and args?.projectName and return early unless BOTH trim to a non-empty string, which is only possible when args is an object. So by the time control reaches this line args can never be null or undefined, and dropping the '?.' cannot throw or yield a different value for any input the handler can be given.",
@@ -12119,7 +12118,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 266,
+            "line": 267,
             "mutants": 1,
             "category": "block",
             "reason": "The else branch contains a single logger.warn and nothing else \u2014 no state change, no return, no call the caller can observe. Emptying it leaves the rename result, the project object and every collaborator call identical.",
@@ -12132,7 +12131,7 @@
             "anchors": [
                 "} catch (rollbackError) {"
             ],
-            "line": 322,
+            "line": 323,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying the catch drops a logger.error and a 'return false'; falling off the end returns undefined instead, and the caller's guard is 'if (!undone)' \u2014 falsy either way. Same branch, same message, same result.",
@@ -12236,7 +12235,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 272,
+            "line": 273,
             "mutants": 1,
             "category": "block",
             "reason": "The remote-sync catch body is a single logger.warn. Emptying it still swallows the Console failure, still leaves the local rename successful and its result unchanged, and still leaves adobe.projectTitle recording the title that was never applied \u2014 the only difference is whether a line reaches the log channel.",

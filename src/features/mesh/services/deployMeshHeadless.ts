@@ -149,7 +149,7 @@ export async function deployMeshHeadless(
     // subscribe step kept succeeding while the deploy beside it failed.
     const orgTarget = buildOrgTargetFromProjectAdobe(
         project.adobe,
-        authManager.getCachedOrganization(),
+        authManager.getCacheManager().getCachedOrganization(),
     );
 
     try {

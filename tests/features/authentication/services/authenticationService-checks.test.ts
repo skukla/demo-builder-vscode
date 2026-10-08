@@ -7,8 +7,6 @@ import {
     createMockLogger,
     createMockSDKClient,
     createMockStepLogger,
-    createOrgContextResult,
-    createProjectListResult,
     mockOrg,
 } from './authenticationService.testUtils';
 
@@ -17,11 +15,8 @@ import {
  *
  * Tests authentication validation methods:
  * - isAuthenticated() - Quick token-only checks (<1s)
- * - isFullyAuthenticated() - Full checks with org validation (3-10s)
  * - Token validation logic
  * - Error handling
- *
- * Total tests: 10
  */
 
 // Only mock external dependencies
@@ -165,9 +160,9 @@ describe('AuthenticationService - Authentication Checks', () => {
      * broken. With a cache that never expires, a signed-out user stays "signed in" until
      * the window is reloaded.
      *
-     * Both `isAuthenticated` and `isFullyAuthenticated` gate on the same freshness check,
-     * written out twice, and nothing tested either copy — the word "cache" did not appear
-     * in this suite.
+     * `isAuthenticated` gates on a freshness check, and nothing tested it — the word
+     * "cache" did not appear in this suite. (`isFullyAuthenticated`, which held a second
+     * copy, had no production caller and was deleted 2026-10-08.)
      */
     /**
      * `getTokenStatus` is the only way anything asks HOW LONG is left, rather than just
@@ -225,11 +220,6 @@ describe('AuthenticationService - Authentication Checks', () => {
             await expect(authService.isAuthenticated()).resolves.toBe(false);
         });
 
-        it('the full check answers false instead of throwing', async () => {
-            tokenReadExplodes();
-
-            await expect(authService.isFullyAuthenticated()).resolves.toBe(false);
-        });
     });
 
     describe('the cached answer', () => {
@@ -250,7 +240,7 @@ describe('AuthenticationService - Authentication Checks', () => {
             await authService.isAuthenticated();
 
             mockStoredToken.value = undefined;
-            authService.clearCache();
+            authService.getCacheManager().clearAll();
 
             await expect(authService.isAuthenticated()).resolves.toBe(false);
         });
@@ -266,115 +256,6 @@ describe('AuthenticationService - Authentication Checks', () => {
             await expect(authService.isAuthenticated()).resolves.toBe(false);
         });
 
-        it('is shared with the full check, not kept per method', async () => {
-            // The two methods answer different questions but read the same cached token
-            // status. If they kept separate caches, signing out would be visible to one
-            // and not the other.
-            mockStoredToken.value = validStoredToken();
-            await authService.isAuthenticated();
-
-            mockStoredToken.value = undefined;
-            await expect(authService.isFullyAuthenticated()).resolves.toBe(true);
-        });
-
-        it('the full check re-reads once the cache is cleared', async () => {
-            // The same freshness rule, in the second place it is written. Both copies
-            // have to hold, or one path keeps trusting a stale answer after the other
-            // has stopped.
-            mockStoredToken.value = validStoredToken();
-            await authService.isFullyAuthenticated();
-
-            mockStoredToken.value = undefined;
-            authService.clearCache();
-
-            await expect(authService.isFullyAuthenticated()).resolves.toBe(false);
-        });
-
-        it('the full check caches a negative answer as well', async () => {
-            mockStoredToken.value = undefined;
-
-            await expect(authService.isFullyAuthenticated()).resolves.toBe(false);
-
-            mockStoredToken.value = validStoredToken();
-            await expect(authService.isFullyAuthenticated()).resolves.toBe(false);
-        });
-    });
-
-    describe('isFullyAuthenticated', () => {
-        it('should return true when token is valid and org context is valid', async () => {
-            // Given: Valid token and org context. The token comes from the config
-            // store now; only the org calls still go through the CLI.
-            mockStoredToken.value = validStoredToken();
-            mockCommandExecutor.execute
-                .mockResolvedValueOnce(createOrgContextResult())
-                .mockResolvedValueOnce(createProjectListResult());
-
-            // When: checking full authentication
-            const result = await authService.isFullyAuthenticated();
-
-            // Then: should return true
-            expect(result).toBe(true);
-        });
-
-        it('should return false when token is invalid', async () => {
-            // Given: Invalid token (too short)
-            mockStoredToken.value = { token: 'short', expiry: Date.now() + 3600000 };
-
-            // When: checking full authentication
-            const result = await authService.isFullyAuthenticated();
-
-            // Then: should return false
-            expect(result).toBe(false);
-        });
-
-        it('should NOT initialize SDK during authentication check', async () => {
-            // Given: Valid token
-            mockStoredToken.value = validStoredToken();
-            mockCommandExecutor.execute.mockResolvedValueOnce(createOrgContextResult());
-
-            // When: checking authentication
-            await authService.isFullyAuthenticated();
-
-            // Then: SDK should not be initialized (it's on-demand)
-            expect(mockSDKClient.initialize).not.toHaveBeenCalled();
-        });
-
-        /**
-         * There were two tests here — "ENOENT errors" and "timeout errors" — and
-         * both worked by rejecting the CLI call that READ THE TOKEN. That read is
-         * in-process now, so neither could fail for its stated reason.
-         *
-         * One survives, below, as the store-unreadable case. The other is DELETED
-         * rather than renamed: the only other failure it could have described is
-         * an org check, and `isFullyAuthenticated` stopped doing one in Phase 4a
-         * (org reachability is resolved per-operation via `ensureOrgContext`). A
-         * test asserting a branch the method does not have is worse than no test.
-         */
-        it('should handle an unreadable config store gracefully', async () => {
-            // Given: the token store throws rather than answering
-            const config = jest.requireMock('@adobe/aio-lib-core-config');
-            config.get.mockImplementationOnce(() => {
-                throw new Error('ENOENT: no such file');
-            });
-
-            // When: checking authentication
-            const result = await authService.isFullyAuthenticated();
-
-            // Then: should return false
-            expect(result).toBe(false);
-        });
-    });
-
-    describe('the shared cache, full check first', () => {
-        it('a full check that passed answers the quick check without re-reading', async () => {
-            mockStoredToken.value = validStoredToken();
-            await expect(authService.isFullyAuthenticated()).resolves.toBe(true);
-
-            // The store now says signed OUT; the quick check must still answer from the
-            // positive the full check cached.
-            mockStoredToken.value = undefined;
-            await expect(authService.isAuthenticated()).resolves.toBe(true);
-        });
     });
 
     describe('entity services wiring', () => {
@@ -386,7 +267,7 @@ describe('AuthenticationService - Authentication Checks', () => {
                 () => Promise<boolean>;
             await expect(isTokenValid()).resolves.toBe(true);
 
-            authService.clearCache();
+            authService.getCacheManager().clearAll();
             mockStoredToken.value = undefined;
             await expect(isTokenValid()).resolves.toBe(false);
         });

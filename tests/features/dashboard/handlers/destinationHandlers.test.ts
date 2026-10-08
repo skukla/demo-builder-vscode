@@ -85,9 +85,16 @@ describe('handleSetProjectDestination', () => {
         function contextSignedInto(adobe: Record<string, unknown> | undefined) {
             const made = makeDestinationContext(adobe);
             (made.context as { authManager: unknown }).authManager =
-                createMockAuthenticationService({
-                    getCurrentOrganization: jest.fn().mockResolvedValue(SIGNED_IN),
-                });
+                createMockAuthenticationService(
+                    {},
+                    {
+                        entities: {
+                            resolver: {
+                                getCurrentOrganization: jest.fn().mockResolvedValue(SIGNED_IN),
+                            },
+                        },
+                    }
+                );
             return made;
         }
 

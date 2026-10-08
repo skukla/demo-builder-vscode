@@ -18,6 +18,7 @@
 
 import type { AdobeEntityReads } from './adobeEntityReads';
 import type { AuthCacheManager } from './authCacheManager';
+import { withTiming } from './performanceTracker';
 import type {
     AdobeOrg,
     AdobeProject,
@@ -161,6 +162,10 @@ export class AdobeContextResolver {
      * Get current organization from CLI
      */
     async getCurrentOrganization(): Promise<AdobeOrg | undefined> {
+        return withTiming('getCurrentOrganization', () => this.readCurrentOrganization());
+    }
+
+    private async readCurrentOrganization(): Promise<AdobeOrg | undefined> {
         try {
             const cachedOrg = this.cacheManager.getCachedOrganization();
             if (cachedOrg) return cachedOrg;
@@ -262,6 +267,10 @@ export class AdobeContextResolver {
      * Get current project from CLI
      */
     async getCurrentProject(): Promise<AdobeProject | undefined> {
+        return withTiming('getCurrentProject', () => this.readCurrentProject());
+    }
+
+    private async readCurrentProject(): Promise<AdobeProject | undefined> {
         try {
             const cachedProject = this.cacheManager.getCachedProject();
             if (cachedProject) return cachedProject;
@@ -287,6 +296,10 @@ export class AdobeContextResolver {
      * Get current workspace from CLI
      */
     async getCurrentWorkspace(): Promise<AdobeWorkspace | undefined> {
+        return withTiming('getCurrentWorkspace', () => this.readCurrentWorkspace());
+    }
+
+    private async readCurrentWorkspace(): Promise<AdobeWorkspace | undefined> {
         try {
             // Check cache first
             const cachedWorkspace = this.cacheManager.getCachedWorkspace();

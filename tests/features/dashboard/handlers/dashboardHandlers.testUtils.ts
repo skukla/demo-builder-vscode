@@ -12,6 +12,7 @@ import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
+import { poolUnits } from '../../../helpers/authenticationServiceFake';
 // Mock dependencies
 jest.mock('@/features/mesh/services/stalenessDetector');
 jest.mock('@/core/di/serviceLocator', () => ({
@@ -146,16 +147,18 @@ export function setupMocks(projectOverrides?: Partial<Project>): TestMocks {
 
     // Setup auth service mock (used by handleRequestStatus)
     const { ServiceLocator } = require('@/core/di/serviceLocator');
-    ServiceLocator.getAuthenticationService.mockReturnValue({
-        isAuthenticated: jest.fn().mockResolvedValue(true),
-        getTokenStatus: jest
-            .fn()
-            .mockResolvedValue({ isAuthenticated: true, expiresInMinutes: 60 }),
-        getCachedOrganization: jest.fn().mockReturnValue(undefined),
-        // On-open org-context check uses the SDK-only read (never the CLI fallback).
-        // Default to [] → the check resolves to 'unknown' without a browser/stall.
-        getOrganizationsSdkOnly: jest.fn().mockResolvedValue([]),
-    });
+    ServiceLocator.getAuthenticationService.mockReturnValue(
+        poolUnits({
+            isAuthenticated: jest.fn().mockResolvedValue(true),
+            getTokenStatus: jest
+                .fn()
+                .mockResolvedValue({ isAuthenticated: true, expiresInMinutes: 60 }),
+            getCachedOrganization: jest.fn().mockReturnValue(undefined),
+            // On-open org-context check uses the SDK-only read (never the CLI fallback).
+            // Default to [] → the check resolves to 'unknown' without a browser/stall.
+            getOrganizationsSdkOnly: jest.fn().mockResolvedValue([]),
+        })
+    );
 
     /**
      * FOUR erasures lived in this one object — `panel`, `context`, `stateManager`

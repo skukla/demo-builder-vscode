@@ -39,7 +39,7 @@ const project = () => projectWithOrg('org1');
 beforeEach(() => detect.mockReset());
 
 it('an SDK read that cannot answer resolves to unknown without running the detector', async () => {
-    const auth = makeOrgContextAuth({ getOrganizationsSdkOnly: jest.fn().mockResolvedValue(undefined) });
+    const auth = makeOrgContextAuth({}, { getOrganizationsSdkOnly: jest.fn().mockResolvedValue(undefined) });
 
     const outcome = await checkWith(auth).run(makeOrgCheckContext(project()).ctx);
 
@@ -48,7 +48,7 @@ it('an SDK read that cannot answer resolves to unknown without running the detec
 });
 
 it('a detector that cannot resolve a mismatch resolves to unknown', async () => {
-    const auth = makeOrgContextAuth({ getOrganizationsSdkOnly: jest.fn().mockResolvedValue([]) });
+    const auth = makeOrgContextAuth({}, { getOrganizationsSdkOnly: jest.fn().mockResolvedValue([]) });
     detect.mockResolvedValue(undefined);
 
     const outcome = await checkWith(auth).run(makeOrgCheckContext(project()).ctx);
@@ -59,7 +59,7 @@ it('a detector that cannot resolve a mismatch resolves to unknown', async () => 
 
 it('hands the detector an org source that returns the SDK-only list', async () => {
     const orgs = [{ id: 'org1', code: 'ORG1@AdobeOrg', name: 'Org One' }];
-    const auth = makeOrgContextAuth({ getOrganizationsSdkOnly: jest.fn().mockResolvedValue(orgs) });
+    const auth = makeOrgContextAuth({}, { getOrganizationsSdkOnly: jest.fn().mockResolvedValue(orgs) });
     detect.mockResolvedValue({ reachable: true, expectedOrg: 'org1', currentOrg: 'Org One' });
     const { ctx } = makeOrgCheckContext(project());
 
