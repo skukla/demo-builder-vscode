@@ -16,7 +16,12 @@ let mockFnmPath: string | null = '/opt/homebrew/bin/fnm';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { adobeCliInstalledUnder, ensureFnmNodeVersion, ensureNodeWithAdobeCli } from '@/core/shell/ensureNodeVersion';
+import {
+    adobeCliInstalledUnder,
+    ensureFnmNodeVersion,
+    ensureNodeWithAdobeCli,
+    failureDetail,
+} from '@/core/shell/ensureNodeVersion';
 import { demoBuilderFnmDir } from '@/core/shell/nodeStore';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
@@ -29,16 +34,6 @@ const logger = createMockLogger() as unknown as Logger;
 
 function executorReturning(code: number, stderr = ''): CommandExecutor {
     return createMockCommandExecutor({ execute: jest.fn().mockResolvedValue({ code, stderr }) });
-}
-
-/**
- * An executor whose result is PARTIAL — the shape a killed or never-spawned
- * process actually produces (measured live 2026-08-27: "exit undefined").
- * `CommandResult` declares every field, so this is the only way to drive the
- * optional reads the module makes.
- */
-function executorResolving(result: Record<string, unknown>): CommandExecutor {
-    return createMockCommandExecutor({ execute: jest.fn().mockResolvedValue(result) });
 }
 
 /** The options object the single `execute` call received. */
@@ -72,14 +67,13 @@ describe('ensureFnmNodeVersion', () => {
         expect(executor.execute).not.toHaveBeenCalled();
     });
 
-    it('returns an actionable error when fnm install fails', async () => {
+    it('answers a plain sentence when fnm install fails, and logs fnm\'s own words', async () => {
         const executor = executorReturning(1, 'error: no fnm here');
 
         const error = await ensureFnmNodeVersion(executor, '24', logger);
 
-        expect(error).toContain('Node 24 is required');
-        expect(error).toContain('no fnm here');
-        expect(error).toContain('fnm install 24');
+        expect(error).toBe('Demo Builder could not install Node 24. Check your internet connection and try again.');
+        expect(logger.debug).toHaveBeenCalled();
     });
 
     it('rejects a non-major version string without running anything', async () => {
@@ -118,37 +112,23 @@ describe('ensureFnmNodeVersion', () => {
         });
     });
 
-    describe('the failure detail', () => {
-        it('is the LAST THREE stderr lines, joined by spaces', async () => {
-            const executor = executorReturning(
-                1,
-                '  first line\nsecond line\nthird line\nfourth line  '
-            );
+});
 
-            const error = await ensureFnmNodeVersion(executor, '24', logger);
+// What a failed install said goes to the log, not to the SC (ADR-023).
+describe('failureDetail', () => {
+    it('is the LAST THREE stderr lines, joined by spaces', () => {
+        expect(failureDetail({ code: 1, stdout: '', stderr: '  first line\nsecond line\nthird line\nfourth line  ' }))
+            .toBe('second line third line fourth line');
+    });
 
-            expect(error).toContain('second line third line fourth line');
-            expect(error).not.toContain('first line');
-        });
+    it('falls back to the TAIL of stdout when stderr is empty', () => {
+        const stdout = `${'x'.repeat(150)}${'y'.repeat(200)}`;
+        expect(failureDetail({ code: 1, stderr: '', stdout })).toBe('y'.repeat(200));
+    });
 
-        it('falls back to the TAIL of stdout when stderr is empty', async () => {
-            const stdout = `${'x'.repeat(150)}${'y'.repeat(200)}`;
-            const executor = executorResolving({ code: 1, stderr: '', stdout });
-
-            const error = await ensureFnmNodeVersion(executor, '24', logger);
-
-            expect(error).toContain('y'.repeat(200));
-            expect(error).not.toContain('x');
-        });
-
-        it('says the command never ran when there is no exit code and no output', async () => {
-            // Neither stream present, and no exit code: an fnm that was never spawned.
-            const executor = executorResolving({ code: null });
-
-            const error = await ensureFnmNodeVersion(executor, '24', logger);
-
-            expect(error).toContain('exit code unknown (command did not run)');
-        });
+    it('says the command never ran when there is no exit code and no output', () => {
+        // Neither stream present, and no exit code: an fnm that was never spawned.
+        expect(failureDetail({ code: null })).toBe('exit code unknown (command did not run)');
     });
 });
 
@@ -220,7 +200,9 @@ describe('ensureNodeWithAdobeCli', () => {
 
         const error = await ensureNodeWithAdobeCli(exec, '24', INSTALL, logger);
 
-        expect(error).toBe('The Adobe CLI could not be installed under Node 24: E403 forbidden');
+        expect(error).toBe(
+            'Demo Builder could not install the Adobe CLI for Node 24. Check your internet connection and try again.',
+        );
         expect(calls).not.toContain(INSTALL[1]);
     });
 });

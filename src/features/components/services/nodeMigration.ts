@@ -22,8 +22,11 @@
  * @module features/components/services/nodeMigration
  */
 
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { stageLine } from '@/core/utils/stageLine';
 import type { ComponentInstance, Project } from '@/types/base';
 import type { TransformedComponentDefinition } from '@/types/components';
+import type { OperationPosition } from '@/types/webviewPayloads';
 
 export interface NodeSweepDeps {
     projects: Project[];
@@ -67,20 +70,24 @@ function componentsBehind(project: Project, node: string): Array<[string, Compon
     });
 }
 
+/** Reinstall one project's components that are behind; log the detail, show only the stage. */
 async function moveProject(
     project: Project,
     deps: NodeSweepDeps,
-    report: (line: string) => void,
+    show: (position: OperationPosition) => void,
+    counter: { index: number; total: number },
     result: NodeSweepResult,
 ): Promise<void> {
     let changed = false;
     for (const [id, component] of componentsBehind(project, deps.node)) {
+        counter.index += 1;
+        show({ index: counter.index, total: counter.total });
         const label = `${project.name}: ${component.name || id}`;
-        report(`Moving ${label} to Node ${deps.node}`);
+        deps.log(`Reinstalling ${label} on Node ${deps.node}`);
         const error = await deps.reinstall(id, component, deps.node);
         if (error) {
             result.failed.push({ component: label, error });
-            report(`Could not move ${label}; it still runs on its old Node: ${error}`);
+            deps.log(`Could not reinstall ${label} on Node ${deps.node}; it still runs on its old Node: ${error}`);
             continue;
         }
         component.metadata = { ...component.metadata, nodeVersion: deps.node };
@@ -92,7 +99,9 @@ async function moveProject(
 
 /**
  * Prepare Demo Builder's Node and move every project's components onto it, when
- * anything needs it.
+ * anything needs it. The notification shows only the stage and a count (handbook:
+ * the stage name alone, 25 characters at most); which component, and any error,
+ * go to the log.
  *
  * @returns what ran, what moved, what failed and why, and which projects were running
  */
@@ -102,22 +111,28 @@ export async function sweepOntoDemoBuilderNode(deps: NodeSweepDeps): Promise<Nod
     const behind = deps.projects.filter((project) => componentsBehind(project, deps.node).length > 0);
     if (behind.length === 0 && (await deps.nodeReady())) return result;
 
-    return deps.withProgress(`Updating Demo Builder's Node to ${deps.node}`, async (progress) => {
-        const report = (line: string): void => {
-            progress(line);
-            deps.log(line);
-        };
+    return deps.withProgress(`Updating to Node ${deps.node}`, async (progress) => {
         result.ran = true;
-        report(`Preparing Node ${deps.node}`);
+        progress(OPERATION_STAGES.preparingNode.label);
         const nodeError = await deps.ensureNode(deps.node);
-        if (nodeError) return { ...result, nodeError };
-        for (const project of behind) {
-            if (project.status === 'running') {
-                result.running.push(project.name);
-                report(`${project.name} is running; it moves to Node ${deps.node} after it stops`);
-                continue;
-            }
-            await moveProject(project, deps, report, result);
+        if (nodeError) {
+            deps.log(`Could not prepare Node ${deps.node}: ${nodeError}`);
+            return { ...result, nodeError };
+        }
+        const stopped = behind.filter((project) => {
+            if (project.status !== 'running') return true;
+            result.running.push(project.name);
+            deps.log(`${project.name} is running; it moves to Node ${deps.node} after it stops`);
+            return false;
+        });
+        const counter = {
+            index: 0,
+            total: stopped.reduce((sum, project) => sum + componentsBehind(project, deps.node).length, 0),
+        };
+        const show = (position: OperationPosition) =>
+            progress(stageLine(OPERATION_STAGES.reinstallingPackages.label, position));
+        for (const project of stopped) {
+            await moveProject(project, deps, show, counter, result);
         }
         return result;
     });

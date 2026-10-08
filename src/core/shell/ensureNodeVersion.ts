@@ -29,9 +29,23 @@ import * as path from 'path';
 import type { CommandExecutor } from './commandExecutor';
 import { EnvironmentSetup } from './environmentSetup';
 import { fnmStoreProcessEnv } from './nodeStore';
+import type { CommandResult } from './types';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
+
+/**
+ * What a failed install said, for the log: the last three stderr lines, else the tail
+ * of stdout, else why there is nothing (the command never ran). Both streams may be
+ * absent: a killed or never-spawned process answers that way (measured 2026-08-27).
+ */
+export function failureDetail(result: { code: CommandResult['code']; stderr?: string; stdout?: string }): string {
+    return (
+        result.stderr?.trim().split('\n').slice(-3).join(' ')
+        || result.stdout?.trim().slice(-200)
+        || `exit code ${result.code ?? 'unknown (command did not run)'}`
+    );
+}
 
 /**
  * Ensure fnm can supply Node `<major>`. Returns an error string when it
@@ -73,14 +87,11 @@ export async function ensureFnmNodeVersion(
     });
 
     if (result.code !== 0) {
-        const detail =
-            result.stderr?.trim().split('\n').slice(-3).join(' ') ||
-            result.stdout?.trim().slice(-200) ||
-            `exit code ${result.code ?? 'unknown (command did not run)'}`;
-        return (
-            `Node ${major} is required but could not be installed via fnm: ${detail}. ` +
-            `Install it manually (\`fnm install ${major}\`) and retry.`
-        );
+        const detail = failureDetail(result);
+        // The SC reads the sentence; fnm's own words go to the log (ADR-023). A manual
+        // `fnm install` would land in the SC's own fnm, which Demo Builder does not read.
+        logger.debug(`[EnsureNode] fnm install ${major} failed: ${detail}`);
+        return `Demo Builder could not install Node ${major}. Check your internet connection and try again.`;
     }
 
     logger.debug(`[EnsureNode] Node ${major} available in Demo Builder's store`);
@@ -126,7 +137,8 @@ export async function ensureNodeWithAdobeCli(
         });
         if (result.code !== 0) {
             const detail = result.stderr?.trim().split('\n').slice(-3).join(' ') || `exit code ${result.code}`;
-            return `The Adobe CLI could not be installed under Node ${major}: ${detail}`;
+            logger.debug(`[EnsureNode] "${command}" failed under Node ${major}: ${detail}`);
+            return `Demo Builder could not install the Adobe CLI for Node ${major}. Check your internet connection and try again.`;
         }
     }
     return undefined;

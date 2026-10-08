@@ -43,11 +43,13 @@ function deps(projects: Project[], overrides: Partial<NodeSweepDeps> = {}) {
 describe('sweepOntoDemoBuilderNode', () => {
     it('reinstalls a component recorded under the old Node on the new one, and moves its record', async () => {
         const project = createMockProject({ name: 'citisignal', componentInstances: { headless: component('headless', '24') } });
-        const { d, titles } = deps([project]);
+        const { d, titles, progressLines } = deps([project]);
 
         const result = await sweepOntoDemoBuilderNode(d);
 
-        expect(titles).toStrictEqual(["Updating Demo Builder's Node to 26"]);
+        // The notification: an -ing title, then the stage alone with a count (handbook).
+        expect(titles).toStrictEqual(['Updating to Node 26']);
+        expect(progressLines).toStrictEqual(['Preparing Node', 'Reinstalling packages (1 of 1)']);
         expect(d.ensureNode).toHaveBeenCalledWith('26');
         expect(d.reinstall).toHaveBeenCalledWith('headless', project.componentInstances?.headless, '26');
         expect(project.componentInstances?.headless.metadata?.nodeVersion).toBe('26');
@@ -98,7 +100,9 @@ describe('sweepOntoDemoBuilderNode', () => {
 
         expect(d.reinstall).not.toHaveBeenCalled();
         expect(result.running).toStrictEqual(['live']);
-        expect(progressLines).toContain('live is running; it moves to Node 26 after it stops');
+        // Which project waits goes to the log; the notification shows stages only.
+        expect(progressLines).toStrictEqual(['Preparing Node']);
+        expect(d.log).toHaveBeenCalled();
     });
 
     it('keeps the old record when a reinstall fails, and reports it', async () => {
@@ -120,6 +124,8 @@ describe('sweepOntoDemoBuilderNode', () => {
 
         expect(result.nodeError).toBe('offline');
         expect(d.reinstall).not.toHaveBeenCalled();
+        // The warning sends the SC to User Logs, so the reason must be there.
+        expect(d.log).toHaveBeenCalled();
     });
 });
 
