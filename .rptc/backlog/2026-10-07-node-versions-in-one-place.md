@@ -91,3 +91,4 @@ the register), [[PL-36]] (an untested Node-version sort in the prerequisites ins
 - 2026-10-07  feat(app-builder): an SC's own integration repo gets the Node its range needs (`cbdd5c8ed`)
 - 2026-10-07  feat(node): a release that moves the Node moves installed components with it (`141adb676`)
 - 2026-10-07  docs(plans): PR-1a step 9 moves components at the update, not at Start (`f50d8adb3`)
+- 2026-10-07  fix(node): the Node sweep joins the activation upkeep chain (`a056030aa`)
