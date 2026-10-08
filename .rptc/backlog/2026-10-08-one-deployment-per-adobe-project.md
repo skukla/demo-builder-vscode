@@ -4,7 +4,7 @@ kind: fix
 area: app-builder
 needs: []
 value: med
-status: backlog
+status: active
 ---
 # One deployment per Adobe project
 
@@ -91,3 +91,7 @@ was run against Adobe: the live check is the owner's, on the Justrite sandbox.
 The Admin UI SDK registration in `commerce-erp-integration` should carry the ERP's
 display name, so the Orders grid reads "ERP order (Justrite ERP)" instead of the Adobe
 project's title. Today two same-named columns cannot be told apart in Commerce.
+
+## Shipped so far
+
+- 2026-10-08  fix(app-builder): one deployment per ERP name in an Adobe project, and a removal confirms its Commerce Admin registration is gone (`0078d4805`)

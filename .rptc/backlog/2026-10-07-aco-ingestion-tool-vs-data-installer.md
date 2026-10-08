@@ -49,3 +49,7 @@ job the Data Installer does not do yet?
 ## Related
 
 [[PR-1a]] (its decision 2 waits on this), [[DI-1]].
+
+## Shipped so far
+
+- 2026-10-07  docs(backlog): DI-4, has the Data Installer superseded the ACO ingestion tool? (`250462432`)
