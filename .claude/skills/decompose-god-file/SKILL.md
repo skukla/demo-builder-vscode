@@ -85,9 +85,74 @@ find src -name "*.tsx" -not -name "*.test.tsx" -exec wc -l {} + | awk '$1 > 350'
 1. `gate` skill green (scoped jest + `tsc --noEmit` + eslint) — the extracted files carry no new
    lint/type errors and the `max-lines` warning is gone on the original.
 2. Original file now under its per-type threshold; each new file has one responsibility.
-3. Run `circular-dependency-scan` (madge) — extraction is the classic way to introduce an import
-   cycle; confirm you added none.
+3. `tests/sop/import-cycles.test.ts` is green — extraction is the classic way to introduce an
+   import cycle, and since 2026-10-08 a new one fails the build. `circular-dependency-scan`
+   explains how to break one.
 4. Full feature suite passes through the UNCHANGED public API (regression proof that the facade
    delegates correctly).
+
+## The per-file routine (EDS-8, the owner's standing order of 2026-10-08)
+
+**Every file over its limit gets split by job, one file per sitting, one commit per file**, until
+`godFileCandidates` reads 0. The two-number rule above still decides HOW: a file a reader judges
+to be one job (`edsPipeline.ts`: 976 lines, one export) is not cut to move a number; it gets a
+dated verdict on `EDS-8` saying what was read and why it stays whole, and the next re-measure
+can revisit it. The routine exists because each of the first nine cuts rediscovered the same
+bookkeeping, and because "the tests passed" cannot see a line no test constrains.
+
+0. **Re-measure first.** `python3 .claude/skills/decompose-god-file/worklist.py` prints every
+   file over its limit, worst first, with the same signals the ratchet counts. EDS-8's own
+   lesson: it tracked files somebody touched, not files measurement condemns.
+1. **Split by job** (steps 1–6 above). Callers move to the owning unit; forwarders are deleted.
+   Where retiring a forwarder needs an interface decision (an object passed whole into a guard
+   that also needs another method on it), keep it, name the decision in the commit, and move on.
+2. **Prove it was a move.** The suite passing unchanged proves what the suite constrains. For the
+   rest, diff each moved function against the pre-split commit:
+   ```bash
+   python3 .claude/skills/decompose-god-file/proveMove.py HEAD~1 <old-file> <new-file>... \
+       [--rename oldName=newName] [--control]
+   ```
+   It ignores whitespace, `this.x`/`deps.x`, the `deps` destructure and wrapped commas, and
+   prints a diff for anything else. **Every `DIFFERS` is read by a person and named in the
+   commit message** — on the first run (2026-10-08) two of three were real: a timing wrapper
+   that moved off two reads, which the agent's report had described as a side effect.
+   `--control` plants a one-token change and must report `DIFFERS`.
+3. **Full checks, not the scoped gate alone:** full jest, `tsc --noEmit`, `typecheck:tests`,
+   whole-repo lint, compile. State each exit code.
+4. **Mutation score before and after**, so the tests still guard what moved:
+   ```bash
+   node scripts/focusModule.mjs <old-file> <new-file>...   # one run, every piece
+   npm run test:mutation:focus
+   node scripts/checkMutationBaseline.mjs --report reports/mutation/focus.json
+   ```
+   The old file has a baseline row; compare per module, never on the total. A new file has no
+   row, and the check reports it as a regression until one exists: read its survivors first
+   (`reports/mutation/focus.json`, by `mutatorName`: string and log mutants are text, the
+   rest are decisions), fix what is a real gap, THEN `checkMutationBaseline.mjs --write
+   "<why>"`. **A new file also needs a suite of its own**, `tests/<mirror>/<name>.test.ts`;
+   a baseline row with no mirrored suite fails `mutation-config-pairing`. On the first run of
+   this routine the moved sign-in flow scored 43% through the service suites alone: three
+   decisions no test constrained (a forced sign-in clears caches before the browser opens;
+   a failed sign-in answers false), all older than the split and found only because the
+   code was measured on its own. A score that fell is a test that stopped reaching the code
+   (a mock now answering for the unit), not a reason to pad.
+5. **The bookkeeping that moves with the code** — check each, every time:
+   - `tests/sop/architecture-rules.exemptions.json`: `godFileCandidates` and `godFileCoupled`
+     lowered by what was achieved, each `_note` prefixed with a dated sentence.
+   - `scripts/mutation-equivalents.ledger.json`: rows keyed by module and line; re-home them
+     (Python `json.dumps(indent=4)`, never Node's stringify).
+   - `tests/sop/user-facing-errors.ledger.json`, `tests/sop/progress-surface.ledger.json`,
+     `tests/sop/derived-fields` keys: `file:line`.
+   - `tests/core/utils/operationStages.test.ts` `STAGE_REPORTERS`; `test-family-setup`; the
+     jscpd ceiling; `tests/templates/spine-chokepoints.test.ts` doors.
+   - Hook proofs and probes that name an example oversized file (`49-god-file.proof.sh`,
+     `writtenPaths.probe.py` `HANDLER`, `router.test.ts`): point them at the next one.
+   - `jest.pl22.config.js` / `stryker.*.config.json` naming a suite you deleted.
+   - Every doc, skill, `CLAUDE.md` and comment naming the moved symbols — `cited-identifiers`
+     and `doc-module-refs` catch the ones under test; `grep` the rest.
+6. **Commit, log, record.** One commit, `Backlog: EDS-8`, then `backlog.mjs unlogged --write`
+   and a log line with before/after lines and pins. Append anything that needs a LIVE check
+   (a sign-in, a deploy, a publish) to the "Needs a live check" list on EDS-8, so the owner
+   tests several at once rather than after every file.
 
 _If this skill was wrong or incomplete, fix it before closing the task._

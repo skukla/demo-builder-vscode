@@ -9,6 +9,14 @@ layer: G
 ---
 # Files over the god-file threshold
 
+> **Standing order, 2026-10-08 (owner): ALL of them.** Not only the coupled list: every
+> file over its limit is split by job, one file per sitting, one commit per file, until
+> `godFileCandidates` reads 0. A file a reader judges to be one job is not cut to move
+> the number; it gets a dated verdict here instead. The per-file routine (re-measure,
+> split, prove the move, full checks, mutation before and after, the bookkeeping list,
+> commit and log) lives in the `decompose-god-file` skill. Branch:
+> `refactor/eds-8-god-files`. Live checks the owner batches: the list below.
+
 ## Index hook
 
 *The item in one paragraph. Moved off the index 2026-08-26, which carried a second copy that drifted from this file.*
@@ -316,6 +324,20 @@ section above, which is the same argument and was right the first time.
 > like. The bar is unchanged and non-negotiable: the existing suites pass
 > UNTOUCHED. A test that has to change means the extraction changed behaviour.
 
+## Needs a live check
+
+The automated checks prove a move did not change what the tests constrain. What they
+cannot drive is listed here, batched so the owner tests several at once. Tick with the
+date and what happened; a failure becomes its own `fix` item.
+
+- [ ] **Adobe sign-in, sign-out, and sign-in that restores a project's org** (the
+      `adobeSignIn.ts` move, `46714daa5`): a forced re-login opens the browser once, the
+      org list refreshes afterwards, and a project opened in the wrong org still prompts.
+- [ ] **A deploy's progress reaching an open dashboard** (`projectPanelPushes.ts`,
+      `df44020fe`): redeploy an integration with the Project Dashboard open and then with
+      the Integrations screen open; the card flips to deploying and back, and the mesh
+      card updates during a mesh deploy.
+
 ## Shipped so far
 
 - 2026-09-10  2026-09-10  Gated: god-file-ratchet.test.ts pins 68 candidates / 31 coupled; rule 49 measures on edit (2987e8623)
@@ -332,4 +354,4 @@ section above, which is the same argument and was right the first time.
 - 2026-10-05  2026-10-04 day-b (staged, uncommitted): prerequisites/handlers/shared.ts (677 -> 71) split by job into nodeVersionRequirements.ts (which Node majors the selection needs), prerequisiteStatusMessages.ts (status values and step wording), perNodeVersionStatus.ts (the per-Node-major install check) and prerequisiteCheckError.ts (a check that threw or timed out); shared.ts keeps the dependency gate and re-exports the rest, so all 30-odd jest.mock('.../shared') sites keep intercepting. Every existing assertion untouched (prerequisites 776/776). God-file pins 61 -> 60 and 24 -> 23; 8 mutation-equivalents rows moved to the new files and lines; the god-file hook proof and writtenPaths probe now aim at installHandler.ts (714 lines).
 - 2026-10-04  refactor: prerequisites shared.ts split by job; six duplicate cache tests removed (EDS-8, PL-42) (`e598c5d5e`)
 - 2026-10-08  PR-1a cut app-builder/services/appBuilderComponentRunner.ts (1944 -> 370, the contract types) into add, redeploy and remove runs plus deploy steps, kind dispatch, removal cleanup and removal state; callers moved, no forwarders (`04d373365`). godFileCandidates 59 -> 58. Re-measured the work list the same day: 22 coupled files, worst authenticationService.ts (924/400, 52 public surface).
-- 2026-10-08  refactor(authentication): authenticationService keeps the session; sign-in moves to adobeSignIn, forwarders deleted (`aefbf195e`)
+- 2026-10-08  refactor(authentication): authenticationService keeps the session; sign-in moves to adobeSignIn, forwarders deleted (`46714daa5`)
