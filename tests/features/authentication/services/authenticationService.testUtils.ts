@@ -93,14 +93,14 @@ export interface AuthServiceHarness {
  * that and failed two tests with the REAL collaborator running; passing the
  * suite's own bindings removes the question rather than answering it.
  *
- * @param deps - the suite's own mocked bindings, and the entity reads it needs
+ * @param deps - the suite's own mocked bindings, and the org reads it needs
  */
 export function setupAuthServiceSuite(deps: {
     AdobeSDKClient: { mockImplementation: (fn: () => AdobeSDKClient) => unknown };
     createEntityServices: jest.Mock;
     getLogger: jest.Mock;
     /** The context suite also needs `getOrganizationsSdkOnly`; operations does not. */
-    reads?: Record<string, unknown>;
+    orgReads?: Record<string, unknown>;
 }): AuthServiceHarness {
     const commandExecutor = createMockCommandExecutorLocal();
     const logger = createMockLoggerLocal();
@@ -116,7 +116,7 @@ export function setupAuthServiceSuite(deps: {
     deps.AdobeSDKClient.mockImplementation(() => sdkClient);
 
     deps.createEntityServices.mockReturnValue({
-        reads: deps.reads ?? { getOrganizations: jest.fn().mockResolvedValue([mockOrg]) },
+        orgReads: deps.orgReads ?? { getOrganizations: jest.fn().mockResolvedValue([mockOrg]) },
         resolver: {},
         selector: {},
     });

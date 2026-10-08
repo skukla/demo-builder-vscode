@@ -102,7 +102,7 @@ function createDeleteContext() {
     context.authManager.getProjects.mockResolvedValue([OWNED_PROJECT]);
     context.authManager.getCacheManager().getCachedProject = jest.fn().mockReturnValue(undefined);
     entityServicesOf(context.authManager).selector.clearConsoleContext = jest.fn().mockResolvedValue(undefined);
-    entityServicesOf(context.authManager).reads.getWorkspaces = jest.fn().mockResolvedValue([]);
+    entityServicesOf(context.authManager).workspaceReads.getWorkspaces = jest.fn().mockResolvedValue([]);
     entityServicesOf(context.authManager).credentials.getWorkspaceS2SCredential = jest.fn();
     entityServicesOf(context.authManager).credentials.createWorkspaceS2SCredentialFor = jest.fn();
     entityServicesOf(context.authManager).projectOps.deleteConsoleProject = jest.fn();
@@ -634,7 +634,7 @@ describe('createTeardownDeps', () => {
                             .fn()
                             .mockResolvedValue(undefined),
                     },
-                    reads: {
+                    workspaceReads: {
                         getWorkspaces: jest.fn().mockResolvedValue([
                             { id: 'ws-1', name: 'Stage', title: 'Stage' },
                             { id: 'ws-2', name: 'Production', title: 'Production' },
@@ -689,7 +689,7 @@ describe('createTeardownDeps', () => {
 
         const workspaces = await deps.getWorkspaces({ orgId: 'org-1', projectId: 'proj-1' });
 
-        expect(entityServicesOf(authService).reads.getWorkspaces).toHaveBeenCalledWith({
+        expect(entityServicesOf(authService).workspaceReads.getWorkspaces).toHaveBeenCalledWith({
             orgId: 'org-1',
             projectId: 'proj-1',
         });

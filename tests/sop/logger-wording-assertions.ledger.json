@@ -32,7 +32,7 @@
         "tests/features/authentication/handlers/projectHandlers-fetch.test.ts": 1,
         "tests/features/authentication/handlers/projectHandlers-select.test.ts": 2,
         "tests/features/authentication/handlers/workspaceHandlers.test.ts": 2,
-        "tests/features/authentication/services/adobeEntityService-organizations-listing.test.ts": 2,
+        "tests/features/authentication/services/adobeOrgReads-listing.test.ts": 2,
         "tests/features/authentication/services/ensureProjectOrgContext.test.ts": 1,
         "tests/features/components/handlers/componentHandlers-getData.test.ts": 1,
         "tests/features/components/handlers/componentHandlers.test.ts": 2,

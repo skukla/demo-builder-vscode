@@ -15349,6 +15349,201 @@
             "decision": "none \u2014 the type makes the fallback unreachable; it is reported as uncovered, not survived.",
             "recorded": "2026-10-08",
             "source": "EDS-8 ProjectCreationStep cut"
+        },
+        {
+            "module": "src/features/authentication/services/adobeEntityReads.ts",
+            "anchors": [
+                "if (outcome.timedOut) {"
+            ],
+            "mutants": 2,
+            "category": "block+branch",
+            "reason": "tryWithTimeout (src/core/utils/promiseUtils.ts) returns `error` alongside `timedOut: true` (its catch sets both), so with this branch removed or never taken the `outcome.error` branch below returns undefined just the same. Only the warn line differs.",
+            "decision": "none \u2014 the only observable difference is which log line prints, and asserting logger arguments is banned (no-logger-wording-assertions)",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 adobeEntityReads cut"
+        },
+        {
+            "module": "src/features/authentication/services/adobeEntityReads.ts",
+            "anchors": [
+                ": String(outcome.error ?? 'no result returned');"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Builds the reason text of the 'SDK unavailable' warn line and nothing else; trySDKFetch returns undefined on that path whatever the text says. Killing it means asserting the logger's arguments, which no-logger-wording-assertions forbids, and no return value, cache write or CLI call changes.",
+            "decision": "none \u2014 the only observable difference is which log line prints, and asserting logger arguments is banned (no-logger-wording-assertions)",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 adobeEntityReads cut"
+        },
+        {
+            "module": "src/features/authentication/services/adobeEntityReads.ts",
+            "anchors": [
+                "if (preferredOrgId && preferredOrgId.length > 0) return preferredOrgId;"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "An empty string is already falsy, so once the `!!x &&` half has passed, `x.length > 0` cannot be false: replacing it with `true` or `>= 0` changes no outcome. Pre-dates the split (moved unchanged from adobeEntityReads.ts).",
+            "decision": "none \u2014 redundant but harmless; removing it is a behaviour-neutral edit left for a non-move change",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 adobeEntityReads cut"
+        },
+        {
+            "module": "src/features/authentication/services/adobeOrgReads.ts",
+            "anchors": [
+                "item: mappedOrgs.length === 1 ? 'organization' : 'organizations',"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "Chooses the noun ('organization' or 'organizations') in the 'found' step line; the step logger is the only reader of the value. Killing it means asserting the logger's arguments, which no-logger-wording-assertions forbids, and no return value, cache write or CLI call changes.",
+            "decision": "none \u2014 the only observable difference is which log line prints, and asserting logger arguments is banned (no-logger-wording-assertions)",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 adobeEntityReads cut"
+        },
+        {
+            "module": "src/features/authentication/services/adobeOrgReads.ts",
+            "anchors": [
+                "if (!this.sdkClient.isInitialized()) return undefined;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "SdkEntityFetch.trySDKFetch opens with the same check and returns undefined, so skipping this early return gives the same answer; only an extra getClient() call differs.",
+            "decision": "none \u2014 the early return is a cheap guard, and the outcome is identical",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 adobeEntityReads cut"
+        },
+        {
+            "module": "src/features/authentication/services/adobeProjectReads.ts",
+            "anchors": [
+                "const hasValidOrgId = !!effectiveOrgId && effectiveOrgId.length > 0;"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "An empty string is already falsy, so once the `!!x &&` half has passed, `x.length > 0` cannot be false: replacing it with `true` or `>= 0` changes no outcome. Pre-dates the split (moved unchanged from adobeEntityReads.ts).",
+            "decision": "none \u2014 redundant but harmless",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 adobeEntityReads cut"
+        },
+        {
+            "module": "src/features/authentication/services/adobeProjectReads.ts",
+            "anchors": [
+                "if (this.sdkClient.isInitialized()) {"
+            ],
+            "mutants": 3,
+            "category": "block+branch",
+            "reason": "Guards one debug line ('SDK available but org ID is missing, using CLI'); the `return []` that hands the read to the CLI sits outside the block. Killing it means asserting the logger's arguments, which no-logger-wording-assertions forbids, and no return value, cache write or CLI call changes.",
+            "decision": "none \u2014 the only observable difference is which log line prints, and asserting logger arguments is banned (no-logger-wording-assertions)",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 adobeEntityReads cut"
+        },
+        {
+            "module": "src/features/authentication/services/adobeProjectReads.ts",
+            "anchors": [
+                "const params = { ...options, silent: true, sdkOnly: true };"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The surviving literal is `silent: true` (the `sdkOnly` literal is killed by the no-CLI tests). `silent` gates only the two step-logger lines in fetchProjects.",
+            "decision": "none \u2014 the only observable difference is which log line prints, and asserting logger arguments is banned (no-logger-wording-assertions)",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 adobeEntityReads cut"
+        },
+        {
+            "module": "src/features/authentication/services/adobeProjectReads.ts",
+            "anchors": [
+                "const silent = options?.silent ?? false;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "`silent` gates only the two step-logger lines in fetchProjects (loading, loaded); the fetch, the CLI fallback and the returned list do not read it. Killing it means asserting the logger's arguments, which no-logger-wording-assertions forbids, and no return value, cache write or CLI call changes.",
+            "decision": "none \u2014 the only observable difference is which log line prints, and asserting logger arguments is banned (no-logger-wording-assertions)",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 adobeEntityReads cut"
+        },
+        {
+            "module": "src/features/authentication/services/adobeProjectReads.ts",
+            "anchors": [
+                "if (!silent) {"
+            ],
+            "line": 132,
+            "mutants": 2,
+            "category": "block+branch",
+            "reason": "Gates the 'loading projects' step line and nothing else; the SDK read, the CLI fallback and the returned list are outside the block. Killing it means asserting the logger's arguments, which no-logger-wording-assertions forbids, and no return value, cache write or CLI call changes.",
+            "decision": "none \u2014 the only observable difference is which log line prints, and asserting logger arguments is banned (no-logger-wording-assertions)",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 adobeEntityReads cut"
+        },
+        {
+            "module": "src/features/authentication/services/adobeProjectReads.ts",
+            "anchors": [
+                "if (!silent) {"
+            ],
+            "line": 154,
+            "mutants": 4,
+            "category": "block+branch",
+            "reason": "Gates the 'projects loaded' step line and nothing else; the list has already been fetched and is returned after the block either way. Killing it means asserting the logger's arguments, which no-logger-wording-assertions forbids, and no return value, cache write or CLI call changes.",
+            "decision": "none \u2014 the only observable difference is which log line prints, and asserting logger arguments is banned (no-logger-wording-assertions)",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 adobeEntityReads cut"
+        },
+        {
+            "module": "src/features/authentication/services/adobeProjectReads.ts",
+            "anchors": [
+                "plural: mappedProjects.length === 1 ? '' : 's',"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "Plural suffix of the 'projects loaded' step line; the step logger is the only reader, and the returned project list is the same either way. Killing it means asserting the logger's arguments, which no-logger-wording-assertions forbids, and no return value, cache write or CLI call changes.",
+            "decision": "none \u2014 the only observable difference is which log line prints, and asserting logger arguments is banned (no-logger-wording-assertions)",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 adobeEntityReads cut"
+        },
+        {
+            "module": "src/features/authentication/services/adobeWorkspaceReads.ts",
+            "anchors": [
+                "orgCode: orgMatches ? cachedOrg?.code : undefined,",
+                "orgName: orgMatches ? cachedOrg?.name : undefined,"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "`orgMatches` is `!!cachedOrg && cachedOrg.id === orgId`, so `cachedOrg` is defined whenever the `?.` is reached; dropping the `?` cannot throw.",
+            "decision": "none \u2014 the type does not narrow through the boolean, so the `?.` keeps tsc quiet",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 adobeEntityReads cut"
+        },
+        {
+            "module": "src/features/authentication/services/adobeWorkspaceReads.ts",
+            "anchors": [
+                "const hasValidIds = !!orgId && orgId.length > 0 && !!projectId && projectId.length > 0;"
+            ],
+            "mutants": 5,
+            "category": "branch",
+            "reason": "An empty string is already falsy, so once the `!!x &&` half has passed, `x.length > 0` cannot be false: replacing it with `true` or `>= 0` changes no outcome. Pre-dates the split (moved unchanged from adobeEntityReads.ts).",
+            "decision": "none \u2014 redundant but harmless",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 adobeEntityReads cut"
+        },
+        {
+            "module": "src/features/authentication/services/adobeWorkspaceReads.ts",
+            "anchors": [
+                "} else if (this.sdkClient.isInitialized()) {"
+            ],
+            "mutants": 3,
+            "category": "block+branch",
+            "reason": "Guards one debug line ('SDK available but org ID or project ID is missing, using CLI'); the CLI fallback below runs on its own condition. Killing it means asserting the logger's arguments, which no-logger-wording-assertions forbids, and no return value, cache write or CLI call changes.",
+            "decision": "none \u2014 the only observable difference is which log line prints, and asserting logger arguments is banned (no-logger-wording-assertions)",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 adobeEntityReads cut"
+        },
+        {
+            "module": "src/features/authentication/services/adobeWorkspaceReads.ts",
+            "anchors": [
+                "plural: mappedWorkspaces.length === 1 ? '' : 's',"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "Plural suffix of the 'workspaces loaded' step line; the step logger is the only reader, and the returned workspace list is the same either way. Killing it means asserting the logger's arguments, which no-logger-wording-assertions forbids, and no return value, cache write or CLI call changes.",
+            "decision": "none \u2014 the only observable difference is which log line prints, and asserting logger arguments is banned (no-logger-wording-assertions)",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 adobeEntityReads cut"
         }
     ]
 }

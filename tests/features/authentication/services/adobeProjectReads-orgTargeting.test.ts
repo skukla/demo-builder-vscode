@@ -1,8 +1,7 @@
 /**
- * AdobeEntityFetcher Unit Tests
+ * Project reads target the THREADED org: org-context env, the SDK org id, and the typed 403.
  *
- * Tests the SDK-first fetching strategy with CLI fallback.
- * These tests verify the fetcher works correctly in isolation.
+ * Split 2026-10-08 from adobeEntityCollaborators.workspaces.test.ts (EDS-8).
  */
 
 import {
@@ -16,9 +15,7 @@ import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 
-// Mock external dependencies
-
-describe('entity collaborators', () => {
+describe('project reads — org targeting', () => {
     let entities: EntityCollaborators;
     let mockCommandExecutor: jest.Mocked<CommandExecutor>;
     let mockSDKClient: jest.Mocked<AdobeSDKClient>;
@@ -45,7 +42,7 @@ describe('entity collaborators', () => {
                 duration: 0,
             });
 
-            await expect(entities.reads.getProjects()).rejects.toMatchObject({
+            await expect(entities.projectReads.getProjects()).rejects.toMatchObject({
                 code: ErrorCode.ORG_MISMATCH,
             });
         });
@@ -63,7 +60,7 @@ describe('entity collaborators', () => {
 
             let caught: unknown;
             try {
-                await entities.reads.getProjects();
+                await entities.projectReads.getProjects();
             } catch (err) {
                 caught = err;
             }
@@ -86,7 +83,7 @@ describe('entity collaborators', () => {
                 duration: 0,
             });
 
-            await expect(entities.reads.getProjects()).rejects.toThrow('AUTH_EXPIRED');
+            await expect(entities.projectReads.getProjects()).rejects.toThrow('AUTH_EXPIRED');
         });
 
         it('runs the project fetch under org-context targeting when orgId is supplied', async () => {
@@ -103,7 +100,7 @@ describe('entity collaborators', () => {
                 return { stdout: JSON.stringify([]), stderr: '', code: 0, duration: 0 };
             });
 
-            await entities.reads.getProjects({ orgId: 'org-target' });
+            await entities.projectReads.getProjects({ orgId: 'org-target' });
 
             expect(seenOrgIds).toContain('org-target');
         });
@@ -119,68 +116,9 @@ describe('entity collaborators', () => {
                 return { stdout: JSON.stringify([]), stderr: '', code: 0, duration: 0 };
             });
 
-            await entities.reads.getProjects();
+            await entities.projectReads.getProjects();
 
             expect(seenOrgIds).toEqual([undefined]);
-        });
-    });
-
-    describe('getWorkspaces() - org-context targeting', () => {
-        it('runs the workspace fetch under org-context targeting (cached org + project)', async () => {
-            // getWorkspaces has no orgId option: it targets from the cached org + project so
-            // the CLI fallback hits the project's org, not the CLI's ambient one (ORG_MISMATCH).
-            const seen: { orgId?: string; projectId?: string }[] = [];
-            mockCacheManager.getCachedOrganization.mockReturnValue({ id: 'org-ws', code: 'C@AdobeOrg', name: 'WS Org' });
-            mockCacheManager.getCachedProject.mockReturnValue({ id: 'proj-ws', name: 'Proj WS' });
-            mockSDKClient.isInitialized.mockReturnValue(false); // force the CLI fallback
-
-            const { getActiveOrgContext } = require('@/core/shell/orgContextEnv');
-            mockCommandExecutor.execute.mockImplementation(async () => {
-                const ctx = getActiveOrgContext();
-                seen.push({ orgId: ctx?.orgId, projectId: ctx?.projectId });
-                return { stdout: JSON.stringify([]), stderr: '', code: 0, duration: 0 };
-            });
-
-            await entities.reads.getWorkspaces();
-
-            expect(seen).toContainEqual({ orgId: 'org-ws', projectId: 'proj-ws' });
-        });
-
-        it('does not establish targeting when org or project id is missing (back-compat)', async () => {
-            const seen: (string | undefined)[] = [];
-            mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
-            mockCacheManager.getCachedProject.mockReturnValue(undefined);
-            mockSDKClient.isInitialized.mockReturnValue(false);
-
-            const { getActiveOrgContext } = require('@/core/shell/orgContextEnv');
-            mockCommandExecutor.execute.mockImplementation(async () => {
-                seen.push(getActiveOrgContext()?.orgId);
-                return { stdout: JSON.stringify([]), stderr: '', code: 0, duration: 0 };
-            });
-
-            await entities.reads.getWorkspaces();
-
-            expect(seen).toEqual([undefined]);
-        });
-
-        it('prefers the threaded target over the (stale) cache', async () => {
-            // The cache holds a stale/pruned project; the threaded selection must win so the
-            // lookup targets the real project (not "Invalid Project id").
-            const seen: { orgId?: string; projectId?: string }[] = [];
-            mockCacheManager.getCachedOrganization.mockReturnValue({ id: 'cached-org', code: 'X@AdobeOrg', name: 'Cached Org' });
-            mockCacheManager.getCachedProject.mockReturnValue({ id: 'stale-proj', name: 'Stale' });
-            mockSDKClient.isInitialized.mockReturnValue(false);
-
-            const { getActiveOrgContext } = require('@/core/shell/orgContextEnv');
-            mockCommandExecutor.execute.mockImplementation(async () => {
-                const ctx = getActiveOrgContext();
-                seen.push({ orgId: ctx?.orgId, projectId: ctx?.projectId });
-                return { stdout: JSON.stringify([]), stderr: '', code: 0, duration: 0 };
-            });
-
-            await entities.reads.getWorkspaces({ orgId: 'threaded-org', projectId: 'threaded-proj' });
-
-            expect(seen).toContainEqual({ orgId: 'threaded-org', projectId: 'threaded-proj' });
         });
     });
 
@@ -202,7 +140,7 @@ describe('entity collaborators', () => {
                 getProjectsForOrg,
             } as ReturnType<typeof mockSDKClient.getClient>);
 
-            await entities.reads.getProjects({ orgId: 'target-org' });
+            await entities.projectReads.getProjects({ orgId: 'target-org' });
 
             expect(getProjectsForOrg).toHaveBeenCalledWith('target-org');
             expect(getProjectsForOrg).not.toHaveBeenCalledWith('stale-org');
@@ -222,7 +160,7 @@ describe('entity collaborators', () => {
                 getProjectsForOrg,
             } as ReturnType<typeof mockSDKClient.getClient>);
 
-            await entities.reads.getProjects();
+            await entities.projectReads.getProjects();
 
             expect(getProjectsForOrg).toHaveBeenCalledWith('cached-org');
         });
@@ -237,63 +175,31 @@ describe('entity collaborators', () => {
                 getProjectsForOrg,
             } as ReturnType<typeof mockSDKClient.getClient>);
 
-            await entities.reads.getProjects({ orgId: 'target-org' });
+            await entities.projectReads.getProjects({ orgId: 'target-org' });
 
             expect(getProjectsForOrg).toHaveBeenCalledWith('target-org');
         });
     });
 
-    describe('getWorkspaces()', () => {
-        it('should fetch workspaces via SDK with valid org and project IDs', async () => {
-            mockCacheManager.getCachedOrganization.mockReturnValue({
-                id: '123456',
-                code: 'ORG@AdobeOrg',
-                name: 'Test Org',
+    describe('getProjectsSdkOnly() - org targeting', () => {
+        it('runs the SDK read for the threaded org, under that org context', async () => {
+            const { getActiveOrgContext } = require('@/core/shell/orgContextEnv');
+            const seenOrgIds: (string | undefined)[] = [];
+            const getProjectsForOrg = jest.fn().mockImplementation(async () => {
+                seenOrgIds.push(getActiveOrgContext()?.orgId);
+                return { body: [{ id: 'proj1', name: 'Project 1', title: 'Project 1 Title' }] };
             });
-            mockCacheManager.getCachedProject.mockReturnValue({
-                id: 'proj123',
-                name: 'Test Project',
-                title: 'Test Project',
-            });
+            mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
             mockSDKClient.isInitialized.mockReturnValue(true);
             mockSDKClient.getClient.mockReturnValue({
-                getWorkspacesForProject: jest.fn().mockResolvedValue({
-                    body: [
-                        { id: 'ws1', name: 'Production', title: 'Production' },
-                        { id: 'ws2', name: 'Stage', title: 'Stage' },
-                    ],
-                }),
+                getProjectsForOrg,
             } as ReturnType<typeof mockSDKClient.getClient>);
 
-            const result = await entities.reads.getWorkspaces();
-
-            expect(result).toHaveLength(2);
-            expect(result[0].name).toBe('Production');
-            expect(result[1].name).toBe('Stage');
-        });
-
-        it('should use CLI when project ID is missing', async () => {
-            mockCacheManager.getCachedOrganization.mockReturnValue({
-                id: '123456',
-                code: 'ORG@AdobeOrg',
-                name: 'Test Org',
-            });
-            mockCacheManager.getCachedProject.mockReturnValue(undefined);
-            mockSDKClient.isInitialized.mockReturnValue(true);
-
-            mockCommandExecutor.execute.mockResolvedValue({
-                stdout: JSON.stringify([
-                    { id: 'ws1', name: 'CLI Workspace', title: 'CLI Workspace' },
-                ]),
-                stderr: '',
-                code: 0,
-                duration: 0,
-            });
-
-            const result = await entities.reads.getWorkspaces();
+            const result = await entities.projectReads.getProjectsSdkOnly({ orgId: 'target-org' });
 
             expect(result).toHaveLength(1);
-            expect(result[0].name).toBe('CLI Workspace');
+            expect(getProjectsForOrg).toHaveBeenCalledWith('target-org');
+            expect(seenOrgIds).toEqual(['target-org']);
         });
     });
 });

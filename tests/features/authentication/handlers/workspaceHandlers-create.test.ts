@@ -31,7 +31,7 @@ function createContext() {
         {
             entities: {
                 projectOps: { createWorkspace: jest.fn().mockResolvedValue(WS) },
-                reads: { getWorkspaces: jest.fn().mockResolvedValue([WS]) },
+                workspaceReads: { getWorkspaces: jest.fn().mockResolvedValue([WS]) },
             },
         },
     );
@@ -142,7 +142,7 @@ describe('workspaceHandlers - Create', () => {
     });
 
     it('returns the refreshed list ON THE RESPONSE (the caller is unmounted, a push is lost)', async () => {
-        entityServicesOf(mockContext.authManager).reads.getWorkspaces.mockResolvedValue([WS]);
+        entityServicesOf(mockContext.authManager).workspaceReads.getWorkspaces.mockResolvedValue([WS]);
 
         const result = await handleCreateAdobeWorkspace(mockContext, {
             name: 'Stage',
@@ -175,7 +175,7 @@ describe('workspaceHandlers - Create', () => {
     });
 
     it('still succeeds when the refresh fetch fails, omitting workspaces so the caller reloads', async () => {
-        entityServicesOf(mockContext.authManager).reads.getWorkspaces.mockRejectedValue(new Error('adobe down'));
+        entityServicesOf(mockContext.authManager).workspaceReads.getWorkspaces.mockRejectedValue(new Error('adobe down'));
 
         const result = await handleCreateAdobeWorkspace(mockContext, { name: 'Stage' });
 
@@ -189,7 +189,7 @@ describe('workspaceHandlers - Create', () => {
 
         // The refresh must target the wizard's project; the fetcher resolves the org via
         // its token-org fallback. Unthreaded, the fetch would drop to the stale-org CLI.
-        expect(entityServicesOf(mockContext.authManager).reads.getWorkspaces).toHaveBeenCalledWith({
+        expect(entityServicesOf(mockContext.authManager).workspaceReads.getWorkspaces).toHaveBeenCalledWith({
             projectId: 'proj-42',
         });
     });

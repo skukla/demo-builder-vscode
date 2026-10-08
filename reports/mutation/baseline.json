@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "EDS-8 2026-10-08: daLiveContentOperations cut to its wiring (558 -> 102; forwarders retired, 33 -> 3 mutants) and the TokenProvider adapters moved to daLiveTokenProviders.ts (13 mutants, all killed, no survivors to read)",
+    "_note": "EDS-8 2026-10-08: adobeEntityReads.ts (543 lines, no row; measured before the split at 60.90% over the same suites) split by entity into adobeOrgReads/adobeProjectReads/adobeWorkspaceReads, keeping the shared SDK-first fetch. 62.26% on the first after-run, 69.43% after; 9 tests close the gaps found (empty org list not cached, deadline honoured for a late SDK answer, SDK-only project read under the threaded org context, workspace org-context code/name enrichment and no-project case, SDK-only workspace ids, rejecting fetchWorkspaces); the remaining 38 behavioural survivors are equivalent or log-only, ledgered.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -9941,6 +9941,74 @@
             "uncoveredCategories": {},
             "highValueSurvivors": 0,
             "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/authentication/services/adobeEntityReads.ts": {
+            "score": 67.44,
+            "killed": 29,
+            "survived": 14,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 3,
+                "branch": 4,
+                "logPresentation": 6,
+                "block": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 5,
+            "equivalent": 5,
+            "openGaps": 0
+        },
+        "src/features/authentication/services/adobeOrgReads.ts": {
+            "score": 78.95,
+            "killed": 45,
+            "survived": 12,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 5,
+                "logPresentation": 3,
+                "branch": 4
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 4,
+            "equivalent": 4,
+            "openGaps": 0
+        },
+        "src/features/authentication/services/adobeProjectReads.ts": {
+            "score": 63.29,
+            "killed": 50,
+            "survived": 29,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 13,
+                "block": 3,
+                "logPresentation": 7,
+                "string": 6
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 16,
+            "equivalent": 16,
+            "openGaps": 0
+        },
+        "src/features/authentication/services/adobeWorkspaceReads.ts": {
+            "score": 69.77,
+            "killed": 60,
+            "survived": 26,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 6,
+                "optionalChain": 2,
+                "logPresentation": 7,
+                "branch": 10,
+                "block": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 11,
+            "equivalent": 13,
             "openGaps": 0
         }
     }

@@ -7,9 +7,9 @@
  * have a CLI fallback.
  *
  * Listing a fresh project's workspaces (for the Runtime sweep) is NOT this
- * class's job — the injected `listWorkspaces` does it, wired by the facade to
- * `AdobeEntityReads.fetchWorkspaces`. Injecting the function rather than the
- * reads object keeps the dependency one-way and exactly as wide as the need.
+ * class's job — the injected `listWorkspaces` does it, wired by
+ * `createEntityCollaborators` to `AdobeWorkspaceReads.fetchWorkspaces`. Injecting
+ * the function rather than the reads object keeps the dependency one-way and exactly as wide as the need.
  *
  * Extracted from `adobeEntityFetcher.ts` (god-file decomposition, 2026-08-23).
  *

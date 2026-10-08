@@ -557,6 +557,19 @@ date and what happened; a failure becomes its own `fix` item.
       `daLiveTokenProviders.ts`, so a DA.live sign-in failing anywhere would show here too.
 
 
+- [ ] **Adobe org, project and workspace lists after the adobeEntityReads cut** (uncommitted on
+      `refactor/eds-8-god-files`): `EntityServices.reads` is now `orgReads`, `projectReads` and
+      `workspaceReads`, sharing one `SdkEntityFetch`. (1) Sign in and open the wizard's Adobe
+      steps: the org, project and workspace lists fill, and a stale `aio console` selection
+      does not win over the token org; (2) open a project dashboard whose org is NOT the
+      token's org: the "Switch IMS Org" warning shows, with no browser opening on its own
+      (`orgReads.getOrganizationsSdkOnly`); (3) on a token that reaches zero orgs, the CLI
+      context is cleared (`onNoOrgsAccessible`); (4) create a workspace and delete a Console
+      project: the workspace list and the Runtime sweep (`workspaceReads.fetchWorkspaces`) are
+      reached; (5) the agent's workspace tools answer. Suites drive all of it with a faked SDK
+      and CLI; only a real sign-in proves the token-org fallback and org-context targeting
+      reach the real Console.
+
 ## Shipped so far
 
 - 2026-09-10  2026-09-10  Gated: god-file-ratchet.test.ts pins 68 candidates / 31 coupled; rule 49 measures on edit (2987e8623)
@@ -592,3 +605,4 @@ date and what happened; a failure becomes its own `fix` item.
 - 2026-10-08  refactor(project-creation): WizardContainer keeps the shell; settings, catalog, the stack-change handler and the footer get their own files (`78d44397e`)
 - 2026-10-08  daLiveContentOperations.ts (558 -> 102) split by job, uncommitted on refactor/eds-8-god-files. It keeps the wiring: it builds the five DA.live services and hands them back as fields. Its sixteen forwarders are gone and callers reach the owning service; the two TokenProvider adapters moved to daLiveTokenProviders.ts (67); copyDaLiveSite and deleteSiteRoot stay (MigrationContentOps spans two services). Pins: godFileCandidates 48 -> 47, godFileCoupled 13 -> 12, cloneCeiling 40 -> 39 (PL-69 pair 8 gone). Mutation: daLiveContentOperations 100% (baseline row 100%, 33 -> 3 mutants), daLiveTokenProviders 100% (13, new row).
 - 2026-10-08  refactor(eds): daLiveContentOperations keeps the wiring; token adapters get their own file and 16 forwarders are retired (`6149b39f3`)
+- 2026-10-08  adobeEntityReads.ts (543 -> 140) split by entity, uncommitted on refactor/eds-8-god-files. The file keeps the SDK-first read path every listing shares (SdkEntityFetch: the bounded SDK call; resolveEffectiveOrgId: threaded, then cached, then token org); org reads are adobeOrgReads.ts (169, cache, single-flight, onNoOrgsAccessible, the SDK-only probe), project reads adobeProjectReads.ts (167) and workspace reads adobeWorkspaceReads.ts (172, including the fetchWorkspaces the Console project ops are wired to). EntityServices.reads became orgReads/projectReads/workspaceReads and every caller moved (11 production sites, AdobeContextResolver now takes org and project reads); no forwarders kept. proveMove (--via sdkFetch): every function a pure move except three named DIFFERS, all the token-org source now passed to resolveEffectiveOrgId instead of read off the instance; control reports DIFFERS. Mutation: no baseline row, measured unsplit at 60.90 over the same suites -> 69.43 across the pieces (adobeEntityReads 67.44, adobeOrgReads 78.95, adobeProjectReads 63.29, adobeWorkspaceReads 69.77, openGaps 0 on all); 9 tests close real gaps (empty org list must not be cached, a late SDK answer inside the deadline is used, SDK-only project read runs under the threaded org, workspace org-context code/name only for the cached org, no targeting without a project, SDK-only workspace ids, a failed workspace read rejects); 38 survivors ledgered as equivalent or log-only. Suites re-homed by name (9 selected, none from the import graph); hand-written mocks retargeted (both fakes, authenticationService.testUtils, the resolver suite and 7 caller suites). Pins: godFileCandidates 47 -> 46, godFileCoupled 12 -> 11; cloneCeiling stays 39 (at the pin); test-family-setup adjudicates the adobeEntityReads pair; logger-wording ledger key renamed. Live check appended above.

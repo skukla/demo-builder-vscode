@@ -50,7 +50,7 @@ it('no Adobe org → ok no-op, without touching auth at all', async () => {
 
     expect(outcome.status).toBe('ok');
     expect(auth.isAuthenticated).not.toHaveBeenCalled();
-    expect(entityServicesOf(auth).reads.getOrganizationsSdkOnly).not.toHaveBeenCalled();
+    expect(entityServicesOf(auth).orgReads.getOrganizationsSdkOnly).not.toHaveBeenCalled();
 });
 
 it('valid token + matching org → ok with currentOrg; no CLI / no interactive path', async () => {
@@ -106,7 +106,7 @@ it('absent/expired token → unknown + signedOut; SDK read NOT attempted, no int
     expect(outcome.status).toBe('unknown');
     expect(outcome.message).toBe('Signed out of Adobe');
     expect(outcome.data).toEqual({ signedOut: true });
-    expect(entityServicesOf(auth).reads.getOrganizationsSdkOnly).not.toHaveBeenCalled();
+    expect(entityServicesOf(auth).orgReads.getOrganizationsSdkOnly).not.toHaveBeenCalled();
     expect(auth.loginAndRestoreProjectContext).not.toHaveBeenCalled();
 });
 

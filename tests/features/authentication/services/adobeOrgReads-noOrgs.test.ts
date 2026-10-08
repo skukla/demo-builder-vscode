@@ -1,5 +1,5 @@
 /**
- * AdobeEntityService Organization Edge Cases Tests
+ * AdobeOrgReads — when no organizations are reachable, the CLI context is cleared
  *
  * Tests for auto-selection, CLI context clearing, and edge case scenarios.
  */

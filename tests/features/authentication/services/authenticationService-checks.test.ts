@@ -83,7 +83,7 @@ describe('AuthenticationService - Authentication Checks', () => {
             () => mockSDKClient
         );
         (createEntityServices as jest.Mock).mockReturnValue({
-            reads: { getOrganizations: jest.fn().mockResolvedValue([mockOrg]) },
+            orgReads: { getOrganizations: jest.fn().mockResolvedValue([mockOrg]) },
             resolver: { getCurrentOrganization: jest.fn().mockResolvedValue(mockOrg) },
             selector: {},
         });

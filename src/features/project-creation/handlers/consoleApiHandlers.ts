@@ -63,7 +63,7 @@ export const handleListOrgConsoleApis: MessageHandler<{
     // getOrganizationsSdkOnlyFirstId) — rather than dead-ending on an unrecoverable error.
     const org =
         authService.getCacheManager().getCachedOrganization() ??
-        (await (await authService.getEntityServices()).reads.getOrganizationsSdkOnly())?.[0];
+        (await (await authService.getEntityServices()).orgReads.getOrganizationsSdkOnly())?.[0];
     if (!org?.id) {
         return {
             success: false,

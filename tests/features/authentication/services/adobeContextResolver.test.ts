@@ -8,7 +8,8 @@
 import { AdobeContextResolver } from '@/features/authentication/services/adobeContextResolver';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
-import type { AdobeEntityReads } from '@/features/authentication/services/adobeEntityReads';
+import type { AdobeOrgReads } from '@/features/authentication/services/adobeOrgReads';
+import type { AdobeProjectReads } from '@/features/authentication/services/adobeProjectReads';
 
 // Mock external dependencies
 jest.mock('@/types/typeGuards');
@@ -24,7 +25,8 @@ describe('AdobeContextResolver', () => {
     let resolver: AdobeContextResolver;
     let mockCommandExecutor: jest.Mocked<CommandExecutor>;
     let mockCacheManager: jest.Mocked<AuthCacheManager>;
-    let mockFetcher: jest.Mocked<AdobeEntityReads>;
+    let mockOrgReads: jest.Mocked<AdobeOrgReads>;
+    let mockProjectReads: jest.Mocked<AdobeProjectReads>;
 
     beforeEach(() => {
         // Setup logger mock
@@ -54,13 +56,19 @@ describe('AdobeContextResolver', () => {
             getCachedOrgList: jest.fn().mockReturnValue(undefined),
         } as unknown as jest.Mocked<AuthCacheManager>;
 
-        mockFetcher = {
+        mockOrgReads = {
             getOrganizations: jest.fn(),
+        } as unknown as jest.Mocked<AdobeOrgReads>;
+        mockProjectReads = {
             getProjects: jest.fn(),
-            getWorkspaces: jest.fn(),
-        } as unknown as jest.Mocked<AdobeEntityReads>;
+        } as unknown as jest.Mocked<AdobeProjectReads>;
 
-        resolver = new AdobeContextResolver(mockCommandExecutor, mockCacheManager, mockFetcher);
+        resolver = new AdobeContextResolver(
+            mockCommandExecutor,
+            mockCacheManager,
+            mockOrgReads,
+            mockProjectReads,
+        );
     });
 
     describe('getConsoleWhereContext()', () => {
@@ -140,7 +148,7 @@ describe('AdobeContextResolver', () => {
                 org: 'Organization Name',
             });
             mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
-            mockFetcher.getOrganizations.mockResolvedValue([
+            mockOrgReads.getOrganizations.mockResolvedValue([
                 { id: 'org1', code: 'ORG@AdobeOrg', name: 'Organization Name' },
             ]);
 
@@ -148,7 +156,7 @@ describe('AdobeContextResolver', () => {
 
             expect(result).toBeDefined();
             expect(result?.id).toBe('org1');
-            expect(mockFetcher.getOrganizations).toHaveBeenCalled();
+            expect(mockOrgReads.getOrganizations).toHaveBeenCalled();
         });
 
         it('should use cached org list for resolution when available', async () => {
@@ -164,7 +172,7 @@ describe('AdobeContextResolver', () => {
 
             expect(result).toBeDefined();
             expect(result?.id).toBe('org1');
-            expect(mockFetcher.getOrganizations).not.toHaveBeenCalled();
+            expect(mockOrgReads.getOrganizations).not.toHaveBeenCalled();
         });
 
         it('should return undefined when no org selected', async () => {
@@ -205,7 +213,7 @@ describe('AdobeContextResolver', () => {
             mockCacheManager.getCachedConsoleWhere.mockReturnValue({
                 project: 'Project Name',
             });
-            mockFetcher.getProjects.mockResolvedValue([
+            mockProjectReads.getProjects.mockResolvedValue([
                 { id: 'proj1', name: 'Project Name', title: 'Project Name' },
             ]);
 
@@ -215,7 +223,7 @@ describe('AdobeContextResolver', () => {
             expect(result?.id).toBe('proj1');
             // No org threaded here: getProjects resolves the org itself (threaded → cached →
             // TOKEN org via the SDK), so this best-effort lookup stays on the SDK path.
-            expect(mockFetcher.getProjects).toHaveBeenCalledWith({ silent: true });
+            expect(mockProjectReads.getProjects).toHaveBeenCalledWith({ silent: true });
         });
 
         // REGRESSION: this used to fabricate `{ id: name, name, title }` when the
@@ -231,7 +239,7 @@ describe('AdobeContextResolver', () => {
             mockCacheManager.getCachedConsoleWhere.mockReturnValue({
                 project: 'Kukla Mesh Test',
             });
-            mockFetcher.getProjects.mockResolvedValue([
+            mockProjectReads.getProjects.mockResolvedValue([
                 { id: 'proj1', name: 'Kukla Mesh', title: 'Kukla Mesh' },
             ]);
 
@@ -247,7 +255,7 @@ describe('AdobeContextResolver', () => {
             mockCacheManager.getCachedConsoleWhere.mockReturnValue({
                 project: 'Some Project',
             });
-            mockFetcher.getProjects.mockRejectedValue(new Error('network'));
+            mockProjectReads.getProjects.mockRejectedValue(new Error('network'));
 
             const result = await resolver.getCurrentProject();
 
@@ -412,15 +420,15 @@ describe('AdobeContextResolver', () => {
         it('an EMPTY cached list is a miss: the list is fetched', async () => {
             mockCacheManager.getCachedConsoleWhere.mockReturnValue({ org: 'Organization Name' });
             mockCacheManager.getCachedOrgList.mockReturnValue([]);
-            mockFetcher.getOrganizations.mockResolvedValue([ORG1]);
+            mockOrgReads.getOrganizations.mockResolvedValue([ORG1]);
 
             await expect(resolver.getCurrentOrganization()).resolves.toEqual(ORG1);
-            expect(mockFetcher.getOrganizations).toHaveBeenCalledTimes(1);
+            expect(mockOrgReads.getOrganizations).toHaveBeenCalledTimes(1);
         });
 
         it('an org in neither list nor fetch falls back to a name-shaped org, and caches it', async () => {
             mockCacheManager.getCachedConsoleWhere.mockReturnValue({ org: 'Unknown Org' });
-            mockFetcher.getOrganizations.mockResolvedValue([ORG1]);
+            mockOrgReads.getOrganizations.mockResolvedValue([ORG1]);
 
             const fallback = { id: 'Unknown Org', code: 'Unknown Org', name: 'Unknown Org' };
             await expect(resolver.getCurrentOrganization()).resolves.toEqual(fallback);
@@ -429,7 +437,7 @@ describe('AdobeContextResolver', () => {
 
         it('a list fetch that fails is an empty list: the name-shaped fallback, not nothing', async () => {
             mockCacheManager.getCachedConsoleWhere.mockReturnValue({ org: 'Organization Name' });
-            mockFetcher.getOrganizations.mockRejectedValue(new Error('network'));
+            mockOrgReads.getOrganizations.mockRejectedValue(new Error('network'));
 
             await expect(resolver.getCurrentOrganization()).resolves.toEqual({
                 id: 'Organization Name',
@@ -442,7 +450,7 @@ describe('AdobeContextResolver', () => {
             mockCacheManager.getCachedConsoleWhere.mockReturnValue({ org: '   ' });
 
             await expect(resolver.getCurrentOrganization()).resolves.toBeUndefined();
-            expect(mockFetcher.getOrganizations).not.toHaveBeenCalled();
+            expect(mockOrgReads.getOrganizations).not.toHaveBeenCalled();
             expect(mockCacheManager.setCachedOrganization).not.toHaveBeenCalled();
         });
     });
@@ -495,7 +503,7 @@ describe('AdobeContextResolver', () => {
         ])('a string project matches the list by %s alone', async (_by, consoleProject) => {
             mockCacheManager.getCachedConsoleWhere.mockReturnValue({ project: consoleProject });
             const listed = { id: 'proj1', name: 'Kukla Mesh', title: 'KM' };
-            mockFetcher.getProjects.mockResolvedValue([{ id: 'proj0', name: 'Other', title: 'Other' }, listed]);
+            mockProjectReads.getProjects.mockResolvedValue([{ id: 'proj0', name: 'Other', title: 'Other' }, listed]);
 
             await expect(resolver.getCurrentProject()).resolves.toEqual(listed);
             expect(mockCacheManager.setCachedProject).toHaveBeenCalledWith(listed);

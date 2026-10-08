@@ -29,7 +29,7 @@ import { createMockProject } from '../../../../helpers/projectFake';
  */
 export function makeOrgContextAuth(
     overrides: Partial<jest.Mocked<AuthenticationService>> = {},
-    reads: Partial<MockEntityServices['reads']> = {},
+    orgReads: Partial<MockEntityServices['orgReads']> = {},
 ): jest.Mocked<AuthenticationService> {
     return createMockAuthenticationService(
         {
@@ -42,7 +42,7 @@ export function makeOrgContextAuth(
             }),
             ...overrides,
         },
-        { entities: { reads: { getOrganizationsSdkOnly: jest.fn().mockResolvedValue([]), ...reads } } },
+        { entities: { orgReads: { getOrganizationsSdkOnly: jest.fn().mockResolvedValue([]), ...orgReads } } },
     );
 }
 

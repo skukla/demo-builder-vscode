@@ -158,8 +158,8 @@ export function createOrgContextCheck(deps: OrgContextCheckDeps): OnOpenCheck {
             // whose forced "Switch IMS Org" login (account/org chooser) is the only
             // recovery that can change the landed org (2026-08-13: the non-forced
             // sign-in offered by `unknown` reuses the browser SSO session and loops).
-            const { reads } = await deps.authManager.getEntityServices();
-            const orgs = await reads.getOrganizationsSdkOnly();
+            const { orgReads } = await deps.authManager.getEntityServices();
+            const orgs = await orgReads.getOrganizationsSdkOnly();
             if (orgs === undefined) {
                 return notVerifiedOutcome();
             }

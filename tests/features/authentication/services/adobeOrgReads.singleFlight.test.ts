@@ -1,5 +1,5 @@
 /**
- * AdobeEntityFetcher — getOrganizationsSdkOnly single-flight
+ * AdobeOrgReads — getOrganizationsSdkOnly single-flight
  *
  * The org-list cache dedupes SEQUENTIAL callers (2nd call reads the cache) but
  * did nothing for CONCURRENT ones: each checked the cache, each missed, each
@@ -76,9 +76,9 @@ describe('entity collaborators — getOrganizationsSdkOnly single-flight', () =>
 
     // THE regression: two callers racing must cost ONE round-trip, not two.
     it('collapses concurrent callers into a single SDK round-trip', async () => {
-        const a = entities.reads.getOrganizationsSdkOnly();
-        const b = entities.reads.getOrganizationsSdkOnly();
-        const c = entities.reads.getOrganizationsSdkOnly();
+        const a = entities.orgReads.getOrganizationsSdkOnly();
+        const b = entities.orgReads.getOrganizationsSdkOnly();
+        const c = entities.orgReads.getOrganizationsSdkOnly();
 
         // Let the shared flight reach the SDK before resolving it.
         await Promise.resolve();
@@ -93,8 +93,8 @@ describe('entity collaborators — getOrganizationsSdkOnly single-flight', () =>
     });
 
     it('every concurrent caller gets the real result, not undefined', async () => {
-        const a = entities.reads.getOrganizationsSdkOnly();
-        const b = entities.reads.getOrganizationsSdkOnly();
+        const a = entities.orgReads.getOrganizationsSdkOnly();
+        const b = entities.orgReads.getOrganizationsSdkOnly();
 
         await Promise.resolve();
         await Promise.resolve();
@@ -109,13 +109,13 @@ describe('entity collaborators — getOrganizationsSdkOnly single-flight', () =>
 
     // A flight that is never released would wedge the fetcher for the session.
     it('releases the flight so a LATER call can fetch again', async () => {
-        const first = entities.reads.getOrganizationsSdkOnly();
+        const first = entities.orgReads.getOrganizationsSdkOnly();
         await Promise.resolve();
         await Promise.resolve();
         release({ body: ORGS });
         await first;
 
-        const second = entities.reads.getOrganizationsSdkOnly();
+        const second = entities.orgReads.getOrganizationsSdkOnly();
         await Promise.resolve();
         await Promise.resolve();
         release({ body: ORGS });
@@ -127,7 +127,7 @@ describe('entity collaborators — getOrganizationsSdkOnly single-flight', () =>
     it('releases the flight after a FAILED fetch (no permanent wedge)', async () => {
         sdk.getOrganizations.mockRejectedValueOnce(new Error('network'));
 
-        const first = await entities.reads.getOrganizationsSdkOnly();
+        const first = await entities.orgReads.getOrganizationsSdkOnly();
         expect(first).toBeUndefined();
 
         // A rejected flight must not be cached NOR left pending.
@@ -137,7 +137,7 @@ describe('entity collaborators — getOrganizationsSdkOnly single-flight', () =>
                     release = resolve;
                 })
         );
-        const second = entities.reads.getOrganizationsSdkOnly();
+        const second = entities.orgReads.getOrganizationsSdkOnly();
         await Promise.resolve();
         await Promise.resolve();
         release({ body: ORGS });
@@ -149,7 +149,7 @@ describe('entity collaborators — getOrganizationsSdkOnly single-flight', () =>
     it('still short-circuits on a cache HIT without starting a flight', async () => {
         cache.getCachedOrgList.mockReturnValue(ORGS);
 
-        const result = await entities.reads.getOrganizationsSdkOnly();
+        const result = await entities.orgReads.getOrganizationsSdkOnly();
 
         expect(result).toEqual(ORGS);
         expect(sdk.getOrganizations).not.toHaveBeenCalled();

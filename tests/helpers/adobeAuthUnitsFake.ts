@@ -1,6 +1,7 @@
 /**
  * Fakes of the units `AuthenticationService` hands out: its entity services
- * (reads, credentials, orgServices, projectOps, resolver, selector), its cache
+ * (orgReads, projectReads, workspaceReads, credentials, orgServices, projectOps,
+ * resolver, selector), its cache
  * manager and its SDK client. Callers reach those units directly since 2026-10-08, when the service's
  * forty pass-through methods were removed (decompose-god-file), so a test that
  * stages an answer stages it on the unit that owns it.
@@ -16,7 +17,9 @@ import type { AuthCacheManager } from '@/features/authentication/services/authCa
 
 /** The units an AuthenticationService fake hands out, each method a jest mock. */
 export interface MockEntityServices {
-    reads: jest.Mocked<EntityServices['reads']>;
+    orgReads: jest.Mocked<EntityServices['orgReads']>;
+    projectReads: jest.Mocked<EntityServices['projectReads']>;
+    workspaceReads: jest.Mocked<EntityServices['workspaceReads']>;
     credentials: jest.Mocked<EntityServices['credentials']>;
     orgServices: jest.Mocked<EntityServices['orgServices']>;
     projectOps: jest.Mocked<EntityServices['projectOps']>;
@@ -39,14 +42,18 @@ export function createMockEntityServices(
     overrides: EntityServiceOverrides = {}
 ): MockEntityServices {
     const base: MockEntityServices = {
-        reads: {
+        orgReads: {
             getOrganizations: jest.fn().mockResolvedValue([]),
             getOrganizationsSdkOnly: jest.fn().mockResolvedValue([]),
+        } as unknown as jest.Mocked<EntityServices['orgReads']>,
+        projectReads: {
             getProjects: jest.fn().mockResolvedValue([]),
             getProjectsSdkOnly: jest.fn().mockResolvedValue([]),
+        } as unknown as jest.Mocked<EntityServices['projectReads']>,
+        workspaceReads: {
             getWorkspaces: jest.fn().mockResolvedValue([]),
             getWorkspacesSdkOnly: jest.fn().mockResolvedValue([]),
-        } as unknown as jest.Mocked<EntityServices['reads']>,
+        } as unknown as jest.Mocked<EntityServices['workspaceReads']>,
         credentials: {
             createAdobeIdCredential: jest.fn().mockResolvedValue(undefined),
             createWorkspaceCredential: jest.fn().mockResolvedValue(undefined),
@@ -84,7 +91,9 @@ export function createMockEntityServices(
             clearConsoleContext: jest.fn().mockResolvedValue(undefined),
         } as unknown as jest.Mocked<EntityServices['selector']>,
     };
-    Object.assign(base.reads, overrides.reads);
+    Object.assign(base.orgReads, overrides.orgReads);
+    Object.assign(base.projectReads, overrides.projectReads);
+    Object.assign(base.workspaceReads, overrides.workspaceReads);
     Object.assign(base.credentials, overrides.credentials);
     Object.assign(base.orgServices, overrides.orgServices);
     Object.assign(base.projectOps, overrides.projectOps);

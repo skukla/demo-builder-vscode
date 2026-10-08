@@ -125,7 +125,9 @@ export function createMockAuthenticationService(
  */
 export function poolUnits<T extends object>(flat: T): T {
     const pool = {
-        reads: flat,
+        orgReads: flat,
+        projectReads: flat,
+        workspaceReads: flat,
         credentials: flat,
         orgServices: flat,
         projectOps: flat,

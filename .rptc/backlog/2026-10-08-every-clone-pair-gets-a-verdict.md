@@ -87,6 +87,14 @@ suites unchanged (the behaviour proof), run `npm run validate:source-duplication
 the drop (cloneCeiling, filePairs, a `_recorded` line), and write the per-pair verdicts
 for the pairs that REMAIN into the ledger so the next reader does not redo this read.
 
+## Below the scan's threshold, found by reading (2026-10-08)
+
+The same five-line `ensureSDKReady` method is copied into four authentication files:
+`adobeEntityReads` (now its shared helper), `adobeOrgServices`, `adobeWorkspaceCredentials`
+and `adobeConsoleProjectOps`. Five lines is under jscpd's eight-line floor, so the pin never
+counted it. Four copies is past the Rule of Three: one shared function, taken in the
+authentication sitting (6) with pairs 33 to 35.
+
 ## Finding for the owner
 
 **Publish and preview handle an expired session differently (pairs 1 to 3).** `previewPage`

@@ -1,5 +1,5 @@
 /**
- * AdobeEntityFetcher — token-org SDK fallback tests
+ * resolveEffectiveOrgId (adobeEntityReads.ts) — token-org SDK fallback tests
  *
  * Split from adobeEntityFetcher.test.ts (kept under the 750-line test-file cap).
  * Covers `resolveEffectiveOrgId`: an un-threaded, un-cached getProjects/getWorkspaces
@@ -8,70 +8,22 @@
  */
 
 import {
-    createEntityCollaborators,
+    setupEntityCollaborators,
     type EntityCollaborators,
-    getLogger,
-    parseJSON,
 } from './adobeEntityCollaborators.testUtils';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
-import type { StepLogger } from '@/core/logging/stepLogger';
-import type { Logger } from '@/types/logger';
-import { createMockLogger } from '../../../helpers/loggerFake';
-import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 describe('entity collaborators — token-org SDK fallback', () => {
     let entities: EntityCollaborators;
     let mockCommandExecutor: jest.Mocked<CommandExecutor>;
     let mockSDKClient: jest.Mocked<AdobeSDKClient>;
     let mockCacheManager: jest.Mocked<AuthCacheManager>;
-    let mockLogger: jest.Mocked<Logger>;
-    let mockStepLogger: jest.Mocked<StepLogger>;
-    let onNoOrgsAccessible: jest.Mock;
 
     beforeEach(() => {
-        (getLogger as jest.Mock).mockReturnValue(createMockLogger());
-
-        (parseJSON as jest.Mock).mockImplementation((str) => {
-            try {
-                return JSON.parse(str);
-            } catch {
-                return null;
-            }
-        });
-
-        mockCommandExecutor = createMockCommandExecutor({ execute: jest.fn() });
-
-        mockSDKClient = {
-            isInitialized: jest.fn().mockReturnValue(false),
-            getClient: jest.fn(),
-            ensureInitialized: jest.fn().mockResolvedValue(true),
-        } as unknown as jest.Mocked<AdobeSDKClient>;
-
-        mockCacheManager = {
-            getCachedOrgList: jest.fn().mockReturnValue(undefined),
-            setCachedOrgList: jest.fn(),
-            getCachedOrganization: jest.fn().mockReturnValue(undefined),
-            getCachedProject: jest.fn().mockReturnValue(undefined),
-        } as unknown as jest.Mocked<AuthCacheManager>;
-
-        mockLogger = createMockLogger() as unknown as jest.Mocked<Logger>;
-
-        mockStepLogger = {
-            logTemplate: jest.fn(),
-        } as unknown as jest.Mocked<StepLogger>;
-
-        onNoOrgsAccessible = jest.fn();
-
-        entities = createEntityCollaborators(
-            mockCommandExecutor,
-            mockSDKClient,
-            mockCacheManager,
-            mockLogger,
-            mockStepLogger,
-            { onNoOrgsAccessible },
-        );
+        ({ entities, mockCommandExecutor, mockSDKClient, mockCacheManager } =
+            setupEntityCollaborators());
     });
 
     describe('token-org SDK fallback (no threaded/cached org)', () => {
@@ -88,11 +40,11 @@ describe('entity collaborators — token-org SDK fallback', () => {
             mockSDKClient.getClient.mockReturnValue({
                 getProjectsForOrg,
             } as ReturnType<typeof mockSDKClient.getClient>);
-            jest.spyOn(entities.reads, 'getOrganizationsSdkOnly').mockResolvedValue([
+            jest.spyOn(entities.orgReads, 'getOrganizationsSdkOnly').mockResolvedValue([
                 { id: 'tok-org', code: 'TOK@AdobeOrg', name: 'Token Org' },
             ]);
 
-            await entities.reads.getProjects();
+            await entities.projectReads.getProjects();
 
             expect(getProjectsForOrg).toHaveBeenCalledWith('tok-org');
             // The SDK path succeeded — the CLI fallback must NOT run.
@@ -108,9 +60,9 @@ describe('entity collaborators — token-org SDK fallback', () => {
             mockSDKClient.getClient.mockReturnValue({
                 getProjectsForOrg,
             } as ReturnType<typeof mockSDKClient.getClient>);
-            const tokenSpy = jest.spyOn(entities.reads, 'getOrganizationsSdkOnly');
+            const tokenSpy = jest.spyOn(entities.orgReads, 'getOrganizationsSdkOnly');
 
-            await entities.reads.getProjects({ orgId: 'threaded-org' });
+            await entities.projectReads.getProjects({ orgId: 'threaded-org' });
 
             expect(getProjectsForOrg).toHaveBeenCalledWith('threaded-org');
             expect(tokenSpy).not.toHaveBeenCalled();
@@ -127,9 +79,9 @@ describe('entity collaborators — token-org SDK fallback', () => {
             mockSDKClient.getClient.mockReturnValue({
                 getProjectsForOrg,
             } as ReturnType<typeof mockSDKClient.getClient>);
-            const tokenSpy = jest.spyOn(entities.reads, 'getOrganizationsSdkOnly');
+            const tokenSpy = jest.spyOn(entities.orgReads, 'getOrganizationsSdkOnly');
 
-            await entities.reads.getProjects();
+            await entities.projectReads.getProjects();
 
             expect(getProjectsForOrg).toHaveBeenCalledWith('cached-org');
             expect(tokenSpy).not.toHaveBeenCalled();
@@ -147,11 +99,11 @@ describe('entity collaborators — token-org SDK fallback', () => {
             mockSDKClient.getClient.mockReturnValue({
                 getWorkspacesForProject,
             } as ReturnType<typeof mockSDKClient.getClient>);
-            jest.spyOn(entities.reads, 'getOrganizationsSdkOnly').mockResolvedValue([
+            jest.spyOn(entities.orgReads, 'getOrganizationsSdkOnly').mockResolvedValue([
                 { id: 'tok-org', code: 'TOK@AdobeOrg', name: 'Token Org' },
             ]);
 
-            await entities.reads.getWorkspaces({ projectId: 'threaded-proj' });
+            await entities.workspaceReads.getWorkspaces({ projectId: 'threaded-proj' });
 
             expect(getWorkspacesForProject).toHaveBeenCalledWith('tok-org', 'threaded-proj');
             expect(mockCommandExecutor.execute).not.toHaveBeenCalled();

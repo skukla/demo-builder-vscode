@@ -48,7 +48,7 @@ import { defineHandlers, type HandlerContext } from '@/types/handlers';
  *
  * REGRESSION (2026-08-04): the destination stage's "Fetching projects…" opened a
  * BROWSER unannounced on a stale token. `handleGetProjects` fetched with no auth
- * check, and `AdobeEntityReads.getProjects` is "SDK with CLI fallback" — the
+ * check, and `AdobeProjectReads.getProjects` is "SDK with CLI fallback" — the
  * fallback is `aio console project list --json`, which triggers interactive
  * browser auth. The codebase already names this hazard as the P1 rule behind
  * `getOrganizationsSdkOnly` ("can stall ~14.5s and trigger interactive browser

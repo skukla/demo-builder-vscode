@@ -87,10 +87,12 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
         (AdobeSDKClient as jest.MockedClass<typeof AdobeSDKClient>).mockImplementation(
             () => mockSDKClient
         );
-        // One pool behind all four collaborator slots — routing a call to the right
+        // One pool behind every collaborator slot — routing a call to the right
         // one is the compiler's job, so this fake only has to answer.
         (createEntityServices as jest.Mock).mockReturnValue({
-            reads: mockEntities,
+            orgReads: mockEntities,
+            projectReads: mockEntities,
+            workspaceReads: mockEntities,
             credentials: mockEntities,
             orgServices: mockEntities,
             projectOps: mockEntities,

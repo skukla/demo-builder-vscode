@@ -134,7 +134,7 @@ export async function handleGetProjects(
         // runs under org-context targeting (AIO_CONSOLE_* env, no global mutation).
         const projectsPromise = quiet
             ? context.authManager?.getEntityServices().then((units) =>
-                  units.reads.getProjectsSdkOnly(orgId ? { orgId } : undefined),
+                  units.projectReads.getProjectsSdkOnly(orgId ? { orgId } : undefined),
               )
             : orgId
               ? context.authManager?.getProjects({ orgId })

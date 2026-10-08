@@ -12,11 +12,12 @@
  * Dependencies:
  * - CommandExecutor for CLI operations
  * - AuthCacheManager for caching
- * - AdobeEntityReads for ID resolution
+ * - AdobeOrgReads and AdobeProjectReads for ID resolution
  * - Logger for logging
  */
 
-import type { AdobeEntityReads } from './adobeEntityReads';
+import type { AdobeOrgReads } from './adobeOrgReads';
+import type { AdobeProjectReads } from './adobeProjectReads';
 import type { AuthCacheManager } from './authCacheManager';
 import { withTiming } from './performanceTracker';
 import type {
@@ -41,7 +42,8 @@ export class AdobeContextResolver {
     constructor(
         private commandManager: CommandExecutor,
         private cacheManager: AuthCacheManager,
-        private reads: AdobeEntityReads,
+        private orgReads: AdobeOrgReads,
+        private projectReads: AdobeProjectReads,
     ) {}
 
     /**
@@ -120,7 +122,7 @@ export class AdobeContextResolver {
      */
     private async fetchOrgListSafely(): Promise<AdobeOrg[]> {
         try {
-            return await this.reads.getOrganizations();
+            return await this.orgReads.getOrganizations();
         } catch (error) {
             this.debugLogger.trace(
                 '[Context Resolver] Failed to fetch org list for ID resolution:',
@@ -209,10 +211,10 @@ export class AdobeContextResolver {
     ): Promise<AdobeProject | undefined> {
         try {
             // getProjects resolves the org itself: threaded → cached → TOKEN org via the
-            // SDK (see AdobeEntityReads.resolveEffectiveOrgId). That systemic fallback
+            // SDK (see resolveEffectiveOrgId in adobeEntityReads.ts). That systemic fallback
             // keeps this best-effort project-ID lookup on the SDK path — no need to thread
             // the token org here — while avoiding the stale-console CLI 403 -> ORG_MISMATCH.
-            const projects = await this.reads.getProjects({ silent: true });
+            const projects = await this.projectReads.getProjects({ silent: true });
             const matched = projects.find(
                 (p) => p.name === projectString || p.title === projectString,
             );

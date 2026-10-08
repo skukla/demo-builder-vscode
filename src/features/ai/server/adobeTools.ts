@@ -209,7 +209,7 @@ export function registerAdobeTools(server: McpToolServer, ctxFactory: () => Hand
             // target's env (mirrors select_workspace). Untargeted when none set.
             try {
                 const workspaces = await runWithAdobeTarget(async () =>
-                    (await mgr.getEntityServices()).reads.getWorkspaces(),
+                    (await mgr.getEntityServices()).workspaceReads.getWorkspaces(),
                 );
                 return asText(workspaces.map(lean));
             } catch (err) {
@@ -328,7 +328,7 @@ export function registerAdobeTools(server: McpToolServer, ctxFactory: () => Hand
             // List workspaces within the stored org/project via env targeting
             // (getWorkspaces has no orgId/projectId option, so wrap it).
             const workspaces = await withOrgContext(stored, async () =>
-                (await mgr.getEntityServices()).reads.getWorkspaces(),
+                (await mgr.getEntityServices()).workspaceReads.getWorkspaces(),
             );
             const workspace = workspaces.find((w) => w.id === args.workspaceId);
             if (!workspace) {

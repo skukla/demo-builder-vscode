@@ -255,22 +255,22 @@ describe('projectHandlers - Fetch', () => {
             it('with an orgId: getProjectsSdkOnly is targeted and getProjects never runs', async () => {
                 mockContext.authManager.getOrganizations.mockResolvedValue([mockOrganization]);
                 entityServicesOf(mockContext.authManager).resolver.getCurrentOrganization.mockResolvedValue(mockOrganization);
-                entityServicesOf(mockContext.authManager).reads.getProjectsSdkOnly.mockResolvedValue(mockProjects);
+                entityServicesOf(mockContext.authManager).projectReads.getProjectsSdkOnly.mockResolvedValue(mockProjects);
 
                 const result = await handleGetProjects(mockContext, { orgId: 'org-123', quiet: true });
 
                 expect(result.success).toBe(true);
-                expect(entityServicesOf(mockContext.authManager).reads.getProjectsSdkOnly).toHaveBeenCalledWith({ orgId: 'org-123' });
+                expect(entityServicesOf(mockContext.authManager).projectReads.getProjectsSdkOnly).toHaveBeenCalledWith({ orgId: 'org-123' });
                 expect(mockContext.authManager.getProjects).not.toHaveBeenCalled();
             });
 
             it('without an orgId: getProjectsSdkOnly runs untargeted', async () => {
                 entityServicesOf(mockContext.authManager).resolver.getCurrentOrganization.mockResolvedValue(mockOrganization);
-                entityServicesOf(mockContext.authManager).reads.getProjectsSdkOnly.mockResolvedValue([]);
+                entityServicesOf(mockContext.authManager).projectReads.getProjectsSdkOnly.mockResolvedValue([]);
 
                 await handleGetProjects(mockContext, { quiet: true });
 
-                expect(entityServicesOf(mockContext.authManager).reads.getProjectsSdkOnly).toHaveBeenCalledWith(undefined);
+                expect(entityServicesOf(mockContext.authManager).projectReads.getProjectsSdkOnly).toHaveBeenCalledWith(undefined);
                 expect(mockContext.authManager.getProjects).not.toHaveBeenCalled();
             });
 
@@ -281,7 +281,7 @@ describe('projectHandlers - Fetch', () => {
                 await handleGetProjects(mockContext, { quiet: 'yes' as unknown as boolean });
 
                 expect(mockContext.authManager.getProjects).toHaveBeenCalledWith();
-                expect(entityServicesOf(mockContext.authManager).reads.getProjectsSdkOnly).not.toHaveBeenCalled();
+                expect(entityServicesOf(mockContext.authManager).projectReads.getProjectsSdkOnly).not.toHaveBeenCalled();
             });
         });
 

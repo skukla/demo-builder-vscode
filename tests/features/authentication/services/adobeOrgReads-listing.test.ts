@@ -1,5 +1,5 @@
 /**
- * AdobeEntityService Organization Listing Tests
+ * AdobeOrgReads — organization listing via SDK and CLI fallback
  *
  * Tests for fetching and listing organizations via SDK and CLI fallback.
  */

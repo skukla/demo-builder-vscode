@@ -143,8 +143,8 @@ export class AuthenticationService {
     }
 
     /**
-     * The entity services — reads, credentials, orgServices, projectOps, resolver,
-     * selector — built once the StepLogger they log through is ready. The way in for
+     * The entity services — orgReads, projectReads, workspaceReads, credentials,
+     * orgServices, projectOps, resolver, selector — built once the StepLogger they log through is ready. The way in for
      * every org/project/workspace/credential job: call the service that owns it.
      */
     async getEntityServices(): Promise<EntityServices> {
@@ -263,7 +263,7 @@ export class AuthenticationService {
         // fine fallback (buildAioConsoleEnv tolerates the missing code/name).
         const org =
             this.cacheManager.getCachedOrganization() ??
-            (await (await this.getEntityServices()).reads.getOrganizationsSdkOnly())?.[0];
+            (await (await this.getEntityServices()).orgReads.getOrganizationsSdkOnly())?.[0];
         if (!org?.id) {
             return this.organizationValidator.testDeveloperPermissions();
         }
@@ -279,14 +279,14 @@ export class AuthenticationService {
     // deciding what those interfaces become — a design question, not a move
     // (2026-10-08).
 
-    /** The orgs the token reaches (`reads.getOrganizations`). */
+    /** The orgs the token reaches (`orgReads.getOrganizations`). */
     async getOrganizations(): Promise<AdobeOrg[]> {
-        return (await this.getEntityServices()).reads.getOrganizations();
+        return (await this.getEntityServices()).orgReads.getOrganizations();
     }
 
-    /** Projects, optionally org-targeted (`reads.getProjects`). */
+    /** Projects, optionally org-targeted (`projectReads.getProjects`). */
     async getProjects(options?: { orgId?: string }): Promise<AdobeProject[]> {
-        return (await this.getEntityServices()).reads.getProjects(options);
+        return (await this.getEntityServices()).projectReads.getProjects(options);
     }
 
     /**

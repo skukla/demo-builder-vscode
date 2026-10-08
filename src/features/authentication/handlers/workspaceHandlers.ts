@@ -42,7 +42,7 @@ export async function handleGetWorkspaces(
         // Wrap getWorkspaces with timeout (30 seconds). Thread the selected org + project
         // (webview state) so the fetch targets them, not the stale in-memory cache.
         const workspacesPromise = context.authManager?.getEntityServices()
-            .then((units) => units.reads.getWorkspaces(payload));
+            .then((units) => units.workspaceReads.getWorkspaces(payload));
         if (!workspacesPromise) {
             throw new Error('Auth manager not available');
         }
@@ -187,7 +187,7 @@ export async function handleCreateAdobeWorkspace(
         // to the stale-org CLI.
         let workspaces: AdobeWorkspace[] | undefined;
         try {
-            workspaces = await (await context.authManager.getEntityServices()).reads.getWorkspaces({
+            workspaces = await (await context.authManager.getEntityServices()).workspaceReads.getWorkspaces({
                 projectId: payload?.projectId,
             });
         } catch (refreshError) {

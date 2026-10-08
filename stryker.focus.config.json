@@ -8,8 +8,10 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/daLive/daLiveContentOperations.ts",
-        "src/features/eds/services/daLive/daLiveTokenProviders.ts"
+        "src/features/authentication/services/adobeEntityReads.ts",
+        "src/features/authentication/services/adobeOrgReads.ts",
+        "src/features/authentication/services/adobeProjectReads.ts",
+        "src/features/authentication/services/adobeWorkspaceReads.ts"
     ],
     "reporters": [
         "clear-text",

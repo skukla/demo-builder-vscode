@@ -56,8 +56,8 @@ export interface DeleteAdobeProjectPayload {
 export function createTeardownDeps(authService: AuthenticationService): TeardownDeps {
     return {
         getWorkspaces: async ({ orgId, projectId }) => {
-            const { reads } = await authService.getEntityServices();
-            const workspaces = await reads.getWorkspaces({ orgId, projectId });
+            const { workspaceReads } = await authService.getEntityServices();
+            const workspaces = await workspaceReads.getWorkspaces({ orgId, projectId });
             return workspaces.map((workspace) => ({ id: workspace.id, name: workspace.name }));
         },
         getWorkspaceS2SCredential: async (orgId, projectId, workspaceId) => {
