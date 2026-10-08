@@ -102,3 +102,6 @@ the register), [[PL-36]] (an untested Node-version sort in the prerequisites ins
 - 2026-10-07  fix(node): the SC reads plain stage names and sentences; fnm's own words go to the log (`f0c7d7cb8`)
 - 2026-10-07  fix(ai): the AI tools launch from Demo Builder's Node folder (`976f54664`)
 - 2026-10-07  refactor(node): close the re-audit's findings (`39f310ff6`)
+- 2026-10-08  refactor(dashboard): project panel pushes get their own module, ending the last three import cycles (`df44020fe`)
+- 2026-10-08  refactor(core): move getMeshEndpointUrl beside the mesh state it reads, ending the typeGuards cycle (`2fdd83acc`)
+- 2026-10-08  refactor(app-builder): split appBuilderComponentRunner into add, redeploy and remove runs (`04d373365`)
