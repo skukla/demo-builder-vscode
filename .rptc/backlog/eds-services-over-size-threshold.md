@@ -409,6 +409,11 @@ and three of them are more than 40% comments). Decide which.
     logic vs the picker and rows. Low value.
 
 **One job, left whole (dated verdicts):**
+- `eds/services/toolManager.ts` (503), 2026-10-08: **not split, pending [[DI-4]].** It is wholly
+  the ACO data ingestion tool, which nothing in the extension reaches and whose data source is
+  gone. DI-4 decides: delete it (one fewer oversized file, with `CleanupService.cleanupBackendData`
+  and the `components.json` entry) or revive it (then split it). A split was started and stopped
+  at 19:34 before any tracked file changed.
 - `eds/services/edsPipeline.ts` (976): confirmed; one entry looping a step table of
   private helpers tested only through it.
 - `core/utils/timeoutConfig.ts` (436): one registry of constants, about 100 code lines.
@@ -454,6 +459,11 @@ and three of them are more than 40% comments). Decide which.
 - 2026-10-08  `copyDaLiveSite` and `deleteSiteRoot` stay as forwarders on
   `DaLiveContentOperations` because `MigrationContentOps` spans two services. **Decide:**
   split that interface (one sitting, no behaviour change) or leave the two forwarders.
+
+- 2026-10-08  `toolManager.ts` is the dead ACO ingestion tool, so the loop skipped it rather
+  than split code that may be deleted. **Decide (DI-4):** does any SC still run the ingestion
+  tool by hand, and does the Data Installer cover ACO? If both answers point to delete, deleting
+  it removes an oversized file and its cleanup path in one change.
 
 ## Needs a live check
 
