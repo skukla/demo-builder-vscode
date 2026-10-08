@@ -53,7 +53,8 @@ const MALFORMED = [
 function makeServices(createdFullName = 'skukla/brand-new') {
     return {
         githubFileOps: {},
-        githubRepoOps: {
+        githubRepoOps: {},
+        githubRepoLifecycle: {
             createFromTemplate: jest.fn().mockResolvedValue({
                 htmlUrl: `https://github.com/${createdFullName}`,
                 fullName: createdFullName,
@@ -321,7 +322,7 @@ describe('creating a brand-new repo', () => {
         const services = makeServices('skukla/brand-new-2');
         await run(config({ repoMode: 'new' }), services, { ...NEW });
 
-        expect(services.githubRepoOps.waitForContent).toHaveBeenCalledWith(
+        expect(services.githubRepoLifecycle.waitForContent).toHaveBeenCalledWith(
             'skukla',
             'brand-new-2',
             expect.any(Object),
@@ -342,7 +343,7 @@ describe('creating a brand-new repo', () => {
             { ...NEW },
         );
 
-        expect(services.githubRepoOps.createFromTemplate).toHaveBeenCalledWith(
+        expect(services.githubRepoLifecycle.createFromTemplate).toHaveBeenCalledWith(
             TEMPLATE.owner,
             TEMPLATE.repo,
             'brand-new',
@@ -358,7 +359,7 @@ describe('creating a brand-new repo', () => {
         const services = makeServices();
         await run(config({ repoMode: 'new', daLiveOrg: '' }), services, { ...NEW });
 
-        expect(services.githubRepoOps.createFromTemplate).toHaveBeenCalledWith(
+        expect(services.githubRepoLifecycle.createFromTemplate).toHaveBeenCalledWith(
             TEMPLATE.owner,
             TEMPLATE.repo,
             'brand-new',

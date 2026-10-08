@@ -27,7 +27,7 @@ import * as path from 'path';
 import { promotionVerbOf } from './promotionEligibility';
 import { getAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { parseIgnoreRules, type IgnoreRule } from '@/core/utils/gitignoreRules';
-import type { GitHubRepoOperations } from '@/features/eds/services/github/githubRepoOperations';
+import type { GitHubRepoLifecycle } from '@/features/eds/services/github/githubRepoLifecycle';
 import { pushFiles, type TreePushOps } from '@/features/eds/services/github/githubTreePush';
 import { isNeverShipped } from '@/features/eds/services/storefront/neverShippedFiles';
 import type { AppBuilderComponentState, Project } from '@/types/base';
@@ -132,7 +132,7 @@ export function unpromotionRefusal(project: Project, id: string): string | undef
 
 export interface PromotionDeps {
     repoOps: Pick<
-        GitHubRepoOperations,
+        GitHubRepoLifecycle,
         'createEmptyRepository' | 'waitForContent' | 'deleteRepository'
     >;
     fileOps: TreePushOps;

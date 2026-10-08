@@ -1,7 +1,7 @@
 /**
  * Cloud-resource tools (Phase 4) — list and delete the external resources the
  * extension provisions (GitHub repos now; DA.live sites next). Thin adapters
- * over the existing EDS service layer (`getGitHubServices(...).repoOperations`),
+ * over the existing EDS service layer (`getGitHubServices(...)`: reads, lifecycle),
  * reached with a fresh headless context per call — no webview, no modals.
  *
  * Gating: reads need no confirmation; an irreversible deletion uses an
@@ -154,10 +154,10 @@ export function registerCloudResourceTools(
                 return asText(NEEDS_GITHUB);
             }
 
-            const { repoOperations } = getGitHubServices(ctx.context.secrets);
+            const { repoLifecycle } = getGitHubServices(ctx.context.secrets);
             let repo;
             try {
-                repo = await repoOperations.createFromTemplate(
+                repo = await repoLifecycle.createFromTemplate(
                     templateOwner,
                     templateRepo,
                     name,
@@ -187,7 +187,7 @@ export function registerCloudResourceTools(
             let contentReady: boolean | undefined;
             if (args?.waitForContent !== false) {
                 try {
-                    contentReady = await repoOperations.waitForContent(createdOwner, repo.name);
+                    contentReady = await repoLifecycle.waitForContent(createdOwner, repo.name);
                 } catch {
                     contentReady = false;
                 }
@@ -243,7 +243,7 @@ export function registerCloudResourceTools(
                 return asText(NEEDS_GITHUB);
             }
             try {
-                await getGitHubServices(ctx.context.secrets).repoOperations.deleteRepository(owner, repo);
+                await getGitHubServices(ctx.context.secrets).repoLifecycle.deleteRepository(owner, repo);
                 return asText({ deleted: true, repo: fullName });
             } catch (err) {
                 return asText({

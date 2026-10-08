@@ -23,6 +23,7 @@ import {
 import { executeEdsPipeline } from '../../services/edsPipeline';
 import { GitHubAppService } from '../../services/github/githubAppService';
 import { GitHubFileOperations } from '../../services/github/githubFileOperations';
+import { GitHubRepoLifecycle } from '../../services/github/githubRepoLifecycle';
 import { GitHubRepoOperations } from '../../services/github/githubRepoOperations';
 import { HelixService } from '../../services/helix/helixService';
 import {
@@ -63,11 +64,8 @@ function createSetupServices(context: HandlerContext): SetupServices {
     const daLiveAuthService = getDaLiveAuthService(context.context);
     const daLiveTokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
     return {
-        githubRepoOps: new GitHubRepoOperations(
-            githubTokenService,
-            ServiceLocator.getCommandExecutor(),
-            context.logger,
-        ),
+        githubRepoOps: new GitHubRepoOperations(githubTokenService, context.logger),
+        githubRepoLifecycle: new GitHubRepoLifecycle(githubTokenService, context.logger),
         templateSync: new TemplateSyncService(
             context.context.secrets,
             context.logger,

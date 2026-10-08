@@ -8,14 +8,8 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/data-installer/handlers/importHandlers.ts",
-        "src/features/data-installer/handlers/importJobWatch.ts",
-        "src/features/data-installer/handlers/provisionAccsHandler.ts",
-        "src/features/data-installer/handlers/importTargetHandlers.ts",
-        "src/features/data-installer/services/dataInstallerWriteClient.ts",
-        "src/features/data-installer/services/dataInstallerExportClient.ts",
-        "src/features/data-installer/services/dataInstallerClient.ts",
-        "src/features/data-installer/services/dataInstallerTransport.ts"
+        "src/features/eds/services/github/githubRepoOperations.ts",
+        "src/features/eds/services/github/githubRepoLifecycle.ts"
     ],
     "reporters": [
         "clear-text",

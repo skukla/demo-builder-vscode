@@ -67,7 +67,7 @@ jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
 
 const REPO_OPERATIONS = { kind: 'repo-operations' };
 jest.mock('@/features/eds/handlers/edsServiceCache', () => ({
-    getGitHubServices: jest.fn(() => ({ repoOperations: REPO_OPERATIONS })),
+    getGitHubServices: jest.fn(() => ({ repoLifecycle: REPO_OPERATIONS })),
 }));
 
 const DA_LIVE_AUTH_SERVICE = { kind: 'da-live-auth-service' };

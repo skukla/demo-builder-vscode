@@ -11,10 +11,9 @@
  * settings. Best effort: a refusal never fails the creation.
  */
 
-import type { GitHubRepoOperations } from '@/features/eds/services/github/githubRepoOperations';
+import type { GitHubRepoLifecycle } from '@/features/eds/services/github/githubRepoLifecycle';
 import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
 import type { Logger } from '@/types/logger';
-import { createMockCommandExecutor } from '../../../../helpers/commandExecutorFake';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const mockOctokitRequest = jest.fn();
@@ -42,7 +41,7 @@ const CREATED = {
 const ACTIONS_OFF = ['PUT /repos/{owner}/{repo}/actions/permissions', { owner: 'steve', repo: 'summit', enabled: false }];
 
 describe('a repository Demo Builder creates has GitHub Actions turned off', () => {
-    let operations: GitHubRepoOperations;
+    let operations: GitHubRepoLifecycle;
     let logger: Logger;
 
     beforeEach(async () => {
@@ -53,9 +52,9 @@ describe('a repository Demo Builder creates has GitHub Actions turned off', () =
         );
         logger = createMockLogger();
         // Imported after resetModules so each test builds its client against the mock above.
-        const { GitHubRepoOperations: Operations } = await import('@/features/eds/services/github/githubRepoOperations');
+        const { GitHubRepoLifecycle: Operations } = await import('@/features/eds/services/github/githubRepoLifecycle');
         const tokenService = { getToken: jest.fn().mockResolvedValue({ token: 'fake-test-token-not-a-secret' }) };
-        operations = new Operations(tokenService as unknown as GitHubTokenService, createMockCommandExecutor(), logger);
+        operations = new Operations(tokenService as unknown as GitHubTokenService, logger);
     });
 
     it('when generated from a template, right after the repository exists', async () => {

@@ -3,7 +3,7 @@
  *
  * One client per instance: built from the token service on the first request and
  * reused until `invalidateOctokit` drops it. `GitHubFileOperations`,
- * `GitHubTreeCommits` and `GitHubRepoOperations` extend this rather than each
+ * `GitHubTreeCommits`, `GitHubRepoOperations` and `GitHubRepoLifecycle` extend this rather than each
  * carrying the same ten lines — the file and repository classes did carry them
  * verbatim until the 2026-10-08 split (a pinned clone pair), and a third copy for
  * the tree commits would have made it three.

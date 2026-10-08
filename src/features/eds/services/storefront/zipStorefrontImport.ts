@@ -13,7 +13,7 @@
 
 import AdmZip from 'adm-zip';
 import { BUNDLE_SETUP_FILE, BUNDLE_STOREFRONT_DIR } from '../demoPackage/demoBundle';
-import type { GitHubRepoOperations } from '../github/githubRepoOperations';
+import type { GitHubRepoLifecycle } from '../github/githubRepoLifecycle';
 import { pushFiles, type TreePushOps } from '../github/githubTreePush';
 import { isNeverShipped } from './neverShippedFiles';
 import {
@@ -153,7 +153,7 @@ export interface CreatedRepository {
 
 export interface CreateRepositoryDeps {
     repoOps: Pick<
-        GitHubRepoOperations,
+        GitHubRepoLifecycle,
         'createEmptyRepository' | 'waitForContent' | 'setTemplateFlag'
     >;
     fileOps: TreePushOps;

@@ -83,7 +83,7 @@ baseline" — UNLESS its trigger fired, which converts it to a finding:
 | prerequisites `checkHandler` ↔ `continueHandler` per-node variant checks + payload builders | variants: different message fns, continue writes shared state mid-build. Both read the same majors (`perNodeVersionMajors`) and the same per-Node check since PR-1a (2026-10-07) | a third handler joining the family |
 | auth `handleCreateAdobeProject` ↔ `handleCreateAdobeWorkspace` prologues | deliberate entity mirror, noun-parameterized | a third entity-create handler |
 | updates `applyBlockLibraryUpdate` lookup ↔ `applyBlockLibraryUpdateResolved` lookup | the wrapper's copy is a pre-dialog guard; removing it prompts users for no-ops | the lookup logic itself changing (then extract `findInstalledLibrary`) |
-| `githubRepoOperations` internal response→GitHubRepo mapper ×2 | two instances | a third mapping site |
+| `githubRepoLifecycle.createFromTemplate` ↔ `githubRepoOperations.listUserRepositories` response→GitHubRepo mappers (one file until the 2026-10-08 EDS-8 split) | two instances | a third mapping site |
 | ai/server `write_page` + `delete_page` openers vs `openPathCall` | variants: write_page's resolve opts depend on a parsed flag; delete_page's confirm gate sits mid-prologue | either constraint dissolving |
 
 ### Reading the UI scan — shape beats count

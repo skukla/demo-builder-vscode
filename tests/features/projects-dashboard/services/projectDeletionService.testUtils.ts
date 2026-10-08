@@ -61,7 +61,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
             getToken: (...a: unknown[]) => mockGetToken(...a),
             storeToken: (...a: unknown[]) => mockStoreToken(...a),
         },
-        repoOperations: { deleteRepository: (...a: unknown[]) => mockDeleteRepository(...a) },
+        repoLifecycle: { deleteRepository: (...a: unknown[]) => mockDeleteRepository(...a) },
     }),
     // `{ authenticated }` — read from edsHelpers, not guessed. The first draft
     // wrote `{ success, authService }` and the DA.live cleanup silently skipped.

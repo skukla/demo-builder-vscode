@@ -540,7 +540,7 @@ async function performGitHubCleanup(
 
     try {
         const { getGitHubServices } = await import('@/features/eds/handlers/edsHelpers');
-        const { tokenService, repoOperations } = getGitHubServices(context.context.secrets);
+        const { tokenService, repoLifecycle } = getGitHubServices(context.context.secrets);
 
         const existingToken = await tokenService.getToken();
         if (!existingToken) {
@@ -554,7 +554,7 @@ async function performGitHubCleanup(
             return;
         }
 
-        await repoOperations.deleteRepository(owner, repo);
+        await repoLifecycle.deleteRepository(owner, repo);
         results.push({ type: 'github', name: githubRepo, success: true });
         context.logger.info(`[Delete Project] Deleted GitHub repository: ${githubRepo}`);
     } catch (error) {

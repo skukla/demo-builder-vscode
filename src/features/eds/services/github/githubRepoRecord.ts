@@ -1,7 +1,7 @@
 /**
  * One reading of GitHub's repository record (`GET /repos/{owner}/{repo}`),
- * shared by the signed-in reader (`githubRepoOperations.ts`) and the
- * credential-free one (`publicGitHubReads.ts`). Two copies of this mapping
+ * shared by the signed-in reader (`githubRepoOperations.ts`), the create path
+ * (`githubRepoLifecycle.ts`) and the credential-free reader (`publicGitHubReads.ts`). Two copies of this mapping
  * existed until EDS-13f added the lineage fields; a field added to one and not
  * the other would have made the shared-demo probe answer differently depending
  * on whether the SC was signed in.

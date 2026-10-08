@@ -133,6 +133,8 @@ export function gh(
         tokenService: { validateToken },
         repoOperations: {
             listUserRepositories: jest.fn(async () => overrides.repos ?? []),
+        },
+        repoLifecycle: {
             deleteRepository: overrides.deleteRepository ?? jest.fn(async () => undefined),
             // Shape from GitHubRepo (`types.ts:47-66`): fullName/htmlUrl/defaultBranch,
             // and NO `owner` field — the tool derives the owner from fullName.

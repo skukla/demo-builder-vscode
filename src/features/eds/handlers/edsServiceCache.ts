@@ -15,11 +15,11 @@ import { createDaLiveServiceTokenProvider } from '../services/daLive/daLiveConte
 import { GitHubFileOperations } from '../services/github/githubFileOperations';
 import { GitHubOAuthService } from '../services/github/githubOAuthService';
 import type { GitHubRepoArchive } from '../services/github/githubRepoArchive';
+import { GitHubRepoLifecycle } from '../services/github/githubRepoLifecycle';
 import { GitHubRepoOperations } from '../services/github/githubRepoOperations';
 import { GitHubTokenService } from '../services/github/githubTokenService';
 import type { GitHubTreeCommits } from '../services/github/githubTreeCommits';
 import { HelixService } from '../services/helix/helixService';
-import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getLogger } from '@/core/logging/debugLogger';
 
 /**
@@ -27,7 +27,10 @@ import { getLogger } from '@/core/logging/debugLogger';
  */
 export interface GitHubServices {
     tokenService: GitHubTokenService;
+    /** The reads: one repository, the access check, the SC's list. */
     repoOperations: GitHubRepoOperations;
+    /** The writes: create (template or empty), the readiness poll, template flag, delete, archive. */
+    repoLifecycle: GitHubRepoLifecycle;
     fileOperations: GitHubFileOperations;
     /** The Git Data unit the file operations build: trees, blobs, commits, the ref. */
     treeCommits: GitHubTreeCommits;
@@ -66,13 +69,15 @@ export function getGitHubServices(secrets: vscode.SecretStorage): GitHubServices
     if (!cachedGitHubServices) {
         logger.debug('[EDS:ServiceCache] Creating NEW GitHub services (no cache)');
         const tokenService = new GitHubTokenService(secrets, logger);
-        const repoOperations = new GitHubRepoOperations(tokenService, ServiceLocator.getCommandExecutor(), logger);
+        const repoOperations = new GitHubRepoOperations(tokenService, logger);
+        const repoLifecycle = new GitHubRepoLifecycle(tokenService, logger);
         const fileOperations = new GitHubFileOperations(tokenService, logger);
         const oauthService = new GitHubOAuthService(secrets, logger);
 
         cachedGitHubServices = {
             tokenService,
             repoOperations,
+            repoLifecycle,
             fileOperations,
             treeCommits: fileOperations.treeCommits,
             repoArchive: fileOperations.repoArchive,

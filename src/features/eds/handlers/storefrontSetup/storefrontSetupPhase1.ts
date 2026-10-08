@@ -7,6 +7,7 @@
  * @module features/eds/handlers/storefrontSetup/storefrontSetupPhase1
  */
 
+import type { GitHubRepoLifecycle } from '../../services/github/githubRepoLifecycle';
 import type { GitHubRepoOperations } from '../../services/github/githubRepoOperations';
 import { pinRepoToLkg } from '../../services/patches/lkgPinHelper';
 import type { PatchReport } from '../../services/patches/patchReportHelper';
@@ -373,12 +374,13 @@ export interface NewRepoRequest {
 
 /** What creating a repository from its source calls: GitHub, and the shared template reset. */
 export interface NewRepoServices {
-    repoOps: Pick<GitHubRepoOperations, 'createFromTemplate' | 'createEmptyRepository' | 'getRepository'>;
+    repoOps: Pick<GitHubRepoOperations, 'getRepository'>;
+    repoLifecycle: Pick<GitHubRepoLifecycle, 'createFromTemplate' | 'createEmptyRepository'>;
     templateSync: Pick<TemplateSyncService, 'resetRepository'>;
 }
 
 export async function createRepoFromSource(
-    { repoOps, templateSync }: NewRepoServices,
+    { repoOps, repoLifecycle, templateSync }: NewRepoServices,
     request: NewRepoRequest,
     templateOwner: string,
     templateRepo: string,
@@ -386,17 +388,17 @@ export async function createRepoFromSource(
 ): Promise<GitHubRepo> {
     const { newRepoName, isPrivate, namespace } = request;
     if (!request.fromAddedDemo) {
-        return repoOps.createFromTemplate(templateOwner, templateRepo, newRepoName, isPrivate, namespace);
+        return repoLifecycle.createFromTemplate(templateOwner, templateRepo, newRepoName, isPrivate, namespace);
     }
     const source = await repoOps.getRepository(templateOwner, templateRepo);
     if (source.isTemplate) {
         logger.info(`[Storefront Setup] ${templateOwner}/${templateRepo} is a template — generating`);
-        return repoOps.createFromTemplate(templateOwner, templateRepo, newRepoName, isPrivate, namespace);
+        return repoLifecycle.createFromTemplate(templateOwner, templateRepo, newRepoName, isPrivate, namespace);
     }
     logger.info(
         `[Storefront Setup] ${templateOwner}/${templateRepo} is not a template — creating an empty repository and resetting it onto the source`,
     );
-    const created = await repoOps.createEmptyRepository(newRepoName, isPrivate, namespace);
+    const created = await repoLifecycle.createEmptyRepository(newRepoName, isPrivate, namespace);
     const [owner, name] = created.fullName.split('/');
     const reset = await templateSync.resetRepository(
         {
@@ -444,8 +446,9 @@ async function executePhaseNewRepo(
     // when daLiveOrg is empty preserves the legacy default of "create under
     // the authenticated user" — defensive against any state that escapes
     // the picker (e.g., direct invocation paths).
+    const { githubRepoOps: repoOps, githubRepoLifecycle: repoLifecycle, templateSync } = services;
     const repo = await createRepoFromSource(
-        { repoOps: services.githubRepoOps, templateSync: services.templateSync },
+        { repoOps, repoLifecycle, templateSync },
         {
             newRepoName: repoInfo.repoName,
             isPrivate: edsConfig.isPrivate ?? false,
@@ -476,7 +479,7 @@ async function executePhaseNewRepo(
         ...repoInfo,
     } satisfies StorefrontSetupProgressPayload);
 
-    await services.githubRepoOps.waitForContent(repoInfo.repoOwner, repoInfo.repoName, signal);
+    await services.githubRepoLifecycle.waitForContent(repoInfo.repoOwner, repoInfo.repoName, signal);
 
     // ADR-006 Step 4b: pin freshly-created thin-layer repos to LKG with
     // canonical-phase patches applied. `generate-from-template` produces at

@@ -40,7 +40,7 @@ const treeCommits = {
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getGitHubServices: () => ({
         tokenService: { validateToken, getUserOrgs },
-        repoOperations: { createEmptyRepository, waitForContent, deleteRepository },
+        repoLifecycle: { createEmptyRepository, waitForContent, deleteRepository },
         treeCommits,
     }),
 }));

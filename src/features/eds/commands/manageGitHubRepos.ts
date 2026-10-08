@@ -30,7 +30,7 @@ export async function manageGitHubReposCommand(context: vscode.ExtensionContext)
 
         // getGitHubServices' parameter is narrowed to the one field it reads,
         // so a command without a full HandlerContext calls it without a cast.
-        const { tokenService, repoOperations } = getGitHubServices(context.secrets);
+        const { tokenService, repoOperations, repoLifecycle } = getGitHubServices(context.secrets);
 
         // Check if we have a valid token
         let token = await tokenService.getToken();
@@ -195,7 +195,7 @@ export async function manageGitHubReposCommand(context: vscode.ExtensionContext)
                             throw new Error(`Invalid repository format: ${repo}`);
                         }
 
-                        await repoOperations.deleteRepository(owner, repoName);
+                        await repoLifecycle.deleteRepository(owner, repoName);
                         deleted.push(repo);
                         logger.info(`[GitHub Manage] ✓ Deleted: ${repo}`);
                     } catch (error) {

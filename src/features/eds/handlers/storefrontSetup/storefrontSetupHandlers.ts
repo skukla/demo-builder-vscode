@@ -412,7 +412,7 @@ async function createCleanupService(context: HandlerContext): Promise<CleanupSer
     // Both come from the cache — it builds the repo operations FROM the same
     // token service, so building them here produced a second pair with a cold
     // validation cache (D-2).
-    const { repoOperations: githubRepoOps } = getGitHubServices(context.context.secrets);
+    const { repoLifecycle: githubRepoOps } = getGitHubServices(context.context.secrets);
 
     // Create TokenProvider adapter from AuthenticationService if available
     const tokenProvider = createDaLiveTokenProvider(context.authManager);

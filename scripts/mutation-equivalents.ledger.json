@@ -5346,18 +5346,6 @@
             "source": "PL-22 batch MUT-03"
         },
         {
-            "module": "src/features/eds/services/github/githubRepoOperations.ts",
-            "anchors": [
-                "const safeCommand = cloneCommand.replace(/https:\\/\\/[^@]+@/g, 'https://***@');"
-            ],
-            "mutants": 2,
-            "category": "other",
-            "reason": "safeCommand exists to redact the token before the clone command is written to the trace log; it is passed to logger.trace on the following line and to nothing else. The command git actually runs is cloneCommand, which is built before this line and is unaffected. Widening or narrowing the redaction regex therefore changes only what a log line shows, and the only assertion that could catch it is one on the logger arguments.",
-            "decision": "none \u2014 redaction feeds logger.trace, not the executed command",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-03"
-        },
-        {
             "module": "src/features/eds/handlers/storefrontSetup/storefrontSetupHandlers.ts",
             "anchors": [
                 "if (!payload?.projectName || !payload?.edsConfig) {"

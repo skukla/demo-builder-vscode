@@ -62,7 +62,8 @@ const PATCH_FIELDS = {
 function makeServices() {
     return {
         githubFileOps: {},
-        githubRepoOps: {
+        githubRepoOps: {},
+        githubRepoLifecycle: {
             createFromTemplate: jest.fn().mockResolvedValue({
                 htmlUrl: 'https://github.com/skukla/brand-new',
                 fullName: 'skukla/brand-new',
@@ -131,7 +132,7 @@ describe('executePhaseGitHubRepo — which branch runs', () => {
     it('creates a new repo when the mode is new and nothing was pre-created', async () => {
         const { services } = await run(config({ repoMode: 'new' }));
 
-        expect(services.githubRepoOps.createFromTemplate).toHaveBeenCalled();
+        expect(services.githubRepoLifecycle.createFromTemplate).toHaveBeenCalled();
     });
 
     it('creates a new repo even when an existingRepo is left over in the config', async () => {
@@ -143,7 +144,7 @@ describe('executePhaseGitHubRepo — which branch runs', () => {
             config({ repoMode: 'new', existingRepo: 'acme/old-choice' }),
         );
 
-        expect(services.githubRepoOps.createFromTemplate).toHaveBeenCalled();
+        expect(services.githubRepoLifecycle.createFromTemplate).toHaveBeenCalled();
         expect(messages(context)).not.toContain('Using existing repository');
     });
 
@@ -152,7 +153,7 @@ describe('executePhaseGitHubRepo — which branch runs', () => {
         // progress messages for an empty owner/name.
         const { services } = await run(config({ repoMode: 'existing' }));
 
-        expect(services.githubRepoOps.createFromTemplate).toHaveBeenCalled();
+        expect(services.githubRepoLifecycle.createFromTemplate).toHaveBeenCalled();
     });
 
     it('uses the pre-created repo when the mode is new and one exists', async () => {
@@ -182,7 +183,7 @@ describe('executePhaseGitHubRepo — which branch runs', () => {
 
         expect(messages(context)).toContain('Using existing repository');
         expect(messages(context)).not.toContain('Using repository');
-        expect(services.githubRepoOps.createFromTemplate).not.toHaveBeenCalled();
+        expect(services.githubRepoLifecycle.createFromTemplate).not.toHaveBeenCalled();
     });
 });
 

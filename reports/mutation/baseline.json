@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "EDS-8 2026-10-08: the three data-installer files that share tests and callers split by job. importHandlers.ts 89.57 (row of 2026-09-05) -> 90.45 for the import/validate/reset spine; its watch half is importJobWatch.ts, measured on its own for the first time: 48.96 before gap-closing, 87.37 after — the shared-channel push (datapackStage, pushOperationProgress; landed 2026-09-20, after the row) had no test, and the stage counter read .status off plain status strings so done was always 0 (fixed, pinned). provisionAccsHandler.ts 93.10 (downloader wiring + the kept ACCS config pinned) and importTargetHandlers.ts 100.00 are its other pieces. dataInstallerWriteClient.ts 90.48 -> 91.67 (import/validate/delete; the no-activation-id errors now name their action); the export half is dataInstallerExportClient.ts 97.37. dataInstallerClient.ts 95.65 -> 98.53 (read endpoints, each now pinned to its action path); its wire layer is dataInstallerTransport.ts 96.81. Remaining survivors are log and message text, plus the ledgered guard/catch in recordDatapackOnProject and the ledgered checkShape branch.",
+    "_note": "EDS-8 2026-10-08: githubRepoOperations.ts (552 -> 221) split by job. The reads keep the file: 85.35 (row of 2026-09-04) -> 85.71, survivors are log text plus the two ledgered filteredOut guards. The writes and the readiness poll are githubRepoLifecycle.ts, measured on its own for the first time: 65.83 on the first run -> after gap-closing, because createEmptyRepository (landed 2026-10-04, after the old row) had no direct test: its default route and body, the private flag, the org route, the 422 reading (name collision only, anywhere in the list, no error list), the 404 org fallback versus a bare 404, and that another failure does not fall back; setTemplateFlag gained its first tests. The remaining survivors are log and error text. cloneRepository was deleted (no caller) with its ledger row.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -6349,21 +6349,21 @@
             "openGaps": 0
         },
         "src/features/eds/services/github/githubRepoOperations.ts": {
-            "score": 85.35,
-            "killed": 229,
-            "survived": 40,
+            "score": 85.71,
+            "killed": 86,
+            "survived": 15,
             "noCoverage": 0,
             "timeout": 4,
             "survivorCategories": {
-                "logPresentation": 29,
-                "other": 3,
+                "logPresentation": 8,
                 "branch": 4,
-                "block": 2,
-                "string": 2
+                "other": 1,
+                "block": 1,
+                "string": 1
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 6,
-            "equivalent": 9,
+            "highValueSurvivors": 5,
+            "equivalent": 6,
             "openGaps": 0
         },
         "src/features/eds/services/github/githubTokenService.ts": {
@@ -9810,6 +9810,21 @@
             "uncoveredCategories": {},
             "highValueSurvivors": 1,
             "equivalent": 3,
+            "openGaps": 0
+        },
+        "src/features/eds/services/github/githubRepoLifecycle.ts": {
+            "score": 90,
+            "killed": 108,
+            "survived": 12,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 11,
+                "string": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
             "openGaps": 0
         }
     }
