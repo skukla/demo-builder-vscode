@@ -10044,7 +10044,7 @@
             "anchors": [
                 "const edsInstance = project?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];"
             ],
-            "line": 499,
+            "line": 498,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Unreachable, so no test can distinguish it. Every one of these functions returns on the line above when isEdsProject(project) is false, and isEdsProject answers false for both undefined and null (isEdsStackId optional-chains the stack id and defaults to false). So by the time this line runs, project is a real object and the '?.' on it can never short-circuit. The compiler still requires it: the guard call does not narrow the parameter's type. The SECOND optional chain on this line \u2014 the one on componentInstances \u2014 IS killed, by the 'no instances record at all' case.",

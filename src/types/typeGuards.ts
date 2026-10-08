@@ -8,7 +8,6 @@
 import { Project, ComponentInstance } from './base';
 import { ADMIN_PANEL_URL, ACCS_GRAPHQL_ENDPOINT } from '@/core/config/envVarKeys';
 import { COMPONENT_IDS } from '@/core/constants';
-import { getMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import {
     deriveAccsAdminUrl,
     lookupComponentConfigValue,
@@ -578,21 +577,6 @@ export function getMeshComponentId(project: Project | undefined | null): string 
  */
 export function hasMeshComponent(project: Project | undefined | null): boolean {
     return getMeshComponentInstance(project) !== undefined;
-}
-
-/**
- * Get the mesh endpoint from a project
- *
- * Keyed-first (ADR-011 D3 Step 06): reads the keyed mesh appBuilderComponents
- * entry, falling back to the legacy `meshState` (whose write-side is retired
- * in Step 07). Every endpoint caller migrates through this one accessor.
- *
- * @param project - The project to check (can be undefined/null)
- * @returns The mesh endpoint URL, or undefined if not available
- */
-export function getMeshEndpointUrl(project: Project | undefined | null): string | undefined {
-    if (!project) return undefined;
-    return getMeshAppBuilderComponent(project)?.endpoint;
 }
 
 // =====================================================================

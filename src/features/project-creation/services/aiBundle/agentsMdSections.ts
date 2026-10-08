@@ -22,6 +22,7 @@ import {
     escapeMarkdown,
 } from '../sanitization';
 import { COMPONENT_IDS } from '@/core/constants';
+import { getMeshEndpointUrl } from '@/core/state/appBuilderComponentState';
 import { resolveStorefrontForProject } from '@/features/components/services/storefrontResolver';
 import {
     getEwCanvasBranch,
@@ -34,7 +35,6 @@ import {
     getEdsLiveUrl,
     getEdsPreviewUrl,
     getEdsDaLiveUrl,
-    getMeshEndpointUrl,
 } from '@/types/typeGuards';
 
 /**

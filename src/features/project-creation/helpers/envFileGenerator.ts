@@ -14,6 +14,7 @@ import {
 } from '@/core/config/envVarKeys';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { SecretStorageLike } from '@/core/di/serviceLocator';
+import { getMeshEndpointUrl } from '@/core/state/appBuilderComponentState';
 import { normalizeIfUrl } from '@/core/validation/Validator';
 import { hydrateDeclaredSecrets } from '@/features/components/services/commerceSecretMigration';
 import type { ConfigMap } from '@/features/components/services/envVarHelpers';
@@ -31,7 +32,6 @@ import {
     ComponentRegistry,
 } from '@/types/components';
 import type { Logger } from '@/types/logger';
-import { getMeshEndpointUrl } from '@/types/typeGuards';
 
 /**
  * Resolves all environment variable keys for a component, including backend-specific service env vars.

@@ -12,6 +12,7 @@
 import type { ProgressTracker } from './shared';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { buildOrgTargetFromProjectAdobe, withOrgContext, type OrgContextTarget } from '@/core/shell/orgContextEnv';
+import { getMeshEndpointUrl } from '@/core/state/appBuilderComponentState';
 import type { ComponentDefinitionEntry } from '@/features/project-creation/services/componentInstallationOrchestrator';
 import {
     deployNewMesh,
@@ -24,7 +25,6 @@ import type { Logger } from '@/types/logger';
 import {
     getMeshComponentInstance,
     getMeshComponentId,
-    getMeshEndpointUrl,
 } from '@/types/typeGuards';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 

@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base/baseCommand';
+import { getMeshEndpointUrl } from '@/core/state/appBuilderComponentState';
 import type { Project } from '@/types/base';
-import { getComponentInstancesByType, getMeshComponentInstance, getMeshEndpointUrl } from '@/types/typeGuards';
+import { getComponentInstancesByType, getMeshComponentInstance } from '@/types/typeGuards';
 
 export class ViewStatusCommand extends BaseCommand {
     public async execute(): Promise<void> {
