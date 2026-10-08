@@ -58,6 +58,14 @@ def body_start(src: str, i: int) -> int | None:
     j = i + m.end()
     while j < len(src):
         c = src[j]
+        if src.startswith('=>', j):
+            # An arrow in a FUNCTION return type (`): (a: string) => void {`). Its `=`
+            # read as a field initialiser and its `>` as a closing angle bracket, so a
+            # builder returning a handler was silently absent from the report — the
+            # fourth run of this tool (2026-10-08) listed nothing at all for
+            # architectureChange.ts, which reads like a file with no functions.
+            j += 2
+            continue
         if c == '<':
             angle += 1
         elif c == '>':

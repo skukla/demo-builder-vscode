@@ -8,11 +8,11 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/ui/steps/ProjectCreationStep.tsx",
-        "src/features/project-creation/ui/hooks/useCreationProgressPhase.ts",
-        "src/features/project-creation/ui/hooks/useGitHubAppPreflight.ts",
-        "src/features/project-creation/ui/steps/projectCreationStepContent.tsx",
-        "src/features/project-creation/ui/steps/projectCreationStepFooter.tsx"
+        "src/features/project-creation/ui/wizard/WizardContainer.tsx",
+        "src/features/project-creation/ui/hooks/useWizardSettings.ts",
+        "src/features/project-creation/ui/hooks/useWizardCatalog.ts",
+        "src/features/project-creation/ui/wizard/architectureChange.ts",
+        "src/features/project-creation/ui/wizard/wizardFooter.tsx"
     ],
     "reporters": [
         "clear-text",
