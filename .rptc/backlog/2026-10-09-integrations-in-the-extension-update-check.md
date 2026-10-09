@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: med
-status: backlog
+status: built
 ---
 
 # Integrations in the extension update check
@@ -57,3 +57,6 @@ opened the Integrations screen was never told, other projects were never checked
 Surfaces: the human picker, `apply_updates`, `check_integration_updates` (unchanged), the
 Integrations card badge (unchanged, same `updateAvailable`).
 
+## Shipped so far
+
+- 2026-10-09  feat(updates): integration updates in the startup check and Check for Updates (`8cf36fb43`)
