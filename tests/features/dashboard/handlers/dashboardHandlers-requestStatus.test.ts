@@ -16,7 +16,7 @@ jest.mock('@/core/di/serviceLocator', () => ({
         })),
     },
 }));
-jest.mock('@/features/mesh/services/stalenessDetector');
+jest.mock('@/core/state/projectStateSync');
 // The API-list warm-up has its own suite; here we only check that opening the
 // dashboard starts it.
 jest.mock('@/features/dashboard/handlers/warmOrgServicesCatalog', () => ({
@@ -55,12 +55,12 @@ describe('dashboardHandlers - handleRequestStatus', () => {
     beforeEach(() => {
         jest.clearAllMocks();
 
-        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
+        const { detectFrontendChanges } = require('@/core/state/projectStateSync');
         detectFrontendChanges.mockReturnValue(false);
     });
 
     it('should return persisted mesh status from meshStatusSummary (Pattern B)', async () => {
-        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
+        const { detectFrontendChanges } = require('@/core/state/projectStateSync');
         detectFrontendChanges.mockReturnValue(false);
 
         // Project has meshStatusSummary='deployed' (set by card grid)
@@ -89,7 +89,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
     });
 
     it('should return "config-changed" when meshStatusSummary is stale', async () => {
-        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
+        const { detectFrontendChanges } = require('@/core/state/projectStateSync');
         detectFrontendChanges.mockReturnValue(false);
 
         const { mockContext } = setupMocks({ meshStatusSummary: 'stale' });
@@ -112,7 +112,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
     // so setting it to undefined asserted nothing — keyed-only is now the only
     // shape there is. An `as any` on the override was hiding it.
     it('should report deployed status + endpoint for a keyed-only project (Steps 07+09)', async () => {
-        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
+        const { detectFrontendChanges } = require('@/core/state/projectStateSync');
         detectFrontendChanges.mockReturnValue(false);
 
         const { mockContext } = setupMocks({
@@ -152,7 +152,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
             },
         });
 
-        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
+        const { detectFrontendChanges } = require('@/core/state/projectStateSync');
         detectFrontendChanges.mockReturnValue(false);
 
         const result = await handleRequestStatus(mockContext);
@@ -194,7 +194,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
     });
 
     it('should return frontendConfigChanged=true when frontend config differs', async () => {
-        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
+        const { detectFrontendChanges } = require('@/core/state/projectStateSync');
         detectFrontendChanges.mockReturnValue(true);
 
         const { mockContext } = setupMocks({
@@ -219,7 +219,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
     // found and asks nothing — the screen already renders `needs-auth` as "Session
     // expired" beside a sign-in affordance (owner, 2026-09-20).
     it('reports needs-auth without asking the SC anything', async () => {
-        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
+        const { detectFrontendChanges } = require('@/core/state/projectStateSync');
         detectFrontendChanges.mockReturnValue(false);
 
         const { mockContext } = setupMocks();
@@ -249,7 +249,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
     it('should NOT carry orgMismatch in the status payload (delivered separately)', async () => {
         // The org check is decoupled — it's posted via the on-open orchestrator's
         // `checkResult` message, never bundled into the status payload (kept fast).
-        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
+        const { detectFrontendChanges } = require('@/core/state/projectStateSync');
         detectFrontendChanges.mockReturnValue(false);
 
         const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' });
@@ -270,7 +270,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
 
     // The counterpart: signed in, so the same silent read gives the real status.
     it('reports the deployed mesh when the session is still good', async () => {
-        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
+        const { detectFrontendChanges } = require('@/core/state/projectStateSync');
         detectFrontendChanges.mockReturnValue(false);
 
         const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' });

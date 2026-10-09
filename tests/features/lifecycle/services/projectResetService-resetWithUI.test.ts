@@ -78,7 +78,7 @@ const mockDeployMeshCreateOrUpdate = jest.fn();
 jest.mock('@/features/mesh/services/meshRedeploy', () => ({
     deployMeshCreateOrUpdate: (...a: unknown[]) => mockDeployMeshCreateOrUpdate(...a),
 }));
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
+jest.mock('@/features/mesh/services/meshDeployBaseline', () => ({
     updateMeshState: jest.fn(),
 }));
 

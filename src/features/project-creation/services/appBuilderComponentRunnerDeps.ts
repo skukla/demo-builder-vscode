@@ -49,10 +49,8 @@ import { ensureNode, prerequisitesOf, type AdobeCliPrerequisites } from '@/featu
 import { ensureDaLiveAuth, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { republishStorefrontConfig } from '@/features/eds/services/storefront/storefrontRepublishService';
 import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
-import {
-    calculateMeshSourceHash,
-    readMeshEnvVarsFromFile,
-} from '@/features/mesh/services/stalenessDetector';
+import { readMeshEnvVarsFromFile } from '@/features/mesh/services/meshEnvVars';
+import { calculateMeshSourceHash } from '@/features/mesh/services/meshSourceHash';
 import { regenerateComponentEnvFile } from '@/features/project-creation/helpers/envFileRegeneration';
 import { erpRunnerDeps } from '@/features/project-creation/services/erpRunnerDeps';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';

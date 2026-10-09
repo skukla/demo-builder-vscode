@@ -23,7 +23,7 @@ import type { ProjectSetupContext } from '@/features/project-creation/services/P
 import type { Project } from '@/types/base';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
+jest.mock('@/features/mesh/services/meshDeployBaseline', () => ({
     updateMeshState: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock('@/features/mesh/services/meshDeployment', () => ({
@@ -39,7 +39,7 @@ jest.mock('@/features/app-builder/services/ensureMeshApiSubscribed', () => ({
 
 import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
-import { updateMeshState } from '@/features/mesh/services/stalenessDetector';
+import { updateMeshState } from '@/features/mesh/services/meshDeployBaseline';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';

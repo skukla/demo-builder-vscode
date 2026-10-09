@@ -36,7 +36,7 @@ jest.mock('@/features/project-creation/helpers/envFileRegeneration', () => ({
     regenerateComponentEnvFile: (...args: unknown[]) => mockRegenerateComponentEnvFile(...args),
 }));
 const mockUpdateMeshState = jest.fn().mockResolvedValue(undefined);
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
+jest.mock('@/features/mesh/services/meshDeployBaseline', () => ({
     updateMeshState: (...args: unknown[]) => mockUpdateMeshState(...args),
 }));
 

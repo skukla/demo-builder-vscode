@@ -67,3 +67,28 @@ export function updateFrontendState(project: Project): void {
         capturedAt: new Date().toISOString(),
     };
 }
+
+/**
+ * Detect if frontend env vars have changed since demo started
+ */
+export function detectFrontendChanges(project: Project): boolean {
+    const frontendInstance = getComponentInstancesByType(project, 'frontend')[0];
+    if (!frontendInstance || !project.frontendEnvState) {
+        return false;
+    }
+
+    const currentConfig = project.componentConfigs?.[frontendInstance.id] || {};
+    const currentEnvVars = getFrontendEnvVars(currentConfig);
+    const deployedEnvVars = project.frontendEnvState.envVars;
+
+    for (const key of Object.keys(currentEnvVars)) {
+        const oldValue = deployedEnvVars[key];
+        const newValue = currentEnvVars[key];
+
+        if (oldValue !== newValue) {
+            return true;
+        }
+    }
+
+    return false;
+}

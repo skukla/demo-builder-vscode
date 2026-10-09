@@ -791,6 +791,15 @@ date and what happened; a failure becomes its own `fix` item.
       body and both screens are proven moves and every piece scores 91% or better under
       mutation with no open gaps, so this is a confirmation, not a known risk.
 
+- [ ] **The mesh redeploy prompt** (the `stalenessDetector.ts` split, 2026-10-09): open the
+      dashboard of a project with a deployed mesh and confirm there is no false "redeploy"
+      prompt; then change a mesh-relevant setting on Configure (for example the Commerce
+      GraphQL endpoint or the store view code) and save, and confirm the prompt appears.
+      Redeploy, reopen the dashboard, and confirm the prompt is gone. Also start the demo (a
+      headless frontend), change a frontend setting such as the store view code, and
+      confirm the demo status turns to "Restart needed". Every moved
+      function is a proven move, so this is a confirmation, not a known risk.
+
 ## Shipped so far
 
 - 2026-09-10  2026-09-10  Gated: god-file-ratchet.test.ts pins 68 candidates / 31 coupled; rule 49 measures on edit (2987e8623)

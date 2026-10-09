@@ -10109,7 +10109,7 @@
             "source": "PL-22 MUT-02, 2026-09-05"
         },
         {
-            "module": "src/features/mesh/services/stalenessDetector.ts",
+            "module": "src/features/mesh/services/meshEnvVars.ts",
             "anchors": [
                 "if (key in componentConfig) {"
             ],
@@ -10121,7 +10121,7 @@
             "source": "PL-22 MUT-03, 2026-09-05"
         },
         {
-            "module": "src/features/mesh/services/stalenessDetector.ts",
+            "module": "src/features/mesh/services/meshEnvVars.ts",
             "anchors": [
                 "const trimmedLine = line.trim();"
             ],
@@ -10133,7 +10133,7 @@
             "source": "PL-22 MUT-03, 2026-09-05"
         },
         {
-            "module": "src/features/mesh/services/stalenessDetector.ts",
+            "module": "src/features/mesh/services/meshEnvVars.ts",
             "anchors": [
                 "if (!trimmedLine || trimmedLine.startsWith('#')) {"
             ],
@@ -10145,7 +10145,7 @@
             "source": "PL-22 MUT-03, 2026-09-05"
         },
         {
-            "module": "src/features/mesh/services/stalenessDetector.ts",
+            "module": "src/features/mesh/services/meshEnvVars.ts",
             "anchors": [
                 "if (equalsIndex <= 0) {"
             ],
@@ -10175,7 +10175,7 @@
             ],
             "mutants": 1,
             "category": "branch",
-            "reason": "Unreachable as a false case. Control only arrives here when currentState is non-null, and currentState is built from getMeshAppBuilderComponent(project) a few lines above: when that returns undefined, envVars, sourceHash and lastDeployed are all absent, getCurrentMeshStateImpl returns null, and the function has already taken the fresh-deployment return. So the same call cannot answer undefined here, and forcing the condition true changes nothing.",
+            "reason": "Unreachable as a false case. Control only arrives here when currentState is non-null, and currentState is built from getMeshAppBuilderComponent(project) a few lines above: when that returns undefined, envVars, sourceHash and lastDeployed are all absent, getCurrentMeshState (meshDeployBaseline.ts) returns null, and the function has already taken the fresh-deployment return. So the same call cannot answer undefined here, and forcing the condition true changes nothing.",
             "decision": "none \u2014 the check keeps the write honest against a future caller that reaches this line another way",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-03, 2026-09-05"
@@ -10233,7 +10233,7 @@
             "anchors": [
                 "hasChanges: envVarsChanged || sourceFilesChanged,"
             ],
-            "line": 576,
+            "line": 202,
             "mutants": 3,
             "category": "branch",
             "reason": "This expression is an argument to logger.debug, not the returned verdict \u2014 the identical expression four lines below at the return statement is the one callers read, and it is killed. Changing this copy alters only the text of a debug line, so the only assertion that could see it would be on the logger's arguments, which pins wording rather than behaviour. The classifier reads the enclosing statement and cannot see that these lines sit inside a logger call.",

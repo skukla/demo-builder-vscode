@@ -64,7 +64,7 @@ jest.mock('@/features/mesh/services/meshVerifier', () => ({
     fetchMeshInfoFromAdobeIO: jest.fn().mockResolvedValue({ meshId: 'mesh-123' }),
 }));
 
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
+jest.mock('@/features/mesh/services/meshDeployBaseline', () => ({
     updateMeshState: jest.fn(),
 }));
 
@@ -377,7 +377,7 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
                 '"test-project" reset successfully, but mesh redeployment failed: aio exploded. ' +
                     'You can redeploy manually from the dashboard.'
             );
-            const { updateMeshState } = require('@/features/mesh/services/stalenessDetector');
+            const { updateMeshState } = require('@/features/mesh/services/meshDeployBaseline');
             expect(updateMeshState).not.toHaveBeenCalled();
         });
 
@@ -487,7 +487,7 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
         }
 
         it('refreshes the keyed mesh entry via the updateMeshState chokepoint', async () => {
-            const { updateMeshState } = require('@/features/mesh/services/stalenessDetector');
+            const { updateMeshState } = require('@/features/mesh/services/meshDeployBaseline');
             const {
                 recordDeployOutcome,
             } = require('@/features/app-builder/services/appBuilderDeployOutcome');

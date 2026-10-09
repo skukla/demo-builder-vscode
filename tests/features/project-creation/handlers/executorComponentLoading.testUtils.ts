@@ -24,7 +24,8 @@ jest.mock('@/features/components/services/projectAppBuilderPredicate', () => ({
 }));
 
 jest.mock('@/features/mesh/services/meshDeployment');
-jest.mock('@/features/mesh/services/stalenessDetector');
+jest.mock('@/features/mesh/services/meshEnvVars');
+jest.mock('@/features/mesh/services/meshDeployBaseline');
 
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {

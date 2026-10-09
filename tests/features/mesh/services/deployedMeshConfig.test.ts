@@ -1,6 +1,6 @@
 // IMPORTANT: Mock must be declared before imports
 
-import { fetchDeployedMeshConfig } from '@/features/mesh/services/stalenessDetector';
+import { fetchDeployedMeshConfig } from '@/features/mesh/services/deployedMeshConfig';
 import {
     setupMockCommandExecutor,
     MOCK_MESH_CONFIG,
@@ -18,7 +18,7 @@ function sourcesResponse(sources: unknown[]): { code: number; stdout: string } {
 }
 
 /**
- * StalenessDetector - File Comparison Tests
+ * deployedMeshConfig - reading the deployed mesh's env vars
  *
  * Tests fetching and parsing deployed mesh configuration:
  * - Fetch deployed mesh config from Adobe I/O
@@ -38,7 +38,7 @@ function sourcesResponse(sources: unknown[]): { code: number; stdout: string } {
  */
 const meshLogger = createMockLogger();
 
-describe('StalenessDetector - File Comparison', () => {
+describe('deployedMeshConfig', () => {
     beforeEach(() => {
         jest.clearAllMocks();
     });

@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "EDS-8 split of StorefrontSetupStep.tsx (2026-10-09) into useStorefrontSetup (the run), storefrontSetupState (phases and pure transitions), StorefrontSetupErrorView and StorefrontSetupCompletedView (the failed and published screens): the unsplit file re-measured first at 92.61% (238 killed, 17 survived, 2 uncovered of 257; the 92.83% row predated the EDS-20 changes), and after the split the same 257 mutants score 95.72% with every survivor a ledgered equivalent; direct suites for each piece killed the five open gaps (the github-app active phase, the completed partial phase, the install-required message, and two fallback strings).",
+    "_note": "EDS-8 split of stalenessDetector.ts (88.32%, 295 killed, 39 survived, re-measured before the split) into six files. The surviving mutants are the same set as before: 21 ledgered equivalents (re-homed, four rows to meshEnvVars.ts) and log-text strings. stalenessDetector fell to 80% only because the killed mutants of the moved functions left with them; it keeps every survivor it had. Across all pieces 311 killed and 38 survived, against 295 and 39 plus projectStateSync's 26 before.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -1006,7 +1006,7 @@
         },
         "src/core/state/projectStateSync.ts": {
             "score": 100,
-            "killed": 26,
+            "killed": 46,
             "survived": 0,
             "noCoverage": 0,
             "timeout": 0,
@@ -7391,20 +7391,19 @@
             "openGaps": 0
         },
         "src/features/mesh/services/stalenessDetector.ts": {
-            "score": 88.32,
-            "killed": 295,
-            "survived": 39,
+            "score": 80,
+            "killed": 84,
+            "survived": 21,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "logPresentation": 18,
-                "branch": 15,
-                "other": 1,
-                "block": 5
+                "branch": 10,
+                "logPresentation": 8,
+                "block": 3
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 20,
-            "equivalent": 21,
+            "highValueSurvivors": 13,
+            "equivalent": 13,
             "openGaps": 0
         },
         "src/features/mesh/utils/errorFormatter.ts": {
@@ -10364,6 +10363,64 @@
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/mesh/services/deployedMeshConfig.ts": {
+            "score": 88.89,
+            "killed": 56,
+            "survived": 7,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 7
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/mesh/services/meshDeployBaseline.ts": {
+            "score": 96.88,
+            "killed": 31,
+            "survived": 1,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/mesh/services/meshEnvVars.ts": {
+            "score": 88.06,
+            "killed": 59,
+            "survived": 8,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 5,
+                "other": 1,
+                "block": 2
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 7,
+            "equivalent": 8,
+            "openGaps": 0
+        },
+        "src/features/mesh/services/meshSourceHash.ts": {
+            "score": 97.22,
+            "killed": 35,
+            "survived": 1,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 1
+            },
             "uncoveredCategories": {},
             "highValueSurvivors": 0,
             "equivalent": 0,

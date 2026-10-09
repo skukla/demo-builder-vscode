@@ -45,7 +45,7 @@ jest.mock('@/features/mesh/services/meshVerifier', () => ({
 }));
 
 const mockUpdateMeshState = jest.fn().mockResolvedValue(undefined);
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
+jest.mock('@/features/mesh/services/meshDeployBaseline', () => ({
     updateMeshState: (...args: unknown[]) => mockUpdateMeshState(...args),
 }));
 

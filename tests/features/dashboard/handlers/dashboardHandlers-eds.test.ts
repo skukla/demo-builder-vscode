@@ -28,8 +28,8 @@ jest.mock('@/core/di/serviceLocator', () => ({
 // Mock HelixService
 jest.mock('@/features/eds/services/helix/helixService');
 
-// Mock stalenessDetector (required by dashboardHandlers module)
-jest.mock('@/features/mesh/services/stalenessDetector');
+// Mock projectStateSync (detectFrontendChanges, read by the status handlers)
+jest.mock('@/core/state/projectStateSync');
 
 // Mock authentication
 

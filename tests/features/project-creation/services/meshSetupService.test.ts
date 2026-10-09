@@ -17,7 +17,7 @@ import type { Project } from '@/types/base';
 import type { TransformedComponentDefinition } from '@/types/components';
 
 // Mock dependencies
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
+jest.mock('@/features/mesh/services/meshDeployBaseline', () => ({
     updateMeshState: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock('@/features/mesh/services/meshDeployment', () => ({

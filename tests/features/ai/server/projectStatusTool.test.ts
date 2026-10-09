@@ -16,7 +16,8 @@ jest.mock('@/core/di/serviceLocator', () => ({
 }));
 
 const detectFrontendChanges = jest.fn();
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
+jest.mock('@/core/state/projectStateSync', () => ({
+    ...jest.requireActual('@/core/state/projectStateSync'),
     detectFrontendChanges: (...a: unknown[]) => detectFrontendChanges(...a),
 }));
 

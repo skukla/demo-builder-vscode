@@ -38,7 +38,7 @@ jest.mock('@/features/dashboard/commands/showDashboard', () => ({
 jest.mock('@/features/dashboard/services/projectPanelPushes', () => ({
     sendMeshStatusUpdate: mockSendMeshStatusUpdate,
 }));
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
+jest.mock('@/features/mesh/services/meshDeployBaseline', () => ({
     updateMeshState: jest.fn().mockResolvedValue(undefined),
 }));
 

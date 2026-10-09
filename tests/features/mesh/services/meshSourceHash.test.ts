@@ -8,12 +8,12 @@ jest.mock('crypto', () => ({
     createHash: jest.fn(),
 }));
 
-import { calculateMeshSourceHash } from '@/features/mesh/services/stalenessDetector';
+import { calculateMeshSourceHash } from '@/features/mesh/services/meshSourceHash';
 import * as fs from 'fs/promises';
 import * as crypto from 'crypto';
 
 /**
- * StalenessDetector - Hash Calculation Tests
+ * meshSourceHash - Hash Calculation Tests
  *
  * Tests mesh source file hash calculation:
  * - Calculate hash from mesh config and source files
@@ -24,7 +24,7 @@ import * as crypto from 'crypto';
  * Total tests: 4
  */
 
-describe('StalenessDetector - Hash Calculation', () => {
+describe('meshSourceHash', () => {
     beforeEach(() => {
         jest.clearAllMocks();
 

@@ -14,7 +14,7 @@ import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
 import { poolUnits } from '../../../helpers/authenticationServiceFake';
 // Mock dependencies
-jest.mock('@/features/mesh/services/stalenessDetector');
+jest.mock('@/core/state/projectStateSync');
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         // ADR-015 (2026-08-28): handlers resolve these when assembling runner

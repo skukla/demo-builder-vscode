@@ -88,7 +88,7 @@ async function runTargetedMeshDeploy(
         );
 
         if (meshResult.success && meshResult.data?.endpoint) {
-            const { updateMeshState } = await import('@/features/mesh/services/stalenessDetector');
+            const { updateMeshState } = await import('@/features/mesh/services/meshDeployBaseline');
             await updateMeshState(project, meshResult.data.endpoint);
             context.logger.info(`${logPrefix} Mesh redeployed: ${meshResult.data.endpoint}`);
             return { redeployed: true };

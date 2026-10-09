@@ -52,7 +52,7 @@ jest.mock('@/features/dashboard/services/projectPanelPushes', () => ({
     sendMeshStatusUpdate: mockSendMeshStatusUpdate,
 }));
 const mockUpdateMeshState = jest.fn().mockResolvedValue(undefined);
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
+jest.mock('@/features/mesh/services/meshDeployBaseline', () => ({
     updateMeshState: (...args: unknown[]) => mockUpdateMeshState(...args),
 }));
 

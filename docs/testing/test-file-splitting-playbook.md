@@ -76,7 +76,8 @@ so on, each named for the handler group it covers.
 It is worth looking at precisely because it kept growing after the split: the
 pattern's value is that adding a handler adds a small file rather than another
 hundred lines to a file nobody wants to open. `stalenessDetector` went the same way,
-from one 925-line suite to eight.
+from one 925-line suite to eight; when the module itself was split by job on
+2026-10-09, each of those suites moved with the functions it tests.
 
 ## Related
 

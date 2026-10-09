@@ -55,7 +55,7 @@ jest.mock('@/features/mesh/services/meshDeployment', () => ({
 jest.mock('@/features/mesh/services/meshVerifier', () => ({
     fetchMeshInfoFromAdobeIO: jest.fn().mockResolvedValue({ meshId: '' }),
 }));
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
+jest.mock('@/features/mesh/services/meshDeployBaseline', () => ({
     updateMeshState: jest.fn().mockResolvedValue(undefined),
 }));
 

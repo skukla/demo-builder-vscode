@@ -8,11 +8,12 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/ui/steps/StorefrontSetupStep.tsx",
-        "src/features/eds/ui/helpers/storefrontSetupState.ts",
-        "src/features/eds/ui/hooks/useStorefrontSetup.ts",
-        "src/features/eds/ui/components/StorefrontSetupErrorView.tsx",
-        "src/features/eds/ui/components/StorefrontSetupCompletedView.tsx"
+        "src/features/mesh/services/stalenessDetector.ts",
+        "src/features/mesh/services/meshEnvVars.ts",
+        "src/features/mesh/services/deployedMeshConfig.ts",
+        "src/features/mesh/services/meshSourceHash.ts",
+        "src/features/mesh/services/meshDeployBaseline.ts",
+        "src/core/state/projectStateSync.ts"
     ],
     "reporters": [
         "clear-text",

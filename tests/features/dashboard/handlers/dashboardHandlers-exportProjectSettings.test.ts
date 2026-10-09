@@ -10,7 +10,7 @@
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: { getAuthenticationService: jest.fn() },
 }));
-jest.mock('@/features/mesh/services/stalenessDetector');
+jest.mock('@/core/state/projectStateSync');
 const mockExportToFile = jest.fn();
 jest.mock('@/features/projects-dashboard/services/settingsTransferService', () => ({
     exportProjectSettingsToFile: (...args: unknown[]) => mockExportToFile(...args),

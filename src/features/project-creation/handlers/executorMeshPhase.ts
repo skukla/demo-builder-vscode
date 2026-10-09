@@ -276,7 +276,7 @@ export async function populateMeshComponentConfigs(
     const meshId = getMeshComponentId(project);
     if (!meshInstance?.path || !meshId) return;
 
-    const { readMeshEnvVarsFromFile } = await import('@/features/mesh/services/stalenessDetector');
+    const { readMeshEnvVarsFromFile } = await import('@/features/mesh/services/meshEnvVars');
     const meshEnvVars = await readMeshEnvVarsFromFile(meshInstance.path);
     const envVarCount = meshEnvVars ? Object.keys(meshEnvVars).length : 0;
     if (meshEnvVars && envVarCount > 0) {

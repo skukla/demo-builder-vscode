@@ -8,14 +8,14 @@
  * preventing false "deploy needed" states when deployed mesh config is inaccessible.
  */
 
-import { detectMeshChanges, calculateMeshSourceHash } from '@/features/mesh/services/stalenessDetector';
+import { calculateMeshSourceHash } from '@/features/mesh/services/meshSourceHash';
+import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { Project } from '@/types/base';
 import { createMeshDepsFake } from '../../../helpers/meshDepsFake';
 import { createMockProject } from '../../../helpers/projectFake';
 
 // Mock dependencies
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
-    ...jest.requireActual('@/features/mesh/services/stalenessDetector'),
+jest.mock('@/features/mesh/services/meshSourceHash', () => ({
     calculateMeshSourceHash: jest.fn(),
 }));
 
@@ -106,7 +106,7 @@ describe('detectMeshChanges - Timeout Handling', () => {
         });
 
         // Mock calculateMeshSourceHash to return null (no source hash captured yet)
-        (calculateMeshSourceHash as jest.Mock).mockResolvedValue(null);
+        jest.mocked(calculateMeshSourceHash).mockResolvedValue(null);
 
         // Mock command executor
         mockCommandExecutor = {

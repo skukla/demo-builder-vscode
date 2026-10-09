@@ -9,9 +9,9 @@
 
 import { ProgressTracker } from '../handlers/shared';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
-import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
 import { extractAndParseJSON } from '@/features/mesh/utils/meshHelpers';
 import { generateComponentEnvFile } from '@/features/project-creation/helpers/envFileGenerator';
@@ -436,7 +436,7 @@ export async function linkExistingMesh(
  * @param endpoint - The mesh endpoint URL (optional)
  */
 async function updateProjectMeshState(project: Project, logger: Logger, endpoint?: string): Promise<void> {
-    const { updateMeshState } = await import('@/features/mesh/services/stalenessDetector');
+    const { updateMeshState } = await import('@/features/mesh/services/meshDeployBaseline');
 
     await updateMeshState(project, endpoint);
     logger.debug('[Project Creation] Updated mesh state after deployment');

@@ -59,7 +59,7 @@ jest.mock('@/features/dashboard/services/projectPanelPushes', () => ({
 // suite asserted an instance status that, in production, comes from
 // recordDeployOutcome inside updateMeshState. The real thing is mocked because it
 // reads the mesh .env and hashes the source tree; what it WRITES is reproduced.
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
+jest.mock('@/features/mesh/services/meshDeployBaseline', () => ({
     updateMeshState: jest.fn().mockImplementation(async (project, endpoint) => {
         const { recordDeployOutcome } = jest.requireActual(
             '@/features/app-builder/services/appBuilderDeployOutcome'
