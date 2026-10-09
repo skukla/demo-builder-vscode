@@ -4,7 +4,7 @@ kind: fix
 area: ai
 needs: []
 value: high
-status: backlog
+status: built
 ---
 
 # A storefront teardown leaves its pages live when the DA.live content is already gone
@@ -31,8 +31,6 @@ in words. Affects `delete_project` with the site box ticked, `cleanup_dalive_sit
 Clean up DA.live sites command and reset. Reversibility rule: a delete that leaves the public
 site up is not undone.
 
-## Shipped so far
-
 **Not covered by this fix: reset.** Reset does not call `tearDownStorefront`. Its unpublish
 (`edsPipeline.ts`, the content-clear step) still lists from the DA.live files it just
 deleted, so a reset of a site whose content was already gone unpublishes nothing old.
@@ -43,3 +41,6 @@ republish finishes, which is a product decision, not a code fix.
 `/products/*` form of the same call is also unproven against a live site
 (`helixPublishedPaths.ts`). If Helix rejects `/*`, the teardown falls back to the DA.live list
 and says so, and the live check still stops it claiming the site is down.
+
+## Shipped so far
+- 2026-10-09  fix(eds): storefront teardown unpublishes what Helix says is live (`1fcd35818`)

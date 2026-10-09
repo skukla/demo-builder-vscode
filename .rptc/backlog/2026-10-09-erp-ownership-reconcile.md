@@ -88,3 +88,4 @@ whole loop on the sandbox (add, tag, remove), which needs that F5 first.
 
 ## Shipped so far
 - 2026-10-09  feat(app-builder): ownership is applied across every ERP when it changes (`0d7e46e33`)
+- 2026-10-09  docs(backlog): AB-70 deployed to Justrite (`0ec353620`)

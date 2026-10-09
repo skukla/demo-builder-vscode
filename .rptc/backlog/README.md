@@ -232,7 +232,7 @@ each item's own file; what has already landed against an item is in its
 | `AI-12` | feature | [Demo Builder works with GitHub Copilot, and with Claude Code while it lasts](2026-09-16-copilot-first-agent-support.md) | — | high | active |
 | `AI-13` | fix | [The AI tools install and run on whatever Node is first on the PATH](2026-10-07-ai-tools-wrong-node.md) | — | med | built |
 | `AI-14` | fix | [Agent-run project creation waited for the AEM Code Sync App and told nobody](2026-10-09-agent-creation-waits-for-code-sync-silently.md) | — | med | built |
-| `EDS-33` | fix | [A storefront teardown leaves its pages live when the DA.live content is already gone](2026-10-09-teardown-unpublish-lists-from-deleted-content.md) | — | high | backlog |
+| `EDS-33` | fix | [A storefront teardown leaves its pages live when the DA.live content is already gone](2026-10-09-teardown-unpublish-lists-from-deleted-content.md) | — | high | built |
 
 ### eds  (40)
 
