@@ -4,6 +4,10 @@
  * The single `.env` writer: project creation calls it directly, and
  * `envFileRegeneration.ts` calls it for an existing project, so both produce the
  * same file. Which keys and values go in is decided in `envVarResolution.ts`.
+ *
+ * FULLY GENERATED (owner, 2026-10-09): this file rewrites the component's config on every
+ * write, a hand edit included. Its values are changed on Configure, not in the file; ADR-013
+ * records why hash-and-skip does not apply here.
  */
 
 import { promises as fsPromises } from 'fs';

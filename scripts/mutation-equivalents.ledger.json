@@ -2023,7 +2023,7 @@
             "anchors": [
                 "groups.get(group)?.push(envVar);"
             ],
-            "line": 31,
+            "line": 35,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "The two lines above guarantee the entry exists: if the map does not have the group, it is set to an empty array immediately before this read. Removing the optional call therefore never dereferences undefined, and there is no input to groupEnvVarsBySection that reaches this line with the key absent.",
@@ -2036,7 +2036,7 @@
             "anchors": [
                 "if (!varsByKey.has(key)) {"
             ],
-            "line": 84,
+            "line": 88,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true lets a repeated key overwrite its own entry. The value written is built entirely from the key, the shared dictionary entry and the componentId \u2014 all identical on the second pass \u2014 and a Map keeps the insertion position of an overwritten key, so neither the contents nor the order of varsByKey changes. Only the wasted work differs.",
@@ -2049,7 +2049,7 @@
             "anchors": [
                 "usedBy: [componentId],"
             ],
-            "line": 90,
+            "line": 94,
             "mutants": 1,
             "category": "other",
             "reason": "usedBy is attached to the in-memory EnvVarDefinition and never read again on this path: the writers consume key, group, description and default only, and nothing serialises usedBy into the .env or the json. Emptying the array changes a field no output and no collaborator observes.",
@@ -2062,7 +2062,7 @@
             "anchors": [
                 "if (envVar.derivedFrom && envVar.derivedFrom.length > 0) {"
             ],
-            "line": 100,
+            "line": 104,
             "mutants": 2,
             "category": "branch",
             "reason": "Both survivors relax the length test on the right of the &&: forcing it true, and widening it to >= 0. The left operand still short-circuits for a var with no derivedFrom, so the only input that could reach the loop differently is a var declaring derivedFrom as an empty array \u2014 and iterating an empty array sets no derived value and logs nothing. Every derivedFrom in the registry names at least one source.",
@@ -2075,7 +2075,7 @@
             "anchors": [
                 "if (relevantVars.length > 0) {"
             ],
-            "line": 118,
+            "line": 122,
             "mutants": 2,
             "category": "branch",
             "reason": "Forcing this guard true, or widening it to >= 0, only lets an empty relevantVars through. groupEnvVarsBySection then returns an empty Map, the for-of over its entries runs zero times, and the lines array reaches the write exactly as it was \u2014 the header-only file the guard already produces. The false arm is a real decision and a test kills it.",
@@ -2153,7 +2153,7 @@
             "anchors": [
                 "if (configFileDef.additionalFields) {"
             ],
-            "line": 174,
+            "line": 178,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true runs Object.assign(outputConfig, undefined) when the declaration carries no additionalFields, and Object.assign ignores a null or undefined source entirely \u2014 outputConfig is returned unchanged and the same bytes are written. The false arm is a real decision and a test with additionalFields present kills it.",
@@ -2166,7 +2166,7 @@
             "anchors": [
                 "if (!githubOwner || !repoName) {"
             ],
-            "line": 255,
+            "line": 259,
             "mutants": 6,
             "category": "branch",
             "reason": "This whole if is a logger.warn and nothing else. The params object was already built above it and is passed to generateConfigJson unchanged whichever way the condition goes, so forcing it true, forcing it false, flipping the || to &&, dropping either negation or emptying the block all change only whether a warning prints. Distinguishing them would mean asserting warning text, which pins wording rather than behaviour.",
@@ -2179,7 +2179,7 @@
             "anchors": [
                 "if (!daLiveOrg || !daLiveSite) {"
             ],
-            "line": 260,
+            "line": 264,
             "mutants": 6,
             "category": "branch",
             "reason": "The same shape as the GitHub warning above: the body is one logger.warn, the daLiveOrg and daLiveSite values already sit in the params object built earlier, and generateConfigJson receives them identically whichever way this condition evaluates. Every mutant here \u2014 condition forced either way, || to &&, either negation dropped, block emptied \u2014 moves only a log line.",

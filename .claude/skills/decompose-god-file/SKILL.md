@@ -104,6 +104,15 @@ dated verdict on `EDS-8` saying what was read and why it stays whole, and the ne
 can revisit it. The routine exists because each of the first nine cuts rediscovered the same
 bookkeeping, and because "the tests passed" cannot see a line no test constrains.
 
+**The count does not reach 0, and that is the design (owner, 2026-10-09).** About seventeen
+files are over their limit and do ONE job; each carries a dated "one job, left whole" verdict
+in EDS-8's triage section. The floor of `godFileCandidates` is that set, not zero. A future
+run must NOT split a file on that list to move the number: re-read it, and cut it only if the
+reading finds a second job (the verdicts are leads, not law). The alternative the owner was
+offered, counting code lines instead of raw lines (several are over by 6 to 41 raw lines and
+three are more than 40% comments), is not the rule; the raw-line limit stands. A run that
+finds the count stuck at the one-job floor is DONE, and says so, rather than inventing a cut.
+
 0. **Re-measure first.** `python3 .claude/skills/decompose-god-file/worklist.py` prints every
    file over its limit, worst first, with the same signals the ratchet counts. EDS-8's own
    lesson: it tracked files somebody touched, not files measurement condemns.

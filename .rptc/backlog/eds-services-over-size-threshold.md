@@ -370,18 +370,18 @@ about it, and what (if anything) the owner has to decide.
 - 2026-10-09  The daLiveAuthPrompt split added its two new pieces (`daLiveAuthGuard.ts`,
   `daLiveTokenValidation.ts`) to the PL-22 mutation sample (`stryker.pl22.config.json`), so
   the sample keeps measuring the same code it measured before the move; their baseline rows
-  came from the focus run. **Decide:** keep them in the sample, or freeze the sample at its
-  old file list (then remove the two lines).
+  came from the focus run. **Decided (owner, 2026-10-09): keep them.**
 
 ## Triage of the untangled files (2026-10-08, read by a Sonnet agent, verdicts are LEADS)
 
 The 36 files over their limit with no coupling signal were read by job. 19 are to be
 split; 17 are one job. Each split goes through the per-file routine; each one-job
 verdict is recorded here so the file stays whole on purpose, and is re-read before the
-end-of-loop walkthrough. **For the owner:** with 17 files judged one job, the count
-cannot reach 0 without either splitting cohesive files to move a number, or changing
-the rule to count code lines rather than raw lines (several are over by 6 to 41 raw lines,
-and three of them are more than 40% comments). Decide which.
+end-of-loop walkthrough. With 17 files judged one job, the count cannot reach 0 without
+splitting cohesive files to move a number. **Decided (owner, 2026-10-09): it does not have
+to.** The one-job files stay whole on purpose and the raw-line rule stands; the floor is the
+one-job set. Written into the decompose-god-file skill so a future run does not cut one of
+these to move the number, and stops when only they are left.
 
 **Split, in sitting order (worst first; files that share suites go in one sitting):**
 1. `project-creation/helpers/envFileGenerator.ts` (701/300): env value resolution; the
@@ -553,8 +553,8 @@ and three of them are more than 40% comments). Decide which.
   (2) **A second JWT decoder:** `authentication/services/imsTokenClaims.ts` `decodeImsUserId`
   decodes the same IMS payload segment (base64url, with an object check) to read `user_id`.
   Read both: same job, and `decodeImsUserId` could be written over `parseJwtPayload`. Not in
-  reach (another feature, and the shared home would be `core/`), so not chased. **Decide:**
-  one decoder in `core/utils`, or leave the two.
+  reach (another feature, and the shared home would be `core/`), so not chased. **Decided
+  (owner, 2026-10-09): merge them** into one decoder in `core/utils`; queued as a loop sitting.
 
 - 2026-10-09  From the envFileGenerator split. **The generated `.env` and component config
   files are written straight to disk, with no hash-and-skip.** Every writer in the split
@@ -563,9 +563,9 @@ and three of them are more than 40% comments). Decide which.
   component's `.env`, `.env.local`, json config or EDS `config.json` without a word. ADR-013's
   seam (`generatedFileWriter.ts`) is scoped to the AI bundle only, so this is not a breach of
   that ADR, but it does sit against "a user's own edits are never overwritten". Not changed:
-  the sitting was a pure move. **Decide:** extend hash-and-skip to these files, or record that
-  they are fully generated and edits belong in Configure. Recommend: record it, since Configure
-  is where these values are meant to be edited and a skipped `.env` would deploy stale values.
+  the sitting was a pure move. **Decided (owner, 2026-10-09): recorded as fully generated**;
+  edits belong in Configure. Written into ADR-013 (an "Out of scope, decided" section) and the
+  headers of both writers.
 
 - 2026-10-09  From the StorefrontSetupStep split, three findings, none changed (the sitting
   was a pure move):
@@ -577,8 +577,9 @@ and three of them are more than 40% comments). Decide which.
   variant with Cancel/Retry; the success/warning variant with detail lines). They now live
   in `StorefrontSetupErrorView.tsx` and `StorefrontSetupCompletedView.tsx`. Moving them onto
   `StatusDisplay` adds its fade and its fixed 350px box, which fights the 2026-10-07 "every
-  state centres in the pane" change, so it is a visual change and needs a look. **Decide:**
-  move them (recommend, with a `height` that fills) or record them as variants.
+  state centres in the pane" change, so it is a visual change and needs a look. **Decided
+  (owner, 2026-10-09): switch to `StatusDisplay`**, with a height that fills the pane; queued as
+  a loop sitting, with a visual baseline before and after.
   (3) **The completed message is still never shown.** `applyComplete` stores the pipeline's
   message (or "Storefront published successfully!") but the published screen always says
   "Storefront Published". The mutation ledger carried this as an OPEN product call; that row

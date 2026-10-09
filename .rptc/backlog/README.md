@@ -186,7 +186,7 @@ each item's own file; what has already landed against an item is in its
 
 <!-- BEGIN GENERATED registry -->
 
-### ai  (40)
+### ai  (41)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -230,6 +230,7 @@ each item's own file; what has already landed against an item is in its
 | `AI-11` | feature | [Create project cannot set store scope for an added demo](2026-09-30-create-project-cannot-set-store-scope-for-an-added-demo.md) | — | med | built |
 | `AI-12` | feature | [Demo Builder works with GitHub Copilot, and with Claude Code while it lasts](2026-09-16-copilot-first-agent-support.md) | — | high | active |
 | `AI-13` | fix | [The AI tools install and run on whatever Node is first on the PATH](2026-10-07-ai-tools-wrong-node.md) | — | med | built |
+| `EDS-33` | fix | [A storefront teardown leaves its pages live when the DA.live content is already gone](2026-10-09-teardown-unpublish-lists-from-deleted-content.md) | — | high | backlog |
 
 ### eds  (40)
 
@@ -638,7 +639,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — built
 
-*238 item(s) sit outside the A–G chain.*
+*239 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

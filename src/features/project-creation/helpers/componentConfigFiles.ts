@@ -5,6 +5,10 @@
  * declarations gets each file it names — `.env` format through the shared `.env`
  * writer, the EDS `config.json` through the canonical EDS config generator, and
  * json files built from the component's env vars.
+ *
+ * FULLY GENERATED (owner, 2026-10-09): this file rewrites the component's config on every
+ * write, a hand edit included. Its values are changed on Configure, not in the file; ADR-013
+ * records why hash-and-skip does not apply here.
  */
 
 import { promises as fsPromises } from 'fs';
