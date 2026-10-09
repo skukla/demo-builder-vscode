@@ -15676,6 +15676,18 @@
             "decision": "none \u2014 the only observable difference is which log line prints, and asserting logger arguments is banned (no-logger-wording-assertions)",
             "recorded": "2026-10-09",
             "source": "EDS-8 adobeConsoleProjectOps cut"
+        },
+        {
+            "module": "src/features/dashboard/ui/components/ActionGrid.tsx",
+            "anchors": [
+                "const lifecycleDot = LIFECYCLE_DOT[demoStatus?.color ?? 'green'];"
+            ],
+            "mutants": 1,
+            "category": "string",
+            "reason": "Stryker empties the `'green'` fallback to `''`. Both keys are absent from LIFECYCLE_DOT, which holds only blue and red, so the lookup answers undefined either way and the Start/Stop tile wears no dot. The fallback names the steady state for a reader; no input can tell the two apart.",
+            "decision": "none \u2014 the default documents the steady state and is correct as written",
+            "recorded": "2026-10-09",
+            "source": "EDS-8 ActionGrid split (BuildZone out)"
         }
     ]
 }

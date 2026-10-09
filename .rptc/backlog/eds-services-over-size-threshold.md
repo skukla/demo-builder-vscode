@@ -935,6 +935,15 @@ date and what happened; a failure becomes its own `fix` item.
       without confirm lists the same pending items, and with confirm applies them. Finding
       what is waiting now lives in `updateSelections.ts`; the apply loop stayed in
       `updateApplyService.ts`, and rollback is unchanged in `componentUpdater.ts`.
+- [ ] **The dashboard's action tiles after the ActionGrid split** (2026-10-09): open the
+      Project Dashboard of an EDS project and of a headless (non-EDS) one. Every tile shows
+      where it did (Open cards; Storefront row on EDS only; Build: Edit, Configure,
+      Datapacks when the Data Installer is set up, AEM Assets, then Reset and red Delete set
+      apart; Share), looks as before, and opens what it opened before. On the headless one,
+      start the demo: Edit greys out with "Stop the demo to change what it contains". The
+      Build zone now lives in `BuildZone.tsx`; the resting style fingerprint of the
+      dashboard harness (a non-EDS fixture) was identical before and after, but the harness
+      has no EDS fixture and presses nothing.
 
 ## Shipped so far
 

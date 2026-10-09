@@ -44,7 +44,7 @@ run() {
 echo "=== over the limit for its kind ==="
 run "$ROOT/src/features/eds/services/edsPipeline.ts"                         "the EDS pipeline, a service over 400 lines"  god-file
 run "$ROOT/src/features/prerequisites/handlers/installHandler.ts"       "714-line handler (>500)"   god-file
-run "$ROOT/src/features/dashboard/ui/components/ActionGrid.tsx"             "660-line component (>350)" god-file
+run "$ROOT/src/features/project-creation/ui/steps/IntegrationsStep.tsx"     "a component over 350 lines" god-file
 
 echo
 echo "=== under the limit: silent ==="

@@ -8,9 +8,8 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts",
-        "src/features/eds/handlers/daLive/daLiveAuthGuard.ts",
-        "src/features/eds/services/daLive/daLiveTokenValidation.ts"
+        "src/features/dashboard/ui/components/ActionGrid.tsx",
+        "src/features/dashboard/ui/components/BuildZone.tsx"
     ],
     "reporters": [
         "clear-text",
