@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: med
-status: backlog
+status: built
 ---
 
 # Preview what every ERP will own before "Add another ERP"
@@ -40,3 +40,7 @@ and the dialog's text was cramped and worded as riddles ("Yes: attribute. No: we
 
 The dialog was not rendered in a real webview; the visual baseline captures surfaces at load
 and cannot open this modal. Tests run it over the shared Spectrum mock.
+
+## Shipped so far
+
+- 2026-10-09  feat(erp): preview what every ERP will own before Add another ERP (`f9f690f94`)

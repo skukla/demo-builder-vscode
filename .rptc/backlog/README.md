@@ -404,7 +404,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-71` | fix | [An update whose deploy failed then says "already up to date"](2026-10-09-update-after-failed-deploy-says-up-to-date.md) | — | med | built |
 | `AB-72` | fix | [ERP ownership: the ERP on "everything" is the catch-all](2026-10-09-erp-ownership-all-is-the-catch-all.md) | — | high | built |
 | `AB-74` | feature | [Assign products to an ERP, and put erp_owner in every attribute set](2026-10-09-erp-assign-products.md) | — | high | built |
-| `AB-75` | feature | [Preview what every ERP will own before "Add another ERP"](2026-10-09-erp-add-preview.md) | — | med | backlog |
+| `AB-75` | feature | [Preview what every ERP will own before "Add another ERP"](2026-10-09-erp-add-preview.md) | — | med | built |
 | `PL-24` | feature | [Component updates cannot follow an environment-variable rename](2026-08-30-env-var-rename-migration.md) | — | med | built |
 
 ### data-installer  (4)
