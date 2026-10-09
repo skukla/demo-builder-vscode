@@ -272,15 +272,29 @@
         {
             "module": "src/features/authentication/services/adobeWorkspaceCredentials.ts",
             "anchors": [
-                "'[Entity Fetcher] Cannot fetch credentials: missing org/project/workspace ID',",
-                "'[Entity Fetcher] Cannot create credential: missing org/project/workspace ID',"
+                "const orgId = this.cacheManager.getCachedOrganization()?.id;",
+                "const projectId = this.cacheManager.getCachedProject()?.id;",
+                "const workspaceId = this.cacheManager.getCachedWorkspace()?.id;"
             ],
-            "mutants": 6,
+            "mutants": 3,
             "category": "optionalChain",
-            "reason": "getWorkspaceCredential and createWorkspaceCredential wrap their whole body in a try/catch that logs and returns undefined, and the guards inside answer undefined too. The three cache reads above each of these guards (`cachedOrg?.id`, `cachedProject?.id`, `cachedWorkspace?.id`) are typed optional, so the `?.` is required; dropping it throws on an empty cache, the catch swallows the throw, and the caller sees the same undefined the guard would have returned. The only difference is a debug line versus an error line. The two guard messages are the anchors because the three read lines are identical in both methods.",
+            "reason": "The three cache reads now live once, in resolveCachedTarget (PL-69 pair 34 folded the copies getWorkspaceCredential and createWorkspaceCredential each carried; this entry was 6 mutants over the two copies). The reads are typed optional, so the `?.` is required; dropping it throws on an empty cache, and both callers wrap the whole call in a try/catch that logs and returns undefined, which is what the guard on the next line would have returned. The only difference is a debug line versus an error line. Re-anchored 2026-10-09 to the helper's three read lines, each of which now appears exactly once.",
             "decision": "none \u2014 the `?.` is required by the type and correct as written",
-            "recorded": "2026-09-03",
+            "recorded": "2026-10-09 (first recorded 2026-09-03)",
             "source": "reports/mutation/focus.json run of 2026-09-03 (adobeWorkspaceCredentials)"
+        },
+        {
+            "module": "src/features/authentication/services/adobeWorkspaceCredentials.ts",
+            "anchors": [
+                "const target = this.resolveCachedTarget('fetch');",
+                "const target = this.resolveCachedTarget('create');"
+            ],
+            "mutants": 4,
+            "category": "branch",
+            "reason": "The guard under each anchor (`if (!target) { return undefined; }`) is what getWorkspaceCredential and createWorkspaceCredential do when the cached org, project or workspace is missing or the SDK is not up. Forcing it false, or emptying its body, reaches the destructuring on the next line with `target` undefined, which throws; the enclosing try/catch swallows the throw and returns undefined, which is what the guard returned. Before the lookup was shared (PL-69 pair 34) the same mutants were killed, because the inline guard's failure mode was an SDK call with undefined ids that the suites assert never happens; the destructure now throws before any call can be made. Only the log level differs, debug under the guard versus error in the catch.",
+            "decision": "none \u2014 the guard is the typed early return the helper's undefined demands; the try/catch makes its failure mode indistinguishable from its success mode",
+            "recorded": "2026-10-09",
+            "source": "reports/mutation/focus.json run of 2026-10-09 (PL-69 sitting 6)"
         },
         {
             "module": "src/features/authentication/services/adobeWorkspaceCredentials.ts",
@@ -367,19 +381,6 @@
             "category": "branch",
             "reason": "handleGetProjects reads `context.authManager` through `?.` four times and then throws 'Auth manager not available' when the fetch promise is missing. All of it sits inside the try whose catch maps every non-timeout, non-org, non-AUTH_EXPIRED failure to the one generic user message and the one generic error code. Dropping any `?.`, or forcing the guard, turns the missing auth manager into a TypeError that lands in the same catch with the same user-facing result: same `success:false`, same message, same code, same `get-projects` push. Only the error object handed to the logger differs, and asserting that is asserting a log string. Forcing this guard false, or emptying it, awaits an undefined promise and fails one line later in `stampProjectsDeletable`, inside the same catch.",
             "decision": "none \u2014 the explicit throw names the wiring gap in the debug log, which is the only place it can be seen",
-            "recorded": "2026-09-03",
-            "source": "reports/mutation/focus.json run of 2026-09-03 (projectHandlers)"
-        },
-        {
-            "module": "src/features/authentication/handlers/projectHandlers.ts",
-            "anchors": [
-                "const name = (payload?.name ?? '').trim();",
-                "const description = payload?.description ?? '';"
-            ],
-            "mutants": 2,
-            "category": "optionalChain",
-            "reason": "`payload` is declared required, so no typed call can omit it; the `?.` guards a malformed webview message at the dispatch boundary (`requireAdobeAuth('create-adobe-project', \u2026)`), which the handler's own signature says cannot happen. Killing either means calling the handler with `undefined as never`, a cast at the call boundary that this repo treats as a silenced type error. Same shape as the installHandler row.",
-            "decision": "none \u2014 a boundary guard on an untyped message is correct even when the typed signature cannot exercise it",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (projectHandlers)"
         },

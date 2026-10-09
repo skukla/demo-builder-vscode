@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "PL-69 sitting 5, 2026-10-09 (prerequisites). Three rows re-measured against the committed file first and then against the change. PrerequisitesManager.ts: row 82.74 was stale (committed file 82.89), now 83.77 with the same 18 behavioural survivors; the success tail both check paths carried is one recordCheckComplete. checkHandler.ts: row 80.59 reproduced exactly, now 79.93 and NOT a gap: the survivors after are the same 57 as before minus the two ledgered ones that moved out with the extracted code, and 18 killed mutants moved with it to perNodeVersionStatus.ts, so the ratio fell while nothing lost a test. continueHandler.ts: row 90.82 was stale (committed file 92.91), now 92.68 for the same reason (one ledgered survivor and 17 killed mutants moved out; no new survivor). perNodeVersionStatus.ts gets NO row: its only mirrored suite is the new perNodeVersionStatus-resolve.test.ts (22 killed, 0 survived on the shared resolver), while checkPerNodeVersionStatus is tested by shared-per-node-status.test.ts, which the mirror cannot see, so a row would pin 65 uncovered mutants as a 25 percent floor that is not the truth. The projects-dashboard/handlers/dashboardHandlers.ts row is deleted: since the EDS-8 split that file is a 42-line re-export barrel and nothing in it can reproduce 88.56 percent (387 killed); the row was a ghost that sitting 4 found and left for a baseline decision.",
+    "_note": "PL-69 sitting 6, 2026-10-09 (authentication). Three rows re-measured against the committed file first and then against the change. projectHandlers.ts: row 83.64 was stale (committed file 86.19), now 87.01: four survivors and one uncovered string moved out with the shared create pre-flight (gateConsoleCreate), nothing new survives. workspaceHandlers.ts: row 89.22 was stale (committed file 89.81), now 87.65 and NOT a gap: the survivors are the same ten as the committed file minus the one string that moved out, and 26 killed mutants moved with the extracted code to consoleCreateGate.ts, so the ratio fell while nothing lost a test. adobeWorkspaceCredentials.ts: row 79.27 was stale DOWNWARD (committed file 75.87, 12 uncovered): listCredentialIds had shipped with no test entering it, seven uncovered mutants. Now 78.29: that method has three cases in the s2s suite, the six optional-chain survivors of the duplicated cache lookup are three (one resolveCachedTarget), and the four new branch/block survivors are the if (!target) guards under each caller, ledgered as equivalent because the try/catch swallows the destructure throw into the same undefined. consoleCreateGate.ts is a new row at 100 (41 killed, 0 survived) from its own suite. projectHandlers.ts was then measured once more at 87.66 (135 killed, 15 survived): the honest arithmetic showed one open gap the stale row's equivalent count of 13 (against 9 ledgered mutants at the time) had hidden, the generic-error branch of handleGetProjects never asserting its UNKNOWN code, so a mutant calling every failure a timeout survived; one assertion in projectHandlers-fetch kills it and the row reads openGaps 0.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -3109,37 +3109,37 @@
             "openGaps": 0
         },
         "src/features/authentication/handlers/projectHandlers.ts": {
-            "score": 83.64,
-            "killed": 271,
-            "survived": 45,
-            "noCoverage": 8,
+            "score": 87.66,
+            "killed": 135,
+            "survived": 15,
+            "noCoverage": 4,
             "timeout": 0,
             "survivorCategories": {
-                "string": 13,
-                "optionalChain": 6,
-                "branch": 2,
-                "logPresentation": 21,
-                "block": 3
-            },
-            "uncoveredCategories": {
-                "string": 7,
+                "string": 4,
+                "optionalChain": 4,
+                "branch": 1,
+                "logPresentation": 5,
                 "block": 1
             },
-            "highValueSurvivors": 5,
-            "equivalent": 13,
+            "uncoveredCategories": {
+                "string": 3,
+                "block": 1
+            },
+            "highValueSurvivors": 2,
+            "equivalent": 7,
             "openGaps": 0
         },
         "src/features/authentication/handlers/workspaceHandlers.ts": {
-            "score": 89.22,
-            "killed": 91,
-            "survived": 11,
+            "score": 87.65,
+            "killed": 71,
+            "survived": 10,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
                 "optionalChain": 3,
-                "block": 1,
+                "string": 2,
                 "logPresentation": 4,
-                "string": 3
+                "block": 1
             },
             "uncoveredCategories": {},
             "highValueSurvivors": 1,
@@ -3225,23 +3225,23 @@
             "openGaps": 0
         },
         "src/features/authentication/services/adobeWorkspaceCredentials.ts": {
-            "score": 79.27,
-            "killed": 218,
-            "survived": 52,
+            "score": 78.29,
+            "killed": 220,
+            "survived": 56,
             "noCoverage": 5,
             "timeout": 0,
             "survivorCategories": {
-                "logPresentation": 34,
-                "optionalChain": 10,
-                "block": 3,
-                "branch": 2,
-                "string": 3
+                "logPresentation": 32,
+                "optionalChain": 7,
+                "string": 8,
+                "block": 5,
+                "branch": 4
             },
             "uncoveredCategories": {
                 "logPresentation": 5
             },
-            "highValueSurvivors": 5,
-            "equivalent": 15,
+            "highValueSurvivors": 9,
+            "equivalent": 16,
             "openGaps": 0
         },
         "src/features/authentication/services/apiAccessCatalog.ts": {
@@ -10727,6 +10727,18 @@
             "survived": 0,
             "noCoverage": 0,
             "timeout": 1,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/authentication/handlers/consoleCreateGate.ts": {
+            "score": 100,
+            "killed": 41,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
             "survivorCategories": {},
             "uncoveredCategories": {},
             "highValueSurvivors": 0,

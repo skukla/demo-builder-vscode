@@ -56,9 +56,9 @@ excluded by the scan's ignore flag and are not among the 40.
 | 30 | dashboard/commands/configure.ts:147-160 | project-creation/commands/createProject.ts:231-244 | getWebviewContent bundle HTML | EXTRACT | `StandalonePanelCommand` already does this with a `bundleName` |
 | 31 | dashboard/commands/configure.ts:853-873 | showProjectsList.ts:208-219 | createHandlerContext | EXTRACT | same as 27 |
 | 32 | components/handlers/componentHandlers.ts:143-155 | same file:102-114 | frontend/backend payload check | EXTRACT | identical guard in two handlers; `readStackPayload(payload)` |
-| 33 | authentication/services/types.ts:80-95 | same file:65-80 | identical interface body | EXTRACT | `AdobeContext` and `AdobeConsoleWhereResponse` have identical bodies; alias one |
-| 34 | authentication/services/adobeWorkspaceCredentials.ts:212-228 | same file:97-113 | resolve org/project/workspace ids | EXTRACT | same lookup in get and create; private `resolveWorkspaceIds()` |
-| 35 | authentication/handlers/projectHandlers.ts:266-285 | authentication/handlers/workspaceHandlers.ts:143-162 | auth guard, permission re-check | EXTRACT | same policy, only the noun differs; `checkCreatePermission(context, noun)`; the refresh after it differs on purpose and stays |
+| 33 | authentication/services/types.ts:80-95 | same file:65-80 | identical interface body | DONE 2026-10-09 (sitting 6) | `AdobeConsoleWhereResponse` is now a type alias of `AdobeContext` |
+| 34 | authentication/services/adobeWorkspaceCredentials.ts:212-228 | same file:97-113 | resolve org/project/workspace ids | DONE 2026-10-09 (sitting 6) | same lookup in get and create; now private `resolveCachedTarget(purpose)` |
+| 35 | authentication/handlers/projectHandlers.ts:266-285 | authentication/handlers/workspaceHandlers.ts:143-162 | auth guard, permission re-check | DONE 2026-10-09 (sitting 6) | same policy, only the noun differs; now `gateConsoleCreate(context, payload, noun)` in consoleCreateGate.ts; the refresh after it differs on purpose and stays |
 | 36 | app-builder/services/appManagementInstaller.ts:307-320 | app-builder/services/appManagementUninstaller.ts:147-159 | resolve target, appData, auth | EXTRACT | identical tail; `prepareAppManagementCall(...)` returning inputs or an error string |
 | 37 | core/utils/progressUnifier/timedProgress.ts:169-179 | same file:66-76 | "Complete" progress payload | EXTRACT | same determinate payload, detail text differs |
 | 38 | progressUnifier/exactProgress.ts:71-86 | progressUnifier/timedProgress.ts:137-152 | determinate progress payload | EXTRACT | same shape |
@@ -74,7 +74,7 @@ excluded by the scan's ignore flag and are not among the 40.
 | 3. Webview command base (`createHandlerContext` and the bundle-HTML method into `BaseWebviewCommand`, modelled on `StandalonePanelCommand`) | 27, 28, 29, 30, 31 | 24 |
 | 4. Projects-dashboard handlers | 15, 16, 17 | 21 |
 | 5. Prerequisites | 19, 20 | 19 (landed at 18: sitting 4 had already reached 20) |
-| 6. Authentication | 33, 34, 35 | 16 |
+| 6. Authentication | 33, 34, 35 | 16 (landed at 15: sitting 5 had already reached 18) |
 | 7. UI (field update logic, TextField props) | 11, 12, 13 | 13 |
 | 8. Small handlers (updates, console API, component payload) | 14, 26, 32 | 10 |
 | 9. Cross-feature | 18, 22 | 8 |
@@ -205,6 +205,48 @@ the number lives here. Three mutation-ledger entries deleted as stale (their cod
 into the resolver, and the new suite pins both early returns), two re-anchored.
 cloneCeiling 20 -> 18.
 
+**Sitting 6 (pairs 33 to 35) DONE 2026-10-09.** Re-scanned first: 18 clones, the three
+authentication fragments where the table said (lines had barely moved). The ensureSDKReady
+fold from the adobeConsoleProjectOps sitting was confirmed in place first: one exported
+function, zero private copies. All three pairs were real:
+
+- **33** (`types.ts`): `AdobeContext` and `AdobeConsoleWhereResponse` had the same body.
+  The where-response is the parsed `aio console where` answer and the context is what the
+  resolver builds; same three selections, same shapes. `AdobeConsoleWhereResponse` is now a
+  type alias of `AdobeContext`. The header comment that said these entity types live in
+  `src/core/ui/types/index.ts` named a file that does not exist; it now names `src/types/webview.ts`.
+- **34** (`adobeWorkspaceCredentials.ts`): `getWorkspaceCredential` and
+  `createWorkspaceCredential` opened with the same lookup (the three cached ids, then the
+  SDK-up check), differing only in the two debug lines. Now one private
+  `resolveCachedTarget(purpose)`; the four log lines keep their exact text.
+- **35** (`projectHandlers.ts`, `workspaceHandlers.ts`): the create handlers refused the
+  same three ways (no auth service, no developer permission with `AUTH_FORBIDDEN`, empty
+  name) and only the noun in the copy differed. Now `gateConsoleCreate(context, payload, noun)`
+  in `handlers/consoleCreateGate.ts` (own suite, 12 cases, probe argument asserted). Two
+  things moved inside each handler's try on purpose: the no-auth-service refusal and the
+  name trim, neither of which can throw. The post-create refresh differs on purpose and stays.
+
+Proof: the 109 pre-existing authentication suites (1,512 tests) ran unchanged before and
+after; 1,527 with the new cases (12 for the gate, 3 for the credential read). cloneCeiling 18 -> 15.
+
+Found by the re-measure, fixed here: `listCredentialIds` (the read the subscribe shortcut
+asks for) had shipped with no test entering it, seven uncovered mutants. It now has three
+cases in the s2s suite, and its `?? []` fallback became an `Array.isArray` guard so no
+equivalent mutant needed recording. And `handleGetProjects` never asserted the UNKNOWN code
+on a generic failure, so a mutant that calls every failure a timeout survived; one
+assertion in `projectHandlers-fetch` kills it.
+
+Mutation: all three rows re-measured against the committed file first; all three were
+stale, credentials DOWNWARD (row 79.27, committed 75.87, because of the untested read).
+Now: projectHandlers 87.66 (openGaps 0), workspaceHandlers 87.65 (same ten survivors as
+the committed file minus one moved string; 26 killed mutants moved out with the gate, so
+the ratio fell while nothing lost a test), adobeWorkspaceCredentials 78.29 (the six
+optional-chain survivors of the duplicated lookup are three; the four `if (!target)` guard
+mutants are ledgered as equivalent, the try/catch swallows the destructure throw into the
+same undefined), consoleCreateGate 100 (41 killed, 0 survived). Ledger: entry for the
+cache reads re-anchored to the helper, the projectHandlers name/description entry deleted
+(those mutants are killed in the gate), one entry added.
+
 ## Below the scan's threshold, found by reading (2026-10-08)
 
 The same five-line `ensureSDKReady` method is copied into four authentication files:
@@ -253,3 +295,5 @@ in favour of the EDS-34 version, and lower the pin. That also turns the floor of
 - 2026-10-09  The ghost baseline row for projects-dashboard/handlers/dashboardHandlers.ts (88.56%, measured before EDS-8 made the file a 42-line barrel) is deleted, with the reason in the baseline note.
 - 2026-10-09  For the owner (sitting 5): `perNodeVersionStatus.ts` has no baseline row on purpose. Its real suite is `shared-per-node-status.test.ts`, named for the `shared` barrel it was split from, so the mirror rule measures the file with only the new resolver suite (25%, 65 uncovered). Same shape as the dashboardHandlers-* family in sitting 4. If the owner wants the file on the ratchet, the fix is renaming that suite to `perNodeVersionStatus-check.test.ts` (one file, no test edits), which this sitting did not do because it changes a test-family ledger entry.
 - 2026-10-09  refactor(prerequisites): one success tail per check, one per-Node variant decision (`8bac13dbe`)
+- 2026-10-09  Sitting 6 (authentication), pairs 33 to 35 extracted: `AdobeConsoleWhereResponse` is a type alias of `AdobeContext`; `resolveCachedTarget(purpose)` in adobeWorkspaceCredentials; `gateConsoleCreate(context, payload, noun)` in handlers/consoleCreateGate.ts (own suite, 100% mutation). ensureSDKReady confirmed already one function. 109 pre-existing authentication suites (1,512 tests) unchanged and green. Also fixed on the way: `listCredentialIds` had no test (three cases now), and the generic-error code in handleGetProjects was never asserted (one assertion). Four baseline rows re-measured and written. cloneCeiling 18 -> 15.
+- 2026-10-09  For the owner (sitting 6): the focused mutation run on projectHandlers and workspaceHandlers kills a Stryker worker eight times per run (`ChildProcessCrashedError`) and scores two mutants per file as RuntimeError, which the score ignores. Cause, read from the crash text: the suites stage `getProjects` / `getWorkspaces` with `mockRejectedValue`, and a mutant that throws before the handler awaits that promise leaves the rejection unhandled, which kills the worker. Pre-existing (the rows from 2026-09-03 carry the same two), not from this sitting, and the fix is test-side: create the rejected promise in the test, attach a no-op catch, and hand it over with `mockReturnValue`. Not done here because it is a harness change to suites this sitting did not otherwise touch.

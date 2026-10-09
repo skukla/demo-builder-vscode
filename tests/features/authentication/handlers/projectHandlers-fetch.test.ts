@@ -150,6 +150,12 @@ describe('projectHandlers - Fetch', () => {
 
             expect(result.success).toBe(false);
             expect(result.error).toBe('Failed to load projects. Please try again.');
+            // UNKNOWN, not TIMEOUT: only a timeout classifies as one (the mutant that
+            // calls every failure a timeout survived until this line).
+            expect(mockContext.sendMessage).toHaveBeenCalledWith('get-projects', {
+                error: 'Failed to load projects. Please try again.',
+                code: 'UNKNOWN',
+            });
             expect(mockContext.logger.error).toHaveBeenCalledWith(
                 'Failed to get projects:',
                 error
