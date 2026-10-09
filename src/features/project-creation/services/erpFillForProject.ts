@@ -14,6 +14,7 @@
  */
 
 import { mapAfterFill } from './erpMappingAfterFill';
+import { otherErpNames, readErpRules } from './erpRules';
 import {
     requestRest,
     resolveRestTargetFor,
@@ -286,6 +287,9 @@ export async function fillErpForProject(
         get: commerceGet(rest, fetchImpl),
         post: commercePost(rest, fetchImpl),
         settings: (codes) => integrationClient.resolvedSettings(codes, target.listId),
+        listId: target.listId,
+        // The other ERPs' rules (AB-72): what this ERP owns is decided across every rule.
+        otherErps: () => readErpRules(integrationClient, otherErpNames(project, integrationId, target.listId)),
         importRecords: erpImport(erp.deployedUrls, auth, fetchImpl),
         saveKeyMap: async (entries) => {
             if (!integrationClient.keepsKeyMap()) return false;

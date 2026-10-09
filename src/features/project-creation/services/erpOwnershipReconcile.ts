@@ -10,7 +10,12 @@
  * owns are marked discontinued there (a real ERP discontinues, it does not delete). When a
  * removal leaves one ERP, its rule goes back to everything first, so a single-ERP project
  * looks as it did before the second ERP was added. What the SC still has to do is said in
- * words: an ERP that owns nothing, and how many products belong to no ERP.
+ * words: an ERP that owns nothing, how many products belong to no ERP, and how many two
+ * rules both claim (the integration refuses their orders until one rule changes).
+ *
+ * Who owns what is decided across every ERP's rule, by the integration's precedence
+ * (`ownersAcross`, AB-72): a product rule first, then the ERP on everything for what nobody
+ * claimed, then website rules. An ERP's rule alone says what it matches, not what it owns.
  *
  * Why: on 2026-10-09 adding a second ERP by attribute gave it zero products, and the first
  * ERP was told its products would "change at its next load", which a load cannot do.
@@ -22,12 +27,12 @@ import { fillEveryErp, type ErpFillForProjectDeps, type ErpFillOutcomes } from '
 import { readErpOwnershipOptionsForProject, saveErpOwnership } from './erpOwnershipSync';
 import { ErpIntegrationClient } from '@/features/app-builder/services/erpIntegrationClient';
 import { erpListIdOf } from '@/features/app-builder/services/erpList';
-import { describeOwns, ownedSkus } from '@/features/app-builder/services/erpOwnership';
+import { describeOwns, overlapsIn, ownersAcross } from '@/features/app-builder/services/erpOwnership';
 import { DISCONTINUED, SELLABLE, listErpProducts, setErpProductStatus } from '@/features/app-builder/services/erpProducts';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { systemsUsedBy } from '@/features/components/services/appBuilderComponentLinks';
 import type { Project } from '@/types/base';
-import type { ErpOwnedProductRow, ErpOwnershipOptions, ErpOwnsRule } from '@/types/erpOwnership';
+import type { ErpOwnershipOptions, ErpOwnsEntry, ErpOwnsRule } from '@/types/erpOwnership';
 
 /** What changed before the pass runs; a removal is the one moment a rule is widened. */
 export type OwnershipMoment = 'add' | 'remove' | 'settings' | 'load';
@@ -193,10 +198,44 @@ async function reconcileStatuses(
     return done;
 }
 
-/** How many Commerce products no row's rule owns. */
-function unownedCount(products: readonly ErpOwnedProductRow[], rows: readonly ErpRow[]): number {
-    const owned = new Set(rows.flatMap((row) => [...ownedSkus(products, row.owns)]));
-    return products.filter((product) => !owned.has(product.sku)).length;
+/**
+ * Every listed ERP's rule as the pass applies it: the integration's list (an ERP listed there
+ * claims products whether or not this project has its component), with the rule the pass
+ * widened where it did.
+ */
+function rulesOf(options: ErpOwnershipOptions, rows: readonly ErpRow[]): ErpOwnsEntry[] {
+    return options.erps.map((entry) => ({
+        erp: entry.erp,
+        owns: rows.find((row) => row.listId === entry.erp)?.owns ?? entry.owns,
+    }));
+}
+
+/** The SKUs one ERP owns, read off what `ownersAcross` answered. */
+function ownedBy(owners: ReadonlyMap<string, readonly string[]>, listId: string): Set<string> {
+    const owned = new Set<string>();
+    for (const [sku, claimed] of owners) if (claimed.includes(listId)) owned.add(sku);
+    return owned;
+}
+
+/** The ERPs in words: "both X and Y", or "X, Y and Z". */
+function namesOf(listIds: readonly string[], options: ErpOwnershipOptions): string {
+    const names = listIds.map((listId) => options.erps.find((entry) => entry.erp === listId)?.name ?? listId);
+    if (names.length === 2) return `both ${names[0]} and ${names[1]}`;
+    return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
+
+/**
+ * The products two rules both claim, said by count and by the ERPs' names: the integration
+ * refuses an order line claimed by two ERPs, so the SC has to change one rule.
+ */
+function overlapNotes(owners: ReadonlyMap<string, readonly string[]>, options: ErpOwnershipOptions): string[] {
+    return overlapsIn(owners).map(({ erps, count }) => {
+        const one = count === 1;
+        return (
+            `${count} product${one ? ' is' : 's are'} claimed by ${namesOf(erps, options)}; ` +
+            `orders for ${one ? 'it' : 'them'} are refused until one rule changes.`
+        );
+    });
 }
 
 /**
@@ -261,12 +300,13 @@ export async function applyErpOwnership(
         if (dead) notes.push(dead);
     }
     const fills = await fillEveryErp(project, integrationId, deps);
+    const owners = ownersAcross(options.products, rulesOf(options, rows));
     const erps: OwnershipErpReport[] = [];
     for (const row of rows) {
-        const owned = ownedSkus(options.products, row.owns);
+        const owned = ownedBy(owners, row.listId);
         const onProgress = (step: string) => deps.onProgress?.(rows.length > 1 ? `${row.name}: ${step}` : step);
         const marked = await reconcileStatuses(row, owned, { ...deps, onProgress }, project);
-        // An ERP owning everything in an empty store is not an action item; a rule that matches nothing is.
+        // The catch-all owning nothing (an empty store, or every product claimed) is not an action item; a rule that matches nothing is.
         if (owned.size === 0 && row.owns.mode !== 'all') notes.push(ownsNothingNote(row));
         if (marked.note) notes.push(marked.note);
         if (marked.restored > 0) {
@@ -280,9 +320,10 @@ export async function applyErpOwnership(
             ...(marked.note ? { note: marked.note } : {}),
         });
     }
-    const unowned = unownedCount(options.products, rows);
-    if (unowned > 0 && rows.some((row) => row.owns.mode !== 'all')) {
+    const unowned = [...owners.values()].filter((claimed) => claimed.length === 0).length;
+    if (unowned > 0) {
         notes.push(`${unowned} product${unowned === 1 ? '' : 's'} belong${unowned === 1 ? 's' : ''} to no ERP.`);
     }
+    notes.push(...overlapNotes(owners, options));
     return { status: 'applied', erps, fills, unowned, notes };
 }

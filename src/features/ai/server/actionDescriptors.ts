@@ -571,12 +571,15 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             "added to the integration's ERP list, given a rule for which products it owns, and " +
             'filled from Commerce. `owns` picks the rule: attribute (erp_owner=<its list id>, or any ' +
             'code=value; the default when omitted) or websites (the products sold on named website ' +
-            'codes). Once there are two ERPs each owns only what its rule says, so an existing ERP ' +
-            'still owning everything is given a rule too (the websites left over when the new ERP ' +
-            'is split by website, else its own attribute), saved with the new one. Then ownership is ' +
+            'codes). Ownership is by product rule first: an ERP on "everything" is the catch-all and ' +
+            'keeps every product no other ERP claims by attribute, so adding by attribute changes no ' +
+            "other rule and untagged products stay with it. Only a website rule narrows an ERP on " +
+            'everything, to the websites left over (a catch-all comes before a website rule), saved ' +
+            'with the new one. Then ownership is ' +
             'applied across every ERP: each is filled with what it now owns, products an ERP no ' +
             'longer owns are marked discontinued there, and data.warning names what the user still ' +
-            'has to do (tag products with erp_owner in Commerce when an ERP owns none yet). The ' +
+            'has to do (tag products with erp_owner in Commerce when an ERP owns none yet; change a ' +
+            'rule when two claim the same products, whose orders are refused). The ' +
             'answer says the rule applied ' +
             '(data.owns, data.existingOwns, each with the rule in words) and which website mappings ' +
             'its fill filled and kept (data.mapping). A new ERP whose starting colour is another ' +

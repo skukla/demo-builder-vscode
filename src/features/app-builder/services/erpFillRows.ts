@@ -13,7 +13,7 @@
  * @module features/app-builder/services/erpFillRows
  */
 
-import type { ErpOwnsMode } from '@/types/erpOwnership';
+import type { ErpOwnedProductRow, ErpOwnsMode } from '@/types/erpOwnership';
 
 /** One Commerce product as the fill reads it. */
 export interface CommerceProductRow {
@@ -32,21 +32,29 @@ export interface CommerceProductRow {
 }
 
 /**
- * The product as the ownership filter reads it: its website codes (ids mapped through the
- * store's websites; an id the store does not list is dropped), its source codes, its
- * attributes. One shape for the fill and for the "Add another ERP" counts, so both answer
- * the same ownership question (AB-64).
+ * The product as the ownership resolver reads it (`ownersAcross`): its SKU, its website codes
+ * (ids mapped through the store's websites; an id the store does not list is dropped), and
+ * its attributes as strings — every one, or only `keep` when the caller names them (the
+ * dialog's rows cross to the webview, so they carry only the codes the rules read). One shape
+ * for the fill and for the "Add another ERP" counts, so both answer the same question (AB-64).
  */
-export function ownedProductOf(
-    product: Pick<CommerceProductRow, 'websiteIds' | 'customAttributes'>,
+export function ownedRowOf(
+    product: Pick<CommerceProductRow, 'sku' | 'websiteIds' | 'customAttributes'>,
     websiteCodeById: ReadonlyMap<number, string>,
-): Required<OwnedProduct> {
+    keep?: readonly string[],
+): ErpOwnedProductRow {
+    const attributes: Record<string, string> = {};
+    for (const code of keep ?? Object.keys(product.customAttributes)) {
+        const value = product.customAttributes[code];
+        if (value !== undefined && value !== null && value !== '') attributes[code] = String(value);
+    }
     return {
-        customAttributes: product.customAttributes,
+        sku: product.sku,
         websiteCodes: product.websiteIds.flatMap((id) => {
             const code = websiteCodeById.get(id);
             return code ? [code] : [];
         }),
+        attributes,
     };
 }
 

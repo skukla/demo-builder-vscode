@@ -25,7 +25,7 @@ export interface ErpOwnsRule {
     attribute?: string;
 }
 
-/** An existing ERP's rule, to show beside the new one's and to change when it still owns everything. */
+/** One ERP's rule by its list id: as read beside the new one's, and as saved when the add narrows it (AB-72). */
 export interface ErpOwnsEntry {
     /** The ERP's id in the integration's list (`erp_owner` takes this value). */
     erp: string;

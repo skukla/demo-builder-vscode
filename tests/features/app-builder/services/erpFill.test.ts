@@ -18,6 +18,7 @@ import {
     type ResolvedErpSettings,
 } from '@/features/app-builder/services/erpFill';
 import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
+import type { ErpOwnsEntry } from '@/types/erpOwnership';
 
 const FIXTURES = path.join(__dirname, '../../../fixtures/commerce-rest');
 
@@ -56,6 +57,8 @@ function deps(settings: ResolvedErpSettings = ALL) {
         sent,
         get: commerce(),
         settings: jest.fn(async () => settings),
+        listId: 'erp',
+        otherErps: jest.fn(async (): Promise<ErpOwnsEntry[]> => []),
         importRecords: jest.fn(async (body: ErpImportBody) => {
             sent.push(body);
         }),
@@ -144,6 +147,23 @@ describe('fillErp', () => {
         expect(result).toStrictEqual({ partners: 4, products: 0, skipped: 2, owns: 'products whose erp_owner is east', paired: 4 });
         // An empty catalogue still sends one products import: it stamps the ERP's last import.
         expect(d.sent[1]).toStrictEqual({ products: [] });
+    });
+
+    it('an ERP on everything leaves to another ERP what that one\'s product rule claims (AB-72)', async () => {
+        // DigiWristQuantum is made in CN; a second ERP claims it by that attribute, so the catch-all keeps the other product.
+        const d = deps();
+        d.otherErps.mockResolvedValue([{ erp: 'east', owns: { mode: 'attribute', attribute: 'country_of_manufacture=CN' } }]);
+        const result = await fillErp(d, 'bodea');
+        expect(result).toStrictEqual({ partners: 4, products: 1, skipped: 1, owns: 'every product no other ERP claims', paired: 4 });
+        expect(d.sent[1].products?.map((p) => p.sku)).toStrictEqual(['essentials-plan']);
+    });
+
+    it('a website rule yields to a catch-all beside it: it fills nothing until that ERP is narrowed (AB-72)', async () => {
+        const d = deps({ default: { structure_owns: 'websites', structure_owns_websites: 'citisignal' }, websites: {} });
+        d.otherErps.mockResolvedValue([{ erp: 'main', owns: { mode: 'all' } }]);
+        expect(await fillErp(d, 'bodea')).toStrictEqual({
+            partners: 4, products: 0, skipped: 2, owns: 'products sold on citisignal', paired: 4,
+        });
     });
 
     it("fills the products sold on the ERP's websites, read by code off Commerce's website list (AB-64)", async () => {

@@ -244,8 +244,8 @@ export function IntegrationsGrid({
 
     const closeAddErp = useCallback((): void => setAddingErpTo(null), []);
     const addErp = useCallback<AddErpDialogProps['onAdd']>(
-        (name, owns, existingOwns): void => {
-            if (addingErpTo) operations.addErp(addingErpTo.id, name, owns, existingOwns);
+        (name, owns): void => {
+            if (addingErpTo) operations.addErp(addingErpTo.id, name, owns);
             setAddingErpTo(null);
         },
         [addingErpTo, operations],

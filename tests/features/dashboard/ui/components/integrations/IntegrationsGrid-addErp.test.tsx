@@ -75,7 +75,6 @@ describe('IntegrationsGrid — Add another ERP', () => {
             id: 'erp-integration',
             progress: 'modal',
             owns: { mode: 'attribute', attribute: 'erp_owner=brand-b' },
-            existingOwns: [],
         });
     });
 

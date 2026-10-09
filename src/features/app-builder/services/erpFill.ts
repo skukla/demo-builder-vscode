@@ -5,9 +5,10 @@
  * integration does.
  *
  * It reads Commerce with the project's signed client, asks the ERP integration which
- * settings are in force (each website's sales organisation, which products this ERP owns),
- * and writes the ERP through its ordinary import: partners and the structure first, then
- * products in batches, the way the integration's mirror did.
+ * settings are in force (each website's sales organisation, which products this ERP owns —
+ * decided across every ERP's rule, `ownedSkusAcross`, AB-72), and writes the ERP through its
+ * ordinary import: partners and the structure first, then products in batches, the way the
+ * integration's mirror did.
  *
  * @module features/app-builder/services/erpFill
  */
@@ -27,8 +28,7 @@ import {
     type CommerceGet,
 } from './erpFillReaders';
 import {
-    ownedProductOf,
-    ownershipFilter,
+    ownedRowOf,
     partnersFrom,
     productsFrom,
     salesOrgOf,
@@ -40,6 +40,8 @@ import {
     type ErpSettings,
     type ErpStructure,
 } from './erpFillRows';
+import { describeOwnsAcross, ownedSkusAcross, ownsRuleOf } from './erpOwnership';
+import type { ErpOwnsEntry } from '@/types/erpOwnership';
 
 /** The integration's settings in force (`GET erp/settings?websites=`). */
 export interface ResolvedErpSettings {
@@ -71,6 +73,14 @@ export interface ErpFillDeps {
     /** A Commerce POST, for the tier-price read the pricing seed needs; absent → no price lists seeded. */
     post?: CommercePost;
     settings: (websiteCodes: string[]) => Promise<ResolvedErpSettings>;
+    /** The ERP's id in the integration's list, the one its rule is resolved for. */
+    listId: string;
+    /**
+     * The rules of the OTHER ERPs the integration serves (AB-72): which products this ERP
+     * owns is decided across every rule (a product rule first, then the ERP on everything,
+     * then website rules), never by its own rule alone.
+     */
+    otherErps: () => Promise<ErpOwnsEntry[]>;
     /** The ERP's import; throws with the ERP's own words when it refuses. */
     importRecords: (body: ErpImportBody) => Promise<void>;
     /**
@@ -84,9 +94,9 @@ export interface ErpFillDeps {
 export interface ErpFillResult {
     partners: number;
     products: number;
-    /** Products another ERP owns under this one's settings, left out. */
+    /** Products another ERP owns once every rule is applied, left out. */
     skipped: number;
-    /** What this ERP owns, in words, when it does not own everything. */
+    /** What this ERP owns, in words, when something was left out. */
     owns?: string;
     /** Customers in the key map handed to the integration; absent when it keeps none. */
     paired?: number;
@@ -138,9 +148,11 @@ export async function fillErp(deps: ErpFillDeps, projectName: string): Promise<E
     const salesOrgByWebsite = new Map(
         read.websites.map((site) => [site.id, salesOrgOf(settingsByWebsite.get(site.id)).salesOrg]),
     );
-    const filter = ownershipFilter(read.settings.default);
+    const rule = ownsRuleOf(read.settings.default);
     const websiteCodeById = new Map(read.websites.map((site) => [site.id, site.code]));
-    const owned = read.products.filter((p) => filter.owns(ownedProductOf(p, websiteCodeById)));
+    const rows = read.products.map((p) => ownedRowOf(p, websiteCodeById));
+    const ownedSkus = ownedSkusAcross(rows, [...(await deps.otherErps()), { erp: deps.listId, owns: rule }], deps.listId);
+    const owned = read.products.filter((p) => ownedSkus.has(p.sku));
     const partners = partnersFrom(read.companies, read.websites, salesOrgByWebsite);
     const products = productsFrom(owned, read.stock, read.sourceNames, read.attributes);
 
@@ -174,7 +186,7 @@ export async function fillErp(deps: ErpFillDeps, projectName: string): Promise<E
         partners: partners.length,
         products: products.length,
         skipped,
-        ...(skipped > 0 ? { owns: filter.describe } : {}),
+        ...(skipped > 0 ? { owns: describeOwnsAcross(rule) } : {}),
         ...(kept ? { paired: keyMap.length } : {}),
     };
 }

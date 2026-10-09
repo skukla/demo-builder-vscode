@@ -161,8 +161,8 @@
           "id": "erp-attributes",
           "label": "Product attributes",
           "title": "Create the erp_owner and brand product attributes",
-          "why": "Each product goes to the ERP its erp_owner names (the ERP's list id: its name in lower case without the word ERP — Justrite ERP is justrite); brand is what buyers filter on.",
-          "where": "Stores > Attributes > Product > Add New Attribute: erp_owner as a Text Field (a Dropdown sends a number, not the id) and brand; then Stores > Attributes > Attribute Set to add both to the set. Set both on the products you sell.",
+          "why": "A product goes to the ERP its erp_owner names (the ERP's list id: its name in lower case without the word ERP — Accuform ERP is accuform); a product with no erp_owner stays with the ERP that owns everything. brand is what buyers filter on.",
+          "where": "Stores > Attributes > Product > Add New Attribute: erp_owner as a Text Field (a Dropdown sends a number, not the id) and brand; then Stores > Attributes > Attribute Set to add both to the set. Set erp_owner on the products of each additional ERP, and brand on the products you sell.",
           "path": [
             "Stores",
             "Attributes",
@@ -173,7 +173,7 @@
             "erp_owner",
             "brand"
           ],
-          "then": "erp_owner is a Text Field; add both to the attribute set and set them on every product.",
+          "then": "erp_owner is a Text Field; add both to the attribute set. Tag the products of each additional ERP with its id; untagged products stay with the ERP on everything.",
           "check": "erp-attributes-exist"
         },
         {

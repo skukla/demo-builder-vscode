@@ -174,8 +174,9 @@ name that no ERP in the project has, compared without case — made to end in "E
    for it, and deploys it with `ERP_DISPLAY_NAME` = the name and `ERP_ID` = its id;
 2. links it to the integration (`systems` / `usedBy`) and sends the integration the whole
    list (`PUT erp/erps`, `erpListSync.ts`), keeping the settings each ERP already has there;
-3. saves each ERP's ownership rule onto its entry (`PATCH erp/erps`, `erpOwnershipSync.ts`):
-   the new ERP's, and an existing ERP's when it still owned everything;
+3. saves the new ERP's ownership rule onto its entry (`PATCH erp/erps`, `erpOwnershipSync.ts`)
+   and, only when the new ERP is split by website, the narrowing of an existing ERP on
+   everything to the websites left over (below);
 4. applies ownership across every ERP (below): each filled from Commerce with its own
    settings (`GET erp/settings?…&erp=<id>`), its key map rows, each carrying `erpId`, merged
    into the map the integration holds, and what an ERP no longer owns marked discontinued.
@@ -186,8 +187,8 @@ finish is said, and Load demo data on the ERP's card runs it again.
 
 **Which products it owns** (AB-64). The dialog asks one question, "Which products belong to
 this ERP?", with two answers, each showing how many products it would give (counted in the
-dialog from one products read, by the fill's own predicate, `erpOwnership.ts` →
-`ownershipFilter`):
+dialog from one products read, across every ERP's rule, `erpOwnership.ts` →
+`countOwnedAfterAdd` → `ownersAcross`):
 
 | Choice | Saved on the ERP's entry | Owns |
 |---|---|---|
@@ -198,11 +199,26 @@ The hint above the choices is the question that decides: should one order ever b
 between ERPs? Yes → attribute. No → websites. The default (`defaultOwnsRule`) is the attribute
 (owner, 2026-10-09): the rule that tells the "master data decides" story and asks nothing of
 the store's structure. "Stocked in these inventory sources" was deleted the same day (AB-70):
-a product in two named sources was owned by two ERPs and nothing resolved it. Once there are
-two ERPs each owns only what its rule says, so an existing ERP whose rule is still "all" is
-shown the rule it is given (`existingRulesToChange`: the websites left over when the new ERP
-is split by website, else its own attribute) and both are saved together. `add_erp` takes the
-same choice as `owns` and applies the same default without it.
+a product in two named sources was owned by two ERPs and nothing resolved it. `add_erp` takes
+the same choice as `owns` and applies the same default without it.
+
+**Who owns a product, with several ERPs** (owner, 2026-10-09, AB-72). Ownership is by product
+attribute, and one resolver answers it everywhere (`ownersAcross`, mirroring the integration's
+`ownersOfLine`): a product rule first (an ERP whose rule names an attribute owns every product
+carrying it), then the ERP on "everything", then website rules. The ERP on everything is the
+**catch-all**: it keeps every product no other ERP claims by attribute, and never competes
+for a tagged product. So the SC tags products for each ADDITIONAL ERP, and untagged products
+stay with the ERP on everything; adding an ERP by attribute changes no other rule. The one
+narrowing left (`existingRulesToChange`) is for a new ERP split by WEBSITE: a catch-all comes
+before a website rule and would take everything first, so it is given the websites nobody's
+rule names, saved with the new ERP's — the handler reads the store for this itself, so Add in
+the dialog never depends on the dialog's own read (that read is what the 2026-10-09 add
+skipped by clicking early, which left Justrite ERP on everything and an order refused as
+claimed by both). The dialog shows the existing ERPs as they will stand. When two specific
+rules both match a product (two attribute rules on different attributes, or two website rules
+for a product sold on both), both own it and the integration refuses its orders; the pass
+says so by count and name. Until AB-72 the add narrowed the first ERP to its own attribute,
+which would have left every untagged product with nobody (182 of 321 on Justrite).
 
 **Applying ownership** (AB-70, `erpOwnershipReconcile.ts` → `applyErpOwnership`). Any change
 to who owns what is followed by one pass across every ERP the integration serves: after an
@@ -221,10 +237,12 @@ ERP's. The SC never resets by hand to make the ERPs match the rules. Per ERP, in
    that reason (its contract v17). Reset ERPs stays the only wipe.
 
 When a removal leaves ONE ERP, its rule is set back to everything before the fills, so a
-single-ERP project looks as it did before the second ERP was added; several left are told how
-many products belong to no ERP. What the SC still has to do is said in the answer's `warning`
-and on the window: "Kukla ERP owns no products yet: tag products with erp_owner=kukla in
-Commerce, then Load demo data." Tagging products stays the SC's job. Anything that did not go
+single-ERP project looks as it did before the second ERP was added; with no ERP on everything
+left, the pass says how many products belong to no ERP. What the SC still has to do is said in
+the answer's `warning` and on the window: "Kukla ERP owns no products yet: tag products with
+erp_owner=kukla in Commerce, then Load demo data." and "3 products are claimed by both Justrite
+ERP and Accuform ERP; orders for them are refused until one rule changes." Tagging products
+stays the SC's job. Anything that did not go
 right for one ERP is its note and the pass stands; a store or an integration that could not be
 read fails the pass, never the add or the removal, which say so.
 

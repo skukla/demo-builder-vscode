@@ -5,10 +5,13 @@
  * without case, by the same `erpNameProblem` the extension applies again before anything
  * runs, so this check is for the SC's benefit, not the gate.
  *
- * The ownership picker ({@link ErpOwnershipPicker}) opens with a default the store decides
- * (`defaultOwnsRule`), its counts read once from Commerce as the dialog opens. Once there are
- * two ERPs each owns only what its rule says, so an existing ERP that still owns everything is
- * shown the rule it will be given (`existingRulesToChange`), saved together with the new one.
+ * The ownership picker ({@link ErpOwnershipPicker}) opens on the attribute (`defaultOwnsRule`),
+ * its counts read once from Commerce as the dialog opens and counted across every ERP's rule
+ * (`countOwnedAfterAdd`, AB-72): an ERP on everything is the catch-all for what no other rule
+ * claims, so the existing ERPs are shown as they will stand once the new one is added. The
+ * one narrowing the add does — a catch-all beside a new website-rule ERP is given the websites
+ * left over — is previewed here (`existingRulesToChange`) and DONE by the handler from the
+ * store, so Add hands back only the name and the rule and nothing about it waits on the read.
  *
  * The core Modal in a DialogContainer, the same host as {@link ConfirmActionDialog}, with
  * one accent action instead of a negative one: adding is not destructive.
@@ -22,7 +25,9 @@ import { ErpOwnershipPicker, ruleOf, type OwnershipChoice } from './ErpOwnership
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { erpListIdFor } from '@/features/app-builder/services/erpListId';
 import {
+    countOwnedAfterAdd,
     describeOwns,
+    describeOwnsAcross,
     existingRulesToChange,
     ownsProblem,
 } from '@/features/app-builder/services/erpOwnership';
@@ -31,7 +36,8 @@ import { useErpOwnershipOptions } from '@/features/dashboard/ui/hooks/useErpOwne
 import type { ErpOwnershipOptions, ErpOwnsEntry, ErpOwnsRule } from '@/types/erpOwnership';
 
 /** Said once there is an ERP to show beside the new one. */
-export const TWO_ERPS_NOTE = 'Once there are two ERPs, each owns only what its rule says.';
+export const TWO_ERPS_NOTE =
+    'An ERP on everything keeps every product the other ERPs do not claim; the others own what their rules say.';
 
 /** The ERP integration an ERP is added to, while the prompt is open. */
 export interface AddErpTarget {
@@ -44,7 +50,7 @@ export interface AddErpDialogProps {
     target?: AddErpTarget;
     /** Names already in the project, which a new ERP may not reuse. */
     takenNames: string[];
-    onAdd: (name: string, owns: ErpOwnsRule, existingOwns: ErpOwnsEntry[]) => void;
+    onAdd: (name: string, owns: ErpOwnsRule) => void;
     onClose: () => void;
 }
 
@@ -54,6 +60,9 @@ const ATTRIBUTE_FIRST: OwnershipChoice = { mode: 'attribute', websites: [] };
 
 /** One empty list for every render, so the picker's effects do not see a new reference each time. */
 const NONE: never[] = [];
+
+/** Every count is 0 when the store could not be read; the attribute still adds. */
+const NOTHING = (): number => 0;
 
 /**
  * Host the prompt; present it while an integration is targeted.
@@ -71,15 +80,15 @@ export function AddErpDialog({ target, takenNames, onAdd, onClose }: AddErpDialo
     );
 }
 
-/** An existing ERP's line: its rule now, or the one it is given and what that means for it. */
+/** An existing ERP's line: its rule as it stands beside the others, or the one it is given and what that means for it. */
 function existingErpLine(erp: ErpOwnershipOptions['erps'][number], change: ErpOwnsEntry | undefined): string {
-    if (!change) return `${erp.name}: ${describeOwns(erp.owns)}`;
+    if (!change) return `${erp.name}: ${describeOwnsAcross(erp.owns)}`;
     // Ownership is applied across every ERP as the add ends (AB-70): the products it no longer
     // owns are marked discontinued there, nothing waits for a reset.
     return `${erp.name}: ${describeOwns(change.owns)} (now ${describeOwns(erp.owns)}; its products are re-sorted as the ERP is added)`;
 }
 
-/** The existing ERPs beside the new one: each one's rule now, and the one it is given. */
+/** The existing ERPs beside the new one: each one's rule as it will stand, and the one it is given. */
 function ExistingErps({ options, changes }: {
     options: ErpOwnershipOptions;
     changes: ErpOwnsEntry[];
@@ -116,11 +125,20 @@ function AddErpForm({ target, takenNames, onAdd, onClose }: AddErpDialogProps & 
         () => (options ? existingRulesToChange({ websites: options.websites, erps: options.erps }, rule) : []),
         [options, rule],
     );
+    // What the new ERP would own under each option, once every ERP's rule is applied (AB-72).
+    const count = useMemo(
+        () =>
+            options
+                ? (candidate: ErpOwnsRule) =>
+                      countOwnedAfterAdd(options.products, { websites: options.websites, erps: options.erps }, { erp: listId, owns: candidate })
+                : NOTHING,
+        [options, listId],
+    );
     // Shown once something is typed; Add stays off while the name is blank either way.
     const problem = saved ? erpNameProblem(saved, takenNames) : undefined;
     const ready = saved.length > 0 && !problem && !ownsProblem(rule);
     const add = (): void => {
-        if (ready) onAdd(saved, rule, changes);
+        if (ready) onAdd(saved, rule);
     };
     return (
         <Modal
@@ -154,7 +172,7 @@ function AddErpForm({ target, takenNames, onAdd, onClose }: AddErpDialogProps & 
                     onChange={setChoice}
                     attribute={attribute}
                     websites={options?.websites ?? NONE}
-                    products={loading ? null : (options?.products ?? NONE)}
+                    count={loading ? null : count}
                 />
                 {error && <Text>{error}</Text>}
                 {options && <ExistingErps options={options} changes={changes} />}

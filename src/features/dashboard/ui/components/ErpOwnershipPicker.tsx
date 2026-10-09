@@ -1,9 +1,9 @@
 /**
  * "Which products belong to this ERP?" inside Add another ERP (AB-64): one question, two
- * choices, each with the count of products it would give, counted here from the products the
- * extension read once (one search per option is too slow for a 300-product catalogue). The
- * counts use the fill's own predicate (`countOwned` → `ownershipFilter`), so what the dialog
- * promises is what the fill delivers.
+ * choices, each with the count of products it would give, counted by the dialog from the
+ * products the extension read once (one search per option is too slow for a 300-product
+ * catalogue) and across every ERP's rule (`countOwnedAfterAdd` → `ownersAcross`, AB-72), so
+ * what the dialog promises is what the fill delivers.
  *
  * - Carrying this attribute — `erp_owner=<the ERP's list id>`, read-only → `attribute`; the
  *   default (owner, 2026-10-09)
@@ -16,8 +16,7 @@
 
 import { Checkbox, Flex, Radio, RadioGroup, Text } from '@adobe/react-spectrum';
 import React from 'react';
-import { countOwned } from '@/features/app-builder/services/erpOwnership';
-import type { ErpOwnedProductRow, ErpOwnsMode, ErpOwnsRule } from '@/types/erpOwnership';
+import type { ErpOwnsMode, ErpOwnsRule } from '@/types/erpOwnership';
 
 /** The picker's state: the mode, and the websites ticked (kept while switching). */
 export interface OwnershipChoice {
@@ -31,17 +30,17 @@ export interface ErpOwnershipPickerProps {
     /** `erp_owner=<list id>`, derived from the typed name. */
     attribute: string;
     websites: Array<{ code: string; name: string }>;
-    /** Null while the products are still being read: every count then reads "…". */
-    products: ErpOwnedProductRow[] | null;
+    /** How many products the new ERP would own under a rule; null while the store is still being read (every count then reads "…"). */
+    count: ((rule: ErpOwnsRule) => number) | null;
 }
 
 /** The hint at the top: the one question that decides between the modes. */
 export const SPLIT_HINT =
     'Should one order ever be split between ERPs? Yes: attribute. No: websites.';
 
-/** A count, or "…" while the products are still being read. */
-function countOf(products: ErpOwnedProductRow[] | null, rule: ErpOwnsRule): string {
-    return products === null ? '…' : String(countOwned(products, rule));
+/** A count, or "…" while the store is still being read. */
+function countOf(count: ErpOwnershipPickerProps['count'], rule: ErpOwnsRule): string {
+    return count === null ? '…' : String(count(rule));
 }
 
 /** A product count in words. */
@@ -89,7 +88,7 @@ function WebsiteList({ items, ticked, onTick, countFor }: {
 /**
  * The picker.
  *
- * @param props - the choice, the lists, the attribute and the products to count
+ * @param props - the choice, the lists, the attribute and the counter
  * @returns the radio group with its lists
  */
 export function ErpOwnershipPicker({
@@ -97,10 +96,10 @@ export function ErpOwnershipPicker({
     onChange,
     attribute,
     websites,
-    products,
+    count,
 }: ErpOwnershipPickerProps): React.ReactElement {
-    const websitesCount = countOf(products, { mode: 'websites', websites: choice.websites });
-    const attributeCount = countOf(products, { mode: 'attribute', attribute });
+    const websitesCount = countOf(count, { mode: 'websites', websites: choice.websites });
+    const attributeCount = countOf(count, { mode: 'attribute', attribute });
     return (
         <Flex direction="column" gap="size-100">
             <Text>{SPLIT_HINT}</Text>
@@ -119,7 +118,7 @@ export function ErpOwnershipPicker({
                     items={websites}
                     ticked={choice.websites}
                     onTick={(codes) => onChange({ ...choice, websites: codes })}
-                    countFor={(code) => countOf(products, { mode: 'websites', websites: [code] })}
+                    countFor={(code) => countOf(count, { mode: 'websites', websites: [code] })}
                 />
             )}
         </Flex>

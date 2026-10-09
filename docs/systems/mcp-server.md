@@ -402,9 +402,11 @@ ERP's own sales organizations and the ones it kept because they were already set
 `add_erp` (2026-09-28, AB-16) is gated although it only adds: it creates an Adobe workspace
 and deploys a new ERP into it, which takes minutes and is undone only by `remove_integration`
 on the new ERP's id. Its optional `owns` (AB-64) says which products the new ERP owns —
-websites, attribute or sources — and without it the default applies (the first website no
-other ERP owns, else `erp_owner=<its list id>`); an existing ERP still owning everything is
-given a rule at the same time, and the answer's `owns` / `existingOwns` say the rules in words.
+attribute or websites — and without it the default applies, `erp_owner=<its list id>`. An ERP
+on "everything" is the catch-all for what no other ERP claims by attribute (AB-72), so adding
+by attribute changes no other rule; only a website rule narrows such an ERP, to the websites
+left over. The answer's `owns` / `existingOwns` say the rules saved in words, and its
+`warning` what the user still has to do, including products two rules both claim.
 The ERP tools that act on one ERP (`load_erp_demo_data`,
 `open_erp_screen`, `run_erp_rest`, `write_erp_rest`, `get_erp_status`) take an optional `erp`,
 the ERP's component id, and default to the integration's first, except `load_erp_demo_data`,

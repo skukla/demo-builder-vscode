@@ -212,61 +212,68 @@ describe('handleAddErp', () => {
                 integration: 'erp-integration',
                 erpList: ['erp', 'demo-erp-2'],
                 owns: { erp: 'brand-b', rule: { mode: 'attribute', attribute: 'erp_owner=brand-b' }, describe: 'products whose erp_owner is brand-b' },
-                existingOwns: [{ erp: 'acme', rule: { mode: 'attribute', attribute: 'erp_owner=acme' }, describe: 'products whose erp_owner is acme' }],
+                existingOwns: [],
                 ownership: { erps: [{ erp: 'demo-erp-2', name: 'Brand B ERP', owns: 10, discontinued: 0, restored: 0 }], unowned: 0 },
             },
         });
     });
 
     describe('which products the new ERP owns (AB-64)', () => {
-        it('saves the rule the SC chose, and the existing ERPs\' rules sent with it, after the list and before the fill', async () => {
+        it('a website rule narrows the ERP on everything to the websites left over, read from the store here (AB-72), after the list and before the fill', async () => {
             const { mockContext } = setup();
 
             const result = await handleAddErp(mockContext, {
                 id: 'erp-integration',
                 name: 'Brand B ERP',
                 owns: { mode: 'websites', websites: ['justrite'] },
-                existingOwns: [{ erp: 'acme', owns: { mode: 'attribute', attribute: 'erp_owner=acme' } }],
             });
 
-            // The new ERP's list id is derived from its name (AB-51), never guessed by the dialog.
+            // The new ERP's list id is derived from its name (AB-51), never guessed by the dialog; the
+            // narrowing is the handler's, from the store, so a click before the dialog's read cannot drop it.
+            expect(mockReadOptions).toHaveBeenCalledWith(expect.any(Object), 'erp-integration', AUTH, expect.any(Object));
             expect(mockSaveOwnership).toHaveBeenCalledWith(expect.any(Object), [
                 { erp: 'brand-b', owns: { mode: 'websites', websites: ['justrite'] } },
-                { erp: 'acme', owns: { mode: 'attribute', attribute: 'erp_owner=acme' } },
+                { erp: 'acme', owns: { mode: 'websites', websites: ['base'] } },
             ]);
             expect(ranInOrder()).toEqual(['list', 'owns', 'fill']);
-            // A rule given is not read for: the dialog already read the options.
-            expect(mockReadOptions).not.toHaveBeenCalled();
             expect(result).toMatchObject({
                 success: true,
                 data: {
                     owns: { erp: 'brand-b', rule: { mode: 'websites', websites: ['justrite'] }, describe: 'products sold on justrite' },
-                    existingOwns: [{ erp: 'acme', describe: 'products whose erp_owner is acme' }],
+                    existingOwns: [{ erp: 'acme', describe: 'products sold on base' }],
                 },
             });
         });
 
-        it('with no rule given (the agent surface), reads the store and applies the default: the attribute for both ERPs', async () => {
+        it('an attribute rule leaves the ERP on everything alone: it is the catch-all for what the attribute does not claim (AB-72)', async () => {
+            const { mockContext } = setup();
+
+            await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP', owns: OWN_ATTRIBUTE });
+
+            expect(mockReadOptions).not.toHaveBeenCalled();
+            expect(mockSaveOwnership).toHaveBeenCalledWith(expect.any(Object), [{ erp: 'brand-b', owns: OWN_ATTRIBUTE }]);
+        });
+
+        it('with no rule given (the agent surface), applies the default: the attribute, and no other rule changes', async () => {
             const { mockContext } = setup();
 
             const result = await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP' });
 
-            expect(mockReadOptions).toHaveBeenCalledWith(expect.any(Object), 'erp-integration', AUTH, expect.any(Object));
+            expect(mockReadOptions).not.toHaveBeenCalled();
             expect(mockSaveOwnership).toHaveBeenCalledWith(expect.any(Object), [
                 { erp: 'brand-b', owns: { mode: 'attribute', attribute: 'erp_owner=brand-b' } },
-                { erp: 'acme', owns: { mode: 'attribute', attribute: 'erp_owner=acme' } },
             ]);
-            expect(result).toMatchObject({ success: true, data: { owns: { describe: 'products whose erp_owner is brand-b' } } });
+            expect(result).toMatchObject({ success: true, data: { owns: { describe: 'products whose erp_owner is brand-b' }, existingOwns: [] } });
         });
 
         it('an existing ERP with a rule of its own is left alone, and no warning says its products change', async () => {
             mockReadOptions.mockResolvedValue({ ...OPTIONS, erps: [{ erp: 'acme', name: 'Acme ERP', owns: { mode: 'websites', websites: ['base'] } }] });
             const { mockContext } = setup();
 
-            const result = await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP' });
+            const result = await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP', owns: { mode: 'websites', websites: ['justrite'] } });
 
             expect(mockSaveOwnership).toHaveBeenCalledWith(expect.any(Object), [
-                { erp: 'brand-b', owns: { mode: 'attribute', attribute: 'erp_owner=brand-b' } },
+                { erp: 'brand-b', owns: { mode: 'websites', websites: ['justrite'] } },
             ]);
             expect(result).toMatchObject({ success: true, data: { existingOwns: [] } });
             expect((result.data as { warning?: string }).warning).toBeUndefined();
@@ -308,11 +315,11 @@ describe('handleAddErp', () => {
             expect(mockApply).not.toHaveBeenCalled();
         });
 
-        it('a store the options could not be read from (no rule given) fails the add the same way', async () => {
+        it('a store the narrowing could not be read from (a website rule) fails the add the same way', async () => {
             mockReadOptions.mockResolvedValue({ refusal: 'No Commerce credential on this project.' });
             const { mockContext } = setup();
 
-            const result = await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP' });
+            const result = await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP', owns: { mode: 'websites', websites: ['justrite'] } });
 
             expect(result).toMatchObject({ success: false, error: expect.stringContaining('No Commerce credential on this project.') });
             expect(mockApply).not.toHaveBeenCalled();

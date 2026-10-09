@@ -19,7 +19,7 @@ import type { CustomBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import type { ComponentConfigs, EnvVarDefinition, ServiceDefinition } from './components';
 import type { DaLiveContentSource } from './demoPackages';
-import type { ErpOwnsEntry, ErpOwnsRule } from './erpOwnership';
+import type { ErpOwnsRule } from './erpOwnership';
 import type { ErrorCode } from './errorCodes';
 import type {
     AddedDemo,
@@ -726,12 +726,11 @@ export interface AddErpRequestPayload {
     /** The new ERP's name, unique in the project (compared without case). */
     name?: string;
     /**
-     * Which products it owns (AB-64), as the dialog's picker chose; absent = the default,
-     * derived from the store when the add runs (the agent surface).
+     * Which products it owns (AB-64), as the dialog's picker chose; absent = the default, the
+     * attribute `erp_owner=<its list id>` (the agent surface). What the other ERPs' rules
+     * become is the handler's to decide from the store (AB-72), never the dialog's.
      */
     owns?: ErpOwnsRule;
-    /** Existing ERPs' rules to save with it (the first ERP's, once it stops owning everything). */
-    existingOwns?: ErpOwnsEntry[];
     /** `'modal'` when the SC started it from the integrations screen (PL-59). */
     progress?: 'modal';
 }

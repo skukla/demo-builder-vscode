@@ -6,8 +6,11 @@
  * its own (`demo-erp-2`, …) in a workspace of its own, named as the SC typed it, and deployed
  * with its id in the integration's list (`ERP_ID`, `listIdOf`). Once deployed it is linked to
  * the integration, the integration is told the whole ERP list (`PUT erp/erps`), each added ERP
- * with its own workspace's credential (AB-16a), each ERP's ownership rule is saved on its entry
- * (AB-64: the one the SC chose in the dialog, or the default when the agent gave none), and
+ * with its own workspace's credential (AB-16a), the new ERP's ownership rule is saved on its
+ * entry (AB-64: the one the SC chose in the dialog, or the default when the agent gave none)
+ * together with the one narrowing the precedence needs (AB-72, `existingRulesToChange`: an ERP
+ * on everything beside a new website-rule ERP is given the websites left over, read from the
+ * store HERE, so the dialog's read is never load-bearing), and
  * ownership is applied across every ERP (AB-70, `applyErpOwnership`): each filled with what it
  * now owns, what an ERP no longer owns marked discontinued there, and what the SC still has to
  * do said in the answer's warning. The rules are saved BEFORE the pass, which reads them. Once linked, an ERP this
@@ -89,10 +92,8 @@ interface ErpAddPlan {
     name: string;
     /** Deployed by an earlier add that stopped after its deploy: list and fill only. */
     deployed: boolean;
-    /** The rule the SC chose (AB-64); absent = the default, derived from the store at add time. */
+    /** The rule the SC chose (AB-64); absent = the default, the attribute `erp_owner=<its list id>`. */
     owns?: ErpOwnsRule;
-    /** Existing ERPs' rules sent with it (the first ERP's, once it stops owning everything). */
-    existingOwns: ErpOwnsEntry[];
 }
 
 /** One ERP's rule as the answer says it: its list id, the rule, and the rule in words. */
@@ -140,14 +141,9 @@ function unfinishedNamed(project: Project, integrationId: string, system: AppBui
     )?.[0];
 }
 
-/** Why a rule in the payload cannot be saved (AB-64), the new ERP's or an existing one's. */
+/** Why the rule in the payload cannot be saved (AB-64). */
 function ownsPayloadProblem(payload: AddErpRequestPayload | undefined): string | undefined {
-    const rules = [payload?.owns, ...(payload?.existingOwns ?? []).map((entry) => entry.owns)];
-    for (const rule of rules) {
-        const problem = rule && ownsProblem(rule);
-        if (problem) return problem;
-    }
-    return undefined;
+    return payload?.owns ? ownsProblem(payload.owns) : undefined;
 }
 
 /** The integration an ERP can be added to: one that serves several ERPs, and is deployed. */
@@ -205,23 +201,26 @@ async function planErpAdd(
         name,
         deployed,
         owns: payload?.owns,
-        existingOwns: payload?.existingOwns ?? [],
     };
 }
 
-/** The new ERP's rule and the existing ERPs' to save with it; a refusal when the store could not be read. */
+/**
+ * The new ERP's rule (the SC's, or the default) and, for a website rule only, the narrowing
+ * the precedence needs on an existing ERP on everything, read from the store here (AB-72);
+ * a refusal when that read did not go through. An attribute rule reads nothing: the catch-all
+ * keeps what the attribute does not claim.
+ */
 async function ownershipToSave(
     plan: ErpAddPlan,
     listId: string,
     auth: AppManagementAuth,
     authManager: AuthenticationService,
 ): Promise<ErpOwnsEntry[] | { refusal: string }> {
-    if (plan.owns) return [{ erp: listId, owns: plan.owns }, ...plan.existingOwns];
-    // No rule given (the agent surface): the default, from the store as it stands (AB-64).
+    const owns = plan.owns ?? defaultOwnsRule({ listId });
+    if (owns.mode !== 'websites') return [{ erp: listId, owns }];
     const options = await readErpOwnershipOptionsForProject(plan.project, plan.integrationId, auth, authManager);
     if ('refusal' in options) return options;
     const erps = options.erps.filter((erp) => erp.erp !== listId);
-    const owns = defaultOwnsRule({ listId });
     return [{ erp: listId, owns }, ...existingRulesToChange({ websites: options.websites, erps }, owns)];
 }
 
@@ -260,7 +259,7 @@ async function saveOwnershipStep(
 }
 
 /** What the answer says about the rules saved: each in words. */
-function ownsSaid(_plan: ErpAddPlan, entries: ErpOwnsEntry[]): Pick<AddOutcome, 'owns' | 'existingOwns'> {
+function ownsSaid(entries: ErpOwnsEntry[]): Pick<AddOutcome, 'owns' | 'existingOwns'> {
     const said = entries.map((entry): OwnsSaid => ({ erp: entry.erp, rule: entry.owns, describe: describeOwns(entry.owns) }));
     const [owns, ...existingOwns] = said;
     return { owns, existingOwns };
@@ -351,7 +350,7 @@ async function listAndFill(
             error: `${plan.name} is deployed and listed, but ${sentence(saved.notSaved)} Add it again with the same name to finish.`,
         };
     }
-    const { owns, existingOwns } = ownsSaid(plan, saved.entries);
+    const { owns, existingOwns } = ownsSaid(saved.entries);
     // Ownership applied across every ERP (AB-70): each filled with what it now owns, what an
     // ERP no longer owns marked discontinued there, and what the SC still has to do said.
     const applied = await applyErpOwnership(

@@ -126,6 +126,63 @@ describe('applyErpOwnership', () => {
         expect(mockSave).not.toHaveBeenCalled();
     });
 
+    it('an ERP on everything is the catch-all (AB-72): it owns what no product rule claims, so nothing belongs to nobody', async () => {
+        mockRead.mockResolvedValue({
+            ...OPTIONS,
+            products: [
+                { sku: 'J1', websiteCodes: ['justrite'], attributes: { erp_owner: 'justrite' } },
+                { sku: 'K1', websiteCodes: ['justrite'], attributes: { erp_owner: 'kukla' } },
+                { sku: 'N1', websiteCodes: ['justrite'], attributes: {} },
+            ],
+            erps: [
+                { erp: 'justrite', name: 'Justrite ERP', owns: { mode: 'all' } },
+                { erp: 'kukla', name: 'Kukla ERP', owns: { mode: 'attribute', attribute: 'erp_owner=kukla' } },
+            ],
+        });
+        mockList.mockImplementation(async (urls: Record<string, string>) =>
+            urls['runtime/demo-erp/products'].startsWith('https://a.')
+                ? [{ sku: 'K1', type: 'simple', salesStatus: 'sellable' }, { sku: 'N1', type: 'simple', salesStatus: 'sellable' }]
+                : [],
+        );
+
+        const result = await applyErpOwnership(project(), 'erp-integration', deps(), 'add');
+
+        // The catch-all keeps J1 and N1; K1 is Kukla's, so Justrite ERP discontinues it.
+        expect(mockSetStatus.mock.calls.map((call) => [call[2], call[3]])).toStrictEqual([['K1', 'discontinued']]);
+        expect(result).toMatchObject({
+            status: 'applied',
+            unowned: 0,
+            erps: [
+                { erp: 'demo-erp', ownsNow: 2, discontinued: 1 },
+                { erp: 'demo-erp-2', ownsNow: 1, discontinued: 0 },
+            ],
+            notes: [],
+        });
+    });
+
+    it('two specific rules claiming the same product are said by count and both names, with what it means for orders', async () => {
+        mockRead.mockResolvedValue({
+            ...OPTIONS,
+            products: [
+                { sku: 'BOTH', websiteCodes: ['justrite'], attributes: { erp_owner: 'justrite', brand: 'kukla' } },
+                { sku: 'J2', websiteCodes: ['justrite'], attributes: { erp_owner: 'justrite' } },
+            ],
+            erps: [
+                { erp: 'justrite', name: 'Justrite ERP', owns: { mode: 'attribute', attribute: 'erp_owner=justrite' } },
+                { erp: 'kukla', name: 'Kukla ERP', owns: { mode: 'attribute', attribute: 'brand=kukla' } },
+            ],
+        });
+
+        const result = await applyErpOwnership(project(), 'erp-integration', deps(), 'settings');
+
+        expect(result).toMatchObject({
+            status: 'applied',
+            unowned: 0,
+            erps: [{ erp: 'demo-erp', ownsNow: 2 }, { erp: 'demo-erp-2', ownsNow: 1 }],
+            notes: ['1 product is claimed by both Justrite ERP and Kukla ERP; orders for it are refused until one rule changes.'],
+        });
+    });
+
     it('marks the products an ERP holds but no longer owns discontinued there, parents and already-marked rows left', async () => {
         mockList.mockImplementation(async (urls: Record<string, string>) =>
             urls['runtime/demo-erp/products'].startsWith('https://a.')

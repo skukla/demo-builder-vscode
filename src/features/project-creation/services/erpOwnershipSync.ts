@@ -11,21 +11,15 @@
  */
 
 import { commerceGetForProject } from './erpFillForProject';
+import { listedErpNames, readErpRules, type ListedErpName } from './erpRules';
 import type { AppManagementAuth } from '@/features/app-builder/services/appManagementClient';
 import { listProducts, listWebsites, type CommerceGet } from '@/features/app-builder/services/erpFillReaders';
-import { ownedProductOf, type CommerceProductRow } from '@/features/app-builder/services/erpFillRows';
+import { ownedRowOf } from '@/features/app-builder/services/erpFillRows';
 import { ErpIntegrationClient } from '@/features/app-builder/services/erpIntegrationClient';
-import { erpListIdOf } from '@/features/app-builder/services/erpList';
-import { ownsRuleOf, ownsSettingsOf } from '@/features/app-builder/services/erpOwnership';
+import { ownsSettingsOf } from '@/features/app-builder/services/erpOwnership';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
-import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
-import { systemsUsedBy } from '@/features/components/services/appBuilderComponentLinks';
 import type { Project } from '@/types/base';
-import type {
-    ErpOwnedProductRow,
-    ErpOwnershipOptions,
-    ErpOwnsEntry,
-} from '@/types/erpOwnership';
+import type { ErpOwnershipOptions, ErpOwnsEntry } from '@/types/erpOwnership';
 
 /** The attribute every ERP's default rule reads; always carried on the product rows. */
 const OWNER_ATTRIBUTE = 'erp_owner';
@@ -35,12 +29,6 @@ export interface ErpOwnershipReadDeps {
     client: ErpIntegrationClient;
 }
 
-/** One ERP the integration serves, as the read names it. */
-export interface ListedErpName {
-    listId: string;
-    name: string;
-}
-
 /** The attribute codes the ERPs' rules name, plus `erp_owner`. */
 function attributeCodesOf(erps: readonly ErpOwnsEntry[]): string[] {
     const named = erps.flatMap((entry) => {
@@ -48,30 +36,6 @@ function attributeCodesOf(erps: readonly ErpOwnsEntry[]): string[] {
         return code ? [code] : [];
     });
     return [...new Set([OWNER_ATTRIBUTE, ...named])];
-}
-
-/** A product's attributes, only those named, as strings. */
-function attributesOf(product: CommerceProductRow, codes: readonly string[]): Record<string, string> {
-    const out: Record<string, string> = {};
-    for (const code of codes) {
-        const value = product.customAttributes[code];
-        if (value !== undefined && value !== null && value !== '') out[code] = String(value);
-    }
-    return out;
-}
-
-/** Each ERP's rule, read off the settings the integration resolves for it. */
-async function rulesOf(
-    client: ErpIntegrationClient,
-    erps: readonly ListedErpName[],
-): Promise<ErpOwnershipOptions['erps']> {
-    const out: ErpOwnershipOptions['erps'] = [];
-    // One at a time: a handful of ERPs, and the integration's action is not built for a burst.
-    for (const erp of erps) {
-        const settings = await client.resolvedSettings([], erp.listId);
-        out.push({ erp: erp.listId, name: erp.name, owns: ownsRuleOf(settings.default) });
-    }
-    return out;
 }
 
 /**
@@ -89,33 +53,17 @@ export async function readErpOwnershipOptions(
     const [products, websites, rules] = await Promise.all([
         listProducts(deps.get),
         listWebsites(deps.get),
-        rulesOf(deps.client, erps),
+        readErpRules(deps.client, erps),
     ]);
     const codes = attributeCodesOf(rules);
     const websiteCodeById = new Map(websites.map((site) => [site.id, site.code]));
-    const rows = products
-        .filter((product) => product.sku)
-        .map((product): ErpOwnedProductRow => ({
-            sku: product.sku,
-            websiteCodes: ownedProductOf(product, websiteCodeById).websiteCodes,
-            attributes: attributesOf(product, codes),
-        }));
+    const rows = products.filter((product) => product.sku).map((product) => ownedRowOf(product, websiteCodeById, codes));
     return {
         websites: websites.map((site) => ({ code: site.code, name: site.name })),
         products: rows,
         erps: rules,
         takenListIds: erps.map((erp) => erp.listId),
     };
-}
-
-/** The ERPs an integration serves in the project, by list id and name, in link order. */
-function listedErpNames(project: Project, integrationId: string): ListedErpName[] {
-    const catalog = getAppBuilderComponentCatalog();
-    return systemsUsedBy(project, integrationId, catalog).flatMap((componentId) => {
-        const listId = erpListIdOf(project, componentId, catalog);
-        const name = project.appBuilderComponents?.[componentId]?.name ?? componentId;
-        return listId ? [{ listId, name }] : [];
-    });
 }
 
 /**

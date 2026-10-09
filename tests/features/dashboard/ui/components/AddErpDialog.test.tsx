@@ -87,20 +87,16 @@ describe('AddErpDialog — the question and its default', () => {
         expect(screen.queryByRole('radio', { name: /inventory sources/i })).toBeNull();
     });
 
-    it("shows the existing ERP's rule beside the new one, and the rule it is given: its own attribute", async () => {
+    it("shows the existing ERP on everything as the catch-all it stays (AB-72): it keeps what the new ERP does not claim", async () => {
         mockRequest.mockResolvedValue(answers(STORE));
         await open();
         typeName('Brand B ERP');
 
         expect(screen.getByText(TWO_ERPS_NOTE)).toBeInTheDocument();
-        expect(
-            screen.getByText(
-                'Acme ERP: products whose erp_owner is acme (now every product; its products are re-sorted as the ERP is added)',
-            ),
-        ).toBeInTheDocument();
+        expect(screen.getByText('Acme ERP: every product no other ERP claims')).toBeInTheDocument();
     });
 
-    it('the default is the attribute, and the existing ERP is given its own', async () => {
+    it('the default is the attribute; Add hands back the name and the rule, nothing about the existing ERP', async () => {
         mockRequest.mockResolvedValue(answers(STORE));
         const { onAdd } = await open();
         typeName('Brand B ERP');
@@ -108,11 +104,7 @@ describe('AddErpDialog — the question and its default', () => {
         expect(radio(/^carrying this attribute: erp_owner=brand-b/i)).toBeChecked();
         fireEvent.click(addButton());
 
-        expect(onAdd).toHaveBeenCalledWith(
-            'Brand B ERP',
-            { mode: 'attribute', attribute: 'erp_owner=brand-b' },
-            [{ erp: 'acme', owns: { mode: 'attribute', attribute: 'erp_owner=acme' } }],
-        );
+        expect(onAdd).toHaveBeenCalledWith('Brand B ERP', { mode: 'attribute', attribute: 'erp_owner=brand-b' });
     });
 
     it('an existing ERP with a rule of its own is shown as it is, and websites it owns are not handed out', async () => {
@@ -127,12 +119,12 @@ describe('AddErpDialog — the question and its default', () => {
         fireEvent.click(screen.getByRole('checkbox', { name: /^Justrite/ }));
         fireEvent.click(addButton());
 
-        expect(onAdd).toHaveBeenCalledWith('Brand B ERP', { mode: 'websites', websites: ['justrite'] }, []);
+        expect(onAdd).toHaveBeenCalledWith('Brand B ERP', { mode: 'websites', websites: ['justrite'] });
     });
 });
 
 describe('AddErpDialog — choosing', () => {
-    it('hands Add the websites ticked, and the existing ERP the rest', async () => {
+    it('hands Add the websites ticked, and shows the catch-all narrowed to the rest, which the add does', async () => {
         mockRequest.mockResolvedValue(answers(STORE));
         const { onAdd } = await open();
         typeName('Brand B ERP');
@@ -141,13 +133,24 @@ describe('AddErpDialog — choosing', () => {
         expect(addDisabled()).toBe(true);
         fireEvent.click(screen.getByRole('checkbox', { name: /^Justrite/ }));
         expect(radio(/^sold on these websites — 2 products$/i)).toBeChecked();
+        expect(
+            screen.getByText('Acme ERP: products sold on base, evo (now every product; its products are re-sorted as the ERP is added)'),
+        ).toBeInTheDocument();
         fireEvent.click(addButton());
 
-        expect(onAdd).toHaveBeenCalledWith(
-            'Brand B ERP',
-            { mode: 'websites', websites: ['justrite'] },
-            [{ erp: 'acme', owns: { mode: 'websites', websites: ['base', 'evo'] } }],
+        expect(onAdd).toHaveBeenCalledWith('Brand B ERP', { mode: 'websites', websites: ['justrite'] });
+    });
+
+    it('counts across every ERP: a product another ERP claims by attribute is not counted for a website rule', async () => {
+        mockRequest.mockResolvedValue(
+            answers({ ...STORE, erps: [{ erp: 'acme', name: 'Acme ERP', owns: { mode: 'attribute', attribute: 'erp_owner=brand-b' } }] }),
         );
+        await open();
+        typeName('Evo ERP');
+
+        fireEvent.click(radio(/^sold on these websites/i));
+        // B is sold on justrite but tagged for acme, so only C counts.
+        expect(screen.getByRole('checkbox', { name: /^Justrite/ })).toHaveAccessibleName(expect.stringMatching(/1 product$/u));
     });
 
     it('a name the project already has is refused, and Add stays off', async () => {
@@ -169,7 +172,7 @@ describe('AddErpDialog — the name ends in ERP', () => {
         expect(screen.getByText('Added as “Brand B ERP”.')).toBeInTheDocument();
         fireEvent.click(addButton());
 
-        expect(onAdd).toHaveBeenCalledWith('Brand B ERP', { mode: 'attribute', attribute: 'erp_owner=brand-b' }, expect.any(Array));
+        expect(onAdd).toHaveBeenCalledWith('Brand B ERP', { mode: 'attribute', attribute: 'erp_owner=brand-b' });
     });
 
     it('checks the name it will be added as for duplicates', async () => {
@@ -200,6 +203,17 @@ describe('AddErpDialog — before and without the store', () => {
         expect(radio(/^sold on these websites — … products$/i)).toBeInTheDocument();
     });
 
+    it('Add pressed before the store answers sends the attribute rule: nothing about the add waits on the read (AB-72)', async () => {
+        mockRequest.mockReturnValue(new Promise(() => undefined));
+        const { onAdd } = await open();
+        typeName('Brand B ERP');
+
+        expect(addDisabled()).toBe(false);
+        fireEvent.click(addButton());
+
+        expect(onAdd).toHaveBeenCalledWith('Brand B ERP', { mode: 'attribute', attribute: 'erp_owner=brand-b' });
+    });
+
     it('a store that could not be read says why; the attribute is the default and Add still works', async () => {
         mockRequest.mockResolvedValue({ success: false, error: 'Adobe sign-in required.' });
         const { onAdd } = await open();
@@ -210,7 +224,7 @@ describe('AddErpDialog — before and without the store', () => {
         expect(radio(/^carrying this attribute: erp_owner=brand-b — 0 products$/i)).toBeChecked();
         fireEvent.click(addButton());
 
-        expect(onAdd).toHaveBeenCalledWith('Brand B ERP', { mode: 'attribute', attribute: 'erp_owner=brand-b' }, []);
+        expect(onAdd).toHaveBeenCalledWith('Brand B ERP', { mode: 'attribute', attribute: 'erp_owner=brand-b' });
     });
 
     it('renders nothing while closed, and asks the store nothing', async () => {
