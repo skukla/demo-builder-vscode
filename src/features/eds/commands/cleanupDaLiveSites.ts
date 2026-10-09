@@ -224,7 +224,10 @@ export async function cleanupDaLiveSitesCommand(context: vscode.ExtensionContext
 export interface SiteDeletionOutcome {
     deleted: string[];
     failed: Array<{ site: string; error: string }>;
-    /** Sites whose source went but whose pages may still be served (no repo, or the unpublish failed). */
+    /**
+     * Sites whose source went but whose pages may still be served: no repo, the unpublish
+     * failed, a page still answered, or the check could not tell (EDS-33).
+     */
     stillLive: string[];
 }
 
@@ -261,6 +264,7 @@ export async function deleteDaLiveSites(
         try {
             logger.debug(`[DA.live Manage] Tearing down ${orgName}/${siteName} (repo ${githubRepo})`);
             const torn = await deps.tearDown({ daLiveOrg: orgName, daLiveSite: siteName, githubRepo });
+            logger.info(`[DA.live Manage] ${siteName}: ${torn.publishSummary}`);
             if (torn.productPages) {
                 logger.info(`[DA.live Manage] ${siteName}: ${torn.productPages.summary}`);
             }
@@ -292,7 +296,7 @@ function showDeletionResult({ deleted, failed, stillLive }: SiteDeletionOutcome)
     const plural = (n: number) => `${n} site${n !== 1 ? 's' : ''}`;
     const stillLiveNote =
         stillLive.length > 0
-            ? ` Pages may still be live for ${stillLive.join(', ')}: they could not be unpublished. See Debug Logs.`
+            ? ` Pages may still be live for ${stillLive.join(', ')}. See Debug Logs for why.`
             : '';
 
     if (deleted.length > 0 && failed.length === 0) {

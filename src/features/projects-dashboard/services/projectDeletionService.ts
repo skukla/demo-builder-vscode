@@ -488,6 +488,14 @@ async function performDaLiveCleanup(
                 name: edsMetadata.githubRepo ?? resourceName,
                 success: true,
             });
+        } else if (torn.stillPublished && edsMetadata.githubRepo) {
+            // Pages still answer, or it could not be told (EDS-33): never a silent "deleted".
+            results.push({
+                type: 'helix',
+                name: edsMetadata.githubRepo,
+                success: false,
+                error: torn.publishSummary,
+            });
         }
 
         results.push({

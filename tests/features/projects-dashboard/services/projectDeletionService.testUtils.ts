@@ -145,6 +145,15 @@ jest.mock('@/features/eds/services/helix/helixService', () => ({
     ),
 }));
 
+/**
+ * The live-host check the teardown makes after unpublishing (EDS-33). Mocked so no suite
+ * fetches a real aem.live URL; 404 by default (the pages are gone).
+ */
+export const mockCheckLiveStatus = jest.fn(async (_url: string): Promise<number> => 404);
+jest.mock('@/features/eds/services/storefront/liveStatusCheck', () => ({
+    checkLiveStatus: (url: string) => mockCheckLiveStatus(url),
+}));
+
 // Real timers would make the exponential backoff take seconds of wall clock.
 export const mockSleep = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/core/utils/sleep', () => ({ sleep: (...a: unknown[]) => mockSleep(...a) }));

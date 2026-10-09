@@ -17,6 +17,8 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 
 const CLEAN: StorefrontTeardownResult = {
     stillPublished: false,
+    publishState: 'down',
+    publishSummary: 'Unpublished 12 pages from main--store--acme.aem.live; none of the 4 checked still answer.',
     unpublishedPages: 12,
     contentDeleted: true,
     deletedCount: 30,
@@ -53,6 +55,24 @@ describe('deleteDaLiveSites', () => {
 
     it('counts a site whose unpublish failed as deleted but still live', async () => {
         const tearDown = jest.fn().mockResolvedValue({ ...CLEAN, stillPublished: true, unpublishedPages: 0 });
+
+        const outcome = await deleteDaLiveSites('acme', ['store'], new Map(), {
+            logger: createMockLogger(),
+            tearDown,
+        });
+
+        expect(outcome).toEqual({ deleted: ['store'], failed: [], stillLive: ['store'] });
+    });
+
+    // EDS-33: "could not tell" is never reported as a clean site.
+    it('counts a site whose teardown could not tell as still live', async () => {
+        const unsure: StorefrontTeardownResult = {
+            ...CLEAN,
+            stillPublished: true,
+            publishState: 'unknown',
+            publishSummary: 'Could not tell whether main--store--acme.aem.live is down.',
+        };
+        const tearDown = jest.fn().mockResolvedValue(unsure);
 
         const outcome = await deleteDaLiveSites('acme', ['store'], new Map(), {
             logger: createMockLogger(),

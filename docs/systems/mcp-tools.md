@@ -118,7 +118,7 @@ server IS — transport, lifecycle, scoping, security — is in
 
 | Tool | | What it does |
 |---|---|---|
-| `cleanup_dalive_site` | **confirm** | Delete all content for a DA.live site, and take its pages (product pages included; see productPages in the result) off the CDN when the GitHub repo is given (irreversible). Requires confirm:true and c |
+| `cleanup_dalive_site` | **confirm** | Delete all content for a DA.live site, and take its pages (product pages included; see productPages in the result) off the CDN when the GitHub repo is given (irreversible). The pages to unpublish are |
 | `create_github_repo` |  | Create a GitHub repo from a template (the EDS storefront path). Returns the repo and whether its content has finished materialising. |
 | `delete_github_repo` | **confirm** | Permanently delete a GitHub repository (irreversible). Requires confirm:true and confirmName="owner/repo". |
 | `list_dalive_sites` |  | List DA.live sites in an organization (paginated summary) |

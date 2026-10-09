@@ -300,7 +300,7 @@ export function registerCloudResourceTools(
             needsAuth: ['dalive'],
             annotations: { readOnlyHint: false, destructiveHint: true },
             description:
-                'Delete all content for a DA.live site, and take its pages (product pages included; see productPages in the result) off the CDN when the GitHub repo is given (irreversible). Requires confirm:true and confirmName="org/site".',
+                'Delete all content for a DA.live site, and take its pages (product pages included; see productPages in the result) off the CDN when the GitHub repo is given (irreversible). The pages to unpublish are what Helix lists as published, so a site whose content is already gone still comes down. stillPublished is false only when the live host was checked afterwards and the pages were gone; publishState (down, still-live, unknown) and publishSummary say which, including when it could not be told. Requires confirm:true and confirmName="org/site".',
             inputSchema: {
                 org: z.string().describe('DA.live organization name'),
                 site: z.string().describe('DA.live site name'),
@@ -364,6 +364,8 @@ export function registerCloudResourceTools(
                     deletedCount: torn.deletedCount,
                     unpublishedPages: torn.unpublishedPages,
                     stillPublished: torn.stillPublished,
+                    publishState: torn.publishState,
+                    publishSummary: torn.publishSummary,
                     ...(torn.productPages ? { productPages: torn.productPages.summary } : {}),
                     ...(torn.stillPublished && !args?.githubRepo
                         ? {

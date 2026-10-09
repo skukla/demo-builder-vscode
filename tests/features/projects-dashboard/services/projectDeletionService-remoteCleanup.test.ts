@@ -11,6 +11,7 @@
 import {
     deleteProject,
     deleteProjectFiles,
+    mockCheckLiveStatus,
     mockDefaultDeleteAdminApiKey,
     mockDefaultListAllPages,
     mockDefaultListPublishedPaths,
@@ -85,6 +86,7 @@ beforeEach(() => {
     });
     mockDefaultDeleteAdminApiKey.mockResolvedValue({ success: true });
     mockHelixInitKeyStore.mockResolvedValue(undefined);
+    mockCheckLiveStatus.mockImplementation(async () => 404);
 });
 
 describe('the CDN unpublish step', () => {
@@ -122,7 +124,8 @@ describe('the CDN unpublish step', () => {
         expect(of(resultsOf(result), 'helix')).toStrictEqual([]);
     });
 
-    it('records no helix result when the unpublish failed', async () => {
+    // EDS-33: a site whose pages may still be live is shown as such, never left out.
+    it('records a failed helix result, with the sentence, when the unpublish failed', async () => {
         armQuickPick('accept', ['daLive']);
         mockUnpublishPages.mockResolvedValue({
             success: false, count: 0, total: 2, liveFailed: 2, previewFailed: 0,
@@ -130,7 +133,14 @@ describe('the CDN unpublish step', () => {
 
         const result = await deleteProject(context(), edsProject(), SERVICES);
 
-        expect(of(resultsOf(result), 'helix')).toStrictEqual([]);
+        expect(of(resultsOf(result), 'helix')).toStrictEqual([
+            {
+                type: 'helix',
+                name: 'skukla/demo-storefront',
+                success: false,
+                error: '2 of 2 pages could not be taken off main--demo-storefront--skukla.aem.live and may still be live.',
+            },
+        ]);
         // ...and it must not stop the rest of the deletion.
         expect(mockDeleteDaLiveSite).toHaveBeenCalled();
         expect(mockRm).toHaveBeenCalled();
@@ -143,6 +153,43 @@ describe('the CDN unpublish step', () => {
 
         expect(of(resultsOf(result), 'helix')).toEqual([
             { type: 'helix', name: 'skukla/demo-storefront', success: true },
+        ]);
+    });
+
+    // EDS-33, measured 2026-10-09: the DA.live content was already gone, so the delete
+    // listed nothing to unpublish and the site's pages stayed live.
+    it('unpublishes what Helix lists when DA.live lists nothing, and checks the live host', async () => {
+        armQuickPick('accept', ['daLive']);
+        mockListAllPages.mockResolvedValue([]);
+        mockListPublishedPaths.mockImplementation(async (_o: string, _s: string, _b: string, pattern: string) =>
+            pattern === '/*' ? ['/', '/about'] : [],
+        );
+
+        const result = await deleteProject(context(), edsProject(), SERVICES);
+
+        expect(mockListPublishedPaths).toHaveBeenCalledWith('skukla', 'demo-storefront', 'main', '/*');
+        expect(mockUnpublishPages).toHaveBeenNthCalledWith(1, 'skukla', 'demo-storefront', 'main', ['/', '/about']);
+        expect(mockCheckLiveStatus).toHaveBeenCalledWith('https://main--demo-storefront--skukla.aem.live/');
+        expect(of(resultsOf(result), 'helix')).toEqual([
+            { type: 'helix', name: 'skukla/demo-storefront', success: true },
+        ]);
+    });
+
+    it('records a failed helix result when a page still answers after the unpublish', async () => {
+        armQuickPick('accept', ['daLive']);
+        mockCheckLiveStatus.mockImplementation(async (url: string) =>
+            url === 'https://main--demo-storefront--skukla.aem.live/' ? 200 : 404,
+        );
+
+        const result = await deleteProject(context(), edsProject(), SERVICES);
+
+        expect(of(resultsOf(result), 'helix')).toEqual([
+            expect.objectContaining({
+                type: 'helix',
+                name: 'skukla/demo-storefront',
+                success: false,
+                error: expect.stringContaining('still answer'),
+            }),
         ]);
     });
 
@@ -179,7 +226,7 @@ describe('the CDN unpublish step', () => {
 
         const result = await deleteProject(ctx, edsProject(), SERVICES);
 
-        expect(mockListPublishedPaths).not.toHaveBeenCalled();
+        expect(mockListPublishedPaths).not.toHaveBeenCalledWith('skukla', 'demo-storefront', 'main', '/products/*');
         expect(mockUnpublishPages).toHaveBeenCalledTimes(1);
         expect(of(resultsOf(result), 'helix')).toContainEqual({
             type: 'helix',

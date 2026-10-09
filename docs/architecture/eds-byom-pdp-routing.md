@@ -218,6 +218,19 @@ each site's repository from the local project that uses it, else assumes the
 same-named repository in the DA.live org's namespace; when the unpublish fails, the
 result names the sites whose pages may still be live.
 
+**What the teardown unpublishes, and how it knows (EDS-33, 2026-10-09).** The pages
+handed to the unpublish used to be the DA.live listing alone. Once a site's content was
+gone, that list was empty and the teardown reported the site down while all 174 of its
+pages still answered on aem.live. The list is now Helix's own record of the whole site
+(the same bulk status job, for `/*`), joined to the DA.live listing, minus the generated
+product pages the step above handles. When Helix cannot be read, the DA.live listing is
+all there is and the sentence says so. Afterwards the home page and the first few
+unpublished pages are fetched from the live host: the site is reported down only when
+a check came back 404, nothing checked still answers, and every live copy was removed.
+Otherwise the answer is `still-live` or `unknown`, said in words (`publishSummary`).
+`storefront/storefrontUnpublish.ts`. Reset does not use the teardown; its unpublish still
+works from the DA.live files it deleted.
+
 ### Out of scope (later workstreams or deliberate non-goals)
 
 - **~~SC template customizations on real product URLs.~~** Resolved — Phase 2 shipped 2026-06-09. The overlay now fetches the storefront's authored `/products/default` and serves it on `/products/{urlKey}/{sku}`. SC customizations inherit automatically.

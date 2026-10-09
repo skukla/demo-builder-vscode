@@ -7,7 +7,10 @@
  *      after the source is gone, so this goes FIRST. It is addressed by the
  *      GitHub repo, not by the DA.live site, because that is what the Helix admin
  *      API is keyed on (ADR 002; the DA.live Bearer token is the only credential
- *      that gets past "while source exists").
+ *      that gets past "while source exists"). WHAT is unpublished is Helix's own
+ *      record of the site, joined to the DA.live list, and the live host is checked
+ *      afterwards (EDS-33, `storefrontUnpublish.ts`): a DA.live list alone is empty
+ *      once the content is gone, and the site stayed up while this said it was down.
  *   2. **Remove the product pages** the overlay published (EDS-26,
  *      `productPageRemoval.ts`). They have no DA.live document, so step 1's listing
  *      never names them; Helix's own listing does. Left alone, with the reason, when
@@ -25,12 +28,15 @@
  *
  * Without a repo there is nothing to unpublish against: the teardown says so in
  * `stillPublished` rather than reporting a clean finish, because "the source is
- * gone" and "the site is down" are different claims.
+ * gone" and "the site is down" are different claims. `stillPublished` is false
+ * only when the live host was checked and the pages were gone.
  *
  * @module features/eds/services/storefront/storefrontTeardown
  */
 
+import { checkLiveStatus } from './liveStatusCheck';
 import { removeProductPages, type ProductPageRemovalResult } from './productPageRemoval';
+import { unpublishStorefront, type LiveStatusCheck, type PublishState } from './storefrontUnpublish';
 import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
 import { HelixService } from '@/features/eds/services/helix/helixService';
 import type { Logger } from '@/types/logger';
@@ -41,7 +47,7 @@ export interface DaLiveTokenProvider {
 }
 
 /**
- * The four Helix calls the unpublish makes, out of a class with dozens. A narrow
+ * The four Helix calls the teardown makes, out of a class with dozens. A narrow
  * seam is what let this be tested at all — see `projectDeletionService`, whose
  * module mock once supplied a method the source had stopped calling.
  */
@@ -60,7 +66,10 @@ export interface TeardownHelix {
         previewFailed: number;
     }>;
     deleteAdminApiKey(org: string, site: string): Promise<{ success: boolean; error?: string }>;
-    /** What the site has in preview or live matching a pattern — where product pages are found. */
+    /**
+     * What the site has in preview or live matching a pattern: `/*` for the whole site
+     * (EDS-33), `/products/*` for the product pages (EDS-26).
+     */
     listPublishedPaths(org: string, site: string, branch: string, pattern: string): Promise<string[]>;
 }
 
@@ -93,6 +102,8 @@ export interface StorefrontTeardownDeps {
     makeHelix?: (logger: Logger, tokenProvider: DaLiveTokenProvider) => TeardownHelix;
     /** Injectable for tests; defaults to the real content operations. */
     makeContentOps?: (tokenProvider: DaLiveTokenProvider, logger: Logger) => TeardownContentOps;
+    /** The status of a page on the live host, checked after the unpublish. Defaults to a GET. */
+    checkLive?: LiveStatusCheck;
     /**
      * Display names of OTHER local projects publishing to this `owner/repo`. Product
      * pages are left alone when there are any (EDS-26). Required, so every caller says
@@ -107,11 +118,16 @@ export interface StorefrontTeardownResult {
     /** How many pages were unpublished; undefined when it was not attempted. */
     unpublishedPages?: number;
     /**
-     * TRUE when the CDN was never unpublished, so the storefront may still be
-     * serving. A caller that says "deleted" without reading this is lying to an
-     * SC about whether the site is down.
+     * FALSE only when the pages were unpublished AND the live host was checked and
+     * no longer answers. TRUE when anything still answers, when the unpublish did not
+     * run, and when it could not be told. A caller that says "deleted" without
+     * reading this is lying to an SC about whether the site is down.
      */
     stillPublished: boolean;
+    /** `down`, `still-live`, or `unknown` (could not tell); `publishSummary` says which in words. */
+    publishState: PublishState;
+    /** What happened to the published pages, in one or two sentences for the SC and the agent. */
+    publishSummary: string;
     /**
      * What happened to the product pages the overlay published (EDS-26); undefined when
      * there was no repo to act against. Its `summary` is for the SC — a caller that
@@ -137,7 +153,13 @@ export async function tearDownStorefront(
 ): Promise<StorefrontTeardownResult> {
     const { logger, tokenProvider, onStep } = deps;
     const { daLiveOrg, daLiveSite } = target;
-    const result: StorefrontTeardownResult = { stillPublished: true, contentDeleted: false };
+    const result: StorefrontTeardownResult = {
+        stillPublished: true,
+        publishState: 'unknown',
+        publishSummary:
+            'No GitHub repository was given, so nothing was taken off the CDN. Anything published is still live.',
+        contentDeleted: false,
+    };
 
     const [owner, repo] = (target.githubRepo ?? '').split('/');
     if (owner && repo) {
@@ -149,12 +171,15 @@ export async function tearDownStorefront(
                 tokenProvider,
             );
             const pages = await helix.listAllPages(daLiveOrg, daLiveSite);
-            const unpublished = await helix.unpublishPages(owner, repo, 'main', pages);
-            result.unpublishedPages = unpublished.count;
-            result.stillPublished = !unpublished.success;
-            if (!unpublished.success) {
-                logger.warn(`[Teardown] CDN unpublish failed for ${owner}/${repo}`);
-            }
+            const unpublished = await unpublishStorefront({ owner, repo }, pages, {
+                helix,
+                checkLive: deps.checkLive ?? checkLiveStatus,
+                logger,
+            });
+            result.unpublishedPages = unpublished.unpublishedPages;
+            result.publishState = unpublished.publishState;
+            result.publishSummary = unpublished.publishSummary;
+            result.stillPublished = unpublished.publishState !== 'down';
 
             // The DA.live pages just listed ARE the authored pages: anything else Helix
             // holds under /products/{urlKey}/{sku} was made through the overlay.
@@ -176,6 +201,9 @@ export async function tearDownStorefront(
         } catch (error) {
             const reason = error instanceof Error ? error.message : String(error);
             logger.warn(`[Teardown] CDN unpublish failed: ${reason}`);
+            if (result.publishState !== 'down') {
+                result.publishSummary = `Couldn't take the pages off the CDN (${reason}). They may still be live.`;
+            }
         }
     } else {
         logger.warn(

@@ -151,14 +151,24 @@ function describe(site: string, found: number, liveFailed: number, previewFailed
     return { status: liveFailed === 0 ? 'live-only' : 'incomplete', ...counts, summary: `${live}${preview}` };
 }
 
+/**
+ * Whether a published path is a product page the overlay made: the
+ * `/products/{urlKey}/{sku}` shape, not the template, and no DA.live document behind it.
+ * The storefront teardown uses it too, to leave these pages to {@link removeProductPages}
+ * and its shared-repository refusal (EDS-33).
+ *
+ * @param path - a web path Helix lists
+ * @param authoredLower - the DA.live documents' web paths, lowercased
+ */
+export function isGeneratedProductPage(path: string, authoredLower: ReadonlySet<string>): boolean {
+    return GENERATED_PRODUCT_PAGE.test(path) && path !== PRODUCT_TEMPLATE && !authoredLower.has(path.toLowerCase());
+}
+
 /** The generated product pages Helix lists, minus anything DA.live holds a document for. */
 async function generatedPagesOn(site: ProductPageSite, deps: ProductPageRemovalDeps): Promise<string[]> {
     const authored = new Set((await deps.listAuthoredProductPages()).map((path) => path.toLowerCase()));
     const published = await deps.helix.listPublishedPaths(site.repoOwner, site.repoName, BRANCH, PRODUCT_PAGES);
-    return published.filter(
-        (path) =>
-            GENERATED_PRODUCT_PAGE.test(path) && path !== PRODUCT_TEMPLATE && !authored.has(path.toLowerCase()),
-    );
+    return published.filter((path) => isGeneratedProductPage(path, authored));
 }
 
 /**

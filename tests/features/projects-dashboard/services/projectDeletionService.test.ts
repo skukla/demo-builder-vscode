@@ -44,6 +44,7 @@ import {
     mockDeleteAdminApiKey,
     mockInitKeyStore,
     mockListAllPages,
+    mockListPublishedPaths,
     mockUnpublishPages,
     plainProject,
 } from './projectDeletionService.fixtures';
@@ -53,6 +54,9 @@ beforeEach(() => {
     mockRm.mockResolvedValue(undefined);
     mockInitKeyStore.mockResolvedValue(undefined);
     mockListAllPages.mockResolvedValue(['/index', '/products']);
+    // Helix's record of what is published (EDS-33). The real call answers a list or
+    // throws; an unset mock answered undefined, a shape it never returns.
+    mockListPublishedPaths.mockResolvedValue([]);
     mockUnpublishPages.mockResolvedValue({
         success: true,
         count: 2,

@@ -44,8 +44,13 @@ export interface CloudCleanupOutcome {
         name: string;
         contentDeleted: boolean;
         unpublishedPages?: number;
-        /** The CDN was not unpublished, so the storefront may still serve. */
+        /**
+         * False only when the pages were unpublished and the live host was checked and
+         * no longer answers; true when they may still serve or it could not be told.
+         */
         stillPublished: boolean;
+        /** Whether the published pages are gone, in words, including "could not tell" (EDS-33). */
+        publishSummary: string;
         /** What happened to the product pages the overlay published, in SC words (EDS-26). */
         productPages?: string;
         error?: string;
@@ -139,6 +144,7 @@ export async function cleanUpProjectCloud(
                 contentDeleted: torn.contentDeleted,
                 unpublishedPages: torn.unpublishedPages,
                 stillPublished: torn.stillPublished,
+                publishSummary: torn.publishSummary,
                 ...(torn.productPages ? { productPages: torn.productPages.summary } : {}),
                 error: torn.error,
             };
@@ -147,6 +153,7 @@ export async function cleanUpProjectCloud(
                 name,
                 contentDeleted: false,
                 stillPublished: true,
+                publishSummary: 'The storefront teardown failed before it could say; its pages may still be live.',
                 error: error instanceof Error ? error.message : String(error),
             };
         }

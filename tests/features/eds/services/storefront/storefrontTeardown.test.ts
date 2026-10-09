@@ -9,7 +9,11 @@
  * clean teardown.
  */
 
-import { tearDownStorefront } from '@/features/eds/services/storefront/storefrontTeardown';
+import type { UnpublishPagesResult } from '@/features/eds/services/helix/helixPageDeletion';
+import {
+    tearDownStorefront,
+    type TeardownHelix,
+} from '@/features/eds/services/storefront/storefrontTeardown';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const removeSitePermissions = jest.fn().mockResolvedValue({ success: true });
@@ -24,22 +28,35 @@ jest.mock('@/features/eds/services/daLive/daLiveConfigService', () => ({
 
 const TOKEN_PROVIDER = { getAccessToken: async () => 'token' };
 
-function helixFake(overrides: Record<string, unknown> = {}) {
+/** An unpublish where every path went from live and preview (the shape `unpublishPages` returns). */
+function unpublishedAll(n: number): UnpublishPagesResult {
+    return { success: n > 0, count: n, total: n, liveFailed: 0, previewFailed: 0 };
+}
+
+/**
+ * What Helix says the site has published, by the pattern asked for. `/products/*` holds
+ * two pages made through the overlay and the authored one DA.live also lists (EDS-26);
+ * `/*` is the whole site (EDS-33) and holds those plus the authored pages.
+ */
+const PUBLISHED: Record<string, string[]> = {
+    '/products/*': ['/products/drum/dc-100', '/products/sign/es-2', '/products/shirt'],
+    '/*': ['/index', '/products/shirt', '/products/drum/dc-100', '/products/sign/es-2'],
+};
+
+type HelixFake = { [K in keyof TeardownHelix]: jest.Mock<ReturnType<TeardownHelix[K]>, Parameters<TeardownHelix[K]>> };
+
+function helixFake(overrides: Partial<HelixFake> = {}): HelixFake {
     return {
-        listAllPages: jest.fn().mockResolvedValue(['/index', '/products/shirt']),
-        unpublishPages: jest.fn().mockResolvedValue({
-            success: true,
-            count: 2,
-            total: 2,
-            liveFailed: 0,
-            previewFailed: 0,
-        }),
-        deleteAdminApiKey: jest.fn().mockResolvedValue({ success: true }),
-        // What Helix says the site has published under /products (EDS-26): two pages
-        // made through the overlay, and the authored one DA.live also lists.
+        listAllPages: jest.fn<Promise<string[]>, [string, string, string?]>().mockResolvedValue(['/index', '/products/shirt']),
+        unpublishPages: jest
+            .fn<Promise<UnpublishPagesResult>, [string, string, string, string[]]>()
+            .mockImplementation(async (_o, _s, _b, paths) => unpublishedAll(paths.length)),
+        deleteAdminApiKey: jest
+            .fn<Promise<{ success: boolean; error?: string }>, [string, string]>()
+            .mockResolvedValue({ success: true }),
         listPublishedPaths: jest
-            .fn()
-            .mockResolvedValue(['/products/drum/dc-100', '/products/sign/es-2', '/products/shirt']),
+            .fn<Promise<string[]>, [string, string, string, string]>()
+            .mockImplementation(async (_o, _s, _b, pattern) => PUBLISHED[pattern] ?? []),
         ...overrides,
     };
 }
@@ -55,9 +72,17 @@ function contentFake(overrides: Record<string, unknown> = {}) {
     };
 }
 
+/** What the live host answers for each URL checked after the unpublish; 404 = gone. */
+function liveCheck(answers: Record<string, number> = {}, otherwise = 404) {
+    return jest.fn<Promise<number>, [string]>().mockImplementation(async (url) => answers[url] ?? otherwise);
+}
+
+const LIVE_HOST = 'https://main--storefront--acme.aem.live';
+
 function depsWith(helix = helixFake(), content = contentFake(), onStep?: (s: string) => void) {
     return {
         deps: {
+            checkLive: liveCheck(),
             tokenProvider: TOKEN_PROVIDER,
             logger: createMockLogger(),
             initKeyStore: jest.fn().mockResolvedValue(undefined),
@@ -97,6 +122,8 @@ describe('with a repo to unpublish against', () => {
         expect(result).toEqual({
             unpublishedPages: 2,
             stillPublished: false,
+            publishState: 'down',
+            publishSummary: expect.stringContaining('main--storefront--acme.aem.live'),
             contentDeleted: true,
             deletedCount: 7,
             error: undefined,
@@ -182,7 +209,7 @@ describe('the product pages the overlay published', () => {
         const result = await tearDownStorefront(SITE, deps);
 
         expect(deps.otherProjectsOnRepo).toHaveBeenCalledWith('acme/storefront');
-        expect(helix.listPublishedPaths).not.toHaveBeenCalled();
+        expect(helix.listPublishedPaths).not.toHaveBeenCalledWith('acme', 'storefront', 'main', '/products/*');
         expect(helix.unpublishPages).toHaveBeenCalledTimes(1);
         expect(result.productPages).toMatchObject({ status: 'refused' });
         expect(result.productPages?.summary).toContain('"Other Demo" also publishes to acme/storefront');
@@ -213,6 +240,143 @@ describe('the product pages the overlay published', () => {
     });
 });
 
+// EDS-33, measured 2026-10-09: a site whose DA.live content was already gone listed
+// nothing, unpublished nothing, and answered stillPublished:false while all 174 of its
+// pages kept answering 200 at aem.live. What is published is Helix's record, not DA.live's.
+describe('what is published comes from Helix, not from DA.live', () => {
+    it('unpublishes what Helix lists when the DA.live content is already gone', async () => {
+        const helix = helixFake({
+            listAllPages: jest.fn<Promise<string[]>, [string, string, string?]>().mockResolvedValue([]),
+            listPublishedPaths: jest
+                .fn<Promise<string[]>, [string, string, string, string]>()
+                .mockImplementation(async (_o, _s, _b, pattern) =>
+                    pattern === '/*' ? ['/', '/about', '/nav', '/products/drum/dc-100'] : ['/products/drum/dc-100'],
+                ),
+        });
+        const { deps } = depsWith(helix);
+
+        const result = await tearDownStorefront(SITE, deps);
+
+        // Asked by the GitHub owner/repo Helix is keyed on, for the whole site.
+        expect(helix.listPublishedPaths).toHaveBeenCalledWith('acme', 'storefront', 'main', '/*');
+        // The generated product page is left to the product-page removal, which
+        // refuses on a shared repository; everything else goes here.
+        expect(helix.unpublishPages).toHaveBeenNthCalledWith(1, 'acme', 'storefront', 'main', [
+            '/',
+            '/about',
+            '/nav',
+        ]);
+        expect(helix.unpublishPages).toHaveBeenNthCalledWith(2, 'acme', 'storefront', 'main', [
+            '/products/drum/dc-100',
+        ]);
+        expect(result.unpublishedPages).toBe(3);
+        expect(result.stillPublished).toBe(false);
+        expect(result.publishState).toBe('down');
+    });
+
+    it('unpublishes the union when both lists can be read, DA.live first', async () => {
+        const helix = helixFake({
+            listAllPages: jest.fn<Promise<string[]>, [string, string, string?]>().mockResolvedValue(['/', '/about']),
+            listPublishedPaths: jest
+                .fn<Promise<string[]>, [string, string, string, string]>()
+                .mockImplementation(async (_o, _s, _b, pattern) => (pattern === '/*' ? ['/', '/old-page'] : [])),
+        });
+        const { deps } = depsWith(helix);
+
+        await tearDownStorefront(SITE, deps);
+
+        expect(helix.listAllPages).toHaveBeenCalledWith('acme', 'shop');
+        expect(helix.unpublishPages).toHaveBeenNthCalledWith(1, 'acme', 'storefront', 'main', [
+            '/',
+            '/about',
+            '/old-page',
+        ]);
+    });
+
+    it('falls back to the DA.live list when Helix cannot be read, and says so', async () => {
+        const helix = helixFake({
+            listPublishedPaths: jest
+                .fn<Promise<string[]>, [string, string, string, string]>()
+                .mockRejectedValue(new Error('Helix refused to list the published pages (HTTP 401)')),
+        });
+        const { deps } = depsWith(helix);
+
+        const result = await tearDownStorefront(SITE, deps);
+
+        expect(helix.unpublishPages).toHaveBeenNthCalledWith(1, 'acme', 'storefront', 'main', [
+            '/index',
+            '/products/shirt',
+        ]);
+        expect(result.publishSummary).toContain('HTTP 401');
+    });
+});
+
+describe('the answer about whether the site is down', () => {
+    it('checks the live host after unpublishing: the home page and the first pages it unpublished', async () => {
+        const { deps, helix } = depsWith();
+
+        await tearDownStorefront(SITE, deps);
+
+        expect(deps.checkLive).toHaveBeenCalledWith(`${LIVE_HOST}/`);
+        expect(deps.checkLive).toHaveBeenCalledWith(`${LIVE_HOST}/index`);
+        expect(deps.checkLive).toHaveBeenCalledWith(`${LIVE_HOST}/products/shirt`);
+        expect(deps.checkLive.mock.invocationCallOrder[0]).toBeGreaterThan(
+            helix.unpublishPages.mock.invocationCallOrder[0],
+        );
+    });
+
+    it('is still published, naming the page, when a checked page still answers', async () => {
+        const { deps } = depsWith();
+        deps.checkLive = liveCheck({ [`${LIVE_HOST}/`]: 200 });
+
+        const result = await tearDownStorefront(SITE, deps);
+
+        expect(result.stillPublished).toBe(true);
+        expect(result.publishState).toBe('still-live');
+        expect(result.publishSummary).toContain('/');
+        expect(result.publishSummary).toContain('still answer');
+    });
+
+    it('is never false when the check got no answer: it says it could not tell', async () => {
+        const { deps } = depsWith();
+        deps.checkLive = liveCheck({}, 0);
+
+        const result = await tearDownStorefront(SITE, deps);
+
+        expect(result.stillPublished).toBe(true);
+        expect(result.publishState).toBe('unknown');
+        expect(result.publishSummary).toContain('Could not tell');
+    });
+
+    it('is never false when neither Helix nor DA.live could list anything', async () => {
+        const helix = helixFake({
+            listAllPages: jest.fn<Promise<string[]>, [string, string, string?]>().mockResolvedValue([]),
+            listPublishedPaths: jest
+                .fn<Promise<string[]>, [string, string, string, string]>()
+                .mockRejectedValue(new Error('HTTP 401')),
+        });
+        const { deps } = depsWith(helix);
+
+        const result = await tearDownStorefront(SITE, deps);
+
+        expect(result.stillPublished).toBe(true);
+        expect(result.publishState).toBe('unknown');
+        expect(result.publishSummary).toContain('Could not tell');
+    });
+
+    it('is still published when some live copies could not be removed, even if the checked ones are gone', async () => {
+        const helix = helixFake();
+        helix.unpublishPages.mockResolvedValueOnce({ success: true, count: 1, total: 2, liveFailed: 1, previewFailed: 0 });
+        const { deps } = depsWith(helix);
+
+        const result = await tearDownStorefront(SITE, deps);
+
+        expect(result.stillPublished).toBe(true);
+        expect(result.publishState).toBe('still-live');
+        expect(result.publishSummary).toContain('1 of 2');
+    });
+});
+
 describe('with no repo', () => {
     it('deletes the source, touches no CDN, and reports the site as still published', async () => {
         const { deps, helix, content } = depsWith();
@@ -223,7 +387,10 @@ describe('with no repo', () => {
         expect(helix.listPublishedPaths).not.toHaveBeenCalled();
         expect(content.deleteAllSiteContent).toHaveBeenCalledWith('acme', 'shop');
         expect(result.stillPublished).toBe(true);
+        expect(result.publishState).toBe('unknown');
+        expect(result.publishSummary).toContain('No GitHub repository');
         expect(result.unpublishedPages).toBeUndefined();
+        expect(deps.checkLive).not.toHaveBeenCalled();
     });
 });
 

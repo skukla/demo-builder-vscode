@@ -451,6 +451,14 @@ that exactly echoes the resource, so an agent can't destroy the wrong one on a
 fuzzy match: `delete_project` (project name), `delete_github_repo` (`owner/repo`),
 and `cleanup_dalive_site` (`org/site`).
 
+**Whether a deleted storefront is really down.** `cleanup_dalive_site` and
+`delete_project` (with `deleteDaLiveSite`) run the storefront teardown. It unpublishes
+what Helix lists as published, not only what DA.live still holds, then checks the live
+host. `stillPublished` is false only when that check found the pages gone;
+`publishState` (`down`, `still-live`, `unknown`) and `publishSummary` say which, in words,
+including "could not tell" (EDS-33). `delete_project` carries `publishSummary` under
+`daLiveSite`.
+
 `delete_page` deliberately uses the plain `confirm: true` gate instead — it removes
 one page from the current project's own storefront, not a whole repository or site.
 That proportionality holds only because the page path is confined to the current

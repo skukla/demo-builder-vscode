@@ -394,6 +394,8 @@ describe('cloud-resource tools (DA.live)', () => {
                 site: 'acme/shop',
                 deletedCount: 7,
                 stillPublished: true,
+                publishState: 'unknown',
+                publishSummary: expect.stringContaining('No GitHub repository'),
                 note: expect.stringContaining('githubRepo'),
             });
             expect(mockDeleteAllSiteContent).toHaveBeenCalledWith('acme', 'shop');
