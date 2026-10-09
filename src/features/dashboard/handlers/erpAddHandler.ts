@@ -35,6 +35,7 @@ import {
     resolveComponentTarget,
     type GuardableResult,
 } from './appBuilderComponentHandlers';
+import { previewErpAddAnswer } from './erpAddPreviewAnswer';
 import { giveAddedErpItsOwnTheme, type ErpAddTheme } from './erpAddTheme';
 import { sentence } from './erpCall';
 import { replaceDeployedElsewhere } from './replaceDeployedElsewhere';
@@ -439,6 +440,8 @@ export const handleAddErp: MessageHandler<AddErpRequestPayload> = narrateOutcome
     async (context, payload): Promise<HandlerResponse> => {
         const plan = await planErpAdd(context, payload);
         if ('error' in plan) return plan.error;
+        // Without confirm, what every ERP will own once it is added (AB-75); nothing runs.
+        if (payload?.confirm !== true) return previewErpAddAnswer(plan);
         const outcome = await withOperationProgress(
             {
                 id: plan.integrationId,

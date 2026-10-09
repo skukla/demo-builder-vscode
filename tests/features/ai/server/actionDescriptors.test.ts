@@ -104,13 +104,35 @@ describe('ACTION_DESCRIPTORS', () => {
     // have caught refresh_block_library or promote_block_to_library, both of
     // which published to a live site ungated. Pinning the exact set means adding
     // a destructive tool forces a deliberate edit here rather than sliding in.
+    // The tools whose HANDLER is the gate: a call without confirm:true previews and writes
+    // nothing, so the descriptor must not refuse it, and must offer `confirm` to pass.
+    it('previewWithoutConfirm: these rows take confirm and leave the gate to the handler', () => {
+        const PREVIEWING = [
+            'add_erp',
+            'add_erp_owner_to_attribute_sets',
+            'assign_erp_products',
+            'remove_erp_owner_from_attribute_sets',
+            'undo_erp_assignment',
+        ];
+        for (const tool of PREVIEWING) {
+            const row = actionRows().find((d) => d.tool === tool);
+            expect({ tool, gatedByDescriptor: row?.confirm ?? false, takesConfirm: Boolean(row?.inputSchema?.confirm) }).toEqual({
+                tool,
+                gatedByDescriptor: false,
+                takesConfirm: true,
+            });
+        }
+    });
+
     it('pins the exact confirm-gated set', () => {
         const gated = actionRows()
             .filter((d) => d.confirm)
             .map((d) => d.tool);
+        // add_erp left this list on 2026-10-09 (AB-75): without confirm it PREVIEWS what every ERP
+        // will own and deploys nothing, so the gate moved into its handler, as it is for the
+        // four AB-74 Assign products tools. A write still needs confirm:true; see
+        // previewWithoutConfirm below.
         expect(gated.sort()).toEqual([
-            // Makes an Adobe workspace and deploys a new ERP into it (AB-16).
-            'add_erp',
             'delete_ai_prompt',
             'delete_mesh',
             // Deletes deployed Runtime code; a redeploy of an older version is the only undo.

@@ -246,6 +246,15 @@ other than `erp_owner` is still told to tag products in Commerce. Anything that 
 right for one ERP is its note and the pass stands; a store or an integration that could not be
 read fails the pass, never the add or the removal, which say so.
 
+**Before the add (AB-75).** The "Add another ERP" dialog shows, under "After adding", what
+every ERP will own once the new one is added: one line per ERP with its count, its rule in
+words and up to three SKUs, then how many products nobody will own and how many two rules
+will both claim. It is worked out with the same resolver as the pass (`previewErpAdd`), the
+catch-all included, and follows the name and the rule as the SC changes them. While the store
+is being read the dialog says so, and Add still works. When the new ERP would own nothing by
+`erp_owner`, it says to use Assign products on its card after adding. `add_erp` without
+`confirm` answers the same preview.
+
 **Assigning products (AB-74).** Which products an ERP owns by `erp_owner` is set from its
 card: **Assign products** opens a modal where the SC picks products by category, by brand, by
 the start of their SKU, or by pasting SKUs. The modal reads the store once as it opens

@@ -588,10 +588,10 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             "ERP's is given the first theme no other ERP shows (data.theme). Ask the user which rule " +
             'before running it. The ERP integration is added once; add_integration refuses a ' +
             'second. Remove one ERP with remove_integration on its id. Takes a few minutes. ' +
-            'Requires confirm:true.',
+            'WITHOUT confirm it previews what every ERP will own (data.preview; data.next when the ' +
+            'new ERP would own nothing); show the user, then call with confirm:true.',
         map: dashboardHandlers,
         type: 'addErp',
-        confirm: true,
         inputSchema: {
             id: z.string().describe('The ERP integration id (from get_project)'),
             name: z.string().min(1).max(40).describe('The new ERP\'s name; it is made to end in "ERP" ("Brand B" → "Brand B ERP")'),
@@ -606,6 +606,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
                 })
                 .optional()
                 .describe('Which products the new ERP owns; omit for the default (see the description)'),
+            confirm: z.boolean().optional().describe('true adds; omitted or false previews only'),
         },
     },
     {

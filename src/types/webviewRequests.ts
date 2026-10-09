@@ -732,6 +732,8 @@ export interface AddErpRequestPayload {
      * become is the handler's to decide from the store (AB-72), never the dialog's.
      */
     owns?: ErpOwnsRule;
+    /** `true` adds; without it the handler answers the preview only (AB-75). The dialog sends it. */
+    confirm?: boolean;
     /** `'modal'` when the SC started it from the integrations screen (PL-59). */
     progress?: 'modal';
 }
