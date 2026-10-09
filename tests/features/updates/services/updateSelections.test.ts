@@ -1,5 +1,5 @@
 /**
- * updateApplyService.computeProjectUpdateSelections — one project, every
+ * updateSelections.computeProjectUpdateSelections — one project, every
  * checker, each category degrading on its own.
  *
  * What each checker is built with and asked, which answers become a selection
@@ -28,7 +28,7 @@ import {
 import {
     computeProjectUpdateSelections,
     countSelections,
-} from '@/features/updates/services/updateApplyService';
+} from '@/features/updates/services/updateSelections';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../helpers/projectFake';
 

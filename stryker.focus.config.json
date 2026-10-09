@@ -8,9 +8,8 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/authentication/services/adobeConsoleProjectOps.ts",
-        "src/features/authentication/services/adobeConsoleWorkspaceOps.ts",
-        "src/features/authentication/services/adobeEntityReads.ts"
+        "src/features/updates/services/updateApplyService.ts",
+        "src/features/updates/services/updateSelections.ts"
     ],
     "reporters": [
         "clear-text",

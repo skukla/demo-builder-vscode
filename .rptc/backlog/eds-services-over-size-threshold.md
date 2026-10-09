@@ -418,8 +418,8 @@ and three of them are more than 40% comments). Decide which.
     notice components; repo-creation hook, repo-readiness hook, selection component.
 12. DONE 2026-10-09 (555 -> 282, see the log). `authentication/services/adobeConsoleProjectOps.ts` (555/400): Console project
     create/rename/delete vs workspace create/delete/namespace. The workspace half is `adobeConsoleWorkspaceOps.ts`.
-13. `updates/services/updateApplyService.ts` (543/400): selection computation vs the
-    appliers and apply loop.
+13. DONE 2026-10-09 (543 -> 393, see the log). `updates/services/updateApplyService.ts` (543/400): selection computation vs the
+    appliers and apply loop. Finding what a project has waiting moved to `updateSelections.ts`.
 14. `eds/handlers/daLive/daLiveAuthPrompt.ts` (666/500): token validation; input prompts;
     the sign-in flow and guard.
 15. `dashboard/ui/components/ActionGrid.tsx` (451/350): `BuildZone` and `EditTile` out,
@@ -905,6 +905,15 @@ date and what happened; a failure becomes its own `fix` item.
       `AdobeConsoleWorkspaceOps` (`workspaceOps` on the entity services); project create,
       rename and delete stay in `AdobeConsoleProjectOps`. Every Console SDK call takes the
       same arguments as before.
+- [ ] **Updates after the updateApplyService split** (2026-10-09): (1) run Check for Updates
+      on a project with a component behind its latest release, apply that one update, and
+      confirm the component reports the new version; (2) apply the extension update the same
+      way; (3) force a component update to fail (for example a release download URL that
+      404s, or a component folder made read-only) and confirm the rollback restores the
+      component exactly as it was, version and files; (4) the agent's `apply_updates`
+      without confirm lists the same pending items, and with confirm applies them. Finding
+      what is waiting now lives in `updateSelections.ts`; the apply loop stayed in
+      `updateApplyService.ts`, and rollback is unchanged in `componentUpdater.ts`.
 
 ## Shipped so far
 
@@ -990,3 +999,4 @@ date and what happened; a failure becomes its own `fix` item.
 - 2026-10-09  refactor(eds): the repo picker keeps the list and its choice; creating a repository and checking one get their own hooks (`2bc8346b7`)
 - 2026-10-09  adobeConsoleProjectOps.ts (555 -> 282) split by job. It keeps the project: createProject with its Runtime sweep over the new project's workspaces, renameRemoteProject, deleteConsoleProject. Workspace create and delete, the look-again after a failed delete, and one workspace's Runtime namespace moved to adobeConsoleWorkspaceOps.ts (308), a new `workspaceOps` entity service wired in createEntityCollaborators; the project sweep reaches the namespace call through an injected function. Callers (create_adobe_workspace and delete_adobe_workspace, the wizard's workspace handler, the App Builder runner deps, the App Builder creation phase) take workspaceOps directly, no forwarders. Folded in PL-69's four-copy ensureSDKReady: one exported function in adobeEntityReads.ts, used by the reads, org services, workspace credentials and both ops. proveMove: every DIFFERS is that one call or the injected-function name; control fired. Two doc comments corrected (createWorkspace said it answers undefined; it answers a failure object). Tests: the two workspace suites renamed to the new file's name; new suites adobeConsoleProjectOps.test.ts and adobeConsoleWorkspaceOps.test.ts assert the arguments of every Console call. The delete suite's wait counts were vacuous (the node project keeps mock calls across tests) and now clear per test. Mutation: no prior row; before 30.52% (94 of 308; 170 mutants no mirror-named suite reached). After: project ops 86.96%, workspace ops 85.64%, open gaps 0 on both; survivors are log text plus four ledgered log-only equivalents (10 mutants). Two adobeProjectReads ledger rows re-homed by their 5-line import shift. Pins: godFileCandidates 25 -> 24, godFileCoupled stays 2. Checks: npm run gate green (lint 0 errors, tsc, typecheck:tests, blind spots, test sizes, full jest 1905 suites / 32,510 tests, source duplication at the pin of 36). Live check appended above.
 - 2026-10-09  refactor(authentication): Console project ops keep the project; workspace create, delete and Runtime namespace get their own file (`5fada61ff`)
+- 2026-10-09  updateApplyService.ts (543 -> 393) split by job. It keeps the apply: the six per-category apply steps, the template conflict policy and the apply loop with its totals; component updates still go through ComponentUpdater, so rollback is untouched. Finding what one project has waiting (computeProjectUpdateSelections, countSelections and the UpdateSelections shape) moved to updateSelections.ts (162). The apply_updates MCP tool imports each directly; no forwarders, no dead code found (every export has a caller). proveMove: all 11 functions a pure move, control fired; the four moved types hand-diffed with a planted control. Tests: the selections suite renamed to updateSelections.test.ts (it keeps the shared updateApplyService.testUtils harness, which now serves both); four checker mocks and one getTemplateSource mock in updateApplyService.test.ts were dead after the split and deleted; the tool test mocks the two modules separately. Mutation: the 89.47% row predated the 2026-10-05 install change, so the unsplit file was re-measured: 90.72% (215 killed, 22 survived). After: the same 215 and 22, split as apply 89.44% and selections 93.42%, open gaps 0 on both; every survivor is a log line or a config key string. Pins: godFileCandidates 24 -> 23; cloneCeiling stays 36 (the updates pair PL-69 lists, updateExecutor <-> updateCore, is untouched by this split). Checks: full jest 1905/1905 suites (32,510 tests), tsc, typecheck:tests, lint (0 errors, 25 pre-existing warnings), source-duplication, test-file-sizes all 0. Live check appended above.

@@ -8,10 +8,8 @@
  */
 
 import * as vscode from 'vscode';
-import {
-    applyUpdatesHeadless,
-    type UpdateSelections,
-} from '@/features/updates/services/updateApplyService';
+import { applyUpdatesHeadless } from '@/features/updates/services/updateApplyService';
+import type { UpdateSelections } from '@/features/updates/services/updateSelections';
 import {
     applyBlockLibraryUpdateResolved,
     updateCommitShaWithRollback,
@@ -67,20 +65,8 @@ jest.mock('@/features/updates/services/updateCore', () => ({
     updateCommitShaWithRollback: jest.fn(),
 }));
 jest.mock('@/features/updates/commands/updateTypes', () => ({
-    getTemplateSource: jest.fn(),
     shouldSkipBlockLibrary: jest.fn(() => false),
 }));
-// Checkers are imported at module top (used by computeProjectUpdateSelections).
-jest.mock('@/features/updates/services/templateUpdateChecker', () => ({
-    TemplateUpdateChecker: jest.fn(),
-}));
-jest.mock('@/features/updates/services/addonUpdateChecker', () => ({
-    AddonUpdateChecker: jest.fn(),
-}));
-jest.mock('@/features/updates/services/adobeMcpUpdateChecker', () => ({
-    AdobeMcpUpdateChecker: jest.fn(),
-}));
-jest.mock('@/features/updates/services/updateManager', () => ({ UpdateManager: jest.fn() }));
 
 const applyBlockResolvedMock = applyBlockLibraryUpdateResolved as jest.Mock;
 const updateShaRollbackMock = updateCommitShaWithRollback as jest.Mock;

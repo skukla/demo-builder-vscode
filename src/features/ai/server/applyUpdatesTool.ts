@@ -1,8 +1,9 @@
 /**
  * apply_updates (Phase 4) — check and apply available updates for the current
  * project across all categories (fork sync, template, components, Adobe MCP,
- * block libraries, inspector SDK), via the headless updateApplyService. It also
- * installs a block library the project has selected but never received (EDS-28).
+ * block libraries, inspector SDK): updateSelections finds them and the headless
+ * updateApplyService applies them. It also installs a block library the project
+ * has selected but never received (EDS-28).
  *
  * Two modes in one tool:
  *  - WITHOUT confirm: read-only — reports what's available (acts as the check).
@@ -20,12 +21,12 @@ import type { McpToolServer } from './mcpToolServer';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import { describePendingInstall } from '@/features/updates/services/blockLibraryInstall';
+import { applyUpdatesHeadless } from '@/features/updates/services/updateApplyService';
 import {
-    applyUpdatesHeadless,
     computeProjectUpdateSelections,
     countSelections,
     type UpdateSelections,
-} from '@/features/updates/services/updateApplyService';
+} from '@/features/updates/services/updateSelections';
 import type { HandlerContext } from '@/types/handlers';
 
 /** Compact, human-readable summary of pending updates. */

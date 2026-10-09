@@ -89,7 +89,7 @@ The result is a folder with **no `.git`** (a zip, not a clone). [code]
 - On demand: command `demoBuilder.checkForUpdates` and the sidebar "updates" nav target
   (`src/commands/commandManager.ts:256-257`, `:330-332`). [code]
 - Agents: MCP `apply_updates` (current project only) via
-  `src/features/updates/services/updateApplyService.ts:424-440`. [code]
+  `src/features/updates/services/updateSelections.ts:42-62`. [code]
 - It checks **every project on disk** (`src/features/updates/commands/checkUpdates.ts:76-100`),
   shows one multi-select list, current project pre-ticked (`updateTypes.ts:122-235`), and asks to
   stop a running demo first (`updateExecutor.ts:231-238`). Nothing applies without a pick. [code]

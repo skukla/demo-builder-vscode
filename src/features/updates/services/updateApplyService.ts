@@ -4,8 +4,9 @@
  * The `perform*` functions in `commands/updateExecutor.ts` drive updates from the
  * QuickPick command — they own the UI shell (running-demo prompts, progress
  * notifications, summary toasts). This module is the modal-free counterpart used
- * by the MCP `apply_updates` tool: it computes what's available for a project and
- * applies it, returning structured per-category results instead of showing UI.
+ * by the MCP `apply_updates` tool: it applies the set `updateSelections.ts`
+ * computed for a project, returning structured per-category results instead of
+ * showing UI.
  *
  * The substantive work lives in shared services (ForkSyncService, TemplateSync-
  * Service, ComponentUpdater, ...) and — for the snapshot/marker-bearing block
@@ -20,15 +21,11 @@
 
 import * as vscode from 'vscode';
 import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
-import { getTemplateSource, shouldSkipBlockLibrary } from '@/features/updates/commands/updateTypes';
-import { AddonUpdateChecker } from '@/features/updates/services/addonUpdateChecker';
-import { AdobeMcpUpdateChecker } from '@/features/updates/services/adobeMcpUpdateChecker';
+import { shouldSkipBlockLibrary } from '@/features/updates/commands/updateTypes';
 import { applyAdobeMcpUpdate } from '@/features/updates/services/adobeMcpUpdateCore';
 import {
     applyBlockLibraryInstall,
     describeInstallOutcome,
-    findUninstalledBlockLibraries,
-    type BlockLibraryInstallTarget,
 } from '@/features/updates/services/blockLibraryInstall';
 import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import { ForkSyncService } from '@/features/updates/services/forkSyncService';
@@ -36,37 +33,17 @@ import {
     TemplateSyncService,
     type TemplateSyncResult,
 } from '@/features/updates/services/templateSyncService';
-import { TemplateUpdateChecker } from '@/features/updates/services/templateUpdateChecker';
 import {
     applyBlockLibraryUpdateResolved,
     updateCommitShaWithRollback,
     type UpdateContext,
 } from '@/features/updates/services/updateCore';
-import { UpdateManager } from '@/features/updates/services/updateManager';
+import type { UpdateSelections } from '@/features/updates/services/updateSelections';
 import type { Project } from '@/types/base';
-import type { InstalledBlockLibrary } from '@/types/blockLibraries';
-import type { HandlerContext } from '@/types/handlers';
 
 // ==========================================================
 // Types
 // ==========================================================
-
-/** Minimal, UI-free selection fields each apply core needs. */
-export interface UpdateSelections {
-    forkSync: Array<{ owner: string; repo: string; branch: string }>;
-    template: Array<{ project: Project }>;
-    component: Array<{
-        project: Project;
-        componentId: string;
-        latestVersion: string;
-        downloadUrl?: string;
-    }>;
-    adobeMcp: Array<{ project: Project; packageName: string; latestVersion: string }>;
-    blockLibrary: Array<{ project: Project; library: InstalledBlockLibrary; latestCommit: string }>;
-    /** Selected but not yet in the storefront (EDS-28) — an install, not an update. */
-    blockLibraryInstall: BlockLibraryInstallTarget[];
-    inspector: Array<{ project: Project; latestCommit: string }>;
-}
 
 /** Per-category outcome. */
 export interface CategoryResult {
@@ -413,130 +390,4 @@ export async function applyUpdatesHeadless(
         totalApplied: cats.reduce((s, c) => s + c.successCount, 0),
         totalFailed: cats.reduce((s, c) => s + c.failCount, 0),
     };
-}
-
-// ==========================================================
-// Selection computation (single project)
-// ==========================================================
-
-/**
- * Compute available updates for ONE project across all categories, reusing the
- * same checker services the QuickPick command uses. Each category degrades
- * independently — a checker failure logs and yields an empty list rather than
- * aborting the whole computation.
- */
-export async function computeProjectUpdateSelections(
-    project: Project,
-    handlerCtx: HandlerContext,
-): Promise<UpdateSelections> {
-    const { secrets } = handlerCtx.context;
-    const logger = handlerCtx.logger;
-    const selections: UpdateSelections = {
-        forkSync: [],
-        template: [],
-        component: [],
-        adobeMcp: [],
-        blockLibrary: [],
-        blockLibraryInstall: [],
-        inspector: [],
-    };
-
-    // Fork sync
-    try {
-        const source = getTemplateSource(project);
-        if (source) {
-            const status = await new ForkSyncService(secrets, logger).checkForkStatus(
-                source.owner,
-                source.repo,
-            );
-            if (status?.isFork && status.behindBy > 0) {
-                selections.forkSync.push({
-                    owner: source.owner,
-                    repo: source.repo,
-                    branch: status.defaultBranch || 'main',
-                });
-            }
-        }
-    } catch (error) {
-        logger.warn(`[Updates] Fork sync check failed: ${sanitizeErrorForLogging(error as Error)}`);
-    }
-
-    // Template
-    try {
-        const t = await new TemplateUpdateChecker(secrets, logger).checkForUpdates(project);
-        if (t?.hasUpdates) selections.template.push({ project });
-    } catch (error) {
-        logger.warn(`[Updates] Template check failed: ${sanitizeErrorForLogging(error as Error)}`);
-    }
-
-    // Components
-    try {
-        const results = await new UpdateManager(
-            handlerCtx.context,
-            logger,
-        ).checkAllProjectsForUpdates([project]);
-        for (const r of results) {
-            const outdated = r.outdatedProjects.some((o) => o.project.path === project.path);
-            if (outdated && r.releaseInfo?.downloadUrl) {
-                selections.component.push({
-                    project,
-                    componentId: r.componentId,
-                    latestVersion: r.latestVersion,
-                    downloadUrl: r.releaseInfo.downloadUrl,
-                });
-            }
-        }
-    } catch (error) {
-        logger.warn(`[Updates] Component check failed: ${sanitizeErrorForLogging(error as Error)}`);
-    }
-
-    // Adobe MCP
-    try {
-        const a = await new AdobeMcpUpdateChecker(secrets, logger).checkForUpdates(project);
-        if (a?.hasUpdate)
-            selections.adobeMcp.push({
-                project,
-                packageName: a.packageName,
-                latestVersion: a.latestVersion,
-            });
-    } catch (error) {
-        logger.warn(`[Updates] Adobe MCP check failed: ${sanitizeErrorForLogging(error as Error)}`);
-    }
-
-    // Add-ons (block libraries + inspector)
-    try {
-        const checker = new AddonUpdateChecker(secrets, logger);
-        for (const u of await checker.checkBlockLibraries(project)) {
-            selections.blockLibrary.push({
-                project,
-                library: u.library,
-                latestCommit: u.latestCommit,
-            });
-        }
-        const insp = await checker.checkInspectorSdk(project);
-        if (insp?.hasUpdate)
-            selections.inspector.push({ project, latestCommit: insp.latestCommit });
-    } catch (error) {
-        logger.warn(`[Updates] Add-on check failed: ${sanitizeErrorForLogging(error as Error)}`);
-    }
-
-    // Block libraries selected but never installed. No network, so no try.
-    for (const library of findUninstalledBlockLibraries(project)) {
-        selections.blockLibraryInstall.push({ project, library });
-    }
-
-    return selections;
-}
-
-/** Total number of pending updates across a selection set. */
-export function countSelections(selections: UpdateSelections): number {
-    return (
-        selections.forkSync.length +
-        selections.template.length +
-        selections.component.length +
-        selections.adobeMcp.length +
-        selections.blockLibrary.length +
-        selections.blockLibraryInstall.length +
-        selections.inspector.length
-    );
 }

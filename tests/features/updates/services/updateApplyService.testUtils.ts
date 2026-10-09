@@ -1,7 +1,8 @@
 /**
- * The fakes the headless apply suites stand on.
+ * The fakes the headless check-and-apply suites stand on: updateApplyService's
+ * own and updateSelections.test.ts, which finds what this applies.
  *
- * Every collaborator the service constructs — the five services and the two
+ * Every collaborator the two modules construct — the services and the
  * checkers — is a mock CLASS whose methods are module-scoped jest.fns, so a
  * suite can script one answer per call and read back what the service handed
  * each of them. The shared apply cores (block library, commit-sha rollback,
@@ -11,7 +12,7 @@
  */
 
 import type { UpdateContext } from '@/features/updates/services/updateCore';
-import type { UpdateSelections } from '@/features/updates/services/updateApplyService';
+import type { UpdateSelections } from '@/features/updates/services/updateSelections';
 import type { Project } from '@/types/base';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
