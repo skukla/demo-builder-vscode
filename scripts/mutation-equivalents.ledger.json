@@ -4263,7 +4263,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 160,
+            "line": 153,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying triggerCodeSync's catch body drops a logger.warn and the explicit 'return false', so the function returns undefined instead. Its single caller uses the value only as 'if (triggered)', where undefined and false are indistinguishable \u2014 the re-check is skipped either way. No test can separate the two.",
@@ -15673,6 +15673,42 @@
             "decision": "none \u2014 an optional read behind a validation that has already refused every undefined payload",
             "recorded": "2026-10-09",
             "source": "PL-69 sitting 8, consoleApiHandlers focus run"
+        },
+        {
+            "module": "src/features/eds/services/github/githubAppService.ts",
+            "anchors": [
+                "const statusXError = response.headers?.get?.('x-error') ?? undefined;"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "One optional-chain removal and the ?? turned into &&. statusXError feeds one logger.debug line and nothing else: the 200-path x-error read exists to log whether Helix explains an inner 400 (measured 2026-09-30: it does not). No value from it reaches the returned verdict, a collaborator argument or any state, and tests/sop/no-logger-wording-assertions forbids pinning the wording. The ?.get?. guards also keep the read safe on a response whose headers object has no get, which the suite already drives on the error path.",
+            "decision": "none \u2014 the read is a log aid and is correct as written",
+            "recorded": "2026-10-09",
+            "source": "PL-69 sitting 9, 2026-10-09"
+        },
+        {
+            "module": "src/features/eds/services/github/githubAppService.ts",
+            "anchors": [
+                "if (codeStatus !== undefined && codeStatus !== 200) {"
+            ],
+            "mutants": 8,
+            "category": "branch",
+            "reason": "The guarded body is a single logger.debug of the code block, kept so a pasted Debug Logs dump shows the reason behind an inner 400 (it hid one for an afternoon, 2026-09-30). Forcing the condition either way, or emptying the body, changes which log line prints and nothing else: the verdict is decided below from codeStatus alone, and tests/sop/no-logger-wording-assertions forbids asserting the wording. Seven condition mutants and one emptied block.",
+            "decision": "none \u2014 the guard keeps the code block out of the logs on the installed path",
+            "recorded": "2026-10-09",
+            "source": "PL-69 sitting 9, 2026-10-09"
+        },
+        {
+            "module": "src/features/lifecycle/services/projectResetService.ts",
+            "anchors": [
+                "if (comp.type === 'dependency') {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "findComponentByType has one caller, loadComponentDefinitionsFromProject, whose components come from buildComponentList, which lists only 'frontend' and 'dependency' entries. A frontend returns from the branch above, so every component reaching this line IS a dependency: forcing the condition true changes nothing any caller can observe. A third type would need a new entry in buildComponentList first.",
+            "decision": "none \u2014 the explicit check reads as the lookup table it is",
+            "recorded": "2026-10-09",
+            "source": "PL-69 sitting 9, 2026-10-09"
         }
     ]
 }

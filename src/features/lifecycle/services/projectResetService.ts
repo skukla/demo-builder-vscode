@@ -26,6 +26,7 @@ import type { AuthenticationService } from '@/features/authentication/services/a
 import { getComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
 import { getStackById } from '@/features/components/services/demoPackageLoader';
 import { handleMeshRedeployment } from '@/features/lifecycle/services/projectResetMesh';
+import { toComponentDefinitionEntry } from '@/features/project-creation/services/componentDefinitionEntry';
 import type { ComponentDefinitionEntry } from '@/features/project-creation/services/componentInstallationOrchestrator';
 import type { Project } from '@/types/base';
 import type { ComponentRegistry, TransformedComponentDefinition } from '@/types/components';
@@ -200,17 +201,7 @@ async function loadComponentDefinitionsFromProject(
             continue;
         }
 
-        const installOptions: { skipDependencies?: boolean } = { skipDependencies: true };
-
-        componentDef = {
-            ...componentDef,
-            type: comp.type as TransformedComponentDefinition['type'],
-        };
-        componentDefinitions.set(comp.id, {
-            definition: componentDef,
-            type: comp.type,
-            installOptions,
-        });
+        componentDefinitions.set(comp.id, toComponentDefinitionEntry(componentDef, comp.type));
     }
 
     return { componentDefinitions, registry, stack };

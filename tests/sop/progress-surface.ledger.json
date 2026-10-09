@@ -33,7 +33,7 @@
         "src/features/eds/commands/cleanupDaLiveSites.ts:171": "Gates: delete these DA.live sites? Named in the detail: the pages come off the live site and the content does not come back.",
         "src/features/eds/commands/manageGitHubRepos.ts:166": "Gates: delete these GitHub repositories? Named in the detail, and they do not come back.",
         "src/features/eds/handlers/storefrontSetup/storefrontSetupHandlers.ts:95": "Gates: cancel setup, knowing the GitHub repo and DA.live content created so far will be deleted? The cost of stopping is not obvious without asking.",
-        "src/features/lifecycle/services/projectResetService.ts:404": "Gates: delete the components and reinstall them from scratch? Configuration and integrations survive, the rest does not.",
+        "src/features/lifecycle/services/projectResetService.ts:395": "Gates: delete the components and reinstall them from scratch? Configuration and integrations survive, the rest does not.",
         "src/features/updates/commands/templateConflictPrompt.ts:47": "Gates: which side wins where an update and the SC's own edits touched the same file? The update cannot proceed until someone chooses.",
         "src/features/ai/server/agentOperationNotifier.ts:164": "Gates: let the agent run this tool? A cloud write an agent proposes is confirmed by a person before it happens.",
         "src/features/eds/services/reset/edsResetUI.ts:201": "Gates: reset this storefront to the template and re-copy demo content? Hand edits are lost.",

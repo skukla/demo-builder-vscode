@@ -41,11 +41,11 @@ excluded by the scan's ignore flag and are not among the 40.
 | 15 | projects-dashboard/handlers/projectsListOpen.ts:96-106 | same file:72-82 | resolve project preamble | EXTRACT | one cluster with 16, 17 and 3 sites in projectsListLifecycle.ts: 7 sites |
 | 16 | projectsListOpen.ts:130-140 | same file:72-106 | same | EXTRACT | same cluster |
 | 17 | projectsListOpen.ts:162-172 | same file:72-106 | same | EXTRACT | `withProject(handler)` in projectFromPath.ts; no named suite for either handler file |
-| 18 | project-creation/handlers/checkGitHubAppHandler.ts:108-120 | eds/services/github/githubAppService.ts:107-119 | isAppInstalled result type | EXTRACT | the interface restates the return type by hand; export `AppInstalledResult`, import type-only. Also an orphaned JSDoc ("@returns True if Helix accepted the request") sits above `CheckGitHubAppService` |
+| 18 | project-creation/handlers/checkGitHubAppHandler.ts:108-120 | eds/services/github/githubAppService.ts:107-119 | isAppInstalled result type | DONE 2026-10-09 (sitting 9) | now the exported `AppInstalledResult` in githubAppService.ts, imported type-only by the handler's `CheckGitHubAppService` (the module itself stays lazy-loaded); the orphaned `triggerCodeSync` JSDoc sits above its function |
 | 19 | prerequisites/services/PrerequisitesManager.ts:177-185 | same file:165-173 | log, cache, return success | DONE 2026-10-09 (sitting 5) | same success tail in both branches; now `recordCheckComplete(...)` |
 | 20 | prerequisites/handlers/checkHandler.ts:145-159 | prerequisites/handlers/continueHandler.ts:22-36 | per-node variant status | DONE 2026-10-09 (sitting 5) | same guard and uninstalled answer; now `resolvePerNodeVariantStatus` in perNodeVersionStatus.ts, the installed step a callback |
 | 21 | checkHandler.ts:375-385 | continueHandler.ts:122-132 | status payload literal | TWO COPIES | `message`, `canInstall`, `plugins` already diverge |
-| 22 | lifecycle/services/projectResetService.ts:200-216 | project-creation/handlers/executorComponentLoading.ts:154-170 | stamp type, install options | EXTRACT | identical tail; reset must match creation; `toComponentDefinitionEntry(def, comp)`; executorComponentLoading has no named suite |
+| 22 | lifecycle/services/projectResetService.ts:200-216 | project-creation/handlers/executorComponentLoading.ts:154-170 | stamp type, install options | DONE 2026-10-09 (sitting 9) | identical tail; now `toComponentDefinitionEntry(definition, type)` in `project-creation/services/componentDefinitionEntry.ts` (own suite), beside the type it builds; not in the orchestrator, whose importers' suites mock it with two functions |
 | 23 | eds/services/errorFormatters.ts:474-485 | same file:283-294 | match error by code | EXTRACT | three tables share the lookup; `formatByPatterns(error, table)` |
 | 24 | errorFormatters.ts:485-502 | same file:294-311 | match error by regex | EXTRACT | same as 23 |
 | 25 | data-installer/handlers/exportHandlers.ts:191-200 | data-installer/handlers/importHandlers.ts:437-447 | access, project, credentials | EXTRACT | the whole gate repeats; `resolveWriteGate(context, verb)`; after the EDS-8 data-installer sitting lands |
@@ -77,7 +77,7 @@ excluded by the scan's ignore flag and are not among the 40.
 | 6. Authentication | 33, 34, 35 | 16 (landed at 15: sitting 5 had already reached 18) |
 | 7. UI (field update logic, TextField props) | 11, 12, 13 | 13 (landed at 12: sitting 6 had already reached 15) |
 | 8. Small handlers (updates, console API, component payload) | 14, 26, 32 | 10 (landed at 9: sitting 7 had already reached 12) |
-| 9. Cross-feature | 18, 22 | 8 |
+| 9. Cross-feature | 18, 22 | 8 (landed at 7: sitting 8 had already reached 9) |
 | 10. App Builder | 36 | 7 |
 | 11. Data installer (after the EDS-8 sitting on those files) | 25 | 6 |
 
@@ -334,6 +334,54 @@ reproduced -> 88.58 and NOT a gap: the same 25 survivors, 7 killed mutants moved
 lookup. updateCore gets no row on purpose (owner note below): 65.08 -> 74.63 measured with
 every related suite, nothing surviving in the new helper.
 
+**Sitting 9 (pairs 18 and 22) DONE 2026-10-09.** Re-scanned first: 9 clones, the two
+cross-feature fragments exactly where the table said. Both pairs were real:
+
+- **18** (`checkGitHubAppHandler.ts`, `githubAppService.ts`): the handler's
+  `CheckGitHubAppService` seam restated `isAppInstalled`'s seven-field return type by
+  hand. Now one exported `AppInstalledResult` on the service, imported type-only by the
+  handler, so the module it lazy-loads at runtime stays lazy-loaded. The `triggerCodeSync`
+  JSDoc that had been stranded above the interface ("@returns True if Helix accepted the
+  request") now sits above its function; nothing else in the handler moved.
+- **22** (`projectResetService.ts`, `executorComponentLoading.ts`): both loops ended with
+  the same entry tail (stamp the definition with the stack's type, skip dependencies, set
+  the entry). Now `toComponentDefinitionEntry(definition, type)` in
+  `project-creation/services/componentDefinitionEntry.ts`. Placement per ADR-015/022:
+  not `core/` (it cannot import a feature's type, and the entry type is
+  project-creation's), and not inside `componentInstallationOrchestrator` beside that type,
+  because four suites that drive the callers replace that module with a two-function
+  factory mock and the helper would be `undefined` under them. Lifecycle already imported
+  the type from project-creation, so the direction of the dependency is unchanged.
+
+Proof: the 34 pre-existing suites that reference the four touched files (558 tests) ran
+unchanged before and after; 37 suites and 568 tests with the new ones (4 for the helper,
+and 6 for the reset in two new suites, `-keptIntegrations` and `-modalProgress`). Those six
+first went into `projectResetService-resetWithUI`, which took it past the 750-line limit,
+so its mock wall, SUT import and defaults moved to
+`projectResetService-resetWithUI.testUtils.ts` per the splitting playbook; the suite's 38
+cases are byte-for-byte what they were, only the preamble is now one import.
+cloneCeiling 9 -> 7.
+
+Found by the re-measure, fixed here: the projectResetService row (93.51) predated AB-23
+slice 7 (reset keeps integrations) and PL-59 (modal progress), and the committed file
+measured 86.06 with nine behavioural survivors in that code: a mesh app-builder entry kept
+like an integration, a kept folder matched by id rather than its instance path, a kept
+integration with no instance record (two shapes), the modal id and branch, and the error
+notification a modal reset must not repeat. Six new cases pin each by what reaches `fs.rm`
+and the orchestrator, and by the modal's final push.
+
+Mutation: four rows re-measured against the committed file first. githubAppService 70.16
+(stale row 74.02: the 2026-09-30 x-error read and inner-400 log landed after it) -> 70.16,
+unchanged by this sitting since the export is a type; its ten behavioural survivors are
+log-only (a `coverageAnalysis: all` run reproduced the same set, so not an attribution
+artefact) and are ledgered, openGaps 0. projectResetService 86.06 -> 91.18 (186 killed, 18
+survived, all strings but one): the one left, `findComponentByType`'s dependency branch, is
+unreachable from `buildComponentList` and ledgered; 4 killed mutants moved out with the tail.
+checkGitHubAppHandler 60.22 reproduced -> 60.22, same survivors; its ledger anchor for the
+`triggerCodeSync` catch re-pinned at line 153 (the interface shrank by eight lines, the
+import added one). componentDefinitionEntry 100 (5 killed, 0 survived), new row.
+executorComponentLoading has no row and gets none (owner note below).
+
 ## Below the scan's threshold, found by reading (2026-10-08)
 
 The same five-line `ensureSDKReady` method is copied into four authentication files:
@@ -391,3 +439,6 @@ in favour of the EDS-34 version, and lower the pin. That also turns the floor of
 - 2026-10-09  Sitting 8 (small handlers), pairs 14, 26 and 32 extracted: `findInstalledLibrary(item, ctx)` in updateCore (first suite for that file), `loadProjectAndGuard(context)` for the add and set Console API handlers, `readStackPayload(payload)` for the three component selection handlers. 53 touched suites (747 tests) unchanged and green; 764 with the new cases. Also fixed on the way: the per-workspace Console API reconcile had seven branch decisions and eight mutants no test reached; a new 13-case suite covers them. Three baseline rows re-measured and written. cloneCeiling 12 -> 9.
 - 2026-10-09  For the owner (sitting 8): `updateCore.ts` has no baseline row on purpose. Before this sitting it had no suite of its own, so the focus tool fell back to the import graph and measured it with the updateExecutor and updateApplyService suites. The new `updateCore.test.ts` is now its mirror suite, and the tool takes the mirror INSTEAD of the graph, so a re-measure would use only the four helper cases and report the rest of the file (the marker write, the re-install) as uncovered. Measured with every related suite it reads 74.63. Same shape as perNodeVersionStatus in sitting 5. Recommendation: let `focusModule.mjs` add the graph's suites when the mirror finds a suite that does not cover the module's other exports, or accept a lower mirror-only row; either is a change to the instrument, not to this sitting's code.
 - 2026-10-09  refactor(handlers): one library lookup, one console API opening, one stack payload reader (`fea4ddb78`)
+- 2026-10-09  Sitting 9 (cross-feature), pairs 18 and 22 extracted: `AppInstalledResult` exported from githubAppService.ts and imported type-only by the check-GitHub-App handler's seam (the orphaned triggerCodeSync JSDoc moved to its function); `toComponentDefinitionEntry(definition, type)` in project-creation/services/componentDefinitionEntry.ts (own suite, 100% mutation) now builds the orchestrator entry for both project creation and project reset. Also fixed on the way: the reset's keep-integrations rule and its modal-progress options had nine decisions no test reached (a mesh kept like an integration, a kept folder matched by id not path, a kept integration with no record, the modal id/branch, the repeated error notification); six new cases pin them (projectResetService-keptIntegrations and -modalProgress, sharing the resetWithUI wall through a new .testUtils). 34 touched suites (558 tests) unchanged; 37 suites, 568 tests after. Four baseline rows re-measured and written (two were stale downward). cloneCeiling 9 -> 7.
+- 2026-10-09  For the owner (sitting 9): `executorComponentLoading.ts` has no baseline row and gets none. Its suites are `executor-meshComponentLoading` and `executor-appBuilderComponentLoading`, named for `executor.ts` they were split from, so the mirror rule finds nothing and the focus tool would measure it through the import graph with the whole executor family. Same shape as perNodeVersionStatus (sitting 5) and updateCore (sitting 8); the fix is still the instrument's (let the mirror rule accept a `<module>-` prefix inside a hyphenated suite name) or a rename of those two suites, neither of which this sitting did.
+- 2026-10-09  For the owner (sitting 9): two rows were stale DOWNWARD before this sitting touched them (githubAppService 74.02 recorded, 70.16 measured; projectResetService 93.51 recorded, 86.06 measured), both because code landed after the row (2026-09-21 and 2026-09-30) without a re-measure. The ratchet only runs on a focus or sample run, so a row can sit above the truth for weeks. Recommendation: have the sweep re-measure any row whose module changed since `recorded` (the mutation-worklist already knows the modules; the date is in git).

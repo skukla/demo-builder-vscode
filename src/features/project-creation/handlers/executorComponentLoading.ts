@@ -10,6 +10,7 @@
  */
 
 import { getStackById } from '@/features/components/services/demoPackageLoader';
+import { toComponentDefinitionEntry } from '@/features/project-creation/services/componentDefinitionEntry';
 import type { ComponentDefinitionEntry } from '@/features/project-creation/services/componentInstallationOrchestrator';
 import { TransformedComponentDefinition } from '@/types/components';
 import type { HandlerContext } from '@/types/handlers';
@@ -154,17 +155,7 @@ export async function loadComponentDefinitions(
             throw new Error(errorMsg);
         }
 
-        const installOptions: { skipDependencies?: boolean } = { skipDependencies: true };
-
-        componentDef = {
-            ...componentDef,
-            type: comp.type as TransformedComponentDefinition['type'],
-        };
-        componentDefinitions.set(comp.id, {
-            definition: componentDef,
-            type: comp.type,
-            installOptions,
-        });
+        componentDefinitions.set(comp.id, toComponentDefinitionEntry(componentDef, comp.type));
     }
 
     return componentDefinitions;
