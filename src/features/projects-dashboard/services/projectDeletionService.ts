@@ -1,98 +1,35 @@
 /**
  * ProjectDeletionService
  *
- * Handles project deletion with confirmation, demo stopping, and retry logic
- * for handling transient filesystem errors.
+ * The delete itself: ask, then remove what the SC chose online, then the local
+ * project, inside one progress surface, and report what was cleaned up.
  *
- * For EDS projects, offers optional cleanup of external resources:
- * - GitHub repository deletion
- * - DA.live site deletion
+ * The question lives in `deletionConfirmation.ts`, the online removal (GitHub
+ * repository, DA.live site, the CDN unpublish) in `edsExternalCleanup.ts`, and
+ * the local removal with its retry in `projectFilesDeletion.ts`.
  */
 
 import * as vscode from 'vscode';
+import { confirmPlainDelete, showCleanupConfirmation, type CleanupOptions } from './deletionConfirmation';
+import { performEdsCleanup, type DeletionServices } from './edsExternalCleanup';
 import { deleteProjectFiles } from './projectFilesDeletion';
 import { showOneTimeTip } from '@/core/utils/oneTimeTip';
 import { deleteOperationId } from '@/core/utils/operationIds';
-import {
-    askDuringOperation,
-    askForDetailsDuringOperation,
-    withModalAsking,
-} from '@/core/vscode/operationPrompt';
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
-import { ensureDaLiveAuth as ensureDaLiveAuthShared, getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
-import { DaLiveAuthService } from '@/features/eds/services/daLive/daLiveAuthService';
-import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveTokenProviders';
-import { HelixService } from '@/features/eds/services/helix/helixService';
 import {
     isEdsProject,
     extractEdsMetadata,
     formatCleanupResults,
     type CleanupResultItem,
 } from '@/features/eds/services/resourceCleanupHelpers';
-import type { ProductPageRemovalResult } from '@/features/eds/services/storefront/productPageRemoval';
-import { otherProjectsPublishingTo } from '@/features/eds/services/storefront/sharedRepoProjects';
-import { tearDownStorefront } from '@/features/eds/services/storefront/storefrontTeardown';
 import type { Project } from '@/types/base';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
-import type { Logger } from '@/types/logger';
 
-/**
- * Cleanup options for EDS projects
- */
-interface CleanupOptions {
-    deleteGitHubRepo: boolean;
-    deleteDaLiveSite: boolean;
-    /** The project being deleted: it does not count as "another project on the repository". */
-    projectPath?: string;
-}
-
-/**
- * The four Helix calls the CDN-unpublish step makes, out of a class with dozens.
- */
-export interface DeletionHelix {
-    listAllPages(org: string, site: string, path?: string): Promise<string[]>;
-    unpublishPages(
-        org: string,
-        site: string,
-        branch: string,
-        webPaths: string[],
-    ): Promise<{
-        success: boolean;
-        count: number;
-        total: number;
-        liveFailed: number;
-        previewFailed: number;
-    }>;
-    deleteAdminApiKey(org: string, site: string): Promise<{ success: boolean; error?: string }>;
-    listPublishedPaths(org: string, site: string, branch: string, pattern: string): Promise<string[]>;
-}
-
-/**
- * Service seam. Defaults to the real Helix, built from the DA.live credential this
- * deletion holds; production never passes it.
- *
- * `HelixService` is STATELESS — credentials arrive at construction and are never
- * mutated — so ADR-015 leaves the construction here. What it cost was test design,
- * and in this file it cost more than that. The suite's module mock supplied
- * `unpublishAllContent`, a method the source stopped calling, and supplied no
- * `initKeyStore` STATIC — so the key-store init threw a TypeError on the first line
- * of the try block, the catch swallowed it as a warning, and every Helix call in
- * this path was unreachable while 23 tests passed. Measured 2026-08-31 by planting a
- * throw inside the try: the suite stayed green.
- *
- * `initKeyStore` rides here for the same reason: it is a side effect this path
- * performs, and a test needs to say whether it happened rather than have it fail
- * invisibly.
- */
-export interface DeletionServices {
-    initKeyStore?: (
-        secrets: vscode.SecretStorage,
-        globalState: vscode.Memento,
-    ) => Promise<void>;
-    makeHelix?: (
-        logger: Logger,
-        daLiveTokenProvider: { getAccessToken: () => Promise<string | null> },
-    ) => DeletionHelix;
+/** Where a delete reports, when a screen started it (PL-59 R1). */
+export interface DeleteProgressOptions {
+    progress?: 'modal';
+    /** The id that screen named the operation by. */
+    operationId?: string;
 }
 
 /**
@@ -103,13 +40,6 @@ export interface DeletionServices {
  *
  * For EDS projects, offers optional external resource cleanup.
  */
-/** Where a delete reports, when a screen started it (PL-59 R1). */
-export interface DeleteProgressOptions {
-    progress?: 'modal';
-    /** The id that screen named the operation by. */
-    operationId?: string;
-}
-
 export async function deleteProject(
     context: HandlerContext,
     project: Project,
@@ -141,16 +71,7 @@ export async function deleteProject(
         }
     } else {
         // Non-EDS project: show standard confirmation
-        const confirm = await vscode.window.showWarningMessage(
-            `Are you sure you want to delete "${project.name}"?`,
-            {
-                modal: true,
-                detail: 'This will remove all project files and configuration. This action cannot be undone.',
-            },
-            'Delete',
-        );
-
-        if (confirm !== 'Delete') {
+        if (!(await confirmPlainDelete(project))) {
             return {
                 success: true,
                 data: { success: false, error: 'cancelled' },
@@ -223,393 +144,3 @@ export async function deleteProject(
         data: { success: true, projectName: project.name, cleanupResults },
     };
 }
-
-
-/**
- * One external resource the SC may delete alongside the project.
- */
-interface CleanupQuickPickItem extends vscode.QuickPickItem {
-    id: 'github' | 'daLive';
-}
-
-/**
- * The same question as the QuickPick, in the modal already narrating the delete:
- * one box per resource, unticked, as the QuickPick starts.
- */
-async function askCleanupInModal(
-    project: Project,
-    items: CleanupQuickPickItem[],
-): Promise<CleanupOptions | null> {
-    const labels: Record<CleanupQuickPickItem['id'], string> = {
-        github: 'Also delete the GitHub repository',
-        daLive: 'Also delete the DA.live site',
-    };
-    const asked = await askForDetailsDuringOperation({
-        message: `Delete "${project.name}"? Its files are removed from this machine. You can also delete what it created online. Sign-in may be required.`,
-        fields: items.map((item) => ({
-            id: item.id,
-            label: labels[item.id],
-            kind: 'checkbox' as const,
-            value: '',
-            description: item.description,
-        })),
-        actions: ['Delete'],
-    });
-    if (asked.action !== 'Delete') return null;
-    return {
-        deleteGitHubRepo: asked.values.github === 'true',
-        deleteDaLiveSite: asked.values.daLive === 'true',
-    };
-}
-
-/**
- * Show cleanup confirmation dialog for EDS projects
- *
- * Asks which external resources to also delete: in the screen's progress modal when
- * a screen started the delete, else a QuickPick with checkboxes.
- * - Delete (or Enter) → Delete local project + selected external resources
- * - Cancel, Escape or click outside → Cancel entirely (no deletion)
- *
- * @param modalId - the operation id of the screen's modal, when one is showing
- * @returns Cleanup options (which external resources to delete), or null if cancelled
- */
-async function showCleanupConfirmation(
-    project: Project,
-    edsMetadata: ReturnType<typeof extractEdsMetadata>,
-    modalId?: string,
-): Promise<CleanupOptions | null> {
-    // Check cleanup behavior configuration setting
-    const config = vscode.workspace.getConfiguration('demoBuilder');
-    const behavior = config.get<string>('cleanupBehavior', 'ask');
-
-    if (behavior === 'deleteAll') {
-        // Auto-delete all available resources (auth is checked lazily during cleanup)
-        return {
-            deleteGitHubRepo: !!edsMetadata?.githubRepo,
-            deleteDaLiveSite: !!edsMetadata?.daLiveOrg && !!edsMetadata?.daLiveSite,
-        };
-    }
-
-    if (behavior === 'localOnly') {
-        // Local only: show standard confirmation, skip external cleanup
-        const confirm = await vscode.window.showWarningMessage(
-            `Are you sure you want to delete "${project.name}"?`,
-            {
-                modal: true,
-                detail: 'This will remove all project files and configuration. This action cannot be undone.',
-            },
-            'Delete',
-        );
-
-        if (confirm !== 'Delete') {
-            return null;
-        }
-
-        return { deleteGitHubRepo: false, deleteDaLiveSite: false };
-    }
-
-    const items: CleanupQuickPickItem[] = [];
-
-    // GitHub repository option
-    if (edsMetadata?.githubRepo) {
-        items.push({
-            id: 'github',
-            label: '$(github) Delete Repository',
-            description: edsMetadata.githubRepo,
-            detail: '$(key) Sign-in required',
-            picked: false,
-        });
-    }
-
-    // DA.live site option (includes Helix unpublish)
-    if (edsMetadata?.daLiveOrg && edsMetadata?.daLiveSite) {
-        items.push({
-            id: 'daLive',
-            label: '$(file-text) Delete DA.live Site',
-            description: `${edsMetadata.daLiveOrg}/${edsMetadata.daLiveSite}`,
-            detail: '$(key) Sign-in required',
-            picked: false,
-        });
-    }
-
-    // If no external resources, skip the dialog and show standard confirmation
-    if (items.length === 0) {
-        const confirm = await vscode.window.showWarningMessage(
-            `Are you sure you want to delete "${project.name}"?`,
-            {
-                modal: true,
-                detail: 'This will remove all project files and configuration. This action cannot be undone.',
-            },
-            'Delete',
-        );
-
-        if (confirm !== 'Delete') {
-            return null;
-        }
-
-        return { deleteGitHubRepo: false, deleteDaLiveSite: false };
-    }
-
-    if (modalId) {
-        return withModalAsking(modalId, () => askCleanupInModal(project, items));
-    }
-
-    // Cancel button for explicit cancellation
-    const cancelButton: vscode.QuickInputButton = {
-        iconPath: new vscode.ThemeIcon('close'),
-        tooltip: 'Cancel',
-    };
-
-    // Show QuickPick with cleanup options
-    const quickPick = vscode.window.createQuickPick<CleanupQuickPickItem>();
-    quickPick.title = `Delete "${project.name}"`;
-    quickPick.placeholder = 'Also delete these external resources? (Enter to delete)';
-    quickPick.canSelectMany = true;
-    quickPick.ignoreFocusOut = true; // Prevent dismissal when webview takes focus
-    quickPick.items = items;
-    quickPick.selectedItems = items.filter(i => i.picked);
-    quickPick.buttons = [cancelButton];
-
-    return new Promise<CleanupOptions | null>((resolve) => {
-        let resolved = false;
-
-        // Cancel button = abort deletion
-        quickPick.onDidTriggerButton(() => {
-            if (resolved) return;
-            resolved = true;
-            quickPick.hide();
-            resolve(null);
-        });
-
-        // Enter key confirms deletion
-        quickPick.onDidAccept(() => {
-            if (resolved) return;
-            resolved = true;
-            const selected = quickPick.selectedItems;
-            quickPick.hide();
-            resolve({
-                deleteGitHubRepo: selected.some(i => i.id === 'github'),
-                deleteDaLiveSite: selected.some(i => i.id === 'daLive'),
-            });
-        });
-
-        // Escape = Cancel entirely (no deletion)
-        quickPick.onDidHide(() => {
-            if (resolved) return;
-            resolved = true;
-            resolve(null);
-        });
-
-        quickPick.show();
-    });
-}
-
-/**
- * Ensure DA.live authentication, prompting user if needed.
- * Returns the auth service if authenticated, or null if auth was declined/failed.
- *
- * Delegates to the shared ensureDaLiveAuth guard from edsHelpers,
- * then wraps the result to match the caller's expected signature.
- */
-async function ensureDaLiveAuth(
-    context: HandlerContext,
-    resourceName: string,
-    results: CleanupResultItem[],
-): Promise<DaLiveAuthService | null> {
-    const authResult = await ensureDaLiveAuthShared(context, '[Delete Project]');
-
-    if (authResult.authenticated) {
-        return getDaLiveAuthService(context.context);
-    }
-
-    results.push({
-        type: 'daLive',
-        name: resourceName,
-        success: false,
-        skipped: true,
-        error: authResult.error || 'Authentication required',
-    });
-    return null;
-}
-
-/**
- * Delete DA.live site content and clean up config
- */
-async function performDaLiveCleanup(
-    context: HandlerContext,
-    edsMetadata: ReturnType<typeof extractEdsMetadata>,
-    options: CleanupOptions,
-    results: CleanupResultItem[],
-    progress: vscode.Progress<{ message?: string }>,
-    services?: DeletionServices,
-): Promise<void> {
-    if (!options.deleteDaLiveSite || !edsMetadata?.daLiveOrg || !edsMetadata?.daLiveSite) return;
-
-    progress.report({ message: 'Deleting the DA.live site' });
-    const resourceName = `${edsMetadata.daLiveOrg}/${edsMetadata.daLiveSite}`;
-
-    try {
-        const daLiveAuthService = await ensureDaLiveAuth(context, resourceName, results);
-        if (!daLiveAuthService) return;
-
-        const daLiveTokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
-
-        // The same four steps the agent's cleanup runs, in the same order — the
-        // CDN unpublish lived only here until 2026-09-19 (AI-9).
-        const torn = await tearDownStorefront(
-            {
-                daLiveOrg: edsMetadata.daLiveOrg,
-                daLiveSite: edsMetadata.daLiveSite,
-                githubRepo: edsMetadata.githubRepo,
-            },
-            {
-                tokenProvider: daLiveTokenProvider,
-                logger: context.logger,
-                initKeyStore: async () => {
-                    const initKeyStore =
-                        services?.initKeyStore ??
-                        ((secrets: vscode.SecretStorage, globalState: vscode.Memento) =>
-                            HelixService.initKeyStore(secrets, globalState));
-                    await initKeyStore(context.context.secrets, context.context.globalState);
-                },
-                makeHelix: services?.makeHelix,
-                otherProjectsOnRepo: (repo) =>
-                    otherProjectsPublishingTo(context.stateManager, repo, options.projectPath),
-                onStep: (step) => progress.report({ message: step }),
-            },
-        );
-        reportProductPages(torn.productPages, edsMetadata.githubRepo ?? resourceName, results);
-
-        // Only when pages actually came down: nothing was published means nothing
-        // to report as cleaned up.
-        if ((torn.unpublishedPages ?? 0) > 0 && !torn.stillPublished) {
-            results.push({
-                type: 'helix',
-                name: edsMetadata.githubRepo ?? resourceName,
-                success: true,
-            });
-        }
-
-        results.push({
-            type: 'daLive',
-            name: resourceName,
-            success: torn.contentDeleted,
-            error: torn.error,
-        });
-    } catch (error) {
-        context.logger.error('[Delete Project] DA.live cleanup failed', error as Error);
-        results.push({
-            type: 'daLive',
-            name: resourceName,
-            success: false,
-            error: (error as Error).message,
-        });
-    }
-}
-
-/**
- * Put the product pages' outcome on the cleanup results (EDS-26). Clean removal is a
- * success row; anything short of it — refused, live-only, could not list — is shown with
- * its sentence, so "deleted" is never said over pages that may still be up.
- */
-function reportProductPages(
-    productPages: ProductPageRemovalResult | undefined,
-    site: string,
-    results: CleanupResultItem[],
-): void {
-    if (!productPages || productPages.status === 'nothing') return;
-    const clean = productPages.status === 'removed';
-    results.push({
-        type: 'helix',
-        name: `product pages, ${site}`,
-        success: clean,
-        ...(clean ? {} : { error: productPages.summary }),
-    });
-}
-
-/**
- * Delete GitHub repository with authentication handling
- */
-async function performGitHubCleanup(
-    context: HandlerContext,
-    githubRepo: string,
-    results: CleanupResultItem[],
-    progress: vscode.Progress<{ message?: string }>,
-): Promise<void> {
-    progress.report({ message: 'Deleting the repository' });
-
-    try {
-        const { getGitHubServices } = await import('@/features/eds/handlers/edsHelpers');
-        const { tokenService, repoLifecycle } = getGitHubServices(context.context.secrets);
-
-        const existingToken = await tokenService.getToken();
-        if (!existingToken) {
-            const authenticated = await promptGitHubAuth(tokenService, githubRepo, results);
-            if (!authenticated) return;
-        }
-
-        const [owner, repo] = githubRepo.split('/');
-        if (!owner || !repo) {
-            results.push({ type: 'github', name: githubRepo, success: false, error: 'Invalid repository name format' });
-            return;
-        }
-
-        await repoLifecycle.deleteRepository(owner, repo);
-        results.push({ type: 'github', name: githubRepo, success: true });
-        context.logger.info(`[Delete Project] Deleted GitHub repository: ${githubRepo}`);
-    } catch (error) {
-        context.logger.error('[Delete Project] GitHub cleanup failed', error as Error);
-        results.push({ type: 'github', name: githubRepo, success: false, error: (error as Error).message });
-    }
-}
-
-/**
- * Prompt user for GitHub authentication. Returns true if authenticated.
- */
-async function promptGitHubAuth(
-    tokenService: { storeToken: (data: { token: string; tokenType: string; scopes: string[] }) => Promise<void> },
-    githubRepo: string,
-    results: CleanupResultItem[],
-): Promise<boolean> {
-    const selection = await askDuringOperation(
-        'GitHub authentication required to delete the repository.',
-        'Sign In',
-    );
-
-    if (selection !== 'Sign In') {
-        results.push({ type: 'github', name: githubRepo, success: false, skipped: true, error: 'Authentication required' });
-        return false;
-    }
-
-    try {
-        const session = await vscode.authentication.getSession('github', ['repo', 'delete_repo'], { createIfNone: true });
-        if (session) {
-            await tokenService.storeToken({ token: session.accessToken, tokenType: 'bearer', scopes: ['repo', 'delete_repo'] });
-        }
-        return true;
-    } catch {
-        results.push({ type: 'github', name: githubRepo, success: false, skipped: true, error: 'Authentication failed' });
-        return false;
-    }
-}
-
-/**
- * Perform EDS external resource cleanup
- */
-async function performEdsCleanup(
-    context: HandlerContext,
-    edsMetadata: ReturnType<typeof extractEdsMetadata>,
-    options: CleanupOptions,
-    results: CleanupResultItem[],
-    progress: vscode.Progress<{ message?: string }>,
-    services?: DeletionServices,
-): Promise<void> {
-    // 1. Delete DA.live site
-    await performDaLiveCleanup(context, edsMetadata, options, results, progress, services);
-
-    // 2. Delete GitHub repository
-    if (options.deleteGitHubRepo && edsMetadata?.githubRepo) {
-        await performGitHubCleanup(context, edsMetadata.githubRepo, results, progress);
-    }
-}
-

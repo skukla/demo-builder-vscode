@@ -449,7 +449,8 @@ describe('spine choke-points', () => {
         // and reports a live-only removal as such.
         //
         // Traced down, every delete door converges on tearDownStorefront: the
-        // delete-project button (projectDeletionService), the agent's delete_project
+        // delete-project button (edsExternalCleanup, split from projectDeletionService
+        // 2026-10-09), the agent's delete_project
         // (agentProjectCleanup), cleanup_dalive_site (cloudResourceTools) and the
         // "Manage DA.live Sites" command (cleanupDaLiveSites, since EDS-31: it used to
         // delete content alone and leave every page live). Reset has its own door
@@ -467,7 +468,7 @@ describe('spine choke-points', () => {
             'features/ai/server/cloudResourceTools.ts',
             'features/eds/commands/cleanupDaLiveSites.ts',
             'features/eds/services/storefront/storefrontTeardown.ts',
-            'features/projects-dashboard/services/projectDeletionService.ts',
+            'features/projects-dashboard/services/edsExternalCleanup.ts',
         ]);
         expect(sorted(/\btakeOutProductPages\(/)).toStrictEqual([
             'features/eds/services/reset/edsResetProductPages.ts',

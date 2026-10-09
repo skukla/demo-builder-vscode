@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "EDS-8 split 2026-10-09: catalogPrewarmService keeps the publish run; the Catalog Service read moved to catalogEnumeration, the diagnostics sample to catalogSampleSku, the identity guard to storefrontIdentityGuard. Same 256 mutants as the pre-split re-measure (77.34); killed 195+3 -> 198+3 because the enumeration now has a direct suite, which killed the endpoint guard a ledger row had called unkillable (row deleted). Every survivor is log text or a ledgered equivalent.",
+    "_note": "EDS-8 split of projectDeletionService (2026-10-09): the question moved to deletionConfirmation.ts and the online removal to edsExternalCleanup.ts. Measured before the split at 76.18% on the unsplit file (the 74.41% row predated the modal question and product pages); the pieces now read 81.71 / 77.61 / 92.76 with openGaps 0 on all three, after tests for the modal progress surface, the in-modal checkboxes, a half DA.live pair and a site named apart from its repo, and five equivalent rows.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -8774,26 +8774,22 @@
             "openGaps": 0
         },
         "src/features/projects-dashboard/services/projectDeletionService.ts": {
-            "score": 74.41,
-            "killed": 309,
-            "survived": 100,
-            "noCoverage": 8,
-            "timeout": 5,
+            "score": 81.71,
+            "killed": 65,
+            "survived": 14,
+            "noCoverage": 1,
+            "timeout": 2,
             "survivorCategories": {
-                "branch": 33,
-                "string": 32,
-                "other": 9,
-                "block": 3,
-                "logPresentation": 13,
-                "optionalChain": 10
+                "branch": 10,
+                "string": 2,
+                "block": 1,
+                "logPresentation": 1
             },
             "uncoveredCategories": {
-                "string": 2,
-                "block": 3,
-                "logPresentation": 3
+                "string": 1
             },
-            "highValueSurvivors": 36,
-            "equivalent": 58,
+            "highValueSurvivors": 11,
+            "equivalent": 11,
             "openGaps": 0
         },
         "src/features/projects-dashboard/services/projectRenameService.ts": {
@@ -10485,6 +10481,40 @@
             "uncoveredCategories": {},
             "highValueSurvivors": 0,
             "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/projects-dashboard/services/deletionConfirmation.ts": {
+            "score": 77.61,
+            "killed": 100,
+            "survived": 30,
+            "noCoverage": 0,
+            "timeout": 4,
+            "survivorCategories": {
+                "string": 14,
+                "other": 2,
+                "branch": 8,
+                "optionalChain": 6
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 8,
+            "equivalent": 16,
+            "openGaps": 0
+        },
+        "src/features/projects-dashboard/services/edsExternalCleanup.ts": {
+            "score": 92.76,
+            "killed": 141,
+            "survived": 11,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 4,
+                "optionalChain": 3,
+                "other": 1,
+                "logPresentation": 3
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 5,
             "openGaps": 0
         }
     }

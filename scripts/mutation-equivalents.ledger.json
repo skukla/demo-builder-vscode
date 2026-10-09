@@ -7905,7 +7905,7 @@
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "module": "src/features/projects-dashboard/services/edsExternalCleanup.ts",
             "anchors": [
                 "progress.report({ message: 'Deleting the DA.live site' });"
             ],
@@ -7917,7 +7917,7 @@
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "module": "src/features/projects-dashboard/services/edsExternalCleanup.ts",
             "anchors": [
                 "progress.report({ message: 'Deleting the repository' });"
             ],
@@ -7929,7 +7929,7 @@
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "module": "src/features/projects-dashboard/services/deletionConfirmation.ts",
             "anchors": [
                 "deleteGitHubRepo: !!edsMetadata?.githubRepo,"
             ],
@@ -7941,7 +7941,7 @@
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "module": "src/features/projects-dashboard/services/deletionConfirmation.ts",
             "anchors": [
                 "if (edsMetadata?.githubRepo) {"
             ],
@@ -7953,7 +7953,7 @@
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "module": "src/features/projects-dashboard/services/deletionConfirmation.ts",
             "anchors": [
                 "if (edsMetadata?.daLiveOrg && edsMetadata?.daLiveSite) {"
             ],
@@ -7965,7 +7965,7 @@
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "module": "src/features/projects-dashboard/services/edsExternalCleanup.ts",
             "anchors": [
                 "if (!options.deleteDaLiveSite || !edsMetadata?.daLiveOrg || !edsMetadata?.daLiveSite) return;"
             ],
@@ -7977,7 +7977,7 @@
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "module": "src/features/projects-dashboard/services/edsExternalCleanup.ts",
             "anchors": [
                 "if (options.deleteGitHubRepo && edsMetadata?.githubRepo) {"
             ],
@@ -7989,11 +7989,11 @@
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "module": "src/features/projects-dashboard/services/deletionConfirmation.ts",
             "anchors": [
                 "if (resolved) return;"
             ],
-            "line": 398,
+            "line": 202,
             "mutants": 1,
             "category": "branch",
             "reason": "A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. The guard's FORCED-TRUE half IS killed (a gesture that returns early never settles, and the test hangs); the forced-false and 'resolved = false' halves leave behaviour identical because the extra resolve is discarded.",
@@ -8002,11 +8002,11 @@
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "module": "src/features/projects-dashboard/services/deletionConfirmation.ts",
             "anchors": [
                 "resolved = true;"
             ],
-            "line": 399,
+            "line": 203,
             "mutants": 1,
             "category": "branch",
             "reason": "A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. The guard's FORCED-TRUE half IS killed (a gesture that returns early never settles, and the test hangs); the forced-false and 'resolved = false' halves leave behaviour identical because the extra resolve is discarded.",
@@ -8031,15 +8031,15 @@
             "anchors": [
                 "if (isEds && edsMetadata && cleanupOptions) {"
             ],
-            "mutants": 3,
+            "mutants": 4,
             "category": "branch",
-            "reason": "Both LogicalOperator swaps are unobservable for the same reason as line 121: the three operands are derived in sequence, so a plain project has all three falsy and an EDS confirm has all three truthy. No input makes && and || disagree. The CONDITIONAL half of this line is killed \u2014 forcing it true on a plain project hands performEdsCleanup a null options object and the delete throws. ALSO: The mutant replaces only the SUB-expression 'isEds && edsMetadata' with true, leaving 'if (true && cleanupOptions)'. cleanupOptions is assigned only inside the EDS branch, so it is null for exactly the projects the removed operands would have excluded and the guard still holds. Verified by planting it: 73 tests still pass.",
-            "decision": "none \u2014 equivalent. none \u2014 equivalent. The whole-condition mutants on this line ARE killed.",
+            "reason": "Both LogicalOperator swaps are unobservable for the same reason as line 121: the three operands are derived in sequence, so a plain project has all three falsy and an EDS confirm has all three truthy. No input makes && and || disagree. Forcing the WHOLE condition true is unobservable too (re-measured 2026-10-09, when this line's file was split): on a plain project cleanupOptions is null, the spread hands performEdsCleanup '{ projectPath }' alone, and with deleteDaLiveSite and deleteGitHubRepo both undefined neither cleanup starts, so nothing is called and nothing is reported. ALSO: The mutant replaces only the SUB-expression 'isEds && edsMetadata' with true, leaving 'if (true && cleanupOptions)'. cleanupOptions is assigned only inside the EDS branch, so it is null for exactly the projects the removed operands would have excluded and the guard still holds. Verified by planting it: 73 tests still pass.",
+            "decision": "none \u2014 equivalent, all four mutants on this line; the plain-project path is pinned by the CRITERION 1 tests, which see no remote call either way.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "module": "src/features/projects-dashboard/services/deletionConfirmation.ts",
             "anchors": [
                 "deleteDaLiveSite: !!edsMetadata?.daLiveOrg && !!edsMetadata?.daLiveSite,"
             ],
@@ -8051,20 +8051,7 @@
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
-            "anchors": [
-                "return { deleteGitHubRepo: false, deleteDaLiveSite: false };"
-            ],
-            "line": 350,
-            "mutants": 3,
-            "category": "other",
-            "reason": "Emptying the returned object leaves both flags undefined, which is falsy exactly where false was: performEdsCleanup skips the repo on a falsy deleteGitHubRepo and performDaLiveCleanup returns on a falsy deleteDaLiveSite. The same is true of flipping either literal to true on this path, because the project reaching it has neither a repo nor a complete DA.live pair to act on. The suite asserts the CALLS made, which do not move.",
-            "decision": "none \u2014 equivalent.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "module": "src/features/projects-dashboard/services/deletionConfirmation.ts",
             "anchors": [
                 "quickPick.selectedItems = items.filter(i => i.picked);"
             ],
@@ -12215,6 +12202,70 @@
             "decision": "It was previously killed by asserting that warning's wording, which tests/sop/no-logger-wording-assertions.test.ts refuses; the assertion was removed and the mutant recorded instead.",
             "recorded": "2026-09-06",
             "source": "Found 2026-09-06 when the ratchet caught the score falling after that assertion was replaced by one on the project's own state."
+        },
+        {
+            "module": "src/features/projects-dashboard/services/deletionConfirmation.ts",
+            "anchors": [
+                "return { deleteGitHubRepo: false, deleteDaLiveSite: false };"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Emptying the returned object leaves both flags undefined, which is falsy exactly where false was: performEdsCleanup skips the repo on a falsy deleteGitHubRepo and performDaLiveCleanup returns on a falsy deleteDaLiveSite. Since 2026-10-09 this one line answers both the localOnly setting and an EDS project with nothing to offer (the plain modal was pasted three times and became confirmPlainDelete); flipping either literal to true IS now killed, by the localOnly test that spares both resources.",
+            "decision": "none \u2014 equivalent; the suite asserts the calls made, which do not move.",
+            "recorded": "2026-10-09",
+            "source": "EDS-8 split of projectDeletionService"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/deletionConfirmation.ts",
+            "anchors": [
+                "if (resolved) return;"
+            ],
+            "line": 182,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "In the handler for the Cancel button: A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. VS Code fires onDidHide after onDidAccept and after the Cancel button's hide(), and nothing fires twice, so dropping this guard or never setting the flag only adds a discarded resolve and a second hide() of a dialog already hidden. Measured 2026-10-09 on the split file; the same reasoning as the onDidHide row.",
+            "decision": "none \u2014 equivalent. The acceptThenHide and cancel tests prove the answer survives the extra event; they cannot prove the flag is what makes it so.",
+            "recorded": "2026-10-09",
+            "source": "EDS-8 split of projectDeletionService"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/deletionConfirmation.ts",
+            "anchors": [
+                "resolved = true;"
+            ],
+            "line": 183,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "In the handler for the Cancel button: A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. VS Code fires onDidHide after onDidAccept and after the Cancel button's hide(), and nothing fires twice, so dropping this guard or never setting the flag only adds a discarded resolve and a second hide() of a dialog already hidden. Measured 2026-10-09 on the split file; the same reasoning as the onDidHide row.",
+            "decision": "none \u2014 equivalent. The acceptThenHide and cancel tests prove the answer survives the extra event; they cannot prove the flag is what makes it so.",
+            "recorded": "2026-10-09",
+            "source": "EDS-8 split of projectDeletionService"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/deletionConfirmation.ts",
+            "anchors": [
+                "if (resolved) return;"
+            ],
+            "line": 190,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "In the handler for Enter (accept): A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. VS Code fires onDidHide after onDidAccept and after the Cancel button's hide(), and nothing fires twice, so dropping this guard or never setting the flag only adds a discarded resolve and a second hide() of a dialog already hidden. Measured 2026-10-09 on the split file; the same reasoning as the onDidHide row.",
+            "decision": "none \u2014 equivalent. The acceptThenHide and cancel tests prove the answer survives the extra event; they cannot prove the flag is what makes it so.",
+            "recorded": "2026-10-09",
+            "source": "EDS-8 split of projectDeletionService"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/deletionConfirmation.ts",
+            "anchors": [
+                "resolved = true;"
+            ],
+            "line": 191,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "In the handler for Enter (accept): A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. VS Code fires onDidHide after onDidAccept and after the Cancel button's hide(), and nothing fires twice, so dropping this guard or never setting the flag only adds a discarded resolve and a second hide() of a dialog already hidden. Measured 2026-10-09 on the split file; the same reasoning as the onDidHide row.",
+            "decision": "none \u2014 equivalent. The acceptThenHide and cancel tests prove the answer survives the extra event; they cannot prove the flag is what makes it so.",
+            "recorded": "2026-10-09",
+            "source": "EDS-8 split of projectDeletionService"
         },
         {
             "module": "src/features/ai/server/agentOperationNotifier.ts",

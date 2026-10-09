@@ -1,5 +1,6 @@
 /**
- * The module wall, the fakes and the fixtures both projectDeletionService suites share.
+ * The module wall, the fakes and the fixtures every project-delete suite shares:
+ * projectDeletionService, deletionConfirmation(-modal) and edsExternalCleanup.
  *
  * Extracted when the second suite arrived. The wall is thirty lines of jest.mock
  * covering seven modules, and the two suites need exactly the same one: the first
@@ -156,4 +157,4 @@ jest.mock('@/core/utils/sleep', () => ({ sleep: (...a: unknown[]) => mockSleep(.
 // Below the mocks on purpose — see the note above about hoisting.
 export { deleteProject } from '@/features/projects-dashboard/services/projectDeletionService';
 export { deleteProjectFiles } from '@/features/projects-dashboard/services/projectFilesDeletion';
-export type { DeletionServices } from '@/features/projects-dashboard/services/projectDeletionService';
+export type { DeletionServices } from '@/features/projects-dashboard/services/edsExternalCleanup';

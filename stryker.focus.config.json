@@ -8,10 +8,9 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/catalogPrewarmService.ts",
-        "src/features/eds/services/catalogEnumeration.ts",
-        "src/features/eds/services/catalogSampleSku.ts",
-        "src/features/eds/services/storefrontIdentityGuard.ts"
+        "src/features/projects-dashboard/services/projectDeletionService.ts",
+        "src/features/projects-dashboard/services/deletionConfirmation.ts",
+        "src/features/projects-dashboard/services/edsExternalCleanup.ts"
     ],
     "reporters": [
         "clear-text",

@@ -1,16 +1,19 @@
 /**
- * The REMOTE half of a delete: the CDN unpublish, the DA.live site and its org
- * config, the GitHub repository, and the one-time tip that follows a cleanup.
+ * What a delete removes ONLINE (`edsExternalCleanup.ts`): the CDN unpublish, the
+ * DA.live site and its org config, and the GitHub repository, each with its own
+ * sign-in check.
  *
- * Split from `projectDeletionService-cleanup`, which covers the confirmation and
- * the dialog that decides WHICH of these run. Same rule in both: every assertion
- * reads the arguments a collaborator received or the `cleanupResults` the service
- * reports, never a value a mock handed back.
+ * Driven through `deleteProject`, because the module wall in
+ * `projectDeletionService.testUtils` is the one place these collaborators are
+ * faked. The confirmation that decides WHICH of these run is
+ * `deletionConfirmation.test.ts`; the one-time tip after a cleanup and the local
+ * removal are the orchestrator's, in `projectDeletionService.test.ts`. Same rule
+ * in all of them: every assertion reads the arguments a collaborator received or
+ * the `cleanupResults` the service reports, never a value a mock handed back.
  */
 
 import {
     deleteProject,
-    deleteProjectFiles,
     mockDefaultDeleteAdminApiKey,
     mockDefaultListAllPages,
     mockDefaultListPublishedPaths,
@@ -19,11 +22,11 @@ import {
     mockDeleteSiteConfig,
     mockDeleteDaLiveSite,
     mockEnsureDaLiveAuth,
-    mockExecuteCommand,
     mockGetConfiguration,
     mockGetSession,
     mockGetToken,
     mockHelixInitKeyStore,
+    mockProgressReport,
     mockRemoveSitePermissions,
     mockRm,
     mockShowInformationMessage,
@@ -40,7 +43,6 @@ import {
     mockListAllPages,
     mockListPublishedPaths,
     mockUnpublishPages,
-    plainProject,
 } from './projectDeletionService.fixtures';
 import type { CleanupResultItem } from '@/features/eds/services/resourceCleanupHelpers';
 
@@ -164,6 +166,21 @@ describe('the CDN unpublish step', () => {
         });
     });
 
+    it('names both CDN results by the repository, not the DA.live site, when the two differ', async () => {
+        armQuickPick('accept', ['daLive']);
+        mockListPublishedPaths.mockResolvedValue(['/products/drum/dc-100']);
+        const project = edsProject();
+        metadataOf(project).daLiveSite = 'demo-site';
+
+        const result = await deleteProject(context(), project, SERVICES);
+
+        // The CDN is addressed by owner/repo; the DA.live pair names the content.
+        expect(of(resultsOf(result), 'helix')).toStrictEqual([
+            { type: 'helix', name: 'product pages, skukla/demo-storefront', success: true },
+            { type: 'helix', name: 'skukla/demo-storefront', success: true },
+        ]);
+    });
+
     it('leaves the product pages, and says why, when another project publishes to the same repository', async () => {
         armQuickPick('accept', ['daLive']);
         mockListPublishedPaths.mockResolvedValue(['/products/drum/dc-100']);
@@ -220,6 +237,22 @@ describe('the CDN unpublish step', () => {
 });
 
 describe('the DA.live site cleanup', () => {
+    it("forwards the teardown's own steps to the progress surface", async () => {
+        armQuickPick('accept', ['daLive']);
+
+        await deleteProject(context(), edsProject(), SERVICES);
+
+        // The site step and the file removal are two lines; anything more is the
+        // shared teardown narrating its own steps (CDN, content, site settings)
+        // through onStep. Without the forwarding the SC sees one frozen line for
+        // the whole teardown.
+        const lines = mockProgressReport.mock.calls
+            .map(([update]) => (update as { message?: string }).message ?? '')
+            .filter((message) => message !== '');
+        expect(lines.length).toBeGreaterThan(2);
+        expect(mockDeleteDaLiveSite).toHaveBeenCalledWith('skukla', 'demo-storefront');
+    });
+
     it('records the deleted site and clears its org-config rows', async () => {
         armQuickPick('accept', ['daLive']);
 
@@ -411,122 +444,6 @@ describe('the GitHub repository cleanup', () => {
                 },
             ]);
         });
-    });
-});
-
-describe('the one-time cleanup-settings tip', () => {
-    /**
-     * A context where the tip has NOT been shown before. The shared handler-context
-     * fake answers `true` to every globalState read so tips stay out of other suites'
-     * way — which here means the tip never fires and the assertions pass on nothing.
-     */
-    function freshTipContext(): ReturnType<typeof context> {
-        const ctx = context();
-        (ctx.context.globalState.get as jest.Mock).mockReturnValue(false);
-        return ctx;
-    }
-
-    it('appears after a cleanup ran, offering the settings it configures', async () => {
-        armQuickPick('accept', ['github', 'daLive']);
-        const ctx = freshTipContext();
-
-        await deleteProject(ctx, edsProject(), SERVICES);
-
-        expect(mockShowInformationMessage).toHaveBeenCalledWith(
-            expect.any(String),
-            'Open Settings',
-        );
-        expect(ctx.context.globalState.update).toHaveBeenCalledWith(
-            'edsCleanup.settingsTipShown',
-            true,
-        );
-    });
-
-    it('does not appear when nothing was cleaned up', async () => {
-        armQuickPick('accept', []);
-
-        await deleteProject(freshTipContext(), edsProject(), SERVICES);
-
-        expect(mockShowInformationMessage).not.toHaveBeenCalled();
-    });
-
-    it('does not appear a second time', async () => {
-        armQuickPick('accept', ['github', 'daLive']);
-        const ctx = context();
-        (ctx.context.globalState.get as jest.Mock).mockReturnValue(true);
-
-        await deleteProject(ctx, edsProject(), SERVICES);
-
-        expect(mockShowInformationMessage).not.toHaveBeenCalled();
-    });
-
-    it('opens the cleanupBehavior setting when its action is chosen', async () => {
-        armQuickPick('accept', ['github', 'daLive']);
-        mockShowInformationMessage.mockResolvedValue('Open Settings');
-
-        await deleteProject(freshTipContext(), edsProject(), SERVICES);
-        // The tip is fire-and-forget; let its .then run.
-        await Promise.resolve();
-
-        expect(mockExecuteCommand).toHaveBeenCalledWith(
-            'workbench.action.openSettings',
-            'demoBuilder.cleanupBehavior',
-        );
-    });
-});
-
-describe('removing the local footprint', () => {
-    it('removes the directory recursively and forcibly', async () => {
-        await deleteProjectFiles(context(), plainProject());
-
-        expect(mockRm).toHaveBeenCalledWith('/projects/demo', { recursive: true, force: true });
-    });
-
-    it('touches nothing on disk when the project has no path', async () => {
-        const ctx = context();
-
-        await deleteProjectFiles(ctx, plainProject({ path: '' }));
-
-        expect(mockRm).not.toHaveBeenCalled();
-        expect(ctx.stateManager.removeFromRecentProjects).not.toHaveBeenCalled();
-    });
-
-    it('backs off exponentially between retries, from a bounded base', async () => {
-        const transient = Object.assign(new Error('busy'), { code: 'EBUSY' });
-        mockRm.mockRejectedValue(transient);
-
-        await expect(deleteProjectFiles(context(), plainProject())).rejects.toThrow();
-
-        // The first sleep is the file-handle release, not a retry delay.
-        const delays = mockSleep.mock.calls.slice(1).map((c) => c[0]);
-        expect(delays).toEqual([100, 200, 400, 800]);
-    });
-
-    it('makes exactly five attempts — the ceiling is a number, not "several"', async () => {
-        const transient = Object.assign(new Error('busy'), { code: 'EBUSY' });
-        mockRm.mockRejectedValue(transient);
-
-        await expect(deleteProjectFiles(context(), plainProject())).rejects.toThrow();
-
-        expect(mockRm).toHaveBeenCalledTimes(5);
-    });
-
-    it('treats an error with NO code as non-retryable', async () => {
-        mockRm.mockRejectedValue(new Error('something else'));
-
-        await expect(deleteProjectFiles(context(), plainProject())).rejects.toThrow(
-            /something else/,
-        );
-        expect(mockRm).toHaveBeenCalledTimes(1);
-    });
-
-    it('does not claim it tried repeatedly when it gave up on the first attempt', async () => {
-        const denied = Object.assign(new Error('permission denied'), { code: 'EACCES' });
-        mockRm.mockRejectedValue(denied);
-
-        await expect(deleteProjectFiles(context(), plainProject())).rejects.toThrow(
-            /^Failed to delete project: permission denied$/,
-        );
     });
 });
 

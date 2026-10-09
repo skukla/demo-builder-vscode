@@ -42,7 +42,7 @@ run() {
 }
 
 echo "=== over the limit for its kind ==="
-run "$ROOT/src/features/projects-dashboard/services/projectDeletionService.ts"  "project deletion, a service over 400 lines"  god-file
+run "$ROOT/src/features/eds/services/edsPipeline.ts"                         "the EDS pipeline, a service over 400 lines"  god-file
 run "$ROOT/src/features/prerequisites/handlers/installHandler.ts"       "714-line handler (>500)"   god-file
 run "$ROOT/src/features/dashboard/ui/components/ActionGrid.tsx"             "660-line component (>350)" god-file
 
@@ -60,7 +60,7 @@ echo
 echo "=== the message must state the MEASUREMENT, not just scold ==="
 # The count is read from the file, the way the rule reads it. A literal here (it was
 # 1251) failed the proof on the next one-line edit to the file it names.
-GOD_FILE="$ROOT/src/features/projects-dashboard/services/projectDeletionService.ts"
+GOD_FILE="$ROOT/src/features/eds/services/edsPipeline.ts"
 GOD_LINES=$(wc -l < "$GOD_FILE" | tr -d ' ')
 payload=$(P="$GOD_FILE" S="god-msg-$RANDOM$$" python3 -c 'import json,os;print(json.dumps({"tool_name":"Edit","tool_input":{"file_path":os.environ["P"],"new_string":"x"},"session_id":os.environ["S"]}))')
 msg=$(printf '%s' "$payload" | bash .claude/hooks/router.sh 2>&1)

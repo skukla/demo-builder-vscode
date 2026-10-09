@@ -240,7 +240,7 @@ no build fails on it, and it shrinks as suites convert to handed-in fakes.
 
 | Suites mocking it | File | Class(es) |
 |---|---|---|
-| 26 | `projectDeletionService.ts` | HelixService |
+| 26 | `edsExternalCleanup.ts` (was `projectDeletionService.ts`, split 2026-10-09) | HelixService |
 | 26 | `checkGitHubAppHandler.ts` | GitHubAppService, HelixService |
 | 26 | `storefrontRepublishService.ts` | HelixService |
 | 26 | `edsResetService.ts` | ConfigurationService, HelixService |

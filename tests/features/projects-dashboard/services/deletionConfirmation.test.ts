@@ -1,10 +1,13 @@
 /**
- * What the delete DOES once the user has said yes.
+ * The question a delete asks (`deletionConfirmation.ts`), and what a yes to it
+ * sets going: the plain modal, the cleanup QuickPick it builds, and the
+ * `cleanupBehavior` settings that answer for the SC.
  *
- * The sibling suite asks the safety question — does cancelling delete nothing.
- * This one asks the completeness question: given a yes, which remote resources
- * are destroyed, in what order, with what arguments, and what does the caller
- * learn when one of them fails.
+ * Driven through `deleteProject`, whose module wall is in
+ * `projectDeletionService.testUtils`. `projectDeletionService.test.ts` asks the
+ * safety question — does cancelling delete nothing; this one asks the
+ * completeness question: given a yes, which remote resources are offered and
+ * taken, and what does the caller learn.
  *
  * Every assertion reads the arguments a collaborator received or the
  * `cleanupResults` the service reports, never a value a mock handed back. A mock
@@ -161,6 +164,20 @@ describe('the cleanup dialog it builds', () => {
         await deleteProject(context(), project, SERVICES);
 
         expect(pick.items().map((i) => i.id)).toEqual(['daLive']);
+    });
+
+    it('offers no DA.live row for a half pair: an org, no site, and no repo to fall back on', async () => {
+        mockShowWarningMessage.mockResolvedValue(undefined);
+        const project = edsProject();
+        delete metadataOf(project).daLiveSite;
+        delete metadataOf(project).githubRepo;
+
+        await deleteProject(context(), project, SERVICES);
+
+        // Nothing deletable is left, so no cleanup dialog is built at all: the
+        // plain modal asks instead.
+        expect(mockCreateQuickPick).not.toHaveBeenCalled();
+        expect(mockShowWarningMessage).toHaveBeenCalled();
     });
 
     it('offers only the GitHub row when the DA.live pair is incomplete', async () => {

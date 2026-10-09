@@ -42,7 +42,7 @@ export interface DaLiveTokenProvider {
 
 /**
  * The four Helix calls the unpublish makes, out of a class with dozens. A narrow
- * seam is what let this be tested at all — see `projectDeletionService`, whose
+ * seam is what let this be tested at all — see `edsExternalCleanup`, whose
  * module mock once supplied a method the source had stopped calling.
  */
 export interface TeardownHelix {
