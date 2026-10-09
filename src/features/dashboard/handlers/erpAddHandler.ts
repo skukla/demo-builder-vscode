@@ -154,9 +154,17 @@ function servingIntegration(
     catalog: readonly AppBuilderComponentCatalogEntry[],
 ): { system: AppBuilderComponentCatalogEntry } | { error: HandlerResponse } {
     const integration = project.appBuilderComponents?.[integrationId];
-    const system = integration ? listedSystemOf(integration.catalogId ?? integrationId, catalog) : undefined;
-    if (!integration || integration.kind !== 'integration' || !system) {
-        const error = `"${integration?.name ?? integrationId}" does not serve several ERPs.`;
+    // Not in THIS project is its own answer: on 2026-10-09 an agent's create_project made a
+    // new project current under an open Integrations screen, and "Add another ERP" there was
+    // told the integration "does not serve several ERPs", which sent the owner looking at the
+    // wrong thing.
+    if (!integration) {
+        const error = `"${integrationId}" is not in the current project (${project.name}). Open the project that has it.`;
+        return { error: { success: false, error, code: ErrorCode.PROJECT_NOT_FOUND } };
+    }
+    const system = listedSystemOf(integration.catalogId ?? integrationId, catalog);
+    if (integration.kind !== 'integration' || !system) {
+        const error = `"${integration.name ?? integrationId}" does not serve several ERPs.`;
         return { error: { success: false, error, code: ErrorCode.INVALID_OPERATION } };
     }
     if (integration.status !== 'deployed') {

@@ -347,6 +347,21 @@ describe('handleAddErp', () => {
         expect(mockAdd).not.toHaveBeenCalled();
     });
 
+    // 2026-10-09: an agent's create_project made another project current under an open
+    // Integrations screen, and the add was told the integration "does not serve several ERPs".
+    it('refuses an integration that is not in the current project, naming that project', async () => {
+        const { mockContext } = setup({ name: 'zz-scratch', appBuilderComponents: {} });
+
+        const result = await handleAddErp(mockContext, { id: 'erp-integration', name: 'Accuform ERP' });
+
+        expect(result).toStrictEqual({
+            success: false,
+            error: '"erp-integration" is not in the current project (zz-scratch). Open the project that has it.',
+            code: ErrorCode.PROJECT_NOT_FOUND,
+        });
+        expect(mockAdd).not.toHaveBeenCalled();
+    });
+
     it('refuses an integration that serves one system only', async () => {
         const { mockContext } = setup(erpProject({ 'starter-kit': { kind: 'integration', status: 'deployed', source: { owner: 'skukla', repo: 'x' } } }));
 
