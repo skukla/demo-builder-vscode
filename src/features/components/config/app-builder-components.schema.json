@@ -208,6 +208,11 @@
                   "card-payments-enabled"
                 ]
               },
+              "fix": {
+                "type": "string",
+                "enum": ["add-erp-owner-to-attribute-sets"],
+                "description": "What Demo Builder can do itself when the check finds the step undone, offered as a confirmed action (AB-74)."
+              },
               "optional": {
                 "type": "boolean",
                 "description": "Only some demos need this step: listed and checkable, but an open optional step is not left to do."

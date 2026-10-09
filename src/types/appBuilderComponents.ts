@@ -83,6 +83,13 @@ export type SetupCheck =
     | 'storefront-returns-enabled'
     | 'card-payments-enabled';
 
+/**
+ * Something Demo Builder can DO about a setup step its check found undone, offered as a
+ * confirmed action beside the check (AB-74). `add-erp-owner-to-attribute-sets` adds
+ * `erp_owner` to the attribute sets the store's products use that lack it.
+ */
+export type SetupFix = 'add-erp-owner-to-attribute-sets';
+
 /** How a system is known in its integration's list of systems (see `listedAs`). */
 export interface SystemListing {
     /** The deploy-time input that carries the id, e.g. "ERP_ID". */
@@ -130,6 +137,8 @@ export interface SetupStep {
     icon?: SetupStepIcon;
     /** A check Demo Builder can run; absent = the SC marks it done. */
     check?: SetupCheck;
+    /** What Demo Builder can do itself when the check finds the step undone (AB-74). */
+    fix?: SetupFix;
     /**
      * Only some demos need it (card payments, 2026-10-02). Still listed, checked and marked,
      * but an open optional step is not left to do: it counts in no "steps left" (`isLeftToDo`).
@@ -158,6 +167,10 @@ export interface SetupChecklistItem {
     lastCheck?: SetupCheckOutcome;
     /** Demo Builder can check this one itself. */
     checkable: boolean;
+    /** What Demo Builder can do about it itself (see `SetupStep`). */
+    fix?: SetupFix;
+    /** Demo Builder applied the fix and recorded it, so it can be undone (AB-74). */
+    fixApplied?: boolean;
 }
 
 /** A pre-built appBuilderComponent catalog entry. */

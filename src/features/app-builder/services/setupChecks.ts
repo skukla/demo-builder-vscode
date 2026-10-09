@@ -8,6 +8,7 @@
  * @module features/app-builder/services/setupChecks
  */
 
+import { readProductSets, setsInWords, setsWithoutOwner } from './erpOwnerAttributeSets';
 import {
     cardPaymentsEnabled,
     erpConfirmedStatus,
@@ -230,8 +231,9 @@ async function readAttribute(read: CommerceRead, code: string): Promise<Attribut
 /**
  * The two product values several ERPs route and sell by exist (owner, 2026-09-28): `erp_owner`
  * names the ERP that fulfils a product, and must be a Text Field, because a Dropdown's API value
- * is the option's number, not the ERP's id; `brand` is what buyers see, in any input type. Only
- * the attributes are checked: which products carry them is the SC's scenario, never seeded.
+ * is the option's number, not the ERP's id, and must be in every attribute set the products use
+ * (AB-74); `brand` is what buyers see, in any input type. Which products carry them is the SC's
+ * scenario (Assign products on an ERP's card), never seeded.
  */
 async function erpAttributesExist(read: CommerceRead): Promise<SetupCheckResult> {
     const owner = await readAttribute(read, 'erp_owner');
@@ -248,7 +250,42 @@ async function erpAttributesExist(read: CommerceRead): Promise<SetupCheckResult>
             note: `erp_owner is a ${owner?.frontend_input ?? 'field of unknown type'}; it must be a Text Field so it carries the ERP's id.`,
         };
     }
-    return { done: true, note: 'erp_owner (Text Field) and brand both exist.' };
+    return ownerInEverySet(read);
+}
+
+/** Notes the signed REST read puts above a body ("[pageSize 20 applied …]"); never JSON. */
+const READ_NOTE = /^\[[a-z][^\n]*\n/giu;
+
+/** The text read as a parsed GET: a body, or a throw with Commerce's words. */
+function parsedGet(read: CommerceRead) {
+    return async (path: string): Promise<unknown> => {
+        const text = (await read(path)).replace(READ_NOTE, '');
+        if (text.startsWith('Error:')) throw new Error(text.replace(/^Error: /u, ''));
+        return JSON.parse(text) as unknown;
+    };
+}
+
+/**
+ * The third half of the step (AB-74): `erp_owner` is in every attribute set the store's
+ * products use, because Commerce drops a value for an attribute outside the product's set and
+ * still answers 200. The sets missing it are named, with how many products each holds.
+ */
+async function ownerInEverySet(read: CommerceRead): Promise<SetupCheckResult> {
+    try {
+        const get = parsedGet(read);
+        const missing = await setsWithoutOwner(get, await readProductSets(get));
+        if (missing.length === 0) {
+            return { done: true, note: 'erp_owner (Text Field) and brand both exist, and erp_owner is in every attribute set your products use.' };
+        }
+        return {
+            done: false,
+            note:
+                `erp_owner is not in the attribute set${missing.length > 1 ? 's' : ''} ${setsInWords(missing)}, ` +
+                'so an ERP tag written to those products is dropped. Demo Builder can add it.',
+        };
+    } catch (error) {
+        return { note: `Could not check the attribute sets: ${error instanceof Error ? error.message : String(error)}` };
+    }
 }
 
 const CHECKS: Record<SetupCheck, (read: CommerceRead, scope: SetupCheckScope) => Promise<SetupCheckResult>> = {

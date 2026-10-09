@@ -19,6 +19,7 @@ import type { CustomBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import type { ComponentConfigs, EnvVarDefinition, ServiceDefinition } from './components';
 import type { DaLiveContentSource } from './demoPackages';
+import type { ErpProductSelection } from './erpAssign';
 import type { ErpOwnsRule } from './erpOwnership';
 import type { ErrorCode } from './errorCodes';
 import type {
@@ -732,6 +733,31 @@ export interface AddErpRequestPayload {
      */
     owns?: ErpOwnsRule;
     /** `'modal'` when the SC started it from the integrations screen (PL-59). */
+    progress?: 'modal';
+}
+
+/**
+ * The ERP verbs of "Assign products" (AB-74): `getErpAssignOptions`, `assignErpProducts` and
+ * `undoErpAssignment`. `id` is the ERP integration, `erp` the ERP's component id. A call
+ * without `confirm: true` previews and writes nothing.
+ */
+export interface ErpAssignRequestPayload {
+    id?: string;
+    erp?: string;
+    /** Which products, for `assignErpProducts`. */
+    selection?: ErpProductSelection;
+    confirm?: boolean;
+    /** `'modal'` when the SC started it from the integrations screen (PL-59). */
+    progress?: 'modal';
+}
+
+/**
+ * `addErpOwnerToAttributeSets` / `removeErpOwnerFromAttributeSets` (AB-74): `id` is the ERP
+ * integration. Without `confirm: true` it answers which sets it would change.
+ */
+export interface ErpOwnerSetsRequestPayload {
+    id?: string;
+    confirm?: boolean;
     progress?: 'modal';
 }
 

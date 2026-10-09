@@ -579,7 +579,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             'with the new one. Then ownership is ' +
             'applied across every ERP: each is filled with what it now owns, products an ERP no ' +
             'longer owns are marked discontinued there, and data.warning names what the user still ' +
-            'has to do (tag products with erp_owner in Commerce when an ERP owns none yet; change a ' +
+            'has to do (give an ERP products with assign_erp_products when it owns none yet; change a ' +
             'rule when two claim the same products, whose orders are refused); data.note says when ' +
             'its prices are still being published, which needs nothing. The ' +
             'answer says the rule applied ' +
@@ -606,6 +606,98 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
                 })
                 .optional()
                 .describe('Which products the new ERP owns; omit for the default (see the description)'),
+        },
+    },
+    {
+        tool: 'assign_erp_products',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            'Give an ERP its products ("Assign products" on its card): tag Commerce products with the ' +
+            "erp_owner value in the ERP's own rule, so the ERP owns them. Pick products one way: by " +
+            'category id, by brand, by SKU prefix, or by a list of SKUs. WITHOUT confirm it only ' +
+            'previews: data.preview says how many products match, how many would be written, a few ' +
+            'example SKUs, which ERPs own them today (they move; that is allowed), products whose ' +
+            'attribute set has no erp_owner (not written; add_erp_owner_to_attribute_sets fixes ' +
+            'that) and pasted SKUs Commerce does not have. Show the preview to the user, then call ' +
+            'again with confirm:true: Commerce writes them in one bulk call, the extension follows it ' +
+            'to its end (data.bulk: complete, failed, open), records each product\'s previous ' +
+            'erp_owner so undo_erp_assignment can put them back, and applies ownership ' +
+            'across every ERP (data.ownership). Only for an ERP whose rule is erp_owner=<value>. Takes ' +
+            "the ERP integration id and the ERP's component id.",
+        map: dashboardHandlers,
+        type: 'assignErpProducts',
+        inputSchema: {
+            id: z.string().describe('The ERP integration id (from get_project)'),
+            erp: z.string().min(1).describe("The ERP's component id (from get_erp_status's erps)"),
+            selection: z
+                .discriminatedUnion('by', [
+                    z.object({ by: z.literal('category'), categoryId: z.number().int().describe('A Commerce category id') }),
+                    z.object({ by: z.literal('brand'), brand: z.string().min(1).describe('A brand as buyers see it') }),
+                    z.object({ by: z.literal('skuPrefix'), prefix: z.string().min(1).describe('The start of the SKUs') }),
+                    z.object({ by: z.literal('skus'), skus: z.array(z.string()).min(1).describe('The SKUs') }),
+                ])
+                .describe('Which products: by category, brand, SKU prefix or a SKU list'),
+            confirm: z
+                .boolean()
+                .optional()
+                .describe('true writes; omitted or false previews only. Show the preview to the user first.'),
+        },
+    },
+    {
+        tool: 'add_erp_owner_to_attribute_sets',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            'Add the erp_owner product attribute to every attribute set the store\'s products use ' +
+            'that lacks it (the fix the erp-attributes setup step offers). Commerce drops an ' +
+            "erp_owner value written to a product whose attribute set does not have it, so an ERP's " +
+            'products in such a set never move to it. WITHOUT confirm it only answers which sets ' +
+            'lack it (data.setsWithoutOwner, each with its product count); with confirm:true it adds ' +
+            'erp_owner to each and records which; remove_erp_owner_from_attribute_sets takes it out again. Takes ' +
+            'the ERP integration id.',
+        map: dashboardHandlers,
+        type: 'addErpOwnerToAttributeSets',
+        inputSchema: {
+            id: z.string().describe('The ERP integration id (from get_project)'),
+            confirm: z
+                .boolean()
+                .optional()
+                .describe('true adds; omitted or false answers which sets lack erp_owner'),
+        },
+    },
+    {
+        tool: 'undo_erp_assignment',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            "Undo an ERP's last assign_erp_products (\"Undo last assignment\" on its card): put back the " +
+            'erp_owner each product had before, on the products that still carry the value written ' +
+            '(a product changed since is left and counted), in one Commerce bulk call, then apply ' +
+            'ownership across every ERP. WITHOUT confirm it only answers what it would put back ' +
+            '(restore, changedSince, a few SKUs). Takes the ERP integration id and the ERP\'s component id.',
+        map: dashboardHandlers,
+        type: 'undoErpAssignment',
+        inputSchema: {
+            id: z.string().describe('The ERP integration id (from get_project)'),
+            erp: z.string().min(1).describe("The ERP's component id (from get_erp_status's erps)"),
+            confirm: z.boolean().optional().describe('true writes; omitted or false previews only'),
+        },
+    },
+    {
+        tool: 'remove_erp_owner_from_attribute_sets',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            'Undo add_erp_owner_to_attribute_sets: take erp_owner out of the attribute sets Demo Builder ' +
+            'added it to. Refused while a product in those sets carries an erp_owner value (undo that ' +
+            "ERP's assignment first, so no tag is lost). WITHOUT confirm it only answers which sets. " +
+            'Takes the ERP integration id.',
+        map: dashboardHandlers,
+        type: 'removeErpOwnerFromAttributeSets',
+        inputSchema: {
+            id: z.string().describe('The ERP integration id (from get_project)'),
+            confirm: z.boolean().optional().describe('true removes; omitted or false answers which sets'),
         },
     },
     {

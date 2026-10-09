@@ -24,6 +24,10 @@ export interface SystemCardHandlers {
     loadErpData: (id: string, erpName: string, erp?: string) => void;
     /** Open an ERP's simulated-downtime modal (AB-59). */
     openDowntime: (target: ErpDemoControlTarget) => void;
+    /** Open "Assign products" for an ERP (AB-74). */
+    openAssign?: (target: ErpDemoControlTarget) => void;
+    /** Ask before undoing an ERP's last assignment (AB-74). */
+    confirmUndoAssignment?: (target: ErpDemoControlTarget) => void;
 }
 
 /**
@@ -52,6 +56,11 @@ export function handleSystemAction(
         if (integrationId) {
             handlers.openDowntime({ id: integrationId, erp: model.id, name: model.name });
         }
+        return true;
+    }
+    if (action === 'assign-products' || action === 'undo-assignment') {
+        const open = action === 'assign-products' ? handlers.openAssign : handlers.confirmUndoAssignment;
+        if (integrationId) open?.({ id: integrationId, erp: model.id, name: model.name });
         return true;
     }
     return false;

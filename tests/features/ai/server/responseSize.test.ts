@@ -344,6 +344,9 @@ describe('rows with no output safety net are classified', () => {
         // `{added: {id, name, kind}, integration, erpList, owns, existingOwns, warning?}`, or a
         // named refusal (AB-64 added the two rules, each an id, a short rule and a sentence).
         'add_erp',
+        // Category 2, read before listing (AB-74): both answer `{confirmed, …}` or a named refusal.
+        ...['assign_erp_products', 'add_erp_owner_to_attribute_sets'],
+        ...['undo_erp_assignment', 'remove_erp_owner_from_attribute_sets'],
         // Category 2, read before listing: `handleListRuntimePackages` returns
         // `{data: {namespace, packages}}` or a named refusal (runtimePackageHandlers.ts).
         'list_runtime_packages',
@@ -530,6 +533,8 @@ describe('the ceiling table tracks the tool surface', () => {
         // `{added, integration, erpList, owns, existingOwns}`: one id and name, the list's ids, and
         // one short rule per ERP (at most a few ERPs).
         'add_erp',
+        // AB-74: one short row per attribute set; the undo's counts and five SKUs.
+        ...['add_erp_owner_to_attribute_sets', 'remove_erp_owner_from_attribute_sets', 'undo_erp_assignment'],
         'delete_undeclared_runtime_code',
         'deploy_mesh',
         'delete_mesh',
@@ -635,7 +640,8 @@ describe('the ceiling table tracks the tool surface', () => {
         // only between being built and being probed.
         // list_runtime_packages: one name per package, so its size is the size of
         // somebody's namespace. Measured on the first live call, then promoted.
-        const PENDING_LIVE_MEASUREMENT = new Set<string>(['list_runtime_packages']);
+        // assign_erp_products (AB-74): its unknown SKUs are as long as what was pasted.
+        const PENDING_LIVE_MEASUREMENT = new Set<string>(['list_runtime_packages', 'assign_erp_products']);
 
         const missing = descriptorTools.filter(
             (t) => !RESPONSE_CEILINGS[t] && !EXEMPT.has(t) && !PENDING_LIVE_MEASUREMENT.has(t)

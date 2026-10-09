@@ -339,3 +339,29 @@ describe('a next step on success', () => {
         expect(screen.queryByRole('button', { name: 'Start setup guide' })).not.toBeInTheDocument();
     });
 });
+
+// AB-74: a next step the RUN offered (`offer`), turned into a button by the screen. "Add
+// another ERP" whose new ERP owns nothing offers "Assign products" this way.
+describe('a next step the run offered', () => {
+    const OFFER = {
+        action: 'assign-erp-products' as const,
+        id: 'erp-integration',
+        erp: 'demo-erp-2',
+        name: 'Accuform ERP',
+        message: 'Next: Accuform ERP owns no products yet. Assign products to it.',
+    };
+
+    it("shows the screen's button for it on success, and starts it after closing", async () => {
+        progress = { id: OPERATION.id, state: 'succeeded', offer: OFFER };
+        const onClose = jest.fn();
+        const onPress = jest.fn();
+        const offerStep = jest.fn(() => ({ message: OFFER.message, action: 'Assign products', onPress }));
+        render(<OperationProgressModal operation={OPERATION} onRetry={jest.fn()} onClose={onClose} offerStep={offerStep} />);
+
+        expect(offerStep).toHaveBeenCalledWith(OFFER);
+        expect(screen.getByText(OFFER.message)).toBeInTheDocument();
+        await user().click(screen.getByRole('button', { name: 'Assign products' }));
+        expect(onClose).toHaveBeenCalledTimes(1);
+        expect(onPress).toHaveBeenCalledTimes(1);
+    });
+});

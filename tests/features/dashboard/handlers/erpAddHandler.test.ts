@@ -280,14 +280,14 @@ describe('handleAddErp', () => {
         });
 
         it("says what the pass says the SC still has to do, as the answer's warning", async () => {
-            mockApply.mockResolvedValue(applied({}, ['Brand B ERP owns no products yet: tag products with erp_owner=brand-b in Commerce, then Load demo data.']));
+            mockApply.mockResolvedValue(applied({}, ['Brand B ERP owns no products yet: use Assign products on its card to give it some.']));
             const { mockContext } = setup();
 
             const result = await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP' });
 
             expect(result).toMatchObject({
                 success: true,
-                data: { warning: 'Brand B ERP owns no products yet: tag products with erp_owner=brand-b in Commerce, then Load demo data.' },
+                data: { warning: 'Brand B ERP owns no products yet: use Assign products on its card to give it some.' },
             });
         });
 
@@ -461,6 +461,43 @@ describe('handleAddErp', () => {
             state: 'succeeded',
             note,
         });
+    });
+
+    // AB-74: a new ERP that owns nothing by erp_owner is offered "Assign products" on the
+    // progress window's success view; one that owns products, or owns by another rule, is not.
+    it('offers Assign products on the success view when the new ERP owns nothing yet', async () => {
+        const nothing = applied();
+        nothing.erps[0].ownsNow = 0;
+        mockApply.mockResolvedValue(nothing);
+        const { mockContext } = setup();
+
+        await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP', owns: OWN_ATTRIBUTE, progress: 'modal' });
+
+        expect(mockContext.sendMessage).toHaveBeenCalledWith('operationProgress', {
+            id: 'erp-integration',
+            state: 'succeeded',
+            offer: {
+                action: 'assign-erp-products',
+                id: 'erp-integration',
+                erp: 'demo-erp-2',
+                name: 'Brand B ERP',
+                message: 'Next: Brand B ERP owns no products yet. Assign products to it.',
+            },
+        });
+    });
+
+    it('offers nothing when the new ERP owns products, or owns by websites', async () => {
+        mockApply.mockResolvedValue(applied());
+        const { mockContext } = setup();
+        await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP', owns: OWN_ATTRIBUTE, progress: 'modal' });
+        const byWebsite = applied();
+        byWebsite.erps[0] = { ...byWebsite.erps[0], ownsNow: 0, owns: { mode: 'websites', attribute: '' } };
+        mockApply.mockResolvedValue(byWebsite);
+        await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP', owns: OWN_ATTRIBUTE, progress: 'modal' });
+
+        const ends = (mockContext.sendMessage as jest.Mock).mock.calls.filter(([, push]) => push?.state === 'succeeded');
+        expect(ends).toHaveLength(2);
+        for (const [, push] of ends) expect(push).not.toHaveProperty('offer');
     });
 
     it("answers the website mappings the new ERP's fill filled and kept (AB-26y)", async () => {

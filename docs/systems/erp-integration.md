@@ -239,12 +239,40 @@ ERP's. The SC never resets by hand to make the ERPs match the rules. Per ERP, in
 When a removal leaves ONE ERP, its rule is set back to everything before the fills, so a
 single-ERP project looks as it did before the second ERP was added; with no ERP on everything
 left, the pass says how many products belong to no ERP. What the SC still has to do is said in
-the answer's `warning` and on the window: "Kukla ERP owns no products yet: tag products with
-erp_owner=kukla in Commerce, then Load demo data." and "3 products are claimed by both Justrite
-ERP and Accuform ERP; orders for them are refused until one rule changes." Tagging products
-stays the SC's job. Anything that did not go
+the answer's `warning` and on the window: "Kukla ERP owns no products yet: use Assign products
+on its card to give it some." and "3 products are claimed by both Justrite ERP and Accuform
+ERP; orders for them are refused until one rule changes." An ERP that owns by an attribute
+other than `erp_owner` is still told to tag products in Commerce. Anything that did not go
 right for one ERP is its note and the pass stands; a store or an integration that could not be
 read fails the pass, never the add or the removal, which say so.
+
+**Assigning products (AB-74).** Which products an ERP owns by `erp_owner` is set from its
+card: **Assign products** opens a modal where the SC picks products by category, by brand, by
+the start of their SKU, or by pasting SKUs. The modal reads the store once as it opens
+(`getErpAssignOptions`) and previews as the SC picks: how many products match, how many will
+be tagged, a few example SKUs, which ERP owns them today (they move, and it says so), how many
+already carry the value, and pasted SKUs Commerce has no product for. The value written is the
+one in the ERP's own rule; an ERP whose rule is not `erp_owner=<value>` is told so and nothing
+is written. Assign writes `erp_owner` on the products in ONE call to Commerce's asynchronous
+bulk API (`PUT V1/async/bulk/products/bySku`, one `{ product: { sku, custom_attributes } }`
+body per product; the ACCS route order is in the reference note on ACCS route shapes), follows
+`GET V1/bulk/<uuid>/status` every 3 s until no operation is open (10 minutes at most), records
+each product's previous value on the ERP's component record (`erpAssignment`), and runs the
+ownership pass above. "Add another ERP" whose new ERP owns nothing offers Assign products on
+its success view. **Undo last assignment** puts the recorded values back, by the same bulk
+route, on the products that still carry the value written (a product changed since is left
+and counted), then runs the pass and drops the record. A product whose attribute set has no
+`erp_owner` is not written: Commerce would drop the value and still answer 200.
+
+**The attribute sets.** The `erp-attributes` setup check also reads which attribute sets the
+store's products use and names the ones without `erp_owner`, with their product counts. Its
+fix, offered in the setup guide and at the top of the Assign modal, adds `erp_owner` to each
+(`POST products/attribute-sets/attributes`, into the set's Product Details group, else
+General) and records which on the integration (`erpOwnerSets`); the guide then offers to take
+it out again (`DELETE products/attribute-sets/<id>/attributes/erp_owner`), which waits until
+no product in those sets carries a value. Agents reach all four through `assign_erp_products`,
+`undo_erp_assignment`, `add_erp_owner_to_attribute_sets` and
+`remove_erp_owner_from_attribute_sets`, which preview without `confirm`.
 
 **Its look.** The ERP picks its starting theme from a hash of its list id (demo-erp
 `lib/appearance.js` `themeForErpId`) and cannot see the other ERPs, so two can start alike

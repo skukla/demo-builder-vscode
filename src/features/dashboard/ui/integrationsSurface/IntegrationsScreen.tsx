@@ -21,6 +21,7 @@
 
 import { Button, Flex, Text, View } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ErpAssignDialogs, useErpAssignDialogs } from '../components/integrations/ErpAssignDialogs';
 import {
     buildIntegrationCards,
     deriveMeshCard,
@@ -228,6 +229,9 @@ export function IntegrationsScreen({
     // The demo setup guide (AB-26x) lives here, not in the grid: the progress modal below
     // opens it too, when an operation finishes with setup still to do.
     const { open: openGuide, modal: guideModal } = useSetupGuide(cards);
+    // "Assign products" and the attribute-set fix (AB-74): opened from a card, the setup
+    // guide, and the success view of "Add another ERP".
+    const erpAssign = useErpAssignDialogs(operations);
     // Named rather than inlined: a 4-operand && chain in JSX trips the
     // complex-expression SOP scan (tests/sop/complex-expressions.test.ts).
     const searchFoundNothing =
@@ -396,6 +400,7 @@ export function IntegrationsScreen({
                         componentSettings={componentSettings}
                         operations={operations}
                         onOpenGuide={openGuide}
+                        erpAssign={erpAssign}
                         // The add card steps aside while a filter is on: it is
                         // not a result, and alone it would read as "add one"
                         // rather than "nothing matched".
@@ -446,8 +451,10 @@ export function IntegrationsScreen({
                     onRetry={operations.retry}
                     onClose={operations.close}
                     next={setupNextStep(cards, operations.open?.id, openGuide)}
+                    offerStep={erpAssign.offerStep}
                 />
-                <SetupGuideModal {...guideModal} />
+                <SetupGuideModal {...guideModal} onFix={erpAssign.changeSets} />
+                <ErpAssignDialogs {...erpAssign.dialogs} />
             </FullScreenSurface>
         </PageLayout>
     );

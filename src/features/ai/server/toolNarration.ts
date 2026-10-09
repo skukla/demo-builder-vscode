@@ -203,6 +203,10 @@ export const TOOL_NARRATION: Record<string, string> = {
     reset_erp_records: 'Resetting the ERP records',
     add_erp: 'Adding another ERP',
     load_erp_demo_data: 'Loading demo data into the ERP',
+    assign_erp_products: 'Assigning products to the ERP',
+    add_erp_owner_to_attribute_sets: 'Fixing product attribute sets',
+    undo_erp_assignment: "Undoing the ERP's assignment",
+    remove_erp_owner_from_attribute_sets: 'Restoring product attribute sets',
     open_erp_screen: "Opening the ERP's screen",
     get_agent_trace: 'Reading the agent activity',
 

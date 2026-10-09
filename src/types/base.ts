@@ -8,6 +8,7 @@
 import type { CustomBlockLibrary, InstalledBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import type { ServiceDefinition } from './components';
+import type { ErpAssignmentRecord, ErpOwnerSetsRecord } from './erpAssign';
 import type { AddedDemo } from './projectFile';
 
 /**
@@ -322,6 +323,17 @@ export interface AppBuilderComponentState {
      * Absent = open. Removed with the component.
      */
     setupSteps?: Record<string, SetupStepRecord>;
+    /**
+     * An ERP's last "Assign products" (AB-74): the value written and each product's
+     * `erp_owner` before it, so "Undo last assignment" can put them back. Replaced by the
+     * next assignment, removed by the undo, and removed with the component.
+     */
+    erpAssignment?: ErpAssignmentRecord;
+    /**
+     * The ERP integration's record of the attribute sets Demo Builder added `erp_owner` to
+     * (AB-74), so the addition can be undone. Removed by the undo and with the component.
+     */
+    erpOwnerSets?: ErpOwnerSetsRecord;
     /**
      * The catalog entry this component was made from, when its id is not that entry's
      * id: a second copy of a kind the project already holds (`demo-erp-2`). ABSENT

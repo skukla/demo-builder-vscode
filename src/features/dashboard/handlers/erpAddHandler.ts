@@ -82,6 +82,7 @@ import type { ErpThemeId } from '@/types/erpDemoControls';
 import type { ErpOwnsEntry, ErpOwnsRule } from '@/types/erpOwnership';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
+import type { OperationOffer } from '@/types/webviewPayloads';
 import type { AddErpRequestPayload } from '@/types/webviewRequests';
 
 /** The add, resolved: the integration, the new ERP's entry, and whether it is already deployed. */
@@ -288,6 +289,26 @@ function ownershipSaid(applied: Extract<ApplyOwnershipOutcome, { status: 'applie
     };
 }
 
+/**
+ * The next step the progress window offers when the new ERP owns nothing yet and owns by
+ * `erp_owner`: "Assign products" for it (AB-74), the way the SC gives it some.
+ */
+function assignOffer(plan: ErpAddPlan, applied: ApplyOwnershipOutcome): { offer?: OperationOffer } {
+    if (applied.status !== 'applied') return {};
+    const report = applied.erps.find((erp) => erp.erp === plan.entry.id);
+    const byOwnerTag = report?.owns.mode === 'attribute' && (report.owns.attribute ?? '').startsWith('erp_owner=');
+    if (!report || report.ownsNow > 0 || !byOwnerTag) return {};
+    return {
+        offer: {
+            action: 'assign-erp-products',
+            id: plan.integrationId,
+            erp: plan.entry.id,
+            name: plan.name,
+            message: `Next: ${plan.name} owns no products yet. Assign products to it.`,
+        },
+    };
+}
+
 /** Record the typed name where the ERP's deploy reads it, so its workspace and card carry it. */
 async function recordName(context: HandlerContext, plan: ErpAddPlan): Promise<void> {
     const key = plan.entry.nameFromEnvVar;
@@ -382,7 +403,8 @@ async function listAndFill(
     const mapping = merged ? { mapping: merged } : {};
     const theme = themed.theme ? { theme: themed.theme } : {};
     const ownership = applied.status === 'applied' ? { ownership: ownershipSaid(applied) } : {};
-    return { success: true, listed: listed.ids, filled, owns, existingOwns, ...mapping, ...theme, ...ownership, ...warning, ...note };
+    const offer = assignOffer(plan, applied);
+    return { success: true, listed: listed.ids, filled, owns, existingOwns, ...mapping, ...theme, ...ownership, ...warning, ...note, ...offer };
 }
 
 /** Deploy the new ERP in its own workspace, unless an earlier add already did. */

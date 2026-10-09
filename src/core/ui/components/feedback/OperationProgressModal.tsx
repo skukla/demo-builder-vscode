@@ -41,7 +41,7 @@ import { useOperationProgress } from '@/core/ui/hooks/useOperationProgress';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { stageLine } from '@/core/utils/stageLine';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { OperationPrompt, OperationProgressPayload } from '@/types/webviewPayloads';
+import type { OperationOffer, OperationPrompt, OperationProgressPayload } from '@/types/webviewPayloads';
 
 /** The operation a progress modal shows: which one, and what it is called. */
 export interface ProgressModalOperation {
@@ -81,6 +81,11 @@ export interface OperationProgressModalProps {
      * what is left and waits for the SC instead of closing by itself.
      */
     next?: ProgressModalNextStep;
+    /**
+     * Turns a next step the RUN offered (`OperationProgressPayload.offer`, AB-74) into a
+     * button. `next` wins when both are there: it is the screen's own.
+     */
+    offerStep?: (offer: OperationOffer) => ProgressModalNextStep | undefined;
 }
 
 /**
@@ -116,6 +121,16 @@ function answerButtons(actions: string[], answer: (chosen: string) => void): Act
 function nextStepButtons(next: ProgressModalNextStep | undefined, onClose: () => void): ActionButton[] {
     if (!next) return [];
     return [{ label: next.action, variant: 'accent', onPress: () => { onClose(); next.onPress(); } }];
+}
+
+/** The success view's next step: the screen's own, else the one the run offered (AB-74). */
+function nextStepOf(
+    progress: OperationProgressPayload | null | undefined,
+    next: ProgressModalNextStep | undefined,
+    offerStep: OperationProgressModalProps['offerStep'],
+): ProgressModalNextStep | undefined {
+    if (next) return next;
+    return progress?.offer && offerStep ? offerStep(progress.offer) : undefined;
 }
 
 /** What a failure offers: the detail it wrote to the logs, and another go. */
@@ -203,6 +218,7 @@ export function OperationProgressModal({
     onRetry,
     onClose,
     next,
+    offerStep,
 }: OperationProgressModalProps): React.ReactElement {
     const progress = useOperationProgress(
         operation?.id ?? null,
@@ -259,7 +275,7 @@ export function OperationProgressModal({
     // So does a warning (AB-26z): a fill whose prices were not published ended on a
     // green tick, and the reason reached only the Debug Logs. So does a note, which is
     // a sentence to read, not a warning to act on: the tick stays green.
-    const offering = succeeded ? next : undefined;
+    const offering = succeeded ? nextStepOf(progress, next, offerStep) : undefined;
     const warning = succeeded ? progress?.warning : undefined;
     const note = succeeded ? progress?.note : undefined;
     useEffect(() => {

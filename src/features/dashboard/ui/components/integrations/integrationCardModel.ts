@@ -209,10 +209,14 @@ function buildSystemMenuActions(
     url: string | undefined,
     usedBy: LinkedCard | undefined,
     hasUpdate = false,
+    assign: { listed: boolean; assigned: boolean } = { listed: false, assigned: false },
 ): CardAction[] {
     if (status === 'deploying' || usedBy?.status === 'deploying') return [];
     const verb = statusVerb(status, hasUpdate);
     const resettable = status === 'deployed' && usedBy?.status === 'deployed';
+    // An ERP in its integration's list can be given products (AB-74); its modal reads the rule
+    // and says so when the rule is not erp_owner, since the rule lives in the integration.
+    const assignable = resettable && assign.listed;
     return [
         ...(verb ? [verb] : []),
         ...(url ? (['open'] as CardAction[]) : []),
@@ -220,6 +224,8 @@ function buildSystemMenuActions(
         // simulated downtime (AB-59), which reaches the ERP through the same integration. Its
         // look is set on the ERP's own screen, not here (owner, 2026-10-02).
         ...(resettable ? (['load-demo-data', 'simulate-downtime'] as CardAction[]) : []),
+        ...(assignable ? (['assign-products'] as CardAction[]) : []),
+        ...(assignable && assign.assigned ? (['undo-assignment'] as CardAction[]) : []),
         ...(status === 'deployed' ? (['redeploy'] as CardAction[]) : []),
         'remove',
     ];
@@ -559,6 +565,7 @@ export function deriveSystemCard(
             screenUrl,
             usedBy,
             Boolean(entry.updateAvailable),
+            { listed: Boolean(catalogEntry?.listedAs), assigned: Boolean(entry.erpAssignment) },
         ),
         canRename: false,
         ...(usedBy ? { linked: { cards: [usedBy] } } : {}),

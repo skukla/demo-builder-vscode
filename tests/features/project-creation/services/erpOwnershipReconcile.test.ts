@@ -119,11 +119,22 @@ describe('applyErpOwnership', () => {
                 { erp: 'demo-erp-2', listId: 'kukla', name: 'Kukla ERP', owns: OPTIONS.erps[1].owns, ownsNow: 0, discontinued: 0, restored: 0 },
             ],
             notes: [
-                'Kukla ERP owns no products yet: tag products with erp_owner=kukla in Commerce, then Load demo data.',
+                'Kukla ERP owns no products yet: use Assign products on its card to give it some.',
                 '1 product belongs to no ERP.',
             ],
         });
         expect(mockSave).not.toHaveBeenCalled();
+    });
+
+    it('still says to tag products in Commerce for a rule on an attribute Assign products does not write (AB-74)', async () => {
+        mockRead.mockResolvedValue({
+            ...OPTIONS,
+            erps: [OPTIONS.erps[0], { ...OPTIONS.erps[1], owns: { mode: 'attribute', attribute: 'brand=kukla' } }],
+        });
+        const result = await applyErpOwnership(project(), 'erp-integration', deps(), 'assign');
+        expect(result).toMatchObject({
+            notes: expect.arrayContaining(['Kukla ERP owns no products yet: tag products with brand=kukla in Commerce, then Load demo data.']),
+        });
     });
 
     it('an ERP on everything is the catch-all (AB-72): it owns what no product rule claims, so nothing belongs to nobody', async () => {

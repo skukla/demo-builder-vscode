@@ -11,45 +11,8 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import React from 'react';
 import '@testing-library/jest-dom';
 
-jest.mock('@adobe/react-spectrum', () => ({
-    Badge: ({ children }: any) => <span data-testid="badge">{children}</span>,
-    Button: ({ children, onPress, isDisabled, variant: _v, ...props }: any) => (
-        <button onClick={onPress} disabled={isDisabled} {...props}>
-            {children}
-        </button>
-    ),
-    DialogContainer: ({ children }: any) => <div data-testid="dialog-container">{children}</div>,
-    Flex: ({ children }: any) => <div>{children}</div>,
-    Heading: ({ children }: any) => <h3>{children}</h3>,
-    ProgressCircle: ({ 'aria-label': label }: any) => <span role="progressbar" aria-label={label} />,
-    Link: ({ children, onPress, isQuiet: _quiet, UNSAFE_className, ...props }: any) => (
-        <span role="link" tabIndex={0} onClick={onPress} className={UNSAFE_className} {...props}>
-            {children}
-        </span>
-    ),
-    Text: ({ children }: any) => <span>{children}</span>,
-}));
-
-jest.mock('@/core/ui/components/ui/Modal', () => ({
-    Modal: ({ title, actionButtons = [], onClose, closeLabel, children }: any) => (
-        <div role="dialog" aria-label={title}>
-            {children}
-            <button onClick={onClose}>{closeLabel ?? 'Close'}</button>
-            {actionButtons.map((b: any) => (
-                <button key={b.label} onClick={b.onPress} disabled={b.isDisabled}>
-                    {b.label}
-                </button>
-            ))}
-        </div>
-    ),
-}));
-
-// Below the mocks on purpose: jest.mock hoists above this file's imports.
 import type { IntegrationCardModel } from '@/features/dashboard/ui/components/integrations/integrationCardModel';
-import {
-    SetupGuideModal,
-    setupNextStep,
-} from '@/features/dashboard/ui/components/integrations/SetupGuideModal';
+import { SetupGuideModal, setupNextStep } from './SetupGuideModal.testUtils';
 import { NO_ANSWER } from '@/features/dashboard/ui/components/integrations/useSetupChecklist';
 import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 
