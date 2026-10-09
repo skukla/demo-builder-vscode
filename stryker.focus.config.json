@@ -8,8 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/utils/jwtPayload.ts",
-        "src/features/authentication/services/imsTokenClaims.ts"
+        "src/features/eds/services/github/githubTokenService.ts"
     ],
     "reporters": [
         "clear-text",

@@ -92,37 +92,12 @@ export class DaLiveConfigService {
      */
     async getOrgConfig(org: string): Promise<MultiSheetConfig | null> {
         const token = await this.getDaLiveToken();
-        const url = `${DA_LIVE_BASE_URL}/config/${org}/`;
-
         this.logger.debug(`[DaLiveConfig] Getting org config for ${org}`);
-
-        try {
-            const response = await this.apiClient.fetchWithRetry(url, {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
-
-            if (response.status === 404) {
-                this.logger.debug(`[DaLiveConfig] No config exists for org ${org}`);
-                return null;
-            }
-
-            if (!response.ok) {
-                const errorText = await response.text().catch(() => '');
-                throw new Error(
-                    `Failed to read org config: ${response.status} ${response.statusText}${errorText ? ` - ${errorText}` : ''}`,
-                );
-            }
-
-            return await response.json();
-        } catch (error) {
-            if ((error as Error).message.includes('Failed to read')) {
-                throw error;
-            }
-            throw new Error(`Config API error: ${(error as Error).message}`);
-        }
+        return this.readConfigAt(token, {
+            url: `${DA_LIVE_BASE_URL}/config/${org}/`,
+            noun: 'org config',
+            missing: `org ${org}`,
+        });
     }
 
     /**
@@ -135,39 +110,9 @@ export class DaLiveConfigService {
      */
     async updateOrgConfig(org: string, config: MultiSheetConfig): Promise<void> {
         const token = await this.getDaLiveToken();
-        const url = `${DA_LIVE_BASE_URL}/config/${org}/`;
-
         this.logger.debug(`[DaLiveConfig] Updating org config for ${org}`);
-
-        try {
-            // Factory: FormData bodies are one-shot, so each retry attempt gets
-            // a fresh one (shared-client contract, 2026-08-22).
-            const response = await this.apiClient.fetchWithRetry(url, () => {
-                const formData = new FormData();
-                formData.set('config', JSON.stringify(config));
-                return {
-                    method: 'PUT',
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                    body: formData,
-                };
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text().catch(() => '');
-                throw new Error(
-                    `Failed to update org config: ${response.status} ${response.statusText}${errorText ? ` - ${errorText}` : ''}`,
-                );
-            }
-
-            this.logger.debug(`[DaLiveConfig] Org config updated for ${org}`);
-        } catch (error) {
-            if ((error as Error).message.includes('Failed to update')) {
-                throw error;
-            }
-            throw new Error(`Config API error: ${(error as Error).message}`);
-        }
+        await this.putConfigAt(token, `${DA_LIVE_BASE_URL}/config/${org}/`, 'org config', config);
+        this.logger.debug(`[DaLiveConfig] Org config updated for ${org}`);
     }
 
     /**
@@ -179,37 +124,12 @@ export class DaLiveConfigService {
      */
     async getConfig(org: string, site: string): Promise<MultiSheetConfig | null> {
         const token = await this.getDaLiveToken();
-        const url = `${DA_LIVE_BASE_URL}/config/${org}/${site}/`;
-
         this.logger.debug(`[DaLiveConfig] Getting config for ${org}/${site}`);
-
-        try {
-            const response = await this.apiClient.fetchWithRetry(url, {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
-
-            if (response.status === 404) {
-                this.logger.debug(`[DaLiveConfig] No config exists for ${org}/${site}`);
-                return null;
-            }
-
-            if (!response.ok) {
-                const errorText = await response.text().catch(() => '');
-                throw new Error(
-                    `Failed to read config: ${response.status} ${response.statusText}${errorText ? ` - ${errorText}` : ''}`,
-                );
-            }
-
-            return await response.json();
-        } catch (error) {
-            if ((error as Error).message.includes('Failed to read')) {
-                throw error;
-            }
-            throw new Error(`Config API error: ${(error as Error).message}`);
-        }
+        return this.readConfigAt(token, {
+            url: `${DA_LIVE_BASE_URL}/config/${org}/${site}/`,
+            noun: 'config',
+            missing: `${org}/${site}`,
+        });
     }
 
     /**
@@ -223,10 +143,63 @@ export class DaLiveConfigService {
      */
     async updateConfig(org: string, site: string, config: MultiSheetConfig): Promise<void> {
         const token = await this.getDaLiveToken();
-        const url = `${DA_LIVE_BASE_URL}/config/${org}/${site}/`;
-
         this.logger.debug(`[DaLiveConfig] Updating config for ${org}/${site}`);
+        await this.putConfigAt(token, `${DA_LIVE_BASE_URL}/config/${org}/${site}/`, 'config', config);
+        this.logger.debug(`[DaLiveConfig] Config updated for ${org}/${site}`);
+    }
 
+    /**
+     * GET one config sheet (org or site). A 404 means none exists yet and answers
+     * null. Any other failure throws "Failed to read <noun>: ..." and anything
+     * thrown on the way becomes "Config API error: ...".
+     *
+     * @param target.noun - how the error names the sheet: 'org config' or 'config'
+     * @param target.missing - how the no-config debug line names the target
+     */
+    private async readConfigAt(
+        token: string,
+        target: { url: string; noun: string; missing: string },
+    ): Promise<MultiSheetConfig | null> {
+        try {
+            const response = await this.apiClient.fetchWithRetry(target.url, {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            if (response.status === 404) {
+                this.logger.debug(`[DaLiveConfig] No config exists for ${target.missing}`);
+                return null;
+            }
+
+            if (!response.ok) {
+                const errorText = await response.text().catch(() => '');
+                throw new Error(
+                    `Failed to read ${target.noun}: ${response.status} ${response.statusText}${errorText ? ` - ${errorText}` : ''}`,
+                );
+            }
+
+            return await response.json();
+        } catch (error) {
+            if ((error as Error).message.includes('Failed to read')) {
+                throw error;
+            }
+            throw new Error(`Config API error: ${(error as Error).message}`);
+        }
+    }
+
+    /**
+     * PUT one config sheet (org or site) as FormData. A failure throws
+     * "Failed to update <noun>: ..." and anything thrown on the way becomes
+     * "Config API error: ...".
+     */
+    private async putConfigAt(
+        token: string,
+        url: string,
+        noun: string,
+        config: MultiSheetConfig,
+    ): Promise<void> {
         try {
             // Factory: FormData bodies are one-shot, so each retry attempt gets
             // a fresh one (shared-client contract, 2026-08-22).
@@ -245,11 +218,9 @@ export class DaLiveConfigService {
             if (!response.ok) {
                 const errorText = await response.text().catch(() => '');
                 throw new Error(
-                    `Failed to update config: ${response.status} ${response.statusText}${errorText ? ` - ${errorText}` : ''}`,
+                    `Failed to update ${noun}: ${response.status} ${response.statusText}${errorText ? ` - ${errorText}` : ''}`,
                 );
             }
-
-            this.logger.debug(`[DaLiveConfig] Config updated for ${org}/${site}`);
         } catch (error) {
             if ((error as Error).message.includes('Failed to update')) {
                 throw error;

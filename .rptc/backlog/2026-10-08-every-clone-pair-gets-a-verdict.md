@@ -24,9 +24,9 @@ excluded by the scan's ignore flag and are not among the 40.
 
 | # | File A:lines | File B:lines | Fragment | Verdict | Reason |
 |---|---|---|---|---|---|
-| 1 | eds/services/helix/helixPageContent.ts:140-151 | same file:94-105 | publishPage/previewPage setup | TWO COPIES | preview treats a 403 as an expired session and re-prompts; publish throws "Access denied". See the finding below. |
-| 2 | helixPageContent.ts:153-168 | same file:107-122 | POST, 401 and 403 handling | TWO COPIES | same pair as 1 |
-| 3 | eds/services/helix/helixBulkPublish.ts:215-242 | same file:101-128 | bulk preview/publish POST | TWO COPIES | same 403 split, bulk version |
+| 1 | eds/services/helix/helixPageContent.ts:140-151 | same file:94-105 | publishPage/previewPage setup | DECIDED, fixed on another branch | owner 2026-10-09: publish handles a refused session like preview. Fixed and extracted under EDS-34 on fix/copy-second-integration (`e3dd47a54`); still counted here until that branch merges into this one. |
+| 2 | helixPageContent.ts:153-168 | same file:107-122 | POST, 401 and 403 handling | DECIDED, fixed on another branch | same pair as 1 |
+| 3 | eds/services/helix/helixBulkPublish.ts:215-242 | same file:101-128 | bulk preview/publish POST | DECIDED, fixed on another branch | same decision, bulk version; same EDS-34 commit |
 | 4 | eds/services/helix/helixApiKeys.ts:208-218 | same file:169-179 | DELETE apiKey request | EXTRACT | identical request; helper `deleteKeyOnServer(org, site, id)`; no named suite |
 | 5 | eds/services/github/githubHelpers.ts:58-70 | eds/services/github/githubTokenService.ts:218-230 | mapToGitHubUser | EXTRACT | byte-identical; delete the private copy, use the exported one |
 | 6 | eds/services/daLive/daLiveConfigService.ts:203-224 | same file:116-136 | read config, error wrap | EXTRACT | site and org reads differ only in URL and a word; `readConfigAt(url, label)` |
@@ -95,6 +95,32 @@ four existing suites run unchanged (81 tests) and an old-against-new comparison 
 (planted control caught). cloneCeiling 36 -> 34. Sitting 2's other pairs (4 to 7, 9, 10) are
 untouched by this cut.
 
+**Sitting 2's other pairs (4 to 7, 9, 10) DONE 2026-10-09.** Re-scanned first: line numbers
+had barely moved. Each pair re-read on both sides and confirmed the same job:
+
+- **4** (Helix key DELETE): `deleteAdminApiKey` and the superseded-key cleanup (`deleteOldApiKey`) sent the same
+  request and differed only in their log lines and what they return. Now one private
+  `deleteKeyOnServer(org, site, keyId)` in `helixApiKeys.ts`.
+- **5** (GitHub user mapper): byte-identical. The private copy in `githubTokenService.ts`
+  is deleted; it imports `mapToGitHubUser` from `githubHelpers.ts`.
+- **6, 7** (DA.live config read and write): the org and site versions differed only in URL
+  and one word of the message. Now private `readConfigAt` and `putConfigAt` in
+  `daLiveConfigService.ts`; every thrown message is the same text as before.
+- **9** (HTTP status to error): `DaLiveOrgOperations` carried its own copy of the shared
+  client's `createErrorFromResponse` without the 401 case. Checked: both callers get their
+  response through the class's own `fetchWithRetry`, which throws on 401 first, so the
+  shared version's 401 branch is unreachable from there. It now delegates, and its identical
+  `getImsToken` copy delegates too. The class had no suite; a new one
+  (`daLiveOrgOperations-errors.test.ts`) was written first and passed against the old code.
+- **10** (site-admin grant and revoke): same resolve, call, failure mapping and re-read
+  check. Now `changeSiteAdmin` in `siteAccessManagerHeadless.ts`; grant passes its
+  "did not verify" warning as a callback, so revoke still logs nothing there.
+
+Proof: the 49 touched suites (895 tests) ran unchanged before and after. cloneCeiling
+34 -> 28. Mutation rows for the three measured files were re-measured against the
+committed file as well as the old row; all three rows were stale and all three files now
+score higher than their committed version.
+
 ## Below the scan's threshold, found by reading (2026-10-08)
 
 The same five-line `ensureSDKReady` method is copied into four authentication files:
@@ -108,15 +134,17 @@ identical; `ensureSDKReady(sdkClient)` is now one exported function in `adobeEnt
 and the `SdkEntityFetch` method, the three private copies and the three reads' calls all use
 it. Pairs 33 to 35 are not touched by that split and stay with sitting 6.
 
-## Finding for the owner
+## Finding for the owner (decided 2026-10-09)
 
-**Publish and preview handle an expired session differently (pairs 1 to 3).** `previewPage`
-and bulk preview call `throwCredentialRefused`, which tells the user the session may have
-expired and triggers a re-login. `publishPage` and bulk publish throw a plain "Access
-denied". The doc on `throwCredentialRefused` (`helixAdminErrors.ts`) exempts only
-DELETE /live, so publish reads as an oversight, and nothing says otherwise. **Decide:** make
-publish match preview (recommended; it also turns pairs 1 to 3 into EXTRACT, floor 3), or
-record why publish must not re-prompt.
+**Publish and preview handled an expired session differently (pairs 1 to 3).** Preview
+treated a refused session as expired and re-prompted; publish threw a plain "Access
+denied". **Owner, 2026-10-09: publish handles a refused session like preview.** That was
+fixed, and the publish/preview copies extracted, under EDS-34 on the
+fix/copy-second-integration branch (`e3dd47a54`), not on this branch. Here the three pairs
+still count in the pin (28) and carry a "clears on merge" verdict in
+`scripts/source-duplication.ledger.json`. **When that branch merges into this one:**
+re-run the scan, resolve any conflict in `helixPageContent.ts` and `helixBulkPublish.ts`
+in favour of the EDS-34 version, and lower the pin. That also turns the floor of 6 into 3.
 
 ## Shipped so far
 
@@ -127,3 +155,4 @@ record why publish must not re-prompt.
 - 2026-10-09  ensureSDKReady folded to one function (in the EDS-8 adobeConsoleProjectOps split): four identical copies (adobeEntityReads' SdkEntityFetch method, adobeOrgServices, adobeWorkspaceCredentials, adobeConsoleProjectOps) became `ensureSDKReady(sdkClient)` in adobeEntityReads.ts; below jscpd's floor, so the clone pin does not move.
 - 2026-10-09  refactor(authentication): Console project ops keep the project; workspace create, delete and Runtime namespace get their own file (`5fada61ff`)
 - 2026-10-09  refactor(eds): error formatters keep the message tables with one matcher; GitHub write rejections get their own file (`f9980a19c`)
+- 2026-10-09  Sitting 2 (EDS services), pairs 4 to 7, 9 and 10 extracted: deleteKeyOnServer (helixApiKeys), the shared mapToGitHubUser (githubTokenService), readConfigAt and putConfigAt (daLiveConfigService), DaLiveOrgOperations delegating to DaLiveApiClient, changeSiteAdmin (siteAccessManagerHeadless). 895 touched tests unchanged and green; full gate green. Pairs 1 to 3 recorded as decided and fixed under EDS-34 on fix/copy-second-integration, to clear when that branch merges. New tests: a DaLiveOrgOperations error suite, plus four cases that killed real survivors (the site a grant or revoke reports, the identity explanation never given for a 401, the response body in config failure messages). cloneCeiling 34 -> 28.

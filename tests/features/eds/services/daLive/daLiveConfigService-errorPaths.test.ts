@@ -135,6 +135,54 @@ describe('an HTTP failure surfaces as its own error, not wrapped', () => {
 });
 
 /**
+ * What DA.live said goes on the end of the message, after " - ". A body that
+ * cannot be read adds nothing rather than failing the error itself.
+ */
+describe('the response body is carried into the failure message', () => {
+    let service: DaLiveConfigService;
+
+    beforeEach(() => {
+        ({ service } = setupConfigService());
+    });
+
+    const withBody = (status: number, statusText: string, body: string) => ({
+        ...httpError(status, statusText),
+        text: jest.fn().mockResolvedValue(body),
+    });
+
+    it('on a read', async () => {
+        mockFetch.mockResolvedValue(withBody(400, 'Bad Request', 'no such sheet'));
+
+        await expect(service.getConfig(testOrg, testSite)).rejects.toThrow(
+            /^Failed to read config: 400 Bad Request - no such sheet$/,
+        );
+    });
+
+    it('on an update', async () => {
+        mockFetch.mockResolvedValue(withBody(400, 'Bad Request', 'bad sheet'));
+
+        await expect(service.updateOrgConfig(testOrg, emptyConfig)).rejects.toThrow(
+            /^Failed to update org config: 400 Bad Request - bad sheet$/,
+        );
+    });
+
+    it('adds nothing when the body cannot be read', async () => {
+        const unreadable = () => ({
+            ...httpError(400, 'Bad Request'),
+            text: jest.fn().mockRejectedValue(new Error('stream closed')),
+        });
+        mockFetch.mockResolvedValueOnce(unreadable()).mockResolvedValueOnce(unreadable());
+
+        await expect(service.getOrgConfig(testOrg)).rejects.toThrow(
+            /^Failed to read org config: 400 Bad Request$/,
+        );
+        await expect(service.updateConfig(testOrg, testSite, emptyConfig)).rejects.toThrow(
+            /^Failed to update config: 400 Bad Request$/,
+        );
+    });
+});
+
+/**
  * The other half of the same fork: a transport failure is not ours, so it gets
  * the `Config API error:` prefix that tells the reader the request never got an
  * answer at all.

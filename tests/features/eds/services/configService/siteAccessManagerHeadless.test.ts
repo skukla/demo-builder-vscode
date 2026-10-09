@@ -203,6 +203,18 @@ describe('addSiteAdmin', () => {
         expect(result.status).toBe('invalid');
         expect(mockEnsure).not.toHaveBeenCalled();
     });
+
+    it('names the site it changed, on success and on a refusal', async () => {
+        mockEnsure.mockResolvedValue({ status: 'ok', changed: true });
+        expect((await addSiteAdmin(project, 'new@adobe.com', context, logger)).site).toBe(
+            'skukla/bodea-source',
+        );
+
+        mockEnsure.mockResolvedValue({ status: 'not_authorized' });
+        expect((await addSiteAdmin(project, 'new@adobe.com', context, logger)).site).toBe(
+            'skukla/bodea-source',
+        );
+    });
 });
 
 describe('removeSiteAdmin', () => {
@@ -228,6 +240,14 @@ describe('removeSiteAdmin', () => {
 
         expect(result.status).toBe('invalid');
         expect(result.error).toMatch(/last admin/i);
+    });
+
+    it('names the site it changed', async () => {
+        mockRevoke.mockResolvedValue({ status: 'ok', changed: true });
+
+        const result = await removeSiteAdmin(project, 'gone@adobe.com', context, logger);
+
+        expect(result.site).toBe('skukla/bodea-source');
     });
 });
 
@@ -389,6 +409,20 @@ describe('listSiteAccess distinguishes the probe outcomes', () => {
 
         expect(result.status).toBe('failed');
         expect(result.error).toBeUndefined();
+    });
+
+    it('explains an identity mismatch only for a refusal, never for a 401', async () => {
+        // The mismatch explains a missing ROLE. A 401 is the session, and telling
+        // that user to change their GitHub email would send them the wrong way.
+        mockProbe.mockResolvedValue('unauthenticated');
+        mockAdobeEmail.mockResolvedValue('sc@adobe.example');
+        mockGitHubEmails.mockResolvedValue([
+            { email: 'personal@example.com', primary: true, verified: true },
+        ]);
+
+        const result = await listSiteAccess(project, context, logger);
+
+        expect(result.identityMismatch).toBeUndefined();
     });
 });
 

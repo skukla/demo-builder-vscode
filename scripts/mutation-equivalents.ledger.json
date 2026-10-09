@@ -5746,13 +5746,26 @@
             "anchors": [
                 "const errorText = await response.text().catch(() => '');"
             ],
-            "line": 246,
+            "line": 177,
             "mutants": 1,
             "category": "other",
-            "reason": "Stryker rewrites the .catch(() => '') callback to return undefined. The result feeds only `${errorText ? ` - ${errorText}` : ''}`, and undefined and '' are both falsy, so the assembled message is byte-identical. The callback runs at all only when response.text() rejects, and even then nothing downstream can tell the two values apart.",
+            "reason": "Re-triaged 2026-10-09 when the org and site reads and writes became readConfigAt and putConfigAt (PL-69 pairs 6 and 7); the four copies of this line are now two. In readConfigAt: Stryker rewrites the .catch(() => '') callback to return undefined. The result feeds only `${errorText ? ` - ${errorText}` : ''}`, and undefined and '' are both falsy, so the assembled message is byte-identical. The callback runs at all only when response.text() rejects, and even then nothing downstream can tell the two values apart.",
             "decision": "Equivalent: both the real value and the mutant's are falsy at the only site that reads it.",
-            "recorded": "2026-09-05",
-            "source": "mutationLedger add"
+            "recorded": "2026-10-09",
+            "source": "PL-69 sitting 2 re-triage (readConfigAt, putConfigAt)"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveConfigService.ts",
+            "anchors": [
+                "const errorText = await response.text().catch(() => '');"
+            ],
+            "line": 219,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Re-triaged 2026-10-09 when the org and site reads and writes became readConfigAt and putConfigAt (PL-69 pairs 6 and 7); the four copies of this line are now two. In putConfigAt: Stryker rewrites the .catch(() => '') callback to return undefined. The result feeds only `${errorText ? ` - ${errorText}` : ''}`, and undefined and '' are both falsy, so the assembled message is byte-identical. The callback runs at all only when response.text() rejects, and even then nothing downstream can tell the two values apart.",
+            "decision": "Equivalent: both the real value and the mutant's are falsy at the only site that reads it.",
+            "recorded": "2026-10-09",
+            "source": "PL-69 sitting 2 re-triage (readConfigAt, putConfigAt)"
         },
         {
             "module": "src/features/eds/services/daLive/daLiveSiteAccess.ts",
@@ -6488,10 +6501,10 @@
             ],
             "mutants": 4,
             "category": "branch",
-            "reason": "The guard's whole body is one logger.warn. Deleting the block, inverting the condition, or forcing it either way changes nothing a caller can observe: the very next line returns the same object with the same `verified` flag, which is the value every consumer reads and which the suite already asserts on both outcomes. The only difference is whether a warning line prints, and asserting log wording is what the ratchet exists to refuse to reward.",
+            "reason": "Re-triaged 2026-10-09 when grant and revoke became one changeSiteAdmin (PL-69 pair 10). The guard's whole body is now one optional call, `change.onUnverified?.(site)`, and the only caller that supplies it (grant) passes a logger.warn. Deleting the block, inverting the condition, or forcing it either way changes nothing a caller can observe: the next line returns the same object with the same `verified` flag, which every consumer reads and the suite asserts on both outcomes. Only whether a warning line prints differs.",
             "decision": "none \u2014 the warn is a diagnostic beside a verdict the return value already carries",
-            "recorded": "2026-09-05",
-            "source": "PL-22 MUT-08 focus run, 2026-09-05"
+            "recorded": "2026-10-09",
+            "source": "PL-69 sitting 2 re-triage (changeSiteAdmin)"
         },
         {
             "module": "src/features/eds/services/github/githubTokenService.ts",
@@ -14811,12 +14824,12 @@
             "anchors": [
                 "this.logger.warn('[GitHub] Failed to parse stored token');"
             ],
-            "line": 69,
+            "line": 68,
             "mutants": 1,
             "category": "block",
-            "reason": "Emptying the catch block leaves the function returning undefined implicitly, which is what the explicit return already produces. A caller cannot tell the two apart; only the warn line differs.",
+            "reason": "Emptying the catch block leaves the function returning undefined implicitly, which is what the explicit return already produces. A caller cannot tell the two apart; only the warn line differs. (Re-triaged 2026-10-09, PL-69 sitting 2: the code is unchanged; the line moved up one when the private mapToGitHubUser copy and its type import were removed.)",
             "decision": "none \u2014 the explicit return states the contract at the site that satisfies it",
-            "recorded": "2026-09-05",
+            "recorded": "2026-10-09",
             "source": "PL-22 MUT-08 focus run, 2026-09-05"
         },
         {
@@ -14824,13 +14837,25 @@
             "anchors": [
                 "if (!token) {"
             ],
-            "line": 193,
+            "line": 192,
             "mutants": 2,
             "category": "branch",
-            "reason": "Same shape as the validateToken guard: without it, token.token throws inside the try and the bare catch returns [], which is exactly what the guard returns. The graceful-degradation contract (the namespace picker falls back to personal-account-only) holds either way, so no assertion on the return value or on Octokit can separate them.",
+            "reason": "Same shape as the validateToken guard: without it, token.token throws inside the try and the bare catch returns [], which is exactly what the guard returns. The graceful-degradation contract (the namespace picker falls back to personal-account-only) holds either way, so no assertion on the return value or on Octokit can separate them. (Re-triaged 2026-10-09, PL-69 sitting 2: the code is unchanged; the line moved up one when the private mapToGitHubUser copy and its type import were removed.)",
             "decision": "none \u2014 returning the answer beats throwing and catching it",
-            "recorded": "2026-09-05",
+            "recorded": "2026-10-09",
             "source": "PL-22 MUT-08 focus run, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/services/github/githubTokenService.ts",
+            "anchors": [
+                "if (!token) return [];"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Same shape as the getUserOrgs guard: forcing getUserEmails' no-token guard false sends a missing token on, token.token throws inside the try, and the bare catch returns [], exactly what the guard returns. Manage Site Access then says nothing about an identity mismatch either way, so no assertion on the return value or on Octokit can separate them.",
+            "decision": "none \u2014 returning the answer beats throwing and catching it",
+            "recorded": "2026-10-09",
+            "source": "PL-69 sitting 2 focus run (githubTokenService)"
         },
         {
             "module": "src/features/components/handlers/componentHandlers.ts",
@@ -15599,6 +15624,30 @@
             "decision": "none \u2014 the default documents the steady state and is correct as written",
             "recorded": "2026-10-09",
             "source": "EDS-8 ActionGrid split (BuildZone out)"
+        },
+        {
+            "module": "src/features/eds/services/configService/siteAccessManagerHeadless.ts",
+            "anchors": [
+                "if (!mismatch) return undefined;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing the no-mismatch guard false sends an undefined mismatch on: the next statement reads mismatch.githubPrimaryEmail for its info line, throws a TypeError, and the surrounding catch returns undefined, which is exactly what the guard returns. The listing a caller receives is identical; only a debug line differs.",
+            "decision": "none \u2014 the guard says what it means instead of relying on a thrown-and-caught TypeError",
+            "recorded": "2026-10-09",
+            "source": "PL-69 sitting 2 focus run (siteAccessManagerHeadless)"
+        },
+        {
+            "module": "src/features/eds/services/configService/siteAccessManagerHeadless.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying explainRefusal's catch block leaves the function returning undefined implicitly, which is what the explicit return already produces, so a failed email read still adds no identity explanation to the listing. Only the debug line saying the emails could not be compared differs.",
+            "decision": "none \u2014 the explicit return states the best-effort contract at the site that satisfies it",
+            "recorded": "2026-10-09",
+            "source": "PL-69 sitting 2 focus run (siteAccessManagerHeadless)"
         }
     ]
 }

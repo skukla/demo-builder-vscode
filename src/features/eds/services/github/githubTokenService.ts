@@ -16,10 +16,9 @@ import {
     type GitHubAccountEmail,
     type GitHubToken,
     type GitHubTokenValidation,
-    type GitHubUser,
     type GitHubApiError,
 } from '../types';
-import { createAuthenticatedOctokit } from './githubHelpers';
+import { createAuthenticatedOctokit, mapToGitHubUser } from './githubHelpers';
 import { getLogger } from '@/core/logging/debugLogger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
@@ -120,7 +119,7 @@ export class GitHubTokenService {
             const octokit = this.createAuthenticatedOctokit(token.token);
             const response = await octokit.request('GET /user');
 
-            const user = this.mapToGitHubUser(response.data);
+            const user = mapToGitHubUser(response.data);
 
             const result: GitHubTokenValidation = {
                 valid: true,
@@ -210,22 +209,5 @@ export class GitHubTokenService {
      */
     private createAuthenticatedOctokit(token: string): InstanceType<typeof Octokit> {
         return createAuthenticatedOctokit(token);
-    }
-
-    /**
-     * Map GitHub API user response to GitHubUser
-     */
-    private mapToGitHubUser(data: {
-        login: string;
-        email?: string | null;
-        name?: string | null;
-        avatar_url?: string | null;
-    }): GitHubUser {
-        return {
-            login: data.login,
-            email: data.email || null,
-            name: data.name || null,
-            avatarUrl: data.avatar_url || null,
-        };
     }
 }
