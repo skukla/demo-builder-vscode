@@ -1,5 +1,5 @@
 /**
- * AdobeConsoleProjectOps.deleteWorkspace — an error is not proof the delete failed.
+ * AdobeConsoleWorkspaceOps.deleteWorkspace — an error is not proof the delete failed.
  *
  * On 2026-09-21 deleting a workspace answered `504 Gateway Timeout ("upstream
  * request timeout")` and the workspace was gone a minute later: Adobe finished the
@@ -14,7 +14,7 @@ jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(unde
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { DeletedWorkspaceNames } from '@/features/authentication/services/deletedWorkspaceNames';
-import { TARGET, opsWith as buildOps, workspace } from './adobeConsoleProjectOps.testUtils';
+import { TARGET, opsWith as buildOps, workspace } from './adobeConsoleWorkspaceOps.testUtils';
 import { READ_ONLY_PROJECT_REFUSAL } from '../../../helpers/adobeConsoleRefusals';
 
 const GATEWAY_TIMEOUT = new Error(
@@ -24,7 +24,10 @@ const GATEWAY_TIMEOUT = new Error(
 const opsWith = (deleteWorkspace: jest.Mock, listWorkspaces: jest.Mock) =>
     buildOps({ deleteWorkspace }, listWorkspaces);
 
-describe('AdobeConsoleProjectOps.deleteWorkspace', () => {
+describe('AdobeConsoleWorkspaceOps.deleteWorkspace', () => {
+    // The node project does not clear mock calls between tests; the waits are counted.
+    beforeEach(() => jest.mocked(sleep).mockClear());
+
     it('reports a plain success without looking anything up', async () => {
         const list = jest.fn();
         const ops = opsWith(jest.fn().mockResolvedValue({}), list);
@@ -91,7 +94,10 @@ describe('AdobeConsoleProjectOps.deleteWorkspace', () => {
 
         await expect(ops.deleteWorkspace('ws-1', TARGET)).resolves.toMatchObject({ deleted: true });
         expect(list).toHaveBeenCalledTimes(3);
-        expect(sleep).toHaveBeenCalledWith(TIMEOUTS.WORKSPACE_DELETE_RECHECK);
+        expect(jest.mocked(sleep).mock.calls).toStrictEqual([
+            [TIMEOUTS.WORKSPACE_DELETE_RECHECK],
+            [TIMEOUTS.WORKSPACE_DELETE_RECHECK],
+        ]);
     });
 
     it('stays a failure when the workspace is still there at the last look', async () => {
@@ -102,6 +108,8 @@ describe('AdobeConsoleProjectOps.deleteWorkspace', () => {
             error: GATEWAY_TIMEOUT.message,
         });
         expect(list).toHaveBeenCalledTimes(5);
+        // A wait between looks, none after the last.
+        expect(sleep).toHaveBeenCalledTimes(4);
     });
 
     it('stays a failure when the list cannot be read — unknown is not deleted', async () => {
@@ -111,6 +119,8 @@ describe('AdobeConsoleProjectOps.deleteWorkspace', () => {
         await expect(ops.deleteWorkspace('ws-1', TARGET)).resolves.toEqual({
             error: GATEWAY_TIMEOUT.message,
         });
+        // One failed read ends the looking; it does not try again.
+        expect(list).toHaveBeenCalledTimes(1);
     });
 
     // AB-18: every workspace delete goes through here — removing an integration, moving

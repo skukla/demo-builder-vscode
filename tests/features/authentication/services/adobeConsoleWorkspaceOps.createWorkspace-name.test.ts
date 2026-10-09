@@ -1,5 +1,5 @@
 /**
- * AdobeConsoleProjectOps.createWorkspace — the name Console shows on the box.
+ * AdobeConsoleWorkspaceOps.createWorkspace — the name Console shows on the box.
  *
  * Console's workspace boxes show the machine NAME, not the title, so a random
  * ending on every name put "ProductionKnDo" and "erpintegrationlHJE" in front of
@@ -11,7 +11,7 @@
  */
 
 import { DeletedWorkspaceNames, NAME_REST_MS } from '@/features/authentication/services/deletedWorkspaceNames';
-import { TARGET, opsWith as buildOps, workspace } from './adobeConsoleProjectOps.testUtils';
+import { TARGET, opsWith as buildOps, workspace } from './adobeConsoleWorkspaceOps.testUtils';
 
 const CONFLICT = new Error('[CoreConsoleAPISDK:ERROR_CREATE_WORKSPACE] 409 - Conflict');
 

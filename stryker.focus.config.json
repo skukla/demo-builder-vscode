@@ -8,9 +8,9 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/ui/steps/RepoSelectionInline.tsx",
-        "src/features/eds/ui/hooks/useRepoCreation.ts",
-        "src/features/eds/ui/hooks/useRepoReadiness.ts"
+        "src/features/authentication/services/adobeConsoleProjectOps.ts",
+        "src/features/authentication/services/adobeConsoleWorkspaceOps.ts",
+        "src/features/authentication/services/adobeEntityReads.ts"
     ],
     "reporters": [
         "clear-text",

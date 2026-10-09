@@ -54,7 +54,7 @@ function serve(opts: { authed?: boolean; noManager?: boolean } = {}) {
                 ? undefined
                 : createMockAuthenticationService(
                       { isAuthenticated, getOrganizations },
-                      { entities: { projectOps: { createProject, createWorkspace } } },
+                      { entities: { projectOps: { createProject }, workspaceOps: { createWorkspace } } },
                   ),
             logger: createMockLogger(),
         });

@@ -25,21 +25,24 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 export type TokenOrgSource = () => Promise<AdobeOrg[] | undefined>;
 
 /**
+ * Ensure the SDK is initialized (lazy init pattern). The one copy: every
+ * authentication service that talks to the Console SDK calls this (PL-69).
+ *
+ * @param sdkClient - the client to initialize when it is not ready yet
+ */
+export async function ensureSDKReady(sdkClient: AdobeSDKClient): Promise<void> {
+    if (!sdkClient.isInitialized()) {
+        await sdkClient.ensureInitialized();
+    }
+}
+
+/**
  * Runs one SDK listing call under the deadline and says whether the SDK answered.
  */
 export class SdkEntityFetch {
     private debugLogger = getLogger();
 
     constructor(private sdkClient: AdobeSDKClient) {}
-
-    /**
-     * Ensure SDK is initialized (lazy init pattern)
-     */
-    async ensureSDKReady(): Promise<void> {
-        if (!this.sdkClient.isInitialized()) {
-            await this.sdkClient.ensureInitialized();
-        }
-    }
 
     /**
      * Try SDK fetch with automatic fallback.

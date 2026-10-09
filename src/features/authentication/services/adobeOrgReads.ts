@@ -14,7 +14,7 @@
 
 import type { AdobeCliFallback } from './adobeCliFallback';
 import { mapOrganizations } from './adobeEntityMapper';
-import type { SdkEntityFetch } from './adobeEntityReads';
+import { ensureSDKReady, type SdkEntityFetch } from './adobeEntityReads';
 import type { AdobeSDKClient } from './adobeSDKClient';
 import type { AuthCacheManager } from './authCacheManager';
 import { withTiming } from './performanceTracker';
@@ -70,7 +70,7 @@ export class AdobeOrgReads {
             if (cachedOrgs) return cachedOrgs;
 
             this.stepLogger.logTemplate('adobe-auth', 'loading-organizations', {});
-            await this.sdkFetch.ensureSDKReady();
+            await ensureSDKReady(this.sdkClient);
 
             const client = this.sdkClient.getClient() as {
                 getOrganizations: () => Promise<SDKResponse<RawAdobeOrg[]>>;
@@ -147,7 +147,7 @@ export class AdobeOrgReads {
     private async fetchOrganizationsSdkOnly(): Promise<AdobeOrg[] | undefined> {
         const startTime = Date.now();
 
-        await this.sdkFetch.ensureSDKReady();
+        await ensureSDKReady(this.sdkClient);
         if (!this.sdkClient.isInitialized()) return undefined;
 
         const client = this.sdkClient.getClient() as {

@@ -82,7 +82,7 @@ export async function ensureWorkspaceRuntimeReady(
     // `createRuntimeNamespace` provision takes explicit ids (targeting-agnostic).
     await withOrgContext(target, () =>
         ensureWorkspaceRuntime(commandManager, context.logger, demoBuilderNode(), async () =>
-            (await authService.getEntityServices()).projectOps.ensureWorkspaceRuntimeNamespace(
+            (await authService.getEntityServices()).workspaceOps.ensureWorkspaceRuntimeNamespace(
                 organization,
                 projectId,
                 workspace,

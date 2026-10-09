@@ -17,8 +17,10 @@
  * │                               S2S, AdobeID/apiKey)
  * ├── AdobeOrgServices          — the entitled-services catalog + credential
  * │                               subscriptions
- * ├── AdobeConsoleProjectOps    — project/workspace create, rename, delete,
- * │                               Runtime-namespace provisioning
+ * ├── AdobeConsoleProjectOps    — project create, rename, delete, and the
+ * │                               new project's Runtime-namespace sweep
+ * ├── AdobeConsoleWorkspaceOps  — workspace create, delete, and one
+ * │                               workspace's Runtime namespace
  * ├── AdobeContextResolver      — resolve the current CLI context
  * └── AdobeEntitySelector       — select entities via CLI commands
  * ```
@@ -34,6 +36,7 @@
 
 import { AdobeCliFallback } from './adobeCliFallback';
 import { AdobeConsoleProjectOps } from './adobeConsoleProjectOps';
+import { AdobeConsoleWorkspaceOps } from './adobeConsoleWorkspaceOps';
 import { AdobeContextResolver } from './adobeContextResolver';
 import { SdkEntityFetch } from './adobeEntityReads';
 import { AdobeEntitySelector } from './adobeEntitySelector';
@@ -58,6 +61,7 @@ export interface EntityCollaborators {
     credentials: AdobeWorkspaceCredentials;
     orgServices: AdobeOrgServices;
     projectOps: AdobeConsoleProjectOps;
+    workspaceOps: AdobeConsoleWorkspaceOps;
 }
 
 export interface EntityServices extends EntityCollaborators {
@@ -113,13 +117,30 @@ export function createEntityCollaborators(
     );
     const credentials = new AdobeWorkspaceCredentials(sdkClient, cacheManager);
     const orgServices = new AdobeOrgServices(sdkClient, config.savedState);
+    const listWorkspaces = (orgId: string, projectId: string) =>
+        workspaceReads.fetchWorkspaces(orgId, projectId);
+    const workspaceOps = new AdobeConsoleWorkspaceOps(
+        sdkClient,
+        cacheManager,
+        listWorkspaces,
+        new DeletedWorkspaceNames(config.savedState),
+    );
     const projectOps = new AdobeConsoleProjectOps(
         sdkClient,
         cacheManager,
-        (orgId, projectId) => workspaceReads.fetchWorkspaces(orgId, projectId),
-        new DeletedWorkspaceNames(config.savedState),
+        listWorkspaces,
+        (orgId, projectId, workspaceId) =>
+            workspaceOps.ensureWorkspaceRuntimeNamespace(orgId, projectId, workspaceId),
     );
-    return { orgReads, projectReads, workspaceReads, credentials, orgServices, projectOps };
+    return {
+        orgReads,
+        projectReads,
+        workspaceReads,
+        credentials,
+        orgServices,
+        projectOps,
+        workspaceOps,
+    };
 }
 
 /**

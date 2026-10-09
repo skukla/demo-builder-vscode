@@ -3,7 +3,8 @@
  *
  * `getWorkspaces` targets the THREADED org + project (org-context env) and falls
  * back to the CLI. `getWorkspacesSdkOnly` never touches the CLI. `fetchWorkspaces`
- * is the explicit-id read `AdobeConsoleProjectOps` is wired to.
+ * is the explicit-id read `AdobeConsoleProjectOps` and `AdobeConsoleWorkspaceOps`
+ * are wired to.
  *
  * Split from `adobeEntityReads.ts` on 2026-10-08 (EDS-8).
  *
@@ -12,7 +13,12 @@
 
 import type { AdobeCliFallback } from './adobeCliFallback';
 import { mapWorkspaces } from './adobeEntityMapper';
-import { resolveEffectiveOrgId, type SdkEntityFetch, type TokenOrgSource } from './adobeEntityReads';
+import {
+    ensureSDKReady,
+    resolveEffectiveOrgId,
+    type SdkEntityFetch,
+    type TokenOrgSource,
+} from './adobeEntityReads';
 import type { AdobeSDKClient } from './adobeSDKClient';
 import type { AuthCacheManager } from './authCacheManager';
 import { withTiming } from './performanceTracker';
@@ -125,7 +131,7 @@ export class AdobeWorkspaceReads {
 
         try {
             this.stepLogger.logTemplate('adobe-auth', 'operations.retrieving-workspaces', {});
-            await this.sdkFetch.ensureSDKReady();
+            await ensureSDKReady(this.sdkClient);
 
             const hasValidIds = !!orgId && orgId.length > 0 && !!projectId && projectId.length > 0;
 

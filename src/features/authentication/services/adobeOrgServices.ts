@@ -11,6 +11,7 @@
  * @module features/authentication/services/adobeOrgServices
  */
 
+import { ensureSDKReady } from './adobeEntityReads';
 import type { AdobeSDKClient } from './adobeSDKClient';
 import { OrgServicesCatalog, type SavedState } from './orgServicesSavedCatalog';
 import type {
@@ -110,15 +111,6 @@ export class AdobeOrgServices {
     }
 
     /**
-     * Ensure SDK is initialized (lazy init pattern)
-     */
-    private async ensureSDKReady(): Promise<void> {
-        if (!this.sdkClient.isInitialized()) {
-            await this.sdkClient.ensureInitialized();
-        }
-    }
-
-    /**
      * List the org's entitled services (the `getServicesForOrg` SDK call).
      * Resolves an App Builder component's `requiredApis` names → sdkCodes + platformList.
      * Each entry carries `{ code, platformList, domainMandatory?, ... }`.
@@ -169,7 +161,7 @@ export class AdobeOrgServices {
         sdkCodes?: readonly string[],
     ): Promise<OrgServiceInfo[]> {
         const startTime = Date.now();
-        await this.ensureSDKReady();
+        await ensureSDKReady(this.sdkClient);
         type ListServices = (orgId: string, codes?: string) => Promise<SDKResponse<OrgServiceInfo[]>>;
         const client = this.sdkClient.getClient() as { getServicesForOrg: ListServices };
         const codes = sdkCodes?.join(',');
@@ -235,7 +227,7 @@ export class AdobeOrgServices {
      */
     async getSubscribedServiceCodes(orgId: string, idIntegration: string): Promise<string[]> {
         try {
-            await this.ensureSDKReady();
+            await ensureSDKReady(this.sdkClient);
             const client = this.sdkClient.getClient() as {
                 getIntegration: (
                     orgId: string,
@@ -271,7 +263,7 @@ export class AdobeOrgServices {
         idIntegration: string,
     ): Promise<SubscribedService[] | undefined> {
         try {
-            await this.ensureSDKReady();
+            await ensureSDKReady(this.sdkClient);
             const client = this.sdkClient.getClient() as {
                 getIntegration: (
                     orgId: string,
@@ -321,7 +313,7 @@ export class AdobeOrgServices {
         idIntegration: string,
         serviceInfo: ServiceSubscriptionInfo[],
     ): Promise<void> {
-        await this.ensureSDKReady();
+        await ensureSDKReady(this.sdkClient);
         const client = this.sdkClient.getClient() as {
             subscribeAdobeIdIntegrationToServices: (
                 orgId: string,
@@ -352,7 +344,7 @@ export class AdobeOrgServices {
         idIntegration: string,
         serviceInfo: ServiceSubscriptionInfo[],
     ): Promise<void> {
-        await this.ensureSDKReady();
+        await ensureSDKReady(this.sdkClient);
         const client = this.sdkClient.getClient() as {
             subscribeOAuthServerToServerIntegrationToServices: (
                 orgId: string,

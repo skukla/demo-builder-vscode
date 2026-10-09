@@ -123,7 +123,7 @@ describe('entity collaborators — credential and Runtime delegates', () => {
 
     it('ensureWorkspaceRuntimeNamespace provisions Runtime on exactly the given workspace', async () => {
         await expect(
-            h.entities.projectOps.ensureWorkspaceRuntimeNamespace(ORG, PROJECT, WORKSPACE),
+            h.entities.workspaceOps.ensureWorkspaceRuntimeNamespace(ORG, PROJECT, WORKSPACE),
         ).resolves.toBeUndefined();
 
         expect(client.createRuntimeNamespace).toHaveBeenCalledTimes(1);

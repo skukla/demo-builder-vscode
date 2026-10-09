@@ -131,6 +131,7 @@ export function poolUnits<T extends object>(flat: T): T {
         credentials: flat,
         orgServices: flat,
         projectOps: flat,
+        workspaceOps: flat,
         resolver: flat,
         selector: flat,
     } as unknown as EntityServices;

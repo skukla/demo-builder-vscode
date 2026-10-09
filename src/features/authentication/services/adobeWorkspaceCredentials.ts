@@ -14,6 +14,7 @@
  * @module features/authentication/services/adobeWorkspaceCredentials
  */
 
+import { ensureSDKReady } from './adobeEntityReads';
 import type { AdobeSDKClient } from './adobeSDKClient';
 import type { AuthCacheManager } from './authCacheManager';
 import type {
@@ -61,15 +62,6 @@ export class AdobeWorkspaceCredentials {
     ) {}
 
     /**
-     * Ensure SDK is initialized (lazy init pattern)
-     */
-    private async ensureSDKReady(): Promise<void> {
-        if (!this.sdkClient.isInitialized()) {
-            await this.sdkClient.ensureInitialized();
-        }
-    }
-
-    /**
      * The shared one-retry (`@/core/utils/transientRetry`) for Console READS.
      * Never used on a create: credential names are org-unique and a repeated
      * create answers 409.
@@ -98,7 +90,7 @@ export class AdobeWorkspaceCredentials {
         }
 
         try {
-            await this.ensureSDKReady();
+            await ensureSDKReady(this.sdkClient);
 
             const cachedOrg = this.cacheManager.getCachedOrganization();
             const cachedProject = this.cacheManager.getCachedProject();
@@ -213,7 +205,7 @@ export class AdobeWorkspaceCredentials {
         }
 
         try {
-            await this.ensureSDKReady();
+            await ensureSDKReady(this.sdkClient);
 
             const cachedOrg = this.cacheManager.getCachedOrganization();
             const cachedProject = this.cacheManager.getCachedProject();
@@ -314,7 +306,7 @@ export class AdobeWorkspaceCredentials {
         workspaceId: string,
         input: AdobeIdCredentialInput,
     ): Promise<string | undefined> {
-        await this.ensureSDKReady();
+        await ensureSDKReady(this.sdkClient);
         const client = this.sdkClient.getClient() as {
             getCredentials: (
                 orgId: string,
@@ -389,7 +381,7 @@ export class AdobeWorkspaceCredentials {
      * without provisioning a credential it may not need.
      */
     async listCredentialIds(orgId: string, projectId: string, workspaceId: string): Promise<string[]> {
-        await this.ensureSDKReady();
+        await ensureSDKReady(this.sdkClient);
         const client = this.sdkClient.getClient() as {
             getCredentials: (
                 orgId: string,
@@ -485,7 +477,7 @@ export class AdobeWorkspaceCredentials {
         projectId: string,
         workspaceId: string,
     ): Promise<WorkspaceS2SCredentialIds | undefined> {
-        await this.ensureSDKReady();
+        await ensureSDKReady(this.sdkClient);
 
         if (!orgId || !projectId || !workspaceId) {
             throw new Error(
@@ -535,7 +527,7 @@ export class AdobeWorkspaceCredentials {
         projectId: string,
         workspaceId: string,
     ): Promise<WorkspaceS2SCredentialIds> {
-        await this.ensureSDKReady();
+        await ensureSDKReady(this.sdkClient);
 
         if (!orgId || !projectId || !workspaceId) {
             throw new Error(

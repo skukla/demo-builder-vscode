@@ -1,10 +1,10 @@
 /**
- * Shared setup for the AdobeConsoleProjectOps suites: the ops built over a fake
+ * Shared setup for the AdobeConsoleWorkspaceOps suites: the ops built over a fake
  * Console client holding just the methods a suite drives, and the injected
  * workspace list its create and delete read.
  */
 
-import { AdobeConsoleProjectOps } from '@/features/authentication/services/adobeConsoleProjectOps';
+import { AdobeConsoleWorkspaceOps } from '@/features/authentication/services/adobeConsoleWorkspaceOps';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import type { DeletedWorkspaceNames } from '@/features/authentication/services/deletedWorkspaceNames';
@@ -32,7 +32,7 @@ export function opsWith(
         getCachedOrganization: jest.fn(),
         getCachedProject: jest.fn(),
     } as unknown as AuthCacheManager;
-    return new AdobeConsoleProjectOps(sdkClient, cacheManager, listWorkspaces, deletedNames);
+    return new AdobeConsoleWorkspaceOps(sdkClient, cacheManager, listWorkspaces, deletedNames);
 }
 
 /** A listed workspace whose id, name and title are all `name`. */

@@ -252,7 +252,7 @@ export function buildDefaultRunnerDeps(
                 onMaking,
                 maker: {
                     createWorkspace: async (title, description, target) =>
-                        (await entities()).projectOps.createWorkspace(title, description, target),
+                        (await entities()).workspaceOps.createWorkspace(title, description, target),
                 },
                 saveProject: ctx.saveProject,
                 // The name the SC gave it (a rename, else the one typed at add),
@@ -266,7 +266,7 @@ export function buildDefaultRunnerDeps(
             (message) => void vscode.window.showWarningMessage(message),
         ),
         deleteComponentWorkspace: async (project, workspace) => {
-            const result = await (await entities()).projectOps.deleteWorkspace(workspace.id, {
+            const result = await (await entities()).workspaceOps.deleteWorkspace(workspace.id, {
                 orgId: project.adobe?.organization,
                 projectId: project.adobe?.projectId,
                 workspaceName: workspace.name,

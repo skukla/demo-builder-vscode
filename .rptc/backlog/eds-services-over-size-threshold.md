@@ -416,8 +416,8 @@ and three of them are more than 40% comments). Decide which.
 11. DONE 2026-10-09 (helpers 440 -> 145, RepoSelectionInline 490 -> 327, see the log). `eds/ui/steps/repoSelectionInline.helpers.tsx` (440/350) then
     `eds/ui/steps/RepoSelectionInline.tsx` (490/350): pure verdict functions vs form and
     notice components; repo-creation hook, repo-readiness hook, selection component.
-12. `authentication/services/adobeConsoleProjectOps.ts` (555/400): Console project
-    create/rename/delete vs workspace create/delete/namespace.
+12. DONE 2026-10-09 (555 -> 282, see the log). `authentication/services/adobeConsoleProjectOps.ts` (555/400): Console project
+    create/rename/delete vs workspace create/delete/namespace. The workspace half is `adobeConsoleWorkspaceOps.ts`.
 13. `updates/services/updateApplyService.ts` (543/400): selection computation vs the
     appliers and apply loop.
 14. `eds/handlers/daLive/daLiveAuthPrompt.ts` (666/500): token validation; input prompts;
@@ -893,6 +893,18 @@ date and what happened; a failure becomes its own `fix` item.
       the reset tick and the notice now live in `NewRepoForm`, `ResetToTemplateOption` and
       `DefaultBranchNotice`, the name field and the create request in `useRepoCreation`, and the
       readiness check in `useRepoReadiness`; only the wizard bundle renders them.
+- [ ] **Adobe Console projects and workspaces after the adobeConsoleProjectOps split**
+      (uncommitted on `refactor/eds-8-god-files`): in a throwaway Console project, in the org
+      the extension is signed in to (check the org first; the token reaches one org only):
+      (1) from the wizard, create a project, then a workspace in it; Console shows both, and
+      the workspace has a Runtime namespace; (2) from the project picker, rename the project;
+      Console shows the new title; (3) delete the workspace, then the project. Then the same
+      through the agent tools in that org: `create_adobe_project`, `create_adobe_workspace`,
+      `rename_adobe_project`, `delete_adobe_workspace`, `delete_adobe_project`; each answers
+      success and Console agrees. Workspace create and delete now live in
+      `AdobeConsoleWorkspaceOps` (`workspaceOps` on the entity services); project create,
+      rename and delete stay in `AdobeConsoleProjectOps`. Every Console SDK call takes the
+      same arguments as before.
 
 ## Shipped so far
 
@@ -976,3 +988,4 @@ date and what happened; a failure becomes its own `fix` item.
 - 2026-10-09  refactor(eds): the repo picker's helpers keep the verdicts; the form, the reset tick and the branch notice get their own files (`7645a1e09`)
 - 2026-10-09  RepoSelectionInline.tsx (490 -> 327) split by job. It keeps the picker: the list and its selection, the mode switches New and Browse, the reset tick handler, the pre-selected-repo check and the verdict it reports. The name field and the create request moved to hooks/useRepoCreation.ts (197) and the readiness check to hooks/useRepoReadiness.ts (63); no forwarders. Moved code proven line for line (multiset of code lines, planted control caught); proveMove reads the two pure functions same. Mutation: the 83% row was stale, 72.41% measured before (189 of 261); after: picker 91.28%, useRepoCreation 97.5%, useRepoReadiness 97.22%, open gaps 0 on all three. The readiness check had survived whole before; five ledger rows for code only reachable through a disabled button were deleted (now killed through the hook), three re-homed. The picker's three suites now share the canonical WebviewClient double instead of three copies. Pins: godFileCandidates 26 -> 25.
 - 2026-10-09  refactor(eds): the repo picker keeps the list and its choice; creating a repository and checking one get their own hooks (`2bc8346b7`)
+- 2026-10-09  adobeConsoleProjectOps.ts (555 -> 282) split by job. It keeps the project: createProject with its Runtime sweep over the new project's workspaces, renameRemoteProject, deleteConsoleProject. Workspace create and delete, the look-again after a failed delete, and one workspace's Runtime namespace moved to adobeConsoleWorkspaceOps.ts (308), a new `workspaceOps` entity service wired in createEntityCollaborators; the project sweep reaches the namespace call through an injected function. Callers (create_adobe_workspace and delete_adobe_workspace, the wizard's workspace handler, the App Builder runner deps, the App Builder creation phase) take workspaceOps directly, no forwarders. Folded in PL-69's four-copy ensureSDKReady: one exported function in adobeEntityReads.ts, used by the reads, org services, workspace credentials and both ops. proveMove: every DIFFERS is that one call or the injected-function name; control fired. Two doc comments corrected (createWorkspace said it answers undefined; it answers a failure object). Tests: the two workspace suites renamed to the new file's name; new suites adobeConsoleProjectOps.test.ts and adobeConsoleWorkspaceOps.test.ts assert the arguments of every Console call. The delete suite's wait counts were vacuous (the node project keeps mock calls across tests) and now clear per test. Mutation: no prior row; before 30.52% (94 of 308; 170 mutants no mirror-named suite reached). After: project ops 86.96%, workspace ops 85.64%, open gaps 0 on both; survivors are log text plus four ledgered log-only equivalents (10 mutants). Two adobeProjectReads ledger rows re-homed by their 5-line import shift. Pins: godFileCandidates 25 -> 24, godFileCoupled stays 2. Checks: npm run gate green (lint 0 errors, tsc, typecheck:tests, blind spots, test sizes, full jest 1905 suites / 32,510 tests, source duplication at the pin of 36). Live check appended above.

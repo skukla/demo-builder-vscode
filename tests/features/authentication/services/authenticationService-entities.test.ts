@@ -96,6 +96,7 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
             credentials: mockEntities,
             orgServices: mockEntities,
             projectOps: mockEntities,
+            workspaceOps: mockEntities,
             resolver: mockResolver,
             selector: mockSelector,
         });

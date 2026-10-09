@@ -15448,7 +15448,7 @@
             "anchors": [
                 "if (!silent) {"
             ],
-            "line": 132,
+            "line": 137,
             "mutants": 2,
             "category": "block+branch",
             "reason": "Gates the 'loading projects' step line and nothing else; the SDK read, the CLI fallback and the returned list are outside the block. Killing it means asserting the logger's arguments, which no-logger-wording-assertions forbids, and no return value, cache write or CLI call changes.",
@@ -15461,7 +15461,7 @@
             "anchors": [
                 "if (!silent) {"
             ],
-            "line": 154,
+            "line": 159,
             "mutants": 4,
             "category": "block+branch",
             "reason": "Gates the 'projects loaded' step line and nothing else; the list has already been fetched and is returned after the block either way. Killing it means asserting the logger's arguments, which no-logger-wording-assertions forbids, and no return value, cache write or CLI call changes.",
@@ -15625,6 +15625,57 @@
             "decision": "none \u2014 the warn is the only trace of a failed pre-warm, read in Debug Logs",
             "recorded": "2026-10-09",
             "source": "EDS-8 storefrontRepublishService split, focus run 2026-10-09"
+        },
+        {
+            "module": "src/features/authentication/services/adobeConsoleWorkspaceOps.ts",
+            "anchors": [
+                "if (/409|conflict|already\\s*exist/i.test(message)) {"
+            ],
+            "mutants": 5,
+            "category": "block+branch",
+            "reason": "ensureWorkspaceRuntimeNamespace's catch: the 409/already-exists test (two condition flips, its block, two regex variants) only picks the debug line over the warn line; both arms return undefined, no Console call or return value differs, and the method never throws either way.",
+            "decision": "none \u2014 the only observable difference is which log line prints, and asserting logger arguments is banned (no-logger-wording-assertions)",
+            "recorded": "2026-10-09",
+            "source": "EDS-8 adobeConsoleProjectOps cut"
+        },
+        {
+            "module": "src/features/authentication/services/adobeConsoleWorkspaceOps.ts",
+            "anchors": [
+                "const message = (error as Error).message || '';"
+            ],
+            "line": 85,
+            "mutants": 3,
+            "category": "branch",
+            "reason": "ensureWorkspaceRuntimeNamespace's catch: `message` feeds only the already-provisioned test and the warn line's text, so its fallback (two condition flips and the operator swap) changes which log line prints and nothing a caller receives; the method resolves undefined on every path.",
+            "decision": "none \u2014 the only observable difference is which log line prints, and asserting logger arguments is banned (no-logger-wording-assertions)",
+            "recorded": "2026-10-09",
+            "source": "EDS-8 adobeConsoleProjectOps cut"
+        },
+        {
+            "module": "src/features/authentication/services/adobeConsoleWorkspaceOps.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 84,
+            "mutants": 1,
+            "category": "block",
+            "reason": "ensureWorkspaceRuntimeNamespace's catch body emptied: the rejection is still caught (the catch clause stays) and the body only logs, so the method still resolves undefined, the caller's create still answers the workspace, and no Console call changes.",
+            "decision": "none \u2014 the only observable difference is which log line prints, and asserting logger arguments is banned (no-logger-wording-assertions)",
+            "recorded": "2026-10-09",
+            "source": "EDS-8 adobeConsoleProjectOps cut"
+        },
+        {
+            "module": "src/features/authentication/services/adobeConsoleProjectOps.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 252,
+            "mutants": 1,
+            "category": "block",
+            "reason": "ensureProjectWorkspacesHaveRuntime's catch body emptied: the listing failure is still caught (the catch clause stays) and the body only logs a warning, so createProject still answers the created project and no Console call or injected call changes.",
+            "decision": "none \u2014 the only observable difference is which log line prints, and asserting logger arguments is banned (no-logger-wording-assertions)",
+            "recorded": "2026-10-09",
+            "source": "EDS-8 adobeConsoleProjectOps cut"
         }
     ]
 }

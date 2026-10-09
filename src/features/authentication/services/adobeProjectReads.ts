@@ -12,7 +12,12 @@
 
 import type { AdobeCliFallback } from './adobeCliFallback';
 import { mapProjects } from './adobeEntityMapper';
-import { resolveEffectiveOrgId, type SdkEntityFetch, type TokenOrgSource } from './adobeEntityReads';
+import {
+    ensureSDKReady,
+    resolveEffectiveOrgId,
+    type SdkEntityFetch,
+    type TokenOrgSource,
+} from './adobeEntityReads';
 import type { AdobeSDKClient } from './adobeSDKClient';
 import type { AuthCacheManager } from './authCacheManager';
 import { withTiming } from './performanceTracker';
@@ -133,7 +138,7 @@ export class AdobeProjectReads {
                 this.stepLogger.logTemplate('adobe-auth', 'operations.loading-projects', {});
             }
 
-            await this.sdkFetch.ensureSDKReady();
+            await ensureSDKReady(this.sdkClient);
             const cachedOrg = this.cacheManager.getCachedOrganization();
 
             let mappedProjects = await this.tryFetchProjectsViaSDK(

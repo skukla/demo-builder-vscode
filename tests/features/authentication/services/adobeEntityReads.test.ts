@@ -7,7 +7,11 @@
  * Driven directly with a handed-in SDK client (ADR-016 unit tier).
  */
 
-import { resolveEffectiveOrgId, SdkEntityFetch } from '@/features/authentication/services/adobeEntityReads';
+import {
+    ensureSDKReady,
+    resolveEffectiveOrgId,
+    SdkEntityFetch,
+} from '@/features/authentication/services/adobeEntityReads';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AdobeOrg, SDKResponse } from '@/features/authentication/services/types';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -25,11 +29,11 @@ function sdkClient(initialized: boolean): jest.Mocked<AdobeSDKClient> {
 /** Maps raw names to upper case, so a test can see the mapper ran. */
 const upper = (raw: string[]): string[] => raw.map((r) => r.toUpperCase());
 
-describe('SdkEntityFetch.ensureSDKReady', () => {
+describe('ensureSDKReady', () => {
     it('initialises the SDK when it is not ready yet', async () => {
         const client = sdkClient(false);
 
-        await new SdkEntityFetch(client).ensureSDKReady();
+        await ensureSDKReady(client);
 
         expect(client.ensureInitialized).toHaveBeenCalledTimes(1);
     });
@@ -37,7 +41,7 @@ describe('SdkEntityFetch.ensureSDKReady', () => {
     it('leaves an initialised SDK alone', async () => {
         const client = sdkClient(true);
 
-        await new SdkEntityFetch(client).ensureSDKReady();
+        await ensureSDKReady(client);
 
         expect(client.ensureInitialized).not.toHaveBeenCalled();
     });

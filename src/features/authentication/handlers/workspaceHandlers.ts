@@ -167,8 +167,8 @@ export async function handleCreateAdobeWorkspace(
             return { success: false, error: 'Workspace name is required.' };
         }
 
-        const { projectOps } = await context.authManager.getEntityServices();
-        const workspace = await projectOps.createWorkspace(name, description);
+        const { workspaceOps } = await context.authManager.getEntityServices();
+        const workspace = await workspaceOps.createWorkspace(name, description);
         if (isConsoleOpFailure(workspace)) {
             // The service carries Console's own reason now — surface it instead
             // of the old quota guess, which the measured failure never matched.

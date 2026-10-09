@@ -13,7 +13,8 @@
  * `deriveFreeAdobeEntityName`: the title's letters and digits, and a number only when the
  * name is taken.
  *
- * Shared by both project and workspace creation (AdobeConsoleProjectOps).
+ * Shared by project creation (AdobeConsoleProjectOps) and workspace creation
+ * (AdobeConsoleWorkspaceOps).
  *
  * @module features/authentication/services/adobeEntityName
  */

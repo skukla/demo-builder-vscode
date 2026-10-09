@@ -30,7 +30,7 @@ function createContext() {
         { testDeveloperPermissions: jest.fn().mockResolvedValue({ hasPermissions: true }) },
         {
             entities: {
-                projectOps: { createWorkspace: jest.fn().mockResolvedValue(WS) },
+                workspaceOps: { createWorkspace: jest.fn().mockResolvedValue(WS) },
                 workspaceReads: { getWorkspaces: jest.fn().mockResolvedValue([WS]) },
             },
         },
@@ -71,7 +71,7 @@ describe('workspaceHandlers - Create', () => {
         );
 
         expect(result).toEqual({ success: false, error: 'Workspace name is required.' });
-        expect(entityServicesOf(mockContext.authManager).projectOps.createWorkspace).not.toHaveBeenCalled();
+        expect(entityServicesOf(mockContext.authManager).workspaceOps.createWorkspace).not.toHaveBeenCalled();
     });
 
     it('returns a permission-typed error and does NOT create when permission is denied', async () => {
@@ -88,7 +88,7 @@ describe('workspaceHandlers - Create', () => {
             code: ErrorCode.AUTH_FORBIDDEN,
             error: 'Developer or System Admin role required.',
         });
-        expect(entityServicesOf(mockContext.authManager).projectOps.createWorkspace).not.toHaveBeenCalled();
+        expect(entityServicesOf(mockContext.authManager).workspaceOps.createWorkspace).not.toHaveBeenCalled();
     });
 
     it('falls back to the generic permission sentence when the probe gives no reason', async () => {
@@ -105,14 +105,14 @@ describe('workspaceHandlers - Create', () => {
                 'You do not have permission to create workspaces in this organization. ' +
                 'Select an existing workspace instead.',
         });
-        expect(entityServicesOf(mockContext.authManager).projectOps.createWorkspace).not.toHaveBeenCalled();
+        expect(entityServicesOf(mockContext.authManager).workspaceOps.createWorkspace).not.toHaveBeenCalled();
     });
 
     it('returns an error for an empty name and does NOT create', async () => {
         const result = await handleCreateAdobeWorkspace(mockContext, { name: '   ' });
 
         expect(result.success).toBe(false);
-        expect(entityServicesOf(mockContext.authManager).projectOps.createWorkspace).not.toHaveBeenCalled();
+        expect(entityServicesOf(mockContext.authManager).workspaceOps.createWorkspace).not.toHaveBeenCalled();
     });
 
     /**
@@ -131,7 +131,7 @@ describe('workspaceHandlers - Create', () => {
      * reason; this asserts that reason reaches the user.
      */
     it("surfaces Console's own reason when createWorkspace reports a failure", async () => {
-        entityServicesOf(mockContext.authManager).projectOps.createWorkspace.mockResolvedValue({
+        entityServicesOf(mockContext.authManager).workspaceOps.createWorkspace.mockResolvedValue({
             error: 'Workspace limit reached for this project',
         });
 
@@ -151,7 +151,7 @@ describe('workspaceHandlers - Create', () => {
 
         expect(result.success).toBe(true);
         expect(result.data).toEqual(WS);
-        expect(entityServicesOf(mockContext.authManager).projectOps.createWorkspace).toHaveBeenCalledWith(
+        expect(entityServicesOf(mockContext.authManager).workspaceOps.createWorkspace).toHaveBeenCalledWith(
             'Stage',
             'A workspace'
         );
@@ -195,7 +195,7 @@ describe('workspaceHandlers - Create', () => {
     });
 
     it('returns an error when createWorkspace throws', async () => {
-        entityServicesOf(mockContext.authManager).projectOps.createWorkspace.mockRejectedValue(new Error('boom'));
+        entityServicesOf(mockContext.authManager).workspaceOps.createWorkspace.mockRejectedValue(new Error('boom'));
 
         const result = await handleCreateAdobeWorkspace(mockContext, { name: 'Stage' });
 

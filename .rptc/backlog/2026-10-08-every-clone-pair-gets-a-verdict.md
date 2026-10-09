@@ -95,6 +95,11 @@ and `adobeConsoleProjectOps`. Five lines is under jscpd's eight-line floor, so t
 counted it. Four copies is past the Rule of Three: one shared function, taken in the
 authentication sitting (6) with pairs 33 to 35.
 
+DONE 2026-10-09 in the EDS-8 adobeConsoleProjectOps sitting: all four read and confirmed
+identical; `ensureSDKReady(sdkClient)` is now one exported function in `adobeEntityReads.ts`,
+and the `SdkEntityFetch` method, the three private copies and the three reads' calls all use
+it. Pairs 33 to 35 are not touched by that split and stay with sitting 6.
+
 ## Finding for the owner
 
 **Publish and preview handle an expired session differently (pairs 1 to 3).** `previewPage`
@@ -111,3 +116,4 @@ record why publish must not re-prompt.
 - 2026-10-08  Pair 8 gone (uncommitted on refactor/eds-8-god-files): the EDS-8 cut of daLiveContentOperations retired the forwarder; cloneCeiling 40 -> 39.
 - 2026-10-09  Sitting 1 (progress unifier), pairs 37 to 39 extracted: all three re-read and confirmed one job, the determinate progress update. New `determinateProgress(context, percent, detail, confidence)` in `core/utils/progressUnifier/progressPayload.ts` (own suite) replaces four hand-built copies in timedProgress and exactProgress; the fnm parser now passes percent lines to the generic parser instead of repeating it. The 12 progressUnifier suites ran unchanged. Left alone on purpose: the configureFnmShell update in timedProgress (it shows the raw `step.name`, not the resolved `context.stepName`) and milestoneProgress (it adds milestone fields); neither is a scan pair. cloneCeiling 39 -> 36.
 - 2026-10-09  refactor(progress): share the determinate progress update (`92a661187`)
+- 2026-10-09  ensureSDKReady folded to one function (in the EDS-8 adobeConsoleProjectOps split): four identical copies (adobeEntityReads' SdkEntityFetch method, adobeOrgServices, adobeWorkspaceCredentials, adobeConsoleProjectOps) became `ensureSDKReady(sdkClient)` in adobeEntityReads.ts; below jscpd's floor, so the clone pin does not move.

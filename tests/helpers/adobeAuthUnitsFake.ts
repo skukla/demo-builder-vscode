@@ -1,6 +1,7 @@
 /**
  * Fakes of the units `AuthenticationService` hands out: its entity services
  * (orgReads, projectReads, workspaceReads, credentials, orgServices, projectOps,
+ * workspaceOps,
  * resolver, selector), its cache
  * manager and its SDK client. Callers reach those units directly since 2026-10-08, when the service's
  * forty pass-through methods were removed (decompose-god-file), so a test that
@@ -23,6 +24,7 @@ export interface MockEntityServices {
     credentials: jest.Mocked<EntityServices['credentials']>;
     orgServices: jest.Mocked<EntityServices['orgServices']>;
     projectOps: jest.Mocked<EntityServices['projectOps']>;
+    workspaceOps: jest.Mocked<EntityServices['workspaceOps']>;
     resolver: jest.Mocked<EntityServices['resolver']>;
     selector: jest.Mocked<EntityServices['selector']>;
 }
@@ -75,12 +77,14 @@ export function createMockEntityServices(
         } as unknown as jest.Mocked<EntityServices['orgServices']>,
         projectOps: {
             createProject: jest.fn().mockResolvedValue(undefined),
-            createWorkspace: jest.fn().mockResolvedValue(undefined),
-            deleteWorkspace: jest.fn().mockResolvedValue(undefined),
             deleteConsoleProject: jest.fn().mockResolvedValue(undefined),
             renameRemoteProject: jest.fn().mockResolvedValue({ ok: true }),
-            ensureWorkspaceRuntimeNamespace: jest.fn().mockResolvedValue(undefined),
         } as unknown as jest.Mocked<EntityServices['projectOps']>,
+        workspaceOps: {
+            createWorkspace: jest.fn().mockResolvedValue(undefined),
+            deleteWorkspace: jest.fn().mockResolvedValue(undefined),
+            ensureWorkspaceRuntimeNamespace: jest.fn().mockResolvedValue(undefined),
+        } as unknown as jest.Mocked<EntityServices['workspaceOps']>,
         resolver: {
             getCurrentContext: jest.fn().mockResolvedValue(null),
             getCurrentOrganization: jest.fn().mockResolvedValue(null),
@@ -97,6 +101,7 @@ export function createMockEntityServices(
     Object.assign(base.credentials, overrides.credentials);
     Object.assign(base.orgServices, overrides.orgServices);
     Object.assign(base.projectOps, overrides.projectOps);
+    Object.assign(base.workspaceOps, overrides.workspaceOps);
     Object.assign(base.resolver, overrides.resolver);
     Object.assign(base.selector, overrides.selector);
     return base;
