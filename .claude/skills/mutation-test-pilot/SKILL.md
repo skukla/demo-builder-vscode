@@ -97,6 +97,28 @@ test:mutation:selftest` holds the controls in both directions, and they run with
 suite via `tests/sop/ratchet-controls.test.ts`. Change the rule and run them; breaking
 it on purpose is how they were checked rather than assumed.
 
+**A row can go stale, and then it is a floor ABOVE the truth.** A row is re-measured only
+when someone measures that module, so a module that changes afterwards keeps its old
+number. On 2026-10-09 three were found by accident: githubAppService.ts pinned at 74.02
+and measuring 70.16, projectResetService.ts 93.51 against 86.06, consoleApiHandlers
+89.53 against 81.05. `npm run test:mutation:stale` lists every such row, oldest first:
+
+- **Stale** means the module, or a suite that mirrors it (the same `mirroringSuites` rule
+  the focused run uses), has a commit the row's own commit does not contain. Any commit
+  counts, comments included — guessing which changes cannot move a score is what a
+  re-measure is for. The `changed` column says whether the MODULE moved (the case that
+  can leave a row too high) or only a suite.
+- **A row's date comes from git**: the newest commit whose diff of baseline.json changed
+  that row. Two git calls read the whole history; the report takes about 9 seconds.
+- **Every write stamps `recorded`** on the rows it measured. Without it a re-measure that
+  found the same numbers would leave the row's text, and so git, unchanged, and the row
+  would read stale forever. Older rows were not backfilled on purpose: one commit
+  stamping all 706 would become every row's recording commit and hide every stale one.
+- **Re-measure them overnight**: `node scripts/mutationSweep.mjs --stale --minutes 480`
+  (`--dry` prints the queue and runs nothing). Here pinning a LOWER score is the point —
+  it corrects a row that was too high — which is why `--stale` implies `--redo`. `npm run
+  sweep` only lists the stale rows; it never starts Stryker for them.
+
 **Moving to the next module is one command:**
 
 ```bash

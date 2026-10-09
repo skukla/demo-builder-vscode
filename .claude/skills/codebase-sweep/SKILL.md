@@ -45,6 +45,7 @@ npm run health                                                        # all 17 m
 bash .claude/skills/circular-dependency-scan/scan.sh src               # cycles (madge)
 bash .claude/skills/dead-code-scan/scan.sh src                         # orphans + doc drift
 bash .claude/skills/architecture-duplication-scan/signals.sh src       # competing impls
+npm run test:mutation:stale -- --limit 30   # mutation rows older than their module (lists only)
 # Boundary-cast audit — silenced type errors (the stackBackend / payload class).
 # Quote the glob args (zsh); the second grep drops comment-only lines.
 grep -rEn '\bas (any|never)\b|as unknown as' src --include='*.ts' --include='*.tsx' \

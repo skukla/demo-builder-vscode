@@ -133,6 +133,33 @@ const wrappedLog = [
 ].join('\n');
 const plainBranch = ['const a = 1;', "const name = org || 'unnamed';", 'const b = 2;'].join('\n');
 
+/**
+ * I: every write STAMPS the rows it measured, and leaves the rows it kept alone.
+ *
+ * `mutationStaleRows.mjs` dates a row by the commit that last changed it. A re-measure
+ * that found the same numbers used to change nothing, so the row read stale forever.
+ * The kept half matters as much: stamping a row nobody measured would make it read
+ * fresh while its numbers are as old as before.
+ */
+function checkRecorded(label) {
+    const blp = DIR + `baseline-${label}.json`;
+    writeBaseline(write(`${label}-first.json`, clean), blp, 'selftest', false, 'T1');
+    const kept = { score: 50, killed: 1, survived: 1, noCoverage: 0, openGaps: 1 };
+    const b = JSON.parse(readFileSync(blp, 'utf8'));
+    b.modules['src/kept.ts'] = kept;
+    writeFileSync(blp, JSON.stringify(b));
+    writeBaseline(write(`${label}-again.json`, clean), blp, 'selftest', true, 'T2');
+    const rows = JSON.parse(readFileSync(blp, 'utf8')).modules;
+    const ok =
+        rows['src/x.ts'].recorded === 'T2' &&
+        JSON.stringify(rows['src/kept.ts']) === JSON.stringify(kept);
+    console.log(
+        `${ok ? 'PASS' : 'FAIL'}  ${label}: measured row recorded=${rows['src/x.ts'].recorded} ` +
+            `expected=T2, kept row untouched=${JSON.stringify(rows['src/kept.ts']) === JSON.stringify(kept)}`
+    );
+    return ok;
+}
+
 const results = [
     check('A-padding-must-flag', before, padding, true),
     check('B-real-branch-must-pass', before, real, false),
@@ -142,6 +169,7 @@ const results = [
     checkOpenGaps('F-wording-only-reads-finished', clean, 0),
     checkCategory('G-wrapped-log-is-wording', wrappedLog, 3, 'LogicalOperator', 'logPresentation'),
     checkCategory('H-plain-branch-stays-behaviour', plainBranch, 2, 'LogicalOperator', 'branch'),
+    checkRecorded('I-write-stamps-measured-rows-only'),
 ];
 console.log(results.every(Boolean) ? '\nALL CONTROLS PASSED' : '\nSELF-TEST FAILED');
 const ok = results.every(Boolean);

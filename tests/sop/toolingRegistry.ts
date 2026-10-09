@@ -205,6 +205,14 @@ const PERIODIC: readonly Instrument[] = [
         what: 'which features an agent can reach: the human surface (handler types) minus the agent surface (MCP tools)',
         runs: 'bash .claude/skills/ai-coverage-scan/scan.sh',
     },
+    {
+        id: 'test:mutation:stale',
+        kind: 'npm-script',
+        cadence: 'periodic',
+        resultKind: 'report',
+        what: "mutation baseline rows whose module or mirroring suite changed after the row was recorded — a floor that may sit ABOVE the truth. Lists only; `mutationSweep.mjs --stale` is the overnight re-measure",
+        runs: 'npm run test:mutation:stale -- --limit 30',
+    },
 ];
 
 /**
