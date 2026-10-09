@@ -7,10 +7,10 @@
  * with its id in the integration's list (`ERP_ID`, `listIdOf`). Once deployed it is linked to
  * the integration, the integration is told the whole ERP list (`PUT erp/erps`), each added ERP
  * with its own workspace's credential (AB-16a), each ERP's ownership rule is saved on its entry
- * (AB-64: the one the SC chose in the dialog, or the default when the agent gave none), and the
- * new ERP is filled from Commerce, its key map rows carrying its id. The rule is saved BEFORE
- * the fill, which reads it; an existing ERP whose rule changed is not refilled here, and the
- * answer says its products change at its next reset or Load demo data. Once linked, an ERP this
+ * (AB-64: the one the SC chose in the dialog, or the default when the agent gave none), and
+ * ownership is applied across every ERP (AB-70, `applyErpOwnership`): each filled with what it
+ * now owns, what an ERP no longer owns marked discontinued there, and what the SC still has to
+ * do said in the answer's warning. The rules are saved BEFORE the pass, which reads them. Once linked, an ERP this
  * add deployed is given a theme no other ERP shows when its own starting theme is another's
  * (AB-51, `erpAddTheme.ts`); the answer's `theme` says which.
  *
@@ -43,7 +43,7 @@ import { addAppBuilderComponent } from '@/features/app-builder/services/appBuild
 import type { AppManagementAuth } from '@/features/app-builder/services/appManagementClient';
 import { catalogEntryFor } from '@/features/app-builder/services/componentEntry';
 import { erpCredentialReader } from '@/features/app-builder/services/erpCredential';
-import type { ErpMappingReport } from '@/features/app-builder/services/erpFillMapping';
+import { mergeMappings, type ErpMappingReport } from '@/features/app-builder/services/erpFillMapping';
 import { ErpIntegrationClient } from '@/features/app-builder/services/erpIntegrationClient';
 import { erpListIdOf, nextListedSystemId, takenSystemNames } from '@/features/app-builder/services/erpList';
 import {
@@ -66,8 +66,9 @@ import {
     buildRunnerDepsContext,
     resolveAppManagementAuth,
 } from '@/features/project-creation/services/appBuilderComponentRunnerDeps';
-import { fillErpForProject } from '@/features/project-creation/services/erpFillForProject';
+import type { ErpFillOutcomes } from '@/features/project-creation/services/erpFillForProject';
 import { syncErpList } from '@/features/project-creation/services/erpListSync';
+import { applyErpOwnership, type ApplyOwnershipOutcome } from '@/features/project-creation/services/erpOwnershipReconcile';
 import {
     readErpOwnershipOptionsForProject,
     saveErpOwnership,
@@ -112,6 +113,8 @@ type AddOutcome = GuardableResult & {
     existingOwns?: OwnsSaid[];
     /** The theme Demo Builder gave the new ERP, when it looked like another (AB-51). */
     theme?: ErpThemeId;
+    /** What the ownership pass did per ERP (AB-70): what each owns now, what was marked, what nobody owns. */
+    ownership?: { erps: Array<{ erp: string; name: string; owns: number; discontinued: number }>; unowned: number };
 };
 
 /**
@@ -207,7 +210,7 @@ async function ownershipToSave(
     const options = await readErpOwnershipOptionsForProject(plan.project, plan.integrationId, auth, authManager);
     if ('refusal' in options) return options;
     const erps = options.erps.filter((erp) => erp.erp !== listId);
-    const owns = defaultOwnsRule({ websites: options.websites, erps, listId });
+    const owns = defaultOwnsRule({ listId });
     return [{ erp: listId, owns }, ...existingRulesToChange({ websites: options.websites, erps }, owns)];
 }
 
@@ -245,23 +248,26 @@ async function saveOwnershipStep(
     return notSaved ? { notSaved } : { entries };
 }
 
-/** The name an existing ERP goes by in the answer's warning, found by its list id. */
-function erpNameOf(project: Project, listId: string): string {
-    const catalog = getAppBuilderComponentCatalog();
-    const found = Object.entries(project.appBuilderComponents ?? {}).find(
-        ([id]) => erpListIdOf(project, id, catalog) === listId,
-    );
-    return found?.[1].name ?? listId;
-}
-
-/** What the answer says about the rules saved: each in words, and the warning for the existing ERPs. */
-function ownsSaid(plan: ErpAddPlan, entries: ErpOwnsEntry[]): Pick<AddOutcome, 'owns' | 'existingOwns'> & { notes: string[] } {
+/** What the answer says about the rules saved: each in words. */
+function ownsSaid(_plan: ErpAddPlan, entries: ErpOwnsEntry[]): Pick<AddOutcome, 'owns' | 'existingOwns'> {
     const said = entries.map((entry): OwnsSaid => ({ erp: entry.erp, rule: entry.owns, describe: describeOwns(entry.owns) }));
     const [owns, ...existingOwns] = said;
-    const notes = existingOwns.map(
-        (entry) => `${erpNameOf(plan.project, entry.erp)}'s products change at its next Reset ERPs or Load demo data.`,
+    return { owns, existingOwns };
+}
+
+/** A fill that did not finish, named by its ERP; Load demo data on its card runs it again. */
+function fillFailures(fills: ErpFillOutcomes): string[] {
+    return fills.flatMap((fill) =>
+        fill.status === 'failed' ? [`Demo data did not load into ${fill.name}: ${sentence(fill.detail)} Use Load demo data on its card.`] : [],
     );
-    return { owns, existingOwns, notes };
+}
+
+/** What the pass did per ERP, as the answer carries it (data.ownership). */
+function ownershipSaid(applied: Extract<ApplyOwnershipOutcome, { status: 'applied' }>): AddOutcome['ownership'] {
+    return {
+        erps: applied.erps.map((erp) => ({ erp: erp.erp, name: erp.name, owns: erp.ownsNow, discontinued: erp.discontinued })),
+        unowned: applied.unowned,
+    };
 }
 
 /** Record the typed name where the ERP's deploy reads it, so its workspace and card carry it. */
@@ -328,23 +334,32 @@ async function listAndFill(
             error: `${plan.name} is deployed and listed, but ${sentence(saved.notSaved)} Add it again with the same name to finish.`,
         };
     }
-    const { owns, existingOwns, notes: ownsNotes } = ownsSaid(plan, saved.entries);
-    const filled = await fillErpForProject(
+    const { owns, existingOwns } = ownsSaid(plan, saved.entries);
+    // Ownership applied across every ERP (AB-70): each filled with what it now owns, what an
+    // ERP no longer owns marked discontinued there, and what the SC still has to do said.
+    const applied = await applyErpOwnership(
         project,
         integrationId,
         { authManager, getAuth: async () => auth, onProgress: (step) => report(OPERATION_STAGES.loadingErpDemoData.label, step) },
-        entry.id,
+        'add',
     );
-    // A credential the list could not carry (AB-16a) and a fill that did not finish are
+    // A credential the list could not carry (AB-16a) and a pass that did not finish are
     // both said, and the add stands.
-    const notes = [...(themed.warning ? [themed.warning] : []), ...listed.warnings, ...ownsNotes];
-    // Prices not published after the fill (AB-26z).
-    if (filled.status === 'filled' && filled.note) notes.push(filled.note);
-    if (filled.status !== 'filled') notes.push(`Demo data did not load: ${sentence(filled.detail)} Use Load demo data on its card.`);
+    const notes = [...(themed.warning ? [themed.warning] : []), ...listed.warnings];
+    if (applied.status === 'applied') {
+        notes.push(...fillFailures(applied.fills), ...applied.notes);
+        // Prices not published after a fill (AB-26z).
+        notes.push(...applied.fills.flatMap((fill) => (fill.status === 'filled' && fill.note ? [fill.note] : [])));
+    } else {
+        notes.push(`Demo data did not load: ${sentence(applied.detail)} Use Load demo data on its card.`);
+    }
+    const filled = applied.status === 'applied' && applied.fills.some((fill) => fill.erp === entry.id && fill.status === 'filled');
     const warning = notes.length ? { warning: notes.join(' ') } : {};
-    const mapping = filled.status === 'filled' && filled.mapping ? { mapping: filled.mapping } : {};
+    const merged = applied.status === 'applied' ? mergeMappings(applied.fills.map((fill) => (fill.status === 'filled' ? fill.mapping : undefined))) : undefined;
+    const mapping = merged ? { mapping: merged } : {};
     const theme = themed.theme ? { theme: themed.theme } : {};
-    return { success: true, listed: listed.ids, filled: filled.status === 'filled', owns, existingOwns, ...mapping, ...theme, ...warning };
+    const ownership = applied.status === 'applied' ? { ownership: ownershipSaid(applied) } : {};
+    return { success: true, listed: listed.ids, filled, owns, existingOwns, ...mapping, ...theme, ...ownership, ...warning };
 }
 
 /** Deploy the new ERP in its own workspace, unless an earlier add already did. */
@@ -407,6 +422,7 @@ export const handleAddErp: MessageHandler<AddErpRequestPayload> = narrateOutcome
                 existingOwns: outcome.existingOwns,
                 ...(outcome.mapping ? { mapping: outcome.mapping } : {}),
                 ...(outcome.theme ? { theme: outcome.theme } : {}),
+                ...(outcome.ownership ? { ownership: outcome.ownership } : {}),
                 ...(outcome.warning ? { warning: outcome.warning } : {}),
             },
         };

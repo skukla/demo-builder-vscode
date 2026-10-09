@@ -6,9 +6,11 @@
  * way. The read is guard-free; the write goes through the integration's `erp/erps` PATCH.
  */
 import { type ErpCallPayload, errorText, openErpCall, shapeErpRow } from './erpCall';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { ErpIntegrationClient } from '@/features/app-builder/services/erpIntegrationClient';
 import { erpListIdOf } from '@/features/app-builder/services/erpList';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
+import { applyErpOwnership, type ApplyOwnershipOutcome } from '@/features/project-creation/services/erpOwnershipReconcile';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerResponse, MessageHandler } from '@/types/handlers';
 
@@ -90,6 +92,16 @@ export const handleSetErpSettings: MessageHandler<SetErpSettingsPayload> = async
             call.integration.deployedUrls,
             call.auth,
         ).updateErpSettings(listId, payload.website, payload.values);
+        // A rule changed: ownership applied across every ERP (AB-70), so the ERPs match the
+        // rules without a reset. The settings stand whatever the pass says.
+        const ownership = changesOwnership(payload.values)
+            ? await applyErpOwnership(
+                  call.project,
+                  call.id,
+                  { authManager: ServiceLocator.getAuthenticationService(), getAuth: async () => call.auth },
+                  'settings',
+              )
+            : undefined;
         return {
             success: true,
             // `erp` is the ERP as every ERP tool answers it (component id and name); `entry.id`
@@ -99,9 +111,26 @@ export const handleSetErpSettings: MessageHandler<SetErpSettingsPayload> = async
                 erp: shapeErpRow(call.erp),
                 website: payload.website ?? null,
                 entry,
+                ...(ownership ? { ownership: ownershipSaid(ownership) } : {}),
             },
         };
     } catch (error) {
         return { success: false, error: `Could not change the ERP settings: ${errorText(error)}` };
     }
 };
+
+/** Whether the values touch who owns what (`structure_owns*`). */
+function changesOwnership(values: Record<string, string | null>): boolean {
+    return Object.keys(values).some((key) => key.startsWith('structure_owns'));
+}
+
+/** What the pass did, as the answer says it: per ERP what it owns now and what was marked, and the notes. */
+function ownershipSaid(applied: ApplyOwnershipOutcome): unknown {
+    if (applied.status === 'failed') return { applied: false, detail: applied.detail };
+    return {
+        applied: true,
+        erps: applied.erps.map((erp) => ({ erp: erp.erp, name: erp.name, owns: erp.ownsNow, discontinued: erp.discontinued })),
+        unowned: applied.unowned,
+        notes: applied.notes,
+    };
+}

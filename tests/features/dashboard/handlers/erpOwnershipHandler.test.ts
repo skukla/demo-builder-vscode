@@ -22,8 +22,7 @@ jest.mock('@/features/project-creation/services/erpOwnershipSync', () => ({
 
 const OPTIONS: ErpOwnershipOptions = {
     websites: [{ code: 'base', name: 'Main Website' }],
-    sources: [],
-    products: [{ sku: 'A', websiteCodes: ['base'], sourceCodes: [], attributes: {} }],
+    products: [{ sku: 'A', websiteCodes: ['base'], attributes: {} }],
     erps: [{ erp: 'nordwind', name: 'Nordwind', owns: { mode: 'all' } }],
     takenListIds: ['nordwind'],
 };

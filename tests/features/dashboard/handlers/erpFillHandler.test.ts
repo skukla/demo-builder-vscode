@@ -47,6 +47,27 @@ jest.mock('@/features/app-builder/services/erpFill', () => ({
     fillErp: (...args: unknown[]) => mockFillErp(...args),
 }));
 
+// The ownership pass (AB-70) reads the store and each ERP's rule, then each ERP's products:
+// here the rules are read off the project's ERPs (everything each), the ERPs hold nothing, so
+// the pass is the fills, which this suite drives for real.
+jest.mock('@/features/project-creation/services/erpOwnershipSync', () => ({
+    readErpOwnershipOptionsForProject: async (project: { appBuilderComponents?: Record<string, { kind?: string; name?: string }> }) => {
+        const { erpListIdOf } = jest.requireActual('@/features/app-builder/services/erpList');
+        const { getAppBuilderComponentCatalog } = require('@/features/components/services/appBuilderComponentCatalogLoader');
+        const erps = Object.entries(project.appBuilderComponents ?? {})
+            .filter(([, state]) => state.kind === 'system')
+            .map(([id, state]) => ({ erp: erpListIdOf(project, id, getAppBuilderComponentCatalog()), name: state.name, owns: { mode: 'all' } }));
+        return { websites: [], products: [], erps, takenListIds: erps.map((erp) => erp.erp) };
+    },
+    saveErpOwnership: jest.fn(),
+}));
+const mockListErpProducts = jest.fn();
+jest.mock('@/features/app-builder/services/erpProducts', () => ({
+    DISCONTINUED: 'discontinued',
+    listErpProducts: (...a: unknown[]) => mockListErpProducts(...a),
+    discontinueErpProduct: jest.fn(),
+}));
+
 const mockResolveRestTarget = jest.fn();
 const mockRequestRest = jest.fn();
 jest.mock('@/features/ai/server/commerceRestClient', () => ({
@@ -152,6 +173,7 @@ beforeEach(() => {
     mockResolveAppManagementAuth.mockResolvedValue(AUTH);
     mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
     mockResolveRestTarget.mockResolvedValue(TARGET);
+    mockListErpProducts.mockResolvedValue([]);
     mockFillErp.mockResolvedValue({ partners: 4, products: 182, skipped: 0 });
     mockPublishesPrices.mockReturnValue(true);
     mockPublishPrices.mockResolvedValue({
@@ -455,12 +477,19 @@ describe('handleLoadErpDemoData — several ERPs', () => {
         });
     });
 
-    it('fills only the ERP its card names', async () => {
+    // Since 2026-10-09 (AB-70) a load from one ERP's card applies ownership across every ERP:
+    // one left alone was how a first ERP kept products its rule no longer gave it.
+    it("a load from one ERP's card fills every ERP, and answers that ERP first", async () => {
+        mockResolvedSettings.mockResolvedValue({ default: {}, websites: {} });
         const { mockContext } = setup(twoErps());
 
-        await handleLoadErpDemoData(mockContext, { id: 'erp-integration', erp: 'demo-erp-2' });
+        const result = await handleLoadErpDemoData(mockContext, { id: 'erp-integration', erp: 'demo-erp-2' });
 
-        expect(mockFillErp).toHaveBeenCalledTimes(1);
+        expect(mockFillErp).toHaveBeenCalledTimes(2);
+        expect(result).toMatchObject({
+            success: true,
+            data: { erp: { id: 'demo-erp-2' }, loaded: [{ erp: 'demo-erp-2' }, { erp: 'demo-erp' }] },
+        });
     });
 
     it('names the ERP whose prices were not published when there are several', async () => {
@@ -497,7 +526,8 @@ describe('handleLoadErpDemoData — several ERPs', () => {
         const { mockContext } = setup(twoErps());
         await handleLoadErpDemoData(mockContext, { id: 'erp-integration', erp: 'demo-erp-2' });
 
-        await handedDeps().saveKeyMap([{ kind: 'customer', commerce: '1', erp: 'B1' }]);
+        // Every ERP fills, in link order: the second fill is Brand B's.
+        await (mockFillErp.mock.calls[1][0] as ErpFillDeps).saveKeyMap([{ kind: 'customer', commerce: '1', erp: 'B1' }]);
 
         expect(mockReplaceKeyMap).toHaveBeenCalledWith([
             first,

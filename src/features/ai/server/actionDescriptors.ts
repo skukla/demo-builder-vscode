@@ -567,14 +567,15 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             'Add another ERP to the ERP integration ("Add another ERP" on its card): a new mock ERP ' +
             'with the given name (unique in the project), in an Adobe workspace of its own, deployed, ' +
             "added to the integration's ERP list, given a rule for which products it owns, and " +
-            'filled from Commerce. `owns` picks the rule: websites (the products sold on named ' +
-            'website codes), attribute (erp_owner=<its list id>, or any code=value), or sources ' +
-            '(the products stocked in named inventory sources). Omitted, the default applies: with ' +
-            'several websites and one not yet owned by another ERP, the first such website; else ' +
-            'the attribute. Once there are two ERPs each owns only what its rule says, so an ' +
-            'existing ERP still owning everything is given a rule too (the websites left over, else ' +
-            'its attribute), saved with the new one; it is NOT refilled, and data.warning says its ' +
-            'products change at its next reset or Load demo data. The answer says the rule applied ' +
+            'filled from Commerce. `owns` picks the rule: attribute (erp_owner=<its list id>, or any ' +
+            'code=value; the default when omitted) or websites (the products sold on named website ' +
+            'codes). Once there are two ERPs each owns only what its rule says, so an existing ERP ' +
+            'still owning everything is given a rule too (the websites left over when the new ERP ' +
+            'is split by website, else its own attribute), saved with the new one. Then ownership is ' +
+            'applied across every ERP: each is filled with what it now owns, products an ERP no ' +
+            'longer owns are marked discontinued there, and data.warning names what the user still ' +
+            'has to do (tag products with erp_owner in Commerce when an ERP owns none yet). The ' +
+            'answer says the rule applied ' +
             '(data.owns, data.existingOwns, each with the rule in words) and which website mappings ' +
             'its fill filled and kept (data.mapping). A new ERP whose starting colour is another ' +
             "ERP's is given the first theme no other ERP shows (data.theme). Ask the user which rule " +
@@ -589,9 +590,8 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             name: z.string().min(1).max(40).describe('The new ERP\'s name; it is made to end in "ERP" ("Brand B" → "Brand B ERP")'),
             owns: z
                 .object({
-                    mode: z.enum(['websites', 'attribute', 'sources']),
+                    mode: z.enum(['attribute', 'websites']),
                     websites: z.array(z.string()).optional().describe('Commerce website codes, for websites'),
-                    sources: z.array(z.string()).optional().describe('Inventory source codes, for sources'),
                     attribute: z
                         .string()
                         .optional()

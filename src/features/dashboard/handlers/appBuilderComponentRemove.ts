@@ -27,10 +27,14 @@ import {
     type RuntimeCleanupSummary,
 } from '@/features/app-builder/services/appBuilderComponentRunner';
 import type { CommerceDetachResult } from '@/features/app-builder/services/erpDetach';
+import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
+import { systemsUsedBy } from '@/features/components/services/appBuilderComponentLinks';
 import {
     buildDefaultRunnerDeps,
     buildRunnerDepsContext,
+    resolveAppManagementAuth,
 } from '@/features/project-creation/services/appBuilderComponentRunnerDeps';
+import { applyErpOwnership } from '@/features/project-creation/services/erpOwnershipReconcile';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -54,6 +58,8 @@ function runRemove(
             progress,
         },
         async (report): Promise<GuardableResult> => {
+            // Read before the removal: the entry leaves the map when it succeeds.
+            const integrationId = getAppBuilderComponent(project, id)?.usedBy;
             // Undeploy is a slow cloud op — telegraph it, or the grid sits frozen
             // while `aio app undeploy` runs with nothing on screen saying so.
             report(OPERATION_STAGES.removing.label);
@@ -67,9 +73,42 @@ function runRemove(
                 (message, subMessage, position) => report(message, subMessage, position),
             );
             // `force` is the SC's "Remove anyway".
-            return removeAppBuilderComponent(project, id, deps, { force });
+            const removed = await removeAppBuilderComponent(project, id, deps, { force });
+            if (!removed.success || !integrationId) return removed;
+            return applyOwnershipAfterRemove(removed, project, integrationId, report);
         },
     );
+}
+
+/**
+ * An ERP taken out of its integration leaves the others' rules as they were, so the products it
+ * owned belonged to nobody (AB-70). The pass runs when the integration still serves an ERP:
+ * one left goes back to owning everything; several left are told how many products nobody
+ * owns. What the pass says joins the removal's warnings; the removal stands either way.
+ */
+async function applyOwnershipAfterRemove(
+    removed: GuardableResult,
+    project: Project,
+    integrationId: string,
+    report: (message: string, subMessage?: string) => void,
+): Promise<GuardableResult> {
+    if (systemsUsedBy(project, integrationId, getAppBuilderComponentCatalog()).length === 0) return removed;
+    const authManager = ServiceLocator.getAuthenticationService();
+    const applied = await applyErpOwnership(
+        project,
+        integrationId,
+        {
+            authManager,
+            getAuth: () => resolveAppManagementAuth(project, authManager),
+            onProgress: (step) => report(OPERATION_STAGES.loadingErpDemoData.label, step),
+        },
+        'remove',
+    );
+    const said =
+        applied.status === 'applied'
+            ? applied.notes
+            : [`Ownership was not applied across the remaining ERPs: ${applied.detail} Use Load demo data on the integration.`];
+    return { ...removed, warnings: [...(removed.warnings ?? []), ...said] };
 }
 
 /** Tell the grid the removal ended, and answer the caller — with any cleanup warning. */

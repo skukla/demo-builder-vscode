@@ -20,6 +20,7 @@ import {
     deriveErpActionUrl,
     type ImsCallMethod,
 } from '@/features/app-builder/services/erpIntegrationClient';
+import { erpListIdOf } from '@/features/app-builder/services/erpList';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { systemsUsedBy } from '@/features/components/services/appBuilderComponentLinks';
 import { resolveAppManagementAuth } from '@/features/project-creation/services/appBuilderComponentRunnerDeps';
@@ -44,7 +45,7 @@ export type ErpRow = AppBuilderComponentState & { id: string };
 /** What an ERP verb is sent: the integration's id, and which of its ERPs when it serves several. */
 export interface ErpCallPayload {
     id?: string;
-    /** An ERP's component id (`demo-erp-2`); absent = the integration's first. */
+    /** An ERP's component id (`demo-erp-2`) or its list id (`kukla`, as get_erp_status answers it); absent = the integration's first. */
     erp?: string;
 }
 
@@ -89,7 +90,12 @@ export async function openErpCall(
     }
     const erps = erpsOf(project, id);
     const named = payload?.erp?.trim();
-    const erp = named ? erps.find((row) => row.id === named) : erps[0];
+    // By component id, else by list id: get_erp_status answers the list id and the settings
+    // tools asked for the component id, so an agent following both was refused (2026-10-09).
+    const catalog = getAppBuilderComponentCatalog();
+    const erp = named
+        ? (erps.find((row) => row.id === named) ?? erps.find((row) => erpListIdOf(project, row.id, catalog) === named))
+        : erps[0];
     if (named && !erp) {
         const listed = erps.map((row) => row.id).join(', ') || 'none';
         const error = `"${integration.name ?? id}" serves no ERP "${named}" (its ERPs: ${listed}).`;

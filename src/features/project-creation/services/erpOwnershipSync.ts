@@ -1,8 +1,8 @@
 /**
  * Which products a new ERP will own, read and saved through the integration (AB-64): what
- * the "Add another ERP" dialog needs before the add (the store's websites and sources, each
- * product's codes, each existing ERP's rule), and the save of each ERP's rule onto its list
- * entry (`PATCH erp/erps`) before the new ERP is filled.
+ * the "Add another ERP" dialog needs before the add (the store's websites, each product's
+ * codes, each existing ERP's rule), and the save of each ERP's rule onto its list entry
+ * (`PATCH erp/erps`) before the new ERP is filled.
  *
  * A composition file: it wires the fill's Commerce readers and the integration's client into
  * the pure rules in `erpOwnership.ts`.
@@ -12,13 +12,7 @@
 
 import { commerceGetForProject } from './erpFillForProject';
 import type { AppManagementAuth } from '@/features/app-builder/services/appManagementClient';
-import {
-    listProducts,
-    listSources,
-    listStock,
-    listWebsites,
-    type CommerceGet,
-} from '@/features/app-builder/services/erpFillReaders';
+import { listProducts, listWebsites, type CommerceGet } from '@/features/app-builder/services/erpFillReaders';
 import { ownedProductOf, type CommerceProductRow } from '@/features/app-builder/services/erpFillRows';
 import { ErpIntegrationClient } from '@/features/app-builder/services/erpIntegrationClient';
 import { erpListIdOf } from '@/features/app-builder/services/erpList';
@@ -82,7 +76,7 @@ async function rulesOf(
 
 /**
  * What the dialog needs before an add. Reads Commerce the way the fill does (the same
- * products and stock reads), and each ERP's rule through the integration.
+ * products and websites reads), and each ERP's rule through the integration.
  *
  * @param deps - Commerce and the integration's client
  * @param erps - the ERPs the integration serves now, by list id and name
@@ -92,10 +86,8 @@ export async function readErpOwnershipOptions(
     deps: ErpOwnershipReadDeps,
     erps: readonly ListedErpName[],
 ): Promise<ErpOwnershipOptions> {
-    const [products, stock, sourceNames, websites, rules] = await Promise.all([
+    const [products, websites, rules] = await Promise.all([
         listProducts(deps.get),
-        listStock(deps.get),
-        listSources(deps.get),
         listWebsites(deps.get),
         rulesOf(deps.client, erps),
     ]);
@@ -103,19 +95,13 @@ export async function readErpOwnershipOptions(
     const websiteCodeById = new Map(websites.map((site) => [site.id, site.code]));
     const rows = products
         .filter((product) => product.sku)
-        .map((product): ErpOwnedProductRow => {
-            const sourceCodes = (stock.get(product.sku) ?? []).map((row) => row.code);
-            const owned = ownedProductOf(product, sourceCodes, websiteCodeById);
-            return {
-                sku: product.sku,
-                websiteCodes: owned.websiteCodes,
-                sourceCodes,
-                attributes: attributesOf(product, codes),
-            };
-        });
+        .map((product): ErpOwnedProductRow => ({
+            sku: product.sku,
+            websiteCodes: ownedProductOf(product, websiteCodeById).websiteCodes,
+            attributes: attributesOf(product, codes),
+        }));
     return {
         websites: websites.map((site) => ({ code: site.code, name: site.name })),
-        sources: [...sourceNames].map(([code, name]) => ({ code, name })),
         products: rows,
         erps: rules,
         takenListIds: erps.map((erp) => erp.listId),

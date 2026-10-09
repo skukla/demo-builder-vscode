@@ -34,6 +34,11 @@ import {
 } from './erpIntegrationHandlers.testUtils';
 import { ErrorCode } from '@/types/errorCodes';
 
+const mockApplyOwnership = jest.fn();
+jest.mock('@/features/project-creation/services/erpOwnershipReconcile', () => ({
+    applyErpOwnership: (...a: unknown[]) => mockApplyOwnership(...a),
+}));
+
 beforeEach(() => {
     resetErpHandlerMocks();
 });
@@ -251,6 +256,44 @@ describe('handleSetErpSettings (AB-16j)', () => {
                 entry,
             },
         });
+    });
+
+    // A rule changed: ownership applied across every ERP (AB-70); a sales organisation is not a rule.
+    it('applies ownership across the ERPs after a rule change, and answers what the pass did', async () => {
+        mockUpdateErpSettings.mockResolvedValue({ entry: { id: 'contoso', name: 'Contoso' } });
+        mockApplyOwnership.mockResolvedValue({
+            status: 'applied',
+            erps: [{ erp: 'demo-erp-2', listId: 'contoso', name: 'Contoso', owns: { mode: 'websites', websites: ['bodea'] }, ownsNow: 4, discontinued: 2 }],
+            fills: [],
+            unowned: 1,
+            notes: ['1 product belongs to no ERP.'],
+        });
+        const { mockContext } = setupMocks(twoErp());
+
+        const result = await handleSetErpSettings(mockContext, {
+            id: 'erp-integration',
+            erp: 'demo-erp-2',
+            values: { structure_owns: 'websites', structure_owns_websites: 'bodea' },
+        });
+
+        expect(mockApplyOwnership).toHaveBeenCalledWith(expect.objectContaining({ appBuilderComponents: expect.any(Object) }), 'erp-integration', expect.any(Object), 'settings');
+        expect(result).toMatchObject({
+            success: true,
+            data: {
+                ownership: { applied: true, erps: [{ erp: 'demo-erp-2', name: 'Contoso', owns: 4, discontinued: 2 }], unowned: 1, notes: ['1 product belongs to no ERP.'] },
+            },
+        });
+    });
+
+    it('names the ERP by its list id too, as get_erp_status answers it', async () => {
+        mockUpdateErpSettings.mockResolvedValue({ entry: { id: 'contoso', name: 'Contoso' } });
+        const { mockContext } = setupMocks(twoErp());
+
+        const result = await handleSetErpSettings(mockContext, { id: 'erp-integration', erp: 'contoso', values: { structure_sales_org: '2000' } });
+
+        expect(mockUpdateErpSettings).toHaveBeenCalledWith('contoso', undefined, { structure_sales_org: '2000' });
+        expect(result).toMatchObject({ success: true, data: { erp: { id: 'demo-erp-2' } } });
+        expect(mockApplyOwnership).not.toHaveBeenCalled();
     });
 
     it('refuses when no ERP is named', async () => {

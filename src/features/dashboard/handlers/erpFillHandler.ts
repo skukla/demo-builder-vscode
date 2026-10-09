@@ -21,11 +21,8 @@ import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
 import { mergeMappings, type ErpMappingReport } from '@/features/app-builder/services/erpFillMapping';
-import {
-    fillErpForProject,
-    fillNotes,
-    type ErpFillForProjectResult,
-} from '@/features/project-creation/services/erpFillForProject';
+import { fillNotes, type ErpFillForProjectResult } from '@/features/project-creation/services/erpFillForProject';
+import { applyErpOwnership } from '@/features/project-creation/services/erpOwnershipReconcile';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerResponse, MessageHandler } from '@/types/handlers';
 
@@ -38,8 +35,12 @@ type FillOutcome = GuardableResult & {
 };
 
 /**
- * Handle 'loadErpDemoData' — fill the ERPs an integration serves from Commerce as it stands:
- * the one named by `erp` (its card), else every one (the integration, and the agent).
+ * Handle 'loadErpDemoData' — apply ownership across the ERPs an integration serves (AB-70):
+ * every ERP filled from Commerce as it stands with what it owns, what an ERP no longer owns
+ * marked discontinued there. Since 2026-10-09 a load from one ERP's card runs the same pass:
+ * ownership is one rule across the ERPs, and a load into one that left the others alone was
+ * how a first ERP kept 321 products its rule no longer gave it. The answer still names the
+ * ERP the card asked for first.
  */
 export const handleLoadErpDemoData: MessageHandler<ErpCallPayload & { progress?: 'modal' }> =
     narrateOutcomeToModal(
@@ -77,42 +78,37 @@ export const handleLoadErpDemoData: MessageHandler<ErpCallPayload & { progress?:
                         report(message),
                     );
                     if (refused) return refused;
+                    const onProgress = (step: string) => report(OPERATION_STAGES.loadingErpDemoData.label, step);
+                    const applied = await applyErpOwnership(
+                        call.project,
+                        call.id,
+                        { authManager, getAuth: async () => call.auth, onProgress },
+                        'load',
+                    );
+                    if (applied.status === 'failed') {
+                        return { success: false, error: `Loading demo data into ${erpName} did not finish: ${applied.detail}` };
+                    }
+                    const failed = applied.fills.find((fill) => fill.status === 'failed');
+                    if (failed && failed.status === 'failed') {
+                        return {
+                            success: false,
+                            error: `Loading demo data into ${failed.name} did not finish: ${failed.detail}`,
+                        };
+                    }
                     const loaded: NonNullable<FillOutcome['loaded']> = [];
                     const mappings: Array<ErpMappingReport | undefined> = [];
-                    for (const erp of erps) {
-                        const name = erp.name ?? erp.id;
-                        const onProgress = (step: string) =>
-                            report(
-                                OPERATION_STAGES.loadingErpDemoData.label,
-                                erps.length > 1 ? `${name}: ${step}` : step,
-                            );
-                        const filled = await fillErpForProject(
-                            call.project,
-                            call.id,
-                            { authManager, getAuth: async () => call.auth, onProgress },
-                            erp.id,
-                        );
-                        if (filled.status === 'failed') {
-                            return {
-                                success: false,
-                                error: `Loading demo data into ${name} did not finish: ${filled.detail}`,
-                            };
-                        }
-                        loaded.push({
-                            erp: erp.id,
-                            name,
-                            result: filled.result,
-                            ...(filled.note ? { note: filled.note } : {}),
-                        });
-                        mappings.push(filled.mapping);
+                    for (const fill of applied.fills) {
+                        if (fill.status !== 'filled') continue;
+                        loaded.push({ erp: fill.erp, name: fill.name, result: fill.result, ...(fill.note ? { note: fill.note } : {}) });
+                        mappings.push(fill.mapping);
                     }
-                    // A mapping not saved, prices not published, after a fill that stood: said,
-                    // never a failure (AB-26y, AB-26z).
-                    const warning = fillNotes(loaded);
+                    // A mapping not saved, prices not published, after a fill that stood, and what
+                    // the ownership pass says the SC still has to do: said, never a failure.
+                    const warning = [fillNotes(loaded), ...applied.notes].filter(Boolean).join(' ') || undefined;
                     const mapping = mergeMappings(mappings);
                     return {
                         success: true,
-                        loaded,
+                        loaded: payload?.erp ? [...loaded].sort((a) => (a.erp === call.erp?.id ? -1 : 0)) : loaded,
                         ...(mapping ? { mapping } : {}),
                         ...(warning ? { warning } : {}),
                     };

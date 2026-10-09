@@ -138,10 +138,10 @@ describe('fillErp', () => {
     });
 
     it('leaves out the products another ERP owns under the ownership setting, and says what this one owns', async () => {
-        // Only accessmesh is stocked anywhere in the capture, and neither captured product is it.
-        const d = deps({ default: { structure_owns: 'sources', structure_owns_sources: 'east' }, websites: {} });
+        // Neither captured product carries erp_owner, so an attribute rule owns none of them.
+        const d = deps({ default: { structure_owns: 'attribute', structure_owns_attribute: 'erp_owner=east' }, websites: {} });
         const result = await fillErp(d, 'bodea');
-        expect(result).toStrictEqual({ partners: 4, products: 0, skipped: 2, owns: 'products stocked in east', paired: 4 });
+        expect(result).toStrictEqual({ partners: 4, products: 0, skipped: 2, owns: 'products whose erp_owner is east', paired: 4 });
         // An empty catalogue still sends one products import: it stamps the ERP's last import.
         expect(d.sent[1]).toStrictEqual({ products: [] });
     });

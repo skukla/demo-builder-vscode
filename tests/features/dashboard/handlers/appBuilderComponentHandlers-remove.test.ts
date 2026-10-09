@@ -29,6 +29,7 @@
 
 import {
     handleRemoveAppBuilderComponent,
+    mockApplyErpOwnership,
     mockRemoveAppBuilderComponent,
     mockSendAppBuilderComponentsSnapshot,
     mockTestDeveloperPermissions,
@@ -241,5 +242,69 @@ describe('handleRemoveAppBuilderComponent', () => {
 
         expect(result).toEqual({ success: false, error: 'undeploy failed' });
         expect(mockSendAppBuilderComponentsSnapshot).not.toHaveBeenCalled();
+    });
+});
+
+describe('handleRemoveAppBuilderComponent — an ERP leaving a multi-ERP integration (AB-70)', () => {
+
+    /** Two ERPs on one integration; the removal mock leaves the record as it is. */
+    function twoErps() {
+        return setupMocks({
+            appBuilderComponents: {
+                'erp-integration': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    name: 'ERP Integration',
+                    systems: ['demo-erp', 'demo-erp-2'],
+                    source: { owner: 'skukla', repo: 'commerce-erp-integration' },
+                },
+                'demo-erp': { kind: 'system', status: 'deployed', name: 'Justrite ERP', usedBy: 'erp-integration', source: { owner: 'skukla', repo: 'demo-erp' } },
+                'demo-erp-2': { kind: 'system', status: 'deployed', name: 'Kukla ERP', usedBy: 'erp-integration', catalogId: 'demo-erp', source: { owner: 'skukla', repo: 'demo-erp' } },
+            },
+        });
+    }
+
+    it('applies ownership across the remaining ERPs after the removal, and says what the pass says', async () => {
+        const { mockContext, mockProject } = twoErps();
+        mockTestDeveloperPermissions(true);
+        mockApplyErpOwnership.mockResolvedValue({ status: 'applied', erps: [], fills: [], unowned: 0, notes: ['Justrite ERP owns every product again.'] });
+
+        const result = await handleRemoveAppBuilderComponent(mockContext, { id: 'demo-erp-2' });
+
+        expect(mockApplyErpOwnership).toHaveBeenCalledWith(mockProject, 'erp-integration', expect.any(Object), 'remove');
+        expect(mockApplyErpOwnership.mock.invocationCallOrder[0]).toBeGreaterThan(mockRemoveAppBuilderComponent.mock.invocationCallOrder[0]);
+        expect(result).toMatchObject({ success: true, data: { warning: 'Justrite ERP owns every product again.' } });
+    });
+
+    it('a pass that could not run is said, and the removal stands', async () => {
+        const { mockContext } = twoErps();
+        mockTestDeveloperPermissions(true);
+        mockApplyErpOwnership.mockResolvedValue({ status: 'failed', detail: 'Adobe sign-in required.' });
+
+        const result = await handleRemoveAppBuilderComponent(mockContext, { id: 'demo-erp-2' });
+
+        expect(result).toMatchObject({
+            success: true,
+            data: { warning: 'Ownership was not applied across the remaining ERPs: Adobe sign-in required. Use Load demo data on the integration.' },
+        });
+    });
+
+    it('runs no pass for a component that is not an ERP of an integration', async () => {
+        const { mockContext } = setupMocks();
+        mockTestDeveloperPermissions(true);
+
+        await handleRemoveAppBuilderComponent(mockContext, { id: 'erp-sync' });
+
+        expect(mockApplyErpOwnership).not.toHaveBeenCalled();
+    });
+
+    it('a removal that stopped runs no pass', async () => {
+        const { mockContext } = twoErps();
+        mockTestDeveloperPermissions(true);
+        mockRemoveAppBuilderComponent.mockResolvedValue({ success: false, error: 'stopped', code: ErrorCode.COMPONENT_REMOVAL_STOPPED });
+
+        await handleRemoveAppBuilderComponent(mockContext, { id: 'demo-erp-2' });
+
+        expect(mockApplyErpOwnership).not.toHaveBeenCalled();
     });
 });

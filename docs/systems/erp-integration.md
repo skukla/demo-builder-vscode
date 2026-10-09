@@ -171,34 +171,57 @@ name that no ERP in the project has, compared without case — made to end in "E
    list (`PUT erp/erps`, `erpListSync.ts`), keeping the settings each ERP already has there;
 3. saves each ERP's ownership rule onto its entry (`PATCH erp/erps`, `erpOwnershipSync.ts`):
    the new ERP's, and an existing ERP's when it still owned everything;
-4. fills it from Commerce with that ERP's own settings (`GET erp/settings?…&erp=<id>`), and
-   merges its key map rows, each carrying `erpId`, into the map the integration holds.
+4. applies ownership across every ERP (below): each filled from Commerce with its own
+   settings (`GET erp/settings?…&erp=<id>`), its key map rows, each carrying `erpId`, merged
+   into the map the integration holds, and what an ERP no longer owns marked discontinued.
 
 A list that cannot be sent, or a rule that cannot be saved, fails the add with the ERP left
 deployed; adding again with the same name finishes it (no second deploy). A fill that does not
 finish is said, and Load demo data on the ERP's card runs it again.
 
 **Which products it owns** (AB-64). The dialog asks one question, "Which products belong to
-this ERP?", with three answers, each showing how many products it would give (counted in the
+this ERP?", with two answers, each showing how many products it would give (counted in the
 dialog from one products read, by the fill's own predicate, `erpOwnership.ts` →
 `ownershipFilter`):
 
 | Choice | Saved on the ERP's entry | Owns |
 |---|---|---|
+| Carrying this attribute (the default) | `structure_owns: attribute`, `structure_owns_attribute: erp_owner=<its list id>` | a product whose attribute holds the value |
 | Sold on these websites | `structure_owns: websites`, `structure_owns_websites: <codes>` | a product sold on one of the websites (`extension_attributes.website_ids`, mapped to codes through `store/websites`) |
-| Carrying this attribute | `structure_owns: attribute`, `structure_owns_attribute: erp_owner=<its list id>` | a product whose attribute holds the value |
-| Stocked in these inventory sources | `structure_owns: sources`, `structure_owns_sources: <codes>` | a product with stock in one of the sources |
 
 The hint above the choices is the question that decides: should one order ever be split
-between ERPs? No → websites. Yes → attribute or sources. The default (`defaultOwnsRule`): with
-more than one website and at least one not yet named by another ERP's rule, "Sold on these
-websites" with the first such website ticked; otherwise the attribute. Once there are two ERPs
-each owns only what its rule says, so an existing ERP whose rule is still "all" is shown the
-rule it is given (`existingRulesToChange`: the websites left over when the new ERP is split by
-website, else its own attribute) and both are saved together. The existing ERP is not refilled
-by the add; its products change at its next Reset ERPs or Load demo data, which the dialog and
-the answer say. `add_erp` takes the same choice as `owns` and applies the same default without
-it.
+between ERPs? Yes → attribute. No → websites. The default (`defaultOwnsRule`) is the attribute
+(owner, 2026-10-09): the rule that tells the "master data decides" story and asks nothing of
+the store's structure. "Stocked in these inventory sources" was deleted the same day (AB-70):
+a product in two named sources was owned by two ERPs and nothing resolved it. Once there are
+two ERPs each owns only what its rule says, so an existing ERP whose rule is still "all" is
+shown the rule it is given (`existingRulesToChange`: the websites left over when the new ERP
+is split by website, else its own attribute) and both are saved together. `add_erp` takes the
+same choice as `owns` and applies the same default without it.
+
+**Applying ownership** (AB-70, `erpOwnershipReconcile.ts` → `applyErpOwnership`). Any change
+to who owns what is followed by one pass across every ERP the integration serves: after an
+add, after an ERP's removal, after a rule change in Settings (`set_erp_settings` with a
+`structure_owns*` value), and on every Load demo data, from the integration's card or one
+ERP's. The SC never resets by hand to make the ERPs match the rules. Per ERP, in order:
+
+1. its rule is checked against the store as it stands: a per-website rule naming a website
+   Commerce no longer has is said by name, and an ERP whose every website is gone owns
+   nothing;
+2. it is filled with every product it now owns (the fill adds and updates, never removes);
+3. the products it holds but no longer owns are marked discontinued there
+   (`PATCH products/<sku> { salesStatus: 'discontinued' }`, `erpProducts.ts`), one by one; a
+   configurable parent carries no sales status and is left, so is a product already marked.
+   A real ERP discontinues, it does not delete, and the demo ERP has no product delete for
+   that reason (its contract v17). Reset ERPs stays the only wipe.
+
+When a removal leaves ONE ERP, its rule is set back to everything before the fills, so a
+single-ERP project looks as it did before the second ERP was added; several left are told how
+many products belong to no ERP. What the SC still has to do is said in the answer's `warning`
+and on the window: "Kukla ERP owns no products yet: tag products with erp_owner=kukla in
+Commerce, then Load demo data." Tagging products stays the SC's job. Anything that did not go
+right for one ERP is its note and the pass stands; a store or an integration that could not be
+read fails the pass, never the add or the removal, which say so.
 
 **Its look.** The ERP picks its starting theme from a hash of its list id (demo-erp
 `lib/appearance.js` `themeForErpId`) and cannot see the other ERPs, so two can start alike

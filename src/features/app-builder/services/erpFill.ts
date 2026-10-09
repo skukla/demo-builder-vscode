@@ -140,15 +140,7 @@ export async function fillErp(deps: ErpFillDeps, projectName: string): Promise<E
     );
     const filter = ownershipFilter(read.settings.default);
     const websiteCodeById = new Map(read.websites.map((site) => [site.id, site.code]));
-    const owned = read.products.filter((p) =>
-        filter.owns(
-            ownedProductOf(
-                p,
-                (read.stock.get(p.sku) ?? []).map((row) => row.code),
-                websiteCodeById,
-            ),
-        ),
-    );
+    const owned = read.products.filter((p) => filter.owns(ownedProductOf(p, websiteCodeById)));
     const partners = partnersFrom(read.companies, read.websites, salesOrgByWebsite);
     const products = productsFrom(owned, read.stock, read.sourceNames, read.attributes);
 

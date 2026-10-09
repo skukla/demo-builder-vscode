@@ -28,14 +28,10 @@ const STORE: ErpOwnershipOptions = {
         { code: 'justrite', name: 'Justrite' },
         { code: 'evo', name: 'Evo' },
     ],
-    sources: [
-        { code: 'east', name: 'East DC' },
-        { code: 'west', name: 'West DC' },
-    ],
     products: [
-        { sku: 'A', websiteCodes: ['base'], sourceCodes: ['east'], attributes: {} },
-        { sku: 'B', websiteCodes: ['justrite'], sourceCodes: ['east', 'west'], attributes: { erp_owner: 'brand-b' } },
-        { sku: 'C', websiteCodes: ['justrite', 'evo'], sourceCodes: [], attributes: {} },
+        { sku: 'A', websiteCodes: ['base'], attributes: {} },
+        { sku: 'B', websiteCodes: ['justrite'], attributes: { erp_owner: 'brand-b' } },
+        { sku: 'C', websiteCodes: ['justrite', 'evo'], attributes: {} },
     ],
     erps: [{ erp: 'acme', name: 'Acme ERP', owns: { mode: 'all' } }],
     takenListIds: ['acme'],
@@ -76,7 +72,7 @@ beforeEach(() => {
 });
 
 describe('AddErpDialog — the question and its default', () => {
-    it('asks the store once, shows the hint and the three options with what each would give', async () => {
+    it('asks the store once, shows the hint and the two options with what each would give', async () => {
         mockRequest.mockResolvedValue(answers(STORE));
         await open();
         typeName('Brand B ERP');
@@ -84,35 +80,32 @@ describe('AddErpDialog — the question and its default', () => {
         expect(mockRequest).toHaveBeenCalledTimes(1);
         expect(mockRequest).toHaveBeenCalledWith('getErpOwnershipOptions', { id: 'erp-integration' });
         expect(screen.getByText(SPLIT_HINT)).toBeInTheDocument();
-        // The default: three websites, none owned yet → the first, ticked, and its count.
-        expect(radio(/^sold on these websites — 1 product$/i)).toBeChecked();
-        expect(screen.getByRole('checkbox', { name: /^Main Website \(base\) — 1 product$/ })).toBeChecked();
-        expect(screen.getByRole('checkbox', { name: /^Justrite \(justrite\) — 2 products$/ })).not.toBeChecked();
-        expect(screen.getByRole('checkbox', { name: /^Evo \(evo\) — 1 product$/ })).not.toBeChecked();
-        // The attribute is the typed name's list id, and its count is read off the products.
-        expect(radio(/^carrying this attribute: erp_owner=brand-b — 1 product$/i)).not.toBeChecked();
-        expect(radio(/^stocked in these inventory sources — 0 products$/i)).not.toBeChecked();
+        // The default is the attribute (owner, 2026-10-09): the typed name's list id, its count
+        // read off the products. The websites option waits for a tick, so it counts nothing yet.
+        expect(radio(/^carrying this attribute: erp_owner=brand-b — 1 product$/i)).toBeChecked();
+        expect(radio(/^sold on these websites — 0 products$/i)).not.toBeChecked();
+        expect(screen.queryByRole('radio', { name: /inventory sources/i })).toBeNull();
     });
 
-    it("shows the existing ERP's rule beside the new one, and the rule it is given: the websites left over", async () => {
+    it("shows the existing ERP's rule beside the new one, and the rule it is given: its own attribute", async () => {
         mockRequest.mockResolvedValue(answers(STORE));
         await open();
+        typeName('Brand B ERP');
 
         expect(screen.getByText(TWO_ERPS_NOTE)).toBeInTheDocument();
         expect(
             screen.getByText(
-                'Acme ERP: products sold on justrite, evo (now every product; its products change at its next Reset ERPs or Load demo data)',
+                'Acme ERP: products whose erp_owner is acme (now every product; its products are re-sorted as the ERP is added)',
             ),
         ).toBeInTheDocument();
     });
 
-    it('with one website the default is the attribute, and the existing ERP is given its own', async () => {
-        mockRequest.mockResolvedValue(answers({ ...STORE, websites: [STORE.websites[0]] }));
+    it('the default is the attribute, and the existing ERP is given its own', async () => {
+        mockRequest.mockResolvedValue(answers(STORE));
         const { onAdd } = await open();
         typeName('Brand B ERP');
 
         expect(radio(/^carrying this attribute: erp_owner=brand-b/i)).toBeChecked();
-        expect(screen.getByText(/^Acme ERP: products whose erp_owner is acme \(now every product/)).toBeInTheDocument();
         fireEvent.click(addButton());
 
         expect(onAdd).toHaveBeenCalledWith(
@@ -122,15 +115,16 @@ describe('AddErpDialog — the question and its default', () => {
         );
     });
 
-    it('an existing ERP with a rule of its own is shown as it is, and the default skips its websites', async () => {
+    it('an existing ERP with a rule of its own is shown as it is, and websites it owns are not handed out', async () => {
         mockRequest.mockResolvedValue(
             answers({ ...STORE, erps: [{ erp: 'acme', name: 'Acme ERP', owns: { mode: 'websites', websites: ['base'] } }] }),
         );
         const { onAdd } = await open();
         typeName('Brand B ERP');
 
-        expect(screen.getByRole('checkbox', { name: /^Justrite/ })).toBeChecked();
         expect(screen.getByText('Acme ERP: products sold on base')).toBeInTheDocument();
+        fireEvent.click(radio(/^sold on these websites/i));
+        fireEvent.click(screen.getByRole('checkbox', { name: /^Justrite/ }));
         fireEvent.click(addButton());
 
         expect(onAdd).toHaveBeenCalledWith('Brand B ERP', { mode: 'websites', websites: ['justrite'] }, []);
@@ -143,8 +137,9 @@ describe('AddErpDialog — choosing', () => {
         const { onAdd } = await open();
         typeName('Brand B ERP');
 
+        fireEvent.click(radio(/^sold on these websites/i));
+        expect(addDisabled()).toBe(true);
         fireEvent.click(screen.getByRole('checkbox', { name: /^Justrite/ }));
-        fireEvent.click(screen.getByRole('checkbox', { name: /^Main Website/ }));
         expect(radio(/^sold on these websites — 2 products$/i)).toBeChecked();
         fireEvent.click(addButton());
 
@@ -152,25 +147,6 @@ describe('AddErpDialog — choosing', () => {
             'Brand B ERP',
             { mode: 'websites', websites: ['justrite'] },
             [{ erp: 'acme', owns: { mode: 'websites', websites: ['base', 'evo'] } }],
-        );
-    });
-
-    it('sources: Add waits for a tick, then hands the sources ticked', async () => {
-        mockRequest.mockResolvedValue(answers(STORE));
-        const { onAdd } = await open();
-        typeName('Brand B ERP');
-
-        fireEvent.click(radio(/^stocked in these inventory sources/i));
-        expect(addDisabled()).toBe(true);
-        const west = screen.getByRole('checkbox', { name: /^West DC \(west\) — 1 product$/ });
-        fireEvent.click(west);
-        expect(addDisabled()).toBe(false);
-        fireEvent.click(addButton());
-
-        expect(onAdd).toHaveBeenCalledWith(
-            'Brand B ERP',
-            { mode: 'sources', sources: ['west'] },
-            [{ erp: 'acme', owns: { mode: 'attribute', attribute: 'erp_owner=acme' } }],
         );
     });
 

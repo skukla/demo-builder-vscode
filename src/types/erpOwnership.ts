@@ -2,7 +2,11 @@
  * Which products an ERP owns, as the "Add another ERP" dialog, the `addErp` handler, the
  * `add_erp` tool and the ERP integration all say it (AB-64). The integration keeps it on the
  * ERP's list entry as `structure_owns` plus the one key its mode reads
- * (`structure_owns_websites`, `structure_owns_attribute`, `structure_owns_sources`).
+ * (`structure_owns_websites`, `structure_owns_attribute`).
+ *
+ * The "by inventory source" mode was deleted on 2026-10-09 (owner, AB-70): a product stocked
+ * in two named sources was owned by two ERPs and nothing resolved it, and per website tells
+ * every story it could.
  *
  * Shared between the extension and the webviews, so it imports nothing.
  *
@@ -10,15 +14,13 @@
  */
 
 /** The ways an ERP can own products (the integration's `structure_owns`). */
-export type ErpOwnsMode = 'all' | 'websites' | 'attribute' | 'sources';
+export type ErpOwnsMode = 'all' | 'websites' | 'attribute';
 
 /** One ERP's ownership rule: the mode and the one list or attribute it reads. */
 export interface ErpOwnsRule {
     mode: ErpOwnsMode;
     /** Commerce website codes, for `websites`. */
     websites?: string[];
-    /** Inventory source codes, for `sources`. */
-    sources?: string[];
     /** `code=value`, for `attribute`, e.g. `erp_owner=accuform`. */
     attribute?: string;
 }
@@ -34,15 +36,13 @@ export interface ErpOwnsEntry {
 export interface ErpOwnedProductRow {
     sku: string;
     websiteCodes: string[];
-    sourceCodes: string[];
     /** The attributes any ERP's rule names (`erp_owner` always), by code. */
     attributes: Record<string, string>;
 }
 
-/** What the dialog needs before an add: the store's websites and sources, its products, and each ERP's rule. */
+/** What the dialog needs before an add: the store's websites, its products, and each ERP's rule. */
 export interface ErpOwnershipOptions {
     websites: Array<{ code: string; name: string }>;
-    sources: Array<{ code: string; name: string }>;
     products: ErpOwnedProductRow[];
     /** The ERPs the integration serves now, with the rule each holds. */
     erps: Array<ErpOwnsEntry & { name: string }>;

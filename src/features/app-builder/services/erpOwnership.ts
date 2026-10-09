@@ -14,11 +14,8 @@
 import { codesOf, ownershipFilter, type ErpSettings } from './erpFillRows';
 import type { ErpOwnedProductRow, ErpOwnsEntry, ErpOwnsRule } from '@/types/erpOwnership';
 
-/** The `erp/erps` setting each list mode reads. */
-const LIST_KEY = {
-    websites: 'structure_owns_websites',
-    sources: 'structure_owns_sources',
-} as const;
+/** The `erp/erps` setting the websites mode reads. */
+const WEBSITES_KEY = 'structure_owns_websites';
 
 const ATTRIBUTE_KEY = 'structure_owns_attribute';
 const MODE_KEY = 'structure_owns';
@@ -31,9 +28,7 @@ const OWNER_ATTRIBUTE = 'erp_owner';
 export function ownsSettingsOf(rule: ErpOwnsRule): Record<string, string> {
     switch (rule.mode) {
         case 'websites':
-            return { [MODE_KEY]: 'websites', [LIST_KEY.websites]: (rule.websites ?? []).join(',') };
-        case 'sources':
-            return { [MODE_KEY]: 'sources', [LIST_KEY.sources]: (rule.sources ?? []).join(',') };
+            return { [MODE_KEY]: 'websites', [WEBSITES_KEY]: (rule.websites ?? []).join(',') };
         case 'attribute':
             return { [MODE_KEY]: 'attribute', [ATTRIBUTE_KEY]: rule.attribute ?? '' };
         default:
@@ -44,8 +39,7 @@ export function ownsSettingsOf(rule: ErpOwnsRule): Record<string, string> {
 /** The rule an ERP holds, read off its resolved settings; an unset mode is "all". */
 export function ownsRuleOf(settings: ErpSettings | undefined): ErpOwnsRule {
     const mode = settings?.[MODE_KEY];
-    if (mode === 'websites') return { mode, websites: codesOf(settings?.[LIST_KEY.websites]) };
-    if (mode === 'sources') return { mode, sources: codesOf(settings?.[LIST_KEY.sources]) };
+    if (mode === 'websites') return { mode, websites: codesOf(settings?.[WEBSITES_KEY]) };
     if (mode === 'attribute') return { mode, attribute: String(settings?.[ATTRIBUTE_KEY] ?? '') };
     return { mode: 'all' };
 }
@@ -55,16 +49,21 @@ function settingsOf(rule: ErpOwnsRule): ErpSettings {
     return ownsSettingsOf(rule);
 }
 
+/** The SKUs the rule owns among these products, by the fill's own predicate. */
+export function ownedSkus(products: readonly ErpOwnedProductRow[], rule: ErpOwnsRule): Set<string> {
+    const filter = ownershipFilter(settingsOf(rule));
+    return new Set(
+        products
+            .filter((product) =>
+                filter.owns({ websiteCodes: product.websiteCodes, customAttributes: product.attributes }),
+            )
+            .map((product) => product.sku),
+    );
+}
+
 /** How many of these products the rule owns, by the fill's own predicate. */
 export function countOwned(products: readonly ErpOwnedProductRow[], rule: ErpOwnsRule): number {
-    const filter = ownershipFilter(settingsOf(rule));
-    return products.filter((product) =>
-        filter.owns({
-            websiteCodes: product.websiteCodes,
-            sourceCodes: product.sourceCodes,
-            customAttributes: product.attributes,
-        }),
-    ).length;
+    return ownedSkus(products, rule).size;
 }
 
 /** The rule in the fill's words ("products sold on justrite"). */
@@ -73,7 +72,7 @@ export function describeOwns(rule: ErpOwnsRule): string {
 }
 
 /** The attribute rule for an ERP: `erp_owner=<its list id>`. */
-function ownerAttributeFor(listId: string): ErpOwnsRule {
+export function ownerAttributeFor(listId: string): ErpOwnsRule {
     return { mode: 'attribute', attribute: `${OWNER_ATTRIBUTE}=${listId}` };
 }
 
@@ -89,19 +88,13 @@ export interface OwnsDefaultInput {
 }
 
 /**
- * The rule the dialog offers before the SC changes anything (owner, 2026-10-02):
- *
- * - Commerce has MORE THAN ONE website, and at least one of them is not yet named by another
- *   ERP's rule → "Sold on these websites", with the first such website ticked;
- * - otherwise → "Carrying this attribute", `erp_owner=<the new ERP's list id>`.
- *
- * An existing ERP that still owns everything names no website, so its websites are free to
- * offer: `existingRulesToChange` gives it what is left.
+ * The rule the dialog offers before the SC changes anything: "Carrying this attribute",
+ * `erp_owner=<the new ERP's list id>` (owner, 2026-10-09, AB-70). Until then the default
+ * was the first website nobody owned, when the store had several; the owner chose the
+ * attribute, the rule that tells the "master data decides" story and the only one that asks
+ * nothing of the store's structure. Per website stays a choice in the picker.
  */
-export function defaultOwnsRule(input: OwnsDefaultInput & { listId: string }): ErpOwnsRule {
-    const owned = websitesOwnedBy(input.erps);
-    const free = input.websites.find((site) => !owned.has(site.code));
-    if (input.websites.length > 1 && free) return { mode: 'websites', websites: [free.code] };
+export function defaultOwnsRule(input: { listId: string }): ErpOwnsRule {
     return ownerAttributeFor(input.listId);
 }
 
@@ -133,7 +126,6 @@ export function existingRulesToChange(
 /** Why a rule cannot be saved yet, or undefined when it can. */
 export function ownsProblem(rule: ErpOwnsRule): string | undefined {
     if (rule.mode === 'websites' && !(rule.websites ?? []).length) return 'Tick at least one website.';
-    if (rule.mode === 'sources' && !(rule.sources ?? []).length) return 'Tick at least one inventory source.';
     if (rule.mode === 'attribute' && !/^[^=\s]+=\S+$/u.test(rule.attribute ?? '')) {
         return 'The attribute is code=value, e.g. erp_owner=acme.';
     }

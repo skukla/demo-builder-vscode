@@ -59,7 +59,7 @@ function integration(settingsByErp: Record<string, Record<string, string>>) {
 }
 
 describe('readErpOwnershipOptions', () => {
-    it("answers the store's websites and sources, each product's codes, and each ERP's rule", async () => {
+    it("answers the store's websites, each product's codes, and each ERP's rule", async () => {
         const { client } = integration({
             acme: { structure_owns: 'websites', structure_owns_websites: 'base' },
             'brand-b': {},
@@ -75,11 +75,10 @@ describe('readErpOwnershipOptions', () => {
             { code: 'bodea', name: 'Bodea Website' },
             { code: 'evo', name: 'Evo' },
         ]);
-        expect(options.sources.map((s) => s.code)).toContain('default');
-        // Both captured products are on website 2 (citisignal) and stocked nowhere in the capture.
+        // Both captured products are on website 2 (citisignal).
         expect(options.products).toStrictEqual([
-            { sku: 'essentials-plan', websiteCodes: ['citisignal'], sourceCodes: [], attributes: {} },
-            { sku: 'DigiWristQuantum', websiteCodes: ['citisignal'], sourceCodes: [], attributes: {} },
+            { sku: 'essentials-plan', websiteCodes: ['citisignal'], attributes: {} },
+            { sku: 'DigiWristQuantum', websiteCodes: ['citisignal'], attributes: {} },
         ]);
         expect(options.erps).toStrictEqual([
             { erp: 'acme', name: 'Acme ERP', owns: { mode: 'websites', websites: ['base'] } },

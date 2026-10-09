@@ -39,12 +39,10 @@ export interface CommerceProductRow {
  */
 export function ownedProductOf(
     product: Pick<CommerceProductRow, 'websiteIds' | 'customAttributes'>,
-    sourceCodes: string[],
     websiteCodeById: ReadonlyMap<number, string>,
 ): Required<OwnedProduct> {
     return {
         customAttributes: product.customAttributes,
-        sourceCodes,
         websiteCodes: product.websiteIds.flatMap((id) => {
             const code = websiteCodeById.get(id);
             return code ? [code] : [];
@@ -170,7 +168,6 @@ export function salesOrgOf(settings: ErpSettings | undefined): {
 
 /** What the ownership filter looks at on a product. */
 export interface OwnedProduct {
-    sourceCodes?: string[];
     /** The codes of the websites the product is sold on (AB-64). */
     websiteCodes?: string[];
     customAttributes?: Record<string, unknown>;
@@ -197,8 +194,8 @@ function attributeOf(text: unknown): { code: string; value: string } | null {
 
 /**
  * Which products belong to this ERP (the integration's rule M3): every product, those sold
- * on the named websites (AB-64), those stocked in the named sources, or those whose
- * attribute names this ERP. A mode whose setting is blank owns nothing, and says so.
+ * on the named websites (AB-64), or those whose attribute names this ERP. A mode whose
+ * setting is blank owns nothing, and says so. The sources mode was deleted (AB-70).
  */
 export function ownershipFilter(settings: ErpSettings | undefined): OwnershipFilter {
     const mode = settings?.structure_owns;
@@ -209,15 +206,6 @@ export function ownershipFilter(settings: ErpSettings | undefined): OwnershipFil
             mode,
             describe: `products sold on ${named}`,
             owns: (product) => (product.websiteCodes ?? []).some((code) => codes.has(code)),
-        };
-    }
-    if (mode === 'sources') {
-        const codes = new Set(codesOf(settings?.structure_owns_sources));
-        const named = codes.size ? [...codes].join(', ') : 'no source (the setting is blank)';
-        return {
-            mode,
-            describe: `products stocked in ${named}`,
-            owns: (product) => (product.sourceCodes ?? []).some((code) => codes.has(code)),
         };
     }
     if (mode === 'attribute') {

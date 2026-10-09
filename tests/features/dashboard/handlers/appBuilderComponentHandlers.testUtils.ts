@@ -36,9 +36,16 @@ export const mockBuildRunnerDepsContext = jest.fn(async () => ({
     getCachedOrganization: () => undefined,
     secrets: { _secrets: true },
 }));
+export const mockResolveAppManagementAuth = jest.fn();
 jest.mock('@/features/project-creation/services/appBuilderComponentRunnerDeps', () => ({
     buildDefaultRunnerDeps: (...a: unknown[]) => mockBuildDefaultRunnerDeps(...(a as [])),
     buildRunnerDepsContext: (...a: unknown[]) => mockBuildRunnerDepsContext(...(a as [])),
+    resolveAppManagementAuth: (...a: unknown[]) => mockResolveAppManagementAuth(...a),
+}));
+// The ownership pass an ERP's removal runs (AB-70): its own suite's; here what it is handed.
+export const mockApplyErpOwnership = jest.fn();
+jest.mock('@/features/project-creation/services/erpOwnershipReconcile', () => ({
+    applyErpOwnership: (...a: unknown[]) => mockApplyErpOwnership(...a),
 }));
 
 // ---- catalog loader --------------------------------------------------------
