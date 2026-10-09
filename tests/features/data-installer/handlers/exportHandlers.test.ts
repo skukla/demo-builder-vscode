@@ -256,6 +256,20 @@ describe('start-datapack-export', () => {
         expect(harness.logger.warn).not.toHaveBeenCalled();
     });
 
+    /** A failure with no per-type entry would otherwise leave no trace at all. */
+    it('warns when a failed export names no data type, and not when a success names none', async () => {
+        startExport.mockResolvedValue({ success: false, perType: [] });
+        const failed = makeImportHarness();
+        await importHandlers['start-datapack-export'](failed, PAYLOAD);
+
+        startExport.mockResolvedValue({ success: true, perType: [] });
+        const succeeded = makeImportHarness();
+        await importHandlers['start-datapack-export'](succeeded, PAYLOAD);
+
+        expect(failed.logger.warn).toHaveBeenCalledTimes(1);
+        expect(succeeded.logger.warn).not.toHaveBeenCalled();
+    });
+
     it('refuses when the project has no usable Commerce credentials', async () => {
         mockedCredentials.mockResolvedValue({ ok: false, reason: 'needs-accs-credentials' });
 

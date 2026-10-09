@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "PL-69 sitting 10, 2026-10-09 (App Builder). Two rows re-measured against the committed file first and then against the change. appManagementInstaller.ts: row 95.87 was stale DOWNWARD (committed file 95.63: followAfterTimeout from 2026-09-30 landed after the row, and its still-running hand-back was never reached, a behavioural survivor on the failed check, two optional-chain survivors and two uncovered strings). Now 98.57 (205 killed, 2 survived, 1 uncovered), openGaps 0: a new case in appManagementInstaller-edges pins the still-running hand-back, its progress line and the full poll; another pins the install's no-sign-in refusal word for word and that no client is built. The opening both calls shared (#36: Commerce target, appData, sign-in) is now prepareAppManagementCall in this file, with its own suite (appManagementInstaller-prepareCall, 5 cases), so its mutants are counted here. The two survivors left are the hands-back constant (every suite imports it) and the install-failed log line. appManagementUninstaller.ts: 95.88 reproduced on the committed file, now 95.51 and NOT a gap: the same three string survivors and one uncovered string, and 8 killed mutants moved out with the opening to the installer's prepareAppManagementCall; the uninstall verb it passes is pinned by one new case.",
+    "_note": "PL-69 sitting 11 (pair 25): the access, project and credential gate both datapack writes opened with moved to datapackWriteGate.ts (new row, 100%, 44 killed). Both old rows were stale downward against their committed files (exportHandlers 92.37 recorded, 85.61 measured: the 2026-09-13 failed-export log branch had no test; importHandlers 90.45 recorded, 89.17 measured). exportHandlers 85.61 -> 87.27: the failed-export-with-no-type branch is pinned by one new case, branch/block survivors 2 -> 0, uncovered 5 -> 3 (log strings). importHandlers 89.17 -> 89.06 is arithmetic, not a gap: the same survivors minus two moved credential strings, 26 killed mutants moved out to the gate.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -4611,28 +4611,28 @@
             "openGaps": 0
         },
         "src/features/data-installer/handlers/exportHandlers.ts": {
-            "score": 92.37,
-            "killed": 109,
-            "survived": 8,
-            "noCoverage": 1,
+            "score": 87.27,
+            "killed": 96,
+            "survived": 11,
+            "noCoverage": 3,
             "timeout": 0,
             "survivorCategories": {
-                "string": 4,
-                "optionalChain": 3,
-                "logPresentation": 1
+                "string": 2,
+                "logPresentation": 6,
+                "optionalChain": 3
             },
             "uncoveredCategories": {
-                "logPresentation": 1
+                "logPresentation": 3
             },
             "highValueSurvivors": 0,
             "equivalent": 3,
             "openGaps": 0
         },
         "src/features/data-installer/handlers/importHandlers.ts": {
-            "score": 90.45,
-            "killed": 142,
+            "score": 89.06,
+            "killed": 114,
             "survived": 13,
-            "noCoverage": 2,
+            "noCoverage": 1,
             "timeout": 0,
             "survivorCategories": {
                 "string": 6,
@@ -4641,7 +4641,6 @@
                 "other": 1
             },
             "uncoveredCategories": {
-                "string": 1,
                 "other": 1
             },
             "highValueSurvivors": 0,
@@ -10748,6 +10747,18 @@
         "src/features/project-creation/services/componentDefinitionEntry.ts": {
             "score": 100,
             "killed": 5,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/data-installer/handlers/datapackWriteGate.ts": {
+            "score": 100,
+            "killed": 44,
             "survived": 0,
             "noCoverage": 0,
             "timeout": 0,

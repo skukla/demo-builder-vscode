@@ -16,14 +16,12 @@
  * **Credentials are checked before anything is sent.** A missing pair is a
  * reason, not a failed request.
  *
- * Reuses `resolveDataInstallerAccess` for the config/auth half rather than
- * repeating it, so a new write handler cannot skip a check.
+ * Opens through `resolveDatapackWriteAccess` (config/auth, project, credentials),
+ * the gate the export handlers share, so a new write handler cannot skip a check.
  *
  * @module features/data-installer/handlers/importHandlers
  */
 
-import { canProvisionAccsCredentials } from '../services/accsProvisionEligibility';
-import { resolveProjectCredentials } from '../services/commerceCredentialBroker';
 import {
     DataInstallerWriteClient,
     type ImportRequest,
@@ -31,7 +29,7 @@ import {
 } from '../services/dataInstallerWriteClient';
 import { resolveInstallTarget } from '../services/sampleDataInstall';
 import type { ImportJobRecord } from '../types';
-import { resolveDataInstallerAccess } from './dataInstallerHandlers';
+import { resolveDatapackWriteAccess } from './datapackWriteGate';
 import { exportHandlers } from './exportHandlers';
 import { JOB_KEY, runAndWatch } from './importJobWatch';
 import { importTargetHandlers } from './importTargetHandlers';
@@ -41,26 +39,6 @@ import { handleBackgroundOperation } from '@/core/vscode/operationProgress';
 import { handleAnswerOperationPrompt } from '@/core/vscode/operationPrompt';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
-
-/** Wording for each credential gap. The service module returns reasons only. */
-const CREDENTIAL_MESSAGES: Record<string, string> = {
-    'missing-paas-admin':
-        'This project has no Commerce admin username and password saved, so an import cannot authenticate.',
-    // "Add them" was the whole story when the user was the only source. There
-    // are now two, and on a project with no Adobe workspace the OTHER one
-    // failing is the likelier cause — so the message says both what did not
-    // happen and the two ways forward. The service is never named: this repo is
-    // public and the string ships in the VSIX.
-    'needs-accs-credentials':
-        'ACCS imports need an Adobe OAuth Server-to-Server client id and secret, and the shared credential service did not supply one. Add the pair to this project, or ask an administrator for access to the shared credential.',
-    'unsupported-backend':
-        'This project has no Adobe Commerce backend, so there is nothing to import into.',
-    // Distinct from the gap above because the remedy is: the extension has no
-    // shared credential service to fall back on, and that is a setting the user
-    // can add. Naming the setting is safe; naming its value would not be.
-    'no-credential-service':
-        'ACCS imports need an Adobe OAuth Server-to-Server client id and secret, and no shared credential service is configured to supply one. Add a service under demoBuilder.accsDiscovery.services, or add the pair to this project.',
-};
 
 /** Payload for a start request. */
 interface StartImportPayload {
@@ -221,41 +199,15 @@ async function prepareImport(
         return { response: { success: false, error: input.error } };
     }
 
-    const access = await resolveDataInstallerAccess(context);
-    if (!access.ok) {
-        return { response: access.response };
-    }
-
-    const project = await context.stateManager.getCurrentProject();
-    if (!project) {
-        return { response: { success: false, error: 'Open a project before importing a datapack.' } };
-    }
-
-    const credentials = await resolveProjectCredentials(context, project);
-    if (!credentials.ok) {
-        return {
-            response: {
-                success: false,
-                error: CREDENTIAL_MESSAGES[credentials.reason] ?? 'Commerce credentials are missing.',
-                code: ErrorCode.INVALID_OPERATION,
-                // The UI offers console-free provisioning on exactly this gap —
-                // matching a message string would be the brittle version of
-                // this. The Adobe-binding half is what makes the offer
-                // honourable: without a workspace the button has nowhere to
-                // create the pair and can only refuse a second time.
-                data: {
-                    needsAccsCredentials:
-                        credentials.reason === 'needs-accs-credentials' &&
-                        canProvisionAccsCredentials(project.adobe),
-                },
-            },
-        };
+    const gate = await resolveDatapackWriteAccess(context, 'import');
+    if ('response' in gate) {
+        return gate;
     }
 
     return {
         writeClient: new DataInstallerWriteClient({
-            baseUrl: access.baseUrl,
-            getToken: access.getToken,
+            baseUrl: gate.baseUrl,
+            getToken: gate.getToken,
             // One line per service call in Debug Logs. The first live dry run
             // refused with an EMPTY channel — undebuggable for the user and us.
             log: (line) => context.debugLogger.debug(`[Data Installer] ${line}`),
@@ -275,8 +227,8 @@ async function prepareImport(
             // Half a pair never reaches here — `readTarget` refuses it — so this
             // cannot complete a partial specification into something the caller
             // did not ask for.
-            target: input.target ?? resolveInstallTarget(project) ?? undefined,
-            credentials: credentials.credentials,
+            target: input.target ?? resolveInstallTarget(gate.project) ?? undefined,
+            credentials: gate.credentials,
         },
     };
 }

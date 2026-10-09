@@ -4,7 +4,7 @@ kind: chore
 area: platform
 needs: []
 value: med
-status: active
+status: built
 ---
 
 # Every clone pair gets a verdict, and the 34 that are the same job get extracted
@@ -48,7 +48,7 @@ excluded by the scan's ignore flag and are not among the 40.
 | 22 | lifecycle/services/projectResetService.ts:200-216 | project-creation/handlers/executorComponentLoading.ts:154-170 | stamp type, install options | DONE 2026-10-09 (sitting 9) | identical tail; now `toComponentDefinitionEntry(definition, type)` in `project-creation/services/componentDefinitionEntry.ts` (own suite), beside the type it builds; not in the orchestrator, whose importers' suites mock it with two functions |
 | 23 | eds/services/errorFormatters.ts:474-485 | same file:283-294 | match error by code | DONE 2026-10-09 (EDS-8 errorFormatters cut, `f9980a19c`) | three tables share the lookup; `formatByPatterns(error, table)` |
 | 24 | errorFormatters.ts:485-502 | same file:294-311 | match error by regex | DONE 2026-10-09 (EDS-8 errorFormatters cut, `f9980a19c`) | same as 23 |
-| 25 | data-installer/handlers/exportHandlers.ts:191-200 | data-installer/handlers/importHandlers.ts:437-447 | access, project, credentials | EXTRACT | the whole gate repeats; `resolveWriteGate(context, verb)`; after the EDS-8 data-installer sitting lands |
+| 25 | data-installer/handlers/exportHandlers.ts:191-200 | data-installer/handlers/importHandlers.ts:437-447 | access, project, credentials | DONE 2026-10-09 (sitting 11) | the whole gate repeated; now `resolveDatapackWriteAccess(context, write)` in `data-installer/handlers/datapackWriteGate.ts` (own suite), copy verbatim per write; the payload checks stay in each caller |
 | 26 | dashboard/handlers/consoleApiHandlers.ts:366-380 | same file:319-333 | validate, project, guards | DONE 2026-10-09 (sitting 8) | `loadProjectAndGuard(context)` opens add and set; list keeps its own opening because its no-org refusal sits between the load and the guards |
 | 27 | dashboard/commands/showIntegrations.ts:194-205 | projects-dashboard/commands/showProjectsList.ts:208-219 | createHandlerContext | DONE 2026-10-09 (sitting 3, `dd6b02b7b`) | identical wrapper over `createPanelHandlerContext` |
 | 28 | dashboard/commands/showDashboard.ts:383-409 | showProjectsList.ts:197-219 | createHandlerContext | DONE 2026-10-09 (sitting 3, `dd6b02b7b`) | same |
@@ -63,7 +63,7 @@ excluded by the scan's ignore flag and are not among the 40.
 | 37 | core/utils/progressUnifier/timedProgress.ts:169-179 | same file:66-76 | "Complete" progress payload | DONE 2026-10-09 (sitting 1, `92a661187`) | same determinate payload, detail text differs |
 | 38 | progressUnifier/exactProgress.ts:71-86 | progressUnifier/timedProgress.ts:137-152 | determinate progress payload | DONE 2026-10-09 (sitting 1, `92a661187`) | same shape |
 | 39 | exactProgress.ts:118-138 | same file:67-152 | percent output parser | DONE 2026-10-09 (sitting 1, `92a661187`) | 37 to 39 take one helper, `determinateProgress(context, percent, detail)` |
-| 40 | core/communication/webviewCommunicationManager.ts:341-361 | core/ui/utils/WebviewClient.ts:103-123 | settle pending response | TWO COPIES | the two ends of one wire protocol in two runtimes; a shared module would cross ADR-015 and ADR-017 for ten lines |
+| 40 | core/communication/webviewCommunicationManager.ts:341-361 | core/ui/utils/WebviewClient.ts:103-123 | settle pending response | TWO COPIES | the two ends of one wire protocol in two runtimes; a shared module would cross ADR-015 and ADR-017 for ten lines; re-read in sitting 11 and its verdict written into the ledger's `_verdicts` |
 
 ## Sittings (worst first; re-run the scan after each, jscpd shifts when code moves)
 
@@ -79,7 +79,7 @@ excluded by the scan's ignore flag and are not among the 40.
 | 8. Small handlers (updates, console API, component payload) | 14, 26, 32 | 10 (landed at 9: sitting 7 had already reached 12) |
 | 9. Cross-feature | 18, 22 | 8 (landed at 7: sitting 8 had already reached 9) |
 | 10. App Builder | 36 | 7 (landed at 6: sitting 9 had already reached 7) |
-| 11. Data installer (after the EDS-8 sitting on those files) | 25 | 6 |
+| 11. Data installer (after the EDS-8 sitting on those files) | 25 | 6 (landed at 5: sitting 10 had already reached 6) |
 
 The floor of 6 is the 5 TWO COPIES plus the 1 VARIANT, each with its reason above. Each
 sitting: re-read the pairs it covers (the table is a lead), extract, run the touched
@@ -437,6 +437,50 @@ uncovered string; 8 killed mutants moved out with the opening, and the `'uninsta
 it passes is pinned by one new case. No equivalents-ledger entries name either file, so
 nothing needed re-anchoring.
 
+**Sitting 11 (pair 25) DONE 2026-10-09.** Precondition checked first: the EDS-8 sitting on
+these files had landed (`c5464410f`, importHandlers 781 -> 341 lines, exportHandlers 252),
+so both are under the 500-line handler limit. Re-scanned: 6 clones, the data-installer
+fragment at `exportHandlers.ts:191-200` and `importHandlers.ts:221-231`. The pair was real:
+
+- **25** (`exportHandlers.ts`, `importHandlers.ts`): `prepareExport` and `prepareImport`
+  opened the same way after their payload checks: resolve Data Installer access, read the
+  open project, resolve its Commerce credentials, and on a credential gap answer the
+  per-gap wording with `INVALID_OPERATION` and the `needsAccsCredentials` offer flag. Each
+  file also carried its own copy of the four-gap wording table. Only the verb differed
+  ("an import cannot authenticate" / "an export cannot authenticate", "nothing to import
+  into" / "nothing to export from"). Now `resolveDatapackWriteAccess(context, write)` in
+  `data-installer/handlers/datapackWriteGate.ts`, which answers the base URL, token getter,
+  project and credentials, or the refusal. The copy is kept verbatim per write, on the
+  `consoleCreateGate` model, so a grep for a message still finds it. The payload checks
+  stay in each caller because they differ on purpose: an import reads a target scope, an
+  export reads selections.
+
+Proof: the 29 pre-existing suites that touch the two files (`--findRelatedTests` on both,
+plus every suite naming either) ran unchanged before and after: 610 tests both times. With
+the new cases: 30 suites, 625 tests (14 in the new `datapackWriteGate.test.ts`, which
+asserts what each collaborator is handed and that a non-ACCS gap never asks whether
+provisioning could help; 1 in `exportHandlers.test.ts`). cloneCeiling 6 -> 5.
+
+Found by the re-measure, fixed here: the exportHandlers row (92.37) predated the
+2026-09-13 change that logs a failed export as a failure, and the committed file measured
+85.61, with two branch survivors and two uncovered mutants on one untested case: a failed
+export that names no data type. One new case pins it (a warning when it fails, none when a
+success names no type).
+
+Mutation: two rows re-measured against the committed file first; both were stale
+downward. exportHandlers 85.61 -> 87.27 (branch/block survivors 2 -> 0, uncovered 5 -> 3,
+all log strings). importHandlers 89.17 (stale row 90.45) -> 89.06 and NOT a gap: the same
+survivors minus the two credential strings that moved, with 26 killed mutants moved out to
+the gate. datapackWriteGate 100 (44 killed, 0 survived), new row. The equivalents-ledger
+entries for both files anchor on payload reads that did not move, so none needed
+re-anchoring. Three user-facing-errors ledger keys moved with their lines (exportHandlers
+82 -> 68 and 114 -> 100, importHandlers 155 -> 133).
+
+Pair 40 had a verdict in this table but none in the ledger's `_verdicts`. It was re-read
+here: the same ten lines settle a pending request on both ends of the webview message
+channel, one in the extension host and one in the webview bundle. The TWO COPIES verdict
+stands and is now written into the ledger.
+
 ## Below the scan's threshold, found by reading (2026-10-08)
 
 The same five-line `ensureSDKReady` method is copied into four authentication files:
@@ -461,6 +505,26 @@ still count in the pin (28) and carry a "clears on merge" verdict in
 `scripts/source-duplication.ledger.json`. **When that branch merges into this one:**
 re-run the scan, resolve any conflict in `helixPageContent.ts` and `helixBulkPublish.ts`
 in favour of the EDS-34 version, and lower the pin. That also turns the floor of 6 into 3.
+
+## Where PL-69 ends
+
+It started at **40 clone pairs** (2026-10-08). It ends at **5** on this branch.
+
+| Pair(s) | What it is | Verdict |
+|---|---|---|
+| 1, 2 | `helixPageContent.ts`: preview and publish of one page | Decided by the owner (publish handles a refused session like preview). Fixed and extracted under EDS-34 on fix/copy-second-integration (`e3dd47a54`). Counted here until that branch merges into this one |
+| 3 | `helixBulkPublish.ts`: bulk preview and bulk publish | Same decision and the same commit as 1 and 2 |
+| 21 | `checkHandler.ts` and `continueHandler.ts`: the status payload each pass builds | TWO COPIES: `message`, `canInstall` and `plugins` already differ in substance |
+| 40 | `webviewCommunicationManager.ts` and `WebviewClient.ts`: settling a pending request | TWO COPIES: the two ends of one wire protocol in two runtimes, kept apart by ADR-015 and ADR-017 |
+
+Each of the five carries its verdict in `scripts/source-duplication.ledger.json`
+`_verdicts`. Of the other 35, 34 were extracted and 1 (pair 8) was deleted with its code
+in an EDS-8 cut. When fix/copy-second-integration merges here, re-run the scan, keep the
+EDS-34 side of `helixPageContent.ts` and `helixBulkPublish.ts`, and lower the pin to 2.
+That is the floor: the two pairs that are TWO COPIES.
+
+Every pair has a verdict, so the item is set to `built`. The merge step above is the one
+thing left, and it belongs to that merge, not to a sitting.
 
 ## Shipped so far
 
@@ -502,3 +566,4 @@ in favour of the EDS-34 version, and lower the pin. That also turns the floor of
 - 2026-10-09  For the owner (sitting 10): `appManagementInstaller.ts` is at 399 lines, one under the 400-line service limit that `god-file-ratchet` counts. The next addition will trip it. Recommendation: when it next grows, move `deriveCommerceTarget` and `prepareAppManagementCall` into their own module. That move changes the import line of the pre-existing `appManagementInstaller-edges` suite, which imports `deriveCommerceTarget` from the installer. This sitting's proof needed that suite unchanged, so it did not make the move.
 - 2026-10-09  For the owner (sitting 10): a third row was stale downward (the installer, 95.87 recorded, 95.63 measured; the 2026-09-30 timeout follow-up landed after the row). Same cause as sitting 9's two; the recommendation there (have the sweep re-measure a row whose module changed since it was recorded) still stands.
 - 2026-10-09  refactor(app-builder): one opening for the App Management install and uninstall (`94369d4cd`)
+- 2026-10-09  Sitting 11 (data installer), pair 25 extracted, the last sitting: `resolveDatapackWriteAccess(context, write)` in data-installer/handlers/datapackWriteGate.ts (own suite, 14 cases, 100% mutation) now opens every datapack write (import, validate, reset and both export calls): Data Installer access, the open project, its Commerce credentials, and the per-gap refusal with the ACCS provisioning offer. The two copies of the gap wording became one table, verbatim per write. Also fixed on the way: a failed export that names no data type (logged as a failure since 2026-09-13) was never reached by a test; one case pins it. 29 pre-existing suites (610 tests) unchanged before and after; 30 suites, 625 tests with the new cases. Three baseline rows written (both old rows were stale downward). Pair 40's TWO COPIES verdict, missing from the ledger, written there. cloneCeiling 6 -> 5. Every pair has a verdict; item set to built.
