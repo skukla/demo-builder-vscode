@@ -90,15 +90,6 @@ jest.mock('@/core/validation/PathSafetyValidator', () => ({
 // GitHubAppService is NOT mocked. Measured 2026-08-31: removing the mock changes
 // nothing this suite observes — it was silencing a construction with no side effects.
 
-// Mock configGenerator (dynamically imported for config.json generation)
-jest.mock('@/features/eds/services/configGenerator', () => ({
-    generateConfigJson: jest.fn().mockResolvedValue({
-        success: true,
-        content: '{"host":"example.com"}',
-    }),
-    extractConfigParams: jest.fn().mockReturnValue({}),
-}));
-
 // Mock global fetch for code sync verification
 global.fetch = jest.fn();
 

@@ -49,9 +49,18 @@ run "$ROOT/src/features/eds/services/placeholderStubs.ts"    "placeholderStubs" 
 
 echo
 echo "=== it must BEAT the generic size notice ==="
-# configGenerator is 598 lines and would otherwise get 49-god-file's message. The
-# specific route is the useful one; this is why god-file is numbered last.
-run "$ROOT/src/features/eds/services/configGenerator.ts"     "a 598-line file, still routed" eds-dropin
+# An oversized routed file would otherwise get 49-god-file's message. The specific
+# route is the useful one; this is why god-file is numbered last. No routed file is
+# over its limit any more (configGenerator.ts went 609 -> 393 on 2026-10-09, EDS-8),
+# so the case runs on a 450-line stand-in under a matching path, with a sibling of
+# the same size as the control that proves the stand-in DOES trip the size notice.
+BIG=$(mktemp -d)
+mkdir -p "$BIG/src/features/eds/services"
+python3 -c 'import sys; open(sys.argv[1], "w").write("// x\n" * 450)' "$BIG/src/features/eds/services/configGenerator.ts"
+cp "$BIG/src/features/eds/services/configGenerator.ts" "$BIG/src/features/eds/services/someService.ts"
+run "$BIG/src/features/eds/services/someService.ts"          "CONTROL: a 450-line service, size notice" god-file
+run "$BIG/src/features/eds/services/configGenerator.ts"      "a 450-line routed file, still routed" eds-dropin
+rm -rf "$BIG"
 
 echo
 echo "=== unrelated eds services stay silent ==="

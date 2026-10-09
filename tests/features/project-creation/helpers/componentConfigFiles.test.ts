@@ -12,10 +12,8 @@
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
 import { generateConfigFile } from '@/core/config/configFileGenerator';
-import {
-    generateConfigJson,
-    extractConfigParamsFromConfigs,
-} from '@/features/eds/services/configGenerator';
+import { generateConfigJson } from '@/features/eds/services/configGenerator';
+import { extractConfigParamsFromConfigs } from '@/features/eds/services/storefrontConfigParams';
 import { generateComponentConfigFiles } from '@/features/project-creation/helpers/componentConfigFiles';
 import { TransformedComponentDefinition, ComponentRegistry } from '@/types/components';
 import {
@@ -41,6 +39,8 @@ jest.mock('@/core/config/configFileGenerator', () => ({
 
 jest.mock('@/features/eds/services/configGenerator', () => ({
     generateConfigJson: jest.fn(),
+}));
+jest.mock('@/features/eds/services/storefrontConfigParams', () => ({
     extractConfigParamsFromConfigs: jest.fn(),
 }));
 

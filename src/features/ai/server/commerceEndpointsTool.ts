@@ -66,11 +66,11 @@
 import { asRawText, asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import { getMeshEndpoint } from '@/core/state/appBuilderComponentState';
+import { generateHeaders } from '@/features/eds/services/configGenerator';
 import {
     buildConfigGeneratorParams,
     extractConfigParamsFromConfigs,
-    generateHeaders,
-} from '@/features/eds/services/configGenerator';
+} from '@/features/eds/services/storefrontConfigParams';
 import type { StateManager } from '@/types/state';
 
 /** What an agent needs before it can send a Commerce query. */
@@ -143,7 +143,7 @@ export function buildCommerceEndpoints(
 
     // The DIRECT endpoint: the same resolver, called with no mesh, so the
     // backend-aware key choice (ACCS_* vs PAAS_*) stays in one place.
-    // The config map's type is module-local to `configGenerator`, so the cast
+    // The config map's type is module-local to `storefrontConfigParams`, so the cast
     // is taken FROM its own signature rather than from a type named here — a
     // hand-written shape at a call boundary is a silenced type error, and this
     // repo has shipped four of those.

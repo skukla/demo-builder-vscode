@@ -45,7 +45,6 @@
  */
 
 import {
-    extractConfigParams,
     generateHeaders,
     type ConfigGeneratorParams,
 } from './configGenerator';
@@ -57,6 +56,7 @@ import {
     scopesMatch,
     type StoreScope,
 } from './storefront/servedStorefrontConfig';
+import { extractConfigParams } from './storefrontConfigParams';
 import type { EdsPipelineProgressCallback } from './types';
 import { runInBatches } from '@/core/utils/promiseUtils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';

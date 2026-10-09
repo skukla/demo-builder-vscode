@@ -8,13 +8,15 @@
 import {
     generateConfigJson,
     generateHeaders,
-    mapBackendToEnvironmentType,
-    extractConfigParamsFromConfigs,
-    extractConfigParams,
-    buildConfigGeneratorParams,
+    generateProjectConfigJson,
     type ConfigGeneratorParams,
     type EnvironmentType,
 } from '@/features/eds/services/configGenerator';
+import {
+    extractConfigParamsFromConfigs,
+    extractConfigParams,
+    buildConfigGeneratorParams,
+} from '@/features/eds/services/storefrontConfigParams';
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types/base';
 import { createMockLogger } from '../../../helpers/loggerFake';
@@ -32,20 +34,6 @@ describe('configGenerator', () => {
 
     beforeEach(() => {
         mockLogger = createMockLogger() as unknown as Logger;
-    });
-
-    describe('mapBackendToEnvironmentType', () => {
-        it.each<[string, string | undefined, EnvironmentType]>([
-            ['the PaaS backend id', 'adobe-commerce-paas', 'paas'],
-            ['the ACCS backend id', 'adobe-commerce-accs', 'accs'],
-            ['the ACO backend id', 'adobe-commerce-aco', 'aco'],
-            // The default arm has to be a real environment, not "neither": a
-            // project whose backend was never recorded still generates a config.
-            ['an id the switch does not name', 'unknown-backend', 'paas'],
-            ['no backend id at all', undefined, 'paas'],
-        ])('%s maps to %s', (_label, backendComponentId, expected) => {
-            expect(mapBackendToEnvironmentType(backendComponentId)).toBe(expected);
-        });
     });
 
     describe('generateHeaders', () => {
@@ -238,141 +226,7 @@ describe('configGenerator', () => {
         });
     });
 
-    describe('extractConfigParamsFromConfigs', () => {
-        it('should use backendComponentId for environment type', () => {
-            const componentConfigs = {
-                'eds-storefront': {
-                    ADOBE_CATALOG_API_KEY: 'api-key-123',
-                },
-            };
-
-            const result = extractConfigParamsFromConfigs(componentConfigs, undefined, 'adobe-commerce-accs');
-
-            expect(result.environmentType).toBe('accs');
-            // ACCS doesn't use API keys — commerceApiKey should be undefined
-            expect(result.commerceApiKey).toBeUndefined();
-        });
-
-        it('should default to paas when backendComponentId not provided', () => {
-            const componentConfigs = {
-                'eds-storefront': {
-                    ACCS_CATALOG_SERVICE_ENDPOINT: 'https://accs.example.com/graphql',
-                },
-            };
-
-            const result = extractConfigParamsFromConfigs(componentConfigs);
-
-            expect(result.environmentType).toBe('paas');
-        });
-
-        it('should prefer mesh endpoint over direct endpoint', () => {
-            const componentConfigs = {
-                'eds-storefront': {
-                    ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://direct.example.com/graphql',
-                },
-            };
-
-            const result = extractConfigParamsFromConfigs(
-                componentConfigs,
-                'https://mesh.example.com/graphql', // mesh endpoint
-            );
-
-            expect(result.commerceEndpoint).toBe('https://mesh.example.com/graphql');
-        });
-
-        it('should extract all store codes from config', () => {
-            const componentConfigs = {
-                'eds-storefront': {
-                    ADOBE_COMMERCE_STORE_CODE: 'us_store',
-                    ADOBE_COMMERCE_STORE_VIEW_CODE: 'en_us',
-                    ADOBE_COMMERCE_WEBSITE_CODE: 'us_website',
-                    ADOBE_COMMERCE_CUSTOMER_GROUP: 'b2c_group',
-                },
-            };
-
-            const result = extractConfigParamsFromConfigs(componentConfigs, undefined, 'adobe-commerce-paas');
-
-            expect(result.storeCode).toBe('us_store');
-            expect(result.storeViewCode).toBe('en_us');
-            expect(result.websiteCode).toBe('us_website');
-            expect(result.customerGroup).toBe('b2c_group');
-        });
-
-        it('should extract AEM Assets enabled from config', () => {
-            const componentConfigs = {
-                'eds-storefront': {
-                    AEM_ASSETS_ENABLED: 'true',
-                },
-            };
-
-            const result = extractConfigParamsFromConfigs(componentConfigs, undefined, 'adobe-commerce-paas');
-
-            expect(result.aemAssetsEnabled).toBe(true);
-        });
-
-        // Regression, both environments: when the wizard populates
-        // componentConfigs the store scope lands under the MESH component, not
-        // 'eds-storefront'. Each row asserts the entire returned params object —
-        // the environment fork decides which keys are read AND which are dropped,
-        // so a per-key assertion cannot see half of what the fork does.
-        it.each<[string, Record<string, Record<string, string>>, string, Partial<ConfigGeneratorParams>]>([
-            [
-                'ACCS reads the scope off eds-accs-mesh and drops the PaaS-only fields',
-                {
-                    'eds-storefront': { AEM_ASSETS_ENABLED: 'true' },
-                    'eds-accs-mesh': {
-                        ACCS_STORE_VIEW_CODE: 'citisignal_us',
-                        ACCS_STORE_CODE: 'citisignal_store',
-                        ACCS_WEBSITE_CODE: 'citisignal',
-                        ACCS_CUSTOMER_GROUP: 'b6589fc6ab0dc82cf12099d1c2d40ab994e8410c',
-                        ACCS_GRAPHQL_ENDPOINT: 'https://accs.example.com/graphql',
-                    },
-                },
-                'adobe-commerce-accs',
-                {
-                    environmentType: 'accs',
-                    commerceEndpoint: 'https://accs.example.com/graphql',
-                    catalogServiceEndpoint: undefined,
-                    commerceApiKey: undefined,
-                    commerceEnvironmentId: undefined,
-                    storeViewCode: 'citisignal_us',
-                    storeCode: 'citisignal_store',
-                    websiteCode: 'citisignal',
-                    customerGroup: 'b6589fc6ab0dc82cf12099d1c2d40ab994e8410c',
-                    aemAssetsEnabled: true,
-                },
-            ],
-            [
-                'PaaS reads the scope off eds-commerce-mesh',
-                {
-                    'eds-storefront': { AEM_ASSETS_ENABLED: 'false' },
-                    'eds-commerce-mesh': {
-                        ADOBE_COMMERCE_STORE_VIEW_CODE: 'default',
-                        ADOBE_COMMERCE_STORE_CODE: 'main_website_store',
-                        ADOBE_COMMERCE_WEBSITE_CODE: 'base',
-                        ADOBE_COMMERCE_CUSTOMER_GROUP: 'hash123',
-                    },
-                },
-                'adobe-commerce-paas',
-                {
-                    environmentType: 'paas',
-                    commerceEndpoint: undefined,
-                    catalogServiceEndpoint: undefined,
-                    commerceApiKey: undefined,
-                    commerceEnvironmentId: undefined,
-                    storeViewCode: 'default',
-                    storeCode: 'main_website_store',
-                    websiteCode: 'base',
-                    customerGroup: 'hash123',
-                    aemAssetsEnabled: false,
-                },
-            ],
-        ])('%s', (_label, componentConfigs, backendComponentId, expected) => {
-            expect(
-                extractConfigParamsFromConfigs(componentConfigs, undefined, backendComponentId),
-            ).toStrictEqual(expected);
-        });
-
+    describe('extracted params rendered into config.json', () => {
         it('should generate correct ACCS headers in config.json when store codes come from mesh config', () => {
             // End-to-end: eds-accs-mesh provides store codes → config.json has correct headers
             const componentConfigs = {
@@ -580,5 +434,15 @@ describe('configGenerator', () => {
             expect(params.commerceEndpoint).toBe('https://direct.example.com/graphql');
         });
 
+        it('generateProjectConfigJson renders what building the params and rendering them does', () => {
+            // Reset and republish both call this; it must not drift from the
+            // two-step form creation's golden tests pin.
+            const project = migratedMeshProject();
+
+            expect(generateProjectConfigJson(project, mockLogger)).toStrictEqual(
+                generateConfigJson(buildConfigGeneratorParams(project), mockLogger),
+            );
+            expect(generateProjectConfigJson(project, mockLogger).content).toContain(MESH_ENDPOINT);
+        });
     });
 });

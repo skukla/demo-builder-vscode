@@ -15566,6 +15566,18 @@
             "decision": "none \u2014 undefined says there is no step; the mutant only changes how nothing is spelled",
             "recorded": "2026-10-08",
             "source": "EDS-8 reset split, edsResetSampleData first focus run"
+        },
+        {
+            "module": "src/features/eds/services/configGenerator.ts",
+            "anchors": [
+                "const label = `package: ${resolved?.package.id ?? params.selectedPackage}`;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Swapping ?? for && changes only the text of `label`, and `label` is read in exactly one place: the debug line injectConfigFlags writes after merging the flags. The flags themselves come from `resolved?.package.configFlags`, never from the label, so config.json is byte-identical either way. Killing it would mean asserting debug-log wording, which tests/sop bans.",
+            "decision": "none \u2014 the label is log presentation; the merged flags are pinned by the configFlags and dataDrivenFlags suites",
+            "recorded": "2026-10-09",
+            "source": "EDS-8 configGenerator split, focus run 2026-10-09"
         }
     ]
 }

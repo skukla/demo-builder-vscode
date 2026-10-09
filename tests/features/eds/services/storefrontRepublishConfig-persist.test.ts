@@ -24,8 +24,7 @@ const mockGenerate = jest.fn();
 const mockSync = jest.fn();
 
 jest.mock('@/features/eds/services/configGenerator', () => ({
-    generateConfigJson: (...a: unknown[]) => mockGenerate(...a),
-    buildConfigGeneratorParams: () => ({}),
+    generateProjectConfigJson: (...a: unknown[]) => mockGenerate(...a),
 }));
 jest.mock('@/features/eds/services/configSyncService', () => ({
     syncConfigToRemote: (...a: unknown[]) => mockSync(...a),

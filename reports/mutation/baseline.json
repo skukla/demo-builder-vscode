@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "EDS-8 split of stalenessDetector.ts (88.32%, 295 killed, 39 survived, re-measured before the split) into six files. The surviving mutants are the same set as before: 21 ledgered equivalents (re-homed, four rows to meshEnvVars.ts) and log-text strings. stalenessDetector fell to 80% only because the killed mutants of the moved functions left with them; it keeps every survivor it had. Across all pieces 311 killed and 38 survived, against 295 and 39 plus projectStateSync's 26 before.",
+    "_note": "EDS-8 split 2026-10-09: configGenerator keeps the config.json render plus generateProjectConfigJson, the one call Reset and republish share (its one block mutant is killed by a direct test); params extraction moved to storefrontConfigParams. 176 mutants, 162 killed across the pair against 161 of 175 before the split. Survivors unchanged: log text, a default-arm string, two ledgered equivalents.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -5784,21 +5784,19 @@
             "openGaps": 0
         },
         "src/features/eds/services/configGenerator.ts": {
-            "score": 92.57,
-            "killed": 162,
+            "score": 90.24,
+            "killed": 111,
             "survived": 12,
-            "noCoverage": 1,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
                 "string": 4,
-                "logPresentation": 7,
-                "branch": 1
+                "logPresentation": 6,
+                "branch": 2
             },
-            "uncoveredCategories": {
-                "string": 1
-            },
-            "highValueSurvivors": 1,
-            "equivalent": 1,
+            "uncoveredCategories": {},
+            "highValueSurvivors": 2,
+            "equivalent": 2,
             "openGaps": 0
         },
         "src/features/eds/services/configService/configAccessRecovery.ts": {
@@ -10422,6 +10420,22 @@
                 "logPresentation": 1
             },
             "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/eds/services/storefrontConfigParams.ts": {
+            "score": 96.23,
+            "killed": 51,
+            "survived": 1,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 1
+            },
+            "uncoveredCategories": {
+                "string": 1
+            },
             "highValueSurvivors": 0,
             "equivalent": 0,
             "openGaps": 0

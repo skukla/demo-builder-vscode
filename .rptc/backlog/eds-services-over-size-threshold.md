@@ -356,6 +356,17 @@ about it, and what (if anything) the owner has to decide.
   visual baseline at HEAD (webview-visual-baseline skill) before this branch or PR-1a
   merges, so the inherited CSS changes are recorded once.
 
+- 2026-10-09  `storefront/storefrontStalenessDetector.ts` has its OWN `mergeComponentConfigs`
+  (every component flattened, last one wins), while `config.json` is rendered from
+  `storefrontConfigParams.mergeComponentConfigs` (a mesh beats the rest, except the store
+  scope, which the backend owns). Read both during the configGenerator split: they are not
+  the same job written twice, but they can disagree. A stale store-scope copy on a mesh
+  entry that iterates after the backend would hide a backend scope change from the
+  "republish needed" check while config.json would pick it up. Not changed: it is outside
+  the split and changing it changes when the prompt shows. **Decide:** whether the
+  staleness check should read the same merge the render uses (one sitting, with a test
+  for the mesh-copy case), or stay as it is.
+
 ## Triage of the untangled files (2026-10-08, read by a Sonnet agent, verdicts are LEADS)
 
 The 36 files over their limit with no coupling signal were read by job. 19 are to be
@@ -800,6 +811,15 @@ date and what happened; a failure becomes its own `fix` item.
       confirm the demo status turns to "Restart needed". Every moved
       function is a proven move, so this is a confirmation, not a known risk.
 
+- [ ] **config.json identical before and after a republish** (the `configGenerator.ts`
+      split, 2026-10-09): on an EDS project with a mesh, copy the storefront repo's
+      `config.json` aside, then run Republish Storefront from the dashboard and compare:
+      the file should be byte-identical. Then Reset the storefront (a throwaway project) and
+      compare again. Reset and republish now both call `generateProjectConfigJson`, which
+      takes its params from `storefrontConfigParams.ts`; creation still renders through
+      `generateConfigJson` with params from the same file. Every function is a proven move
+      and the suites pin the bytes, so this is a confirmation, not a known risk.
+
 ## Shipped so far
 
 - 2026-09-10  2026-09-10  Gated: god-file-ratchet.test.ts pins 68 candidates / 31 coupled; rule 49 measures on edit (2987e8623)
@@ -865,3 +885,4 @@ date and what happened; a failure becomes its own `fix` item.
 - 2026-10-09  refactor(eds): StorefrontSetupStep keeps the screen choice; the run, its state and its two end screens get their own files (`a5bc275ef`)
 - 2026-10-09  fix(eds): the first storefront setup start sends each dependency once (`db804c010`)
 - 2026-10-09  refactor(mesh): stalenessDetector keeps the redeploy decision; its inputs get their own files (`d0c296c88`)
+- 2026-10-09  configGenerator.ts (609 -> 393) split by job. It keeps the config.json render: generateHeaders, the addon and package flag injection, generateConfigJson, and one new call, generateProjectConfigJson, which EDS Reset and storefront republish now share instead of each composing the same two calls. What a project says config.json should carry (mapBackendToEnvironmentType, mergeComponentConfigs, extractConfigParamsFromConfigs, extractConfigParams, buildConfigGeneratorParams and the endpoint resolver) moved to storefrontConfigParams.ts (244); every caller imports from the owning file, no forwarders. The shared call exists because the split otherwise gave storefrontRepublishService.ts a 16th import and pushed it onto the coupled list. Two orphaned doc comments were fixed (one described a function that no longer exists). proveMove: all eleven functions pure moves; every other code line compared as a multiset against HEAD with a planted control, same. Two dead jest.mock calls of configGenerator deleted (dashboardHandlers-eds, dashboardHandlers-dalive-auth: both suites pass without them). Tests: the merge suite became storefrontConfigParams.test.ts and gained the backend-map and params tests from configGenerator.test.ts; one new test pins generateProjectConfigJson to the two-step form. Mutation: both rows predated 2026-10-06 changes, so the unsplit file was re-measured at 92.00 (161 of 175); after, 162 of 176 across the pair: configGenerator 90.24, storefrontConfigParams 96.23, open gaps 0 (one log-label survivor ledgered). Pins: godFileCandidates 33 -> 32, godFileCoupled stays 2; the configGenerator test-family reason now says five suites; rule 43's precedence proof runs on a 450-line stand-in with a control, since no routed file is oversized any more; ADR-003 and ADR-009 name the new file. Checks: npm run gate green (lint 0 errors, tsc, typecheck:tests, blind spots, test sizes, full jest 1900 suites / 32,261 tests, source duplication at the pin of 36). Live check appended above.

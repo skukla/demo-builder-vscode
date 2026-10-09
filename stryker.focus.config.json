@@ -8,12 +8,8 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/mesh/services/stalenessDetector.ts",
-        "src/features/mesh/services/meshEnvVars.ts",
-        "src/features/mesh/services/deployedMeshConfig.ts",
-        "src/features/mesh/services/meshSourceHash.ts",
-        "src/features/mesh/services/meshDeployBaseline.ts",
-        "src/core/state/projectStateSync.ts"
+        "src/features/eds/services/configGenerator.ts",
+        "src/features/eds/services/storefrontConfigParams.ts"
     ],
     "reporters": [
         "clear-text",

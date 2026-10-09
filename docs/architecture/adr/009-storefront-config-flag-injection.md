@@ -55,7 +55,8 @@ Make the generator inject the required flags, **data-driven per demo package**.
   `injectConfigFlags` primitive — the **same** primitive used for addon-level
   `configFlags` (one injector, two sources: addons and packages).
 - All three config-writing paths — create, EDS reset, and storefront republish —
-  flow through the generator (`buildConfigGeneratorParams` / `extractConfigParams`),
+  flow through the generator (params from `buildConfigGeneratorParams` / `extractConfigParams`
+  in `storefrontConfigParams.ts`; Reset and republish share `generateProjectConfigJson`),
   so the flags land consistently regardless of how the storefront is provisioned.
 
 Why this shape:

@@ -130,7 +130,7 @@ Where the singular assumption is encoded:
 | `features/components/config/components.json` | three scalar keys per backend |
 | `features/components/config/envVarKeys.ts` | `BACKEND_OWNED_SCOPE_KEYS` — "the backend owns *the* scope", not the scope map |
 | `features/components/ui/components/StoreSelectionRow.tsx` | `getFieldKeys(group.id)` writes exactly three fixed keys |
-| `features/eds/services/configGenerator.ts` | `extractConfigParamsFromConfigs` emits singular `websiteCode` / `storeCode` / `storeViewCode` into `config.json` |
+| `features/eds/services/storefrontConfigParams.ts` | `extractConfigParamsFromConfigs` emits singular `websiteCode` / `storeCode` / `storeViewCode` into `config.json` |
 | `features/mesh/services/stalenessDetector.ts` | compares scalar values against the deployed snapshot |
 | `features/dashboard/ui/components/integrations/integrationCardModel.ts` | `deriveCommerceScope` returns ONE triple for the flyout's Commerce scope row |
 

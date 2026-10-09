@@ -2,7 +2,7 @@
  * Storefront Republish Service
  *
  * Republishes config.json for EDS storefronts when configuration changes.
- * Reuses existing generateConfigJson() and syncConfigToRemote() services.
+ * Reuses existing generateProjectConfigJson() and syncConfigToRemote() services.
  *
  * @module features/eds/services/storefront/storefrontRepublishService
  */
@@ -23,7 +23,7 @@ import {
 import { createCatalogMenuSite } from '../catalogMenu/catalogMenuSiteDeps';
 import { applyCatalogMenuStep } from '../catalogMenu/catalogMenuStep';
 import { prewarmCatalog } from '../catalogPrewarmService';
-import { generateConfigJson, buildConfigGeneratorParams } from '../configGenerator';
+import { generateProjectConfigJson } from '../configGenerator';
 import { syncConfigToRemote, verifyConfigOnCdn } from '../configSyncService';
 import type { DaLiveAuthService } from '../daLive/daLiveAuthService';
 import { DaLiveContentOperations } from '../daLive/daLiveContentOperations';
@@ -234,7 +234,7 @@ export async function republishStorefrontConfig(params: RepublishParams): Promis
             project.componentConfigs ?? {},
         );
 
-        const configResult = generateConfigJson(buildConfigGeneratorParams(project), logger);
+        const configResult = generateProjectConfigJson(project, logger);
 
         if (!configResult.success || !configResult.content) {
             return {

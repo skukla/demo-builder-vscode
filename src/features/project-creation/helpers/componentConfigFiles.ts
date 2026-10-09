@@ -20,9 +20,9 @@ import {
 import { COMPONENT_IDS } from '@/core/constants';
 import {
     generateConfigJson,
-    extractConfigParamsFromConfigs,
     type ConfigGeneratorParams,
 } from '@/features/eds/services/configGenerator';
+import { extractConfigParamsFromConfigs } from '@/features/eds/services/storefrontConfigParams';
 import type { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
 import type { ConfigFileDefinition, TransformedComponentDefinition } from '@/types/components';
 
