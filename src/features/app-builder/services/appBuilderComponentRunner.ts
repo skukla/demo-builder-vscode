@@ -91,6 +91,7 @@ import {
 import {
     clearUpdateAvailable,
     recordInstallation,
+    runsOlderCode,
     workspacesHeldBy,
     workspacesToRelease,
 } from '@/core/state/appBuilderComponentState';
@@ -352,6 +353,12 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
     ) => Promise<{ status: 'filled' } | { status: 'failed'; detail: string }>;
     /** The version an app's manifest declares (appManifestVersion); optional for bare tests. */
     readAppVersion?: (componentPath: string) => Promise<string | undefined>;
+    /**
+     * The commit a clone is at (`readCloneCommit`), recorded as `deployedCommit` by a
+     * deploy that succeeds (AB-71). Optional: without it a deploy records none, and
+     * update trusts the clone as it did before the field existed.
+     */
+    readCloneCommit?: (componentPath: string) => Promise<string | undefined>;
     /** Fast-forward a clone to its branch (integrationSourceUpdate); update only. */
     fetchComponentSource?: (componentPath: string, branch: string) => Promise<SourceUpdateResult>;
     /** Whether a clone's branch has newer commits (integrationSourceUpdate); update check only. */
@@ -763,6 +770,14 @@ function layoutMismatchError(
     );
 }
 
+/** The clone's commit, or undefined when this caller wired no way to read it. */
+async function commitToShip(
+    componentPath: string,
+    deps: AppBuilderComponentRunnerDeps,
+): Promise<string | undefined> {
+    return deps.readCloneCommit ? deps.readCloneCommit(componentPath) : undefined;
+}
+
 /** Dispatch the deploy by kind; returns success + the outcome to record. */
 async function dispatchDeploy(
     project: Project,
@@ -858,6 +873,8 @@ async function dispatchDeploy(
             };
         }
     }
+    // Read before the deploy: the commit this run ships, recorded only if it lands.
+    const shipped = await commitToShip(componentPath, deps);
     const result = await deps.deployApp(
         componentPath,
         owPackage,
@@ -882,7 +899,12 @@ async function dispatchDeploy(
     const warning = [events?.note, leftovers].filter(Boolean).join(' ');
     return {
         ok: true,
-        outcome: integrationOutcome(entry, result.data, resolveDisplayName(entry, inputs)),
+        outcome: {
+            ...integrationOutcome(entry, result.data, resolveDisplayName(entry, inputs)),
+            // Explicit even when unknown: a stale commit left behind would read as code
+            // never deployed, and send every later update to redeploy.
+            deployedCommit: shipped,
+        },
         ...(warning ? { warning } : {}),
     };
 }
@@ -1380,11 +1402,12 @@ export async function updateAppBuilderComponent(
     if (fetched.status === 'refused' || fetched.status === 'failed') {
         return { success: false, error: fetched.detail };
     }
-    // A component whose last deploy failed is redeployed even when its code is
-    // current: an earlier Update that fetched the code and then failed to deploy
-    // left it current, and the shortcut below answered "nothing to do" and left
-    // it failed (2026-09-18).
-    if (fetched.status === 'current' && existing.status !== 'error') {
+    // A current clone is not a current APP. An earlier Update that fetched the code
+    // and then failed to deploy left the clone current, and this shortcut answered
+    // "nothing to do": once on a status left at 'error' (2026-09-18), and once on a
+    // commit the running app never got (AB-71, 2026-10-09). Both redeploy now.
+    const fetchedEarlier = runsOlderCode(existing.deployedCommit, fetched.to);
+    if (fetched.status === 'current' && existing.status !== 'error' && !fetchedEarlier) {
         const onDisk = await deps.readAppVersion?.(componentPath);
         const installed = existing.installation?.version;
         if (!onDisk || onDisk === installed) {
@@ -1392,6 +1415,7 @@ export async function updateAppBuilderComponent(
             return { success: true, detail: fetched.detail };
         }
     } else {
+        await rememberRunningCommit(project, existing, fetched, deps);
         deps.onProgress?.(OPERATION_STAGES.installingUpdateDependencies.label);
         const dependencies = await deps.installComponentDependencies(
             componentPath,
@@ -1409,7 +1433,40 @@ export async function updateAppBuilderComponent(
         return deployed;
     }
     await forgetUpdate(project, id, deps);
-    return { ...deployed, detail: fetched.detail };
+    const detail =
+        fetched.status === 'current' ? redeployedDetail(fetched.to, fetchedEarlier) : fetched.detail;
+    return { ...deployed, detail };
+}
+
+/** How much of a commit an answer names, as git's own short form does. */
+const SHORT_COMMIT = 7;
+
+/**
+ * What an update that found the clone current says once it has deployed anyway: the
+ * code was fetched by an earlier update whose deploy failed, or the last deploy failed,
+ * or Commerce holds an older version. "Already up to date" would be false.
+ */
+function redeployedDetail(commit: string | undefined, fetchedEarlier: boolean): string {
+    if (fetchedEarlier && commit) {
+        return `Deployed ${commit.slice(0, SHORT_COMMIT)}, which an earlier update fetched but did not deploy.`;
+    }
+    return 'The code was already current; deployed it again so the running app matches.';
+}
+
+/**
+ * A record from before `deployedCommit` existed trusts its clone, so the commit the
+ * clone moved FROM is the one running. Record it before anything can fail: a deploy
+ * that then fails leaves it, and the next update sees code that never went live.
+ */
+async function rememberRunningCommit(
+    project: Project,
+    state: AppBuilderComponentState,
+    fetched: SourceUpdateResult,
+    deps: AppBuilderComponentRunnerDeps,
+): Promise<void> {
+    if (fetched.status !== 'updated' || state.deployedCommit || !fetched.from) return;
+    state.deployedCommit = fetched.from;
+    await deps.saveProject(project);
 }
 
 /** A finished update leaves nothing to offer; drop the recorded one. */

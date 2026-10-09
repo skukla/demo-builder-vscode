@@ -378,18 +378,32 @@ export interface AppBuilderComponentState {
     };
     /**
      * Newer code is available: the source branch on GitHub has commits the
-     * clone lacks, or the clone's app version differs from the one installed in
-     * Commerce. Set by the integrations screen's check, removed by a successful
-     * update (integrationUpdateCheck).
+     * clone lacks, the clone is at a commit the last good deploy did not ship
+     * (`deployedCommit`), or the clone's app version differs from the one
+     * installed in Commerce. Set by the integrations screen's check, removed by a
+     * successful update (integrationUpdateCheck).
      */
     updateAvailable?: {
-        /** The branch head on GitHub, when the branch moved. */
+        /** The commit an update would put live: the branch head, or a fetched commit never deployed. */
         commit?: string;
         /** The version in the clone, when it differs from the installed one. */
         version?: string;
         /** ISO date string of the check. */
         checkedAt: string;
     };
+    /**
+     * The commit the last SUCCESSFUL deploy shipped: the clone's HEAD when the deploy
+     * ran. Written by every app deploy (add, redeploy, update) that succeeds, never by
+     * one that fails, so it names the code that is running (AB-71). Update and the
+     * update check compare the clone with it: a clone an earlier update moved, whose
+     * deploy then failed, is current while the running app is not.
+     *
+     * ABSENT means "trust the clone", which is what every component deployed before
+     * this field existed has: such a record is current when its clone is. An update
+     * that moves such a clone records the commit it moved from first, so a deploy that
+     * then fails is still retried.
+     */
+    deployedCommit?: string;
     /**
      * The Adobe workspace this component is deployed into.
      *

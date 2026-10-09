@@ -32,6 +32,7 @@ export type DeployOutcome = Pick<
     | 'url'
     | 'deployedUrls'
     | 'lastDeployed'
+    | 'deployedCommit'
     | 'sourceHash'
     | 'envVars'
     | 'userDeclinedUpdate'

@@ -116,8 +116,20 @@ export interface UpdateCheckResult {
     /** available: the branch has commits the clone does not; unknown: git could not tell. */
     status: 'available' | 'current' | 'unknown';
     detail?: string;
+    /** The clone's own commit (what a deploy from it ships), when known. */
+    from?: string;
     /** The branch head on GitHub, when known. */
     to?: string;
+}
+
+/**
+ * The clone's commit: what a deploy from it ships (recorded as `deployedCommit`).
+ * Undefined when git cannot say, which leaves the caller trusting the clone.
+ */
+export async function readCloneCommit(componentPath: string, run: GitRunner): Promise<string | undefined> {
+    const head = await run('git rev-parse HEAD', componentPath);
+    const commit = head.stdout.trim();
+    return head.code === 0 && commit ? commit : undefined;
 }
 
 /**
@@ -139,9 +151,9 @@ export async function checkCloneForUpdate(
         return { status: 'unknown', detail: heads.failure };
     }
     if (heads.from === heads.to || !(await isBehind(componentPath, run))) {
-        return { status: 'current', to: heads.to };
+        return { status: 'current', ...heads };
     }
-    return { status: 'available', to: heads.to };
+    return { status: 'available', ...heads };
 }
 
 /**

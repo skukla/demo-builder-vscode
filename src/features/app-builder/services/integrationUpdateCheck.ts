@@ -1,9 +1,12 @@
 /**
  * Which deployed integrations (and their bound systems) have newer code.
  *
- * Two signals, either one is enough:
+ * Three signals, any one is enough:
  * - the source branch on GitHub has commits the clone lacks (a fetch, which
  *   changes nothing the SC can see);
+ * - the clone is at a commit the last good deploy did not ship
+ *   (`deployedCommit`): an update moved it and its deploy failed (AB-71), so the
+ *   badge stays on until the new code is live. Update reads the same rule;
  * - the clone's app version differs from the one installed in Commerce (code
  *   that reached the folder some other way and was never deployed).
  *
@@ -15,7 +18,7 @@
  */
 
 import type { UpdateCheckResult } from './integrationSourceUpdate';
-import { clearUpdateAvailable } from '@/core/state/appBuilderComponentState';
+import { clearUpdateAvailable, runsOlderCode } from '@/core/state/appBuilderComponentState';
 import type { AppBuilderComponentState, Project } from '@/types/base';
 
 export interface UpdateCheckDeps {
@@ -78,7 +81,7 @@ async function checkOne(
     if (clone.status === 'unknown' && !version) {
         return { report: { id, available: Boolean(state.updateAvailable), detail: clone.detail }, changed: false };
     }
-    const commit = clone.status === 'available' ? clone.to : undefined;
+    const commit = newerCommit(clone, state);
     const next: UpdateAvailable | undefined =
         commit || version
             ? {
@@ -92,6 +95,12 @@ async function checkOne(
         setUpdateAvailable(state, next);
     }
     return { report: { id, available: Boolean(next) }, changed };
+}
+
+/** The commit an update would put live: the branch head, or a fetched commit never deployed. */
+function newerCommit(clone: UpdateCheckResult, state: AppBuilderComponentState): string | undefined {
+    if (clone.status === 'available') return clone.to;
+    return runsOlderCode(state.deployedCommit, clone.from) ? clone.from : undefined;
 }
 
 function setUpdateAvailable(state: AppBuilderComponentState, value: UpdateAvailable | undefined): void {

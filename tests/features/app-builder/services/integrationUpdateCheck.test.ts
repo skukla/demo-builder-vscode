@@ -72,6 +72,46 @@ describe('checkIntegrationUpdates', () => {
         });
     });
 
+    // AB-71: an update moved the clone and its deploy failed. The clone is current, the
+    // running app is not, and the badge stays on until the new code is live.
+    it('keeps an update on while the clone holds code the last deploy did not ship', async () => {
+        const p = project({
+            erp: component({
+                deployedCommit: 'd32eb96',
+                updateAvailable: { commit: '7804f3e', checkedAt: 'earlier' },
+            }),
+        });
+
+        const result = await checkIntegrationUpdates(
+            p,
+            deps({ '/p/components/erp': { status: 'current', from: '7804f3e', to: '7804f3e' } }),
+        );
+
+        expect(result).toEqual({ reports: [{ id: 'erp', available: true }], changed: false });
+        expect(p.appBuilderComponents?.erp?.updateAvailable?.commit).toBe('7804f3e');
+    });
+
+    it('says current when the clone is the commit that was deployed, or none was recorded', async () => {
+        const p = project({
+            shipped: component({ deployedCommit: '7804f3e' }),
+            legacy: component(),
+        });
+        const head = { status: 'current' as const, from: '7804f3e', to: '7804f3e' };
+
+        const result = await checkIntegrationUpdates(
+            p,
+            deps({ '/p/components/shipped': head, '/p/components/legacy': head }),
+        );
+
+        expect(result).toEqual({
+            reports: [
+                { id: 'shipped', available: false },
+                { id: 'legacy', available: false },
+            ],
+            changed: false,
+        });
+    });
+
     it('clears an answer that no longer holds', async () => {
         const p = project({ erp: component({ updateAvailable: { commit: 'old', checkedAt: 'earlier' } }) });
 

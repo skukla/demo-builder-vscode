@@ -137,13 +137,18 @@ storefront's own tools; a drop-in from another release blank-pages the site).
 ## Updating the pair
 
 Opening the integrations screen checks, in the background, whether either app has newer
-code: a `git fetch` of its branch in its folder, which moves nothing the SC can see, plus a
-comparison of the folder's app version with the one installed in Commerce. A card with an
+code: a `git fetch` of its branch in its folder, which moves nothing the SC can see, a
+comparison of the folder's commit with the one its last successful deploy shipped
+(`deployedCommit`), and a comparison of the folder's app version with the one installed in
+Commerce. The second is what keeps an update whose deploy failed visible: the fetch already
+moved the folder, so only the deployed commit says the running app is older (AB-71); a record
+deployed before that field existed has none and trusts its folder. A card with an
 update reads **Update needed**, and **Update** leads its kebab — also on a card whose last
 deploy failed, since Update redeploys too. The pair updates as a unit from **either** card:
 the ERP first when it has newer code, then the integration when it does; a failed ERP update
 stops there. Each folder is fast-forwarded (never re-cloned), its dependencies installed, and
-the app redeployed. The integration's redeploy
+the app redeployed. A folder that is current but holds code no deploy shipped is
+redeployed rather than answered "already up to date". The integration's redeploy
 upgrades it in Commerce. Update refuses, naming the files, when a folder holds the SC's own
 edits; **Redeploy** still deploys a folder as it is.
 

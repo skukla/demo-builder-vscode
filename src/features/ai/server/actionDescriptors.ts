@@ -410,7 +410,8 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             'Update an integration to the newest code on its GitHub branch: fetch it ' +
             '(fast-forward only), install its dependencies, redeploy, and upgrade the app in ' +
             'Commerce. An integration and its ERP update as a pair from either id: each with ' +
-            'newer code is updated, the ERP first. Also works on one whose last deploy failed. ' +
+            'newer code is updated, the ERP first. Also works on one whose last deploy failed, and ' +
+            'deploys code an earlier update fetched but did not deploy. ' +
             'Refuses, and names the files, when the folder holds local edits. Use ' +
             'check_integration_updates to see which integrations have an update.',
         map: dashboardHandlers,
@@ -429,7 +430,8 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         readOnly: false,
         description:
             'Check which deployed integrations (and their ERPs) have newer code on their GitHub ' +
-            'branch, or a version Commerce does not have installed. Records the answer where the ' +
+            'branch, code an earlier update fetched but never deployed, or a version Commerce ' +
+            'does not have installed. Records the answer where the ' +
             'integration cards read it. Changes no files and deploys nothing.',
         map: dashboardHandlers,
         type: 'checkIntegrationUpdates',

@@ -18,6 +18,7 @@ import * as path from 'path';
 import {
     checkCloneForUpdate,
     fastForwardClone,
+    readCloneCommit,
     type GitRunner,
 } from '@/features/app-builder/services/integrationSourceUpdate';
 
@@ -281,7 +282,7 @@ describe('checkCloneForUpdate', () => {
 
         const result = await checkCloneForUpdate(fx.clone, 'main', realGit(fx));
 
-        expect(result).toEqual({ status: 'available', to });
+        expect(result).toEqual({ status: 'available', from: head, to });
         expect(git(fx, fx.clone, 'rev-parse', 'HEAD')).toBe(head);
         expect(fs.readFileSync(path.join(fx.clone, 'app.commerce.config.ts'), 'utf8')).toBe('version 0.1.0\n');
     }, REAL_GIT_TIMEOUT_MS);
@@ -291,6 +292,7 @@ describe('checkCloneForUpdate', () => {
 
         await expect(checkCloneForUpdate(fx.clone, 'main', realGit(fx))).resolves.toEqual({
             status: 'current',
+            from: head,
             to: head,
         });
     }, REAL_GIT_TIMEOUT_MS);
@@ -300,9 +302,12 @@ describe('checkCloneForUpdate', () => {
         git(fx, fx.clone, 'add', '-A');
         git(fx, fx.clone, 'commit', '-q', '-m', 'local');
 
+        const local = git(fx, fx.clone, 'rev-parse', 'HEAD');
+
         const result = await checkCloneForUpdate(fx.clone, 'main', realGit(fx));
 
-        expect(result.status).toBe('current');
+        // `from` is the clone's own commit: what a deploy from this folder ships.
+        expect(result).toMatchObject({ status: 'current', from: local });
     }, REAL_GIT_TIMEOUT_MS);
 
     it('ignores edits in the folder: they do not decide whether the branch moved', async () => {
@@ -331,4 +336,28 @@ describe('checkCloneForUpdate', () => {
         });
         expect(run).not.toHaveBeenCalled();
     });
+});
+
+describe('readCloneCommit', () => {
+    let fx: Fixture;
+
+    beforeEach(() => {
+        fx = buildFixture();
+    });
+    afterEach(() => {
+        fs.rmSync(fx.root, { recursive: true, force: true });
+    });
+
+    it("reads the clone's commit, the one a deploy from it ships", async () => {
+        const head = git(fx, fx.clone, 'rev-parse', 'HEAD');
+
+        await expect(readCloneCommit(fx.clone, realGit(fx))).resolves.toBe(head);
+    }, REAL_GIT_TIMEOUT_MS);
+
+    it('answers undefined for a folder that is not a git clone', async () => {
+        const plain = path.join(fx.root, 'plain');
+        fs.mkdirSync(plain);
+
+        await expect(readCloneCommit(plain, realGit(fx))).resolves.toBeUndefined();
+    }, REAL_GIT_TIMEOUT_MS);
 });

@@ -36,16 +36,16 @@ export interface InstallationOutcome {
     needsReinstall?: boolean;
 }
 
-/**
- * Store an App Management install pass's outcome on the component, where the
- * card, the drawer and `get_integration_install_status` read it. The deploy
- * tail and the install tool both write it.
- */
 /** Forget a recorded update (`updateAvailable`), after the update that applied it. */
 export function clearUpdateAvailable(state: AppBuilderComponentState): void {
     delete state.updateAvailable;
 }
 
+/**
+ * Store an App Management install pass's outcome on the component, where the
+ * card, the drawer and `get_integration_install_status` read it. The deploy
+ * tail and the install tool both write it.
+ */
 export function recordInstallation(
     state: AppBuilderComponentState,
     outcome: InstallationOutcome,
@@ -102,6 +102,17 @@ export function listAppBuilderComponents(project: Project): IdentifiedAppBuilder
         id,
         ...state,
     }));
+}
+
+/**
+ * Whether the running app is older than the clone: the last good deploy recorded the
+ * commit it shipped (`deployedCommit`), and the clone is now at another. A record with
+ * none (deployed before the field existed) trusts the clone, as update always had
+ * (AB-71). Update and the update check both ask this, so the card's badge and the
+ * Update button agree.
+ */
+export function runsOlderCode(deployedCommit: string | undefined, cloneCommit: string | undefined): boolean {
+    return Boolean(deployedCommit && cloneCommit && deployedCommit !== cloneCommit);
 }
 
 /** Pure: return a new project with `appBuilderComponents[id]` set (does not mutate input). */

@@ -44,6 +44,7 @@ import { subscriberTarget } from '@/features/app-builder/services/ensureMeshApiS
 import {
     checkCloneForUpdate,
     fastForwardClone,
+    readCloneCommit,
     type GitRunner,
 } from '@/features/app-builder/services/integrationSourceUpdate';
 import { deleteUndeclaredActions } from '@/features/app-builder/services/runtimeUndeclaredActions';
@@ -147,7 +148,7 @@ export function buildDefaultRunnerDeps(
     onProgress?: (message: string, subMessage?: string, position?: OperationPosition) => void,
     confirmToolchainRefresh?: () => Promise<boolean>,
 ): AppBuilderComponentRunnerDeps {
-    // Git in an integration's clone, for update and its check.
+    // Git in an integration's clone: update, its check, and the commit a deploy ships.
     const gitIn: GitRunner = (command, cwd) =>
         ctx.commandManager.execute(command, {
             cwd,
@@ -214,6 +215,8 @@ export function buildDefaultRunnerDeps(
         readAppVersion: readAppManifestVersion,
         // Update: fast-forward the clone, then the same dependency install the
         // add path runs (ComponentManager, with the entry's Node version).
+        // The commit every successful deploy records as shipped (AB-71).
+        readCloneCommit: (componentPath) => readCloneCommit(componentPath, gitIn),
         fetchComponentSource: (componentPath, branch) =>
             fastForwardClone(componentPath, branch, gitIn),
         checkComponentSource: (componentPath, branch) =>

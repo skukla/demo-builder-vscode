@@ -207,6 +207,99 @@ describe('updateAppBuilderComponent', () => {
         expect(project.appBuilderComponents?.[ENTRY.id]?.status).toBe('deployed');
     });
 
+    /*
+     * AB-71, measured live 2026-10-09: an Update fast-forwarded the ERP's clone, then
+     * `aio app deploy` failed on an Adobe 504. The retry found the clone current and
+     * answered "already up to date" while the old code was still running. Current
+     * means the commit the last good deploy SHIPPED, not the folder's.
+     */
+    describe('the commit the running app was deployed from (AB-71)', () => {
+        const CURRENT: SourceUpdateResult = {
+            status: 'current',
+            detail: 'The integration is already up to date.',
+            from: '7804f3e',
+            to: '7804f3e',
+        };
+
+        function deployedFrom(deployedCommit: string | undefined): Project {
+            const project = installedProject('0.2.0');
+            const state = project.appBuilderComponents![ENTRY.id];
+            if (deployedCommit) state.deployedCommit = deployedCommit;
+            delete state.updateAvailable;
+            return project;
+        }
+
+        it('redeploys a current clone whose code was fetched but never deployed, and says so', async () => {
+            const deps = updateDeps(CURRENT, { readCloneCommit: jest.fn(async () => '7804f3e') });
+            const project = deployedFrom('d32eb96');
+
+            const result = await updateAppBuilderComponent(project, ENTRY.id, deps);
+
+            expect(result).toEqual({
+                success: true,
+                detail: 'Deployed 7804f3e, which an earlier update fetched but did not deploy.',
+            });
+            expect(deps.installComponentDependencies).toHaveBeenCalledTimes(1);
+            expect(deps.deployApp).toHaveBeenCalledTimes(1);
+            expect(project.appBuilderComponents?.[ENTRY.id]?.deployedCommit).toBe('7804f3e');
+        });
+
+        it('leaves a current clone alone when it is the commit that was deployed', async () => {
+            const deps = updateDeps(CURRENT);
+            const project = deployedFrom('7804f3e');
+
+            const result = await updateAppBuilderComponent(project, ENTRY.id, deps);
+
+            expect(result).toEqual({ success: true, detail: 'The integration is already up to date.' });
+            expect(deps.deployApp).not.toHaveBeenCalled();
+        });
+
+        it('trusts the clone for a record from before the field existed', async () => {
+            const deps = updateDeps(CURRENT);
+            const project = deployedFrom(undefined);
+
+            const result = await updateAppBuilderComponent(project, ENTRY.id, deps);
+
+            expect(result).toEqual({ success: true, detail: 'The integration is already up to date.' });
+            expect(deps.deployApp).not.toHaveBeenCalled();
+        });
+
+        it('a failed deploy keeps the commit still running, so the retry deploys', async () => {
+            const deps = updateDeps(UPDATED, {
+                readCloneCommit: jest.fn(async () => '7804f3e'),
+                deployApp: jest.fn().mockResolvedValue({ success: false, error: 'aio app deploy failed: 504' }),
+            });
+            const project = deployedFrom('d32eb96');
+
+            const first = await updateAppBuilderComponent(project, ENTRY.id, deps);
+            expect(first.success).toBe(false);
+            expect(project.appBuilderComponents?.[ENTRY.id]?.deployedCommit).toBe('d32eb96');
+
+            // Something set the card back to deployed (the live case did not stay
+            // 'error'); the recorded commit alone must still send the retry to deploy.
+            project.appBuilderComponents![ENTRY.id].status = 'deployed';
+            deps.fetchComponentSource = jest.fn().mockResolvedValue(CURRENT);
+            deps.deployApp = jest.fn().mockResolvedValue({ success: true, data: { url: 'https://app/api', deployedUrls: URLS } });
+
+            const retry = await updateAppBuilderComponent(project, ENTRY.id, deps);
+
+            expect(retry.success).toBe(true);
+            expect(deps.deployApp).toHaveBeenCalledTimes(1);
+            expect(project.appBuilderComponents?.[ENTRY.id]?.deployedCommit).toBe('7804f3e');
+        });
+
+        it('a record from before the field records the commit it moved from, before deploying', async () => {
+            const deps = updateDeps(UPDATED, {
+                deployApp: jest.fn().mockResolvedValue({ success: false, error: 'aio app deploy failed: 504' }),
+            });
+            const project = deployedFrom(undefined);
+
+            await updateAppBuilderComponent(project, ENTRY.id, deps);
+
+            expect(project.appBuilderComponents?.[ENTRY.id]?.deployedCommit).toBe('d32eb96');
+        });
+    });
+
     it("a failed redeploy keeps the component's own name, not the catalog's", async () => {
         const deps = updateDeps(UPDATED, {
             deployApp: jest.fn().mockResolvedValue({ success: false, error: 'aio app deploy failed' }),
