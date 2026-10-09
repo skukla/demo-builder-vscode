@@ -87,6 +87,14 @@ suites unchanged (the behaviour proof), run `npm run validate:source-duplication
 the drop (cloneCeiling, filePairs, a `_recorded` line), and write the per-pair verdicts
 for the pairs that REMAIN into the ledger so the next reader does not redo this read.
 
+**Pairs 23 and 24 DONE 2026-10-09** in the EDS-8 errorFormatters sitting. Re-read: the GitHub
+and Helix formatters were the same function apart from the table, both reading `status`; the
+DA.live formatter was a third copy reading `statusCode`, and had never had a caller, so it was
+deleted rather than folded. One `formatByTable(error, table)` now serves both. Proved by the
+four existing suites run unchanged (81 tests) and an old-against-new comparison of 3,808 inputs
+(planted control caught). cloneCeiling 36 -> 34. Sitting 2's other pairs (4 to 7, 9, 10) are
+untouched by this cut.
+
 ## Below the scan's threshold, found by reading (2026-10-08)
 
 The same five-line `ensureSDKReady` method is copied into four authentication files:

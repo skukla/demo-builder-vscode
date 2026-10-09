@@ -5680,7 +5680,7 @@
             "source": "mutationLedger add"
         },
         {
-            "module": "src/features/eds/services/errorFormatters.ts",
+            "module": "src/features/eds/services/github/githubWriteRejection.ts",
             "anchors": [
                 "for (const ph of data.metadata?.secret_scanning?.bypass_placeholders ?? []) {"
             ],
@@ -5692,7 +5692,7 @@
             "source": "mutationLedger add"
         },
         {
-            "module": "src/features/eds/services/errorFormatters.ts",
+            "module": "src/features/eds/services/github/githubWriteRejection.ts",
             "anchors": [
                 "for (const [i, entry] of (data.errors ?? []).entries()) {"
             ],
@@ -5704,7 +5704,7 @@
             "source": "mutationLedger add"
         },
         {
-            "module": "src/features/eds/services/errorFormatters.ts",
+            "module": "src/features/eds/services/github/githubWriteRejection.ts",
             "anchors": [
                 "out.push(`  errors[${i}]${entry?.resource ? ` (${entry.resource})` : ''}: ${detail}`);"
             ],
@@ -5716,7 +5716,7 @@
             "source": "mutationLedger add"
         },
         {
-            "module": "src/features/eds/services/errorFormatters.ts",
+            "module": "src/features/eds/services/github/githubWriteRejection.ts",
             "anchors": [
                 "if (err?.status) lines.push(`  status: ${err.status}`);"
             ],
@@ -5728,7 +5728,7 @@
             "source": "mutationLedger add"
         },
         {
-            "module": "src/features/eds/services/errorFormatters.ts",
+            "module": "src/features/eds/services/github/githubWriteRejection.ts",
             "anchors": [
                 "const requestId = err?.response?.headers?.['x-github-request-id'];"
             ],
@@ -5744,7 +5744,7 @@
             "anchors": [
                 "patterns: [],"
             ],
-            "line": 60,
+            "line": 116,
             "mutants": 1,
             "category": "other",
             "reason": "GitHub table. UNKNOWN's pattern list is empty AND the matching loop skips the UNKNOWN key outright, so this array is read by nothing. Substituting an element cannot change any answer while the skip stands \u2014 and the skip's own mutant is unkillable while this array stays empty, so each keeps the other unobservable. Killing either needs a src change: deleting the skip would make the fallback's technicalDetails (which omits Status:) reachable for any future UNKNOWN pattern, trading a real invariant for a mutation score.",
@@ -5757,11 +5757,10 @@
             "anchors": [
                 "if (code === 'UNKNOWN') continue;"
             ],
-            "line": 295,
             "mutants": 1,
             "category": "branch",
-            "reason": "GitHub table. Mutating the guard to never skip is unobservable because UNKNOWN's own patterns list is empty \u2014 the inner loop then iterates zero times and falls through to the same fallback. The guard is not dead: it is what keeps the loop's return shape (which carries Status:) from ever answering for UNKNOWN, whose fallback deliberately omits it. See the paired entry on this table's empty `patterns` array.",
-            "decision": "Equivalent while UNKNOWN's patterns list is empty.",
+            "reason": "Shared table matcher (formatByTable), since 2026-10-09 the one copy the GitHub, DA.live and Helix formatters each used to carry. Mutating the guard to never skip is unobservable because UNKNOWN's own patterns list is empty in both tables \u2014 the inner loop then iterates zero times and falls through to the same fallback. The guard is not dead: it is what keeps the loop's return shape (which carries Status:) from ever answering for UNKNOWN, whose fallback deliberately omits it. See the paired entries on each table's empty `patterns` array.",
+            "decision": "Equivalent while UNKNOWN's patterns lists are empty.",
             "recorded": "2026-09-05",
             "source": "mutationLedger add"
         },
@@ -5770,50 +5769,11 @@
             "anchors": [
                 "patterns: [],"
             ],
-            "line": 360,
-            "mutants": 1,
-            "category": "other",
-            "reason": "DA.live table. UNKNOWN's pattern list is empty AND the matching loop skips the UNKNOWN key outright, so this array is read by nothing. Substituting an element cannot change any answer while the skip stands \u2014 and the skip's own mutant is unkillable while this array stays empty, so each keeps the other unobservable. Killing either needs a src change: deleting the skip would make the fallback's technicalDetails (which omits Status:) reachable for any future UNKNOWN pattern, trading a real invariant for a mutation score.",
-            "decision": "Equivalent while the UNKNOWN skip stands.",
-            "recorded": "2026-09-05",
-            "source": "mutationLedger add"
-        },
-        {
-            "module": "src/features/eds/services/errorFormatters.ts",
-            "anchors": [
-                "if (code === 'UNKNOWN') continue;"
-            ],
-            "line": 390,
-            "mutants": 1,
-            "category": "branch",
-            "reason": "DA.live table. Mutating the guard to never skip is unobservable because UNKNOWN's own patterns list is empty \u2014 the inner loop then iterates zero times and falls through to the same fallback. The guard is not dead: it is what keeps the loop's return shape (which carries Status:) from ever answering for UNKNOWN, whose fallback deliberately omits it. See the paired entry on this table's empty `patterns` array.",
-            "decision": "Equivalent while UNKNOWN's patterns list is empty.",
-            "recorded": "2026-09-05",
-            "source": "mutationLedger add"
-        },
-        {
-            "module": "src/features/eds/services/errorFormatters.ts",
-            "anchors": [
-                "patterns: [],"
-            ],
-            "line": 456,
+            "line": 165,
             "mutants": 1,
             "category": "other",
             "reason": "Helix table. UNKNOWN's pattern list is empty AND the matching loop skips the UNKNOWN key outright, so this array is read by nothing. Substituting an element cannot change any answer while the skip stands \u2014 and the skip's own mutant is unkillable while this array stays empty, so each keeps the other unobservable. Killing either needs a src change: deleting the skip would make the fallback's technicalDetails (which omits Status:) reachable for any future UNKNOWN pattern, trading a real invariant for a mutation score.",
             "decision": "Equivalent while the UNKNOWN skip stands.",
-            "recorded": "2026-09-05",
-            "source": "mutationLedger add"
-        },
-        {
-            "module": "src/features/eds/services/errorFormatters.ts",
-            "anchors": [
-                "if (code === 'UNKNOWN') continue;"
-            ],
-            "line": 486,
-            "mutants": 1,
-            "category": "branch",
-            "reason": "Helix table. Mutating the guard to never skip is unobservable because UNKNOWN's own patterns list is empty \u2014 the inner loop then iterates zero times and falls through to the same fallback. The guard is not dead: it is what keeps the loop's return shape (which carries Status:) from ever answering for UNKNOWN, whose fallback deliberately omits it. See the paired entry on this table's empty `patterns` array.",
-            "decision": "Equivalent while UNKNOWN's patterns list is empty.",
             "recorded": "2026-09-05",
             "source": "mutationLedger add"
         },

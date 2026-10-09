@@ -13,14 +13,14 @@
  * @module features/eds/services/github/githubTreeCommits
  */
 
+import type { GitHubTreeInput } from '../types';
+import { GitHubAuthenticatedOperations } from './githubAuthenticatedOperations';
+import type { GitHubTokenService } from './githubTokenService';
 import {
     describePushProtectionBlock,
     describeRejectionDiagnostics,
     isRulesetRejection,
-} from '../errorFormatters';
-import type { GitHubTreeInput } from '../types';
-import { GitHubAuthenticatedOperations } from './githubAuthenticatedOperations';
-import type { GitHubTokenService } from './githubTokenService';
+} from './githubWriteRejection';
 import { getLogger } from '@/core/logging/debugLogger';
 import type { Logger } from '@/types/logger';
 
@@ -75,7 +75,7 @@ const COMMIT_REBASE_ATTEMPTS = 3;
  *
  * Keyed on the MESSAGE, not the 422 — a repository-ruleset rejection carries the
  * same status and an entirely different remedy, and retrying it can only repeat a
- * write the rules forbid. `errorFormatters` makes the same distinction for the
+ * write the rules forbid. `githubWriteRejection` makes the same distinction for the
  * Contents path; this is the refs-API side of it.
  */
 function isStaleRefRejection(error: unknown): boolean {

@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "EDS-8 split of ActionGrid: BuildZone and EditTile moved to BuildZone.tsx (100%, 11 of 11) with its own suite, which pins the two Edit tooltips no suite asserted. The 94.38 ActionGrid row was stale (2026-09-06, a 660-line file): re-measured unsplit before the split at 93.33 (42 of 45; the Edit tooltips and the lifecycle fallback survived). ActionGrid now 33 of 34; its one survivor, the 'green' fallback, is ledgered as equivalent.",
+    "_note": "EDS-8 2026-10-09: errorFormatters split. The GitHub and Helix formatters share one table matcher and the never-called DA.live formatter was deleted; GitHub write-rejection description moved to githubWriteRejection.ts. Three uncovered decisions now tested (N/A status on the code path, a bypass id with no token type, an errors entry with no resource); every survivor left is a ledgered equivalent or text with no observable effect.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -6193,22 +6193,19 @@
             "openGaps": 0
         },
         "src/features/eds/services/errorFormatters.ts": {
-            "score": 85.02,
-            "killed": 244,
-            "survived": 40,
-            "noCoverage": 3,
+            "score": 95.6,
+            "killed": 87,
+            "survived": 4,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "other": 5,
-                "optionalChain": 4,
-                "string": 28,
-                "branch": 3
+                "string": 1,
+                "branch": 1,
+                "other": 2
             },
-            "uncoveredCategories": {
-                "string": 3
-            },
-            "highValueSurvivors": 3,
-            "equivalent": 12,
+            "uncoveredCategories": {},
+            "highValueSurvivors": 1,
+            "equivalent": 3,
             "openGaps": 0
         },
         "src/features/eds/services/ewSettingChangeListener.ts": {
@@ -10728,6 +10725,22 @@
             "uncoveredCategories": {},
             "highValueSurvivors": 0,
             "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/eds/services/github/githubWriteRejection.ts": {
+            "score": 92.79,
+            "killed": 103,
+            "survived": 8,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 2,
+                "optionalChain": 4,
+                "string": 2
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 6,
             "openGaps": 0
         }
     }

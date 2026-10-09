@@ -14,10 +14,6 @@
  * @module features/eds/services/github/githubFileOperations
  */
 
-import {
-    describePushProtectionBlock,
-    describeRejectionDiagnostics,
-} from '../errorFormatters';
 import type {
     GitHubFileContent,
     GitHubFileResult,
@@ -29,6 +25,10 @@ import { GitHubAuthenticatedOperations } from './githubAuthenticatedOperations';
 import { GitHubRepoArchive } from './githubRepoArchive';
 import type { GitHubTokenService } from './githubTokenService';
 import { GitHubTreeCommits } from './githubTreeCommits';
+import {
+    describePushProtectionBlock,
+    describeRejectionDiagnostics,
+} from './githubWriteRejection';
 import { getLogger } from '@/core/logging/debugLogger';
 import type { Logger } from '@/types/logger';
 

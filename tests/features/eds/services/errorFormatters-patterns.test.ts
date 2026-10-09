@@ -1,12 +1,12 @@
 /**
  * The three pattern TABLES, exercised as tables.
  *
- * `formatGitHubError`, `formatDaLiveError` and `formatHelixError` each classify a
+ * `formatGitHubError` and `formatHelixError` each classify a
  * failure two ways: by an explicit `code` the caller attached, or — far more
  * often, because most of these errors arrive from octokit and fetch with no code
  * at all — by matching the message against a list of regexes. The existing suite
  * covers one message per formatter and mostly through the code path, so almost
- * every regex in the three tables was matched by nothing.
+ * every regex in the tables was matched by nothing.
  *
  * Two things this pins that a single happy-path case per code cannot:
  *
@@ -23,11 +23,7 @@
  * failure names the pattern that broke.
  */
 
-import {
-    formatGitHubError,
-    formatDaLiveError,
-    formatHelixError,
-} from '@/features/eds/services/errorFormatters';
+import { formatGitHubError, formatHelixError } from '@/features/eds/services/errorFormatters';
 
 import { codedError } from '../../../helpers/codedErrorFake';
 
@@ -40,16 +36,6 @@ describe('formatGitHubError — the message table', () => {
         ['403 secondary rate abuse detected', 'RATE_LIMITED'],
     ])('classifies %j as %s', (message, code) => {
         expect(formatGitHubError(new Error(message)).code).toBe(code);
-    });
-});
-
-describe('formatDaLiveError — the message table', () => {
-    it('classifies a refused connection as NETWORK_ERROR', () => {
-        // ECONNREFUSED matches nothing else in the DA.live table, so this is the
-        // one message that proves that list is consulted at all.
-        expect(formatDaLiveError(new Error('connect ECONNREFUSED 127.0.0.1:443')).code).toBe(
-            'NETWORK_ERROR',
-        );
     });
 });
 
@@ -74,7 +60,6 @@ describe('formatHelixError — the message table', () => {
 describe('an explicit code beats the message, and an unknown code falls through', () => {
     const formatters = [
         ['GitHub', formatGitHubError, 'RATE_LIMITED'],
-        ['DA.live', formatDaLiveError, 'NOT_FOUND'],
         ['Helix', formatHelixError, 'CONFIG_FAILED'],
     ] as const;
 
@@ -93,8 +78,7 @@ describe('an explicit code beats the message, and an unknown code falls through'
 /**
  * `technicalDetails` on the MESSAGE path carries the HTTP status, and it is the
  * only place the status survives — the user-facing message never mentions it.
- * Note which field each formatter reads: GitHub and Helix read `status`, DA.live
- * reads `statusCode`.
+ * Both formatters read `status`.
  */
 describe('technicalDetails carries the status on the pattern path', () => {
     it('GitHub reads status', () => {
@@ -103,22 +87,134 @@ describe('technicalDetails carries the status on the pattern path', () => {
         ).toBe('Status: 401, Message: Bad credentials');
     });
 
-    it('DA.live reads statusCode', () => {
-        expect(
-            formatDaLiveError(codedError('Request forbidden', { statusCode: 403 }))
-                .technicalDetails,
-        ).toBe('Status: 403, Message: Request forbidden');
-    });
-
     it('Helix reads status', () => {
         expect(
             formatHelixError(codedError('service unavailable', { status: 503 })).technicalDetails,
         ).toBe('Status: 503, Message: service unavailable');
     });
 
+    it('says N/A on the code path too when the error carries no status', () => {
+        expect(
+            formatHelixError(codedError('nothing in here matches anything', { code: 'SYNC_TIMEOUT' }))
+                .technicalDetails,
+        ).toBe('Status: N/A, Message: nothing in here matches anything');
+    });
+
     it('says N/A when the error carries no status at all', () => {
         expect(formatGitHubError(new Error('Bad credentials')).technicalDetails).toBe(
             'Status: N/A, Message: Bad credentials',
+        );
+    });
+});
+
+/**
+ * Every row's words, exactly. These are what the SC reads, and since 2026-10-09
+ * both formatters classify through one shared matcher, so each row is reached
+ * here once by its code and the words are compared byte for byte. A row that
+ * changed its wording, or a matcher that answered from the wrong table, fails
+ * by name.
+ */
+describe('each table row answers with its own words', () => {
+    const githubRows: [string, string, string][] = [
+        [
+            'OAUTH_CANCELLED',
+            'GitHub sign-in was cancelled. Please try again to authenticate.',
+            'Click the Sign In button to start the authentication process again.',
+        ],
+        [
+            'REPO_EXISTS',
+            'A repository with this name already exists. Please choose a different name for your project.',
+            'Go back and enter a different project name, or delete the existing repository first.',
+        ],
+        [
+            'AUTH_EXPIRED',
+            'Your GitHub session has expired. Please sign in again to continue.',
+            'Click Sign In to authenticate with GitHub again.',
+        ],
+        [
+            'RATE_LIMITED',
+            'Too many requests to GitHub. Please try again in a few minutes.',
+            'Wait 5-10 minutes before trying again. GitHub limits API requests.',
+        ],
+        [
+            'NETWORK_ERROR',
+            'Could not connect to GitHub. Please check your internet connection.',
+            'Verify your internet connection and try again.',
+        ],
+        [
+            'UNKNOWN',
+            'An unexpected error occurred with GitHub. Please try again.',
+            'If the problem persists, check GitHub status at status.github.com.',
+        ],
+    ];
+    const helixRows: [string, string, string][] = [
+        [
+            'SERVICE_UNAVAILABLE',
+            'The Helix configuration service is temporarily unavailable. Please try again in a few minutes.',
+            'This is usually a temporary issue. Try again in a few minutes.',
+        ],
+        [
+            'SYNC_TIMEOUT',
+            'Code synchronization is taking longer than expected. The repository may still be processing.',
+            'You can retry the setup or check back in a few minutes. The synchronization may complete in the background.',
+        ],
+        [
+            'CONFIG_FAILED',
+            'Failed to configure the Helix site. The server encountered an error.',
+            'Try again. If the problem persists, verify your project settings.',
+        ],
+        [
+            'NETWORK_ERROR',
+            'Could not connect to the Helix service. Please check your internet connection.',
+            'Verify your internet connection and try again.',
+        ],
+        [
+            'UNKNOWN',
+            'An unexpected error occurred with Helix configuration. Please try again.',
+            'If the problem persists, contact support.',
+        ],
+    ];
+
+    it.each(githubRows)('GitHub %s', (code, userMessage, recoveryHint) => {
+        expect(formatGitHubError(codedError('nothing in here matches anything', { code, status: 418 })))
+            .toStrictEqual({
+                code,
+                message: 'nothing in here matches anything',
+                userMessage,
+                recoveryHint,
+                technicalDetails: 'Status: 418, Message: nothing in here matches anything',
+            });
+    });
+
+    it.each(helixRows)('Helix %s', (code, userMessage, recoveryHint) => {
+        expect(formatHelixError(codedError('nothing in here matches anything', { code, status: 418 })))
+            .toStrictEqual({
+                code,
+                message: 'nothing in here matches anything',
+                userMessage,
+                recoveryHint,
+                technicalDetails: 'Status: 418, Message: nothing in here matches anything',
+            });
+    });
+
+    it('the fallback carries no status, whatever the error had', () => {
+        expect(formatHelixError(codedError('nothing in here matches anything', { status: 418 })))
+            .toStrictEqual({
+                code: 'UNKNOWN',
+                message: 'nothing in here matches anything',
+                userMessage: 'An unexpected error occurred with Helix configuration. Please try again.',
+                recoveryHint: 'If the problem persists, contact support.',
+                technicalDetails: 'Message: nothing in here matches anything',
+            });
+    });
+
+    it('a message matching rows in both tables is answered from the table asked', () => {
+        // "network" sits in both NETWORK_ERROR rows; the words name the service.
+        expect(formatGitHubError(new Error('network down')).userMessage).toBe(
+            'Could not connect to GitHub. Please check your internet connection.',
+        );
+        expect(formatHelixError(new Error('network down')).userMessage).toBe(
+            'Could not connect to the Helix service. Please check your internet connection.',
         );
     });
 });

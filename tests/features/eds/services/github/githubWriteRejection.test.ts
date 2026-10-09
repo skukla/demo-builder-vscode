@@ -21,7 +21,8 @@
 import {
     describePushProtectionBlock,
     describeRejectionDiagnostics,
-} from '@/features/eds/services/errorFormatters';
+    isRulesetRejection,
+} from '@/features/eds/services/github/githubWriteRejection';
 
 /** The shape octokit raises for a 422 ruleset rejection. */
 function rulesetError(topLine: string, errorsDetail?: string): Error {
@@ -293,5 +294,32 @@ describe('describePushProtectionBlock — names the secret from the real body', 
         const out = describePushProtectionBlock(realBody(), 'fstab.yaml');
         expect(out).toContain('fstab.yaml');
         expect(out).toMatch(/nothing was written/i);
+    });
+});
+
+/**
+ * The one test both write paths share. The API path reads octokit's message; the
+ * CLI-git push path reads git's stderr, where a ruleset refusal looks like an
+ * ordinary rejection unless the ruleset markers are looked for first.
+ */
+describe('isRulesetRejection', () => {
+    it.each([
+        ['the API message', 'Repository rule violations found\n\nSecret detected in content'],
+        ['the rule code alone', 'remote: error: GH013: Repository rule violations found for refs/heads/main'],
+        [
+            'git stderr',
+            ' ! [remote rejected] main -> main (push declined due to repository rule violations)',
+        ],
+    ])('recognises %s', (_label, text) => {
+        expect(isRulesetRejection(text)).toBe(true);
+    });
+
+    it.each([
+        ['a non-fast-forward', ' ! [rejected] main -> main (non-fast-forward)'],
+        ['a stale-SHA conflict', 'main.css does not match 1a2b3c'],
+        ['lower-case gh013', 'gh013'],
+        ['nothing', ''],
+    ])('does not claim %s', (_label, text) => {
+        expect(isRulesetRejection(text)).toBe(false);
     });
 });

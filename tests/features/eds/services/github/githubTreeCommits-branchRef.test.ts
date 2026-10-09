@@ -101,7 +101,7 @@ describe('updateBranchRef', () => {
  * the NEW base is what makes both changes survive: our entries win for the paths
  * we wrote, everything else comes from their commit.
  *
- * 422 is ambiguous here and the codebase already says so (`errorFormatters.ts`:
+ * 422 is ambiguous here and the codebase already says so (`githubWriteRejection.ts`:
  * "GitHub also returns 422 for a stale-SHA conflict on update, which has an
  * entirely different remedy, so detection keys on the message rather than the
  * status"). A repository-ruleset rejection is also a 422 and retrying it can

@@ -21,7 +21,7 @@
 import {
     describePushProtectionBlock,
     describeRejectionDiagnostics,
-} from '@/features/eds/services/errorFormatters';
+} from '@/features/eds/services/github/githubWriteRejection';
 
 /** An octokit-shaped rejection: `status` on the error, everything else in `response`. */
 function rejection(
@@ -129,6 +129,24 @@ describe('describeRejectionDiagnostics — half-populated bodies', () => {
         );
 
         expect(out).toBe('GitHub rejection detail:\n  detected: SLACK_WEBHOOK');
+    });
+
+    it('names a placeholder that carries only a bypass id as an unknown type', () => {
+        const out = describeRejectionDiagnostics(
+            rejection({
+                metadata: { secret_scanning: { bypass_placeholders: [{ placeholder_id: 'PID2' }] } },
+            }),
+        );
+
+        expect(out).toBe('GitHub rejection detail:\n  detected: unknown type (bypass id PID2)');
+    });
+
+    it('reports an errors[] entry with no resource without an empty bracket', () => {
+        const out = describeRejectionDiagnostics(
+            rejection({ errors: [{ message: 'file path is restricted' }] }),
+        );
+
+        expect(out).toBe('GitHub rejection detail:\n  errors[0]: file path is restricted');
     });
 
     it('skips an errors[] entry with no message, and steps over a null one', () => {
