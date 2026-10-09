@@ -525,6 +525,17 @@ and three of them are more than 40% comments). Decide which.
   reach (another feature, and the shared home would be `core/`), so not chased. **Decide:**
   one decoder in `core/utils`, or leave the two.
 
+- 2026-10-09  From the envFileGenerator split. **The generated `.env` and component config
+  files are written straight to disk, with no hash-and-skip.** Every writer in the split
+  (`envFileGenerator.ts`, `componentConfigFiles.ts`) calls `fsPromises.writeFile`, so
+  Regenerate, Configure, EDS Reset and a mesh redeploy all overwrite a hand edit to a
+  component's `.env`, `.env.local`, json config or EDS `config.json` without a word. ADR-013's
+  seam (`generatedFileWriter.ts`) is scoped to the AI bundle only, so this is not a breach of
+  that ADR, but it does sit against "a user's own edits are never overwritten". Not changed:
+  the sitting was a pure move. **Decide:** extend hash-and-skip to these files, or record that
+  they are fully generated and edits belong in Configure. Recommend: record it, since Configure
+  is where these values are meant to be edited and a skipped `.env` would deploy stale values.
+
 ## Needs a live check
 
 The automated checks prove a move did not change what the tests constrain. What they
@@ -735,6 +746,16 @@ date and what happened; a failure becomes its own `fix` item.
       Also confirm a token the agent's `da-auth` skill cached is picked up without a prompt.
       The JWT decoder moved file unchanged and the service lost only a parameter nothing
       passed, so this is a confirmation, not a known risk.
+
+- [ ] **A project's generated config files, created and then regenerated** (the
+      `envFileGenerator.ts` split, 2026-10-09): create a project with an EDS storefront and a
+      mesh, copy each component's `.env` (and `.env.local` for a Next.js frontend) and the
+      storefront's `config.json` aside, then press Save on Configure (which regenerates every
+      `.env`) and redeploy the mesh from the dashboard (which rewrites the mesh `.env`).
+      Compare: only the `# Generated:` timestamp line should differ. Creation reaches the files
+      through `componentConfigFiles.ts`, regeneration through `envFileRegeneration.ts`, and both
+      end in the same `.env` writer; every function is a proven move, so this is a
+      confirmation, not a known risk.
 
 ## Shipped so far
 

@@ -31,8 +31,8 @@ jest.mock('@/features/mesh/services/meshDeployment', () => ({ deployMeshComponen
 // Dynamically imported across the feature boundary (same pattern as
 // projectResetService), so the mock targets the module it imports.
 const mockRegenerateComponentEnvFile = jest.fn().mockResolvedValue(undefined);
-jest.mock('@/features/project-creation/helpers/envFileGenerator', () => ({
-    ...jest.requireActual('@/features/project-creation/helpers/envFileGenerator'),
+jest.mock('@/features/project-creation/helpers/envFileRegeneration', () => ({
+    ...jest.requireActual('@/features/project-creation/helpers/envFileRegeneration'),
     regenerateComponentEnvFile: (...args: unknown[]) => mockRegenerateComponentEnvFile(...args),
 }));
 const mockUpdateMeshState = jest.fn().mockResolvedValue(undefined);

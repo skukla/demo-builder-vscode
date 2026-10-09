@@ -8,8 +8,10 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/daLive/daLiveAuthService.ts",
-        "src/features/eds/services/daLive/jwtPayload.ts"
+        "src/features/project-creation/helpers/envFileGenerator.ts",
+        "src/features/project-creation/helpers/envVarResolution.ts",
+        "src/features/project-creation/helpers/envFileRegeneration.ts",
+        "src/features/project-creation/helpers/componentConfigFiles.ts"
     ],
     "reporters": [
         "clear-text",

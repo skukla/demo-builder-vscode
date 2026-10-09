@@ -35,7 +35,7 @@ import { republishStorefrontConfig } from '@/features/eds/services/storefront/st
 import { detectStorefrontChanges } from '@/features/eds/services/storefront/storefrontStalenessDetector';
 import { markMeshUpdateDeclined } from '@/features/mesh/services/meshUpdateDecline';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
-import { regenerateProjectEnvFiles } from '@/features/project-creation/helpers/envFileGenerator';
+import { regenerateProjectEnvFiles } from '@/features/project-creation/helpers/envFileRegeneration';
 import { handleRenameProject } from '@/features/projects-dashboard/handlers/dashboardHandlers';
 import { Project, type AuthoringExperience } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';

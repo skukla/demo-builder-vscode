@@ -54,7 +54,7 @@ jest.mock('@/features/project-creation/services/componentInstallationOrchestrato
 }));
 
 const mockRegenerateProjectEnvFiles = jest.fn();
-jest.mock('@/features/project-creation/helpers/envFileGenerator', () => ({
+jest.mock('@/features/project-creation/helpers/envFileRegeneration', () => ({
     regenerateProjectEnvFiles: (...a: unknown[]) => mockRegenerateProjectEnvFiles(...a),
 }));
 

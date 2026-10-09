@@ -262,7 +262,7 @@ export class ProjectFileLoader {
             // Orphaned config entries: removal deletes a component's
             // componentConfigs entry going forward, but entries stranded by
             // earlier removals live in existing manifests — and two readers
-            // sweep the WHOLE map (envFileGenerator's fallback loop;
+            // sweep the WHOLE map (envVarResolution's fallback loop;
             // configGenerator's merge, where a MESH entry overrides the
             // backend). Runs AFTER reconcileComponentSelections so a freshly
             // reconciled selection counts as live. Read-side only; the on-disk

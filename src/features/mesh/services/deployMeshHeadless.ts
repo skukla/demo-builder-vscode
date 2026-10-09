@@ -173,7 +173,7 @@ export async function deployMeshHeadless(
                 onProgress?.(OPERATION_STAGES.generatingMeshConfig.label);
                 try {
                     const { regenerateComponentEnvFile } = await import(
-                        '@/features/project-creation/helpers/envFileGenerator'
+                        '@/features/project-creation/helpers/envFileRegeneration'
                     );
                     await regenerateComponentEnvFile(
                         project,

@@ -303,7 +303,7 @@ async function rebuildComponents(
 
     report('Writing the settings back', undefined, at(5));
     const { regenerateProjectEnvFiles } = await import(
-        '@/features/project-creation/helpers/envFileGenerator'
+        '@/features/project-creation/helpers/envFileRegeneration'
     );
     await regenerateProjectEnvFiles(project, loaded.registry, context.logger, context.context.secrets);
 }

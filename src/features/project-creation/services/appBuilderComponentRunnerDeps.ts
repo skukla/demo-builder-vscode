@@ -53,7 +53,7 @@ import {
     calculateMeshSourceHash,
     readMeshEnvVarsFromFile,
 } from '@/features/mesh/services/stalenessDetector';
-import { regenerateComponentEnvFile } from '@/features/project-creation/helpers/envFileGenerator';
+import { regenerateComponentEnvFile } from '@/features/project-creation/helpers/envFileRegeneration';
 import { erpRunnerDeps } from '@/features/project-creation/services/erpRunnerDeps';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';

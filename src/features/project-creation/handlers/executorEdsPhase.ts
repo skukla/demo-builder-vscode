@@ -264,7 +264,7 @@ export async function setupEdsContent(
     // builder cannot enable B2B (no API — it's a backend prerequisite), so warn
     // only on a definitive negative; 'unknown' (older/SaaS schema) stays silent.
     if (typedConfig.edsConfig.templateRepo === 'boilerplate-b2b-template') {
-        // Reuse the canonical config reader (same one envFileGenerator /
+        // Reuse the canonical config reader (same one componentConfigFiles /
         // catalogPrewarmService use) — the GraphQL endpoint is already collected
         // as a project config setting; don't re-derive it. meshEndpoint omitted so
         // we probe the raw Commerce GraphQL the backend exposes.

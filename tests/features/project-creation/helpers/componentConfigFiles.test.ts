@@ -1,6 +1,6 @@
 /**
- * Unit tests for generateComponentConfigFiles — the non-.env half of
- * envFileGenerator.
+ * Unit tests for generateComponentConfigFiles (componentConfigFiles.ts) — the
+ * config files a component declares beyond its default .env.
  *
  * A component declares `configuration.configFiles`; each entry names a format and
  * optionally a generator. This suite pins the three routes that declaration can
@@ -16,7 +16,7 @@ import {
     generateConfigJson,
     extractConfigParamsFromConfigs,
 } from '@/features/eds/services/configGenerator';
-import { generateComponentConfigFiles } from '@/features/project-creation/helpers/envFileGenerator';
+import { generateComponentConfigFiles } from '@/features/project-creation/helpers/componentConfigFiles';
 import { TransformedComponentDefinition, ComponentRegistry } from '@/types/components';
 import {
     createMockSetupContext,

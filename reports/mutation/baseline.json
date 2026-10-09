@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "2026-10-09 EDS-8: parseJwtPayload moved out of daLiveAuthService into jwtPayload.ts unchanged; its two survivors are the ledgered parts.length guard equivalent. The service lost the decoder and the unused token parameter of fetchUserEmail, so its denominator shrank.",
+    "_note": "EDS-8 split of envFileGenerator.ts (2026-10-09) into envVarResolution, envFileRegeneration and componentConfigFiles: every function is a proven move, 348 mutants before the split and 347 after it (one unread interface member deleted), and the new direct suite for envVarResolution kills the five key-list mutants that were previously ledgered as invisible through the writers; remaining survivors are log text, the ledgered equivalents, and one unread interface member that was deleted",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -7748,25 +7748,20 @@
             "openGaps": 0
         },
         "src/features/project-creation/helpers/envFileGenerator.ts": {
-            "score": 86,
-            "killed": 301,
-            "survived": 45,
-            "noCoverage": 4,
+            "score": 87.88,
+            "killed": 58,
+            "survived": 8,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "other": 11,
-                "branch": 16,
-                "logPresentation": 14,
                 "optionalChain": 1,
-                "string": 1,
-                "block": 2
-            },
-            "uncoveredCategories": {
-                "string": 3,
+                "branch": 5,
+                "other": 1,
                 "logPresentation": 1
             },
-            "highValueSurvivors": 18,
-            "equivalent": 30,
+            "uncoveredCategories": {},
+            "highValueSurvivors": 5,
+            "equivalent": 7,
             "openGaps": 0
         },
         "src/features/project-creation/helpers/formatters.ts": {
@@ -10276,6 +10271,55 @@
             "uncoveredCategories": {},
             "highValueSurvivors": 2,
             "equivalent": 2,
+            "openGaps": 0
+        },
+        "src/features/project-creation/helpers/componentConfigFiles.ts": {
+            "score": 80.67,
+            "killed": 121,
+            "survived": 26,
+            "noCoverage": 3,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 12,
+                "branch": 11,
+                "string": 1,
+                "block": 2
+            },
+            "uncoveredCategories": {
+                "string": 2,
+                "logPresentation": 1
+            },
+            "highValueSurvivors": 13,
+            "equivalent": 13,
+            "openGaps": 0
+        },
+        "src/features/project-creation/helpers/envVarResolution.ts": {
+            "score": 98.65,
+            "killed": 73,
+            "survived": 0,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {
+                "string": 1
+            },
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/project-creation/helpers/envFileRegeneration.ts": {
+            "score": 89.47,
+            "killed": 51,
+            "survived": 6,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 1,
+                "other": 5
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 5,
             "openGaps": 0
         }
     }

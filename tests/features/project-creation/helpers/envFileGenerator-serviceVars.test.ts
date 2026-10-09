@@ -1,5 +1,6 @@
 /**
- * Unit tests for the env-var RESOLUTION half of envFileGenerator: which keys a
+ * Unit tests for env-var RESOLUTION (envVarResolution.ts), seen through the .env
+ * writer and the regeneration entry points: which keys a
  * component's .env ends up holding once backend-specific service definitions are
  * folded in, and which registry categories a component id is looked up across.
  *
@@ -11,11 +12,11 @@
  */
 
 import { promises as fsPromises } from 'fs';
+import { generateComponentEnvFile } from '@/features/project-creation/helpers/envFileGenerator';
 import {
-    generateComponentEnvFile,
     regenerateComponentEnvFile,
     regenerateProjectEnvFiles,
-} from '@/features/project-creation/helpers/envFileGenerator';
+} from '@/features/project-creation/helpers/envFileRegeneration';
 import {
     ComponentRegistry,
     EnvVarDefinition,

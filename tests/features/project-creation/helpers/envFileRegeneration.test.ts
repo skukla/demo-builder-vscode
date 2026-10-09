@@ -9,7 +9,7 @@
 
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
-import { regenerateProjectEnvFiles } from '@/features/project-creation/helpers/envFileGenerator';
+import { regenerateProjectEnvFiles } from '@/features/project-creation/helpers/envFileRegeneration';
 import { ComponentRegistry } from '@/types/components';
 import type { Project } from '@/types/base';
 import { createMockLogger, sharedEnvVars } from './envFileGenerator.testUtils';
@@ -152,7 +152,7 @@ describe('regenerateProjectEnvFiles', () => {
         await regenerateProjectEnvFiles(project, buildRegistry(), logger, secretsFake);
 
         expect(fsPromises.writeFile).toHaveBeenCalledTimes(1);
-        expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('unknown-comp'));
+        expect(logger.warn).toHaveBeenCalledTimes(1);
     });
 
     // ADR-011 D3 Steps 07+09: MESH_ENDPOINT must resolve from the keyed mesh

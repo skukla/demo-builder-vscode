@@ -27,7 +27,7 @@ jest.mock('fs/promises', () => ({
 }));
 
 const mockRegenerateProjectEnvFiles = jest.fn().mockResolvedValue(undefined);
-jest.mock('@/features/project-creation/helpers/envFileGenerator', () => ({
+jest.mock('@/features/project-creation/helpers/envFileRegeneration', () => ({
     regenerateProjectEnvFiles: (...args: unknown[]) => mockRegenerateProjectEnvFiles(...args),
 }));
 

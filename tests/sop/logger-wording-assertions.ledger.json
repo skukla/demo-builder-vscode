@@ -96,7 +96,6 @@
         "tests/features/project-creation/handlers/wizardLifecycleHandlers-initialization.test.ts": 1,
         "tests/features/project-creation/handlers/wizardLifecycleHandlers-utilities.test.ts": 5,
         "tests/features/project-creation/helpers/envFileGenerator-basic.test.ts": 1,
-        "tests/features/project-creation/helpers/envFileGenerator-regenerate.test.ts": 1,
         "tests/features/project-creation/services/ProjectSetupContext.test.ts": 1,
         "tests/features/project-creation/services/aiBundle/aiBundleActivationRefresh.test.ts": 1,
         "tests/features/project-creation/services/aiBundle/aiDefaultsInstaller.test.ts": 3,

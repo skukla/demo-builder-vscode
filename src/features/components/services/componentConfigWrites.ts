@@ -41,7 +41,7 @@ export interface FieldRef {
  * with an empty product block. `backendOwnedScope` was added to make the READS
  * agree; this makes the WRITE single, so there is no second copy to disagree with.
  *
- * `.env` generation is unaffected — `envFileGenerator.resolveFromComponentConfigs`
+ * `.env` generation is unaffected — `envVarResolution.resolveFromComponentConfigs`
  * already resolves these keys from the backend before its fallback sweep, so a
  * mesh still gets the value in its own `.env`.
  *

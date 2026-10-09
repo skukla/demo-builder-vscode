@@ -401,7 +401,7 @@ export function getCurrentMeshState(project: Project): MeshState | null {
 /**
  * Flatten every component's config into one record, FIRST definition winning.
  *
- * Mirrors `envFileGenerator.resolveFromComponentConfigs`, which walks
+ * Mirrors `envVarResolution.resolveFromComponentConfigs`, which walks
  * `componentConfigs` and returns the first component that defines a key. The
  * detector must agree with it: whatever that generator writes into the mesh
  * `.env` is what the next deploy ships, so any other tiebreak here means
@@ -506,7 +506,7 @@ async function detectMeshChangesImpl(
     //
     // The baseline this is compared against was read FROM that `.env`, so the
     // only correct question is "would the generator write something different?".
-    // That makes `envFileGenerator.resolveFromComponentConfigs` the spec, and
+    // That makes `envVarResolution.resolveFromComponentConfigs` the spec, and
     // this must resolve values exactly as it does:
     //
     //   1. flatten across ALL components, FIRST definition wins — cross-boundary
