@@ -51,3 +51,54 @@ describe('OperationPromptForm — field kinds', () => {
         expect(last()).toEqual({ name: 'y' });
     });
 });
+
+// Owner, 2026-10-09: deleting a project offers one box per online resource, and the
+// QuickPick it replaced had a select-all; the modal had none.
+describe('OperationPromptForm — select all', () => {
+    const RESOURCES: OperationPromptField[] = [
+        { id: 'github', label: 'Also delete the GitHub repository', kind: 'checkbox', value: '' },
+        { id: 'daLive', label: 'Also delete the DA.live site', kind: 'checkbox', value: '' },
+    ];
+
+    it('offers a select-all above two or more boxes, which ticks and clears every one', () => {
+        const { last } = renderForm(RESOURCES);
+        const all = screen.getByRole('checkbox', { name: 'Select all' });
+
+        fireEvent.click(all);
+        expect(last()).toEqual({ github: 'true', daLive: 'true' });
+        expect(screen.getByRole('checkbox', { name: 'Also delete the GitHub repository' })).toBeChecked();
+        expect(screen.getByRole('checkbox', { name: 'Also delete the DA.live site' })).toBeChecked();
+
+        fireEvent.click(all);
+        expect(last()).toEqual({ github: '', daLive: '' });
+    });
+
+    it('reads ticked when every box is, and partly ticked when only some are', () => {
+        renderForm(RESOURCES);
+        const all = screen.getByRole('checkbox', { name: 'Select all' });
+
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Also delete the GitHub repository' }));
+        expect(all).not.toBeChecked();
+        expect(all).toHaveAttribute('aria-checked', 'mixed');
+
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Also delete the DA.live site' }));
+        expect(all).toBeChecked();
+        expect(all).not.toHaveAttribute('aria-checked');
+    });
+
+    it('from partly ticked, ticks the rest', () => {
+        const { last } = renderForm([{ ...RESOURCES[0], value: 'true' }, RESOURCES[1]]);
+
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Select all' }));
+
+        expect(last()).toEqual({ github: 'true', daLive: 'true' });
+    });
+
+    it('is not offered for a single box, and is never an answer of its own', () => {
+        const { last } = renderForm([RESOURCES[0], { id: 'name', label: 'Name', value: 'x' }]);
+
+        expect(screen.queryByRole('checkbox', { name: 'Select all' })).toBeNull();
+        expect(Object.keys(last() ?? {})).toStrictEqual(['github', 'name']);
+    });
+});
+

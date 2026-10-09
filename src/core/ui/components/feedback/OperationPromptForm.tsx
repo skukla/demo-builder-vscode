@@ -84,6 +84,31 @@ function PromptField({ field, value, onChange }: {
     );
 }
 
+/**
+ * "Select all" over a question's boxes, when it has two or more: ticked when every box
+ * is, partly ticked when some are, and a click ticks them all (or, when all are, clears
+ * them). Owner, 2026-10-09: deleting a project offers one box per online resource, and
+ * the QuickPick it replaced had a select-all the modal lacked. It is never an answer of
+ * its own: it only sets the boxes it stands for.
+ */
+function SelectAllBox({ ids, values, onChange }: {
+    ids: string[];
+    values: Record<string, string>;
+    onChange: (next: Record<string, string>) => void;
+}): React.ReactElement {
+    const ticked = ids.filter((id) => values[id] === 'true').length;
+    const all = ticked === ids.length;
+    const setAll = (): void => {
+        const value = all ? '' : 'true';
+        onChange({ ...values, ...Object.fromEntries(ids.map((id) => [id, value])) });
+    };
+    return (
+        <Checkbox isSelected={all} isIndeterminate={ticked > 0 && !all} onChange={setAll}>
+            Select all
+        </Checkbox>
+    );
+}
+
 /** The fields of one question, in the order the guard asked for them. */
 export function OperationPromptForm({
     fields,
@@ -103,14 +128,16 @@ export function OperationPromptForm({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [identity]);
 
-    const change = (id: string, value: string): void => {
-        const next = { ...values, [id]: value };
+    const replace = (next: Record<string, string>): void => {
         setValues(next);
         onChange(next);
     };
+    const change = (id: string, value: string): void => replace({ ...values, [id]: value });
+    const boxes = fields.filter((field) => field.kind === 'checkbox').map((field) => field.id);
 
     return (
         <Flex direction="column" gap="size-200" width="100%">
+            {boxes.length > 1 && <SelectAllBox ids={boxes} values={values} onChange={replace} />}
             {fields.map((field) => (
                 <PromptField
                     key={field.id}

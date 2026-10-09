@@ -292,6 +292,7 @@ export const Checkbox: React.FC<any> = ({
     children,
     isSelected,
     isDisabled,
+    isIndeterminate,
     onChange,
     ...props
 }) => (
@@ -300,6 +301,7 @@ export const Checkbox: React.FC<any> = ({
             type="checkbox"
             checked={isSelected || false}
             disabled={isDisabled}
+            aria-checked={isIndeterminate ? 'mixed' : undefined}
             onChange={(e) => onChange?.(e.target.checked)}
         />
         {children}
