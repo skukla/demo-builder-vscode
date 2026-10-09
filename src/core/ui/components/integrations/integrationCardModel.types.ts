@@ -50,6 +50,9 @@ export type CardAction =
     // A system card's simulated downtime (AB-59), moved off the mock ERP's own Settings screen
     // so it never sits beside a real ERP setting.
     | 'simulate-downtime'
+    // An ERP card's "Assign products" and its undo (AB-74).
+    | 'assign-products'
+    | 'undo-assignment'
     // The ERP integration's: add another ERP beside the ones it serves (AB-16).
     | 'add-erp'
     // After a removal stopped on a clean-up that did not finish: go ahead.

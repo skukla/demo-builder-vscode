@@ -679,6 +679,14 @@
           },
           "description": "Where the SC is with each of the catalog entry's `setupSteps` (AB-26x), by step id. Absent = open. Removed with the component."
         },
+        "erpAssignment": {
+          "$ref": "#/definitions/ErpAssignmentRecord",
+          "description": "An ERP's last \"Assign products\" (AB-74): the value written and each product's `erp_owner` before it, so \"Undo last assignment\" can put them back. Replaced by the next assignment, removed by the undo, and removed with the component."
+        },
+        "erpOwnerSets": {
+          "$ref": "#/definitions/ErpOwnerSetsRecord",
+          "description": "The ERP integration's record of the attribute sets Demo Builder added `erp_owner` to (AB-74), so the addition can be undone. Removed by the undo and with the component."
+        },
         "catalogId": {
           "type": "string",
           "description": "The catalog entry this component was made from, when its id is not that entry's id: a second copy of a kind the project already holds (`demo-erp-2`). ABSENT means the id IS the catalog id — every component before this, and the first of each kind. Read through `catalogEntryFor`."
@@ -927,6 +935,75 @@
         "unknown"
       ],
       "description": "What a setup check concluded."
+    },
+    "ErpAssignmentRecord": {
+      "type": "object",
+      "properties": {
+        "at": {
+          "type": "string",
+          "description": "ISO date string of the write."
+        },
+        "value": {
+          "type": "string",
+          "description": "The value written."
+        },
+        "previous": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "sku": {
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "sku",
+              "value"
+            ]
+          }
+        }
+      },
+      "required": [
+        "at",
+        "value",
+        "previous"
+      ],
+      "description": "What an assignment recorded so it can be undone: each product's `erp_owner` BEFORE the write, the empty string for a product that had none. Kept on the ERP's component record until the next assignment replaces it, the undo runs, or the ERP is removed."
+    },
+    "ErpOwnerSetsRecord": {
+      "type": "object",
+      "properties": {
+        "at": {
+          "type": "string",
+          "description": "ISO date string of the addition."
+        },
+        "sets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "number"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          }
+        }
+      },
+      "required": [
+        "at",
+        "sets"
+      ],
+      "description": "The attribute sets Demo Builder added `erp_owner` to, so the addition can be undone. Kept on the ERP integration's component record until the undo runs or the integration is removed."
     },
     "AddedDemo": {
       "type": "object",

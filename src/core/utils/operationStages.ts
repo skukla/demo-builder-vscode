@@ -109,6 +109,16 @@ export const OPERATION_STAGES = {
         expectation: 'Usually a minute',
         detail: "Copying Commerce's products and companies into the ERP",
     },
+    assigningErpProducts: {
+        label: 'Tagging the products',
+        expectation: 'Usually under a minute',
+        detail: 'Writing erp_owner in one bulk call to Commerce',
+    },
+    changingAttributeSets: {
+        label: 'Changing attribute sets',
+        expectation: 'Usually a few seconds a set',
+        detail: 'erp_owner in the sets your products use',
+    },
     resettingErpRecords: {
         label: 'Resetting the records',
         expectation: 'Usually a minute or two',

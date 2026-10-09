@@ -35,7 +35,7 @@ import type { Project } from '@/types/base';
 import type { ErpOwnershipOptions, ErpOwnsEntry, ErpOwnsRule } from '@/types/erpOwnership';
 
 /** What changed before the pass runs; a removal is the one moment a rule is widened. */
-export type OwnershipMoment = 'add' | 'remove' | 'settings' | 'load';
+export type OwnershipMoment = 'add' | 'remove' | 'settings' | 'load' | 'assign';
 
 /** One ERP as the pass saw it: its rule, what it owns now, what was marked, what to say. */
 export interface OwnershipErpReport {
@@ -105,10 +105,17 @@ function deadWebsitesNote(row: ErpRow, websites: ReadonlyArray<{ code: string }>
     );
 }
 
-/** What the SC does for an ERP whose rule owns no product. */
+/**
+ * What the SC does for an ERP whose rule owns no product. For an `erp_owner` rule that is
+ * "Assign products" on its card (AB-74), which tags the products and runs this pass again;
+ * any other attribute is still tagged in Commerce.
+ */
 function ownsNothingNote(row: ErpRow): string {
     if (row.owns.mode === 'attribute') {
         const [code, value] = (row.owns.attribute ?? 'erp_owner=').split('=');
+        if (code === 'erp_owner') {
+            return `${row.name} owns no products yet: use Assign products on its card to give it some.`;
+        }
         return (
             `${row.name} owns no products yet: tag products with ${code}=${value} in Commerce, ` +
             'then Load demo data.'

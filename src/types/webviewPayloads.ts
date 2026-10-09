@@ -410,6 +410,24 @@ export interface OperationProgressPayload {
     note?: string;
     /** Set while the work is paused on a question only the SC can answer. */
     prompt?: OperationPrompt;
+    /** A next step a run that succeeded offers on its success view (AB-74). */
+    offer?: OperationOffer;
+}
+
+/**
+ * A next step offered when a run succeeds: "Add another ERP" whose new ERP owns nothing yet
+ * offers "Assign products" for it (AB-74). The screen turns it into the modal's button.
+ */
+export interface OperationOffer {
+    action: 'assign-erp-products';
+    /** The ERP integration. */
+    id: string;
+    /** The ERP's component id. */
+    erp: string;
+    /** The ERP's name. */
+    name: string;
+    /** One sentence under the success title. */
+    message: string;
 }
 
 /**

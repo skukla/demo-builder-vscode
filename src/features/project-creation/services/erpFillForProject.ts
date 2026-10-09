@@ -19,9 +19,12 @@ import { otherErpNames, readErpRules } from './erpRules';
 import {
     requestRest,
     resolveRestTargetFor,
+    type RestMethod,
+    type RestRoute,
     type RestTarget,
 } from '@/features/ai/server/commerceRestClient';
 import type { AppManagementAuth } from '@/features/app-builder/services/appManagementClient';
+import type { CommerceSend } from '@/features/app-builder/services/commerceBulk';
 import { catalogEntryFor } from '@/features/app-builder/services/componentEntry';
 import { listIdOf } from '@/features/app-builder/services/deployInputs';
 import {
@@ -75,13 +78,17 @@ export type ErpFillOutcome =
 
 /** One Commerce REST call over the project's signed client; parsed body, or CommerceReadError. */
 async function commerceReply(
-    method: 'GET' | 'POST',
+    method: RestMethod,
     target: RestTarget,
     path: string,
     body: unknown,
     fetchImpl: typeof fetch,
+    via?: RestRoute,
 ): Promise<unknown> {
-    const answer = await requestRest(method, target, path, body, fetchImpl);
+    // The bulk route only when asked: every other call is sent exactly as before.
+    const answer = via
+        ? await requestRest(method, target, path, body, fetchImpl, via)
+        : await requestRest(method, target, path, body, fetchImpl);
     const route = path.split('?')[0];
     if ('failed' in answer)
         throw new CommerceReadError(`Commerce did not answer ${route}: ${answer.failed}`);
@@ -112,6 +119,25 @@ export async function commerceGetForProject(
     const rest = await resolveRestTargetFor(project, authManager, undefined, fetchImpl);
     if ('refusal' in rest) return { refusal: rest.refusal.replace(/^Error: /u, '') };
     return commerceGet(rest, fetchImpl);
+}
+
+/**
+ * A GET and a write over the project's signed Commerce client, or why there is none: what
+ * "Assign products" and the attribute-set fix write with (AB-74). The write takes the bulk
+ * route when asked (`V1/async/bulk`), and waits as long as every signed call does
+ * (`requestRest`: TIMEOUTS.LONG, past the 120 s a product save took on ACCS).
+ */
+export async function commerceClientForProject(
+    project: Project,
+    authManager: AuthenticationService,
+    fetchImpl: typeof fetch = globalThis.fetch,
+): Promise<{ get: CommerceGet; send: CommerceSend } | { refusal: string }> {
+    const rest = await resolveRestTargetFor(project, authManager, undefined, fetchImpl);
+    if ('refusal' in rest) return { refusal: rest.refusal.replace(/^Error: /u, '') };
+    return {
+        get: commerceGet(rest, fetchImpl),
+        send: (method, path, body, route) => commerceReply(method, rest, path, body, fetchImpl, route),
+    };
 }
 
 /** A POST over the same signed client, for the reads Commerce only answers to a POST (tier prices). */

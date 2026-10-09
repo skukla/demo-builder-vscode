@@ -1173,6 +1173,42 @@
         "why": "Added with the tool (2026-09-28, AB-16): the ERP integration is added once and more ERPs are added beside it; add_integration now refuses a second. A MISS is a discoverability finding about the tool, not a bad prompt."
     },
     {
+        "id": "erp-assign-products",
+        "prompt": "Give the Accuform ERP every product whose brand is Accuform. Show me what changes first.",
+        "expect": [
+            "assign_erp_products"
+        ],
+        "cwd": "project",
+        "why": "Added with the tool (2026-10-09, AB-74): tagging an ERP's products with erp_owner was done by hand in the Commerce Admin or one write_commerce_rest call per product (35 minutes for 139 products). The prompt asks for a preview first, which is the tool's call without confirm. A MISS is a discoverability finding about the tool, not a bad prompt."
+    },
+    {
+        "id": "erp-owner-attribute-sets",
+        "prompt": "Some of my products never move to the second ERP when I tag them. Make sure the erp_owner attribute is in every attribute set my products use.",
+        "expect": [
+            "add_erp_owner_to_attribute_sets"
+        ],
+        "cwd": "project",
+        "why": "Added with the tool (2026-10-09, AB-74): Commerce drops a value for an attribute outside the product's attribute set and still answers 200, so a tag can be written all day and never land. The prompt describes that symptom and asks for the fix the erp-attributes setup step offers."
+    },
+    {
+        "id": "erp-undo-assignment",
+        "prompt": "Put the products I just gave the Accuform ERP back where they were.",
+        "expect": [
+            "undo_erp_assignment"
+        ],
+        "cwd": "project",
+        "why": "Added with the tool (2026-10-09, AB-74): the undo of assign_erp_products. The prompt asks to reverse the last assignment without naming the attribute, which only the recorded previous values can do."
+    },
+    {
+        "id": "erp-owner-attribute-sets-undo",
+        "prompt": "Take the erp_owner attribute back out of the attribute sets Demo Builder added it to.",
+        "expect": [
+            "remove_erp_owner_from_attribute_sets"
+        ],
+        "cwd": "project",
+        "why": "Added with the tool (2026-10-09, AB-74): the undo of add_erp_owner_to_attribute_sets, which the reversibility ledger requires. It refuses while a product in those sets is tagged."
+    },
+    {
         "id": "erp-settings",
         "prompt": "On my ERP integration, which products does the second ERP own, and set its sales organisation on the Bodea website to 2000.",
         "expect": [

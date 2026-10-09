@@ -162,7 +162,7 @@
           "label": "Product attributes",
           "title": "Create the erp_owner and brand product attributes",
           "why": "A product goes to the ERP its erp_owner names (the ERP's list id: its name in lower case without the word ERP — Accuform ERP is accuform); a product with no erp_owner stays with the ERP that owns everything. brand is what buyers filter on.",
-          "where": "Stores > Attributes > Product > Add New Attribute: erp_owner as a Text Field (a Dropdown sends a number, not the id) and brand; then Stores > Attributes > Attribute Set to add both to the set. Set erp_owner on the products of each additional ERP, and brand on the products you sell.",
+          "where": "Stores > Attributes > Product > Add New Attribute: erp_owner as a Text Field (a Dropdown sends a number, not the id) and brand; then Stores > Attributes > Attribute Set to add both to every set your products use (the check names any set erp_owner is missing from, and Demo Builder can add it). Give each additional ERP its products with Assign products on its card, and set brand on the products you sell.",
           "path": [
             "Stores",
             "Attributes",
@@ -173,8 +173,9 @@
             "erp_owner",
             "brand"
           ],
-          "then": "erp_owner is a Text Field; add both to the attribute set. Tag the products of each additional ERP with its id; untagged products stay with the ERP on everything.",
-          "check": "erp-attributes-exist"
+          "then": "erp_owner is a Text Field in every attribute set your products use; a value for an attribute not in a product's set is dropped without an error. Give each additional ERP its products with Assign products on its card; untagged products stay with the ERP on everything.",
+          "check": "erp-attributes-exist",
+          "fix": "add-erp-owner-to-attribute-sets"
         },
         {
           "id": "partially-held-status",

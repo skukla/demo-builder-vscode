@@ -401,12 +401,26 @@ ERP's own sales organizations and the ones it kept because they were already set
 
 `add_erp` (2026-09-28, AB-16) is gated although it only adds: it creates an Adobe workspace
 and deploys a new ERP into it, which takes minutes and is undone only by `remove_integration`
-on the new ERP's id. Its optional `owns` (AB-64) says which products the new ERP owns —
+on the new ERP's id. Since 2026-10-09 (AB-75) the gate is in its handler: a call without
+`confirm` previews what every ERP will own once it is added (`data.preview`, the same numbers
+the "Add another ERP" dialog shows, and `data.next` when the new ERP would own nothing), and
+only `confirm: true` deploys, with the consent dialog. Its optional `owns` (AB-64) says which products the new ERP owns —
 attribute or websites — and without it the default applies, `erp_owner=<its list id>`. An ERP
 on "everything" is the catch-all for what no other ERP claims by attribute (AB-72), so adding
 by attribute changes no other rule; only a website rule narrows such an ERP, to the websites
 left over. The answer's `owns` / `existingOwns` say the rules saved in words, and its
 `warning` what the user still has to do, including products two rules both claim.
+`assign_erp_products` and `add_erp_owner_to_attribute_sets` (2026-10-09, AB-74) preview
+WITHOUT `confirm`, so they are not refused by the descriptor's confirm gate: a call without
+it reads Commerce and answers what would change, and writes nothing. With `confirm: true`
+they raise the consent dialog and write. `assign_erp_products` dispatches into the same
+handler as "Assign products" on an ERP's card: it writes `erp_owner` on the chosen products
+in one Commerce bulk call (`V1/async/bulk/products/bySku`), follows the bulk to its end,
+records each product's previous value on the ERP, and applies ownership across every ERP.
+`add_erp_owner_to_attribute_sets` is the fix the erp-attributes setup step offers. Their
+undos, `undo_erp_assignment` and `remove_erp_owner_from_attribute_sets`, follow the same
+pattern and dispatch into the same handlers as the card's "Undo last assignment" and the
+setup guide's "Take erp_owner out again".
 The ERP tools that act on one ERP (`load_erp_demo_data`,
 `open_erp_screen`, `run_erp_rest`, `write_erp_rest`, `get_erp_status`) take an optional `erp`,
 the ERP's component id, and default to the integration's first, except `load_erp_demo_data`,

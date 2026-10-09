@@ -54,3 +54,29 @@ export interface ErpOwnershipOptions {
 export type ErpOwnershipOptionsResult =
     | { success: true; data: ErpOwnershipOptions }
     | { success: false; error?: string; code?: string };
+
+/** One ERP as it will stand once the new one is added (AB-75). */
+export interface ErpAddPreviewRow {
+    /** The list id. */
+    erp: string;
+    name: string;
+    /** The products it will own, across every ERP's rule. */
+    count: number;
+    /** Its rule in words, as it stands beside the others. */
+    describe: string;
+    /** Up to three of its SKUs. */
+    examples: string[];
+    /** The ERP being added. */
+    isNew: boolean;
+    /** Its rule is narrowed by the add (a catch-all beside a new website rule, AB-72). */
+    narrowed: boolean;
+}
+
+/** What every ERP will own once the new one is added: what the dialog and `add_erp` preview. */
+export interface ErpAddPreview {
+    erps: ErpAddPreviewRow[];
+    /** Products no ERP will own. */
+    nobody: { count: number; examples: string[] };
+    /** Products two or more rules will both claim; their orders are refused. */
+    overlap: { count: number; examples: string[] };
+}

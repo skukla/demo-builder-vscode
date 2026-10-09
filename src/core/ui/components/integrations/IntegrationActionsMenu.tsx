@@ -57,6 +57,9 @@ const MENU_ROWS: Partial<Record<CardAction, { label: string; icon: string }>> = 
     'load-demo-data': { label: 'Fill from Commerce', icon: 'loadData' },
     // Its simulated downtime (AB-59), in a modal.
     'simulate-downtime': { label: 'Simulate downtime', icon: 'downtime' },
+    // Tag Commerce products for this ERP, and put the tags back (AB-74).
+    'assign-products': { label: 'Assign products', icon: 'edit' },
+    'undo-assignment': { label: 'Undo last assignment', icon: 'reset' },
     // The integration's alone: a reset covers every ERP it serves (owner, 2026-10-01).
     'reset-records': { label: 'Reset ERPs', icon: 'reset' },
     // A blank-starter app's own repository (AB-1c), and its undo.

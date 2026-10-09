@@ -201,7 +201,8 @@ export function useComponentOperation(): ComponentOperationControls {
                 id,
                 name: erpName,
                 message: 'addErp',
-                payload: { name: erpName, owns },
+                // The SC confirmed in the dialog; without it the handler only previews (AB-75).
+                payload: { name: erpName, owns, confirm: true },
                 title: `Adding ${erpName}`,
                 failureTitle: `Couldn't add ${erpName}`,
                 successTitle: `${erpName} added`,

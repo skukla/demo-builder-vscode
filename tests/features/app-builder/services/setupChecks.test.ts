@@ -9,6 +9,7 @@
  * catalogs on their own groups.
  */
 
+import { SET_LIST, WITHOUT_OWNER, WITH_OWNER, productSetPage } from '../../../helpers/commerceAssignFixtures';
 import { runSetupCheck } from '@/features/app-builder/services/setupChecks';
 
 const COMPANIES_PATH =
@@ -216,8 +217,16 @@ describe('erp-attributes-exist', () => {
     const OWNER = { attribute_code: 'erp_owner', frontend_input: 'text' };
     const BRAND = { attribute_code: 'brand', frontend_input: 'select' };
 
-    function attributes(byCode: Record<string, object | string>) {
+    /**
+     * The attributes by code, and (AB-74) the products' attribute sets: every product in set 4
+     * "Default", whose attributes include erp_owner unless `setHasOwner` is false. The set
+     * answers are the typed fixtures in tests/helpers/commerceAssignFixtures.ts.
+     */
+    function attributes(byCode: Record<string, object | string>, setHasOwner = true, products: object = productSetPage([['A', 4], ['B', 4]])) {
         return jest.fn(async (path: string) => {
+            if (path.startsWith('products?')) return JSON.stringify(products);
+            if (path.startsWith('products/attribute-sets/sets/list')) return JSON.stringify(SET_LIST);
+            if (path === 'products/attribute-sets/4/attributes') return JSON.stringify(setHasOwner ? WITH_OWNER : WITHOUT_OWNER);
             const answer = byCode[path.replace('products/attributes/', '')] ?? NOT_FOUND;
             return typeof answer === 'string' ? answer : JSON.stringify(answer);
         });
@@ -231,10 +240,26 @@ describe('erp-attributes-exist', () => {
         expect(read).toHaveBeenCalledWith('products/attributes/brand');
     });
 
-    it('is done when erp_owner is a Text Field and brand exists in any input type', async () => {
+    it('is done when erp_owner is a Text Field in every set the products use and brand exists', async () => {
         expect(await attributeCheck(attributes({ erp_owner: OWNER, brand: BRAND }))).toStrictEqual({
             done: true,
-            note: 'erp_owner (Text Field) and brand both exist.',
+            note: 'erp_owner (Text Field) and brand both exist, and erp_owner is in every attribute set your products use.',
+        });
+    });
+
+    it('names the attribute sets the products use that lack erp_owner (AB-74)', async () => {
+        const read = attributes({ erp_owner: OWNER, brand: BRAND }, false);
+        expect(await attributeCheck(read)).toStrictEqual({
+            done: false,
+            note: 'erp_owner is not in the attribute set Default (2 products), so an ERP tag written to those products is dropped. Demo Builder can add it.',
+        });
+        expect(read).toHaveBeenCalledWith('products/attribute-sets/4/attributes');
+    });
+
+    it('cannot tell when Commerce does not say how many products it has', async () => {
+        const read = attributes({ erp_owner: OWNER, brand: BRAND }, true, { items: [{ sku: 'A', attribute_set_id: 4 }] });
+        expect(await attributeCheck(read)).toStrictEqual({
+            note: 'Could not check the attribute sets: Commerce did not say how many products it has.',
         });
     });
 

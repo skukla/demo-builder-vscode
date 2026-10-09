@@ -284,7 +284,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-37` | fix | [Storefront setup recorded its block libraries on the wrong project](2026-10-09-storefront-setup-records-block-libraries-on-the-open-project.md) | — | med | built |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | built |
 
-### app-builder  (118)
+### app-builder  (120)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -404,6 +404,8 @@ each item's own file; what has already landed against an item is in its
 | `AB-71` | fix | [An update whose deploy failed then says "already up to date"](2026-10-09-update-after-failed-deploy-says-up-to-date.md) | — | med | built |
 | `AB-72` | fix | [ERP ownership: the ERP on "everything" is the catch-all](2026-10-09-erp-ownership-all-is-the-catch-all.md) | — | high | built |
 | `AB-73` | feature | [Integrations in the extension update check](2026-10-09-integrations-in-the-extension-update-check.md) | — | med | built |
+| `AB-74` | feature | [Assign products to an ERP, and put erp_owner in every attribute set](2026-10-09-erp-assign-products.md) | — | high | built |
+| `AB-75` | feature | [Preview what every ERP will own before "Add another ERP"](2026-10-09-erp-add-preview.md) | — | med | built |
 | `AB-76` | feature | [The ERP setup checklist follows each ERP's ownership mode](2026-10-09-erp-setup-checklist-follows-the-ownership-mode.md) | — | low | backlog |
 | `PL-24` | feature | [Component updates cannot follow an environment-variable rename](2026-08-30-env-var-rename-migration.md) | — | med | built |
 
@@ -649,7 +651,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — built
 
-*249 item(s) sit outside the A–G chain.*
+*251 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

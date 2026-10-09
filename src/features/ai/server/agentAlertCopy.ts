@@ -287,6 +287,34 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: ['id', 'erp'],
         sessionGrant: false,
     },
+    assign_erp_products: {
+        action: 'Assign products to an ERP',
+        consequence:
+            'Writes the ERP\'s tag on the chosen products in Commerce, so they move to it from whichever ERP owns them now. The previous tags are recorded, and Undo last assignment on the ERP\'s card puts them back.',
+        target: ['erp'],
+        sessionGrant: false,
+    },
+    add_erp_owner_to_attribute_sets: {
+        action: 'Add erp_owner to the attribute sets',
+        consequence:
+            'Adds the erp_owner attribute to every attribute set the store\'s products use that lacks it. Demo Builder records which, and the setup guide can take it out again.',
+        target: ['id'],
+        sessionGrant: false,
+    },
+    undo_erp_assignment: {
+        action: "Undo an ERP's last assignment",
+        consequence:
+            'Puts back the tag each product had before that assignment, in Commerce, on the products that still carry it, so they return to the ERP that owned them.',
+        target: ['erp'],
+        sessionGrant: false,
+    },
+    remove_erp_owner_from_attribute_sets: {
+        action: 'Take erp_owner out of the attribute sets',
+        consequence:
+            'Removes the erp_owner attribute from the attribute sets Demo Builder added it to. It refuses while a product in them is tagged.',
+        target: ['id'],
+        sessionGrant: false,
+    },
     reset_erp_records: {
         action: 'Reset the ERP records',
         consequence:

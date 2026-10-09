@@ -57,7 +57,7 @@ function withErpNames(values: string[], erpNames: readonly string[]): string[] {
  */
 export function setupChecklistOf(
     id: string,
-    state: Pick<AppBuilderComponentState, 'catalogId' | 'setupSteps'>,
+    state: Pick<AppBuilderComponentState, 'catalogId' | 'setupSteps' | 'erpOwnerSets'>,
     erpNames: readonly string[] = [],
 ): SetupChecklistItem[] | undefined {
     const steps = getAppBuilderComponentEntry(state.catalogId ?? id)?.setupSteps;
@@ -80,6 +80,8 @@ export function setupChecklistOf(
             ...(saved?.note ? { note: saved.note } : {}),
             ...(lastCheck ? { lastCheck } : {}),
             checkable: step.check !== undefined,
+            ...(step.fix ? { fix: step.fix } : {}),
+            ...(step.fix && state.erpOwnerSets ? { fixApplied: true } : {}),
         };
     });
 }

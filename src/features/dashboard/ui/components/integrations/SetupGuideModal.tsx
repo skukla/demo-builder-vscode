@@ -42,7 +42,18 @@ export interface SetupGuideModalProps {
     onClose: () => void;
     /** Opens Commerce Admin (the grid's 'openAdminPanel' request). */
     onOpenAdmin: () => void;
+    /**
+     * A step's fix, or its undo (AB-74): the screen confirms it and runs it. Absent, the
+     * guide offers no fix.
+     */
+    onFix?: (integrationId: string, mode: 'add' | 'remove') => void;
 }
+
+/** The fix buttons' words, in one place. */
+export const FIX_COPY = {
+    fix: 'Add erp_owner to the attribute sets',
+    undo: 'Take erp_owner out again',
+};
 
 /** Where the guide opens: the first step still to do (not an optional one), else the first. */
 function firstOpen(items: SetupChecklistItem[]): number {
@@ -58,6 +69,21 @@ interface FooterInput {
     setDone: () => void;
     checkAll: () => void;
     openAdmin: () => void;
+    /** The step's fix or its undo, when the guide offers one. */
+    fix?: (mode: 'add' | 'remove') => void;
+}
+
+/**
+ * The step's fix, when its last check failed, or the undo of a fix Demo Builder applied
+ * (AB-74). Nothing for a step with no fix, or when the screen offers none.
+ */
+function fixButtons(item: SetupChecklistItem, fix: FooterInput['fix'], busy: boolean): ActionButton[] {
+    if (!item.fix || !fix || item.state === 'dismissed') return [];
+    if (item.lastCheck === 'failed') {
+        return [{ label: FIX_COPY.fix, variant: 'secondary', onPress: () => fix('add'), isDisabled: busy }];
+    }
+    if (item.fixApplied) return [{ label: FIX_COPY.undo, variant: 'secondary', onPress: () => fix('remove'), isDisabled: busy }];
+    return [];
 }
 
 /**
@@ -88,12 +114,13 @@ function footerButtons({
     setDone,
     checkAll,
     openAdmin,
+    fix,
 }: FooterInput): ActionButton[] {
     const open: ActionButton = { label: 'Open Commerce Admin', variant: 'accent', onPress: openAdmin };
     if (!item) return [open];
     if (item.checkable && item.state !== 'dismissed') {
         const label = checkLabel(progress, connecting);
-        return [{ label, variant: 'secondary', onPress: checkAll, isDisabled: busy }, open];
+        return [...fixButtons(item, fix, busy), { label, variant: 'secondary', onPress: checkAll, isDisabled: busy }, open];
     }
     if (item.state === 'open') {
         return [{ label: 'Mark as done', variant: 'secondary', onPress: setDone, isDisabled: busy }, open];
@@ -142,6 +169,7 @@ function Guide({
     model,
     onClose,
     onOpenAdmin,
+    onFix,
 }: SetupGuideModalProps & { model: IntegrationCardModel }): React.ReactElement {
     const items = model.setupChecklist ?? [];
     const actions = useSetupChecklist(model.id);
@@ -178,6 +206,13 @@ function Guide({
         setDone: () => item && actions.setStep(item.id, 'done'),
         checkAll: () => void checkAll(),
         openAdmin: onOpenAdmin,
+        // The confirm opens over the screen, not over the guide: the guide closes first.
+        fix: onFix
+            ? (mode) => {
+                  onClose();
+                  onFix(model.id, mode);
+              }
+            : undefined,
     });
     return (
         <Modal
@@ -229,6 +264,7 @@ export function SetupGuideModal({
     model,
     onClose,
     onOpenAdmin,
+    onFix,
 }: SetupGuideModalProps): React.ReactElement {
     // Nothing mounted while closed, not an empty DialogContainer: the screen hosts this
     // beside its own dialogs, and a container with no child still occupies the dialog
@@ -236,7 +272,7 @@ export function SetupGuideModal({
     if (!model || (model.setupChecklist?.length ?? 0) === 0) return <></>;
     return (
         <DialogContainer onDismiss={onClose}>
-            <Guide key={model.id} model={model} onClose={onClose} onOpenAdmin={onOpenAdmin} />
+            <Guide key={model.id} model={model} onClose={onClose} onOpenAdmin={onOpenAdmin} onFix={onFix} />
         </DialogContainer>
     );
 }

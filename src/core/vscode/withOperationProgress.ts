@@ -27,7 +27,7 @@ import { withProgressRegister } from './progressRegister';
 import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
 import { detailFor, expectationFor } from '@/core/utils/operationStages';
 import { stageLine } from '@/core/utils/stageLine';
-import type { OperationPosition, OperationProgressPayload } from '@/types/webviewPayloads';
+import type { OperationOffer, OperationPosition, OperationProgressPayload } from '@/types/webviewPayloads';
 
 /** What an operation answers when it ends. */
 export interface OperationOutcome {
@@ -37,6 +37,8 @@ export interface OperationOutcome {
     warning?: string;
     /** What a run that succeeded leaves the SC to know, nothing to act on; said as a plain success. */
     note?: string;
+    /** A next step its success view offers (AB-74). */
+    offer?: OperationOffer;
 }
 
 export interface OperationProgressOptions {
@@ -84,6 +86,7 @@ function endOf(id: string, result: OperationOutcome): OperationProgressPayload {
         state: 'succeeded',
         ...(result.warning ? { warning: result.warning } : {}),
         ...(result.note ? { note: result.note } : {}),
+        ...(result.offer ? { offer: result.offer } : {}),
     };
 }
 

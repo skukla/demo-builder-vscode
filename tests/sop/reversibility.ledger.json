@@ -20,6 +20,11 @@
             "note": "An ERP added from the integration's card is removed on its own: the integration stops listing it, its records are wiped, it is undeployed and its workspace deleted (AB-16)."
         },
         {
+            "tool": "add_erp_owner_to_attribute_sets",
+            "reverses": "remove_erp_owner_from_attribute_sets",
+            "note": "The sets it added erp_owner to are recorded on the ERP integration (erpOwnerSets); the removal takes it out of exactly those, and waits until no product in them is tagged (AB-74)."
+        },
+        {
             "tool": "add_shared_demo",
             "reverses": "forget_added_demo"
         },

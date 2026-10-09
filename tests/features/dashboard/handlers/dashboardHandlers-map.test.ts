@@ -294,7 +294,11 @@ describe('dashboardHandlers', () => {
             // webview beside the dashboard, as openDataInstaller does.
             // openStorefrontReport (85 → 86, 2026-10-07): the Storefront Report tile
             // opens the report beside the dashboard.
-            expect(types).toHaveLength(86);
+            // getErpAssignOptions + assignErpProducts + undoErpAssignment +
+            // addErpOwnerToAttributeSets + removeErpOwnerFromAttributeSets (86 → 91, AB-74,
+            // 2026-10-09): "Assign products" on an ERP's card and its undo, and the
+            // attribute-set fix the erp-attributes check offers and its undo.
+            expect(types).toHaveLength(91);
         });
 
         it('should have handlers as functions', () => {

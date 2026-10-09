@@ -261,6 +261,18 @@ export const TIMEOUTS = {
      */
     HELIX_STATUS_JOB_MAX: 2 * 60 * 1000,
 
+    /**
+     * How often a Commerce bulk write's status is read while its operations are open
+     * (AB-74): every 3 seconds. 43 product saves completed in 15 s on the sandbox.
+     */
+    COMMERCE_BULK_POLL_INTERVAL: 3000,
+
+    /**
+     * How long a Commerce bulk write is followed before the follow stops and says how many
+     * operations are still open: 10 minutes. A single product save took up to 120 s on ACCS.
+     */
+    COMMERCE_BULK_MAX: 10 * 60 * 1000,
+
     /** Startup update check delay (10 seconds) */
     STARTUP_UPDATE_CHECK_DELAY: 10000,
 
