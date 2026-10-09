@@ -15,6 +15,10 @@ import { COMPONENT_IDS } from '@/core/constants';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import {
+    mergeAddedEntries,
+    type RemovedByHandEntry,
+} from '@/features/eds/services/addedEntriesRecord';
+import {
     installBlockCollections,
     type BlockLibraryEntry,
     type InstallBlockCollectionResult,
@@ -83,18 +87,21 @@ export async function updateCommitShaWithRollback(
  * UI `applyBlockLibraryUpdate` (which resolves 'ask' via a prompt) and the
  * headless `updateApplyService` (which resolves 'ask' to the safe 'disabled'
  * default). Keeps the snapshot/marker logic in one place.
+ *
+ * Returns the authoring entries the update left out because the SC had removed
+ * them by hand (EDS-36) — empty when it left none out or did not install.
  */
 export async function applyBlockLibraryUpdateResolved(
     item: BlockLibraryUpdateTarget,
     effectiveBehavior: 'enabled' | 'disabled',
     ctx: UpdateContext,
-): Promise<void> {
+): Promise<RemovedByHandEntry[]> {
     const lib = item.project.installedBlockLibraries?.find((l) => l.name === item.library.name);
     if (!lib) {
         ctx.logger.warn(
             `[Updates] Block library "${item.library.name}" not in installedBlockLibraries; skipping`,
         );
-        return;
+        return [];
     }
 
     if (effectiveBehavior === 'disabled') {
@@ -102,11 +109,15 @@ export async function applyBlockLibraryUpdateResolved(
         ctx.logger.info(
             `[Updates] Sync disabled — recorded marker for "${item.library.name}" at ${item.latestCommit.substring(0, 7)}`,
         );
-        return;
+        return [];
     }
 
     // effectiveBehavior === 'enabled'
-    await installBlockLibraryFiles(item, ctx);
+    const result = await installBlockLibraryFiles(item, ctx);
+    // Saved by the commit-sha save just below. Set first: the entries are in
+    // the repository now, whether or not that save succeeds.
+    const addedEntries = mergeAddedEntries(lib.addedEntries, result.libraryVersions?.[0]?.addedEntries);
+    if (addedEntries) lib.addedEntries = addedEntries;
     await updateCommitShaWithRollback(lib, item.latestCommit, () =>
         ctx.stateManager.saveProject(item.project),
     );
@@ -117,6 +128,7 @@ export async function applyBlockLibraryUpdateResolved(
     ctx.logger.info(
         `[Updates] Updated block library "${item.library.name}" in ${item.project.name}`,
     );
+    return result.removedByHand ?? [];
 }
 
 async function applyDisabledMarker(
@@ -173,11 +185,16 @@ export async function installBlockLibraryFiles(
     const { tokenService } = getGitHubServices(ctx.secrets);
     const fileOps = new GitHubFileOperations(tokenService, ctx.logger);
 
+    // What this library added before, so an entry the SC has since deleted is
+    // left out rather than put back (EDS-36). None for a first install.
+    const addedEntries = item.project.installedBlockLibraries?.find(
+        (l) => l.name === item.library.name,
+    )?.addedEntries;
     const result = await installBlockCollections(
         fileOps,
         destOwner,
         destRepo,
-        [{ source: item.library.source, name: item.library.name }],
+        [{ source: item.library.source, name: item.library.name, ...(addedEntries ? { addedEntries } : {}) }],
         ctx.logger,
     );
     if (!result.success) {

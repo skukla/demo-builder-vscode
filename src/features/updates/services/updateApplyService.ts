@@ -20,6 +20,7 @@
 
 import * as vscode from 'vscode';
 import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
+import { describeUpdateLeftOut } from '@/features/eds/services/addedEntriesRecord';
 import { getTemplateSource, shouldSkipBlockLibrary } from '@/features/updates/commands/updateTypes';
 import { AddonUpdateChecker } from '@/features/updates/services/addonUpdateChecker';
 import { AdobeMcpUpdateChecker } from '@/features/updates/services/adobeMcpUpdateChecker';
@@ -78,6 +79,11 @@ export interface CategoryResult {
     deferred?: string[];
     /** One plain line per block library installed: what was added to the storefront. */
     installed?: string[];
+    /**
+     * One plain line per block library update that left authoring entries out
+     * because the SC had removed them by hand (EDS-36).
+     */
+    leftOut?: string[];
 }
 
 /** Aggregate outcome across all categories. */
@@ -291,7 +297,9 @@ async function applyAddons(
         }
         onProgress?.(`Updating block library ${item.library.name}`);
         try {
-            await applyBlockLibraryUpdateResolved(item, effectiveBehavior, ctx);
+            const leftOut = await applyBlockLibraryUpdateResolved(item, effectiveBehavior, ctx);
+            const note = describeUpdateLeftOut(item, leftOut);
+            if (note) (result.leftOut ??= []).push(note);
             // 'ask' always resolves to 'disabled' above, so the setting alone says
             // whether this was a deferral rather than the user's own choice.
             if (setting === 'ask') {

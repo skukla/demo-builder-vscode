@@ -19,6 +19,9 @@ export function toInstalledBlockLibrary(
         source: version.source,
         commitSha: version.commitSha,
         blockIds: version.blockIds,
+        // What the install added to the authoring files: the proof that lets a
+        // later update tell a hand deletion from an entry it never added (EDS-36).
+        ...(version.addedEntries ? { addedEntries: version.addedEntries } : {}),
         installedAt,
     };
 }

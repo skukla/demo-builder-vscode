@@ -44,6 +44,28 @@ export interface LibraryVersionInfo {
     commitSha: string;
     /** Block IDs installed from this library */
     blockIds: string[];
+    /**
+     * The authoring entries the extension itself added to the storefront's three
+     * authoring files from this library. Absent when it added none, and on
+     * records written before 2026-10-09.
+     */
+    addedEntries?: AddedComponentEntries;
+}
+
+/**
+ * Entry ids the extension added to a storefront's authoring files, one list per
+ * kind of entry. An id in here that is no longer in its file was removed by
+ * hand, so an install or update leaves it out instead of putting it back.
+ */
+export interface AddedComponentEntries {
+    /** `component-definition.json`: ids of `groups[].components[]` entries. */
+    definition: string[];
+    /** `component-filters.json`: block ids added to the `section` filter's `components`. */
+    sectionFilter: string[];
+    /** `component-filters.json`: ids of whole filter entries (e.g. `tabs`). */
+    filters: string[];
+    /** `component-models.json`: ids of model entries. */
+    models: string[];
 }
 
 /** Persisted tracking data with installation timestamp */

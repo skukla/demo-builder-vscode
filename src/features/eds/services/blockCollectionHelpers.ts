@@ -16,12 +16,26 @@
  * Blocks without metadata entries still get their files installed — they just
  * won't appear in the DA.live authoring library until the source repo adds them.
  *
+ * The three authoring files are the SC's as much as ours: an entry the extension
+ * added before and the SC has since deleted is left out, not put back (the
+ * record and its reasoning: addedEntriesRecord.ts), and each file is written in
+ * the indentation it already had.
+ *
  * @module features/eds/services/blockCollectionHelpers
  */
 
+import {
+    claimMissingEntry,
+    createEntryTracker,
+    mergeAddedEntries,
+    type EntryOrigin,
+    type EntryTracker,
+    type RemovedByHandEntry,
+} from './addedEntriesRecord';
 import type { GitHubFileOperations } from './github/githubFileOperations';
 import type { GitHubTreeInput } from './types';
-import type { LibraryVersionInfo } from '@/types/blockLibraries';
+import { stringifyJsonLike } from '@/core/utils/jsonFormatting';
+import type { AddedComponentEntries, LibraryVersionInfo } from '@/types/blockLibraries';
 import type { AddonSource } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
 
@@ -32,12 +46,20 @@ export interface InstallBlockCollectionResult {
     error?: string;
     /** Per-library tracking data (source commit SHA + block IDs) for version tracking */
     libraryVersions?: LibraryVersionInfo[];
+    /** Authoring entries left out because the SC had deleted them (EDS-36). */
+    removedByHand?: RemovedByHandEntry[];
 }
 
 /** Entry for a block library source (used by installBlockCollections) */
 export interface BlockLibraryEntry {
     source: AddonSource;
     name: string;
+    /**
+     * What this library added to the storefront's authoring files on earlier
+     * runs (`installedBlockLibraries[].addedEntries`). An entry in here that is
+     * missing from its file now was removed by hand and is not put back.
+     */
+    addedEntries?: AddedComponentEntries;
 }
 
 /** Per-library block discovery result used by merge helpers */
@@ -45,6 +67,16 @@ interface LibraryBlockData {
     source: AddonSource;
     blockIds: string[];
     files: Array<{ path: string; sha: string }>;
+    /** The library's name and its record, for deciding missing entries */
+    origin: EntryOrigin;
+}
+
+/** Where the merged authoring files go, and the run's record of what was added. */
+interface MergeContext {
+    githubFileOps: GitHubFileOperations;
+    destOwner: string;
+    destRepo: string;
+    tracker: EntryTracker;
 }
 
 /** Result of discovering + cross-library-deduplicating one library's blocks */
@@ -177,6 +209,7 @@ export async function installBlockCollections(
                     source: lib.source,
                     blockIds: discovered.uniqueBlockIds,
                     files: discovered.files,
+                    origin: { name: lib.name, addedEntries: lib.addedEntries },
                 });
 
                 // Track version info for this library
@@ -225,8 +258,11 @@ export async function installBlockCollections(
         }
 
         // 3. Build merged component-definition.json from all sources
+        const merge: MergeContext = {
+            githubFileOps, destOwner, destRepo, tracker: createEntryTracker(),
+        };
         const mergedCompDef = await buildMergedComponentDefinitionMultiSource(
-            githubFileOps, destOwner, destRepo, libraryBlockFiles,
+            merge, libraryBlockFiles,
         );
         if (mergedCompDef) {
             treeEntries.push({
@@ -239,7 +275,7 @@ export async function installBlockCollections(
 
         // 3b. Build merged component-filters.json from all sources
         const mergedFilters = await buildMergedComponentFiltersMultiSource(
-            githubFileOps, destOwner, destRepo, libraryBlockFiles,
+            merge, libraryBlockFiles,
         );
         if (mergedFilters) {
             treeEntries.push({
@@ -252,7 +288,7 @@ export async function installBlockCollections(
 
         // 3c. Build merged component-models.json from all sources
         const mergedModels = await buildMergedComponentModelsMultiSource(
-            githubFileOps, destOwner, destRepo, libraryBlockFiles,
+            merge, libraryBlockFiles,
         );
         if (mergedModels) {
             treeEntries.push({
@@ -283,11 +319,17 @@ export async function installBlockCollections(
 
         logger.info(`[Block Collection] Installed ${sortedBlockIds.length} blocks from ${libraries.length} ${libraries.length === 1 ? 'library' : 'libraries'}`);
 
+        const { removedByHand } = merge.tracker;
+        if (removedByHand.length > 0) {
+            logger.info(`[Block Collection] Left out ${removedByHand.length} entries removed by hand: ${removedByHand.map((e) => `${e.id} (${e.file})`).join(', ')}`);
+        }
+
         return {
             success: true,
             blocksCount: sortedBlockIds.length,
             blockIds: sortedBlockIds,
-            libraryVersions,
+            libraryVersions: withAddedEntries(libraryVersions, libraries, merge.tracker),
+            removedByHand,
         };
     } catch (error) {
         return {
@@ -300,6 +342,22 @@ export async function installBlockCollections(
 }
 
 /**
+ * Each library's version record with its added entries: the earlier record plus
+ * what this run added. A library that added nothing keeps its record unchanged.
+ */
+function withAddedEntries(
+    versions: LibraryVersionInfo[],
+    libraries: BlockLibraryEntry[],
+    tracker: EntryTracker,
+): LibraryVersionInfo[] {
+    return versions.map((version) => {
+        const previous = libraries.find((lib) => lib.name === version.name)?.addedEntries;
+        const addedEntries = mergeAddedEntries(previous, tracker.added.get(version.name));
+        return addedEntries ? { ...version, addedEntries } : version;
+    });
+}
+
+/**
  * Build a merged component-definition.json from multiple source repositories.
  *
  * For each source, extracts entries from ALL groups matching the blocks assigned
@@ -307,18 +365,14 @@ export async function installBlockCollections(
  * group, creating new groups as needed.
  */
 async function buildMergedComponentDefinitionMultiSource(
-    githubFileOps: GitHubFileOperations,
-    destOwner: string,
-    destRepo: string,
+    { githubFileOps, destOwner, destRepo, tracker }: MergeContext,
     libraryBlockFiles: LibraryBlockData[],
 ): Promise<string | null> {
     // Collect entries tagged by group from all source repos.
     // Cache parsed source definitions for the unsafeHTML enrichment pass below.
-    const entriesByGroup = new Map<string, {
-        title: string;
-        entries: Array<{ id: string; [key: string]: unknown }>;
-    }>();
+    const entriesByGroup: CollectedEntriesByGroup = new Map();
     const collectedIds = new Set<string>();
+    const origins = new Map<string, EntryOrigin>();
     const sourceDefinitions: Array<{ groups: Array<{ components?: Array<{ id: string; plugins?: { da?: { unsafeHTML?: string } } }> }> }> = [];
 
     for (const libData of libraryBlockFiles) {
@@ -342,6 +396,7 @@ async function buildMergedComponentDefinitionMultiSource(
                 if (!matches) continue;
 
                 collectedIds.add(entry.id);
+                origins.set(entry.id, libData.origin);
                 let groupData = entriesByGroup.get(group.id);
                 if (!groupData) {
                     groupData = { title: group.title, entries: [] };
@@ -361,8 +416,12 @@ async function buildMergedComponentDefinitionMultiSource(
     const destDef = JSON.parse(destFile.content);
     if (!destDef.groups) return null;
 
-    // Pass 1: merge component-definition entries for newly-installed (unique) blocks.
-    const addedCount = mergeNewComponentDefinitionEntries(destDef, entriesByGroup);
+    // Pass 1: merge component-definition entries for newly-installed (unique) blocks,
+    // leaving out any the SC deleted after an earlier run added them.
+    const addedCount = mergeNewComponentDefinitionEntries(destDef, entriesByGroup, (id) => {
+        const origin = origins.get(id);
+        return origin ? claimMissingEntry(tracker, origin, 'definition', id) : true;
+    });
 
     // Pass 2: enrich unsafeHTML for blocks already present in the destination but
     // without unsafeHTML. Covers deduplicated blocks whose component-definition entries
@@ -372,7 +431,7 @@ async function buildMergedComponentDefinitionMultiSource(
     const enrichedCount = enrichMissingUnsafeHtml(destDef, sourceDefinitions);
 
     if (addedCount === 0 && enrichedCount === 0) return null;
-    return JSON.stringify(destDef, null, 2);
+    return stringifyJsonLike(destFile.content, destDef);
 }
 
 /** Group entries collected from source repos, keyed by group id. */
@@ -388,28 +447,31 @@ type SourceDefinition = {
 
 /**
  * Pass 1: append component-definition entries for newly-installed (unique) blocks
- * into the matching destination group, creating groups as needed. Returns the
- * number of entries added.
+ * into the matching destination group, creating groups as needed. An entry that
+ * is anywhere in the file — in any group — is left where it is; a missing one is
+ * added only if `mayAdd` agrees. Returns the number of entries added.
  */
 function mergeNewComponentDefinitionEntries(
     destDef: { groups: Array<{ id: string; title?: string; components?: Array<{ id: string }> }> },
     entriesByGroup: CollectedEntriesByGroup,
+    mayAdd: (id: string) => boolean,
 ): number {
+    const existingIds = new Set(
+        destDef.groups.flatMap((g) => g.components?.map((c: { id: string }) => c.id) ?? []),
+    );
     let addedCount = 0;
     for (const [groupId, groupData] of entriesByGroup) {
+        const newEntries = groupData.entries.filter(
+            (c: { id: string }) => !existingIds.has(c.id) && mayAdd(c.id),
+        );
+        if (newEntries.length === 0) continue;
         let destGroup = destDef.groups.find((g: { id: string }) => g.id === groupId);
         if (!destGroup) {
             destGroup = { id: groupId, title: groupData.title, components: [] };
             destDef.groups.push(destGroup);
         }
-        const existingIds = new Set(
-            destGroup.components?.map((c: { id: string }) => c.id) ?? [],
-        );
-        const newEntries = groupData.entries.filter((c: { id: string }) => !existingIds.has(c.id));
-        if (newEntries.length > 0) {
-            destGroup.components = [...(destGroup.components || []), ...newEntries];
-            addedCount += newEntries.length;
-        }
+        destGroup.components = [...(destGroup.components || []), ...newEntries];
+        addedCount += newEntries.length;
     }
     return addedCount;
 }
@@ -455,13 +517,11 @@ function enrichMissingUnsafeHtml(
  * and appends to the destination's component-filters.json.
  */
 async function buildMergedComponentFiltersMultiSource(
-    githubFileOps: GitHubFileOperations,
-    destOwner: string,
-    destRepo: string,
+    { githubFileOps, destOwner, destRepo, tracker }: MergeContext,
     libraryBlockFiles: LibraryBlockData[],
 ): Promise<string | null> {
-    const newSectionIds: string[] = [];
-    const newSubFilters: Array<{ id: string; components: string[] }> = [];
+    const newSectionIds: Array<{ id: string; origin: EntryOrigin }> = [];
+    const newSubFilters: Array<{ filter: { id: string; components: string[] }; origin: EntryOrigin }> = [];
     const collectedSectionIds = new Set<string>();
     const collectedSubFilterIds = new Set<string>();
 
@@ -481,7 +541,7 @@ async function buildMergedComponentFiltersMultiSource(
             for (const componentId of sourceSection.components) {
                 if (blockIdSet.has(componentId) && !collectedSectionIds.has(componentId)) {
                     collectedSectionIds.add(componentId);
-                    newSectionIds.push(componentId);
+                    newSectionIds.push({ id: componentId, origin: libData.origin });
                 }
             }
         }
@@ -491,7 +551,7 @@ async function buildMergedComponentFiltersMultiSource(
             if (filter.id === 'main' || filter.id === 'section') continue;
             if (blockIdSet.has(filter.id) && !collectedSubFilterIds.has(filter.id)) {
                 collectedSubFilterIds.add(filter.id);
-                newSubFilters.push(filter);
+                newSubFilters.push({ filter, origin: libData.origin });
             }
         }
     }
@@ -509,28 +569,29 @@ async function buildMergedComponentFiltersMultiSource(
 
     let changed = false;
 
-    // Append new block IDs to destination's section filter (skip duplicates)
+    // Append new block IDs to destination's section filter (skip duplicates and
+    // ids the SC removed after an earlier run added them)
     const destSection = destFilters.find(f => f.id === 'section');
     if (destSection) {
         const existingSectionIds = new Set(destSection.components);
-        for (const id of newSectionIds) {
-            if (!existingSectionIds.has(id)) {
+        for (const { id, origin } of newSectionIds) {
+            if (!existingSectionIds.has(id) && claimMissingEntry(tracker, origin, 'sectionFilter', id)) {
                 destSection.components.push(id);
                 changed = true;
             }
         }
     }
 
-    // Append new sub-component filter entries (skip entries already present)
+    // Append new sub-component filter entries (same two skips)
     const existingFilterIds = new Set(destFilters.map(f => f.id));
-    for (const subFilter of newSubFilters) {
-        if (!existingFilterIds.has(subFilter.id)) {
-            destFilters.push(subFilter);
+    for (const { filter, origin } of newSubFilters) {
+        if (!existingFilterIds.has(filter.id) && claimMissingEntry(tracker, origin, 'filters', filter.id)) {
+            destFilters.push(filter);
             changed = true;
         }
     }
 
-    return changed ? JSON.stringify(destFilters, null, 2) : null;
+    return changed ? stringifyJsonLike(destFile.content, destFilters) : null;
 }
 
 /**
@@ -542,12 +603,10 @@ async function buildMergedComponentFiltersMultiSource(
  * across libraries, and appends to the destination.
  */
 async function buildMergedComponentModelsMultiSource(
-    githubFileOps: GitHubFileOperations,
-    destOwner: string,
-    destRepo: string,
+    { githubFileOps, destOwner, destRepo, tracker }: MergeContext,
     libraryBlockFiles: LibraryBlockData[],
 ): Promise<string | null> {
-    const newModels: Array<{ id: string; [key: string]: unknown }> = [];
+    const newModels: Array<{ model: { id: string; [key: string]: unknown }; origin: EntryOrigin }> = [];
     const collectedIds = new Set<string>();
 
     for (const libData of libraryBlockFiles) {
@@ -567,7 +626,7 @@ async function buildMergedComponentModelsMultiSource(
             if (!matches) continue;
 
             collectedIds.add(model.id);
-            newModels.push(model);
+            newModels.push({ model, origin: libData.origin });
         }
     }
 
@@ -583,10 +642,13 @@ async function buildMergedComponentModelsMultiSource(
         JSON.parse(destFile.content);
 
     const existingIds = new Set(destModels.map(m => m.id));
-    const entriesToAdd = newModels.filter(m => !existingIds.has(m.id));
+    const entriesToAdd = newModels
+        .filter(({ model, origin }) =>
+            !existingIds.has(model.id) && claimMissingEntry(tracker, origin, 'models', model.id))
+        .map(({ model }) => model);
 
     if (entriesToAdd.length === 0) return null;
 
-    return JSON.stringify([...destModels, ...entriesToAdd], null, 2);
+    return stringifyJsonLike(destFile.content, [...destModels, ...entriesToAdd]);
 }
 

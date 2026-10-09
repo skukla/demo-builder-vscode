@@ -52,7 +52,9 @@ one commit to the storefront repository through the same installer updates and
 creation use, and writes the same record creation writes.
 
 The installer only adds: a block folder the storefront already has is left as it
-is. It does not rebuild the DA.live authoring library — run "Refresh Block
+is, and an authoring entry it added before that the SC has since deleted is not
+put back (`installedBlockLibraries[].addedEntries`; see
+[custom block libraries](../../../docs/systems/custom-block-libraries.md)). It does not rebuild the DA.live authoring library — run "Refresh Block
 Library" (`refresh_block_library`) for that. Un-selecting a library removes
 nothing.
 

@@ -21,6 +21,28 @@ as the edge is concerned.
 The consequence is that updating a library later does not update projects already
 created from it. They have their own copy, and that copy is now theirs to change.
 
+Installing also merges the library's entries into the storefront's three authoring
+files — `component-definition.json`, `component-filters.json` and
+`component-models.json`, the list of blocks authors can pick in DA.live. Those files
+are the SC's too, so the merge follows two rules:
+
+- **A hand deletion stays deleted.** The project records, per library, which entries
+  the extension added (`installedBlockLibraries[].addedEntries`). On a later install
+  or update, an entry it added before that is now missing was removed by hand: it is
+  left out, and the update says so (the Check for Updates notice, and
+  `categories.addon.leftOut` in `apply_updates`). An entry it never added is added
+  and recorded. A project installed before 2026-10-09 has no record, so its next run
+  adds what is missing, as it always did, and starts recording. A reset passes no
+  record: it starts from the template, so every entry comes back.
+- **The file keeps its layout.** Each file is written back in the indentation it
+  already had (four spaces, tabs, or two when there is none to detect), with its
+  final newline if it had one. `promote_block_to_library` and
+  `remove_block_from_library` follow the same rule for `component-definition.json`.
+
+The merge only considers blocks whose folder is not already in the storefront, so an
+entry deleted while its block folder stays was never put back. What the record adds
+is the case where the folder was deleted too.
+
 ## Registering a block for authoring
 
 A block existing in the repository does not make it available in DA.live's authoring

@@ -6177,24 +6177,12 @@
         {
             "module": "src/features/eds/services/blockCollectionHelpers.ts",
             "anchors": [
-                "destGroup.components?.map((c: { id: string }) => c.id) ?? [],"
+                "destDef.groups.flatMap((g) => g.components?.map((c: { id: string }) => c.id) ?? []),"
             ],
             "mutants": 1,
             "category": "other",
-            "reason": "The `?? []` fallback builds the set of ids already in the destination group. Substituting ['Stryker was here'] adds an id no component can have, so the very next line \u2014 filter(c => !existingIds.has(c.id)) \u2014 keeps exactly the same entries. The sibling OptionalChaining mutant on this line IS killed, by the destination group that lists no components.",
+            "reason": "The `?? []` fallback builds the set of ids already anywhere in the destination file. Substituting ['Stryker was here'] adds an id no component can have, so the filter that reads the set keeps exactly the same entries. Re-anchored 2026-10-09 (EDS-36), when the set widened from one group to every group.",
             "decision": "Equivalent: the substituted id matches no component.",
-            "recorded": "2026-09-05",
-            "source": "mutationLedger add"
-        },
-        {
-            "module": "src/features/eds/services/blockCollectionHelpers.ts",
-            "anchors": [
-                "if (newEntries.length > 0) {"
-            ],
-            "mutants": 2,
-            "category": "branch",
-            "reason": "Both mutants make the branch run for an EMPTY newEntries. The body then assigns [...(components || [])] \u2014 the same contents in a new array \u2014 and adds zero to addedCount, so the serialised document and the return value are identical. The empty case cannot arrive with components undefined: existingIds would be empty, so every collected entry would pass the filter and newEntries could not be empty.",
-            "decision": "Equivalent: the branch body is a no-op for an empty list.",
             "recorded": "2026-09-05",
             "source": "mutationLedger add"
         },

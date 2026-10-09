@@ -59,7 +59,7 @@ export function registerApplyUpdatesTool(
             needsAuth: ['github'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             description:
-                'Check and (with confirm:true) apply available updates for the current project — fork sync, template, components, Adobe MCP, block libraries, inspector SDK — and install any block library the project has selected (configure_project blockLibraries) whose blocks are not in its storefront repository yet. Without confirm, reports what is available. A template update that conflicts with the user\'s edits stops and names the files; it is applied over them only with resetTemplateOnConflict:true.',
+                'Check and (with confirm:true) apply available updates for the current project — fork sync, template, components, Adobe MCP, block libraries, inspector SDK — and install any block library the project has selected (configure_project blockLibraries) whose blocks are not in its storefront repository yet. Without confirm, reports what is available. A template update that conflicts with the user\'s edits stops and names the files; it is applied over them only with resetTemplateOnConflict:true. A block library update never puts back a block entry the user removed by hand from the storefront\'s component-definition, component-filters or component-models file; categories.addon.leftOut names any it left out.',
             inputSchema: {
                 confirm: z
                     .boolean()

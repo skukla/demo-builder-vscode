@@ -234,7 +234,7 @@ each item's own file; what has already landed against an item is in its
 | `AI-14` | fix | [Agent-run project creation waited for the AEM Code Sync App and told nobody](2026-10-09-agent-creation-waits-for-code-sync-silently.md) | — | med | built |
 | `EDS-33` | fix | [A storefront teardown leaves its pages live when the DA.live content is already gone](2026-10-09-teardown-unpublish-lists-from-deleted-content.md) | — | high | built |
 
-### eds  (42)
+### eds  (43)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -279,6 +279,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-32` | question | [Sharing a storefront: should Site access also make someone a GitHub collaborator?](2026-10-07-share-storefront-github-collaborator.md) | — | med | dropped |
 | `EDS-34` | fix | [Publish and cache purge give up on an expired session that preview recovers from](2026-10-09-publish-purge-403-reprompts.md) | — | med | built |
 | `EDS-35` | fix | [The DA.live access token sat in plaintext globalState](2026-10-09-dalive-token-secretstorage.md) | — | med | built |
+| `EDS-36` | fix | [A block library install put back block entries the SC had deleted](2026-10-09-block-library-respects-hand-deletions.md) | — | med | built |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | built |
 
 ### app-builder  (114)
@@ -642,7 +643,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — built
 
-*242 item(s) sit outside the A–G chain.*
+*243 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

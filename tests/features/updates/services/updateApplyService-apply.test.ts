@@ -440,6 +440,27 @@ describe('add-ons', () => {
         expect(res.addon).toEqual(expected);
     });
 
+    it('says which entries an update left out because the SC removed them (EDS-36)', async () => {
+        const ctx = makeCtx();
+        mockApplyBlockLibraryUpdateResolved.mockResolvedValue([
+            { library: 'Lib A', file: 'component-models.json', id: 'promo' },
+        ]);
+
+        const res = await applyUpdatesHeadless(
+            { ...emptySelections(), blockLibrary: [lib()] },
+            ctx
+        );
+
+        expect(res.addon).toEqual({
+            successCount: 1,
+            failCount: 0,
+            errors: [],
+            leftOut: [
+                'Lib A in demo: Left out 1 block entry removed by hand: promo (component-models.json).',
+            ],
+        });
+    });
+
     it('a failed block library is recorded by name', async () => {
         const ctx = makeCtx();
         mockApplyBlockLibraryUpdateResolved.mockRejectedValue(new Error('upstream 404\nat stack'));

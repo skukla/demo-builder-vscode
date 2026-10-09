@@ -9,38 +9,10 @@
  * it as a test suite — it contains no `describe`/`it` blocks.
  */
 
-/** Create a component-definition.json with specified blocks */
-export function createComponentDef(
-    blocks: Array<{ title: string; id: string; unsafeHTML?: string }>,
-): string {
-    return JSON.stringify({
-        groups: [{
-            id: 'blocks',
-            title: 'Blocks',
-            components: blocks.map(b => ({
-                title: b.title,
-                id: b.id,
-                plugins: b.unsafeHTML ? { da: { unsafeHTML: b.unsafeHTML } } : undefined,
-            })),
-        }],
-    });
-}
-
-/** Create a destination component-definition.json with existing blocks */
-export function createDestComponentDef(
-    blocks: Array<{ title: string; id: string }> = [
-        { title: 'Hero', id: 'hero' },
-        { title: 'Cards', id: 'cards' },
-    ],
-): string {
-    return JSON.stringify({
-        groups: [{
-            id: 'blocks',
-            title: 'Blocks',
-            components: blocks.map(b => ({ title: b.title, id: b.id })),
-        }],
-    });
-}
+// The component-definition builders live in tests/helpers/ because suites in
+// other feature directories (updates, ai) build the same file.
+import { createComponentDef, createDestComponentDef } from '../../../helpers/componentDefinitionFixtures';
+export { createComponentDef, createDestComponentDef };
 
 /** Create a source component-filters.json */
 export function createComponentFilters(

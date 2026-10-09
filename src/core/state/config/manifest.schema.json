@@ -1290,6 +1290,10 @@
           },
           "description": "Block IDs installed from this library"
         },
+        "addedEntries": {
+          "$ref": "#/definitions/AddedComponentEntries",
+          "description": "The authoring entries the extension itself added to the storefront's three authoring files from this library. Absent when it added none, and on records written before 2026-10-09."
+        },
         "installedAt": {
           "type": "string",
           "description": "ISO date string when blocks were installed"
@@ -1321,6 +1325,46 @@
         "source"
       ],
       "description": "Persisted tracking data with installation timestamp"
+    },
+    "AddedComponentEntries": {
+      "type": "object",
+      "properties": {
+        "definition": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "`component-definition.json`: ids of `groups[].components[]` entries."
+        },
+        "sectionFilter": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "`component-filters.json`: block ids added to the `section` filter's `components`."
+        },
+        "filters": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "`component-filters.json`: ids of whole filter entries (e.g. `tabs`)."
+        },
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "`component-models.json`: ids of model entries."
+        }
+      },
+      "required": [
+        "definition",
+        "sectionFilter",
+        "filters",
+        "models"
+      ],
+      "description": "Entry ids the extension added to a storefront's authoring files, one list per kind of entry. An id in here that is no longer in its file was removed by hand, so an install or update leaves it out instead of putting it back."
     },
     "AiPrompt": {
       "type": "object",

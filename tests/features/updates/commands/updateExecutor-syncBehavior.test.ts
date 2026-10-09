@@ -143,6 +143,42 @@ describe('performAddonUpdates — block library syncBehavior policy', () => {
             ]);
         });
 
+        it('hands the installer what the library added before (EDS-36)', async () => {
+            setSyncBehavior('enabled');
+            const addedEntries = { definition: ['hero'], sectionFilter: [], filters: [], models: [] };
+            const project = makeProject({ installedBlockLibraries: [makeLibrary({ addedEntries })] });
+
+            await performAddonUpdates([makeItem(project)], [], new Set(), makeCtx());
+
+            expect(installMock.mock.calls[0][3]).toEqual([
+                {
+                    source: { owner: 'stephen-garner-adobe', repo: 'isle5', branch: 'main' },
+                    name: 'Isle5 Block Collection',
+                    addedEntries,
+                },
+            ]);
+        });
+
+        it('tells the SC which entries it left out because they were removed by hand', async () => {
+            setSyncBehavior('enabled');
+            installMock.mockResolvedValueOnce({
+                success: true,
+                blocksCount: 1,
+                blockIds: ['hero'],
+                removedByHand: [
+                    { library: 'Isle5 Block Collection', file: 'component-definition.json', id: 'hero' },
+                ],
+            });
+            const project = makeProject();
+
+            await performAddonUpdates([makeItem(project)], [], new Set(), makeCtx());
+
+            expect(showInfoMock).toHaveBeenCalledWith(
+                'Isle5 Block Collection in demo: Left out 1 block entry removed by hand: ' +
+                    'hero (component-definition.json).',
+            );
+        });
+
         it('bumps commitSha to the latest upstream SHA on successful install', async () => {
             setSyncBehavior('enabled');
             const project = makeProject();

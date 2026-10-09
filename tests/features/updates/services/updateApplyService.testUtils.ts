@@ -188,7 +188,7 @@ export function resetFakes(): void {
     mockUpdateLastSyncedCommit.mockResolvedValue(undefined);
     mockUpdateComponent.mockResolvedValue(undefined);
     mockApplyAdobeMcpUpdate.mockResolvedValue(undefined);
-    mockApplyBlockLibraryUpdateResolved.mockResolvedValue(undefined);
+    mockApplyBlockLibraryUpdateResolved.mockResolvedValue([]);
     mockUpdateCommitShaWithRollback.mockResolvedValue(undefined);
     mockInstallBlockLibraryFiles.mockResolvedValue({
         success: true,

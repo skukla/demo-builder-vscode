@@ -20,6 +20,7 @@ import {
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
+import { describeUpdateLeftOut } from '@/features/eds/services/addedEntriesRecord';
 import { applyAdobeMcpUpdate } from '@/features/updates/services/adobeMcpUpdateCore';
 import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import { ForkSyncService } from '@/features/updates/services/forkSyncService';
@@ -493,5 +494,7 @@ async function applyBlockLibraryUpdate(
         effectiveBehavior = syncBehavior;
     }
 
-    await applyBlockLibraryUpdateResolved(item, effectiveBehavior, ctx);
+    const leftOut = await applyBlockLibraryUpdateResolved(item, effectiveBehavior, ctx);
+    const note = describeUpdateLeftOut(item, leftOut);
+    if (note) vscode.window.showInformationMessage(note);
 }

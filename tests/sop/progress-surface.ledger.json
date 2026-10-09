@@ -17,9 +17,9 @@
         "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts:486": "Verifies credentials the SC has just pasted, inside the prompt that asked for them. The prompt is the surface; this covers the check.",
         "src/features/project-creation/services/aiBundle/thirdPartyToolingSettingListener.ts:102": "Runs when a VS Code setting changes, so there is no screen and no agent \u2014 a notification is the only surface available.",
         "src/features/updates/commands/checkUpdates.ts:64": "The update check, from the palette and from activation. Updates narrate themselves through their own notifications end to end.",
-        "src/features/updates/commands/updateExecutor.ts:146": "Template sync during an update run. The update flow is a sequence of notifications by design \u2014 the SC is not on a screen while it happens.",
-        "src/features/updates/commands/updateExecutor.ts:246": "Component update during the same run, and part of the same sequence.",
-        "src/features/updates/commands/updateExecutor.ts:342": "Adobe MCP update during the same run, and part of the same sequence.",
+        "src/features/updates/commands/updateExecutor.ts:147": "Template sync during an update run. The update flow is a sequence of notifications by design \u2014 the SC is not on a screen while it happens.",
+        "src/features/updates/commands/updateExecutor.ts:247": "Component update during the same run, and part of the same sequence.",
+        "src/features/updates/commands/updateExecutor.ts:343": "Adobe MCP update during the same run, and part of the same sequence.",
         "src/features/updates/services/extensionUpdater.ts:21": "Installs the new VSIX and reloads the window. Nothing of ours survives the reload, so a surface owned by our own state is the wrong place for it.",
         "src/commands/commandManager.ts:459": "GitHub sign-in from the palette: one notification while the browser flow completes, the same shape as the Adobe sign-in above it (develop, merged 2026-09-24)."
     },

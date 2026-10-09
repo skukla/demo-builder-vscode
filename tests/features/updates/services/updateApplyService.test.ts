@@ -152,7 +152,7 @@ describe('applyUpdatesHeadless', () => {
         });
         updateComponentMock.mockResolvedValue(undefined);
         executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
-        applyBlockResolvedMock.mockResolvedValue(undefined);
+        applyBlockResolvedMock.mockResolvedValue([]);
         updateShaRollbackMock.mockResolvedValue(undefined);
         shouldSkipMock.mockReturnValue(false);
     });
