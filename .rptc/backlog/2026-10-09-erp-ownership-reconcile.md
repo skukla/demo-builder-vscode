@@ -4,7 +4,7 @@ kind: feature
 area: ai
 needs: []
 value: high
-status: active
+status: built
 ---
 
 # Ownership reconcile: adding or removing an ERP leaves no products behind
@@ -79,9 +79,12 @@ owner-change handling, then the demo-erp status if the model needs it.
   end-to-end journeys run against the new ERP. Biome reports issues only in six files this
   change does not touch (pre-existing on `main`).
 
-Not done, needs the owner: commits, pushes, and deploying the ERP and the integration to
-Justrite (the extension's discontinue call answers 400 until the ERP is deployed with v20,
-which the pass reports and the add stands). Untested live: the whole loop on the sandbox.
+Committed and deployed 2026-10-09 (owner: "Commit and deploy"): demo-erp `2e50537` and
+commerce-erp-integration `a53347e` pushed to their `main`; `update_integration` on Justrite
+redeployed Justrite ERP, Kukla ERP and the integration from those commits (05:05 to 05:11 UTC,
+each component's checkout read back at the new commit). The extension change is in the
+release candidate (`cec5d466e`), which runs after the owner's next F5. Untested live: the
+whole loop on the sandbox (add, tag, remove), which needs that F5 first.
 
 ## Shipped so far
 - 2026-10-09  feat(app-builder): ownership is applied across every ERP when it changes (`0d7e46e33`)
