@@ -178,3 +178,4 @@ after "Refresh registrations", and Apps > App Management lists one app.
 
 - 2026-10-08  fix(app-builder): one deployment per ERP name in an Adobe project, and a removal confirms its Commerce Admin registration is gone (`0078d4805`)
 - 2026-10-08  fix(authentication): the extension-point registry is a bare map, as the live service answers it (`f3cf95d30`)
+- 2026-10-08  fix(app-builder): name what a removal checks, and say why Adobe refused a delete (`cb5c45420`)
