@@ -17,7 +17,8 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { NewRepoForm } from '@/features/eds/ui/steps/repoSelectionInline.helpers';
+import userEvent from '@testing-library/user-event';
+import { NewRepoForm } from '@/features/eds/ui/steps/NewRepoForm';
 import type { RepoCreationState } from '@/features/eds/ui/steps/repoSelectionInline.helpers';
 
 // A stand-in that exposes the two things this behaviour lives in: the validation
@@ -31,7 +32,16 @@ jest.mock('@adobe/react-spectrum', () => ({
             {children}
         </button>
     ),
-    TextField: ({ label, value, description, validationState, errorMessage, isDisabled }: any) => (
+    TextField: ({
+        label,
+        value,
+        description,
+        validationState,
+        errorMessage,
+        isDisabled,
+        isReadOnly,
+        placeholder,
+    }: any) => (
         <div>
             <label>{label}</label>
             <input
@@ -40,6 +50,8 @@ jest.mock('@adobe/react-spectrum', () => ({
                 readOnly
                 disabled={isDisabled}
                 data-validation={validationState}
+                data-readonly={String(Boolean(isReadOnly))}
+                placeholder={placeholder}
             />
             <span data-testid="description">{description}</span>
             {errorMessage && <span data-testid="error">{errorMessage}</span>}
@@ -136,5 +148,114 @@ describe('errors still win', () => {
             'data-validation',
             'invalid',
         );
+    });
+});
+
+describe('the form\'s controls', () => {
+    const user = () => userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    const idle: RepoCreationState = { isCreated: false, isCreating: false };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it('goes back to the list on Browse', async () => {
+        renderForm(idle);
+
+        await user().click(screen.getByRole('button', { name: 'Browse' }));
+
+        expect(baseProps.onUseExisting).toHaveBeenCalledTimes(1);
+    });
+
+    it('creates on Create when the name is valid and a template is available', async () => {
+        renderForm(idle);
+
+        const create = screen.getByRole('button', { name: 'Create' });
+        expect(create).toBeEnabled();
+        await user().click(create);
+
+        expect(baseProps.onCreateRepository).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+        ['no name', { repoName: '' }, idle],
+        ['a name GitHub would reject', { repoName: '-invalid' }, idle],
+        ['no template to copy', { templateAvailable: false }, idle],
+        ['a request in flight', {}, { isCreated: false, isCreating: true }],
+    ])('disables Create with %s', (_label, extra, state) => {
+        renderForm(state, extra);
+
+        expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
+    });
+
+    it('drops Create once the repository exists, and makes the field read-only', () => {
+        renderForm({ isCreated: true, isCreating: false });
+
+        expect(screen.queryByRole('button', { name: 'Create' })).not.toBeInTheDocument();
+        expect(screen.getByLabelText('Repository Name')).toHaveAttribute('data-readonly', 'true');
+    });
+
+    it('greys the field and shows the overlay only while the request is in flight', () => {
+        const { unmount } = renderForm({ isCreated: false, isCreating: true });
+        expect(screen.getByLabelText('Repository Name')).toBeDisabled();
+        expect(screen.getByTestId('loading-overlay')).toBeInTheDocument();
+        unmount();
+
+        renderForm(idle);
+        expect(screen.getByLabelText('Repository Name')).toBeEnabled();
+        expect(screen.getByLabelText('Repository Name')).toHaveAttribute('data-readonly', 'false');
+        expect(screen.queryByTestId('loading-overlay')).not.toBeInTheDocument();
+    });
+});
+
+describe('what the field shows', () => {
+    it('shows what was typed over the derived GitHub name', () => {
+        renderForm(
+            { isCreated: false, isCreating: false },
+            { repoName: 'kukla-just-rite', repoNameInput: 'Kukla Just Rite' },
+        );
+
+        expect(screen.getByLabelText('Repository Name')).toHaveValue('Kukla Just Rite');
+        expect(screen.getByTestId('description')).toHaveTextContent(
+            'Will be created as skukla/kukla-just-rite',
+        );
+    });
+
+    it('falls back to the GitHub name when nothing typed is held', () => {
+        renderForm({ isCreated: false, isCreating: false });
+
+        expect(screen.getByLabelText('Repository Name')).toHaveValue('bodea-team-demo');
+        expect(screen.getByLabelText('Repository Name')).toHaveAttribute(
+            'placeholder',
+            'my-eds-project',
+        );
+    });
+
+    it('describes the placeholder name until one is typed', () => {
+        renderForm({ isCreated: false, isCreating: false }, { repoName: '' });
+
+        expect(screen.getByTestId('description')).toHaveTextContent(
+            'Will be created as skukla/my-eds-project',
+        );
+    });
+
+    it('asks only for a name when no GitHub user is known', () => {
+        renderForm({ isCreated: false, isCreating: false }, { githubUser: undefined });
+
+        expect(screen.getByTestId('description')).toHaveTextContent(
+            'Name for your new GitHub repository',
+        );
+    });
+
+    it('shows the creation error under the field', () => {
+        renderForm({ isCreated: false, isCreating: false, error: 'GitHub rejected the request' });
+
+        expect(screen.getByTestId('error')).toHaveTextContent('GitHub rejected the request');
+    });
+
+    it('shows no error when there is none', () => {
+        renderForm({ isCreated: false, isCreating: false });
+
+        expect(screen.queryByTestId('error')).not.toBeInTheDocument();
     });
 });

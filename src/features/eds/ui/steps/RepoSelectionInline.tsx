@@ -20,15 +20,15 @@ import { Button, Text } from '@adobe/react-spectrum';
 import Add from '@spectrum-icons/workflow/Add';
 import React, { useEffect, useCallback, useState } from 'react';
 import { edsConfigStringDefaults, type WizardEdsConfig } from '../helpers/edsConfigDefaults';
+import { DefaultBranchNotice } from './DefaultBranchNotice';
+import { NewRepoForm } from './NewRepoForm';
 import {
-    NewRepoForm,
-    ResetToTemplateOption,
-    DefaultBranchNotice,
     computeRepoValid,
     type RepoReadinessState,
     type RepoCreationState,
     isJustCreatedSelection,
 } from './repoSelectionInline.helpers';
+import { ResetToTemplateOption } from './ResetToTemplateOption';
 import { SelectionStepContent } from '@/core/ui/components/selection/SelectionStepContent';
 import { useSelectionStep } from '@/core/ui/hooks/useSelectionStep';
 import { webviewClient } from '@/core/ui/utils/vscode-api';

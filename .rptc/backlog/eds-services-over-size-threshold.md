@@ -413,7 +413,7 @@ and three of them are more than 40% comments). Decide which.
    modal's own body file, with a planted control.
 10. DONE 2026-10-09 (565 -> 324, see the log). `eds/services/storefront/storefrontRepublishService.ts` (567/400): config republish vs
     full content republish. The content republish moved to `storefrontContentRepublishService.ts`.
-11. `eds/ui/steps/repoSelectionInline.helpers.tsx` (440/350) then
+11. DONE 2026-10-09 for the helpers (440 -> 145, see the log). `eds/ui/steps/repoSelectionInline.helpers.tsx` (440/350) then
     `eds/ui/steps/RepoSelectionInline.tsx` (490/350): pure verdict functions vs form and
     notice components; repo-creation hook, repo-readiness hook, selection component.
 12. `authentication/services/adobeConsoleProjectOps.ts` (555/400): Console project
@@ -881,6 +881,18 @@ date and what happened; a failure becomes its own `fix` item.
       code, permissions, publish, category pages, pre-warm, CDN verify) is now
       `storefrontContentRepublishService.ts`. Every function is a proven move.
 
+- [ ] **The wizard's repository picker after the RepoSelectionInline split** (uncommitted on
+      `refactor/eds-8-god-files`): in the Storefront area's Repository sub-step, (1) pick an
+      existing repository: it is selected, the reset tick unlocks, Continue enables; (2) create a
+      new one with New, a typed name and Create: the field gains its checkmark, the line beneath
+      reads "Created as", and the new repository appears first in the list, selected, with the
+      reset tick quiet; (3) try a name that is already taken on GitHub: the error shows under the
+      field and nothing is selected; (4) pick a repository that is not ready: a populated repo with
+      no storefront asks for the reset before Continue enables, an empty one shows as ticked and
+      locked, and a repo whose default branch is not main shows the amber notice alone. The form,
+      the reset tick and the notice now live in `NewRepoForm`, `ResetToTemplateOption` and
+      `DefaultBranchNotice`; only the wizard bundle renders them.
+
 ## Shipped so far
 
 - 2026-09-10  2026-09-10  Gated: god-file-ratchet.test.ts pins 68 candidates / 31 coupled; rule 49 measures on edit (2987e8623)
@@ -959,3 +971,4 @@ date and what happened; a failure becomes its own `fix` item.
 - 2026-10-09  refactor(data-installer): ImportDatapackModal keeps the state and the requests; what each state shows gets its own file (`e9d414a7c`)
 - 2026-10-09  storefrontRepublishService.ts (565 -> 324) split by job. It keeps the config.json republish: extractRepublishParams, the DA.live session guard, generate, write, push, and recording the published baseline from the snapshot taken BEFORE the push (the 2026-08-10 ordering, unchanged and now pinned by a test that saves a Configure change during the push). The full content republish (republishStorefrontContent with its params and result types) moved to storefrontContentRepublishService.ts (241); the dashboard handler and the sync_content tool import it directly, no forwarders. needsStorefrontRepublish had no caller in src, tests or the MCP surface and was deleted. proveMove: all three functions pure moves, control fired; every other line compared as a multiset against HEAD (only the headers, imports, the deleted function and two section dividers differ), planted control caught. Tests: both suites moved into the mirror folder as storefrontRepublishService.test.ts and storefrontContentRepublishService.test.ts and gained 25 cases (every extractor refusal, each step's failure answer, the push arguments, the progress order of both pipelines, the permissions skip, the published-baseline snapshot); one logger-wording assertion replaced by an outcome check and its ledger row removed; a duplicated storefrontRepublishService mock in configure-authoring-experience deleted. Mutation: no row existed, so the unsplit file was measured first: 40.21 (76 of 189, 43 uncovered). After: storefrontRepublishService 88.43 (107 of 121), storefrontContentRepublishService 72.41 (42 of 58), open gaps 0 on both; every survivor is log wording or a log-only decision, five ledger rows (14 mutants). Pins: godFileCandidates 28 -> 27, godFileCoupled stays 2; spine door for the category pages now names the new file; ADR-016's mock table, category-pages.md and call-path-audit name it too. storefrontTools.ts imports 12 -> 13 (limit 15). Checks: npm run gate green (lint 0 errors, tsc, typecheck:tests, blind spots, test sizes, full jest 1901 suites / 32,386 tests, source duplication at the pin of 36), compile green. Live check appended above.
 - 2026-10-09  refactor(eds): storefront republish keeps config.json; the full content republish gets its own file (`c5d8a660d`)
+- 2026-10-09  repoSelectionInline.helpers.tsx (440 -> 145, renamed .ts) split by job. It keeps the pure verdicts: computeRepoValid, isJustCreatedSelection, describeResetOption and the two state types. NewRepoForm (125), ResetToTemplateOption (87) and DefaultBranchNotice (45) each moved to a file of their own name; RepoSelectionInline imports each, no forwarders. About 90 lines of doc comments for Code Sync functions removed on 2026-09-25 were deleted. proveMove: all 7 functions same, control DIFFERS. Mutation: no prior row; 79.62% before (125 of 157), 100% after on all four (157 of 157). Pins: godFileCandidates 27 -> 26.

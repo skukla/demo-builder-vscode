@@ -120,7 +120,7 @@ New: the storefront flow's stage ids and copy; the `add` card variant. Two gener
 | Integrations the demo names (D29) | `useProjectBuilder.onAppBuilderComponentToggle`; `appBuilderComponentSources` + `buildCustomIntegrationEntry` for custom links; `selectedAppBuilderComponents` as the single mesh authority | use as is: the row's list is replayed through the same handlers |
 | The datapack the demo names (D26) | `SampleDataStep.tsx` + `project.datapack` | add to it: a preselected value and one line of copy |
 | Storefront summary "Demo" row | `storefrontSummaryGroup` (`buildSummary.ts:69`) | add to it: one row |
-| "Reset to Isle5 by Jen" tick wording | `repoSelectionInline.helpers.tsx:826` | add to it: interpolate the demo name |
+| "Reset to Isle5 by Jen" tick wording | `ResetToTemplateOption.tsx` | add to it: interpolate the demo name |
 | Headless clone | `executorComponentLoading.ts:73` → `componentInstallation.ts:86` | use as is |
 | Template identity on the instance | `populateEdsMetadata` (`executorEdsPhase.ts:72`) | use as is (no `lkgSource` for a colleague's repo) |
 

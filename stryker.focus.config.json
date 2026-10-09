@@ -8,8 +8,10 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/storefront/storefrontRepublishService.ts",
-        "src/features/eds/services/storefront/storefrontContentRepublishService.ts"
+        "src/features/eds/ui/steps/repoSelectionInline.helpers.ts",
+        "src/features/eds/ui/steps/NewRepoForm.tsx",
+        "src/features/eds/ui/steps/ResetToTemplateOption.tsx",
+        "src/features/eds/ui/steps/DefaultBranchNotice.tsx"
     ],
     "reporters": [
         "clear-text",
