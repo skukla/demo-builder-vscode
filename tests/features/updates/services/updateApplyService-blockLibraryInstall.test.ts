@@ -16,6 +16,7 @@ import {
     installedLibrary,
     makeCtx,
     mockInstallBlockLibraryFiles,
+    recordsIntegrationProbe,
     resetFakes,
 } from './updateApplyService.testUtils';
 import * as vscode from 'vscode';
@@ -45,7 +46,7 @@ describe('computeProjectUpdateSelections — block library installs', () => {
     it('selects a library the project selected but has no record of, resolved from the catalog', async () => {
         const project = edsProject({ selectedBlockLibraries: ['demo-builder-blocks'] });
 
-        const sel = await computeProjectUpdateSelections(project, createMockHandlerContext());
+        const sel = await computeProjectUpdateSelections(project, createMockHandlerContext(), recordsIntegrationProbe());
 
         expect(sel.blockLibraryInstall).toEqual([{ project, library: LIBRARY }]);
         expect(countSelections(sel)).toBe(1);
@@ -57,7 +58,7 @@ describe('computeProjectUpdateSelections — block library installs', () => {
             installedBlockLibraries: [installedLibrary(LIBRARY.name, LIBRARY.source)],
         });
 
-        const sel = await computeProjectUpdateSelections(project, createMockHandlerContext());
+        const sel = await computeProjectUpdateSelections(project, createMockHandlerContext(), recordsIntegrationProbe());
 
         expect(sel.blockLibraryInstall).toStrictEqual([]);
         expect(countSelections(sel)).toBe(0);

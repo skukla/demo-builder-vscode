@@ -13,6 +13,7 @@
 import type * as vscode from 'vscode';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import type { RunnerResult } from '@/features/app-builder/services/appBuilderComponentRunner';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import {
     mergeAddedEntries,
@@ -28,6 +29,18 @@ import type { Project } from '@/types/base';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
+
+/**
+ * The pair update the integrations card's Update button runs, for any project:
+ * guards, then the integration and its systems with newer code, systems first.
+ * Bound at the boundary that has a handler context
+ * (`updateIntegrationPairFor`, dashboard/handlers/integrationUpdateHandlers).
+ */
+export type IntegrationPairUpdater = (
+    project: Project,
+    componentId: string,
+    report: (message: string, subMessage?: string) => void,
+) => Promise<RunnerResult>;
 
 /**
  * Context passed from the Check Updates command (or the headless apply
@@ -47,6 +60,12 @@ export interface UpdateContext {
     logger: Logger;
     /** ADR-015: the shell executor, supplied by whichever boundary builds this. */
     commandManager: CommandExecutor;
+    /**
+     * Runs an integration pair update (AB-73). Optional: a boundary that cannot
+     * run App Builder deploys leaves it out, and an integration update then
+     * reports "not available here" rather than pretending.
+     */
+    updateIntegrationPair?: IntegrationPairUpdater;
 }
 
 /**

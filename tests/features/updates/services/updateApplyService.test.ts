@@ -137,6 +137,7 @@ function emptySelections(): UpdateSelections {
         blockLibrary: [],
         blockLibraryInstall: [],
         inspector: [],
+        integration: [],
     };
 }
 

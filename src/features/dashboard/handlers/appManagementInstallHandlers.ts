@@ -213,17 +213,27 @@ export const handleGetAppBuilderInstallStatus: MessageHandler<{ id?: string }> =
  * The runner deps a dashboard handler hands the runner, with the runner's step
  * text forwarded to `report`: the sub-step alone when there is one, because the
  * notification title already names the operation.
+ *
+ * `save: 'in-place'` writes the project's record without making it the current
+ * project — for a project other than the open one (the extension's update check
+ * updating a pair in another project, AB-73; the `replaceDeployedElsewhere`
+ * precedent). Passed INTO the builder rather than patched after, because the
+ * deps capture `saveProject` in closures of their own.
  */
 export async function handlerRunnerDeps(
     context: HandlerContext,
     project: Project,
     report?: (message: string, subMessage?: string, position?: OperationPosition) => void,
+    save: 'current' | 'in-place' = 'current',
 ): Promise<AppBuilderComponentRunnerDeps> {
+    const ctx = await buildRunnerDepsContext(context, project, {
+        authManager: ServiceLocator.getAuthenticationService(),
+        commandManager: ServiceLocator.getCommandExecutor(),
+    });
+    const saveProject =
+        save === 'in-place' ? (p: Project) => context.stateManager.saveProjectConfigOnly(p) : ctx.saveProject;
     return buildDefaultRunnerDeps(
-        await buildRunnerDepsContext(context, project, {
-            authManager: ServiceLocator.getAuthenticationService(),
-            commandManager: ServiceLocator.getCommandExecutor(),
-        }),
+        { ...ctx, saveProject },
         report && ((message, subMessage, position) => report(message, subMessage, position)),
     );
 }

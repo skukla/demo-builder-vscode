@@ -10,6 +10,7 @@
  * THIS FILE OWNS THE jest.mock CALLS. Import it FIRST.
  */
 
+import type { IntegrationUpdateProbe } from '@/features/updates/services/integrationUpdates';
 import type { UpdateContext } from '@/features/updates/services/updateCore';
 import type { UpdateSelections } from '@/features/updates/services/updateApplyService';
 import type { Project } from '@/types/base';
@@ -173,6 +174,26 @@ export function emptySelections(): UpdateSelections {
         blockLibrary: [],
         blockLibraryInstall: [],
         inspector: [],
+        integration: [],
+    };
+}
+
+/**
+ * The integration probe the calling boundary binds (AB-73), answering from the
+ * records alone — the way the real check answers when nothing changed — with
+ * every project in the signed-in org.
+ */
+export function recordsIntegrationProbe(): IntegrationUpdateProbe {
+    return {
+        check: jest.fn(async (project: Project) => ({
+            reports: Object.entries(project.appBuilderComponents ?? {}).map(([id, state]) => ({
+                id,
+                available: Boolean(state.updateAvailable),
+            })),
+            changed: false,
+        })),
+        inOtherOrg: jest.fn(async () => false),
+        catalog: [],
     };
 }
 

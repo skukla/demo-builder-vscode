@@ -540,6 +540,7 @@ describe('totals', () => {
                 ],
                 blockLibraryInstall: [],
                 inspector: [{ project, latestCommit: 'z' }],
+                integration: [],
             },
             makeCtx()
         );

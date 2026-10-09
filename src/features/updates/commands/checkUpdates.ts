@@ -1,6 +1,11 @@
 import * as vscode from 'vscode';
 import { performBlockLibraryInstalls } from './blockLibraryInstallExecutor';
 import {
+    detectIntegrationUpdateItems,
+    integrationPairUpdater,
+    performIntegrationUpdates,
+} from './integrationUpdatePicker';
+import {
     performAddonUpdates,
     performAdobeMcpUpdates,
     performComponentUpdates,
@@ -12,15 +17,18 @@ import {
     buildUpdatePickerItems,
     formatBehindLabel,
     getTemplateSource,
+    hasPickerRows,
     toAdobeMcpUpdateItem,
     type AdobeMcpUpdateItem,
     type BlockLibraryInstallItem,
     type BlockLibraryUpdateItem,
     type ForkSyncItem,
     type InspectorUpdateItem,
+    type IntegrationUpdateItem,
     type ProjectUpdateItem,
     type TemplateUpdateItem,
     type UpdateItem,
+    type UpdatePickerSources,
 } from './updateTypes';
 import { BaseCommand } from '@/core/base/baseCommand';
 import { ServiceLocator } from '@/core/di/serviceLocator';
@@ -37,7 +45,7 @@ import { ExtensionUpdater } from '@/features/updates/services/extensionUpdater';
 import { ForkSyncService } from '@/features/updates/services/forkSyncService';
 import { shouldOfferGraduation } from '@/features/updates/services/releaseTrack';
 import { TemplateUpdateChecker, TemplateUpdateResult } from '@/features/updates/services/templateUpdateChecker';
-import { UpdateManager, MultiProjectUpdateResult } from '@/features/updates/services/updateManager';
+import { UpdateManager } from '@/features/updates/services/updateManager';
 import { Project } from '@/types/base';
 
 /**
@@ -57,11 +65,7 @@ export class CheckUpdatesCommand extends BaseCommand {
 
         await CheckUpdatesCommand.lock.run(async () => {
             try {
-                const {
-                    extensionUpdate, multiProjectUpdates, templateUpdates,
-                    forkSyncItems, blockLibraryItems, inspectorItems, adobeMcpItems,
-                    currentProject, hasUpdates,
-                } = await vscode.window.withProgress(
+                const { extensionUpdate, sources, currentProject, hasUpdates } = await vscode.window.withProgress(
                     {
                         location: vscode.ProgressLocation.Notification,
                         title: 'Checking for updates',
@@ -94,6 +98,13 @@ export class CheckUpdatesCommand extends BaseCommand {
                                 allProjects.push(project);
                             }
                         }
+
+                        // Integrations (AB-73) run alongside the checks below: each
+                        // deployed pair costs a git fetch per clone, and the extension's
+                        // own update notice must not wait on that.
+                        const integrationCheck = detectIntegrationUpdateItems(
+                            this.pickerParts(), allProjects, currentProject ?? null,
+                        );
 
                         // Phase 2: Check fork sync for source repos
                         progress.report({ message: 'Checking source repos' });
@@ -129,14 +140,14 @@ export class CheckUpdatesCommand extends BaseCommand {
                             allProjects, currentProject ?? null,
                         );
 
-                        // Check if any updates available
-                        const hasUpdates = extensionUpdate.hasUpdate
-                            || multiProjectUpdates.length > 0
-                            || templateUpdates.length > 0
-                            || forkSyncItems.length > 0
-                            || blockLibraryItems.length > 0
-                            || inspectorItems.length > 0
-                            || adobeMcpItems.length > 0;
+                        progress.report({ message: 'Checking integrations' });
+                        const integrationItems = await integrationCheck;
+
+                        const sources: UpdatePickerSources = {
+                            componentUpdates: multiProjectUpdates, templateUpdates, forkSyncItems,
+                            blockLibraryItems, inspectorItems, adobeMcpItems, integrationItems,
+                        };
+                        const hasUpdates = extensionUpdate.hasUpdate || hasPickerRows(sources);
 
                         if (!hasUpdates) {
                             progress.report({
@@ -145,11 +156,7 @@ export class CheckUpdatesCommand extends BaseCommand {
                             await sleep(TIMEOUTS.UPDATE_RESULT_DISPLAY);
                         }
 
-                        return {
-                            extensionUpdate, multiProjectUpdates, templateUpdates,
-                            forkSyncItems, blockLibraryItems, inspectorItems, adobeMcpItems,
-                            currentProject, hasUpdates,
-                        };
+                        return { extensionUpdate, sources, currentProject, hasUpdates };
                     },
                 );
 
@@ -182,23 +189,8 @@ export class CheckUpdatesCommand extends BaseCommand {
                 }
 
                 // Handle all non-extension updates with QuickPick
-                const hasNonExtensionUpdates = multiProjectUpdates.length > 0
-                    || templateUpdates.length > 0
-                    || forkSyncItems.length > 0
-                    || blockLibraryItems.length > 0
-                    || inspectorItems.length > 0
-                    || adobeMcpItems.length > 0;
-
-                if (hasNonExtensionUpdates) {
-                    await this.showMultiProjectUpdatePicker(
-                        multiProjectUpdates,
-                        templateUpdates,
-                        forkSyncItems,
-                        blockLibraryItems,
-                        inspectorItems,
-                        adobeMcpItems,
-                        currentProject ?? null,
-                    );
+                if (hasPickerRows(sources)) {
+                    await this.showMultiProjectUpdatePicker(sources, currentProject ?? null);
                 }
             } catch (error) {
                 await this.showError('Failed to check for updates', error as Error);
@@ -211,18 +203,10 @@ export class CheckUpdatesCommand extends BaseCommand {
     // -----------------------------------------------------------------------
 
     private async showMultiProjectUpdatePicker(
-        componentUpdates: MultiProjectUpdateResult[],
-        templateUpdates: Array<{ project: Project; update: TemplateUpdateResult }>,
-        forkSyncItems: ForkSyncItem[],
-        blockLibraryItems: Array<BlockLibraryUpdateItem | BlockLibraryInstallItem>,
-        inspectorItems: InspectorUpdateItem[],
-        adobeMcpItems: AdobeMcpUpdateItem[],
+        sources: UpdatePickerSources,
         currentProject: Project | null,
     ): Promise<void> {
-        const { items, title } = buildUpdatePickerItems(
-            componentUpdates, templateUpdates, forkSyncItems,
-            blockLibraryItems, inspectorItems, adobeMcpItems, currentProject,
-        );
+        const { items, title } = buildUpdatePickerItems(sources, currentProject);
 
         const selected = await vscode.window.showQuickPick(items, {
             title,
@@ -263,12 +247,16 @@ export class CheckUpdatesCommand extends BaseCommand {
         const selectedAdobeMcp = selected.filter(
             (item): item is AdobeMcpUpdateItem => 'isAdobeMcpUpdate' in item,
         );
+        const selectedIntegrations = selected.filter(
+            (item): item is IntegrationUpdateItem => 'isIntegrationUpdate' in item,
+        );
 
         this.logger.debug(
             `[Updates] User selected: ${selectedForks.length} fork(s), ${selectedTemplates.length} template(s), `
             + `${selectedComponents.length} component(s), ${selectedBlockLibraries.length} block lib(s), `
             + `${selectedLibraryInstalls.length} block lib install(s), `
-            + `${selectedInspectors.length} inspector(s), ${selectedAdobeMcp.length} Adobe MCP package(s)`,
+            + `${selectedInspectors.length} inspector(s), ${selectedAdobeMcp.length} Adobe MCP package(s), `
+            + `${selectedIntegrations.length} integration pair(s)`,
         );
 
         const ctx = this.buildUpdateContext();
@@ -302,6 +290,11 @@ export class CheckUpdatesCommand extends BaseCommand {
         // template sync above may have just moved that branch.
         if (selectedLibraryInstalls.length > 0) {
             await performBlockLibraryInstalls(selectedLibraryInstalls, ctx);
+        }
+
+        // Integration pairs deploy to Adobe, independent of the storefront work above.
+        if (selectedIntegrations.length > 0) {
+            await performIntegrationUpdates(selectedIntegrations, ctx);
         }
     }
 
@@ -485,6 +478,12 @@ export class CheckUpdatesCommand extends BaseCommand {
             stateManager: this.stateManager,
             logger: this.logger,
             commandManager: ServiceLocator.getCommandExecutor(),
+            updateIntegrationPair: integrationPairUpdater(this.pickerParts()),
         };
+    }
+
+    /** What the integration picker builds its headless handler context from. */
+    private pickerParts() {
+        return { context: this.context, stateManager: this.stateManager, logger: this.logger };
     }
 }

@@ -77,7 +77,7 @@ jest.mock('@/features/dashboard/commands/showDashboard', () => ({
 
 // Below the mocks on purpose: they hoist above these imports. The shared wall
 // comes before the subject, or the subject binds to the real modules first.
-import { setupMocks } from './dashboardHandlers.testUtils';
+import { createDashboardProject, setupMocks } from './dashboardHandlers.testUtils';
 import {
     handleCheckIntegrationUpdates,
     handleUpdateAppBuilderComponent,
@@ -442,5 +442,83 @@ describe('handleUpdateAppBuilderComponent — started from the integrations scre
             state: 'failed',
             error: '"erp-integration" is not deployed; deploy it instead of updating it.',
         });
+    });
+});
+
+// AB-73: the extension's update check runs the same check and the same pair
+// update for ANY project, through these two boundary functions.
+describe('checkProjectIntegrationUpdates and updateIntegrationPairFor — a project that is not the open one', () => {
+    const { checkProjectIntegrationUpdates, updateIntegrationPairFor, integrationUpdateProbe } =
+        jest.requireActual('@/features/dashboard/handlers/integrationUpdateHandlers');
+
+    function otherProject(): Project {
+        return {
+            ...createDashboardProject(pairProject({ updateAvailable: { commit: 'abc', checkedAt: 'x' } })),
+            name: 'Other',
+            path: '/p/other',
+        };
+    }
+
+    it('the check records the answer in place without making the project current', async () => {
+        const { mockContext } = setup(pairProject());
+        const other = otherProject();
+        mockCheckComponentSource.mockResolvedValue({ status: 'available', to: 'def456' });
+
+        const checked = await checkProjectIntegrationUpdates(mockContext, other);
+
+        expect(checked?.reports.map((r: { id: string; available: boolean }) => r.available)).toEqual([true, true]);
+        expect(other.appBuilderComponents?.['erp-integration']?.updateAvailable?.commit).toBe('def456');
+        expect(mockContext.stateManager.saveProjectConfigOnly).toHaveBeenCalledWith(other);
+        expect(mockContext.stateManager.saveProject).not.toHaveBeenCalled();
+    });
+
+    it('the probe answers from the check and the org step of the guard chain', async () => {
+        const { mockContext } = setup(pairProject());
+        const { detectProjectOrgMismatch } = jest.requireMock('@/features/authentication/services/detectProjectOrgMismatch');
+        detectProjectOrgMismatch.mockResolvedValueOnce({ reachable: false });
+
+        const probe = integrationUpdateProbe(mockContext);
+        const other = otherProject();
+
+        expect(await probe.inOtherOrg(other)).toBe(true);
+        expect(detectProjectOrgMismatch).toHaveBeenLastCalledWith(expect.anything(), other, mockContext.logger);
+        expect(await probe.check(otherProject())).toMatchObject({ reports: expect.any(Array) });
+    });
+
+    it('the probe leaves a pair selectable when the org step cannot tell, so the full chain decides at apply', async () => {
+        const { mockContext } = setup(pairProject());
+        const { detectProjectOrgMismatch } = jest.requireMock('@/features/authentication/services/detectProjectOrgMismatch');
+        detectProjectOrgMismatch.mockResolvedValueOnce(undefined);
+
+        expect(await integrationUpdateProbe(mockContext).inOtherOrg(otherProject())).toBe(false);
+    });
+
+    it('the pair update runs the guards, updates in order, saves in place, and telegraphs no rows of the open project', async () => {
+        const { mockContext } = setup(pairProject());
+        const other = otherProject();
+        const report = jest.fn();
+
+        const result = await updateIntegrationPairFor(mockContext, other, 'erp-integration', report);
+
+        expect(result).toEqual({ success: true, detail: 'Updated the integration from a to b.' });
+        expect(mockEnsureAdobeIOAuth).toHaveBeenCalledTimes(1);
+        expect(mockUpdate.mock.calls.map((call) => [call[0], call[1]])).toEqual([[other, 'demo-erp'], [other, 'erp-integration']]);
+        expect(mockSendStatus).not.toHaveBeenCalled();
+        // The other project's record is saved in place, never made current.
+        const depsCtx = mockBuildDefaultRunnerDeps.mock.calls[0][0] as { saveProject: (p: Project) => Promise<void> };
+        await depsCtx.saveProject(other);
+        expect(mockContext.stateManager.saveProjectConfigOnly).toHaveBeenCalledWith(other);
+        expect(mockContext.stateManager.saveProject).not.toHaveBeenCalled();
+    });
+
+    it('a failed guard refuses before anything updates, in the guard\'s own words', async () => {
+        const { mockContext } = setup(pairProject());
+        const { detectProjectOrgMismatch } = jest.requireMock('@/features/authentication/services/detectProjectOrgMismatch');
+        detectProjectOrgMismatch.mockResolvedValueOnce({ reachable: false });
+
+        const result = await updateIntegrationPairFor(mockContext, otherProject(), 'erp-integration', jest.fn());
+
+        expect(result).toMatchObject({ success: false, blocked: true, error: expect.stringContaining('different Adobe organization') });
+        expect(mockUpdate).not.toHaveBeenCalled();
     });
 });

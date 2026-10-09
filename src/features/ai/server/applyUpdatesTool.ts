@@ -1,8 +1,11 @@
 /**
  * apply_updates (Phase 4) — check and apply available updates for the current
  * project across all categories (fork sync, template, components, Adobe MCP,
- * block libraries, inspector SDK), via the headless updateApplyService. It also
- * installs a block library the project has selected but never received (EDS-28).
+ * block libraries, inspector SDK, integration pairs), via the headless
+ * updateApplyService. It also installs a block library the project has selected
+ * but never received (EDS-28). An integration pair (an integration and its ERPs)
+ * with newer code is applied through the same pair update the card's Update
+ * button runs (AB-73); one in another Adobe org is reported, not deployed.
  *
  * Two modes in one tool:
  *  - WITHOUT confirm: read-only — reports what's available (acts as the check).
@@ -19,7 +22,12 @@ import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
+import {
+    integrationUpdateProbe,
+    updateIntegrationPairFor,
+} from '@/features/dashboard/handlers/integrationUpdateHandlers';
 import { describePendingInstall } from '@/features/updates/services/blockLibraryInstall';
+import { describeIntegrationUpdate } from '@/features/updates/services/integrationUpdates';
 import {
     applyUpdatesHeadless,
     computeProjectUpdateSelections,
@@ -40,6 +48,7 @@ function summarize(selections: UpdateSelections): Record<string, unknown> {
             describePendingInstall(b.library),
         ),
         inspector: selections.inspector.length,
+        integration: selections.integration.map(describeIntegrationUpdate),
     };
 }
 
@@ -59,7 +68,7 @@ export function registerApplyUpdatesTool(
             needsAuth: ['github'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             description:
-                'Check and (with confirm:true) apply available updates for the current project — fork sync, template, components, Adobe MCP, block libraries, inspector SDK — and install any block library the project has selected (configure_project blockLibraries) whose blocks are not in its storefront repository yet. Without confirm, reports what is available. A template update that conflicts with the user\'s edits stops and names the files; it is applied over them only with resetTemplateOnConflict:true. A block library update never puts back what the user removed by hand from the storefront: a block folder it copied, an entry it added to the component-definition, component-filters or component-models file, or an HTML example it filled in; categories.addon.leftOut names any it left out.',
+                'Check and (with confirm:true) apply available updates for the current project — fork sync, template, components, Adobe MCP, block libraries, inspector SDK, and deployed integrations and their ERPs (the same pair update as update_integration, ERPs first) — and install any block library the project has selected (configure_project blockLibraries) whose blocks are not in its storefront repository yet. Without confirm, reports what is available. An integration pair whose project uses a different Adobe organization is listed, not deployed: categories.integration.deferred says to open that project. A template update that conflicts with the user\'s edits stops and names the files; it is applied over them only with resetTemplateOnConflict:true. A block library update never puts back what the user removed by hand from the storefront: a block folder it copied, an entry it added to the component-definition, component-filters or component-models file, or an HTML example it filled in; categories.addon.leftOut names any it left out.',
             inputSchema: {
                 confirm: z
                     .boolean()
@@ -83,7 +92,7 @@ export function registerApplyUpdatesTool(
                 return asText({ error: 'No current project is open' });
             }
 
-            const selections = await computeProjectUpdateSelections(project, ctx);
+            const selections = await computeProjectUpdateSelections(project, ctx, integrationUpdateProbe(ctx));
             const available = countSelections(selections);
             const summary = summarize(selections);
 
@@ -119,6 +128,9 @@ export function registerApplyUpdatesTool(
                     stateManager: ctx.stateManager,
                     logger: ctx.logger,
                     commandManager: ServiceLocator.getCommandExecutor(),
+                    // The pair update the card's Update button runs, under this context.
+                    updateIntegrationPair: (project, id, report) =>
+                        updateIntegrationPairFor(ctx, project, id, report),
                 },
                 // Collected for the RESULT and reported LIVE. The array is the
                 // agent's after-the-fact record; reportPhase is what the user
@@ -140,6 +152,7 @@ export function registerApplyUpdatesTool(
                     adobeMcp: result.adobeMcp,
                     addon: result.addon,
                     blockLibraryInstall: result.blockLibraryInstall,
+                    integration: result.integration,
                 },
                 phases,
             });

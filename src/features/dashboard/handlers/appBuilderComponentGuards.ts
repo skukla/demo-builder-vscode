@@ -14,6 +14,7 @@ import { withComponentProgress, type GuardableResult } from './appBuilderCompone
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import type { OrgAwareAuthManager } from '@/features/authentication/services/detectProjectOrgMismatch';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
@@ -66,6 +67,36 @@ export async function guardOrBlock(
     };
 }
 
+/**
+ * The chain's org step on its own: a refusal when the project's Adobe org is not
+ * the one the signed-in token reaches; undefined when it is, or when the check
+ * cannot tell (not signed in — the auth step owns that case).
+ *
+ * Exported for the extension's update check (AB-73), which asks this one step
+ * while LISTING every project's integration updates: the full chain would ask
+ * for a sign-in and a role check per project before the SC chose anything.
+ *
+ * @param context - the handler context (its logger)
+ * @param project - the project whose org is checked
+ * @param authManager - the signed-in session the token comes from
+ */
+export async function orgGuard(
+    context: HandlerContext,
+    project: Project,
+    authManager: OrgAwareAuthManager,
+): Promise<GuardFailure | undefined> {
+    const { detectProjectOrgMismatch } = await import(
+        '@/features/authentication/services/detectProjectOrgMismatch'
+    );
+    const orgContext = await detectProjectOrgMismatch(authManager, project, context.logger);
+    if (orgContext && !orgContext.reachable) {
+        return {
+            error: 'Project uses a different Adobe organization. Use "Switch IMS Org" to continue.',
+        };
+    }
+    return undefined;
+}
+
 export async function runGuards(
     context: HandlerContext,
     project: Project,
@@ -96,14 +127,9 @@ export async function runGuards(
     }
 
     context.logger.debug('[Guards] 2/3 org-mismatch check');
-    const { detectProjectOrgMismatch } = await import(
-        '@/features/authentication/services/detectProjectOrgMismatch'
-    );
-    const orgContext = await detectProjectOrgMismatch(authManager, project, context.logger);
-    if (orgContext && !orgContext.reachable) {
-        return {
-            error: 'Project uses a different Adobe organization. Use "Switch IMS Org" to continue.',
-        };
+    const orgRefusal = await orgGuard(context, project, authManager);
+    if (orgRefusal) {
+        return orgRefusal;
     }
 
     context.logger.debug('[Guards] 3/3 developer-permission check');

@@ -34,6 +34,12 @@ import {
 import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import { ForkSyncService } from '@/features/updates/services/forkSyncService';
 import {
+    applyIntegrationUpdates,
+    findIntegrationPairUpdates,
+    type IntegrationPairUpdate,
+    type IntegrationUpdateProbe,
+} from '@/features/updates/services/integrationUpdates';
+import {
     TemplateSyncService,
     type TemplateSyncResult,
 } from '@/features/updates/services/templateSyncService';
@@ -67,6 +73,8 @@ export interface UpdateSelections {
     /** Selected but not yet in the storefront (EDS-28) — an install, not an update. */
     blockLibraryInstall: BlockLibraryInstallTarget[];
     inspector: Array<{ project: Project; latestCommit: string }>;
+    /** Deployed integration pairs (an integration and its ERPs) with newer code (AB-73). */
+    integration: IntegrationPairUpdate[];
 }
 
 /** Per-category outcome. */
@@ -75,8 +83,14 @@ export interface CategoryResult {
     failCount: number;
     /** Human-readable per-item failures (sanitized). */
     errors: string[];
-    /** Block libraries deferred under the headless 'ask' → 'disabled' policy. */
+    /**
+     * Not applied, by policy: block libraries under the headless 'ask' → 'disabled'
+     * rule, and integration pairs in a project of another Adobe org (the line says
+     * to open that project).
+     */
     deferred?: string[];
+    /** One plain line per integration pair updated: what the update did (AB-73). */
+    applied?: string[];
     /** One plain line per block library installed: what was added to the storefront. */
     installed?: string[];
     /**
@@ -94,6 +108,7 @@ export interface ApplyUpdatesResult {
     adobeMcp: CategoryResult;
     addon: CategoryResult;
     blockLibraryInstall: CategoryResult;
+    integration: CategoryResult;
     totalApplied: number;
     totalFailed: number;
 }
@@ -379,7 +394,8 @@ async function applyBlockLibraryInstalls(
 /**
  * Apply all selected updates headlessly, in the same category order the QuickPick
  * command uses (fork → template → components → Adobe MCP → add-ons → block
- * library installs), threading template-sync successes into the add-on dedup.
+ * library installs → integration pairs), threading template-sync successes into
+ * the add-on dedup.
  */
 export async function applyUpdatesHeadless(
     selections: UpdateSelections,
@@ -410,7 +426,9 @@ export async function applyUpdatesHeadless(
         onProgress,
     );
 
-    const cats = [forkSync, template, component, adobeMcp, addon, blockLibraryInstall];
+    const integration = await applyIntegrationUpdates(selections.integration, ctx, onProgress);
+
+    const cats = [forkSync, template, component, adobeMcp, addon, blockLibraryInstall, integration];
     return {
         forkSync,
         template,
@@ -418,6 +436,7 @@ export async function applyUpdatesHeadless(
         adobeMcp,
         addon,
         blockLibraryInstall,
+        integration,
         totalApplied: cats.reduce((s, c) => s + c.successCount, 0),
         totalFailed: cats.reduce((s, c) => s + c.failCount, 0),
     };
@@ -432,10 +451,17 @@ export async function applyUpdatesHeadless(
  * same checker services the QuickPick command uses. Each category degrades
  * independently — a checker failure logs and yields an empty list rather than
  * aborting the whole computation.
+ *
+ * @param project - the project to check
+ * @param handlerCtx - the handler context the checkers are built from
+ * @param integrationProbe - the Integrations screen's check and the guard
+ *   chain's org step, bound by the calling boundary (AB-73); this service does
+ *   not reach into the dashboard's handlers for it
  */
 export async function computeProjectUpdateSelections(
     project: Project,
     handlerCtx: HandlerContext,
+    integrationProbe: IntegrationUpdateProbe,
 ): Promise<UpdateSelections> {
     const { secrets } = handlerCtx.context;
     const logger = handlerCtx.logger;
@@ -447,6 +473,7 @@ export async function computeProjectUpdateSelections(
         blockLibrary: [],
         blockLibraryInstall: [],
         inspector: [],
+        integration: [],
     };
 
     // Fork sync
@@ -533,6 +560,14 @@ export async function computeProjectUpdateSelections(
         selections.blockLibraryInstall.push({ project, library });
     }
 
+    // Integration pairs (AB-73): the Integrations screen's own check, through the
+    // probe the boundary bound. Costs nothing for a project with no deployed integration.
+    try {
+        selections.integration = await findIntegrationPairUpdates([project], integrationProbe);
+    } catch (error) {
+        logger.warn(`[Updates] Integration check failed: ${sanitizeErrorForLogging(error as Error)}`);
+    }
+
     return selections;
 }
 
@@ -545,6 +580,7 @@ export function countSelections(selections: UpdateSelections): number {
         selections.adobeMcp.length +
         selections.blockLibrary.length +
         selections.blockLibraryInstall.length +
-        selections.inspector.length
+        selections.inspector.length +
+        selections.integration.length
     );
 }

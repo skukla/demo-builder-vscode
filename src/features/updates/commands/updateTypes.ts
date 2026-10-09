@@ -7,8 +7,10 @@
 
 import * as vscode from 'vscode';
 import { COMPONENT_IDS } from '@/core/constants';
+import { getAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import type { BlockLibraryEntry } from '@/features/eds/services/blockCollectionHelpers';
 import type { AdobeMcpUpdateResult } from '@/features/updates/services/adobeMcpUpdateChecker';
+import { OTHER_ORG_NOTE, type IntegrationPairUpdate } from '@/features/updates/services/integrationUpdates';
 import type { TemplateUpdateResult } from '@/features/updates/services/templateUpdateChecker';
 import type { MultiProjectUpdateResult } from '@/features/updates/services/updateManager';
 import type { Project } from '@/types/base';
@@ -76,6 +78,16 @@ export interface AdobeMcpUpdateItem extends vscode.QuickPickItem {
     isAdobeMcpUpdate: true;
 }
 
+/**
+ * A deployed integration pair (an integration and its ERPs) with newer code
+ * (AB-73). One row per pair; picking it runs the pair update the card's Update
+ * button runs. A pair in another Adobe org is listed unticked and not applied.
+ */
+export interface IntegrationUpdateItem extends vscode.QuickPickItem {
+    update: IntegrationPairUpdate;
+    isIntegrationUpdate: true;
+}
+
 /** Union of all QuickPick item types */
 export type UpdateItem =
     | ProjectUpdateItem
@@ -84,7 +96,24 @@ export type UpdateItem =
     | BlockLibraryUpdateItem
     | BlockLibraryInstallItem
     | InspectorUpdateItem
-    | AdobeMcpUpdateItem;
+    | AdobeMcpUpdateItem
+    | IntegrationUpdateItem;
+
+/** Every source of picker rows, gathered by the command's checks. */
+export interface UpdatePickerSources {
+    componentUpdates: MultiProjectUpdateResult[];
+    templateUpdates: Array<{ project: Project; update: TemplateUpdateResult }>;
+    forkSyncItems: ForkSyncItem[];
+    blockLibraryItems: Array<BlockLibraryUpdateItem | BlockLibraryInstallItem>;
+    inspectorItems: InspectorUpdateItem[];
+    adobeMcpItems: AdobeMcpUpdateItem[];
+    integrationItems: IntegrationUpdateItem[];
+}
+
+/** Whether any source has a row to show. */
+export function hasPickerRows(sources: UpdatePickerSources): boolean {
+    return Object.values(sources).some((rows) => rows.length > 0);
+}
 
 // ---------------------------------------------------------------------------
 // Pure helpers
@@ -137,14 +166,13 @@ export function shouldSkipBlockLibrary(
  * Pure function — no side effects, no VS Code API calls.
  */
 export function buildUpdatePickerItems(
-    componentUpdates: MultiProjectUpdateResult[],
-    templateUpdates: Array<{ project: Project; update: TemplateUpdateResult }>,
-    forkSyncItems: ForkSyncItem[],
-    blockLibraryItems: Array<BlockLibraryUpdateItem | BlockLibraryInstallItem>,
-    inspectorItems: InspectorUpdateItem[],
-    adobeMcpItems: AdobeMcpUpdateItem[],
+    sources: UpdatePickerSources,
     currentProject: Project | null,
 ): { items: UpdateItem[]; title: string } {
+    const {
+        componentUpdates, templateUpdates, forkSyncItems,
+        blockLibraryItems, inspectorItems, adobeMcpItems, integrationItems,
+    } = sources;
     // Single map: group components and templates by project
     const projectMap = new Map<string, {
         project: Project;
@@ -226,6 +254,7 @@ export function buildUpdatePickerItems(
     items.push(...blockLibraryItems);
     items.push(...inspectorItems);
     items.push(...adobeMcpItems);
+    items.push(...integrationItems);
 
     // Build summary title
     // Forks are repo-level, not project-level, so excluded from project count
@@ -234,6 +263,7 @@ export function buildUpdatePickerItems(
         ...blockLibraryItems.map(b => b.project.path),
         ...inspectorItems.map(i => i.project.path),
         ...adobeMcpItems.map(a => a.project.path),
+        ...integrationItems.map(i => i.update.project.path),
     ]);
 
     const totalComponents = Array.from(projectMap.values())
@@ -245,6 +275,9 @@ export function buildUpdatePickerItems(
     if (templateUpdates.length > 0) parts.push(`${templateUpdates.length} template${templateUpdates.length !== 1 ? 's' : ''}`);
     const totalAddons = blockLibraryItems.length + inspectorItems.length + adobeMcpItems.length;
     if (totalAddons > 0) parts.push(`${totalAddons} add-on${totalAddons !== 1 ? 's' : ''}`);
+    if (integrationItems.length > 0) {
+        parts.push(`${integrationItems.length} integration${integrationItems.length !== 1 ? 's' : ''}`);
+    }
 
     const title = `Updates Available (${allProjectPaths.size} project${allProjectPaths.size !== 1 ? 's' : ''}, ${parts.join(', ')})`;
 
@@ -272,5 +305,27 @@ export function toAdobeMcpUpdateItem(
         latestVersion: update.latestVersion,
         packageName: update.packageName,
         isAdobeMcpUpdate: true,
+    };
+}
+
+/**
+ * The picker row for one integration pair with newer code (AB-73). Ticked for
+ * the current project, like the other rows; a pair in another Adobe org is never
+ * ticked and its row says to open that project instead.
+ */
+export function toIntegrationUpdateItem(
+    update: IntegrationPairUpdate,
+    currentProject: Project | null,
+): IntegrationUpdateItem {
+    const isCurrent = update.project.path === currentProject?.path;
+    const source = getAppBuilderComponent(update.project, update.componentId)?.source;
+    const state = update.otherOrg ? OTHER_ORG_NOTE : 'update available';
+    return {
+        label: isCurrent ? `${update.project.name} (current)` : update.project.name,
+        detail: `    $(plug) ${update.label}  ${state}`,
+        description: source ? `${source.owner}/${source.repo}` : undefined,
+        picked: isCurrent && !update.otherOrg,
+        update,
+        isIntegrationUpdate: true,
     };
 }

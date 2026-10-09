@@ -120,6 +120,8 @@ describe('CheckUpdatesCommand — dispatch', () => {
             stateManager: harness.mockStateManager,
             logger: harness.mockLogger,
             commandManager: commandExecutor,
+            // AB-73: the pair update the integration rows run, bound to this command.
+            updateIntegrationPair: expect.any(Function),
         };
         expect(forkMock).toHaveBeenCalledWith([items[0]], ctx);
         expect(templateMock).toHaveBeenCalledWith([items[1]], ctx);

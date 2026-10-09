@@ -59,6 +59,29 @@ SC has since deleted is not put back (`installedBlockLibraries[].blockIds` and
 Library" (`refresh_block_library`) for that. Un-selecting a library removes
 nothing.
 
+## Integration pairs are checked here too, for every project
+
+A deployed integration and its ERPs are one more category of the startup check and
+Check for Updates (AB-73), with the Integrations screen's own rule
+(`checkIntegrationUpdates`: the GitHub branch is ahead of the clone, a fetched commit
+was never deployed, or the clone's app version differs from the one installed in
+Commerce). It runs for ALL projects, one row per pair ("Justrite: ERP Integration and
+Justrite ERP"), alongside the other project checks so the extension's own update notice
+does not wait on it; a project with no deployed integration costs nothing, and each
+pair costs one `git fetch` per clone.
+
+Picking the row is the confirmation. It runs the same pair update the card's Update
+button runs (`updateIntegrationPairFor`, dashboard/handlers/integrationUpdateHandlers;
+the order and loop in app-builder's `integrationPairUpdate.ts`): guards, then the ERPs
+with newer code, then the integration. A project other than the open one is saved in
+place, never made current. A pair whose project uses a different Adobe organization is
+listed unticked and not deployed from this org: its row says to open that project.
+That is decided by the guard chain's own org step (`orgGuard`, which `runGuards` runs),
+handed to the updates services as a probe bound at the boundary (`integrationUpdateProbe`),
+so nothing under `updates/services` reaches into the dashboard's handlers.
+`apply_updates` reports the same pairs (`summary.integration`) and applies them with
+`confirm:true`; an other-org pair comes back under `categories.integration.deferred`.
+
 ## Related
 
 - [component-version-management.md](../../../docs/architecture/component-version-management.md)

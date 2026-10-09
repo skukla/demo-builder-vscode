@@ -31,7 +31,7 @@ const applyMock = applyUpdatesHeadless as jest.Mock;
 const countMock = countSelections as jest.Mock;
 const reportPhaseMock = reportPhase as jest.Mock;
 
-const EMPTY = { forkSync: [], template: [], component: [], adobeMcp: [], blockLibrary: [], blockLibraryInstall: [], inspector: [] };
+const EMPTY = { forkSync: [], template: [], component: [], adobeMcp: [], blockLibrary: [], blockLibraryInstall: [], inspector: [], integration: [] };
 
 function fakeServer() {
 
@@ -149,8 +149,9 @@ describe('apply_updates', () => {
             blockLibrary: [{ library: { name: 'Bodea blocks' } }],
             blockLibraryInstall: [{ library: { name: 'Demo Builder Blocks' } }],
             inspector: [{ y: 1 }],
+            integration: [{ label: 'ERP Integration and Justrite ERP', otherOrg: false }],
         });
-        countMock.mockReturnValueOnce(8);
+        countMock.mockReturnValueOnce(9);
         const s = fakeServer();
         registerApplyUpdatesTool(s, ctxFactory);
 
@@ -165,6 +166,8 @@ describe('apply_updates', () => {
             // Reads as an INSTALL, not an update (EDS-28).
             blockLibraryInstall: ['Demo Builder Blocks: install'],
             inspector: 1,
+            // The pair by name (AB-73); an other-org pair carries the open-the-project note.
+            integration: ['ERP Integration and Justrite ERP'],
         });
     });
 
@@ -271,5 +274,71 @@ describe('apply_updates', () => {
             ['Syncing fork'],
             ['Updating components'],
         ]);
+    });
+});
+
+// AB-73: integration pairs (an integration and its ERPs) are one more category,
+// reported without confirm and applied with it through the same pair update the
+// card's Update button runs.
+describe('apply_updates — integrations', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        getCurrentProject.mockResolvedValue({ name: 'p', path: '/p', status: 'stopped' });
+        computeMock.mockResolvedValue({ ...EMPTY, component: [{ componentId: 'mesh', latestVersion: '2.0.0' }] });
+        countMock.mockReturnValue(1);
+    });
+
+    const pair = (otherOrg: boolean) => ({
+        project: { name: 'Justrite', path: '/p' },
+        componentId: 'demo-erp',
+        members: ['demo-erp'],
+        label: 'ERP Integration and Justrite ERP',
+        otherOrg,
+    });
+
+    it('says in its description that it covers integrations and their ERPs', () => {
+        const s = fakeServer();
+        registerApplyUpdatesTool(s, ctxFactory);
+
+        expect(s.definition().description).toMatch(/integrations? and (its|their) ERPs?/);
+    });
+
+    it('without confirm, names each pair with newer code, and which must be updated from its own project', async () => {
+        computeMock.mockResolvedValueOnce({ ...EMPTY, integration: [pair(false), pair(true)] });
+        countMock.mockReturnValueOnce(2);
+        const s = fakeServer();
+        registerApplyUpdatesTool(s, ctxFactory);
+
+        const res = await s.call({});
+
+        expect(res.summary.integration).toStrictEqual([
+            'ERP Integration and Justrite ERP',
+            'ERP Integration and Justrite ERP (uses a different Adobe organization: open that project and update it from its Integrations screen)',
+        ]);
+        expect(applyMock).not.toHaveBeenCalled();
+        // The boundary binds the probe (the check and the guard chain's org step);
+        // the service never reaches into the dashboard's handlers for it.
+        expect(computeMock.mock.calls[0][2]).toMatchObject({
+            check: expect.any(Function),
+            inOtherOrg: expect.any(Function),
+            catalog: expect.any(Array),
+        });
+    });
+
+    it('with confirm, hands the apply a context that can run the pair update, and reports the category', async () => {
+        const integration = { successCount: 1, failCount: 0, errors: [], applied: ['Updated from a to b.'] };
+        applyMock.mockResolvedValueOnce({
+            forkSync: {}, template: {}, component: {}, adobeMcp: {}, addon: {}, blockLibraryInstall: {},
+            integration,
+            totalApplied: 1,
+            totalFailed: 0,
+        });
+        const s = fakeServer();
+        registerApplyUpdatesTool(s, ctxFactory);
+
+        const res = await s.call({ confirm: true });
+
+        expect(applyMock.mock.calls[0][1]).toMatchObject({ updateIntegrationPair: expect.any(Function) });
+        expect(res.categories.integration).toStrictEqual(integration);
     });
 });

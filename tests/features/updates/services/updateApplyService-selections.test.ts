@@ -23,12 +23,14 @@ import {
     mockCheckInspectorSdk,
     mockCheckMcpUpdates,
     mockCheckTemplateUpdates,
+    recordsIntegrationProbe,
     resetFakes,
 } from './updateApplyService.testUtils';
 import {
     computeProjectUpdateSelections,
     countSelections,
 } from '@/features/updates/services/updateApplyService';
+import type { Project } from '@/types/base';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../helpers/projectFake';
 
@@ -58,7 +60,7 @@ describe('computeProjectUpdateSelections', () => {
     it('with every checker silent, selects nothing, counts zero, and warns about nothing', async () => {
         const handlerCtx = createMockHandlerContext();
 
-        const sel = await computeProjectUpdateSelections(edsProject(), handlerCtx);
+        const sel = await computeProjectUpdateSelections(edsProject(), handlerCtx, recordsIntegrationProbe());
 
         expect(sel).toEqual(emptySelections());
         expect(countSelections(sel)).toBe(0);
@@ -68,7 +70,7 @@ describe('computeProjectUpdateSelections', () => {
     it('builds every checker from the handler context secrets and logger', async () => {
         const handlerCtx = createMockHandlerContext();
 
-        await computeProjectUpdateSelections(edsProject(), handlerCtx);
+        await computeProjectUpdateSelections(edsProject(), handlerCtx, recordsIntegrationProbe());
 
         const { secrets } = handlerCtx.context;
         expect(ForkSyncServiceCtor).toHaveBeenCalledWith(secrets, handlerCtx.logger);
@@ -88,7 +90,8 @@ describe('computeProjectUpdateSelections', () => {
 
             const sel = await computeProjectUpdateSelections(
                 edsProject(),
-                createMockHandlerContext()
+                createMockHandlerContext(),
+                recordsIntegrationProbe(),
             );
 
             expect(mockCheckForkStatus).toHaveBeenCalledWith('adobe', 'aem-boilerplate-commerce');
@@ -102,7 +105,8 @@ describe('computeProjectUpdateSelections', () => {
 
             const sel = await computeProjectUpdateSelections(
                 edsProject(),
-                createMockHandlerContext()
+                createMockHandlerContext(),
+                recordsIntegrationProbe(),
             );
 
             expect(sel.forkSync[0].branch).toBe('main');
@@ -116,7 +120,7 @@ describe('computeProjectUpdateSelections', () => {
             mockCheckForkStatus.mockResolvedValue(status);
             const handlerCtx = createMockHandlerContext();
 
-            const sel = await computeProjectUpdateSelections(edsProject(), handlerCtx);
+            const sel = await computeProjectUpdateSelections(edsProject(), handlerCtx, recordsIntegrationProbe());
 
             expect(sel.forkSync).toStrictEqual([]);
             expect(handlerCtx.logger.warn).not.toHaveBeenCalled();
@@ -127,7 +131,8 @@ describe('computeProjectUpdateSelections', () => {
 
             const sel = await computeProjectUpdateSelections(
                 createMockProject({ componentInstances: {} }),
-                handlerCtx
+                handlerCtx,
+                recordsIntegrationProbe(),
             );
 
             expect(mockCheckForkStatus).not.toHaveBeenCalled();
@@ -141,7 +146,7 @@ describe('computeProjectUpdateSelections', () => {
             const project = edsProject();
             mockCheckTemplateUpdates.mockResolvedValue({ hasUpdates: true, commitsBehind: 2 });
 
-            const sel = await computeProjectUpdateSelections(project, createMockHandlerContext());
+            const sel = await computeProjectUpdateSelections(project, createMockHandlerContext(), recordsIntegrationProbe());
 
             expect(mockCheckTemplateUpdates).toHaveBeenCalledWith(project);
             expect(sel.template).toEqual([{ project }]);
@@ -152,7 +157,8 @@ describe('computeProjectUpdateSelections', () => {
 
             const sel = await computeProjectUpdateSelections(
                 edsProject(),
-                createMockHandlerContext()
+                createMockHandlerContext(),
+                recordsIntegrationProbe(),
             );
 
             expect(sel.template).toStrictEqual([]);
@@ -164,7 +170,7 @@ describe('computeProjectUpdateSelections', () => {
             const project = edsProject();
             mockCheckAllProjectsForUpdates.mockResolvedValue([componentResult({}, project)]);
 
-            const sel = await computeProjectUpdateSelections(project, createMockHandlerContext());
+            const sel = await computeProjectUpdateSelections(project, createMockHandlerContext(), recordsIntegrationProbe());
 
             expect(mockCheckAllProjectsForUpdates).toHaveBeenCalledWith([project]);
             expect(sel.component).toEqual([
@@ -188,7 +194,7 @@ describe('computeProjectUpdateSelections', () => {
                 }),
             ]);
 
-            const sel = await computeProjectUpdateSelections(project, createMockHandlerContext());
+            const sel = await computeProjectUpdateSelections(project, createMockHandlerContext(), recordsIntegrationProbe());
 
             expect(sel.component).toHaveLength(1);
         });
@@ -203,7 +209,7 @@ describe('computeProjectUpdateSelections', () => {
             mockCheckAllProjectsForUpdates.mockResolvedValue([result]);
             const handlerCtx = createMockHandlerContext();
 
-            const sel = await computeProjectUpdateSelections(edsProject(), handlerCtx);
+            const sel = await computeProjectUpdateSelections(edsProject(), handlerCtx, recordsIntegrationProbe());
 
             expect(sel.component).toStrictEqual([]);
             expect(handlerCtx.logger.warn).not.toHaveBeenCalled();
@@ -220,7 +226,7 @@ describe('computeProjectUpdateSelections', () => {
                 packageName: 'pkg',
             });
 
-            const sel = await computeProjectUpdateSelections(project, createMockHandlerContext());
+            const sel = await computeProjectUpdateSelections(project, createMockHandlerContext(), recordsIntegrationProbe());
 
             expect(mockCheckMcpUpdates).toHaveBeenCalledWith(project);
             expect(sel.adobeMcp).toEqual([{ project, packageName: 'pkg', latestVersion: '1.1.0' }]);
@@ -236,7 +242,8 @@ describe('computeProjectUpdateSelections', () => {
 
             const sel = await computeProjectUpdateSelections(
                 edsProject(),
-                createMockHandlerContext()
+                createMockHandlerContext(),
+                recordsIntegrationProbe(),
             );
 
             expect(sel.adobeMcp).toStrictEqual([]);
@@ -257,7 +264,7 @@ describe('computeProjectUpdateSelections', () => {
                 commitsBehind: 2,
             });
 
-            const sel = await computeProjectUpdateSelections(project, createMockHandlerContext());
+            const sel = await computeProjectUpdateSelections(project, createMockHandlerContext(), recordsIntegrationProbe());
 
             expect(mockCheckBlockLibraries).toHaveBeenCalledWith(project);
             expect(mockCheckInspectorSdk).toHaveBeenCalledWith(project);
@@ -275,7 +282,8 @@ describe('computeProjectUpdateSelections', () => {
 
             const sel = await computeProjectUpdateSelections(
                 edsProject(),
-                createMockHandlerContext()
+                createMockHandlerContext(),
+                recordsIntegrationProbe(),
             );
 
             expect(sel.inspector).toStrictEqual([]);
@@ -283,9 +291,29 @@ describe('computeProjectUpdateSelections', () => {
     });
 
     describe('a failing checker costs only its own category', () => {
-        /** Also carries a selected-but-uninstalled library, so the install category is non-empty. */
-        const everythingProject = () =>
-            edsProject({ selectedBlockLibraries: ['demo-builder-blocks'] });
+        /**
+         * Also carries a selected-but-uninstalled library, so the install category is
+         * non-empty, and a deployed ERP with newer code, so the integration category is.
+         */
+        const everythingProject = (): Project => {
+            const base = edsProject({ selectedBlockLibraries: ['demo-builder-blocks'] });
+            return {
+                ...base,
+                appBuilderComponents: {
+                    'demo-erp': {
+                        kind: 'system',
+                        status: 'deployed',
+                        name: 'Demo ERP',
+                        source: { owner: 'skukla', repo: 'demo-erp', branch: 'main' },
+                        updateAvailable: { commit: 'abc', checkedAt: '2026-10-09T00:00:00.000Z' },
+                    },
+                },
+                componentInstances: {
+                    ...base.componentInstances,
+                    'demo-erp': { id: 'demo-erp', name: 'Demo ERP', status: 'ready', path: '/p/demo/components/demo-erp' },
+                },
+            };
+        };
 
         function everythingHasAnUpdate(project: ReturnType<typeof edsProject>): void {
             mockCheckForkStatus.mockResolvedValue({ isFork: true, behindBy: 1 });
@@ -316,7 +344,7 @@ describe('computeProjectUpdateSelections', () => {
                 everythingHasAnUpdate(project);
                 checker.mockRejectedValue(new Error('boom'));
 
-                const sel = await computeProjectUpdateSelections(project, handlerCtx);
+                const sel = await computeProjectUpdateSelections(project, handlerCtx, recordsIntegrationProbe());
 
                 expect(sel[category]).toStrictEqual([]);
                 const others = (Object.keys(sel) as Array<keyof typeof sel>).filter(
@@ -331,9 +359,9 @@ describe('computeProjectUpdateSelections', () => {
             const project = everythingProject();
             everythingHasAnUpdate(project);
 
-            const sel = await computeProjectUpdateSelections(project, createMockHandlerContext());
+            const sel = await computeProjectUpdateSelections(project, createMockHandlerContext(), recordsIntegrationProbe());
 
-            expect(countSelections(sel)).toBe(7);
+            expect(countSelections(sel)).toBe(8);
         });
     });
 });
@@ -355,6 +383,7 @@ describe('countSelections', () => {
                 { project, library: { name: 'n', source: installedLibrary('n').source } },
             ],
             inspector: [{ project, latestCommit: 'c' }],
+            integration: [],
         };
 
         expect(countSelections(sel)).toBe(9);

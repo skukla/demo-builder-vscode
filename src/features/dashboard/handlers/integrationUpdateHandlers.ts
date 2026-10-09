@@ -17,9 +17,16 @@
  * Split from `appBuilderComponentHandlers.ts` the way the install and ERP
  * handlers were; the guard chain and progress telegraph are its exports.
  *
+ * The pair's order and loop live in `integrationPairUpdate.ts` (app-builder
+ * services). This module binds them to a handler context, and exports that
+ * binding — `checkProjectIntegrationUpdates`, `integrationUpdateProbe`,
+ * `updateIntegrationPairFor` — so the extension's update check (AB-73) runs the
+ * SAME check and the SAME pair update for ANY project, not only the open one.
+ *
  * @module features/dashboard/handlers/integrationUpdateHandlers
  */
 
+import { orgGuard } from './appBuilderComponentGuards';
 import {
     guardOrBlock,
     postComponentsSnapshot,
@@ -28,22 +35,74 @@ import {
     withComponentProgress,
     type GuardableResult,
 } from './appBuilderComponentHandlers';
-import { handlerRunnerDeps as runnerDeps, resolveComponentRecord } from './appManagementInstallHandlers';
-import { getAppBuilderComponent } from '@/core/state/appBuilderComponentState';
+import { handlerRunnerDeps, resolveComponentRecord } from './appManagementInstallHandlers';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
 import {
-    updateAppBuilderComponent,
-    type AppBuilderComponentRunnerDeps,
-} from '@/features/app-builder/services/appBuilderComponentRunner';
-import { checkIntegrationUpdates } from '@/features/app-builder/services/integrationUpdateCheck';
+    componentNameOf,
+    pairUpdateOrder,
+    updateIntegrationPair,
+} from '@/features/app-builder/services/integrationPairUpdate';
+import { checkIntegrationUpdates, type IntegrationUpdateCheck } from '@/features/app-builder/services/integrationUpdateCheck';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
-import { integrationUsing, systemsUsedBy } from '@/features/components/services/appBuilderComponentLinks';
+import type { IntegrationUpdateProbe } from '@/features/updates/services/integrationUpdates';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
 import type { OperationPosition } from '@/types/webviewPayloads';
 
 type UpdateResult = GuardableResult & { detail?: string };
+type Report = (message: string, subMessage?: string, position?: OperationPosition) => void;
+
+/**
+ * The runner deps for `project`. A project other than the open one is saved IN
+ * PLACE: `saveProject` would also make it the current project, which an update
+ * from the Check for Updates list is not about.
+ */
+function runnerDepsFor(context: HandlerContext, project: Project, isCurrent: boolean, report?: Report) {
+    return handlerRunnerDeps(context, project, report, isCurrent ? 'current' : 'in-place');
+}
+
+async function isCurrentProject(context: HandlerContext, project: Project): Promise<boolean> {
+    return (await context.stateManager.getCurrentProject())?.path === project.path;
+}
+
+/**
+ * Record which of `project`'s deployed integrations have newer code, for any
+ * project. Saves only when an answer changed; the open project through
+ * `saveProject`, any other in place. Undefined when the check is not wired.
+ */
+export async function checkProjectIntegrationUpdates(
+    context: HandlerContext,
+    project: Project,
+): Promise<IntegrationUpdateCheck | undefined> {
+    const isCurrent = await isCurrentProject(context, project);
+    const deps = await runnerDepsFor(context, project, isCurrent);
+    if (!deps.checkComponentSource) return undefined;
+    const checked = await checkIntegrationUpdates(project, {
+        checkClone: deps.checkComponentSource,
+        readAppVersion: deps.readAppVersion,
+    });
+    if (checked.changed) {
+        await (isCurrent ? context.stateManager.saveProject(project) : context.stateManager.saveProjectConfigOnly(project));
+    }
+    return checked;
+}
+
+/**
+ * The finder's probe, bound to this context: the check, the guard chain's own
+ * org step (`orgGuard`, the step `runGuards` runs), and the catalog.
+ */
+export function integrationUpdateProbe(context: HandlerContext): IntegrationUpdateProbe {
+    return {
+        check: (project) => checkProjectIntegrationUpdates(context, project),
+        inOtherOrg: async (project) => {
+            const authManager = context.authManager ?? ServiceLocator.getAuthenticationService();
+            return (await orgGuard(context, project, authManager)) !== undefined;
+        },
+        catalog: getAppBuilderComponentCatalog(),
+    };
+}
 
 /**
  * Handle 'checkIntegrationUpdates' — record which deployed integrations have
@@ -54,110 +113,49 @@ export const handleCheckIntegrationUpdates: MessageHandler = async (context): Pr
     if (!project) {
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
     }
-    const deps = await runnerDeps(context, project);
-    if (!deps.checkComponentSource) {
+    const checked = await checkProjectIntegrationUpdates(context, project);
+    if (!checked) {
         return { success: false, error: 'Checking for updates is not available here.' };
     }
-    const checked = await checkIntegrationUpdates(project, {
-        checkClone: deps.checkComponentSource,
-        readAppVersion: deps.readAppVersion,
-    });
     if (checked.changed) {
-        await context.stateManager.saveProject(project);
         await postComponentsSnapshot(context);
     }
     return { success: true, data: { updates: checked.reports } };
 };
 
 /**
- * What an Update on this card updates, in order: the systems of its pair, then the
- * integration, each when it has newer code recorded OR its last deploy failed, so
- * the pair ends deployed (2026-09-18: an ERP whose code an earlier failed Update
- * had already fetched counted as current and was skipped, left failed). The card
- * asked for is always included, so an update check that is out of date still
- * fetches it.
+ * The pair update the card's Update button runs, for ANY project: guards → the
+ * pair's members with newer code, systems first (`pairUpdateOrder`), each
+ * fetched, its dependencies installed and redeployed. Rows are telegraphed only
+ * for the open project (its ids may repeat in another project's grid); the
+ * dashboard is refreshed either way, since it reads persisted state.
+ *
+ * @param context - the handler context
+ * @param project - the project the pair is in; need not be the open one
+ * @param id - the integration or ERP asked for
+ * @param report - where the stages go
+ * @param progress - `'modal'` when started from the integrations screen
  */
-function pairToUpdate(project: Project, id: string): string[] {
-    const catalog = getAppBuilderComponentCatalog();
-    const integrationId = getAppBuilderComponent(project, id)?.kind === 'system'
-        ? integrationUsing(project, id, catalog)
-        : id;
-    const members = integrationId ? [...systemsUsedBy(project, integrationId, catalog), integrationId] : [id];
-    return members.filter((member) => member === id || needsUpdate(project, member));
-}
-
-function needsUpdate(project: Project, id: string): boolean {
-    const state = getAppBuilderComponent(project, id);
-    return Boolean(state?.updateAvailable) || state?.status === 'error';
-}
-
-function nameOf(project: Project, id: string): string {
-    return getAppBuilderComponent(project, id)?.name ?? id;
-}
-
-/** Update one component, telegraphing its row. */
-async function updateOne(project: Project, id: string, deps: AppBuilderComponentRunnerDeps): Promise<UpdateResult> {
-    await postRowStatus(id, 'deploying', 'Updating');
-    const result = await updateAppBuilderComponent(project, id, deps);
-    if (result.success) {
-        await postRowStatus(id, 'deployed');
-    } else {
-        await postRowStatus(id, 'error', result.error);
-    }
-    return result;
-}
-
-/** Which members to update, in order, and where the progress shows. */
-interface UpdatePlan {
-    order: string[];
-    /** `'modal'` when the SC started it from the integrations screen (PL-59). */
-    progress: 'modal' | undefined;
-}
-
-/** Update each member in order; the first failure stops the rest and says what it left alone. */
-async function updatePair(
+export async function updateIntegrationPairFor(
     context: HandlerContext,
     project: Project,
-    plan: UpdatePlan,
-    report: (message: string, subMessage?: string, position?: OperationPosition) => void,
+    id: string,
+    report: Report,
+    progress?: 'modal',
 ): Promise<UpdateResult> {
-    const { order, progress } = plan;
     const refused = await guardOrBlock(context, project, report, progress);
     if (refused) {
         return refused;
     }
-    // Every card the click covers says so at once: the first updates, the rest
-    // wait their turn (owner, 2026-09-18). The clicked card is not assumed to be
-    // the one running.
-    for (const waiting of order.slice(1)) {
-        await postRowStatus(waiting, 'deploying', 'Waiting to update');
-    }
-    let last: UpdateResult = { success: true };
-    for (const [index, memberId] of order.entries()) {
-        // A pair updates two things back to back: each one's reports say which.
-        const position =
-            order.length > 1
-                ? { index: index + 1, total: order.length, name: nameOf(project, memberId) }
-                : undefined;
-        const deps = await runnerDeps(context, project, (message, step) => report(message, step, position));
-        last = await updateOne(project, memberId, deps);
-        const rest = order.slice(index + 1);
-        if (!last.success && rest.length > 0) {
-            await releaseWaiting(project, rest, nameOf(project, memberId));
-            const left = rest.map((restId) => nameOf(project, restId)).join(' and ');
-            const why = last.error ?? 'no reason given';
-            return { success: false, error: `${nameOf(project, memberId)} did not update, so ${left} was left as it is: ${why}` };
-        }
-    }
-    return last;
-}
-
-/** Cards that were waiting go back to their own status, saying why nothing happened. */
-async function releaseWaiting(project: Project, ids: string[], failedName: string): Promise<void> {
-    for (const id of ids) {
-        const status = getAppBuilderComponent(project, id)?.status ?? 'not-deployed';
-        await postRowStatus(id, status, `Left as it is: ${failedName} did not update.`);
-    }
+    const isCurrent = await isCurrentProject(context, project);
+    const result = await updateIntegrationPair(project, pairUpdateOrder(project, id, getAppBuilderComponentCatalog()), {
+        runnerDepsFor: (position) =>
+            runnerDepsFor(context, project, isCurrent, (message, step) => report(message, step, position)),
+        postRowStatus: isCurrent ? (rowId, status, message) => postRowStatus(rowId, status, message) : async () => undefined,
+    });
+    await postComponentsSnapshot(context);
+    await refreshProjectStatus(context);
+    return result;
 }
 
 /** A card can update when it is deployed, or when its last deploy failed. */
@@ -186,15 +184,14 @@ export const handleUpdateAppBuilderComponent: MessageHandler<{
             };
         }
 
-        const plan: UpdatePlan = { order: pairToUpdate(project, id), progress: progressSurfaceOf(payload) };
-        const label = plan.order.map((memberId) => nameOf(project, memberId)).join(' and ');
+        const progress = progressSurfaceOf(payload);
+        const label = pairUpdateOrder(project, id, getAppBuilderComponentCatalog())
+            .map((memberId) => componentNameOf(project, memberId))
+            .join(' and ');
         const result = await withComponentProgress(
-            { title: 'Updating', id, label, noun: 'Integration', logger: context.logger, progress: plan.progress },
-            (report) => updatePair(context, project, plan, report),
+            { title: 'Updating', id, label, noun: 'Integration', logger: context.logger, progress },
+            (report) => updateIntegrationPairFor(context, project, id, report, progress),
         );
-
-        await postComponentsSnapshot(context);
-        await refreshProjectStatus(context);
         return result.success
             ? { success: true, detail: result.detail }
             : { success: false, error: result.error, code: result.code };

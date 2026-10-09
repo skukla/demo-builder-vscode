@@ -112,6 +112,15 @@ function setUpdateAvailable(state: AppBuilderComponentState, value: UpdateAvaila
 }
 
 /**
+ * Whether `project` has anything this check would look at — so a caller walking
+ * every project (the extension's update check, AB-73) spends nothing on the ones
+ * with no deployed integration.
+ */
+export function hasIntegrationsToCheck(project: Project): boolean {
+    return candidates(project).length > 0;
+}
+
+/**
  * Check every deployed integration and system in `project`, in parallel, and
  * record the answers on it.
  */
