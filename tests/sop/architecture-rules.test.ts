@@ -119,8 +119,8 @@ const SESSION_ACCESSORS: Readonly<Record<string, string>> = {
  */
 const COMPOSITION_POINTS: Readonly<Record<string, string>> = {
     'src/commands/handlerContextFactory.ts':
-        'builds HandlerContext for the webview side; called PER INCOMING MESSAGE by all ' +
-        'six surfaces (17 call sites)',
+        'builds HandlerContext for the webview side; called PER INCOMING MESSAGE by every ' +
+        'bundled panel, through BundledPanelCommand.createHandlerContext',
     'src/features/ai/server/headlessHandlerContext.ts':
         'builds the same bundle for the MCP side, where there is no panel',
 };
@@ -228,9 +228,10 @@ describe('ADR-015: a repeated composition point builds nothing STATEFUL', () => 
      * for its state to be worth carrying.
      *
      * `extension.ts` runs once, so state built there is shared for the session.
-     * The other composition points do not: all six webview surfaces call
-     * `createPanelHandlerContext` PER INCOMING MESSAGE, 17 call sites between
-     * them. A cache built there is empty every time it is read.
+     * The other composition points do not: every bundled panel calls
+     * `createPanelHandlerContext` PER INCOMING MESSAGE (through
+     * `BundledPanelCommand.createHandlerContext`, 2026-10-09). A cache built there
+     * is empty every time it is read.
      *
      * Found by `PrerequisitesCacheManager`, which advertises a 95% reduction in
      * repeated CLI checks (a hit <10ms, a miss 500-3000ms) and cannot hit at all.
@@ -266,15 +267,21 @@ describe('ADR-015: a repeated composition point builds nothing STATEFUL', () => 
 describe('ADR-015: commands extend the base classes', () => {
     // An abstract class that itself extends a base counts as one, so a shared
     // intermediate (StandalonePanelCommand) does not make its subclasses violations.
+    // Repeated until nothing new joins: StandalonePanelCommand extends
+    // BundledPanelCommand, which extends BaseWebviewCommand.
     const bases = new Set(['BaseCommand', 'BaseWebviewCommand']);
-    for (const f of FILES) {
-        const s = src.get(f) as string;
-        for (const m of s.matchAll(/export abstract class (\w+)[^{]*?extends \w*(BaseCommand|BaseWebviewCommand)\b/g)) {
-            bases.add(m[1]);
+    const isBaseName = (name: string): boolean => bases.has(name) || /(BaseCommand|BaseWebviewCommand)$/.test(name);
+    for (let size = -1; size !== bases.size; ) {
+        size = bases.size;
+        for (const f of FILES) {
+            const s = src.get(f) as string;
+            for (const m of s.matchAll(/export abstract class (\w+)[^{]*?extends (\w+)/g)) {
+                if (isBaseName(m[2])) bases.add(m[1]);
+            }
         }
     }
     const extendsBase = (decl: string): boolean =>
-        [...decl.matchAll(/extends (\w+)/g)].some((e) => bases.has(e[1]) || /(BaseCommand|BaseWebviewCommand)$/.test(e[1]));
+        [...decl.matchAll(/extends (\w+)/g)].some((e) => isBaseName(e[1]));
     const violations: string[] = [];
     for (const f of FILES) {
         if (!/\/commands\//.test(f) && !/^src\/commands\//.test(f)) continue;
@@ -297,6 +304,8 @@ describe('ADR-015: commands extend the base classes', () => {
     });
 
     it('positive control: an intermediate base is recognised as a base', () => {
+        expect(bases.has('BundledPanelCommand')).toBe(true);
+        // Two levels down — found only because the search repeats.
         expect(bases.has('StandalonePanelCommand')).toBe(true);
     });
 

@@ -1,13 +1,9 @@
-import * as path from 'path';
 import * as vscode from 'vscode';
 import { aiHandlers } from '../handlers/aiHandlers';
-import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
+import { BundledPanelCommand } from '@/commands/bundledPanelCommand';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
-import { getBundleUri } from '@/core/utils/bundleUri';
-import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
-import type { HandlerContext } from '@/types/handlers';
 import type { AiOverviewInitialData } from '@/types/webviewPayloads';
 
 /**
@@ -20,7 +16,10 @@ import type { AiOverviewInitialData } from '@/types/webviewPayloads';
  * underneath is Claude-specific, but that's an implementation detail handled by
  * the `openInClaude` route.
  */
-export class ShowAiCommand extends BaseWebviewCommand<AiOverviewInitialData> {
+export class ShowAiCommand extends BundledPanelCommand<AiOverviewInitialData> {
+    protected readonly bundleName = 'aiOverview';
+    protected override readonly servesLocalMedia = true;
+
     /**
      * Dispose any active AI panel (used during navigation / reset).
      */
@@ -74,30 +73,6 @@ export class ShowAiCommand extends BaseWebviewCommand<AiOverviewInitialData> {
     // affordance that no longer exists. Nothing webview-side awaited the
     // message either — found by the 2026-08-21 settings-seam audit.
 
-    protected async getWebviewContent(): Promise<string> {
-        if (!this.panel) {
-            throw new Error('Panel must be created before getting webview content');
-        }
-        const scriptUri = getBundleUri({
-            webview: this.panel.webview,
-            extensionPath: this.context.extensionPath,
-            featureBundleName: 'aiOverview',
-        });
-
-        const nonce = this.getNonce();
-
-        const mediaPath = vscode.Uri.file(path.join(this.context.extensionPath, 'dist'));
-        const baseUri = this.panel.webview.asWebviewUri(mediaPath);
-
-        return getWebviewHTML({
-            scriptUri,
-            nonce,
-            cspSource: this.panel.webview.cspSource,
-            title: 'Prompt Library',
-            baseUri,
-        });
-    }
-
     protected async getInitialData(): Promise<AiOverviewInitialData> {
         const project = await this.stateManager.getCurrentProject();
         if (!project) {
@@ -127,22 +102,6 @@ export class ShowAiCommand extends BaseWebviewCommand<AiOverviewInitialData> {
         comm.on('cancel', async () => {
             this.panel?.dispose();
             return { success: true };
-        });
-    }
-
-    /**
-     * Create handler context for message handlers. Mirrors the Configure command —
-     * the AI handlers reuse the same shape (stateManager + context.globalState).
-     */
-    private createHandlerContext(): HandlerContext {
-        // ONE complete context from the shared factory — no per-panel guessing about
-        // which managers its (possibly reused) handlers will reach for.
-        return createPanelHandlerContext({
-            context: this.context,
-            panel: this.panel,
-            stateManager: this.stateManager,
-            communicationManager: this.communicationManager,
-            sendMessage: (type: string, data?: unknown) => this.sendMessage(type, data),
         });
     }
 }

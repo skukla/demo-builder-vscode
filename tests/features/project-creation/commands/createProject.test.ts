@@ -201,6 +201,21 @@ describe('CreateProjectWebviewCommand - Bundle Loading', () => {
         // Verify CSP includes cspSource
         expect(html).toMatch(/script-src[^;]+vscode-webview:/);
     });
+
+    it('titles the page with the product name while the tab says create or edit', async () => {
+        const command = createWizardCommand();
+        internals(command).panel = {
+            webview: {
+                cspSource: 'vscode-webview://test',
+                asWebviewUri: jest.fn((uri: vscode.Uri) => uri),
+            },
+        };
+
+        const html = await internals(command).getWebviewContent();
+
+        expect(html).toContain('<title>Adobe Demo Builder</title>');
+        expect(internals(command).getWebviewTitle()).toBe('Create Demo Project');
+    });
 });
 
 describe('CreateProjectWebviewCommand - Static Methods', () => {

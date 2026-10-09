@@ -23,14 +23,15 @@ works, because each file carries a substantial header comment.
 | `refreshBlockLibrary.ts` | Dashboard kebab action, EDS-only — a destructive full re-sync of the DA.live block library |
 | `showPromptsPicker.ts` | Prompt QuickPick; dispatches to `openInClaude` (insert) or `openAi` (manage) |
 
-Four modules here are not commands but support them:
+Six modules here are not commands but support them:
 
 | File | Purpose |
 |------|---------|
 | `diagnosticsChecks.ts` | The collection half of Diagnostics — environment, tools, Adobe CLI, capability probes. Free functions, because none needs the command's state |
 | `diagnosticsReport.ts` | The rendering half. Split from collection deliberately: the two change for different reasons |
 | `handlerContextFactory.ts` | Builds a COMPLETE `HandlerContext` for a webview panel. Every panel command used to hand-roll one, and most filled it in partially |
-| `standalonePanelCommand.ts` | Base for webviews that stand beside whatever is open and work with no project — the Data Installer and Site access. Owns the bundle HTML, registering every handler map in one loop, and the panel handler context |
+| `bundledPanelCommand.ts` | Base for every panel whose page is one esbuild bundle (all but the sidebar). Owns the page HTML around the bundle named by `bundleName` and the panel handler context. Lives here, not on `BaseWebviewCommand`, because core may not import the context factory |
+| `standalonePanelCommand.ts` | Extends `BundledPanelCommand` for webviews that stand beside whatever is open and work with no project — the Data Installer and Site access. Adds registering every handler map in one loop, and opening |
 | `orphanedSettings.ts` | Finds settings a user has set that the extension no longer reads — renaming a contributed setting does not migrate the value, so it strands silently |
 
 ## Registration

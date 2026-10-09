@@ -2,14 +2,12 @@ import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
+import { BundledPanelCommand } from '@/commands/bundledPanelCommand';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { getMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
-import { getBundleUri } from '@/core/utils/bundleUri';
-import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { loadDemoPackages } from '@/features/components/services/demoPackageLoader';
 import { resolveStorefrontForProject } from '@/features/components/services/storefrontResolver';
@@ -23,7 +21,6 @@ import {
 } from '@/features/eds/handlers/edsHelpers';
 import { addedDemoKey, readAddedDemos } from '@/features/project-creation/services/addedDemoSettings';
 import { ComponentInstance, Project } from '@/types/base';
-import { HandlerContext } from '@/types/handlers';
 import type { AddedDemo } from '@/types/projectFile';
 import type { Stack, StacksConfig } from '@/types/stacks';
 import {
@@ -95,7 +92,9 @@ function demoPackageNameFor(demo: AddedDemo): { demoPackageName?: string } {
  * Refactored in Phase 3.8 to use BaseWebviewCommand pattern with HandlerRegistry.
  * Updated in Step 3 to use object literal handler maps with dispatchHandler.
  */
-export class ProjectDashboardWebviewCommand extends BaseWebviewCommand<DashboardInitialData> {
+export class ProjectDashboardWebviewCommand extends BundledPanelCommand<DashboardInitialData> {
+    protected readonly bundleName = 'dashboard';
+
     // Static reference to active instance for refreshStatus
     private static activeInstance: ProjectDashboardWebviewCommand | null = null;
 
@@ -117,26 +116,6 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand<Dashboard
 
     protected getWebviewTitle(): string {
         return 'Project Dashboard';
-    }
-
-    protected async getWebviewContent(): Promise<string> {
-        if (!this.panel) {
-            throw new Error('Panel must be created before getting webview content');
-        }
-        const scriptUri = getBundleUri({
-            webview: this.panel.webview,
-            extensionPath: this.context.extensionPath,
-            featureBundleName: 'dashboard',
-        });
-
-        const nonce = this.getNonce();
-
-        return getWebviewHTML({
-            scriptUri,
-            nonce,
-            cspSource: this.panel.webview.cspSource,
-            title: 'Project Dashboard',
-        });
     }
 
     protected async getInitialData(): Promise<DashboardInitialData> {
@@ -387,21 +366,6 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand<Dashboard
     // ============================================================================
     // Helper Methods
     // ============================================================================
-
-    /**
-     * Create handler context with all dependencies
-     */
-    private createHandlerContext(): HandlerContext {
-        // ONE complete context from the shared factory — no per-panel guessing about
-        // which managers its (possibly reused) handlers will reach for.
-        return createPanelHandlerContext({
-            context: this.context,
-            panel: this.panel,
-            stateManager: this.stateManager,
-            communicationManager: this.communicationManager,
-            sendMessage: (type: string, data?: unknown) => this.sendMessage(type, data),
-        });
-    }
 
     /**
      * Initialize file hashes for a running demo

@@ -26,13 +26,11 @@
  */
 
 import * as vscode from 'vscode';
-import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
+import { BundledPanelCommand } from '@/commands/bundledPanelCommand';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { resolveViewMode } from '@/core/state/viewModePreference';
-import { getBundleUri } from '@/core/utils/bundleUri';
-import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { asDisplayName, getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { loadProjectComponentSettings } from '@/features/app-builder/services/componentSettingSecrets';
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
@@ -41,12 +39,13 @@ import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandle
 import { addIntegrationFlowHandlers } from '@/features/project-creation/handlers/addIntegrationFlowHandlers';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';
-import { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
 import type { IntegrationsInitialData } from '@/types/webviewPayloads';
 
-export class ShowIntegrationsCommand extends BaseWebviewCommand<IntegrationsInitialData> {
+export class ShowIntegrationsCommand extends BundledPanelCommand<IntegrationsInitialData> {
+    protected readonly bundleName = 'integrations';
+
     constructor(context: vscode.ExtensionContext, stateManager: StateManager, logger: Logger) {
         super(context, stateManager, logger);
     }
@@ -57,24 +56,6 @@ export class ShowIntegrationsCommand extends BaseWebviewCommand<IntegrationsInit
 
     protected getWebviewTitle(): string {
         return 'Integrations';
-    }
-
-    protected async getWebviewContent(): Promise<string> {
-        if (!this.panel) {
-            throw new Error('Panel must be created before getting webview content');
-        }
-        const scriptUri = getBundleUri({
-            webview: this.panel.webview,
-            extensionPath: this.context.extensionPath,
-            featureBundleName: 'integrations',
-        });
-
-        return getWebviewHTML({
-            scriptUri,
-            nonce: this.getNonce(),
-            cspSource: this.panel.webview.cspSource,
-            title: 'Integrations',
-        });
     }
 
     protected getLoadingMessage(): string {
@@ -189,17 +170,5 @@ export class ShowIntegrationsCommand extends BaseWebviewCommand<IntegrationsInit
         if (!this.communicationManager) {
             await this.initializeCommunication();
         }
-    }
-
-    private createHandlerContext(): HandlerContext {
-        // ONE complete context from the shared factory — no per-panel guessing about
-        // which managers its (possibly reused) handlers will reach for.
-        return createPanelHandlerContext({
-            context: this.context,
-            panel: this.panel,
-            stateManager: this.stateManager,
-            communicationManager: this.communicationManager,
-            sendMessage: (type: string, data?: unknown) => this.sendMessage(type, data),
-        });
     }
 }

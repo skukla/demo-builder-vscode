@@ -8,7 +8,9 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/github/githubTokenService.ts"
+        "src/features/dashboard/commands/openAi.ts",
+        "src/features/dashboard/commands/showIntegrations.ts",
+        "src/features/project-creation/commands/createProject.ts"
     ],
     "reporters": [
         "clear-text",

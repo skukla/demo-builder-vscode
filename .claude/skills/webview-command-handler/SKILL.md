@@ -36,7 +36,10 @@ Two traps that fail SILENTLY — nothing throws, nothing logs, the UI just never
   is not "no more registration": the map you register must cover every message the surface's
   components send, INCLUDING components borrowed from another feature — see below.
 
-Precedents to copy rather than invent: `showProjectsList.ts` (command shape),
+Precedents to copy rather than invent: `showProjectsList.ts` (command shape — it extends
+`BundledPanelCommand`, so the page HTML and the handler context come from setting
+`bundleName`, not from copying either method; `StandalonePanelCommand` for a panel that
+works with no project),
 `src/features/dashboard/ui/aiSurface/index.tsx` (entry point), `WEBVIEW_ENTRIES` in
 `esbuild.config.js` (bundle key), `commandManager.ts` `registerCommands()` (registration +
 sibling-panel disposal).

@@ -121,6 +121,32 @@ Proof: the 49 touched suites (895 tests) ran unchanged before and after. cloneCe
 committed file as well as the old row; all three rows were stale and all three files now
 score higher than their committed version.
 
+**Sitting 3 (pairs 27 to 31) DONE 2026-10-09.** Re-scanned first: line numbers had not
+moved. All five pairs were real, and wider than the table said:
+
+- **27, 28, 29, 31** (`createHandlerContext`): byte-identical in configure, showDashboard,
+  openAi, showIntegrations and showProjectsList, and a sixth copy in
+  `StandalonePanelCommand` that the scan did not pair. The wizard's version is a variant: it
+  passes its shared state by reference and adds its own loggers. It now builds on the shared one.
+- **30** (the page HTML): eight copies, not two. They differed only in the bundle name, the
+  title, and whether the page gets a `dist/` base URI (the wizard, Configure and the
+  Prompt Library do). The wizard's page title is "Adobe Demo Builder" while its tab says create
+  or edit, so that stays as a one-line override.
+
+**The home is not `BaseWebviewCommand`.** The sitting named it, but it lives in `core/`,
+and core may not import the context factory (it builds feature managers). So there is one new
+class, `BundledPanelCommand` in `src/commands/bundledPanelCommand.ts`, between the core
+base and the panels; `StandalonePanelCommand` now extends it. A panel names its
+`bundleName` and, if needed, `servesLocalMedia`.
+
+Proof: the 79 touched suites ran unchanged (1,063 tests before; 1,058 after, the five fewer
+being the factory SOP's per-file rows for files that no longer build a context). Two SOP
+enforcers changed with the structure: the base-class detector now follows a chain of
+intermediate bases, and the factory rule accepts `super.createHandlerContext(`. New tests:
+a suite for the base (6 cases, 100% mutation score), a first suite for
+`ShowIntegrationsCommand` (it had none), and one case each that killed a survivor the move
+exposed (the Prompt Library's base URI, the wizard's page title). cloneCeiling 28 -> 23.
+
 ## Below the scan's threshold, found by reading (2026-10-08)
 
 The same five-line `ensureSDKReady` method is copied into four authentication files:
@@ -157,3 +183,5 @@ in favour of the EDS-34 version, and lower the pin. That also turns the floor of
 - 2026-10-09  refactor(eds): error formatters keep the message tables with one matcher; GitHub write rejections get their own file (`f9980a19c`)
 - 2026-10-09  Sitting 2 (EDS services), pairs 4 to 7, 9 and 10 extracted: deleteKeyOnServer (helixApiKeys), the shared mapToGitHubUser (githubTokenService), readConfigAt and putConfigAt (daLiveConfigService), DaLiveOrgOperations delegating to DaLiveApiClient, changeSiteAdmin (siteAccessManagerHeadless). 895 touched tests unchanged and green; full gate green. Pairs 1 to 3 recorded as decided and fixed under EDS-34 on fix/copy-second-integration, to clear when that branch merges. New tests: a DaLiveOrgOperations error suite, plus four cases that killed real survivors (the site a grant or revoke reports, the identity explanation never given for a 401, the response body in config failure messages). cloneCeiling 34 -> 28.
 - 2026-10-09  refactor(eds): one copy each of the DA.live, Helix, GitHub and site-access requests (`e8a0fb593`)
+- 2026-10-09  Sitting 3 (webview command base), pairs 27 to 31 extracted: one `BundledPanelCommand` (src/commands) now owns the page HTML and the handler context for every bundled panel; six copies of the context builder and eight of the page method are gone. Not on `BaseWebviewCommand`: core may not import the context factory. 79 touched suites unchanged and green; full gate green. Mutation: the five panel rows re-measured; the showDashboard row was stale (committed file 93.71%, new 93.87%). cloneCeiling 28 -> 23.
+- 2026-10-09  Needs a live check (sitting 3): open each panel once in the Extension Dev Host (Create Project, Edit Project, Project Dashboard, Configure, Prompt Library, Integrations, Projects list, Data Installer, Site access) and confirm it renders and answers its first request. Tests cover the HTML and the context; nothing here ran a real webview.

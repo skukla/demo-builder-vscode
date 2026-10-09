@@ -1,8 +1,8 @@
 /**
  * Headless HandlerContext factory for the in-extension MCP server.
  *
- * Mirrors `BaseWebviewCommand.createHandlerContext()` (see
- * `src/features/dashboard/commands/openAi.ts`) but with no webview: `panel` and
+ * Mirrors `BundledPanelCommand.createHandlerContext()` (see
+ * `src/commands/bundledPanelCommand.ts`) but with no webview: `panel` and
  * `communicationManager` are undefined and `sendMessage` is a no-op. This lets
  * MCP tools dispatch to the existing handler maps (via `dispatchHandler`) with
  * the same context the UI uses — minus the webview the agent surface doesn't have.
