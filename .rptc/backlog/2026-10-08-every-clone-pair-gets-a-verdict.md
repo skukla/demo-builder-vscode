@@ -126,3 +126,4 @@ record why publish must not re-prompt.
 - 2026-10-09  refactor(progress): share the determinate progress update (`92a661187`)
 - 2026-10-09  ensureSDKReady folded to one function (in the EDS-8 adobeConsoleProjectOps split): four identical copies (adobeEntityReads' SdkEntityFetch method, adobeOrgServices, adobeWorkspaceCredentials, adobeConsoleProjectOps) became `ensureSDKReady(sdkClient)` in adobeEntityReads.ts; below jscpd's floor, so the clone pin does not move.
 - 2026-10-09  refactor(authentication): Console project ops keep the project; workspace create, delete and Runtime namespace get their own file (`5fada61ff`)
+- 2026-10-09  refactor(eds): error formatters keep the message tables with one matcher; GitHub write rejections get their own file (`f9980a19c`)
