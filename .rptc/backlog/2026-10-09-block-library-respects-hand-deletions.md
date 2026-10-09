@@ -87,3 +87,4 @@ entry installed before 2026-10-09 and deleted later can still come back once.
 
 ## Shipped so far
 - 2026-10-09  fix(eds): a block library install no longer puts back entries the SC deleted (`692443854`)
+- 2026-10-09  fix(eds): a block library update keeps deleted block folders and stripped examples out (`36edd839e`)
