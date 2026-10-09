@@ -7,6 +7,7 @@
  * Moved out of ProgressUnifier.ts by EDS-8 (2026-10-08); the bodies are unchanged.
  */
 
+import { determinateProgress } from './progressPayload';
 import { settleStep } from './stepExit';
 import type { ExecutionContext, ProgressHandler, ProgressReporterDeps } from './types';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -63,20 +64,9 @@ export async function executeSynthetic(
             deps.timerProvider.clearInterval(progressInterval);
 
             // Final update
-            await onProgress({
-                overall: {
-                    percent: Math.round(((context.stepIndex + 1) / context.totalSteps) * 100),
-                    currentStep: context.stepIndex + 1,
-                    totalSteps: context.totalSteps,
-                    stepName: context.stepName,
-                },
-                command: {
-                    type: 'determinate',
-                    percent: 100,
-                    detail: deps.enhanceDetailWithElapsedTime('Complete'),
-                    confidence: 'synthetic',
-                },
-            });
+            await onProgress(determinateProgress(
+                context, 100, deps.enhanceDetailWithElapsedTime('Complete'), 'synthetic',
+            ));
 
             settleStep(code, step, context, resolve, reject);
         });
@@ -134,20 +124,7 @@ export async function executeImmediate(
         progressSteps.forEach(({ time, percent, detail }) => {
             const timeout = deps.timerProvider.setTimeout(async () => {
                 if (!commandCompleted) {
-                    await onProgress({
-                        overall: {
-                            percent: Math.round(((context.stepIndex + (percent / 100)) / context.totalSteps) * 100),
-                            currentStep: context.stepIndex + 1,
-                            totalSteps: context.totalSteps,
-                            stepName: context.stepName,
-                        },
-                        command: {
-                            type: 'determinate',
-                            percent,
-                            detail,
-                            confidence: 'exact',
-                        },
-                    });
+                    await onProgress(determinateProgress(context, percent, detail));
                 }
             }, time);
             progressTimeouts.push(timeout);
@@ -166,20 +143,7 @@ export async function executeImmediate(
 
             // Wait for minimum duration to ensure smooth transition
             deps.timerProvider.setTimeout(async () => {
-                await onProgress({
-                    overall: {
-                        percent: Math.round(((context.stepIndex + 1) / context.totalSteps) * 100),
-                        currentStep: context.stepIndex + 1,
-                        totalSteps: context.totalSteps,
-                        stepName: context.stepName,
-                    },
-                    command: {
-                        type: 'determinate',
-                        percent: 100,
-                        detail: 'Complete',
-                        confidence: 'exact',
-                    },
-                });
+                await onProgress(determinateProgress(context, 100, 'Complete'));
 
                 settleStep(commandExitCode, step, context, resolve, reject);
             }, remainingTime);

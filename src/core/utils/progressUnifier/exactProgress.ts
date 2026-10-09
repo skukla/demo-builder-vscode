@@ -6,6 +6,7 @@
  * Moved out of ProgressUnifier.ts by EDS-8 (2026-10-08); the bodies are unchanged.
  */
 
+import { determinateProgress } from './progressPayload';
 import { settleStep } from './stepExit';
 import type { ExecutionContext, ProgressHandler, ProgressReporterDeps } from './types';
 import type { InstallStep } from '@/types/prerequisites';
@@ -48,11 +49,13 @@ export async function executeExact(
 }
 
 /**
- * Parse fnm-specific output format
+ * Parse fnm-specific output format: a percentage line is reported as exact
+ * progress (the same as generic output); any other non-empty line is shown as
+ * indeterminate detail.
  */
 async function parseFnmOutput(
     output: string,
-    _step: InstallStep,
+    step: InstallStep,
     context: ExecutionContext,
     onProgress: ProgressHandler,
     lastDetail: string,
@@ -61,29 +64,11 @@ async function parseFnmOutput(
     const trimmedOutput = output.trim();
     if (!trimmedOutput) return;
 
-    const percentMatch = trimmedOutput.match(/(\d+)%/);
-    if (percentMatch) {
-        const percent = parseInt(percentMatch[1]);
-        const detail = trimmedOutput.substring(0, 100);
+    if (await parseGenericOutput(output, step, context, onProgress, lastDetail, setLastDetail)) {
+        return;
+    }
 
-        if (detail !== lastDetail) {
-            setLastDetail(detail);
-            await onProgress({
-                overall: {
-                    percent: Math.round(((context.stepIndex + (percent / 100)) / context.totalSteps) * 100),
-                    currentStep: context.stepIndex + 1,
-                    totalSteps: context.totalSteps,
-                    stepName: context.stepName,
-                },
-                command: {
-                    type: 'determinate',
-                    percent,
-                    detail,
-                    confidence: 'exact',
-                },
-            });
-        }
-    } else if (trimmedOutput !== lastDetail) {
+    if (trimmedOutput !== lastDetail) {
         setLastDetail(trimmedOutput);
         await onProgress({
             overall: {
@@ -102,7 +87,9 @@ async function parseFnmOutput(
 }
 
 /**
- * Parse generic percentage-based output
+ * Parse generic percentage-based output.
+ *
+ * @returns whether the output carried a percentage (reported or a repeat)
  */
 async function parseGenericOutput(
     output: string,
@@ -111,28 +98,15 @@ async function parseGenericOutput(
     onProgress: ProgressHandler,
     lastDetail: string,
     setLastDetail: (detail: string) => void,
-): Promise<void> {
+): Promise<boolean> {
     const percentMatch = output.match(/(\d+)%/);
-    if (percentMatch) {
-        const percent = parseInt(percentMatch[1]);
-        const detail = output.trim().substring(0, 100);
+    if (!percentMatch) return false;
 
-        if (detail !== lastDetail) {
-            setLastDetail(detail);
-            await onProgress({
-                overall: {
-                    percent: Math.round(((context.stepIndex + (percent / 100)) / context.totalSteps) * 100),
-                    currentStep: context.stepIndex + 1,
-                    totalSteps: context.totalSteps,
-                    stepName: context.stepName,
-                },
-                command: {
-                    type: 'determinate',
-                    percent,
-                    detail,
-                    confidence: 'exact',
-                },
-            });
-        }
+    const percent = parseInt(percentMatch[1]);
+    const detail = output.trim().substring(0, 100);
+    if (detail !== lastDetail) {
+        setLastDetail(detail);
+        await onProgress(determinateProgress(context, percent, detail));
     }
+    return true;
 }
