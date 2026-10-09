@@ -444,3 +444,4 @@ in favour of the EDS-34 version, and lower the pin. That also turns the floor of
 - 2026-10-09  For the owner (sitting 9): two rows were stale DOWNWARD before this sitting touched them (githubAppService 74.02 recorded, 70.16 measured; projectResetService 93.51 recorded, 86.06 measured), both because code landed after the row (2026-09-21 and 2026-09-30) without a re-measure. The ratchet only runs on a focus or sample run, so a row can sit above the truth for weeks. Recommendation: have the sweep re-measure any row whose module changed since `recorded` (the mutation-worklist already knows the modules; the date is in git).
 - 2026-10-09  refactor(cross-feature): one GitHub App result type, one orchestrator entry builder (`669ed12b5`)
 - 2026-10-09  feat(mutation): the sweep lists baseline rows older than their module (`27586ea0b`)
+- 2026-10-09  chore(sweep): the sweep reports and never starts Stryker (`9ac4fc15f`)
