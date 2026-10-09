@@ -8,9 +8,8 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/dashboard/commands/openAi.ts",
-        "src/features/dashboard/commands/showIntegrations.ts",
-        "src/features/project-creation/commands/createProject.ts"
+        "src/features/projects-dashboard/handlers/projectFromPath.ts",
+        "src/features/dashboard/commands/showIntegrations.ts"
     ],
     "reporters": [
         "clear-text",

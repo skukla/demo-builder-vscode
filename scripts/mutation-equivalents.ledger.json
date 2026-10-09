@@ -15647,6 +15647,18 @@
             "decision": "none \u2014 log-only; a test could only assert the log wording, which the logger-argument rule forbids.",
             "recorded": "2026-10-09",
             "source": "PL-69 sitting 4 (re-triage of the PL-22 batch MUT-01 row)"
+        },
+        {
+            "module": "src/features/dashboard/commands/showIntegrations.ts",
+            "anchors": [
+                "if (panel) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "disposeActivePanel guards panel.dispose() with this if, inside a try whose catch swallows everything. Forcing the condition true when no panel is open makes dispose() throw on undefined, and that throw is swallowed by the same catch, so the caller sees the same return (void) and the same absence of an error either way. No input distinguishes the two.",
+            "decision": "none \u2014 equivalent: the catch that exists for an already-disposed panel also hides the mutant.",
+            "recorded": "2026-10-09",
+            "source": "PL-69 sitting 4 (Part B, the Integrations command suite)"
         }
     ]
 }
