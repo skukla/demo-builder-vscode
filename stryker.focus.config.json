@@ -8,9 +8,11 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/configService/configurationService.ts",
-        "src/features/eds/services/configService/configServiceRequest.ts",
-        "src/features/eds/services/configService/siteConfigParams.ts"
+        "src/features/dashboard/ui/configure/ConfigureScreen.tsx",
+        "src/features/dashboard/ui/configure/hooks/useProjectNameField.ts",
+        "src/features/dashboard/ui/configure/hooks/useConfigureSave.ts",
+        "src/features/dashboard/ui/configure/hooks/useConfigureSections.ts",
+        "src/features/dashboard/ui/configure/hooks/useConfigureFieldRow.tsx"
     ],
     "reporters": [
         "clear-text",

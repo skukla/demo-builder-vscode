@@ -11217,11 +11217,11 @@
             "source": "EDS-8 IntegrationsScreen split"
         },
         {
-            "module": "src/features/dashboard/ui/configure/ConfigureScreen.tsx",
+            "module": "src/features/dashboard/ui/configure/hooks/useConfigureSave.ts",
             "anchors": [
                 "}, []);"
             ],
-            "line": 263,
+            "line": 132,
             "mutants": 1,
             "category": "other",
             "reason": "A useEffect/useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The subscription and the two handlers close over nothing, so identity is the only thing the array can affect and it does not move. Verified by planting all three at once: the sixteen configure suites pass unchanged.",
@@ -11242,7 +11242,7 @@
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/dashboard/ui/configure/ConfigureScreen.tsx",
+            "module": "src/features/dashboard/ui/configure/hooks/useConfigureSave.ts",
             "anchors": [
                 "if (!result.success) {",
                 "throw new Error(result.error || 'Failed to save configuration');"
@@ -14014,6 +14014,31 @@
             "decision": "none - the guard is the same shape as the URL one above it and should stay",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/dashboard/ui/configure/hooks/useConfigureSave.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 77,
+            "mutants": 1,
+            "category": "other",
+            "reason": "The deployment-status subscription's dependency array holds no values, so ['Stryker was here'] is just as constant as [] when React compares it element-wise with Object.is on every render: the effect subscribes once on mount and unsubscribes on unmount either way. The listener reads nothing from the render it was created in, only the stable setIsDeploying setter. Survived identically on ConfigureScreen.tsx before the EDS-8 split, where the PL-22 row for the handlers already described the same equivalence.",
+            "decision": "none \u2014 [] is the correct dependency list",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 ConfigureScreen split"
+        },
+        {
+            "module": "src/features/dashboard/ui/configure/hooks/useProjectNameField.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "handleProjectNameChange closes over nothing but the two useState setters, which React keeps stable for the component's lifetime. A constant dependency array of ['Stryker was here'] never changes between renders, exactly like [], so the callback keeps the same identity and calls the same setters. No test can tell them apart because the component cannot. Survived identically on ConfigureScreen.tsx before the EDS-8 split.",
+            "decision": "none \u2014 [] is the correct dependency list",
+            "recorded": "2026-10-08",
+            "source": "EDS-8 ConfigureScreen split"
         },
         {
             "module": "src/features/data-installer/services/accsCredentialProvisioner.ts",

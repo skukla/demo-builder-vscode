@@ -624,6 +624,22 @@ date and what happened; a failure becomes its own `fix` item.
       is gone and a second delete reads as already gone. Suites fake `fetch`; only a real
       call proves Adobe still accepts the body and the bearer.
 
+- [ ] **The Configure Project screen after the ConfigureScreen split** (uncommitted on
+      `refactor/eds-8-god-files`): the screen is now wiring over four hooks
+      (`useProjectNameField`, `useConfigureSave`, `useConfigureSections`,
+      `useConfigureFieldRow`). One ordering moved: the global-validation effect now runs
+      before the store-discovery effects within a render, not after (they share no state).
+      No cloud write needed beyond a save; on an ACCS project and an EDS project:
+      (1) open Configure, rename the project with capitals and spaces, Save — the title
+      changes and the folder slug shown under the field matches; (2) blank a required field
+      in a section that is not on screen — its rail tab shows the error and Save stays
+      disabled; (3) on the Commerce connection tab, the store cascade discovers and the
+      Business Structure tab's fields appear; on ACCS the OAuth override fields show the
+      shared-credential state; (4) start a mesh redeploy and confirm Save reads "Deploying"
+      and is disabled until it ends; (5) on the EDS project, Save without touching
+      Authoring keeps DA.live classic. Suites render the real hooks with Spectrum mocked;
+      only the real webview proves the screen still looks and behaves the same.
+
 ## Shipped so far
 
 - 2026-09-10  2026-09-10  Gated: god-file-ratchet.test.ts pins 68 candidates / 31 coupled; rule 49 measures on edit (2987e8623)
@@ -672,3 +688,4 @@ date and what happened; a failure becomes its own `fix` item.
 - 2026-10-08  refactor(eds): configurationService keeps the site-config operations; the registration body and the request get their own files (`32e193848`)
 - 2026-10-08  docs(backlog): PrerequisitesManager waits for PR-1a, which is reshaping the prerequisites area (`554ebd1db`)
 - 2026-10-08  docs(backlog): toolManager.ts is not split; it is the unreachable ACO ingestion tool, and DI-4 decides its fate (`312171589`)
+- 2026-10-08  (uncommitted on refactor/eds-8-god-files) dashboard/ui/configure/ConfigureScreen.tsx 395 -> 207 (the wiring and the page chrome; 23 -> 15 non-type imports) over four hooks: useProjectNameField 83 (the typed title, its error and folder slug), useConfigureSave 135 (Save, Close, the saving/deploying flags), useConfigureSections 115 (sections, global validation, rail tabs, canSave), useConfigureFieldRow 158 (store discovery, the shared-credential probe, the row renderer). Rendered markup unchanged, no forwarders, every existing ConfigureScreen suite unchanged and green. proveMove: ConfigureScreen DIFFERS by construction (its body became hook calls); the four new hooks hand-diffed against HEAD statement by statement, all verbatim except one comment reworded and normalizeProjectName(projectName) moved into useProjectNameField as projectFolder; one effect-order change (validation now runs before the discovery effects; no shared state). Mutation: before = baseline row 86.36 (10 survived/5 uncovered); after ConfigureScreen 96.97, useConfigureSave 69.70 (all branch survivors ledgered equivalents: the swallowed save-failure throw and two constant dependency arrays), useConfigureSections 96.15, useProjectNameField 90.91, useConfigureFieldRow 100; openGaps 0 on all five. Gap closed: an EDS project with no saved preference now saves DA.live classic, pinned. Pins: godFileCandidates 42 -> 41, godFileCoupled 8 -> 7; 2 mutation-equivalents rows re-homed to useConfigureSave, 2 added; cloneCeiling stays 39. Checks: full jest 1892/1892, tsc, typecheck:tests, lint (0 errors, 25 warnings), compile, source-duplication, tsc-blindspots, test-file-sizes all 0.
