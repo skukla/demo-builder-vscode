@@ -1,9 +1,9 @@
 /**
  * Catalog Prewarm Service — Shared Test Utilities
  *
- * Fixtures shared by the catalogPrewarmService suite and its sample-scope
- * sibling: a logger double, a minimal ACCS project, and a Catalog Service
- * GraphQL page builder.
+ * Fixtures shared by the catalog suites (catalogPrewarmService and its
+ * failure-modes sibling, catalogEnumeration, catalogSampleSku): a logger double,
+ * a minimal ACCS project, and a Catalog Service GraphQL page builder.
  *
  * NOTE: This is a `*.testUtils.ts` file (not `*.test.ts`) so Jest does not treat
  * it as a test suite — it contains no `describe`/`it` blocks.

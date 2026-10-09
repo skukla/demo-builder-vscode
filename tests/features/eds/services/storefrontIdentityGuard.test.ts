@@ -19,7 +19,7 @@
  * structure onto it."
  */
 
-import { projectTargetsStorefront } from '@/features/eds/services/catalogPrewarmService';
+import { projectTargetsStorefront } from '@/features/eds/services/storefrontIdentityGuard';
 import type { Project } from '@/types/base';
 import { createMockProject } from '../../../helpers/projectFake';
 

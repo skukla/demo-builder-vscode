@@ -51,7 +51,7 @@
         "tests/features/eds/handlers/storefrontSetup/storefrontSetupPhase2.placeholderStubs.test.ts": 1,
         "tests/features/eds/services/blockCollectionHelpers-multiLibrary-merging.test.ts": 1,
         "tests/features/eds/services/brandAssetPublisher-policy.test.ts": 2,
-        "tests/features/eds/services/catalogPrewarmService-sampleScope.test.ts": 1,
+        "tests/features/eds/services/catalogSampleSku.test.ts": 1,
         "tests/features/eds/services/configService/configAccessRecovery.test.ts": 2,
         "tests/features/eds/services/configSyncService.test.ts": 5,
         "tests/features/eds/services/daLive/daLiveContentOperations-accountOverlay.test.ts": 1,

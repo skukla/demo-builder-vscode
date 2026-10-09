@@ -9,7 +9,7 @@
  * NEVER throws to the caller. These tests pin that contract.
  */
 
-import { pickSampleSku, prewarmCatalog } from '@/features/eds/services/catalogPrewarmService';
+import { prewarmCatalog } from '@/features/eds/services/catalogPrewarmService';
 import {
     catalogPage,
     makeAccsProject,
@@ -374,83 +374,49 @@ describe('prewarmCatalog — happy path', () => {
     });
 });
 
-describe('pickSampleSku', () => {
+describe('prewarmCatalog — the skip reason it reports', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         global.fetch = jest.fn();
     });
 
-    it('returns the first product with its canonical PDP path', async () => {
-        // The path must be byte-identical to what the storefront's getProductLink
-        // produces, which is why it is built with pdpPathFor rather than by hand.
-        (global.fetch as jest.Mock).mockResolvedValue(
-            catalogPage([{ sku: 'VA19-SI-NA', urlKey: 'Cronus Yoga Pant' }])
-        );
-
-        const sample = await pickSampleSku(makeAccsProject(), mockLogger);
-
-        expect(sample).toEqual({
-            sku: 'VA19-SI-NA',
-            urlKey: 'Cronus Yoga Pant',
-            path: '/products/cronus-yoga-pant/va19-si-na',
-            // No EDS repo on this fixture, so there is no served config to read.
-            scopeSource: 'manifest',
-            scopeDivergence: undefined,
-        });
-    });
-
-    it('cleans a SKU that needs it, matching the URL the storefront will emit', async () => {
-        // Spaces, slashes and underscores are the SKUs Helix rewrites on publish.
-        (global.fetch as jest.Mock).mockResolvedValue(
-            catalogPage([{ sku: 'AB 12/CD_e', urlKey: 'Widget' }])
-        );
-
-        const sample = await pickSampleSku(makeAccsProject(), mockLogger);
-
-        expect(sample?.path).toBe('/products/widget/ab-12-cd-e');
-    });
-
-    it('issues no POST to prepublish-pdp — this probe must not publish', async () => {
-        // The control on read-only-ness. The GraphQL enumeration IS a POST, so
-        // assert on the destination rather than the verb.
-        (global.fetch as jest.Mock).mockResolvedValue(catalogPage([{ sku: 'S1', urlKey: 'u1' }]));
-
-        await pickSampleSku(makeAccsProject(), mockLogger);
-
-        for (const [url] of (global.fetch as jest.Mock).mock.calls) {
-            expect(String(url)).not.toContain('prepublish-pdp');
-        }
-        expect(global.fetch).toHaveBeenCalledTimes(1);
-    });
-
-    it('returns undefined for a non-ACCS backend', async () => {
-        const paas = makeAccsProject({
+    it('names the backend it refused to prewarm', async () => {
+        // The reason reaches the setup summary, so "non-ACCS backend" alone
+        // leaves the reader guessing which backend they actually have.
+        const paas = createMockProject({
+            ...makeAccsProject(),
             componentSelections: { backend: 'adobe-commerce-paas' },
         });
 
-        expect(await pickSampleSku(paas, mockLogger)).toBeUndefined();
-        expect(global.fetch).not.toHaveBeenCalled();
+        const result = await prewarmCatalog(
+            paas,
+            ACCS_OVERLAY,
+            DA_ORG,
+            DA_SITE,
+            makePublisher(),
+            mockLogger,
+        );
+
+        expect(result.skipReason).toBe('non-ACCS backend (paas)');
     });
 
-    it('returns undefined when the catalog is empty', async () => {
-        (global.fetch as jest.Mock).mockResolvedValue(catalogPage([]));
+    it('announces the enumeration step before it starts', async () => {
+        (global.fetch as jest.Mock).mockResolvedValueOnce(catalogPage([{ sku: 'SKU1', urlKey: 'orchard' }]));
+        const onProgress = jest.fn();
 
-        expect(await pickSampleSku(makeAccsProject(), mockLogger)).toBeUndefined();
-    });
+        await prewarmCatalog(
+            makeAccsProject(),
+            ACCS_OVERLAY,
+            DA_ORG,
+            DA_SITE,
+            makePublisher(),
+            mockLogger,
+            onProgress,
+        );
 
-    it('returns undefined when Catalog Service is down', async () => {
-        (global.fetch as jest.Mock).mockResolvedValue({ ok: false, status: 503 });
-
-        expect(await pickSampleSku(makeAccsProject(), mockLogger)).toBeUndefined();
-    });
-
-    it('returns undefined on GraphQL errors rather than throwing', async () => {
-        (global.fetch as jest.Mock).mockResolvedValue({
-            ok: true,
-            status: 200,
-            json: async () => ({ errors: [{ message: 'boom' }] }),
+        expect(onProgress).toHaveBeenCalledWith({
+            operation: 'catalog-prewarm',
+            message: 'Enumerating catalog',
         });
-
-        expect(await pickSampleSku(makeAccsProject(), mockLogger)).toBeUndefined();
     });
 });

@@ -39,7 +39,7 @@ import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefron
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getBlockLibraryContentSource } from '@/features/components/services/blockLibraryLoader';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
-import { projectTargetsStorefront } from '@/features/eds/services/catalogPrewarmService';
+import { projectTargetsStorefront } from '@/features/eds/services/storefrontIdentityGuard';
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';

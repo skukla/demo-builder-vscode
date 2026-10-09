@@ -320,7 +320,7 @@ If Phase 1's behavior diverges from this in production, those four probes locali
 | Standalone retry after a refused registration | `src/features/eds/services/configService/repairSiteConfigHeadless.ts` + `src/commands/repairSiteConfiguration.ts` (`demoBuilder.repairSiteConfiguration`) |
 | Configuration Service registration with overlay (incl. `suffix: ".html"`) | `src/features/eds/services/configService/configurationService.ts` (`registerSite`, `updateSiteConfig`); the overlay body and `buildSiteConfigParams` in `siteConfigParams.ts` (`buildRegistrationBody`) |
 | Smart-404 snippet generation + install (head.html, 404.html, delayed.js) | `src/features/eds/services/pdp/pdp404HandlerPublisher.ts` |
-| **Catalog pre-warming (enumerate + bulk pre-publish)** | `src/features/eds/services/catalogPrewarmService.ts` |
+| **Catalog pre-warming (enumerate + bulk pre-publish)** | `src/features/eds/services/catalogPrewarmService.ts` (publish), `catalogEnumeration.ts` (enumerate) |
 | Pipeline integration (smart-404 install + pre-warming) | `src/features/eds/services/edsPipeline.ts`, `src/features/eds/handlers/storefrontSetup/storefrontSetupPhase2.ts` (create / edit), `src/features/eds/services/reset/edsResetRepoHelper.ts` (reset) |
 | **Product page removal on reset and delete (EDS-26)** | `src/features/eds/services/storefront/productPageRemoval.ts` (the rules), `helix/helixPublishedPaths.ts` (the listing), `reset/edsResetProductPages.ts`, `storefront/storefrontTeardown.ts`, `storefront/sharedRepoProjects.ts` |
 | Settings | `package.json` (`demoBuilder.byom.enabled`, `demoBuilder.byom.overlayUrl`) |

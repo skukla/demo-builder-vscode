@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "EDS-8 split 2026-10-09: configGenerator keeps the config.json render plus generateProjectConfigJson, the one call Reset and republish share (its one block mutant is killed by a direct test); params extraction moved to storefrontConfigParams. 176 mutants, 162 killed across the pair against 161 of 175 before the split. Survivors unchanged: log text, a default-arm string, two ledgered equivalents.",
+    "_note": "EDS-8 split 2026-10-09: catalogPrewarmService keeps the publish run; the Catalog Service read moved to catalogEnumeration, the diagnostics sample to catalogSampleSku, the identity guard to storefrontIdentityGuard. Same 256 mutants as the pre-split re-measure (77.34); killed 195+3 -> 198+3 because the enumeration now has a direct suite, which killed the endpoint guard a ledger row had called unkillable (row deleted). Every survivor is log text or a ledgered equivalent.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -5729,24 +5729,23 @@
             "openGaps": 0
         },
         "src/features/eds/services/catalogPrewarmService.ts": {
-            "score": 77.52,
-            "killed": 197,
-            "survived": 52,
-            "noCoverage": 6,
-            "timeout": 3,
+            "score": 68.13,
+            "killed": 62,
+            "survived": 27,
+            "noCoverage": 2,
+            "timeout": 0,
             "survivorCategories": {
-                "logPresentation": 24,
-                "string": 10,
-                "branch": 11,
-                "block": 6,
-                "optionalChain": 1
+                "logPresentation": 15,
+                "string": 5,
+                "branch": 4,
+                "block": 3
             },
             "uncoveredCategories": {
-                "logPresentation": 4,
-                "string": 2
+                "logPresentation": 1,
+                "string": 1
             },
-            "highValueSurvivors": 17,
-            "equivalent": 18,
+            "highValueSurvivors": 7,
+            "equivalent": 7,
             "openGaps": 0
         },
         "src/features/eds/services/cleanupService.ts": {
@@ -10436,6 +10435,54 @@
             "uncoveredCategories": {
                 "string": 1
             },
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/eds/services/catalogEnumeration.ts": {
+            "score": 91.8,
+            "killed": 53,
+            "survived": 4,
+            "noCoverage": 1,
+            "timeout": 3,
+            "survivorCategories": {
+                "optionalChain": 1,
+                "branch": 3
+            },
+            "uncoveredCategories": {
+                "logPresentation": 1
+            },
+            "highValueSurvivors": 3,
+            "equivalent": 4,
+            "openGaps": 0
+        },
+        "src/features/eds/services/catalogSampleSku.ts": {
+            "score": 69.12,
+            "killed": 47,
+            "survived": 19,
+            "noCoverage": 2,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 4,
+                "branch": 3,
+                "logPresentation": 9,
+                "block": 3
+            },
+            "uncoveredCategories": {
+                "logPresentation": 2
+            },
+            "highValueSurvivors": 6,
+            "equivalent": 6,
+            "openGaps": 0
+        },
+        "src/features/eds/services/storefrontIdentityGuard.ts": {
+            "score": 100,
+            "killed": 36,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
             "highValueSurvivors": 0,
             "equivalent": 0,
             "openGaps": 0

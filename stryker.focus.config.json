@@ -8,8 +8,10 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/configGenerator.ts",
-        "src/features/eds/services/storefrontConfigParams.ts"
+        "src/features/eds/services/catalogPrewarmService.ts",
+        "src/features/eds/services/catalogEnumeration.ts",
+        "src/features/eds/services/catalogSampleSku.ts",
+        "src/features/eds/services/storefrontIdentityGuard.ts"
     ],
     "reporters": [
         "clear-text",

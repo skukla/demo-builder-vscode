@@ -1,21 +1,150 @@
 /**
- * `pickSampleSku` — which store scope the sample comes from.
+ * `pickSampleSku` — the diagnostics sample: what it returns, the guards before it
+ * asks, and which store scope the sample comes from.
  *
  * The diagnostics probe asks the LIVE storefront whether a PDP renders, so the
  * sample product must come from the scope that storefront is querying: its
- * served `config.json`, not the project manifest. Split from
- * catalogPrewarmService.test.ts to keep both suites under the 500-line limit.
+ * served `config.json`, not the project manifest.
  */
 
-import { pickSampleSku } from '@/features/eds/services/catalogPrewarmService';
+import { pickSampleSku } from '@/features/eds/services/catalogSampleSku';
 import type { Project } from '@/types/base';
 import {
+    ACCS_ENDPOINT,
     catalogPage,
     makeAccsProject,
     mockLogger,
 } from './catalogPrewarmService.testUtils';
+import { createMockProject } from '../../../helpers/projectFake';
 
-describe('pickSampleSku', () => {
+describe('pickSampleSku — what it returns', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        global.fetch = jest.fn();
+    });
+
+    it('returns the first product with its canonical PDP path', async () => {
+        // The path must be byte-identical to what the storefront's getProductLink
+        // produces, which is why it is built with pdpPathFor rather than by hand.
+        (global.fetch as jest.Mock).mockResolvedValue(
+            catalogPage([{ sku: 'VA19-SI-NA', urlKey: 'Cronus Yoga Pant' }])
+        );
+
+        const sample = await pickSampleSku(makeAccsProject(), mockLogger);
+
+        expect(sample).toEqual({
+            sku: 'VA19-SI-NA',
+            urlKey: 'Cronus Yoga Pant',
+            path: '/products/cronus-yoga-pant/va19-si-na',
+            // No EDS repo on this fixture, so there is no served config to read.
+            scopeSource: 'manifest',
+            scopeDivergence: undefined,
+        });
+    });
+
+    it('cleans a SKU that needs it, matching the URL the storefront will emit', async () => {
+        // Spaces, slashes and underscores are the SKUs Helix rewrites on publish.
+        (global.fetch as jest.Mock).mockResolvedValue(
+            catalogPage([{ sku: 'AB 12/CD_e', urlKey: 'Widget' }])
+        );
+
+        const sample = await pickSampleSku(makeAccsProject(), mockLogger);
+
+        expect(sample?.path).toBe('/products/widget/ab-12-cd-e');
+    });
+
+    it('issues no POST to prepublish-pdp — this probe must not publish', async () => {
+        // The control on read-only-ness. The GraphQL enumeration IS a POST, so
+        // assert on the destination rather than the verb.
+        (global.fetch as jest.Mock).mockResolvedValue(catalogPage([{ sku: 'S1', urlKey: 'u1' }]));
+
+        await pickSampleSku(makeAccsProject(), mockLogger);
+
+        for (const [url] of (global.fetch as jest.Mock).mock.calls) {
+            expect(String(url)).not.toContain('prepublish-pdp');
+        }
+        expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns undefined for a non-ACCS backend', async () => {
+        const paas = makeAccsProject({
+            componentSelections: { backend: 'adobe-commerce-paas' },
+        });
+
+        expect(await pickSampleSku(paas, mockLogger)).toBeUndefined();
+        expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    it('returns undefined when the catalog is empty', async () => {
+        (global.fetch as jest.Mock).mockResolvedValue(catalogPage([]));
+
+        expect(await pickSampleSku(makeAccsProject(), mockLogger)).toBeUndefined();
+    });
+
+    it('returns undefined when Catalog Service is down', async () => {
+        (global.fetch as jest.Mock).mockResolvedValue({ ok: false, status: 503 });
+
+        expect(await pickSampleSku(makeAccsProject(), mockLogger)).toBeUndefined();
+    });
+
+    it('returns undefined on GraphQL errors rather than throwing', async () => {
+        (global.fetch as jest.Mock).mockResolvedValue({
+            ok: true,
+            status: 200,
+            json: async () => ({ errors: [{ message: 'boom' }] }),
+        });
+
+        expect(await pickSampleSku(makeAccsProject(), mockLogger)).toBeUndefined();
+    });
+});
+
+describe('pickSampleSku — the guards before it asks', () => {
+    /** An ACCS project with a storefront repo, so a served-config read is reachable. */
+    function withStorefront(componentConfigs: Record<string, Record<string, string>>) {
+        return makeAccsProject({
+            componentConfigs,
+            selectedStack: 'eds-accs',
+            componentInstances: {
+                'eds-storefront': {
+                    id: 'eds-storefront',
+                    name: 'EDS Storefront',
+                    status: 'ready',
+                    metadata: { githubRepo: 'acme/shop' },
+                },
+            },
+        });
+    }
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        global.fetch = jest.fn();
+    });
+
+    it('asks nothing for a non-ACCS backend, even one with an endpoint', async () => {
+        // Enumeration is ACCS-only. A PaaS project can still carry a GraphQL
+        // endpoint, so the backend check has to be what stops the request.
+        const paas = createMockProject({
+            ...withStorefront({
+                'adobe-commerce-paas': { ADOBE_COMMERCE_GRAPHQL_ENDPOINT: ACCS_ENDPOINT },
+            }),
+            componentSelections: { backend: 'adobe-commerce-paas' },
+        });
+
+        await expect(pickSampleSku(paas, mockLogger)).resolves.toBeUndefined();
+        expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    it('asks nothing when no Commerce endpoint is configured', async () => {
+        const noEndpoint = withStorefront({
+            'adobe-commerce-accs': { ACCS_STORE_VIEW_CODE: 'default' },
+        });
+
+        await expect(pickSampleSku(noEndpoint, mockLogger)).resolves.toBeUndefined();
+        expect(global.fetch).not.toHaveBeenCalled();
+    });
+});
+
+describe('pickSampleSku — which scope it samples', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         global.fetch = jest.fn();
