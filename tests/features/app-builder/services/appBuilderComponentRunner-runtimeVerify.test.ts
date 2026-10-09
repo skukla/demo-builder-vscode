@@ -372,7 +372,10 @@ describe('post-undeploy runtime verification', () => {
 
         expect(stages).toEqual([
             [OPERATION_STAGES.removing.label, 'Undeploying Custom Integration'],
-            [OPERATION_STAGES.checkingLeftovers.label, undefined],
+            [
+                OPERATION_STAGES.checkingLeftovers.label,
+                'Reading its Runtime namespace for packages, actions, triggers and rules still deployed',
+            ],
         ]);
     });
 

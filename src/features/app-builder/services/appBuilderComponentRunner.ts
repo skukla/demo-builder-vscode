@@ -657,7 +657,10 @@ async function deleteLeftBehindActions(
     deps: AppBuilderComponentRunnerDeps,
 ): Promise<string | undefined> {
     if (!deps.deleteUndeclaredActions) return undefined;
-    deps.onProgress?.(OPERATION_STAGES.checkingLeftovers.label);
+    deps.onProgress?.(
+        OPERATION_STAGES.checkingLeftovers.label,
+        'Deleting code the app no longer declares from its Runtime namespace',
+    );
     const sharing = entriesSharingWorkspace(deps.catalog, project, entry)
         .map((other) => project.componentInstances?.[other.id]?.path)
         .filter((other): other is string => Boolean(other) && other !== componentPath);
@@ -1630,7 +1633,10 @@ async function undeployAndCheck(
         );
     }
     if (!app) return undefined;
-    deps.onProgress?.(OPERATION_STAGES.checkingLeftovers.label);
+    deps.onProgress?.(
+        OPERATION_STAGES.checkingLeftovers.label,
+        'Reading its Runtime namespace for packages, actions, triggers and rules still deployed',
+    );
     const checked = await checkRuntimeLeftovers(targetFor(project, deps, id), id, declared, shownName, deps);
     const registration = await checkRegistration(
         project,

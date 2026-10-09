@@ -13,9 +13,9 @@
  */
 
 import * as vscode from 'vscode';
-import { stageLine } from '@/core/utils/stageLine';
 import { resolveOrgContext, sendOrgMismatch } from './projectHandlers';
 import { BASELINE_API } from '@/core/constants';
+import { stageLine } from '@/core/utils/stageLine';
 import { validateOrgId, validateProjectId } from '@/core/validation/validators/AdobeResourceValidator';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import {
@@ -200,11 +200,19 @@ function buildSuccessMessage(result: ConsoleProjectTeardownResult, title: string
         + `(${registrations} event registration(s) and ${providers} event provider(s) removed).`;
 }
 
-/** Failure warning: names every failed item; the delete is safely retryable. */
+/**
+ * Failure warning: names every failed item WITH Adobe's reason for it; the delete is
+ * safely retryable. The reason was collected per item and dropped here until
+ * 2026-10-09, when "Read-only project cannot be deleted" reached the owner as
+ * `Failed: project "Kukla Bodea Mesh"` and nothing else.
+ */
 function buildFailureMessage(result: ConsoleProjectTeardownResult, title: string): string {
     const failed = result.items
         .filter((item) => item.outcome === 'failed')
-        .map((item) => `${item.kind} "${item.label ?? item.id}"`)
+        .map((item) => {
+            const name = `${item.kind} "${item.label ?? item.id}"`;
+            return item.error ? `${name} (${item.error})` : name;
+        })
         .join(', ');
     return `Could not delete Adobe project "${title}". Failed: ${failed}. `
         + 'The project was NOT deleted. Already-removed items stay removed; '

@@ -162,10 +162,12 @@ export const OPERATION_STAGES = {
         expectation: 'Usually under a minute',
         detail: "The system's own data, before its code goes",
     },
+    // "Checking nothing is left" covered three jobs with one line and said which
+    // in none of them (owner, 2026-10-09). Every reporter now names its job.
     checkingLeftovers: {
-        label: 'Checking nothing is left',
+        label: 'Checking for leftovers',
         expectation: 'Usually under a minute',
-        detail: 'Deleting anything the undeploy left running',
+        detail: 'Its Runtime namespace, then its Commerce Admin registration',
     },
     // A mesh redeploy that changed its address left the storefront on the old one
     // until someone republished by hand (2026-09-21).

@@ -570,7 +570,7 @@ describe('handleDeleteAdobeProject', () => {
 
             // First call is the confirm modal; the outcome warning follows it.
             const warning = mockShowWarning.mock.calls[1][0] as string;
-            expect(warning).toContain('My Provider');
+            expect(warning).toContain('provider "My Provider" (HTTP 500)'); // Adobe's reason travels
             expect(warning).not.toContain('reg-1'); // deleted fine — not a failure
             expect(warning).toContain('NOT deleted');
             expect(warning).toContain('run Delete again');
