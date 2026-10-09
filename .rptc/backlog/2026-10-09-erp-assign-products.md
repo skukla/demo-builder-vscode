@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: high
-status: backlog
+status: built
 ---
 
 # Assign products to an ERP, and put erp_owner in every attribute set
@@ -56,3 +56,7 @@ existed and was a Text Field.
 Everything Commerce-facing is tested against fakes. The first live check: on a scratch ACCS
 store, assign three products to an ERP and read them back (value present on a product read
 with and without the project's Store header), and confirm the bulk status's operation list.
+
+## Shipped so far
+
+- 2026-10-09  feat(erp): assign products to an ERP, and put erp_owner in every attribute set (`d48056b5c`)
