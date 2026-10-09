@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "EDS-8 split of projectDeletionService (2026-10-09): the question moved to deletionConfirmation.ts and the online removal to edsExternalCleanup.ts. Measured before the split at 76.18% on the unsplit file (the 74.41% row predated the modal question and product pages); the pieces now read 81.71 / 77.61 / 92.76 with openGaps 0 on all three, after tests for the modal progress surface, the in-modal checkboxes, a half DA.live pair and a site named apart from its repo, and five equivalent rows.",
+    "_note": "EDS-8 split of blockCollectionHelpers.ts: the same 377 mutants, 344 killed and 33 surviving as the 2026-09-05 row, now divided between the install (130 of 158) and the new merge file blockLibraryComponentMerge.ts (214 of 219). The install's score fell only because the merge, the better-covered half, left it; its five survivors are the four ledger rows re-homed with it.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -5691,21 +5691,21 @@
             "openGaps": 0
         },
         "src/features/eds/services/blockCollectionHelpers.ts": {
-            "score": 91.25,
-            "killed": 344,
-            "survived": 33,
+            "score": 82.28,
+            "killed": 130,
+            "survived": 28,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 11,
+                "branch": 9,
                 "string": 9,
-                "other": 4,
-                "logPresentation": 8,
-                "block": 1
+                "other": 1,
+                "block": 1,
+                "logPresentation": 8
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 12,
-            "equivalent": 16,
+            "highValueSurvivors": 10,
+            "equivalent": 11,
             "openGaps": 0
         },
         "src/features/eds/services/brandAssetPublisher.ts": {
@@ -10514,6 +10514,21 @@
             },
             "uncoveredCategories": {},
             "highValueSurvivors": 0,
+            "equivalent": 5,
+            "openGaps": 0
+        },
+        "src/features/eds/services/blockLibraryComponentMerge.ts": {
+            "score": 97.72,
+            "killed": 214,
+            "survived": 5,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 3,
+                "branch": 2
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 2,
             "equivalent": 5,
             "openGaps": 0
         }

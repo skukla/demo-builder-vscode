@@ -1,7 +1,7 @@
 /**
  * The component-definition merge, driven with the SHAPES real repos have.
  *
- * `buildMergedComponentDefinitionMultiSource` walks four levels of two JSON
+ * `buildMergedComponentDefinitionMultiSource` (blockLibraryComponentMerge.ts) walks four levels of two JSON
  * documents it did not write — a source `component-definition.json` from each
  * library and the destination's own — and every level is optional in practice.
  * A group with no `components`, a definition with no `groups`, an entry whose

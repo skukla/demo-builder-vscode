@@ -395,8 +395,14 @@ and three of them are more than 40% comments). Decide which.
    the shared `ensureDaLiveAuth` in `edsHelpers` and only wrap its answer differently, and
    its GitHub check is a `delete_repo` sign-in where the reset's (`edsResetPreflight`)
    checks the Code Sync App. Nothing to fold; split it by its own jobs.
-7. `eds/services/blockCollectionHelpers.ts` (593/400): discovery and install commit vs
-   the merge of definition, filters and models.
+7. DONE 2026-10-09 (593 -> 299, see the log). `eds/services/blockCollectionHelpers.ts` (593/400): discovery and install commit vs
+   the merge of definition, filters and models. The merge never overwrites: every
+   builder starts from the destination's current file and only adds entries whose id is
+   not there yet (plus a missing `unsafeHTML`). Two things it does NOT keep, both older
+   than the split and left as they are: the file is re-written with two-space
+   indentation, and a library entry the SC deleted by hand comes back the next time that
+   library is installed. Not ADR-013's hash seam: these files are committed to GitHub,
+   not written into the project folder.
 8. `data-installer/services/dataInstallerWriteClient.ts` (579/400): import/validate/delete
    vs export (its suites are already split that way). A doc comment near line 166 sits
    on the wrong function; fix in the same sitting.
@@ -842,6 +848,14 @@ date and what happened; a failure becomes its own `fix` item.
       `deletionConfirmation.ts` and the online removal `edsExternalCleanup.ts`; every moved
       function is a proven move except the plain "Are you sure" modal, which was pasted
       three times and is now one `confirmPlainDelete` with the same words and button.
+- [ ] **Adding a block library, then refreshing it, keeps a hand edit** (the
+      `blockCollectionHelpers.ts` split, 2026-10-09). On a throwaway EDS storefront, hand
+      edit one existing entry in each of `component-definition.json`,
+      `component-filters.json` and `component-models.json` on GitHub, then add a block
+      library from the dashboard and run Refresh Block Library: each of the three files
+      carries the library's entries once (no duplicates), the hand edits are still there,
+      and the new blocks appear in the DA.live library. The merge is now
+      `blockLibraryComponentMerge.ts`; every moved function is a proven move.
 
 ## Shipped so far
 

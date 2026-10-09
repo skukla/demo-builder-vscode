@@ -8,9 +8,8 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/projects-dashboard/services/projectDeletionService.ts",
-        "src/features/projects-dashboard/services/deletionConfirmation.ts",
-        "src/features/projects-dashboard/services/edsExternalCleanup.ts"
+        "src/features/eds/services/blockCollectionHelpers.ts",
+        "src/features/eds/services/blockLibraryComponentMerge.ts"
     ],
     "reporters": [
         "clear-text",
