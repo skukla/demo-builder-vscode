@@ -62,3 +62,4 @@ and says so, and the live check still stops it claiming the site is down.
 ## Shipped so far
 - 2026-10-09  fix(eds): storefront teardown unpublishes what Helix says is live (`1fcd35818`)
 - 2026-10-09  docs(backlog): EDS-33 built, logs its commit (`9ded02d82`)
+- 2026-10-09  fix(eds): a reset keeps the site up and unpublishes leftovers after republishing (`e6470fa0f`)

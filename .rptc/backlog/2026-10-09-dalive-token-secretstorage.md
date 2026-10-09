@@ -50,3 +50,4 @@ and stays.
 ## Shipped so far
 
 - 2026-10-09  fix(eds): keep the DA.live token in SecretStorage, not globalState (`2d5f8f496`)
+- 2026-10-09  docs(backlog): EDS-35 built, logs its commit (`6bf22878c`)
