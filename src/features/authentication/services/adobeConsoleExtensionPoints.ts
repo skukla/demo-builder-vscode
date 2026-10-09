@@ -23,16 +23,17 @@ import { getLogger } from '@/core/logging/debugLogger';
 
 /**
  * A workspace's published extension points, as Adobe's registry sends and takes them:
- * `{ endpoints: { '<extension point id>': { '<operation>': ... } } }`. The Console API
- * spec (`@adobe/aio-lib-console/spec/api.json`, the workspace `/endpoints` GET and PUT)
- * and the CLI's `removeExtensionPoints` helper (`@adobe/aio-cli-lib-console`,
- * `pure-helpers.js`) read and write this one shape; the PUT REPLACES the map. The
- * Admin UI SDK registration behind a Commerce grid column is one of these points
- * (`commerce/backend-ui/<n>`), published on the app's workspace by `aio app deploy`.
+ * a BARE map, `{ '<extension point id>': { '<operation>': ... } }`, on the GET and on
+ * the PUT (which replaces it). Measured live on 2026-10-08 against the two Justrite
+ * workspaces: the GET body's top-level keys were `commerce/extensibility/1`,
+ * `commerce/configuration/1` and `commerce/backend-ui/2`. The Console API spec and the
+ * CLI's fixtures show `{ endpoints: {...} }`, and this code read `body.endpoints` for a
+ * few hours, which against the real service finds nothing and reports clean; that
+ * wrapper is the CLI's own (`getExtensionPoints` adds it, `removeSelectedExtensionPoints`
+ * strips it before the PUT). The Admin UI SDK registration behind a Commerce grid
+ * column is one of these points, published on the app's workspace by `aio app deploy`.
  */
-export interface WorkspaceEndpointsBody {
-    endpoints?: Record<string, unknown>;
-}
+export type WorkspaceEndpointsBody = Record<string, unknown>;
 
 /** The two registry methods of the Console SDK, typed to what they are handed. */
 interface EndpointsClient {
@@ -112,7 +113,7 @@ export class AdobeConsoleExtensionPoints {
                 ready.orgId,
                 ready.projectId,
                 workspaceId,
-                { endpoints: kept },
+                kept,
             );
             return { remaining: Object.keys(await this.readEndpoints(ready)) };
         } catch (error) {
@@ -129,7 +130,7 @@ export class AdobeConsoleExtensionPoints {
             ready.projectId,
             ready.workspaceId,
         );
-        return response?.body?.endpoints ?? {};
+        return response?.body ?? {};
     }
 
     /** Resolve the ids and the client a registry op needs; explicit target over cache. */

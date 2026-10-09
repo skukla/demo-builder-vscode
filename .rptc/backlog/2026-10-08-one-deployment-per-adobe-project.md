@@ -46,7 +46,7 @@ step confirmed by reading back, never assumed. An integration that brings no sys
    the app's extension points, published on its WORKSPACE in Adobe's registry by `aio
    app deploy`; `aio app undeploy` unpublishes them through the same two Console SDK
    methods (`getEndPointsInWorkspace` / `updateEndPointsInWorkspace`, body
-   `{ endpoints: { '<point id>': {...} } }`, the PUT replaces the map) and exits 0 either
+   a bare map keyed by point id, see the live read below; the PUT replaces the map) and exits 0 either
    way. The write answers what a RE-READ holds, never what it was handed.
 2. **Every removal verifies the registration is gone** (`appBuilderComponentRunner.ts`
    `checkRegistration`, deps in `workspaceRegistryDeps.ts`). After the undeploy, for an
@@ -91,6 +91,18 @@ was run against Adobe: the live check is the owner's, on the Justrite sandbox.
 The Admin UI SDK registration in `commerce-erp-integration` should carry the ERP's
 display name, so the Orders grid reads "ERP order (Justrite ERP)" instead of the Adobe
 project's title. Today two same-named columns cannot be told apart in Commerce.
+
+## Live read, 2026-10-08 20:50: the registry body is a BARE map
+
+After the owner signed `aio` into Adobe Demo System, `getEndPointsInWorkspace` was called
+for both Justrite workspaces (JustriteERPIntegrat and JustriteERP). Each answered 200 with
+a top-level map keyed `commerce/extensibility/1`, `commerce/configuration/1` and
+`commerce/backend-ui/2`, with no `endpoints` wrapper. The Console API spec and the CLI's
+fixtures show `{ endpoints: {...} }`; that wrapper is the CLI's own (`getExtensionPoints`
+adds it, `removeSelectedExtensionPoints` strips it before the PUT). The first build of this
+fix read `body.endpoints`, which against the real service finds nothing and would have
+reported every removal clean. Corrected the same evening, before any live removal ran.
+Two live registrations confirmed, one per workspace, which is the duplicate the grid shows.
 
 ## Shipped so far
 

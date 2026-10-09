@@ -92,13 +92,13 @@ describe('AdobeConsoleExtensionPoints.removeWorkspaceExtensionPoints', () => {
     it('writes an empty map when the given points were all there was', async () => {
         const get = jest
             .fn()
-            .mockResolvedValueOnce({ body: { endpoints: { [ADMIN_UI_POINT]: {} } } })
-            .mockResolvedValueOnce({ body: { endpoints: {} } });
+            .mockResolvedValueOnce({ body: { [ADMIN_UI_POINT]: {} } })
+            .mockResolvedValueOnce({ body: {} });
         const { ops, update } = registry(get);
 
         const result = await ops.removeWorkspaceExtensionPoints(WS, [ADMIN_UI_POINT], TARGET);
 
-        expect(update).toHaveBeenCalledWith('org-1', 'proj-1', WS, { endpoints: {} });
+        expect(update).toHaveBeenCalledWith('org-1', 'proj-1', WS, {});
         expect(result).toStrictEqual({ remaining: [] });
     });
 
@@ -113,7 +113,7 @@ describe('AdobeConsoleExtensionPoints.removeWorkspaceExtensionPoints', () => {
     });
 
     it('uses the cached org and project when no target is given', async () => {
-        const get = jest.fn().mockResolvedValue({ body: { endpoints: {} } });
+        const get = jest.fn().mockResolvedValue({ body: {} });
         const { ops } = registry(get);
         // The cache answers nothing, so this is the refusal that proves the cache was asked.
         await expect(ops.removeWorkspaceExtensionPoints(WS, [ADMIN_UI_POINT])).resolves.toEqual({
