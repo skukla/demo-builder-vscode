@@ -8,7 +8,8 @@
  * `LoadingDisplay`, row for row), in one fixed height. While the operation runs it
  * ALWAYS offers "Run in background" (R8), which hands it to a VS Code progress
  * notification that keeps narrating it. A success closes it by itself, unless it carries a
- * warning or a next step, which wait to be read. A failure
+ * warning (the SC must act), a note (the SC need only know; shown as a plain success) or a
+ * next step, which wait to be read. A failure
  * stays: the reason, Retry, and the Debug Logs where the full detail went.
  *
  * Not `layout/CenteredFeedbackContainer`: that RESERVES a minimum height and lets
@@ -136,9 +137,9 @@ interface ProgressBodyProps {
     succeeded: boolean;
     failureTitle: string;
     successTitle: string;
-    /** The success view's second line: the run's warning, then what is left to do. */
+    /** The success view's second line: the run's warning or note, then what is left to do. */
     successMessage?: string;
-    /** The run succeeded with a warning: the view is a warning's, not a green tick. */
+    /** The run succeeded with a warning: the view is a warning's, not a green tick. A note keeps the tick. */
     warned: boolean;
     progress?: OperationProgressPayload | null;
     elapsed?: string;
@@ -256,14 +257,16 @@ export function OperationProgressModal({
     // the checkmark is its last beat.
     // A next step waits for the SC: closing by itself would take the offer away unread.
     // So does a warning (AB-26z): a fill whose prices were not published ended on a
-    // green tick, and the reason reached only the Debug Logs.
+    // green tick, and the reason reached only the Debug Logs. So does a note, which is
+    // a sentence to read, not a warning to act on: the tick stays green.
     const offering = succeeded ? next : undefined;
     const warning = succeeded ? progress?.warning : undefined;
+    const note = succeeded ? progress?.note : undefined;
     useEffect(() => {
-        if (!succeeded || offering || warning) return undefined;
+        if (!succeeded || offering || warning || note) return undefined;
         const timer = setTimeout(onClose, TIMEOUTS.UI.RESULT_GLANCE);
         return () => clearTimeout(timer);
-    }, [succeeded, offering, warning, onClose]);
+    }, [succeeded, offering, warning, note, onClose]);
 
     const close = useCallback((): void => {
         if (prompt) {
@@ -306,7 +309,7 @@ export function OperationProgressModal({
                         failureTitle={operation.failureTitle}
                         successTitle={operation.successTitle}
                         successMessage={
-                            [warning, offering?.message].filter(Boolean).join(' ') || undefined
+                            [warning, note, offering?.message].filter(Boolean).join(' ') || undefined
                         }
                         warned={Boolean(warning)}
                         progress={progress}

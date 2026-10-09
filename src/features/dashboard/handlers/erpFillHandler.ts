@@ -10,7 +10,7 @@
  * integration's unset website mappings filled from the ERP's own sales organizations (the
  * answer's `mapping`, AB-26y) and the ERP's prices published into the companies' shared
  * catalogs (AB-26z); a mapping not saved or prices not published are the answer's `warning`,
- * and the fill still stands.
+ * prices still being published its `note`, and the fill still stands.
  *
  * @module features/dashboard/handlers/erpFillHandler
  */
@@ -21,7 +21,11 @@ import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
 import { mergeMappings, type ErpMappingReport } from '@/features/app-builder/services/erpFillMapping';
-import { fillNotes, type ErpFillForProjectResult } from '@/features/project-creation/services/erpFillForProject';
+import {
+    fillNotes,
+    fillWarnings,
+    type ErpFillForProjectResult,
+} from '@/features/project-creation/services/erpFillForProject';
 import { applyErpOwnership } from '@/features/project-creation/services/erpOwnershipReconcile';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerResponse, MessageHandler } from '@/types/handlers';
@@ -29,7 +33,15 @@ import type { HandlerResponse, MessageHandler } from '@/types/handlers';
 type FillOutcome = GuardableResult & {
     /** Prices a fill could not publish: the progress window's last word (AB-26z). */
     warning?: string;
-    loaded?: Array<{ erp: string; name: string; result: ErpFillForProjectResult; note?: string }>;
+    /** Prices still being published: said as a plain success. */
+    note?: string;
+    loaded?: Array<{
+        erp: string;
+        name: string;
+        result: ErpFillForProjectResult;
+        warning?: string;
+        note?: string;
+    }>;
     /** The website mappings the fills filled and kept (AB-26y); absent when none ran the step. */
     mapping?: ErpMappingReport;
 };
@@ -99,25 +111,34 @@ export const handleLoadErpDemoData: MessageHandler<ErpCallPayload & { progress?:
                     const mappings: Array<ErpMappingReport | undefined> = [];
                     for (const fill of applied.fills) {
                         if (fill.status !== 'filled') continue;
-                        loaded.push({ erp: fill.erp, name: fill.name, result: fill.result, ...(fill.note ? { note: fill.note } : {}) });
+                        loaded.push({
+                            erp: fill.erp,
+                            name: fill.name,
+                            result: fill.result,
+                            ...(fill.warning ? { warning: fill.warning } : {}),
+                            ...(fill.note ? { note: fill.note } : {}),
+                        });
                         mappings.push(fill.mapping);
                     }
                     // A mapping not saved, prices not published, after a fill that stood, and what
-                    // the ownership pass says the SC still has to do: said, never a failure.
-                    const warning = [fillNotes(loaded), ...applied.notes].filter(Boolean).join(' ') || undefined;
+                    // the ownership pass says the SC still has to do: said, never a failure. Prices
+                    // still being published: a note, nothing to do.
+                    const warning = [fillWarnings(loaded), ...applied.notes].filter(Boolean).join(' ') || undefined;
+                    const note = fillNotes(loaded);
                     const mapping = mergeMappings(mappings);
                     return {
                         success: true,
                         loaded: payload?.erp ? [...loaded].sort((a) => (a.erp === call.erp?.id ? -1 : 0)) : loaded,
                         ...(mapping ? { mapping } : {}),
                         ...(warning ? { warning } : {}),
+                        ...(note ? { note } : {}),
                     };
                 },
             );
             if (outcome.blocked || !outcome.success)
                 return { success: false, error: outcome.error };
             const loaded = outcome.loaded ?? [];
-            const { warning, mapping } = outcome;
+            const { warning, note, mapping } = outcome;
             return {
                 success: true,
                 data: {
@@ -126,6 +147,7 @@ export const handleLoadErpDemoData: MessageHandler<ErpCallPayload & { progress?:
                     loaded: loadedAnswer(loaded),
                     ...(mapping ? { mapping } : {}),
                     ...(warning ? { warning } : {}),
+                    ...(note ? { note } : {}),
                 },
             };
         },
@@ -134,7 +156,7 @@ export const handleLoadErpDemoData: MessageHandler<ErpCallPayload & { progress?:
 
 /**
  * One ERP's result as before (an agent reads `loaded.partners`); several, each by its ERP.
- * A note is answered once, as the `warning`, not again inside each row.
+ * A warning or note is answered once, at the top, not again inside each row.
  */
 function loadedAnswer(loaded: NonNullable<FillOutcome['loaded']>): unknown {
     if (loaded.length === 1) return loaded[0].result;

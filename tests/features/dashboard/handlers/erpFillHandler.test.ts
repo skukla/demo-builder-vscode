@@ -6,184 +6,33 @@
  * target, the integration's settings call, and the ERP import at the ERP's own URLs.
  */
 
-import type { AppBuilderComponentState, Project } from '@/types/base';
-
-const mockResolveAppManagementAuth = jest.fn();
-jest.mock('@/features/project-creation/services/appBuilderComponentRunnerDeps', () => ({
-    buildDefaultRunnerDeps: jest.fn(),
-    buildRunnerDepsContext: jest.fn(async () => ({})),
-    resolveAppManagementAuth: (...a: unknown[]) => mockResolveAppManagementAuth(...a),
-}));
-
-const mockResolvedSettings = jest.fn();
-const mockCallErpApi = jest.fn();
-jest.mock('@/features/app-builder/services/erpIntegrationClient', () => ({
-    ...jest.requireActual('@/features/app-builder/services/erpIntegrationClient'),
-    callErpApi: (...args: unknown[]) => mockCallErpApi(...args),
-    ErpIntegrationClient: class {
-        resolvedSettings = (codes: string[], erp?: string) => mockResolvedSettings(codes, erp);
-        keepsKeyMap = () => true;
-        readKeyMap = () => mockReadKeyMap();
-        replaceKeyMap = (entries: unknown) => mockReplaceKeyMap(entries);
-        publishesPrices = () => mockPublishesPrices();
-        publishPrices = (erpId?: string) => mockPublishPrices(erpId);
-        keepsErpList = () => mockKeepsErpList();
-        listErps = () => mockListErps();
-        updateErpSettings = (id: string, website: string | undefined, values: unknown) =>
-            mockUpdateErpSettings(id, website, values);
-    },
-}));
-// Unset (a deployment before `erp/erps`), the mapping step is skipped: the suites above run as before.
-const mockKeepsErpList = jest.fn();
-const mockListErps = jest.fn();
-const mockUpdateErpSettings = jest.fn();
-const mockReadKeyMap = jest.fn();
-const mockReplaceKeyMap = jest.fn();
-const mockPublishesPrices = jest.fn();
-const mockPublishPrices = jest.fn();
-
-const mockFillErp = jest.fn();
-jest.mock('@/features/app-builder/services/erpFill', () => ({
-    fillErp: (...args: unknown[]) => mockFillErp(...args),
-}));
-
-// The ownership pass (AB-70) reads the store and each ERP's rule, then each ERP's products:
-// here the rules are read off the project's ERPs (everything each), the ERPs hold nothing, so
-// the pass is the fills, which this suite drives for real.
-jest.mock('@/features/project-creation/services/erpOwnershipSync', () => ({
-    readErpOwnershipOptionsForProject: async (project: { appBuilderComponents?: Record<string, { kind?: string; name?: string }> }) => {
-        const { erpListIdOf } = jest.requireActual('@/features/app-builder/services/erpList');
-        const { getAppBuilderComponentCatalog } = require('@/features/components/services/appBuilderComponentCatalogLoader');
-        const erps = Object.entries(project.appBuilderComponents ?? {})
-            .filter(([, state]) => state.kind === 'system')
-            .map(([id, state]) => ({ erp: erpListIdOf(project, id, getAppBuilderComponentCatalog()), name: state.name, owns: { mode: 'all' } }));
-        return { websites: [], products: [], erps, takenListIds: erps.map((erp) => erp.erp) };
-    },
-    saveErpOwnership: jest.fn(),
-}));
-const mockListErpProducts = jest.fn();
-jest.mock('@/features/app-builder/services/erpProducts', () => ({
-    DISCONTINUED: 'discontinued',
-    listErpProducts: (...a: unknown[]) => mockListErpProducts(...a),
-    discontinueErpProduct: jest.fn(),
-}));
-
-const mockResolveRestTarget = jest.fn();
-const mockRequestRest = jest.fn();
-jest.mock('@/features/ai/server/commerceRestClient', () => ({
-    resolveRestTargetFor: (...args: unknown[]) => mockResolveRestTarget(...args),
-    requestRest: (...args: unknown[]) => mockRequestRest(...args),
-}));
-
-jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
-    getAppBuilderComponentCatalog: jest.fn(() => [
-        {
-            id: 'demo-erp',
-            kind: 'system',
-            boundTo: 'erp-integration',
-            listedAs: { envVar: 'ERP_ID', adapter: 'demo-erp' },
-        },
-    ]),
-    getAppBuilderComponentEntry: jest.fn(),
-    buildCustomIntegrationEntry: jest.fn(),
-    entryFitsProjectAxes: jest.fn().mockReturnValue(true),
-}));
-
-jest.mock('@/core/di/serviceLocator', () => ({
-    ServiceLocator: {
-        getAuthenticationService: jest.fn(() => ({
-            getTokenManager: () => ({ inspectToken: jest.fn(async () => ({ valid: false })) }),
-            getCachedOrganization: jest.fn(),
-            testDeveloperPermissions: jest.fn().mockResolvedValue({ hasPermissions: true }),
-        })),
-        getCommandExecutor: jest.fn(() => ({ execute: jest.fn() })),
-    },
-}));
-
-const mockEnsureAdobeIOAuth = jest.fn();
-jest.mock('@/core/auth/adobeAuthGuard', () => ({
-    ensureAdobeIOAuth: (...a: unknown[]) => mockEnsureAdobeIOAuth(...a),
-}));
-jest.mock('@/features/authentication/services/detectProjectOrgMismatch', () => ({
-    detectProjectOrgMismatch: jest.fn(async () => ({ reachable: true })),
-}));
-jest.mock('@/features/dashboard/handlers/dashboardHandlers', () => ({
-    handleRequestStatus: jest.fn().mockResolvedValue({ success: true }),
-}));
-jest.mock('@/features/dashboard/commands/showDashboard', () => ({
-    ProjectDashboardWebviewCommand: {
-        sendAppBuilderComponentStatusUpdate: jest.fn(),
-        sendAppBuilderComponentsSnapshot: jest.fn(),
-        refreshStatus: jest.fn(),
-    },
-}));
-
-import { setupMocks } from './dashboardHandlers.testUtils';
-import type { ErpFillDeps } from '@/features/app-builder/services/erpFill';
-import { ErpIntegrationApiError } from '@/features/app-builder/services/erpIntegrationClient';
-import { handleLoadErpDemoData } from '@/features/dashboard/handlers/erpFillHandler';
-import { ErrorCode } from '@/types/errorCodes';
-
-const ERP_URLS = {
-    'runtime/demo-erp/admin': 'https://ns.adobeioruntime.net/api/v1/web/demo-erp/admin',
-    'runtime/demo-erp/orders': 'https://ns.adobeioruntime.net/api/v1/web/demo-erp/orders',
-};
-const AUTH = { accessToken: 'fake-test-pw-not-a-secret', imsOrgId: 'ABC@AdobeOrg' };
-const TARGET = { base: 'https://tenant.example', token: 't', clientId: 'c', imsOrgCode: 'o' };
-
-function pairProject(erpStatus: AppBuilderComponentState['status'] = 'deployed'): Partial<Project> {
-    return {
-        name: 'bodea',
-        appBuilderComponents: {
-            'erp-integration': {
-                kind: 'integration',
-                status: 'deployed',
-                name: 'Northwind ERP Integration',
-                source: { owner: 'skukla', repo: 'commerce-erp-integration' },
-                deployedUrls: {
-                    'runtime/erp/status': 'https://ns.adobeioruntime.net/api/v1/web/erp/status',
-                },
-            },
-            'demo-erp': {
-                kind: 'system',
-                status: erpStatus,
-                name: 'Northwind ERP',
-                source: { owner: 'skukla', repo: 'demo-erp' },
-                deployedUrls: ERP_URLS,
-            },
-        },
-    };
-}
-
-/** The dashboard context over this project, with the developer role the guards check. */
-function setup(project: Partial<Project> = pairProject()) {
-    const mocks = setupMocks(project);
-    const { ServiceLocator } = require('@/core/di/serviceLocator');
-    ServiceLocator.getAuthenticationService().testDeveloperPermissions = jest
-        .fn()
-        .mockResolvedValue({ hasPermissions: true });
-    return mocks;
-}
-
-/** The deps the handler handed the fill, from its first call. */
-const handedDeps = (): ErpFillDeps => mockFillErp.mock.calls[0][0] as ErpFillDeps;
+import {
+    AUTH,
+    ERP_URLS,
+    ErrorCode,
+    TARGET,
+    handedDeps,
+    handleLoadErpDemoData,
+    mockCallErpApi,
+    mockFillErp,
+    mockKeepsErpList,
+    mockListErps,
+    mockPublishPrices,
+    mockReadKeyMap,
+    mockReplaceKeyMap,
+    mockRequestRest,
+    mockResolveRestTarget,
+    mockResolvedSettings,
+    mockUpdateErpSettings,
+    pairProject,
+    resetFillMocks,
+    setup,
+    type ErpFillDeps,
+} from './erpFillHandler.testUtils';
+import type { Project } from '@/types/base';
 
 beforeEach(() => {
-    jest.clearAllMocks();
-    mockResolveAppManagementAuth.mockResolvedValue(AUTH);
-    mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
-    mockResolveRestTarget.mockResolvedValue(TARGET);
-    mockListErpProducts.mockResolvedValue([]);
-    mockFillErp.mockResolvedValue({ partners: 4, products: 182, skipped: 0 });
-    mockPublishesPrices.mockReturnValue(true);
-    mockPublishPrices.mockResolvedValue({
-        erps: ['northwind'],
-        written: 6,
-        removed: 1,
-        unchanged: 2,
-        skipped: [],
-        failed: [],
-    });
+    resetFillMocks();
 });
 
 describe('handleLoadErpDemoData', () => {
@@ -299,132 +148,6 @@ describe('handleLoadErpDemoData', () => {
 });
 
 /*
- * Prices (AB-26z): after a fill, the integration publishes that ERP's customer prices into the
- * companies' shared catalogs. A publish that fails never fails the fill; a deployment made
- * before `erp/prices` existed is silent.
- */
-describe('handleLoadErpDemoData — prices', () => {
-    it("publishes the filled ERP's prices by its list id and answers the counts with the fill", async () => {
-        const { mockContext } = setup();
-
-        const result = await handleLoadErpDemoData(mockContext, { id: 'erp-integration' });
-
-        expect(mockPublishPrices).toHaveBeenCalledWith('northwind');
-        expect(result).toStrictEqual({
-            success: true,
-            data: expect.objectContaining({
-                loaded: {
-                    partners: 4,
-                    products: 182,
-                    skipped: 0,
-                    prices: { written: 6, removed: 1, unchanged: 2, skipped: 0 },
-                },
-            }),
-        });
-        expect(result.data).not.toHaveProperty('warning');
-    });
-
-    it('does not publish when the fill stops', async () => {
-        mockFillErp.mockRejectedValue(new Error('Commerce answered 401 for products'));
-        const { mockContext } = setup();
-
-        await handleLoadErpDemoData(mockContext, { id: 'erp-integration' });
-
-        expect(mockPublishPrices).not.toHaveBeenCalled();
-    });
-
-    it('still answers the fill as done when the publish fails, and says so in plain words', async () => {
-        mockPublishPrices.mockRejectedValue(
-            new Error('ERP prices answered 500: Commerce did not answer')
-        );
-        const { mockContext } = setup();
-
-        const result = await handleLoadErpDemoData(mockContext, { id: 'erp-integration' });
-
-        expect(result).toMatchObject({
-            success: true,
-            data: {
-                loaded: { partners: 4, products: 182, skipped: 0 },
-                warning:
-                    'Demo data loaded; prices were not published: ERP prices answered 500: Commerce did not answer. Load demo data again to retry.',
-            },
-        });
-        expect(result.data).not.toHaveProperty('loaded.prices');
-    });
-
-    // The SC pressing the button reads the progress window, not the answer (AB-26z).
-    it('ends the progress window on the same warning when the fill was started from a screen', async () => {
-        mockPublishPrices.mockRejectedValue(
-            new Error('ERP prices answered 500: Commerce did not answer')
-        );
-        const { mockContext } = setup();
-
-        await handleLoadErpDemoData(mockContext, { id: 'erp-integration', progress: 'modal' });
-
-        expect(mockContext.sendMessage).toHaveBeenLastCalledWith('operationProgress', {
-            id: 'erp-integration',
-            state: 'succeeded',
-            warning:
-                'Demo data loaded; prices were not published: ERP prices answered 500: Commerce did not answer. Load demo data again to retry.',
-        });
-    });
-
-    it('a publish that outran the call is "still running", not "not published" (no retry asked)', async () => {
-        // Runtime's answer when a blocking web call passes 60 s; the action runs on and the
-        // writes land (measured 2026-10-01: 72 prices, ledger full minutes later).
-        mockPublishPrices.mockRejectedValue(
-            new ErpIntegrationApiError('prices', 504, 'Response not yet ready.')
-        );
-        const { mockContext } = setup();
-
-        const result = await handleLoadErpDemoData(mockContext, { id: 'erp-integration' });
-
-        const warning = (result.data as { warning: string }).warning;
-        expect(warning).toContain('still running in Adobe Runtime');
-        expect(warning).not.toContain('not published');
-        expect(warning).not.toContain('Load demo data again');
-    });
-
-    it('says which companies it could not price when some writes failed', async () => {
-        mockPublishPrices.mockResolvedValue({
-            erps: ['northwind'],
-            written: 2,
-            removed: 0,
-            unchanged: 0,
-            skipped: [],
-            failed: [
-                { erpId: 'northwind', partnerId: 'C1', error: 'Commerce answered 400' },
-                { erpId: 'northwind', partnerId: 'C2', error: 'Commerce answered 400' },
-            ],
-        });
-        const { mockContext } = setup();
-
-        const result = await handleLoadErpDemoData(mockContext, { id: 'erp-integration' });
-
-        expect(result).toMatchObject({
-            success: true,
-            data: {
-                warning:
-                    'Demo data loaded; prices for 2 companies were not published: Commerce answered 400. Load demo data again to retry.',
-            },
-        });
-    });
-
-    it('is silent for a deployment without the prices action', async () => {
-        mockPublishesPrices.mockReturnValue(false);
-        const { mockContext } = setup();
-
-        const result = await handleLoadErpDemoData(mockContext, { id: 'erp-integration' });
-
-        expect(mockPublishPrices).not.toHaveBeenCalled();
-        expect(result).toStrictEqual({
-            success: true,
-            data: expect.objectContaining({ loaded: { partners: 4, products: 182, skipped: 0 } }),
-        });
-    });
-});
-
-/*
  * Several ERPs (AB-16): an ERP added from the integration's card (`demo-erp-2`, linked to it).
  * Load demo data on the integration fills every ERP; on one ERP's card, only that one. Each
  * fill reads its own ERP's settings and replaces only its own rows in the key map.
@@ -465,7 +188,7 @@ describe('handleLoadErpDemoData — several ERPs', () => {
         await (mockFillErp.mock.calls[1][0] as ErpFillDeps).settings(['bodea']);
         expect(mockResolvedSettings).toHaveBeenCalledWith(['bodea'], 'brand-b');
         // Each ERP publishes its own prices, by its own list id.
-        expect(mockPublishPrices.mock.calls).toEqual([['northwind'], ['brand-b']]);
+        expect(mockPublishPrices.mock.calls.map(([erpId]) => erpId)).toEqual(['northwind', 'brand-b']);
         expect(result).toMatchObject({
             success: true,
             data: {

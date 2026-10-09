@@ -33,8 +33,10 @@ import type { OperationPosition, OperationProgressPayload } from '@/types/webvie
 export interface OperationOutcome {
     success: boolean;
     error?: string;
-    /** What a run that succeeded could not do; the modal's success view says it. */
+    /** What a run that succeeded could not do, for the SC to act on; the modal's success view says it. */
     warning?: string;
+    /** What a run that succeeded leaves the SC to know, nothing to act on; said as a plain success. */
+    note?: string;
 }
 
 export interface OperationProgressOptions {
@@ -72,12 +74,17 @@ export async function withOperationProgress<T extends OperationOutcome>(
     return runInModal(options.id, run);
 }
 
-/** The modal's last word: the reason on failure, a success's warning when it has one. */
+/** The modal's last word: the reason on failure, a success's warning and note when it has them. */
 function endOf(id: string, result: OperationOutcome): OperationProgressPayload {
     if (!result.success) {
         return { id, state: 'failed', error: result.error ?? 'The operation did not finish.' };
     }
-    return result.warning ? { id, state: 'succeeded', warning: result.warning } : { id, state: 'succeeded' };
+    return {
+        id,
+        state: 'succeeded',
+        ...(result.warning ? { warning: result.warning } : {}),
+        ...(result.note ? { note: result.note } : {}),
+    };
 }
 
 /** R1 and R7: every stage — and every step of anything nested — to the modal. */

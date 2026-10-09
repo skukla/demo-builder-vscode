@@ -221,33 +221,34 @@ describe('handleResetErpRecords', () => {
         });
     });
 
-    it('answers a reset whose prices were not published as done, with the note as its warning (AB-26z)', async () => {
+    it("answers a reset whose prices were not published as done, with the fill's warning (AB-26z)", async () => {
         const { mockContext } = setupMocks(pairProject());
         allowDeveloperRole();
-        const note =
+        const warning =
             'Demo data loaded; prices were not published: ERP prices answered 500: boom. Load demo data again to retry.';
         mockFillErpForProject.mockResolvedValue({
             status: 'filled',
             erpId: 'demo-erp',
             result: { partners: 3, products: 40, skipped: 0 },
-            note,
+            warning,
         });
 
         const result = await handleResetErpRecords(mockContext, { id: 'erp-integration' });
 
-        expect(result).toMatchObject({ success: true, data: { warning: note } });
+        expect(result).toMatchObject({ success: true, data: { warning } });
+        expect(result.data).not.toHaveProperty('note');
     });
 
     it('ends the progress window on that warning when the reset was started from a screen', async () => {
         const { mockContext } = setupMocks(pairProject());
         allowDeveloperRole();
-        const note =
+        const warning =
             'Demo data loaded; prices were not published: ERP prices answered 500: boom. Load demo data again to retry.';
         mockFillErpForProject.mockResolvedValue({
             status: 'filled',
             erpId: 'demo-erp',
             result: { partners: 3, products: 40, skipped: 0 },
-            note,
+            warning,
         });
 
         await handleResetErpRecords(mockContext, { id: 'erp-integration', progress: 'modal' });
@@ -255,7 +256,32 @@ describe('handleResetErpRecords', () => {
         expect(mockContext.sendMessage).toHaveBeenLastCalledWith('operationProgress', {
             id: 'erp-integration',
             state: 'succeeded',
-            warning: note,
+            warning,
+        });
+    });
+
+    // Prices still being published after the fill is nothing the SC must act on: the reset
+    // ends as a plain success that says so, in the modal and in the answer (owner, 2026-10-09).
+    it("ends on the fill's note as a plain success, not a warning", async () => {
+        const { mockContext } = setupMocks(pairProject());
+        allowDeveloperRole();
+        const note =
+            'Demo data loaded. Prices are still being published and will finish by themselves in a few minutes.';
+        mockFillErpForProject.mockResolvedValue({
+            status: 'filled',
+            erpId: 'demo-erp',
+            result: { partners: 3, products: 40, skipped: 0 },
+            note,
+        });
+
+        const result = await handleResetErpRecords(mockContext, { id: 'erp-integration', progress: 'modal' });
+
+        expect(result).toMatchObject({ success: true, data: { note } });
+        expect(result.data).not.toHaveProperty('warning');
+        expect(mockContext.sendMessage).toHaveBeenLastCalledWith('operationProgress', {
+            id: 'erp-integration',
+            state: 'succeeded',
+            note,
         });
     });
 

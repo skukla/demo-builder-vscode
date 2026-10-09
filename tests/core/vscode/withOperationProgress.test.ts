@@ -69,6 +69,21 @@ describe('started from a button on a screen (R1)', () => {
         });
     });
 
+    // A note the SC need not act on (prices still being published) ends the modal as a
+    // plain success that says it; it is never dressed as a warning.
+    it('ends the modal with the note of a run that succeeded with one', async () => {
+        await withOperationProgress({ id: ID, title: 'Filling Northwind', inModal: true }, async () => ({
+            success: true,
+            note: 'Demo data loaded. Prices are still being published and will finish by themselves in a few minutes.',
+        }));
+
+        expect(modalPayloads().at(-1)).toEqual({
+            id: ID,
+            state: 'succeeded',
+            note: 'Demo data loaded. Prices are still being published and will finish by themselves in a few minutes.',
+        });
+    });
+
     it('ends the modal with the reason when the operation fails', async () => {
         await withOperationProgress({ id: ID, title: 'Deploying ERP', inModal: true }, async () => ({
             success: false,

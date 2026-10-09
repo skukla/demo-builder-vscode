@@ -14,6 +14,7 @@
  */
 
 import { mapAfterFill } from './erpMappingAfterFill';
+import { publishPricesAfterFill, type ErpPricesPublished } from './erpPricesAfterFill';
 import { otherErpNames, readErpRules } from './erpRules';
 import {
     requestRest,
@@ -28,14 +29,13 @@ import {
     type ErpFillDeps,
     type ErpFillResult,
 } from '@/features/app-builder/services/erpFill';
-import { clause, type ErpMappingReport } from '@/features/app-builder/services/erpFillMapping';
+import type { ErpMappingReport } from '@/features/app-builder/services/erpFillMapping';
 import type { CommercePost } from '@/features/app-builder/services/erpFillPricing';
 import {
     CommerceReadError,
     type CommerceGet,
 } from '@/features/app-builder/services/erpFillReaders';
 import {
-    ErpIntegrationApiError,
     ErpIntegrationClient,
     callErpApi,
 } from '@/features/app-builder/services/erpIntegrationClient';
@@ -53,26 +53,21 @@ export interface ErpFillForProjectDeps {
     fetchImpl?: typeof fetch;
 }
 
-/** The prices the integration published after a fill: tier prices written, removed, kept, and companies skipped. */
-export interface ErpPricesPublished {
-    written: number;
-    removed: number;
-    unchanged: number;
-    skipped: number;
-}
-
 /** What one fill put in the ERP, and the prices published after it (absent when none were). */
 export type ErpFillForProjectResult = ErpFillResult & { prices?: ErpPricesPublished };
 
 export type ErpFillOutcome =
     /**
-     * `erpId`: the filled ERP's component id. `note`: what did not go right after the fill (mapping
-     * not saved, prices not published); it stands. `mapping`: absent when the step was skipped.
+     * `erpId`: the filled ERP's component id. `warning`: what did not go right after the fill
+     * and the SC must act on (mapping not saved, prices not published); the fill stands.
+     * `note`: what the SC need only know (prices still being published). `mapping`: absent
+     * when the step was skipped.
      */
     | {
           status: 'filled';
           result: ErpFillForProjectResult;
           erpId: string;
+          warning?: string;
           note?: string;
           mapping?: ErpMappingReport;
       }
@@ -171,78 +166,6 @@ function fillTarget(
     return { componentId, listId: listIdOf(project, entry) };
 }
 
-/** The note for prices that did not get published after a fill that did. */
-function pricesNote(reason: string): string {
-    return `Demo data loaded; ${reason}. Load demo data again to retry.`;
-}
-
-/**
- * Runtime's answer when a blocking web call passes the 60 s it may wait: the action keeps
- * running (to its own limit, 300 s here) and the body carries the activation id as `code`.
- * Measured 2026-10-01: a publish of 72 contract prices answered this twice and landed both
- * times — the integration's ledger held every write minutes later. Reading it as a failed
- * publish sent the SC to "load again", which runs the whole publish a second time.
- */
-const STILL_RUNNING = /not yet ready/iu;
-
-const STILL_RUNNING_NOTE =
-    'Demo data loaded; the price publish is still running in Adobe Runtime — it passed the ' +
-    '60 seconds a call may wait and finishes on its own within five minutes. Check the ERP ' +
-    "status's ledger before loading again.";
-
-/** The note for a publish that outran the call, which is not a publish that failed. */
-function noteFor(error: unknown): string {
-    const message = error instanceof Error ? error.message : String(error);
-    if (error instanceof ErpIntegrationApiError && STILL_RUNNING.test(message)) {
-        return STILL_RUNNING_NOTE;
-    }
-    return pricesNote(`prices were not published: ${clause(message)}`);
-}
-
-/**
- * Publish one ERP's prices after its fill. A deployment without `erp/prices` is silent; a
- * publish that fails, whole or for some companies, is a note, never a failed fill.
- */
-async function publishPricesAfterFill(
-    client: ErpIntegrationClient,
-    listId: string,
-    onProgress?: (step: string) => void,
-): Promise<{ prices?: ErpPricesPublished; note?: string }> {
-    if (!client.publishesPrices()) return {};
-    onProgress?.('Publishing prices');
-    const published = await publishedOrNote(client, listId);
-    // The note is also a step, so the progress (and the Debug Logs, which record each step) say it.
-    if (published.note) onProgress?.(published.note);
-    return published;
-}
-
-/** The publish's counts, and a note when it failed whole or for some companies. */
-async function publishedOrNote(
-    client: ErpIntegrationClient,
-    listId: string,
-): Promise<{ prices?: ErpPricesPublished; note?: string }> {
-    try {
-        const report = await client.publishPrices(listId);
-        const prices = {
-            written: report.written,
-            removed: report.removed,
-            unchanged: report.unchanged,
-            skipped: report.skipped.length,
-        };
-        if (report.failed.length === 0) return { prices };
-        const companies =
-            report.failed.length === 1 ? '1 company' : `${report.failed.length} companies`;
-        return {
-            prices,
-            note: pricesNote(
-                `prices for ${companies} were not published: ${clause(report.failed[0].error)}`,
-            ),
-        };
-    } catch (error) {
-        return { note: noteFor(error) };
-    }
-}
-
 /**
  * Fill one ERP an integration serves in this project. Never throws: a missing ERP, sign-in or
  * credential, and a fill that stops, are a `failed` outcome with the reason.
@@ -251,7 +174,8 @@ async function publishedOrNote(
  * so this ERP's pairs are merged into the map the integration holds (`mergeKeyMap`).
  *
  * Then the unset website mappings are filled (`mapAfterFill`, AB-26y) and the ERP's prices
- * published (`publishPricesAfterFill`); either failing is the `note`, and the fill stands.
+ * published (`publishPricesAfterFill`); either failing is the `warning`, a publish still
+ * running the `note`, and the fill stands.
  *
  * @param project - the project the integration is in
  * @param integrationId - the integration whose ERP is filled
@@ -315,13 +239,14 @@ export async function fillErpForProject(
         onProgress: deps.onProgress,
     });
     const priced = await publishPricesAfterFill(integrationClient, target.listId, deps.onProgress);
-    const note = [mapped.note, priced.note].filter(Boolean).join(' ');
+    const warning = [mapped.note, priced.warning].filter(Boolean).join(' ');
     return {
         status: 'filled',
         result: priced.prices ? { ...result, prices: priced.prices } : result,
         erpId: target.componentId,
         ...(mapped.mapping ? { mapping: mapped.mapping } : {}),
-        ...(note ? { note } : {}),
+        ...(warning ? { warning } : {}),
+        ...(priced.note ? { note: priced.note } : {}),
     };
 }
 
@@ -359,8 +284,8 @@ export async function fillEveryErp(
 
 /**
  * Several fills as one outcome: filled when every ERP was, else each failure named by its
- * ERP. No ERP at all is a failure, as a single fill of none is. Prices not published are not
- * carried here: the fill's own progress step has said so (`publishPricesAfterFill`).
+ * ERP. No ERP at all is a failure, as a single fill of none is. A fill's warning or note is not
+ * carried here: the fill's own progress step has said it (`publishPricesAfterFill`).
  *
  * @param outcomes - each ERP's fill
  * @returns one outcome
@@ -378,19 +303,42 @@ export function summarizeFills(
         : { status: 'failed', detail: failed.join('; ') };
 }
 
+/** One filled ERP's name with what its fill said, for `fillWarnings` and `fillNotes`. */
+export interface FillSaid {
+    name: string;
+    warning?: string;
+    note?: string;
+}
+
 /**
- * The fills' notes as one text: one ERP's as it is, several each after its ERP's name, since
- * "prices were not published" means nothing without saying for which.
+ * The fills' lines of one kind as one text: one ERP's as it is, several each after its ERP's
+ * name, since "prices were not published" means nothing without saying for which.
+ */
+function fillLines(fills: FillSaid[], kind: 'warning' | 'note'): string | undefined {
+    const said = fills.flatMap((fill) => {
+        const line = fill[kind];
+        if (!line) return [];
+        return [fills.length > 1 ? `${fill.name}: ${line}` : line];
+    });
+    return said.length > 0 ? said.join(' ') : undefined;
+}
+
+/**
+ * The fills' warnings as one text: what the SC must act on (prices not published).
  *
- * @param fills - each filled ERP's name and note
+ * @param fills - each filled ERP's name and what its fill said
+ * @returns the warnings, or undefined when there are none
+ */
+export function fillWarnings(fills: FillSaid[]): string | undefined {
+    return fillLines(fills, 'warning');
+}
+
+/**
+ * The fills' notes as one text: what the SC need only know (prices still being published).
+ *
+ * @param fills - each filled ERP's name and what its fill said
  * @returns the notes, or undefined when there are none
  */
-export function fillNotes(fills: Array<{ name: string; note?: string }>): string | undefined {
-    const noted = fills.filter((fill): fill is { name: string; note: string } =>
-        Boolean(fill.note),
-    );
-    if (noted.length === 0) return undefined;
-    return noted
-        .map((fill) => (fills.length > 1 ? `${fill.name}: ${fill.note}` : fill.note))
-        .join(' ');
+export function fillNotes(fills: FillSaid[]): string | undefined {
+    return fillLines(fills, 'note');
 }

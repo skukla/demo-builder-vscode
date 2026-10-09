@@ -391,7 +391,9 @@ export interface OperationPosition {
  * the SC opened by starting it (PL-59). `stage` is what is happening, `step` the detail
  * of the moment, `expectation` the stage's fixed "how long this usually takes" line.
  * A terminal `state` carries the reason on failure, and on success a `warning` when the
- * run stood but something in it did not (a fill whose prices were not published, AB-26z).
+ * run stood but something in it did not (a fill whose prices were not published, AB-26z),
+ * or a `note` when there is something to know and nothing to do (prices still being
+ * published).
  */
 export interface OperationProgressPayload {
     id: string;
@@ -404,6 +406,8 @@ export interface OperationProgressPayload {
     error?: string;
     /** What a run that succeeded could not do, for the SC to read before the modal closes. */
     warning?: string;
+    /** What a run that succeeded leaves the SC to know; shown as a plain success, not a warning. */
+    note?: string;
     /** Set while the work is paused on a question only the SC can answer. */
     prompt?: OperationPrompt;
 }

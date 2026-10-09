@@ -436,13 +436,31 @@ describe('handleAddErp', () => {
     });
 
     it("a fill whose prices were not published still adds the ERP, and says so (AB-26z)", async () => {
-        const note = 'Demo data loaded; prices were not published: ERP prices answered 500: boom. Load demo data again to retry.';
-        mockApply.mockResolvedValue(applied({ note }));
+        const warning = 'Demo data loaded; prices were not published: ERP prices answered 500: boom. Load demo data again to retry.';
+        mockApply.mockResolvedValue(applied({ warning }));
         const { mockContext } = setup();
 
         const result = await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP', owns: OWN_ATTRIBUTE });
 
-        expect(result).toMatchObject({ success: true, data: { added: { id: 'demo-erp-2' }, warning: note } });
+        expect(result).toMatchObject({ success: true, data: { added: { id: 'demo-erp-2' }, warning } });
+        expect(result.data).not.toHaveProperty('note');
+    });
+
+    // Prices still being published after the fill: said as a plain note, never a warning.
+    it("a fill whose prices are still being published adds the ERP as a plain success, with the note", async () => {
+        const note = 'Demo data loaded. Prices are still being published and will finish by themselves in a few minutes.';
+        mockApply.mockResolvedValue(applied({ note }));
+        const { mockContext } = setup();
+
+        const result = await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP', owns: OWN_ATTRIBUTE, progress: 'modal' });
+
+        expect(result).toMatchObject({ success: true, data: { added: { id: 'demo-erp-2' }, note } });
+        expect(result.data).not.toHaveProperty('warning');
+        expect(mockContext.sendMessage).toHaveBeenCalledWith('operationProgress', {
+            id: 'erp-integration',
+            state: 'succeeded',
+            note,
+        });
     });
 
     it("answers the website mappings the new ERP's fill filled and kept (AB-26y)", async () => {
@@ -455,9 +473,9 @@ describe('handleAddErp', () => {
         expect(result).toMatchObject({ success: true, data: { added: { id: 'demo-erp-2' }, mapping } });
     });
 
-    it('ends the progress window on that note when the add was started from a screen', async () => {
-        const note = 'Demo data loaded; prices were not published: ERP prices answered 500: boom. Load demo data again to retry.';
-        mockApply.mockResolvedValue(applied({ note }));
+    it('ends the progress window on that warning when the add was started from a screen', async () => {
+        const warning = 'Demo data loaded; prices were not published: ERP prices answered 500: boom. Load demo data again to retry.';
+        mockApply.mockResolvedValue(applied({ warning }));
         const { mockContext } = setup();
 
         await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B ERP', owns: OWN_ATTRIBUTE, progress: 'modal' });
@@ -465,7 +483,7 @@ describe('handleAddErp', () => {
         expect(mockContext.sendMessage).toHaveBeenCalledWith('operationProgress', {
             id: 'erp-integration',
             state: 'succeeded',
-            warning: note,
+            warning,
         });
     });
 

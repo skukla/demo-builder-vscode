@@ -38,7 +38,8 @@ answered 504: Response not yet ready." Both ERPs kept their orders; nothing was 
 - A reset no longer makes the scheduled jobs due: clearing a job's record keeps the moment it
   last ran for (7ff2121).
 - Demo Builder sends a `run` with every detach and, on a 504 from an integration that records
-  runs, follows the run to its end, then goes on with the wipe and fill (`erpDetachRun.ts`).
+  runs, follows the run to its end, then goes on with the wipe and fill (`erpActionRun.ts`,
+  named `erpDetachRun.ts` until the price publish took the same follower on 2026-10-09).
 
 Proved live on Justrite: the reset went through in about two minutes (109 prices undone, 9
 orders closed, both ERPs wiped and filled). Not yet seen live: the follow path itself, because

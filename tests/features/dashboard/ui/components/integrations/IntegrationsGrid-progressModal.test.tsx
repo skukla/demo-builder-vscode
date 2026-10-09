@@ -154,8 +154,41 @@ describe('the progress modal', () => {
         push({ id: 'custom-app', state: 'succeeded', warning: 'Prices were not published.' });
 
         const result = within(modal).getByTestId('status-display');
+        expect(result).toHaveAttribute('data-variant', 'warning');
         expect(within(result).getByText('custom-app deployed')).toBeInTheDocument();
         expect(within(result).getByText('Prices were not published.')).toBeInTheDocument();
+
+        await act(async () => {
+            jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 2);
+        });
+        expect(screen.getByRole('dialog', { name: 'Deploying custom-app' })).toBeInTheDocument();
+        await user.click(within(modal).getByRole('button', { name: 'Close' }));
+        expect(
+            screen.queryByRole('dialog', { name: 'Deploying custom-app' }),
+        ).not.toBeInTheDocument();
+    });
+
+    // A note is something the SC need only know, not act on (prices still being published
+    // after a fill): the success view says it as a success, and waits to be read.
+    it("shows a success's note under the result as a plain success, and stays until closed", async () => {
+        const user = setupUser();
+        renderGrid({ appBuilderComponents: NOT_DEPLOYED });
+        const modal = await startDeploy(user);
+
+        push({
+            id: 'custom-app',
+            state: 'succeeded',
+            note: 'Demo data loaded. Prices are still being published and will finish by themselves in a few minutes.',
+        });
+
+        const result = within(modal).getByTestId('status-display');
+        expect(result).toHaveAttribute('data-variant', 'success');
+        expect(within(result).getByText('custom-app deployed')).toBeInTheDocument();
+        expect(
+            within(result).getByText(
+                'Demo data loaded. Prices are still being published and will finish by themselves in a few minutes.',
+            ),
+        ).toBeInTheDocument();
 
         await act(async () => {
             jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 2);

@@ -184,8 +184,8 @@ jest.mock('@/core/ui/components/ui/Modal', () => ({
 // The progress modal's failure view (PL-59): the shared status display has its own
 // suite, so a stand-in shows only what the modal hands it.
 jest.mock('@/core/ui/components/feedback/StatusDisplay', () => ({
-    StatusDisplay: ({ title, message }: any) => (
-        <div data-testid="status-display">
+    StatusDisplay: ({ title, message, variant }: any) => (
+        <div data-testid="status-display" data-variant={variant}>
             <strong>{title}</strong>
             <p>{message}</p>
         </div>

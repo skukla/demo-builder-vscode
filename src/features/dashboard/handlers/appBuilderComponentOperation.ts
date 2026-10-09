@@ -107,6 +107,8 @@ export type GuardableResult = {
     warnings?: string[];
     /** The one line the modal's success view shows: `warnings` joined, unless the run set its own. */
     warning?: string;
+    /** What the SC need only know, nothing to act on (prices still being published); a plain success. */
+    note?: string;
     /** Set by `removeAppBuilderComponent`: the Adobe workspaces it deleted. */
     workspacesDeleted?: string[];
 };
@@ -146,14 +148,14 @@ export function kindNoun(kind: AppBuilderComponentKind | undefined): string {
 }
 
 /**
- * A run's notes as the one `warning` the modal's success view reads (`withOperationProgress`).
- * Without it the modal closed as a plain success and the notes reached the SC only as a
- * pop-up afterwards (owner, 2026-10-09).
+ * A run's `warnings` as the one `warning` the modal's success view reads (`withOperationProgress`).
+ * Without it the modal closed as a plain success and they reached the SC only as a pop-up
+ * afterwards (owner, 2026-10-09). A `note` is not a warning and passes through as it is.
  */
-function withNotesAsWarning<T extends GuardableResult>(result: T): T {
-    const notes = (result.warnings ?? []).filter(Boolean);
-    if (!result.success || result.warning || notes.length === 0) return result;
-    return { ...result, warning: notes.join(' ') };
+function withWarningsJoined<T extends GuardableResult>(result: T): T {
+    const warnings = (result.warnings ?? []).filter(Boolean);
+    if (!result.success || result.warning || warnings.length === 0) return result;
+    return { ...result, warning: warnings.join(' ') };
 }
 
 /**
@@ -244,7 +246,7 @@ export async function withComponentProgress<T extends GuardableResult>(
             },
         },
         async (report) =>
-            withNotesAsWarning(
+            withWarningsJoined(
                 await run((stage, step, position) => {
                     steps.step(stageLine(step || stage, position));
                     report(stage, step, position);

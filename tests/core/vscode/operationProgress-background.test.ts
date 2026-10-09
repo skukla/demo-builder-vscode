@@ -13,12 +13,14 @@ const mockWithProgress = jest.fn(
     },
 );
 const mockShowWarning = jest.fn();
+const mockShowInformation = jest.fn();
 const mockStatusBar = jest.fn();
 const mockExecuteCommand = jest.fn();
 jest.mock('vscode', () => ({
     window: {
         withProgress: (...a: [unknown, never]) => mockWithProgress(...a),
         showWarningMessage: (...a: unknown[]) => mockShowWarning(...a),
+        showInformationMessage: (...a: unknown[]) => mockShowInformation(...a),
         setStatusBarMessage: (...a: unknown[]) => mockStatusBar(...a),
     },
     commands: { executeCommand: (...a: unknown[]) => mockExecuteCommand(...a) },
@@ -103,6 +105,23 @@ describe('Run in background', () => {
 
         await expect(mockProgressEnded).resolves.toBeUndefined();
         expect(mockShowWarning).toHaveBeenCalledWith(`${TITLE} — done. Prices were not published.`);
+        expect(mockStatusBar).not.toHaveBeenCalled();
+    });
+
+    it("says a success's note in a plain notification, never a warning", async () => {
+        await runningInBackground();
+
+        await pushOperationProgress({
+            id: ID,
+            state: 'succeeded',
+            note: 'Demo data loaded. Prices are still being published and will finish by themselves in a few minutes.',
+        });
+
+        await expect(mockProgressEnded).resolves.toBeUndefined();
+        expect(mockShowInformation).toHaveBeenCalledWith(
+            `${TITLE} — done. Demo data loaded. Prices are still being published and will finish by themselves in a few minutes.`,
+        );
+        expect(mockShowWarning).not.toHaveBeenCalled();
         expect(mockStatusBar).not.toHaveBeenCalled();
     });
 

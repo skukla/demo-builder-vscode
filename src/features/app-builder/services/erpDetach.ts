@@ -11,7 +11,8 @@
  */
 
 import type { AppManagementAuth } from './appManagementClient';
-import { ErpIntegrationClient, deriveErpActionUrl, type ErpDetachReport } from './erpIntegrationClient';
+import { ErpIntegrationClient, deriveErpActionUrl } from './erpIntegrationClient';
+import type { ErpDetachReport } from '@/types/erpIntegration';
 
 export interface CommerceDetachResult {
     /** skipped: the component deploys no detach action (it is not the ERP integration). */
@@ -24,7 +25,7 @@ export interface ErpDetachDeps {
     getAuth: () => Promise<AppManagementAuth | undefined>;
     onProgress?: (message: string) => void;
     fetchImpl?: typeof fetch;
-    /** How following a cut-off undo pauses (erpDetachRun); a real sleep when absent. */
+    /** How following a cut-off undo pauses (erpActionRun); a real sleep when absent. */
     wait?: (ms: number) => Promise<void>;
 }
 

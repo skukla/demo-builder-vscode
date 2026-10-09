@@ -151,11 +151,15 @@ describe('ErpIntegrationClient', () => {
         expect(fetchImpl.mock.calls[0][0]).toBe(urls['runtime/erp/prices']);
         const init = fetchImpl.mock.calls[0][1] as RequestInit;
         expect(init.method).toBe('POST');
-        expect(JSON.parse(String(init.body))).toEqual({ erpId: 'demo-erp-2' });
+        // Every publish is named with a run id, so one cut off at 60 s can be followed.
+        expect(JSON.parse(String(init.body))).toEqual({
+            erpId: 'demo-erp-2',
+            run: expect.stringMatching(RUN_ID),
+        });
         expect(report).toEqual(answer);
     });
 
-    it('POSTs prices with no body for every ERP, and knows a deployment without the action has none', async () => {
+    it('POSTs prices with only a run id for every ERP, and knows a deployment without the action has none', async () => {
         const fetchImpl = answering(200, {
             erps: ['erp'],
             written: 0,
@@ -171,7 +175,9 @@ describe('ErpIntegrationClient', () => {
 
         await new ErpIntegrationClient(urls, AUTH, fetchImpl).publishPrices();
 
-        expect((fetchImpl.mock.calls[0][1] as RequestInit).body).toBeUndefined();
+        expect(JSON.parse(String((fetchImpl.mock.calls[0][1] as RequestInit).body))).toEqual({
+            run: expect.stringMatching(RUN_ID),
+        });
         expect(new ErpIntegrationClient(urls, AUTH, fetchImpl).publishesPrices()).toBe(true);
         expect(new ErpIntegrationClient(URLS, AUTH, fetchImpl).publishesPrices()).toBe(false);
     });
@@ -589,5 +595,125 @@ describe("callErpApi — the ERP's own routes", () => {
             refusal: 'The ERP deploys no "pricing" action.',
         });
         expect(fetchImpl).not.toHaveBeenCalled();
+    });
+});
+
+/*
+ * A price publish that outlives its answer. The same cut-off as a detach: a 504 at 60 s
+ * while the action runs on. The integration records each publish under the run id the POST
+ * carried (`priceRuns` on erp/status), and `GET erp/prices?run=` answers the same record
+ * shape as a detach run: `{ run, status, startedAt, finishedAt?, result?, error? }`.
+ */
+describe('ErpIntegrationClient.publishPrices, when the answer is cut off at 60 seconds', () => {
+    const PRICES = 'https://ns.adobeioruntime.net/api/v1/web/erp/prices';
+    const STATUS = URLS['runtime/erp/status'];
+    const WITH_PRICES = { ...URLS, 'runtime/erp/prices': PRICES };
+    const LIVE = {
+        app: { id: 'erp', version: '1' },
+        erp: { reachable: true, ok: true },
+        erpBaseUrl: 'x',
+        ledger: { entries: 72 },
+        closesOrdersOnReset: true,
+        detachRuns: true,
+    };
+    const CUT_OFF = { status: 504, body: { error: 'Response not yet ready' } };
+    const CUT_OFF_ERROR = new ErpIntegrationApiError('prices', 504, 'Response not yet ready');
+    const COUNTS = { erps: ['demo-erp-2'], written: 72, removed: 0, unchanged: 0, skipped: [], failed: [] };
+
+    interface Answer {
+        status: number;
+        body: unknown;
+    }
+
+    function cutOffThen(status: Answer, reads: Answer[] = []) {
+        let read = 0;
+        return jest.fn(async (url: string, init: RequestInit) => {
+            let answer: Answer = CUT_OFF;
+            if (url.startsWith(STATUS)) answer = status;
+            else if (init.method === 'GET') answer = reads[Math.min(read++, reads.length - 1)];
+            return {
+                ok: answer.status >= 200 && answer.status < 300,
+                status: answer.status,
+                text: async () => JSON.stringify(answer.body),
+            };
+        }) as unknown as jest.MockedFunction<typeof fetch>;
+    }
+
+    function priceCalls(fetchImpl: jest.MockedFunction<typeof fetch>): string[] {
+        return fetchImpl.mock.calls
+            .filter(([url]) => String(url).startsWith(PRICES))
+            .map(([url, init]) => `${init?.method} ${String(url)}`);
+    }
+
+    function sentRun(fetchImpl: jest.MockedFunction<typeof fetch>): string {
+        const post = fetchImpl.mock.calls.find(([, init]) => init?.method === 'POST');
+        return (JSON.parse(String(post?.[1]?.body)) as { run: string }).run;
+    }
+
+    const record = (status: string, more: Record<string, unknown> = {}): Answer => ({
+        status: 200,
+        body: { run: 'echoed', status, startedAt: '2026-10-09T14:33:10Z', ...more },
+    });
+    const RECORDS = { status: 200, body: { ...LIVE, priceRuns: true } };
+    const noWait = () => jest.fn(async (_ms: number) => undefined);
+
+    it("reads the run's record by the same id until it is done, and answers the counts", async () => {
+        const fetchImpl = cutOffThen(RECORDS, [record('running'), record('done', { result: COUNTS })]);
+        const wait = noWait();
+        const onProgress = jest.fn();
+
+        const report = await new ErpIntegrationClient(WITH_PRICES, AUTH, fetchImpl, wait).publishPrices(
+            'demo-erp-2',
+            onProgress
+        );
+
+        expect(report).toEqual(COUNTS);
+        const run = sentRun(fetchImpl);
+        expect(run).toMatch(RUN_ID);
+        expect(priceCalls(fetchImpl)).toEqual([
+            `POST ${PRICES}`,
+            `GET ${PRICES}?run=${run}`,
+            `GET ${PRICES}?run=${run}`,
+        ]);
+        expect(wait).toHaveBeenCalledTimes(2);
+        // One plain line while it waits: no Runtime, no seconds, no ledger.
+        expect(onProgress.mock.calls).toEqual([['Publishing prices, still running']]);
+    });
+
+    it("throws the run's own error when the run failed", async () => {
+        const fetchImpl = cutOffThen(RECORDS, [record('failed', { error: 'Commerce answered 503' })]);
+
+        await expect(
+            new ErpIntegrationClient(WITH_PRICES, AUTH, fetchImpl, noWait()).publishPrices('demo-erp-2')
+        ).rejects.toThrow('ERP prices failed: Commerce answered 503');
+    });
+
+    it('never reads a run from an integration that does not record price runs: the 504 stands', async () => {
+        // `detachRuns` alone is not enough: a deployment that records detaches may not record prices.
+        const fetchImpl = cutOffThen({ status: 200, body: LIVE }, [record('done', { result: COUNTS })]);
+        const onProgress = jest.fn();
+
+        const publishing = new ErpIntegrationClient(WITH_PRICES, AUTH, fetchImpl, noWait()).publishPrices(
+            'demo-erp-2',
+            onProgress
+        );
+
+        await expect(publishing).rejects.toThrow(CUT_OFF_ERROR);
+        await expect(publishing).rejects.toBeInstanceOf(ErpIntegrationApiError);
+        expect(priceCalls(fetchImpl)).toEqual([`POST ${PRICES}`]);
+        expect(onProgress).not.toHaveBeenCalled();
+    });
+
+    it("stops a little past the action's 300-second limit, saying the publish is still running", async () => {
+        const fetchImpl = cutOffThen(RECORDS, [record('running')]);
+        const wait = noWait();
+
+        await expect(
+            new ErpIntegrationClient(WITH_PRICES, AUTH, fetchImpl, wait).publishPrices('demo-erp-2')
+        ).rejects.toThrow('The integration is still publishing the prices.');
+
+        const waited = wait.mock.calls.reduce((total, [ms]) => total + ms, 0);
+        expect(waited).toBeGreaterThan(300_000);
+        expect(waited).toBeLessThanOrEqual(360_000);
     });
 });

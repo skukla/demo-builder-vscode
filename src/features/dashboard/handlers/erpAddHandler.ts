@@ -108,6 +108,8 @@ type AddOutcome = GuardableResult & {
     filled?: boolean;
     /** What the add could not do though it stood: the answer's warning, and the progress window's. */
     warning?: string;
+    /** Prices still being published after the fill: said as a plain success. */
+    note?: string;
     /** The website mappings the new ERP's fill filled and kept (AB-26y). */
     mapping?: ErpMappingReport;
     owns?: OwnsSaid;
@@ -365,17 +367,22 @@ async function listAndFill(
     if (applied.status === 'applied') {
         notes.push(...fillFailures(applied.fills), ...applied.notes);
         // Prices not published after a fill (AB-26z).
-        notes.push(...applied.fills.flatMap((fill) => (fill.status === 'filled' && fill.note ? [fill.note] : [])));
+        notes.push(...applied.fills.flatMap((fill) => (fill.status === 'filled' && fill.warning ? [fill.warning] : [])));
     } else {
         notes.push(`Demo data did not load: ${sentence(applied.detail)} Use Load demo data on its card.`);
     }
     const filled = applied.status === 'applied' && applied.fills.some((fill) => fill.erp === entry.id && fill.status === 'filled');
     const warning = notes.length ? { warning: notes.join(' ') } : {};
+    // Prices still being published after a fill: something to know, nothing to do.
+    const stillPublishing = applied.status === 'applied'
+        ? applied.fills.flatMap((fill) => (fill.status === 'filled' && fill.note ? [fill.note] : []))
+        : [];
+    const note = stillPublishing.length ? { note: stillPublishing.join(' ') } : {};
     const merged = applied.status === 'applied' ? mergeMappings(applied.fills.map((fill) => (fill.status === 'filled' ? fill.mapping : undefined))) : undefined;
     const mapping = merged ? { mapping: merged } : {};
     const theme = themed.theme ? { theme: themed.theme } : {};
     const ownership = applied.status === 'applied' ? { ownership: ownershipSaid(applied) } : {};
-    return { success: true, listed: listed.ids, filled, owns, existingOwns, ...mapping, ...theme, ...ownership, ...warning };
+    return { success: true, listed: listed.ids, filled, owns, existingOwns, ...mapping, ...theme, ...ownership, ...warning, ...note };
 }
 
 /** Deploy the new ERP in its own workspace, unless an earlier add already did. */
@@ -440,6 +447,7 @@ export const handleAddErp: MessageHandler<AddErpRequestPayload> = narrateOutcome
                 ...(outcome.theme ? { theme: outcome.theme } : {}),
                 ...(outcome.ownership ? { ownership: outcome.ownership } : {}),
                 ...(outcome.warning ? { warning: outcome.warning } : {}),
+                ...(outcome.note ? { note: outcome.note } : {}),
             },
         };
     },

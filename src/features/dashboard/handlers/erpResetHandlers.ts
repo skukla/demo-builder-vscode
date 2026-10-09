@@ -21,16 +21,15 @@ import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
 import { mergeMappings, type ErpMappingReport } from '@/features/app-builder/services/erpFillMapping';
-import {
-    ErpIntegrationClient,
-    callErpApi,
-    type ErpDetachReport,
-} from '@/features/app-builder/services/erpIntegrationClient';
+import { ErpIntegrationClient, callErpApi } from '@/features/app-builder/services/erpIntegrationClient';
 import {
     fillErpForProject,
     fillNotes,
+    fillWarnings,
     type ErpFillForProjectResult,
+    type FillSaid,
 } from '@/features/project-creation/services/erpFillForProject';
+import type { ErpDetachReport } from '@/types/erpIntegration';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
 
@@ -38,12 +37,14 @@ import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/ha
  * What a reset did: the integration's Commerce writes undone, then each ERP wiped and filled
  * again, its prices published. `mapping`: the website mappings the fills filled and kept
  * (AB-26y). `warning`: a mapping a fill could not save, prices it could not publish (AB-26z).
+ * `note`: prices still being published, nothing to do.
  */
 interface ErpResetReport {
     undone: ErpDetachReport;
     erps: Array<{ id: string; name: string; wiped: unknown; loaded: ErpFillForProjectResult }>;
     mapping?: ErpMappingReport;
     warning?: string;
+    note?: string;
 }
 
 /**
@@ -69,7 +70,7 @@ async function resetErp(
     if (!context.authManager) throw new Error('Adobe sign-in required.');
     const authManager = context.authManager;
     const erps: ErpResetReport['erps'] = [];
-    const notes: Array<{ name: string; note?: string }> = [];
+    const said: FillSaid[] = [];
     const mappings: Array<ErpMappingReport | undefined> = [];
     for (const erp of call.erps) {
         const name = erp.name ?? erp.id;
@@ -96,12 +97,19 @@ async function resetErp(
             wiped: (wipe.body as { wiped?: unknown }).wiped,
             loaded: filled.result,
         });
-        notes.push({ name, note: filled.note });
+        said.push({ name, warning: filled.warning, note: filled.note });
         mappings.push(filled.mapping);
     }
-    const warning = fillNotes(notes);
+    const warning = fillWarnings(said);
+    const note = fillNotes(said);
     const mapping = mergeMappings(mappings);
-    return { undone, erps, ...(mapping ? { mapping } : {}), ...(warning ? { warning } : {}) };
+    return {
+        undone,
+        erps,
+        ...(mapping ? { mapping } : {}),
+        ...(warning ? { warning } : {}),
+        ...(note ? { note } : {}),
+    };
 }
 
 /**
@@ -113,7 +121,7 @@ async function resetErp(
  * wiping then would leave exactly the half-an-order this step exists to prevent, under a
  * green toast (review, 2026-09-30). Nothing is wiped on a refusal, so the reset is simply
  * run again once the named orders are dealt with. An undo that outlives its 60-second
- * answer is followed by the client to its end (`erpDetachRun`, AB-61); `onProgress` gets
+ * answer is followed by the client to its end (`erpActionRun`, AB-61); `onProgress` gets
  * the one line it says while it does.
  */
 async function closeOffAndDetach(
@@ -172,15 +180,20 @@ export const handleResetErpRecords: MessageHandler<ErpCallPayload & { progress?:
                     inModal: progressSurfaceOf(payload) === 'modal',
                     cardLabel: `${erpName} records`,
                 },
-                async (report): Promise<GuardableResult & { report?: ErpResetReport; warning?: string }> => {
+                async (report): Promise<GuardableResult & { report?: ErpResetReport }> => {
                     const refused = await guardOrBlock(context, call.project, (message) =>
                         report(message),
                     );
                     if (refused) return refused;
                     try {
                         const done = await resetErp(context, call, report);
-                        // The progress window's last word, when prices were not published (AB-26z).
-                        return { success: true, report: done, ...(done.warning ? { warning: done.warning } : {}) };
+                        // The progress window's last word: prices not published (AB-26z), or still publishing.
+                        return {
+                            success: true,
+                            report: done,
+                            ...(done.warning ? { warning: done.warning } : {}),
+                            ...(done.note ? { note: done.note } : {}),
+                        };
                     } catch (error) {
                         return {
                             success: false,
@@ -192,8 +205,10 @@ export const handleResetErpRecords: MessageHandler<ErpCallPayload & { progress?:
             if (result.blocked || !result.success) {
                 return { success: false, error: result.error };
             }
-            // Prices a fill could not publish: said beside the report, never a failed reset (AB-26z).
+            // Prices a fill could not publish, or is still publishing: said beside the report,
+            // never a failed reset (AB-26z).
             const warning = result.report?.warning;
+            const note = result.report?.note;
             const mapping = result.report?.mapping;
             const report = result.report && {
                 undone: result.report.undone,
@@ -207,6 +222,7 @@ export const handleResetErpRecords: MessageHandler<ErpCallPayload & { progress?:
                     report,
                     ...(mapping ? { mapping } : {}),
                     ...(warning ? { warning } : {}),
+                    ...(note ? { note } : {}),
                 },
             };
         },

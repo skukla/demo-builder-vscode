@@ -306,7 +306,8 @@ seconds until the run is `done` (its `result` is the report the POST would have 
 still undoing and to try again in a few minutes; nothing has been wiped at that point. An
 integration that does not answer `detachRuns` is never read this way, because one deployed
 before it would run a second detach on the GET; there the 504 is reported as it is. Removing
-the integration follows its undo the same way (`erpDetachRun.ts`).
+the integration follows its undo the same way, and a fill's price publish is followed the same
+way too (one follower, `erpActionRun.ts`; see "Prices after a fill" below).
 
 **Removing one.** Remove on an added ERP's card takes it off the integration's list first
 (the list without it), then wipes its records, undeploys it and deletes its workspace. If the
@@ -359,8 +360,23 @@ asking the integration to publish that ERP's prices into the companies' shared c
 (`POST erp/prices` with the ERP's list id); the answer carries the counts (`prices`:
 written, removed, unchanged, skipped). A publish that fails does not fail the fill: the
 answer's `warning` says so in plain words, and Load demo data again retries it. An
-integration deployed before it had `erp/prices` is filled without it, silently. Because it runs in
-the extension, it has no one-minute web-request limit. Last, it hands the integration its key map
+integration deployed before it had `erp/prices` is filled without it, silently.
+
+**Prices after a fill that take longer than a minute.** `erp/prices` is a web action with the
+same 60-second cut-off as the undo. Every `POST erp/prices` carries a `run` id; when the
+answer is cut off and `erp/status` says `priceRuns: true`, the progress shows "Publishing
+prices, still running" and `GET erp/prices?run=<id>` is read every five seconds until the run
+is `done` (its `result` is the counts) or `failed` (its `error` is the reason, and the
+answer's `warning` says the prices were not published, with the retry). Followed to `done`,
+the fill answers its counts and nothing else. Against an integration that does not answer
+`priceRuns`, the 504 is not read as a failed publish: the prices land on their own, so the
+answer carries a `note`, not a `warning`: "Demo data loaded. Prices are still being published
+and will finish by themselves in a few minutes." A `note` is something the SC need only know;
+the progress modal shows it as a plain success, and the agent tools answer it as `data.note`.
+A `warning` is something the SC must act on, and only a publish that actually failed asks for
+Load demo data again.
+
+Last, it hands the integration its key map
 (`PUT erp/keymap`: which Commerce company is which ERP customer), the way a key map is loaded
 at a go-live; an integration deployed before it had `erp/keymap` is filled without one, and
 the progress says so. The ERP itself holds no Commerce id (its contract version 3): the customers

@@ -91,6 +91,11 @@ export function forwardToBackgroundNotice(payload: OperationProgressPayload): vo
         void vscode.window.showWarningMessage(`${notice.title} — done. ${payload.warning}`);
         return;
     }
+    if (payload.state === 'succeeded' && payload.note) {
+        // Something to know, nothing to do: plain, never a warning.
+        void vscode.window.showInformationMessage(`${notice.title} — done. ${payload.note}`);
+        return;
+    }
     if (payload.state === 'succeeded') {
         vscode.window.setStatusBarMessage(`$(check) ${notice.title} — done`, TIMEOUTS.STATUS_BAR_SUCCESS);
         return;

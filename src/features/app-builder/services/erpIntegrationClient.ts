@@ -1,5 +1,6 @@
 /**
- * The ERP integration's own actions, as Demo Builder calls them: `erp/status`, `erp/lookup` and
+ * The ERP integration's own actions, as Demo Builder calls them (what each answers is typed in
+ * `@/types/erpIntegration`): `erp/status`, `erp/lookup` and
  * `erp/history` (what the integration sees of its ERP), `erp/settings` (the settings in force,
  * which the ERP fill sorts records by), `erp/keymap` and `erp/erps` (the key map and the list of
  * ERPs, both replaced whole by Demo Builder), `erp/prices` (publish an ERP's customer prices into
@@ -17,45 +18,28 @@
  */
 
 import type { AppManagementAuth } from './appManagementClient';
-import { detachReportOf, newDetachRunId, type ErpDetachRun } from './erpDetachRun';
+import {
+    newRunId,
+    reportOf,
+    type ActionRunSource,
+    type ActionRunWords,
+    type ErpActionRun,
+} from './erpActionRun';
 import type { ErpKeyMapEntry, ResolvedErpSettings } from './erpFill';
 import type { ErpListEntry } from './erpList';
+import type {
+    ErpDetachReport,
+    ErpIntegrationStatus,
+    ErpLookup,
+    ErpOrderTrace,
+    ErpPricesReport,
+} from '@/types/erpIntegration';
 
-/** What `erp/status` answers (the integration's `actions/erp/status`). */
-export interface ErpIntegrationStatus {
-    app: { id: string; version: string };
-    erp: {
-        reachable: boolean;
-        ok?: boolean;
-        status?: number;
-        error?: string;
-        [key: string]: unknown;
-    };
-    erpBaseUrl: string | null;
-    ledger: { entries: number };
-    /** Whether `erp/detach` closes off the ERPs' orders when asked (`closeOrders`, AB-16n). */
-    closesOrdersOnReset?: boolean;
-    /** Whether `erp/detach` records each run for `GET erp/detach?run=` to read back (AB-61). */
-    detachRuns?: boolean;
-}
+/** One detach run as the integration records it (`GET erp/detach?run=<id>`). */
+export type ErpDetachRun = ErpActionRun<ErpDetachReport>;
 
-/**
- * What `erp/detach` answers: the company writes undone and the ERP order numbers cleared, and
- * `closed`, present only when it closed off the orders the ERPs hold (AB-16n): orders
- * cancelled, orders only noted (invoiced or shipped), orders an earlier reset closed, parts
- * records removed, and each order it could not close, in words.
- */
-export interface ErpDetachReport {
-    reverted?: { reverted: number; failed: unknown[] };
-    orders?: { cleared: number; failed: unknown[] };
-    closed?: {
-        cancelled: number;
-        commented: number;
-        alreadyClosed: number;
-        partsRemoved: number;
-        failed: Array<{ orderId: string; error: string }>;
-    };
-}
+/** One price publish run as the integration records it (`GET erp/prices?run=<id>`). */
+export type ErpPricesRun = ErpActionRun<ErpPricesReport>;
 
 export type ErpAction =
     | 'status'
@@ -67,59 +51,20 @@ export type ErpAction =
     | 'erps'
     | 'prices';
 
-/**
- * What `erp/prices` answers (the integration's `actions/erp/prices/index.js`, read 2026-09-28):
- * the ERPs it published for and the tier prices written, removed (no longer in force) and left
- * as they were, across every company. A company it could not price is `skipped` with the
- * reason (no shared catalog, say); one whose write failed is in `failed`.
- */
-export interface ErpPricesReport {
-    erps: string[];
-    written: number;
-    removed: number;
-    unchanged: number;
-    skipped: Array<{ erpId: string; partnerId: string; reason: string }>;
-    failed: Array<{ erpId: string; partnerId?: string; error: string }>;
-}
+/** The detach's words while a cut-off undo is followed (`erpActionRun`). */
+const DETACH_RUN_WORDS: ActionRunWords = {
+    stillRunning: "Still undoing the ERP's changes in Commerce",
+    stillRunningAtEnd:
+        "The integration is still undoing the ERP's changes in Commerce. Try again in a few minutes.",
+    failed: 'ERP detach failed',
+};
 
-/**
- * What `erp/lookup` answers (the integration's `lib/lookup.js`, `productLookup` and
- * `companyLookup`): one entity as both systems hold it, one row per field. A side
- * that does not have it answers `null` cells; that is the answer, not an error.
- */
-export interface ErpLookup {
-    kind: 'product' | 'company';
-    /** The SKU or the Commerce company id asked for. */
-    key: string;
-    found: { commerce: boolean; erp: boolean };
-    rows: Array<{ label: string; commerce: string | null; erp: string | null }>;
-    /** The ERP screen's hash for the record, when the ERP has it. */
-    erpHash: string | null;
-}
-
-/**
- * What `erp/history?trace=<order>` answers (the integration's `lib/order-trace.js`,
- * `buildOrderTrace`): one order's whole life across Commerce, the integration and
- * the ERP, oldest step first.
- */
-export interface ErpOrderTrace {
-    summary: {
-        incrementId: string | null;
-        commerceStatus: string | null;
-        erpNumber: string | null;
-        erpStatus: string | null;
-        reachedErp: boolean;
-    };
-    steps: Array<{
-        at: string;
-        where: string;
-        what: string;
-        detail?: string;
-        outcome?: string;
-        tries?: number;
-        retry?: unknown;
-    }>;
-}
+/** The publish's words while a cut-off publish is followed: plain, nothing about Runtime. */
+const PRICES_RUN_WORDS: ActionRunWords = {
+    stillRunning: 'Publishing prices, still running',
+    stillRunningAtEnd: 'The integration is still publishing the prices.',
+    failed: 'ERP prices failed',
+};
 
 /**
  * The deployed URL of one `erp/<action>` web action, or undefined when the
@@ -181,21 +126,43 @@ export class ErpIntegrationClient {
      * `closeOrders` (a reset, AB-16n), it first closes off every order the ERPs hold: cancelled
      * when Commerce still can, noted when not, and forgotten by the integration. Ask
      * `status().closesOrdersOnReset` first: a deployment before it ignores the option. An
-     * answer cut off at 60 s is followed by its run id (`erpDetachRun`, AB-61).
+     * answer cut off at 60 s is followed by its run id (`erpActionRun`, AB-61).
      */
     async detach(
         options: { closeOrders?: boolean } = {},
         onProgress?: (message: string) => void,
     ): Promise<ErpDetachReport> {
-        const run = newDetachRunId();
+        const run = newRunId();
         const body = { run, ...(options.closeOrders ? { closeOrders: true } : {}) };
         const post = this.call('detach', 'POST', undefined, body) as Promise<ErpDetachReport>;
-        return detachReportOf(post, this, run, { wait: this.wait, onProgress });
+        const source: ActionRunSource<ErpDetachReport> = {
+            recordsRuns: () => this.recordsRuns('detachRuns'),
+            readRun: (id) => this.detachRun(id),
+            emptyResult: () => ({}),
+        };
+        return reportOf(post, source, run, DETACH_RUN_WORDS, { wait: this.wait, onProgress });
     }
 
     /** One detach run's record (`GET erp/detach?run=`); a 404 when the integration has none. */
     async detachRun(run: string): Promise<ErpDetachRun> {
         return (await this.call('detach', 'GET', { run })) as ErpDetachRun;
+    }
+
+    /** One price publish run's record (`GET erp/prices?run=`); a 404 when the integration has none. */
+    async priceRun(run: string): Promise<ErpPricesRun> {
+        return (await this.call('prices', 'GET', { run })) as ErpPricesRun;
+    }
+
+    /**
+     * Whether the integration records an action's runs, by the flag `erp/status` carries for it.
+     * A status that cannot be read is no proof a GET is safe (one deployed before would run the
+     * action), so that reads as "no".
+     */
+    private recordsRuns(flag: 'detachRuns' | 'priceRuns'): Promise<boolean> {
+        return this.status().then(
+            (status) => status[flag] === true,
+            () => false,
+        );
     }
 
     /** One product (by SKU) or one company (by Commerce id) as both systems hold it. */
@@ -237,14 +204,24 @@ export class ErpIntegrationClient {
     /**
      * Publish an ERP's customer prices in force into each company's shared catalog, as a
      * replace (`POST erp/prices`). With `erpId` (its list id), that ERP's; else every ERP's.
+     * An answer cut off at 60 s is followed by its run id when the integration records price
+     * runs (`priceRuns` on `erp/status`); `onProgress` gets the one line said while it does.
      */
-    async publishPrices(erpId?: string): Promise<ErpPricesReport> {
-        return (await this.call(
-            'prices',
-            'POST',
-            undefined,
-            erpId ? { erpId } : undefined,
-        )) as ErpPricesReport;
+    async publishPrices(
+        erpId?: string,
+        onProgress?: (message: string) => void,
+    ): Promise<ErpPricesReport> {
+        const run = newRunId();
+        const body = { run, ...(erpId ? { erpId } : {}) };
+        const post = this.call('prices', 'POST', undefined, body) as Promise<ErpPricesReport>;
+        const source: ActionRunSource<ErpPricesReport> = {
+            recordsRuns: () => this.recordsRuns('priceRuns'),
+            readRun: (id) => this.priceRun(id),
+            emptyResult: () => {
+                throw new Error(`${PRICES_RUN_WORDS.failed}: the run ended without a result`);
+            },
+        };
+        return reportOf(post, source, run, PRICES_RUN_WORDS, { wait: this.wait, onProgress });
     }
 
     /** Whether this deployment serves several ERPs (`erp/erps`); one deployed before it does not. */
