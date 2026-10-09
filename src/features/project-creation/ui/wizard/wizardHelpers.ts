@@ -545,6 +545,9 @@ function buildProjectEdsConfig(wizardState: ProjectConfigSource) {
         repoUrl: eds.repoUrl,
         preflightComplete: eds.preflightComplete,
         ...(eds.brokenLinks?.length ? { brokenLinks: eds.brokenLinks } : {}),
+        ...(eds.installedBlockLibraries?.length
+            ? { installedBlockLibraries: eds.installedBlockLibraries }
+            : {}),
     };
 }
 

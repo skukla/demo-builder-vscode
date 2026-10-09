@@ -12,13 +12,16 @@
  */
 
 import {
+    COMPLETE_EDS_CONFIG,
     cancelPayloads,
+    pushComplete,
     pushProgress,
     renderStep,
     resetDriver,
     subscribedMessageTypes,
 } from './StorefrontSetupStep.driver.testUtils';
 import { screen } from '@testing-library/react';
+import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 import type { StorefrontSetupProgressPhase } from '@/types/webviewPayloads';
 
 beforeEach(() => {
@@ -237,5 +240,37 @@ describe('StorefrontSetupStep — subscriptions', () => {
         unmount();
 
         expect(subscribedMessageTypes()).toStrictEqual([]);
+    });
+});
+
+describe('StorefrontSetupStep — completion keeps what creation must record', () => {
+    it('holds the installed block libraries on the wizard config, beside the repo URL', () => {
+        // Creation saves these onto the project it makes. Storefront setup used to
+        // save them itself, onto whichever project happened to be open (2026-10-09).
+        const installed: InstalledBlockLibrary[] = [
+            {
+                name: 'Isle5 Blocks',
+                source: { owner: 'adobe', repo: 'isle5', branch: 'main' },
+                commitSha: 'abc123',
+                blockIds: ['hero'],
+                installedAt: '2026-10-09T00:00:00.000Z',
+            },
+        ];
+        const { updateState } = renderStep();
+
+        pushComplete({
+            message: 'Done',
+            githubRepo: 'https://github.com/o/r',
+            installedBlockLibraries: installed,
+        });
+
+        expect(updateState).toHaveBeenCalledWith({
+            edsConfig: expect.objectContaining({
+                ...COMPLETE_EDS_CONFIG,
+                repoUrl: 'https://github.com/o/r',
+                preflightComplete: true,
+                installedBlockLibraries: installed,
+            }),
+        });
     });
 });

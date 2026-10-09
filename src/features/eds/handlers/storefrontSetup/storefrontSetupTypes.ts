@@ -15,6 +15,7 @@ import type { GitHubFileOperations } from '../../services/github/githubFileOpera
 import type { GitHubRepoOperations } from '../../services/github/githubRepoOperations';
 import type { HelixService } from '../../services/helix/helixService';
 import type { TemplateSyncService } from '@/features/updates/services/templateSyncService';
+import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 import type { StorefrontBrokenLink } from '@/types/webviewPayloads';
 
 /**
@@ -32,6 +33,8 @@ export interface StorefrontSetupResult {
     demoCaveats?: string[];
     /** Links the content copy found to pages the source lacks; the project records them. */
     brokenLinks?: StorefrontBrokenLink[];
+    /** See {@link RepoInfo.installedBlockLibraries} — spread in from the threaded repoInfo. */
+    installedBlockLibraries?: InstalledBlockLibrary[];
     // Note: previewUrl/liveUrl not included - derived from githubRepo by typeGuards
 }
 
@@ -92,4 +95,12 @@ export interface RepoInfo {
      * will not load at all; these say what may not work on this demo.
      */
     demoCaveats?: string[];
+    /**
+     * The block libraries phase 2 installed, one record each, spread into
+     * {@link StorefrontSetupResult} and on to project creation, which saves them onto
+     * the project it creates or edits. Setup must not save them itself: in the
+     * wizard the project does not exist yet, and `getCurrentProject()` is whatever
+     * was open before — which is where they went until 2026-10-09.
+     */
+    installedBlockLibraries?: InstalledBlockLibrary[];
 }

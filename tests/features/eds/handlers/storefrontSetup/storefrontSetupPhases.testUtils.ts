@@ -79,11 +79,9 @@ export function createSetupContext(
      * What `stateManager.getCurrentProject` resolves.
      *
      * Defaults to `undefined`, which is what three of the four suites had. The
-     * tracking suite needs a real one — its subject saves installed-library metadata
-     * back onto the current project, so with no project the save path never runs and
-     * its assertions silently see zero calls. That is exactly what happened when this
-     * parameter did not exist: two tests failed against a shared context that was
-     * correct for the other three suites.
+     * tracking suite passes a real one to prove setup leaves it ALONE: in the wizard
+     * the open project is not the one being created, and setup once saved its
+     * installed-library records onto it (fixed 2026-10-09).
      */
     currentProject?: unknown,
 ): HandlerContext {

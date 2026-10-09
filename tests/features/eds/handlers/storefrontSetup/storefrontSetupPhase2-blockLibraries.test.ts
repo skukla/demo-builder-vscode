@@ -6,7 +6,7 @@
  * demo packages (`onlyForPackages`), and a CUSTOM library is user-entered, so
  * its owner/repo is validated against GitHub's identifier rules before it is
  * used to build an API call. Everything downstream — the inspector entries, the
- * progress wording, the install tracking saved onto the project — is keyed off
+ * progress wording, the install records handed back for creation — is keyed off
  * that list, so these assert the list as it arrives at `installBlockCollections`.
  */
 
@@ -39,15 +39,16 @@ async function runPhase(
 ) {
     const fileOps = makeFileOps();
     const { context, sendMessage, saveProject } = makePhaseContext(project);
+    const repoInfo = makeRepoInfo();
     const result = await executePhaseHelixConfig(
         context,
         EDS_CONFIG,
         servicesWith(fileOps),
-        makeRepoInfo(),
+        repoInfo,
         new AbortController().signal,
         options,
     );
-    return { result, fileOps, context, sendMessage, saveProject };
+    return { result, repoInfo, fileOps, context, sendMessage, saveProject };
 }
 
 /** The library list as it reached the installer. */
@@ -354,7 +355,14 @@ describe('executePhaseHelixConfig — what it reports back and records', () => {
         expect(saveProject).not.toHaveBeenCalled();
     });
 
-    it('records what was installed against the open project', async () => {
+    /**
+     * The records travel back on the run, to be saved by project creation onto the
+     * project being created or edited. They were written onto `getCurrentProject()`
+     * until 2026-10-09 — whatever project was open before the wizard — which left
+     * the new project with none and REPLACED the open project's list with the new
+     * one's (Justrite carried a library it never selected).
+     */
+    it('hands what was installed back on the run, and never writes the open project', async () => {
         jest.useFakeTimers().setSystemTime(new Date('2026-09-05T04:00:00.000Z'));
         blockCollectionHelpers.installBlockCollections.mockResolvedValue({
             success: true,
@@ -369,12 +377,17 @@ describe('executePhaseHelixConfig — what it reports back and records', () => {
                 },
             ],
         });
-        const project = createMockProject();
+        const openProject = createMockProject({ name: 'justrite' });
 
-        const { saveProject } = await runPhase({ selectedBlockLibraries: ['isle5'] }, project);
+        const { saveProject, repoInfo } = await runPhase(
+            { selectedBlockLibraries: ['isle5'] },
+            openProject,
+        );
 
-        expect(saveProject).toHaveBeenCalledWith(project);
-        expect(project.installedBlockLibraries).toEqual([
+        expect(saveProject).not.toHaveBeenCalledWith(openProject);
+        expect(saveProject).not.toHaveBeenCalled();
+        expect(openProject.installedBlockLibraries).toBeUndefined();
+        expect(repoInfo.installedBlockLibraries).toEqual([
             {
                 name: 'Isle5 Blocks',
                 source: ISLE5_SOURCE,
@@ -386,7 +399,7 @@ describe('executePhaseHelixConfig — what it reports back and records', () => {
         jest.useRealTimers();
     });
 
-    it('records nothing when no project is open', async () => {
+    it('hands the records back when no project is open (the first project on a machine)', async () => {
         blockCollectionHelpers.installBlockCollections.mockResolvedValue({
             success: true,
             blocksCount: 2,
@@ -396,13 +409,17 @@ describe('executePhaseHelixConfig — what it reports back and records', () => {
             ],
         });
 
-        const { saveProject, result } = await runPhase({ selectedBlockLibraries: ['isle5'] }, null);
+        const { saveProject, result, repoInfo } = await runPhase(
+            { selectedBlockLibraries: ['isle5'] },
+            null,
+        );
 
         expect(saveProject).not.toHaveBeenCalled();
         expect(result).toEqual({ blockCollectionIds: ['hero'] });
+        expect(repoInfo.installedBlockLibraries?.map((lib) => lib.name)).toEqual(['Isle5 Blocks']);
     });
 
-    it('does not touch the project when the install reported no library versions', async () => {
+    it('hands nothing back when the install reported no library versions', async () => {
         blockCollectionHelpers.installBlockCollections.mockResolvedValue({
             success: true,
             blocksCount: 0,
@@ -411,9 +428,10 @@ describe('executePhaseHelixConfig — what it reports back and records', () => {
         });
         const project = createMockProject();
 
-        const { saveProject } = await runPhase({ selectedBlockLibraries: ['isle5'] }, project);
+        const { saveProject, repoInfo } = await runPhase({ selectedBlockLibraries: ['isle5'] }, project);
 
         expect(saveProject).not.toHaveBeenCalled();
         expect(project.installedBlockLibraries).toBeUndefined();
+        expect(repoInfo.installedBlockLibraries).toBeUndefined();
     });
 });

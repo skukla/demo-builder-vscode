@@ -9,6 +9,8 @@
  */
 
 import { AdobeOrgMismatchError } from '@/features/authentication/services/authenticationErrors';
+import type { InstalledBlockLibrary } from '@/types/blockLibraries';
+import type { StorefrontSetupCompletePayload } from '@/types/webviewPayloads';
 
 import {
     EDS,
@@ -462,5 +464,36 @@ describe('create_project', () => {
             expect(state.selectedBlockLibraries).toStrictEqual([]);
             expect(state.customBlockLibraries).toStrictEqual([]);
         });
+    });
+});
+
+describe('create_project — the block libraries storefront setup installed', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        defaultStorefrontSetup();
+    });
+
+    it('threads them into creation, the same channel the wizard uses', async () => {
+        const installed: InstalledBlockLibrary[] = [
+            {
+                name: 'Isle5 Blocks',
+                source: { owner: 'adobe', repo: 'isle5', branch: 'main' },
+                commitSha: 'abc123',
+                blockIds: ['hero'],
+                installedAt: '2026-10-09T00:00:00.000Z',
+            },
+        ];
+        storefrontSetup.mockImplementationOnce(async (ctx: { sendMessage: (t: string, d?: unknown) => Promise<void> }) => {
+            await ctx.sendMessage('storefront-setup-complete', {
+                message: 'Done',
+                githubRepo: 'https://github.com/o/r',
+                installedBlockLibraries: installed,
+            } satisfies StorefrontSetupCompletePayload);
+            return { success: true };
+        });
+
+        await toolServer().call(EDS);
+
+        expect(capturedWizardState().edsConfig?.installedBlockLibraries).toStrictEqual(installed);
     });
 });

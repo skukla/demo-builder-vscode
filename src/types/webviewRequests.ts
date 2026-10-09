@@ -389,6 +389,8 @@ export interface ProjectCreationConfig {
         repoUrl?: string;
         /** Links the setup's content copy found to pages the source lacks (Storefront Report). */
         brokenLinks?: import('./webviewPayloads').StorefrontBrokenLink[];
+        /** The block libraries setup installed: saved onto THIS project, not the open one. */
+        installedBlockLibraries?: import('./blockLibraries').InstalledBlockLibrary[];
         // Note: previewUrl/liveUrl not stored - derived from githubRepo by typeGuards
         // Patch IDs to apply during reset (from demo-packages.json)
         patches?: string[];

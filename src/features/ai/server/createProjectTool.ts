@@ -495,13 +495,14 @@ async function createEds(
     // StorefrontSetupCompletePayload); `repoUrl` was an invented key, read as
     // undefined for every agent creation until 2026-09-12, so the project was
     // saved without its repository and reset refused it.
-    const repoUrl = lastCompleteData(events)?.githubRepo as string | undefined;
+    const complete: Partial<StorefrontSetupCompletePayload> = lastCompleteData(events) ?? {};
+    const repoUrl = complete.githubRepo;
     // What the setup said about the storefront, in the words the wizard's card shows:
     // an added demo's caveats and the offer of Demo Builder's fixes (EDS-13f). The
     // agent never heard them before; the card was the only reader.
-    const caveats = lastCompleteData(events)?.warnings as StorefrontSetupCompletePayload['warnings'];
+    const caveats = complete.warnings;
     // Recorded on the project for the Storefront Report, as the wizard does.
-    const brokenLinks = lastCompleteData(events)?.brokenLinks as StorefrontSetupCompletePayload['brokenLinks'];
+    const brokenLinks = complete.brokenLinks;
 
     // Phase 2: create the project, with preflight results threaded in.
     const wizardState: ProjectConfigSource = {
@@ -529,6 +530,8 @@ async function createEds(
             repoUrl,
             preflightComplete: true,
             ...(brokenLinks?.length ? { brokenLinks } : {}),
+            // Recorded on THIS project by creation, as the wizard does (EDS-37).
+            installedBlockLibraries: complete.installedBlockLibraries,
         },
     };
 

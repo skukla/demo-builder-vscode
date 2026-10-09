@@ -313,6 +313,8 @@ export function StorefrontSetupStep({
                     preflightComplete: true,
                     // Recorded on the project at creation, for the Storefront Report.
                     brokenLinks: data.brokenLinks,
+                    // Saved onto the project by creation; setup has no project to write.
+                    installedBlockLibraries: data.installedBlockLibraries,
                 },
             });
         },

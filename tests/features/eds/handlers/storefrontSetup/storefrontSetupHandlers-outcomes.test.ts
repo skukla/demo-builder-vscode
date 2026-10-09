@@ -10,6 +10,7 @@
  * one covers the branches that suite never enters.
  */
 
+import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 import type { HandlerContext } from '@/types/handlers';
 
 // =============================================================================
@@ -342,6 +343,32 @@ describe('handleStartStorefrontSetup — the two outcomes', () => {
             daLiveSite: 'https://da.live/demo-org/demo-site',
             repoOwner: 'demo-org',
             repoName: 'demo-repo',
+        });
+    });
+
+    it('hands back the block libraries it installed, for creation to record on the new project', async () => {
+        const installed: InstalledBlockLibrary[] = [
+            {
+                name: 'Isle5 Blocks',
+                source: { owner: 'adobe', repo: 'isle5', branch: 'main' },
+                commitSha: 'abc123',
+                blockIds: ['hero'],
+                installedAt: '2026-10-09T00:00:00.000Z',
+            },
+        ];
+        mockExecutePhases.mockResolvedValue({
+            success: true,
+            repoUrl: 'https://github.com/demo-org/demo-repo',
+            repoOwner: 'demo-org',
+            repoName: 'demo-repo',
+            installedBlockLibraries: installed,
+        });
+        const context = createContext();
+
+        await handleStartStorefrontSetup(context, payload());
+
+        expect(messagePayload(context, 'storefront-setup-complete')).toMatchObject({
+            installedBlockLibraries: installed,
         });
     });
 });

@@ -57,6 +57,14 @@ entry deleted while its block folder stays was never put back. When the folder i
 gone too and the library copied it, the folder rule decides first, so the entry
 record is the backstop for a block that is missing from `blockIds`.
 
+**Which project gets the record.** Storefront setup installs the libraries but saves
+no project: in the wizard it runs before the project exists. It hands the records
+back on its result, and project creation saves them onto the project it creates or
+edits (an edit that installed nothing keeps the records it had). Until 2026-10-09
+setup saved them onto whichever project was open, so a project created before then
+can lack its record: its next update check offers each selected library once, and
+applying it records it (EDS-37).
+
 ## Registering a block for authoring
 
 A block existing in the repository does not make it available in DA.live's authoring

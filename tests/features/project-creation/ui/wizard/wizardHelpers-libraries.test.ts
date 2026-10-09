@@ -20,7 +20,7 @@ import {
     getWizardTitle,
     initializeAdobeContextFromImport,
 } from '@/features/project-creation/ui/wizard/wizardHelpers';
-import type { CustomBlockLibrary } from '@/types/blockLibraries';
+import type { CustomBlockLibrary, InstalledBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { WizardState } from '@/types/webview';
 import type { ImportedSettings } from '@/types/wizard';
@@ -378,6 +378,23 @@ describe('buildProjectConfig', () => {
             );
 
             expect(withAco.edsConfig).toMatchObject({ skipTools: false });
+        });
+
+        it('should hand over the block libraries storefront setup installed, so creation records them', () => {
+            const installed: InstalledBlockLibrary[] = [
+                {
+                    name: 'Isle5 Blocks',
+                    source: { owner: 'adobe', repo: 'isle5', branch: 'main' },
+                    commitSha: 'abc123',
+                    blockIds: ['hero'],
+                    installedAt: '2026-10-09T00:00:00.000Z',
+                },
+            ];
+
+            expect(withEds({ installedBlockLibraries: installed })).toMatchObject({
+                installedBlockLibraries: installed,
+            });
+            expect(withEds({})).not.toHaveProperty('installedBlockLibraries');
         });
     });
 });

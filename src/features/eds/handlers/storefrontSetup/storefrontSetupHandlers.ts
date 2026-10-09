@@ -315,6 +315,8 @@ export async function handleStartStorefrontSetup(
                 repoOwner: result.repoOwner,
                 repoName: result.repoName,
                 ...(result.brokenLinks?.length ? { brokenLinks: result.brokenLinks } : {}),
+                // Recorded by creation on the project it makes, as brokenLinks are.
+                installedBlockLibraries: result.installedBlockLibraries,
                 // Note: previewUrl/liveUrl not sent - derived from githubRepo by typeGuards
             } satisfies StorefrontSetupCompletePayload);
             return { success: true, data: result };

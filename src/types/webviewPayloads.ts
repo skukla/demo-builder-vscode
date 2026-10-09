@@ -20,7 +20,7 @@ import type {
     Project,
     ProjectStatus,
 } from './base';
-import type { CustomBlockLibrary } from './blockLibraries';
+import type { CustomBlockLibrary, InstalledBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import type { EnvVarDefinition, TransformedComponentDefinition } from './components';
 import type { AddedDemo } from './projectFile';
@@ -769,6 +769,12 @@ export interface StorefrontSetupCompletePayload {
     warnings?: string[];
     /** Links the copied content carries to pages the source lacks; the project records them. */
     brokenLinks?: StorefrontBrokenLink[];
+    /**
+     * The block libraries setup installed, for project creation to record on the
+     * project it creates or edits. Setup has no project of its own to write to: in
+     * the wizard it runs before the project exists.
+     */
+    installedBlockLibraries?: InstalledBlockLibrary[];
 }
 
 /** `storefront-setup-error` — the pipeline failed; the wizard offers Retry. */

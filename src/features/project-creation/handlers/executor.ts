@@ -17,7 +17,6 @@
  */
 
 import * as fsPromises from 'fs/promises';
-import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import * as os from 'os';
 import * as path from 'path';
 import {
@@ -38,6 +37,7 @@ import { ProgressTracker } from './shared';
 import { COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { migrateDeclaredSecrets } from '@/features/components/services/commerceSecretMigration';
 import { componentRegistryFrom } from '@/features/components/services/componentRegistryAccess';
@@ -152,6 +152,10 @@ export function buildInitialProject(
         selectedAddons: typedConfig.selectedAddons,
         selectedBlockLibraries: typedConfig.selectedBlockLibraries,
         customBlockLibraries: typedConfig.customBlockLibraries,
+        // What THIS run's storefront setup installed; an edit that installed none keeps its own.
+        installedBlockLibraries: typedConfig.edsConfig?.installedBlockLibraries?.length
+            ? typedConfig.edsConfig.installedBlockLibraries
+            : existingProject?.installedBlockLibraries,
         componentApiPicks: typedConfig.componentApiPicks,
         // Note: componentVersions, meshState, etc. are NOT preserved during edit
         // - componentVersions: Regenerated from fresh component installation

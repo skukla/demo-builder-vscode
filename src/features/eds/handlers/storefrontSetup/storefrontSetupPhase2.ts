@@ -303,17 +303,14 @@ async function installBlockCollectionsWithTracking(
                     ? `Installed ${result.blocksCount} unique blocks from ${allLibraries.length} ${allLibraries.length === 1 ? 'library' : 'libraries'} (+ inspector tagging)`
                     : `All blocks already present in destination — skipped copy, applied inspector tagging`;
             logger.info(`[Storefront Setup] ${blockMsg}`);
+            // Handed back, never saved here: project creation records them on the
+            // project it creates or edits. In the wizard that project does not exist
+            // yet, and `getCurrentProject()` — where these went until 2026-10-09 —
+            // is whatever was open before, which got the new project's list.
             if (result.libraryVersions && result.libraryVersions.length > 0) {
-                const currentProject = await context.stateManager.getCurrentProject();
-                if (currentProject) {
-                    currentProject.installedBlockLibraries = result.libraryVersions.map((lv) =>
-                        toInstalledBlockLibrary(lv),
-                    );
-                    await context.stateManager.saveProject(currentProject);
-                    logger.info(
-                        `[Storefront Setup] Saved install tracking for ${result.libraryVersions.length} block libraries`,
-                    );
-                }
+                repoInfo.installedBlockLibraries = result.libraryVersions.map((lv) =>
+                    toInstalledBlockLibrary(lv),
+                );
             }
             return result.blockIds;
         }
