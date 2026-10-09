@@ -21,6 +21,8 @@ import {
     createMockExtensionContext,
     createStatefulGlobalState,
 } from '../../../../helpers/extensionContextFake';
+import { createMockSecretStorage } from '../../../../helpers/secretStorageFake';
+import { DA_LIVE_TOKEN_SECRET_KEY } from '@/features/eds/services/daLive/daLiveTokenMigration';
 
 const IMS_PROFILE_URL = 'https://ims-na1.adobelogin.com/ims/profile/v1';
 
@@ -29,18 +31,24 @@ describe('DaLiveAuthService — IMS profile email', () => {
     let service: DaLiveAuthService;
     let store: Map<string, unknown>;
 
-    /** A service over a globalState pre-loaded with `initial`. */
-    function makeService(initial: Record<string, unknown> = {}) {
+    /**
+     * A service over a globalState pre-loaded with `initial`. A `token` entry goes
+     * to SecretStorage, which is where the token lives; everything else is state.
+     */
+    function makeService({ token, ...initial }: Record<string, unknown> = {}) {
         const stateful = createStatefulGlobalState(initial);
         store = stateful.store;
+        const { secrets } = createMockSecretStorage(
+            typeof token === 'string' ? { [DA_LIVE_TOKEN_SECRET_KEY]: token } : {},
+        );
         service = new DaLiveAuthService(
-            createMockExtensionContext({ globalState: stateful.globalState }),
+            createMockExtensionContext({ globalState: stateful.globalState, secrets }),
         );
     }
 
-    /** globalState holding a token that passes the 5-minute expiry buffer. */
+    /** A stored token that passes the 5-minute expiry buffer. */
     const withStoredToken = (accessToken = 'stored-token') => ({
-        'daLive.accessToken': accessToken,
+        token: accessToken,
         'daLive.tokenExpiration': Date.now() + 3600_000,
     });
 

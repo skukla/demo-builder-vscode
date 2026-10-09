@@ -257,6 +257,9 @@ export async function activate(context: vscode.ExtensionContext) {
             // newest sweeps sit last so they are the easiest to drop if the upkeep
             // chain ever needs shortening.
             await sweepCommerceSecretStorage(context);
+            // Same job for the DA.live token: out of plaintext globalState and
+            // into SecretStorage, without waiting for the SC to touch DA.live.
+            await migrateDaLiveTokenStorage(context);
             // Manifest write-back migration: load+save any manifest not stamped
             // with MANIFEST_FORMAT_VERSION, so legacy shapes are rewritten on
             // disk instead of converted on every read forever. Must stay IN this
@@ -842,6 +845,21 @@ async function sweepCommerceSecretStorage(context: vscode.ExtensionContext): Pro
         });
     } catch (error) {
         logger.debug(`[Secrets] Sweep skipped: ${(error as Error).message}`);
+    }
+}
+
+/**
+ * Move a DA.live token an older build left in globalState into SecretStorage.
+ *
+ * Glue only; the verified write-through lives in `daLiveTokenMigration`, and the
+ * service also runs it on first read, so this only makes it happen sooner. A
+ * keychain that refuses leaves the token where it was and costs nothing else.
+ */
+async function migrateDaLiveTokenStorage(context: vscode.ExtensionContext): Promise<void> {
+    try {
+        await getDaLiveAuthService(context).migrateLegacyToken();
+    } catch (error) {
+        logger.debug(`[DA.live Auth] Token move skipped: ${(error as Error).message}`);
     }
 }
 

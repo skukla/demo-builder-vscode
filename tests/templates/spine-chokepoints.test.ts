@@ -264,13 +264,16 @@ describe('spine choke-points', () => {
         // the GitHub token, App Builder component secrets, and the Commerce
         // secret migration (which the data-installer's provisioning routes
         // through rather than storing directly). A credential write anywhere
-        // else means a fifth cache nobody rotates.
+        // else means a fifth cache nobody rotates. Added 2026-10-09 (EDS-35): the
+        // DA.live access token, moved out of globalState; its migration module
+        // owns every write and delete, and the auth service calls through it.
         const primitive = /[sS]ecret[sS]?(torage)?\.(store|delete)\(/;
         const spine = [
             'features/eds/services/helix/helixKeyStore.ts',
             'features/eds/services/github/githubTokenService.ts',
             'features/app-builder/services/componentSettingSecrets.ts',
             'features/components/services/commerceSecretMigration.ts',
+            'features/eds/services/daLive/daLiveTokenMigration.ts',
         ];
 
         const hits = filesTouchingPrimitive(primitive);

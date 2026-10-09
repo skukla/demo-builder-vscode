@@ -6722,7 +6722,7 @@
             ],
             "mutants": 2,
             "category": "branch",
-            "reason": "Every route that produces a non-null tokenInfo has already applied the five-minute expiry buffer - readValidStateToken and hydrateFromDaAuthHelper both return null unless expiresAt is at least now plus 300000. So when the left operand is true the right one is true as well, and it is strictly greater than Date.now(), never equal. Neither forcing the comparison true nor relaxing it to >= reaches a state any input can produce.",
+            "reason": "Every route that produces a non-null tokenInfo has already applied the five-minute expiry buffer - readValidStoredToken and hydrateFromDaAuthHelper both return null unless expiresAt is at least now plus 300000. So when the left operand is true the right one is true as well, and it is strictly greater than Date.now(), never equal. Neither forcing the comparison true nor relaxing it to >= reaches a state any input can produce.",
             "decision": "none - unreachable; the buffer upstream makes this comparison a tautology.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-07"
@@ -6730,12 +6730,12 @@
         {
             "module": "src/features/eds/services/daLive/daLiveAuthService.ts",
             "anchors": [
-                "} catch (error) {"
+                "} catch {"
             ],
-            "line": 165,
+            "line": 213,
             "mutants": 1,
             "category": "block",
-            "reason": "This catch body is a single logger.warn. Caching the adopted token into globalState is best-effort by design, and the function returns the helper token immediately afterwards whether the cache write threw or not - which the fallback suite pins with a globalState.update that rejects. Emptying the block changes only whether one warn line prints.",
+            "reason": "This catch body is a single logger.warn. Storing the adopted token in SecretStorage is best-effort by design, and the function returns the helper token immediately afterwards whether the store threw or not - which the fallback suite pins with a secrets.store that rejects. Emptying the block changes only whether one warn line prints. (Re-anchored 2026-10-09, EDS-35: the token moved from globalState to SecretStorage.)",
             "decision": "none - equivalent; the behaviour it guards is already asserted, and only the log line differs.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-07"
@@ -6745,7 +6745,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 256,
+            "line": 304,
             "mutants": 1,
             "category": "block",
             "reason": "The else branch of the response.ok check contains only a logger.warn. Both the taken and the untaken path fall through to the same return null at the end of fetchUserEmail, which the refused-response test asserts.",
@@ -6758,7 +6758,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 259,
+            "line": 307,
             "mutants": 1,
             "category": "block",
             "reason": "This catch body is a single logger.warn, and control falls through to the same return null either way - pinned by the test that makes fetch reject and asserts null. Emptying it changes only the log.",
@@ -8603,7 +8603,7 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 798,
+            "line": 801,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here the step is starting the in-extension MCP server, whose failure must never abort activation.",
@@ -8628,7 +8628,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 532,
+            "line": 535,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a logger.error plus a showErrorMessage whose text is built from the error. Activation's own tests assert showErrorMessage was NOT called on every success path, which is the observable half; the wording of the message when it IS called is the rest.",
@@ -8641,7 +8641,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 889,
+            "line": 907,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here it is the manifest-format sweep.",

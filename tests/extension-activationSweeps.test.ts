@@ -27,6 +27,7 @@ import {
     mockRefreshAiBundles,
     mockRenewPublishKeys,
     mockSweepCommerceSecrets,
+    mockMigrateDaLiveToken,
     mockSweepManifestFormat,
     mockStateManagerDispose,
 } from './extension.testUtils';
@@ -120,6 +121,27 @@ describe('the activation upkeep sweeps', () => {
         ]);
         expect(args.secrets).toBe(context.secrets);
         expect(typeof args.saveProject).toBe('function');
+    });
+
+    // The DA.live token moved from globalState (plain data on disk) into
+    // SecretStorage on 2026-10-09. A token signed in before that sits in
+    // plaintext until something moves it; activation is that something, so it
+    // does not wait for the SC to next touch DA.live.
+    it('moves a DA.live token left in globalState into SecretStorage', async () => {
+        await activate(createActivationContext());
+        await settleSweeps();
+
+        expect(mockMigrateDaLiveToken).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not let a failed DA.live token move take activation down', async () => {
+        mockMigrateDaLiveToken.mockRejectedValueOnce(new Error('keychain locked'));
+
+        await activate(createActivationContext());
+        await settleSweeps();
+
+        expect(mockSweepManifestFormat).toHaveBeenCalled();
+        expect(vscode.window.showErrorMessage).not.toHaveBeenCalled();
     });
 
     it('hands the publish-key sweep every project and a DA.live token source', async () => {

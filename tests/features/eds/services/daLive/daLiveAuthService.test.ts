@@ -3,6 +3,12 @@ import {
     ExtensionContext,
 } from './daLiveAuthService.testUtils';
 import { createMockExtensionContext, createStatefulGlobalState } from '../../../../helpers/extensionContextFake';
+import { fakeJwt } from '../../../../helpers/jwtFake';
+import { createMockSecretStorage } from '../../../../helpers/secretStorageFake';
+import {
+    DA_LIVE_TOKEN_SECRET_KEY,
+    LEGACY_TOKEN_STATE_KEY,
+} from '@/features/eds/services/daLive/daLiveTokenMigration';
 /**
  * DA.live Auth Service Tests
  *
@@ -23,13 +29,21 @@ describe('DaLiveAuthService', () => {
     let service: DaLiveAuthService;
     let mockContext: ExtensionContext;
     let globalStateStore: Map<string, unknown>;
+    let keychain: Map<string, string>;
+    let secrets: ReturnType<typeof createMockSecretStorage>['secrets'];
 
     beforeEach(() => {
         jest.clearAllMocks();
 
         const stateful = createStatefulGlobalState();
         globalStateStore = stateful.store;
-        mockContext = createMockExtensionContext({ globalState: stateful.globalState });
+        const secretFake = createMockSecretStorage();
+        keychain = secretFake.store;
+        secrets = secretFake.secrets;
+        mockContext = createMockExtensionContext({
+            globalState: stateful.globalState,
+            secrets,
+        });
 
         service = new DaLiveAuthService(mockContext);
     });
@@ -55,7 +69,7 @@ describe('DaLiveAuthService', () => {
         const realFetch = global.fetch;
 
         beforeEach(() => {
-            globalStateStore.set('daLive.accessToken', 'live-token');
+            keychain.set(DA_LIVE_TOKEN_SECRET_KEY, 'live-token');
             globalStateStore.set('daLive.tokenExpiration', Date.now() + 60 * 60 * 1000);
         });
 
@@ -98,6 +112,7 @@ describe('DaLiveAuthService', () => {
         });
 
         it('returns refused when no token is stored — nothing to accept', async () => {
+            keychain.clear();
             globalStateStore.clear();
             global.fetch = jest.fn();
             expect(await service.isServerAccepted('acme')).toBe('refused');
@@ -119,7 +134,7 @@ describe('DaLiveAuthService', () => {
         it('should return false when token is expired', async () => {
             // Given: Token stored with expiration in the past
             const expiredTime = Date.now() - 60 * 60 * 1000; // 1 hour ago
-            globalStateStore.set('daLive.accessToken', 'expired-token');
+            keychain.set(DA_LIVE_TOKEN_SECRET_KEY, 'expired-token');
             globalStateStore.set('daLive.tokenExpiration', expiredTime);
 
             // When: isAuthenticated() called
@@ -132,7 +147,7 @@ describe('DaLiveAuthService', () => {
         it('should return false when token expires within 5 minutes', async () => {
             // Given: Token with expiration in 3 minutes (within 5-min buffer)
             const almostExpired = Date.now() + 3 * 60 * 1000;
-            globalStateStore.set('daLive.accessToken', 'almost-expired-token');
+            keychain.set(DA_LIVE_TOKEN_SECRET_KEY, 'almost-expired-token');
             globalStateStore.set('daLive.tokenExpiration', almostExpired);
 
             // When: isAuthenticated() called
@@ -145,7 +160,7 @@ describe('DaLiveAuthService', () => {
         it('should return true when valid token exists', async () => {
             // Given: Token stored with future expiration (more than 5 min)
             const validExpiration = Date.now() + 60 * 60 * 1000; // 1 hour from now
-            globalStateStore.set('daLive.accessToken', 'valid-token');
+            keychain.set(DA_LIVE_TOKEN_SECRET_KEY, 'valid-token');
             globalStateStore.set('daLive.tokenExpiration', validExpiration);
 
             // When: isAuthenticated() called
@@ -169,7 +184,7 @@ describe('DaLiveAuthService', () => {
 
         it('should return null when token is missing expiration', async () => {
             // Given: Token stored without expiration
-            globalStateStore.set('daLive.accessToken', 'token-without-expiry');
+            keychain.set(DA_LIVE_TOKEN_SECRET_KEY, 'token-without-expiry');
 
             // When: getStoredToken() called
             const result = await service.getStoredToken();
@@ -181,7 +196,7 @@ describe('DaLiveAuthService', () => {
         it('should return null when token is expired', async () => {
             // Given: Token stored with past expiration
             const expiredTime = Date.now() - 60 * 1000; // 1 minute ago
-            globalStateStore.set('daLive.accessToken', 'expired-token');
+            keychain.set(DA_LIVE_TOKEN_SECRET_KEY, 'expired-token');
             globalStateStore.set('daLive.tokenExpiration', expiredTime);
 
             // When: getStoredToken() called
@@ -195,7 +210,7 @@ describe('DaLiveAuthService', () => {
             // Given: Token and expiration in globalState
             const validExpiration = Date.now() + 60 * 60 * 1000; // 1 hour from now
             const email = 'user@example.com';
-            globalStateStore.set('daLive.accessToken', 'valid-token');
+            keychain.set(DA_LIVE_TOKEN_SECRET_KEY, 'valid-token');
             globalStateStore.set('daLive.tokenExpiration', validExpiration);
             globalStateStore.set('daLive.userEmail', email);
 
@@ -218,7 +233,7 @@ describe('DaLiveAuthService', () => {
             const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
             try {
                 const boundary = now + 5 * 60 * 1000;
-                globalStateStore.set('daLive.accessToken', 'boundary-token');
+                keychain.set(DA_LIVE_TOKEN_SECRET_KEY, 'boundary-token');
                 globalStateStore.set('daLive.tokenExpiration', boundary);
 
                 const result = await service.getStoredToken();
@@ -233,7 +248,7 @@ describe('DaLiveAuthService', () => {
         it('should return token info without email if not stored', async () => {
             // Given: Token without email
             const validExpiration = Date.now() + 60 * 60 * 1000;
-            globalStateStore.set('daLive.accessToken', 'valid-token');
+            keychain.set(DA_LIVE_TOKEN_SECRET_KEY, 'valid-token');
             globalStateStore.set('daLive.tokenExpiration', validExpiration);
 
             // When: getStoredToken() called
@@ -260,7 +275,7 @@ describe('DaLiveAuthService', () => {
         it('should return null when token is expired', async () => {
             // Given: Expired token in storage
             const expiredTime = Date.now() - 60 * 1000;
-            globalStateStore.set('daLive.accessToken', 'expired-token');
+            keychain.set(DA_LIVE_TOKEN_SECRET_KEY, 'expired-token');
             globalStateStore.set('daLive.tokenExpiration', expiredTime);
 
             // When: getAccessToken() called
@@ -273,7 +288,7 @@ describe('DaLiveAuthService', () => {
         it('should return stored token when valid', async () => {
             // Given: Valid token in storage
             const validExpiration = Date.now() + 60 * 60 * 1000;
-            globalStateStore.set('daLive.accessToken', 'valid-access-token');
+            keychain.set(DA_LIVE_TOKEN_SECRET_KEY, 'valid-access-token');
             globalStateStore.set('daLive.tokenExpiration', validExpiration);
 
             // When: getAccessToken() called
@@ -315,28 +330,110 @@ describe('DaLiveAuthService', () => {
         it('fires only after the token is readable, not before', async () => {
             // A listener runs work that reads the session back. Firing earlier
             // would race the write it is supposed to signal.
-            let tokenAtFireTime: string | null = 'not-checked';
+            let tokenAtFireTime: string | undefined = 'not-checked';
             service.onDidSignIn(() => {
-                const calls = (mockContext.globalState.update as jest.Mock).mock.calls;
-                tokenAtFireTime = calls.some((c) => c[0] === 'daLive.accessToken')
-                    ? 'written'
-                    : null;
+                tokenAtFireTime = keychain.get(DA_LIVE_TOKEN_SECRET_KEY);
+            });
+            const token = createTestToken({
+                sub: 'user123',
+                created_at: String(Date.now()),
+                expires_in: String(3600000),
             });
 
-            await service.storeToken(
-                createTestToken({
-                    sub: 'user123',
-                    created_at: String(Date.now()),
-                    expires_in: String(3600000),
+            await service.storeToken(token);
+
+            expect(tokenAtFireTime).toBe(token);
+        });
+    });
+
+    // The token moved out of globalState (plain data on disk) into SecretStorage
+    // (the OS keychain) on 2026-10-09. Expiry, email and org are not secrets and
+    // stay where they were.
+    describe('where the token lives', () => {
+        const legacyToken = fakeJwt({ note: 'signed-in-before-the-move' });
+        const inAnHour = () => Date.now() + 60 * 60 * 1000;
+
+        it('stores a new token in SecretStorage and never in globalState', async () => {
+            const token = fakeJwt({ note: 'fresh' });
+
+            await service.storeToken(token, { expiresAt: inAnHour() });
+
+            expect(keychain.get(DA_LIVE_TOKEN_SECRET_KEY)).toBe(token);
+            expect(mockContext.globalState.update).not.toHaveBeenCalledWith(
+                LEGACY_TOKEN_STATE_KEY,
+                token
+            );
+            expect(globalStateStore.has(LEGACY_TOKEN_STATE_KEY)).toBe(false);
+        });
+
+        it('keeps an SC signed in across the upgrade: the first read moves the old token', async () => {
+            globalStateStore.set(LEGACY_TOKEN_STATE_KEY, legacyToken);
+            globalStateStore.set('daLive.tokenExpiration', inAnHour());
+
+            expect(await service.getAccessToken()).toBe(legacyToken);
+            expect(keychain.get(DA_LIVE_TOKEN_SECRET_KEY)).toBe(legacyToken);
+            expect(globalStateStore.has(LEGACY_TOKEN_STATE_KEY)).toBe(false);
+            expect(globalStateStore.has('daLive.tokenExpiration')).toBe(true);
+        });
+
+        it('stays signed in when the keychain refuses the move, and keeps the old copy', async () => {
+            globalStateStore.set(LEGACY_TOKEN_STATE_KEY, legacyToken);
+            globalStateStore.set('daLive.tokenExpiration', inAnHour());
+            secrets.store.mockRejectedValue(new Error('keychain locked'));
+
+            expect(await service.isAuthenticated()).toBe(true);
+            expect(await service.getAccessToken()).toBe(legacyToken);
+            expect(globalStateStore.get(LEGACY_TOKEN_STATE_KEY)).toBe(legacyToken);
+        });
+
+        it('exposes the move for activation, and running it twice is harmless', async () => {
+            globalStateStore.set(LEGACY_TOKEN_STATE_KEY, legacyToken);
+
+            await service.migrateLegacyToken();
+            await service.migrateLegacyToken();
+
+            expect(secrets.store).toHaveBeenCalledTimes(1);
+            expect(keychain.get(DA_LIVE_TOKEN_SECRET_KEY)).toBe(legacyToken);
+        });
+
+        it('a new sign-in is not overwritten by an old token still waiting to move', async () => {
+            globalStateStore.set(LEGACY_TOKEN_STATE_KEY, legacyToken);
+            const fresh = fakeJwt({ note: 'fresh' });
+
+            await service.storeToken(fresh, { expiresAt: inAnHour() });
+
+            expect(await service.getAccessToken()).toBe(fresh);
+            expect(globalStateStore.has(LEGACY_TOKEN_STATE_KEY)).toBe(false);
+        });
+
+        it('sign-out removes the token from SecretStorage AND any globalState copy', async () => {
+            keychain.set(DA_LIVE_TOKEN_SECRET_KEY, fakeJwt({ note: 'current' }));
+            const leftover = createStatefulGlobalState({ [LEGACY_TOKEN_STATE_KEY]: legacyToken });
+            // A globalState copy that could not move (keychain refused it earlier).
+            const refusing = createMockSecretStorage({
+                [DA_LIVE_TOKEN_SECRET_KEY]: fakeJwt({ note: 'current' }),
+            });
+            refusing.secrets.store.mockRejectedValue(new Error('keychain locked'));
+            const stuck = new DaLiveAuthService(
+                createMockExtensionContext({
+                    globalState: leftover.globalState,
+                    secrets: refusing.secrets,
                 })
             );
 
-            expect(tokenAtFireTime).toBe('written');
+            await service.logout();
+            await stuck.logout();
+            stuck.dispose();
+
+            expect(keychain.has(DA_LIVE_TOKEN_SECRET_KEY)).toBe(false);
+            expect(refusing.store.has(DA_LIVE_TOKEN_SECRET_KEY)).toBe(false);
+            expect(leftover.store.has(LEGACY_TOKEN_STATE_KEY)).toBe(false);
+            expect(await stuck.getAccessToken()).toBeNull();
         });
     });
 
     describe('storeToken', () => {
-        it('should persist token to globalState', async () => {
+        it('should persist token to SecretStorage', async () => {
             // Given: Valid JWT token string
             const token = createTestToken({
                 sub: 'user123',
@@ -348,11 +445,9 @@ describe('DaLiveAuthService', () => {
             // When: storeToken(token) called
             await service.storeToken(token);
 
-            // Then: globalState contains token
-            expect(mockContext.globalState.update).toHaveBeenCalledWith(
-                'daLive.accessToken',
-                token
-            );
+            // Then: SecretStorage holds the token
+            expect(secrets.store).toHaveBeenCalledWith(DA_LIVE_TOKEN_SECRET_KEY, token);
+            expect(keychain.get(DA_LIVE_TOKEN_SECRET_KEY)).toBe(token);
         });
 
         it('should extract and store expiration from JWT payload', async () => {
@@ -435,8 +530,8 @@ describe('DaLiveAuthService', () => {
 
     describe('logout', () => {
         it('should clear all stored token data and orgName', async () => {
-            // Given: Token stored in globalState
-            globalStateStore.set('daLive.accessToken', 'token-to-clear');
+            // Given: Token stored in SecretStorage, the rest in globalState
+            keychain.set(DA_LIVE_TOKEN_SECRET_KEY, 'token-to-clear');
             globalStateStore.set('daLive.tokenExpiration', Date.now() + 60000);
             globalStateStore.set('daLive.userEmail', 'user@example.com');
             globalStateStore.set('daLive.orgName', 'my-org');
@@ -446,10 +541,7 @@ describe('DaLiveAuthService', () => {
             await service.logout();
 
             // Then: Token data and orgName cleared
-            expect(mockContext.globalState.update).toHaveBeenCalledWith(
-                'daLive.accessToken',
-                undefined
-            );
+            expect(keychain.has(DA_LIVE_TOKEN_SECRET_KEY)).toBe(false);
             expect(mockContext.globalState.update).toHaveBeenCalledWith(
                 'daLive.tokenExpiration',
                 undefined
@@ -490,7 +582,7 @@ describe('DaLiveAuthService', () => {
     describe('resetAll', () => {
         it('should clear everything including setupComplete', async () => {
             // Given: Full state
-            globalStateStore.set('daLive.accessToken', 'token');
+            keychain.set(DA_LIVE_TOKEN_SECRET_KEY, 'token');
             globalStateStore.set('daLive.tokenExpiration', Date.now() + 60000);
             globalStateStore.set('daLive.userEmail', 'user@example.com');
             globalStateStore.set('daLive.orgName', 'my-org');
@@ -504,10 +596,7 @@ describe('DaLiveAuthService', () => {
                 'daLive.setupComplete',
                 undefined
             );
-            expect(mockContext.globalState.update).toHaveBeenCalledWith(
-                'daLive.accessToken',
-                undefined
-            );
+            expect(keychain.has(DA_LIVE_TOKEN_SECRET_KEY)).toBe(false);
             expect(mockContext.globalState.update).toHaveBeenCalledWith(
                 'daLive.orgName',
                 undefined

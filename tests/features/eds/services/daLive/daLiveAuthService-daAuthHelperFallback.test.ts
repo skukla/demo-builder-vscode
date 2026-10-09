@@ -1,7 +1,7 @@
 /**
  * DA.live auth — da-auth-helper fallback.
  *
- * When globalState has no valid token, DaLiveAuthService adopts a still-valid
+ * When SecretStorage has no valid token, DaLiveAuthService adopts a still-valid
  * token from the da-auth-helper cache (~/.aem/da-token.json) so a sign-in the
  * agent did via the `da-auth` skill is recognized by the extension. The cache
  * reader is mocked here; its own parsing is covered by daAuthHelperToken.test.
@@ -19,14 +19,25 @@ import {
     writeDaAuthHelperToken,
 } from '@/features/eds/services/daAuthHelperToken';
 import { createMockExtensionContext, createStatefulGlobalState } from '../../../../helpers/extensionContextFake';
+import { fakeJwt } from '../../../../helpers/jwtFake';
+import { createMockSecretStorage } from '../../../../helpers/secretStorageFake';
+import { DA_LIVE_TOKEN_SECRET_KEY } from '@/features/eds/services/daLive/daLiveTokenMigration';
+
+const FROM_HELPER = fakeJwt({ note: 'from-helper' });
+const FROM_STORAGE = fakeJwt({ note: 'from-storage' });
+const FROM_EXTENSION = fakeJwt({ note: 'from-extension' });
 
 const readMock = readDaAuthHelperToken as jest.Mock;
 const writeMock = writeDaAuthHelperToken as jest.Mock;
 
-function makeService(initial: Record<string, unknown> = {}) {
+function makeService(
+    initial: Record<string, unknown> = {},
+    initialSecrets: Record<string, string> = {},
+) {
     const { globalState, store } = createStatefulGlobalState(initial);
-    const context = createMockExtensionContext({ globalState });
-    return { service: new DaLiveAuthService(context), store };
+    const { secrets, store: keychain } = createMockSecretStorage(initialSecrets);
+    const context = createMockExtensionContext({ globalState, secrets });
+    return { service: new DaLiveAuthService(context), store, keychain, secrets };
 }
 
 describe('DaLiveAuthService — da-auth-helper fallback', () => {
@@ -35,20 +46,22 @@ describe('DaLiveAuthService — da-auth-helper fallback', () => {
         readMock.mockReturnValue(null);
     });
 
-    it('adopts a valid cached token when globalState is empty', async () => {
+    it('adopts a valid cached token when nothing is stored, into SecretStorage', async () => {
         const expiresAt = Date.now() + 3600_000;
-        readMock.mockReturnValue({ accessToken: 'eyJ.from-helper', expiresAt, email: 'x@y.com' });
-        const { service, store } = makeService();
+        readMock.mockReturnValue({ accessToken: FROM_HELPER, expiresAt, email: 'x@y.com' });
+        const { service, store, keychain } = makeService();
 
         expect(await service.isAuthenticated()).toBe(true);
-        expect(await service.getAccessToken()).toBe('eyJ.from-helper');
-        // Hydrated into globalState so the rest of the extension sees it.
-        expect(store.get('daLive.accessToken')).toBe('eyJ.from-helper');
+        expect(await service.getAccessToken()).toBe(FROM_HELPER);
+        // Adopted into SecretStorage so the rest of the extension sees it — and
+        // never into globalState, which is plain data on disk.
+        expect(keychain.get(DA_LIVE_TOKEN_SECRET_KEY)).toBe(FROM_HELPER);
+        expect(store.has('daLive.accessToken')).toBe(false);
         expect(store.get('daLive.tokenExpiration')).toBe(expiresAt);
     });
 
     it('ignores an expired cached token', async () => {
-        readMock.mockReturnValue({ accessToken: 'eyJ.old', expiresAt: Date.now() - 1000 });
+        readMock.mockReturnValue({ accessToken: fakeJwt({ note: 'old' }), expiresAt: Date.now() - 1000 });
         const { service } = makeService();
 
         expect(await service.isAuthenticated()).toBe(false);
@@ -63,31 +76,31 @@ describe('DaLiveAuthService — da-auth-helper fallback', () => {
         const now = 1_700_000_000_000;
         const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
         try {
-            readMock.mockReturnValue({ accessToken: 'eyJ.boundary', expiresAt: now + 5 * 60 * 1000 });
+            const boundary = fakeJwt({ note: 'boundary' });
+            readMock.mockReturnValue({ accessToken: boundary, expiresAt: now + 5 * 60 * 1000 });
             const { service } = makeService();
 
-            expect(await service.getAccessToken()).toBe('eyJ.boundary');
+            expect(await service.getAccessToken()).toBe(boundary);
         } finally {
             nowSpy.mockRestore();
         }
     });
 
     it('ignores a cached token that expires inside the buffer but has not expired yet', async () => {
-        readMock.mockReturnValue({ accessToken: 'eyJ.nearly', expiresAt: Date.now() + 60_000 });
+        readMock.mockReturnValue({ accessToken: fakeJwt({ note: 'nearly' }), expiresAt: Date.now() + 60_000 });
         const { service } = makeService();
 
         expect(await service.getAccessToken()).toBeNull();
     });
 
-    it('still adopts the token when caching it into globalState fails', async () => {
+    it('still adopts the token when the keychain refuses to store it', async () => {
         // Caching is best-effort — the token is usable for this call either way.
         const expiresAt = Date.now() + 3600_000;
-        readMock.mockReturnValue({ accessToken: 'eyJ.from-helper', expiresAt });
-        const { globalState } = createStatefulGlobalState();
-        jest.spyOn(globalState, 'update').mockRejectedValue(new Error('state write failed'));
-        const service = new DaLiveAuthService(createMockExtensionContext({ globalState }));
+        readMock.mockReturnValue({ accessToken: FROM_HELPER, expiresAt });
+        const { service, secrets } = makeService();
+        secrets.store.mockRejectedValue(new Error('keychain locked'));
 
-        expect(await service.getAccessToken()).toBe('eyJ.from-helper');
+        expect(await service.getAccessToken()).toBe(FROM_HELPER);
     });
 
     it('reports unauthenticated when there is no cached token', async () => {
@@ -95,14 +108,14 @@ describe('DaLiveAuthService — da-auth-helper fallback', () => {
         expect(await service.isAuthenticated()).toBe(false);
     });
 
-    it('prefers a valid globalState token and never consults the cache', async () => {
+    it('prefers a valid stored token and never consults the cache', async () => {
         const expiresAt = Date.now() + 3600_000;
-        const { service } = makeService({
-            'daLive.accessToken': 'eyJ.from-state',
-            'daLive.tokenExpiration': expiresAt,
-        });
+        const { service } = makeService(
+            { 'daLive.tokenExpiration': expiresAt },
+            { [DA_LIVE_TOKEN_SECRET_KEY]: FROM_STORAGE },
+        );
 
-        expect(await service.getAccessToken()).toBe('eyJ.from-state');
+        expect(await service.getAccessToken()).toBe(FROM_STORAGE);
         expect(readMock).not.toHaveBeenCalled();
     });
 
@@ -110,8 +123,8 @@ describe('DaLiveAuthService — da-auth-helper fallback', () => {
         const { service } = makeService();
         const expiresAt = Date.now() + 3600_000;
 
-        await service.storeToken('eyJ.from-extension', { expiresAt, email: 'x@y.com' });
+        await service.storeToken(FROM_EXTENSION, { expiresAt, email: 'x@y.com' });
 
-        expect(writeMock).toHaveBeenCalledWith({ accessToken: 'eyJ.from-extension', expiresAt });
+        expect(writeMock).toHaveBeenCalledWith({ accessToken: FROM_EXTENSION, expiresAt });
     });
 });

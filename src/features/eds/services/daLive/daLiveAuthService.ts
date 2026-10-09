@@ -5,6 +5,11 @@
  * Tokens are obtained externally via the wizard's bookmarklet/token-paste flow
  * or the dashboard's QuickPick authentication flow.
  *
+ * The token lives in SecretStorage (the OS keychain), like every other credential
+ * the extension holds. Its expiry, the user's email and the org are not secrets and
+ * live in globalState. Builds before 2026-10-09 kept the token in globalState too;
+ * `daLiveTokenMigration` moves it, once, on activation or on the first read.
+ *
  * Note: The OAuth PKCE flow was removed as it requires the app to be hosted
  * on the da.live domain for OAuth callbacks, which VS Code extensions cannot do.
  */
@@ -12,15 +17,21 @@
 import * as vscode from 'vscode';
 import { readDaAuthHelperToken, writeDaAuthHelperToken } from '../daAuthHelperToken';
 import { DA_LIVE_BASE_URL } from './daLiveConstants';
+import {
+    DA_LIVE_TOKEN_SECRET_KEY,
+    LEGACY_TOKEN_STATE_KEY,
+    forgetDaLiveToken,
+    migrateDaLiveTokenToSecretStorage,
+    storeDaLiveToken,
+} from './daLiveTokenMigration';
 import { getLogger } from '@/core/logging/debugLogger';
 
 // ==========================================================
 // Constants
 // ==========================================================
 
-/** State storage keys for DA.live token data */
+/** globalState keys for the NON-secret session data. The token is in SecretStorage. */
 const STATE_KEYS = {
-    accessToken: 'daLive.accessToken',
     tokenExpiration: 'daLive.tokenExpiration',
     userEmail: 'daLive.userEmail',
     orgName: 'daLive.orgName',
@@ -87,6 +98,9 @@ export class DaLiveAuthService {
      */
     readonly onDidSignIn = this.signInEmitter.event;
 
+    /** The one-time move out of globalState, run at most once per instance. */
+    private legacyMigration: Promise<void> | undefined;
+
     constructor(context: vscode.ExtensionContext) {
         this.context = context;
     }
@@ -109,20 +123,54 @@ export class DaLiveAuthService {
      * The 5-minute expiration buffer prevents tokens from expiring mid-operation.
      */
     async getStoredToken(): Promise<DaLiveTokenInfo | null> {
-        const fromState = this.readValidStateToken();
-        if (fromState) {
-            return fromState;
+        const stored = await this.readValidStoredToken();
+        if (stored) {
+            return stored;
         }
         // Fallback: a token the agent obtained via the `da-auth` skill (cached by
         // da-auth-helper at ~/.aem/da-token.json) — the same admin.da.live IMS
-        // credential, just a different front door. Hydrate it into globalState so
+        // credential, just a different front door. Adopt it into SecretStorage so
         // the rest of the extension and our MCP tools recognize the same sign-in.
         return this.hydrateFromDaAuthHelper();
     }
 
-    /** Read a still-valid token from globalState (with the 5-minute buffer), or null. */
-    private readValidStateToken(): DaLiveTokenInfo | null {
-        const accessToken = this.context.globalState.get<string>(STATE_KEYS.accessToken);
+    /**
+     * Move a token an older build left in globalState into SecretStorage
+     * (verify-then-delete; see `daLiveTokenMigration`). Runs once per instance:
+     * activation calls it, and every read, store and sign-out awaits it first, so
+     * a stale globalState copy can never land on top of a newer sign-in or
+     * survive a sign-out. Never rejects.
+     */
+    migrateLegacyToken(): Promise<void> {
+        this.legacyMigration ??= migrateDaLiveTokenToSecretStorage(
+            this.context.globalState,
+            this.context.secrets,
+            (line) => this.logger.info(`[DA.live Auth] ${line}`),
+        ).then(() => undefined);
+        return this.legacyMigration;
+    }
+
+    /**
+     * The raw token, from SecretStorage. Falls back to a globalState copy only
+     * when the keychain refused to take it, so an SC is never signed out by the
+     * move itself.
+     */
+    private async readAccessToken(): Promise<string | undefined> {
+        await this.migrateLegacyToken();
+        try {
+            const stored = await this.context.secrets.get(DA_LIVE_TOKEN_SECRET_KEY);
+            if (stored) {
+                return stored;
+            }
+        } catch {
+            this.logger.warn('[DA.live Auth] Could not read the token from SecretStorage');
+        }
+        return this.context.globalState.get<string>(LEGACY_TOKEN_STATE_KEY);
+    }
+
+    /** Read a still-valid stored token (with the 5-minute buffer), or null. */
+    private async readValidStoredToken(): Promise<DaLiveTokenInfo | null> {
+        const accessToken = await this.readAccessToken();
         const expiresAt = this.context.globalState.get<number>(STATE_KEYS.tokenExpiration);
         const email = this.context.globalState.get<string>(STATE_KEYS.userEmail);
 
@@ -140,7 +188,7 @@ export class DaLiveAuthService {
 
     /**
      * Adopt a still-valid token from the da-auth-helper cache (`~/.aem/da-token.json`)
-     * when globalState has none. Caches it into globalState (best-effort) so
+     * when none is stored. Caches it into SecretStorage (best-effort) so
      * subsequent reads are fast and the extension's own flows see the same token.
      * Returns null when there is no usable cached token.
      */
@@ -162,11 +210,11 @@ export class DaLiveAuthService {
             this.logger.info(
                 '[DA.live Auth] Adopted token from da-auth-helper cache (~/.aem/da-token.json)',
             );
-        } catch (error) {
-            // Caching is best-effort; the token is still usable for this call.
-            this.logger.warn(
-                `[DA.live Auth] Could not cache da-auth-helper token: ${(error as Error).message}`,
-            );
+        } catch {
+            // Caching is best-effort; the token is still usable for this call. The
+            // error text is not logged: it is the keychain's, and nothing guarantees
+            // it never echoes the value it was handed.
+            this.logger.warn('[DA.live Auth] Could not store the da-auth-helper token');
         }
 
         return {
@@ -296,8 +344,12 @@ export class DaLiveAuthService {
         token: string,
         opts?: { expiresAt?: number; email?: string; orgName?: string },
     ): Promise<void> {
-        // Store the token
-        await this.context.globalState.update(STATE_KEYS.accessToken, token);
+        // Let any pending move finish first, so an old globalState token cannot
+        // be copied over this one afterwards.
+        await this.migrateLegacyToken();
+        await storeDaLiveToken(this.context.secrets, token);
+        // A copy the keychain once refused to take is now stale; drop it.
+        await this.clearLegacyToken();
 
         // Use pre-validated data if provided, otherwise extract from JWT
         if (opts?.expiresAt) {
@@ -369,12 +421,16 @@ export class DaLiveAuthService {
     /**
      * Log out and clear stored tokens
      *
-     * Clears all stored token data from globalState.
+     * Removes the token from SecretStorage AND any globalState copy an older
+     * build left, then clears the rest of the session from globalState.
      * Preserves `setupComplete` so user doesn't have to re-learn the bookmarklet flow.
      * Token revocation is not performed as tokens expire naturally.
      */
     async logout(): Promise<void> {
-        await this.context.globalState.update(STATE_KEYS.accessToken, undefined);
+        // A move still in flight would otherwise write the token back afterwards.
+        await this.migrateLegacyToken();
+        await forgetDaLiveToken(this.context.secrets);
+        await this.clearLegacyToken();
         await this.context.globalState.update(STATE_KEYS.tokenExpiration, undefined);
         await this.context.globalState.update(STATE_KEYS.userEmail, undefined);
         await this.context.globalState.update(STATE_KEYS.orgName, undefined);
@@ -393,6 +449,13 @@ export class DaLiveAuthService {
         await this.context.globalState.update(STATE_KEYS.setupComplete, undefined);
 
         this.logger.info('[DA.live Auth] Full reset complete');
+    }
+
+    /** Drop a globalState token copy, if an older build left one. */
+    private async clearLegacyToken(): Promise<void> {
+        if (this.context.globalState.get(LEGACY_TOKEN_STATE_KEY) !== undefined) {
+            await this.context.globalState.update(LEGACY_TOKEN_STATE_KEY, undefined);
+        }
     }
 
     /** Get stored org name */

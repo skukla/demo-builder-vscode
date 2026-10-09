@@ -97,8 +97,9 @@ jest.mock('@/features/eds/services/helix/helixApiClient', () => ({
     },
 }));
 
-// The DA.live IMS token comes from DaLiveAuthService (globalState-backed, with
-// the ~/.aem/da-token.json fallback) — NOT from VS Code SecretStorage. This
+// The DA.live IMS token comes from DaLiveAuthService (SecretStorage under
+// `demoBuilder.daLive.accessToken` since 2026-10-09, with the
+// ~/.aem/da-token.json fallback) — the caller never reads storage itself. This
 // suite used to fake a `demoBuilder.daLive.imsToken` secret that nothing in the
 // codebase ever wrote, which made a silently-skipped Helix publish look green.
 export const mockGetAccessToken = jest.fn<Promise<string | null>, []>();

@@ -217,12 +217,14 @@ jest.mock('@/features/project-creation/services/aiBundle/globalMcpRegistration',
  */
 export const mockOnDidSignIn = jest.fn((_listener: () => void) => ({ dispose: jest.fn() }));
 export const mockGetAccessToken = jest.fn();
+export const mockMigrateDaLiveToken = jest.fn(async () => undefined);
 export const mockGetGitHubToken = jest.fn();
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     ...jest.requireActual('@/features/eds/handlers/edsHelpers'),
     getDaLiveAuthService: jest.fn(() => ({
         onDidSignIn: (listener: () => void) => mockOnDidSignIn(listener),
         getAccessToken: (...a: unknown[]) => mockGetAccessToken(...a),
+        migrateLegacyToken: () => mockMigrateDaLiveToken(),
         dispose: jest.fn(),
     })),
     getGitHubServices: jest.fn(() => ({
