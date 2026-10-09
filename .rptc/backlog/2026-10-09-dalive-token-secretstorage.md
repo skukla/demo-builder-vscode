@@ -46,3 +46,7 @@ and stays.
 - No live check yet: after F5, confirm the SC stays signed in across a reload, that
   sign out then sign in works, and that the agent's `get_auth_status` still reports
   the DA.live session.
+
+## Shipped so far
+
+- 2026-10-09  fix(eds): keep the DA.live token in SecretStorage, not globalState (`2d5f8f496`)
