@@ -32,12 +32,10 @@ import { COMPONENT_IDS } from '@/core/constants';
 import { phaseReporter } from '@/core/utils/agentPhaseChannel';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { describeCdnPropagation } from '@/features/eds/services/configSyncService';
+import { republishStorefrontContent } from '@/features/eds/services/storefront/storefrontContentRepublishService';
 import { readStorefrontReport, storefrontReportLines } from '@/features/eds/services/storefront/storefrontReport';
 import { createStorefrontReportDeps } from '@/features/eds/services/storefront/storefrontReportDeps';
-import {
-    republishStorefrontConfig,
-    republishStorefrontContent,
-} from '@/features/eds/services/storefront/storefrontRepublishService';
+import { republishStorefrontConfig } from '@/features/eds/services/storefront/storefrontRepublishService';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 

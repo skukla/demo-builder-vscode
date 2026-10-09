@@ -25,7 +25,7 @@ step by reset and republish.
 |---|---|---|
 | Project creation | After the datapack is installed (the categories arrive with it) | `project-creation/services/catalogMenuPhase.ts` |
 | Reset (dashboard, `reset_project`) | Takes out what Demo Builder wrote, with the stored record, before re-copying the content; writes it again after publishing | `eds/services/reset/edsResetCatalogMenu.ts` |
-| Republish (dashboard, `sync_content`) | Writes pages for categories added since; refreshes ours if unedited | `eds/services/storefront/storefrontRepublishService.ts` |
+| Republish (dashboard, `sync_content`) | Writes pages for categories added since; refreshes ours if unedited | `eds/services/storefront/storefrontContentRepublishService.ts` |
 | While the project is open (EDS-27) | Offers pages for categories added since, or adds them when the SC opted in. Add-only | `eds/services/catalogMenu/newCategoryPagesWatcher.ts` |
 
 All of them call one step file, `eds/services/catalogMenu/catalogMenuStep.ts`, on a site built by

@@ -411,8 +411,8 @@ and three of them are more than 40% comments). Decide which.
    moved to `importModalView.ts`. The split blinded `modal-steady-height` to this very
    modal (it counted view branches in the modal's own file only); the scan now also reads the
    modal's own body file, with a planted control.
-10. `eds/services/storefront/storefrontRepublishService.ts` (567/400): config republish vs
-    full content republish.
+10. DONE 2026-10-09 (565 -> 324, see the log). `eds/services/storefront/storefrontRepublishService.ts` (567/400): config republish vs
+    full content republish. The content republish moved to `storefrontContentRepublishService.ts`.
 11. `eds/ui/steps/repoSelectionInline.helpers.tsx` (440/350) then
     `eds/ui/steps/RepoSelectionInline.tsx` (490/350): pure verdict functions vs form and
     notice components; repo-creation hook, repo-readiness hook, selection component.
@@ -871,6 +871,16 @@ date and what happened; a failure becomes its own `fix` item.
       (6) a finished import shows its result, and Back returns to the form. What each state
       shows now comes from `importModalView.ts`; every function is a proven move.
 
+- [ ] **Both republishes after the storefrontRepublishService split** (uncommitted on
+      `refactor/eds-8-god-files`): (1) change a store setting on Configure (the store scope)
+      and accept the republish prompt: config.json on GitHub and on the CDN carry the new
+      scope, and the prompt and the amber Republish tile clear; (2) a full content republish
+      from the dashboard's Republish button, then (3) the same through the agent's
+      `sync_content` tool: both finish, the pages are live, and the tile stays green. The config
+      republish stayed in `storefrontRepublishService.ts`; the content pipeline (site config,
+      code, permissions, publish, category pages, pre-warm, CDN verify) is now
+      `storefrontContentRepublishService.ts`. Every function is a proven move.
+
 ## Shipped so far
 
 - 2026-09-10  2026-09-10  Gated: god-file-ratchet.test.ts pins 68 candidates / 31 coupled; rule 49 measures on edit (2987e8623)
@@ -947,3 +957,4 @@ date and what happened; a failure becomes its own `fix` item.
 - 2026-10-09  docs(backlog): the staleness merge question on EDS-8 is answered by a fix (`5c552f0d9`)
 - 2026-10-09  ImportDatapackModal.tsx (504 -> 332) split by job. It keeps the state and the requests: the selection, the status poll, the four actions, and the close handover to a progress notification. What each state shows (resolveView, watchedActivation, busyMessage, and the footer row buildActions with startLabel) moved to importModalView.ts (179), pure; the component is its only caller, no forwarders. proveMove: all six functions pure moves, control fired; no markup moved. Tests: the watchedActivation suite became importModalView.test.ts and gained resolveView precedence, busyMessage and every footer row (20 new cases); the decisions suite gained four close tests. Pre-existing gap found by re-measuring: the 2026-09-20 "Run in background" handover had no test at all (14 uncovered mutants). Mutation: the 09-06 row was stale, so the unsplit file was re-measured at 86.77 (223 of 257); after, 245 of 257: ImportDatapackModal 92.05 (12 survivors, all ledgered equivalents; two rows added), importModalView 100. modal-steady-height had gone blind to this modal and now reads the modal's own body file (planted control: removing the floor fails it). Pins: godFileCandidates 29 -> 28, godFileCoupled stays 2. Checks: npm run gate green (lint 0 errors, tsc, typecheck:tests, blind spots, test sizes, full jest 1901 suites / 32,341 tests, source duplication at the pin of 36), compile green. Live check appended above.
 - 2026-10-09  refactor(data-installer): ImportDatapackModal keeps the state and the requests; what each state shows gets its own file (`e9d414a7c`)
+- 2026-10-09  storefrontRepublishService.ts (565 -> 324) split by job. It keeps the config.json republish: extractRepublishParams, the DA.live session guard, generate, write, push, and recording the published baseline from the snapshot taken BEFORE the push (the 2026-08-10 ordering, unchanged and now pinned by a test that saves a Configure change during the push). The full content republish (republishStorefrontContent with its params and result types) moved to storefrontContentRepublishService.ts (241); the dashboard handler and the sync_content tool import it directly, no forwarders. needsStorefrontRepublish had no caller in src, tests or the MCP surface and was deleted. proveMove: all three functions pure moves, control fired; every other line compared as a multiset against HEAD (only the headers, imports, the deleted function and two section dividers differ), planted control caught. Tests: both suites moved into the mirror folder as storefrontRepublishService.test.ts and storefrontContentRepublishService.test.ts and gained 25 cases (every extractor refusal, each step's failure answer, the push arguments, the progress order of both pipelines, the permissions skip, the published-baseline snapshot); one logger-wording assertion replaced by an outcome check and its ledger row removed; a duplicated storefrontRepublishService mock in configure-authoring-experience deleted. Mutation: no row existed, so the unsplit file was measured first: 40.21 (76 of 189, 43 uncovered). After: storefrontRepublishService 88.43 (107 of 121), storefrontContentRepublishService 72.41 (42 of 58), open gaps 0 on both; every survivor is log wording or a log-only decision, five ledger rows (14 mutants). Pins: godFileCandidates 28 -> 27, godFileCoupled stays 2; spine door for the category pages now names the new file; ADR-016's mock table, category-pages.md and call-path-audit name it too. storefrontTools.ts imports 12 -> 13 (limit 15). Checks: npm run gate green (lint 0 errors, tsc, typecheck:tests, blind spots, test sizes, full jest 1901 suites / 32,386 tests, source duplication at the pin of 36), compile green. Live check appended above.

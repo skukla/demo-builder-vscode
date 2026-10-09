@@ -6,6 +6,8 @@
 
 jest.mock('@/features/eds/services/storefront/storefrontRepublishService', () => ({
     republishStorefrontConfig: jest.fn(),
+}));
+jest.mock('@/features/eds/services/storefront/storefrontContentRepublishService', () => ({
     republishStorefrontContent: jest.fn(),
 }));
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
@@ -24,10 +26,8 @@ import { registerStorefrontTools } from '@/features/ai/server/storefrontTools';
 import type { McpToolSchema } from '@/features/ai/server/mcpToolServer';
 import { runWithAdobeTarget } from '@/features/ai/server/adobeTargetStore';
 import { COMPONENT_IDS } from '@/core/constants';
-import {
-    republishStorefrontConfig,
-    republishStorefrontContent,
-} from '@/features/eds/services/storefront/storefrontRepublishService';
+import { republishStorefrontContent } from '@/features/eds/services/storefront/storefrontContentRepublishService';
+import { republishStorefrontConfig } from '@/features/eds/services/storefront/storefrontRepublishService';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { isEdsProject } from '@/types/typeGuards';
 import { AdobeOrgMismatchError } from '@/features/authentication/services/authenticationErrors';

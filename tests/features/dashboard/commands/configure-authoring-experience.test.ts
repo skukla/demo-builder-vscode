@@ -42,9 +42,6 @@ jest.mock('@/types/typeGuards', () => ({
 jest.mock('@/features/eds/services/storefront/storefrontStalenessDetector', () => ({
     detectStorefrontChanges: jest.fn(() => ({ hasChanges: false })),
 }));
-jest.mock('@/features/eds/services/storefront/storefrontRepublishService', () => ({
-    republishStorefrontConfig: (...args: unknown[]) => mockRepublishStorefrontConfig(...args),
-}));
 
 // The config.json regen now runs through the shared authoringExperienceFlip
 // service, which imports republishStorefrontConfig directly from its module

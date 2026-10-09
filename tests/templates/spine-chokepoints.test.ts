@@ -433,7 +433,7 @@ describe('spine choke-points', () => {
         const doors = [
             'features/eds/services/catalogMenu/catalogMenuStep.ts',
             'features/eds/services/reset/edsResetCatalogMenu.ts',
-            'features/eds/services/storefront/storefrontRepublishService.ts',
+            'features/eds/services/storefront/storefrontContentRepublishService.ts',
             'features/project-creation/services/catalogMenuPhase.ts',
         ];
         const stepHits = filesTouchingPrimitive(/\b(applyCatalogMenuStep|removeCatalogMenuStep)\(/);

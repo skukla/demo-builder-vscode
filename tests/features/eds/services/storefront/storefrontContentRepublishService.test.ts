@@ -1,20 +1,23 @@
 /**
  * republishStorefrontContent — the shared content-publish pipeline extracted from
  * the dashboard republish handler. Collaborators (Helix, DA.live ops, helpers,
- * CDN verify) are mocked; the same-module republishStorefrontConfig early-returns
+ * CDN verify) are mocked; the real republishStorefrontConfig early-returns
  * (non-fatal) for a metadata-less project, so the test stays deterministic.
  * Asserts the success contract and that a step failure is caught and returned.
  */
 
 const mockPreviewCode = jest.fn(async () => undefined);
 const mockPurgeCacheAll = jest.fn(async () => undefined);
-const mockPublishAllSiteContent = jest.fn(async () => undefined);
+const mockPublishAllSiteContent = jest.fn(async (..._args: unknown[]) => undefined);
 
+// One instance each, so the steps that receive them can be asserted by identity.
+const mockContentOps = { sourceOps: {} };
+const mockTokenProvider = {};
 jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
-    DaLiveContentOperations: jest.fn(() => ({})),
+    DaLiveContentOperations: jest.fn(() => mockContentOps),
 }));
 jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
-    createDaLiveServiceTokenProvider: jest.fn(() => ({})),
+    createDaLiveServiceTokenProvider: jest.fn(() => mockTokenProvider),
 }));
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     applyDaLiveOrgConfigSettings: jest.fn(async () => undefined),
@@ -39,14 +42,17 @@ jest.mock('@/features/eds/services/catalogMenu/catalogMenuStep', () => ({
     applyCatalogMenuStep: (...a: unknown[]) => mockApplyCatalogMenuStep(...a),
 }));
 
-import { republishStorefrontContent } from '@/features/eds/services/storefront/storefrontRepublishService';
+import { republishStorefrontContent } from '@/features/eds/services/storefront/storefrontContentRepublishService';
 import { verifyConfigOnCdn } from '@/features/eds/services/configSyncService';
 import { resolveByomOverlayConfig } from '@/features/eds/handlers/byomOverlay';
 import { prewarmCatalog } from '@/features/eds/services/catalogPrewarmService';
-import type { Logger } from '@/types/logger';
+import {
+    applyDaLiveOrgConfigSettings,
+    configureDaLivePermissions,
+} from '@/features/eds/handlers/edsHelpers';
 import type { HelixService } from '@/features/eds/services/helix/helixService';
-import { createMockLogger } from '../../../helpers/loggerFake';
-import { PREVIEW_CODE_APP_NOT_ON_REPO_ERROR } from '../../../helpers/helixAdminFixtures';
+import { createMockLogger } from '../../../../helpers/loggerFake';
+import { PREVIEW_CODE_APP_NOT_ON_REPO_ERROR } from '../../../../helpers/helixAdminFixtures';
 
 /**
  * Helix arrives through `republishStorefrontContent`'s own params rather than by
@@ -60,7 +66,7 @@ const fakeHelix = {
     publishAllSiteContent: mockPublishAllSiteContent,
 } as unknown as HelixService;
 
-const logger = createMockLogger() as unknown as Logger;
+const logger = createMockLogger();
 
 function params(overrides: Record<string, unknown> = {}) {
     return {
@@ -155,10 +161,8 @@ describe('republishStorefrontContent', () => {
         it('a prewarm failure is non-fatal to the republish', async () => {
             (prewarmCatalog as jest.Mock).mockRejectedValueOnce(new Error('enumeration boom'));
             const res = await republishStorefrontContent(params());
-            expect(res.success).toBe(true);
-            expect(logger.warn).toHaveBeenCalledWith(
-                expect.stringContaining('pre-warming failed (non-fatal)'),
-            );
+            expect(res).toStrictEqual({ success: true, cdnVerified: true });
+            expect(verifyConfigOnCdn).toHaveBeenCalledWith('me', 'shop', logger);
         });
     });
 
@@ -198,8 +202,74 @@ describe('republishStorefrontContent', () => {
         it('adds nothing and saves nothing extra when the storefront has no catalog menu', async () => {
             const p = params();
             const res = await republishStorefrontContent(p);
-            expect(res).toEqual({ success: true, cdnVerified: true });
+            // Strict: an absent sentence is no key at all, not `catalogMenu: undefined`.
+            expect(res).toStrictEqual({ success: true, cdnVerified: true });
             expect(p.persist).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('the steps between the config and the publish', () => {
+        it('applies the DA.live site config with the project\'s authoring experience', async () => {
+            await republishStorefrontContent(params());
+            expect(applyDaLiveOrgConfigSettings).toHaveBeenCalledWith(
+                mockContentOps,
+                'acme',
+                'shop',
+                logger,
+                'da-live-classic',
+            );
+        });
+
+        it('grants the signed-in user site permissions', async () => {
+            await republishStorefrontContent(params());
+            expect(configureDaLivePermissions).toHaveBeenCalledWith(
+                mockTokenProvider,
+                'acme',
+                'shop',
+                'u@example.com',
+                logger,
+            );
+        });
+
+        it('skips the permissions, and still publishes, when nobody is signed in by email', async () => {
+            const res = await republishStorefrontContent(
+                params({ daLiveAuthService: { getUserEmail: jest.fn(async () => undefined) } }),
+            );
+            expect(configureDaLivePermissions).not.toHaveBeenCalled();
+            expect(mockPublishAllSiteContent).toHaveBeenCalled();
+            expect(res).toStrictEqual({ success: true, cdnVerified: true });
+        });
+
+        it('tells the SC each step in order, the publish and prewarm progress included', async () => {
+            mockPublishAllSiteContent.mockImplementationOnce(async (...a: unknown[]) => {
+                const onStep = a[4] as (i: { message: string }) => void;
+                onStep({ message: 'Published 3 of 3 pages' });
+                return undefined;
+            });
+            (prewarmCatalog as jest.Mock).mockImplementationOnce(
+                async (...a: unknown[]) => {
+                    const onStep = a[6] as (p: { message: string }) => void;
+                    onStep({ message: 'Loaded 2 of 2 product pages' });
+                    return { attempted: 2, succeeded: 2, failed: 0, skipped: false };
+                },
+            );
+            const onProgress = jest.fn();
+
+            await republishStorefrontContent(params({ onProgress }));
+
+            expect(onProgress.mock.calls.map(([m]) => m)).toStrictEqual([
+                'Applying EDS configuration',
+                'Regenerating storefront configuration',
+                'Extracting configuration',
+                'Syncing code to CDN',
+                'Configuring site permissions',
+                'Purging stale cache',
+                'Publishing content to CDN',
+                'Published 3 of 3 pages',
+                'Loading the product pages so they are quick for visitors',
+                'Loaded 2 of 2 product pages',
+                'Verifying CDN',
+            ]);
         });
     });
 });

@@ -15642,6 +15642,66 @@
             "decision": "none \u2014 the label is log presentation; the merged flags are pinned by the configFlags and dataDrivenFlags suites",
             "recorded": "2026-10-09",
             "source": "EDS-8 configGenerator split, focus run 2026-10-09"
+        },
+        {
+            "module": "src/features/eds/services/storefront/storefrontRepublishService.ts",
+            "anchors": [
+                "if (session && !session.authenticated) {"
+            ],
+            "mutants": 4,
+            "category": "branch",
+            "reason": "The condition only decides whether one warn line is written before the push. Nothing else reads it: the push runs either way, and what the SC is told comes later from `session?.authenticated === false` choosing NO_DALIVE_SESSION_MESSAGE as the cdnError, which the DA.live session guard tests pin (asked before the push, declined sign-in names the reason, good session keeps the CDN's reason). Killing these four would mean asserting log wording, which tests/sop bans.",
+            "decision": "none \u2014 the warn is the Debug Logs evidence that the CDN publish will not land; the outcome is pinned through cdnError",
+            "recorded": "2026-10-09",
+            "source": "EDS-8 storefrontRepublishService split, focus run 2026-10-09"
+        },
+        {
+            "module": "src/features/eds/services/storefront/storefrontContentRepublishService.ts",
+            "anchors": [
+                "if (!configResult.success) {"
+            ],
+            "mutants": 4,
+            "category": "branch",
+            "reason": "A failed config.json step is deliberately non-fatal to the content republish: the condition and its block only decide whether one warn line names the failure. Every later step runs the same either way, and the config step's own outcomes (stale flag, persist, cdnError) are pinned in storefrontRepublishService.test.ts. Asserting the warn would be asserting log wording, which tests/sop bans.",
+            "decision": "none \u2014 the warn is how Debug Logs show a config regeneration that failed under a content republish that succeeded",
+            "recorded": "2026-10-09",
+            "source": "EDS-8 storefrontRepublishService split, focus run 2026-10-09"
+        },
+        {
+            "module": "src/features/eds/services/storefront/storefrontContentRepublishService.ts",
+            "anchors": [
+                "logger.warn('[Republish] No user email available for permissions');"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The surviving mutant empties the else block around this line, which holds nothing but this warn. The decision itself is pinned: with an email the permissions step runs with the right arguments, without one it is skipped and the publish still runs (the steps-between suite). Emptying the block removes only the log line, and asserting log wording is what tests/sop bans.",
+            "decision": "none \u2014 the anchor names the block's only statement because the mutated line, an else, is not unique",
+            "recorded": "2026-10-09",
+            "source": "EDS-8 storefrontRepublishService split, focus run 2026-10-09"
+        },
+        {
+            "module": "src/features/eds/services/storefront/storefrontContentRepublishService.ts",
+            "anchors": [
+                "if (!prewarm.skipped) {"
+            ],
+            "mutants": 4,
+            "category": "branch",
+            "reason": "The condition only decides whether the pre-warm count is logged; prewarmCatalog has already run and its progress reached the SC through the report callback either way. The prewarm call, its arguments, its order after the content publish and its non-fatal failure are pinned in the pre-warming suite. Asserting the count line would be asserting log wording, which tests/sop bans.",
+            "decision": "none \u2014 the line is Debug Logs evidence of how many product pages were pre-published",
+            "recorded": "2026-10-09",
+            "source": "EDS-8 storefrontRepublishService split, focus run 2026-10-09"
+        },
+        {
+            "module": "src/features/eds/services/storefront/storefrontContentRepublishService.ts",
+            "anchors": [
+                "} catch (prewarmError) {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying the catch body removes only the warn naming the failure; the catch itself stays, so a pre-warm failure is still swallowed and the republish still answers success. That non-fatal outcome is pinned by 'a prewarm failure is non-fatal to the republish', which also checks the CDN verify still runs after it. Asserting the warn would be asserting log wording.",
+            "decision": "none \u2014 the warn is the only trace of a failed pre-warm, read in Debug Logs",
+            "recorded": "2026-10-09",
+            "source": "EDS-8 storefrontRepublishService split, focus run 2026-10-09"
         }
     ]
 }

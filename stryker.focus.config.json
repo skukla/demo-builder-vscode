@@ -8,8 +8,8 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/data-installer/ui/components/ImportDatapackModal.tsx",
-        "src/features/data-installer/ui/components/importModalView.ts"
+        "src/features/eds/services/storefront/storefrontRepublishService.ts",
+        "src/features/eds/services/storefront/storefrontContentRepublishService.ts"
     ],
     "reporters": [
         "clear-text",
