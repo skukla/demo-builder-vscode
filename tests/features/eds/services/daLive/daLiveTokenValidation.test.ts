@@ -17,12 +17,20 @@
  *     sees the specific reason rather than a generic one
  */
 
-
 import {
     validateDaLiveToken,
     validateDaLiveTokenStrict,
-    makeDaLiveToken,
-} from './daLiveAuthPrompt.testUtils';
+} from '@/features/eds/services/daLive/daLiveTokenValidation';
+import { fakeJwt } from '../../../../helpers/jwtFake';
+
+/** Build a DA.live-shaped token at run time, so no token literal enters the repo. */
+const makeDaLiveToken = (payload: Record<string, string>): string => fakeJwt(payload);
+
+/**
+ * Base64 of a JSON object with no dot in it: starts like a token, has no payload
+ * segment to read. Built here rather than written out, for the same reason.
+ */
+const unreadableJwtShape = Buffer.from(JSON.stringify({ some: 'thing' })).toString('base64url');
 
 /** A DA.live token whose lifetime runs to the year 2286. */
 const liveToken = makeDaLiveToken({
@@ -123,7 +131,7 @@ describe('validateDaLiveToken (the lenient check the strict one builds on)', () 
         // This is the leniency the strict check exists to close: base64 of ANY
         // JSON begins "eyJ" and carries no dot, so the payload parser returns
         // null and this check has no grounds to refuse.
-        expect(validateDaLiveToken('eyJzb21lIjoidGhpbmcifQ')).toEqual({ valid: true });
+        expect(validateDaLiveToken(unreadableJwtShape)).toEqual({ valid: true });
     });
 
     it('does not treat a token as expired at the exact instant it expires', () => {
@@ -160,9 +168,61 @@ describe('validateDaLiveTokenStrict on a payload nothing can read', () => {
         // client_id off it without a guard would throw here instead of
         // refusing, and the throw lands in the sign-in flow's catch as
         // "Authentication failed" with no usable reason.
-        expect(validateDaLiveTokenStrict('eyJzb21lIjoidGhpbmcifQ')).toEqual({
+        expect(validateDaLiveTokenStrict(unreadableJwtShape)).toEqual({
             valid: false,
             error: 'This does not look like a DA.live token. Use the bookmarklet on da.live to copy a fresh one.',
         });
+    });
+});
+
+// Moved from the sign-in suite with the function: the ordinary check on its own.
+describe('validateDaLiveToken', () => {
+    // created_at + expires_in land in the year 2286 — valid whenever this runs.
+    const validToken = makeDaLiveToken({
+        client_id: 'darkalley',
+        created_at: '9999999999999',
+        expires_in: '3600000',
+        email: 'user@example.com',
+    });
+
+    // Correct shape, correct client_id, expired back in 2001.
+    const expiredToken = makeDaLiveToken({
+        client_id: 'darkalley',
+        created_at: '1000000000000',
+        expires_in: '1000',
+    });
+
+    it('should reject non-JWT tokens', () => {
+        const result = validateDaLiveToken('not-a-jwt');
+        expect(result.valid).toBe(false);
+        expect(result.error).toContain('Invalid token format');
+    });
+
+    it('should reject empty tokens', () => {
+        const result = validateDaLiveToken('');
+        expect(result.valid).toBe(false);
+    });
+
+    it('should accept valid JWT format tokens', () => {
+        const result = validateDaLiveToken(validToken);
+        expect(result.valid).toBe(true);
+        expect(result.email).toBe('user@example.com');
+    });
+
+    it('should reject tokens with wrong client_id', () => {
+        const wrongClientToken = makeDaLiveToken({
+            client_id: 'wrong-client',
+            created_at: '9999999999999',
+            expires_in: '3600000',
+        });
+        const result = validateDaLiveToken(wrongClientToken);
+        expect(result.valid).toBe(false);
+        expect(result.error).toContain('not from DA.live');
+    });
+
+    it('should reject expired tokens', () => {
+        const result = validateDaLiveToken(expiredToken);
+        expect(result.valid).toBe(false);
+        expect(result.error).toContain('expired');
     });
 });

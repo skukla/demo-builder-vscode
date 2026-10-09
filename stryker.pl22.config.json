@@ -16,6 +16,8 @@
         "src/features/dashboard/ui/components/integrations/integrationCardModel.ts",
         "src/features/data-installer/ui/importProgress.ts",
         "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts",
+        "src/features/eds/handlers/daLive/daLiveAuthGuard.ts",
+        "src/features/eds/services/daLive/daLiveTokenValidation.ts",
         "src/features/eds/services/patches/codePatchRegistry.ts",
         "src/features/prerequisites/handlers/installHandler.ts",
         "src/features/project-creation/ui/helpers/buttonTextHelpers.ts",

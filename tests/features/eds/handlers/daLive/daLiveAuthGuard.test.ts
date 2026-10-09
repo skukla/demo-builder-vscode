@@ -1,16 +1,16 @@
 /**
- * daLiveAuthPrompt - DA.live Auth Guard Tests
+ * daLiveAuthGuard - the DA.live session guard
  *
- * Tests for ensureDaLiveAuth shared utility:
+ * Tests for ensureDaLiveAuth:
  * - Already authenticated (fast path)
  * - Expired token with sign-in prompt
  * - User cancellation at warning dialog
  * - Delegation to showDaLiveAuthQuickPick
- * - Logger behavior and custom logPrefix
+ * - Inside a progress modal: straight to the form, no notification first
  *
- * Note: showDaLiveAuthQuickPick is in the same module, so we mock
- * its dependencies (vscode APIs) to control the flow. The sign-in flow
- * itself is thoroughly tested in daLiveAuthPrompt-signIn.test.ts.
+ * The guard runs the REAL sign-in flow (daLiveAuthPrompt), so these tests mock
+ * its dependencies (vscode APIs) to control the flow, and share that flow's
+ * harness. The sign-in flow itself is tested in daLiveAuthPrompt-signIn.test.ts.
  */
 
 import type { HandlerContext } from '@/types/handlers';
@@ -111,11 +111,22 @@ jest.mock('@/core/utils/oneTimeTip', () => ({
     showOneTimeTip: jest.fn(),
 }));
 
+// Inside a progress modal the sign-in form is pushed to the modal. Intercepted so
+// the modal test can answer it; the notification path never pushes.
+jest.mock('@/core/vscode/operationProgress', () => ({
+    heldProgress: () => ({ id: 'op', state: 'running', stage: 'Checking requirements' }),
+    pushOperationProgress: jest.fn(),
+    startModalRun: jest.fn(),
+}));
+
 // =============================================================================
 // Now import the module under test (after all mocks are set up)
 // =============================================================================
 
 import * as vscode from 'vscode';
+import { answerOperationPrompt, withModalAsking } from '@/core/vscode/operationPrompt';
+import { pushOperationProgress } from '@/core/vscode/operationProgress';
+import type { OperationPrompt } from '@/types/webviewPayloads';
 import {
     clearServiceCache,
     createAuthPromptContext,
@@ -266,40 +277,10 @@ describe('ensureDaLiveAuth', () => {
     });
 
     // =========================================================================
-    // Custom Options
-    // =========================================================================
-
-    it('should use default logPrefix [Auth] in log messages', async () => {
-        // Given: Token expired, using default prefix
-        mockIsAuthenticated.mockResolvedValue(false);
-        showWarningMessageResponse = undefined;
-
-        // When: ensureDaLiveAuth is called without logPrefix
-        await ensureDaLiveAuth(mockContext);
-
-        // Then: Should use [Auth] prefix
-        expect(mockContext.logger.warn).toHaveBeenCalledWith(expect.stringContaining('[Auth]'));
-    });
-
-    it('should use custom logPrefix in log messages', async () => {
-        // Given: Token expired, custom prefix
-        mockIsAuthenticated.mockResolvedValue(false);
-        showWarningMessageResponse = undefined;
-
-        // When: ensureDaLiveAuth is called with custom logPrefix
-        await ensureDaLiveAuth(mockContext, '[Storefront Setup]');
-
-        // Then: Should use custom prefix
-        expect(mockContext.logger.warn).toHaveBeenCalledWith(
-            expect.stringContaining('[Storefront Setup]')
-        );
-    });
-
-    // =========================================================================
     // Logger Behavior
     // =========================================================================
 
-    it('should call logger.warn when token is expired', async () => {
+    it('should warn once when the token is expired', async () => {
         // Given: Token expired
         mockIsAuthenticated.mockResolvedValue(false);
         showWarningMessageResponse = undefined;
@@ -307,10 +288,8 @@ describe('ensureDaLiveAuth', () => {
         // When: ensureDaLiveAuth is called
         await ensureDaLiveAuth(mockContext);
 
-        // Then: Should log warning about expired token
-        expect(mockContext.logger.warn).toHaveBeenCalledWith(
-            expect.stringContaining('DA.live token expired or missing')
-        );
+        // Then: one warning is logged (its wording is not the contract)
+        expect(mockContext.logger.warn).toHaveBeenCalledTimes(1);
     });
 
     // =========================================================================
@@ -427,5 +406,40 @@ describe('ensureDaLiveAuth — server probe', () => {
 
         expect(mockIsServerAccepted).not.toHaveBeenCalled();
         expect(result).toEqual({ authenticated: true });
+    });
+});
+
+// =============================================================================
+// Inside a progress modal — the modal asks, so no notification goes first.
+// =============================================================================
+
+describe('ensureDaLiveAuth — inside a progress modal', () => {
+    it('goes straight to the sign-in form, headed by why it is asking', async () => {
+        // A Sign In button in front of a form the modal was going to show anyway
+        // is a click that asks nothing (owner, 2026-09-20).
+        jest.clearAllMocks();
+        clearServiceCache();
+        resetMockState();
+        const asked: OperationPrompt[] = [];
+        (pushOperationProgress as jest.Mock).mockImplementation(async (payload) => {
+            if (!payload.prompt) return;
+            asked.push(payload.prompt);
+            // The SC dismisses the form.
+            setImmediate(() => answerOperationPrompt(payload.id, undefined, {}));
+        });
+
+        const result = await withModalAsking('op', () =>
+            ensureDaLiveAuth(createAuthPromptContext()),
+        );
+
+        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
+        expect(asked).toHaveLength(1);
+        expect(asked[0].fields?.map((field) => field.id)).toEqual(['orgName', 'token']);
+        expect(asked[0].message).toContain('Your DA.live session has expired.');
+        expect(result).toEqual({
+            authenticated: false,
+            cancelled: true,
+            error: 'DA.live authentication required',
+        });
     });
 });

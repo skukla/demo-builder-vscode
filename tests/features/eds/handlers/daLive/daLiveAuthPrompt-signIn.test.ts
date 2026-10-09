@@ -116,7 +116,6 @@ jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => {
 // =============================================================================
 
 import * as vscode from 'vscode';
-import { validateDaLiveToken } from '@/features/eds/handlers/daLive/daLiveAuthPrompt';
 import {
     createAuthPromptContext,
     showDaLiveAuthQuickPick,
@@ -646,44 +645,5 @@ describe('showDaLiveAuthQuickPick', () => {
                 expect.stringContaining('cancelled at org step')
             );
         });
-    });
-});
-
-// =============================================================================
-// validateDaLiveToken Tests (unit tests for the token validation function)
-// =============================================================================
-describe('validateDaLiveToken', () => {
-    it('should reject non-JWT tokens', () => {
-        const result = validateDaLiveToken('not-a-jwt');
-        expect(result.valid).toBe(false);
-        expect(result.error).toContain('Invalid token format');
-    });
-
-    it('should reject empty tokens', () => {
-        const result = validateDaLiveToken('');
-        expect(result.valid).toBe(false);
-    });
-
-    it('should accept valid JWT format tokens', () => {
-        const result = validateDaLiveToken(validToken);
-        expect(result.valid).toBe(true);
-        expect(result.email).toBe('user@example.com');
-    });
-
-    it('should reject tokens with wrong client_id', () => {
-        const wrongClientToken = makeToken({
-            client_id: 'wrong-client',
-            created_at: '9999999999999',
-            expires_in: '3600000',
-        });
-        const result = validateDaLiveToken(wrongClientToken);
-        expect(result.valid).toBe(false);
-        expect(result.error).toContain('not from DA.live');
-    });
-
-    it('should reject expired tokens', () => {
-        const result = validateDaLiveToken(expiredToken);
-        expect(result.valid).toBe(false);
-        expect(result.error).toContain('expired');
     });
 });

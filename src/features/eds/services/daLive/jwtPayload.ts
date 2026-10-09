@@ -3,9 +3,9 @@
  *
  * A pure helper with no state: it reads the claims out of a token's second
  * segment and never checks the signature. `DaLiveAuthService.storeToken` uses
- * it for the expiry and email it stores, and the sign-in prompt
- * (`daLiveAuthPrompt`) uses it to check `client_id` and expiry before a pasted
- * token is accepted.
+ * it for the expiry and email it stores, and the token checks
+ * (`daLiveTokenValidation`) use it to check `client_id` and expiry before a
+ * pasted token is accepted.
  */
 
 /**

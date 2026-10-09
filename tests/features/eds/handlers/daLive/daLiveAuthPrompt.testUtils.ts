@@ -49,13 +49,13 @@ import { createMockStateManager } from '../../../../helpers/stateManagerFake';
 // Below the factories on purpose — they hoist above it, so the subject binds to
 // the mocked modules. `import/first` is NOT a registered eslint rule here; do not
 // add a disable comment, that itself errors as an unknown rule.
+export { showDaLiveAuthQuickPick } from '@/features/eds/handlers/daLive/daLiveAuthPrompt';
+// The guard suite (daLiveAuthGuard.test.ts) drives the guard through this real
+// sign-in flow, so it shares this harness although its subject is the guard.
 export {
     ensureDaLiveAuth,
-    showDaLiveAuthQuickPick,
-    validateDaLiveToken,
-    validateDaLiveTokenStrict,
     type DaLiveGuardResult,
-} from '@/features/eds/handlers/daLive/daLiveAuthPrompt';
+} from '@/features/eds/handlers/daLive/daLiveAuthGuard';
 
 /**
  * Build a DA.live-shaped JWT from a payload.

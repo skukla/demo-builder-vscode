@@ -367,6 +367,12 @@ about it, and what (if anything) the owner has to decide.
   and the recording of what was published now use the render's merge; three tests pin the
   stale mesh copy case and all three fail on the old code.
 
+- 2026-10-09  The daLiveAuthPrompt split added its two new pieces (`daLiveAuthGuard.ts`,
+  `daLiveTokenValidation.ts`) to the PL-22 mutation sample (`stryker.pl22.config.json`), so
+  the sample keeps measuring the same code it measured before the move; their baseline rows
+  came from the focus run. **Decide:** keep them in the sample, or freeze the sample at its
+  old file list (then remove the two lines).
+
 ## Triage of the untangled files (2026-10-08, read by a Sonnet agent, verdicts are LEADS)
 
 The 36 files over their limit with no coupling signal were read by job. 19 are to be
@@ -420,8 +426,10 @@ and three of them are more than 40% comments). Decide which.
     create/rename/delete vs workspace create/delete/namespace. The workspace half is `adobeConsoleWorkspaceOps.ts`.
 13. DONE 2026-10-09 (543 -> 393, see the log). `updates/services/updateApplyService.ts` (543/400): selection computation vs the
     appliers and apply loop. Finding what a project has waiting moved to `updateSelections.ts`.
-14. `eds/handlers/daLive/daLiveAuthPrompt.ts` (666/500): token validation; input prompts;
-    the sign-in flow and guard.
+14. DONE 2026-10-09 (666 -> 437, see the log). `eds/handlers/daLive/daLiveAuthPrompt.ts` (666/500): token validation; input prompts;
+    the sign-in flow and guard. Cut differently from this lead: the input prompts are private
+    steps of the sign-in flow and stayed with it; the guard went to `daLiveAuthGuard.ts`
+    (its suite was already separate), the token checks to `services/daLive/daLiveTokenValidation.ts`.
 15. `dashboard/ui/components/ActionGrid.tsx` (451/350): `BuildZone` and `EditTile` out,
     beside the sibling zones.
 16. `eds/services/errorFormatters.ts` (511/400): one pattern matcher; GitHub errors; DA.live
@@ -789,6 +797,19 @@ date and what happened; a failure becomes its own `fix` item.
       Also confirm a token the agent's `da-auth` skill cached is picked up without a prompt.
       The JWT decoder moved file unchanged and the service lost only a parameter nothing
       passed, so this is a confirmation, not a known risk.
+- [ ] **DA.live sign-in after the daLiveAuthPrompt split** (2026-10-09): (1) from the wizard,
+      sign in with a fresh token already on the clipboard (run the bookmarklet first): no
+      token box opens and the status bar names the namespace and email; (2) the same with an
+      empty clipboard: the token box opens and a pasted token signs in; (3) paste an expired
+      token, then a token from another site or org: each is refused in words ("Token has
+      expired..." / "This token is not from DA.live..." or "This does not look like a DA.live
+      token...") and nothing is stored; (4) signed out, ask the agent to sign in (`sign_in`
+      with `provider:"dalive"`): the same prompts open and the agent's next DA.live call
+      works; (5) with a DA.live operation running in the progress modal and the token
+      expired, the modal shows the sign-in form headed "Your DA.live session has expired."
+      with no notification first. The token checks now live in
+      `services/daLive/daLiveTokenValidation.ts` and the guard in `daLiveAuthGuard.ts`; every
+      moved function is unchanged, so this is a confirmation, not a known risk.
 
 - [ ] **A project's generated config files, created and then regenerated** (the
       `envFileGenerator.ts` split, 2026-10-09): create a project with an EDS storefront and a

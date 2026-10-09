@@ -8,8 +8,9 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/updates/services/updateApplyService.ts",
-        "src/features/updates/services/updateSelections.ts"
+        "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts",
+        "src/features/eds/handlers/daLive/daLiveAuthGuard.ts",
+        "src/features/eds/services/daLive/daLiveTokenValidation.ts"
     ],
     "reporters": [
         "clear-text",

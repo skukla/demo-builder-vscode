@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "EDS-8 split of updateApplyService: the same 215 killed and 22 surviving mutants as the unsplit file measured fresh today (90.72%), now divided by job; every survivor is a log line or a config key string, none a decision",
+    "_note": "EDS-8 split daLiveAuthPrompt.ts by job: token checks to services/daLive/daLiveTokenValidation.ts (100%), the session guard to daLiveAuthGuard.ts (94.23%, only log text survives). The prompt's 91.29 row was stale: re-measured unsplit before the split at 85.37 (the 2026-09-20 modal form added untested decisions). Nine new tests kill those; the prompt's own score reads lower only because the all-killed validation mutants left its denominator; branch/block 4 and uncovered 2 unchanged, survivors are log and placeholder text plus five ledgered equivalents.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -59,17 +59,17 @@
             "openGaps": 0
         },
         "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts": {
-            "score": 91.29,
-            "killed": 241,
-            "survived": 21,
+            "score": 87.96,
+            "killed": 186,
+            "survived": 24,
             "noCoverage": 2,
-            "timeout": 0,
+            "timeout": 4,
             "survivorCategories": {
-                "logPresentation": 11,
-                "block": 3,
                 "optionalChain": 1,
+                "block": 3,
                 "branch": 1,
-                "string": 5
+                "logPresentation": 12,
+                "string": 7
             },
             "uncoveredCategories": {
                 "string": 2
@@ -10687,6 +10687,33 @@
             "survivorCategories": {
                 "logPresentation": 5
             },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/eds/handlers/daLive/daLiveAuthGuard.ts": {
+            "score": 94.23,
+            "killed": 49,
+            "survived": 3,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 1,
+                "logPresentation": 2
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/eds/services/daLive/daLiveTokenValidation.ts": {
+            "score": 100,
+            "killed": 67,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
             "uncoveredCategories": {},
             "highValueSurvivors": 0,
             "equivalent": 0,
