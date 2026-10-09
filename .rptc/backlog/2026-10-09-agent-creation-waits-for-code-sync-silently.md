@@ -50,3 +50,4 @@ Not fixed here, recorded:
   because it holds the run. Left as designed, now that the person is told.
 
 ## Shipped so far
+- 2026-10-09  fix(ai): a creation waiting for the Code Sync App now asks the user in VS Code (`b84f00a66`)
