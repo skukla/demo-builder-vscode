@@ -442,6 +442,16 @@ and three of them are more than 40% comments). Decide which.
   five helpers; 25 raw lines over.
 - `core/ui/components/forms/FieldHelpButton.tsx` (360): 10 lines over.
 - `authentication/ui/components/AdobeEntityFields.tsx` (356): 6 lines over.
+- `core/ui/utils/WebviewClient.ts` (312 -> 286), 2026-10-09: **one job, not cut.** It is
+  the webview end of the message channel: the handshake, the queue that holds messages
+  until it completes, request/response matched by `isResponse` + `responseToId` with the
+  backend's timeout hints, and subscriptions. Every method touches the same handshake flag,
+  queue or pending-request map, so a split would hand that state between files for no
+  reader's benefit, and ADR-017 rules it a single module-level instance. The 12 lines over
+  the limit were six methods no production code called: `getState`/`setState` and four
+  message helpers (validate, progress, get-projects, re-detect-context). Deleted with their
+  tests and their slots on the shared test double, which took it under the limit; the
+  three helpers that have callers (`requestAuth`, `createProject`, `log`) stay.
 
 - 2026-10-08  The owner asked whether the 40 pinned clone pairs were accounted for. They
   were not (one blanket sentence, no per-pair verdict). Read in full and filed as [[PL-69]]:
@@ -475,6 +485,15 @@ and three of them are more than 40% comments). Decide which.
   types have no caller outside the tests: leftovers from the event-provider creation feature
   pulled on 2026-09-09. Kept, because whether creation comes back is [[AB-8]]'s open question.
   **Decide (with AB-8):** if creation is not coming back, delete them (no soft deprecation).
+
+- 2026-10-09  From the WebviewClient verdict. The extension still registers a
+  `'re-detect-context'` handler (`handleReDetectContext` in `organizationHandlers.ts`, wired in
+  `ProjectCreationHandlerRegistry.ts`), but no webview sends that message and none listens for
+  its reply; the only sender was the client helper deleted today, which itself had no caller.
+  The handler is unreachable. **Recommend:** delete it with its tests (one sitting, no
+  behaviour change). **Decide:** delete, or say what was meant to send it. Also: the handler
+  coverage test listed `'progress'` as "handled by the base command"; nothing handled it. The
+  entry went with the helper, so the guard has one hole fewer.
 
 ## Needs a live check
 
@@ -673,6 +692,12 @@ date and what happened; a failure becomes its own `fix` item.
       re-checks. The five dialogs now render from `DashboardDialogs.tsx`; the move is
       proven and both pieces score 100% under mutation, so this is a confirmation, not a
       known risk.
+- [ ] **Every webview still opens and talks to the extension** (the `WebviewClient.ts`
+      deletions, 2026-10-09): open the wizard, a Project Dashboard, Configure, the sidebar,
+      the projects list, the AI overview, Integrations and the Data Installer; each loads
+      its data, and the wizard's Adobe sign-in step still signs in. Only methods with no
+      caller were deleted and every kept method is byte-identical, so this is a
+      confirmation, not a known risk.
 
 ## Shipped so far
 

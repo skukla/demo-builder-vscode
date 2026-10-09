@@ -100,7 +100,9 @@ const PLATFORM_HANDLED = new Set([
     // logging "No handler registered for 'ready'" on every open (2026-08-03).
     'ready',
     'log', // debug passthrough, every panel
-    'progress', // WebviewClient.reportProgress → base command
+    // 'progress' was listed here as "WebviewClient.reportProgress → base command".
+    // No base command ever handled it, and the helper had no caller; both went on
+    // 2026-10-09 (EDS-8), so the hole closed with them.
     // Shared helpers in core/ui/utils/vscode-api.ts. They sit in every panel's
     // import graph whether or not that panel ever calls them, so attributing them
     // per-panel is noise; each is a fire-and-forget with no reply to wait for.
@@ -143,9 +145,10 @@ function resolve(spec: string, fromFile: string): string | null {
 }
 
 /**
- * WebviewClient's named helpers (`requestProjects`, `requestAuth`, …) hide their
+ * WebviewClient's named helpers (`requestAuth`, `createProject`, `log`) hide their
  * message literal inside the client, so a call site shows no string at all — which
- * is precisely how `get-projects` slipped past an earlier version of this suite.
+ * is precisely how `get-projects` slipped past an earlier version of this suite
+ * (through a get-projects helper on the client, deleted 2026-10-09 with no caller).
  * The client is reachable from every panel, so its literals count as sent by all of
  * them: over-broad, but it fails LOUDLY instead of silently, and PLATFORM_HANDLED
  * absorbs the genuinely universal ones.
@@ -153,7 +156,7 @@ function resolve(spec: string, fromFile: string): string | null {
 function clientHelperTypes(): Map<string, string> {
     const source = fs.readFileSync(path.join(SRC, 'core/ui/utils/WebviewClient.ts'), 'utf8');
     const map = new Map<string, string>();
-    // `public requestProjects(...) { ... this.postMessage('get-projects', ...) }`
+    // `public requestAuth(...) { ... this.postMessage('authenticate', ...) }`
     for (const m of source.matchAll(
         /(?:public\s+)?(?:async\s+)?(\w+)\s*\([^)]*\)[^{]*\{[\s\S]{0,400}?this\s*\.\s*(?:request|postMessage)\s*(?:<[^>]*>)?\s*\(\s*'([^']+)'/g
     )) {

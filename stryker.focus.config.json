@@ -8,8 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/dashboard/ui/ProjectDashboardScreen.tsx",
-        "src/features/dashboard/ui/components/DashboardDialogs.tsx"
+        "src/core/ui/utils/WebviewClient.ts"
     ],
     "reporters": [
         "clear-text",
