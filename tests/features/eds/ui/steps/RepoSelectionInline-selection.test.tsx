@@ -6,8 +6,8 @@
  * selection the account no longer has, the pre-load GitHub-auth guard, and the
  * reset-to-template control beside it.
  *
- * The readiness/Code-Sync half lives in RepoSelectionInline-codeSync.test.tsx;
- * both drive the component through the shared harness.
+ * The readiness check itself is pinned in hooks/useRepoReadiness.test.ts, and
+ * the create flow in RepoSelectionInline-createRepo.test.tsx.
  */
 
 import { act, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -17,8 +17,8 @@ import {
     createHarness,
     resetSelectionMocks,
     stateWith,
-    mockOnMessage,
     mockPostMessage,
+    webviewClientHandlers,
     REPO,
     OTHER,
     type SelectionHarness,
@@ -89,6 +89,25 @@ describe('RepoSelectionInline — choosing an existing repository', () => {
             await h.renderInline(stateWith({ selectedRepo: REPO, repoName: 'my-store' }));
 
             expect(h.clearedSelection()).toBe(false);
+        });
+
+        it('is cleared when the list arrives AFTER the step opened, without it', async () => {
+            // The check has to run again when the load lands, not only on mount:
+            // with no cache the first render has nothing to compare against.
+            const gone: GitHubRepoItem = { ...REPO, id: 'repo-gone', name: 'gone' };
+            await h.renderStateful(stateWith({ selectedRepo: gone, repoName: 'gone' }, null));
+            expect(h.clearedSelection()).toBe(false);
+
+            await act(async () => {
+                webviewClientHandlers.get('get-github-repos')?.([REPO]);
+            });
+            await settle();
+
+            expect(h.lastConfigPatch()).toMatchObject({
+                selectedRepo: undefined,
+                existingRepo: undefined,
+                repoName: '',
+            });
         });
 
         it('is left alone while the list is still empty', async () => {
@@ -211,22 +230,11 @@ describe('RepoSelectionInline — choosing an existing repository', () => {
     });
 
     describe('when the repository list arrives from a load', () => {
-        /** Capture the hook's subscription so a spec can deliver the response. */
-        function captureHandlers(): Record<string, (data: unknown) => void> {
-            const handlers: Record<string, (data: unknown) => void> = {};
-            mockOnMessage.mockImplementation((type, handler) => {
-                handlers[type] = handler;
-                return () => undefined;
-            });
-            return handlers;
-        }
-
         it('does not choose the repository for the user, even when there is only one', async () => {
-            const handlers = captureHandlers();
             await h.renderInline(stateWith({}, null));
 
             await act(async () => {
-                handlers['get-github-repos']?.([REPO]);
+                webviewClientHandlers.get('get-github-repos')?.([REPO]);
             });
             await settle();
 
@@ -236,11 +244,10 @@ describe('RepoSelectionInline — choosing an existing repository', () => {
         });
 
         it('caches what arrived so the list can render it', async () => {
-            const handlers = captureHandlers();
             await h.renderInline(stateWith({}, null));
 
             await act(async () => {
-                handlers['get-github-repos']?.([REPO]);
+                webviewClientHandlers.get('get-github-repos')?.([REPO]);
             });
             await settle();
 
@@ -248,11 +255,10 @@ describe('RepoSelectionInline — choosing an existing repository', () => {
         });
 
         it('reports the error the extension sent instead of a list', async () => {
-            const handlers = captureHandlers();
             await h.renderInline(stateWith({}, null));
 
             await act(async () => {
-                handlers['get-github-repos-error']?.({ error: 'Rate limited by GitHub' });
+                webviewClientHandlers.get('get-github-repos-error')?.({ error: 'Rate limited by GitHub' });
             });
             await settle();
 
@@ -290,6 +296,17 @@ describe('RepoSelectionInline — choosing an existing repository', () => {
                 resetToTemplate: true,
                 existingRepo: 'testuser/other-store',
             });
+        });
+    });
+
+    describe('the verdict it reports', () => {
+        it('reports again when a repository is chosen after the step opened', async () => {
+            const rerender = await h.renderWithRerender(stateWith({}));
+            expect(h.onRepoValidChange).toHaveBeenLastCalledWith(false);
+
+            await rerender(stateWith({ selectedRepo: REPO, repoName: 'my-store' }));
+
+            expect(h.onRepoValidChange).toHaveBeenLastCalledWith(true);
         });
     });
 

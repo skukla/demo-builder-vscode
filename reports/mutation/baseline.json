@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "EDS-8 split repoSelectionInline.helpers.tsx (no prior row; measured 79.62% before, 125 of 157) into the pure verdicts plus NewRepoForm, ResetToTemplateOption and DefaultBranchNotice, each with its own mirrored suite; all 157 mutants now killed",
+    "_note": "EDS-8 split RepoSelectionInline.tsx (measured 72.41% before, 189 of 261, on a stale 83% row) into the picker plus useRepoCreation and useRepoReadiness, each with a mirrored suite; the readiness effect had survived whole and is now pinned; open decision gaps 0",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -7003,27 +7003,19 @@
             "openGaps": 0
         },
         "src/features/eds/ui/steps/RepoSelectionInline.tsx": {
-            "score": 83,
-            "killed": 285,
-            "survived": 51,
-            "noCoverage": 8,
-            "timeout": 3,
+            "score": 91.28,
+            "killed": 136,
+            "survived": 13,
+            "noCoverage": 0,
+            "timeout": 0,
             "survivorCategories": {
-                "string": 15,
-                "branch": 16,
-                "other": 10,
-                "optionalChain": 8,
-                "logPresentation": 1,
-                "block": 1
-            },
-            "uncoveredCategories": {
-                "string": 3,
-                "block": 2,
+                "string": 11,
                 "other": 1,
-                "branch": 2
+                "optionalChain": 1
             },
-            "highValueSurvivors": 17,
-            "equivalent": 40,
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 2,
             "openGaps": 0
         },
         "src/features/eds/ui/steps/StorefrontSetupStep.tsx": {
@@ -10622,6 +10614,35 @@
             "uncoveredCategories": {},
             "highValueSurvivors": 0,
             "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/eds/ui/hooks/useRepoCreation.ts": {
+            "score": 97.5,
+            "killed": 78,
+            "survived": 2,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 1,
+                "logPresentation": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 1,
+            "openGaps": 0
+        },
+        "src/features/eds/ui/hooks/useRepoReadiness.ts": {
+            "score": 97.22,
+            "killed": 35,
+            "survived": 1,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "optionalChain": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 1,
             "openGaps": 0
         }
     }

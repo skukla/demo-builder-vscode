@@ -413,7 +413,7 @@ and three of them are more than 40% comments). Decide which.
    modal's own body file, with a planted control.
 10. DONE 2026-10-09 (565 -> 324, see the log). `eds/services/storefront/storefrontRepublishService.ts` (567/400): config republish vs
     full content republish. The content republish moved to `storefrontContentRepublishService.ts`.
-11. DONE 2026-10-09 for the helpers (440 -> 145, see the log). `eds/ui/steps/repoSelectionInline.helpers.tsx` (440/350) then
+11. DONE 2026-10-09 (helpers 440 -> 145, RepoSelectionInline 490 -> 327, see the log). `eds/ui/steps/repoSelectionInline.helpers.tsx` (440/350) then
     `eds/ui/steps/RepoSelectionInline.tsx` (490/350): pure verdict functions vs form and
     notice components; repo-creation hook, repo-readiness hook, selection component.
 12. `authentication/services/adobeConsoleProjectOps.ts` (555/400): Console project
@@ -891,7 +891,8 @@ date and what happened; a failure becomes its own `fix` item.
       no storefront asks for the reset before Continue enables, an empty one shows as ticked and
       locked, and a repo whose default branch is not main shows the amber notice alone. The form,
       the reset tick and the notice now live in `NewRepoForm`, `ResetToTemplateOption` and
-      `DefaultBranchNotice`; only the wizard bundle renders them.
+      `DefaultBranchNotice`, the name field and the create request in `useRepoCreation`, and the
+      readiness check in `useRepoReadiness`; only the wizard bundle renders them.
 
 ## Shipped so far
 
@@ -973,3 +974,4 @@ date and what happened; a failure becomes its own `fix` item.
 - 2026-10-09  refactor(eds): storefront republish keeps config.json; the full content republish gets its own file (`c5d8a660d`)
 - 2026-10-09  repoSelectionInline.helpers.tsx (440 -> 145, renamed .ts) split by job. It keeps the pure verdicts: computeRepoValid, isJustCreatedSelection, describeResetOption and the two state types. NewRepoForm (125), ResetToTemplateOption (87) and DefaultBranchNotice (45) each moved to a file of their own name; RepoSelectionInline imports each, no forwarders. About 90 lines of doc comments for Code Sync functions removed on 2026-09-25 were deleted. proveMove: all 7 functions same, control DIFFERS. Mutation: no prior row; 79.62% before (125 of 157), 100% after on all four (157 of 157). Pins: godFileCandidates 27 -> 26.
 - 2026-10-09  refactor(eds): the repo picker's helpers keep the verdicts; the form, the reset tick and the branch notice get their own files (`7645a1e09`)
+- 2026-10-09  RepoSelectionInline.tsx (490 -> 327) split by job. It keeps the picker: the list and its selection, the mode switches New and Browse, the reset tick handler, the pre-selected-repo check and the verdict it reports. The name field and the create request moved to hooks/useRepoCreation.ts (197) and the readiness check to hooks/useRepoReadiness.ts (63); no forwarders. Moved code proven line for line (multiset of code lines, planted control caught); proveMove reads the two pure functions same. Mutation: the 83% row was stale, 72.41% measured before (189 of 261); after: picker 91.28%, useRepoCreation 97.5%, useRepoReadiness 97.22%, open gaps 0 on all three. The readiness check had survived whole before; five ledger rows for code only reachable through a disabled button were deleted (now killed through the hook), three re-homed. The picker's three suites now share the canonical WebviewClient double instead of three copies. Pins: godFileCandidates 26 -> 25.

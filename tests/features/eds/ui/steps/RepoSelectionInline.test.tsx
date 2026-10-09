@@ -13,6 +13,7 @@
  * - daLiveSite is locked to repoName on new-repo input
  */
 
+import { mockRequest } from '../../../../helpers/webviewClientMock';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
@@ -21,19 +22,6 @@ import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import type { WizardState, EDSConfig } from '@/types/webview';
 import '@testing-library/jest-dom';
 
-// Mock webviewClient (used for create-github-repo + check-github-app)
-const mockPostMessage = jest.fn();
-const mockOnMessage = jest.fn(() => jest.fn());
-const mockRequest = jest.fn();
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: mockPostMessage,
-        onMessage: mockOnMessage,
-        request: mockRequest,
-        ready: jest.fn().mockResolvedValue(undefined),
-    },
-}));
 
 const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <Provider theme={defaultTheme} colorScheme="light">

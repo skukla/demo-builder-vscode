@@ -18,40 +18,28 @@
 
 import { Button, Text } from '@adobe/react-spectrum';
 import Add from '@spectrum-icons/workflow/Add';
-import React, { useEffect, useCallback, useState } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { edsConfigStringDefaults, type WizardEdsConfig } from '../helpers/edsConfigDefaults';
+import { useRepoCreation } from '../hooks/useRepoCreation';
+import { useRepoReadiness } from '../hooks/useRepoReadiness';
 import { DefaultBranchNotice } from './DefaultBranchNotice';
 import { NewRepoForm } from './NewRepoForm';
-import {
-    computeRepoValid,
-    type RepoReadinessState,
-    type RepoCreationState,
-    isJustCreatedSelection,
-} from './repoSelectionInline.helpers';
+import { computeRepoValid, isJustCreatedSelection } from './repoSelectionInline.helpers';
 import { ResetToTemplateOption } from './ResetToTemplateOption';
 import { SelectionStepContent } from '@/core/ui/components/selection/SelectionStepContent';
 import { useSelectionStep } from '@/core/ui/hooks/useSelectionStep';
-import { webviewClient } from '@/core/ui/utils/vscode-api';
-import {
-    isValidRepositoryName,
-    getRepositoryNameError,
-    normalizeRepositoryName,
-} from '@/core/validation/normalizers';
 import type { GitHubRepoItem } from '@/types/webview';
 import type { BaseStepProps } from '@/types/wizard';
 import '../styles/eds-steps.css';
 
-
-/** Props: state-driven like the parent step, but validity flows OUT to the parent. */
 /** Constant per call site — see PROJECT_SEARCH_FIELDS in AdobeProjectPicker. */
 const REPO_SEARCH_FIELDS: ReadonlyArray<keyof GitHubRepoItem> = ['name', 'fullName', 'description'];
 
+/** Props: state-driven like the parent step, but validity flows OUT to the parent. */
 export interface RepoSelectionInlineProps extends Pick<BaseStepProps, 'state' | 'updateState'> {
     /** Reports whether the repository choice is valid. */
     onRepoValidChange: (valid: boolean) => void;
 }
-
-
 
 /**
  * The repo-selection values this component derives from `edsConfig`.
@@ -106,20 +94,6 @@ export function RepoSelectionInline({
     const edsConfig = state.edsConfig;
     const { repoMode, selectedRepo, resetToTemplate, githubUser, repoName, hasCreatedRepo } =
         readRepoSelection(edsConfig);
-
-    const [repoNameError, setRepoNameError] = useState<string | undefined>();
-    // What the SC typed, kept as typed: the field shows it and the line beneath
-    // shows the GitHub name derived from it, as the project-name field does.
-    // Normalizing under the cursor turned "Kukla Just Rite" into
-    // "kukla-just-rite" mid-word. The typed text is shown only while it still
-    // derives the stored name, so a name set from anywhere else wins.
-    const [typedRepoName, setTypedRepoName] = useState(repoName);
-    const repoNameInput =
-        normalizeRepositoryName(typedRepoName) === repoName ? typedRepoName : repoName;
-    const [repoCreationState, setRepoCreationState] = useState<RepoCreationState>({
-        isCreating: false,
-        isCreated: hasCreatedRepo,
-    });
 
     const {
         items: repos,
@@ -184,9 +158,15 @@ export function RepoSelectionInline({
         [edsConfig, updateState],
     );
 
-    const resetLocalState = useCallback(() => {
-        setRepoCreationState({ isCreating: false, isCreated: false });
-    }, []);
+    const {
+        repoNameError,
+        repoNameInput,
+        repoCreationState,
+        resetCreation,
+        handleRepoNameChange,
+        handleRepoNameBlur,
+        handleCreateRepository,
+    } = useRepoCreation({ state, updateState, updateEdsConfig, repoName, hasCreatedRepo });
 
     const handleCreateNew = useCallback(() => {
         updateEdsConfig({
@@ -199,13 +179,13 @@ export function RepoSelectionInline({
             // Names are locked together; clear daLiveSite alongside.
             daLiveSite: '',
         });
-        resetLocalState();
-    }, [updateEdsConfig, resetLocalState]);
+        resetCreation();
+    }, [updateEdsConfig, resetCreation]);
 
     const handleUseExisting = useCallback(() => {
         updateEdsConfig({ repoMode: 'existing', createdRepo: undefined });
-        resetLocalState();
-    }, [updateEdsConfig, resetLocalState]);
+        resetCreation();
+    }, [updateEdsConfig, resetCreation]);
 
     const handleResetToTemplateChange = useCallback(
         (isSelected: boolean) => {
@@ -213,114 +193,6 @@ export function RepoSelectionInline({
         },
         [updateEdsConfig],
     );
-
-    const handleRepoNameChange = useCallback(
-        (value: string) => {
-            setTypedRepoName(value);
-            const normalized = normalizeRepositoryName(value);
-            // DA.live site name is locked to the GitHub repo name — see backlog
-            // 2026-06-08-unify-da-site-and-repo-name for why the dual-identifier
-            // model was retired.
-            updateEdsConfig({ repoName: normalized, daLiveSite: normalized });
-            setRepoNameError(getRepositoryNameError(normalized));
-        },
-        [updateEdsConfig],
-    );
-
-    const handleRepoNameBlur = useCallback(() => {
-        setRepoNameError(getRepositoryNameError(repoName));
-    }, [repoName]);
-
-    const handleCreateRepository = useCallback(async () => {
-        const templateOwner = edsConfig?.templateOwner;
-        const templateRepo = edsConfig?.templateRepo;
-
-        if (!templateOwner || !templateRepo) {
-            setRepoCreationState({
-                isCreating: false,
-                isCreated: false,
-                error: 'Template configuration not available. Please check your stack settings.',
-            });
-            return;
-        }
-        if (!repoName || !isValidRepositoryName(repoName)) {
-            setRepoNameError(getRepositoryNameError(repoName));
-            return;
-        }
-
-        setRepoCreationState({ isCreating: true, isCreated: false });
-        setRepoNameError(undefined);
-
-        try {
-            const result = await webviewClient.request<{
-                success: boolean;
-                data?: { owner: string; name: string; url: string; fullName: string };
-                error?: string;
-            }>('create-github-repo', {
-                repoName,
-                templateOwner,
-                templateRepo,
-                isPrivate: false,
-                // An added demo's source may not be a GitHub template; the handler checks.
-                ...(state.demo ? { fromAddedDemo: true } : {}),
-            });
-
-            if (!result.success || !result.data) {
-                throw new Error(result.error || 'Failed to create repository');
-            }
-
-            // The new repository becomes the SELECTED repository, in the list, first.
-            //
-            // It used to stay in the create form's "created" state with `repoMode: 'new'`,
-            // and the list — cached in wizard state and fetched only when empty — never
-            // heard of it. Coming back to this step meant Browse, then Refresh, then a
-            // click, to arrive where creation had already put you (owner, 2026-09-25).
-            // Now the list shows it selected, and the Code Sync probe runs for it the way
-            // it runs for any selected repository.
-            const created: GitHubRepoItem = {
-                id: result.data.fullName,
-                name: result.data.name,
-                owner: result.data.owner,
-                fullName: result.data.fullName,
-                description: null,
-                isPrivate: false,
-                htmlUrl: result.data.url,
-                defaultBranch: 'main',
-                updatedAt: new Date().toISOString(),
-            };
-            updateState({
-                githubReposCache: [
-                    created,
-                    ...(state.githubReposCache ?? []).filter((repo) => repo.id !== created.id),
-                ],
-                edsConfig: {
-                    ...edsConfig,
-                    ...edsConfigStringDefaults(edsConfig),
-                    createdRepo: {
-                        owner: result.data.owner,
-                        name: result.data.name,
-                        url: result.data.url,
-                        fullName: result.data.fullName,
-                    },
-                    repoMode: 'existing',
-                    selectedRepo: created,
-                    existingRepo: created.fullName,
-                    repoName: created.name,
-                    // Names are locked together (see onSelect above).
-                    daLiveSite: created.name,
-                    resetToTemplate: false,
-                },
-            });
-            setRepoCreationState({ isCreating: false, isCreated: true });
-        } catch (err) {
-            console.error('[GitHub Repo] Creation failed:', err);
-            setRepoCreationState({
-                isCreating: false,
-                isCreated: false,
-                error: (err as Error).message,
-            });
-        }
-    }, [repoName, edsConfig, state.githubReposCache, state.demo, updateState]);
 
     // Validate pre-selected repo exists in loaded repos (for import flow).
     useEffect(() => {
@@ -336,43 +208,9 @@ export function RepoSelectionInline({
         }
     }, [hasLoadedOnce, repos, selectedRepo, repoMode, updateEdsConfig]);
 
-    const [readiness, setReadiness] = useState<RepoReadinessState | undefined>(undefined);
-
     // Classify the selected repo so the reset control can ask only when there
-    // is something to lose. Undefined while in flight — the gate treats that as
-    // "do not block", so the step never flickers to invalid mid-check.
-
-    useEffect(() => {
-        if (repoMode !== 'existing' || !selectedRepo) {
-            setReadiness(undefined);
-            return;
-        }
-        const [owner, name] = selectedRepo.fullName.split('/');
-        if (!owner || !name) return;
-
-        let cancelled = false;
-        setReadiness(undefined);
-        webviewClient
-            .request<{ success: boolean; readiness?: RepoReadinessState }>(
-                'check-repo-readiness',
-                { owner, repo: name },
-            )
-            .then((result) => {
-                // A stale response must not overwrite a newer selection's answer.
-                //
-                // Fall back to `undetermined` rather than leaving it undefined: a
-                // successful response with no `readiness` field would otherwise be
-                // indistinguishable from a request still in flight, and the reset
-                // control reads that distinction. Matches the catch below.
-                if (!cancelled) setReadiness(result?.readiness ?? { kind: 'undetermined' });
-            })
-            .catch(() => {
-                if (!cancelled) setReadiness({ kind: 'undetermined' });
-            });
-        return () => {
-            cancelled = true;
-        };
-    }, [repoMode, selectedRepo]);
+    // is something to lose.
+    const readiness = useRepoReadiness(repoMode, selectedRepo);
 
     // Report the repository-choice verdict.
     useEffect(() => {

@@ -11,34 +11,19 @@
  * the primitives would remove the thing under test.
  */
 
-// The doubles are built INSIDE the factory and read back below. Declaring them
-// as consts above would leave them uninitialised when this module's static SUT
-// import runs, because jest.mock is hoisted above it and the factory is not.
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: jest.fn(),
-        onMessage: jest.fn(() => jest.fn()),
-        request: jest.fn(),
-        ready: jest.fn().mockResolvedValue(undefined),
-    },
-}));
-
-// Below the mock on purpose: it must register before the component loads.
+// The canonical double: importing it registers the WebviewClient mock, so it
+// must come before the component import below.
+import {
+    mockPostMessage,
+    mockRequest,
+    webviewClientHandlers,
+} from '../../../../helpers/webviewClientMock';
 import React from 'react';
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { render } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { settle } from '../../../../helpers/reactSettle';
 import { RepoSelectionInline } from '@/features/eds/ui/steps/RepoSelectionInline';
 import type { WizardState, EDSConfig, GitHubRepoItem } from '@/types/webview';
-
-const mockPostMessage = webviewClient.postMessage as unknown as jest.Mock;
-/** Typed to the real signature, so a spec's handler cannot invent a shape. */
-const mockOnMessage = webviewClient.onMessage as unknown as jest.Mock<
-    () => void,
-    [string, (data: unknown) => void]
->;
-const mockRequest = webviewClient.request as unknown as jest.Mock;
 
 export const REPO: GitHubRepoItem = {
     id: 'repo-1',
@@ -115,7 +100,8 @@ export function resetSelectionMocks(): void {
     jest.clearAllMocks();
     mockRequest.mockReset();
     mockRequest.mockResolvedValue({ success: true });
-    mockOnMessage.mockImplementation(() => () => undefined);
+    // The canonical onMessage RECORDS each subscription here; start every spec empty.
+    webviewClientHandlers.clear();
 }
 
 /** Build a fresh harness; call from each spec's `beforeEach`. */
@@ -206,4 +192,4 @@ export function createHarness(): SelectionHarness {
     };
 }
 
-export { mockPostMessage, mockOnMessage, mockRequest };
+export { mockPostMessage, mockRequest, webviewClientHandlers };

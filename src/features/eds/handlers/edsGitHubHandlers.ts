@@ -393,7 +393,7 @@ interface CreateGitHubRepoPayload {
  * Create a GitHub repository from a template
  *
  * Creates the repository and waits for template content to be populated.
- * This is called from RepoSelectionInline when creating a new repository,
+ * This is called from useRepoCreation (the repo picker's create flow),
  * allowing the repo to exist before proceeding to code sync verification.
  *
  * @param context - Handler context with logging and messaging
