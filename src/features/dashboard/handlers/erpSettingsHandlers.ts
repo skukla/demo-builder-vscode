@@ -129,7 +129,13 @@ function ownershipSaid(applied: ApplyOwnershipOutcome): unknown {
     if (applied.status === 'failed') return { applied: false, detail: applied.detail };
     return {
         applied: true,
-        erps: applied.erps.map((erp) => ({ erp: erp.erp, name: erp.name, owns: erp.ownsNow, discontinued: erp.discontinued })),
+        erps: applied.erps.map((erp) => ({
+            erp: erp.erp,
+            name: erp.name,
+            owns: erp.ownsNow,
+            discontinued: erp.discontinued,
+            restored: erp.restored,
+        })),
         unowned: applied.unowned,
         notes: applied.notes,
     };

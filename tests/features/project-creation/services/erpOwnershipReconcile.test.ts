@@ -18,11 +18,12 @@ jest.mock('@/features/project-creation/services/erpFillForProject', () => ({
     fillEveryErp: (...a: unknown[]) => mockFillEvery(...a),
 }));
 const mockList = jest.fn();
-const mockDiscontinue = jest.fn();
+const mockSetStatus = jest.fn();
 jest.mock('@/features/app-builder/services/erpProducts', () => ({
     DISCONTINUED: 'discontinued',
+    SELLABLE: 'sellable',
     listErpProducts: (...a: unknown[]) => mockList(...a),
-    discontinueErpProduct: (...a: unknown[]) => mockDiscontinue(...a),
+    setErpProductStatus: (...a: unknown[]) => mockSetStatus(...a),
 }));
 jest.mock('@/features/app-builder/services/erpIntegrationClient', () => ({
     ErpIntegrationClient: jest.fn(function (this: { urls: unknown }, urls: unknown) {
@@ -99,7 +100,7 @@ beforeEach(() => {
     mockSave.mockResolvedValue(undefined);
     mockFillEvery.mockResolvedValue([]);
     mockList.mockResolvedValue([]);
-    mockDiscontinue.mockResolvedValue(undefined);
+    mockSetStatus.mockResolvedValue(undefined);
 });
 
 describe('applyErpOwnership', () => {
@@ -114,8 +115,8 @@ describe('applyErpOwnership', () => {
             fills: [],
             unowned: 1,
             erps: [
-                { erp: 'demo-erp', listId: 'justrite', name: 'Justrite ERP', owns: OPTIONS.erps[0].owns, ownsNow: 2, discontinued: 0 },
-                { erp: 'demo-erp-2', listId: 'kukla', name: 'Kukla ERP', owns: OPTIONS.erps[1].owns, ownsNow: 0, discontinued: 0 },
+                { erp: 'demo-erp', listId: 'justrite', name: 'Justrite ERP', owns: OPTIONS.erps[0].owns, ownsNow: 2, discontinued: 0, restored: 0 },
+                { erp: 'demo-erp-2', listId: 'kukla', name: 'Kukla ERP', owns: OPTIONS.erps[1].owns, ownsNow: 0, discontinued: 0, restored: 0 },
             ],
             notes: [
                 'Kukla ERP owns no products yet: tag products with erp_owner=kukla in Commerce, then Load demo data.',
@@ -142,10 +143,10 @@ describe('applyErpOwnership', () => {
         const result = await applyErpOwnership(project(), 'erp-integration', d, 'load');
 
         // N1 (nobody\'s) and GONE (not in Commerce) are marked; J1 is owned, OLD is marked already, P is a parent.
-        const marked = mockDiscontinue.mock.calls.map((call) => call[2]);
-        expect(marked).toStrictEqual(['N1', 'GONE']);
-        expect(mockDiscontinue.mock.calls[0][0]).toStrictEqual({ 'runtime/demo-erp/products': 'https://a.adobeioruntime.net/api/v1/web/demo-erp/products' });
-        expect(result).toMatchObject({ status: 'applied', erps: [{ erp: 'demo-erp', discontinued: 2 }, { erp: 'demo-erp-2', discontinued: 0 }] });
+        const marked = mockSetStatus.mock.calls.map((call) => [call[2], call[3]]);
+        expect(marked).toStrictEqual([['N1', 'discontinued'], ['GONE', 'discontinued']]);
+        expect(mockSetStatus.mock.calls[0][0]).toStrictEqual({ 'runtime/demo-erp/products': 'https://a.adobeioruntime.net/api/v1/web/demo-erp/products' });
+        expect(result).toMatchObject({ status: 'applied', erps: [{ erp: 'demo-erp', discontinued: 2, restored: 0 }, { erp: 'demo-erp-2', discontinued: 0, restored: 0 }] });
         expect(d.onProgress).toHaveBeenCalledWith('Justrite ERP: Marking 1 of 2 products discontinued');
     });
 
@@ -154,11 +155,11 @@ describe('applyErpOwnership', () => {
             { sku: 'N1', type: 'simple', salesStatus: 'sellable' },
             { sku: 'N2', type: 'simple', salesStatus: 'sellable' },
         ]);
-        mockDiscontinue.mockRejectedValueOnce(new Error('The ERP answered 400: salesStatus must be sellable or blocked'));
+        mockSetStatus.mockRejectedValueOnce(new Error('The ERP answered 400: salesStatus must be sellable or blocked'));
 
         const result = await applyErpOwnership(project(['demo-erp']), 'erp-integration', deps(), 'load');
 
-        expect(mockDiscontinue).toHaveBeenCalledTimes(1);
+        expect(mockSetStatus).toHaveBeenCalledTimes(1);
         expect(result).toMatchObject({
             status: 'applied',
             erps: [
@@ -182,12 +183,48 @@ describe('applyErpOwnership', () => {
         ]);
         expect(mockSave.mock.invocationCallOrder[0]).toBeLessThan(mockFillEvery.mock.invocationCallOrder[0]);
         // Owning everything, nothing is marked and nothing is unowned.
-        expect(mockDiscontinue).not.toHaveBeenCalled();
+        expect(mockSetStatus).not.toHaveBeenCalled();
         expect(result).toMatchObject({
             status: 'applied',
             unowned: 0,
             erps: [{ erp: 'demo-erp', owns: { mode: 'all' }, ownsNow: 3 }],
             notes: ['Justrite ERP owns every product again.'],
+        });
+    });
+
+    it('makes the products an ERP owns again sellable again, and says how many (blocked stays)', async () => {
+        mockRead.mockResolvedValue({ ...OPTIONS, erps: [OPTIONS.erps[0]] });
+        mockList.mockResolvedValue([
+            { sku: 'J1', type: 'simple', salesStatus: 'discontinued' },
+            { sku: 'J2', type: 'simple', salesStatus: 'blocked' },
+            { sku: 'N1', type: 'simple', salesStatus: 'discontinued' },
+            { sku: 'GONE', type: 'simple', salesStatus: 'sellable' },
+        ]);
+
+        const result = await applyErpOwnership(project(['demo-erp']), 'erp-integration', deps(), 'remove');
+
+        // Owning everything: J1 and N1 come back; J2 is the ERP user's own decision; GONE is not in Commerce.
+        const changes = mockSetStatus.mock.calls.map((call) => [call[2], call[3]]);
+        expect(changes).toStrictEqual([['J1', 'sellable'], ['N1', 'sellable'], ['GONE', 'discontinued']]);
+        expect(result).toMatchObject({
+            status: 'applied',
+            erps: [{ erp: 'demo-erp', discontinued: 1, restored: 2 }],
+            notes: ['Justrite ERP owns every product again.', 'Justrite ERP: 2 products are sellable again.'],
+        });
+    });
+
+    it('a refusal while restoring names what is left on both sides', async () => {
+        mockRead.mockResolvedValue({ ...OPTIONS, erps: [OPTIONS.erps[0]] });
+        mockList.mockResolvedValue([
+            { sku: 'J1', type: 'simple', salesStatus: 'discontinued' },
+            { sku: 'GONE', type: 'simple', salesStatus: 'sellable' },
+        ]);
+        mockSetStatus.mockRejectedValueOnce(new Error('The ERP answered 500'));
+
+        const result = await applyErpOwnership(project(['demo-erp']), 'erp-integration', deps(), 'remove');
+
+        expect(result).toMatchObject({
+            erps: [{ erp: 'demo-erp', discontinued: 0, restored: 0, note: 'Justrite ERP: 1 product it no longer owns could not be marked discontinued, and 1 product it owns again could not be made sellable: The ERP answered 500' }],
         });
     });
 

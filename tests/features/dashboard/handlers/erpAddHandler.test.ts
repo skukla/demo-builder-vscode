@@ -49,7 +49,7 @@ jest.mock('@/features/project-creation/services/erpOwnershipReconcile', () => ({
 function applied(over: Record<string, unknown> = {}, notes: string[] = []) {
     return {
         status: 'applied',
-        erps: [{ erp: 'demo-erp-2', listId: 'brand-b', name: 'Brand B ERP', owns: { mode: 'attribute', attribute: 'erp_owner=brand-b' }, ownsNow: 10, discontinued: 0 }],
+        erps: [{ erp: 'demo-erp-2', listId: 'brand-b', name: 'Brand B ERP', owns: { mode: 'attribute', attribute: 'erp_owner=brand-b' }, ownsNow: 10, discontinued: 0, restored: 0 }],
         fills: [{ erp: 'demo-erp-2', name: 'Brand B ERP', status: 'filled', result: { partners: 2, products: 10, skipped: 0 }, erpId: 'demo-erp-2', ...over }],
         unowned: 0,
         notes,
@@ -213,7 +213,7 @@ describe('handleAddErp', () => {
                 erpList: ['erp', 'demo-erp-2'],
                 owns: { erp: 'brand-b', rule: { mode: 'attribute', attribute: 'erp_owner=brand-b' }, describe: 'products whose erp_owner is brand-b' },
                 existingOwns: [{ erp: 'acme', rule: { mode: 'attribute', attribute: 'erp_owner=acme' }, describe: 'products whose erp_owner is acme' }],
-                ownership: { erps: [{ erp: 'demo-erp-2', name: 'Brand B ERP', owns: 10, discontinued: 0 }], unowned: 0 },
+                ownership: { erps: [{ erp: 'demo-erp-2', name: 'Brand B ERP', owns: 10, discontinued: 0, restored: 0 }], unowned: 0 },
             },
         });
     });

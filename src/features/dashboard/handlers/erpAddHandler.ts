@@ -114,7 +114,10 @@ type AddOutcome = GuardableResult & {
     /** The theme Demo Builder gave the new ERP, when it looked like another (AB-51). */
     theme?: ErpThemeId;
     /** What the ownership pass did per ERP (AB-70): what each owns now, what was marked, what nobody owns. */
-    ownership?: { erps: Array<{ erp: string; name: string; owns: number; discontinued: number }>; unowned: number };
+    ownership?: {
+        erps: Array<{ erp: string; name: string; owns: number; discontinued: number; restored: number }>;
+        unowned: number;
+    };
 };
 
 /**
@@ -273,7 +276,13 @@ function fillFailures(fills: ErpFillOutcomes): string[] {
 /** What the pass did per ERP, as the answer carries it (data.ownership). */
 function ownershipSaid(applied: Extract<ApplyOwnershipOutcome, { status: 'applied' }>): AddOutcome['ownership'] {
     return {
-        erps: applied.erps.map((erp) => ({ erp: erp.erp, name: erp.name, owns: erp.ownsNow, discontinued: erp.discontinued })),
+        erps: applied.erps.map((erp) => ({
+            erp: erp.erp,
+            name: erp.name,
+            owns: erp.ownsNow,
+            discontinued: erp.discontinued,
+            restored: erp.restored,
+        })),
         unowned: applied.unowned,
     };
 }

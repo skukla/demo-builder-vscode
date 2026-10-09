@@ -263,7 +263,7 @@ describe('handleSetErpSettings (AB-16j)', () => {
         mockUpdateErpSettings.mockResolvedValue({ entry: { id: 'contoso', name: 'Contoso' } });
         mockApplyOwnership.mockResolvedValue({
             status: 'applied',
-            erps: [{ erp: 'demo-erp-2', listId: 'contoso', name: 'Contoso', owns: { mode: 'websites', websites: ['bodea'] }, ownsNow: 4, discontinued: 2 }],
+            erps: [{ erp: 'demo-erp-2', listId: 'contoso', name: 'Contoso', owns: { mode: 'websites', websites: ['bodea'] }, ownsNow: 4, discontinued: 2, restored: 0 }],
             fills: [],
             unowned: 1,
             notes: ['1 product belongs to no ERP.'],
@@ -280,7 +280,7 @@ describe('handleSetErpSettings (AB-16j)', () => {
         expect(result).toMatchObject({
             success: true,
             data: {
-                ownership: { applied: true, erps: [{ erp: 'demo-erp-2', name: 'Contoso', owns: 4, discontinued: 2 }], unowned: 1, notes: ['1 product belongs to no ERP.'] },
+                ownership: { applied: true, erps: [{ erp: 'demo-erp-2', name: 'Contoso', owns: 4, discontinued: 2, restored: 0 }], unowned: 1, notes: ['1 product belongs to no ERP.'] },
             },
         });
     });

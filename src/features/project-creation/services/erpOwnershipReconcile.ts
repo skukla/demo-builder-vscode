@@ -23,7 +23,7 @@ import { readErpOwnershipOptionsForProject, saveErpOwnership } from './erpOwners
 import { ErpIntegrationClient } from '@/features/app-builder/services/erpIntegrationClient';
 import { erpListIdOf } from '@/features/app-builder/services/erpList';
 import { describeOwns, ownedSkus } from '@/features/app-builder/services/erpOwnership';
-import { DISCONTINUED, discontinueErpProduct, listErpProducts } from '@/features/app-builder/services/erpProducts';
+import { DISCONTINUED, SELLABLE, listErpProducts, setErpProductStatus } from '@/features/app-builder/services/erpProducts';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { systemsUsedBy } from '@/features/components/services/appBuilderComponentLinks';
 import type { Project } from '@/types/base';
@@ -44,6 +44,8 @@ export interface OwnershipErpReport {
     ownsNow: number;
     /** Products it held but no longer owns, marked discontinued there. */
     discontinued: number;
+    /** Products it owns again that the pass had discontinued, sellable again. */
+    restored: number;
     /** What did not go right for this ERP, in words; the pass stands. */
     note?: string;
 }
@@ -110,45 +112,85 @@ function ownsNothingNote(row: ErpRow): string {
     return `${row.name} owns no products: no Commerce product is ${describeOwns(row.owns).replace(/^products /u, '')}.`;
 }
 
+/** What the status pass did for one ERP, and what did not go right. */
+interface StatusPassResult {
+    discontinued: number;
+    restored: number;
+    note?: string;
+}
+
+/** One status change the pass makes: the SKU and the status it gets. */
+interface StatusChange {
+    sku: string;
+    to: typeof DISCONTINUED | typeof SELLABLE;
+}
+
 /**
- * Mark the products an ERP holds but no longer owns discontinued there, one at a time (the
- * ERP's PATCH takes one SKU). A parent carries no sales status and is left; so is a product
- * already discontinued. The first refusal stops the marking for that ERP and is the note.
+ * The status changes an ERP's held products need: what it no longer owns becomes
+ * discontinued; what it owns again, and the pass had discontinued, becomes sellable
+ * (measured 2026-10-09: a removal gave Justrite ERP everything back and 278 products it
+ * owned again stayed discontinued, because an import never resets a status). A parent
+ * carries no sales status and is left; `blocked` is the ERP user's own decision and is
+ * never touched either way.
  */
-async function discontinueNotOwned(
+function statusChangesFor(
+    held: readonly { sku: string; type?: string; salesStatus?: string }[],
+    owned: ReadonlySet<string>,
+): StatusChange[] {
+    return held.flatMap((product): StatusChange[] => {
+        if (product.type === 'configurable') return [];
+        const isOwned = owned.has(product.sku);
+        if (!isOwned && product.salesStatus !== DISCONTINUED) return [{ sku: product.sku, to: DISCONTINUED }];
+        if (isOwned && product.salesStatus === DISCONTINUED) return [{ sku: product.sku, to: SELLABLE }];
+        return [];
+    });
+}
+
+/** The pass's note when a status change is refused: what is left and why. */
+function statusRefusedNote(row: ErpRow, left: StatusChange[], error: unknown): string {
+    const toMark = left.filter((change) => change.to === DISCONTINUED).length;
+    const toRestore = left.length - toMark;
+    const parts = [
+        ...(toMark ? [`${toMark} product${toMark === 1 ? '' : 's'} it no longer owns could not be marked discontinued`] : []),
+        ...(toRestore ? [`${toRestore} product${toRestore === 1 ? '' : 's'} it owns again could not be made sellable`] : []),
+    ];
+    return `${row.name}: ${parts.join(', and ')}: ${(error as Error).message}`;
+}
+
+/**
+ * Apply the status changes an ERP's held products need, one at a time (the ERP's PATCH takes
+ * one SKU). The first refusal stops the pass for that ERP and is the note.
+ */
+async function reconcileStatuses(
     row: ErpRow,
     owned: ReadonlySet<string>,
     deps: ErpFillForProjectDeps,
     project: Project,
-): Promise<{ discontinued: number; note?: string }> {
+): Promise<StatusPassResult> {
     const auth = await deps.getAuth();
     const urls = project.appBuilderComponents?.[row.erp]?.deployedUrls;
-    if (!auth) return { discontinued: 0, note: `${row.name}: Adobe sign-in required to mark products discontinued.` };
+    const none = { discontinued: 0, restored: 0 };
+    if (!auth) return { ...none, note: `${row.name}: Adobe sign-in required to change product statuses.` };
     let held;
     try {
         held = await listErpProducts(urls, auth, deps.fetchImpl);
     } catch (error) {
-        return { discontinued: 0, note: `${row.name}'s products could not be read: ${(error as Error).message}` };
+        return { ...none, note: `${row.name}'s products could not be read: ${(error as Error).message}` };
     }
-    const toMark = held.filter(
-        (product) => product.type !== 'configurable' && product.salesStatus !== DISCONTINUED && !owned.has(product.sku),
-    );
-    let done = 0;
-    for (const product of toMark) {
-        deps.onProgress?.(`Marking ${done + 1} of ${toMark.length} products discontinued`);
+    const changes = statusChangesFor(held, owned);
+    const done = { ...none };
+    for (const [index, change] of changes.entries()) {
+        const verb = change.to === DISCONTINUED ? 'discontinued' : 'sellable again';
+        deps.onProgress?.(`Marking ${index + 1} of ${changes.length} products ${verb}`);
         try {
-            await discontinueErpProduct(urls, auth, product.sku, deps.fetchImpl);
-            done += 1;
+            await setErpProductStatus(urls, auth, change.sku, change.to, deps.fetchImpl);
+            if (change.to === DISCONTINUED) done.discontinued += 1;
+            else done.restored += 1;
         } catch (error) {
-            return {
-                discontinued: done,
-                note:
-                    `${row.name}: ${toMark.length - done} product${toMark.length - done === 1 ? '' : 's'} it no ` +
-                    `longer owns could not be marked discontinued: ${(error as Error).message}`,
-            };
+            return { ...done, note: statusRefusedNote(row, changes.slice(index), error) };
         }
     }
-    return { discontinued: done };
+    return done;
 }
 
 /** How many Commerce products no row's rule owns. */
@@ -223,11 +265,20 @@ export async function applyErpOwnership(
     for (const row of rows) {
         const owned = ownedSkus(options.products, row.owns);
         const onProgress = (step: string) => deps.onProgress?.(rows.length > 1 ? `${row.name}: ${step}` : step);
-        const marked = await discontinueNotOwned(row, owned, { ...deps, onProgress }, project);
+        const marked = await reconcileStatuses(row, owned, { ...deps, onProgress }, project);
         // An ERP owning everything in an empty store is not an action item; a rule that matches nothing is.
         if (owned.size === 0 && row.owns.mode !== 'all') notes.push(ownsNothingNote(row));
         if (marked.note) notes.push(marked.note);
-        erps.push({ ...row, ownsNow: owned.size, discontinued: marked.discontinued, ...(marked.note ? { note: marked.note } : {}) });
+        if (marked.restored > 0) {
+            notes.push(`${row.name}: ${marked.restored} product${marked.restored === 1 ? ' is' : 's are'} sellable again.`);
+        }
+        erps.push({
+            ...row,
+            ownsNow: owned.size,
+            discontinued: marked.discontinued,
+            restored: marked.restored,
+            ...(marked.note ? { note: marked.note } : {}),
+        });
     }
     const unowned = unownedCount(options.products, rows);
     if (unowned > 0 && rows.some((row) => row.owns.mode !== 'all')) {

@@ -26,6 +26,9 @@ export interface ErpProductRow {
 /** The status a product no ERP owns is given where it is held. */
 export const DISCONTINUED = 'discontinued';
 
+/** The status a product gets back when the ERP owns it again. */
+export const SELLABLE = 'sellable';
+
 /** The products an ERP holds; throws in the ERP's words when it does not answer. */
 export async function listErpProducts(
     deployedUrls: Record<string, string> | undefined,
@@ -45,11 +48,17 @@ export async function listErpProducts(
     });
 }
 
-/** Mark one product discontinued in the ERP; throws in the ERP's words when it refuses. */
-export async function discontinueErpProduct(
+/**
+ * Set one product's sales status in the ERP; throws in the ERP's words when it refuses.
+ * The pass writes two: `discontinued` for a product the ERP no longer owns, and `sellable`
+ * for one it owns again (only ever over a `discontinued` the pass wrote; `blocked` is the
+ * ERP user's own decision and is never touched).
+ */
+export async function setErpProductStatus(
     deployedUrls: Record<string, string> | undefined,
     auth: AppManagementAuth,
     sku: string,
+    salesStatus: typeof DISCONTINUED | typeof SELLABLE,
     fetchImpl: typeof fetch = globalThis.fetch,
 ): Promise<void> {
     const answer = await callErpApi(
@@ -57,9 +66,19 @@ export async function discontinueErpProduct(
         auth,
         'PATCH',
         `products/${encodeURIComponent(sku)}`,
-        { salesStatus: DISCONTINUED },
+        { salesStatus },
         fetchImpl,
     );
     if ('refusal' in answer) throw new Error(answer.refusal);
     if (!answer.ok) throw new Error(`The ERP answered ${answer.status}: ${answer.detail}`);
+}
+
+/** Mark one product discontinued in the ERP; throws in the ERP's words when it refuses. */
+export function discontinueErpProduct(
+    deployedUrls: Record<string, string> | undefined,
+    auth: AppManagementAuth,
+    sku: string,
+    fetchImpl: typeof fetch = globalThis.fetch,
+): Promise<void> {
+    return setErpProductStatus(deployedUrls, auth, sku, DISCONTINUED, fetchImpl);
 }

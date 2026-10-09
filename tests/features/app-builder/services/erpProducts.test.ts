@@ -5,7 +5,7 @@
  * 2026-10-09), and a 400 in its words when a status is not one it knows.
  */
 
-import { discontinueErpProduct, listErpProducts } from '@/features/app-builder/services/erpProducts';
+import { discontinueErpProduct, listErpProducts, setErpProductStatus } from '@/features/app-builder/services/erpProducts';
 
 const AUTH = { accessToken: 'fake-test-pw-not-a-secret', imsOrgId: 'ABC@AdobeOrg' };
 const URLS = { 'runtime/demo-erp/products': 'https://ns.adobeioruntime.net/api/v1/web/demo-erp/products' };
@@ -46,6 +46,18 @@ describe('listErpProducts', () => {
         await expect(listErpProducts({}, AUTH, answering(200, {}) as unknown as typeof fetch)).rejects.toThrow(
             'The ERP deploys no "products" action.',
         );
+    });
+});
+
+describe('setErpProductStatus', () => {
+    it('PATCHes the product with the status asked for, sellable included', async () => {
+        const fetchImpl = answering(200, { sku: 'A', salesStatus: 'sellable' });
+
+        await setErpProductStatus(URLS, AUTH, 'A', 'sellable', fetchImpl as unknown as typeof fetch);
+
+        const [, init] = fetchImpl.mock.calls[0] as [string, RequestInit];
+        expect(init.method).toBe('PATCH');
+        expect(JSON.parse(String(init.body))).toStrictEqual({ salesStatus: 'sellable' });
     });
 });
 
