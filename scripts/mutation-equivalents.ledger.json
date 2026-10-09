@@ -1363,7 +1363,7 @@
             "anchors": [
                 "if (prereq.check.parseVersion) {"
             ],
-            "line": 126,
+            "line": 161,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true runs the parse block for a prerequisite that declares no parseVersion. new RegExp(undefined) is the empty pattern, which matches at position zero with no capture group, so match[1] is undefined and the || '' fallback leaves cliVersion as the empty string it was initialised to. createVersionStatus therefore receives the same three arguments on both routes.",
@@ -1376,7 +1376,7 @@
             "anchors": [
                 "if (match) cliVersion = match[1] || '';"
             ],
-            "line": 129,
+            "line": 164,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true reads match[1] when the regex did not match, so match is null and the read throws a TypeError. That throw is caught by the enclosing try in the same block, whose catch comments that regex parse errors are ignored, leaving cliVersion as the empty string the unmutated path also leaves it. The exception never escapes and no collaborator sees a different call.",
@@ -1389,7 +1389,7 @@
             "anchors": [
                 "const duration = Date.now() - startTime;"
             ],
-            "line": 150,
+            "line": 185,
             "mutants": 1,
             "category": "other",
             "reason": "duration is read on the very next statement and nowhere else, and that statement is a context.logger.debug call whose message reports how long the parallel check took. Adding the two clocks instead of subtracting them changes a number inside one debug line; the function's return value, every collaborator call and every status it produces are untouched.",
@@ -1415,7 +1415,7 @@
             "anchors": [
                 "(prereq.id === 'node' && nodeMissing)"
             ],
-            "line": 208,
+            "line": 182,
             "mutants": 3,
             "category": "branch",
             "reason": "nodeMissing can only ever be true for the 'node' prerequisite: it is assigned solely inside the `prereq.id === 'node'` guard on line 198 and initialised false otherwise. So mutating this operand \u2014 to true, to false, or to !== \u2014 cannot change the value of the disjunction for any input.",
@@ -1428,7 +1428,7 @@
             "anchors": [
                 "if (!prereq) continue;"
             ],
-            "line": 315,
+            "line": 289,
             "mutants": 1,
             "category": "branch",
             "reason": "`if (false)` removes a guard that the loop bound already makes unreachable: i is strictly less than prerequisites.length, so prerequisites?.[i] is never undefined for a dense array. The guard exists to satisfy the optional-index type, not to handle a reachable state.",
@@ -1441,7 +1441,7 @@
             "anchors": [
                 "if (checkResult.installed) {"
             ],
-            "line": 361,
+            "line": 335,
             "mutants": 4,
             "category": "branch",
             "reason": "Both arms of this if/else do nothing but call context.stepLogger.log \u2014 one with a tick and a version suffix, one with a cross. Flipping the condition, emptying either block, changes only WHICH step-log line prints. Killing it would mean asserting a logger call's arguments, which pins wording rather than behaviour.",
@@ -1454,7 +1454,7 @@
             "anchors": [
                 "for (let i = 0; i < (prerequisites?.length ?? 0); i++) {"
             ],
-            "line": 313,
+            "line": 287,
             "mutants": 1,
             "category": "branch",
             "reason": "`<` to `<=` runs one extra iteration at i === length, where `prerequisites?.[i]` is undefined and the very next line (`if (!prereq) continue;`) skips it. No collaborator is called and no message is sent on that iteration, so no test can observe it.",
@@ -1465,35 +1465,9 @@
         {
             "module": "src/features/prerequisites/handlers/checkHandler.ts",
             "anchors": [
-                "return { perNodeVersionStatus, missingVariantMajors: [...requiredMajors] };"
-            ],
-            "line": 63,
-            "mutants": 1,
-            "category": "other",
-            "reason": "`missingVariantMajors` from this branch is only ever read by getPrerequisiteDisplayMessage, and only on its 'missing in Node X' arm \u2014 which is unreachable here, because this branch also returns a NON-EMPTY perNodeVersionStatus (one entry per required major), and that takes the earlier 'Installed for versions:' arm. Emptying the array changes no output.",
-            "decision": "Kept: it is the honest value even though nothing downstream reads it on this path.",
-            "recorded": "2026-09-04",
-            "source": "PL-22 MUT-01, 2026-09-04"
-        },
-        {
-            "module": "src/features/prerequisites/handlers/checkHandler.ts",
-            "anchors": [
-                "return { perNodeVariantMissing: false, missingVariantMajors: [], perNodeVersionStatus: [] };"
-            ],
-            "line": 156,
-            "mutants": 1,
-            "category": "other",
-            "reason": "The `missingVariantMajors: []` literal is unobservable on this early-return path: it is read only by getPrerequisiteDisplayMessage's 'missing in Node X' arm, which is gated on perNodeVariantMissing \u2014 returned false here. Filling the array changes no message.",
-            "decision": "Kept as the empty-by-construction value.",
-            "recorded": "2026-09-04",
-            "source": "PL-22 MUT-01, 2026-09-04"
-        },
-        {
-            "module": "src/features/prerequisites/handlers/checkHandler.ts",
-            "anchors": [
                 "if (prereq.id === 'node' && nodeVersionStatus && nodeVersionStatus.length > 0) {"
             ],
-            "line": 197,
+            "line": 171,
             "mutants": 3,
             "category": "branch",
             "reason": "Each surviving mutant weakens one operand into a condition the OTHER operands already enforce. `prereq.id === 'node'` to true: nodeVersionStatus is assigned only inside the id === 'node' arm of the check loop, so it is undefined for every other prerequisite and the conjunction still short-circuits. `length > 0` to true or to >= 0: the only case they admit is an empty array, where the body's `some(v => !v.installed)` is false anyway, so nodeMissing does not move.",
@@ -1506,7 +1480,7 @@
             "anchors": [
                 "const userOptionalDeps = payload?.selectedOptionalDependencies ?? [];"
             ],
-            "line": 239,
+            "line": 213,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "This line sits inside `if (payload?.selectedStack)`, so payload is known truthy by the time it runs. Dropping the optional chain cannot throw.",
@@ -1519,7 +1493,7 @@
             "anchors": [
                 "const prereq = prerequisites?.[i];"
             ],
-            "line": 314,
+            "line": 288,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "The loop bound is `i < (prerequisites?.length ?? 0)`, so the body runs only when prerequisites is truthy. Dropping the optional chain cannot throw.",
@@ -1532,7 +1506,7 @@
             "anchors": [
                 "const nodeVersionStatus = await context.prereqManager?.checkMultipleNodeVersions(nodeVersionMapping);"
             ],
-            "line": 107,
+            "line": 91,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Reaching this line requires the check loop to be running over a non-empty prerequisite list, and that list comes from `context.prereqManager?.resolveDependencies(...)` earlier in the SAME invocation. A context whose prereqManager is undefined therefore never gets here \u2014 the loop has nothing to iterate. So no input can distinguish the optional chain from a plain member access.",
@@ -1545,7 +1519,7 @@
             "anchors": [
                 "const cachedResults = context.prereqManager?.getCacheManager().getPerVersionResults(prereq.id);"
             ],
-            "line": 167,
+            "line": 140,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Reaching this line requires the check loop to be running over a non-empty prerequisite list, and that list comes from `context.prereqManager?.resolveDependencies(...)` earlier in the SAME invocation. A context whose prereqManager is undefined therefore never gets here \u2014 the loop has nothing to iterate. So no input can distinguish the optional chain from a plain member access.",
@@ -1558,7 +1532,7 @@
             "anchors": [
                 "checkResult = prereq ? await context.prereqManager?.checkPrerequisite(prereq) : undefined;"
             ],
-            "line": 338,
+            "line": 312,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Reaching this line requires the check loop to be running over a non-empty prerequisite list, and that list comes from `context.prereqManager?.resolveDependencies(...)` earlier in the SAME invocation. A context whose prereqManager is undefined therefore never gets here \u2014 the loop has nothing to iterate. So no input can distinguish the optional chain from a plain member access.",
@@ -1597,7 +1571,7 @@
             "anchors": [
                 "if (installedNodeVersions.length === 0) {"
             ],
-            "line": 209,
+            "line": 212,
             "mutants": 1,
             "category": "block",
             "reason": "The block logs and then assigns `status.installed = false` \u2014 the value the status object was already constructed with a few lines earlier. Emptying the block leaves every later read (including the `prereq.plugins && status.installed` gate) seeing the same false.",
@@ -1610,7 +1584,7 @@
             "anchors": [
                 "if (anyInstalled) {"
             ],
-            "line": 244,
+            "line": 247,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing the guard true runs extractVersionFromPerNodeStatus with nothing installed, where `find(v => v.installed)` is undefined and the function returns undefined \u2014 so `status.version` is assigned undefined instead of being left absent. Jest equality, JSON and every production reader treat those the same.",
@@ -1636,20 +1610,20 @@
             "anchors": [
                 "const totalDuration = Date.now() - startTime;"
             ],
-            "mutants": 3,
+            "mutants": 2,
             "category": "other",
-            "reason": "Anchored at line 167 and covering all THREE identical occurrences (167 on the per-node-version path, 179 on the standard path, 328 in the error handler): each feeds only `formatDuration(totalDuration)` inside a debug log, so turning the subtraction into an addition changes the number printed in a log line and nothing any caller can read.",
+            "reason": "Anchored at line 187 and covering BOTH identical occurrences (187 in recordCheckComplete, the one success tail both check paths now share since PL-69 pair 19 on 2026-10-09; 331 in the error handler): each feeds only `formatDuration(totalDuration)` inside a debug log, so turning the subtraction into an addition changes the number printed in a log line and nothing any caller can read.",
             "decision": "Kept; killing it would mean asserting a logger call's arguments.",
             "recorded": "2026-09-04",
             "source": "PL-22 MUT-01, 2026-09-04",
-            "line": 167
+            "line": 187
         },
         {
             "module": "src/features/prerequisites/services/PrerequisitesManager.ts",
             "anchors": [
                 "if (match) {"
             ],
-            "line": 279,
+            "line": 282,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true when the regex did not match makes `match[1]` throw a TypeError, which checkPrerequisite's own catch hands to handleCheckError \u2014 which sets installed false and caches the result under the same key, exactly as the unmutated else branch leaves it. The returned status, the cache write and its arguments are all identical; only the debug line differs.",
@@ -1664,18 +1638,18 @@
             ],
             "mutants": 2,
             "category": "block",
-            "reason": "Anchored at line 282 and covering BOTH log-only else arms (282, where the version regex did not match; 356, where a failed check was not a missing command). Each holds one statement, a logger call. Emptying either removes a log line and changes nothing a caller of checkPrerequisite can observe: status.installed is already false in both cases and the cache write that follows is identical.",
+            "reason": "Anchored at line 285 and covering BOTH log-only else arms (285, where the version regex did not match; 360, where a failed check was not a missing command). Each holds one statement, a logger call. Emptying either removes a log line and changes nothing a caller of checkPrerequisite can observe: status.installed is already false in both cases and the cache write that follows is identical.",
             "decision": "Ledgered rather than pinned: asserting it would pin logger wording.",
             "recorded": "2026-09-04",
             "source": "PL-22 MUT-01, 2026-09-04",
-            "line": 282
+            "line": 285
         },
         {
             "module": "src/features/prerequisites/services/PrerequisitesManager.ts",
             "anchors": [
                 "if (!prereq.plugins) return;"
             ],
-            "line": 303,
+            "line": 306,
             "mutants": 1,
             "category": "branch",
             "reason": "Both call sites of checkPrerequisitePlugins are already guarded by `prereq.plugins && status.installed`, so prereq.plugins is truthy whenever this runs and the early return is unreachable. Removing the guard changes no run.",
@@ -3784,18 +3758,6 @@
             "decision": "none \u2014 the typeof half is what makes the cast on the next line honest, and null (typeof 'object') is caught by the other half",
             "recorded": "2026-09-04",
             "source": "MUT-06 batch, globalMcpRegistration focus run 2026-09-04"
-        },
-        {
-            "module": "src/features/prerequisites/handlers/continueHandler.ts",
-            "anchors": [
-                "return { perNodeVariantMissing: false, missingVariantMajors: [], perNodeVersionStatus: [] };"
-            ],
-            "mutants": 1,
-            "category": "other",
-            "reason": "The mutant fills missingVariantMajors on the early-return path, and nothing reads it there. Its only consumer is getPrerequisiteStatusMessage, which is gated on perNodeVariantMissing \u2014 false on this path by construction, since this return is taken exactly when the prerequisite is not per-node-version or no Node versions are required. A test could only observe it by also flipping the flag, which is a second mutation.",
-            "decision": "none \u2014 the empty array keeps the returned shape uniform across both exits",
-            "recorded": "2026-09-04",
-            "source": "PL-22 batch MUT-01"
         },
         {
             "module": "src/features/prerequisites/handlers/continueHandler.ts",
@@ -14642,7 +14604,7 @@
             "anchors": [
                 "errorObj.code === 'ENOENT' ||"
             ],
-            "line": 349,
+            "line": 352,
             "mutants": 7,
             "category": "branch",
             "reason": "isCommandNotFound is read exactly once, by the if/else immediately below, and BOTH arms of that if/else call this.logger.info \u2014 one naming the command that was not on PATH, one quoting the error message. Nothing else reads it: status.installed is set false before the branch and the cache write after it is identical either way. So every way of weakening this disjunction changes only which info line prints.",
@@ -14655,7 +14617,7 @@
             "anchors": [
                 "if (isCommandNotFound) {"
             ],
-            "line": 355,
+            "line": 358,
             "mutants": 3,
             "category": "branch",
             "reason": "Both arms of this if/else do nothing but call this.logger.info. Flipping the condition either way, or emptying the block, changes only which of the two messages is written to the log; the status object and the cache write that follow are byte-identical.",
@@ -14668,7 +14630,7 @@
             "anchors": [
                 "return firstInstalled?.component || undefined;"
             ],
-            "line": 469,
+            "line": 472,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "extractVersionFromPerNodeStatus is called from exactly one place, under `if (anyInstalled)`, and anyInstalled is `perNodeVersionStatus.some(v => v.installed)` over the same array this searches. So the find always hits and firstInstalled is never undefined when the line runs.",

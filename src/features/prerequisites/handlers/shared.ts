@@ -32,7 +32,8 @@ export {
     getPrerequisiteStatusMessage,
 } from './prerequisiteStatusMessages';
 export type { PerNodeVersionStatusEntry } from './prerequisiteStatusMessages';
-export { checkPerNodeVersionStatus } from './perNodeVersionStatus';
+export { checkPerNodeVersionStatus, resolvePerNodeVariantStatus } from './perNodeVersionStatus';
+export type { PerNodeVariantStatus } from './perNodeVersionStatus';
 export { handlePrerequisiteCheckError } from './prerequisiteCheckError';
 
 /**

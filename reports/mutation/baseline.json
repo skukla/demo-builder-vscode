@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "PL-69 sitting 4, 2026-10-09 (projects-dashboard handlers, and the Integrations command suite). The resolve-the-project opening that four open handlers and the reset handler each carried became withProjectFromPath in projectFromPath.ts (100%, own suite). projectsListOpen.ts (measured 95.52%) and projectsListLifecycle.ts (73.72%) get NO row, for the reason StandalonePanelCommand got none in sitting 3: their suites are the dashboardHandlers-* family named for the barrel they were split from on 2026-10-05, so the mirror rule finds nothing to re-measure them with and the pairing enforcer refuses the row. The numbers are in PL-69; the dashboardHandlers.ts row at 88.56% is now a ghost of a 42-line barrel. showIntegrations: the 5.26% row from sitting 3 covered only the page; a behaviour suite (16 cases, arguments asserted) takes it to 98.25% with the one survivor ledgered as equivalent (the dispose guard inside a swallowing catch).",
+    "_note": "PL-69 sitting 5, 2026-10-09 (prerequisites). Three rows re-measured against the committed file first and then against the change. PrerequisitesManager.ts: row 82.74 was stale (committed file 82.89), now 83.77 with the same 18 behavioural survivors; the success tail both check paths carried is one recordCheckComplete. checkHandler.ts: row 80.59 reproduced exactly, now 79.93 and NOT a gap: the survivors after are the same 57 as before minus the two ledgered ones that moved out with the extracted code, and 18 killed mutants moved with it to perNodeVersionStatus.ts, so the ratio fell while nothing lost a test. continueHandler.ts: row 90.82 was stale (committed file 92.91), now 92.68 for the same reason (one ledgered survivor and 17 killed mutants moved out; no new survivor). perNodeVersionStatus.ts gets NO row: its only mirrored suite is the new perNodeVersionStatus-resolve.test.ts (22 killed, 0 survived on the shared resolver), while checkPerNodeVersionStatus is tested by shared-per-node-status.test.ts, which the mirror cannot see, so a row would pin 65 uncovered mutants as a 25 percent floor that is not the truth. The projects-dashboard/handlers/dashboardHandlers.ts row is deleted: since the EDS-8 split that file is a 42-line re-export barrel and nothing in it can reproduce 88.56 percent (387 killed); the row was a ghost that sitting 4 found and left for a baseline decision.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -7414,13 +7414,12 @@
             "openGaps": 0
         },
         "src/features/prerequisites/handlers/checkHandler.ts": {
-            "score": 80.59,
-            "killed": 243,
-            "survived": 59,
+            "score": 79.93,
+            "killed": 225,
+            "survived": 57,
             "noCoverage": 0,
             "timeout": 2,
             "survivorCategories": {
-                "other": 2,
                 "optionalChain": 5,
                 "logPresentation": 39,
                 "branch": 10,
@@ -7429,27 +7428,23 @@
             },
             "uncoveredCategories": {},
             "highValueSurvivors": 12,
-            "equivalent": 19,
+            "equivalent": 17,
             "openGaps": 0
         },
         "src/features/prerequisites/handlers/continueHandler.ts": {
-            "score": 90.82,
-            "killed": 188,
-            "survived": 18,
-            "noCoverage": 1,
+            "score": 92.68,
+            "killed": 114,
+            "survived": 9,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "string": 4,
-                "other": 4,
-                "branch": 8,
-                "logPresentation": 1,
+                "branch": 6,
+                "string": 2,
                 "optionalChain": 1
             },
-            "uncoveredCategories": {
-                "string": 1
-            },
-            "highValueSurvivors": 8,
-            "equivalent": 13,
+            "uncoveredCategories": {},
+            "highValueSurvivors": 6,
+            "equivalent": 7,
             "openGaps": 0
         },
         "src/features/prerequisites/handlers/shared.ts": {
@@ -7473,22 +7468,22 @@
             "openGaps": 0
         },
         "src/features/prerequisites/services/PrerequisitesManager.ts": {
-            "score": 82.74,
-            "killed": 187,
-            "survived": 39,
+            "score": 83.77,
+            "killed": 191,
+            "survived": 37,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
                 "optionalChain": 2,
                 "branch": 14,
-                "other": 3,
-                "logPresentation": 13,
+                "other": 2,
+                "logPresentation": 12,
                 "block": 4,
                 "string": 3
             },
             "uncoveredCategories": {},
             "highValueSurvivors": 18,
-            "equivalent": 23,
+            "equivalent": 22,
             "openGaps": 0
         },
         "src/features/prerequisites/services/prerequisitesCacheManager.ts": {
@@ -8728,27 +8723,6 @@
             "uncoveredCategories": {},
             "highValueSurvivors": 1,
             "equivalent": 1,
-            "openGaps": 0
-        },
-        "src/features/projects-dashboard/handlers/dashboardHandlers.ts": {
-            "score": 88.56,
-            "killed": 387,
-            "survived": 48,
-            "noCoverage": 2,
-            "timeout": 0,
-            "survivorCategories": {
-                "string": 6,
-                "logPresentation": 32,
-                "block": 4,
-                "branch": 4,
-                "optionalChain": 2
-            },
-            "uncoveredCategories": {
-                "block": 1,
-                "logPresentation": 1
-            },
-            "highValueSurvivors": 8,
-            "equivalent": 11,
             "openGaps": 0
         },
         "src/features/projects-dashboard/services/projectDeletionService.ts": {

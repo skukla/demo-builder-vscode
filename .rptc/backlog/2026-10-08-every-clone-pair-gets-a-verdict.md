@@ -42,8 +42,8 @@ excluded by the scan's ignore flag and are not among the 40.
 | 16 | projectsListOpen.ts:130-140 | same file:72-106 | same | EXTRACT | same cluster |
 | 17 | projectsListOpen.ts:162-172 | same file:72-106 | same | EXTRACT | `withProject(handler)` in projectFromPath.ts; no named suite for either handler file |
 | 18 | project-creation/handlers/checkGitHubAppHandler.ts:108-120 | eds/services/github/githubAppService.ts:107-119 | isAppInstalled result type | EXTRACT | the interface restates the return type by hand; export `AppInstalledResult`, import type-only. Also an orphaned JSDoc ("@returns True if Helix accepted the request") sits above `CheckGitHubAppService` |
-| 19 | prerequisites/services/PrerequisitesManager.ts:177-185 | same file:165-173 | log, cache, return success | EXTRACT | same success tail in both branches; `recordComplete(...)` |
-| 20 | prerequisites/handlers/checkHandler.ts:145-159 | prerequisites/handlers/continueHandler.ts:22-36 | per-node variant status | EXTRACT | same signature and guard; continue inlines what `buildUninstalledPerNodeStatus` does; move the type and builder to perNodeVersionStatus.ts |
+| 19 | prerequisites/services/PrerequisitesManager.ts:177-185 | same file:165-173 | log, cache, return success | DONE 2026-10-09 (sitting 5) | same success tail in both branches; now `recordCheckComplete(...)` |
+| 20 | prerequisites/handlers/checkHandler.ts:145-159 | prerequisites/handlers/continueHandler.ts:22-36 | per-node variant status | DONE 2026-10-09 (sitting 5) | same guard and uninstalled answer; now `resolvePerNodeVariantStatus` in perNodeVersionStatus.ts, the installed step a callback |
 | 21 | checkHandler.ts:375-385 | continueHandler.ts:122-132 | status payload literal | TWO COPIES | `message`, `canInstall`, `plugins` already diverge |
 | 22 | lifecycle/services/projectResetService.ts:200-216 | project-creation/handlers/executorComponentLoading.ts:154-170 | stamp type, install options | EXTRACT | identical tail; reset must match creation; `toComponentDefinitionEntry(def, comp)`; executorComponentLoading has no named suite |
 | 23 | eds/services/errorFormatters.ts:474-485 | same file:283-294 | match error by code | EXTRACT | three tables share the lookup; `formatByPatterns(error, table)` |
@@ -73,7 +73,7 @@ excluded by the scan's ignore flag and are not among the 40.
 | 2. EDS services (helix, github, daLive, configService, errorFormatters) | 4, 5, 6, 7, 9, 10, 23, 24 | 29 |
 | 3. Webview command base (`createHandlerContext` and the bundle-HTML method into `BaseWebviewCommand`, modelled on `StandalonePanelCommand`) | 27, 28, 29, 30, 31 | 24 |
 | 4. Projects-dashboard handlers | 15, 16, 17 | 21 |
-| 5. Prerequisites | 19, 20 | 19 |
+| 5. Prerequisites | 19, 20 | 19 (landed at 18: sitting 4 had already reached 20) |
 | 6. Authentication | 33, 34, 35 | 16 |
 | 7. UI (field update logic, TextField props) | 11, 12, 13 | 13 |
 | 8. Small handlers (updates, console API, component payload) | 14, 26, 32 | 10 |
@@ -163,6 +163,48 @@ Proof: the 39 touched suites (794 tests) ran unchanged before and after. New: a 
 for `projectFromPath.ts` (6 cases, the resolve and the wrapper, arguments asserted).
 cloneCeiling 23 -> 20.
 
+**Sitting 5 (pairs 19 and 20) DONE 2026-10-09.** Re-scanned first: 20 clones, the three
+prerequisites fragments where the table said. Both pairs were real:
+
+- **19** (`PrerequisitesManager.checkPrerequisite`): the per-Node branch and the standard
+  branch ended with the same eight lines (duration, debug log, cache the status). Now one
+  private `recordCheckComplete(prereq, status, startTime, nodeVersion)`; the per-Node branch
+  no longer returns early, it falls through to the same call. The only touch on that file,
+  which is on EDS-8's hold list.
+- **20** (`detectPerNodeVariantStatus` in checkHandler, `checkContinuePerNodeVariants` in
+  continueHandler): the same guard (not per-Node, or no Node versions required, means
+  nothing to report) and the same "tool not installed, so missing in every required major"
+  answer. Moving only the uninstalled builder, as the table suggested, left a ten-line
+  clone (signature, guard, majors lookup), so the whole decision is now one
+  `resolvePerNodeVariantStatus(requiredMajors, installed, whenInstalled)` in
+  `perNodeVersionStatus.ts`, exported through `shared.ts`. The one step that differs on
+  purpose, what to do when the tool IS installed, arrives as a callback: the first pass
+  reuses cached per-version results, the continue pass re-checks. The handlers still call
+  `hasNodeVersions` and `perNodeVersionMajors` themselves and pass the majors in, because
+  every check and continue suite mocks those through the `shared` barrel and a shared module
+  calling them directly would bypass the mocks (the suites would then test something else).
+  `PerNodeVariantStatus` is now one exported type instead of four hand-written literals.
+
+**21 stays TWO COPIES**, re-read: the ten shared lines of the status payload are field
+names, and `message`, `canInstall` and `plugins` already differ in substance (display
+message vs status message; computed vs inline rule; hidden on a missing variant vs always
+sent). Verdict written into the ledger's `_verdicts`.
+
+Proof: the 69 pre-existing prerequisites suites (738 tests) ran unchanged before and after.
+New: `perNodeVersionStatus-resolve.test.ts` (4 cases: the three branches and that the
+caller's array is not handed back). Mutation: all three rows re-measured against the
+committed file first; PrerequisitesManager (row 82.74, committed 82.89, now 83.77) and
+continueHandler (row 90.82, committed 92.91, now 92.68) were stale; checkHandler reproduced
+80.59 and now reads 79.93 with the SAME survivors minus the two that moved out with the
+code (18 killed mutants moved with them), so the fall is arithmetic and the row was written
+with that reason. `perNodeVersionStatus.ts` measured 22 killed, 0 survived on the new
+resolver but 65 uncovered elsewhere in the file, because its only mirrored suite is the new
+one and `checkPerNodeVersionStatus` is tested by `shared-per-node-status.test.ts`, which
+the mirror cannot see: no baseline row (it would pin a 25% floor that is not the truth);
+the number lives here. Three mutation-ledger entries deleted as stale (their code moved
+into the resolver, and the new suite pins both early returns), two re-anchored.
+cloneCeiling 20 -> 18.
+
 ## Below the scan's threshold, found by reading (2026-10-08)
 
 The same five-line `ensureSDKReady` method is copied into four authentication files:
@@ -207,3 +249,6 @@ in favour of the EDS-34 version, and lower the pin. That also turns the floor of
 - 2026-10-09  Part B (the gap sitting 3 found): the Integrations command (`dashboard/commands/showIntegrations.ts`) had a suite covering only its page HTML and scored 5.26% with 54 mutants no test reached. Its suite (`showIntegrations.test.ts`, now 16 cases in one file rather than a split family) pins its panel names, the init payload it seeds the grid with (from a live project, from a bare one with no Adobe block or stack, and from none), the two handler maps it wires and their order (the add-integration flow first, then the whole dashboard map, so the dashboard's `switchOrg` wins), what each registered listener hands `dispatchHandler`, how it disposes a sibling's panel, and execute(). 98.25% after; the one survivor is the dispose guard inside a swallowing catch, ledgered as equivalent.
 - 2026-10-09  refactor(projects-dashboard): one opening for every handler that takes a project path (`187c4a089`)
 - 2026-10-09  test(dashboard): the Integrations command's behaviour, not only its page (`8675b5e40`)
+- 2026-10-09  Sitting 5 (prerequisites), pairs 19 and 20 extracted: `recordCheckComplete` in PrerequisitesManager (the one touch on a hold-list file) and `resolvePerNodeVariantStatus` in perNodeVersionStatus.ts with the installed step as a callback; pair 21 re-read and kept as TWO COPIES with its verdict in the ledger. 69 touched suites (738 tests) unchanged and green; full gate green. New: a 4-case suite for the resolver. Three baseline rows re-measured (two were stale; checkHandler's fall is arithmetic, same survivors). cloneCeiling 20 -> 18.
+- 2026-10-09  The ghost baseline row for projects-dashboard/handlers/dashboardHandlers.ts (88.56%, measured before EDS-8 made the file a 42-line barrel) is deleted, with the reason in the baseline note.
+- 2026-10-09  For the owner (sitting 5): `perNodeVersionStatus.ts` has no baseline row on purpose. Its real suite is `shared-per-node-status.test.ts`, named for the `shared` barrel it was split from, so the mirror rule measures the file with only the new resolver suite (25%, 65 uncovered). Same shape as the dashboardHandlers-* family in sitting 4. If the owner wants the file on the ratchet, the fix is renaming that suite to `perNodeVersionStatus-check.test.ts` (one file, no test edits), which this sitting did not do because it changes a test-family ledger entry.

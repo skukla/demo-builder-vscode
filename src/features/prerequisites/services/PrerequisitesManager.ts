@@ -163,30 +163,33 @@ export class PrerequisitesManager {
             // Step 2 Fix: Use fnm-aware logic for perNodeVersion prerequisites
             if (prereq.perNodeVersion && prereq.id !== 'node' && prereq.id !== 'npm') {
                 await this.checkPerNodeVersionPrerequisite(prereq, status);
-
-                const totalDuration = Date.now() - startTime;
-                this.logger.debug(
-                    `[Prerequisites] ${prereq.id}: ✓ Complete in ${formatDuration(totalDuration)}, installed=${status.installed}`,
-                );
-
-                this.cacheManager.setCachedResult(prereq.id, status, undefined, nodeVersion);
-                return status;
+            } else {
+                // Standard check for non-perNodeVersion prerequisites
+                await this.checkStandardPrerequisite(prereq, status);
             }
-
-            // Standard check for non-perNodeVersion prerequisites
-            await this.checkStandardPrerequisite(prereq, status);
-
-            const totalDuration = Date.now() - startTime;
-            this.logger.debug(
-                `[Prerequisites] ${prereq.id}: ✓ Complete in ${formatDuration(totalDuration)}, installed=${status.installed}`,
-            );
-
-            this.cacheManager.setCachedResult(prereq.id, status, undefined, nodeVersion);
+            this.recordCheckComplete(prereq, status, startTime, nodeVersion);
         } catch (error) {
             this.handleCheckError(prereq, status, error, startTime, nodeVersion);
         }
 
         return status;
+    }
+
+    /**
+     * Log a finished check and cache its result. Both check paths end this way.
+     */
+    private recordCheckComplete(
+        prereq: PrerequisiteDefinition,
+        status: PrerequisiteStatus,
+        startTime: number,
+        nodeVersion?: string,
+    ): void {
+        const totalDuration = Date.now() - startTime;
+        this.logger.debug(
+            `[Prerequisites] ${prereq.id}: ✓ Complete in ${formatDuration(totalDuration)}, installed=${status.installed}`,
+        );
+
+        this.cacheManager.setCachedResult(prereq.id, status, undefined, nodeVersion);
     }
 
     /**

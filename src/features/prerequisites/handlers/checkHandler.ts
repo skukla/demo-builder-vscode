@@ -10,7 +10,7 @@
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getStackById } from '@/features/components/services/demoPackageLoader';
-import { getNodeVersionMapping, checkPerNodeVersionStatus, areDependenciesInstalled, handlePrerequisiteCheckError, determinePrerequisiteStatus, getPrerequisiteDisplayMessage, formatProgressMessage, formatVersionSuffix, hasNodeVersions, perNodeVersionMajors } from '@/features/prerequisites/handlers/shared';
+import { getNodeVersionMapping, checkPerNodeVersionStatus, areDependenciesInstalled, handlePrerequisiteCheckError, determinePrerequisiteStatus, getPrerequisiteDisplayMessage, formatProgressMessage, formatVersionSuffix, hasNodeVersions, perNodeVersionMajors, resolvePerNodeVariantStatus, type PerNodeVariantStatus } from '@/features/prerequisites/handlers/shared';
 import type { PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/PrerequisitesManager';
 import { ErrorCode } from '@/types/errorCodes';
 import { HandlerContext, type PrerequisiteCheckState } from '@/types/handlers';
@@ -45,22 +45,6 @@ function toPrerequisiteSummary(
         version: state.result.version,
         canInstall: state.result.canInstall,
     };
-}
-
-/**
- * Build per-node-version status when the main tool is NOT installed.
- * Populates all required majors as "not installed".
- */
-function buildUninstalledPerNodeStatus(
-    requiredMajors: string[],
-): { perNodeVersionStatus: { version: string; major: string; component: string; installed: boolean }[]; missingVariantMajors: string[] } {
-    const perNodeVersionStatus = requiredMajors.map(major => ({
-        version: `Node ${major}`,
-        major,
-        component: '',
-        installed: false,
-    }));
-    return { perNodeVersionStatus, missingVariantMajors: [...requiredMajors] };
 }
 
 /**
@@ -147,38 +131,28 @@ async function detectPerNodeVariantStatus(
     prereq: PrerequisiteDefinition,
     checkResult: { installed: boolean },
     nodeVersionMapping: Record<string, string>,
-): Promise<{
-    perNodeVariantMissing: boolean;
-    missingVariantMajors: string[];
-    perNodeVersionStatus: { version: string; major: string; component: string; installed: boolean }[];
-}> {
-    if (!prereq.perNodeVersion || !hasNodeVersions(nodeVersionMapping)) {
-        return { perNodeVariantMissing: false, missingVariantMajors: [], perNodeVersionStatus: [] };
-    }
+): Promise<PerNodeVariantStatus> {
+    const requiredMajors = prereq.perNodeVersion && hasNodeVersions(nodeVersionMapping)
+        ? perNodeVersionMajors()
+        : undefined;
+    return resolvePerNodeVariantStatus(requiredMajors, checkResult.installed, async (majors) => {
+        // Main tool installed: filter cached per-version results to required versions only
+        const cachedResults = context.prereqManager?.getCacheManager().getPerVersionResults(prereq.id);
 
-    const requiredMajors = perNodeVersionMajors();
+        if (cachedResults && cachedResults.length > 0) {
+            context.logger.debug(`[Prerequisites] Reusing cached per-version results for ${prereq.name} (${majors.length} required versions)`);
+            return buildCachedPerNodeStatus(majors, cachedResults, nodeVersionMapping);
+        }
 
-    if (!checkResult.installed) {
-        const result = buildUninstalledPerNodeStatus(requiredMajors);
-        return { perNodeVariantMissing: true, ...result };
-    }
-
-    // Main tool installed: filter cached per-version results to required versions only
-    const cachedResults = context.prereqManager?.getCacheManager().getPerVersionResults(prereq.id);
-
-    if (cachedResults && cachedResults.length > 0) {
-        context.logger.debug(`[Prerequisites] Reusing cached per-version results for ${prereq.name} (${requiredMajors.length} required versions)`);
-        return buildCachedPerNodeStatus(requiredMajors, cachedResults, nodeVersionMapping);
-    }
-
-    // Fallback: no cached results, run the check
-    context.logger.warn(`[Prerequisites] No cached per-version results for ${prereq.name}, falling back to re-check`);
-    const result = await checkPerNodeVersionStatus(prereq, requiredMajors, context);
-    return {
-        perNodeVariantMissing: result.perNodeVariantMissing,
-        missingVariantMajors: result.missingVariantMajors,
-        perNodeVersionStatus: result.perNodeVersionStatus,
-    };
+        // Fallback: no cached results, run the check
+        context.logger.warn(`[Prerequisites] No cached per-version results for ${prereq.name}, falling back to re-check`);
+        const result = await checkPerNodeVersionStatus(prereq, majors, context);
+        return {
+            perNodeVariantMissing: result.perNodeVariantMissing,
+            missingVariantMajors: result.missingVariantMajors,
+            perNodeVersionStatus: result.perNodeVersionStatus,
+        };
+    });
 }
 
 /**

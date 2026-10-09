@@ -7,7 +7,7 @@
  * - Updates UI with current status
  */
 
-import { getNodeVersionMapping, areDependenciesInstalled, handlePrerequisiteCheckError, determinePrerequisiteStatus, getPrerequisiteStatusMessage, hasNodeVersions, perNodeVersionMajors, checkPerNodeVersionStatus } from '@/features/prerequisites/handlers/shared';
+import { getNodeVersionMapping, areDependenciesInstalled, handlePrerequisiteCheckError, determinePrerequisiteStatus, getPrerequisiteStatusMessage, hasNodeVersions, perNodeVersionMajors, checkPerNodeVersionStatus, resolvePerNodeVariantStatus, type PerNodeVariantStatus } from '@/features/prerequisites/handlers/shared';
 import type { PrerequisiteDefinition } from '@/features/prerequisites/services/PrerequisitesManager';
 import { ErrorCode } from '@/types/errorCodes';
 import { HandlerContext } from '@/types/handlers';
@@ -24,26 +24,14 @@ async function checkContinuePerNodeVariants(
     prereq: PrerequisiteDefinition,
     checkResult: { installed: boolean },
     nodeVersionMapping: Record<string, string>,
-): Promise<{
-    perNodeVariantMissing: boolean;
-    missingVariantMajors: string[];
-    perNodeVersionStatus: { version: string; major: string; component: string; installed: boolean }[];
-}> {
-    if (!prereq.perNodeVersion || !hasNodeVersions(nodeVersionMapping)) {
-        return { perNodeVariantMissing: false, missingVariantMajors: [], perNodeVersionStatus: [] };
-    }
-
+): Promise<PerNodeVariantStatus> {
     // The SAME scope check applies — see perNodeVersionMajors' docstring.
-    const requiredMajors = perNodeVersionMajors();
-    if (!checkResult.installed) {
-        const perNodeVersionStatus = requiredMajors.map(
-            (major) => ({ version: `Node ${major}`, major, component: '', installed: false }),
-        );
-        return { perNodeVariantMissing: true, missingVariantMajors: [...requiredMajors], perNodeVersionStatus };
-    }
-
+    const requiredMajors = prereq.perNodeVersion && hasNodeVersions(nodeVersionMapping)
+        ? perNodeVersionMajors()
+        : undefined;
     // Main tool installed: the same per-Node check the first pass runs.
-    return checkPerNodeVersionStatus(prereq, requiredMajors, context);
+    return resolvePerNodeVariantStatus(requiredMajors, checkResult.installed,
+        (majors) => checkPerNodeVersionStatus(prereq, majors, context));
 }
 
 /**
