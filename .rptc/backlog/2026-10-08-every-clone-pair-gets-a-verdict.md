@@ -27,42 +27,42 @@ excluded by the scan's ignore flag and are not among the 40.
 | 1 | eds/services/helix/helixPageContent.ts:140-151 | same file:94-105 | publishPage/previewPage setup | DECIDED, fixed on another branch | owner 2026-10-09: publish handles a refused session like preview. Fixed and extracted under EDS-34 on fix/copy-second-integration (`e3dd47a54`); still counted here until that branch merges into this one. |
 | 2 | helixPageContent.ts:153-168 | same file:107-122 | POST, 401 and 403 handling | DECIDED, fixed on another branch | same pair as 1 |
 | 3 | eds/services/helix/helixBulkPublish.ts:215-242 | same file:101-128 | bulk preview/publish POST | DECIDED, fixed on another branch | same decision, bulk version; same EDS-34 commit |
-| 4 | eds/services/helix/helixApiKeys.ts:208-218 | same file:169-179 | DELETE apiKey request | EXTRACT | identical request; helper `deleteKeyOnServer(org, site, id)`; no named suite |
-| 5 | eds/services/github/githubHelpers.ts:58-70 | eds/services/github/githubTokenService.ts:218-230 | mapToGitHubUser | EXTRACT | byte-identical; delete the private copy, use the exported one |
-| 6 | eds/services/daLive/daLiveConfigService.ts:203-224 | same file:116-136 | read config, error wrap | EXTRACT | site and org reads differ only in URL and a word; `readConfigAt(url, label)` |
-| 7 | daLiveConfigService.ts:229-249 | same file:141-161 | PUT config via FormData | EXTRACT | same shape for update; `putConfigAt(url, label, config)` |
+| 4 | eds/services/helix/helixApiKeys.ts:208-218 | same file:169-179 | DELETE apiKey request | DONE 2026-10-09 (sitting 2, `e8a0fb593`) | identical request; helper `deleteKeyOnServer(org, site, id)`; no named suite |
+| 5 | eds/services/github/githubHelpers.ts:58-70 | eds/services/github/githubTokenService.ts:218-230 | mapToGitHubUser | DONE 2026-10-09 (sitting 2, `e8a0fb593`) | byte-identical; delete the private copy, use the exported one |
+| 6 | eds/services/daLive/daLiveConfigService.ts:203-224 | same file:116-136 | read config, error wrap | DONE 2026-10-09 (sitting 2, `e8a0fb593`) | site and org reads differ only in URL and a word; `readConfigAt(url, label)` |
+| 7 | daLiveConfigService.ts:229-249 | same file:141-161 | PUT config via FormData | DONE 2026-10-09 (sitting 2, `e8a0fb593`) | same shape for update; `putConfigAt(url, label, config)` |
 | 8 | eds/services/daLive/daLiveBlockLibraryOperations.ts:62-75 | eds/services/daLive/daLiveContentOperations.ts:289-302 | createBlockLibraryFromTemplate signature | GONE | a one-line forwarder; only the parameter list repeated. Retired 2026-10-08 in the EDS-8 cut; callers use `blockLibOps` directly |
-| 9 | eds/services/daLive/daLiveApiClient.ts:125-143 | eds/services/daLive/daLiveOrgOperations.ts:263-281 | HTTP status to error | EXTRACT | `createErrorFromResponse` copied; only the 401 case differs; check every response reaching it passed the 401-throwing wrapper first |
-| 10 | eds/services/configService/siteAccessManagerHeadless.ts:313-325 | same file:274-286 | admin mutation failure mapping | EXTRACT | grant and revoke repeat resolve + "not ok" mapping + confirm; `failedMutation(result, site)`; small gain |
+| 9 | eds/services/daLive/daLiveApiClient.ts:125-143 | eds/services/daLive/daLiveOrgOperations.ts:263-281 | HTTP status to error | DONE 2026-10-09 (sitting 2, `e8a0fb593`) | `createErrorFromResponse` copied; only the 401 case differs; check every response reaching it passed the 401-throwing wrapper first |
+| 10 | eds/services/configService/siteAccessManagerHeadless.ts:313-325 | same file:274-286 | admin mutation failure mapping | DONE 2026-10-09 (sitting 2, `e8a0fb593`) | grant and revoke repeat resolve + "not ok" mapping + confirm; `failedMutation(result, site)`; small gain |
 | 11 | components/ui/hooks/useComponentConfig.ts:321-329 | dashboard/ui/configure/hooks/useConfigureFieldValues.ts:146-155 | updateField start | DONE 2026-10-09 (sitting 7) | same edit on both surfaces; now `applyFieldUpdate(configs, field, value, { backendId, touchedFields })` in `components/services/componentConfigWrites.ts` |
 | 12 | useComponentConfig.ts:331-343 | useConfigureFieldValues.ts:157-169 | linked PAAS_URL write | DONE 2026-10-09 (sitting 7) | same fragment; the PaaS URL to GraphQL link is inside `applyFieldUpdate` |
 | 13 | components/ui/components/ConfigFieldRenderer.tsx:96-109 | same file:76-89 | TextField props block | DONE 2026-10-09 (sitting 7) | text and password differ by `type` and the url `onBlur`; now one `textFieldProps()` builder spread into both |
 | 14 | updates/commands/updateExecutor.ts:463-474 | updates/services/updateCore.ts:89-100 | find library, warn, skip | DONE 2026-10-09 (sitting 8) | `findInstalledLibrary(item, ctx)` in updateCore, with its first suite (`updateCore.test.ts`, 3 cases); both apply paths open with it |
-| 15 | projects-dashboard/handlers/projectsListOpen.ts:96-106 | same file:72-82 | resolve project preamble | EXTRACT | one cluster with 16, 17 and 3 sites in projectsListLifecycle.ts: 7 sites |
-| 16 | projectsListOpen.ts:130-140 | same file:72-106 | same | EXTRACT | same cluster |
-| 17 | projectsListOpen.ts:162-172 | same file:72-106 | same | EXTRACT | `withProject(handler)` in projectFromPath.ts; no named suite for either handler file |
+| 15 | projects-dashboard/handlers/projectsListOpen.ts:96-106 | same file:72-82 | resolve project preamble | DONE 2026-10-09 (sitting 4, `187c4a089`) | one cluster with 16, 17 and 3 sites in projectsListLifecycle.ts: 7 sites |
+| 16 | projectsListOpen.ts:130-140 | same file:72-106 | same | DONE 2026-10-09 (sitting 4, `187c4a089`) | same cluster |
+| 17 | projectsListOpen.ts:162-172 | same file:72-106 | same | DONE 2026-10-09 (sitting 4, `187c4a089`) | `withProject(handler)` in projectFromPath.ts; no named suite for either handler file |
 | 18 | project-creation/handlers/checkGitHubAppHandler.ts:108-120 | eds/services/github/githubAppService.ts:107-119 | isAppInstalled result type | DONE 2026-10-09 (sitting 9) | now the exported `AppInstalledResult` in githubAppService.ts, imported type-only by the handler's `CheckGitHubAppService` (the module itself stays lazy-loaded); the orphaned `triggerCodeSync` JSDoc sits above its function |
 | 19 | prerequisites/services/PrerequisitesManager.ts:177-185 | same file:165-173 | log, cache, return success | DONE 2026-10-09 (sitting 5) | same success tail in both branches; now `recordCheckComplete(...)` |
 | 20 | prerequisites/handlers/checkHandler.ts:145-159 | prerequisites/handlers/continueHandler.ts:22-36 | per-node variant status | DONE 2026-10-09 (sitting 5) | same guard and uninstalled answer; now `resolvePerNodeVariantStatus` in perNodeVersionStatus.ts, the installed step a callback |
 | 21 | checkHandler.ts:375-385 | continueHandler.ts:122-132 | status payload literal | TWO COPIES | `message`, `canInstall`, `plugins` already diverge |
 | 22 | lifecycle/services/projectResetService.ts:200-216 | project-creation/handlers/executorComponentLoading.ts:154-170 | stamp type, install options | DONE 2026-10-09 (sitting 9) | identical tail; now `toComponentDefinitionEntry(definition, type)` in `project-creation/services/componentDefinitionEntry.ts` (own suite), beside the type it builds; not in the orchestrator, whose importers' suites mock it with two functions |
-| 23 | eds/services/errorFormatters.ts:474-485 | same file:283-294 | match error by code | EXTRACT | three tables share the lookup; `formatByPatterns(error, table)` |
-| 24 | errorFormatters.ts:485-502 | same file:294-311 | match error by regex | EXTRACT | same as 23 |
+| 23 | eds/services/errorFormatters.ts:474-485 | same file:283-294 | match error by code | DONE 2026-10-09 (EDS-8 errorFormatters cut, `f9980a19c`) | three tables share the lookup; `formatByPatterns(error, table)` |
+| 24 | errorFormatters.ts:485-502 | same file:294-311 | match error by regex | DONE 2026-10-09 (EDS-8 errorFormatters cut, `f9980a19c`) | same as 23 |
 | 25 | data-installer/handlers/exportHandlers.ts:191-200 | data-installer/handlers/importHandlers.ts:437-447 | access, project, credentials | EXTRACT | the whole gate repeats; `resolveWriteGate(context, verb)`; after the EDS-8 data-installer sitting lands |
 | 26 | dashboard/handlers/consoleApiHandlers.ts:366-380 | same file:319-333 | validate, project, guards | DONE 2026-10-09 (sitting 8) | `loadProjectAndGuard(context)` opens add and set; list keeps its own opening because its no-org refusal sits between the load and the guards |
-| 27 | dashboard/commands/showIntegrations.ts:194-205 | projects-dashboard/commands/showProjectsList.ts:208-219 | createHandlerContext | EXTRACT | identical wrapper over `createPanelHandlerContext` |
-| 28 | dashboard/commands/showDashboard.ts:383-409 | showProjectsList.ts:197-219 | createHandlerContext | EXTRACT | same |
-| 29 | dashboard/commands/openAi.ts:137-148 | showProjectsList.ts:208-219 | createHandlerContext | EXTRACT | same |
-| 30 | dashboard/commands/configure.ts:147-160 | project-creation/commands/createProject.ts:231-244 | getWebviewContent bundle HTML | EXTRACT | `StandalonePanelCommand` already does this with a `bundleName` |
-| 31 | dashboard/commands/configure.ts:853-873 | showProjectsList.ts:208-219 | createHandlerContext | EXTRACT | same as 27 |
+| 27 | dashboard/commands/showIntegrations.ts:194-205 | projects-dashboard/commands/showProjectsList.ts:208-219 | createHandlerContext | DONE 2026-10-09 (sitting 3, `dd6b02b7b`) | identical wrapper over `createPanelHandlerContext` |
+| 28 | dashboard/commands/showDashboard.ts:383-409 | showProjectsList.ts:197-219 | createHandlerContext | DONE 2026-10-09 (sitting 3, `dd6b02b7b`) | same |
+| 29 | dashboard/commands/openAi.ts:137-148 | showProjectsList.ts:208-219 | createHandlerContext | DONE 2026-10-09 (sitting 3, `dd6b02b7b`) | same |
+| 30 | dashboard/commands/configure.ts:147-160 | project-creation/commands/createProject.ts:231-244 | getWebviewContent bundle HTML | DONE 2026-10-09 (sitting 3, `dd6b02b7b`) | `StandalonePanelCommand` already does this with a `bundleName` |
+| 31 | dashboard/commands/configure.ts:853-873 | showProjectsList.ts:208-219 | createHandlerContext | DONE 2026-10-09 (sitting 3, `dd6b02b7b`) | same as 27 |
 | 32 | components/handlers/componentHandlers.ts:143-155 | same file:102-114 | frontend/backend payload check | DONE 2026-10-09 (sitting 8) | `readStackPayload(payload)` in all three selection handlers; validateSelection keeps its own dependencies check after it |
 | 33 | authentication/services/types.ts:80-95 | same file:65-80 | identical interface body | DONE 2026-10-09 (sitting 6) | `AdobeConsoleWhereResponse` is now a type alias of `AdobeContext` |
 | 34 | authentication/services/adobeWorkspaceCredentials.ts:212-228 | same file:97-113 | resolve org/project/workspace ids | DONE 2026-10-09 (sitting 6) | same lookup in get and create; now private `resolveCachedTarget(purpose)` |
 | 35 | authentication/handlers/projectHandlers.ts:266-285 | authentication/handlers/workspaceHandlers.ts:143-162 | auth guard, permission re-check | DONE 2026-10-09 (sitting 6) | same policy, only the noun differs; now `gateConsoleCreate(context, payload, noun)` in consoleCreateGate.ts; the refresh after it differs on purpose and stays |
-| 36 | app-builder/services/appManagementInstaller.ts:307-320 | app-builder/services/appManagementUninstaller.ts:147-159 | resolve target, appData, auth | EXTRACT | identical tail; `prepareAppManagementCall(...)` returning inputs or an error string |
-| 37 | core/utils/progressUnifier/timedProgress.ts:169-179 | same file:66-76 | "Complete" progress payload | EXTRACT | same determinate payload, detail text differs |
-| 38 | progressUnifier/exactProgress.ts:71-86 | progressUnifier/timedProgress.ts:137-152 | determinate progress payload | EXTRACT | same shape |
-| 39 | exactProgress.ts:118-138 | same file:67-152 | percent output parser | EXTRACT | 37 to 39 take one helper, `determinateProgress(context, percent, detail)` |
+| 36 | app-builder/services/appManagementInstaller.ts:307-320 | app-builder/services/appManagementUninstaller.ts:147-159 | resolve target, appData, auth | DONE 2026-10-09 (sitting 10) | identical opening; now `prepareAppManagementCall(project, componentId, getAuth, verb)` in appManagementInstaller.ts (own suite), answering the target, appData and auth or the first refusal; the base-URL check stays in each caller (install fails, uninstall skips) |
+| 37 | core/utils/progressUnifier/timedProgress.ts:169-179 | same file:66-76 | "Complete" progress payload | DONE 2026-10-09 (sitting 1, `92a661187`) | same determinate payload, detail text differs |
+| 38 | progressUnifier/exactProgress.ts:71-86 | progressUnifier/timedProgress.ts:137-152 | determinate progress payload | DONE 2026-10-09 (sitting 1, `92a661187`) | same shape |
+| 39 | exactProgress.ts:118-138 | same file:67-152 | percent output parser | DONE 2026-10-09 (sitting 1, `92a661187`) | 37 to 39 take one helper, `determinateProgress(context, percent, detail)` |
 | 40 | core/communication/webviewCommunicationManager.ts:341-361 | core/ui/utils/WebviewClient.ts:103-123 | settle pending response | TWO COPIES | the two ends of one wire protocol in two runtimes; a shared module would cross ADR-015 and ADR-017 for ten lines |
 
 ## Sittings (worst first; re-run the scan after each, jscpd shifts when code moves)
@@ -78,7 +78,7 @@ excluded by the scan's ignore flag and are not among the 40.
 | 7. UI (field update logic, TextField props) | 11, 12, 13 | 13 (landed at 12: sitting 6 had already reached 15) |
 | 8. Small handlers (updates, console API, component payload) | 14, 26, 32 | 10 (landed at 9: sitting 7 had already reached 12) |
 | 9. Cross-feature | 18, 22 | 8 (landed at 7: sitting 8 had already reached 9) |
-| 10. App Builder | 36 | 7 |
+| 10. App Builder | 36 | 7 (landed at 6: sitting 9 had already reached 7) |
 | 11. Data installer (after the EDS-8 sitting on those files) | 25 | 6 |
 
 The floor of 6 is the 5 TWO COPIES plus the 1 VARIANT, each with its reason above. Each
@@ -382,6 +382,61 @@ checkGitHubAppHandler 60.22 reproduced -> 60.22, same survivors; its ledger anch
 import added one). componentDefinitionEntry 100 (5 killed, 0 survived), new row.
 executorComponentLoading has no row and gets none (owner note below).
 
+**Sitting 10 (pair 36) DONE 2026-10-09.** Re-scanned first: 7 clones, the App Builder
+fragment exactly where the table said. The pair was real:
+
+- **36** (`appManagementInstaller.ts`, `appManagementUninstaller.ts`): install and
+  uninstall opened with the same steps in the same order: derive the Commerce target,
+  build the appData, get a sign-in, hand back the first refusal, build the client. Only
+  the verb in the no-sign-in refusal differed. Now
+  `prepareAppManagementCall(project, componentId, getAuth, verb)`, which answers the
+  target, appData and auth, or the refusal as an error string. Each caller still builds its
+  own client from it in one line, and keeps its own base-URL check, because that one
+  differs on purpose: no URL fails the install but skips the uninstall (nothing was
+  installed). The helper lives in the installer, which the uninstaller already imported.
+  A new module was not possible: it would import `deriveCommerceTarget` from the installer
+  while the installer imports the helper back, which is an import cycle. The target is now
+  typed as the client's own
+  `SetAssociationRequest` (the same two fields), and an orphaned JSDoc for
+  `pollInstallation`, which moved to `appManagementInstallPolling.ts` long ago and has its
+  own there, is deleted. That keeps the installer at 399 lines, under the 400-line service
+  limit `god-file-ratchet` holds.
+
+Proof: the 128 pre-existing suites related to the two touched files (`--findRelatedTests`
+on both, plus every suite naming either file, including `spine-chokepoints`) ran
+unchanged before and after: 2,058 tests both times. With the new cases: 129 suites, 2,066
+tests (5 in the new `appManagementInstaller-prepareCall` suite, which hands in `getAuth` and
+asserts it is not asked when the target or appData refuses; 2 in
+`appManagementInstaller-edges`; 1 in `appManagementUninstaller`). cloneCeiling 7 -> 6.
+
+Table reconciliation (done while the scan report was open): 20 rows still read EXTRACT,
+and the scan measures none of them. For each one, `git log -S` on a line from its
+fragment, run on this branch, named the commit that removed it. Pairs 4 to 7, 9 and 10:
+`e8a0fb593` (sitting 2). Pairs 15 to 17: `187c4a089` (sitting 4). Pairs 23 and 24:
+`f9980a19c` (the EDS-8 errorFormatters cut). Pairs 27 to 31: `dd6b02b7b` (sitting 3).
+Pairs 37 to 39: `92a661187` (sitting 1). All are marked DONE with their commit. The six
+pairs the scan still measures are 1 to 3 (decided, fixed on another branch), 21 and 40
+(TWO COPIES), and 25, now the only EXTRACT row left (sitting 11). Pair 25's import side has
+moved to `importHandlers.ts:221-231`. The export side is still at 191-200. No row outside
+25 and 36 still measures, so there is nothing for the owner from the reconciliation.
+
+Found by the re-measure, fixed here: the installer row (95.87) predated `followAfterTimeout`
+(2026-09-30), and the committed file measured 95.63. No test reached the timed-out call
+whose installation was still running when the poll gave up. That case produced one
+behavioural survivor (the failed check forced true), two optional-chain survivors and
+two uncovered strings. One new case pins it: the exact hand-back, the "following the
+installation" progress line, and all 36 poll reads.
+
+Mutation: two rows re-measured against the committed file first. appManagementInstaller
+95.63 (stale row 95.87) -> 98.57 (205 killed, 2 survived, 1 uncovered), openGaps 0; the two
+survivors are the hands-back constant every suite imports and the install-failed log line.
+The helper's mutants count in this row, and the verb the installer passes is pinned by
+one new case (the full no-sign-in refusal, and no client built). appManagementUninstaller
+95.88 reproduced -> 95.51 and NOT a gap: the same three string survivors and one
+uncovered string; 8 killed mutants moved out with the opening, and the `'uninstall'` verb
+it passes is pinned by one new case. No equivalents-ledger entries name either file, so
+nothing needed re-anchoring.
+
 ## Below the scan's threshold, found by reading (2026-10-08)
 
 The same five-line `ensureSDKReady` method is copied into four authentication files:
@@ -443,3 +498,6 @@ in favour of the EDS-34 version, and lower the pin. That also turns the floor of
 - 2026-10-09  For the owner (sitting 9): `executorComponentLoading.ts` has no baseline row and gets none. Its suites are `executor-meshComponentLoading` and `executor-appBuilderComponentLoading`, named for `executor.ts` they were split from, so the mirror rule finds nothing and the focus tool would measure it through the import graph with the whole executor family. Same shape as perNodeVersionStatus (sitting 5) and updateCore (sitting 8); the fix is still the instrument's (let the mirror rule accept a `<module>-` prefix inside a hyphenated suite name) or a rename of those two suites, neither of which this sitting did.
 - 2026-10-09  For the owner (sitting 9): two rows were stale DOWNWARD before this sitting touched them (githubAppService 74.02 recorded, 70.16 measured; projectResetService 93.51 recorded, 86.06 measured), both because code landed after the row (2026-09-21 and 2026-09-30) without a re-measure. The ratchet only runs on a focus or sample run, so a row can sit above the truth for weeks. Recommendation: have the sweep re-measure any row whose module changed since `recorded` (the mutation-worklist already knows the modules; the date is in git).
 - 2026-10-09  refactor(cross-feature): one GitHub App result type, one orchestrator entry builder (`669ed12b5`)
+- 2026-10-09  Sitting 10 (App Builder), pair 36 extracted: `prepareAppManagementCall(project, componentId, getAuth, verb)` in appManagementInstaller.ts (own suite, 5 cases) now opens both the install and the uninstall (Commerce target, appData, sign-in, first refusal); each keeps its own base-URL check because no URL fails an install but skips an uninstall. Also fixed on the way: the installer's timed-out-and-still-running hand-back (2026-09-30) was never reached by a test; one case pins it. 128 related suites (2,058 tests) unchanged before and after; 129 suites, 2,066 tests with the new cases. Two baseline rows re-measured and written (the installer's was stale downward). Table reconciled: the 20 rows still marked EXTRACT that no longer measure are marked DONE with the commit that removed each. cloneCeiling 7 -> 6.
+- 2026-10-09  For the owner (sitting 10): `appManagementInstaller.ts` is at 399 lines, one under the 400-line service limit that `god-file-ratchet` counts. The next addition will trip it. Recommendation: when it next grows, move `deriveCommerceTarget` and `prepareAppManagementCall` into their own module. That move changes the import line of the pre-existing `appManagementInstaller-edges` suite, which imports `deriveCommerceTarget` from the installer. This sitting's proof needed that suite unchanged, so it did not make the move.
+- 2026-10-09  For the owner (sitting 10): a third row was stale downward (the installer, 95.87 recorded, 95.63 measured; the 2026-09-30 timeout follow-up landed after the row). Same cause as sitting 9's two; the recommendation there (have the sweep re-measure a row whose module changed since it was recorded) still stands.

@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "PL-69 sitting 9, 2026-10-09 (cross-feature). Four rows re-measured against the committed file first and then against the change. githubAppService.ts: row 74.02 was stale DOWNWARD (committed file 70.16: the 200-path x-error read and the inner-400 code-block log from 2026-09-30 landed after the row, ten behavioural mutants and two uncovered string pieces of the same debug line). Now 70.16 unchanged by this sitting (the exported AppInstalledResult is a type), openGaps 0: the read (2 mutants) and the guard (8) are ledgered as log-only, which tests/sop/no-logger-wording-assertions forbids pinning; a run with coverageAnalysis 'all' reproduced the same survivors, so they are not a per-test attribution artefact. projectResetService.ts: row 93.51 was stale DOWNWARD (committed file 86.06: the keep-integrations rule from AB-23 slice 7 had six behavioural survivors, a mesh app kept like an integration, a kept folder named by id instead of its instance path, a kept integration with no instance record, and the modal-progress options from PL-59 three more). Now 91.18 (186 killed, 18 survived, all strings but one): six new cases in projectResetService-resetWithUI pin them by what reaches fs.rm and the orchestrator, and by the modal's final push and the error notification it must not repeat; the one behavioural survivor left, findComponentByType's dependency branch, is unreachable from buildComponentList and ledgered. Four killed mutants moved out with the entry tail to componentDefinitionEntry.ts (new row, 5 killed, 0 survived, own suite). checkGitHubAppHandler.ts: 60.22 reproduced on the committed file and after; same survivors, the moved ledger anchor re-pinned at line 153.",
+    "_note": "PL-69 sitting 10, 2026-10-09 (App Builder). Two rows re-measured against the committed file first and then against the change. appManagementInstaller.ts: row 95.87 was stale DOWNWARD (committed file 95.63: followAfterTimeout from 2026-09-30 landed after the row, and its still-running hand-back was never reached, a behavioural survivor on the failed check, two optional-chain survivors and two uncovered strings). Now 98.57 (205 killed, 2 survived, 1 uncovered), openGaps 0: a new case in appManagementInstaller-edges pins the still-running hand-back, its progress line and the full poll; another pins the install's no-sign-in refusal word for word and that no client is built. The opening both calls shared (#36: Commerce target, appData, sign-in) is now prepareAppManagementCall in this file, with its own suite (appManagementInstaller-prepareCall, 5 cases), so its mutants are counted here. The two survivors left are the hands-back constant (every suite imports it) and the install-failed log line. appManagementUninstaller.ts: 95.88 reproduced on the committed file, now 95.51 and NOT a gap: the same three string survivors and one uncovered string, and 8 killed mutants moved out with the opening to the installer's prepareAppManagementCall; the uninstall verb it passes is pinned by one new case.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -2937,27 +2937,25 @@
             "openGaps": 0
         },
         "src/features/app-builder/services/appManagementInstaller.ts": {
-            "score": 95.87,
+            "score": 98.57,
             "killed": 205,
-            "survived": 8,
+            "survived": 2,
             "noCoverage": 1,
-            "timeout": 4,
+            "timeout": 2,
             "survivorCategories": {
-                "string": 5,
-                "block": 1,
-                "other": 1,
-                "logPresentation": 1
+                "logPresentation": 1,
+                "string": 1
             },
             "uncoveredCategories": {
                 "string": 1
             },
-            "highValueSurvivors": 1,
-            "equivalent": 2,
+            "highValueSurvivors": 0,
+            "equivalent": 0,
             "openGaps": 0
         },
         "src/features/app-builder/services/appManagementUninstaller.ts": {
-            "score": 95.88,
-            "killed": 89,
+            "score": 95.51,
+            "killed": 81,
             "survived": 3,
             "noCoverage": 1,
             "timeout": 4,
