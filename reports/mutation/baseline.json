@@ -3108,20 +3108,6 @@
             "equivalent": 0,
             "openGaps": 0
         },
-        "src/features/authentication/handlers/organizationHandlers.ts": {
-            "score": 94.44,
-            "killed": 17,
-            "survived": 1,
-            "noCoverage": 0,
-            "timeout": 0,
-            "survivorCategories": {
-                "logPresentation": 1
-            },
-            "uncoveredCategories": {},
-            "highValueSurvivors": 0,
-            "equivalent": 0,
-            "openGaps": 0
-        },
         "src/features/authentication/handlers/projectHandlers.ts": {
             "score": 83.64,
             "killed": 271,

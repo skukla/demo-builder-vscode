@@ -490,8 +490,9 @@ and three of them are more than 40% comments). Decide which.
   `'re-detect-context'` handler (`handleReDetectContext` in `organizationHandlers.ts`, wired in
   `ProjectCreationHandlerRegistry.ts`), but no webview sends that message and none listens for
   its reply; the only sender was the client helper deleted today, which itself had no caller.
-  The handler is unreachable. **Recommend:** delete it with its tests (one sitting, no
-  behaviour change). **Decide:** delete, or say what was meant to send it. Also: the handler
+  The handler is unreachable. **Done the same day:** checked that no agent tool dispatches it
+  either (no descriptor names it), then deleted it with its file, its tests and its registry
+  row; the push-message ceiling fell 145 to 143 and its mutation row went with the file. Also: the handler
   coverage test listed `'progress'` as "handled by the base command"; nothing handled it. The
   entry went with the helper, so the guard has one hole fewer.
 
