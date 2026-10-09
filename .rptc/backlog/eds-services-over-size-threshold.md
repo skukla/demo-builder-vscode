@@ -379,8 +379,11 @@ and three of them are more than 40% comments). Decide which.
    (647/400): params extraction vs `config.json` render; prewarm publish, catalog
    enumeration, sample-SKU picker, storefront identity guard.
 6. `projects-dashboard/services/projectDeletionService.ts` (616/400): confirmation
-   dialogs; EDS external cleanup; the delete orchestrator. Check first whether its DA.live
-   and GitHub auth checks duplicate `edsResetUI`'s (unverified).
+   dialogs; EDS external cleanup; the delete orchestrator. Its auth checks do NOT
+   duplicate the reset's (checked 2026-10-08, re-checked 2026-10-09): both already call
+   the shared `ensureDaLiveAuth` in `edsHelpers` and only wrap its answer differently, and
+   its GitHub check is a `delete_repo` sign-in where the reset's (`edsResetPreflight`)
+   checks the Code Sync App. Nothing to fold; split it by its own jobs.
 7. `eds/services/blockCollectionHelpers.ts` (593/400): discovery and install commit vs
    the merge of definition, filters and models.
 8. `data-installer/services/dataInstallerWriteClient.ts` (579/400): import/validate/delete
@@ -663,7 +666,7 @@ date and what happened; a failure becomes its own `fix` item.
       the Spectrum layout, so only a real render proves the band's markup and spacing are
       unchanged.
 
-- [ ] **Reset Storefront after the reset split** (uncommitted on `refactor/eds-8-god-files`):
+- [ ] **Reset Storefront after the reset split** (`a8b835c1d` + `9e58ae0a8` on `refactor/eds-8-god-files`):
       the pre-flight checks now live in `edsResetPreflight`, the sample-data step in
       `edsResetSampleData`, the result messages in `edsResetNotifications`, and steps 4-5,
       8-11 and the last steps in `edsResetCodeSyncStep`, `edsResetContentStep` and
