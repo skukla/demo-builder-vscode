@@ -128,6 +128,7 @@ describe('every pipeline operation maps to a wizard phase and a bar position', (
         ['cache-purge', 'publish', 66],
         ['content-publish', 'publish', 67],
         ['library-publish', 'publish', 95],
+        ['leftover-pages', 'publish', 95],
         ['catalog-prewarm', 'publish', 95],
     ])('%s → %s at %i', async (operation, phase, progress) => {
         const payload = await reportProgress({ operation, message: 'working' });

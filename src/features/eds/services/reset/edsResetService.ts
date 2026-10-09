@@ -15,7 +15,9 @@
  * 8. Clear + copy demo content to DA.live
  * 9. Create block library in DA.live
  * 10. Apply EDS settings
- * 11. Purge cache + publish content; category pages + catalog menu re-written (EDS-24)
+ * 11. Purge cache + publish content; then unpublish the pages left over from before
+ *     (EDS-33: nothing is unpublished until the republish is done, so the site stays up);
+ *     category pages + catalog menu re-written (EDS-24)
  * 12. (Optional) Redeploy API Mesh
  *
  * @module features/eds/services/reset/edsResetService
@@ -38,6 +40,7 @@ import type { GitHubTokenService } from '../github/githubTokenService';
 import { HelixService } from '../helix/helixService';
 import { createPatchReport, addCodeResult, reportUnapplied } from '../patches/patchReportHelper';
 import { writeBrokenLinks } from '../storefront/brokenLinksRecord';
+import type { LeftoverPagesResult } from '../storefront/leftoverPages';
 import { migrateStorefrontNamingIfNeeded } from '../storefront/storefrontNameMigration';
 import { updateStorefrontState } from '../storefront/storefrontStalenessDetector';
 import { GitHubAppNotInstalledError } from '../types';
@@ -54,7 +57,7 @@ import {
     type EdsResetResult,
     type ExtractParamsResult,
 } from './edsResetParams';
-import { takeOutProductPages, withPageSentences } from './edsResetProductPages';
+import { takeOutProductPages, withLeftoverPages, withPageSentences } from './edsResetProductPages';
 import { resetRepoToTemplate } from './edsResetRepoHelper';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Project } from '@/types/base';
@@ -84,6 +87,7 @@ const PIPELINE_STEP_MAP: Record<string, number> = {
     'cache-purge': 11,
     'content-publish': 11,
     'library-publish': 11,
+    'leftover-pages': 11,
     'catalog-prewarm': 11,
 };
 
@@ -150,9 +154,16 @@ function mapPipelineProgress(
     report(PIPELINE_STEP_MAP[info.operation] ?? 8, message);
 }
 
+/** What the content pipeline hands back to the reset. */
+interface ContentPipelineOutcome {
+    contentCopied: number;
+    leftoverPages?: LeftoverPagesResult;
+}
+
 /**
  * Steps 8-11: Run the EDS content pipeline with automatic DA.live re-auth retry.
- * Returns the number of content files copied.
+ * Returns the number of content files copied, and what happened to the pages left
+ * over from before (EDS-33).
  */
 async function runContentPipeline(
     params: EdsResetParams,
@@ -167,7 +178,7 @@ async function runContentPipeline(
     tokenProvider: TokenProvider,
     context: HandlerContext,
     report: (step: number, message: string) => void,
-): Promise<number> {
+): Promise<ContentPipelineOutcome> {
     const {
         repoOwner,
         repoName,
@@ -253,7 +264,10 @@ async function runContentPipeline(
             }
 
             context.logger.info('[EdsReset] Content pipeline completed successfully');
-            return pipelineResult.contentFilesCopied;
+            return {
+                contentCopied: pipelineResult.contentFilesCopied,
+                leftoverPages: pipelineResult.leftoverPages,
+            };
         },
         {
             logPrefix: '[EdsReset]',
@@ -475,7 +489,7 @@ export async function executeEdsReset(
         const productPages = await takeOutProductPages(params, context, clients, report);
 
         // Steps 8-11: Content Pipeline (with DA.live re-auth retry)
-        contentCopied = await runContentPipeline(
+        const content = await runContentPipeline(
             params,
             repoResetResult,
             daLiveContentOps,
@@ -485,6 +499,7 @@ export async function executeEdsReset(
             context,
             report,
         );
+        contentCopied = content.contentCopied;
         const catalogMenu = await putBackCatalogMenu(params, catalogMenuSite, context.logger, report);
         recordSyncedCommit(params.project, repoResetResult.templateCommitSha, context.logger);
         recordBoilerplate(params.project, repoResetResult.boilerplate);
@@ -500,7 +515,7 @@ export async function executeEdsReset(
             configWritten,
             { demoCaveats: repoResetResult.demoCaveats, demoFixes: repoResetResult.demoFixes },
         );
-        return withPageSentences(result, { catalogMenu, productPages });
+        return withLeftoverPages(withPageSentences(result, { catalogMenu, productPages }), content.leftoverPages);
     } catch (error) {
         return handleResetError(error, context.logger);
     }

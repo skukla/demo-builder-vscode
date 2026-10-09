@@ -52,9 +52,11 @@ interface BulkRequest {
 }
 
 /**
- * File names to exclude from publishing (non-content files)
+ * File names to exclude from publishing (non-content files). Exported because a reset's
+ * leftover-page check (`storefront/leftoverPages.ts`) must not read "not republished"
+ * as "left over" for a page this step never publishes.
  */
-const EXCLUDED_NAMES = [
+export const EXCLUDED_NAMES = [
     'metadata', // metadata.json
     'redirects', // redirects.json
     'placeholders', // placeholders.json
@@ -63,9 +65,10 @@ const EXCLUDED_NAMES = [
 ];
 
 /**
- * Folder names to exclude from publishing
+ * Folder names to exclude from publishing. Exported for the same reason as
+ * {@link EXCLUDED_NAMES}.
  */
-const EXCLUDED_FOLDERS = [
+export const EXCLUDED_FOLDERS = [
     '.helix',
     '.milo',
     'placeholders',
@@ -369,6 +372,8 @@ export class HelixSiteContent {
      * @param daLiveOrg - DA.live organization (for listing content, may differ from GitHub owner)
      * @param daLiveSite - DA.live site name (for listing content, may differ from GitHub repo)
      * @param onProgress - Optional callback for progress updates
+     * @returns the web paths it published: every page DA.live listed. A page the
+     *   page-by-page fallback skipped is still in the list; it is current content.
      */
     async publishAllSiteContent(
         repoFullName: string,
@@ -376,7 +381,7 @@ export class HelixSiteContent {
         daLiveOrg?: string,
         daLiveSite?: string,
         onProgress?: (info: SitePublishProgress) => void,
-    ): Promise<void> {
+    ): Promise<string[]> {
         const [githubOrg, githubSite] = parseRepoFullName(repoFullName);
 
         // Use provided DA.live org/site, or fall back to GitHub org/site
@@ -421,6 +426,7 @@ export class HelixSiteContent {
                 onProgress,
             );
         }
+        return pages;
     }
 
     /**

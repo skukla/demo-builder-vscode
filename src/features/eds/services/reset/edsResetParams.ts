@@ -10,6 +10,7 @@
  * @module features/eds/services/reset/edsResetParams
  */
 
+import type { LeftoverPagesResult } from '../storefront/leftoverPages';
 import { COMPONENT_IDS } from '@/core/constants';
 import { resolveStorefrontForProject } from '@/features/components/services/storefrontResolver';
 import type { Project } from '@/types/base';
@@ -135,6 +136,13 @@ export interface EdsResetResult extends HandlerResponse {
      * kept, or that they could not be listed. Absent when Helix listed none.
      */
     productPages?: string;
+    /**
+     * What happened to the pages still published from before the reset that it did not
+     * republish (EDS-33): removed, some left, or that Helix could not say what is
+     * published, in which case they may still be live. Absent when there were none, or
+     * when the content was kept.
+     */
+    leftoverPages?: LeftoverPagesResult;
     /** Additional error details */
     errorDetails?: Record<string, unknown>;
 }

@@ -341,6 +341,7 @@ export class HelixService {
     /**
      * Preview and publish all content in one operation (bulk-first, page-by-page
      * fallback). Delegates to {@link HelixSiteContent}.
+     * @returns the web paths of the pages it published
      */
     async publishAllSiteContent(
         repoFullName: string,
@@ -348,7 +349,7 @@ export class HelixService {
         daLiveOrg?: string,
         daLiveSite?: string,
         onProgress?: (info: SitePublishProgress) => void,
-    ): Promise<void> {
+    ): Promise<string[]> {
         return this.siteContent.publishAllSiteContent(
             repoFullName,
             branch,

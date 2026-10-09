@@ -152,6 +152,29 @@ describe('reset notifications — success', () => {
     });
 });
 
+describe('reset notifications — pages from before the reset (EDS-33)', () => {
+    const sentence =
+        'Pages from before the reset may still be live on main--r--o.aem.live: Helix could not list what is published (HTTP 401). Reset again to remove them.';
+
+    it.each(['not-listed', 'not-compared', 'some-left'] as const)(
+        'warns with the sentence when they may still be live (%s)',
+        async (status) => {
+            await run({ success: true, leftoverPages: { status, removed: 0, summary: sentence } });
+
+            expect(vscode.window.showWarningMessage).toHaveBeenLastCalledWith(sentence);
+        },
+    );
+
+    it('adds no warning when they were taken off', async () => {
+        await run({
+            success: true,
+            leftoverPages: { status: 'removed', removed: 2, summary: 'Took 2 pages from before the reset off h.' },
+        });
+
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
+    });
+});
+
 describe('reset notifications — the App is missing', () => {
     const missingApp: EdsResetResult = {
         success: false,

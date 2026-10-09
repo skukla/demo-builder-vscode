@@ -489,8 +489,12 @@ again.
 `reset_project` is the agent's door to the same action as the Reset button, and it
 dispatches the way the button's handler does: an Edge Delivery project goes to
 `executeEdsReset` (storefront repo, DA.live content and config back to the
-template); a headless project goes to `executeProjectReset` (components deleted and
-installed again; integrations and configuration kept), the core
+template; the site stays up while the content is replaced, and afterwards any page
+still published from before that was not republished is unpublished: `leftoverPages`
+in the answer says `removed`, `some-left`, or `not-listed` when Helix could not say
+what is published, in which case old pages may still be live (EDS-33); a headless
+project goes to `executeProjectReset` (components deleted and installed again;
+integrations and configuration kept), the core
 `resetProjectWithUI` wraps. Before that date the tool was `reset_eds_project` and
 refused a headless project. The headless half refuses a running demo and names
 `stop_demo` rather than stopping it unasked, and asks for the Adobe sign-in only

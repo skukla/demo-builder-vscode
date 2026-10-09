@@ -26,6 +26,7 @@ import type { TokenProvider } from '../daLive/daLiveOrgOperations';
 import { listDaLivePages } from '../daLive/daLivePageWalk';
 import type { GitHubTokenService } from '../github/githubTokenService';
 import { HelixService } from '../helix/helixService';
+import type { LeftoverPagesResult } from '../storefront/leftoverPages';
 import { removeProductPages, type ProductPageHelix } from '../storefront/productPageRemoval';
 import { otherProjectsPublishingTo } from '../storefront/sharedRepoProjects';
 import type { EdsResetParams } from './edsResetParams';
@@ -98,4 +99,20 @@ export function withPageSentences<T extends object>(
         ...(sentences.catalogMenu === undefined ? {} : { catalogMenu: sentences.catalogMenu }),
         ...(sentences.productPages === undefined ? {} : { productPages: sentences.productPages }),
     };
+}
+
+/**
+ * Put what happened to the pages left over from before the reset (EDS-33) on its
+ * result, when there is something to say: removed, some left, or could not tell.
+ *
+ * @param result - the reset's result
+ * @param leftoverPages - the pipeline's answer; absent when the content was kept
+ * @returns the result with `leftoverPages` unless there were none to remove
+ */
+export function withLeftoverPages<T extends object>(
+    result: T,
+    leftoverPages: LeftoverPagesResult | undefined,
+): T & { leftoverPages?: LeftoverPagesResult } {
+    if (!leftoverPages || leftoverPages.status === 'none') return result;
+    return { ...result, leftoverPages };
 }

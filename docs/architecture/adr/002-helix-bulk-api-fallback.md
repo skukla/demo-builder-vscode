@@ -239,7 +239,7 @@ The DA.live IMS token (Adobe IMS with client_id "darkalley") **bypasses the "sou
 
 **Implementation**:
 - `helixService.ts`: `getDeleteAuthHeaders()` returns `{ Authorization: Bearer ${daLiveToken} }` for all DELETE operations. Since 2026-08-14 `tryAdminBearer()` attaches the same credential to the NON-delete admin-API calls too (see the superseding note above) — DELETE is no longer the only operation that needs it
-- `edsPipeline.ts`: `pipelineClearContent()` directly calls `unpublishPages()` without any pre-unpublish workarounds
+- `edsPipeline.ts`: since 2026-10-09 (EDS-33) `pipelineClearContent()` unpublishes nothing; after the republish, `pipelineUnpublishLeftovers()` (`storefront/leftoverPages.ts`) calls `unpublishPages()` directly, without any pre-unpublish workarounds, for the pages Helix still lists that the reset did not republish
 - `projectDeletionService.ts`: `performDaLiveCleanup()` calls `unpublishCdnContent()` directly
 
 ### Remaining Improvements

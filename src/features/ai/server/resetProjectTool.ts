@@ -147,7 +147,10 @@ export function registerResetProjectTool(
             description:
                 'Reset the current project to its starting point, Edge Delivery or headless. ' +
                 'An Edge Delivery project: the storefront repo, DA.live content and config go back to the template, and the old ' +
-                "catalog's product pages are removed before the current ones are made (productPages in the result). A headless " +
+                "catalog's product pages are removed before the current ones are made (productPages in the result). The site " +
+                'stays up: pages are republished over the old ones, then any other page still published from before is ' +
+                'unpublished (leftoverPages in the result: removed, some-left, or not-listed when Helix could not say what ' +
+                'is published, in which case old pages may still be live). A headless ' +
                 'project: its components are deleted and installed again (stop the demo first); ' +
                 'integrations and configuration are kept. Requires confirm:true.',
             inputSchema: {

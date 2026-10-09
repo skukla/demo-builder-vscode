@@ -372,6 +372,30 @@ describe('executeEdsReset - the product pages the overlay published (EDS-26)', (
     });
 });
 
+describe('executeEdsReset - the pages left over from before (EDS-33)', () => {
+    it('carries what the pipeline did with them on the result', async () => {
+        const leftoverPages = { status: 'not-listed', removed: 0, summary: 'Pages from before the reset may still be live.' };
+        mockExecuteEdsPipeline.mockResolvedValue({ success: true, contentFilesCopied: 3, libraryPaths: [], leftoverPages });
+
+        const { result } = await runReset();
+
+        expect(result).toMatchObject({ success: true, leftoverPages });
+    });
+
+    it('adds nothing to the result when there were none', async () => {
+        mockExecuteEdsPipeline.mockResolvedValue({
+            success: true,
+            contentFilesCopied: 3,
+            libraryPaths: [],
+            leftoverPages: { status: 'none', removed: 0, summary: 'No pages from before the reset were left.' },
+        });
+
+        const { result } = await runReset();
+
+        expect(result).not.toHaveProperty('leftoverPages');
+    });
+});
+
 describe('executeEdsReset - category pages and the catalog menu (EDS-24)', () => {
     it('takes them out BEFORE the content pipeline and puts them back AFTER it, on the same site', async () => {
         const { params, context } = await runReset();
@@ -433,6 +457,7 @@ describe('executeEdsReset - pipeline progress mapping', () => {
         ['eds-settings', 10],
         ['cache-purge', 11],
         ['library-publish', 11],
+        ['leftover-pages', 11],
         ['catalog-prewarm', 11],
         ['something-new', 8],
     ])('maps %s to step %i with the message unchanged', async (operation, step) => {

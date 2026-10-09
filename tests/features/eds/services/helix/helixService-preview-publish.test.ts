@@ -388,11 +388,13 @@ describe('HelixService - Preview/Publish', () => {
                     Promise.resolve({ state: 'stopped', progress: { processed: 3, total: 3 } }),
             });
 
-            await service.publishAllSiteContent('testuser/my-site');
+            const published = await service.publishAllSiteContent('testuser/my-site');
             expect(mockFetch).toHaveBeenCalledTimes(4);
             expect(mockLogger.info).toHaveBeenCalledWith(
                 expect.stringContaining('Successfully published 3 pages using bulk API')
             );
+            // The pages it published, which a reset compares Helix's listing against (EDS-33).
+            expect(published).toEqual(['/', '/about', '/customer/account/confirm']);
         });
 
         it('should fall back to page-by-page when bulk API returns 404', async () => {
@@ -406,7 +408,8 @@ describe('HelixService - Preview/Publish', () => {
             mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
             mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
 
-            await service.publishAllSiteContent('testuser/my-site');
+            const published = await service.publishAllSiteContent('testuser/my-site');
+            expect(published).toEqual(['/', '/about']);
             expect(mockFetch).toHaveBeenCalledTimes(5);
             expect(mockLogger.warn).toHaveBeenCalledWith(
                 expect.stringContaining('falling back to page-by-page')

@@ -131,7 +131,8 @@ colleague storefront (Justrite).
 2. **How reset clears pages.** The EDS pipeline's `clear-content` step
    (`edsPipeline.ts`, `pipelineClearContent`) deletes ALL DA.live content
    (`deleteAllSiteContent`) and unpublishes every deleted path, then re-copies from the
-   content source. So on a normal reset the category pages go with everything else; only a
+   content source. (Since 2026-10-09, EDS-33, it unpublishes nothing there; after the
+   republish the `leftover-pages` step unpublishes what Helix lists that was not republished.) So on a normal reset the category pages go with everything else; only a
    keep-content reset (an added demo whose content site is gone) leaves them. Reset now
    removes by the record first either way, so both cases end the same.
 3. **Justrite holds no category pages from a dev run.** Every current category path

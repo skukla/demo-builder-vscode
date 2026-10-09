@@ -136,6 +136,7 @@ function buildPipelineProgressCallback(
                 progress: PIPELINE_PROGRESS.CONTENT_PUBLISH_START,
             },
             'library-publish': { phase: 'publish', progress: PIPELINE_PROGRESS.LIBRARY_PUBLISH },
+            'leftover-pages': { phase: 'publish', progress: PIPELINE_PROGRESS.LIBRARY_PUBLISH },
             'catalog-prewarm': { phase: 'publish', progress: PIPELINE_PROGRESS.LIBRARY_PUBLISH },
         };
         // Fallback for an operation the mapping doesn't know. It used to push

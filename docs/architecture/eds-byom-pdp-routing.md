@@ -228,8 +228,20 @@ all there is and the sentence says so. Afterwards the home page and the first fe
 unpublished pages are fetched from the live host: the site is reported down only when
 a check came back 404, nothing checked still answers, and every live copy was removed.
 Otherwise the answer is `still-live` or `unknown`, said in words (`publishSummary`).
-`storefront/storefrontUnpublish.ts`. Reset does not use the teardown; its unpublish still
-works from the DA.live files it deleted.
+`storefront/storefrontUnpublish.ts`.
+
+**What a reset unpublishes (EDS-33, decided 2026-10-09).** Reset does not use the
+teardown, and it no longer unpublishes the DA.live files it deletes: that left the
+storefront offline from the delete until the republish, and missed every page live on
+Helix whose DA.live file was already gone. Reset now deletes the DA.live content, copies
+and republishes over the top (the site stays up), then lists the whole site from Helix
+(the same `/*` status job) and unpublishes, live and preview, what was not republished.
+Product pages are never on that list: the old catalog's were taken out before the copy
+(the step above), and the pre-warm after it publishes the current catalog's. Nor are
+non-page files or the folders the whole-site publish skips, since "not republished"
+says nothing about them. When Helix cannot be read, nothing is removed and the reset
+says old pages may still be live (`leftoverPages` on its result, and a warning to the
+SC). `storefront/leftoverPages.ts`.
 
 ### Out of scope (later workstreams or deliberate non-goals)
 

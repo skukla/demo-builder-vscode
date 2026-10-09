@@ -58,8 +58,8 @@ export interface StorefrontUnpublishResult {
 }
 
 const BRANCH = 'main';
-/** Every path the site holds in preview or live. */
-const WHOLE_SITE = '/*';
+/** Every path the site holds in preview or live. Also what a reset lists its leftovers by. */
+export const WHOLE_SITE = '/*';
 /** How many unpublished pages are checked on the live host, besides the home page. */
 const PAGES_CHECKED = 3;
 const HTTP_NOT_FOUND = 404;

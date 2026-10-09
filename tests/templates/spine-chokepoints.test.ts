@@ -466,6 +466,28 @@ describe('spine choke-points', () => {
         ]);
     });
 
+    it('UNPUBLISHING storefront pages: three deciders, and reset unpublishes only after it republishes', () => {
+        // Audited 2026-10-09 (EDS-33, the reset door). The primitive is the Helix call that
+        // takes pages off live and preview. Three modules decide WHICH pages: the teardown
+        // (everything Helix lists), the product-page removal (generated product pages, with
+        // the shared-repository refusal), and the reset's leftover step (what Helix lists
+        // that the reset did not republish). The pipeline used to make a fourth call in its
+        // content-clear step, which took the site down until the republish; it must not
+        // come back there.
+        const sorted = (pattern: RegExp): string[] => filesTouchingPrimitive(pattern).sort();
+
+        expect(sorted(/\.unpublishPages\(/)).toStrictEqual([
+            'features/eds/services/storefront/leftoverPages.ts',
+            'features/eds/services/storefront/productPageRemoval.ts',
+            'features/eds/services/storefront/storefrontUnpublish.ts',
+        ]);
+        // The leftover step has one door: the shared pipeline, after the content publish.
+        expect(sorted(/\bunpublishLeftoverPages\(/)).toStrictEqual([
+            'features/eds/services/edsPipeline.ts',
+            'features/eds/services/storefront/leftoverPages.ts',
+        ]);
+    });
+
     it('category PAGES for new categories: the add-only write has one step and two doors', () => {
         // Audited 2026-10-05 (EDS-27). Pages for categories added after setup are
         // written by the SAME step file as the three flows above, through an add-only

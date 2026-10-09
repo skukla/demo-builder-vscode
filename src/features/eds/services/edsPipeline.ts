@@ -5,14 +5,17 @@
  * the setup flow (storefrontSetupHandlers) and the reset flow (edsResetService).
  *
  * Operations executed in order:
- * 0. Clear existing DA.live content and unpublish CDN pages (gated by clearExistingContent)
- *    - Uses DA.live Bearer token auth which bypasses "source exists" restriction
+ * 0. Clear existing DA.live content (gated by clearExistingContent). Nothing is
+ *    unpublished here: the site stays up while the content is replaced (EDS-33)
  * 1. Copy DA.live content from source (gated by skipContent)
  * 2. Create block library from component-definition.json
  * 3. Apply EDS settings (AEM Assets, Universal Editor config)
  * 4. Purge CDN cache (conditional)
  * 5. Publish content to CDN
  * 6. Publish block library paths
+ * 7. Unpublish the pages Helix still has published that steps 5-6 did not publish,
+ *    product pages excepted (gated by clearExistingContent; EDS-33)
+ * 8. Pre-warm the catalog's product pages (conditional)
  *
  * @module features/eds/services/edsPipeline
  */
@@ -25,6 +28,11 @@ import type { GitHubFileOperations } from './github/githubFileOperations';
 import type { HelixService } from './helix/helixService';
 import { applyBlockCodePatches } from './patches/codePatchPipelineHelpers';
 import { createPatchReport, addCodeResult, type PatchReport } from './patches/patchReportHelper';
+import {
+    LEFTOVERS_MAY_REMAIN,
+    unpublishLeftoverPages,
+    type LeftoverPagesResult,
+} from './storefront/leftoverPages';
 import { DaLiveAuthError, DaLiveError, type EdsPipelineProgressCallback } from './types';
 import type { Project } from '@/types/base';
 import type { BrandAssetsConfig, ContentPatchSource, CodePatchSource } from '@/types/demoPackages';
@@ -63,7 +71,10 @@ export interface EdsPipelineParams {
     templateRepo: string;
 
     // Content management
-    /** Delete all existing DA.live content before populating (true = clean slate) */
+    /**
+     * Delete all existing DA.live content before populating (true = clean slate). Also
+     * turns on step 7: after the republish, unpublish what was not republished.
+     */
     clearExistingContent?: boolean;
     skipContent?: boolean;
     contentSource?: { org: string; site: string; indexPath: string };
@@ -140,6 +151,8 @@ export interface EdsPipelineResult {
      *  to surface unapplied patches via a single toast (one per create/reset,
      *  not one per patch domain). Always present even when the report is empty. */
     patchReport?: PatchReport;
+    /** What step 7 did with the pages left over from before (EDS-33). Absent when it did not run. */
+    leftoverPages?: LeftoverPagesResult;
 }
 
 // ==========================================================
@@ -206,48 +219,24 @@ async function pipelineApplyBrandAssets(
 }
 
 /**
- * Convert DA.live paths to web paths for Admin API.
- * HTML: /accessories.html -> /accessories, /products/index.html -> /products
- * Non-HTML: kept as-is (e.g. /media_abc.png, /config.json)
- */
-function toWebPaths(daLivePaths: string[]): string[] {
-    return daLivePaths.map((p) => {
-        if (!p.endsWith('.html')) {
-            return p;
-        }
-        // No `i` flag: the guard above is case-sensitive, so anything reaching
-        // this line already ends in a lowercase `.html` and the flag could never
-        // fire. The `$` anchor IS load-bearing — without it a folder named
-        // `docs.html` loses its own extension instead of the page's.
-        let web = p.replace(/\.html$/, '');
-        // `endsWith` alone: a path EQUAL to '/index' also ends with it, so the
-        // equality half could never decide anything.
-        if (web.endsWith('/index')) {
-            web = web.slice(0, -6) || '/';
-        }
-        return web || '/';
-    });
-}
-
-/**
- * Step 0: Clear all existing DA.live content and unpublish from CDN.
+ * Step 0: Clear all existing DA.live content.
  *
  * Uses DA.live Bearer token auth for DELETE operations, which bypasses
  * the Helix Admin API's "source exists" restriction. No fstab.yaml
  * manipulation or Configuration Service config changes needed.
+ *
+ * Nothing is unpublished here (EDS-33, owner decision 2026-10-09). It used to
+ * unpublish every deleted page, which took the storefront offline until step 5
+ * republished, and missed every page live on Helix but already gone from DA.live.
+ * The republish overwrites the pages that still exist; step 7 takes off the rest.
  */
 async function pipelineClearContent(
     services: EdsPipelineServices,
-    context: {
-        daLiveOrg: string;
-        daLiveSite: string;
-        repoOwner: string;
-        repoName: string;
-    },
+    context: { daLiveOrg: string; daLiveSite: string },
     onProgress?: EdsPipelineProgressCallback,
 ): Promise<void> {
-    const { daLiveContentOps, helixService, logger } = services;
-    const { daLiveOrg, daLiveSite, repoOwner, repoName } = context;
+    const { daLiveContentOps, logger } = services;
+    const { daLiveOrg, daLiveSite } = context;
 
     onProgress?.({
         operation: 'content-clear',
@@ -273,56 +262,6 @@ async function pipelineClearContent(
     }
 
     logger.info(`[EdsPipeline] Cleared ${clearResult.deletedCount} files`);
-
-    // Unpublish deleted content from CDN (Helix retains previously-published resources)
-    if (clearResult.deletedPaths.length > 0) {
-        const webPaths = toWebPaths(clearResult.deletedPaths);
-
-        onProgress?.({
-            operation: 'content-clear',
-            message: `Unpublishing ${webPaths.length} CDN pages`,
-        });
-
-        try {
-            // The RESULT is read, not discarded. `unpublishPages` never throws —
-            // per-path failures become counts — so the try/catch below could never
-            // fire, and a reset where every live DELETE was refused reported a
-            // clean run while the stale pages kept serving from the CDN.
-            //
-            // Still non-fatal: the reset republishes over the top and the user has
-            // a working storefront either way. But "52 pages could not be
-            // unpublished" is a fact they need, because the pages that should have
-            // DISAPPEARED are the ones that will not.
-            const unpublished = await helixService.unpublishPages(
-                repoOwner,
-                repoName,
-                'main',
-                webPaths,
-            );
-            if (unpublished.liveFailed > 0) {
-                // previewFailed rides the same warn: stale preview pages
-                // (*.aem.page) are the same class of leftover, just not public.
-                const previewNote =
-                    unpublished.previewFailed > 0
-                        ? ` (${unpublished.previewFailed} preview page${unpublished.previewFailed === 1 ? '' : 's'} also failed)`
-                        : '';
-                logger.warn(
-                    `[EdsPipeline] ${unpublished.liveFailed}/${unpublished.total} pages could not ` +
-                        `be unpublished from the CDN — they will keep serving their old content${previewNote}. ` +
-                        'A refused DA.live session is the usual cause; sign in again and reset to clear them.',
-                );
-                onProgress?.({
-                    operation: 'content-clear',
-                    message: `⚠️ ${unpublished.liveFailed} of ${unpublished.total} pages could not be unpublished`,
-                });
-            }
-        } catch (error) {
-            logger.warn(
-                `[EdsPipeline] CDN unpublish failed (non-fatal): ${(error as Error).message}`,
-            );
-        }
-    }
-
     onProgress?.({
         operation: 'content-clear',
         message: `Cleared ${clearResult.deletedCount} files`,
@@ -426,7 +365,8 @@ async function pipelineCopyContent(
 
 /**
  * Step 5: Publish content to CDN.
- * Treats "No publishable pages" as non-fatal.
+ * Treats "No publishable pages" as non-fatal: nothing was published.
+ * @returns the pages published, or undefined when the publish did not say
  */
 async function pipelinePublishContent(
     helixService: HelixService,
@@ -436,7 +376,7 @@ async function pipelinePublishContent(
     daLiveSite: string,
     logger: Logger,
     onProgress?: EdsPipelineProgressCallback,
-): Promise<void> {
+): Promise<string[] | undefined> {
     onProgress?.({
         operation: 'content-publish',
         message: 'Publishing content to CDN',
@@ -446,7 +386,7 @@ async function pipelinePublishContent(
     logger.info(`[EdsPipeline] Publishing content to CDN for ${repoOwner}/${repoName}`);
 
     try {
-        await helixService.publishAllSiteContent(
+        const published = await helixService.publishAllSiteContent(
             `${repoOwner}/${repoName}`,
             'main',
             daLiveOrg,
@@ -465,6 +405,7 @@ async function pipelinePublishContent(
             },
         );
         logger.info('[EdsPipeline] Content published to CDN');
+        return Array.isArray(published) ? published : undefined;
     } catch (publishError) {
         // No publishable pages is non-fatal (e.g. Custom package with no content source)
         const msg = (publishError as Error).message;
@@ -472,9 +413,9 @@ async function pipelinePublishContent(
             logger.info(
                 '[EdsPipeline] No content pages to publish (site has no publishable content)',
             );
-        } else {
-            throw publishError;
+            return [];
         }
+        throw publishError;
     }
 }
 
@@ -606,6 +547,9 @@ interface PipelineContext {
     contentFilesCopied: number;
     libraryPaths: string[];
     patchReport: PatchReport;
+    /** What step 5 published; undefined when it did not run or did not say. */
+    republishedPages?: string[];
+    leftoverPages?: LeftoverPagesResult;
 }
 
 /** Params with every gating flag resolved to a concrete boolean. */
@@ -654,12 +598,7 @@ const PIPELINE_STEPS: PipelineStep[] = [
         run: ({ params, services, onProgress }) =>
             pipelineClearContent(
                 services,
-                {
-                    daLiveOrg: params.daLiveOrg,
-                    daLiveSite: params.daLiveSite,
-                    repoOwner: params.repoOwner,
-                    repoName: params.repoName,
-                },
+                { daLiveOrg: params.daLiveOrg, daLiveSite: params.daLiveSite },
                 onProgress,
             ),
     },
@@ -773,8 +712,8 @@ const PIPELINE_STEPS: PipelineStep[] = [
         name: 'content-publish',
         when: ({ params }) => !params.skipPublish,
         skipLog: 'Skipping content publish (skipPublish=true)',
-        run: ({ params, services, onProgress }) =>
-            pipelinePublishContent(
+        run: async ({ params, services, ctx, onProgress }) => {
+            ctx.republishedPages = await pipelinePublishContent(
                 services.helixService,
                 params.repoOwner,
                 params.repoName,
@@ -782,7 +721,8 @@ const PIPELINE_STEPS: PipelineStep[] = [
                 params.daLiveSite,
                 services.logger,
                 onProgress,
-            ),
+            );
+        },
     },
     // Step 6: Library Publish — non-fatal: library config was created,
     // publishing can be retried.
@@ -792,6 +732,14 @@ const PIPELINE_STEPS: PipelineStep[] = [
         onError: 'continue',
         failureLog: 'Block library publish failed',
         run: pipelinePublishLibrary,
+    },
+    // Step 7: the pages left over from before the content was replaced (EDS-33).
+    // After the republish, so the storefront stayed up throughout; before the
+    // pre-warm, whose product pages are never on the list anyway. Never throws.
+    {
+        name: 'leftover-pages',
+        when: ({ params }) => params.clearExistingContent && !params.skipPublish,
+        run: pipelineUnpublishLeftovers,
     },
     // (Smart 404 plumbing lives entirely in storefront code now:
     //  - scripts/delayed.js — cold-path action call + Loading state
@@ -878,6 +826,27 @@ async function pipelinePublishLibrary({ params, services, ctx, onProgress }: Pip
     }
 }
 
+/**
+ * Step 7 body: unpublish what Helix still has published that steps 5-6 did not
+ * publish. A result that may leave old pages live goes on the progress line as a
+ * warning, and on the pipeline result for the caller to show.
+ */
+async function pipelineUnpublishLeftovers({ params, services, ctx, onProgress }: PipelineStepEnv) {
+    onProgress?.({
+        operation: 'leftover-pages',
+        message: 'Removing old pages',
+        subMessage: `${params.repoOwner}/${params.repoName}`,
+    });
+    const result = await unpublishLeftoverPages(
+        { owner: params.repoOwner, repo: params.repoName },
+        { republished: ctx.republishedPages, alsoPublished: ctx.libraryPaths },
+        { helix: services.helixService, logger: services.logger },
+    );
+    ctx.leftoverPages = result;
+    const message = LEFTOVERS_MAY_REMAIN.has(result.status) ? `⚠️ ${result.summary}` : result.summary;
+    onProgress?.({ operation: 'leftover-pages', message });
+}
+
 /** Step 8 body: pre-warm the catalog; reporting only, all gating is in the descriptor. */
 async function pipelinePrewarmCatalog({ params, services, onProgress }: PipelineStepEnv) {
     const result = await prewarmCatalog(
@@ -957,6 +926,7 @@ export async function executeEdsPipeline(
             contentFilesCopied: ctx.contentFilesCopied,
             libraryPaths: ctx.libraryPaths,
             patchReport: ctx.patchReport,
+            ...(ctx.leftoverPages ? { leftoverPages: ctx.leftoverPages } : {}),
         };
     } catch (error) {
         // Re-throw auth errors so callers can offer re-authentication

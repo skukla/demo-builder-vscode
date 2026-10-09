@@ -18,6 +18,7 @@
 
 import type { GitHubAppService } from '../github/githubAppService';
 import type { GitHubRepoOperations } from '../github/githubRepoOperations';
+import { LEFTOVERS_MAY_REMAIN } from '../storefront/leftoverPages';
 import { checkDemoSource, type DemoSourceCheck } from './demoSourceCheck';
 import type { MeshRedeployDeps } from './edsResetMeshHelper';
 import {
@@ -343,6 +344,13 @@ async function showResetResultNotifications(
             } else {
                 vscode.window.showWarningMessage(message);
             }
+        }
+
+        // Pages from before the reset that are, or may be, still live (EDS-33). A
+        // dialog for the same reason as the config remedy: the progress line that
+        // said it is overwritten by the steps after it.
+        if (result.leftoverPages && LEFTOVERS_MAY_REMAIN.has(result.leftoverPages.status)) {
+            vscode.window.showWarningMessage(result.leftoverPages.summary);
         }
     } else if (result.errorType === 'GITHUB_APP_NOT_INSTALLED') {
         const selection = await vscode.window.showErrorMessage(

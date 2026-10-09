@@ -31,11 +31,28 @@ in words. Affects `delete_project` with the site box ticked, `cleanup_dalive_sit
 Clean up DA.live sites command and reset. Reversibility rule: a delete that leaves the public
 site up is not undone.
 
-**Not covered by this fix: reset.** Reset does not call `tearDownStorefront`. Its unpublish
-(`edsPipeline.ts`, the content-clear step) still lists from the DA.live files it just
-deleted, so a reset of a site whose content was already gone unpublishes nothing old.
+**Reset, as first found.** Reset does not call `tearDownStorefront`. Its unpublish
+(`edsPipeline.ts`, the content-clear step) listed from the DA.live files it had just
+deleted, so a reset of a site whose content was already gone unpublished nothing old.
 Taking everything Helix lists down during a reset would take the live site down until the
-republish finishes, which is a product decision, not a code fix.
+republish finishes, which was a product decision, not a code fix. Decided below.
+
+**Reset, decided 2026-10-09 (owner: "Yes").** A reset no longer unpublishes at the start.
+It still deletes the DA.live content (the copy needs a clean source), then copies and
+republishes; the republish overwrites every page that still exists, so the storefront stays
+up. After the republish (and the block library publish), the pipeline asks Helix what the
+whole site has published (the same `/*` listing the teardown uses) and unpublishes, live and
+preview, whatever was not republished. Product pages are never on that list: the old
+catalog's were taken out before the copy (EDS-26, with its shared-repository refusal) and the
+pre-warm, which runs after this step, publishes the current catalog's. Non-page files and the
+folders the whole-site publish skips are left too, because "not republished" says nothing
+about them. When Helix cannot be read, nothing is removed and the reset says old pages may
+still be live: a warning to the SC, and `leftoverPages` (`not-listed`) in `reset_project`'s
+answer, never a clean finish. Why this way: no downtime during a reset, a clean end state
+(a page live from an earlier demo comes down too), and it reuses the EDS-33 listing rather
+than adding a second one. `storefront/leftoverPages.ts`; the step is `leftover-pages` in
+`edsPipeline.ts`. Also runs for storefront setup when it is told to replace existing content
+(`clearExistingContent`), which shares the pipeline.
 
 **Not yet seen live.** The whole-site listing asks Helix's bulk status job for `/*`; the
 `/products/*` form of the same call is also unproven against a live site

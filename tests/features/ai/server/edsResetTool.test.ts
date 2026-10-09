@@ -189,6 +189,27 @@ describe('reset_project on an Edge Delivery project', () => {
         expect(res).toMatchObject({ reset: true, caveats: ['Product links may not work.'] });
     });
 
+    it('says in words when pages from before the reset may still be live (EDS-33), and no key otherwise', async () => {
+        const s = fakeServer();
+        registerResetProjectTool(s, ctxFactory);
+        expect('leftoverPages' in (await s.call({ confirm: true }))).toBe(false);
+
+        const leftoverPages = {
+            status: 'not-listed' as const,
+            removed: 0,
+            summary: 'Pages from before the reset may still be live on main--r--o.aem.live: Helix could not list what is published (HTTP 401). Reset again to remove them.',
+        };
+        executeEdsResetMock.mockResolvedValueOnce({
+            success: true,
+            filesReset: 12,
+            contentCopied: 5,
+            meshRedeployed: false,
+            leftoverPages,
+        });
+        const res = await s.call({ confirm: true });
+        expect(res).toMatchObject({ reset: true, leftoverPages });
+    });
+
     it("passes the SC's yes to Demo Builder's fixes, and says what was applied and what was offered (EDS-13f)", async () => {
         const s = fakeServer();
         registerResetProjectTool(s, ctxFactory);
