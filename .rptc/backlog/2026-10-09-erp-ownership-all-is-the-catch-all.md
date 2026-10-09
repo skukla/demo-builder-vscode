@@ -4,7 +4,7 @@ kind: fix
 area: app-builder
 needs: []
 value: high
-status: active
+status: built
 ---
 
 # ERP ownership: the ERP on "everything" is the catch-all
@@ -57,3 +57,7 @@ stay with Justrite.
 
 **Not checked live.** The integration side (`ownersOfLine`) is the owner's parallel change;
 the extension was proven by its suites only.
+
+## Shipped so far
+
+- 2026-10-09  fix(erp): an ERP on everything is the catch-all for products no other ERP claims (`5d1a60d89`)
