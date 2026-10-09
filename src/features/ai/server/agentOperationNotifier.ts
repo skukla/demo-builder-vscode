@@ -36,6 +36,7 @@ import type { ConsentVerdict } from './inExtensionMcpServer';
 import { asRawText } from './mcpToolResult';
 import { narrationForCall } from './toolNarration';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { withHandBackSinks, type HandBack } from '@/core/utils/agentPhaseChannel';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
@@ -231,6 +232,24 @@ function landOutcome(title: string, toolName: string, outcome: AgentOutcome, log
 }
 
 /**
+ * Show a hand-back the operation raised mid-run: a toast with the one button that
+ * ends the wait. The card keeps running underneath it, because the operation does.
+ */
+function showHandBack(handBack: HandBack): void {
+    const buttons = handBack.action ? [handBack.action.label] : [];
+    void vscode.window
+        .showWarningMessage(
+            `${agentNotice('Waiting for you')}: ${handBack.title}. ${handBack.detail}`,
+            ...buttons,
+        )
+        .then((choice) => {
+            if (handBack.action && choice === handBack.action.label) {
+                void vscode.env.openExternal(vscode.Uri.parse(handBack.action.url));
+            }
+        });
+}
+
+/**
  * Build the notifier the extension passes to `InExtensionMcpServer`.
  *
  * @param logger - extension logger (failures are logged as well as shown)
@@ -264,8 +283,8 @@ export function createAgentOperationNotifier(
                         // phase strings reach this notification. Previously `run`
                         // took nothing, so the notification could only ever show
                         // the tool's title while the phases went nowhere.
-                        const result = await run((message) =>
-                            progress.report({ message: phaseLine(message) }),
+                        const result = await withHandBackSinks([showHandBack], () =>
+                            run((message) => progress.report({ message: phaseLine(message) })),
                         );
                         landOutcome(label(toolName, args), toolName, outcomeOf(result), logger);
                         return result;

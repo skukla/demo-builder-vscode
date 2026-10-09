@@ -11,9 +11,82 @@ import {
     withCapturedProgress,
     type CapturedEvent,
 } from '@/features/ai/server/progressCapture';
+import { withHandBackSinks, withPhaseSinks, type HandBack } from '@/core/utils/agentPhaseChannel';
+import type { StorefrontGitHubAppRequiredPayload } from '@/types/webviewPayloads';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
+/** What `pauseForGitHubApp` sends, typed to the payload the wizard dialog reads. */
+const APP_REQUIRED: StorefrontGitHubAppRequiredPayload = {
+    owner: 'acme',
+    repo: 'shop',
+    installUrl: 'https://github.com/apps/aem-code-sync/installations/new',
+    message: 'AEM Code Sync is not installed on acme/shop',
+};
+
 describe('progressCapture', () => {
+    // 2026-10-08: an agent-run creation waited 27 minutes for the App while this
+    // event sat in the sink and the card read "Creating the project".
+    it('hands the AEM Code Sync install back to the user, with the install page as the button', async () => {
+        const base = createMockHandlerContext({ sendMessage: jest.fn(async () => undefined) });
+        const seen: HandBack[] = [];
+        const ctx = withCapturedProgress(base, []);
+
+        await withHandBackSinks([(h) => seen.push(h)], () =>
+            ctx.sendMessage('storefront-setup-github-app-required', APP_REQUIRED),
+        );
+
+        expect(seen).toStrictEqual([
+            {
+                title: 'install the AEM Code Sync GitHub App on acme/shop',
+                detail: 'The run resumes by itself once it is installed.',
+                action: { label: 'Install App', url: APP_REQUIRED.installUrl },
+            },
+        ]);
+    });
+
+    it('does not hand back on an event missing the repository or the install page', async () => {
+        const base = createMockHandlerContext({ sendMessage: jest.fn(async () => undefined) });
+        const seen: HandBack[] = [];
+        const ctx = withCapturedProgress(base, []);
+
+        await withHandBackSinks([(h) => seen.push(h)], () =>
+            ctx.sendMessage('storefront-setup-github-app-required', { owner: 'acme' }),
+        );
+
+        expect(seen).toStrictEqual([]);
+    });
+
+    it("forwards the storefront setup's phases to the agent channel, and only those", async () => {
+        const base = createMockHandlerContext({ sendMessage: jest.fn(async () => undefined) });
+        const lines: string[] = [];
+        const ctx = withCapturedProgress(base, []);
+
+        await withPhaseSinks([(m) => lines.push(m)], async () => {
+            await ctx.sendMessage('storefront-setup-progress', {
+                phase: 'site-config',
+                message: 'Verifying AEM Code Sync',
+                subMessage: 'acme/shop',
+                progress: 48,
+            });
+            await ctx.sendMessage('storefront-setup-progress', { phase: 'repo', progress: 10 });
+            await ctx.sendMessage('reset-progress', { phase: 'x', message: 'Resetting' });
+        });
+
+        expect(lines).toStrictEqual(['Verifying AEM Code Sync — acme/shop']);
+    });
+
+    it('shows the wait in the timeline the agent reads, as a progress line', () => {
+        expect(toPhaseTimeline([{ type: 'storefront-setup-github-app-required', data: APP_REQUIRED }])).toEqual([
+            {
+                phase: 'site-config',
+                status: 'progress',
+                message:
+                    'Waiting for the user to install the AEM Code Sync GitHub App on acme/shop ' +
+                    '(asked in VS Code; the run resumes by itself)',
+            },
+        ]);
+    });
+
     it('captures sendMessage events into the sink and still calls the base', async () => {
         const baseSend = jest.fn(async () => undefined);
         const base = createMockHandlerContext({ sendMessage: baseSend });

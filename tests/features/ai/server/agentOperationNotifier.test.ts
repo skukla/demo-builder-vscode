@@ -21,6 +21,7 @@ const mockSetStatusBarMessage = jest.fn();
 const mockShowWarningMessage = jest.fn();
 const mockGetConfiguration = jest.fn();
 const mockGetStateManager = jest.fn();
+const mockOpenExternal = jest.fn();
 
 jest.mock(
     'vscode',
@@ -34,6 +35,8 @@ jest.mock(
         workspace: {
             getConfiguration: (...a: unknown[]) => mockGetConfiguration(...a),
         },
+        env: { openExternal: (...a: unknown[]) => mockOpenExternal(...a) },
+        Uri: { parse: (value: string) => ({ parsed: value }) },
         ProgressLocation: { Notification: 15 },
     }),
     { virtual: true }
@@ -52,6 +55,7 @@ import {
     phaseLine,
 } from '@/features/ai/server/agentOperationNotifier';
 import { asText } from '@/features/ai/server/mcpToolResult';
+import { reportHandBack } from '@/core/utils/agentPhaseChannel';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
@@ -69,6 +73,29 @@ beforeEach(() => {
 });
 
 describe('createAgentOperationNotifier', () => {
+    // The card kept saying "Creating the project" for 27 minutes while the run
+    // waited for the AEM Code Sync App and nobody was asked (2026-10-08).
+    it('shows a hand-back raised mid-run as a toast whose button opens the page', async () => {
+        const notifier = createAgentOperationNotifier(logger);
+        mockShowWarningMessage.mockResolvedValueOnce('Install App');
+
+        await notifier('create_project', async () => {
+            reportHandBack({
+                title: 'install the AEM Code Sync GitHub App on acme/shop',
+                detail: 'The run resumes by itself once it is installed.',
+                action: { label: 'Install App', url: 'https://github.com/apps/aem-code-sync' },
+            });
+            return { ok: true };
+        });
+
+        expect(mockShowWarningMessage).toHaveBeenCalledWith(
+            'Agent · Waiting for you: install the AEM Code Sync GitHub App on acme/shop. ' +
+                'The run resumes by itself once it is installed.',
+            'Install App',
+        );
+        expect(mockOpenExternal).toHaveBeenCalledWith({ parsed: 'https://github.com/apps/aem-code-sync' });
+    });
+
     it('wraps the call in a named progress notification and returns its result', async () => {
         const notifier = createAgentOperationNotifier(logger);
 

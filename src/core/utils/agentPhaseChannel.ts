@@ -31,11 +31,40 @@ export type PhaseSink = (message: string) => void;
 const storage = new AsyncLocalStorage<PhaseSink[]>();
 
 /**
+ * Something the operation needs a PERSON to do before it can go on — the AEM Code
+ * Sync GitHub App on a new repository, which only its owner can install. A phase
+ * says what the operation is doing; a hand-back says what it is waiting for, and
+ * carries the one action that ends the wait.
+ */
+export interface HandBack {
+    /** What to do, as a sentence a toast can lead with. */
+    title: string;
+    /** Where and why, including that the operation resumes by itself. */
+    detail: string;
+    /** The button that opens the page where it is done. */
+    action?: { label: string; url: string };
+}
+
+/** Somewhere a hand-back can be shown with its button. */
+export type HandBackSink = (handBack: HandBack) => void;
+
+const handBackStorage = new AsyncLocalStorage<HandBackSink[]>();
+
+/**
  * Run `fn` with `sinks` receiving every {@link reportPhase} call made inside it,
  * however deep.
  */
 export function withPhaseSinks<T>(sinks: PhaseSink[], fn: () => Promise<T>): Promise<T> {
     return sinks.length === 0 ? fn() : storage.run(sinks, fn);
+}
+
+/**
+ * Run `fn` with `sinks` receiving every {@link reportHandBack} made inside it.
+ * Installed by the window-side notifier, which is the only place a button can be
+ * rendered; the phase text of the same hand-back still reaches every phase sink.
+ */
+export function withHandBackSinks<T>(sinks: HandBackSink[], fn: () => Promise<T>): Promise<T> {
+    return sinks.length === 0 ? fn() : handBackStorage.run(sinks, fn);
 }
 
 /**
@@ -75,4 +104,27 @@ export function reportPhase(message: string): void {
  */
 export function phaseReporter(): (message: string, subMessage?: string) => void {
     return (message) => reportPhase(message);
+}
+
+/**
+ * Report that the operation in flight is waiting on the user.
+ *
+ * Reaches the hand-back sinks (a toast with the action's button) AND the phase
+ * sinks as one line, so the chat and the progress card say what the wait is for.
+ * Until 2026-10-08 an agent-run project creation waited up to thirty minutes for
+ * the AEM Code Sync App with the prompt captured into a buffer nobody read: the
+ * card said "Creating the project" and the person was never asked. Same contract
+ * as {@link reportPhase}: a no-op outside a tool call, never throws.
+ */
+export function reportHandBack(handBack: HandBack): void {
+    reportPhase(`Waiting for you — ${handBack.title}`);
+    const sinks = handBackStorage.getStore();
+    if (!sinks) return;
+    for (const sink of sinks) {
+        try {
+            sink(handBack);
+        } catch {
+            // A broken sink is not the caller's problem.
+        }
+    }
 }

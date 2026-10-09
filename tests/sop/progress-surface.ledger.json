@@ -35,7 +35,7 @@
         "src/features/eds/handlers/storefrontSetup/storefrontSetupHandlers.ts:95": "Gates: cancel setup, knowing the GitHub repo and DA.live content created so far will be deleted? The cost of stopping is not obvious without asking.",
         "src/features/lifecycle/services/projectResetService.ts:404": "Gates: delete the components and reinstall them from scratch? Configuration and integrations survive, the rest does not.",
         "src/features/updates/commands/templateConflictPrompt.ts:47": "Gates: which side wins where an update and the SC's own edits touched the same file? The update cannot proceed until someone chooses.",
-        "src/features/ai/server/agentOperationNotifier.ts:164": "Gates: let the agent run this tool? A cloud write an agent proposes is confirmed by a person before it happens.",
+        "src/features/ai/server/agentOperationNotifier.ts:165": "Gates: let the agent run this tool? A cloud write an agent proposes is confirmed by a person before it happens.",
         "src/features/eds/services/reset/edsResetUI.ts:470": "Gates: reset this storefront to the template and re-copy demo content? Hand edits are lost.",
         "src/features/eds/services/reset/edsResetUI.ts:726": "Gates: also reset the Commerce backend, which takes several minutes and is not needed for a storefront reset? A separate, costlier choice inside the same flow.",
         "src/features/eds/handlers/forgetAddedDemoHandler.ts:174": "Gates: take an added demo's card off the Welcome step \u2014 and, for a demo added from a zip, whether the repository made from it goes too. Modal because the detail names what stays and what goes before the click (develop, merged 2026-09-24).",
