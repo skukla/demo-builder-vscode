@@ -7,6 +7,7 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { withoutStaleSystemLinks } from '@/core/state/appBuilderComponentState';
 import { writeFileAtomic } from '@/core/utils/writeFileAtomic';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
@@ -79,9 +80,11 @@ function addOptionalManifestFields(manifest: Record<string, unknown>, project: P
     // Keyed App Builder component state (ADR-011 D3 Step 01) — the durable model
     // that replaces the singular meshState/appState (retired in Step 07). Omitted
     // when empty so legacy manifests keep loading via the read-side migration
-    // fallback instead of a persisted-but-empty map.
+    // fallback instead of a persisted-but-empty map. A system id left in an
+    // integration's `systems` list after the system went is dropped on the way out
+    // (AB-70), so a project carrying one heals on its next save without a migration.
     if (project.appBuilderComponents && Object.keys(project.appBuilderComponents).length) {
-        manifest.appBuilderComponents = project.appBuilderComponents;
+        manifest.appBuilderComponents = withoutStaleSystemLinks(project.appBuilderComponents);
     }
     // ADR-013 hash-and-skip: per-file sha-256 of the last generated AI bundle,
     // keyed by posix project-relative path. Omitted when empty so pre-ADR

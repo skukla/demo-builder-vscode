@@ -92,6 +92,7 @@ import {
     clearUpdateAvailable,
     recordInstallation,
     runsOlderCode,
+    withoutStaleSystemLinks,
     workspacesHeldBy,
     workspacesToRelease,
 } from '@/core/state/appBuilderComponentState';
@@ -2043,6 +2044,8 @@ function withoutComponent(
         ...(project.componentConfigs ? { componentConfigs: { ...project.componentConfigs } } : {}),
     };
     delete cleared.appBuilderComponents[id];
+    // A system leaves its integration's `systems` list in the same save (AB-70).
+    cleared.appBuilderComponents = withoutStaleSystemLinks(cleared.appBuilderComponents);
     if (cleared.componentApiPicks) {
         delete cleared.componentApiPicks[id];
     }

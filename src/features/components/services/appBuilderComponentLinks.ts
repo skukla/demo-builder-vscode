@@ -4,9 +4,10 @@
  *
  * The answer is stored on the project: an integration's record lists its
  * `systems`, a system's record names the integration it is `usedBy`. Both are
- * written when the pair is added ({@link linkBroughtSystem}). A removed id is
- * not scrubbed from the records that named it; every read skips ids that are no
- * longer in the project. The catalog's
+ * written when the pair is added ({@link linkBroughtSystem}). A removal takes the
+ * id off its integration's list, and every save drops ids that are no longer in the
+ * project (`withoutStaleSystemLinks`, AB-70); reads still skip such ids, for a
+ * project loaded before its next save. The catalog's
  * `boundTo` only says which system an integration BRINGS; it is not how a project
  * knows what it has, because a project may one day hold more than one of a kind
  * (AB-16).

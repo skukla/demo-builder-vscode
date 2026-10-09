@@ -202,6 +202,21 @@ describe('an ERP added from the card', () => {
         expect(Object.keys(project.appBuilderComponents ?? {})).toEqual(['erp-integration', 'demo-erp']);
     });
 
+    // AB-70, the owner's Justrite project: the ERP was gone and the integration still
+    // listed it. The id leaves the list in the same save that drops the ERP's record.
+    it("takes the ERP off the integration's systems list in the save that drops its record", async () => {
+        const project = withAddedErp();
+        const deps = createDeps({ catalog: [SYSTEM, INTEGRATION], unlistSystem: jest.fn(async () => undefined) });
+
+        await removeAppBuilderComponent(project, 'demo-erp-2', deps);
+
+        expect(project.appBuilderComponents?.['erp-integration']?.systems).toEqual(['demo-erp']);
+        const dropped = deps.saveProject.mock.calls
+            .map(([saved]) => saved.appBuilderComponents ?? {})
+            .find((components) => !('demo-erp-2' in components));
+        expect(dropped?.['erp-integration']?.systems).toEqual(['demo-erp']);
+    });
+
     it('removes nothing when the integration could not be told, and says so', async () => {
         const project = withAddedErp();
         const deps = createDeps({ catalog: [SYSTEM, INTEGRATION], unlistSystem: jest.fn(async () => 'Adobe sign-in required.') });

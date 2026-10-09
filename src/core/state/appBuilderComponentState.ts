@@ -115,6 +115,29 @@ export function runsOlderCode(deployedCommit: string | undefined, cloneCommit: s
     return Boolean(deployedCommit && cloneCommit && deployedCommit !== cloneCommit);
 }
 
+/**
+ * Pure: the keyed map with every `systems` list holding only ids still in the map.
+ *
+ * A removed system's id used to stay in its integration's list (AB-70, the owner's
+ * Justrite project: `systems: ['demo-erp', 'demo-erp-2']` with `demo-erp-2` gone).
+ * Readers skipped it, but a later system added under the same id read as linked
+ * before its add finished. The removal drops the id through this, and the manifest
+ * writer does too, so a project already carrying one heals on its next save. A list
+ * emptied this way stays an empty list: a stored `[]` says "no system".
+ *
+ * Records that change are copied; the input is not mutated.
+ */
+export function withoutStaleSystemLinks(
+    components: Record<string, AppBuilderComponentState>,
+): Record<string, AppBuilderComponentState> {
+    const pruned: Record<string, AppBuilderComponentState> = {};
+    for (const [id, state] of Object.entries(components)) {
+        const kept = state.systems?.filter((systemId) => systemId in components);
+        pruned[id] = kept && kept.length !== state.systems?.length ? { ...state, systems: kept } : state;
+    }
+    return pruned;
+}
+
 /** Pure: return a new project with `appBuilderComponents[id]` set (does not mutate input). */
 export function setAppBuilderComponent(
     project: Project,
