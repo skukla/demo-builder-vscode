@@ -70,3 +70,4 @@ entry installed before 2026-10-09 and deleted later can still come back once.
   then run Check for Updates on a library with a newer commit.
 
 ## Shipped so far
+- 2026-10-09  fix(eds): a block library install no longer puts back entries the SC deleted (`692443854`)
