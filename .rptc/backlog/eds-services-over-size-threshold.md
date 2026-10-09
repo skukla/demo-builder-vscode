@@ -541,12 +541,10 @@ and three of them are more than 40% comments). Decide which.
 
 - 2026-10-09  From the StorefrontSetupStep split, three findings, none changed (the sitting
   was a pure move):
-  (1) **The first start and Retry send different dependency lists.** Retry de-duplicates
-  (`new Set`), the first start does not, so a mesh id that is in both
-  `components.dependencies` and `selectedAppBuilderComponents` goes out twice on the first
-  start and once on Retry. Both live in `useStorefrontSetup.ts`; the hook suite pins today's
-  behaviour. **Decide:** de-duplicate both (recommend: it is one line and the handler only
-  checks membership), or leave them.
+  (1) **Fixed the same day:** the first start and Retry sent different dependency lists (the
+  first start sent a mesh id twice when it was in both selections). Both now build the list in
+  `startDependencies` in `useStorefrontSetup.ts`, which keeps each id once; the test that
+  pinned the old behaviour now pins the fix.
   (2) **The failed and published screens are near-copies of `StatusDisplay`** (the error
   variant with Cancel/Retry; the success/warning variant with detail lines). They now live
   in `StorefrontSetupErrorView.tsx` and `StorefrontSetupCompletedView.tsx`. Moving them onto

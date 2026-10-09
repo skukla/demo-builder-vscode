@@ -13,7 +13,7 @@ import {
 } from '../../../../helpers/webviewClientMock';
 import { act, renderHook } from '@testing-library/react';
 import React from 'react';
-import { useStorefrontSetup } from '@/features/eds/ui/hooks/useStorefrontSetup';
+import { startDependencies, useStorefrontSetup } from '@/features/eds/ui/hooks/useStorefrontSetup';
 import type { EDSConfig, WizardState } from '@/types/webview';
 import type {
     StorefrontGitHubAppRequiredPayload,
@@ -82,9 +82,8 @@ beforeEach(() => {
 });
 
 describe('starting the run', () => {
-    // The first start does NOT de-duplicate the mesh id the way Retry does; this
-    // pins today's behaviour, and the difference is logged on EDS-8 for a decision.
-    it('posts one start with the selections the step mounted with', () => {
+    // The mesh id is in both lists here; the first start sends it once, as Retry does.
+    it('posts one start with the selections the step mounted with, each dependency once', () => {
         renderRun();
         expect(posted<StorefrontSetupStartPayload>('storefront-setup-start')).toStrictEqual([
             {
@@ -92,7 +91,7 @@ describe('starting the run', () => {
                 edsConfig: EDS,
                 componentConfigs: undefined,
                 backendComponentId: 'adobe-commerce-accs',
-                dependencies: ['eds-commerce-mesh', 'eds-commerce-mesh'],
+                dependencies: ['eds-commerce-mesh'],
                 selectedAddons: undefined,
                 selectedBlockLibraries: undefined,
                 customBlockLibraries: undefined,
@@ -252,5 +251,26 @@ describe('closing the wizard', () => {
         pushComplete({ message: 'Done', githubRepo: 'test-owner/test-repo' });
         unmount();
         expect(posted('storefront-setup-cancel')).toStrictEqual([]);
+    });
+});
+
+describe('startDependencies', () => {
+    it('adds the selected mesh to the dependencies, each id once', () => {
+        expect(
+            startDependencies({
+                components: { dependencies: ['eds-commerce-mesh', 'demo-inspector'] },
+                selectedAppBuilderComponents: ['eds-commerce-mesh', 'erp-integration'],
+            }),
+        ).toStrictEqual(['eds-commerce-mesh', 'demo-inspector']);
+    });
+
+    it('answers the mesh alone when no dependencies were selected', () => {
+        expect(startDependencies({ selectedAppBuilderComponents: ['eds-commerce-mesh'] })).toStrictEqual([
+            'eds-commerce-mesh',
+        ]);
+    });
+
+    it('answers an empty list when nothing was selected', () => {
+        expect(startDependencies({})).toStrictEqual([]);
     });
 });

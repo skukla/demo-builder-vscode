@@ -6788,12 +6788,11 @@
         {
             "module": "src/features/eds/ui/hooks/useStorefrontSetup.ts",
             "anchors": [
-                "...new Set([",
-                "const initialConfigRef = useRef({"
+                "...new Set(["
             ],
-            "mutants": 2,
+            "mutants": 1,
             "category": "other",
-            "reason": "Both sites read '(state.selectedAppBuilderComponents || []).filter(isMeshComponentId)'. Stryker rewrites the empty fallback to ['Stryker was here'], and the very next call filters it out: isMeshComponentId tests membership of MESH_COMPONENT_IDS, which holds three fixed ids, so any invented string is dropped before the value leaves the expression. The dependency list is identical either way, at mount and on retry. Re-homed 2026-10-09 by the EDS-8 split of StorefrontSetupStep.tsx, which moved this code here unchanged.",
+            "reason": "The site reads '(state.selectedAppBuilderComponents || []).filter(isMeshComponentId)'. Stryker rewrites the empty fallback to ['Stryker was here'], and the very next call filters it out: isMeshComponentId tests membership of MESH_COMPONENT_IDS, which holds three fixed ids, so any invented string is dropped before the value leaves the expression. The dependency list is identical either way. One site since 2026-10-09: the first start and Retry both build the list in startDependencies, which also removes duplicates.",
             "decision": "none \u2014 the fallback's contents cannot survive the filter that follows it",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-01, 2026-09-05"

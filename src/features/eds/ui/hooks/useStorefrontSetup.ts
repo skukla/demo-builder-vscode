@@ -46,6 +46,23 @@ interface StorefrontSetupRun {
     handleInstallDetected: () => void;
 }
 
+/**
+ * The dependency ids a start sends: the selected dependencies, plus the mesh, which rides
+ * selectedAppBuilderComponents (D3) but which the handler's mesh gate still reads off this
+ * list. Each id once. The first start sent the mesh twice when it was in both lists while
+ * Retry sent it once (found 2026-10-09 in the EDS-8 split); both now build it here.
+ */
+export function startDependencies(
+    state: Pick<WizardState, 'components' | 'selectedAppBuilderComponents'>,
+): string[] {
+    return [
+        ...new Set([
+            ...(state.components?.dependencies || []),
+            ...(state.selectedAppBuilderComponents || []).filter(isMeshComponentId),
+        ]),
+    ];
+}
+
 export function useStorefrontSetup(
     state: WizardState,
     updateState: (updates: Partial<WizardState>) => void,
@@ -114,14 +131,10 @@ export function useStorefrontSetup(
             edsConfig,
             componentConfigs: state.componentConfigs,
             backendComponentId: state.components?.backend,
-            // The mesh rides selectedAppBuilderComponents (D3); the wire's
-            // dependencies list still carries it for the handler's mesh gate.
-            dependencies: [
-                ...new Set([
-                    ...(state.components?.dependencies || []),
-                    ...(state.selectedAppBuilderComponents || []).filter(isMeshComponentId),
-                ]),
-            ],
+            dependencies: startDependencies({
+                components: state.components,
+                selectedAppBuilderComponents: state.selectedAppBuilderComponents,
+            }),
             selectedAddons: state.selectedAddons,
             demo: state.demo,
             selectedBlockLibraries: state.selectedBlockLibraries,
@@ -134,8 +147,7 @@ export function useStorefrontSetup(
         state.edsConfig,
         state.demo,
         state.componentConfigs,
-        state.components?.backend,
-        state.components?.dependencies,
+        state.components,
         state.selectedAppBuilderComponents,
         state.selectedAddons,
         state.selectedBlockLibraries,
@@ -160,10 +172,7 @@ export function useStorefrontSetup(
         edsConfig: state.edsConfig,
         componentConfigs: state.componentConfigs,
         backendComponentId: state.components?.backend,
-        dependencies: [
-            ...(state.components?.dependencies || []),
-            ...(state.selectedAppBuilderComponents || []).filter(isMeshComponentId),
-        ],
+        dependencies: startDependencies(state),
         selectedAddons: state.selectedAddons,
         selectedBlockLibraries: state.selectedBlockLibraries,
         customBlockLibraries: state.customBlockLibraries,
