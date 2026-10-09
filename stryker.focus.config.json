@@ -8,8 +8,8 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/errorFormatters.ts",
-        "src/features/eds/services/github/githubWriteRejection.ts"
+        "src/core/ui/components/selection/ApiAccessPicker.tsx",
+        "src/core/ui/components/selection/apiAccessFilters.ts"
     ],
     "reporters": [
         "clear-text",

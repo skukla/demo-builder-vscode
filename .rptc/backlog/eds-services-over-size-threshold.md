@@ -436,7 +436,7 @@ these to move the number, and stops when only they are left.
     and Helix tables. **Verified duplication:** `formatDaLiveError` (372 to 419) and
     `formatHelixError` (468 to 511) are the same function apart from the table and a field
     name; `formatGitHubError` was not checked. Fold them in the same sitting.
-17. `core/ui/components/selection/ApiAccessPicker.tsx` (393/350): pure family and filter
+17. DONE 2026-10-09 (393 -> 285, see the log). `core/ui/components/selection/ApiAccessPicker.tsx` (393/350): pure family and filter
     logic vs the picker and rows. Low value.
 
 **One job, left whole (dated verdicts):**
@@ -945,6 +945,15 @@ date and what happened; a failure becomes its own `fix` item.
       Build zone now lives in `BuildZone.tsx`; the resting style fingerprint of the
       dashboard harness (a non-EDS fixture) was identical before and after, but the harness
       has no EDS fixture and presses nothing.
+- [ ] **The Adobe API picker after the ApiAccessPicker split** (2026-10-09): open it in both
+      places it appears, the wizard's Add Integration flow (the API access stage) and the
+      dashboard's Manage APIs dialog. Type in the filter box (it shows past five APIs) and
+      the list narrows by name or code; the product pills read All, then Adobe Commerce and
+      App Builder when anything matches them, then the cloud families alphabetically, with
+      no Document Cloud or Creative Cloud pill; pressing one narrows the list, and an API
+      can sit under both its curated and its cloud pill. Tick an API: the box checks and
+      the rows do not move. Which rows are pickable and how the pills group them now live in
+      `apiAccessFilters.ts`; no markup or style moved.
 
 ## Shipped so far
 
@@ -1037,3 +1046,4 @@ date and what happened; a failure becomes its own `fix` item.
 - 2026-10-09  errorFormatters.ts (511 -> 179) split by job. It keeps the words the SC sees for a failed GitHub or Helix call: the two message tables and ONE matcher, formatByTable, which formatGitHubError and formatHelixError had each carried a copy of (PL-69 pairs 23 and 24; formatGitHubError was the same shape, reading the same status field). What GitHub says when it refuses a write (isRulesetRejection, describeRejectionDiagnostics, describePushProtectionBlock) moved to github/githubWriteRejection.ts (214); its three callers import it directly, no forwarders. formatDaLiveError, its table and the DaLiveErrorCode type were deleted: nothing in src or the MCP surface had ever called it (DA.live's own errors carry their own words). Proof: the four existing suites passed unchanged against the folded code (81 tests); an old-against-new comparison of 3,808 inputs (messages x codes x statuses, both formatters) matched exactly, planted control caught; proveMove reads the five rejection functions as pure moves (control fired) and formatByTable as the old Helix body with only the table name changed; both tables and the moved constants compared line for line. Tests: the two rejection suites moved to github/githubWriteRejection(-rejectionShapes).test.ts; new cases pin every table row's exact words, isRulesetRejection on git stderr, and three decisions no test reached (N/A status on the code path, a bypass id with no token type, an errors entry with no resource). Mutation: row 85.02 (current); after errorFormatters 95.60 (87 of 91), githubWriteRejection 92.79 (103 of 111), open gaps 0; survivors are ledgered equivalents or text with no effect. Pins: godFileCandidates 21 -> 20; cloneCeiling 36 -> 34; 8 equivalents rows re-homed, 3 deleted with the DA.live code and the merged matcher; one test family adjudicated. Gate green (lint 0 errors, tsc, typecheck:tests, full jest 1906 suites / 32,536 tests, source duplication at 34). No live check needed: every message is byte-identical.
 - 2026-10-09  refactor(eds): error formatters keep the message tables with one matcher; GitHub write rejections get their own file (`f9980a19c`)
 - 2026-10-09  docs: record the owner's decisions on generated files, the one-job floor and the open EDS-8 questions (`f3578cf63`)
+- 2026-10-09  ApiAccessPicker.tsx (393 -> 285) split by job. It keeps the picker and its rows: the frozen checked-first order, the search header, the pill buttons, the code text and the locked-reason line. Which rows are pickable, how a search matches, the sort tie-break and the two product-pill lenses (API_FAMILIES, EXCLUDED_CLOUD_PILLS, curatedFamilyOf, cloudFamilyOf, familiesOf, familyChips) moved to apiAccessFilters.ts (131), which takes the ApiAccessOption type from the picker by a type-only import (no runtime cycle); the picker imports the six functions it uses, no forwarders, no dead code found. proveMove: all 13 functions a pure move, control fired; the moved block (115 lines, constants and the FamilyChip type included) identical apart from the export keyword, planted control caught. No JSX or CSS moved, so no bundle can lose a style (the wizard and the Integrations surface render it). Tests: the two picker suites passed unchanged; new apiAccessFilters.test.ts (31) pins the functions directly. Mutation: the 98.48 row was current (only a placeholder string changed since); after ApiAccessPicker 99.15 (117 of 118, the survivor is a React key string), apiAccessFilters 100 (79 of 79). The two familiesOf mutants ledgered as equivalent through the rendered picker are now killed by the direct suite, so that ledger row was deleted. Pins: godFileCandidates 20 -> 19, godFileCoupled stays 2, cloneCeiling stays 34. Gate green (lint 0 errors, tsc, typecheck:tests, blind spots, test sizes, full jest 1907 suites / 32,563 tests, source duplication at 34). Live check appended above.
