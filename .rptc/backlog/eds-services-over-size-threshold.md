@@ -816,3 +816,4 @@ date and what happened; a failure becomes its own `fix` item.
 - 2026-10-09  refactor(core): WebviewClient is one job and stays whole; six uncalled methods go (`4375094b0`)
 - 2026-10-09  refactor(auth): delete the re-detect-context handler nothing sends (`09ad0f3ca`)
 - 2026-10-09  refactor(eds): daLiveAuthService is one job and stays whole; the JWT decoder gets its own file (`f1e3712f3`)
+- 2026-10-09  refactor(project-creation): split envFileGenerator by job (`45539135e`)
