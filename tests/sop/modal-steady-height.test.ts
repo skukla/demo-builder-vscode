@@ -54,6 +54,12 @@ function localImports(file: string, source: string): string[] {
         .filter((candidate) => existsSync(join(ROOT, candidate)));
 }
 
+/** `XModalBody.tsx` is the body of `XModal.tsx`: same directory, name extended. */
+function isOwnBody(file: string, near: string): boolean {
+    const stem = file.replace(/\.tsx$/, '');
+    return near.startsWith(stem) && near !== file;
+}
+
 /** The source minus its imports: a floor imported and never rendered is not a floor. */
 function withoutImports(source: string): string {
     return source
@@ -68,7 +74,18 @@ function modalsWithViews(): Modal[] {
     for (const file of COMPONENTS) {
         const source = readFileSync(join(ROOT, file), 'utf8');
         if (!source.includes('<Modal')) continue;
-        const branches = (source.match(BRANCH) ?? []).length;
+        const near = localImports(file, source);
+        const nearby = near.map((path) => withoutImports(readFileSync(join(ROOT, path), 'utf8')));
+        // The view switch can live one file along too, in the modal's OWN body
+        // (`XModal.tsx` beside `XModalBody.tsx`). The import modal's does: once its
+        // footer and view choice moved to importModalView.ts (EDS-8, 2026-10-09),
+        // counting only the modal's own file dropped the very modal this rule was
+        // written for out of the scan, with every check still green. Only the
+        // modal's own body counts: any sibling (a picker with modes, a label helper)
+        // matched two modals that switch no views.
+        const branches = [source, ...nearby.filter((_, i) => isOwnBody(file, near[i]))]
+            .map((text) => (text.match(BRANCH) ?? []).length)
+            .reduce((sum, n) => sum + n, 0);
         if (branches < 2) continue;
         // A body big enough to live in its own module still holds the floor — it
         // just holds it one file along. Follow a locally-imported component before
@@ -76,9 +93,7 @@ function modalsWithViews(): Modal[] {
         // asks for elsewhere) would break a rule it kept.
         const holds =
             HOLDS.some((h) => h.test(withoutImports(source))) ||
-            localImports(file, source).some((near) =>
-                HOLDS.some((h) => h.test(withoutImports(readFileSync(join(ROOT, near), 'utf8')))),
-            );
+            nearby.some((text) => HOLDS.some((h) => h.test(text)));
         found.push({ file, branches, holds });
     }
     return found;

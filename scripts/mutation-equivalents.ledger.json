@@ -10221,7 +10221,7 @@
             "anchors": [
                 "const [selection, setSelection] = useState<TypeSelection>({ selected: [], auto: [] });"
             ],
-            "line": 129,
+            "line": 95,
             "mutants": 1,
             "category": "other",
             "reason": "The 'auto' provenance set is only ever consulted as auto.has(t) for a type that is already in 'selected' and is a declared dependency of the type being unticked. A seeded entry that is not a real data type therefore matches nothing, and deselectType's final filter (auto kept only where it appears in the surviving selection) removes it on the first untick. Nothing rendered or sent reads 'auto' at all.",
@@ -10234,7 +10234,7 @@
             "anchors": [
                 "allSelected ? { selected: [], auto: [] } : { selected: [...availableTypes], auto: [] },"
             ],
-            "line": 229,
+            "line": 195,
             "mutants": 2,
             "category": "other",
             "reason": "Both survivors seed the 'auto' provenance set rather than the selection. 'auto' is read only as auto.has(t) while unticking, and only for types that are both currently selected and declared dependencies of the departing type, so an entry that is not a real data type can never match. The checkboxes, the Start guard and the request body all read 'selected'; none of them reads 'auto'.",
@@ -10259,7 +10259,7 @@
             "anchors": [
                 "}, [loadStatus]);"
             ],
-            "line": 159,
+            "line": 125,
             "mutants": 1,
             "category": "other",
             "reason": "Emptying this dependency array changes nothing, because loadStatus is referentially stable for the life of the modal: useDataInstallerRequest returns load as a useCallback keyed on execute, and useVSCodeRequest builds execute as a useCallback keyed on the request type, which is a literal here. The effect therefore runs exactly once either way.",
@@ -10272,7 +10272,7 @@
             "anchors": [
                 "}, [loadTarget]);"
             ],
-            "line": 164,
+            "line": 130,
             "mutants": 1,
             "category": "other",
             "reason": "Emptying this dependency array changes nothing, because loadTarget is referentially stable for the life of the modal: useDataInstallerRequest returns load as a useCallback keyed on execute, and useVSCodeRequest builds execute as a useCallback keyed on the request type, which is a literal here. The effect therefore runs exactly once either way.",
@@ -10285,7 +10285,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 250,
+            "line": 216,
             "mutants": 1,
             "category": "other",
             "reason": "Replacing this empty dependency array with a one-element constant array keeps the callback just as stable: React compares dependency arrays element by element with Object.is, and the same string literal is produced on every render, so the comparison succeeds and useCallback returns the memoised function exactly as it does now. Nothing about act's identity or behaviour moves.",
@@ -10298,7 +10298,7 @@
             "anchors": [
                 "const goBack = useCallback((): void => setDismissed(true), []);"
             ],
-            "line": 277,
+            "line": 243,
             "mutants": 1,
             "category": "other",
             "reason": "Replacing this empty dependency array with a one-element constant array keeps the callback just as stable: React compares dependency arrays element by element with Object.is, and the same string literal is produced on every render, so the comparison succeeds and useCallback returns the memoised function. goBack closes over nothing but a setState function, which React guarantees is stable.",
@@ -10311,7 +10311,7 @@
             "anchors": [
                 "}, [act, provision]);"
             ],
-            "line": 275,
+            "line": 241,
             "mutants": 1,
             "category": "other",
             "reason": "Emptying this dependency array freezes provisionCredentials on the FIRST render's closure, and neither thing it closes over can go stale: act is a useCallback with an empty dependency list, and the only member of provision it touches is load, which useDataInstallerRequest memoises on execute, itself memoised on the literal request type. So the frozen callback calls the same two functions the fresh one would.",
@@ -10324,13 +10324,38 @@
             "anchors": [
                 "setWatching(true);"
             ],
-            "line": 266,
+            "line": 232,
             "mutants": 1,
             "category": "branch",
             "reason": "Unreachable with watching already false. watching only becomes false through the Stop watching button, which buildActions renders solely for the 'watching' view; that view requires a running record, and turning the watch off also stops the poll that could retire it. So while watching is false the modal offers no Remove data affordance to arm, and this call can only ever re-assert a value that is already true.",
             "decision": "none \u2014 the call states that a confirmed removal is watched, which the next reader needs",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/data-installer/ui/components/ImportDatapackModal.tsx",
+            "anchors": [
+                "setWatching(true);"
+            ],
+            "line": 225,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Unreachable with watching already false, for the same reason as the removal's call: watching only turns false through Stop watching, which buildActions renders solely for the 'watching' view, and that view needs a running record whose poll the same press stops. So while watching is false the modal shows no Start import button, and this call can only re-assert a value that is already true.",
+            "decision": "none \u2014 the call states that a started import is watched, which the next reader needs",
+            "recorded": "2026-10-09",
+            "source": "EDS-8 ImportDatapackModal split, 2026-10-09"
+        },
+        {
+            "module": "src/features/data-installer/ui/components/ImportDatapackModal.tsx",
+            "anchors": [
+                "title: `${record?.operation === 'reset' ? 'Removing' : 'Importing'} ${displayName}`,"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "This line runs only inside the if (running) branch of close, and running is computed as record?.outcome === 'watching', which is true only when record is a non-null object. So record is never null where this optional chain is read, and record.operation behaves exactly as record?.operation does. Both titles it can produce are pinned by the decisions suite.",
+            "decision": "none \u2014 the chain mirrors how record is read everywhere else in the component",
+            "recorded": "2026-10-09",
+            "source": "EDS-8 ImportDatapackModal split, 2026-10-09"
         },
         {
             "module": "src/features/projects-dashboard/utils/projectStatusUtils.ts",

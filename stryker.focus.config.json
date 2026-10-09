@@ -8,8 +8,8 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/blockCollectionHelpers.ts",
-        "src/features/eds/services/blockLibraryComponentMerge.ts"
+        "src/features/data-installer/ui/components/ImportDatapackModal.tsx",
+        "src/features/data-installer/ui/components/importModalView.ts"
     ],
     "reporters": [
         "clear-text",

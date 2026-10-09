@@ -24,7 +24,9 @@ import {
     defaultResponse,
     DEFAULTS,
     ImportDatapackModal,
+    mockPostMessage,
 } from './ImportDatapackModal.testUtils';
+import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
 
 const STATUS = 'get-datapack-import-status';
 
@@ -331,6 +333,61 @@ describe('ImportDatapackModal — decisions', () => {
             // nameless ones would hide it.
             const labels = screen.getAllByRole('button').map((button) => button.textContent);
             expect(labels).toEqual(['Close', 'Back']);
+        });
+    });
+
+    /**
+     * Closing stops nothing: a RUNNING job is handed to a progress notification
+     * so the SC keeps seeing it, and the close button says so. With no job
+     * running, closing just closes.
+     */
+    describe('closing the modal', () => {
+        beforeEach(() => {
+            mockPostMessage.mockClear();
+        });
+
+        it('hands a running import to a notification named for it, then closes', async () => {
+            const onClose = jest.fn();
+            withStatus(runningRecord());
+            renderModal({ onClose });
+            await settle();
+
+            await press(await screen.findByRole('button', { name: 'Run in background' }));
+
+            expect(mockPostMessage.mock.calls).toStrictEqual([
+                ['backgroundOperation', { id: DATAPACK_OPERATION_ID, title: 'Importing Bodea' }],
+            ]);
+            expect(onClose).toHaveBeenCalledTimes(1);
+        });
+
+        it('names a running removal as a removal', async () => {
+            withStatus(runningRecord({ operation: 'reset' }));
+            renderModal({ onClose: jest.fn() });
+            await settle();
+
+            await press(await screen.findByRole('button', { name: 'Run in background' }));
+
+            expect(mockPostMessage.mock.calls).toStrictEqual([
+                ['backgroundOperation', { id: DATAPACK_OPERATION_ID, title: 'Removing Bodea' }],
+            ]);
+        });
+
+        it('just closes when no job is running', async () => {
+            const onClose = jest.fn();
+            renderModal({ onClose });
+            await awaitForm();
+
+            await press(screen.getByRole('button', { name: 'Close' }));
+
+            expect(mockPostMessage.mock.calls).toStrictEqual([]);
+            expect(onClose).toHaveBeenCalledTimes(1);
+        });
+
+        it('titles the dialog with the pack it imports', async () => {
+            renderModal();
+            await awaitForm();
+
+            expect(screen.getByText('Import Bodea')).toBeInTheDocument();
         });
     });
 

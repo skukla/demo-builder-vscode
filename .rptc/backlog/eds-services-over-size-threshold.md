@@ -406,8 +406,11 @@ and three of them are more than 40% comments). Decide which.
 8. `data-installer/services/dataInstallerWriteClient.ts` (579/400): import/validate/delete
    vs export (its suites are already split that way). A doc comment near line 166 sits
    on the wrong function; fix in the same sitting.
-9. `data-installer/ui/components/ImportDatapackModal.tsx` (504/350): view-state helpers
-   vs the modal component.
+9. DONE 2026-10-09 (504 -> 332, see the log). `data-installer/ui/components/ImportDatapackModal.tsx` (504/350): view-state helpers
+   vs the modal component. The view choice, the watched job, the busy line and the footer row
+   moved to `importModalView.ts`. The split blinded `modal-steady-height` to this very
+   modal (it counted view branches in the modal's own file only); the scan now also reads the
+   modal's own body file, with a planted control.
 10. `eds/services/storefront/storefrontRepublishService.ts` (567/400): config republish vs
     full content republish.
 11. `eds/ui/steps/repoSelectionInline.helpers.tsx` (440/350) then
@@ -856,6 +859,17 @@ date and what happened; a failure becomes its own `fix` item.
       carries the library's entries once (no duplicates), the hand edits are still there,
       and the new blocks appear in the DA.live library. The merge is now
       `blockLibraryComponentMerge.ts`; every moved function is a proven move.
+- [ ] **Importing a datapack, every step of the modal** (the `ImportDatapackModal.tsx`
+      split, 2026-10-09; only the `dataInstaller` bundle renders it). Open the Data Installer,
+      pick a pack and press Import: (1) the form shows the project's target, Dry run, Remove
+      data and Start import, disabled until a type is ticked; (2) Dry run reads "Checking",
+      then a result with Back; (3) Start import reads "Starting", then the per-type progress
+      with Stop watching; close the modal while it runs and the close button reads "Run in
+      background", a notification named "Importing <pack>" takes over; (4) Remove data asks
+      Keep the data / Remove the data, and Keep returns to the form; (5) an error (for example
+      the credentials refusal) shows a result with Back and "Set up credentials automatically";
+      (6) a finished import shows its result, and Back returns to the form. What each state
+      shows now comes from `importModalView.ts`; every function is a proven move.
 
 ## Shipped so far
 
@@ -931,3 +945,4 @@ date and what happened; a failure becomes its own `fix` item.
 - 2026-10-09  fix(eds): the republish prompt reads the store scope as config.json does (`045974e39`)
 - 2026-10-09  refactor(eds): blockCollectionHelpers keeps the install; the merge of the three component files gets its own file (`a04830630`)
 - 2026-10-09  docs(backlog): the staleness merge question on EDS-8 is answered by a fix (`5c552f0d9`)
+- 2026-10-09  ImportDatapackModal.tsx (504 -> 332) split by job. It keeps the state and the requests: the selection, the status poll, the four actions, and the close handover to a progress notification. What each state shows (resolveView, watchedActivation, busyMessage, and the footer row buildActions with startLabel) moved to importModalView.ts (179), pure; the component is its only caller, no forwarders. proveMove: all six functions pure moves, control fired; no markup moved. Tests: the watchedActivation suite became importModalView.test.ts and gained resolveView precedence, busyMessage and every footer row (20 new cases); the decisions suite gained four close tests. Pre-existing gap found by re-measuring: the 2026-09-20 "Run in background" handover had no test at all (14 uncovered mutants). Mutation: the 09-06 row was stale, so the unsplit file was re-measured at 86.77 (223 of 257); after, 245 of 257: ImportDatapackModal 92.05 (12 survivors, all ledgered equivalents; two rows added), importModalView 100. modal-steady-height had gone blind to this modal and now reads the modal's own body file (planted control: removing the floor fails it). Pins: godFileCandidates 29 -> 28, godFileCoupled stays 2. Checks: npm run gate green (lint 0 errors, tsc, typecheck:tests, blind spots, test sizes, full jest 1901 suites / 32,341 tests, source duplication at the pin of 36), compile green. Live check appended above.

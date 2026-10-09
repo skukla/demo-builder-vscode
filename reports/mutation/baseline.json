@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "EDS-8 split of blockCollectionHelpers.ts: the same 377 mutants, 344 killed and 33 surviving as the 2026-09-05 row, now divided between the install (130 of 158) and the new merge file blockLibraryComponentMerge.ts (214 of 219). The install's score fell only because the merge, the better-covered half, left it; its five survivors are the four ledger rows re-homed with it.",
+    "_note": "EDS-8 split (2026-10-09): view decisions moved to importModalView.ts (106/106 killed). The modal's 09-06 row was stale: re-measured unsplit it read 86.77% with 14 uncovered (the Run in background handover, untested); now tested, 0 uncovered, 12 survivors all ledgered equivalents.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -5225,19 +5225,19 @@
             "openGaps": 0
         },
         "src/features/data-installer/ui/components/ImportDatapackModal.tsx": {
-            "score": 92.41,
-            "killed": 278,
-            "survived": 23,
+            "score": 92.05,
+            "killed": 139,
+            "survived": 12,
             "noCoverage": 0,
-            "timeout": 2,
+            "timeout": 0,
             "survivorCategories": {
                 "other": 8,
-                "branch": 5,
-                "string": 10
+                "branch": 3,
+                "optionalChain": 1
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 5,
-            "equivalent": 13,
+            "highValueSurvivors": 3,
+            "equivalent": 12,
             "openGaps": 0
         },
         "src/features/data-installer/ui/components/ViewSwitcher.tsx": {
@@ -10530,6 +10530,18 @@
             "uncoveredCategories": {},
             "highValueSurvivors": 2,
             "equivalent": 5,
+            "openGaps": 0
+        },
+        "src/features/data-installer/ui/components/importModalView.ts": {
+            "score": 100,
+            "killed": 106,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
             "openGaps": 0
         }
     }
