@@ -7,7 +7,7 @@
  */
 
 import * as vscode from 'vscode';
-import { resolveProjectFromPath } from './projectFromPath';
+import { resolveProjectFromPath, withProjectFromPath } from './projectFromPath';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { deleteOperationId, resetOperationId } from '@/core/utils/operationIds';
 import { validateProjectPath } from '@/core/validation/PathSafetyValidator';
@@ -218,12 +218,7 @@ export const handleRenameProject: MessageHandler<{ projectPath: string; newName:
  * the first confirmation dialog, not after it.
  */
 export const handleResetProject: MessageHandler<ResetProjectPayload> = narrateOutcomeToModal(
-    async (context, payload) => {
-        const resolved = await resolveProjectFromPath(context, payload);
-        if (!resolved.ok) {
-            return resolved.error;
-        }
-        const { project } = resolved;
+    withProjectFromPath<ResetProjectPayload>(async (context, project, payload) => {
         const progress = progressSurfaceOf(payload);
         const operationId = payload?.id ?? resetOperationId(project.name);
 
@@ -261,7 +256,7 @@ export const handleResetProject: MessageHandler<ResetProjectPayload> = narrateOu
             progress,
             operationId,
         });
-    },
+    }),
     (payload) => payload?.id ?? '',
 );
 

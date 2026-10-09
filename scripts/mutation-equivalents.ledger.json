@@ -7727,19 +7727,6 @@
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/projects-dashboard/handlers/projectsListOpen.ts",
-            "anchors": [
-                ".then(undefined, (error) => {"
-            ],
-            "line": 187,
-            "mutants": 1,
-            "category": "block",
-            "reason": "The rejection arm of a fire-and-forget notification chain; its body is a single logger.error. Emptying it leaves the same unhandled-free promise and the same already-returned success response.",
-            "decision": "none \u2014 log-only.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
             "module": "src/features/projects-dashboard/handlers/projectsListLifecycle.ts",
             "anchors": [
                 "if (!payload?.projectPath || !payload?.newName) {"
@@ -15648,6 +15635,18 @@
             "decision": "none \u2014 the explicit return states the best-effort contract at the site that satisfies it",
             "recorded": "2026-10-09",
             "source": "PL-69 sitting 2 focus run (siteAccessManagerHeadless)"
+        },
+        {
+            "module": "src/features/projects-dashboard/handlers/projectsListOpen.ts",
+            "anchors": [
+                ".then(undefined, (error) => {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "Re-triaged 2026-10-09 after PL-69 sitting 4 moved handleOpenAdminPanel into withProjectFromPath (the old row pinned line 187; the anchor is now unique, so no line). Same mutant: the rejection arm of a fire-and-forget notification chain whose body is a single logger.error. Emptying it leaves the same promise with no unhandled rejection and the same already-returned success response.",
+            "decision": "none \u2014 log-only; a test could only assert the log wording, which the logger-argument rule forbids.",
+            "recorded": "2026-10-09",
+            "source": "PL-69 sitting 4 (re-triage of the PL-22 batch MUT-01 row)"
         }
     ]
 }

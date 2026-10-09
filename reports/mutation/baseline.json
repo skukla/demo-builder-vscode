@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "PL-69 sitting 3, 2026-10-09 (webview command base). Six panels' handler-context builder and eight panels' page-HTML method became one BundledPanelCommand (src/commands/bundledPanelCommand.ts, 100%, own suite); StandalonePanelCommand now extends it (measured 100% through the Data Installer and Site access suites, but given no row: it has no mirrored suite, so a re-run could not reproduce the number). Rows for the five panels changed because killed and surviving mutants left with the deleted copies, not because tests changed. showDashboard: the 95.69% row was stale; the committed file measured 93.71%, the new one 93.87%, with the same behavioural survivors. openAi and createProject each gained one survivor in the move (the Prompt Library media base URI, the wizard page title); one new test each kills it, so both are at or below their old behavioural survivors and above their old scores. showProjectsList and configure rose only because the deleted copies held survivors. showIntegrations had no suite and no row; a first suite covers its page, and the rest (56 mutants) is honestly uncovered.",
+    "_note": "PL-69 sitting 4, 2026-10-09 (projects-dashboard handlers, and the Integrations command suite). The resolve-the-project opening that four open handlers and the reset handler each carried became withProjectFromPath in projectFromPath.ts (100%, own suite). projectsListOpen.ts (measured 95.52%) and projectsListLifecycle.ts (73.72%) get NO row, for the reason StandalonePanelCommand got none in sitting 3: their suites are the dashboardHandlers-* family named for the barrel they were split from on 2026-10-05, so the mirror rule finds nothing to re-measure them with and the pairing enforcer refuses the row. The numbers are in PL-69; the dashboardHandlers.ts row at 88.56% is now a ghost of a 42-line barrel. showIntegrations: the 5.26% row from sitting 3 covered only the page; a behaviour suite (16 cases, arguments asserted) takes it to 98.25% with the one survivor ledgered as equivalent (the dispose guard inside a swallowing catch).",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -10745,6 +10745,18 @@
             "survived": 0,
             "noCoverage": 0,
             "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/projects-dashboard/handlers/projectFromPath.ts": {
+            "score": 100,
+            "killed": 36,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 1,
             "survivorCategories": {},
             "uncoveredCategories": {},
             "highValueSurvivors": 0,

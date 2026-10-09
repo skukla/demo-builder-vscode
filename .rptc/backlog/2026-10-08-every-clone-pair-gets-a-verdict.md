@@ -147,6 +147,22 @@ a suite for the base (6 cases, 100% mutation score), a first suite for
 `ShowIntegrationsCommand` (it had none), and one case each that killed a survivor the move
 exposed (the Prompt Library's base URI, the wizard's page title). cloneCeiling 28 -> 23.
 
+**Sitting 4 (pairs 15 to 17) DONE 2026-10-09.** Re-scanned first: the three self-pairs in
+`projectsListOpen.ts` sat exactly where the table said. All three were real: the same
+ten-line opening (resolve the project from the payload, return the failure, unwrap) in
+`handleOpenAiForProject`, `handleOpenLiveSite`, `handleOpenDaLive` and `handleOpenAdminPanel`,
+and a fifth copy in `handleResetProject` next door. Now one `withProjectFromPath(run)` in
+`projectFromPath.ts`: the handler is given the context, the loaded project and its payload.
+
+Left inline on purpose, with the reason on the helper: `handleDeleteProject` and
+`handleEditProject` wrap the load in their own try/catch, so a load that throws answers with
+that handler's message ("Failed to delete project"); the wrapper would move the load outside
+the catch and change the answer. Neither was a scan pair.
+
+Proof: the 39 touched suites (794 tests) ran unchanged before and after. New: a first suite
+for `projectFromPath.ts` (6 cases, the resolve and the wrapper, arguments asserted).
+cloneCeiling 23 -> 20.
+
 ## Below the scan's threshold, found by reading (2026-10-08)
 
 The same five-line `ensureSDKReady` method is copied into four authentication files:
@@ -186,3 +202,5 @@ in favour of the EDS-34 version, and lower the pin. That also turns the floor of
 - 2026-10-09  Sitting 3 (webview command base), pairs 27 to 31 extracted: one `BundledPanelCommand` (src/commands) now owns the page HTML and the handler context for every bundled panel; six copies of the context builder and eight of the page method are gone. Not on `BaseWebviewCommand`: core may not import the context factory. 79 touched suites unchanged and green; full gate green. Mutation: the five panel rows re-measured; the showDashboard row was stale (committed file 93.71%, new 93.87%). cloneCeiling 28 -> 23.
 - 2026-10-09  Needs a live check (sitting 3): open each panel once in the Extension Dev Host (Create Project, Edit Project, Project Dashboard, Configure, Prompt Library, Integrations, Projects list, Data Installer, Site access) and confirm it renders and answers its first request. Tests cover the HTML and the context; nothing here ran a real webview.
 - 2026-10-09  refactor(commands): one base for every bundled panel's page and handler context (`dd6b02b7b`)
+- 2026-10-09  Sitting 4 (projects-dashboard handlers), pairs 15 to 17 extracted: one `withProjectFromPath(run)` in `projectFromPath.ts` now opens the four open handlers (AI chat, live site, DA.live, Admin Panel) and the reset handler; delete and edit keep the inline resolve because their try/catch must cover the load (reason on the helper). 39 touched suites (794 tests) unchanged and green; full gate green. New: a first suite for projectFromPath (6 cases, 100% mutation). Measured projectsListOpen at 95.52% (one survivor, a log string) and projectsListLifecycle at 73.72% (the ledgered debug-log block in edit, log strings, and six uncovered mutants in the two progress-modal id lambdas), but neither gets a baseline row: their suites are the dashboardHandlers-* family named for the barrel they were split from, so the pairing enforcer has no mirrored suite to re-measure them with (the StandalonePanelCommand precedent from sitting 3). cloneCeiling 23 -> 20.
+- 2026-10-09  For the owner (sitting 4): `reports/mutation/baseline.json` still carries a row for `projects-dashboard/handlers/dashboardHandlers.ts` at 88.56% (387 killed), measured before the EDS-8 split made that file a 42-line re-export barrel. The row is a ghost: nothing in the file can be mutated to those numbers again. Not deleted here because removing a row is a baseline decision, not a sitting's bookkeeping. Recommendation: delete the row in the next sweep.
