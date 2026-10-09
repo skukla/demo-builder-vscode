@@ -83,8 +83,15 @@ Committed and deployed 2026-10-09 (owner: "Commit and deploy"): demo-erp `2e5053
 commerce-erp-integration `a53347e` pushed to their `main`; `update_integration` on Justrite
 redeployed Justrite ERP, Kukla ERP and the integration from those commits (05:05 to 05:11 UTC,
 each component's checkout read back at the new commit). The extension change is in the
-release candidate (`cec5d466e`), which runs after the owner's next F5. Untested live: the
-whole loop on the sandbox (add, tag, remove), which needs that F5 first.
+release candidate (`cec5d466e`), which runs after the owner's next F5. **Live check 2026-10-09 13:28 UTC, passed (owner: "Check 2 and 3 are okay"):** on Justrite
+with two ERPs (Justrite ERP erp_owner=justrite, 43 tagged; Kukla ERP erp_owner=kukla, 0
+tagged), Load demo data on the integration ran the pass in 2.5 minutes. Justrite ERP's fill
+took 43 products and skipped 278; Kukla ERP's took 0 and skipped 321; the answer's warning
+read exactly "Kukla ERP owns no products yet: tag products with erp_owner=kukla in Commerce,
+then Load demo data. 278 products belong to no ERP." Read back from Justrite ERP's own
+product list (the first 78 of 321 the tool can show): 55 discontinued, 3 sellable, the rest
+configurable parents; the first sellable one is tagged justrite in Commerce. Not yet checked
+live: add and remove with the pass, and the integration's old-owner discontinue on a tag change.
 
 ## Shipped so far
 - 2026-10-09  feat(app-builder): ownership is applied across every ERP when it changes (`0d7e46e33`)
