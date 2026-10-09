@@ -8,8 +8,8 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/quickEditPublisher.ts",
-        "src/features/eds/services/quickEditSnippet.ts"
+        "src/features/dashboard/ui/ProjectDashboardScreen.tsx",
+        "src/features/dashboard/ui/components/DashboardDialogs.tsx"
     ],
     "reporters": [
         "clear-text",

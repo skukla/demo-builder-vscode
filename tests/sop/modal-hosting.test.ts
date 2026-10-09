@@ -43,7 +43,7 @@ const HOSTS = /DialogContainer|DialogTrigger/;
  * become folklore the first time nobody could remember why it was listed.
  */
 const HOSTED_BY_PARENT: Record<string, string> = {
-    'AiCapabilitiesModal.tsx': 'ProjectDashboardScreen.tsx',
+    'AiCapabilitiesModal.tsx': 'DashboardDialogs.tsx',
     'PromptEditDialog.tsx': 'AiOverviewScreen.tsx',
 };
 

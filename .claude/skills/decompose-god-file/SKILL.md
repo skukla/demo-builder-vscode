@@ -128,6 +128,12 @@ bookkeeping, and because "the tests passed" cannot see a line no test constrains
    taking the `{` inside `Promise<{ treeSha: string }>` for a body, so two forwarders with
    object-literal return types read `same` against the ten-line methods they replaced;
    the return type is now skipped at bracket depth.
+   **It compares functions, so a move of JSX is invisible to it.** When a component split
+   moves markup (dialogs, a band of the page) rather than a named function, the tool
+   reports the parent as `DIFFERS` and `--control` answers "no identical function to plant
+   into". Diff the moved JSX block by hand instead: cut it out of the old file and the
+   new, strip comments and whitespace, apply the prop renames, and plant one changed
+   prop as the control (2026-10-09, `ProjectDashboardScreen` → `DashboardDialogs`).
 3. **Full checks, not the scoped gate alone:** full jest, `tsc --noEmit`, `typecheck:tests`,
    whole-repo lint, compile. State each exit code.
 4. **Mutation score after (and before only when there is no record)**, so the tests still

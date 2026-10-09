@@ -664,6 +664,15 @@ date and what happened; a failure becomes its own `fix` item.
       paints without a reload. The text now lives in `quickEditSnippet.ts` and the install
       in `quickEditPublisher.ts`; every line is a proven move and the suites drive both
       with a GitHub fake, so this is a confirmation, not a known risk.
+- [ ] **The Project Dashboard's dialogs** (the `ProjectDashboardScreen.tsx` split,
+      uncommitted on `refactor/eds-8-god-files`): open a project's dashboard and open
+      each dialog from it, then close it — Export, Save as Package (an EDS project),
+      View AI Capabilities (also close it with Esc), and Reset (the progress modal shows
+      the reset's steps). On a project built on an added demo, Change source opens the
+      Add a demo package dialog in its change mode, and after a change the source warning
+      re-checks. The five dialogs now render from `DashboardDialogs.tsx`; the move is
+      proven and both pieces score 100% under mutation, so this is a confirmation, not a
+      known risk.
 
 ## Shipped so far
 
@@ -719,3 +728,4 @@ date and what happened; a failure becomes its own `fix` item.
 - 2026-10-08  refactor(authentication): ioEventsClient keeps the endpoints; the transport and the provider-binding rule get their own files (`fcf860115`)
 - 2026-10-08  (uncommitted on refactor/eds-8-god-files) eds/services/quickEditPublisher.ts 427 -> 187 (the GitHub install: read, decide which edits are missing, commit, never throw; 15 -> 4 public surface) split by job: the anchors, markers, inserted blocks, the quick-edit.js body and the pure buildQuickEditScriptsJs transform moved to quickEditSnippet.ts (268), on the pdp404Snippet model. Every line a proven move, no forwarders, callers unchanged (all three import installQuickEdit). Tests split to match (quickEditSnippet.test.ts, quickEditSnippet-anchorMatch.test.ts renamed, shared quickEditScriptsFixture.ts); two gaps closed (the anchor-missing reason, the two repo paths). Mutation: publisher 77.63 -> 77.05 (denominator only; 59 -> 62 killed across the pair), snippet 100. Pins: godFileCandidates 40 -> 39, godFileCoupled 6 -> 5.
 - 2026-10-09  refactor(eds): quickEditPublisher keeps the GitHub install; the vendored text and its transform become quickEditSnippet (`c43b63f5e`)
+- 2026-10-09  (uncommitted on refactor/eds-8-god-files) dashboard/ui/ProjectDashboardScreen.tsx 374 -> 311 (what the dashboard shows: the header with the rename field, the masthead notices, the action grid, and the open state of each dialog; 25 -> 19 non-type imports) split by job: the five dialogs mounted over it (Change source, Export, Save as demo package, the operation progress modal, the AI capability catalog) moved to components/DashboardDialogs.tsx (139), with the change-source status re-request. No forwarders; the screen is its only caller and its props are unchanged. Every moved line proven by a normalised JSX diff (proveMove sees functions, and this move was JSX); the only differences are the two close callbacks, which now arrive as props carrying the same setters. New suite DashboardDialogs.test.tsx (9 tests); one wiring test added for the broken-link count. Mutation: the screen's row of record said 100 (2026-09-06) but measured 92.54 before the split (5 survivors no test constrained); after, the screen 100 (54/54) and DashboardDialogs 100 (9/9). Pins: godFileCandidates 39 -> 38, godFileCoupled 5 -> 4; modal-hosting names DashboardDialogs as the AI capability catalog's host. Renders in the dashboard bundle only.
