@@ -117,7 +117,14 @@ and measuring 70.16, projectResetService.ts 93.51 against 86.06, consoleApiHandl
 - **Re-measure them overnight**: `node scripts/mutationSweep.mjs --stale --minutes 480`
   (`--dry` prints the queue and runs nothing). Here pinning a LOWER score is the point —
   it corrects a row that was too high — which is why `--stale` implies `--redo`. `npm run
-  sweep` only lists the stale rows; it never starts Stryker for them.
+  sweep` only lists the stale rows; it never starts Stryker at all.
+
+**Where this skill sits in the registry.** Nothing here runs inside `npm run sweep`. The
+pilot and the stale re-measure are the `overnight` cadence in `tests/sop/toolingRegistry.ts`
+— a person starts them when no other test run needs the machine. The focused run and the
+worklist are `on-demand`, steps of a working session. Before 2026-10-09 three of these sat
+in the sweep, which made a half-minute report take hours and collide with other test runs;
+`tooling-registry.test.ts` now fails if any entry that starts Stryker is filed `periodic`.
 
 **Moving to the next module is one command:**
 

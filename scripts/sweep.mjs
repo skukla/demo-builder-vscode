@@ -105,6 +105,15 @@ const judgement = INSTRUMENTS.filter((i) => i.cadence === 'periodic' && i.runs =
 console.log(`\n${BAR}\nNOT run here — ${judgement.length} guided reviews needing a person\n${BAR}`);
 for (const i of judgement) console.log(`  ${i.id.padEnd(30)} ${i.unwiredReason}`);
 
+// Stryker never runs here — it takes hours and collides with any other test run.
+// Say where it went, so its absence does not read as "dropped".
+const overnight = INSTRUMENTS.filter((i) => i.cadence === 'overnight');
+console.log(
+    `\nMutation testing (Stryker) is NOT run here: it is the 'overnight' cadence ` +
+        `(${overnight.map((i) => i.id).join(', ')}). Re-measure with: ` +
+        `${overnight.find((i) => i.runs?.includes('--stale'))?.runs}`,
+);
+
 console.log(`\n${BAR}`);
 const reported = flagged.filter((r) => r.isReport).length;
 console.log(

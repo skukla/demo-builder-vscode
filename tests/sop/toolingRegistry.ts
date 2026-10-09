@@ -62,6 +62,14 @@ export type Cadence =
     | 'per-push'
     /** Release cuts / sweeps. Run by `npm run sweep`. */
     | 'periodic'
+    /**
+     * Stryker runs. They hold the machine and collide with any other test run, so a
+     * person starts them when nothing else needs it — the long one before leaving
+     * for the night. Split from `periodic` on 2026-10-09: Stryker inside `npm run
+     * sweep` turned a half-minute report into hours. The sweep reports; this
+     * re-measures.
+     */
+    | 'overnight'
     /** Invoked by a human or an agent when the situation calls for it. */
     | 'on-demand';
 
@@ -255,30 +263,6 @@ const JUDGEMENT: readonly Instrument[] = [
         unwiredReason: 'guided review over a generated census',
     },
     {
-        id: 'mutation-test-pilot',
-        kind: 'skill',
-        cadence: 'periodic',
-        what: 'Stryker mutation testing over a 4-module pilot scope — the only instrument that measures whether the tests would CATCH a defect rather than whether they executed a line',
-        runs: 'npm run test:mutation',
-        resultKind: 'report',
-    },
-    {
-        id: 'test:mutation:focus',
-        kind: 'npm-script',
-        cadence: 'periodic',
-        what: "Stryker over ONE module — 3 minutes instead of the sample's 16, so a survivor can be killed and re-measured inside a working session rather than a release cut",
-        runs: 'npm run test:mutation:focus',
-        resultKind: 'report',
-    },
-    {
-        id: 'test:mutation:worklist',
-        kind: 'npm-script',
-        cadence: 'periodic',
-        what: 'turns a Stryker report into the ranked list of DECISIONS nothing constrains — dropping log lines, log-only branches and non-decisions, because a score is not a thing anyone can act on',
-        runs: 'npm run test:mutation:worklist',
-        resultKind: 'report',
-    },
-    {
         id: 'test-strategy-scan',
         kind: 'skill',
         cadence: 'periodic',
@@ -327,6 +311,52 @@ const JUDGEMENT: readonly Instrument[] = [
         what: 'staleness in memory, skills and CLAUDE.md, mined from recent transcripts',
         runs: null,
         unwiredReason: 'reads transcripts outside the repo; proposes, never applies',
+    },
+];
+
+/**
+ * Mutation testing. Every entry that starts Stryker is `overnight`, never
+ * `periodic`, and `tooling-registry.test.ts` enforces that by reading each
+ * command — so `npm run sweep` cannot start Stryker however a new entry is filed.
+ * The sweep still LISTS what needs re-measuring (`test:mutation:stale`, above).
+ */
+const MUTATION: readonly Instrument[] = [
+    {
+        id: 'test:mutation:sweep',
+        kind: 'npm-script',
+        cadence: 'overnight',
+        resultKind: 'report',
+        what: 'the overnight re-measure: with `--stale` it runs Stryker over every baseline row older than its module, oldest first, and pins what it finds — a lower floor included, because a stale row sits above the truth',
+        runs: 'npm run test:mutation:sweep -- --stale --minutes 480',
+        writes: true,
+    },
+    {
+        id: 'mutation-test-pilot',
+        kind: 'skill',
+        cadence: 'overnight',
+        what: 'Stryker mutation testing over a 4-module pilot scope — the only instrument that measures whether the tests would CATCH a defect rather than whether they executed a line',
+        runs: 'npm run test:mutation',
+        resultKind: 'report',
+    },
+    {
+        id: 'test:mutation:focus',
+        kind: 'npm-script',
+        cadence: 'on-demand',
+        what: "Stryker over ONE module — 3 minutes instead of the sample's 16, so a survivor can be killed and re-measured inside a working session rather than a release cut",
+        runs: 'npm run test:mutation:focus',
+        resultKind: 'report',
+        unwiredReason:
+            'a working-session step on one chosen module; it starts Stryker, so it is never swept',
+    },
+    {
+        id: 'test:mutation:worklist',
+        kind: 'npm-script',
+        cadence: 'on-demand',
+        what: 'turns a Stryker report into the ranked list of DECISIONS nothing constrains — dropping log lines, log-only branches and non-decisions, because a score is not a thing anyone can act on',
+        runs: 'npm run test:mutation:worklist',
+        resultKind: 'report',
+        unwiredReason:
+            'runs no Stryker, but only reads the report the last focused run left behind — on its own in a sweep it would rank whichever module someone last measured',
     },
 ];
 
@@ -619,6 +649,7 @@ export const NON_INSTRUMENT_SCRIPTS: Readonly<Record<string, string>> = {
 export const INSTRUMENTS: readonly Instrument[] = [
     ...PERIODIC,
     ...JUDGEMENT,
+    ...MUTATION,
     ...NPM_CHECKS,
     ...AUTHORING,
     ...PROGRAM_INSTRUMENTS,

@@ -46,6 +46,9 @@ bash .claude/skills/circular-dependency-scan/scan.sh src               # cycles 
 bash .claude/skills/dead-code-scan/scan.sh src                         # orphans + doc drift
 bash .claude/skills/architecture-duplication-scan/signals.sh src       # competing impls
 npm run test:mutation:stale -- --limit 30   # mutation rows older than their module (lists only)
+# No Stryker here, and none in `npm run sweep`: re-measuring is the OVERNIGHT cadence —
+#   npm run test:mutation:sweep -- --stale --minutes 480   (a person starts it; hours)
+# Propose that run when the stale list is long; never start it inside this pass.
 # Boundary-cast audit — silenced type errors (the stackBackend / payload class).
 # Quote the glob args (zsh); the second grep drops comment-only lines.
 grep -rEn '\bas (any|never)\b|as unknown as' src --include='*.ts' --include='*.tsx' \
