@@ -8,10 +8,11 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/helpers/envFileGenerator.ts",
-        "src/features/project-creation/helpers/envVarResolution.ts",
-        "src/features/project-creation/helpers/envFileRegeneration.ts",
-        "src/features/project-creation/helpers/componentConfigFiles.ts"
+        "src/features/eds/ui/steps/StorefrontSetupStep.tsx",
+        "src/features/eds/ui/helpers/storefrontSetupState.ts",
+        "src/features/eds/ui/hooks/useStorefrontSetup.ts",
+        "src/features/eds/ui/components/StorefrontSetupErrorView.tsx",
+        "src/features/eds/ui/components/StorefrontSetupCompletedView.tsx"
     ],
     "reporters": [
         "clear-text",

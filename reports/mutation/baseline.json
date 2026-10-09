@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "EDS-8 split of envFileGenerator.ts (2026-10-09) into envVarResolution, envFileRegeneration and componentConfigFiles: every function is a proven move, 348 mutants before the split and 347 after it (one unread interface member deleted), and the new direct suite for envVarResolution kills the five key-list mutants that were previously ledgered as invisible through the writers; remaining survivors are log text, the ledgered equivalents, and one unread interface member that was deleted",
+    "_note": "EDS-8 split of StorefrontSetupStep.tsx (2026-10-09) into useStorefrontSetup (the run), storefrontSetupState (phases and pure transitions), StorefrontSetupErrorView and StorefrontSetupCompletedView (the failed and published screens): the unsplit file re-measured first at 92.61% (238 killed, 17 survived, 2 uncovered of 257; the 92.83% row predated the EDS-20 changes), and after the split the same 257 mutants score 95.72% with every survivor a ledgered equivalent; direct suites for each piece killed the five open gaps (the github-app active phase, the completed partial phase, the install-required message, and two fallback strings).",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -7030,21 +7030,15 @@
             "openGaps": 0
         },
         "src/features/eds/ui/steps/StorefrontSetupStep.tsx": {
-            "score": 92.83,
-            "killed": 233,
-            "survived": 16,
-            "noCoverage": 2,
+            "score": 100,
+            "killed": 30,
+            "survived": 0,
+            "noCoverage": 0,
             "timeout": 0,
-            "survivorCategories": {
-                "branch": 6,
-                "other": 8,
-                "string": 2
-            },
-            "uncoveredCategories": {
-                "string": 2
-            },
-            "highValueSurvivors": 6,
-            "equivalent": 14,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
             "openGaps": 0
         },
         "src/features/lifecycle/commands/managedStorefrontFiles.ts": {
@@ -10320,6 +10314,59 @@
             "uncoveredCategories": {},
             "highValueSurvivors": 0,
             "equivalent": 5,
+            "openGaps": 0
+        },
+        "src/features/eds/ui/helpers/storefrontSetupState.ts": {
+            "score": 98.23,
+            "killed": 111,
+            "survived": 2,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 2
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 2,
+            "equivalent": 2,
+            "openGaps": 0
+        },
+        "src/features/eds/ui/hooks/useStorefrontSetup.ts": {
+            "score": 91,
+            "killed": 91,
+            "survived": 9,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 8,
+                "branch": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 1,
+            "equivalent": 9,
+            "openGaps": 0
+        },
+        "src/features/eds/ui/components/StorefrontSetupCompletedView.tsx": {
+            "score": 100,
+            "killed": 7,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/eds/ui/components/StorefrontSetupErrorView.tsx": {
+            "score": 100,
+            "killed": 7,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
             "openGaps": 0
         }
     }

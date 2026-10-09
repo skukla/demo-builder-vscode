@@ -539,6 +539,28 @@ and three of them are more than 40% comments). Decide which.
   they are fully generated and edits belong in Configure. Recommend: record it, since Configure
   is where these values are meant to be edited and a skipped `.env` would deploy stale values.
 
+- 2026-10-09  From the StorefrontSetupStep split, three findings, none changed (the sitting
+  was a pure move):
+  (1) **The first start and Retry send different dependency lists.** Retry de-duplicates
+  (`new Set`), the first start does not, so a mesh id that is in both
+  `components.dependencies` and `selectedAppBuilderComponents` goes out twice on the first
+  start and once on Retry. Both live in `useStorefrontSetup.ts`; the hook suite pins today's
+  behaviour. **Decide:** de-duplicate both (recommend: it is one line and the handler only
+  checks membership), or leave them.
+  (2) **The failed and published screens are near-copies of `StatusDisplay`** (the error
+  variant with Cancel/Retry; the success/warning variant with detail lines). They now live
+  in `StorefrontSetupErrorView.tsx` and `StorefrontSetupCompletedView.tsx`. Moving them onto
+  `StatusDisplay` adds its fade and its fixed 350px box, which fights the 2026-10-07 "every
+  state centres in the pane" change, so it is a visual change and needs a look. **Decide:**
+  move them (recommend, with a `height` that fills) or record them as variants.
+  (3) **The completed message is still never shown.** `applyComplete` stores the pipeline's
+  message (or "Storefront published successfully!") but the published screen always says
+  "Storefront Published". The mutation ledger carried this as an OPEN product call; that row
+  is gone because the transition is now tested directly, so the question lives here.
+  **Decide:** show the pipeline's message on the published screen, or stop storing it.
+  Also: the new hook is 268 lines, over the skill's 200-line hook guideline (the ratchet
+  does not count hooks). It is one job, the run, so it was not cut further.
+
 ## Needs a live check
 
 The automated checks prove a move did not change what the tests constrain. What they
@@ -760,6 +782,17 @@ date and what happened; a failure becomes its own `fix` item.
       end in the same `.env` writer; every function is a proven move, so this is a
       confirmation, not a known risk.
 
+- [ ] **The wizard's storefront setup step, every state** (the `StorefrontSetupStep.tsx`
+      split, 2026-10-09): create an EDS project through the wizard and watch the setup step
+      show progress through each phase; on an owner without AEM Code Sync, confirm the install
+      dialog pauses the run and that installing the App resumes it at code sync without a
+      Retry; close the wizard mid-run and confirm the cancel offers cleanup of what was
+      created; make it fail (for example a revoked GitHub token) and confirm the error screen's
+      Cancel goes back and Retry starts again; let it finish and confirm the published screen
+      (with warnings, if PDP routing could not be set up) and that Continue opens. The hook
+      body and both screens are proven moves and every piece scores 91% or better under
+      mutation with no open gaps, so this is a confirmation, not a known risk.
+
 ## Shipped so far
 
 - 2026-09-10  2026-09-10  Gated: god-file-ratchet.test.ts pins 68 candidates / 31 coupled; rule 49 measures on edit (2987e8623)
@@ -821,3 +854,4 @@ date and what happened; a failure becomes its own `fix` item.
 - 2026-10-09  refactor(eds): daLiveAuthService is one job and stays whole; the JWT decoder gets its own file (`f1e3712f3`)
 - 2026-10-09  refactor(project-creation): split envFileGenerator by job (`45539135e`)
 - 2026-10-09  docs(backlog): the reset split is committed; deletion's auth checks are not the reset's (`6ce184ab3`)
+- 2026-10-09  StorefrontSetupStep.tsx (657 -> 122) split by job (Hook Extraction, ADR-017). The step keeps which screen a phase shows. The run (start once, the four pushes, Retry, cancel when the wizard closes) is ui/hooks/useStorefrontSetup.ts (268); the phases, the expectation line, the config check and every state transition as a pure function are ui/helpers/storefrontSetupState.ts (288); the failed and published screens are ui/components/StorefrontSetupErrorView.tsx (51) and StorefrontSetupCompletedView.tsx (51). Dead code deleted: the per-phase PROGRESS_RANGES entries (only the finished value was ever read). No forwarders; the only caller (wizardStepRouter) is unchanged and all five step suites passed untouched. proveMove: getHelperText, toStartEdsConfig, isActivePhase pure moves; the hook body and both screens hand-diffed with the transitions inlined back, same; two inert differences named (the initial state is built lazily; the incomplete-config error was written twice and is now one transition); planted controls reported DIFFERS. Mutation: the 92.83 row predated EDS-20, so the unsplit file was re-measured at 92.61 (257 mutants, 5 open gaps); after, the same 257 score 95.72 with every survivor a ledgered equivalent: step 100, error view 100, completed view 100, storefrontSetupState 98.23, useStorefrontSetup 91.00, openGaps 0. Direct suites added for each piece (4 suites, 67 tests). Pins: godFileCandidates 35 -> 34, godFileCoupled stays 2; 5 mutation-equivalents rows re-homed, the OPEN completed-message row dropped (now killed; the question moved to the findings above); cloneCeiling at the pin (36). Renders in the wizard bundle only. Checks: gate green (lint 0 errors, tsc, typecheck:tests, full jest 1901 suites / 32,260 tests, source-duplication). Live check appended above.
