@@ -28,7 +28,8 @@
 
 import { explainMissingDeveloperAccess } from './authenticationErrorFormatter';
 import { errorMessage, teardownEventEntities } from './consoleProjectTeardownEvents';
-import type { EventsAuth, IoEventsClient } from './ioEventsClient';
+import type { IoEventsClient } from './ioEventsClient';
+import type { EventsAuth } from './ioEventsTransport';
 import type { WorkspaceS2SCredentialIds } from './types';
 import { getLogger } from '@/core/logging/debugLogger';
 

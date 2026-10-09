@@ -16,7 +16,7 @@ import {
     listWorkspaceEventEntities,
     type EventWorkspaceTarget,
 } from '@/features/authentication/services/eventProviderLifecycle';
-import { IoEventsApiError, type RawProvider } from '@/features/authentication/services/ioEventsClient';
+import { IoEventsApiError, type RawProvider } from '@/features/authentication/services/ioEventsTransport';
 import { CRED_WS1, boundProvider, makeHarness } from './consoleProjectTeardown.testUtils';
 
 const TARGET: EventWorkspaceTarget = { orgId: 'org1', projectId: 'proj1', workspaceId: 'ws1' };

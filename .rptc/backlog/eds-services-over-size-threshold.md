@@ -470,6 +470,12 @@ and three of them are more than 40% comments). Decide which.
   prerequisites area this branch is built on, and a split now would collide with it. Take it
   after PR-1a merges. No decision needed from the owner; recorded so the gap is explained.
 
+- 2026-10-08  From the ioEventsClient cut. Four client methods (`createProvider`,
+  `createEventMetadata`, `createRegistration`, `deleteEventMetadata`) and their three request-body
+  types have no caller outside the tests: leftovers from the event-provider creation feature
+  pulled on 2026-09-09. Kept, because whether creation comes back is [[AB-8]]'s open question.
+  **Decide (with AB-8):** if creation is not coming back, delete them (no soft deprecation).
+
 ## Needs a live check
 
 The automated checks prove a move did not change what the tests constrain. What they
@@ -640,6 +646,16 @@ date and what happened; a failure becomes its own `fix` item.
       Authoring keeps DA.live classic. Suites render the real hooks with Spectrum mocked;
       only the real webview proves the screen still looks and behaves the same.
 
+- [ ] **Deleting an Adobe project that has event providers** (the `ioEventsClient.ts`
+      split, uncommitted on `refactor/eds-8-god-files`): this is a real teardown, so use a
+      scratch Console project whose workspace holds at least one app-onboarded 3rd-party
+      provider with a registration. Delete it from Demo Builder and confirm the
+      registrations, then the provider, are gone in Developer Console and the project
+      deletes. Every request now travels through `ioEventsTransport.ts` and the
+      which-providers-are-ours filter lives in `eventProviderBinding.ts`; the suites drive
+      both with an injected fetch, so only a live call proves the real `fetch`, the
+      headers and the pagination against Adobe.
+
 ## Shipped so far
 
 - 2026-09-10  2026-09-10  Gated: god-file-ratchet.test.ts pins 68 candidates / 31 coupled; rule 49 measures on edit (2987e8623)
@@ -690,3 +706,4 @@ date and what happened; a failure becomes its own `fix` item.
 - 2026-10-08  docs(backlog): toolManager.ts is not split; it is the unreachable ACO ingestion tool, and DI-4 decides its fate (`312171589`)
 - 2026-10-08  (uncommitted on refactor/eds-8-god-files) dashboard/ui/configure/ConfigureScreen.tsx 395 -> 207 (the wiring and the page chrome; 23 -> 15 non-type imports) over four hooks: useProjectNameField 83 (the typed title, its error and folder slug), useConfigureSave 135 (Save, Close, the saving/deploying flags), useConfigureSections 115 (sections, global validation, rail tabs, canSave), useConfigureFieldRow 158 (store discovery, the shared-credential probe, the row renderer). Rendered markup unchanged, no forwarders, every existing ConfigureScreen suite unchanged and green. proveMove: ConfigureScreen DIFFERS by construction (its body became hook calls); the four new hooks hand-diffed against HEAD statement by statement, all verbatim except one comment reworded and normalizeProjectName(projectName) moved into useProjectNameField as projectFolder; one effect-order change (validation now runs before the discovery effects; no shared state). Mutation: before = baseline row 86.36 (10 survived/5 uncovered); after ConfigureScreen 96.97, useConfigureSave 69.70 (all branch survivors ledgered equivalents: the swallowed save-failure throw and two constant dependency arrays), useConfigureSections 96.15, useProjectNameField 90.91, useConfigureFieldRow 100; openGaps 0 on all five. Gap closed: an EDS project with no saved preference now saves DA.live classic, pinned. Pins: godFileCandidates 42 -> 41, godFileCoupled 8 -> 7; 2 mutation-equivalents rows re-homed to useConfigureSave, 2 added; cloneCeiling stays 39. Checks: full jest 1892/1892, tsc, typecheck:tests, lint (0 errors, 25 warnings), compile, source-duplication, tsc-blindspots, test-file-sizes all 0.
 - 2026-10-08  refactor(dashboard): ConfigureScreen keeps the page frame; the name field, save, sections and field rows become hooks (`c9cd74b35`)
+- 2026-10-08  (uncommitted on refactor/eds-8-god-files) authentication/services/ioEventsClient.ts 447 -> 216 (the endpoints: list/delete providers and registrations, the create half and event metadata; 20 public surface) split by job: how one request travels (headers, timeout, sanitized IoEventsApiError, isEventsAccessDenied, already-gone DELETEs, the pagination host check) moved to ioEventsTransport.ts (193), which the client wraps, and the ownership rule (THIRD_PARTY_PROVIDER_METADATA, parseProviderBinding) to eventProviderBinding.ts (69). Callers import the owning unit, no forwarders. proveMove --via transport: all 17 functions a pure move (control fired); without --via the only difference was the transport. prefix. Mutation: before = baseline row 91.3 (123/12/3); after client 98.28, transport 98.39, binding 100, openGaps 0 on all three; the ten string survivors (operation labels and error messages) are now pinned by message tests; 1 equivalents row re-homed to the transport. Pins: godFileCandidates 41 -> 40, godFileCoupled 7 -> 6; cloneCeiling stays 39. AB-6 and AB-8 notes updated. Live check appended above.

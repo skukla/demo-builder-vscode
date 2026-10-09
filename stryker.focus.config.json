@@ -8,11 +8,9 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/dashboard/ui/configure/ConfigureScreen.tsx",
-        "src/features/dashboard/ui/configure/hooks/useProjectNameField.ts",
-        "src/features/dashboard/ui/configure/hooks/useConfigureSave.ts",
-        "src/features/dashboard/ui/configure/hooks/useConfigureSections.ts",
-        "src/features/dashboard/ui/configure/hooks/useConfigureFieldRow.tsx"
+        "src/features/authentication/services/ioEventsClient.ts",
+        "src/features/authentication/services/ioEventsTransport.ts",
+        "src/features/authentication/services/eventProviderBinding.ts"
     ],
     "reporters": [
         "clear-text",
