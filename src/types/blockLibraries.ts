@@ -42,7 +42,11 @@ export interface LibraryVersionInfo {
     source: AddonSource;
     /** Commit SHA of the source repo at installation time */
     commitSha: string;
-    /** Block IDs installed from this library */
+    /**
+     * Block IDs whose folders this library copied into the storefront (at
+     * install, and by an update that copies a new one). A block in here whose
+     * folder is gone was removed by hand, so an update does not copy it back.
+     */
     blockIds: string[];
     /**
      * The authoring entries the extension itself added to the storefront's three
@@ -66,6 +70,12 @@ export interface AddedComponentEntries {
     filters: string[];
     /** `component-models.json`: ids of model entries. */
     models: string[];
+    /**
+     * `component-definition.json`: ids of entries whose HTML example
+     * (`plugins.da.unsafeHTML`) the extension filled in. Absent when it filled
+     * none, and on records written before the field existed.
+     */
+    htmlExamples?: string[];
 }
 
 /** Persisted tracking data with installation timestamp */

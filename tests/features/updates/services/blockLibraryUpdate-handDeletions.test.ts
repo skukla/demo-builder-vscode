@@ -133,9 +133,33 @@ describe('applyBlockLibraryUpdateResolved — hand deletions (EDS-36)', () => {
             { project: edsProject(lib), library: lib, latestCommit: 'new' }, 'enabled', makeCtx(),
         );
 
+        // The folder went with the entry, so the folder is what is named; its
+        // entries are not considered at all.
         expect(leftOut).toEqual([
-            { library: 'Acme Blocks', file: 'component-definition.json', id: 'promo' },
+            { library: 'Acme Blocks', file: 'block folder blocks/promo', id: 'promo' },
         ]);
+    });
+
+    it('does not copy back the block folder the SC deleted', async () => {
+        const lib = record();
+
+        await applyBlockLibraryUpdateResolved(
+            { project: edsProject(lib), library: lib, latestCommit: 'new' }, 'enabled', makeCtx(),
+        );
+
+        const tree = fileOps.commitTreeToBranch.mock.calls[0][3] as GitHubTreeInput[];
+        expect(tree.map((e) => e.path).filter((path) => path.startsWith('blocks/'))).toEqual([
+            'blocks/quote/quote.js',
+        ]);
+    });
+
+    it('records the block it copied beside the ones copied before, so a later deletion stays deleted', async () => {
+        const lib = record();
+        const project = edsProject(lib);
+
+        await applyBlockLibraryUpdateResolved({ project, library: lib, latestCommit: 'new' }, 'enabled', makeCtx());
+
+        expect(project.installedBlockLibraries?.[0].blockIds).toEqual(['promo', 'quote']);
     });
 
     it('records the new entry beside the old one and saves the project', async () => {

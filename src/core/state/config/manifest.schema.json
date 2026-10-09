@@ -1288,7 +1288,7 @@
           "items": {
             "type": "string"
           },
-          "description": "Block IDs installed from this library"
+          "description": "Block IDs whose folders this library copied into the storefront (at install, and by an update that copies a new one). A block in here whose folder is gone was removed by hand, so an update does not copy it back."
         },
         "addedEntries": {
           "$ref": "#/definitions/AddedComponentEntries",
@@ -1356,6 +1356,13 @@
             "type": "string"
           },
           "description": "`component-models.json`: ids of model entries."
+        },
+        "htmlExamples": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "`component-definition.json`: ids of entries whose HTML example (`plugins.da.unsafeHTML`) the extension filled in. Absent when it filled none, and on records written before the field existed."
         }
       },
       "required": [

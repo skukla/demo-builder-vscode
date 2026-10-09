@@ -207,6 +207,7 @@ describe('installBlockCollections — the order ids come back in', () => {
             blocksCount: 0,
             blockIds: [],
             libraryVersions: [],
+            removedByHand: [],
         });
         expect(mockGithubFileOps.createTree).not.toHaveBeenCalled();
     });

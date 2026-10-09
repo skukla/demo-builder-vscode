@@ -114,10 +114,14 @@ export async function applyBlockLibraryUpdateResolved(
 
     // effectiveBehavior === 'enabled'
     const result = await installBlockLibraryFiles(item, ctx);
-    // Saved by the commit-sha save just below. Set first: the entries are in
-    // the repository now, whether or not that save succeeds.
-    const addedEntries = mergeAddedEntries(lib.addedEntries, result.libraryVersions?.[0]?.addedEntries);
+    // Saved by the commit-sha save just below. Set first: the entries and block
+    // folders are in the repository now, whether or not that save succeeds.
+    const version = result.libraryVersions?.[0];
+    const addedEntries = mergeAddedEntries(lib.addedEntries, version?.addedEntries);
     if (addedEntries) lib.addedEntries = addedEntries;
+    // A block this update copied is the library's from now on, so deleting its
+    // folder later stays deleted too.
+    lib.blockIds = [...new Set([...lib.blockIds, ...(version?.blockIds ?? [])])];
     await updateCommitShaWithRollback(lib, item.latestCommit, () =>
         ctx.stateManager.saveProject(item.project),
     );
@@ -167,7 +171,8 @@ async function applyDisabledMarker(
  *
  * The installer only ADDS: a block folder that already exists in the storefront
  * is left exactly as it is (`installBlockCollections` seeds its seen-set from
- * the destination's `blocks/`).
+ * the destination's `blocks/`), and one this library copied before that is gone
+ * now was deleted by hand and is not copied back.
  */
 export async function installBlockLibraryFiles(
     item: { project: Project; library: BlockLibraryEntry },
@@ -185,16 +190,22 @@ export async function installBlockLibraryFiles(
     const { tokenService } = getGitHubServices(ctx.secrets);
     const fileOps = new GitHubFileOperations(tokenService, ctx.logger);
 
-    // What this library added before, so an entry the SC has since deleted is
-    // left out rather than put back (EDS-36). None for a first install.
-    const addedEntries = item.project.installedBlockLibraries?.find(
+    // What this library added before — entries and block folders — so one the
+    // SC has since deleted is left out rather than put back (EDS-36). None for a
+    // first install.
+    const recorded = item.project.installedBlockLibraries?.find(
         (l) => l.name === item.library.name,
-    )?.addedEntries;
+    );
     const result = await installBlockCollections(
         fileOps,
         destOwner,
         destRepo,
-        [{ source: item.library.source, name: item.library.name, ...(addedEntries ? { addedEntries } : {}) }],
+        [{
+            source: item.library.source,
+            name: item.library.name,
+            ...(recorded?.addedEntries ? { addedEntries: recorded.addedEntries } : {}),
+            ...(recorded ? { blockIds: recorded.blockIds } : {}),
+        }],
         ctx.logger,
     );
     if (!result.success) {

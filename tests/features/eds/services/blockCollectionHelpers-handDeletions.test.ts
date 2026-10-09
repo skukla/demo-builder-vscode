@@ -65,13 +65,25 @@ function destFiles(indent: Indent): Record<string, string> {
     };
 }
 
-function prime(mock: jest.Mocked<GitHubFileOperations>, dest: Record<string, string>): void {
+/** What a test changes about the two repositories; the rest is the defaults above. */
+interface PrimeOptions {
+    /** The library's three files. */
+    source?: Record<string, string>;
+    /** Block folders the storefront has. */
+    storefrontBlocks?: string[];
+}
+
+function prime(
+    mock: jest.Mocked<GitHubFileOperations>,
+    dest: Record<string, string>,
+    { source = SOURCE_FILES, storefrontBlocks = [] }: PrimeOptions = {},
+): void {
     mock.listRepoFiles
-        .mockResolvedValueOnce([]) // storefront: none of the library's block folders
+        .mockResolvedValueOnce(createBlockFileEntries(storefrontBlocks))
         .mockResolvedValueOnce(createBlockFileEntries(['hero-cta', 'newsletter', 'tabs']));
     mock.getBlobContent.mockResolvedValue('export default function() {}');
     mock.getFileContent.mockImplementation(async (owner: string, _repo: string, path: string) => {
-        const content = owner === SOURCE.owner ? SOURCE_FILES[path] : dest[path];
+        const content = owner === SOURCE.owner ? source[path] : dest[path];
         return content === undefined ? null : { content, sha: 'sha', path, encoding: 'base64' };
     });
     mock.getBranchInfo.mockResolvedValue({ treeSha: 'tree-sha', commitSha: 'source-commit' });
@@ -229,6 +241,142 @@ describe('installBlockCollections — entries removed by hand (EDS-36)', () => {
         const def = JSON.parse(committedFiles(mockGithubFileOps)['component-definition.json']!);
         const ids = def.groups.flatMap((g: { components: Array<{ id: string }> }) => g.components.map((c) => c.id));
         expect(ids.filter((id: string) => id === 'hero-cta')).toHaveLength(1);
+    });
+});
+
+/** The block files in the tree handed to the commit, by path. */
+function committedBlockPaths(mock: jest.Mocked<GitHubFileOperations>): string[] {
+    const tree = mock.commitTreeToBranch.mock.calls[0][3] as GitHubTreeInput[];
+    return tree.map((e) => e.path).filter((path) => path.startsWith('blocks/'));
+}
+
+describe('installBlockCollections — block folders removed by hand (EDS-36)', () => {
+    let mockGithubFileOps: jest.Mocked<GitHubFileOperations>;
+    let mockLogger: jest.Mocked<Logger>;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        ({ mockLogger, mockGithubFileOps } = setupBlockCollectionMocks());
+    });
+
+    function install(library: BlockLibraryEntry) {
+        return installBlockCollections(
+            mockGithubFileOps, 'dest-owner', 'dest-repo', [library], mockLogger,
+        );
+    }
+
+    it('does not copy back a folder it added before, nor put back its entries, and says so', async () => {
+        const dest = destFiles(2);
+        prime(mockGithubFileOps, dest);
+
+        // An earlier install copied hero-cta; the SC has deleted its folder. No
+        // entry record, so only the folder rule can keep hero-cta's entries out.
+        const result = await install({ source: SOURCE, name: LIBRARY_NAME, blockIds: ['hero-cta'] });
+
+        expect(committedBlockPaths(mockGithubFileOps)).toEqual([
+            'blocks/newsletter/newsletter.js',
+            'blocks/tabs/tabs.js',
+        ]);
+        expect(committedFiles(mockGithubFileOps)).toEqual(
+            expectedFiles(dest, 2, {
+                definition: ['newsletter'],
+                section: ['newsletter', 'tabs'],
+                filters: [{ id: 'tabs', components: ['tabs-item'] }],
+                models: ['newsletter'],
+            }),
+        );
+        expect(result.blockIds).toEqual(['newsletter', 'tabs']);
+        expect(result.removedByHand).toEqual([
+            { library: LIBRARY_NAME, file: 'block folder blocks/hero-cta', id: 'hero-cta' },
+        ]);
+    });
+
+    it('leaves a folder the storefront still has alone, whatever the record says', async () => {
+        prime(mockGithubFileOps, destFiles(2), { storefrontBlocks: ['hero-cta'] });
+
+        const result = await install({ source: SOURCE, name: LIBRARY_NAME, blockIds: ['hero-cta'] });
+
+        expect(committedBlockPaths(mockGithubFileOps)).not.toContain('blocks/hero-cta/hero-cta.js');
+        expect(result.removedByHand).toStrictEqual([]);
+    });
+
+    it('commits nothing when every block it would copy was removed by hand, and says so', async () => {
+        prime(mockGithubFileOps, destFiles(2));
+
+        const result = await install({
+            source: SOURCE, name: LIBRARY_NAME, blockIds: ['hero-cta', 'newsletter', 'tabs'],
+        });
+
+        expect(mockGithubFileOps.commitTreeToBranch).not.toHaveBeenCalled();
+        expect(result.success).toBe(true);
+        expect(result.removedByHand?.map((e) => e.id)).toEqual(['hero-cta', 'newsletter', 'tabs']);
+    });
+});
+
+describe('installBlockCollections — HTML examples removed by hand (EDS-36)', () => {
+    let mockGithubFileOps: jest.Mocked<GitHubFileOperations>;
+    let mockLogger: jest.Mocked<Logger>;
+
+    /** The library, with an HTML example for the storefront's own hero and for hero-cta. */
+    const SOURCE_WITH_EXAMPLES: Record<string, string> = {
+        ...SOURCE_FILES,
+        'component-definition.json': createComponentDef([
+            { title: 'Hero', id: 'hero', unsafeHTML: '<div class="hero"></div>' },
+            { title: 'Hero CTA', id: 'hero-cta', unsafeHTML: '<div class="hero-cta"></div>' },
+            { title: 'Newsletter', id: 'newsletter' },
+        ]),
+    };
+
+    /** The storefront's definition after pass 1 adds hero-cta and newsletter. */
+    function withLibraryEntries(dest: Record<string, string>): { groups: Array<{ components: Array<Record<string, unknown>> }> } {
+        const def = JSON.parse(dest['component-definition.json']);
+        const sourceComponents = JSON.parse(SOURCE_WITH_EXAMPLES['component-definition.json']).groups[0].components;
+        def.groups[0].components.push(sourceComponents[1], sourceComponents[2]);
+        return def;
+    }
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        ({ mockLogger, mockGithubFileOps } = setupBlockCollectionMocks());
+    });
+
+    function install(library: BlockLibraryEntry) {
+        return installBlockCollections(
+            mockGithubFileOps, 'dest-owner', 'dest-repo', [library], mockLogger,
+        );
+    }
+
+    it('does not put back an example it filled before that the SC stripped, and says so', async () => {
+        const dest = destFiles(2);
+        prime(mockGithubFileOps, dest, { source: SOURCE_WITH_EXAMPLES, storefrontBlocks: ['hero'] });
+
+        const result = await install({
+            source: SOURCE,
+            name: LIBRARY_NAME,
+            addedEntries: { definition: [], sectionFilter: [], filters: [], models: [], htmlExamples: ['hero'] },
+        });
+
+        expect(committedFiles(mockGithubFileOps)['component-definition.json']).toBe(
+            JSON.stringify(withLibraryEntries(dest), null, 2),
+        );
+        expect(result.removedByHand).toEqual([
+            { library: LIBRARY_NAME, file: 'HTML example in component-definition.json', id: 'hero' },
+        ]);
+    });
+
+    it('fills an example it never filled, and records it with the examples its own entries brought', async () => {
+        const dest = destFiles(2);
+        prime(mockGithubFileOps, dest, { source: SOURCE_WITH_EXAMPLES, storefrontBlocks: ['hero'] });
+
+        const result = await install({ source: SOURCE, name: LIBRARY_NAME });
+
+        const expected = withLibraryEntries(dest);
+        expected.groups[0].components[0].plugins = { da: { unsafeHTML: '<div class="hero"></div>' } };
+        expect(committedFiles(mockGithubFileOps)['component-definition.json']).toBe(
+            JSON.stringify(expected, null, 2),
+        );
+        expect(result.removedByHand).toStrictEqual([]);
+        expect(result.libraryVersions?.[0].addedEntries?.htmlExamples).toEqual(['hero-cta', 'hero']);
     });
 });
 

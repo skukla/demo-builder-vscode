@@ -41,10 +41,27 @@ indentation. Same idea as ADR-013's authorship proof, for files that live in Git
 - An entry anywhere in `component-definition.json` (any group) now counts as present;
   before, one the SC moved to another group was added a second time.
 
+### Extended 2026-10-09 (owner: "Yes, add it")
+
+- **Deleted block folders.** `installedBlockLibraries[].blockIds` already listed the
+  folders a library copied. A block in it whose folder is gone was removed by hand: an
+  update copies none of its files, puts back none of its entries, and names it on the
+  same "Left out" line ("hero-cta (block folder blocks/hero-cta)"). An update now adds
+  the blocks it copies to `blockIds`, so a block that arrives by update is covered too.
+- **Stripped HTML examples.** New record list `addedEntries.htmlExamples` (type, schema,
+  docs): entries whose `plugins.da.unsafeHTML` the extension filled, plus entries it
+  added whole with one. An id in it whose entry has no example now is left out and
+  named ("hero (HTML example in component-definition.json)"). Each id is decided once
+  per run, so a second library cannot refill what the first left out.
+- The rules are `claimMissingBlockFolder` and the `htmlExamples` kind in
+  `addedEntriesRecord.ts`; `apply_updates`' description names all three.
+
 ## Existing projects
 
 No record means "added nothing", so the first run behaves as before and starts
-recording. Guessing authorship from today's file could claim template entries as ours,
+recording. That holds for entries and for HTML examples. Block folders are different:
+every installed project already has `blockIds`, so a deleted folder stays deleted from
+its next update. Guessing authorship from today's file could claim template entries as ours,
 and a future removal that trusted the record would then delete them. Consequence: an
 entry installed before 2026-10-09 and deleted later can still come back once.
 
@@ -52,7 +69,7 @@ entry installed before 2026-10-09 and deleted later can still come back once.
 
 - The merge only considers blocks whose folder is not already in the storefront. An
   entry deleted while its block folder stays was never put back. The bug needs the
-  folder deleted too; the block FILES still come back in that case (not changed here).
+  folder deleted too; the block FILES came back in that case too (fixed by the extension above).
 - "Refresh Block Library" (`refresh_block_library`) and `promote_block_to_library` do
   not run this merge. Refresh rebuilds the DA.live library from the repo's own file;
   promote edits the local checkout. The merge runs at creation, reset, library install
@@ -62,12 +79,11 @@ entry installed before 2026-10-09 and deleted later can still come back once.
 
 ## Not done here
 
-- Block folders the SC deleted are still re-added by an update. `blockIds` already
-  records what was added, so the same rule could apply. Owner's call.
-- The unsafeHTML enrichment pass still adds `plugins.da.unsafeHTML` back to an entry the
-  SC stripped it from.
-- Live check: on a scratch storefront, delete a library block's folder and its entry,
-  then run Check for Updates on a library with a newer commit.
+- Live check: on a scratch storefront, delete a library block's folder (and, for the
+  second rule, strip one entry's HTML example), then run Check for Updates on a library
+  with a newer commit. Expect neither to come back and both on the "Left out" line.
+- `blockIds` written before 2026-10-09 is trusted as-is. If an old record lists a block
+  the extension never actually copied, that block will not be copied by an update.
 
 ## Shipped so far
 - 2026-10-09  fix(eds): a block library install no longer puts back entries the SC deleted (`692443854`)

@@ -35,6 +35,16 @@ describe('claimMissingEntry', () => {
         expect(tracker.added.size).toBe(0);
     });
 
+    it('names a stripped HTML example as such, not as a missing entry', () => {
+        const tracker = createEntryTracker();
+        const origin = { name: 'Lib', addedEntries: { ...RECORD, htmlExamples: ['hero'] } };
+
+        expect(claimMissingEntry(tracker, origin, 'htmlExamples', 'hero')).toBe(false);
+        expect(tracker.removedByHand).toEqual([
+            { library: 'Lib', file: 'HTML example in component-definition.json', id: 'hero' },
+        ]);
+    });
+
     it('with no record, adds everything', () => {
         const tracker = createEntryTracker();
 
@@ -47,6 +57,13 @@ describe('mergeAddedEntries', () => {
         expect(mergeAddedEntries(RECORD, { ...RECORD, definition: ['hero', 'cards'] })).toEqual({
             definition: ['hero', 'cards'], sectionFilter: ['hero'], filters: [], models: [],
         });
+    });
+
+    it('carries HTML examples only when there are some, so older records keep their shape', () => {
+        expect(mergeAddedEntries(RECORD, { ...RECORD, htmlExamples: ['hero'] })).toEqual({
+            ...RECORD, htmlExamples: ['hero'],
+        });
+        expect(mergeAddedEntries(RECORD, undefined)).toStrictEqual(RECORD);
     });
 
     it('is undefined when nothing was ever added', () => {

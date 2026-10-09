@@ -34,14 +34,28 @@ are the SC's too, so the merge follows two rules:
   and recorded. A project installed before 2026-10-09 has no record, so its next run
   adds what is missing, as it always did, and starts recording. A reset passes no
   record: it starts from the template, so every entry comes back.
+- **A deleted block folder stays deleted.** `installedBlockLibraries[].blockIds` lists
+  the block folders the library copied (at install, and from now on the new ones an
+  update copies). A block in that list whose folder is gone was removed by hand: an
+  update does not copy its files back, does not put back any of its entries, and names
+  it on the same "Left out" line ("hero-cta (block folder blocks/hero-cta)"). Every
+  installed project already has this list, so the rule applies from its next update.
+- **A stripped HTML example stays stripped.** An update also fills the HTML example
+  (`plugins.da.unsafeHTML`) into an entry the storefront has without one.
+  `addedEntries.htmlExamples` records each entry it filled, and each entry it added
+  whole with an example. One in that list that has no example now was stripped by
+  hand: it is left out and named ("hero (HTML example in component-definition.json)").
+  Records written before this have no such list, so the next run fills as before and
+  starts recording.
 - **The file keeps its layout.** Each file is written back in the indentation it
   already had (four spaces, tabs, or two when there is none to detect), with its
   final newline if it had one. `promote_block_to_library` and
   `remove_block_from_library` follow the same rule for `component-definition.json`.
 
 The merge only considers blocks whose folder is not already in the storefront, so an
-entry deleted while its block folder stays was never put back. What the record adds
-is the case where the folder was deleted too.
+entry deleted while its block folder stays was never put back. When the folder is
+gone too and the library copied it, the folder rule decides first, so the entry
+record is the backstop for a block that is missing from `blockIds`.
 
 ## Registering a block for authoring
 

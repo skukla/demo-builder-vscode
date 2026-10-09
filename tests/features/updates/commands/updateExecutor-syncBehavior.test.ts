@@ -139,6 +139,8 @@ describe('performAddonUpdates — block library syncBehavior policy', () => {
                 {
                     source: { owner: 'stephen-garner-adobe', repo: 'isle5', branch: 'main' },
                     name: 'Isle5 Block Collection',
+                    // The folders it copied before, so one deleted by hand stays deleted.
+                    blockIds: ['hero'],
                 },
             ]);
         });
@@ -155,6 +157,7 @@ describe('performAddonUpdates — block library syncBehavior policy', () => {
                     source: { owner: 'stephen-garner-adobe', repo: 'isle5', branch: 'main' },
                     name: 'Isle5 Block Collection',
                     addedEntries,
+                    blockIds: ['hero'],
                 },
             ]);
         });

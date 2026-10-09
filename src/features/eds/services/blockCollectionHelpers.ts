@@ -19,15 +19,18 @@
  * The three authoring files are the SC's as much as ours: an entry the extension
  * added before and the SC has since deleted is left out, not put back (the
  * record and its reasoning: addedEntriesRecord.ts), and each file is written in
- * the indentation it already had.
+ * the indentation it already had. The same goes for a block folder it copied
+ * before and an HTML example it filled before.
  *
  * @module features/eds/services/blockCollectionHelpers
  */
 
 import {
+    claimMissingBlockFolder,
     claimMissingEntry,
     createEntryTracker,
     mergeAddedEntries,
+    noteAddedEntry,
     type EntryOrigin,
     type EntryTracker,
     type RemovedByHandEntry,
@@ -60,6 +63,12 @@ export interface BlockLibraryEntry {
      * missing from its file now was removed by hand and is not put back.
      */
     addedEntries?: AddedComponentEntries;
+    /**
+     * The block folders this library copied on earlier runs
+     * (`installedBlockLibraries[].blockIds`). One in here whose folder is gone
+     * now was removed by hand: its files and entries are not put back.
+     */
+    blockIds?: string[];
 }
 
 /** Per-library block discovery result used by merge helpers */
@@ -91,16 +100,25 @@ interface LibraryDiscoveryResult {
     sourceCommitSha: string;
 }
 
+/** What discovery carries from one library to the next within a run. */
+interface DiscoveryState {
+    /** Block folders already claimed: in the storefront, or by an earlier library */
+    seenBlocks: Set<string>;
+    /** Every block this run copies, across libraries */
+    allBlockIds: string[];
+    tracker: EntryTracker;
+}
+
 /**
  * Discover the blocks in a single library's source repo and deduplicate them
  * against blocks already seen (first-seen-wins). Mutates `seenBlocks` and
- * `allBlockIds` to record newly-claimed block IDs.
+ * `allBlockIds` to record newly-claimed block IDs. A block the library copied
+ * before whose folder is gone is claimed but not copied (removed by hand).
  */
 async function discoverAndDeduplicateLibraryBlocks(
     githubFileOps: GitHubFileOperations,
     lib: BlockLibraryEntry,
-    seenBlocks: Set<string>,
-    allBlockIds: string[],
+    { seenBlocks, allBlockIds, tracker }: DiscoveryState,
 ): Promise<LibraryDiscoveryResult> {
     const sourceFiles = await githubFileOps.listRepoFiles(
         lib.source.owner, lib.source.repo, lib.source.branch,
@@ -120,14 +138,15 @@ async function discoverAndDeduplicateLibraryBlocks(
         }
     }
 
-    // Determine which blocks are new (not seen in a prior library)
+    // Determine which blocks are new (not seen in a prior library). Claim a
+    // removed-by-hand block too, so a later library does not copy it back either.
     const uniqueBlockIds: string[] = [];
     for (const blockId of [...discoveredBlocks].sort()) {
-        if (!seenBlocks.has(blockId)) {
-            seenBlocks.add(blockId);
-            uniqueBlockIds.push(blockId);
-            allBlockIds.push(blockId);
-        }
+        if (seenBlocks.has(blockId)) continue;
+        seenBlocks.add(blockId);
+        if (!claimMissingBlockFolder(tracker, toOrigin(lib), blockId)) continue;
+        uniqueBlockIds.push(blockId);
+        allBlockIds.push(blockId);
     }
 
     // Collect files only for unique blocks
@@ -172,6 +191,7 @@ export async function installBlockCollections(
     try {
         const seenBlocks = new Set<string>();
         const allBlockIds: string[] = [];
+        const tracker = createEntryTracker();
 
         // Discover blocks already in the destination repo (from template reset)
         // so library installation only ADDS new blocks, never overwrites template blocks
@@ -199,7 +219,7 @@ export async function installBlockCollections(
         // 1. Discover blocks from each library, dedup across libraries
         for (const lib of libraries) {
             const discovered = await discoverAndDeduplicateLibraryBlocks(
-                githubFileOps, lib, seenBlocks, allBlockIds,
+                githubFileOps, lib, { seenBlocks, allBlockIds, tracker },
             );
 
             totalDiscovered += discovered.discoveredCount;
@@ -209,7 +229,7 @@ export async function installBlockCollections(
                     source: lib.source,
                     blockIds: discovered.uniqueBlockIds,
                     files: discovered.files,
-                    origin: { name: lib.name, addedEntries: lib.addedEntries },
+                    origin: toOrigin(lib),
                 });
 
                 // Track version info for this library
@@ -231,10 +251,15 @@ export async function installBlockCollections(
 
         if (sortedBlockIds.length === 0) {
             if (totalDiscovered > 0) {
-                // All blocks from every source library are already in the destination repo
-                // (added by the template). Nothing to copy — this is a success.
-                logger.info(`[Block Collection] All ${totalDiscovered} blocks already present in destination — nothing to add`);
-                return { success: true, blocksCount: 0, blockIds: [], libraryVersions: [] };
+                // Every block from every source library is already in the destination
+                // repo (added by the template), or was removed by hand there. Nothing
+                // to copy — this is a success.
+                logger.info(`[Block Collection] All ${totalDiscovered} blocks already present in destination or removed by hand — nothing to add`);
+                logRemovedByHand(logger, tracker.removedByHand);
+                return {
+                    success: true, blocksCount: 0, blockIds: [], libraryVersions: [],
+                    removedByHand: tracker.removedByHand,
+                };
             }
             logger.warn('[Block Collection] No blocks found in source libraries');
             return { success: false, blocksCount: 0, blockIds: [], error: 'No blocks found in source libraries' };
@@ -258,9 +283,7 @@ export async function installBlockCollections(
         }
 
         // 3. Build merged component-definition.json from all sources
-        const merge: MergeContext = {
-            githubFileOps, destOwner, destRepo, tracker: createEntryTracker(),
-        };
+        const merge: MergeContext = { githubFileOps, destOwner, destRepo, tracker };
         const mergedCompDef = await buildMergedComponentDefinitionMultiSource(
             merge, libraryBlockFiles,
         );
@@ -319,10 +342,8 @@ export async function installBlockCollections(
 
         logger.info(`[Block Collection] Installed ${sortedBlockIds.length} blocks from ${libraries.length} ${libraries.length === 1 ? 'library' : 'libraries'}`);
 
-        const { removedByHand } = merge.tracker;
-        if (removedByHand.length > 0) {
-            logger.info(`[Block Collection] Left out ${removedByHand.length} entries removed by hand: ${removedByHand.map((e) => `${e.id} (${e.file})`).join(', ')}`);
-        }
+        const { removedByHand } = tracker;
+        logRemovedByHand(logger, removedByHand);
 
         return {
             success: true,
@@ -339,6 +360,17 @@ export async function installBlockCollections(
             error: (error as Error).message,
         };
     }
+}
+
+/** The library as the merge sees it: its name and what it added on earlier runs. */
+function toOrigin(lib: BlockLibraryEntry): EntryOrigin {
+    return { name: lib.name, addedEntries: lib.addedEntries, blockIds: lib.blockIds };
+}
+
+/** One log line naming what the run left out, when it left anything out. */
+function logRemovedByHand(logger: Logger, removedByHand: RemovedByHandEntry[]): void {
+    if (removedByHand.length === 0) return;
+    logger.info(`[Block Collection] Left out ${removedByHand.length} removed by hand: ${removedByHand.map((e) => `${e.id} (${e.file})`).join(', ')}`);
 }
 
 /**
@@ -373,7 +405,7 @@ async function buildMergedComponentDefinitionMultiSource(
     const entriesByGroup: CollectedEntriesByGroup = new Map();
     const collectedIds = new Set<string>();
     const origins = new Map<string, EntryOrigin>();
-    const sourceDefinitions: Array<{ groups: Array<{ components?: Array<{ id: string; plugins?: { da?: { unsafeHTML?: string } } }> }> }> = [];
+    const sourceDefinitions: Array<{ def: SourceDefinition; origin: EntryOrigin }> = [];
 
     for (const libData of libraryBlockFiles) {
         const sourceFile = await githubFileOps.getFileContent(
@@ -384,7 +416,7 @@ async function buildMergedComponentDefinitionMultiSource(
         const sourceDef = JSON.parse(sourceFile.content);
         if (!sourceDef.groups) continue;
 
-        sourceDefinitions.push(sourceDef);
+        sourceDefinitions.push({ def: sourceDef, origin: libData.origin });
 
         for (const group of sourceDef.groups) {
             if (!group.components) continue;
@@ -417,32 +449,41 @@ async function buildMergedComponentDefinitionMultiSource(
     if (!destDef.groups) return null;
 
     // Pass 1: merge component-definition entries for newly-installed (unique) blocks,
-    // leaving out any the SC deleted after an earlier run added them.
-    const addedCount = mergeNewComponentDefinitionEntries(destDef, entriesByGroup, (id) => {
-        const origin = origins.get(id);
-        return origin ? claimMissingEntry(tracker, origin, 'definition', id) : true;
+    // leaving out any the SC deleted after an earlier run added them. An added
+    // entry's HTML example is recorded too, so stripping it later sticks.
+    const addedCount = mergeNewComponentDefinitionEntries(destDef, entriesByGroup, (entry) => {
+        const origin = origins.get(entry.id);
+        if (!origin) return true;
+        if (!claimMissingEntry(tracker, origin, 'definition', entry.id)) return false;
+        if (entry.plugins?.da?.unsafeHTML) noteAddedEntry(tracker, origin, 'htmlExamples', entry.id);
+        return true;
     });
 
     // Pass 2: enrich unsafeHTML for blocks already present in the destination but
     // without unsafeHTML. Covers deduplicated blocks whose component-definition entries
     // came from the template rather than the library — their block files were correctly
     // preserved, but their metadata may lack unsafeHTML that the library source has.
-    // Additive only: never overwrites existing unsafeHTML, never touches block files.
-    const enrichedCount = enrichMissingUnsafeHtml(destDef, sourceDefinitions);
+    // Additive only: never overwrites existing unsafeHTML, never touches block files,
+    // and never refills an example it filled before that the SC has since stripped.
+    const enrichedCount = enrichMissingUnsafeHtml(destDef, sourceDefinitions, (id, origin) =>
+        claimMissingEntry(tracker, origin, 'htmlExamples', id));
 
     if (addedCount === 0 && enrichedCount === 0) return null;
     return stringifyJsonLike(destFile.content, destDef);
 }
 
+/** A component-definition entry, as far as the merge reads one. */
+type DefinitionEntry = { id: string; plugins?: { da?: { unsafeHTML?: string } }; [key: string]: unknown };
+
 /** Group entries collected from source repos, keyed by group id. */
 type CollectedEntriesByGroup = Map<string, {
     title: string;
-    entries: Array<{ id: string; [key: string]: unknown }>;
+    entries: DefinitionEntry[];
 }>;
 
 /** Parsed source component-definition shape needed for unsafeHTML enrichment. */
 type SourceDefinition = {
-    groups: Array<{ components?: Array<{ id: string; plugins?: { da?: { unsafeHTML?: string } } }> }>;
+    groups: Array<{ components?: DefinitionEntry[] }>;
 };
 
 /**
@@ -454,7 +495,7 @@ type SourceDefinition = {
 function mergeNewComponentDefinitionEntries(
     destDef: { groups: Array<{ id: string; title?: string; components?: Array<{ id: string }> }> },
     entriesByGroup: CollectedEntriesByGroup,
-    mayAdd: (id: string) => boolean,
+    mayAdd: (entry: DefinitionEntry) => boolean,
 ): number {
     const existingIds = new Set(
         destDef.groups.flatMap((g) => g.components?.map((c: { id: string }) => c.id) ?? []),
@@ -462,7 +503,7 @@ function mergeNewComponentDefinitionEntries(
     let addedCount = 0;
     for (const [groupId, groupData] of entriesByGroup) {
         const newEntries = groupData.entries.filter(
-            (c: { id: string }) => !existingIds.has(c.id) && mayAdd(c.id),
+            (c) => !existingIds.has(c.id) && mayAdd(c),
         );
         if (newEntries.length === 0) continue;
         let destGroup = destDef.groups.find((g: { id: string }) => g.id === groupId);
@@ -479,30 +520,34 @@ function mergeNewComponentDefinitionEntries(
 /**
  * Pass 2: enrich unsafeHTML for blocks already present in the destination but
  * missing it, using the source definitions. Additive only — never overwrites
- * existing unsafeHTML. Returns the number of entries enriched.
+ * existing unsafeHTML, and fills an entry only if `mayFill` agrees. Each entry
+ * id is decided once, by the first library that has an example for it, so a
+ * second library cannot refill what the first left out. Returns the number of
+ * entries enriched.
  */
 function enrichMissingUnsafeHtml(
-    destDef: { groups: Array<{ components?: Array<{ id: string; plugins?: { da?: { unsafeHTML?: string } } }> }> },
-    sourceDefinitions: SourceDefinition[],
+    destDef: { groups: Array<{ components?: DefinitionEntry[] }> },
+    sourceDefinitions: Array<{ def: SourceDefinition; origin: EntryOrigin }>,
+    mayFill: (id: string, origin: EntryOrigin) => boolean,
 ): number {
+    const destEntries = destDef.groups.flatMap((g) => g.components ?? []);
+    const decided = new Set<string>();
     let enrichedCount = 0;
-    for (const sourceDef of sourceDefinitions) {
-        for (const group of sourceDef.groups) {
-            if (!group.components) continue;
-            for (const entry of group.components) {
-                const sourceUnsafeHTML = entry.plugins?.da?.unsafeHTML;
-                if (!sourceUnsafeHTML) continue;
-
-                for (const destGroup of destDef.groups) {
-                    const destEntry = destGroup.components?.find(
-                        (c: { id: string }) => c.id === entry.id,
-                    );
-                    if (!destEntry || destEntry.plugins?.da?.unsafeHTML) continue;
-                    destEntry.plugins = destEntry.plugins ?? {};
-                    destEntry.plugins.da = destEntry.plugins.da ?? {};
-                    destEntry.plugins.da.unsafeHTML = sourceUnsafeHTML;
-                    enrichedCount++;
-                }
+    for (const { def, origin } of sourceDefinitions) {
+        for (const entry of def.groups.flatMap((g) => g.components ?? [])) {
+            const sourceUnsafeHTML = entry.plugins?.da?.unsafeHTML;
+            if (!sourceUnsafeHTML || decided.has(entry.id)) continue;
+            const missing = destEntries.filter(
+                (c) => c.id === entry.id && !c.plugins?.da?.unsafeHTML,
+            );
+            if (missing.length === 0) continue;
+            decided.add(entry.id);
+            if (!mayFill(entry.id, origin)) continue;
+            for (const destEntry of missing) {
+                destEntry.plugins = destEntry.plugins ?? {};
+                destEntry.plugins.da = destEntry.plugins.da ?? {};
+                destEntry.plugins.da.unsafeHTML = sourceUnsafeHTML;
+                enrichedCount++;
             }
         }
     }
