@@ -16,7 +16,12 @@
  * @module features/components/services/componentConfigWrites
  */
 
-import { BACKEND_OWNED_SCOPE_KEYS } from '@/core/config/envVarKeys';
+import {
+    BACKEND_OWNED_SCOPE_KEYS,
+    PAAS_GRAPHQL_ENDPOINT,
+    PAAS_URL,
+} from '@/core/config/envVarKeys';
+import { deriveGraphqlEndpoint } from '@/features/components/services/envVarHelpers';
 import type { ComponentConfig, ComponentConfigs } from '@/types/webview';
 
 /** The shape both surfaces agree on: a field and the components that declare it. */
@@ -118,6 +123,47 @@ export function writeFieldValue(
     return writeToComponents(configs, resolveWriteTargets(field, backendId), {
         [field.key]: value,
     });
+}
+
+/** What an edit needs to know besides the field and the value. */
+export interface FieldUpdateContext {
+    /** The project's backend component id, when known (see {@link resolveWriteTargets}). */
+    backendId: string | undefined;
+    /** Field keys the user has edited so far. */
+    touchedFields: ReadonlySet<string>;
+}
+
+/**
+ * Apply one field edit the way both config surfaces do.
+ *
+ * The value lands on every component {@link resolveWriteTargets} names. One field is
+ * linked: editing the PaaS Commerce URL also fills the GraphQL endpoint derived from
+ * it, unless the user has already touched the endpoint field, in which case their
+ * value stands. Both hooks carried this verbatim (PL-69 pairs 11 and 12).
+ *
+ * @param configs - Current component configs
+ * @param field - The field being edited
+ * @param value - The new value
+ * @param context - The backend id and the touched set at the time of the edit
+ * @returns A new configs object; the input is left exactly as it was
+ */
+export function applyFieldUpdate(
+    configs: ComponentConfigs,
+    field: FieldRef,
+    value: string | boolean,
+    context: FieldUpdateContext,
+): ComponentConfigs {
+    const writes: ComponentConfig = { [field.key]: value };
+
+    if (
+        field.key === PAAS_URL &&
+        typeof value === 'string' &&
+        !context.touchedFields.has(PAAS_GRAPHQL_ENDPOINT)
+    ) {
+        writes[PAAS_GRAPHQL_ENDPOINT] = deriveGraphqlEndpoint(value);
+    }
+
+    return writeToComponents(configs, resolveWriteTargets(field, context.backendId), writes);
 }
 
 /**

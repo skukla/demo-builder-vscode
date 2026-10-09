@@ -7469,7 +7469,7 @@
             "anchors": [
                 "const value = getValueFromConfigs(field);"
             ],
-            "line": 123,
+            "line": 121,
             "mutants": 1,
             "category": "branch",
             "reason": "Stryker forces the following guard's second half ('value !== \"\"') true. getValueFromConfigs can never return an empty string: it returns findFieldValue's result, which skips empty values, or a foreign value guarded by the same non-empty test, or undefined. The half that CAN be false is the undefined check, and that one is killed.",
@@ -7949,7 +7949,20 @@
             "anchors": [
                 "if (cancelled) return;"
             ],
-            "line": 195,
+            "line": 184,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The first of the two post-unmount guards, after a resolved response. React 18 no longer warns when state is set on an unmounted component, so a late setState has no observable effect at all: no render happens, no console output the gate could catch, and result.current is unreachable after unmount. The suite drives both post-unmount paths (a resolved response and a rejected one) to prove they do not throw, which is the most a test can see here. The row at line 192 described both guards and accounted for one mutant; this one makes the count match the reason (PL-69 sitting 7 re-triage, the gap had been hidden by a stale baseline row).",
+            "decision": "none \u2014 equivalent.",
+            "recorded": "2026-10-09",
+            "source": "PL-69 sitting 7 (re-triage of PL-22 batch MUT-01)"
+        },
+        {
+            "module": "src/features/components/ui/hooks/useComponentConfig.ts",
+            "anchors": [
+                "if (cancelled) return;"
+            ],
+            "line": 192,
             "mutants": 1,
             "category": "branch",
             "reason": "React 18 no longer warns when state is set on an unmounted component, so a late setState has no observable effect at all: no render happens, no console output the gate could catch, and result.current is unreachable after unmount. The suite drives both post-unmount paths (a resolved response and a rejected one) to prove they do not throw, which is the most a test can see here.",
@@ -7986,7 +7999,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 204,
+            "line": 201,
             "mutants": 1,
             "category": "other",
             "reason": "Giving the load effect a non-empty dependency array makes it re-run on every render, and both re-entry paths are already idempotent: after the load, 'registryCache !== undefined' returns immediately, and before it, 'registryInFlight ??=' hands every caller the same in-flight promise. The suite pins that the request is made exactly once across two mounts.",
@@ -8071,7 +8084,20 @@
             "anchors": [
                 "if (!result.valid && result.error) {"
             ],
-            "line": 311,
+            "line": 295,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The URL block's copy of the guard. Swapping && for || cannot be observed because the Validator never produces the disagreeing pair. Its result is either { valid: true } with no error or { valid: false } with one, so '!valid && error' and '!valid || error' agree on every value it returns. Verified by planting the || form on BOTH validation blocks at once: 97 tests still pass, including the ones that assert a bad URL, a pattern mismatch, and their absence on valid input. The row at line 308 names both blocks (it was verified by planting the || form on both at once) and accounted for one mutant; this one makes the count match the reason (PL-69 sitting 7 re-triage, the gap had been hidden by a stale baseline row).",
+            "decision": "none \u2014 equivalent.",
+            "recorded": "2026-10-09",
+            "source": "PL-69 sitting 7 (re-triage of PL-22 batch MUT-01)"
+        },
+        {
+            "module": "src/features/components/ui/hooks/useComponentConfig.ts",
+            "anchors": [
+                "if (!result.valid && result.error) {"
+            ],
+            "line": 308,
             "mutants": 1,
             "category": "branch",
             "reason": "Swapping && for || cannot be observed because the Validator never produces the disagreeing pair. Its result is either { valid: true } with no error or { valid: false } with one, so '!valid && error' and '!valid || error' agree on every value it returns. Verified by planting the || form on BOTH validation blocks at once: 97 tests still pass, including the ones that assert a bad URL, a pattern mismatch, and their absence on valid input.",

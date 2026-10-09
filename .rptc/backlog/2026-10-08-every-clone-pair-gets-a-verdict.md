@@ -34,9 +34,9 @@ excluded by the scan's ignore flag and are not among the 40.
 | 8 | eds/services/daLive/daLiveBlockLibraryOperations.ts:62-75 | eds/services/daLive/daLiveContentOperations.ts:289-302 | createBlockLibraryFromTemplate signature | GONE | a one-line forwarder; only the parameter list repeated. Retired 2026-10-08 in the EDS-8 cut; callers use `blockLibOps` directly |
 | 9 | eds/services/daLive/daLiveApiClient.ts:125-143 | eds/services/daLive/daLiveOrgOperations.ts:263-281 | HTTP status to error | EXTRACT | `createErrorFromResponse` copied; only the 401 case differs; check every response reaching it passed the 401-throwing wrapper first |
 | 10 | eds/services/configService/siteAccessManagerHeadless.ts:313-325 | same file:274-286 | admin mutation failure mapping | EXTRACT | grant and revoke repeat resolve + "not ok" mapping + confirm; `failedMutation(result, site)`; small gain |
-| 11 | components/ui/hooks/useComponentConfig.ts:321-329 | dashboard/ui/configure/hooks/useConfigureFieldValues.ts:146-155 | updateField start | EXTRACT | the second file's header says it is a moved copy |
-| 12 | useComponentConfig.ts:331-343 | useConfigureFieldValues.ts:157-169 | linked PAAS_URL write | EXTRACT | same fragment; pure `applyFieldUpdate(...)` beside `resolveWriteTargets` in `components/services/componentConfigWrites.ts` |
-| 13 | components/ui/components/ConfigFieldRenderer.tsx:96-109 | same file:76-89 | TextField props block | EXTRACT | text and password differ by `type` and the url `onBlur`; hoist shared props |
+| 11 | components/ui/hooks/useComponentConfig.ts:321-329 | dashboard/ui/configure/hooks/useConfigureFieldValues.ts:146-155 | updateField start | DONE 2026-10-09 (sitting 7) | same edit on both surfaces; now `applyFieldUpdate(configs, field, value, { backendId, touchedFields })` in `components/services/componentConfigWrites.ts` |
+| 12 | useComponentConfig.ts:331-343 | useConfigureFieldValues.ts:157-169 | linked PAAS_URL write | DONE 2026-10-09 (sitting 7) | same fragment; the PaaS URL to GraphQL link is inside `applyFieldUpdate` |
+| 13 | components/ui/components/ConfigFieldRenderer.tsx:96-109 | same file:76-89 | TextField props block | DONE 2026-10-09 (sitting 7) | text and password differ by `type` and the url `onBlur`; now one `textFieldProps()` builder spread into both |
 | 14 | updates/commands/updateExecutor.ts:463-474 | updates/services/updateCore.ts:89-100 | find library, warn, skip | EXTRACT | `findInstalledLibrary(item, ctx)` in updateCore; updateCore has no named suite |
 | 15 | projects-dashboard/handlers/projectsListOpen.ts:96-106 | same file:72-82 | resolve project preamble | EXTRACT | one cluster with 16, 17 and 3 sites in projectsListLifecycle.ts: 7 sites |
 | 16 | projectsListOpen.ts:130-140 | same file:72-106 | same | EXTRACT | same cluster |
@@ -75,7 +75,7 @@ excluded by the scan's ignore flag and are not among the 40.
 | 4. Projects-dashboard handlers | 15, 16, 17 | 21 |
 | 5. Prerequisites | 19, 20 | 19 (landed at 18: sitting 4 had already reached 20) |
 | 6. Authentication | 33, 34, 35 | 16 (landed at 15: sitting 5 had already reached 18) |
-| 7. UI (field update logic, TextField props) | 11, 12, 13 | 13 |
+| 7. UI (field update logic, TextField props) | 11, 12, 13 | 13 (landed at 12: sitting 6 had already reached 15) |
 | 8. Small handlers (updates, console API, component payload) | 14, 26, 32 | 10 |
 | 9. Cross-feature | 18, 22 | 8 |
 | 10. App Builder | 36 | 7 |
@@ -247,6 +247,51 @@ same undefined), consoleCreateGate 100 (41 killed, 0 survived). Ledger: entry fo
 cache reads re-anchored to the helper, the projectHandlers name/description entry deleted
 (those mutants are killed in the gate), one entry added.
 
+**Sitting 7 (pairs 11 to 13) DONE 2026-10-09.** Re-scanned first: 15 clones, the three UI
+fragments exactly where the table said. All three pairs were real:
+
+- **11, 12** (`updateField` in the wizard's `useComponentConfig` and Configure's
+  `useConfigureFieldValues`): the same edit, line for line, apart from one comment: write
+  the value where `resolveWriteTargets` says, and when the PaaS Commerce URL changes, fill
+  the GraphQL endpoint from it unless the user has already touched that field. Now one pure
+  `applyFieldUpdate(configs, field, value, { backendId, touchedFields })` in
+  `components/services/componentConfigWrites.ts`, beside `resolveWriteTargets` (seven cases
+  in that suite). Each hook's `updateField` is now the touched-set add and one call. The
+  touched set the helper reads is the one the hook's callback closed over, as before.
+- **13** (`ConfigFieldRenderer`): the text/url and password `TextField` blocks differed only
+  by `type` and the url-only `onBlur`. Now one `textFieldProps()` builder spread into both;
+  the two differing props stay on the element. `useSelectableDefault` returns only `onFocus`,
+  so the spread order cannot collide with either.
+
+Found on the way, fixed here: the two `normalizeUrlField` copies were not a scan pair but
+differed in one argument. Configure's inlined exactly what `writeFieldValue(..., backendId)`
+does; the wizard's called `writeFieldValue` WITHOUT the backend id, so a URL-typed
+backend-owned scope key normalized on blur would have been written to every declaring
+component, the copy-per-component shape `resolveWriteTargets` exists to prevent. No scope
+key is URL-typed today (the four ACCS keys are `text`; the PaaS ones are in no registry), so
+it is unobservable, and both hooks now go through `writeFieldValue` with the backend id.
+
+Proof: the 10 pre-existing suites for the four touched files (205 tests) ran unchanged before
+and after; 212 with the seven new cases. cloneCeiling 15 -> 12.
+
+Mutation: all four rows re-measured against the committed file first, in one focused run
+(the four files share suites). useComponentConfig (row 88.52, committed 85.65 with 230
+mutants against the row's 305, now 84.79) and useConfigureFieldValues (row 94.62, committed
+95.16, now 94.55) were stale, and both falls are arithmetic: the same survivors (32 and 6)
+before and after, with 13 and 14 killed mutants moved out to the shared helper.
+componentConfigWrites stays at 100 with 14 more mutants, all killed. ConfigFieldRenderer
+reproduced 86.27 and now reads 84.91 with two NEW survivors, both strings: `width: '100%'`
+and `marginBottom: 'size-200'` in the hoisted builder. As JSX attributes Stryker never
+mutated them; as object-literal strings it does, and the suite renders the mocked Spectrum
+TextField (`tests/__mocks__/@adobe/react-spectrum.tsx`), which drops both props, so a test
+there could only assert the mock. Not ledgered as equivalent (a real browser would show the
+change); the row carries the reason. The stale useComponentConfig row had also hidden two open
+gaps the committed file already carried: the first `if (cancelled) return;` guard and the URL
+block's `!result.valid && result.error`, each the twin of a ledgered line whose reason already
+covered both sites but accounted for one mutant. Two ledger rows added with those reasons;
+open gaps are 0 on every row. Four equivalents ledger entries re-anchored to the lines the
+import changes moved.
+
 ## Below the scan's threshold, found by reading (2026-10-08)
 
 The same five-line `ensureSDKReady` method is copied into four authentication files:
@@ -298,3 +343,5 @@ in favour of the EDS-34 version, and lower the pin. That also turns the floor of
 - 2026-10-09  Sitting 6 (authentication), pairs 33 to 35 extracted: `AdobeConsoleWhereResponse` is a type alias of `AdobeContext`; `resolveCachedTarget(purpose)` in adobeWorkspaceCredentials; `gateConsoleCreate(context, payload, noun)` in handlers/consoleCreateGate.ts (own suite, 100% mutation). ensureSDKReady confirmed already one function. 109 pre-existing authentication suites (1,512 tests) unchanged and green. Also fixed on the way: `listCredentialIds` had no test (three cases now), and the generic-error code in handleGetProjects was never asserted (one assertion). Four baseline rows re-measured and written. cloneCeiling 18 -> 15.
 - 2026-10-09  For the owner (sitting 6): the focused mutation run on projectHandlers and workspaceHandlers kills a Stryker worker eight times per run (`ChildProcessCrashedError`) and scores two mutants per file as RuntimeError, which the score ignores. Cause, read from the crash text: the suites stage `getProjects` / `getWorkspaces` with `mockRejectedValue`, and a mutant that throws before the handler awaits that promise leaves the rejection unhandled, which kills the worker. Pre-existing (the rows from 2026-09-03 carry the same two), not from this sitting, and the fix is test-side: create the rejected promise in the test, attach a no-op catch, and hand it over with `mockReturnValue`. Not done here because it is a harness change to suites this sitting did not otherwise touch.
 - 2026-10-09  refactor(authentication): one create gate, one cached-target lookup, one context type (`27d90656d`)
+- 2026-10-09  Sitting 7 (UI), pairs 11 to 13 extracted: `applyFieldUpdate(configs, field, value, { backendId, touchedFields })` in componentConfigWrites.ts now applies the field edit (and the PaaS URL to GraphQL endpoint link) for both the wizard and Configure; ConfigFieldRenderer's text/url and password fields share one `textFieldProps()` builder. Both hooks' blur-normalize now pass the backend id through `writeFieldValue` (the wizard's did not; unobservable today, no scope key is URL-typed). 10 touched suites (205 tests) unchanged and green; 212 with the seven new cases. Four baseline rows re-measured and written. cloneCeiling 15 -> 12.
+- 2026-10-09  For the owner (sitting 7): `ConfigFieldRenderer.tsx` has two new string survivors (`width: '100%'`, `marginBottom: 'size-200'`) that nothing in its suite can kill, because the suite renders the mocked Spectrum TextField and the mock drops both props. They are presentational and the ratchet does not count them, but they are also not equivalent mutants, so they sit in the row's note rather than the ledger. If the owner wants them killed, the honest route is a test that renders the real Spectrum TextField for this one component (the `webview-visual-baseline` instrument already proves the real layout), not an assertion on the mock.

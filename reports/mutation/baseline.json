@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "PL-69 sitting 6, 2026-10-09 (authentication). Three rows re-measured against the committed file first and then against the change. projectHandlers.ts: row 83.64 was stale (committed file 86.19), now 87.01: four survivors and one uncovered string moved out with the shared create pre-flight (gateConsoleCreate), nothing new survives. workspaceHandlers.ts: row 89.22 was stale (committed file 89.81), now 87.65 and NOT a gap: the survivors are the same ten as the committed file minus the one string that moved out, and 26 killed mutants moved with the extracted code to consoleCreateGate.ts, so the ratio fell while nothing lost a test. adobeWorkspaceCredentials.ts: row 79.27 was stale DOWNWARD (committed file 75.87, 12 uncovered): listCredentialIds had shipped with no test entering it, seven uncovered mutants. Now 78.29: that method has three cases in the s2s suite, the six optional-chain survivors of the duplicated cache lookup are three (one resolveCachedTarget), and the four new branch/block survivors are the if (!target) guards under each caller, ledgered as equivalent because the try/catch swallows the destructure throw into the same undefined. consoleCreateGate.ts is a new row at 100 (41 killed, 0 survived) from its own suite. projectHandlers.ts was then measured once more at 87.66 (135 killed, 15 survived): the honest arithmetic showed one open gap the stale row's equivalent count of 13 (against 9 ledgered mutants at the time) had hidden, the generic-error branch of handleGetProjects never asserting its UNKNOWN code, so a mutant calling every failure a timeout survived; one assertion in projectHandlers-fetch kills it and the row reads openGaps 0.",
+    "_note": "PL-69 sitting 7, 2026-10-09 (UI). Four rows re-measured against the committed file first and then against the change, in one focused run. useComponentConfig.ts: row 88.52 was stale (committed file 85.65, 230 mutants against the row's 305), now 84.79 and NOT a gap: the same 32 survivors as the committed file, and 13 killed mutants moved out with the field edit to componentConfigWrites.ts, so the ratio fell while nothing lost a test. The stale row also hid two open gaps the committed file already had: the first 'if (cancelled) return;' guard and the URL block's '!result.valid && result.error', each the twin of a ledgered line whose reason already covered both sites but accounted for one mutant; two rows added, openGaps 0. useConfigureFieldValues.ts: row 94.62 was stale upward (committed file 95.16), now 94.55 for the same reason: the same 6 survivors, 14 killed mutants moved out with the edit. componentConfigWrites.ts: 100 before and after; applyFieldUpdate adds 14 mutants and its seven cases kill all of them. ConfigFieldRenderer.tsx: row 86.27 reproduced on the committed file, now 84.91 with two NEW survivors, both strings: width '100%' and marginBottom 'size-200' in the shared textFieldProps() builder. As JSX attributes Stryker never mutated them; as object-literal strings it does, and the suite renders the mocked Spectrum TextField (tests/__mocks__/@adobe/react-spectrum.tsx), which drops both props, so no test in that suite can see them. Not ledgered as equivalent, because a real browser would show the change; recorded here as presentational strings the ratchet does not count as behavioural (open gaps 0 before and after). The 'invalid' validationState string that survived once and was uncovered once is now one mutant.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -3640,10 +3640,10 @@
         },
         "src/features/components/services/componentConfigWrites.ts": {
             "score": 100,
-            "killed": 43,
+            "killed": 54,
             "survived": 0,
             "noCoverage": 0,
-            "timeout": 0,
+            "timeout": 3,
             "survivorCategories": {},
             "uncoveredCategories": {},
             "highValueSurvivors": 0,
@@ -3802,17 +3802,17 @@
             "openGaps": 0
         },
         "src/features/components/ui/components/ConfigFieldRenderer.tsx": {
-            "score": 86.27,
-            "killed": 44,
-            "survived": 5,
-            "noCoverage": 2,
+            "score": 84.91,
+            "killed": 45,
+            "survived": 7,
+            "noCoverage": 1,
             "timeout": 0,
             "survivorCategories": {
-                "string": 4,
+                "string": 6,
                 "branch": 1
             },
             "uncoveredCategories": {
-                "string": 2
+                "string": 1
             },
             "highValueSurvivors": 1,
             "equivalent": 1,
@@ -4484,19 +4484,18 @@
             "openGaps": 0
         },
         "src/features/dashboard/ui/configure/hooks/useConfigureFieldValues.ts": {
-            "score": 94.62,
-            "killed": 123,
-            "survived": 7,
+            "score": 94.55,
+            "killed": 104,
+            "survived": 6,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
                 "branch": 4,
-                "string": 2,
-                "other": 1
+                "string": 2
             },
             "uncoveredCategories": {},
             "highValueSurvivors": 4,
-            "equivalent": 5,
+            "equivalent": 4,
             "openGaps": 0
         },
         "src/features/dashboard/ui/configure/hooks/useServiceGroups.ts": {
@@ -4959,24 +4958,24 @@
             "openGaps": 0
         },
         "src/features/components/ui/hooks/useComponentConfig.ts": {
-            "score": 88.52,
-            "killed": 251,
-            "survived": 34,
+            "score": 84.79,
+            "killed": 169,
+            "survived": 32,
             "noCoverage": 1,
-            "timeout": 19,
+            "timeout": 15,
             "survivorCategories": {
-                "branch": 19,
+                "branch": 17,
                 "logPresentation": 4,
                 "string": 3,
-                "block": 2,
                 "other": 4,
+                "block": 2,
                 "optionalChain": 2
             },
             "uncoveredCategories": {
                 "string": 1
             },
-            "highValueSurvivors": 21,
-            "equivalent": 27,
+            "highValueSurvivors": 19,
+            "equivalent": 25,
             "openGaps": 0
         },
         "src/features/dashboard/ui/hooks/useDashboardActions.ts": {

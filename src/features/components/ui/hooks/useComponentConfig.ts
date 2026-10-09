@@ -1,20 +1,17 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
-import { PAAS_URL, PAAS_GRAPHQL_ENDPOINT } from '@/core/config/envVarKeys';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { url, pattern, normalizeUrl } from '@/core/validation/Validator';
 import {
-    findFieldValue,
-    resolveWriteTargets,
-    writeFieldValue,
-    writeToComponents,
-} from '@/features/components/services/componentConfigWrites';
-import {
     applyFieldDefaults,
     collectConfigFields,
 } from '@/features/components/services/componentConfigDefaults';
+import {
+    applyFieldUpdate,
+    findFieldValue,
+    writeFieldValue,
+} from '@/features/components/services/componentConfigWrites';
 import { getStackById } from '@/features/components/services/demoPackageLoader';
-import { deriveGraphqlEndpoint } from '@/features/components/services/envVarHelpers';
 import {
     toServiceGroupWithSortedFields,
     SERVICE_GROUP_DEFINITIONS,
@@ -323,19 +320,11 @@ export function useComponentConfig({
     const updateField = useCallback(
         (field: UniqueField, value: string | boolean) => {
             setTouchedFields((prev) => new Set(prev).add(field.key));
-            setComponentConfigs((prev) => {
-                const writes: Record<string, string | boolean> = { [field.key]: value };
-
-                // Linked field: PAAS_URL → PAAS_GRAPHQL_ENDPOINT
-                // Only auto-derive if GraphQL hasn't been manually touched
-                if (field.key === PAAS_URL && typeof value === 'string') {
-                    if (!touchedFields.has(PAAS_GRAPHQL_ENDPOINT)) {
-                        writes[PAAS_GRAPHQL_ENDPOINT] = deriveGraphqlEndpoint(value);
-                    }
-                }
-
-                return writeToComponents(prev, resolveWriteTargets(field, backendId), writes);
-            });
+            // The write, and the PAAS_URL -> GraphQL endpoint link, live in
+            // applyFieldUpdate; the Configure screen applies the same edit.
+            setComponentConfigs((prev) =>
+                applyFieldUpdate(prev, field, value, { backendId, touchedFields }),
+            );
         },
         [touchedFields, backendId],
     );
@@ -377,10 +366,12 @@ export function useComponentConfig({
             // Normalize and update if changed
             const normalized = normalizeUrl(currentValue);
             if (normalized !== currentValue) {
-                setComponentConfigs((prev) => writeFieldValue(prev, field, normalized));
+                setComponentConfigs((prev) =>
+                    writeFieldValue(prev, field, normalized, backendId),
+                );
             }
         },
-        [componentConfigs],
+        [componentConfigs, backendId],
     );
 
     return {
