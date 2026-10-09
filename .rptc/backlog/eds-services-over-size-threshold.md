@@ -452,6 +452,20 @@ and three of them are more than 40% comments). Decide which.
   message helpers (validate, progress, get-projects, re-detect-context). Deleted with their
   tests and their slots on the shared test double, which took it under the limit; the
   three helpers that have callers (`requestAuth`, `createProject`, `log`) stay.
+- `eds/services/daLive/daLiveAuthService.ts` (413 -> 384), 2026-10-09: **the class is one
+  job, not cut.** It is the DA.live session held in `globalState`: store a token (expiry and
+  email from opts or the JWT), read it back with the five-minute buffer, clear it (`logout`,
+  `resetAll`), bridge it both ways with the da-auth-helper cache, fire `onDidSignIn`, and
+  answer two questions about that stored token (`isServerAccepted`, the IMS profile email).
+  Every method reads or writes the same five state keys; the email lookup writes the same
+  `userEmail` key `storeToken` writes, so splitting the network questions off would hand that
+  state between files. No method is uncalled: every one has a production caller, and the
+  agent surface reaches it whole (`authTools`, `edsToolGuards`, `storefrontTools` and five
+  more take the service from `getDaLiveAuthService`). What did not belong was the
+  free-standing `parseJwtPayload`, a pure decoder the sign-in prompt also uses: it moved to
+  `daLive/jwtPayload.ts` unchanged and the prompt imports it from there. `fetchUserEmail`'s
+  `token` parameter, which no production caller ever passed, was deleted with the one test
+  that exercised it.
 
 - 2026-10-08  The owner asked whether the 40 pinned clone pairs were accounted for. They
   were not (one blanket sentence, no per-pair verdict). Read in full and filed as [[PL-69]]:
@@ -495,6 +509,21 @@ and three of them are more than 40% comments). Decide which.
   row; the push-message ceiling fell 145 to 143 and its mutation row went with the file. Also: the handler
   coverage test listed `'progress'` as "handled by the base command"; nothing handled it. The
   entry went with the helper, so the guard has one hole fewer.
+
+- 2026-10-09  From the daLiveAuthService verdict, two findings, neither changed:
+  (1) **The DA.live token lives in `globalState`, not SecretStorage.** The sitting's brief
+  said SecretStorage; the code says `context.globalState` for the token, its expiry, the
+  email and the org. globalState is a plain store on disk, SecretStorage is the OS keychain.
+  The token is short-lived (it carries its own expiry) and is also mirrored to `~/.aem/da-token.json` in
+  plain text by design (the da-auth-helper bridge), so moving it would change storage for one
+  copy of two. **Decide:** move the token to SecretStorage (a migration: read the old key
+  once, then clear it, so existing sign-ins survive), or record that globalState is accepted
+  for this token. Recommend: record it as accepted unless the helper mirror goes too.
+  (2) **A second JWT decoder:** `authentication/services/imsTokenClaims.ts` `decodeImsUserId`
+  decodes the same IMS payload segment (base64url, with an object check) to read `user_id`.
+  Read both: same job, and `decodeImsUserId` could be written over `parseJwtPayload`. Not in
+  reach (another feature, and the shared home would be `core/`), so not chased. **Decide:**
+  one decoder in `core/utils`, or leave the two.
 
 ## Needs a live check
 
@@ -699,6 +728,13 @@ date and what happened; a failure becomes its own `fix` item.
       its data, and the wizard's Adobe sign-in step still signs in. Only methods with no
       caller were deleted and every kept method is byte-identical, so this is a
       confirmation, not a known risk.
+- [ ] **DA.live sign-in, from the wizard and from the agent** (the `daLiveAuthService.ts`
+      verdict, 2026-10-09): sign in to DA.live from the wizard's Storefront area (paste a
+      token, confirm the namespace) and confirm it shows signed in with the right email;
+      then, signed out, ask the agent to sign in (its `sign_in` tool with `provider:"dalive"`) and confirm the same.
+      Also confirm a token the agent's `da-auth` skill cached is picked up without a prompt.
+      The JWT decoder moved file unchanged and the service lost only a parameter nothing
+      passed, so this is a confirmation, not a known risk.
 
 ## Shipped so far
 

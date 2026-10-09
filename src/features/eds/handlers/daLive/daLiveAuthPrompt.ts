@@ -9,7 +9,7 @@
  */
 
 import * as vscode from 'vscode';
-import { parseJwtPayload } from '../../services/daLive/daLiveAuthService';
+import { parseJwtPayload } from '../../services/daLive/jwtPayload';
 import { getDaLiveAuthService } from '../edsServiceCache';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {

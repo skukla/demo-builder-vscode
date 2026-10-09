@@ -1,12 +1,10 @@
 /**
- * Tests for parseJwtPayload utility
- *
- * Verifies the JWT payload parsing utility extracted from storeToken
- * to eliminate duplication between storeToken and validateDaLiveToken.
+ * Tests for parseJwtPayload, the JWT payload decoder shared by
+ * DaLiveAuthService.storeToken and the sign-in prompt's validateDaLiveToken.
  */
 
-
-import { parseJwtPayload } from '@/features/eds/services/daLive/daLiveAuthService';
+import { parseJwtPayload } from '@/features/eds/services/daLive/jwtPayload';
+import { fakeJwtHeaderSegment, malformedJwt } from '../../../../helpers/jwtFake';
 
 // Helper to create test JWT tokens
 function createTestJwt(payload: Record<string, unknown>): string {
@@ -55,7 +53,7 @@ describe('parseJwtPayload', () => {
 
     it('should return null for JWT with invalid base64 payload', () => {
         // Given: A token with valid header but invalid base64 in payload
-        const token = 'eyJhbGciOiJSUzI1NiJ9.!!!invalid!!!.signature';
+        const token = malformedJwt();
 
         // When: Parsing the token
         const result = parseJwtPayload(token);
@@ -81,7 +79,7 @@ describe('parseJwtPayload', () => {
 
     it('should return null for JWT with fewer than two parts', () => {
         // Given: A token with only one part
-        const token = 'eyJhbGciOiJSUzI1NiJ9';
+        const token = fakeJwtHeaderSegment();
 
         // When: Parsing the token
         const result = parseJwtPayload(token);

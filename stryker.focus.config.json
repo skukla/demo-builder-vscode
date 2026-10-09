@@ -8,7 +8,8 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/ui/utils/WebviewClient.ts"
+        "src/features/eds/services/daLive/daLiveAuthService.ts",
+        "src/features/eds/services/daLive/jwtPayload.ts"
     ],
     "reporters": [
         "clear-text",

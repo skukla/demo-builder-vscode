@@ -6564,7 +6564,7 @@
             "source": "PL-22 batch MUT-07"
         },
         {
-            "module": "src/features/eds/services/daLive/daLiveAuthService.ts",
+            "module": "src/features/eds/services/daLive/jwtPayload.ts",
             "anchors": [
                 "if (parts.length < 2) {"
             ],
@@ -6592,7 +6592,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 165,
+            "line": 138,
             "mutants": 1,
             "category": "block",
             "reason": "This catch body is a single logger.warn. Caching the adopted token into globalState is best-effort by design, and the function returns the helper token immediately afterwards whether the cache write threw or not - which the fallback suite pins with a globalState.update that rejects. Emptying the block changes only whether one warn line prints.",
@@ -6605,7 +6605,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 256,
+            "line": 228,
             "mutants": 1,
             "category": "block",
             "reason": "The else branch of the response.ok check contains only a logger.warn. Both the taken and the untaken path fall through to the same return null at the end of fetchUserEmail, which the refused-response test asserts.",
@@ -6618,7 +6618,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 259,
+            "line": 231,
             "mutants": 1,
             "category": "block",
             "reason": "This catch body is a single logger.warn, and control falls through to the same return null either way - pinned by the test that makes fetch reject and asserts null. Emptying it changes only the log.",

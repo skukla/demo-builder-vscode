@@ -12,6 +12,7 @@
 import * as vscode from 'vscode';
 import { readDaAuthHelperToken, writeDaAuthHelperToken } from '../daAuthHelperToken';
 import { DA_LIVE_BASE_URL } from './daLiveConstants';
+import { parseJwtPayload } from './jwtPayload';
 import { getLogger } from '@/core/logging/debugLogger';
 
 // ==========================================================
@@ -35,34 +36,6 @@ export interface DaLiveTokenInfo {
     accessToken: string;
     expiresAt: number;
     email?: string;
-}
-
-// ==========================================================
-// JWT Utilities
-// ==========================================================
-
-/**
- * Parse a JWT token's payload section (base64-decode + JSON.parse).
- *
- * Returns the decoded payload as a plain object, or null if the token
- * cannot be parsed (too few parts, invalid base64, or invalid JSON).
- *
- * Shared by storeToken (to extract email/expiry) and
- * validateDaLiveToken in daLiveAuthPrompt (to validate client_id/expiry).
- *
- * @param token - JWT token string
- * @returns Decoded payload or null on failure
- */
-export function parseJwtPayload(token: string): Record<string, unknown> | null {
-    try {
-        const parts = token.split('.');
-        if (parts.length < 2) {
-            return null;
-        }
-        return JSON.parse(Buffer.from(parts[1], 'base64').toString());
-    } catch {
-        return null;
-    }
 }
 
 // ==========================================================
@@ -227,11 +200,10 @@ export class DaLiveAuthService {
      * The DA.live token is an Adobe IMS token. The user's email is not reliably
      * in the JWT claims, so we fetch it from the IMS profile endpoint.
      *
-     * @param token - Optional token to use (defaults to stored token)
      * @returns User email or null if fetch fails
      */
-    async fetchUserEmail(token?: string): Promise<string | null> {
-        const accessToken = token || (await this.getAccessToken());
+    async fetchUserEmail(): Promise<string | null> {
+        const accessToken = await this.getAccessToken();
         if (!accessToken) {
             return null;
         }

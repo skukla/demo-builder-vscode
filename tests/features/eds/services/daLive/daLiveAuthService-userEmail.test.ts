@@ -58,18 +58,7 @@ describe('DaLiveAuthService — IMS profile email', () => {
     });
 
     describe('fetchUserEmail', () => {
-        it('puts the token it was handed on the wire, not the stored one', async () => {
-            makeService(withStoredToken());
-            imsAnswers({ email: 'a@x.test' });
-
-            await service.fetchUserEmail('explicit-token');
-
-            expect(global.fetch).toHaveBeenCalledWith(IMS_PROFILE_URL, {
-                headers: { Authorization: 'Bearer explicit-token' },
-            });
-        });
-
-        it('falls back to the stored token when handed none', async () => {
+        it('puts the stored token on the wire', async () => {
             makeService(withStoredToken());
             imsAnswers({ email: 'a@x.test' });
 
