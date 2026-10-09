@@ -362,10 +362,10 @@ about it, and what (if anything) the owner has to decide.
   scope, which the backend owns). Read both during the configGenerator split: they are not
   the same job written twice, but they can disagree. A stale store-scope copy on a mesh
   entry that iterates after the backend would hide a backend scope change from the
-  "republish needed" check while config.json would pick it up. Not changed: it is outside
-  the split and changing it changes when the prompt shows. **Decide:** whether the
-  staleness check should read the same merge the render uses (one sitting, with a test
-  for the mesh-copy case), or stay as it is.
+  "republish needed" check while config.json would pick it up. **Fixed the same day**
+  (045974e39): verified against the 2026-08-10 empty-PDP failure it reproduces, the check
+  and the recording of what was published now use the render's merge; three tests pin the
+  stale mesh copy case and all three fail on the old code.
 
 ## Triage of the untangled files (2026-10-08, read by a Sonnet agent, verdicts are LEADS)
 
