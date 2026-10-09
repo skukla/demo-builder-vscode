@@ -107,3 +107,4 @@ naming fields, so the screen uses the words an SC's prospect would recognise.
 - 2026-09-28  docs(backlog): AB-26z the ERP's local date built on a loop branch (`2e5483728`)
 - 2026-10-03  Leftover built, not committed (loop/2026-10-03-overnight): a run that succeeds with a warning now ends the progress window on it (warning icon, the run's title, the warning under it) and the window waits to be closed; in the background it becomes a warning notification. Wired for Load demo data, Add another ERP and Reset ERPs. Open for the owner: see it once on a real fill whose prices do not publish
 - 2026-10-03  Reconciled 2026-10-03 (second pass): the 'uncommitted / staged' wording above is stale: the work is committed (6817f5486, f0b4705e3, b7bc129d2, 844afae69) and on feature/erp-integration.
+- 2026-10-09  fix(erp): a price publish that outruns its answer is followed, or said plainly (`11e62ced4`)
