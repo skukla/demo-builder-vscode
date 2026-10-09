@@ -77,6 +77,11 @@ export async function captureErrorDetail(response: Response): Promise<string> {
      * MAX_REAUTH_ATTEMPTS. The cost of being wrong is one prompt; the cost of not
      * trying was a three-minute pipeline failing 52 times.
      *
+     * Used by every Helix write that can meet this 403: page and bulk preview,
+     * code preview, page and bulk publish, and cache purge. Publish and purge
+     * threw "you do not have permission" until 2026-10-09, with no recorded
+     * reason; the owner decided they should match preview (PL-69).
+     *
      * NOT used for the DELETE /live 403, which is the documented
      * "while source exists" restriction — a real constraint, not a credential
      * problem, and on a different method (see `HelixAdminAuth.getDeleteAuthHeaders`).

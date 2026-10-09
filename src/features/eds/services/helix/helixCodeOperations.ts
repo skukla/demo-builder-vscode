@@ -51,7 +51,7 @@ interface CodeOperationDeps {
  * @param org - Organization/owner name
  * @param site - Site/repository name
  * @param branch - Branch name
- * @throws Error on access denied (403) or network error
+ * @throws DaLiveAuthError on a 403 (a refused credential); Error on other failures
  */
 export async function purgeCacheAll(
     deps: CodeOperationDeps,
@@ -88,9 +88,10 @@ export async function purgeCacheAll(
         throw new Error(ADMIN_API_401_MESSAGE);
     }
 
-    // 403 is access denied
+    // 403 is a refused credential, as on preview and publish — an expired admin
+    // Bearer is refused with the same x-error as a missing role.
     if (response.status === 403) {
-        throw new Error('Access denied. You do not have permission to purge this site cache.');
+        await throwCredentialRefused(response, 'purge this site cache');
     }
 
     if (!response.ok) {

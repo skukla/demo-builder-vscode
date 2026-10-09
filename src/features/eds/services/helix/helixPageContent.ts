@@ -90,21 +90,35 @@ export async function getResourceStatus(
     }
 }
 
-/** Preview one page: Helix pulls it from the content source into the preview partition. */
-export async function previewPage(
+/** How one single-page POST names itself in logs and errors. */
+const PAGE_OPS = {
+    preview: { doing: 'Previewing', did: 'Successfully previewed', verb: 'preview' },
+    live: { doing: 'Publishing', did: 'Successfully published', verb: 'publish' },
+} as const;
+
+/**
+ * POST one page to a Helix partition — preview pulls it from the content source,
+ * live copies preview to the CDN. One body for both: they send the same
+ * credentials and read the same answers, and a 403 is a refused credential on
+ * either (see `throwCredentialRefused`), so an expired session re-prompts
+ * whichever step it lands on.
+ */
+async function postPage(
     deps: PageContentDeps,
+    partition: keyof typeof PAGE_OPS,
     org: string,
     site: string,
     path: string,
     branch: string,
 ): Promise<void> {
     const { logger } = deps;
+    const op = PAGE_OPS[partition];
     const githubToken = await deps.auth.getGitHubToken();
     const imsToken = await deps.auth.getDaLiveToken();
     const cleanPath = normalizeHelixPath(path);
-    const url = buildPartitionUrl('preview', org, site, branch, cleanPath);
+    const url = buildPartitionUrl(partition, org, site, branch, cleanPath);
 
-    logger.debug(`[Helix] Previewing page: ${url}`);
+    logger.debug(`[Helix] ${op.doing} page: ${url}`);
 
     const response = await fetch(url, {
         method: 'POST',
@@ -119,14 +133,25 @@ export async function previewPage(
     }
 
     if (response.status === 403) {
-        await throwCredentialRefused(response, 'preview this content');
+        await throwCredentialRefused(response, `${op.verb} this content`);
     }
 
     if (!response.ok) {
-        throw new Error(`Failed to preview page: ${response.status} ${response.statusText}`);
+        throw new Error(`Failed to ${op.verb} page: ${response.status} ${response.statusText}`);
     }
 
-    logger.debug(`[Helix] Successfully previewed: ${cleanPath}`);
+    logger.debug(`[Helix] ${op.did}: ${cleanPath}`);
+}
+
+/** Preview one page: Helix pulls it from the content source into the preview partition. */
+export function previewPage(
+    deps: PageContentDeps,
+    org: string,
+    site: string,
+    path: string,
+    branch: string,
+): Promise<void> {
+    return postPage(deps, 'preview', org, site, path, branch);
 }
 
 /**
@@ -135,42 +160,14 @@ export async function previewPage(
  * This triggers the Helix Admin to copy content from preview
  * to the .aem.live production URL.
  *
- * @throws Error on access denied (403) or network error
+ * @throws DaLiveAuthError on a 403 (a refused credential); Error on other failures
  */
-export async function publishPage(
+export function publishPage(
     deps: PageContentDeps,
     org: string,
     site: string,
     path: string,
     branch: string,
 ): Promise<void> {
-    const { logger } = deps;
-    const githubToken = await deps.auth.getGitHubToken();
-    const imsToken = await deps.auth.getDaLiveToken();
-    const cleanPath = normalizeHelixPath(path);
-    const url = buildPartitionUrl('live', org, site, branch, cleanPath);
-
-    logger.debug(`[Helix] Publishing page: ${url}`);
-
-    const response = await fetch(url, {
-        method: 'POST',
-        // ONE credential definition with the vscode-free client (the
-        // Authorization-first rationale lives on buildPublishHeaders).
-        headers: buildPublishHeaders({ githubToken, daLiveToken: imsToken }),
-        signal: AbortSignal.timeout(TIMEOUTS.LONG),
-    });
-
-    if (response.status === 401) {
-        throw new Error(ADMIN_API_401_MESSAGE);
-    }
-
-    if (response.status === 403) {
-        throw new Error('Access denied. You do not have permission to publish this content.');
-    }
-
-    if (!response.ok) {
-        throw new Error(`Failed to publish page: ${response.status} ${response.statusText}`);
-    }
-
-    logger.debug(`[Helix] Successfully published: ${cleanPath}`);
+    return postPage(deps, 'live', org, site, path, branch);
 }
