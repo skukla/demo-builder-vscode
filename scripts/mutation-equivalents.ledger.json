@@ -14838,11 +14838,11 @@
             "anchors": [
                 "if (!payload || typeof payload !== 'object') {"
             ],
-            "line": 194,
+            "line": 103,
             "mutants": 1,
             "category": "branch",
-            "reason": "Stryker replaces the typeof clause with false, leaving 'if (!payload)'. Every payload that reaches these handlers is a JSON value from a webview message or an in-process tool call, and for every truthy non-object JSON value \u2014 a string, a number, a boolean \u2014 the destructured fields come back undefined and the SECOND guard below refuses with the identical { success: false, error: 'Invalid payload' }. The only input that separates the two is a function or symbol carrying string-typed fields, which no caller can produce and no message channel can carry.",
-            "decision": "none \u2014 the clause is the shared object check every handler in this file runs; the field-type guard below makes it unobservable here, and deleting it would leave the other handlers inconsistent",
+            "reason": "Stryker replaces the typeof clause with false, leaving 'if (!payload)'. The clause now lives once, in readStackPayload, which every selection handler in this file opens with (PL-69 sitting 8, 2026-10-09; it was the first line of each handler's own copy before). Every payload that reaches these handlers is a JSON value from a webview message or an in-process tool call, and for every truthy non-object JSON value, a string, a number, a boolean, the destructured fields come back undefined and the SECOND guard below refuses with the identical undefined, so the handler answers the same { success: false, error: 'Invalid payload' }. The only input that separates the two is a function or symbol carrying string-typed fields, which no caller can produce and no message channel can carry.",
+            "decision": "none \u2014 the clause is the object check the shared reader runs for every handler; the field-type guard below makes it unobservable, and deleting it would make the reader destructure a primitive on purpose",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-06"
         },
@@ -15648,6 +15648,31 @@
             "decision": "none \u2014 equivalent: the catch that exists for an already-disposed panel also hides the mutant.",
             "recorded": "2026-10-09",
             "source": "PL-69 sitting 4 (Part B, the Integrations command suite)"
+        },
+        {
+            "module": "src/features/dashboard/handlers/consoleApiHandlers.ts",
+            "anchors": [
+                "if (desiredExtras.length > 0) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Both mutants (the condition forced true, and > turned into >=) make an emptied owner keep an EMPTY list in nextPicks instead of being deleted. Nothing downstream can tell the two apart: an empty list adds nothing when the shared-workspace union is flattened from it, and before anything is saved the picks pass through '.filter(([, codes]) => codes.length > 0)', which removes the empty key. Pinned by 'an owner left with nothing is removed' in consoleApiHandlers-persistedPicks, which stays green under both mutants; the delete is the honest statement of the rule applyDesiredApis follows, and the filter is what enforces it for the owners the subscribe emptied.",
+            "decision": "none \u2014 the save-time filter already removes every empty owner, so the delete and the filter agree by construction",
+            "recorded": "2026-10-09",
+            "source": "PL-69 sitting 8, consoleApiHandlers focus run"
+        },
+        {
+            "module": "src/features/dashboard/handlers/consoleApiHandlers.ts",
+            "anchors": [
+                "const componentId = payload?.componentId;"
+            ],
+            "line": 363,
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "The add handler's twin of the ledgered set-handler line: the payload cannot be undefined by the time this line runs, because the handler's first act is validateSdkCodes(payload?.apis, ...), and an undefined payload yields undefined apis, which is not an array, so it returns the CONFIG_INVALID refusal before reaching here. Dropping the optional changes nothing for any input the handler accepts.",
+            "decision": "none \u2014 an optional read behind a validation that has already refused every undefined payload",
+            "recorded": "2026-10-09",
+            "source": "PL-69 sitting 8, consoleApiHandlers focus run"
         }
     ]
 }

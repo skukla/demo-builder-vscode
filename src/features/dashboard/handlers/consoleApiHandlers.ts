@@ -304,6 +304,41 @@ async function reconcileExtras(
 }
 
 /**
+ * The refusal a handler answers with when there is no project or a guard says no.
+ * A type alias, not an interface, so it satisfies HandlerResponse's index signature.
+ */
+type ConsoleApiRefusal = {
+    success: false;
+    error: string;
+    code?: ErrorCode;
+};
+
+/**
+ * The opening every mutating Console API handler shares: the current project,
+ * then the App Builder guard chain over it. Answers the project or the refusal
+ * to return. The list handler keeps its own opening because its no-org refusal
+ * sits between the load and the guards, and moving it would change which
+ * refusal a signed-out, org-less project sees.
+ */
+async function loadProjectAndGuard(
+    context: HandlerContext,
+): Promise<
+    { project: Project; refusal?: undefined } | { project?: undefined; refusal: ConsoleApiRefusal }
+> {
+    const project = await context.stateManager.getCurrentProject();
+    if (!project) {
+        return {
+            refusal: { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND },
+        };
+    }
+    const guardError = await runGuards(context, project);
+    if (guardError) {
+        return { refusal: { success: false, error: guardError.error, code: guardError.code } };
+    }
+    return { project };
+}
+
+/**
  * Handle 'addConsoleApis' — additively subscribe the given sdk codes (union with
  * the existing extras). The MCP `add_console_apis` tool path.
  *
@@ -321,14 +356,9 @@ export const handleAddConsoleApis: MessageHandler<{
         return { success: false, error: codeError, code: ErrorCode.CONFIG_INVALID };
     }
 
-    const project = await context.stateManager.getCurrentProject();
-    if (!project) {
-        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
-    }
-    const guardError = await runGuards(context, project);
-    if (guardError) {
-        return { success: false, error: guardError.error, code: guardError.code };
-    }
+    const loaded = await loadProjectAndGuard(context);
+    if (loaded.refusal) return loaded.refusal;
+    const { project } = loaded;
 
     const componentId = payload?.componentId;
     if (componentId && !project.appBuilderComponents?.[componentId]) {
@@ -368,14 +398,9 @@ export const handleSetConsoleApis: MessageHandler<{ apis?: string[]; componentId
         return { success: false, error: codeError, code: ErrorCode.CONFIG_INVALID };
     }
 
-    const project = await context.stateManager.getCurrentProject();
-    if (!project) {
-        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
-    }
-    const guardError = await runGuards(context, project);
-    if (guardError) {
-        return { success: false, error: guardError.error, code: guardError.code };
-    }
+    const loaded = await loadProjectAndGuard(context);
+    if (loaded.refusal) return loaded.refusal;
+    const { project } = loaded;
 
     const desired = [...new Set(apis as string[])];
     const result = await reconcileExtras(context, project, desired, payload?.componentId);

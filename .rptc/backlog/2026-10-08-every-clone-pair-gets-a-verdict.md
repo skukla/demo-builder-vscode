@@ -37,7 +37,7 @@ excluded by the scan's ignore flag and are not among the 40.
 | 11 | components/ui/hooks/useComponentConfig.ts:321-329 | dashboard/ui/configure/hooks/useConfigureFieldValues.ts:146-155 | updateField start | DONE 2026-10-09 (sitting 7) | same edit on both surfaces; now `applyFieldUpdate(configs, field, value, { backendId, touchedFields })` in `components/services/componentConfigWrites.ts` |
 | 12 | useComponentConfig.ts:331-343 | useConfigureFieldValues.ts:157-169 | linked PAAS_URL write | DONE 2026-10-09 (sitting 7) | same fragment; the PaaS URL to GraphQL link is inside `applyFieldUpdate` |
 | 13 | components/ui/components/ConfigFieldRenderer.tsx:96-109 | same file:76-89 | TextField props block | DONE 2026-10-09 (sitting 7) | text and password differ by `type` and the url `onBlur`; now one `textFieldProps()` builder spread into both |
-| 14 | updates/commands/updateExecutor.ts:463-474 | updates/services/updateCore.ts:89-100 | find library, warn, skip | EXTRACT | `findInstalledLibrary(item, ctx)` in updateCore; updateCore has no named suite |
+| 14 | updates/commands/updateExecutor.ts:463-474 | updates/services/updateCore.ts:89-100 | find library, warn, skip | DONE 2026-10-09 (sitting 8) | `findInstalledLibrary(item, ctx)` in updateCore, with its first suite (`updateCore.test.ts`, 3 cases); both apply paths open with it |
 | 15 | projects-dashboard/handlers/projectsListOpen.ts:96-106 | same file:72-82 | resolve project preamble | EXTRACT | one cluster with 16, 17 and 3 sites in projectsListLifecycle.ts: 7 sites |
 | 16 | projectsListOpen.ts:130-140 | same file:72-106 | same | EXTRACT | same cluster |
 | 17 | projectsListOpen.ts:162-172 | same file:72-106 | same | EXTRACT | `withProject(handler)` in projectFromPath.ts; no named suite for either handler file |
@@ -49,13 +49,13 @@ excluded by the scan's ignore flag and are not among the 40.
 | 23 | eds/services/errorFormatters.ts:474-485 | same file:283-294 | match error by code | EXTRACT | three tables share the lookup; `formatByPatterns(error, table)` |
 | 24 | errorFormatters.ts:485-502 | same file:294-311 | match error by regex | EXTRACT | same as 23 |
 | 25 | data-installer/handlers/exportHandlers.ts:191-200 | data-installer/handlers/importHandlers.ts:437-447 | access, project, credentials | EXTRACT | the whole gate repeats; `resolveWriteGate(context, verb)`; after the EDS-8 data-installer sitting lands |
-| 26 | dashboard/handlers/consoleApiHandlers.ts:366-380 | same file:319-333 | validate, project, guards | EXTRACT | three handlers share the prefix (line 90 too); `loadProjectAndGuard(context)` |
+| 26 | dashboard/handlers/consoleApiHandlers.ts:366-380 | same file:319-333 | validate, project, guards | DONE 2026-10-09 (sitting 8) | `loadProjectAndGuard(context)` opens add and set; list keeps its own opening because its no-org refusal sits between the load and the guards |
 | 27 | dashboard/commands/showIntegrations.ts:194-205 | projects-dashboard/commands/showProjectsList.ts:208-219 | createHandlerContext | EXTRACT | identical wrapper over `createPanelHandlerContext` |
 | 28 | dashboard/commands/showDashboard.ts:383-409 | showProjectsList.ts:197-219 | createHandlerContext | EXTRACT | same |
 | 29 | dashboard/commands/openAi.ts:137-148 | showProjectsList.ts:208-219 | createHandlerContext | EXTRACT | same |
 | 30 | dashboard/commands/configure.ts:147-160 | project-creation/commands/createProject.ts:231-244 | getWebviewContent bundle HTML | EXTRACT | `StandalonePanelCommand` already does this with a `bundleName` |
 | 31 | dashboard/commands/configure.ts:853-873 | showProjectsList.ts:208-219 | createHandlerContext | EXTRACT | same as 27 |
-| 32 | components/handlers/componentHandlers.ts:143-155 | same file:102-114 | frontend/backend payload check | EXTRACT | identical guard in two handlers; `readStackPayload(payload)` |
+| 32 | components/handlers/componentHandlers.ts:143-155 | same file:102-114 | frontend/backend payload check | DONE 2026-10-09 (sitting 8) | `readStackPayload(payload)` in all three selection handlers; validateSelection keeps its own dependencies check after it |
 | 33 | authentication/services/types.ts:80-95 | same file:65-80 | identical interface body | DONE 2026-10-09 (sitting 6) | `AdobeConsoleWhereResponse` is now a type alias of `AdobeContext` |
 | 34 | authentication/services/adobeWorkspaceCredentials.ts:212-228 | same file:97-113 | resolve org/project/workspace ids | DONE 2026-10-09 (sitting 6) | same lookup in get and create; now private `resolveCachedTarget(purpose)` |
 | 35 | authentication/handlers/projectHandlers.ts:266-285 | authentication/handlers/workspaceHandlers.ts:143-162 | auth guard, permission re-check | DONE 2026-10-09 (sitting 6) | same policy, only the noun differs; now `gateConsoleCreate(context, payload, noun)` in consoleCreateGate.ts; the refresh after it differs on purpose and stays |
@@ -76,7 +76,7 @@ excluded by the scan's ignore flag and are not among the 40.
 | 5. Prerequisites | 19, 20 | 19 (landed at 18: sitting 4 had already reached 20) |
 | 6. Authentication | 33, 34, 35 | 16 (landed at 15: sitting 5 had already reached 18) |
 | 7. UI (field update logic, TextField props) | 11, 12, 13 | 13 (landed at 12: sitting 6 had already reached 15) |
-| 8. Small handlers (updates, console API, component payload) | 14, 26, 32 | 10 |
+| 8. Small handlers (updates, console API, component payload) | 14, 26, 32 | 10 (landed at 9: sitting 7 had already reached 12) |
 | 9. Cross-feature | 18, 22 | 8 |
 | 10. App Builder | 36 | 7 |
 | 11. Data installer (after the EDS-8 sitting on those files) | 25 | 6 |
@@ -292,6 +292,48 @@ covered both sites but accounted for one mutant. Two ledger rows added with thos
 open gaps are 0 on every row. Four equivalents ledger entries re-anchored to the lines the
 import changes moved.
 
+**Sitting 8 (pairs 14, 26 and 32) DONE 2026-10-09.** Re-scanned first: 12 clones, the three
+handler fragments exactly where the table said. All three pairs were real:
+
+- **14** (`updateExecutor.ts`, `updateCore.ts`): both block-library apply paths opened with
+  the same lookup, the project's record of the library or a warning and a skip. Now
+  `findInstalledLibrary(item, ctx)` in updateCore, beside the resolved apply it serves; the
+  UI path still asks it before prompting, so a dropped library never raises a dialog.
+  updateCore had no suite of its own; `updateCore.test.ts` now holds the helper's three
+  cases and one for the resolved path's skip.
+- **26** (`consoleApiHandlers.ts`): add and set opened with the same load-the-project,
+  run-the-guards prefix. Now one private `loadProjectAndGuard(context)` that answers the
+  project or the refusal to return. The list handler keeps its own opening on purpose: its
+  no-org refusal sits between the load and the guards, and folding it would change which
+  refusal an org-less project sees.
+- **32** (`componentHandlers.ts`): check-compatibility and load-dependencies carried the
+  same object-then-string-fields guard. Now one private `readStackPayload(payload)`;
+  validate-selection reads its stack through it too and keeps its own dependencies check
+  after, with the same 'Invalid payload' refusal.
+
+Proof: the 53 pre-existing suites for the four touched files (747 tests) ran unchanged
+before and after; 55 suites and 764 tests with the new ones. cloneCeiling 12 -> 9.
+
+Found by the re-measure, fixed here: the consoleApiHandlers row (89.53) predated the
+per-workspace reconcile code of 2026-09-21, and the committed file measured 81.05 with seven
+branch survivors and eight uncovered mutants in it. A new suite,
+`consoleApiHandlers-persistedPicks` (13 cases), pins each by what reaches
+`subscribeRequiredApis` or the saved project: an owner emptied by a set is removed, a code
+Adobe refused is dropped from the asking owner only (another workspace's picks survive), the
+own-workspace and shared catalog filters, the subscribe's progress pushes, and the reads of
+an integration or mesh entry the project does not list. Two of those were planted by hand
+first and each failed the new suite.
+
+Mutation: three rows re-measured against the committed file first. consoleApiHandlers 81.05
+(stale row 89.53) -> 89.75, openGaps 0 (the debug-log forwarder survives because no suite may
+assert log wording); two ledger rows added (the emptied-owner condition,
+which the save-time empty filter makes unobservable, and the add handler's
+`payload?.componentId`, twin of the ledgered set line). componentHandlers 94.24 (stale row
+86.25) -> 94.64; its one ledger entry re-anchored to readStackPayload. updateExecutor 88.94
+reproduced -> 88.58 and NOT a gap: the same 25 survivors, 7 killed mutants moved out with the
+lookup. updateCore gets no row on purpose (owner note below): 65.08 -> 74.63 measured with
+every related suite, nothing surviving in the new helper.
+
 ## Below the scan's threshold, found by reading (2026-10-08)
 
 The same five-line `ensureSDKReady` method is copied into four authentication files:
@@ -346,3 +388,5 @@ in favour of the EDS-34 version, and lower the pin. That also turns the floor of
 - 2026-10-09  Sitting 7 (UI), pairs 11 to 13 extracted: `applyFieldUpdate(configs, field, value, { backendId, touchedFields })` in componentConfigWrites.ts now applies the field edit (and the PaaS URL to GraphQL endpoint link) for both the wizard and Configure; ConfigFieldRenderer's text/url and password fields share one `textFieldProps()` builder. Both hooks' blur-normalize now pass the backend id through `writeFieldValue` (the wizard's did not; unobservable today, no scope key is URL-typed). 10 touched suites (205 tests) unchanged and green; 212 with the seven new cases. Four baseline rows re-measured and written. cloneCeiling 15 -> 12.
 - 2026-10-09  For the owner (sitting 7): `ConfigFieldRenderer.tsx` has two new string survivors (`width: '100%'`, `marginBottom: 'size-200'`) that nothing in its suite can kill, because the suite renders the mocked Spectrum TextField and the mock drops both props. They are presentational and the ratchet does not count them, but they are also not equivalent mutants, so they sit in the row's note rather than the ledger. If the owner wants them killed, the honest route is a test that renders the real Spectrum TextField for this one component (the `webview-visual-baseline` instrument already proves the real layout), not an assertion on the mock.
 - 2026-10-09  refactor(components): one field edit for both config surfaces, one TextField props builder (`850e4e955`)
+- 2026-10-09  Sitting 8 (small handlers), pairs 14, 26 and 32 extracted: `findInstalledLibrary(item, ctx)` in updateCore (first suite for that file), `loadProjectAndGuard(context)` for the add and set Console API handlers, `readStackPayload(payload)` for the three component selection handlers. 53 touched suites (747 tests) unchanged and green; 764 with the new cases. Also fixed on the way: the per-workspace Console API reconcile had seven branch decisions and eight mutants no test reached; a new 13-case suite covers them. Three baseline rows re-measured and written. cloneCeiling 12 -> 9.
+- 2026-10-09  For the owner (sitting 8): `updateCore.ts` has no baseline row on purpose. Before this sitting it had no suite of its own, so the focus tool fell back to the import graph and measured it with the updateExecutor and updateApplyService suites. The new `updateCore.test.ts` is now its mirror suite, and the tool takes the mirror INSTEAD of the graph, so a re-measure would use only the four helper cases and report the rest of the file (the marker write, the re-install) as uncovered. Measured with every related suite it reads 74.63. Same shape as perNodeVersionStatus in sitting 5. Recommendation: let `focusModule.mjs` add the graph's suites when the mirror finds a suite that does not cover the module's other exports, or accept a lower mirror-only row; either is a change to the instrument, not to this sitting's code.

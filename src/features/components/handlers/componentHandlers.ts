@@ -95,6 +95,22 @@ export const handleGetComponentsData: MessageHandler = async (context: HandlerCo
 };
 
 /**
+ * The frontend/backend pair a selection handler is asked about, or undefined
+ * when the payload is not an object carrying both as strings. Every handler
+ * below refuses with the same 'Invalid payload' on undefined.
+ */
+function readStackPayload(payload: unknown): { frontend: string; backend: string } | undefined {
+    if (!payload || typeof payload !== 'object') {
+        return undefined;
+    }
+    const { frontend, backend } = payload as { frontend?: unknown; backend?: unknown };
+    if (typeof frontend !== 'string' || typeof backend !== 'string') {
+        return undefined;
+    }
+    return { frontend, backend };
+}
+
+/**
  * checkCompatibility - Check component compatibility
  *
  * Validates that selected components are compatible with each other.
@@ -104,13 +120,11 @@ export const handleCheckCompatibility: MessageHandler = async (
     payload?: unknown,
 ) => {
     try {
-        if (!payload || typeof payload !== 'object') {
+        const stack = readStackPayload(payload);
+        if (!stack) {
             return { success: false, error: 'Invalid payload' };
         }
-        const { frontend, backend } = payload as { frontend: string; backend: string };
-        if (typeof frontend !== 'string' || typeof backend !== 'string') {
-            return { success: false, error: 'Invalid payload' };
-        }
+        const { frontend, backend } = stack;
         const registryManager = createRegistryManager(context);
 
         const compatible = await registryManager.checkCompatibility(frontend, backend);
@@ -145,13 +159,11 @@ export const handleLoadDependencies: MessageHandler = async (
     payload?: unknown,
 ) => {
     try {
-        if (!payload || typeof payload !== 'object') {
+        const stack = readStackPayload(payload);
+        if (!stack) {
             return { success: false, error: 'Invalid payload' };
         }
-        const { frontend, backend } = payload as { frontend: string; backend: string };
-        if (typeof frontend !== 'string' || typeof backend !== 'string') {
-            return { success: false, error: 'Invalid payload' };
-        }
+        const { frontend, backend } = stack;
         const dependencyResolver = createDependencyResolver(context);
 
         const resolved = await dependencyResolver.resolveDependencies(frontend, backend);
@@ -191,21 +203,15 @@ export const handleValidateSelection: MessageHandler = async (
     payload?: unknown,
 ) => {
     try {
-        if (!payload || typeof payload !== 'object') {
+        const stack = readStackPayload(payload);
+        if (!stack) {
             return { success: false, error: 'Invalid payload' };
         }
-        const { frontend, backend, dependencies } = payload as {
-            frontend: string;
-            backend: string;
-            dependencies: string[];
-        };
-        if (
-            typeof frontend !== 'string' ||
-            typeof backend !== 'string' ||
-            !Array.isArray(dependencies)
-        ) {
+        const { dependencies } = payload as { dependencies?: string[] };
+        if (!Array.isArray(dependencies)) {
             return { success: false, error: 'Invalid payload' };
         }
+        const { frontend, backend } = stack;
         const dependencyResolver = createDependencyResolver(context);
 
         const resolved = await dependencyResolver.resolveDependencies(

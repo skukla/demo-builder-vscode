@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "PL-69 sitting 7, 2026-10-09 (UI). Four rows re-measured against the committed file first and then against the change, in one focused run. useComponentConfig.ts: row 88.52 was stale (committed file 85.65, 230 mutants against the row's 305), now 84.79 and NOT a gap: the same 32 survivors as the committed file, and 13 killed mutants moved out with the field edit to componentConfigWrites.ts, so the ratio fell while nothing lost a test. The stale row also hid two open gaps the committed file already had: the first 'if (cancelled) return;' guard and the URL block's '!result.valid && result.error', each the twin of a ledgered line whose reason already covered both sites but accounted for one mutant; two rows added, openGaps 0. useConfigureFieldValues.ts: row 94.62 was stale upward (committed file 95.16), now 94.55 for the same reason: the same 6 survivors, 14 killed mutants moved out with the edit. componentConfigWrites.ts: 100 before and after; applyFieldUpdate adds 14 mutants and its seven cases kill all of them. ConfigFieldRenderer.tsx: row 86.27 reproduced on the committed file, now 84.91 with two NEW survivors, both strings: width '100%' and marginBottom 'size-200' in the shared textFieldProps() builder. As JSX attributes Stryker never mutated them; as object-literal strings it does, and the suite renders the mocked Spectrum TextField (tests/__mocks__/@adobe/react-spectrum.tsx), which drops both props, so no test in that suite can see them. Not ledgered as equivalent, because a real browser would show the change; recorded here as presentational strings the ratchet does not count as behavioural (open gaps 0 before and after). The 'invalid' validationState string that survived once and was uncovered once is now one mutant.",
+    "_note": "PL-69 sitting 8, 2026-10-09 (small handlers). Three rows re-measured against the committed file first and then against the change. consoleApiHandlers.ts: row 89.53 was stale DOWNWARD (committed file 81.05: seven branch survivors and eight uncovered mutants in the per-workspace reconcile code from 2026-09-21, which landed after the row). Now 89.75 (219 killed, 23 survived, 2 uncovered) from its three mirror suites, openGaps 0 (the one survivor past 90.16 is the subscribe log forwarder, which tests/sop/no-logger-wording-assertions forbids asserting): a new suite, consoleApiHandlers-persistedPicks (13 cases), pins the emptied owner, the refused code dropped from the asking owner only, the own-workspace and shared catalog filters, the subscribe progress callbacks and the missing-entry reads by what reaches subscribeRequiredApis or the saved project. Two ledger rows added: the emptied-owner condition (the save-time empty filter makes the delete unobservable, 2 mutants) and the add handler's payload?.componentId (the twin of the ledgered set line). The 'behavioural survivors did not fall (4 -> 7)' warning compares against the stale row; all seven are ledgered. componentHandlers.ts: row 86.25 was stale (committed file 94.24), now 94.64: the payload guard's typeof survivor was one per handler and is one in readStackPayload (ledger entry re-anchored, line 103). updateExecutor.ts: 88.94 reproduced on the committed file, now 88.58 and NOT a gap: the same 25 survivors, and 7 killed mutants moved out with the library lookup to updateCore.ts. updateCore.ts gets no row on purpose (see the PL-69 sitting 8 owner note): with all related suites it measured 65.08 on the committed file and 74.63 after (50 killed, 11 survived, 6 uncovered, none in findInstalledLibrary), but the new mirror suite updateCore.test.ts now makes the focus tool select only that suite, so a re-measure would not reproduce the number.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -3530,21 +3530,19 @@
             "openGaps": 0
         },
         "src/features/components/handlers/componentHandlers.ts": {
-            "score": 86.25,
-            "killed": 207,
-            "survived": 31,
-            "noCoverage": 2,
+            "score": 94.64,
+            "killed": 106,
+            "survived": 6,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "logPresentation": 22,
-                "string": 5,
-                "branch": 4
+                "logPresentation": 2,
+                "branch": 1,
+                "string": 3
             },
-            "uncoveredCategories": {
-                "logPresentation": 2
-            },
-            "highValueSurvivors": 4,
-            "equivalent": 4,
+            "uncoveredCategories": {},
+            "highValueSurvivors": 1,
+            "equivalent": 1,
             "openGaps": 0
         },
         "src/features/components/services/ComponentRegistryManager.ts": {
@@ -3996,23 +3994,24 @@
             "openGaps": 0
         },
         "src/features/dashboard/handlers/consoleApiHandlers.ts": {
-            "score": 89.53,
-            "killed": 171,
-            "survived": 18,
+            "score": 89.75,
+            "killed": 219,
+            "survived": 23,
             "noCoverage": 2,
             "timeout": 0,
             "survivorCategories": {
-                "string": 2,
+                "string": 5,
                 "other": 2,
-                "logPresentation": 12,
-                "optionalChain": 2
+                "branch": 2,
+                "logPresentation": 11,
+                "optionalChain": 3
             },
             "uncoveredCategories": {
                 "other": 1,
                 "logPresentation": 1
             },
-            "highValueSurvivors": 0,
-            "equivalent": 5,
+            "highValueSurvivors": 2,
+            "equivalent": 8,
             "openGaps": 0
         },
         "src/features/dashboard/handlers/dashboardHandlers.ts": {
@@ -8926,14 +8925,14 @@
             "openGaps": 0
         },
         "src/features/updates/commands/updateExecutor.ts": {
-            "score": 88.94,
-            "killed": 209,
-            "survived": 26,
+            "score": 88.58,
+            "killed": 194,
+            "survived": 25,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "string": 20,
-                "logPresentation": 5,
+                "string": 7,
+                "logPresentation": 17,
                 "optionalChain": 1
             },
             "uncoveredCategories": {},
