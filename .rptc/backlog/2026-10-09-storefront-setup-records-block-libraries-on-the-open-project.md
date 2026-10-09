@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: med
-status: backlog
+status: built
 ---
 
 # Storefront setup recorded its block libraries on the wrong project
@@ -43,3 +43,4 @@ Projects made before the fix have no record. Their next update check offers each
 selected library once; applying it records it. No migration needed.
 
 ## Shipped so far
+- 2026-10-09  fix(eds): record installed block libraries on the project being set up (`343d26516`)
