@@ -84,3 +84,4 @@ Justrite (the extension's discontinue call answers 400 until the ERP is deployed
 which the pass reports and the add stands). Untested live: the whole loop on the sandbox.
 
 ## Shipped so far
+- 2026-10-09  feat(app-builder): ownership is applied across every ERP when it changes (`0d7e46e33`)

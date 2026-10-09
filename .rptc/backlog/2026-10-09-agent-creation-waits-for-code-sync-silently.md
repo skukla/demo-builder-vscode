@@ -51,3 +51,4 @@ Not fixed here, recorded:
 
 ## Shipped so far
 - 2026-10-09  fix(ai): a creation waiting for the Code Sync App now asks the user in VS Code (`b84f00a66`)
+- 2026-10-09  docs(backlog): AI-14 logs its commit (`2508721d8`)
