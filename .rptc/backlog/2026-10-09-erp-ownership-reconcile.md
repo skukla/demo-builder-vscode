@@ -96,3 +96,6 @@ live: add and remove with the pass, and the integration's old-owner discontinue 
 ## Shipped so far
 - 2026-10-09  feat(app-builder): ownership is applied across every ERP when it changes (`0d7e46e33`)
 - 2026-10-09  docs(backlog): AB-70 deployed to Justrite (`0ec353620`)
+- 2026-10-09  fix(erp): ownership pass makes products an ERP owns again sellable again (`7c47869b9`)
+- 2026-10-09  docs(backlog): AB-70 passed its first live check on Justrite (`0a02fa8dd`)
+- 2026-10-09  Live remove of Kukla ERP (human surface) completed with 'Justrite ERP owns every product again', but the 278 products Justrite owned again stayed discontinued (an import never resets a status). Fixed both sides: extension pass restores sellable (7c47869b9); integration restores at the owner (commerce-erp-integration ad1f4c3 on feature/ownership-reconcile, not pushed or deployed yet). Owner-side next: F5, then Load demo data on Justrite to restore the 278.

@@ -4,7 +4,7 @@ kind: fix
 area: ai
 needs: []
 value: high
-status: backlog
+status: active
 ---
 
 # A screen opened for one project acts on whichever project is current
@@ -35,3 +35,4 @@ mid-removal. `get_erp_status` from the agent answered "not found" for the same r
    current project, naming it (erpAddHandler, same day).
 
 ## Shipped so far
+- 2026-10-09  fix(dashboard): Add another ERP says when the integration is not in the current project (`f045b0c7d`)
