@@ -53,16 +53,19 @@ describe('IntegrationsGrid — reinstall', () => {
         expect(reinstallDialog()).toBeNull();
     });
 
-    it('confirming posts reinstallAppBuilderComponent with the id', async () => {
+    it('confirming runs the reinstall in the screen\'s progress modal, by the id', async () => {
         const user = setupUser();
         const { setCards } = renderCards([erpCard(false)]);
         act(() => setCards([erpCard(true)]));
 
         await user.click(within(reinstallDialog()!).getByRole('button', { name: /^reinstall$/i }));
 
+        // Pressed on a screen, it narrates in that screen's modal, never a notification.
         expect(getClient().postMessage).toHaveBeenCalledWith('reinstallAppBuilderComponent', {
             id: 'erp-integration',
+            progress: 'modal',
         });
+        expect(screen.getByRole('dialog', { name: 'Reinstalling ERP integration in Commerce' })).toBeInTheDocument();
     });
 
     it('SAFETY: closing the confirm posts nothing', async () => {
@@ -114,10 +117,13 @@ describe('IntegrationsGrid — remove anyway', () => {
 
         await user.click(within(removeAnywayDialog()!).getByRole('button', { name: /^remove anyway$/i }));
 
+        // Pressed on a screen, it narrates in that screen's modal, never a notification.
         expect(getClient().postMessage).toHaveBeenCalledWith('removeAppBuilderComponent', {
             id: 'erp-integration-key',
             force: true,
+            progress: 'modal',
         });
+        expect(screen.getByRole('dialog', { name: 'Removing ERP integration' })).toBeInTheDocument();
     });
 
     it('the menu opens it for a stop that predates the screen; closing posts nothing', async () => {

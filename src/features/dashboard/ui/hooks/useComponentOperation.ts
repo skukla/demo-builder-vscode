@@ -41,8 +41,18 @@ const OPERATION_MESSAGES: Partial<Record<CardAction, string>> = {
     // Re-run the Commerce install pass WITHOUT a redeploy (AB-5).
     install: 'installAppBuilderComponent',
     remove: 'removeAppBuilderComponent',
+    // The two flagged-card confirms. They used to post straight from their dialogs,
+    // so a reinstall or a forced removal narrated in a notification while every other
+    // card action used the modal (owner, 2026-10-09).
+    reinstall: 'reinstallAppBuilderComponent',
+    'remove-anyway': 'removeAppBuilderComponent',
     // Asks where and what to call it in the modal, then pushes (picker-to-modal).
     'save-to-github': 'promoteAppBuilderComponent',
+};
+
+/** What an action sends beside its id. "Remove anyway" is a removal told to go ahead. */
+const ACTION_PAYLOADS: Partial<Record<CardAction, Record<string, unknown>>> = {
+    'remove-anyway': { force: true },
 };
 
 /**
@@ -63,6 +73,8 @@ const VERBS: Partial<
     update: { running: 'Updating', base: 'update', done: 'updated' },
     install: { running: 'Installing', base: 'install', done: 'installed', suffix: ' into Commerce' },
     remove: { running: 'Removing', base: 'remove', done: 'removed' },
+    reinstall: { running: 'Reinstalling', base: 'reinstall', done: 'reinstalled', suffix: ' in Commerce' },
+    'remove-anyway': { running: 'Removing', base: 'remove', done: 'removed' },
     'save-to-github': { running: 'Saving', base: 'save', done: 'saved', suffix: ' to GitHub' },
 };
 
@@ -106,7 +118,8 @@ export function useComponentOperation(): ComponentOperationControls {
         (id: string, name: string, action: CardAction): boolean => {
             const message = OPERATION_MESSAGES[action];
             if (!message) return false;
-            start({ id, name, message, ...titlesFor(action, name) });
+            const payload = ACTION_PAYLOADS[action];
+            start({ id, name, message, ...(payload ? { payload } : {}), ...titlesFor(action, name) });
             return true;
         },
         [start],

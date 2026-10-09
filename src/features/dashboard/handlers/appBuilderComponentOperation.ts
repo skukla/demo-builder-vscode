@@ -105,26 +105,34 @@ export type GuardableResult = {
      * or an add's/deploy's storefront republish whose CDN publish did not land.
      */
     warnings?: string[];
+    /** The one line the modal's success view shows: `warnings` joined, unless the run set its own. */
+    warning?: string;
     /** Set by `removeAppBuilderComponent`: the Adobe workspaces it deleted. */
     workspacesDeleted?: string[];
 };
 
 /**
- * Answer a finished operation, carrying its warnings to BOTH surfaces: a warning
- * notification for the SC, and `data.warning` for an agent, which cannot see a
- * toast. HandlerResponse already has `data?: unknown`, so the message contract
- * does not change. The durable signal is elsewhere — a republish that did not
- * land leaves the storefront stale, so the Republish tile stays amber after the
- * toast is gone (`storefrontRepublishService`).
+ * Answer a finished operation, carrying its warnings to the SC and to `data.warning`
+ * for an agent, which cannot see a toast. HandlerResponse already has
+ * `data?: unknown`, so the message contract does not change. The durable signal is
+ * elsewhere — a republish that did not land leaves the storefront stale, so the
+ * Republish tile stays amber after the toast is gone (`storefrontRepublishService`).
+ *
+ * The SC reads them where the run was narrating. A run in the screen's modal already
+ * ended on them (`withComponentProgress` hands them to the modal's success view), so
+ * no notification opens for it: a removal's "Justrite ERP owns every product again"
+ * arrived as a pop-up after its modal had closed (owner, 2026-10-09). Anywhere else
+ * they are a warning notification, as before.
  */
 export function answerWithWarnings(
     data: Record<string, unknown>,
     warnings: (string | undefined)[],
+    progress?: 'modal',
 ): HandlerResponse {
     const present = warnings.filter((warning): warning is string => Boolean(warning));
     if (present.length > 0) {
         const warning = present.join(' ');
-        vscode.window.showWarningMessage(warning);
+        if (progress !== 'modal') vscode.window.showWarningMessage(warning);
         return { success: true, data: { ...data, warning } };
     }
     return { success: true, data: Object.keys(data).length > 0 ? data : undefined };
@@ -135,6 +143,17 @@ export function kindNoun(kind: AppBuilderComponentKind | undefined): string {
     if (kind === 'mesh') return 'Mesh';
     if (kind === 'system') return 'System';
     return 'Integration';
+}
+
+/**
+ * A run's notes as the one `warning` the modal's success view reads (`withOperationProgress`).
+ * Without it the modal closed as a plain success and the notes reached the SC only as a
+ * pop-up afterwards (owner, 2026-10-09).
+ */
+function withNotesAsWarning<T extends GuardableResult>(result: T): T {
+    const notes = (result.warnings ?? []).filter(Boolean);
+    if (!result.success || result.warning || notes.length === 0) return result;
+    return { ...result, warning: notes.join(' ') };
 }
 
 /**
@@ -224,11 +243,13 @@ export async function withComponentProgress<T extends GuardableResult>(
                 void postRowStatus(id, 'deploying', cardLabel);
             },
         },
-        (report) =>
-            run((stage, step, position) => {
-                steps.step(stageLine(step || stage, position));
-                report(stage, step, position);
-            }),
+        async (report) =>
+            withNotesAsWarning(
+                await run((stage, step, position) => {
+                    steps.step(stageLine(step || stage, position));
+                    report(stage, step, position);
+                }),
+            ),
     );
     steps.finish();
 

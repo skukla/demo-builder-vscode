@@ -640,6 +640,22 @@ describe('handleReinstallAppBuilderComponent', () => {
     // it (2026-09-22, live) — and the app still reports itself installed, so the
     // install pass answers "skipped" and nothing comes back. A reinstall is the one
     // pass that starts from nothing, so it may be asked for at any time.
+    it('started from the integrations screen, it narrates in the modal and opens no notification', async () => {
+        const { mockContext } = setupMocks(refusedProject());
+        mockDeveloperPermissions();
+        mockUninstallAppManagement.mockResolvedValue({ status: 'uninstalled' });
+        mockInstallAppManagement.mockResolvedValue({ status: 'installed', version: '0.2.0' });
+
+        const result = await handleReinstallAppBuilderComponent(mockContext, { id: 'kit-app', progress: 'modal' });
+
+        expect(result.success).toBe(true);
+        expect(mockProgressTitles).toStrictEqual([]);
+        expect(mockContext.sendMessage).toHaveBeenCalledWith(
+            'operationProgress',
+            expect.objectContaining({ id: 'kit-app' }),
+        );
+    });
+
     it('reinstalls an app Commerce never refused to upgrade — the repair for a lost install', async () => {
         const { mockContext } = setupMocks(kitProject());
         mockDeveloperPermissions();

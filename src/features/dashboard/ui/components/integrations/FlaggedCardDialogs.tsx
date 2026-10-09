@@ -6,6 +6,10 @@
  * - Remove anyway, after a removal stopped because a clean-up only the deployed
  *   code can do did not finish. It removes with `force`, leaving that behind.
  *
+ * Neither posts. A confirmed action goes to the screen's operation runner (`onRun`),
+ * so it narrates in the progress modal like every other card action. Posting from
+ * here meant both ran in a notification instead (owner, 2026-10-09).
+ *
  * Split from `IntegrationsGrid` to keep the grid within its size limit.
  *
  * @module features/dashboard/ui/components/integrations/FlaggedCardDialogs
@@ -14,9 +18,11 @@
 import { Text } from '@adobe/react-spectrum';
 import React, { useCallback } from 'react';
 import { ConfirmActionDialog } from '../ConfirmActionDialog';
-import type { IntegrationCardModel } from './integrationCardModel';
+import type { CardAction, IntegrationCardModel } from './integrationCardModel';
 import type { FlaggedCardDialog } from './useFlaggedCardDialog';
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
+
+/** Start a confirmed action on the screen's runner: the id it runs on, the card's name, the action. */
+export type RunFlaggedAction = (id: string, name: string, action: CardAction) => void;
 
 /** Whether a card needs the reinstall. Module-level: the hook needs a stable reference. */
 export const needsReinstall = (card: IntegrationCardModel): boolean => Boolean(card.installation?.needsReinstall);
@@ -24,25 +30,21 @@ export const needsReinstall = (card: IntegrationCardModel): boolean => Boolean(c
 /** Whether a card's last removal stopped. Module-level for the same reason. */
 export const removalStopped = (card: IntegrationCardModel): boolean => Boolean(card.removalStopped);
 
-/** Post `message` for the pending card, then close. */
-function useConfirm(dialog: FlaggedCardDialog, send: (card: IntegrationCardModel) => void): () => void {
+/** Run `action` on the pending card, then close. The removal goes by the component id, as the grid's own Remove does. */
+function useConfirm(dialog: FlaggedCardDialog, action: CardAction, onRun: RunFlaggedAction): () => void {
     const { pending, close } = dialog;
     return useCallback((): void => {
-        if (pending) send(pending);
+        if (pending) {
+            const id = action === 'remove-anyway' ? (pending.componentId ?? pending.id) : pending.id;
+            onRun(id, pending.name, action);
+        }
         close();
-    }, [pending, close, send]);
+    }, [pending, close, action, onRun]);
 }
 
-const sendReinstall = (card: IntegrationCardModel): void =>
-    webviewClient.postMessage('reinstallAppBuilderComponent', { id: card.id });
-
-// By the component id, as the grid's own Remove posts it.
-const sendRemoveAnyway = (card: IntegrationCardModel): void =>
-    webviewClient.postMessage('removeAppBuilderComponent', { id: card.componentId ?? card.id, force: true });
-
 /** Reinstall in Commerce, confirmed. */
-function ReinstallDialog({ dialog }: { dialog: FlaggedCardDialog }): React.ReactElement {
-    const confirm = useConfirm(dialog, sendReinstall);
+function ReinstallDialog({ dialog, onRun }: { dialog: FlaggedCardDialog; onRun: RunFlaggedAction }): React.ReactElement {
+    const confirm = useConfirm(dialog, 'reinstall', onRun);
     return (
         <ConfirmActionDialog
             isOpen={dialog.pending !== null}
@@ -74,8 +76,8 @@ function ReinstallDialog({ dialog }: { dialog: FlaggedCardDialog }): React.React
 }
 
 /** Remove anyway, confirmed; the reason is the one the removal recorded. */
-function RemoveAnywayDialog({ dialog }: { dialog: FlaggedCardDialog }): React.ReactElement {
-    const confirm = useConfirm(dialog, sendRemoveAnyway);
+function RemoveAnywayDialog({ dialog, onRun }: { dialog: FlaggedCardDialog; onRun: RunFlaggedAction }): React.ReactElement {
+    const confirm = useConfirm(dialog, 'remove-anyway', onRun);
     return (
         <ConfirmActionDialog
             isOpen={dialog.pending !== null}
@@ -97,14 +99,17 @@ function RemoveAnywayDialog({ dialog }: { dialog: FlaggedCardDialog }): React.Re
 export function FlaggedCardDialogs({
     reinstall,
     removeAnyway,
+    onRun,
 }: {
     reinstall: FlaggedCardDialog;
     removeAnyway: FlaggedCardDialog;
+    /** The screen's operation runner, so a confirmed action opens the progress modal. */
+    onRun: RunFlaggedAction;
 }): React.ReactElement {
     return (
         <>
-            <ReinstallDialog dialog={reinstall} />
-            <RemoveAnywayDialog dialog={removeAnyway} />
+            <ReinstallDialog dialog={reinstall} onRun={onRun} />
+            <RemoveAnywayDialog dialog={removeAnyway} onRun={onRun} />
         </>
     );
 }

@@ -150,7 +150,7 @@ async function deployById(
     await postComponentsSnapshot(context);
     await refreshProjectStatus(context);
     return result.success
-        ? answerWithWarnings({}, result.warnings ?? [])
+        ? answerWithWarnings({}, result.warnings ?? [], progress)
         : { success: false, error: result.error };
 }
 

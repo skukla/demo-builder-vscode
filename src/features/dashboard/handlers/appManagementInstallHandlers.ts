@@ -379,25 +379,25 @@ export const handleInstallAppBuilderComponent: MessageHandler<{
  * Destructive, so it stays behind the card's confirm dialog and the agent
  * surface's `confirm: true`.
  */
-export const handleReinstallAppBuilderComponent: MessageHandler<{ id?: string }> = async (
-    context: HandlerContext,
-    payload,
-): Promise<HandlerResponse> =>
-    runInstallPass(
-        context,
-        {
-            requestedId: payload?.id,
-            title: 'Reinstalling',
-            progress: undefined,
-        },
-        async ({ project, id, deps, report, appVersion }) => {
-            const { installAppManagement, uninstallAppManagement } = deps;
-            if (!installAppManagement || !uninstallAppManagement) {
-                return 'The reinstall is not available.';
-            }
-            return reinstallAppManagementApp({
-                uninstall: () => uninstallAppManagement(project, id, report),
-                install: () => installAppManagement(project, id, report, { appVersion }),
-            });
-        },
-    );
+export const handleReinstallAppBuilderComponent: MessageHandler<{
+    id?: string;
+    /** `'modal'` when the SC confirmed it on the integrations screen (PL-59). */
+    progress?: 'modal';
+}> = narrateOutcomeToModal(
+    (context, payload) =>
+        runInstallPass(
+            context,
+            { requestedId: payload?.id, title: 'Reinstalling', progress: progressSurfaceOf(payload) },
+            async ({ project, id, deps, report, appVersion }) => {
+                const { installAppManagement, uninstallAppManagement } = deps;
+                if (!installAppManagement || !uninstallAppManagement) {
+                    return 'The reinstall is not available.';
+                }
+                return reinstallAppManagementApp({
+                    uninstall: () => uninstallAppManagement(project, id, report),
+                    install: () => installAppManagement(project, id, report, { appVersion }),
+                });
+            },
+        ),
+    (payload) => payload?.id,
+);

@@ -73,7 +73,10 @@ function runRemove(
                 (message, subMessage, position) => report(message, subMessage, position),
             );
             // `force` is the SC's "Remove anyway".
-            const removed = await removeAppBuilderComponent(project, id, deps, { force });
+            const removed = withCleanupNotes(
+                getAppBuilderComponent(project, id)?.name ?? id,
+                await removeAppBuilderComponent(project, id, deps, { force }),
+            );
             if (!removed.success || !integrationId) return removed;
             return applyOwnershipAfterRemove(removed, project, integrationId, report);
         },
@@ -111,11 +114,25 @@ async function applyOwnershipAfterRemove(
     return { ...removed, warnings: [...(removed.warnings ?? []), ...said] };
 }
 
+/**
+ * What the removal left behind, as notes ahead of its own: they belong to the run's
+ * result so the modal ends on them, not to the answer alone.
+ */
+function withCleanupNotes(displayName: string, removed: GuardableResult): GuardableResult {
+    if (!removed.success) return removed;
+    const notes = [
+        runtimeWarning(displayName, removed.runtimeCleanup),
+        detachWarning(displayName, removed.commerceDetach),
+        ...(removed.warnings ?? []),
+    ].filter((note): note is string => Boolean(note));
+    return notes.length > 0 ? { ...removed, warnings: notes } : removed;
+}
+
 /** Tell the grid the removal ended, and answer the caller — with any cleanup warning. */
 async function reportRemoveOutcome(
     context: HandlerContext,
-    displayName: string,
     result: GuardableResult,
+    progress: 'modal' | undefined,
 ): Promise<HandlerResponse> {
     if (!result.success) {
         if (result.code !== ErrorCode.COMPONENT_REMOVAL_STOPPED) {
@@ -138,11 +155,8 @@ async function reportRemoveOutcome(
             ...(commerceDetach ? { commerceDetach } : {}),
             ...workspaceNote(result.workspacesDeleted),
         },
-        [
-            runtimeWarning(displayName, cleanup),
-            detachWarning(displayName, commerceDetach),
-            ...(result.warnings ?? []),
-        ],
+        result.warnings ?? [],
+        progress,
     );
 }
 
@@ -160,12 +174,9 @@ export const handleRemoveAppBuilderComponent: MessageHandler<{
         const { id, project } = target;
 
         // Read before the removal: the entry leaves the map when it succeeds.
-        const displayName = getAppBuilderComponent(project, id)?.name ?? id;
-        const result = await runRemove(context, project, id, {
-            progress: progressSurfaceOf(payload),
-            force: payload?.force === true,
-        });
-        return reportRemoveOutcome(context, displayName, result);
+        const progress = progressSurfaceOf(payload);
+        const result = await runRemove(context, project, id, { progress, force: payload?.force === true });
+        return reportRemoveOutcome(context, result, progress);
     },
     (payload) => payload?.id,
 );

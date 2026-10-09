@@ -7,6 +7,8 @@ import {
     handleDeployAppBuilderComponent,
     handleRemoveAppBuilderComponent,
     mockEnsureAdobeIOAuth,
+    mockRemoveAppBuilderComponent,
+    mockTestDeveloperPermissions,
     mockSendAppBuilderComponentStatusUpdate,
     mockSendOperationProgress,
     resetHandlerMocks,
@@ -87,6 +89,19 @@ describe('withComponentProgress — started from the integrations screen', () =>
             state: 'succeeded',
         });
         expect(vscodeMock.window.withProgress).not.toHaveBeenCalled();
+    });
+
+    it("ends with the run's notes as the modal's warning, so the SC reads them there", async () => {
+        await withComponentProgress(options('modal'), async () => ({
+            success: true,
+            warnings: ['Justrite ERP owns every product again.', 'Justrite ERP: 2 products are sellable again.'],
+        }));
+
+        expect(mockSendOperationProgress).toHaveBeenLastCalledWith({
+            id: 'erp-sync',
+            state: 'succeeded',
+            warning: 'Justrite ERP owns every product again. Justrite ERP: 2 products are sellable again.',
+        });
     });
 
     it('ends with failed and the reason', async () => {
@@ -211,6 +226,26 @@ describe('a modal-hosted request always ends', () => {
         await handleDeployAppBuilderComponent(mockContext, { id: 'erp-sync' });
 
         expect(mockSendOperationProgress).not.toHaveBeenCalled();
+    });
+
+    it("shows a removal's notes in the modal only, with no warning pop-up (owner, 2026-10-09)", async () => {
+        const { mockContext } = setupModalMocks({ appBuilderComponents: DEPLOYED });
+        mockTestDeveloperPermissions(true);
+        mockRemoveAppBuilderComponent.mockResolvedValue({
+            success: true,
+            runtimeCleanup: { verified: true, deleted: ['kit-a'], failed: ['kit-b'] },
+            warnings: ['Justrite ERP owns every product again.'],
+        });
+
+        const result = await handleRemoveAppBuilderComponent(mockContext, { id: 'erp-sync', progress: 'modal' });
+
+        expect(vscodeMock.window.showWarningMessage).not.toHaveBeenCalled();
+        const ended = mockSendOperationProgress.mock.calls.at(-1)![0] as { state: string; warning?: string };
+        expect(ended.state).toBe('succeeded');
+        expect(ended.warning).toContain('kit-b');
+        expect(ended.warning).toContain('Justrite ERP owns every product again.');
+        // An agent still reads the same words in the answer.
+        expect((result.data as { warning?: string }).warning).toBe(ended.warning);
     });
 
     it('shows a guard refusal in the modal only, with no warning pop-up', async () => {

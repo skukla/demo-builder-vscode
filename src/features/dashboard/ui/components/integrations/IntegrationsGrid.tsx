@@ -336,7 +336,7 @@ export function IntegrationsGrid({
             />
 
             <ErpDowntimeDialog target={downtime} onClose={() => setDowntime(null)} />
-            <FlaggedCardDialogs reinstall={reinstall} removeAnyway={removeAnyway} />
+            <FlaggedCardDialogs reinstall={reinstall} removeAnyway={removeAnyway} onRun={operations.run} />
         </div>
     );
 }
