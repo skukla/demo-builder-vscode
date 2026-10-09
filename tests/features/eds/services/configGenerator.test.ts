@@ -415,7 +415,8 @@ describe('configGenerator', () => {
 
         it('includes the quick-edit Sidekick plugin (Experience Workspace WYSIWYG entry point)', () => {
             // The Config-Service half of the Quick Edit wiring. The GitHub
-            // files half is the quickEditPublisher vendoring step; this
+            // files half is the quickEditPublisher vendoring step
+            // (text in quickEditSnippet); this
             // plugin lets the EW Layout view invoke Quick Edit. Inert under
             // Universal Editor, active under Experience Workspace.
             const result = generateConfigJson(baseParams, mockLogger);

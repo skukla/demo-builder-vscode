@@ -8,9 +8,8 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/authentication/services/ioEventsClient.ts",
-        "src/features/authentication/services/ioEventsTransport.ts",
-        "src/features/authentication/services/eventProviderBinding.ts"
+        "src/features/eds/services/quickEditPublisher.ts",
+        "src/features/eds/services/quickEditSnippet.ts"
     ],
     "reporters": [
         "clear-text",

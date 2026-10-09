@@ -656,6 +656,15 @@ date and what happened; a failure becomes its own `fix` item.
       both with an injected fetch, so only a live call proves the real `fetch`, the
       headers and the pagination against Adobe.
 
+- [ ] **Quick Edit wiring on a storefront** (the `quickEditPublisher.ts` split, uncommitted
+      on `refactor/eds-8-god-files`): create (or reset) an EDS storefront and confirm its
+      GitHub repo gets the Quick Edit commits — `scripts/scripts.js` carries all four
+      markers once each and `tools/quick-edit/quick-edit.js` exists — then open a page in
+      Experience Workspace's Layout view and confirm it renders and the first section
+      paints without a reload. The text now lives in `quickEditSnippet.ts` and the install
+      in `quickEditPublisher.ts`; every line is a proven move and the suites drive both
+      with a GitHub fake, so this is a confirmation, not a known risk.
+
 ## Shipped so far
 
 - 2026-09-10  2026-09-10  Gated: god-file-ratchet.test.ts pins 68 candidates / 31 coupled; rule 49 measures on edit (2987e8623)
@@ -708,3 +717,4 @@ date and what happened; a failure becomes its own `fix` item.
 - 2026-10-08  refactor(dashboard): ConfigureScreen keeps the page frame; the name field, save, sections and field rows become hooks (`c9cd74b35`)
 - 2026-10-08  (uncommitted on refactor/eds-8-god-files) authentication/services/ioEventsClient.ts 447 -> 216 (the endpoints: list/delete providers and registrations, the create half and event metadata; 20 public surface) split by job: how one request travels (headers, timeout, sanitized IoEventsApiError, isEventsAccessDenied, already-gone DELETEs, the pagination host check) moved to ioEventsTransport.ts (193), which the client wraps, and the ownership rule (THIRD_PARTY_PROVIDER_METADATA, parseProviderBinding) to eventProviderBinding.ts (69). Callers import the owning unit, no forwarders. proveMove --via transport: all 17 functions a pure move (control fired); without --via the only difference was the transport. prefix. Mutation: before = baseline row 91.3 (123/12/3); after client 98.28, transport 98.39, binding 100, openGaps 0 on all three; the ten string survivors (operation labels and error messages) are now pinned by message tests; 1 equivalents row re-homed to the transport. Pins: godFileCandidates 41 -> 40, godFileCoupled 7 -> 6; cloneCeiling stays 39. AB-6 and AB-8 notes updated. Live check appended above.
 - 2026-10-08  refactor(authentication): ioEventsClient keeps the endpoints; the transport and the provider-binding rule get their own files (`fcf860115`)
+- 2026-10-08  (uncommitted on refactor/eds-8-god-files) eds/services/quickEditPublisher.ts 427 -> 187 (the GitHub install: read, decide which edits are missing, commit, never throw; 15 -> 4 public surface) split by job: the anchors, markers, inserted blocks, the quick-edit.js body and the pure buildQuickEditScriptsJs transform moved to quickEditSnippet.ts (268), on the pdp404Snippet model. Every line a proven move, no forwarders, callers unchanged (all three import installQuickEdit). Tests split to match (quickEditSnippet.test.ts, quickEditSnippet-anchorMatch.test.ts renamed, shared quickEditScriptsFixture.ts); two gaps closed (the anchor-missing reason, the two repo paths). Mutation: publisher 77.63 -> 77.05 (denominator only; 59 -> 62 killed across the pair), snippet 100. Pins: godFileCandidates 40 -> 39, godFileCoupled 6 -> 5.

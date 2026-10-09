@@ -14330,7 +14330,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 423,
+            "line": 183,
             "mutants": 1,
             "category": "block",
             "reason": "The quick-edit.js commit failure is non-fatal by contract: nothing is returned, nothing is retried, and the caller's result comes from the scripts.js half. That contract IS tested (a rejecting createOrUpdateFile for the module still reports installed), so the only content of this catch that a test could reach is the warn line's wording.",
@@ -14343,7 +14343,7 @@
             "anchors": [
                 "const reason = (error as Error).message ?? 'unknown';"
             ],
-            "line": 424,
+            "line": 184,
             "mutants": 1,
             "category": "branch",
             "reason": "This reason never leaves the log line below it \u2014 unlike its twin in installQuickEditScripts, which returns it in the result. Killing the fallback would mean asserting the warn message for an error with no message.",

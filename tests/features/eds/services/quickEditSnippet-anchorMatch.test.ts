@@ -9,7 +9,7 @@
  * whose LKG gate verified — on every canonical bump — that the patch
  * preconditions still matched the upstream boilerplate. Step 1 of
  * experience-workspace-default-authoring moved those edits into the
- * extension (`quickEditPublisher.ts`), so they no longer ride that gate.
+ * extension (`quickEditSnippet.ts`), so they no longer ride that gate.
  *
  * This test is the replacement safety net: it loads the pinned-canonical
  * `hlxsites/aem-boilerplate-commerce` `scripts/scripts.js` fixture and
@@ -32,7 +32,7 @@ import {
     QUICK_EDIT_BRANCH_ANCHOR,
     QUICK_EDIT_LOADLAZY_ANCHOR,
     QUICK_EDIT_FIRSTIMAGE_ANCHOR,
-} from '@/features/eds/services/quickEditPublisher';
+} from '@/features/eds/services/quickEditSnippet';
 
 /** LKG SHA the canonical fixture is pinned to (see fixture README). */
 const PINNED_LKG_SHA = '760601940fa7264ea900c9d4b6bf735a5e78f46b';

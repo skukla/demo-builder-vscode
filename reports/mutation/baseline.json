@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "EDS-8 split ioEventsClient.ts into the endpoint client, ioEventsTransport.ts (headers, timeout, sanitized errors, already-gone DELETEs, pagination host check) and eventProviderBinding.ts (the ownership rule); the ten operation-label and error-message string survivors are now pinned by message tests, the two remaining survivors are the ledgered equivalents",
+    "_note": "EDS-8 split: quickEditSnippet takes the vendored text and the pure transform (15 of 15 killed); quickEditPublisher keeps the GitHub install. The publisher's drop is the 15 killed snippet mutants leaving its denominator; the pair kills 62 against 59 before, with new tests pinning the anchor-missing reason and the two repo paths. The 12 left are log wording, commit-message text and two ledgered equivalents.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -6619,16 +6619,16 @@
             "openGaps": 0
         },
         "src/features/eds/services/quickEditPublisher.ts": {
-            "score": 77.63,
-            "killed": 59,
-            "survived": 15,
+            "score": 77.05,
+            "killed": 47,
+            "survived": 12,
             "noCoverage": 2,
             "timeout": 0,
             "survivorCategories": {
                 "logPresentation": 8,
-                "string": 5,
                 "block": 1,
-                "branch": 1
+                "branch": 1,
+                "string": 2
             },
             "uncoveredCategories": {
                 "string": 2
@@ -10251,6 +10251,18 @@
             "uncoveredCategories": {},
             "highValueSurvivors": 1,
             "equivalent": 1,
+            "openGaps": 0
+        },
+        "src/features/eds/services/quickEditSnippet.ts": {
+            "score": 100,
+            "killed": 15,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
             "openGaps": 0
         }
     }

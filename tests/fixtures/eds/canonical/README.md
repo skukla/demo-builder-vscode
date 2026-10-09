@@ -14,9 +14,9 @@ extension already uses for storefront create/reset.
 Verbatim `scripts/scripts.js` from
 `hlxsites/aem-boilerplate-commerce@760601940fa7264ea900c9d4b6bf735a5e78f46b`.
 
-Used by `tests/features/eds/services/quickEditPublisher-anchorMatch.test.ts` to
-prove the two literal anchors `quickEditPublisher` search/replaces against
-(`QUICK_EDIT_LOAD_PAGE_ANCHOR`, `QUICK_EDIT_BRANCH_ANCHOR`) still exist in
+Used by `tests/features/eds/services/quickEditSnippet-anchorMatch.test.ts` to
+prove the literal anchors `quickEditSnippet` search/replaces against
+(`QUICK_EDIT_LOAD_PAGE_ANCHOR`, `QUICK_EDIT_BRANCH_ANCHOR` and the rest) still exist in
 the pinned-canonical boilerplate. This anchor-match test is the safety net
 that **replaces** the patches-repo LKG-gate's anchor coverage now that the
 Quick Edit `scripts.js` edits live in the extension (not the per-brand
@@ -34,4 +34,4 @@ curl -fsSL "https://raw.githubusercontent.com/hlxsites/aem-boilerplate-commerce/
 
 If the canonical `loadPage` signature or the post-`loadPage()` call-site
 shape changes, the anchor-match test fails — that's the intended signal to
-update the anchors in `quickEditPublisher.ts` in lockstep.
+update the anchors in `quickEditSnippet.ts` in lockstep.

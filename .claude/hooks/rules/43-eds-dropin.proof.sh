@@ -44,6 +44,7 @@ run() {
 echo "=== dropin delivery ==="
 run "$ROOT/src/features/eds/services/configGenerator.ts"     "configGenerator"     eds-dropin
 run "$ROOT/src/features/eds/services/quickEditPublisher.ts"  "quickEditPublisher"  eds-dropin
+run "$ROOT/src/features/eds/services/quickEditSnippet.ts"    "quickEditSnippet"    eds-dropin
 run "$ROOT/src/features/eds/services/placeholderStubs.ts"    "placeholderStubs"    eds-dropin
 
 echo
