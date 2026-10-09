@@ -8,8 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/ui/components/selection/ApiAccessPicker.tsx",
-        "src/core/ui/components/selection/apiAccessFilters.ts"
+        "src/features/eds/ui/steps/StorefrontSetupStep.tsx"
     ],
     "reporters": [
         "clear-text",

@@ -7014,7 +7014,7 @@
         },
         "src/features/eds/ui/steps/StorefrontSetupStep.tsx": {
             "score": 100,
-            "killed": 30,
+            "killed": 55,
             "survived": 0,
             "noCoverage": 0,
             "timeout": 0,
@@ -10319,30 +10319,6 @@
             "uncoveredCategories": {},
             "highValueSurvivors": 1,
             "equivalent": 9,
-            "openGaps": 0
-        },
-        "src/features/eds/ui/components/StorefrontSetupCompletedView.tsx": {
-            "score": 100,
-            "killed": 7,
-            "survived": 0,
-            "noCoverage": 0,
-            "timeout": 0,
-            "survivorCategories": {},
-            "uncoveredCategories": {},
-            "highValueSurvivors": 0,
-            "equivalent": 0,
-            "openGaps": 0
-        },
-        "src/features/eds/ui/components/StorefrontSetupErrorView.tsx": {
-            "score": 100,
-            "killed": 7,
-            "survived": 0,
-            "noCoverage": 0,
-            "timeout": 0,
-            "survivorCategories": {},
-            "uncoveredCategories": {},
-            "highValueSurvivors": 0,
-            "equivalent": 0,
             "openGaps": 0
         },
         "src/features/mesh/services/deployedMeshConfig.ts": {

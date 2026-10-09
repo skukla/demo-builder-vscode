@@ -9,24 +9,56 @@
  * Renamed from EdsPreflightStep to better reflect the step's purpose.
  *
  * The run itself (start, pushes, retry, cancel on close) is `useStorefrontSetup`;
- * the phases and how each push moves them are `storefrontSetupState.ts`; the
- * failed and published screens are `StorefrontSetupErrorView.tsx` and
- * `StorefrontSetupCompletedView.tsx`. This file picks which screen the current
- * phase shows.
+ * the phases and how each push moves them are `storefrontSetupState.ts`. This
+ * file picks which screen the current phase shows. The failed and published
+ * screens are the shared `StatusDisplay` (owner, 2026-10-09: EDS-8).
  *
  * @module features/eds/ui/steps/StorefrontSetupStep
  */
 
 import React from 'react';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { StatusDisplay, type StatusVariant } from '@/core/ui/components/feedback/StatusDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { GitHubAppInstallDialog } from '@/features/eds/ui/components/GitHubAppInstallDialog';
-import { StorefrontSetupCompletedView } from '@/features/eds/ui/components/StorefrontSetupCompletedView';
-import { StorefrontSetupErrorView } from '@/features/eds/ui/components/StorefrontSetupErrorView';
 import { getHelperText, isActivePhase } from '@/features/eds/ui/helpers/storefrontSetupState';
 import { useStorefrontSetup } from '@/features/eds/ui/hooks/useStorefrontSetup';
 import type { WizardState } from '@/types/webview';
+
+/** The width the two end screens have always had (StatusDisplay's own default is 600px). */
+const END_SCREEN_MAX_WIDTH = '520px';
+
+/**
+ * `StatusDisplay` sizes to its content, and the `fill` container around it is
+ * what makes it centre in the whole pane. The component's default is a fixed
+ * 350px box, which would pin these screens to the top of a tall pane.
+ */
+const END_SCREEN_HEIGHT = 'auto';
+
+const CONTINUE_HINT = 'Click Continue to proceed with project creation.';
+
+/**
+ * What the published screen says.
+ *
+ * A storefront that cannot serve product pages is not the same outcome as one
+ * that can, and must not wear the same green checkmark: any warning turns the
+ * screen orange and lists each reason above the Continue hint.
+ */
+function publishedScreen(warnings: string[] | undefined): {
+    variant: StatusVariant;
+    title: string;
+    details: string[];
+} {
+    if (warnings?.length) {
+        return {
+            variant: 'warning',
+            title: 'Storefront Published, with warnings',
+            details: [...warnings, CONTINUE_HINT],
+        };
+    }
+    return { variant: 'success', title: 'Storefront Published', details: [CONTINUE_HINT] };
+}
 
 /**
  * Props for the StorefrontSetupStep component
@@ -101,18 +133,32 @@ export function StorefrontSetupStep({
 
                     {setupState.phase === 'error' && (
                         <CenteredFeedbackContainer fill>
-                            <StorefrontSetupErrorView
-                                error={setupState.error}
-                                message={setupState.message}
-                                onCancel={onBack}
-                                onRetry={handleRetry}
+                            <StatusDisplay
+                                variant="error"
+                                title="Storefront Setup Failed"
+                                // Never empty: every way into 'error' sets one or
+                                // the other (applyError, applyIncompleteConfig).
+                                message={setupState.error || setupState.message}
+                                // Cancel takes StatusDisplay's default, 'secondary'.
+                                actions={[
+                                    { label: 'Cancel', onPress: onBack },
+                                    { label: 'Retry', variant: 'accent', onPress: handleRetry },
+                                ]}
+                                height={END_SCREEN_HEIGHT}
+                                maxWidth={END_SCREEN_MAX_WIDTH}
+                                centerMessage
                             />
                         </CenteredFeedbackContainer>
                     )}
 
                     {setupState.phase === 'completed' && (
                         <CenteredFeedbackContainer fill>
-                            <StorefrontSetupCompletedView warnings={setupState.warnings} />
+                            <StatusDisplay
+                                {...publishedScreen(setupState.warnings)}
+                                height={END_SCREEN_HEIGHT}
+                                maxWidth={END_SCREEN_MAX_WIDTH}
+                                centerMessage
+                            />
                         </CenteredFeedbackContainer>
                     )}
                 </SingleColumnLayout>

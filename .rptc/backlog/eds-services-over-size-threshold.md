@@ -579,12 +579,25 @@ these to move the number, and stops when only they are left.
   `StatusDisplay` adds its fade and its fixed 350px box, which fights the 2026-10-07 "every
   state centres in the pane" change, so it is a visual change and needs a look. **Decided
   (owner, 2026-10-09): switch to `StatusDisplay`**, with a height that fills the pane; queued as
-  a loop sitting, with a visual baseline before and after.
+  a loop sitting, with a visual baseline before and after. **Done 2026-10-09:** both screens
+  are `StatusDisplay` written straight into `StorefrontSetupStep.tsx`, and the two view
+  files are deleted. `StatusDisplay` did not change: it already takes `height`, and the
+  step passes `'auto'` inside the `fill` container it already used, so each screen still
+  centres in the whole pane rather than in a 350px box. On screen: a 200ms fade-in, and the
+  warning lines on the published screen are grey (StatusDisplay's detail colour) instead of
+  orange; the orange icon and "with warnings" title still mark it. Width stays 520px,
+  buttons unchanged. The failed screen's third fallback ("An error occurred during
+  setup.") was unreachable (every way into the error phase sets a message) and went. The
+  harness cannot drive the wizard to these states, so the proof is test-level
+  (`StorefrontSetupStep-endScreens.test.tsx`) plus the other eight webview bundles
+  building byte-identical before and after.
   (3) **The completed message is still never shown.** `applyComplete` stores the pipeline's
   message (or "Storefront published successfully!") but the published screen always says
   "Storefront Published". The mutation ledger carried this as an OPEN product call; that row
   is gone because the transition is now tested directly, so the question lives here.
   **Decide:** show the pipeline's message on the published screen, or stop storing it.
+  Still open after the StatusDisplay switch (left as it was: its `message` slot would sit
+  right under a title that already says the same thing).
   Also: the new hook is 268 lines, over the skill's 200-line hook guideline (the ratchet
   does not count hooks). It is one job, the run, so it was not cut further.
 
@@ -954,6 +967,14 @@ date and what happened; a failure becomes its own `fix` item.
       can sit under both its curated and its cloud pill. Tick an API: the box checks and
       the rows do not move. Which rows are pickable and how the pills group them now live in
       `apiAccessFilters.ts`; no markup or style moved.
+- [ ] **The storefront setup step's end screens on StatusDisplay** (2026-10-09): create an
+      EDS project and force a setup failure (for example, revoke DA.live access mid-run);
+      the failed screen fades in, centred in the pane and filling it, with the red alert,
+      the error text, and Cancel (goes back) and Retry (starts again). Let another run
+      finish: the published screen fades in, centred and filling the pane, green check
+      and "Click Continue to proceed with project creation."; with warnings, the orange
+      icon, "Storefront Published, with warnings" and each warning (now grey) above the
+      hint. Nothing pinned to the top, nothing clipped.
 
 ## Shipped so far
 
