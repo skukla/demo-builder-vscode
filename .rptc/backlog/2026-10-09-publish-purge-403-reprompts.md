@@ -45,3 +45,4 @@ publish and the MCP block-library publish) still says "Token does not have permi
 on a 403 for preview and publish alike. It has no way to prompt, so it was left.
 
 ## Shipped so far
+- 2026-10-09  fix(eds): publish, bulk publish and cache purge re-prompt on a refused session (`e3dd47a54`)
