@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "EDS-8 split 2026-10-09: the pill and filter logic left ApiAccessPicker.tsx for apiAccessFilters.ts with its own unit suite, which kills all 79 mutants there, including the two familiesOf mutants that were ledgered as equivalent through the rendered picker; the picker keeps one string survivor (a React key).",
+    "_note": "EDS-8 2026-10-09: the DA.live and IMS JWT decoders became one, core/utils/jwtPayload.ts. Its suite kills 13 of 15; the two survivors are the no-payload-segment guard, ledgered as equivalent (the catch returns the same null). imsTokenClaims.ts is now a claim reader over it and its suite kills all 11. The old daLive/jwtPayload.ts row is removed with the file.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -3367,18 +3367,15 @@
             "openGaps": 0
         },
         "src/features/authentication/services/imsTokenClaims.ts": {
-            "score": 71.43,
-            "killed": 20,
-            "survived": 8,
+            "score": 100,
+            "killed": 11,
+            "survived": 0,
             "noCoverage": 0,
             "timeout": 0,
-            "survivorCategories": {
-                "block": 3,
-                "branch": 5
-            },
+            "survivorCategories": {},
             "uncoveredCategories": {},
-            "highValueSurvivors": 8,
-            "equivalent": 8,
+            "highValueSurvivors": 0,
+            "equivalent": 0,
             "openGaps": 0
         },
         "src/features/authentication/services/ioEventsClient.ts": {
@@ -10228,21 +10225,6 @@
             "equivalent": 0,
             "openGaps": 0
         },
-        "src/features/eds/services/daLive/jwtPayload.ts": {
-            "score": 80,
-            "killed": 8,
-            "survived": 2,
-            "noCoverage": 0,
-            "timeout": 0,
-            "survivorCategories": {
-                "branch": 1,
-                "block": 1
-            },
-            "uncoveredCategories": {},
-            "highValueSurvivors": 2,
-            "equivalent": 2,
-            "openGaps": 0
-        },
         "src/features/project-creation/helpers/componentConfigFiles.ts": {
             "score": 80.67,
             "killed": 121,
@@ -10727,6 +10709,21 @@
             "uncoveredCategories": {},
             "highValueSurvivors": 0,
             "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/core/utils/jwtPayload.ts": {
+            "score": 86.67,
+            "killed": 13,
+            "survived": 2,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 1,
+                "block": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 2,
+            "equivalent": 2,
             "openGaps": 0
         }
     }

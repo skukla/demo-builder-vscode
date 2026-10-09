@@ -10,7 +10,7 @@
  * @module features/eds/services/daLive/daLiveTokenValidation
  */
 
-import { parseJwtPayload } from './jwtPayload';
+import { decodeJwtPayload } from '@/core/utils/jwtPayload';
 
 /**
  * What the STRICT check answers.
@@ -63,7 +63,7 @@ export function validateDaLiveToken(token: string): DaLiveTokenValidationResult 
     }
 
     // Try to decode and validate the token
-    const payload = parseJwtPayload(token);
+    const payload = decodeJwtPayload(token);
     if (payload) {
         // Extract email (prefer email field, fallback to preferred_username)
         const email = (payload.email || payload.preferred_username) as string | undefined;
@@ -111,7 +111,7 @@ export function validateDaLiveToken(token: string): DaLiveTokenValidationResult 
  *
  * {@link validateDaLiveToken} answers a weaker question, and deliberately so:
  * it passes anything starting with `eyJ` whose payload it cannot read. But
- * base64 of any JSON begins `eyJ` and carries no `.`, so `parseJwtPayload`
+ * base64 of any JSON begins `eyJ` and carries no `.`, so `decodeJwtPayload`
  * returns null for an encoded .env, a k8s secret or a config blob — and every
  * one of those was stored and sent as `Authorization: Bearer`.
  *
@@ -141,7 +141,7 @@ export function validateDaLiveTokenStrict(token: string): StrictTokenValidation 
         // ratchet caught when this was first written that way.
         return { valid: false, error: validation.error };
     }
-    if (parseJwtPayload(token)?.client_id !== 'darkalley') {
+    if (decodeJwtPayload(token)?.client_id !== 'darkalley') {
         return {
             valid: false,
             error: 'This does not look like a DA.live token. Use the bookmarklet on da.live to copy a fresh one.',

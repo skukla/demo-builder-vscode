@@ -144,7 +144,7 @@ function resetTrackingState(): void {
  * Assembled rather than pasted so no JWT literal lands in the repo — a secret
  * scanner flags the literal and cannot tell a fixture from a live credential.
  * The signature is the word "signature": nothing here verifies one, and
- * `parseJwtPayload` only base64-decodes the second part.
+ * `decodeJwtPayload` only base64-decodes the second part.
  */
 function makeToken(payload: Record<string, string>): string {
     const encode = (value: object): string => Buffer.from(JSON.stringify(value)).toString('base64');

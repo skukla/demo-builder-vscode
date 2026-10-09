@@ -12,8 +12,8 @@
 import * as vscode from 'vscode';
 import { readDaAuthHelperToken, writeDaAuthHelperToken } from '../daAuthHelperToken';
 import { DA_LIVE_BASE_URL } from './daLiveConstants';
-import { parseJwtPayload } from './jwtPayload';
 import { getLogger } from '@/core/logging/debugLogger';
+import { decodeJwtPayload } from '@/core/utils/jwtPayload';
 
 // ==========================================================
 // Constants
@@ -281,7 +281,7 @@ export class DaLiveAuthService {
 
         // Extract from JWT payload if not provided via opts
         if (!opts?.expiresAt || !opts?.email) {
-            const payload = parseJwtPayload(token);
+            const payload = decodeJwtPayload(token);
             if (payload) {
                 if (!opts?.expiresAt && payload.created_at && payload.expires_in) {
                     const createdAt = parseInt(String(payload.created_at), 10);

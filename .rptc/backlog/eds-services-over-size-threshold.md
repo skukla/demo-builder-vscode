@@ -554,7 +554,16 @@ these to move the number, and stops when only they are left.
   decodes the same IMS payload segment (base64url, with an object check) to read `user_id`.
   Read both: same job, and `decodeImsUserId` could be written over `parseJwtPayload`. Not in
   reach (another feature, and the shared home would be `core/`), so not chased. **Decided
-  (owner, 2026-10-09): merge them** into one decoder in `core/utils`; queued as a loop sitting.
+  (owner, 2026-10-09): merge them** into one decoder in `core/utils`. **Done 2026-10-09:**
+  `core/utils/jwtPayload.ts` `decodeJwtPayload` is the one decoder; `decodeImsUserId` reads
+  `user_id` over it, and `daLive/jwtPayload.ts` is deleted. The two decoded identically
+  (Node's base64 and base64url decoders read both alphabets and ignore padding). The one
+  difference: `parseJwtPayload` returned any JSON value, so a payload that was a string,
+  number or array came back as truthy "claims"; the merged decoder returns null for anything
+  that is not an object, as `decodeImsUserId` already did. On the DA.live side that only
+  changes a token whose payload is not an object: the lenient check returns `{ valid: true }`
+  without the two empty fields, and `storeToken` now logs its "Could not parse token payload"
+  warning for it. No suite of any caller changed.
 
 - 2026-10-09  From the envFileGenerator split. **The generated `.env` and component config
   files are written straight to disk, with no hash-and-skip.** Every writer in the split
