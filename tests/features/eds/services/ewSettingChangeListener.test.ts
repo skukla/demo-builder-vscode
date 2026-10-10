@@ -21,7 +21,6 @@ import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 import { createMockProject } from '../../../helpers/projectFake';
 
-
 const mockApplyAuthoringExperienceFlip = jest.fn().mockResolvedValue({
     editorPath: 'ok',
     quickEdit: 'ok',
@@ -505,6 +504,21 @@ describe('registerEwSettingChangeListener', () => {
         expect(vscode.window.showInformationMessage).toHaveBeenLastCalledWith(
             'Re-applied Experience Workspace config to justrite'
         );
+    });
+
+    it('re-applies cleanly when no host callback is registered, reporting no failure', async () => {
+        // `onReapplied` is optional. Calling through its absence would throw
+        // after the flip had already succeeded, and the project would be
+        // reported as a failed republish when nothing failed.
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Republish');
+        register(buildStateManager([{ name: 'solo', eds: true }]));
+
+        fireChange('demoBuilder.daLive.authoringExperience');
+        await flushDebounce();
+
+        expect(mockApplyAuthoringExperienceFlip).toHaveBeenCalledTimes(1);
+        expect(mockLogger.warn).not.toHaveBeenCalled();
+        expect(mockLogger.error).not.toHaveBeenCalled();
     });
 
     it('dispose() removes the subscription', () => {

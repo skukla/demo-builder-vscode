@@ -16456,6 +16456,18 @@
             "decision": "none \u2014 the flush is pinned by the handshake suite; the guard only keeps 'Flushing 0 queued messages' out of the log",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-01"
+        },
+        {
+            "module": "src/features/eds/services/ewSettingChangeListener.ts",
+            "anchors": [
+                "await onReapplied?.(project).catch((error: unknown) => {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch handler on the host callback extracts a message and logs a warning; it returns nothing, does not rethrow and does not touch successCount, which was already incremented on the line above. Emptying it still absorbs the rejection, so the loop carries on and the completion toast still reports the re-apply as done, which 'a failing dashboard refresh does not turn a successful re-apply into a failure' asserts. The only thing the mutant removes is the warning text, and wording is not pinned by a test here.",
+            "decision": "none \u2014 the swallow is asserted; the mutant removes only the warn wording",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-03"
         }
     ]
 }
