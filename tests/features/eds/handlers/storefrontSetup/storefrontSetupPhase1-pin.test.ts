@@ -164,5 +164,43 @@ describe('executePhaseGitHubRepo — Step 4b pin coverage', () => {
             expect(pinMessage).toBeDefined();
             expect(pinMessage?.[1]).toMatchObject({ progress: 12 });
         });
+
+        // A pin needs BOTH the patch list and where the patches come from. With only
+        // one of them nothing is pinned, so announcing the step names work that is
+        // not happening (seen live over a colleague's code, 2026-09-12).
+        it.each([
+            ['patches but no source', { codePatches: THIN_LAYER_CONFIG_PATCH_FIELDS.codePatches }],
+            ['a source but no patches', { codePatchSource: THIN_LAYER_CONFIG_PATCH_FIELDS.codePatchSource }],
+        ])('does not announce a pin for %s', async (_label, patchFields) => {
+            const ctx = makeContext();
+            const edsConfig = {
+                repoMode: 'new',
+                createdRepo: {
+                    owner: 'skukla',
+                    name: 'b2b-tester',
+                    url: 'https://github.com/skukla/b2b-tester',
+                },
+                ...patchFields,
+            } as unknown as StorefrontSetupStartPayload['edsConfig'];
+
+            await executePhaseGitHubRepo(
+                ctx,
+                edsConfig,
+                makeServices(),
+                { ...FRESH_REPO_INFO },
+                new AbortController().signal,
+                TEMPLATE.owner,
+                TEMPLATE.repo,
+                undefined
+            );
+
+            const messages = (ctx.sendMessage as jest.Mock).mock.calls.map(
+                ([, payload]) => payload?.message
+            );
+            expect(messages).not.toContain('Pinning to verified canonical state');
+            // The run still got as far as the pin step: this is what it says on a
+            // new repository whether or not there is a pin to make.
+            expect(messages.length).toBeGreaterThan(0);
+        });
     });
 });
