@@ -39,6 +39,7 @@ import { createMockAuthenticationService } from '../../../helpers/authentication
 
 const createProject = jest.fn();
 const createWorkspace = jest.fn();
+const deleteWorkspace = jest.fn();
 const isAuthenticated = jest.fn();
 /** Two orgs by default: with no selection, a tool must still ask which. */
 const getOrganizations = jest.fn();
@@ -54,7 +55,7 @@ function serve(opts: { authed?: boolean; noManager?: boolean } = {}) {
                 ? undefined
                 : createMockAuthenticationService(
                       { isAuthenticated, getOrganizations },
-                      { entities: { projectOps: { createProject }, workspaceOps: { createWorkspace } } },
+                      { entities: { projectOps: { createProject }, workspaceOps: { createWorkspace, deleteWorkspace } } },
                   ),
             logger: createMockLogger(),
         });
@@ -136,14 +137,46 @@ describe('tool descriptors', () => {
         expect(schema.safeParse({}).success).toBe(false);
         expect(schema.safeParse({ projectId: 'p', projectName: 'Doomed' }).success).toBe(true);
     });
+
+    // A workspace carries its own credentials and Runtime namespace, so a client
+    // must be told to ask before this one too.
+    it('declares delete_adobe_workspace DESTRUCTIVE, behind Adobe sign-in', () => {
+        const d = descriptorFor('delete_adobe_workspace');
+
+        expect(d.needsAuth).toStrictEqual(['adobe']);
+        expect(d.annotations).toStrictEqual({ readOnlyHint: false, destructiveHint: true });
+    });
+
+    it('takes the workspace id and name, with both confirmations optional in the schema', () => {
+        const schema = z.object(descriptorFor('delete_adobe_workspace').inputSchema);
+
+        expect(schema.safeParse({ workspaceId: 'w' }).success).toBe(false);
+        expect(schema.safeParse({ workspaceName: 'Stage' }).success).toBe(false);
+        expect(schema.safeParse({ workspaceId: 'w', workspaceName: 'Stage' }).success).toBe(true);
+        expect(
+            schema.safeParse({ workspaceId: 'w', workspaceName: 'Stage', confirm: 'yes' }).success
+        ).toBe(false);
+    });
+
+    it('takes the id, the current title and the new title to rename a project', () => {
+        const schema = z.object(descriptorFor('rename_adobe_project').inputSchema);
+        const all = { projectId: 'p', projectName: 'Old', title: 'New' };
+
+        expect(schema.safeParse(all).success).toBe(true);
+        for (const missing of ['projectId', 'projectName', 'title'] as const) {
+            expect(schema.safeParse({ ...all, [missing]: undefined }).success).toBe(false);
+        }
+    });
 });
 
 beforeEach(() => {
     jest.clearAllMocks();
+    mockSetAdobeTarget.mockReset();
     mockGetAdobeTarget.mockReturnValue({ orgId: 'org-1', projectId: 'proj-1' });
     getOrganizations.mockResolvedValue([ORG_ONE, ORG_TWO]);
     createProject.mockResolvedValue({ id: 'p9', name: 'New Project' });
     createWorkspace.mockResolvedValue({ id: 'w9', name: 'dev' });
+    deleteWorkspace.mockResolvedValue({ deleted: true });
     mockTeardown.mockResolvedValue({
         success: true,
         projectDeleted: true,
@@ -245,6 +278,19 @@ describe('create_adobe_workspace', () => {
         const out = await serve()('create_adobe_workspace', { name: 'dev' });
 
         expect(out.error).toMatch(/select_org/);
+        expect(createWorkspace).not.toHaveBeenCalled();
+    });
+
+    // The one-org shortcut settles the ORG only. The store here remembers what it
+    // is handed, as the real one does, so the project is still missing afterwards.
+    it('still asks for a project when the only org was picked for the agent', async () => {
+        mockGetAdobeTarget.mockReturnValue(undefined);
+        mockSetAdobeTarget.mockImplementation((t) => mockGetAdobeTarget.mockReturnValue(t));
+        getOrganizations.mockResolvedValue([ORG_ONE]);
+
+        const out = await serve()('create_adobe_workspace', { name: 'dev' });
+
+        expect(out).toStrictEqual({ error: expect.stringContaining('select_project') });
         expect(createWorkspace).not.toHaveBeenCalled();
     });
 
@@ -427,8 +473,128 @@ describe('delete_adobe_project', () => {
     });
 });
 
+describe('delete_adobe_workspace', () => {
+    const ARGS = { workspaceId: ' ws-7 ', workspaceName: ' Stage ' };
+    const CONFIRMED = { ...ARGS, confirm: true, confirmName: 'Stage' };
+    const REQUIRED = { error: 'workspaceId and workspaceName are required' };
+
+    it('deletes in the agent-selected org and project, by trimmed id and name', async () => {
+        const out = await serve()('delete_adobe_workspace', CONFIRMED);
+
+        expect(deleteWorkspace).toHaveBeenCalledWith('ws-7', {
+            orgId: 'org-1',
+            projectId: 'proj-1',
+            workspaceName: 'Stage',
+        });
+        expect(out).toStrictEqual({ deleted: true, workspaceId: 'ws-7', projectId: 'proj-1' });
+    });
+
+    it("passes on the service's note when it has one", async () => {
+        deleteWorkspace.mockResolvedValue({ deleted: true, note: 'Runtime namespace kept' });
+
+        expect(await serve()('delete_adobe_workspace', CONFIRMED)).toStrictEqual({
+            deleted: true,
+            workspaceId: 'ws-7',
+            projectId: 'proj-1',
+            note: 'Runtime namespace kept',
+        });
+    });
+
+    it("answers Adobe's refusal as the reason it is", async () => {
+        deleteWorkspace.mockResolvedValue({ error: '403 - Forbidden' });
+
+        expect(await serve()('delete_adobe_workspace', CONFIRMED)).toStrictEqual({
+            deleted: false,
+            error: '403 - Forbidden',
+        });
+    });
+
+    it.each([
+        ['no arguments at all', undefined],
+        ['no workspace name', { workspaceId: 'ws-7' }],
+        ['no workspace id', { workspaceName: 'Stage' }],
+        ['a whitespace-only id', { workspaceId: '  ', workspaceName: 'Stage' }],
+        ['a whitespace-only name', { workspaceId: 'ws-7', workspaceName: '  ' }],
+    ])('requires both identifiers: %s', async (_case, args) => {
+        expect(await serve()('delete_adobe_workspace', args)).toStrictEqual(REQUIRED);
+        expect(deleteWorkspace).not.toHaveBeenCalled();
+    });
+
+    // The gate is confirm AND the exact echo; either alone is not consent.
+    it.each([
+        ['neither confirmation', ARGS],
+        ['confirm without the echo', { ...ARGS, confirm: true }],
+        ['the echo without confirm', { ...ARGS, confirmName: 'Stage' }],
+        ['an echo that differs in case', { ...ARGS, confirm: true, confirmName: 'stage' }],
+        ['a confirm that is not the boolean', { ...ARGS, confirm: 'true', confirmName: 'Stage' }],
+    ])('refuses, naming what to send back: %s', async (_case, args) => {
+        const out = await serve()('delete_adobe_workspace', args);
+
+        expect(out).toStrictEqual({
+            error:
+                'delete_adobe_workspace permanently deletes "Stage" and its credentials. ' +
+                'To proceed, call again with confirm:true and confirmName:"Stage".',
+            irreversible: true,
+        });
+        expect(deleteWorkspace).not.toHaveBeenCalled();
+    });
+
+    it('hands off a confirmed delete when not signed in, without calling Console', async () => {
+        const out = await serve({ authed: false })('delete_adobe_workspace', CONFIRMED);
+
+        expect(out).toStrictEqual({ needsAuth: 'adobe', message: expect.stringContaining('sign_in') });
+        expect(deleteWorkspace).not.toHaveBeenCalled();
+    });
+
+    // Falling back to a cached project is the failure these tools exist to prevent.
+    it('refuses a confirmed delete when no project is selected', async () => {
+        mockGetAdobeTarget.mockReturnValue({ orgId: 'org-1' });
+
+        const out = await serve()('delete_adobe_workspace', CONFIRMED);
+
+        expect(out).toStrictEqual({ error: expect.stringContaining('select_project') });
+        expect(deleteWorkspace).not.toHaveBeenCalled();
+    });
+});
+
+describe('a sign-in check that throws', () => {
+    // The pre-flight never prompts and never fails the call: a broken check is a
+    // hand-off, the same as signed out.
+    it('hands off instead of failing the call', async () => {
+        const call = serve();
+        isAuthenticated.mockRejectedValue(new Error('token store unreadable'));
+
+        expect(await call('create_adobe_project', { name: 'x' })).toMatchObject({ needsAuth: 'adobe' });
+        expect(createProject).not.toHaveBeenCalled();
+    });
+});
+
 describe('rename_adobe_project', () => {
     const ARGS = { projectId: 'proj-9', projectName: 'Kukla Test', title: ' Kukla Bodea ' };
+
+    it('trims the project id it renames', async () => {
+        mockRenameHandler.mockResolvedValue({ success: true });
+
+        const out = await serve()('rename_adobe_project', { ...ARGS, projectId: ' proj-9 ' });
+
+        expect(mockRenameHandler).toHaveBeenCalledWith(expect.anything(), {
+            orgId: 'org-1',
+            projectId: 'proj-9',
+            title: 'Kukla Bodea',
+        });
+        expect(out.projectId).toBe('proj-9');
+    });
+
+    it.each([
+        ['no arguments at all', undefined],
+        ['no title', { projectId: 'p' }],
+        ['no project id', { title: 'New' }],
+    ])('refuses, without renaming: %s', async (_case, args) => {
+        expect(await serve()('rename_adobe_project', args)).toStrictEqual({
+            error: 'projectId and title are required',
+        });
+        expect(mockRenameHandler).not.toHaveBeenCalled();
+    });
 
     it('declares a non-destructive write behind Adobe sign-in', () => {
         const d = descriptorFor('rename_adobe_project');

@@ -201,7 +201,7 @@ export function registerAdobeResourceTools(
             // The same name-echo gate as delete_adobe_project. A workspace carries its
             // own credentials and Runtime namespace, so deleting the wrong one costs an
             // SC a redeploy, not just a row.
-            if (args?.confirm !== true || args?.confirmName !== workspaceName) {
+            if (args.confirm !== true || args.confirmName !== workspaceName) {
                 return asText({
                     error:
                         `delete_adobe_workspace permanently deletes "${workspaceName}" and its credentials. ` +
@@ -267,7 +267,7 @@ export function registerAdobeResourceTools(
             // Same extra-strict gate as delete_github_repo: confirm AND an exact
             // name echo. Deleting a Console project destroys its workspaces and
             // credentials with it.
-            if (args?.confirm !== true || args?.confirmName !== projectName) {
+            if (args.confirm !== true || args.confirmName !== projectName) {
                 return asText({
                     error:
                         `delete_adobe_project permanently deletes "${projectName}" and all of its workspaces and ` +

@@ -10586,19 +10586,6 @@
             "source": "PL-22 batch MUT-05"
         },
         {
-            "module": "src/features/ai/server/adobeResourceTools.ts",
-            "anchors": [
-                "if (args?.confirm !== true || args?.confirmName !== projectName) {"
-            ],
-            "line": 270,
-            "mutants": 2,
-            "category": "optionalChain",
-            "reason": "Both optional chains on this line are unreachable-nullish. Lines 194-198 read args?.projectId and args?.projectName and return early unless BOTH trim to a non-empty string, which is only possible when args is an object. So by the time control reaches this line args can never be null or undefined, and dropping the '?.' cannot throw or yield a different value for any input the handler can be given.",
-            "decision": "none - the required-identifier guard above makes a nullish args impossible here",
-            "recorded": "2026-09-06",
-            "source": "PL-22 batch MUT-05"
-        },
-        {
             "module": "src/features/data-installer/handlers/exportHandlers.ts",
             "anchors": [
                 "const commerceInstance = payload?.commerceInstance;",
@@ -15992,6 +15979,18 @@
             "category": "branch",
             "reason": "Forcing the guard true makes a plain line that arrives before any stage read `current.stage` off undefined, which throws. The line reaches this sink only through reportPhase (agentPhaseChannel.ts), which calls every sink inside a try/catch and discards what it throws, so the throw never leaves the channel and the progress tracker is not called either way: the guarded return and the swallowed throw produce the same screen. Verified by planting the mutation on 2026-10-10: all 13 tests in executorAppBuilderPhase-integrations still passed, including 'drops a plain line that arrives before any stage has started', which drives exactly that case and asserts the tracker's full call list.",
             "decision": "none \u2014 the guard states the intent and the compiler needs it; the channel's catch makes its absence unobservable",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-07"
+        },
+        {
+            "module": "src/features/ai/server/adobeResourceTools.ts",
+            "anchors": [
+                "const projectId = getAdobeTarget()?.projectId;"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Dropping the optional chain throws only when the target store is empty at this line. The line runs only after resolveAgentOrg (agentOrg.ts) returned an org, and it returns one in exactly two ways: it read a stored target carrying an orgId, or it had just called setAdobeTarget with the only org the sign-in reaches. Either way the store holds a target when this line reads it, so the call returns an object and both forms read the same projectId. The store is emptied only by sign_out (authTools.ts), which would have to land between that return and this read with no I/O in between. Verified by planting the mutation on 2026-10-10: all 63 tests in adobeResourceTools.test.ts passed, including 'still asks for a project when the only org was picked for the agent', whose store remembers what it is handed as the real one does.",
+            "decision": "none \u2014 the compiler needs the chain because the store's getter is typed to allow an empty store",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-07"
         }
