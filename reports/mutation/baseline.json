@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "ManageApisModal: the apply view shows the subscribe's stage and step, and an apply never asks for an earlier run's progress",
+    "_note": "dashboardCheckRouting: the demo-source notice needs both a warning and a sentence",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -4695,19 +4695,17 @@
             "recorded": "2026-10-10T01:33:15.039Z"
         },
         "src/features/dashboard/ui/hooks/dashboardCheckRouting.ts": {
-            "score": 97.26,
-            "killed": 71,
-            "survived": 2,
+            "score": 100,
+            "killed": 73,
+            "survived": 0,
             "noCoverage": 0,
             "timeout": 0,
-            "survivorCategories": {
-                "branch": 2
-            },
+            "survivorCategories": {},
             "uncoveredCategories": {},
-            "highValueSurvivors": 2,
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 2,
-            "recorded": "2026-10-10T01:36:49.719Z"
+            "openGaps": 0,
+            "recorded": "2026-10-10T21:00:39.504Z"
         },
         "src/features/dashboard/ui/integrationsSurface/AddIntegrationFlowAdapter.tsx": {
             "score": 97.14,
