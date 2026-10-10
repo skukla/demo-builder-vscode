@@ -16507,6 +16507,19 @@
             "decision": "none - any non-empty default is erased by the window filter on the following line, so no input can distinguish it from []",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-04"
+        },
+        {
+            "module": "src/core/validation/normalizers.ts",
+            "anchors": [
+                ".replace(/[\\s_]+/g, '-')       // Convert spaces and underscores to hyphens"
+            ],
+            "line": 37,
+            "mutants": 1,
+            "category": "other",
+            "reason": "The same step as line 83, in normalizeIdentifierName: Stryker drops the + from the whitespace/underscore class, so each such character becomes its own hyphen instead of a run becoming one. The collapse two lines below turns every run of hyphens back into one, and the step between them only deletes characters, so it cannot keep two hyphens apart. Verified by planting the mutation with the suite green, and by comparing the original and the mutated function over all 299,593 strings of up to six characters drawn from space, underscore, hyphen, tab, dot, a letter, a digit and a symbol: zero differences.",
+            "decision": "none - the + says what is meant and the collapse behind it is the safety net, not the intent",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-04"
         }
     ]
 }
