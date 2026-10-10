@@ -60,6 +60,25 @@ const FAKE_CATALOG: Record<string, AppBuilderComponentCatalogEntry> = {
         listedAs: { envVar: 'ERP_ID', adapter: 'demo-erp' },
         source: { owner: 'skukla', repo: 'demo-erp', branch: 'main' },
     },
+    // Added once like the ERP integration, but no system lists itself under it, and it
+    // declares a setup step whose value is entered once per ERP it uses.
+    'solo-with-setup': {
+        id: 'solo-with-setup',
+        name: 'Solo with setup',
+        description: 'added once, serves no listed system',
+        kind: 'integration',
+        addOnce: true,
+        source: { owner: 'adobe', repo: 'solo-with-setup', branch: 'main' },
+        setupSteps: [
+            {
+                id: 'second-source',
+                title: 'Create a source per ERP',
+                why: 'Orders split by source.',
+                where: 'Stores > Inventory > Sources',
+                enter: ['<ERP name> warehouse'],
+            },
+        ],
+    },
     'app-builder-shell': {
         id: 'app-builder-shell',
         name: 'Custom Integration',

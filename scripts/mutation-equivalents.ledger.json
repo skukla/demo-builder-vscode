@@ -16084,6 +16084,18 @@
             "decision": "none \u2014 the body is narration; the swallow is what is tested",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-07"
+        },
+        {
+            "module": "src/features/dashboard/ui/components/integrations/integrationCardModel.ts",
+            "anchors": [
+                "if (!system) return [];"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "The guard covers a system id with no component behind it, and no such id can arrive. The ids come from systemsUsedBy (appBuilderComponentLinks.ts), which filters both of its sources, the integration's stored list and the catalog fallback, to ids present in the project it is handed; that project is built a few lines above from the same components array byId indexes. So every id it returns is a key of byId and the lookup always finds a component. Both mutants (the guard forced false, and its empty-array result replaced) differ only on that unreachable input. Verified by planting on 2026-10-10: with the guard removed, all suites under tests/features/dashboard/ui/components/integrations still passed.",
+            "decision": "none \u2014 the compiler needs the narrowing because Map.get is typed to allow a miss",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-07"
         }
     ]
 }

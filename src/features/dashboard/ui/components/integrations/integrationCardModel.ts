@@ -132,23 +132,22 @@ const INTEGRATION_STATUSES: readonly string[] = [
 /**
  * The integration card's kebab items.
  *
- * Open leads when the integration has a URL — it is the most common thing to do
- * with a healthy one, just not urgent enough for the card face. Nothing is
- * offered mid-deploy: every item would race the runner.
+ * Open is always there: it is the integration's Adobe workspace, whether or not the
+ * app serves an address. Nothing is offered mid-deploy: every item would race the
+ * runner.
  *
  * Rename is deliberately absent — it is the name's own inline pencil, matching
  * ProjectCard.
  *
  * @param status - the card's normalized status
- * @param url - the integration's primary URL, when it has one
  * @param installation - the Commerce install record, when the app has one
+ * @param hasUpdate - newer code is recorded for it
  * @returns the menu actions, in display order
  */
 function buildMenuActions(
     status: IntegrationStatus,
-    url: string | undefined,
     installation: IntegrationCardModel['installation'],
-    hasUpdate = false,
+    hasUpdate: boolean,
 ): CardAction[] {
     if (status === 'deploying') return [];
     // The status verb leads: on a card that needs something, that something is the
@@ -208,8 +207,8 @@ function buildSystemMenuActions(
     status: IntegrationStatus,
     url: string | undefined,
     usedBy: LinkedCard | undefined,
-    hasUpdate = false,
-    assign: { listed: boolean; assigned: boolean } = { listed: false, assigned: false },
+    hasUpdate: boolean,
+    assign: { listed: boolean; assigned: boolean },
 ): CardAction[] {
     if (status === 'deploying' || usedBy?.status === 'deploying') return [];
     const verb = statusVerb(status, hasUpdate);
@@ -463,7 +462,7 @@ export function deriveIntegrationCard(
             withErpActions(
                 entry,
                 face.status,
-                buildMenuActions(face.status, primaryUrl, installation, Boolean(entry.updateAvailable)),
+                buildMenuActions(face.status, installation, Boolean(entry.updateAvailable)),
             ),
         ),
         canRename: entry.kind === 'integration' && facet.renamable,
@@ -491,9 +490,16 @@ function withErpActions(
         getAppBuilderComponentEntry(kind)?.addOnce &&
         listedSystemOf(kind, getAppBuilderComponentCatalog());
     if (status !== 'deployed' || !addsErps) return actions;
-    const own: CardAction[] = ['add-erp', 'load-demo-data', 'reset-records'];
+    return aboveRemove(actions, ['add-erp', 'load-demo-data', 'reset-records']);
+}
+
+/**
+ * `own` placed just above Remove. Every non-empty integration menu ends with Remove
+ * ({@link buildMenuActions}), and both callers return before this for an empty one.
+ */
+function aboveRemove(actions: CardAction[], own: CardAction[]): CardAction[] {
     const at = actions.indexOf('remove');
-    return at === -1 ? [...actions, ...own] : [...actions.slice(0, at), ...own, ...actions.slice(at)];
+    return [...actions.slice(0, at), ...own, ...actions.slice(at)];
 }
 
 /** The repository verb an integration offers: the undo once saved, the save while blank. */
@@ -513,9 +519,7 @@ function withPromotionActions(
     actions: CardAction[],
 ): CardAction[] {
     if (actions.length === 0) return actions;
-    const own = promotionVerbs(entry);
-    const at = actions.indexOf('remove');
-    return at === -1 ? [...actions, ...own] : [...actions.slice(0, at), ...own, ...actions.slice(at)];
+    return aboveRemove(actions, promotionVerbs(entry));
 }
 
 /** The demo setup checklist, when the entry declares one (`setupChecklist.ts`). */
@@ -792,9 +796,9 @@ export function deriveMeshCard(
 function synthesizePendingCard(
     id: string,
     override: RowStatusOverride,
-    catalog?: readonly AppBuilderComponentCatalogEntry[],
+    catalog: readonly AppBuilderComponentCatalogEntry[],
 ): IntegrationCardModel {
-    const entry = catalog?.find((e) => e.id === id) ?? getAppBuilderComponentEntry(id);
+    const entry = catalog.find((e) => e.id === id) ?? getAppBuilderComponentEntry(id);
     const synthetic: IdentifiedAppBuilderComponent = {
         id,
         kind: entry?.kind === 'system' ? 'system' : 'integration',
