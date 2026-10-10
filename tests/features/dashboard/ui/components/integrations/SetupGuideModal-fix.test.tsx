@@ -78,10 +78,23 @@ describe('a step with a fix offers Apply, and Undo once applied', () => {
         expect(onFix).toHaveBeenCalledWith(expect.objectContaining({ mode: 'undo', stepId: 'erp-attributes' }));
     });
 
-    it('offers nothing on a done step the SC did by hand, or when the screen gives no way to run it', async () => {
-        await renderGuide({ ...ATTRIBUTES, state: 'done', lastCheck: 'passed' }, jest.fn());
-        expect(screen.queryByRole('button', { name: FIX_COPY.fix })).toBeNull();
+    it('still offers Apply on a step SAVED done: the apply decides from a fresh check, not the saved state', async () => {
+        const onFix = jest.fn();
+        await renderGuide({ ...PRICE, state: 'done', lastCheck: 'passed' }, onFix);
         expect(screen.queryByRole('button', { name: FIX_COPY.undo })).toBeNull();
+        fireEvent.click(screen.getByRole('button', { name: FIX_COPY.fix }));
+        expect(onFix).toHaveBeenCalledWith(expect.objectContaining({ mode: 'apply', stepId: 'price-scope-website' }));
+    });
+
+    it('offers both once Demo Builder applied a step the store has since lost', async () => {
+        await renderGuide({ ...PRICE, state: 'open', lastCheck: 'failed', fixApplied: true }, jest.fn());
+        expect(screen.getByRole('button', { name: FIX_COPY.fix })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: FIX_COPY.undo })).toBeInTheDocument();
+    });
+
+    it('offers nothing on a skipped step', async () => {
+        await renderGuide({ ...PRICE, state: 'dismissed' }, jest.fn());
+        expect(screen.queryByRole('button', { name: FIX_COPY.fix })).toBeNull();
     });
 
     it('offers nothing when the screen gives no way to run it', async () => {

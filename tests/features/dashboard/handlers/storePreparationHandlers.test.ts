@@ -68,9 +68,9 @@ function setup(integration: Partial<AppBuilderComponentState> = {}, projectOver:
 beforeEach(() => {
     jest.clearAllMocks();
     mockRunCheck.mockResolvedValue({ done: true, note: 'Catalog Price Scope is Website.' });
-    mockPreview.mockResolvedValue([{ ...APPLIED_REPORT, state: 'applicable' }]);
-    mockApply.mockResolvedValue({ reports: [APPLIED_REPORT], record: RECORD });
-    mockUndo.mockResolvedValue({ reports: [{ ...APPLIED_REPORT, state: 'undone' }], record: undefined });
+    mockPreview.mockResolvedValue({ reports: [{ ...APPLIED_REPORT, state: 'applicable' }], checks: {} });
+    mockApply.mockResolvedValue({ reports: [APPLIED_REPORT], record: RECORD, checks: {} });
+    mockUndo.mockResolvedValue({ reports: [{ ...APPLIED_REPORT, state: 'undone' }], record: undefined, checks: {} });
 });
 
 describe('prepareCommerceStore', () => {
@@ -79,7 +79,46 @@ describe('prepareCommerceStore', () => {
         expect(await handlePrepareCommerceStore(context, { id: 'app-builder-shell' })).toMatchObject({ success: false, code: ErrorCode.INVALID_OPERATION });
     });
 
-    it('without confirm, answers the preview from the engine and writes nothing', async () => {
+    it('hands the engine a runCheck that runs the named check against the store, with the project scope', async () => {
+        const { context } = setup();
+        await handlePrepareCommerceStore(context, { id: 'erp-integration' });
+        const deps = mockPreview.mock.calls[0][2] as { runCheck: (check: string) => Promise<unknown> };
+        await deps.runCheck('payment-on-account-enabled');
+        expect(mockRunCheck).toHaveBeenCalledWith('payment-on-account-enabled', expect.any(Function), { websiteCode: 'acme' });
+    });
+
+    it('a preview saves what its fresh checks found, so the guide and the card agree with it', async () => {
+        mockPreview.mockResolvedValue({
+            reports: [{ ...APPLIED_REPORT, state: 'applicable' }],
+            checks: { 'price-scope-website': { done: false, note: 'Catalog Price Scope is Global; it must be Website.' } },
+        });
+        const { context, saved } = setup({ setupSteps: { 'price-scope-website': { state: 'done', lastCheck: 'passed', note: 'Catalog Price Scope is Website.' } } });
+        await handlePrepareCommerceStore(context, { id: 'erp-integration' });
+        const step = saved()?.appBuilderComponents?.['erp-integration'].setupSteps?.['price-scope-website'];
+        expect(step).toMatchObject({ lastCheck: 'failed', note: 'Catalog Price Scope is Global; it must be Website.' });
+        expect(step).not.toHaveProperty('state');
+        // The preview's own checks are the record; no second read of the store.
+        expect(mockRunCheck).not.toHaveBeenCalled();
+    });
+
+    it('an apply saves the fresh check of a step it skipped, and rechecks only what it wrote', async () => {
+        mockApply.mockResolvedValue({
+            reports: [APPLIED_REPORT, { ...APPLIED_REPORT, id: 'storefront-returns', label: 'Returns', state: 'skipped', changes: [] }],
+            record: RECORD,
+            checks: {
+                'price-scope-website': { done: false, note: 'Catalog Price Scope is Global; it must be Website.' },
+                'storefront-returns': { done: true, note: 'Returns are on for the Acme storefront.' },
+            },
+        });
+        const { context, saved } = setup();
+        await handlePrepareCommerceStore(context, { id: 'erp-integration', confirm: true });
+        const steps = saved()?.appBuilderComponents?.['erp-integration'].setupSteps;
+        expect(steps?.['storefront-returns']).toMatchObject({ state: 'done', lastCheck: 'passed', note: 'Returns are on for the Acme storefront.' });
+        expect(steps?.['price-scope-website']).toMatchObject({ state: 'done', lastCheck: 'passed', note: 'Catalog Price Scope is Website.' });
+        expect(mockRunCheck.mock.calls.map(([check]) => check)).toEqual(['price-scope-website']);
+    });
+
+    it('without confirm, answers the preview from the engine and writes nothing to Commerce', async () => {
         const { context, saved } = setup();
         const result = await handlePrepareCommerceStore(context, { id: 'erp-integration', stepIds: ['price-scope-website'] });
         expect(result).toStrictEqual({ success: true, data: { confirmed: false, steps: [{ ...APPLIED_REPORT, state: 'applicable' }] } });
@@ -89,6 +128,8 @@ describe('prepareCommerceStore', () => {
         expect(deps).toMatchObject({ commerce: COMMERCE, websiteCode: 'acme', erpNames: ['Justrite ERP'] });
         expect(stepIds).toEqual(['price-scope-website']);
         expect(mockApply).not.toHaveBeenCalled();
+        expect(COMMERCE.send).not.toHaveBeenCalled();
+        // No check ran in this preview, so there is nothing to save.
         expect(saved()).toBeUndefined();
     });
 
@@ -103,7 +144,7 @@ describe('prepareCommerceStore', () => {
     });
 
     it('names what Commerce refused as the warning, and still records what it took', async () => {
-        mockApply.mockResolvedValue({ reports: [{ ...APPLIED_REPORT, state: 'rejected', rejected: ['x: no'] }], record: RECORD });
+        mockApply.mockResolvedValue({ reports: [{ ...APPLIED_REPORT, state: 'rejected', rejected: ['x: no'] }], record: RECORD, checks: {} });
         mockRunCheck.mockResolvedValue({ done: false, note: 'still Global' });
         const { context } = setup();
         const result = await handlePrepareCommerceStore(context, { id: 'erp-integration', confirm: true });

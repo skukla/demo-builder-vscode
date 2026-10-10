@@ -84,7 +84,7 @@ export interface CommerceConfigChangeRecord {
 
 /** Where one step stands for "Prepare this store". */
 export type PreparationStepState =
-    /** Its check passed, or the SC marked it done: nothing to apply. */
+    /** Its check, run fresh, found it done in the store: nothing to apply. Never from a saved answer. */
     | 'done'
     /** It declares a fix and is not done: the apply will write it. */
     | 'applicable'
@@ -117,6 +117,6 @@ export interface PreparationStepReport {
     rejected: string[];
     /** What stays by hand after the step, if anything. */
     manual?: string;
-    /** What the step's last check said, when it could not tell: shown beside the state. */
+    /** What the step's check found in the store just now, in its words: shown beside the state. */
     note?: string;
 }

@@ -9,7 +9,6 @@ import { commerceFake, configList, configSaved } from '../../../../helpers/comme
 import {
     applyPreparation,
     previewPreparation,
-    stepState,
     undoPreparation,
     type PreparationDeps,
 } from '@/features/app-builder/services/storePreparation/storePreparationEngine';
@@ -52,28 +51,77 @@ function deps(defaults: Array<[string, string | null]>, checks: Partial<Record<s
     };
 }
 
-describe('stepState', () => {
-    it('is manual without a fix, applicable with one, done once marked, applied once recorded', () => {
-        expect(stepState(STEPS[0], {})).toBe('manual');
-        expect(stepState(STEPS[1], {})).toBe('applicable');
-        expect(stepState(STEPS[1], { setupSteps: { 'price-scope': { state: 'done' } } })).toBe('done');
-        expect(stepState(STEPS[1], { storePreparation: { at: 't', steps: { 'price-scope': { kind: 'config', previous: [] } } } })).toBe('applied');
+describe('the store NOW decides, never the saved checklist', () => {
+    const SAVED_DONE = { setupSteps: { 'price-scope': { state: 'done' as const, lastCheck: 'passed' as const, note: 'Catalog Price Scope is Website.' } } };
+
+    it('a step saved done whose fresh check says not done previews as Will apply, with the change line', async () => {
+        const d = deps([['catalog/price/scope', '0']]);
+        const { reports, checks } = await previewPreparation(STEPS, SAVED_DONE, d, ['price-scope']);
+        expect(reports[0]).toMatchObject({ state: 'applicable', changes: ['catalog/price/scope at the default scope: 0 → 1'], note: 'price-scope-website: not yet' });
+        expect(checks).toEqual({ 'price-scope': { done: false, note: 'price-scope-website: not yet' } });
+    });
+
+    it('and the apply writes it', async () => {
+        const d = deps([['catalog/price/scope', '0']]);
+        const { reports, record } = await applyPreparation(STEPS, SAVED_DONE, d, ['price-scope']);
+        expect(reports[0].state).toBe('applied');
+        expect(d.commerce.writes()).toEqual([['PUT', 'system/config', { items: [{ path: 'catalog/price/scope', value: '1', scope: 'default' }] }]]);
+        expect(Object.keys(record?.steps ?? {})).toEqual(['price-scope']);
+    });
+
+    it('a step saved open whose fresh check says done is Done, and nothing is written', async () => {
+        const d = deps([['catalog/price/scope', '0']], { 'price-scope-website': true });
+        const preview = await previewPreparation(STEPS, {}, d, ['price-scope']);
+        expect(preview.reports[0]).toMatchObject({ state: 'done', changes: [], note: 'price-scope-website: done' });
+        const applied = await applyPreparation(STEPS, {}, d, ['price-scope']);
+        expect(applied.reports[0]).toMatchObject({ state: 'skipped', note: 'price-scope-website: done' });
+        expect(d.commerce.send).not.toHaveBeenCalled();
+        expect(applied.record).toBeUndefined();
+    });
+
+    it('runs the check once per selected step that has one, by its name, and none for a step without', async () => {
+        const d = deps([['catalog/price/scope', '0']]);
+        await previewPreparation(STEPS, SAVED_DONE, d);
+        expect((d.runCheck as jest.Mock).mock.calls).toEqual([['price-scope-website'], ['storefront-returns-enabled']]);
+        (d.runCheck as jest.Mock).mockClear();
+        await applyPreparation(STEPS, SAVED_DONE, d, ['returns']);
+        expect((d.runCheck as jest.Mock).mock.calls).toEqual([['storefront-returns-enabled']]);
+    });
+
+    it('a step with no check is never Done: by hand without a fix, whatever was saved', async () => {
+        const { reports } = await previewPreparation(STEPS, { setupSteps: { status: { state: 'done' } } }, deps([]), ['status']);
+        expect(reports[0].state).toBe('manual');
+    });
+
+    it('a step Demo Builder applied and the store still shows done stays Applied; one the store lost is applied again, keeping the first record', async () => {
+        const recorded = { storePreparation: { at: 't', steps: { 'price-scope': { kind: 'config' as const, previous: [{ path: 'catalog/price/scope', scope: 'default' as const, stored: null, effective: '0' }] } } } };
+        const still = deps([['catalog/price/scope', '1']], { 'price-scope-website': true });
+        expect((await previewPreparation(STEPS, recorded, still, ['price-scope'])).reports[0].state).toBe('applied');
+        const lost = deps([['catalog/price/scope', '5']]);
+        const { reports, record } = await applyPreparation(STEPS, recorded, lost, ['price-scope']);
+        expect(reports[0].state).toBe('applied');
+        // The value before Demo Builder first touched it is what an undo restores.
+        expect(record?.steps['price-scope']).toEqual(recorded.storePreparation.steps['price-scope']);
     });
 });
 
 describe('a check that could not tell', () => {
-    const COULD_NOT = { state: 'done' as const, lastCheck: 'unknown' as const, note: 'Could not check the attribute sets: Unterminated string in JSON.' };
+    const COULD_NOT = { note: 'Could not check the attribute sets: Unterminated string in JSON.' };
+    const NO_FIX_CHECKED: SetupStep = { id: 'held', title: 'Create the held status', why: 'w', where: 'Admin', label: 'Held', check: 'partially-held-status' };
 
-    it('never reads as done: with a fix it stays applicable, without one it is unknown', () => {
-        expect(stepState(STEPS[1], { setupSteps: { 'price-scope': COULD_NOT } })).toBe('applicable');
-        expect(stepState(STEPS[0], { setupSteps: { status: COULD_NOT } })).toBe('unknown');
+    it("previews from the fix's own read with the check's words; without a fix it is unknown", async () => {
+        const d = deps([['catalog/price/scope', '0']]);
+        (d.runCheck as jest.Mock).mockResolvedValue(COULD_NOT);
+        const { reports } = await previewPreparation([STEPS[1], NO_FIX_CHECKED], {}, d);
+        expect(reports[0]).toMatchObject({ state: 'applicable', changes: ['catalog/price/scope at the default scope: 0 → 1'], note: COULD_NOT.note });
+        expect(reports[1]).toMatchObject({ state: 'unknown', note: COULD_NOT.note, changes: [] });
     });
 
-    it('previews from the fix\'s own read, and carries the check\'s note', async () => {
+    it('a check that throws is the same: could not check, in its words', async () => {
         const d = deps([['catalog/price/scope', '0']]);
-        const reports = await previewPreparation(STEPS, { setupSteps: { 'price-scope': COULD_NOT, status: COULD_NOT } }, d);
-        expect(reports[1]).toMatchObject({ state: 'applicable', changes: ['catalog/price/scope at the default scope: 0 → 1'], note: COULD_NOT.note });
-        expect(reports[0]).toMatchObject({ state: 'unknown', note: COULD_NOT.note, changes: [] });
+        (d.runCheck as jest.Mock).mockRejectedValue(new Error('socket hang up'));
+        const { reports } = await previewPreparation([NO_FIX_CHECKED], {}, d);
+        expect(reports[0]).toMatchObject({ state: 'unknown', note: 'Could not check: socket hang up' });
     });
 
     it('is "could not check" when the fix cannot preview either, with the reason', async () => {
@@ -81,14 +129,14 @@ describe('a check that could not tell', () => {
         d.commerce.get.mockImplementation(async () => {
             throw new Error('Commerce answered 500 for system/config');
         });
-        const reports = await previewPreparation(STEPS, {}, d, ['price-scope']);
+        const { reports } = await previewPreparation(STEPS, {}, d, ['price-scope']);
         expect(reports[0]).toMatchObject({ state: 'unknown', rejected: ['Could not read what would change: Commerce answered 500 for system/config'] });
     });
 
-    it('is never skipped on apply when the check cannot tell: the fix applies from its own read', async () => {
+    it('is never skipped on apply: the fix applies from its own read', async () => {
         const d = deps([['catalog/price/scope', '0']]);
-        (d.runCheck as jest.Mock).mockResolvedValue({ note: 'Could not check: the read timed out.' });
-        const { reports, record } = await applyPreparation(STEPS, { setupSteps: { 'price-scope': COULD_NOT } }, d, ['price-scope']);
+        (d.runCheck as jest.Mock).mockResolvedValue(COULD_NOT);
+        const { reports, record } = await applyPreparation(STEPS, {}, d, ['price-scope']);
         expect(reports[0].state).toBe('applied');
         expect(Object.keys(record?.steps ?? {})).toEqual(['price-scope']);
     });
@@ -97,7 +145,7 @@ describe('a check that could not tell', () => {
 describe('previewPreparation', () => {
     it('lists every step with its state and what the applicable ones would change, writing nothing', async () => {
         const d = deps([['catalog/price/scope', '0']]);
-        const reports = await previewPreparation(STEPS, {}, d);
+        const { reports } = await previewPreparation(STEPS, {}, d);
         expect(reports.map((r) => [r.id, r.state, r.changes])).toEqual([
             ['status', 'manual', []],
             ['price-scope', 'applicable', ['catalog/price/scope at the default scope: 0 → 1']],
@@ -107,7 +155,7 @@ describe('previewPreparation', () => {
     });
 
     it('limits itself to the steps asked for', async () => {
-        const reports = await previewPreparation(STEPS, {}, deps([]), ['returns']);
+        const { reports } = await previewPreparation(STEPS, {}, deps([]), ['returns']);
         expect(reports.map((r) => r.id)).toEqual(['returns']);
     });
 });
@@ -116,7 +164,7 @@ describe('applyPreparation', () => {
     it('checks each applicable step first and SKIPS one its check finds done, writing nothing for it', async () => {
         const d = deps([['catalog/price/scope', '0']], { 'price-scope-website': true });
         const { reports, record } = await applyPreparation(STEPS, {}, d);
-        expect(reports.find((r) => r.id === 'price-scope')).toMatchObject({ state: 'skipped', changes: ['price-scope-website: done'] });
+        expect(reports.find((r) => r.id === 'price-scope')).toMatchObject({ state: 'skipped', note: 'price-scope-website: done' });
         expect(reports.find((r) => r.id === 'returns')).toMatchObject({ state: 'applied' });
         expect(d.commerce.writes()).toEqual([
             ['PUT', 'system/config', { items: [{ path: 'sales/magento_rma/enabled', value: '1', scope: 'website', scope_code: 'acme' }] }],
@@ -146,11 +194,11 @@ describe('applyPreparation', () => {
         expect(Object.keys(record?.steps ?? {})).toEqual(['returns']);
     });
 
-    it('leaves a done or already-applied step alone', async () => {
-        const d = deps([]);
-        const saved = { setupSteps: { 'price-scope': { state: 'done' as const } }, storePreparation: { at: 't', steps: { returns: { kind: 'config' as const, previous: [] } } } };
+    it('leaves alone a step the store shows done, applied by Demo Builder or not', async () => {
+        const d = deps([], { 'price-scope-website': true, 'storefront-returns-enabled': true });
+        const saved = { storePreparation: { at: 't', steps: { returns: { kind: 'config' as const, previous: [] } } } };
         const { reports } = await applyPreparation(STEPS, saved, d);
-        expect(reports.map((r) => r.state)).toEqual(['manual', 'done', 'applied']);
+        expect(reports.map((r) => r.state)).toEqual(['manual', 'skipped', 'applied']);
         expect(d.commerce.send).not.toHaveBeenCalled();
     });
 

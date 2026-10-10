@@ -74,17 +74,18 @@ interface FooterInput {
 }
 
 /**
- * The step's Apply while it is open and Demo Builder can do it, or the Undo of one Demo
- * Builder applied and recorded (AB-77). Nothing for a step with no fix, a done or skipped
- * step, or when the screen offers none.
+ * The step's Apply when Demo Builder can do it, and the Undo of one it applied and recorded
+ * (AB-77). Apply is offered on a step SAVED done too: the apply checks the store fresh and
+ * writes only if the step is not done there, so the saved state must not hide it. Once
+ * applied, Apply returns only when a check found the store has lost it. Nothing for a step
+ * with no fix, a skipped step, or when the screen offers none.
  */
 function fixButtons(item: SetupChecklistItem, fix: FooterInput['fix'], busy: boolean): ActionButton[] {
     if (!item.fix || !fix || item.state === 'dismissed') return [];
-    if (item.fixApplied) return [{ label: FIX_COPY.undo, variant: 'secondary', onPress: () => fix('undo'), isDisabled: busy }];
-    if (item.state === 'open') {
-        return [{ label: FIX_COPY.fix, variant: 'secondary', onPress: () => fix('apply'), isDisabled: busy }];
-    }
-    return [];
+    const apply: ActionButton = { label: FIX_COPY.fix, variant: 'secondary', onPress: () => fix('apply'), isDisabled: busy };
+    const undo: ActionButton = { label: FIX_COPY.undo, variant: 'secondary', onPress: () => fix('undo'), isDisabled: busy };
+    if (!item.fixApplied) return [apply];
+    return item.state === 'open' ? [apply, undo] : [undo];
 }
 
 /**

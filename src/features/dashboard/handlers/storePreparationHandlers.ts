@@ -24,6 +24,7 @@ import {
     applyPreparation,
     previewPreparation,
     undoPreparation,
+    type FreshChecks,
     type PreparationDeps,
     type PreparationOutcome,
 } from '@/features/app-builder/services/storePreparation/storePreparationEngine';
@@ -69,22 +70,36 @@ const failed = (verb: string, error: unknown): HandlerResponse => ({
     error: `Could not ${verb}: ${error instanceof Error ? error.message : String(error)}`,
 });
 
-/** The steps the applied or undone ones' checks now find, so the guide shows them as they are. */
-function recheck(opened: Opened, reports: PreparationStepReport[]): Promise<Record<string, SetupStepRecord>> {
+/**
+ * The checklist records after a run, so the guide and the card agree with what Prepare just
+ * said: every step's FRESH check as the engine found it (no second read), then a new check of
+ * the steps the run wrote to or undid, whose answer the write has changed.
+ */
+async function recordsAfter(opened: Opened, checks: FreshChecks, reports: PreparationStepReport[]): Promise<Record<string, SetupStepRecord>> {
+    const found = opened.steps.filter((step) => checks[step.id]);
+    const byCheck = new Map(found.map((step) => [step.check, checks[step.id]]));
+    const fresh = await checkedRecords(found, opened.state.setupSteps, async (check) => byCheck.get(check) ?? { note: '' });
     const touched = new Set(reports.filter((report) => ['applied', 'undone', 'rejected'].includes(report.state)).map((report) => report.id));
-    const steps = opened.steps.filter((step) => touched.has(step.id));
-    return checkedRecords(steps, opened.state.setupSteps, opened.deps.runCheck);
+    return checkedRecords(opened.steps.filter((step) => touched.has(step.id)), fresh, opened.deps.runCheck);
 }
 
-/** Save the record (or its absence) and the rechecked steps on the component. */
+/** Save the record (or its absence) and the checked steps on the component. */
 async function saveOutcome(context: HandlerContext, opened: Opened, outcome: PreparationOutcome): Promise<void> {
     const { storePreparation: _old, ...rest } = opened.state;
     const next: AppBuilderComponentState = {
         ...rest,
-        setupSteps: await recheck(opened, outcome.reports),
+        setupSteps: await recordsAfter(opened, outcome.checks, outcome.reports),
         ...(outcome.record ? { storePreparation: outcome.record } : {}),
     };
     await context.stateManager.saveProject(setAppBuilderComponent(opened.project, opened.id, next));
+}
+
+/** A preview's fresh checks, saved on the checklist; nothing when no check ran. */
+async function savePreviewChecks(context: HandlerContext, opened: Opened, checks: FreshChecks): Promise<void> {
+    if (Object.keys(checks).length === 0) return;
+    const next: AppBuilderComponentState = { ...opened.state, setupSteps: await recordsAfter(opened, checks, []) };
+    await context.stateManager.saveProject(setAppBuilderComponent(opened.project, opened.id, next));
+    await postComponentsSnapshot(context);
 }
 
 type RunOutcome = GuardableResult & { reports?: PreparationStepReport[]; record?: StorePreparationRecord; warning?: string };
@@ -135,8 +150,10 @@ function answerOf(outcome: RunOutcome, extra: Record<string, unknown> = {}): Han
 }
 
 /**
- * Handle 'prepareCommerceStore' — without `confirm`, every step with its state and what the
- * applicable ones would change. With it, apply them (or the `stepIds` named), in order.
+ * Handle 'prepareCommerceStore' — without `confirm`, every step with where it stands in the
+ * store NOW (each check run fresh, and saved on the checklist) and what the applicable ones
+ * would change. With it, apply them (or the `stepIds` named), in order, each checked again
+ * just before it is decided.
  */
 export const handlePrepareCommerceStore: MessageHandler<PrepareStoreRequestPayload> = narrateOutcomeToModal(
     async (context, payload): Promise<HandlerResponse> => {
@@ -145,7 +162,9 @@ export const handlePrepareCommerceStore: MessageHandler<PrepareStoreRequestPaylo
         const stepIds = Array.isArray(payload?.stepIds) ? payload.stepIds.filter((id): id is string => typeof id === 'string') : undefined;
         if (payload?.confirm !== true) {
             try {
-                return { success: true, data: { confirmed: false, steps: await previewPreparation(opened.steps, opened.state, opened.deps, stepIds) } };
+                const preview = await previewPreparation(opened.steps, opened.state, opened.deps, stepIds);
+                await savePreviewChecks(context, opened, preview.checks);
+                return { success: true, data: { confirmed: false, steps: preview.reports } };
             } catch (error) {
                 return failed('read what the store needs', error);
             }

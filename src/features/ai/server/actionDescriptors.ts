@@ -712,11 +712,13 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             'card payments on (settings written through PUT /V1/system/config at the default or the ' +
             'website scope), the erp_owner and brand attributes as Text Fields with erp_owner in every ' +
             'attribute set, a warehouse per ERP in a stock the website sells from, and a shared catalog ' +
-            'per company without one. WITHOUT confirm it only previews: data.steps lists every step ' +
-            'with its state (done, applicable, manual, applied) and what each applicable one would ' +
-            'change, reading current values first. Show the preview to the user, then call again ' +
-            'with confirm:true: each step is checked first and SKIPPED when a datapack or the user ' +
-            'already did it, what Commerce refused is named by step and item (rejected), the previous ' +
+            'per company without one. WITHOUT confirm it only previews, and it READS THE STORE to do ' +
+            'so: every step\'s check runs fresh (never the saved checklist) and is saved on the ' +
+            'checklist; data.steps lists every step with where it stands now (done, applicable, ' +
+            'manual, applied, unknown = could not check) with the check\'s note, and what each ' +
+            'applicable one would change. Show the preview to the user, then call again ' +
+            'with confirm:true: each step is checked again just before it is decided and SKIPPED ' +
+            'when the store shows it done (a datapack or the user did it), what Commerce refused is named by step and item (rejected), the previous ' +
             'values are recorded so undo_commerce_store_preparation puts them back, and the steps left ' +
             'by hand (the two order statuses, the PayPal sandbox connection, moving stock) are listed ' +
             'as manual. stepIds limits the run to some steps. Takes the integration id.',

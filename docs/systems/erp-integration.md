@@ -395,6 +395,14 @@ list is longer than that on Justrite, and the cut read broke the attribute-set c
 the checklist, the guide or the engine: a step with a fix previews and applies from the fix's
 own read; one without is "could not check", with the check's words shown.
 
+The preview and the apply are statements about the store NOW. For every selected step that
+has a check the engine runs it fresh (the preview all of them at once, the apply each just
+before deciding) and decides from that answer alone; the saved checklist is never consulted,
+because a store changes after a check passes (Justrite 2026-10-10: two settings switched off
+by hand still previewed as Done and were skipped). The fresh answers are saved on the
+checklist, so the guide and the card agree afterwards. The guide offers "Apply this step" on a
+step saved done as well, for the same reason. A step applied twice keeps its first record.
+
 Two rules whatever the step: a step is checked first and SKIPPED when its check says done,
 so a datapack that already loaded the attributes, sources or shared catalogs is never redone
 and never relied on; and a refused item stops nothing else — what Commerce took stands and is

@@ -36,7 +36,10 @@ function lastCheckOf(saved: SetupStepRecord | undefined): SetupCheckOutcome | un
  * Whether a step reads as done: marked done, and its last check did not come back unable to
  * tell. A check that could not tell must never read as done (Justrite 2026-10-10: a step
  * saved done, then checked "could not", previewed as done and would have skipped seven
- * attribute sets without `erp_owner`). Shared with the preparation engine.
+ * attribute sets without `erp_owner`).
+ *
+ * This is the SAVED, no-network answer: what the card's "n of m done" line and the guide show
+ * before a check runs. "Prepare this store" never reads it; it checks the store fresh.
  */
 export function isStepDone(saved: SetupStepRecord | undefined): boolean {
     return saved?.state === 'done' && lastCheckOf(saved) !== 'unknown';
