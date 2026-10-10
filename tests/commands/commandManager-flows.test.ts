@@ -489,7 +489,9 @@ describe('signInGitHub', () => {
 
         await h.handlerFor('demoBuilder.signInGitHub')();
 
-        expect(mockSignInToGitHub).toHaveBeenCalledWith(expect.anything(), expect.anything(), { force: false });
+        expect(mockSignInToGitHub).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
+            force: false,
+        });
         expect(vscode.window.setStatusBarMessage).toHaveBeenCalledWith(
             '$(check) Signed in to GitHub as sayurihanki',
             5000
@@ -507,7 +509,24 @@ describe('signInGitHub', () => {
         expect((vscode.window.showInformationMessage as jest.Mock).mock.calls[0][0]).toBe(
             'Already signed in to GitHub as steve.'
         );
-        expect(mockSignInToGitHub).toHaveBeenCalledWith(expect.anything(), expect.anything(), { force: true });
+        expect(mockSignInToGitHub).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
+            force: true,
+        });
+    });
+
+    it('makes the same offer without a name when the valid token carries no user', async () => {
+        const h = harness();
+        mockValidateGitHubToken.mockResolvedValue({ valid: true });
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Sign in again');
+
+        await h.handlerFor('demoBuilder.signInGitHub')();
+
+        expect((vscode.window.showInformationMessage as jest.Mock).mock.calls[0][0]).toBe(
+            'Already signed in to GitHub.'
+        );
+        expect(mockSignInToGitHub).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
+            force: true,
+        });
     });
 
     it('does nothing when that offer is declined', async () => {
@@ -549,7 +568,10 @@ describe('signInGitHub', () => {
         );
 
         (vscode.window.showWarningMessage as jest.Mock).mockClear();
-        mockSignInToGitHub.mockResolvedValue({ error: 'Authentication cancelled', cancelled: true });
+        mockSignInToGitHub.mockResolvedValue({
+            error: 'Authentication cancelled',
+            cancelled: true,
+        });
         await h.handlerFor('demoBuilder.signInGitHub')();
         expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
     });
