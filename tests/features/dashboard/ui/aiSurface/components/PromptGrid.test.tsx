@@ -283,5 +283,16 @@ describe('PromptGrid', () => {
             fireEvent.change(input, { target: { value: '' } });
             expect(screen.getByTestId('ai-new-prompt-tile')).toBeInTheDocument();
         });
+
+        // Spaces alone are not a search: nothing is narrowed, so the add card has
+        // no reason to step aside.
+        it('keeps every card and the New card when the query is only spaces', () => {
+            renderGrid({ userPrompts: PROMPTS });
+            const input = screen.getByPlaceholderText(/search prompts/i);
+            fireEvent.change(input, { target: { value: '   ' } });
+
+            expect(screen.getAllByTestId('ai-prompt-card')).toHaveLength(PROMPTS.length);
+            expect(screen.getByTestId('ai-new-prompt-tile')).toBeInTheDocument();
+        });
     });
 });

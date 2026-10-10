@@ -4368,20 +4368,19 @@
             "openGaps": 0
         },
         "src/features/dashboard/ui/aiSurface/components/PromptGrid.tsx": {
-            "score": 95.65,
-            "killed": 44,
-            "survived": 2,
+            "score": 97.83,
+            "killed": 45,
+            "survived": 1,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 1,
-                "other": 1
+                "branch": 1
             },
             "uncoveredCategories": {},
             "highValueSurvivors": 1,
             "equivalent": 1,
-            "openGaps": 1,
-            "recorded": "2026-10-10T01:00:15.626Z"
+            "openGaps": 0,
+            "recorded": "2026-10-10T21:41:11.077Z"
         },
         "src/features/dashboard/ui/components/ActionGrid.tsx": {
             "score": 97.06,
