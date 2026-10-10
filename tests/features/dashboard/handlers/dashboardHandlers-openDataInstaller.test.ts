@@ -95,4 +95,15 @@ describe.each([
             error: 'command missing',
         });
     });
+
+    // VS Code rejects some commands with a bare string rather than an Error; the
+    // reason is still what the dashboard has to be told.
+    it('reports the reason when what was thrown is not an Error', async () => {
+        (vscode.commands.executeCommand as jest.Mock).mockRejectedValueOnce('no such command');
+
+        await expect(dashboardHandlers[type](makeContext(), undefined)).resolves.toStrictEqual({
+            success: false,
+            error: 'no such command',
+        });
+    });
 });

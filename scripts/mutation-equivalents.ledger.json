@@ -16414,6 +16414,18 @@
             "decision": "none - the guard selects a log line; the registration call itself is tested by its arguments",
             "recorded": "2026-10-10",
             "source": "PL-70 MUT-04, 2026-10-10"
+        },
+        {
+            "module": "src/features/dashboard/handlers/dashboardHandlers.ts",
+            "anchors": [
+                "return deployMeshFromScreen(context, payload?.id ?? MESH_OPERATION_ID);"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Dropping the ?. throws only when payload is undefined, and this line cannot run in that state: the guard two lines above returns unless progressSurfaceOf(payload) is 'modal', and progressSurfaceOf reads payload?.progress, so an undefined payload always takes the palette-command return. The compiler requires the ?. because MessageHandler declares payload optional and a call through progressSurfaceOf does not narrow it. The sibling ?. in the idOf callback one statement later was NOT required by its type (idOf receives a defined payload) and was deleted in the same change instead of being recorded.",
+            "decision": "none \u2014 required by the type, unreachable in the state that would differ",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-05 \u2014 the guard is exercised from both sides by dashboardHandlers-deployMesh.test.ts (no payload, an id without the modal surface, the modal surface with and without an id)"
         }
     ]
 }

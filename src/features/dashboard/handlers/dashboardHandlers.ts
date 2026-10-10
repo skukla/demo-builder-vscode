@@ -284,7 +284,7 @@ export const handleDeployMesh: MessageHandler<{ id?: string; progress?: 'modal' 
             }
             return deployMeshFromScreen(context, payload?.id ?? MESH_OPERATION_ID);
         },
-        (payload) => payload?.id ?? MESH_OPERATION_ID,
+        (payload) => payload.id ?? MESH_OPERATION_ID,
     );
 
 /**
