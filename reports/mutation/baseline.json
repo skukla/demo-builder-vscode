@@ -8426,10 +8426,10 @@
             "recorded": "2026-10-09T23:33:20.915Z"
         },
         "src/features/project-creation/services/edsContentSetup.ts": {
-            "score": 67.57,
-            "killed": 75,
+            "score": 69.37,
+            "killed": 77,
             "survived": 29,
-            "noCoverage": 7,
+            "noCoverage": 5,
             "timeout": 0,
             "survivorCategories": {
                 "logPresentation": 11,
@@ -8439,14 +8439,12 @@
             },
             "uncoveredCategories": {
                 "string": 4,
-                "logPresentation": 1,
-                "branch": 1,
-                "other": 1
+                "logPresentation": 1
             },
             "highValueSurvivors": 8,
-            "equivalent": 9,
-            "openGaps": 1,
-            "recorded": "2026-10-09T23:28:23.028Z"
+            "equivalent": 8,
+            "openGaps": 0,
+            "recorded": "2026-10-10T14:55:49.924Z"
         },
         "src/features/project-creation/services/envVarClassifier.ts": {
             "score": 100,

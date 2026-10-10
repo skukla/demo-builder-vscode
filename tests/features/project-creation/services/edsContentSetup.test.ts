@@ -62,7 +62,7 @@ jest.mock('@/features/eds/services/github/githubTokenService', () => ({
 jest.mock('@/features/eds/handlers/edsServiceCache', () => ({
     getGitHubServices: jest.fn(() => {
         const { GitHubTokenService } = jest.requireMock(
-            '@/features/eds/services/github/githubTokenService',
+            '@/features/eds/services/github/githubTokenService'
         );
         return { tokenService: new GitHubTokenService() };
     }),
@@ -574,5 +574,42 @@ describe('ensureEdsContent — the calls it makes', () => {
 
         expect(result).toBe(true);
         expect(mockPublishAllSiteContent).toHaveBeenCalledTimes(1);
+    });
+
+    describe('the broken links it hands back for the Storefront Report', () => {
+        it('hands the caller the links the copy recorded, exactly as recorded', async () => {
+            const recorded = [{ link: '/fr', pages: ['/footer', '/nav'] }];
+            mockCopyContentFromSource.mockImplementation(
+                async (
+                    _src: unknown,
+                    _destOrg: unknown,
+                    _destSite: unknown,
+                    _progress: unknown,
+                    _ids: unknown,
+                    _source: unknown,
+                    patchReport: PatchReport | undefined
+                ) => {
+                    if (patchReport) patchReport.brokenLinks = recorded;
+                    return { success: true, totalFiles: 5, failedFiles: [] };
+                }
+            );
+            const onBrokenLinks = jest.fn();
+
+            await ensureEdsContent(makeConfig(), { ...makeDeps(), onBrokenLinks });
+
+            expect(onBrokenLinks).toHaveBeenCalledTimes(1);
+            expect(onBrokenLinks).toHaveBeenCalledWith(recorded);
+        });
+
+        it('hands the caller an empty list, not nothing, when the copy recorded none', async () => {
+            // The caller writes this straight onto the project; an undefined here
+            // would leave a previous run's links standing in the report.
+            const onBrokenLinks = jest.fn();
+
+            await ensureEdsContent(makeConfig(), { ...makeDeps(), onBrokenLinks });
+
+            expect(onBrokenLinks).toHaveBeenCalledTimes(1);
+            expect(onBrokenLinks.mock.calls[0]).toStrictEqual([[]]);
+        });
     });
 });

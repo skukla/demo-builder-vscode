@@ -14516,19 +14516,6 @@
             "source": "PL-22 batch MUT-01, adobeEntitySelector focus run"
         },
         {
-            "module": "src/features/project-creation/services/edsContentSetup.ts",
-            "anchors": [
-                "} catch (error) {"
-            ],
-            "line": 107,
-            "mutants": 1,
-            "category": "block",
-            "reason": "REPLACES the block-library-publish catch entry removed 2026-09-10. Five identical per-step try/catch blocks became one `nonFatal` helper, so there is ONE equivalent mutant here where there were five. Emptying this catch still swallows the failure and still returns normally \u2014 every caller is declared non-fatal \u2014 so only the warn line differs.",
-            "decision": "none \u2014 the warn line is what tells a pasted log which step failed",
-            "recorded": "2026-09-10",
-            "source": "manual \u2014 re-anchor after decomposition"
-        },
-        {
             "module": "src/features/updates/services/preservedFiles.ts",
             "anchors": [
                 "logger.debug(`[TemplateSync] File ${filePath} not found, skipping backup`);"
@@ -15995,18 +15982,6 @@
             "reason": "Same replacement on fail's dependency list: an empty list becomes a list of one constant string, which Object.is finds equal on every render, so the memoised function never changes. fail calls only three state setters, which React guarantees are stable, so it closes over nothing that could go stale. No test can observe a difference in identity or behaviour; the widened run left it surviving.",
             "decision": "none \u2014 the callback must stay memoised because runEnable, runWorkspace and runCreate list it as a dependency",
             "recorded": "2026-10-10",
-        },
-        {
-            "module": "src/features/project-creation/services/aiBundle/mcpConfigWriter.ts",
-            "anchors": [
-                "if (command !== 'node' || !fnmPath) return { command, args };"
-            ],
-            "mutants": 1,
-            "category": "branch",
-            "reason": "Stryker replaces the `command !== 'node'` half with false, leaving `!fnmPath`. The two differ only for an ai-defaults entry whose command is not node, and the bundled ai-defaults.json has none: all three entries declare \"command\": \"node\" (lines 8, 19, 31), so the half is constantly false in production and in every suite that reads the real file. Verified by planting rather than by reasoning: a suite that swapped the config for one with a `uvx` entry killed the mutant on 2026-10-10, and was then deleted because tests/sop/no-config-leaf-mocks.test.ts refuses a jest.mock of a config/*.json leaf (its allowlist is empty and shrink-only). The only other route is an injected-defaults parameter on writeMcpConfigs, which is a production signature change for an entry that does not exist yet.",
-            "decision": "keep the guard: the schema allows any command string, and without it a future non-node server would be launched as fnm exec node <command>. Kill it through an injected defaults seam in the same change that ships the first non-node entry",
-            "recorded": "2026-10-10",
-            "source": "PL-70 batch MUT-06, focus run 2026-10-10"
             "source": "PL-70 batch MUT-05, 2026-10-10"
         },
         {
@@ -16020,6 +15995,18 @@
             "decision": "none \u2014 kept for the same reason as its four neighbours: it states intent and keeps the field list reading consistently",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-05, 2026-10-10"
+        },
+        {
+            "module": "src/features/project-creation/services/aiBundle/mcpConfigWriter.ts",
+            "anchors": [
+                "if (command !== 'node' || !fnmPath) return { command, args };"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Stryker replaces the `command !== 'node'` half with false, leaving `!fnmPath`. The two differ only for an ai-defaults entry whose command is not node, and the bundled ai-defaults.json has none: all three entries declare \"command\": \"node\" (lines 8, 19, 31), so the half is constantly false in production and in every suite that reads the real file. Verified by planting rather than by reasoning: a suite that swapped the config for one with a `uvx` entry killed the mutant on 2026-10-10, and was then deleted because tests/sop/no-config-leaf-mocks.test.ts refuses a jest.mock of a config/*.json leaf (its allowlist is empty and shrink-only). The only other route is an injected-defaults parameter on writeMcpConfigs, which is a production signature change for an entry that does not exist yet.",
+            "decision": "keep the guard: the schema allows any command string, and without it a future non-node server would be launched as fnm exec node <command>. Kill it through an injected defaults seam in the same change that ships the first non-node entry",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-06, focus run 2026-10-10"
         }
     ]
 }
