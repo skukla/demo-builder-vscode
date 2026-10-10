@@ -48,7 +48,13 @@ describe('workspacesHeldBy', () => {
 
         expect(
             workspacesHeldBy(project, ['erp-integration', 'demo-erp', 'legacy-thing', 'absent']),
-        ).toEqual([PAIR_WS, PAIR_WS]);
+        ).toStrictEqual([PAIR_WS, PAIR_WS]);
+    });
+
+    it('holds nothing for a project with no App Builder components at all', () => {
+        const bare = createMockProject({ appBuilderComponents: undefined });
+
+        expect(workspacesHeldBy(bare, ['erp-integration'])).toStrictEqual([]);
     });
 });
 
@@ -65,6 +71,15 @@ describe('workspacesToRelease', () => {
         const remaining = projectWith({ 'demo-erp': component(PAIR_WS) });
 
         expect(workspacesToRelease([PAIR_WS], remaining)).toStrictEqual([]);
+    });
+
+    it('releases a workspace when what remains includes a component with none', () => {
+        const remaining = projectWith({
+            'legacy-thing': component(),
+            'starter-kit': component(OTHER_WS),
+        });
+
+        expect(workspacesToRelease([PAIR_WS, OTHER_WS], remaining)).toStrictEqual([PAIR_WS]);
     });
 
     it('releases a shared workspace ONCE when both holders go together', () => {

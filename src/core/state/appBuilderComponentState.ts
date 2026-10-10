@@ -124,7 +124,10 @@ export function listAppBuilderComponents(project: Project): IdentifiedAppBuilder
  * (AB-71). Update and the update check both ask this, so the card's badge and the
  * Update button agree.
  */
-export function runsOlderCode(deployedCommit: string | undefined, cloneCommit: string | undefined): boolean {
+export function runsOlderCode(
+    deployedCommit: string | undefined,
+    cloneCommit: string | undefined,
+): boolean {
     return Boolean(deployedCommit && cloneCommit && deployedCommit !== cloneCommit);
 }
 
@@ -145,8 +148,13 @@ export function withoutStaleSystemLinks(
 ): Record<string, AppBuilderComponentState> {
     const pruned: Record<string, AppBuilderComponentState> = {};
     for (const [id, state] of Object.entries(components)) {
-        const kept = state.systems?.filter((systemId) => systemId in components);
-        pruned[id] = kept && kept.length !== state.systems?.length ? { ...state, systems: kept } : state;
+        const { systems } = state;
+        if (!systems) {
+            pruned[id] = state;
+            continue;
+        }
+        const kept = systems.filter((systemId) => systemId in components);
+        pruned[id] = kept.length !== systems.length ? { ...state, systems: kept } : state;
     }
     return pruned;
 }
@@ -242,10 +250,10 @@ export function workspacesToRelease(
     held: ReadonlyArray<NonNullable<AppBuilderComponentState['workspace']>>,
     remaining: Project,
 ): NonNullable<AppBuilderComponentState['workspace']>[] {
+    // A component with no workspace contributes `undefined`, which no held
+    // workspace's id can equal, so the set needs no filtering.
     const stillUsed = new Set(
-        Object.values(remaining.appBuilderComponents ?? {})
-            .map((state) => state.workspace?.id)
-            .filter((id): id is string => Boolean(id)),
+        Object.values(remaining.appBuilderComponents ?? {}).map((state) => state.workspace?.id),
     );
     const seen = new Set<string>();
     return held.filter((workspace) => {
