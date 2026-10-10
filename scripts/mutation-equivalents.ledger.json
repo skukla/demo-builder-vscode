@@ -15957,6 +15957,19 @@
             "decision": "none \u2014 the connection slice is the filter's default, so its name is not what selects it",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-03"
+        },
+        {
+            "module": "src/features/authentication/services/adobeEntityName.ts",
+            "anchors": [
+                "const TITLE_CHARS = /[^A-Za-z0-9\u00c0-\u00d6\u00d8-\u00f6\u00f8-\u00ff\\s]+/g;"
+            ],
+            "line": 99,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker drops the + so each disallowed character becomes its own space instead of a run becoming one. The only reader, toAdobeTitle, immediately collapses every whitespace run to a single space (replace(/\\s+/g, ' ')), so a run of spaces and one space are the same string by the next call. Planted 2026-10-10: 200,000 random titles over letters, digits, accents, spaces, tabs and punctuation gave zero differences, while the control (dropping the first trim) differed on its first input.",
+            "decision": "none \u2014 replacing a run at once is the clearer statement of intent and costs nothing",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-04"
         }
     ]
 }

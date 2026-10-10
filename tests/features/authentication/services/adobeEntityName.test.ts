@@ -118,6 +118,17 @@ describe('deriveFreeAdobeEntityName', () => {
     it('falls back to App when the title has nothing Adobe accepts', () => {
         expect(deriveFreeAdobeEntityName('***', [])).toBe('App');
     });
+
+    it('treats a missing title as an empty one', () => {
+        expect(deriveFreeAdobeEntityName(undefined as unknown as string, [])).toBe('App');
+    });
+
+    // The fallback still has to be unique: App is numbered when taken, and gets the
+    // random ending when the names in use are unknown.
+    it('gives the App fallback an ending like any other name', () => {
+        expect(deriveFreeAdobeEntityName('***', ['app'])).toBe('App1');
+        expect(deriveFreeAdobeEntityName('***', undefined, 'ZZZZ')).toBe('AppZZZZ');
+    });
 });
 
 // aio's config schema takes a title of letters, digits and spaces, 1–45 long; Console
@@ -144,5 +155,12 @@ describe('toAdobeTitle', () => {
 
     it('falls back to App when nothing usable is left', () => {
         expect(toAdobeTitle('---')).toBe('App');
+        expect(toAdobeTitle(undefined as unknown as string)).toBe('App');
+    });
+
+    // The space a leading "-" turns into is dropped BEFORE the cut, so it does not
+    // take one of the 45 places from the title.
+    it('does not spend one of the 45 characters on leading punctuation', () => {
+        expect(toAdobeTitle(`-${'a'.repeat(45)}`)).toBe('a'.repeat(45));
     });
 });
