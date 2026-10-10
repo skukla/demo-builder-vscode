@@ -12,7 +12,11 @@
 
 import * as vscode from 'vscode';
 import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
-import { cardInFlightLabel, timedSteps, withProgressRegister } from '@/core/vscode/progressRegister';
+import {
+    cardInFlightLabel,
+    timedSteps,
+    withProgressRegister,
+} from '@/core/vscode/progressRegister';
 
 /** Capture the reporter withProgress hands the task. */
 function stubWithProgress(): {
@@ -254,6 +258,99 @@ describe('withProgressRegister — operations with no card', () => {
         );
 
         expect(pushCardStatus).toHaveBeenCalledWith('Deploying Mesh…');
+    });
+});
+
+/**
+ * A card channel with no label (the label is optional, the channel is a separate
+ * option): the card is told an EMPTY line, on every path, never `undefined` and
+ * never some other text.
+ */
+describe('withProgressRegister — a card channel with no label', () => {
+    it('pushes an empty line from the notification path', async () => {
+        stubWithProgress();
+        const pushCardStatus = jest.fn();
+
+        await withProgressRegister({ title: 'Deploying', pushCardStatus }, async () => undefined);
+
+        expect(pushCardStatus.mock.calls).toStrictEqual([['']]);
+    });
+
+    it('pushes an empty line from inside an agent tool call', async () => {
+        stubWithProgress();
+        const pushCardStatus = jest.fn();
+
+        await withPhaseSinks([jest.fn()], () =>
+            withProgressRegister({ title: 'Deploying', pushCardStatus }, async () => undefined)
+        );
+
+        expect(pushCardStatus.mock.calls).toStrictEqual([['']]);
+    });
+
+    it('pushes an empty line when the steps are shown in a modal', async () => {
+        stubWithProgress();
+        const pushCardStatus = jest.fn();
+
+        await withProgressRegister(
+            { title: 'Deploying', pushCardStatus, inModal: true },
+            async () => undefined
+        );
+
+        expect(pushCardStatus.mock.calls).toStrictEqual([['']]);
+    });
+});
+
+/**
+ * The modal surface (PL-59). The SC opened a modal by starting the operation and
+ * the caller sends its steps there, so this helper must narrate them NOWHERE: no
+ * notification, and no phase sink either, or two surfaces show the same step.
+ */
+describe('withProgressRegister — steps shown in a modal', () => {
+    it('opens no notification, tells the card its line once, and returns the work’s result', async () => {
+        const { report } = stubWithProgress();
+        const pushCardStatus = jest.fn();
+
+        const result = await withProgressRegister(
+            {
+                title: 'Deploying',
+                cardLabel: 'Deploying Integration',
+                pushCardStatus,
+                inModal: true,
+            },
+            async (step) => {
+                step('Checking requirements');
+                return 'done';
+            }
+        );
+
+        expect(result).toBe('done');
+        expect(vscode.window.withProgress).not.toHaveBeenCalled();
+        expect(report).not.toHaveBeenCalled();
+        expect(pushCardStatus.mock.calls).toStrictEqual([['Deploying Integration']]);
+    });
+
+    it('sends its steps to no phase sink, even inside an agent tool call', async () => {
+        stubWithProgress();
+        const sink = jest.fn();
+
+        await withPhaseSinks([sink], () =>
+            withProgressRegister({ title: 'Deploying', inModal: true }, async (step) => {
+                step('Checking requirements');
+            })
+        );
+
+        expect(sink).not.toHaveBeenCalled();
+    });
+
+    it('runs a card-less operation without reaching for a card channel', async () => {
+        stubWithProgress();
+
+        const result = await withProgressRegister(
+            { title: 'Changing destination', inModal: true },
+            async () => 'done'
+        );
+
+        expect(result).toBe('done');
     });
 });
 

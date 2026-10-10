@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "MUT-05: ensureNodeVersion to zero open gaps — a Node that could not be asked, the Node error stopping the Adobe CLI install, and the options each command runs with",
+    "_note": "MUT-05: progressRegister to zero open gaps — the modal surface narrates nowhere, and a card channel with no label is told an empty line",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -2060,23 +2060,17 @@
             "openGaps": 0
         },
         "src/core/vscode/progressRegister.ts": {
-            "score": 81.4,
-            "killed": 35,
-            "survived": 1,
-            "noCoverage": 7,
+            "score": 100,
+            "killed": 43,
+            "survived": 0,
+            "noCoverage": 0,
             "timeout": 0,
-            "survivorCategories": {
-                "branch": 1
-            },
-            "uncoveredCategories": {
-                "block": 1,
-                "branch": 3,
-                "string": 3
-            },
-            "highValueSurvivors": 1,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 5,
-            "recorded": "2026-10-10T01:38:29.763Z"
+            "openGaps": 0,
+            "recorded": "2026-10-10T19:09:34.148Z"
         },
         "src/core/vscode/workspaceWatcherManager.ts": {
             "score": 82.14,
