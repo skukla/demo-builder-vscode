@@ -54,7 +54,12 @@ const EDS_PROJECT = createMockProject({
     name: 'Test',
     path: PROJECT_PATH,
     componentInstances: {
-        [COMPONENT_IDS.EDS_STOREFRONT]: { id: COMPONENT_IDS.EDS_STOREFRONT, name: 'EDS Storefront', status: 'ready', path: `${PROJECT_PATH}/components/eds-storefront` },
+        [COMPONENT_IDS.EDS_STOREFRONT]: {
+            id: COMPONENT_IDS.EDS_STOREFRONT,
+            name: 'EDS Storefront',
+            status: 'ready',
+            path: `${PROJECT_PATH}/components/eds-storefront`,
+        },
     },
 });
 // Mesh-only project — only 'app-builder-tooling' entries apply.
@@ -62,7 +67,12 @@ const MESH_PROJECT = createMockProject({
     name: 'Test',
     path: PROJECT_PATH,
     componentInstances: {
-        [COMPONENT_IDS.HEADLESS_COMMERCE_MESH]: { id: COMPONENT_IDS.HEADLESS_COMMERCE_MESH, name: 'EDS Storefront', status: 'ready', path: `${PROJECT_PATH}/components/mesh` },
+        [COMPONENT_IDS.HEADLESS_COMMERCE_MESH]: {
+            id: COMPONENT_IDS.HEADLESS_COMMERCE_MESH,
+            name: 'EDS Storefront',
+            status: 'ready',
+            path: `${PROJECT_PATH}/components/mesh`,
+        },
     },
 });
 // Bare project — nothing applies; the installer no-ops.
@@ -139,16 +149,34 @@ describe('installAiDefaultsMcpTools', () => {
         await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT, executor);
 
         expect(mockEnsureNode).toHaveBeenCalledWith(executor, '24', expect.anything());
-        expect(executeMock).toHaveBeenCalledWith('npm install', expect.objectContaining({ useNodeVersion: '24' }));
+        expect(executeMock).toHaveBeenCalledWith(
+            'npm install',
+            expect.objectContaining({ useNodeVersion: '24' })
+        );
     });
 
-    it('fails with fnm\'s reason, and runs no npm, when that Node cannot be had', async () => {
+    it("fails with fnm's reason, and runs no npm, when that Node cannot be had", async () => {
         mockEnsureNode.mockResolvedValueOnce('Node 24 is required but fnm was not found.');
 
         const result = await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT, executor);
 
-        expect(result).toStrictEqual({ success: false, error: 'Node 24 is required but fnm was not found.' });
+        expect(result).toStrictEqual({
+            success: false,
+            error: 'Node 24 is required but fnm was not found.',
+        });
         expect(executeMock).not.toHaveBeenCalled();
+    });
+
+    it('hands the Node helper a debug sink it can call, with or without a logger', async () => {
+        // ensureFnmNodeVersion calls `logger.debug` unconditionally, so an empty
+        // object here is a TypeError in the real helper — the stub cannot see it.
+        executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
+
+        await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT, executor);
+
+        const sink = mockEnsureNode.mock.lastCall?.[2] as { debug: (message: string) => void };
+        expect(sink).toStrictEqual({ debug: expect.any(Function) });
+        expect(() => sink.debug('fnm said something')).not.toThrow();
     });
 
     it('marks the tools package.json private with a stable name', async () => {
@@ -289,7 +317,8 @@ describe('installAiDefaultsMcpTools — npm output reaches a channel', () => {
     // this machine does not satisfy) therefore reached no channel at all — it
     // flashed past on the progress line, which keeps only the last line of a chunk.
     const EBADENGINE = 'npm warn EBADENGINE Unsupported engine {';
-    const DEPRECATED = 'npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported';
+    const DEPRECATED =
+        'npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported';
 
     let logger: { debug: jest.Mock; warn: jest.Mock };
 
@@ -314,7 +343,11 @@ describe('installAiDefaultsMcpTools — npm output reaches a channel', () => {
     });
 
     it('sends the whole output to debug, warning lines included', async () => {
-        executeMock.mockResolvedValue({ code: 0, stdout: `${EBADENGINE}\nadded 214 packages`, stderr: '' });
+        executeMock.mockResolvedValue({
+            code: 0,
+            stdout: `${EBADENGINE}\nadded 214 packages`,
+            stderr: '',
+        });
 
         await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT, executor, undefined, logger);
 
@@ -334,7 +367,11 @@ describe('installAiDefaultsMcpTools — npm output reaches a channel', () => {
     });
 
     it('still logs the output when npm FAILED, alongside the structured error', async () => {
-        executeMock.mockResolvedValue({ code: 1, stdout: EBADENGINE, stderr: 'npm error code E404' });
+        executeMock.mockResolvedValue({
+            code: 1,
+            stdout: EBADENGINE,
+            stderr: 'npm error code E404',
+        });
 
         const result = await installAiDefaultsMcpTools(
             PROJECT_PATH,

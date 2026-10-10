@@ -8222,25 +8222,23 @@
             "recorded": "2026-10-09T23:34:22.108Z"
         },
         "src/features/project-creation/services/aiBundle/aiDefaultsInstaller.ts": {
-            "score": 91.18,
-            "killed": 93,
-            "survived": 5,
-            "noCoverage": 4,
+            "score": 93.14,
+            "killed": 95,
+            "survived": 4,
+            "noCoverage": 3,
             "timeout": 0,
             "survivorCategories": {
                 "logPresentation": 2,
                 "string": 1,
-                "other": 1,
                 "optionalChain": 1
             },
             "uncoveredCategories": {
-                "string": 3,
-                "logPresentation": 1
+                "string": 3
             },
             "highValueSurvivors": 0,
             "equivalent": 1,
-            "openGaps": 1,
-            "recorded": "2026-10-09T23:22:02.956Z"
+            "openGaps": 0,
+            "recorded": "2026-10-10T14:48:53.849Z"
         },
         "src/features/project-creation/services/aiBundle/aiToolingGate.ts": {
             "score": 96,
