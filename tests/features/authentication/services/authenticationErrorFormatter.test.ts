@@ -268,6 +268,7 @@ describe('explainAdobeAccessFailure', () => {
 
         expect(message).toContain('not a developer on every product profile');
         expect(message).toContain('Admin Console');
+        expect(message).toMatch(/Details are in Debug Logs\.$/);
     });
 
     it('recognises the refusal by its template alone', () => {
@@ -285,6 +286,16 @@ describe('explainAdobeAccessFailure', () => {
 
     it('leaves a timeout from anything other than Adobe Console alone', () => {
         expect(explainAdobeAccessFailure('npm install: 504 Gateway Timeout')).toBeUndefined();
+    });
+
+    // A Console timeout is a 504 AND a timeout wording, from Console. Any one of the
+    // three missing and it is some other failure, which must not be called Adobe's.
+    it.each([
+        ['a Console failure that is not a timeout', '[CoreConsoleAPISDK:ERROR_GET_INTEGRATION] 500 - Internal Server Error'],
+        ['a Console 504 with no timeout wording', '[CoreConsoleAPISDK:ERROR_GET_INTEGRATION] 504 - Bad Gateway'],
+        ['a licence read that timed out without a 504', 'I/O error on GET request for licenses: Read timed out'],
+    ])('leaves %s alone', (_label, text) => {
+        expect(explainAdobeAccessFailure(text)).toBeUndefined();
     });
 
     it('leaves every other failure alone', () => {

@@ -3495,20 +3495,17 @@
             "openGaps": 0
         },
         "src/features/authentication/services/authenticationErrorFormatter.ts": {
-            "score": 95.52,
-            "killed": 64,
-            "survived": 3,
+            "score": 100,
+            "killed": 67,
+            "survived": 0,
             "noCoverage": 0,
             "timeout": 0,
-            "survivorCategories": {
-                "branch": 2,
-                "string": 1
-            },
+            "survivorCategories": {},
             "uncoveredCategories": {},
-            "highValueSurvivors": 2,
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 2,
-            "recorded": "2026-10-09T22:53:53.686Z"
+            "openGaps": 0,
+            "recorded": "2026-10-10T14:06:35.663Z"
         },
         "src/features/authentication/services/consoleProjectTeardown.ts": {
             "score": 83.95,
