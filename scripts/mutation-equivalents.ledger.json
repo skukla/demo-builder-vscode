@@ -16494,6 +16494,19 @@
             "decision": "none \u2014 the empty deps array is correct; the mutant is a no-op array of equal primitives",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-03"
+        },
+        {
+            "module": "src/core/shell/rateLimiter.ts",
+            "anchors": [
+                "const ops = this.operations.get(resource) || [];"
+            ],
+            "line": 56,
+            "mutants": 1,
+            "category": "other",
+            "reason": "The same default as line 108, in checkRateLimit: Stryker replaces [] with ['Stryker was here'] for a resource with no recorded operations. The next statement filters by 'now - timestamp < RATE_LIMIT_WINDOW'; for a string that subtraction is NaN and every NaN comparison is false, so the injected element is dropped before recentOps is read, counted or stored. The limit check, the wait time and the array written back are identical. Verified by planting the literal at line 56 and re-running the suite: all green.",
+            "decision": "none - any non-empty default is erased by the window filter on the following line, so no input can distinguish it from []",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-04"
         }
     ]
 }
