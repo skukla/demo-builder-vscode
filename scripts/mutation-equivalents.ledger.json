@@ -16206,6 +16206,42 @@
             "decision": "Recorded, not killed: reaching it would mean pressing Add on a prompt that is not open.",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-01"
+        },
+        {
+            "module": "src/features/ai/server/createProjectTool.ts",
+            "anchors": [
+                "...(state.selectedAppBuilderComponents ?? []),"
+            ],
+            "mutants": 1,
+            "category": "equivalent",
+            "reason": "The fallback list is read only when the state carries no component list. withSeed is private and both its callers build the state with the awaited answer of getAutoSelectedOptionalDependencies, which is always an array, so the fallback is never taken. The '??' turned into '&&' IS killed (the auto-selected components would be dropped). Verified by planting it (128 tests across the eight suites that reach this file, green) against a control on the same file (the mesh filter removed: suite red).",
+            "decision": "Recorded, not killed: the field is optional on ProjectConfigSource, so the fallback is what typechecks; no caller can leave it unset.",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-01"
+        },
+        {
+            "module": "src/features/ai/server/createProjectTool.ts",
+            "anchors": [
+                "...(args.seed?.selectedAppBuilderComponents ?? []).filter(isMeshComponentId),"
+            ],
+            "mutants": 1,
+            "category": "equivalent",
+            "reason": "Stryker swaps the empty fallback for a list holding a placeholder string. The very next call filters the list down to known mesh component ids, and the placeholder is not one, so the dependencies handed to storefront setup are identical. The filter's removal and the surrounding lists ARE killed. Verified by planting it (128 tests across the eight suites that reach this file, green) against a control on the same file (the mesh filter removed: suite red).",
+            "decision": "Recorded, not killed: any non-mesh content of the fallback is discarded by the filter on the same line.",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-01"
+        },
+        {
+            "module": "src/features/ai/server/createProjectTool.ts",
+            "anchors": [
+                "const scope = parseStoreScope(stackId, args?.storeScope);"
+            ],
+            "mutants": 1,
+            "category": "equivalent",
+            "reason": "Dropping the '?.' throws only if args were nullish. It cannot be here: the guard just above returns early unless String(args?.projectName ?? '') is non-empty, which needs args to be an object. Same case as the args?.confirm row two lines below. Verified by planting it (128 tests across the eight suites that reach this file, green) against a control on the same file (the mesh filter removed: suite red).",
+            "decision": "Recorded, not killed: the optional chain is defensive on an 'any' parameter the earlier guard has already excluded.",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-01"
         }
     ]
 }

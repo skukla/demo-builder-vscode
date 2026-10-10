@@ -13,7 +13,7 @@
 
 import { registerCopyProjectTool } from '@/features/ai/server/copyProjectTool';
 import { registerCreateProjectFromFileTool } from '@/features/ai/server/createProjectFromFileTool';
-import { registerCreateProjectTool } from '@/features/ai/server/createProjectTool';
+import { registerCreateProjectTool, runProjectCreation } from '@/features/ai/server/createProjectTool';
 import { getAdobeTarget, runWithAdobeTarget } from '@/features/ai/server/adobeTargetStore';
 import type { McpToolSchema } from '@/features/ai/server/mcpToolServer';
 import { buildProjectConfig } from '@/features/project-creation/ui/wizard/wizardHelpers';
@@ -21,6 +21,7 @@ import { executeProjectCreation } from '@/features/project-creation/handlers/exe
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import { getGitHubServices, getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
 import {
+    getAutoSelectedOptionalDependencies,
     getAvailableStacksForPackage,
     getResolvedMeshRequirement,
     getSelectablePackages,
@@ -77,6 +78,8 @@ export {
     registerCopyProjectTool,
     registerCreateProjectFromFileTool,
     registerCreateProjectTool,
+    runProjectCreation,
+    getAutoSelectedOptionalDependencies,
     getAdobeTarget,
     runWithAdobeTarget,
     buildProjectConfig,
