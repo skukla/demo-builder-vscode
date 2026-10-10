@@ -375,16 +375,16 @@ export function registerContentAuthoringTools(
         async (args: any) => {
             const raw = String(args?.path ?? '').trim();
             if (!raw) return asText({ error: 'path is required' });
-            const content = args?.content;
+            const content = args.content;
             if (typeof content !== 'string' || content.length === 0) {
                 return asText({ error: 'content is required' });
             }
-            const publish = args?.publish === true;
+            const publish = args.publish === true;
             const webPath = toWebPath(raw);
             if (!webPath) return asText(INVALID_PATH);
             const r = await resolveTarget(ctxFactory, { needsGitHub: publish });
             if (!r.ok) return asText(r.body);
-            if (args?.confirm !== true) return writeRefusal(r.target, webPath, publish);
+            if (args.confirm !== true) return writeRefusal(r.target, webPath, publish);
 
             const sourcePath = toSourcePath(webPath);
             const { daLiveOrg, daLiveSite } = r.target;
@@ -443,7 +443,7 @@ export function registerContentAuthoringTools(
             const r = await openPathCall(ctxFactory, args, { needsGitHub: true });
             if (!r.ok) return asText(r.body);
             const { webPath } = r;
-            if (args?.confirm !== true) return publishRefusal(r.target, webPath);
+            if (args.confirm !== true) return publishRefusal(r.target, webPath);
 
             try {
                 await runWithAdobeTarget(() =>
@@ -545,7 +545,7 @@ export function registerContentAuthoringTools(
             if (!raw) return asText({ error: 'path is required' });
             const webPath = toWebPath(raw);
             if (!webPath) return asText(INVALID_PATH);
-            if (args?.confirm !== true) {
+            if (args.confirm !== true) {
                 return asText({
                     error: `delete_page permanently removes ${webPath} from DA.live and unpublishes it. To proceed, call again with confirm:true.`,
                     irreversible: true,

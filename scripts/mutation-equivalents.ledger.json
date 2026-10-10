@@ -8431,20 +8431,6 @@
         {
             "module": "src/features/ai/server/contentAuthoringTools.ts",
             "anchors": [
-                "const content = args?.content;",
-                "const publish = args?.publish === true;",
-                "if (args?.confirm !== true) {"
-            ],
-            "mutants": 3,
-            "category": "optionalChain",
-            "reason": "Each of these optional chains guards against args being undefined, and each is preceded in its own handler by a path read that returns the required-argument refusal for exactly that case. A bare invocation never reaches these lines, and every other invocation passes an object, so removing the chain cannot throw. The bare-invocation behaviour itself is pinned by the descriptors suite.",
-            "decision": "none - unreachable behind the path guard that returns first.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-02"
-        },
-        {
-            "module": "src/features/ai/server/contentAuthoringTools.ts",
-            "anchors": [
                 "const dir = toWebPath(String(args?.path ?? '/').trim() || '/');"
             ],
             "mutants": 1,
