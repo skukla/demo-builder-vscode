@@ -34,6 +34,7 @@ module.exports = {
         '**/tests/core/state/stateManager-saveGuards.test.ts',
         '**/tests/features/updates/services/updateManager-plumbing.test.ts',
         '**/tests/features/updates/services/componentUpdater-plumbing.test.ts',
+        '**/tests/features/ai/server/siteTools-contentAccess.test.ts',
         '**/tests/features/ai/server/siteTools-contract.test.ts',
         '**/tests/features/authentication/services/authenticationService-checks.test.ts',
         '**/tests/features/authentication/services/authenticationService-context.test.ts',
