@@ -16314,6 +16314,19 @@
             "decision": "Recorded, not killed: the optional chains are what the optional 'adobe' type requires.",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-01"
+        },
+        {
+            "module": "src/core/utils/githubUrlParser.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 41,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Stryker empties the catch in parseStorefrontLink, so text that new URL cannot parse falls through with host never assigned instead of returning null. Nothing observable changes: SITE_HOST.exec(undefined) coerces its argument to the string 'undefined', which has no dot and so cannot match a pattern requiring two, and the very next line returns null. Verified by planting the empty catch and running the suite plus nine unparseable inputs ('https://', 'not a link', 'a b.aem.live', 'http://[', '://', '%%', a NUL character and others): every one still answered null.",
+            "decision": "none \u2014 the explicit return states the outcome instead of relying on a regex rejecting the word 'undefined'",
+            "recorded": "2026-10-10",
+            "source": "PL-70 MUT-02, 2026-10-10"
         }
     ]
 }

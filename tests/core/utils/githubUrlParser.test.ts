@@ -1,4 +1,10 @@
-import { gitHubSourceProblem, parseGitHubUrl, parseStorefrontLink } from '@/core/utils/githubUrlParser';
+import {
+    assertGitHubName,
+    assertGitRef,
+    gitHubSourceProblem,
+    parseGitHubUrl,
+    parseStorefrontLink,
+} from '@/core/utils/githubUrlParser';
 
 describe('parseGitHubUrl', () => {
     describe('valid URLs', () => {
@@ -107,5 +113,92 @@ describe('gitHubSourceProblem', () => {
 
     it('names the repo when only the repo is unusable', () => {
         expect(gitHubSourceProblem('jen', '..')).toBe('Invalid GitHub repo: ".."');
+    });
+});
+
+describe('parseStorefrontLink — what counts as a site address', () => {
+    it('reads an address pasted with spaces around it', () => {
+        expect(parseStorefrontLink('  main--isle5-demo--jen.aem.live  ')).toEqual({
+            owner: 'jen',
+            repo: 'isle5-demo',
+        });
+    });
+
+    it('reads the shorter long dash the same way as the longer one', () => {
+        expect(parseStorefrontLink('https://main\u2013isle5-demo\u2013jen.aem.page')).toEqual({
+            owner: 'jen',
+            repo: 'isle5-demo',
+        });
+    });
+
+    it('reads the older hlx.page host', () => {
+        expect(parseStorefrontLink('https://main--isle5-demo--jen.hlx.page')).toEqual({
+            owner: 'jen',
+            repo: 'isle5-demo',
+        });
+    });
+
+    // The whole host has to be the site address: a look-alike that merely
+    // CONTAINS one is somebody else's domain.
+    it('refuses a host that only contains a site address', () => {
+        expect(parseStorefrontLink('https://sub.main--isle5-demo--jen.aem.live')).toBeNull();
+        expect(parseStorefrontLink('https://main--isle5-demo--jen.aem.live.example.com')).toBeNull();
+    });
+
+    it('refuses a host with too few or too many parts', () => {
+        expect(parseStorefrontLink('https://isle5-demo--jen.aem.live')).toBeNull();
+        expect(parseStorefrontLink('https://main--isle5-demo--jen--extra.aem.live')).toBeNull();
+    });
+
+    it('refuses a host with any part left empty, whichever one', () => {
+        expect(parseStorefrontLink('https://main----jen.aem.live')).toBeNull();
+        expect(parseStorefrontLink('main--isle5-demo--.aem.live')).toBeNull();
+    });
+
+    it('answers null for empty text and for text no address can be made from', () => {
+        expect(parseStorefrontLink('')).toBeNull();
+        expect(parseStorefrontLink('https://')).toBeNull();
+    });
+});
+
+describe('assertGitHubName', () => {
+    it('accepts letters, digits, dots, underscores and hyphens', () => {
+        expect(() => assertGitHubName('Jen-smith_2.demo', 'owner')).not.toThrow();
+    });
+
+    it('refuses a name with a shell character at the start, the middle or the end', () => {
+        expect(() => assertGitHubName(';rm', 'owner')).toThrow('Invalid GitHub owner: ";rm"');
+        expect(() => assertGitHubName('a b', 'repo')).toThrow('Invalid GitHub repo: "a b"');
+        expect(() => assertGitHubName('rm;', 'repo')).toThrow('Invalid GitHub repo: "rm;"');
+    });
+
+    it('refuses an empty name', () => {
+        expect(() => assertGitHubName('', 'owner')).toThrow('Invalid GitHub owner: ""');
+    });
+
+    // Both pass the charset; as path segments they mean "here" and "up one".
+    it('refuses the dot-only names', () => {
+        expect(() => assertGitHubName('.', 'repo')).toThrow('Invalid GitHub repo: "."');
+        expect(() => assertGitHubName('..', 'owner')).toThrow('Invalid GitHub owner: ".."');
+    });
+});
+
+describe('assertGitRef', () => {
+    it('accepts a branch name with slashes, dots, underscores and hyphens', () => {
+        expect(() => assertGitRef('feature/isle5_demo-1.2')).not.toThrow();
+    });
+
+    it('refuses a ref with a shell character at the start, the middle or the end', () => {
+        expect(() => assertGitRef(';main')).toThrow('Invalid git branch: ";main"');
+        expect(() => assertGitRef('ma in')).toThrow('Invalid git branch: "ma in"');
+        expect(() => assertGitRef('main;')).toThrow('Invalid git branch: "main;"');
+    });
+
+    it('refuses an empty ref', () => {
+        expect(() => assertGitRef('')).toThrow('Invalid git branch: ""');
+    });
+
+    it('refuses a ref that climbs with two dots, though each character is allowed', () => {
+        expect(() => assertGitRef('main/../other')).toThrow('Invalid git branch: "main/../other"');
     });
 });

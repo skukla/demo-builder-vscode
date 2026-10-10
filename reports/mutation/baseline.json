@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "PL-70 MUT-01: destinationHandlers to zero open gaps (7 modal-run tests, 7 equivalents recorded)",
+    "_note": "githubUrlParser: assertGitRef and assertGitHubName tested directly, site-address host rules pinned, one equivalent recorded (PL-70 MUT-02)",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -1199,26 +1199,20 @@
             "openGaps": 0
         },
         "src/core/utils/githubUrlParser.ts": {
-            "score": 77.78,
-            "killed": 70,
-            "survived": 12,
-            "noCoverage": 8,
+            "score": 96.67,
+            "killed": 87,
+            "survived": 3,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "other": 7,
                 "block": 1,
-                "branch": 3,
-                "string": 1
+                "branch": 2
             },
-            "uncoveredCategories": {
-                "block": 2,
-                "branch": 4,
-                "string": 2
-            },
-            "highValueSurvivors": 4,
-            "equivalent": 2,
-            "openGaps": 15,
-            "recorded": "2026-10-10T01:36:01.578Z"
+            "uncoveredCategories": {},
+            "highValueSurvivors": 3,
+            "equivalent": 3,
+            "openGaps": 0,
+            "recorded": "2026-10-10T17:09:42.281Z"
         },
         "src/core/utils/maskEmail.ts": {
             "score": 100,
