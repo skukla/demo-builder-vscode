@@ -18,7 +18,7 @@ import {
 import type { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
 import type { Project } from '@/types/base';
 
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
+jest.mock('@/features/mesh/services/meshDeployBaseline', () => ({
     updateMeshState: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock('@/features/mesh/services/meshDeployment', () => ({
@@ -29,7 +29,7 @@ jest.mock('@/features/project-creation/helpers/envFileGenerator', () => ({
 }));
 
 import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
-import { updateMeshState } from '@/features/mesh/services/stalenessDetector';
+import { updateMeshState } from '@/features/mesh/services/meshDeployBaseline';
 import { generateComponentEnvFile } from '@/features/project-creation/helpers/envFileGenerator';
 
 import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';

@@ -15,8 +15,8 @@
  * @module features/mesh/services/deployMeshHeadless
  */
 
+import { updateMeshState } from './meshDeployBaseline';
 import { deployMeshCreateOrUpdate } from './meshRedeploy';
-import { updateMeshState } from './stalenessDetector';
 import type { SecretStorageLike } from '@/core/di/serviceLocator';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
@@ -149,7 +149,7 @@ export async function deployMeshHeadless(
     // subscribe step kept succeeding while the deploy beside it failed.
     const orgTarget = buildOrgTargetFromProjectAdobe(
         project.adobe,
-        authManager.getCachedOrganization(),
+        authManager.getCacheManager().getCachedOrganization(),
     );
 
     try {
@@ -173,7 +173,7 @@ export async function deployMeshHeadless(
                 onProgress?.(OPERATION_STAGES.generatingMeshConfig.label);
                 try {
                     const { regenerateComponentEnvFile } = await import(
-                        '@/features/project-creation/helpers/envFileGenerator'
+                        '@/features/project-creation/helpers/envFileRegeneration'
                     );
                     await regenerateComponentEnvFile(
                         project,

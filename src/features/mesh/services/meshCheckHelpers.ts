@@ -6,7 +6,7 @@
  */
 
 import { CommandExecutor } from '@/core/shell/commandExecutor';
-import { getMeshNodeVersion } from '@/core/utils/meshConfig';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { getMeshStatusCategory, extractAndParseJSON } from '@/features/mesh/utils/meshHelpers';
 
 /**
@@ -85,7 +85,7 @@ export async function checkMeshExistence(
     error?: string;
 }> {
     try {
-        const { stdout, code } = await commandExecutor.execute('aio api-mesh get', { useNodeVersion: getMeshNodeVersion() });
+        const { stdout, code } = await commandExecutor.execute('aio api-mesh get', { useNodeVersion: demoBuilderNode() });
 
         if (code !== 0) {
             // A failed command is "no mesh", whatever it said. This used to sort
@@ -160,7 +160,7 @@ export async function fallbackMeshCheck(
     meshStatus?: 'deployed';
 }> {
     try {
-        const { stdout, stderr } = await commandExecutor.execute('aio api-mesh get --active', { useNodeVersion: getMeshNodeVersion() });
+        const { stdout, stderr } = await commandExecutor.execute('aio api-mesh get --active', { useNodeVersion: demoBuilderNode() });
         const combined = `${stdout}\n${stderr}`;
 
         // "Unable to get mesh config" indicates API is NOT enabled

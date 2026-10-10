@@ -39,7 +39,7 @@ import { withOrgContext } from '@/core/shell/orgContextEnv';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
-import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
+import { createMockAuthenticationService, entityServicesOf } from '../../../helpers/authenticationServiceFake';
 const MESH = 'GraphQLServiceSDK';
 const MGMT = 'AdobeIOManagementAPISDK';
 
@@ -76,20 +76,29 @@ function createAuthService(): jest.Mocked<AuthenticationService> {
     // The canonical fake, with the four methods this suite drives. It was a bare
     // four-method literal reaching `ensureMeshApiSubscribed` through `as any` at
     // nine call sites — and that param is typed `AuthenticationService`, which has 44.
-    return createMockAuthenticationService({
-        getServicesForOrg: jest.fn().mockResolvedValue([
-            { code: MESH, name: 'API Mesh', platformList: ['apiKey'], domainMandatory: true },
-            { code: MGMT, name: 'I/O Management API', platformList: ['oauth_server_to_server'] },
-        ]),
-        createAdobeIdCredential: jest.fn().mockResolvedValue('apikey-int'),
-        subscribeAdobeIdIntegrationToServices: jest.fn().mockResolvedValue(undefined),
-        subscribeOAuthServerToServerIntegrationToServices: jest.fn().mockResolvedValue(undefined),
-        ensureOAuthCredentialId: jest.fn().mockResolvedValue('oauth-int'),
-        // Default: nothing subscribed yet → the subscribe paths proceed.
-        getSubscribedServiceCodes: jest.fn().mockResolvedValue([]),
-        getSubscribedServices: jest.fn().mockResolvedValue([]),
-        getCachedOrganization: jest.fn().mockReturnValue(undefined),
-    });
+    return createMockAuthenticationService(
+        {},
+        {
+            entities: {
+                orgServices: {
+                    getServicesForOrg: jest.fn().mockResolvedValue([
+                        { code: MESH, name: 'API Mesh', platformList: ['apiKey'], domainMandatory: true },
+                        { code: MGMT, name: 'I/O Management API', platformList: ['oauth_server_to_server'] },
+                    ]),
+                    subscribeAdobeIdIntegrationToServices: jest.fn().mockResolvedValue(undefined),
+                    subscribeOAuthServerToServerIntegrationToServices: jest.fn().mockResolvedValue(undefined),
+                    // Default: nothing subscribed yet → the subscribe paths proceed.
+                    getSubscribedServiceCodes: jest.fn().mockResolvedValue([]),
+                    getSubscribedServices: jest.fn().mockResolvedValue([]),
+                },
+                credentials: {
+                    createAdobeIdCredential: jest.fn().mockResolvedValue('apikey-int'),
+                    ensureOAuthCredentialId: jest.fn().mockResolvedValue('oauth-int'),
+                },
+            },
+            cache: { getCachedOrganization: jest.fn().mockReturnValue(undefined) },
+        },
+    );
 }
 
 describe('ensureMeshApiSubscribed', () => {
@@ -115,13 +124,13 @@ describe('ensureMeshApiSubscribed', () => {
             logger,
         });
 
-        expect(authService.createAdobeIdCredential).toHaveBeenCalledWith(
+        expect(entityServicesOf(authService).credentials.createAdobeIdCredential).toHaveBeenCalledWith(
             'org-1',
             'proj-1',
             'ws-1',
             expect.objectContaining({ platform: 'apiKey', domain: 'localhost:3000' })
         );
-        expect(authService.subscribeAdobeIdIntegrationToServices).toHaveBeenCalledWith(
+        expect(entityServicesOf(authService).orgServices.subscribeAdobeIdIntegrationToServices).toHaveBeenCalledWith(
             'org-1',
             'apikey-int',
             expect.arrayContaining([expect.objectContaining({ sdkCode: MESH })])
@@ -137,8 +146,8 @@ describe('ensureMeshApiSubscribed', () => {
             logger,
         });
 
-        expect(authService.ensureOAuthCredentialId).toHaveBeenCalledWith('org-1', 'proj-1', 'ws-1');
-        expect(authService.subscribeOAuthServerToServerIntegrationToServices).toHaveBeenCalledWith(
+        expect(entityServicesOf(authService).credentials.ensureOAuthCredentialId).toHaveBeenCalledWith('org-1', 'proj-1', 'ws-1');
+        expect(entityServicesOf(authService).orgServices.subscribeOAuthServerToServerIntegrationToServices).toHaveBeenCalledWith(
             'org-1',
             'oauth-int',
             expect.arrayContaining([expect.objectContaining({ sdkCode: MGMT })])
@@ -177,7 +186,7 @@ describe('ensureMeshApiSubscribed', () => {
 
     it('still subscribes (idempotent union) when an existing cred id is returned', async () => {
         const authService = createAuthService();
-        authService.ensureOAuthCredentialId.mockResolvedValue('existing-int');
+        entityServicesOf(authService).credentials.ensureOAuthCredentialId.mockResolvedValue('existing-int');
 
         await expect(
             ensureMeshApiSubscribed({
@@ -186,7 +195,7 @@ describe('ensureMeshApiSubscribed', () => {
                 logger,
             })
         ).resolves.toEqual(expect.any(Array));
-        expect(authService.subscribeOAuthServerToServerIntegrationToServices).toHaveBeenCalled();
+        expect(entityServicesOf(authService).orgServices.subscribeOAuthServerToServerIntegrationToServices).toHaveBeenCalled();
     });
 
     it('returns the resolved+subscribed API list (union incl. baseline) with names', async () => {
@@ -218,7 +227,7 @@ describe('ensureMeshApiSubscribed', () => {
         });
 
         expect(result).toStrictEqual([]);
-        expect(authService.getServicesForOrg).not.toHaveBeenCalled();
+        expect(entityServicesOf(authService).orgServices.getServicesForOrg).not.toHaveBeenCalled();
         expect(withOrgContext).not.toHaveBeenCalled();
     });
 
@@ -268,7 +277,7 @@ describe('ensureMeshApiSubscribed', () => {
         });
 
         expect(result).toStrictEqual([]);
-        expect(authService.getServicesForOrg).not.toHaveBeenCalled();
+        expect(entityServicesOf(authService).orgServices.getServicesForOrg).not.toHaveBeenCalled();
         expect(withOrgContext).not.toHaveBeenCalled();
     });
 });

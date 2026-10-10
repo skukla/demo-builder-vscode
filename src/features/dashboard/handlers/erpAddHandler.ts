@@ -43,7 +43,7 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
-import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
+import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderAddRun';
 import type { AppManagementAuth } from '@/features/app-builder/services/appManagementClient';
 import { catalogEntryFor } from '@/features/app-builder/services/componentEntry';
 import { erpCredentialReader } from '@/features/app-builder/services/erpCredential';
@@ -357,7 +357,11 @@ async function listAndFill(
     const authManager = ServiceLocator.getAuthenticationService();
     const auth = await resolveAppManagementAuth(project, authManager);
     report(OPERATION_STAGES.adding.label, 'Telling the integration about its ERPs');
-    const readCredential = erpCredentialReader(ServiceLocator.getCommandExecutor(), project, authManager.getCachedOrganization());
+    const readCredential = erpCredentialReader(
+        ServiceLocator.getCommandExecutor(),
+        project,
+        authManager.getCacheManager().getCachedOrganization(),
+    );
     const listed = await syncErpList(project, integrationId, auth, { readCredential });
     if (listed.status === 'failed') {
         return {

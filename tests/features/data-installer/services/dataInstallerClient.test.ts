@@ -1,16 +1,18 @@
 /**
  * Tests for the Data Installer read client.
  *
- * The client is the only place that talks HTTP, and it imports no `vscode` — so
+ * The client names every read endpoint, and it imports no `vscode` — so
  * everything here runs with an injected `fetchImpl` and a stub token provider,
  * with no VS Code mocks at all.
  *
- * Three assertions are load-bearing rather than routine:
- *   - the token never reaches a thrown message (public repo, and errors get logged),
+ * Two assertions are load-bearing rather than routine:
  *   - `batchGetDataItems` with no data types refuses BEFORE the network, because
  *     omitting them trips a live server-side 400,
  *   - health-check carries no Authorization header, since it is the one endpoint
  *     that must work when the token is dead.
+ *
+ * Failure mapping, timeouts and the drift canary moved to
+ * `dataInstallerTransport.test.ts` with the transport (2026-10-08).
  */
 
 import * as path from 'path';
@@ -19,9 +21,8 @@ import { DataInstallerClient } from '@/features/data-installer/services/dataInst
 import {
     DataInstallerApiError,
     DataInstallerInputError,
-    isDataInstallerAuthError,
 } from '@/features/data-installer/services/dataInstallerErrors';
-import { resetDriftReported } from '@/features/data-installer/services/dataInstallerClient';
+import { resetDriftReported } from '@/features/data-installer/services/dataInstallerTransport';
 
 const FIXTURES = path.join(__dirname, '../../../fixtures/data-installer');
 const load = (name: string): unknown => require(path.join(FIXTURES, name));
@@ -36,16 +37,6 @@ function jsonFetch(body: unknown, status = 200, statusText = 'OK'): jest.Mock {
         status,
         statusText,
         text: async () => JSON.stringify(body),
-    });
-}
-
-/** A fetch stub that returns a raw (non-JSON) body. */
-function textFetch(text: string, status: number, statusText: string): jest.Mock {
-    return jest.fn().mockResolvedValue({
-        ok: false,
-        status,
-        statusText,
-        text: async () => text,
     });
 }
 
@@ -95,6 +86,7 @@ describe('DataInstallerClient', () => {
             // makes it useful for telling "our auth" apart from "their outage".
             const f = jsonFetch(load('health-check.json'));
             await makeClient(f).checkHealth();
+            expect(callArgs(f).url).toContain('/health-check');
             expect(headerOf(callArgs(f).init, 'Authorization')).toBeUndefined();
         });
 
@@ -141,7 +133,8 @@ describe('DataInstallerClient', () => {
         it('POSTs a JSON body for batch reads', async () => {
             const f = jsonFetch(load('batch-ok.json'));
             await makeClient(f).batchGetDataItems({ name: 'citisignal_new', version: 'main' }, ['categories']);
-            const { init } = callArgs(f);
+            const { url, init } = callArgs(f);
+            expect(url).toContain('/batch-get-data-items');
             expect(init.method).toBe('POST');
             expect(headerOf(init, 'Content-Type')).toBe('application/json');
             expect(JSON.parse(String(init.body))).toMatchObject({
@@ -229,96 +222,6 @@ describe('DataInstallerClient', () => {
         });
     });
 
-    describe('failure handling', () => {
-        it('throws a typed error carrying the status and the action', async () => {
-            const f = jsonFetch({ success: false, error: 'Authentication required' }, 401, 'Unauthorized');
-            const err = await makeClient(f).findDatapacks({}).catch((e: unknown) => e);
-            expect(err).toBeInstanceOf(DataInstallerApiError);
-            expect((err as DataInstallerApiError).status).toBe(401);
-            expect((err as DataInstallerApiError).action).toBe('find-datapacks');
-            expect(isDataInstallerAuthError(err)).toBe(true);
-        });
-
-        it('folds status, statusText and body into the message', async () => {
-            const f = jsonFetch({ success: false, error: 'Authentication required' }, 401, 'Unauthorized');
-            const err = (await makeClient(f).findDatapacks({}).catch((e: unknown) => e)) as Error;
-            expect(err.message).toContain('find-datapacks');
-            expect(err.message).toContain('401');
-            expect(err.message).toContain('Authentication required');
-        });
-
-        it('handles a non-JSON error body without throwing a parse error', async () => {
-            const f = textFetch('<html>502 Bad Gateway</html>', 502, 'Bad Gateway');
-            const err = (await makeClient(f).findDatapacks({}).catch((e: unknown) => e)) as Error;
-            expect(err).toBeInstanceOf(DataInstallerApiError);
-            expect(err.message).toContain('502');
-        });
-
-        it('NEVER puts the token in a thrown message', async () => {
-            // Errors get logged; a token in one is a leak in a public repo.
-            const f = jsonFetch({ success: false, error: 'nope' }, 500, 'Internal Server Error');
-            const err = (await makeClient(f).findDatapacks({}).catch((e: unknown) => e)) as Error;
-            expect(err.message).not.toContain(TOKEN);
-            expect(JSON.stringify(err)).not.toContain(TOKEN);
-        });
-
-        it('reports a timeout in terms a user can act on', async () => {
-            const abort = new Error('aborted');
-            abort.name = 'AbortError';
-            const f = jest.fn().mockRejectedValue(abort);
-            await expect(makeClient(f).findDatapacks({})).rejects.toThrow(/timed out/i);
-        });
-
-        it('reports an unreachable service distinctly from a timeout', async () => {
-            const f = jest.fn().mockRejectedValue(new TypeError('fetch failed'));
-            await expect(makeClient(f).findDatapacks({})).rejects.toThrow(/could not reach|unreachable/i);
-        });
-
-        it('does not misclassify a 500 whose body text mentions timeout', async () => {
-            const f = jsonFetch({ error: 'upstream timeout contacting Commerce' }, 500, 'Internal Server Error');
-            const err = (await makeClient(f).findDatapacks({}).catch((e: unknown) => e)) as Error;
-            expect(err).toBeInstanceOf(DataInstallerApiError);
-            expect((err as DataInstallerApiError).status).toBe(500);
-        });
-    });
-
-    describe('drift canary', () => {
-        it('reports a missing expected key once per endpoint', async () => {
-            const onDrift = jest.fn();
-            // `datapacks` gone: the shape moved under us.
-            const f = jsonFetch({ success: true, count: 0 });
-            const client = makeClient(f, { onDrift });
-            await client.findDatapacks({});
-            await client.findDatapacks({});
-            expect(onDrift).toHaveBeenCalledTimes(1);
-            expect(onDrift).toHaveBeenCalledWith('find-datapacks', expect.arrayContaining(['datapacks']));
-        });
-
-        it('stays silent when the shape is intact', async () => {
-            const onDrift = jest.fn();
-            await makeClient(jsonFetch(load('find-datapacks.json')), { onDrift }).findDatapacks({});
-            expect(onDrift).not.toHaveBeenCalled();
-        });
-
-        it('reports key NAMES only — never a value', async () => {
-            const onDrift = jest.fn();
-            const f = jsonFetch({ success: true, secret_field: TOKEN });
-            await makeClient(f, { onDrift }).findDatapacks({});
-            // Guard: a not.toContain on an EMPTY call list passes for the wrong
-            // reason. The dedupe is module-scoped, so without the reset in
-            // beforeEach an earlier test silences this endpoint and this
-            // assertion proves nothing.
-            expect(onDrift).toHaveBeenCalled();
-            expect(JSON.stringify(onDrift.mock.calls)).not.toContain(TOKEN);
-        });
-
-        it('does not fail the request when drift is detected', async () => {
-            const page = await makeClient(jsonFetch({ success: true, count: 0 }), {
-                onDrift: jest.fn(),
-            }).findDatapacks({});
-            expect(page.items).toStrictEqual([]);
-        });
-    });
     /**
      * Every read endpoint, asserted on what it SENDS.
      *
@@ -353,6 +256,7 @@ describe('DataInstallerClient', () => {
             );
 
             const { url } = callArgs(f);
+            expect(url).toContain('/get-data-item');
             expect(url).toContain('datapack_name=citisignal_new');
             expect(url).toContain('data_type=categories');
             expect(url).toContain('version=main');
@@ -375,6 +279,7 @@ describe('DataInstallerClient', () => {
 
             const order = await makeClient(f).getProcessorOrder('export');
 
+            expect(callArgs(f).url).toContain('/get-processor-order');
             expect(callArgs(f).url).toContain('operation_mode=export');
             expect(order[0]).toBe('product_attributes');
             expect(order).toContain('attribute_sets');
@@ -417,6 +322,7 @@ describe('DataInstallerClient', () => {
             });
 
             const { url } = callArgs(f);
+            expect(url).toContain('/logs');
             for (const param of [
                 'datapack_name=citisignal_new',
                 'version=main',
@@ -501,102 +407,14 @@ describe('DataInstallerClient', () => {
 
             expect(JSON.parse(String(callArgs(f).init.body)).include_content).toBe(true);
         });
-
-        it('reports the timeout in SECONDS, not milliseconds', async () => {
-            const abort = new Error('aborted');
-            abort.name = 'AbortError';
-            const f = jest.fn().mockRejectedValue(abort);
-            const client = new DataInstallerClient({
-                baseUrl: BASE,
-                getToken: async () => TOKEN,
-                fetchImpl: f as unknown as typeof fetch,
-                timeoutMs: 5000,
-            });
-
-            await expect(client.findDatapacks({})).rejects.toThrow(/timed out after 5s/);
-        });
-
-        it('does not call an unclassifiable transport failure unreachable', async () => {
-            // Only a TypeError('fetch failed') means unreachable. Anything else
-            // keeps its own message, or a network hiccup gets blamed on the URL
-            // setting and the user edits something that was never wrong.
-            const f = jest.fn().mockRejectedValue(new Error('socket hang up'));
-
-            const err = (await makeClient(f)
-                .findDatapacks({})
-                .catch((e: unknown) => e)) as Error;
-
-            expect(err.message).toContain('socket hang up');
-            expect(err.message).not.toContain('could not reach');
-        });
     });
 
-    describe('the drift canary, per endpoint', () => {
-        /** Each endpoint that declares expected keys, and the call that reaches it. */
-        const DRIFT_CASES: ReadonlyArray<{
-            action: string;
-            keys: string[];
-            call: (client: DataInstallerClient) => Promise<unknown>;
-        }> = [
-            { action: 'find-datapacks', keys: ['datapacks'], call: (c) => c.findDatapacks({}) },
-            {
-                action: 'get-datapack-metadata',
-                keys: ['datapack_name', 'display_name'],
-                call: (c) => c.getDatapackDetail({ name: 'x', version: 'main' }),
-            },
-            {
-                action: 'get-data-item',
-                keys: ['data'],
-                call: (c) => c.getDataItem({ name: 'x', version: 'main' }, 'categories'),
-            },
-            {
-                action: 'batch-get-data-items',
-                keys: ['results'],
-                call: (c) => c.batchGetDataItems({ name: 'x', version: 'main' }, ['categories']),
-            },
-            {
-                action: 'get-export-data-types',
-                keys: ['data_types'],
-                call: (c) => c.getExportDataTypes(),
-            },
-            {
-                action: 'get-processor-order',
-                keys: ['processors'],
-                call: (c) => c.getProcessorOrder('import'),
-            },
-            {
-                action: 'get-installed-datapacks',
-                keys: ['datapacks'],
-                call: (c) => c.getInstalledDatapacks({}),
-            },
-            { action: 'logs', keys: ['logs'], call: (c) => c.getActivityLog({}) },
-        ];
-
-        it.each(DRIFT_CASES)(
-            'names exactly the missing keys for $action',
-            async ({ action, keys, call }) => {
-                const onDrift = jest.fn();
-
-                await call(makeClient(jsonFetch({ success: true }), { onDrift }));
-
-                expect(onDrift).toHaveBeenCalledWith(action, keys);
-            },
-        );
-
-        it('checks no shape for an endpoint it holds no expectation for', async () => {
-            // datapack-process-status declares no expected keys. The guard is what
-            // stops the check reading `.filter` off undefined and failing a call
-            // that was perfectly fine.
-            const onDrift = jest.fn();
-
-            const snap = await makeClient(jsonFetch({ success: true }), { onDrift }).getJobStatus(
-                'a',
-            );
-
-            expect(onDrift).not.toHaveBeenCalled();
-            expect(snap.activationId).toBe('a');
-        });
-
+    /**
+     * The transport reports the drift; the client still has to answer. A body
+     * with no keys parses to an EMPTY page, not a crash — the canary is a log
+     * line, never a failed read.
+     */
+    describe('a drifted body still parses', () => {
         it('reports drift when the body is JSON null rather than crashing', async () => {
             const onDrift = jest.fn();
 

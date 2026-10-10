@@ -30,9 +30,10 @@ import { buildAppData } from './appManagementAppData';
 import {
     AppManagementApiError,
     AppManagementClient,
+    type AppData,
     type AppManagementAuth,
-    type CommerceEnv,
     type ReconcileResult,
+    type SetAssociationRequest,
 } from './appManagementClient';
 import {
     CREDENTIAL_ACTIVATION_WAITS_MS,
@@ -111,6 +112,13 @@ export function deriveAppManagementBaseUrl(
     return undefined;
 }
 
+/** What an install or uninstall call needs once every input has resolved. */
+export interface AppManagementCallInputs {
+    target: SetAssociationRequest;
+    appData: AppData;
+    auth: AppManagementAuth;
+}
+
 /**
  * The Commerce association target from the project's configured backend.
  *
@@ -124,9 +132,7 @@ export function deriveAppManagementBaseUrl(
  * @param project - the current project
  * @returns the association body fields, or an error naming what is missing
  */
-export function deriveCommerceTarget(
-    project: Project,
-): { commerceBaseUrl: string; commerceEnv: CommerceEnv } | { error: string } {
+export function deriveCommerceTarget(project: Project): SetAssociationRequest | { error: string } {
     const backendId = project.componentSelections?.backend;
     const contract = getBackendCommerceContract(backendId);
     if (!contract) {
@@ -158,6 +164,37 @@ export function deriveCommerceTarget(
 }
 
 /**
+ * Resolve what an install or uninstall call needs, in the order its refusals are
+ * reported: the Commerce target, the app's Adobe context, then a sign-in. Both
+ * calls open with this; only the verb in the no-sign-in refusal differs.
+ *
+ * @param project - the current project (Commerce config + Adobe context)
+ * @param componentId - the app's component id; picks the workspace it lives in
+ * @param getAuth - resolves IMS auth for the app's org
+ * @param verb - names the call in the no-sign-in refusal
+ * @returns the target, appData and auth, or the first refusal as an error string
+ */
+export async function prepareAppManagementCall(
+    project: Project,
+    componentId: string,
+    getAuth: AppManagementInstallDeps['getAuth'],
+    verb: 'install' | 'uninstall',
+): Promise<AppManagementCallInputs | { error: string }> {
+    const target = deriveCommerceTarget(project);
+    if ('error' in target) {
+        return target;
+    }
+    const appData = buildAppData(project, componentId);
+    if ('error' in appData) {
+        return appData;
+    }
+    const auth = await getAuth();
+    return auth
+        ? { target, appData, auth }
+        : { error: `No Adobe sign-in is available to authenticate the ${verb} call.` };
+}
+
+/**
  * True when a reconcile 409 means "nothing to do", not "broken". The spec's
  * closed `reason` enum says `already-current`; the LIVE API answers with a
  * message and no reason at all ("Installation has already completed
@@ -173,13 +210,6 @@ function isBenignNoOp(error: unknown): boolean {
     );
 }
 
-/**
- * Poll a queued (202) installation until it lands or the budget runs out.
- *
- * @param client - the app's client
- * @param deps - wait + progress
- * @returns the final state, or undefined when the budget ran out first
- */
 /**
  * How many reconcile rounds to drive before handing back. The measured
  * convergence took 4 from a residue-laden state; a fresh install needs fewer.
@@ -236,8 +266,8 @@ async function settleReconcile(
  */
 async function driveReconcile(
     client: InstallerClient,
-    appData: Exclude<ReturnType<typeof buildAppData>, { error: string }>,
-    target: Exclude<ReturnType<typeof deriveCommerceTarget>, { error: string }>,
+    appData: AppData,
+    target: SetAssociationRequest,
     deps: AppManagementInstallDeps,
     fail: (detail: string) => AppManagementInstallResult,
 ): Promise<AppManagementInstallResult> {
@@ -306,24 +336,12 @@ export async function installAppManagementApp(
     if (!baseUrl) {
         return fail('The deploy produced no app-management install API URL.');
     }
-    const target = deriveCommerceTarget(project);
-    if ('error' in target) {
-        return fail(target.error);
+    const inputs = await prepareAppManagementCall(project, componentId, deps.getAuth, 'install');
+    if ('error' in inputs) {
+        return fail(inputs.error);
     }
-    const appData = buildAppData(project, componentId);
-    if ('error' in appData) {
-        return fail(appData.error);
-    }
-
-    const auth = await deps.getAuth();
-    if (!auth) {
-        return fail('No Adobe sign-in is available to authenticate the install call.');
-    }
-
-    const factory =
-        deps.clientFactory ??
-        ((url: string, clientAuth: AppManagementAuth) => new AppManagementClient(url, clientAuth));
-    const client = factory(baseUrl, auth);
+    const { target, appData, auth } = inputs;
+    const client = deps.clientFactory?.(baseUrl, auth) ?? new AppManagementClient(baseUrl, auth);
 
     try {
         deps.onProgress?.('Associating the app with your Commerce instance');

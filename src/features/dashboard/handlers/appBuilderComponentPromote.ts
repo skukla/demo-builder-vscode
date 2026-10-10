@@ -41,8 +41,8 @@ export const CREATE_REPOSITORY = 'Create repository';
 export const DELETE_REPOSITORY = 'Delete repository';
 
 function promotionDeps(context: HandlerContext): PromotionDeps {
-    const { repoOperations, fileOperations } = getGitHubServices(context.context.secrets);
-    return { repoOps: repoOperations, fileOps: fileOperations, logger: context.logger };
+    const { repoLifecycle, treeCommits } = getGitHubServices(context.context.secrets);
+    return { repoOps: repoLifecycle, fileOps: treeCommits, logger: context.logger };
 }
 
 function cancelled(): HandlerResponse {

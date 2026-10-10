@@ -1,5 +1,6 @@
 /**
- * The module wall, the fakes and the fixtures both projectDeletionService suites share.
+ * The module wall, the fakes and the fixtures every project-delete suite shares:
+ * projectDeletionService, deletionConfirmation(-modal) and edsExternalCleanup.
  *
  * Extracted when the second suite arrived. The wall is thirty lines of jest.mock
  * covering seven modules, and the two suites need exactly the same one: the first
@@ -61,7 +62,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
             getToken: (...a: unknown[]) => mockGetToken(...a),
             storeToken: (...a: unknown[]) => mockStoreToken(...a),
         },
-        repoOperations: { deleteRepository: (...a: unknown[]) => mockDeleteRepository(...a) },
+        repoLifecycle: { deleteRepository: (...a: unknown[]) => mockDeleteRepository(...a) },
     }),
     // `{ authenticated }` — read from edsHelpers, not guessed. The first draft
     // wrote `{ success, authService }` and the DA.live cleanup silently skipped.
@@ -81,20 +82,24 @@ jest.mock('@/features/eds/services/resourceCleanupHelpers', () => ({
 // shared storefront teardown (AI-9): the same four steps the agent's cleanup
 // runs. `mockDeleteDaLiveSite` drives it, keeping every suite's setup intact.
 jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
-    createDaLiveServiceTokenProvider: () => async () => 'token',
     DaLiveContentOperations: class {
-        async deleteAllSiteContent(org: string, site: string) {
-            const result = (await mockDeleteDaLiveSite(org, site)) as
-                | { success?: boolean; error?: string; deletedCount?: number }
-                | undefined;
-            return {
-                success: result?.success ?? true,
-                deletedCount: result?.deletedCount ?? 0,
-                deletedPaths: [],
-                error: result?.error,
-            };
-        }
+        sourceOps = {
+            async deleteAllSiteContent(org: string, site: string) {
+                const result = (await mockDeleteDaLiveSite(org, site)) as
+                    | { success?: boolean; error?: string; deletedCount?: number }
+                    | undefined;
+                return {
+                    success: result?.success ?? true,
+                    deletedCount: result?.deletedCount ?? 0,
+                    deletedPaths: [],
+                    error: result?.error,
+                };
+            },
+        };
     },
+}));
+jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
+    createDaLiveServiceTokenProvider: () => async () => 'token',
 }));
 
 /**
@@ -161,4 +166,4 @@ jest.mock('@/core/utils/sleep', () => ({ sleep: (...a: unknown[]) => mockSleep(.
 // Below the mocks on purpose — see the note above about hoisting.
 export { deleteProject } from '@/features/projects-dashboard/services/projectDeletionService';
 export { deleteProjectFiles } from '@/features/projects-dashboard/services/projectFilesDeletion';
-export type { DeletionServices } from '@/features/projects-dashboard/services/projectDeletionService';
+export type { DeletionServices } from '@/features/projects-dashboard/services/edsExternalCleanup';

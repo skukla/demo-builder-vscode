@@ -24,8 +24,8 @@
 
 import * as childProcess from 'child_process';
 import { promisify } from 'util';
-import { isRulesetRejection } from '../errorFormatters';
 import { injectTokenIntoUrl } from '../github/githubHelpers';
+import { isRulesetRejection } from '../github/githubWriteRejection';
 import { previewAndPublishPage } from '../helix/helixApiClient';
 import { SECRET_FILES_PATHSPEC_EXCLUDE } from './neverShippedFiles';
 

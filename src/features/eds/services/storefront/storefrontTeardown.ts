@@ -48,7 +48,7 @@ export interface DaLiveTokenProvider {
 
 /**
  * The four Helix calls the teardown makes, out of a class with dozens. A narrow
- * seam is what let this be tested at all — see `projectDeletionService`, whose
+ * seam is what let this be tested at all — see `edsExternalCleanup`, whose
  * module mock once supplied a method the source had stopped calling.
  */
 export interface TeardownHelix {
@@ -213,7 +213,7 @@ export async function tearDownStorefront(
     }
 
     onStep?.('Deleting the DA.live content');
-    const contentOps = (deps.makeContentOps ?? ((tp, l) => new DaLiveContentOperations(tp, l)))(
+    const contentOps = (deps.makeContentOps ?? ((tp, l) => new DaLiveContentOperations(tp, l).sourceOps))(
         tokenProvider,
         logger,
     );

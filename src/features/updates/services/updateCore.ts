@@ -101,6 +101,25 @@ export async function updateCommitShaWithRollback(
 }
 
 /**
+ * The project's record of the library an update targets, or undefined (after a
+ * warning) when the project no longer lists it. Both apply paths open with
+ * this: the UI one before it prompts, so a library the project has dropped
+ * never asks a question, and the resolved one before it writes.
+ */
+export function findInstalledLibrary(
+    item: BlockLibraryUpdateTarget,
+    ctx: Pick<UpdateContext, 'logger'>,
+): InstalledBlockLibrary | undefined {
+    const lib = item.project.installedBlockLibraries?.find((l) => l.name === item.library.name);
+    if (!lib) {
+        ctx.logger.warn(
+            `[Updates] Block library "${item.library.name}" not in installedBlockLibraries; skipping`,
+        );
+    }
+    return lib;
+}
+
+/**
  * Apply a block library update with the sync behavior ALREADY resolved to a
  * concrete action ('enabled' | 'disabled') — no 'ask', no modal. Shared by the
  * UI `applyBlockLibraryUpdate` (which resolves 'ask' via a prompt) and the
@@ -115,13 +134,8 @@ export async function applyBlockLibraryUpdateResolved(
     effectiveBehavior: 'enabled' | 'disabled',
     ctx: UpdateContext,
 ): Promise<RemovedByHandEntry[]> {
-    const lib = item.project.installedBlockLibraries?.find((l) => l.name === item.library.name);
-    if (!lib) {
-        ctx.logger.warn(
-            `[Updates] Block library "${item.library.name}" not in installedBlockLibraries; skipping`,
-        );
-        return [];
-    }
+    const lib = findInstalledLibrary(item, ctx);
+    if (!lib) return [];
 
     if (effectiveBehavior === 'disabled') {
         await applyDisabledMarker(lib, item.latestCommit, item.project, ctx);

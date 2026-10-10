@@ -8,16 +8,7 @@ jest.mock('crypto', () => ({
     createHash: jest.fn(),
 }));
 
-jest.mock('@/core/state/projectStateSync', () => ({
-    getFrontendEnvVars: jest.fn(),
-}));
-
-import {
-    detectMeshChanges,
-    detectFrontendChanges,
-    getCurrentMeshState,
-} from '@/features/mesh/services/stalenessDetector';
-import { getFrontendEnvVars } from '@/core/state/projectStateSync';
+import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import {
     createStalenessProject,
     createMockProjectWithMesh,
@@ -54,28 +45,6 @@ describe('StalenessDetector - change decisions', () => {
         jest.mocked(fs.readFile).mockReset();
         jest.mocked(fs.readdir).mockReset();
         jest.mocked(crypto.createHash).mockReset();
-    });
-
-    describe('getCurrentMeshState — what counts as deployment evidence', () => {
-        it('reports state from a sourceHash alone, with no envVars and no lastDeployed', () => {
-            const project = createStalenessProject({
-                componentInstances: MESH_INSTANCES,
-                appBuilderComponents: {
-                    mesh: {
-                        kind: 'mesh',
-                        status: 'deployed',
-                        source: { owner: '', repo: '' },
-                        sourceHash: 'abc123',
-                    },
-                },
-            });
-
-            expect(getCurrentMeshState(project)).toEqual({
-                envVars: {},
-                sourceHash: 'abc123',
-                lastDeployed: null,
-            });
-        });
     });
 
     describe('detectMeshChanges', () => {
@@ -176,63 +145,4 @@ describe('StalenessDetector - change decisions', () => {
         });
     });
 
-    describe('detectFrontendChanges', () => {
-        const FRONTEND_INSTANCES = {
-            headless: {
-                id: 'headless',
-                name: 'Frontend',
-                type: 'frontend' as const,
-                path: '/test/frontend',
-                status: 'running' as const,
-            },
-        };
-
-        it('reports no change when the frontend has no captured env state', () => {
-            const project = createStalenessProject({
-                componentInstances: FRONTEND_INSTANCES,
-                componentConfigs: { headless: { MESH_ENDPOINT: 'https://example.com' } },
-            });
-
-            expect(detectFrontendChanges(project)).toBe(false);
-            expect(getFrontendEnvVars).not.toHaveBeenCalled();
-        });
-
-        it("compares against THAT frontend's own config", () => {
-            jest.mocked(getFrontendEnvVars).mockReturnValue({
-                MESH_ENDPOINT: 'https://example.com',
-            });
-            const project = createStalenessProject({
-                componentInstances: FRONTEND_INSTANCES,
-                componentConfigs: {
-                    headless: { MESH_ENDPOINT: 'https://example.com', OTHER_VAR: 'value' },
-                    'some-other-component': { MESH_ENDPOINT: 'https://wrong.example' },
-                },
-                frontendEnvState: {
-                    envVars: { MESH_ENDPOINT: 'https://example.com' },
-                    capturedAt: '2024-01-01T00:00:00Z',
-                },
-            });
-
-            expect(detectFrontendChanges(project)).toBe(false);
-            expect(getFrontendEnvVars).toHaveBeenCalledWith({
-                MESH_ENDPOINT: 'https://example.com',
-                OTHER_VAR: 'value',
-            });
-        });
-
-        it('tolerates a project carrying no componentConfigs at all', () => {
-            jest.mocked(getFrontendEnvVars).mockReturnValue({});
-            const project = createStalenessProject({
-                componentInstances: FRONTEND_INSTANCES,
-                componentConfigs: undefined,
-                frontendEnvState: {
-                    envVars: { MESH_ENDPOINT: 'https://example.com' },
-                    capturedAt: '2024-01-01T00:00:00Z',
-                },
-            });
-
-            expect(detectFrontendChanges(project)).toBe(false);
-            expect(getFrontendEnvVars).toHaveBeenCalledWith({});
-        });
-    });
 });

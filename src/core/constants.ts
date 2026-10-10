@@ -284,7 +284,11 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // node server as `fnm exec --using=24 node <script>`. And `@dropins/mcp` became
 // `@dropins/ai-tools` (npm's rename; its server lists 20 tools, measured 2026-10-07). Existing projects get both at the
 // next sweep only because of this bump.
-export const AI_CONTEXT_VERSION = 39;
+// v40 (2026-10-07, PR-1a): the ai-defaults tools install into Demo Builder's Node folder
+// (`~/.demo-builder/node`), so each .mcp.json node entry now carries
+// `env: { FNM_DIR: <that folder> }`. Without it `fnm exec` read the SC's own fnm, which may
+// not have the Node, and the tool did not start. Existing projects get it only through this bump.
+export const AI_CONTEXT_VERSION = 40;
 
 /**
  * Component IDs for standardized component instance access

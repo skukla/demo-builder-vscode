@@ -7,7 +7,7 @@ import * as fs from 'fs/promises';
 import * as crypto from 'crypto';
 import { createMockProject as createMockProjectBase } from '../../../helpers/projectFake';
 
-import type { MeshStalenessDeps } from '@/features/mesh/services/stalenessDetector';
+import type { MeshStalenessDeps } from '@/features/mesh/services/deployedMeshConfig';
 import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 // Mock dependencies
@@ -22,14 +22,6 @@ jest.mock('@/core/di/serviceLocator', () => ({
                 .mockResolvedValue({ isAuthenticated: true, expiresInMinutes: 30 }),
         })),
     },
-}));
-
-jest.mock('@/core/state/projectStateSync', () => ({
-    getFrontendEnvVars: jest.fn((config) => ({
-        MESH_ENDPOINT: config.MESH_ENDPOINT || '',
-        OTHER_VAR: config.OTHER_VAR || '',
-    })),
-    updateFrontendState: jest.fn(),
 }));
 
 jest.mock('fs/promises', () => ({
@@ -108,34 +100,6 @@ export function createMockProjectWithMesh(overrides?: Partial<Project>): Project
                 sourceHash: 'abc123',
                 lastDeployed: '2024-01-01T00:00:00Z',
             },
-        },
-        ...overrides,
-    });
-}
-
-export function createMockProjectWithFrontend(overrides?: Partial<Project>): Project {
-    return createStalenessProject({
-        componentInstances: {
-            headless: {
-                id: 'headless',
-                name: 'Frontend',
-                type: 'frontend',
-                path: '/test/frontend',
-                status: 'running',
-            },
-        },
-        componentConfigs: {
-            headless: {
-                MESH_ENDPOINT: 'https://example.com',
-                OTHER_VAR: 'value',
-            },
-        },
-        frontendEnvState: {
-            envVars: {
-                MESH_ENDPOINT: 'https://example.com',
-                OTHER_VAR: 'value',
-            },
-            capturedAt: '2024-01-01T00:00:00Z',
         },
         ...overrides,
     });

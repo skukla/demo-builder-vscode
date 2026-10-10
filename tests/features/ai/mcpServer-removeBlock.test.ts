@@ -3,7 +3,7 @@
  *
  * toolHandlers.removeBlockFromLibrary is the inverse of promoteBlockToLibrary:
  * it removes the block's component-definition.json entry, deletes the DA.live
- * doc page + sheet row (via DaLiveContentOperations.removeBlockFromLibrary),
+ * doc page + sheet row (via DaLiveContentOperations.blockLibOps.removeBlockFromLibrary),
  * then commits/pushes the removal via syncAndPublish and unpublishes the doc
  * page via helixApiClient.unpublishPage.
  *
@@ -27,8 +27,10 @@ const mockRemoveBlockFromLibrary = jest.fn();
 
 jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn().mockImplementation(() => ({
-        removeBlockFromLibrary: mockRemoveBlockFromLibrary,
+        blockLibOps: { removeBlockFromLibrary: mockRemoveBlockFromLibrary },
     })),
+}));
+jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
     createDaLiveServiceTokenProvider: jest.fn(),
     createDaLiveTokenProvider: jest.fn(),
 }));

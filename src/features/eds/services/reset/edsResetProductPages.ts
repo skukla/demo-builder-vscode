@@ -21,9 +21,9 @@
  * @module features/eds/services/reset/edsResetProductPages
  */
 
-import type { DaLiveContentOperations } from '../daLive/daLiveContentOperations';
 import type { TokenProvider } from '../daLive/daLiveOrgOperations';
 import { listDaLivePages } from '../daLive/daLivePageWalk';
+import type { DaLiveSourceOperations } from '../daLive/daLiveSourceOperations';
 import type { GitHubTokenService } from '../github/githubTokenService';
 import { HelixService } from '../helix/helixService';
 import type { LeftoverPagesResult } from '../storefront/leftoverPages';
@@ -37,7 +37,7 @@ const PRODUCTS_FOLDER = '/products';
 
 /** The clients reset already holds, narrowed to what this step uses. */
 interface ResetClients {
-    daLiveContentOps: Pick<DaLiveContentOperations, 'listDirectory'>;
+    daLiveContentOps: Pick<DaLiveSourceOperations, 'listDirectory'>;
     githubTokenService?: GitHubTokenService;
     tokenProvider?: TokenProvider;
 }

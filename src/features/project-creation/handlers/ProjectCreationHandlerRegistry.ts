@@ -16,7 +16,6 @@ import { checkGitHubApp } from './checkGitHubAppHandler';
 import { handleCreateProject } from './createHandler';
 import { handleValidate } from './validateHandler';
 import * as lifecycle from './wizardLifecycleHandlers';
-import { handleReDetectContext } from '@/features/authentication/handlers/organizationHandlers';
 import * as components from '@/features/components/handlers/componentHandlers';
 import { dataInstallerHandlers } from '@/features/data-installer/handlers/dataInstallerHandlers';
 import { handleOpenDataInstallerSettings } from '@/features/data-installer/handlers/settingsHandlers';
@@ -71,7 +70,6 @@ export const projectCreationHandlers = defineHandlers({
     validateSelection: components.handleValidateSelection,
 
     // Re-detect Adobe context after an external auth/org change
-    're-detect-context': handleReDetectContext,
 
     // Workspace handlers
     // Mesh handlers

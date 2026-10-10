@@ -34,7 +34,8 @@
 import {
     mockFetch,
 } from './daLiveContentOperations.testUtils';
-import { DaLiveContentOperations, type TokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { type TokenProvider } from '@/features/eds/services/daLive/daLiveApiClient';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
@@ -160,7 +161,7 @@ describe('createBlockLibraryFromTemplate', () => {
 
             const contentSources = [{ org: 'demo-system-stores', site: 'accs-citisignal' }];
 
-            const result = await service.createBlockLibraryFromTemplate(
+            const result = await service.blockLibOps.createBlockLibraryFromTemplate(
                 destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
                 contentSources,
             );
@@ -224,7 +225,7 @@ describe('createBlockLibraryFromTemplate', () => {
                 { org: 'stephen-garner-adobe', site: 'isle5' },
             ];
 
-            const result = await service.createBlockLibraryFromTemplate(
+            const result = await service.blockLibOps.createBlockLibraryFromTemplate(
                 destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
                 contentSources,
             );
@@ -252,7 +253,7 @@ describe('createBlockLibraryFromTemplate', () => {
             const contentSources = [{ org: 'demo-system-stores', site: 'accs-citisignal' }];
             const installedBlockIds = ['commerce-cart', 'tabs'];
 
-            const result = await service.createBlockLibraryFromTemplate(
+            const result = await service.blockLibOps.createBlockLibraryFromTemplate(
                 destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
                 contentSources, installedBlockIds,
             );
@@ -286,7 +287,7 @@ describe('createBlockLibraryFromTemplate', () => {
 
             const contentSources = [{ org: 'demo-system-stores', site: 'accs-citisignal' }];
 
-            const result = await service.createBlockLibraryFromTemplate(
+            const result = await service.blockLibOps.createBlockLibraryFromTemplate(
                 destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
                 contentSources,
             );
@@ -310,7 +311,7 @@ describe('createBlockLibraryFromTemplate', () => {
             });
             mockFetch.mockResolvedValue({ ok: false, status: 404 } as Response);
 
-            const result = await service.createBlockLibraryFromTemplate(
+            const result = await service.blockLibOps.createBlockLibraryFromTemplate(
                 destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
             );
 
@@ -392,7 +393,7 @@ describe('createBlockLibraryFromTemplate', () => {
                 blockDocsExist: { cards: false, hero: false },
             }));
 
-            const result = await service.createBlockLibraryFromTemplate(
+            const result = await service.blockLibOps.createBlockLibraryFromTemplate(
                 destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
             );
 
@@ -424,7 +425,7 @@ describe('createBlockLibraryFromTemplate', () => {
                 blockDocsExist: { cards: true, hero: true, accordion: false, carousel: false },
             }));
 
-            const result = await service.createBlockLibraryFromTemplate(
+            const result = await service.blockLibOps.createBlockLibraryFromTemplate(
                 destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
             );
 

@@ -42,7 +42,7 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
 // =============================================================================
 
 import { mockWithOrgContext } from './appBuilderComponentRunner.orgContextMock';
-import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
+import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderAddRun';
 import {
     MESH_ENTRY,
     INTEGRATION_ENTRY,

@@ -35,6 +35,9 @@ jest.setTimeout(5000);
 
 jest.mock('@/features/eds/services/reset/edsResetService', () => ({
     executeEdsReset: jest.fn().mockResolvedValue({ success: true }),
+}));
+jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
+    ...jest.requireActual('@/features/eds/services/reset/edsResetParams'),
     extractResetParams: jest.fn().mockReturnValue({
         success: true,
         params: {
@@ -51,7 +54,8 @@ jest.mock('@/features/eds/services/reset/edsResetService', () => ({
 // The App resolver retries an inconclusive answer after a real 2s delay.
 jest.mock('@/core/utils/sleep');
 
-import { executeEdsReset, extractResetParams } from '@/features/eds/services/reset/edsResetService';
+import { extractResetParams } from '@/features/eds/services/reset/edsResetParams';
+import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
 import { createMeshDepsFake } from '../../../../helpers/meshDepsFake';
 import { createMockStateManager } from '../../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../../helpers/loggerFake';

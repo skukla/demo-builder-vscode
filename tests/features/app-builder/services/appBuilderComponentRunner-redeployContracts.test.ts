@@ -29,8 +29,9 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
 // Imports (after mocks)
 // =============================================================================
 
-import { deployAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
+import { deployAppBuilderComponent } from '@/features/app-builder/services/appBuilderRedeployRun';
 import { MESH_ENTRY, createDeps, createProject } from './appBuilderComponentRunner.testUtils';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 
 const ID = MESH_ENTRY.id;
 
@@ -144,13 +145,13 @@ describe('deployAppBuilderComponent — Node preparation', () => {
         );
     });
 
-    it('never touches fnm for an entry that declares no Node version', async () => {
+    it("prepares Demo Builder's Node for an entry that declares none (PR-1a)", async () => {
         const ensureNodeVersion = jest.fn().mockResolvedValue(undefined);
         const deps = createDeps({ ensureNodeVersion });
 
         await deployAppBuilderComponent(deployedMeshProject(), ID, deps);
 
-        expect(ensureNodeVersion).not.toHaveBeenCalled();
+        expect(ensureNodeVersion).toHaveBeenCalledWith(demoBuilderNode());
     });
 
     it('a Node preparation failure aborts the redeploy with fnm’s own reason', async () => {

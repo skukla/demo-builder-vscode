@@ -22,7 +22,7 @@ jest.setTimeout(5000);
 const mockUpdateSiteConfig = jest.fn();
 const mockRegisterSite = jest.fn();
 
-jest.mock('@/features/eds/services/configService/configurationService', () => ({
+jest.mock('@/features/eds/services/configService/siteConfigParams', () => ({
     // Mirrors the real 4-arg shape (legacyLookupKey retired 2026-08-23):
     // lookup key AND content source both use the GitHub owner/repo.
     buildSiteConfigParams: (

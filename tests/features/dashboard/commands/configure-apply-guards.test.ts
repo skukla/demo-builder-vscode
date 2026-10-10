@@ -36,8 +36,10 @@ const mockRefreshStatus = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/features/dashboard/commands/showDashboard', () => ({
     ProjectDashboardWebviewCommand: {
         refreshStatus: (...args: unknown[]) => mockRefreshStatus(...args),
-        sendAuthoringExperienceUpdate: jest.fn().mockResolvedValue(undefined),
     },
+}));
+jest.mock('@/features/dashboard/services/projectPanelPushes', () => ({
+    sendAuthoringExperienceUpdate: jest.fn().mockResolvedValue(undefined),
 }));
 
 // ensureAuthAndApply reaches the guard through a dynamic import; jest.mock

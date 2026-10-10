@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "deleted an unreachable empty-blocks guard in createBlockLibrary; 4 uncovered mutants gone",
+    "_note": "PL-69 sitting 11 (pair 25): the access, project and credential gate both datapack writes opened with moved to datapackWriteGate.ts (new row, 100%, 44 killed). Both old rows were stale downward against their committed files (exportHandlers 92.37 recorded, 85.61 measured: the 2026-09-13 failed-export log branch had no test; importHandlers 90.45 recorded, 89.17 measured). exportHandlers 85.61 -> 87.27: the failed-export-with-no-type branch is pinned by one new case, branch/block survivors 2 -> 0, uncovered 5 -> 3 (log strings). importHandlers 89.17 -> 89.06 is arithmetic, not a gap: the same survivors minus two moved credential strings, 26 killed mutants moved out to the gate.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -59,17 +59,17 @@
             "openGaps": 0
         },
         "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts": {
-            "score": 91.29,
-            "killed": 241,
-            "survived": 21,
+            "score": 87.96,
+            "killed": 186,
+            "survived": 24,
             "noCoverage": 2,
-            "timeout": 0,
+            "timeout": 4,
             "survivorCategories": {
-                "logPresentation": 11,
-                "block": 3,
                 "optionalChain": 1,
+                "block": 3,
                 "branch": 1,
-                "string": 5
+                "logPresentation": 12,
+                "string": 7
             },
             "uncoveredCategories": {
                 "string": 2
@@ -252,29 +252,25 @@
             "openGaps": 0
         },
         "src/features/authentication/services/authenticationService.ts": {
-            "score": 56.7,
-            "killed": 146,
-            "survived": 91,
-            "noCoverage": 22,
-            "timeout": 2,
+            "score": 60.82,
+            "killed": 59,
+            "survived": 27,
+            "noCoverage": 11,
+            "timeout": 0,
             "survivorCategories": {
-                "string": 25,
-                "logPresentation": 56,
-                "branch": 5,
-                "other": 1,
-                "optionalChain": 2,
-                "block": 2
+                "string": 7,
+                "block": 1,
+                "logPresentation": 17,
+                "branch": 2
             },
             "uncoveredCategories": {
-                "logPresentation": 11,
-                "block": 3,
-                "branch": 5,
-                "other": 1,
-                "string": 2
+                "logPresentation": 6,
+                "block": 2,
+                "branch": 3
             },
-            "highValueSurvivors": 7,
-            "equivalent": 22,
-            "openGaps": 0
+            "highValueSurvivors": 3,
+            "equivalent": 7,
+            "openGaps": 1
         },
         "src/commands/ResetAllCommand.ts": {
             "score": 67.78,
@@ -1010,7 +1006,7 @@
         },
         "src/core/state/projectStateSync.ts": {
             "score": 100,
-            "killed": 26,
+            "killed": 46,
             "survived": 0,
             "noCoverage": 0,
             "timeout": 0,
@@ -1941,11 +1937,11 @@
             "openGaps": 0
         },
         "src/core/ui/utils/WebviewClient.ts": {
-            "score": 89.39,
-            "killed": 99,
+            "score": 88.24,
+            "killed": 87,
             "survived": 13,
             "noCoverage": 1,
-            "timeout": 19,
+            "timeout": 18,
             "survivorCategories": {
                 "branch": 10,
                 "block": 1,
@@ -2941,27 +2937,25 @@
             "openGaps": 0
         },
         "src/features/app-builder/services/appManagementInstaller.ts": {
-            "score": 95.87,
+            "score": 98.57,
             "killed": 205,
-            "survived": 8,
+            "survived": 2,
             "noCoverage": 1,
-            "timeout": 4,
+            "timeout": 2,
             "survivorCategories": {
-                "string": 5,
-                "block": 1,
-                "other": 1,
-                "logPresentation": 1
+                "logPresentation": 1,
+                "string": 1
             },
             "uncoveredCategories": {
                 "string": 1
             },
-            "highValueSurvivors": 1,
-            "equivalent": 2,
+            "highValueSurvivors": 0,
+            "equivalent": 0,
             "openGaps": 0
         },
         "src/features/app-builder/services/appManagementUninstaller.ts": {
-            "score": 95.88,
-            "killed": 89,
+            "score": 95.51,
+            "killed": 81,
             "survived": 3,
             "noCoverage": 1,
             "timeout": 4,
@@ -3112,52 +3106,38 @@
             "equivalent": 0,
             "openGaps": 0
         },
-        "src/features/authentication/handlers/organizationHandlers.ts": {
-            "score": 94.44,
-            "killed": 17,
-            "survived": 1,
-            "noCoverage": 0,
-            "timeout": 0,
-            "survivorCategories": {
-                "logPresentation": 1
-            },
-            "uncoveredCategories": {},
-            "highValueSurvivors": 0,
-            "equivalent": 0,
-            "openGaps": 0
-        },
         "src/features/authentication/handlers/projectHandlers.ts": {
-            "score": 83.64,
-            "killed": 271,
-            "survived": 45,
-            "noCoverage": 8,
+            "score": 87.66,
+            "killed": 135,
+            "survived": 15,
+            "noCoverage": 4,
             "timeout": 0,
             "survivorCategories": {
-                "string": 13,
-                "optionalChain": 6,
-                "branch": 2,
-                "logPresentation": 21,
-                "block": 3
-            },
-            "uncoveredCategories": {
-                "string": 7,
+                "string": 4,
+                "optionalChain": 4,
+                "branch": 1,
+                "logPresentation": 5,
                 "block": 1
             },
-            "highValueSurvivors": 5,
-            "equivalent": 13,
+            "uncoveredCategories": {
+                "string": 3,
+                "block": 1
+            },
+            "highValueSurvivors": 2,
+            "equivalent": 7,
             "openGaps": 0
         },
         "src/features/authentication/handlers/workspaceHandlers.ts": {
-            "score": 89.22,
-            "killed": 91,
-            "survived": 11,
+            "score": 87.65,
+            "killed": 71,
+            "survived": 10,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
                 "optionalChain": 3,
-                "block": 1,
+                "string": 2,
                 "logPresentation": 4,
-                "string": 3
+                "block": 1
             },
             "uncoveredCategories": {},
             "highValueSurvivors": 1,
@@ -3243,23 +3223,23 @@
             "openGaps": 0
         },
         "src/features/authentication/services/adobeWorkspaceCredentials.ts": {
-            "score": 79.27,
-            "killed": 218,
-            "survived": 52,
+            "score": 78.29,
+            "killed": 220,
+            "survived": 56,
             "noCoverage": 5,
             "timeout": 0,
             "survivorCategories": {
-                "logPresentation": 34,
-                "optionalChain": 10,
-                "block": 3,
-                "branch": 2,
-                "string": 3
+                "logPresentation": 32,
+                "optionalChain": 7,
+                "string": 8,
+                "block": 5,
+                "branch": 4
             },
             "uncoveredCategories": {
                 "logPresentation": 5
             },
-            "highValueSurvivors": 5,
-            "equivalent": 15,
+            "highValueSurvivors": 9,
+            "equivalent": 16,
             "openGaps": 0
         },
         "src/features/authentication/services/apiAccessCatalog.ts": {
@@ -3385,34 +3365,29 @@
             "openGaps": 0
         },
         "src/features/authentication/services/imsTokenClaims.ts": {
-            "score": 71.43,
-            "killed": 20,
-            "survived": 8,
+            "score": 100,
+            "killed": 11,
+            "survived": 0,
             "noCoverage": 0,
             "timeout": 0,
-            "survivorCategories": {
-                "block": 3,
-                "branch": 5
-            },
+            "survivorCategories": {},
             "uncoveredCategories": {},
-            "highValueSurvivors": 8,
-            "equivalent": 8,
+            "highValueSurvivors": 0,
+            "equivalent": 0,
             "openGaps": 0
         },
         "src/features/authentication/services/ioEventsClient.ts": {
-            "score": 91.3,
-            "killed": 123,
-            "survived": 12,
+            "score": 98.28,
+            "killed": 54,
+            "survived": 1,
             "noCoverage": 0,
             "timeout": 3,
             "survivorCategories": {
-                "block": 1,
-                "string": 10,
                 "other": 1
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 1,
-            "equivalent": 2,
+            "highValueSurvivors": 0,
+            "equivalent": 1,
             "openGaps": 0
         },
         "src/features/authentication/services/organizationValidator.ts": {
@@ -3553,21 +3528,19 @@
             "openGaps": 0
         },
         "src/features/components/handlers/componentHandlers.ts": {
-            "score": 86.25,
-            "killed": 207,
-            "survived": 31,
-            "noCoverage": 2,
+            "score": 94.64,
+            "killed": 106,
+            "survived": 6,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "logPresentation": 22,
-                "string": 5,
-                "branch": 4
+                "logPresentation": 2,
+                "branch": 1,
+                "string": 3
             },
-            "uncoveredCategories": {
-                "logPresentation": 2
-            },
-            "highValueSurvivors": 4,
-            "equivalent": 4,
+            "uncoveredCategories": {},
+            "highValueSurvivors": 1,
+            "equivalent": 1,
             "openGaps": 0
         },
         "src/features/components/services/ComponentRegistryManager.ts": {
@@ -3663,10 +3636,10 @@
         },
         "src/features/components/services/componentConfigWrites.ts": {
             "score": 100,
-            "killed": 43,
+            "killed": 54,
             "survived": 0,
             "noCoverage": 0,
-            "timeout": 0,
+            "timeout": 3,
             "survivorCategories": {},
             "uncoveredCategories": {},
             "highValueSurvivors": 0,
@@ -3825,17 +3798,17 @@
             "openGaps": 0
         },
         "src/features/components/ui/components/ConfigFieldRenderer.tsx": {
-            "score": 86.27,
-            "killed": 44,
-            "survived": 5,
-            "noCoverage": 2,
+            "score": 84.91,
+            "killed": 45,
+            "survived": 7,
+            "noCoverage": 1,
             "timeout": 0,
             "survivorCategories": {
-                "string": 4,
+                "string": 6,
                 "branch": 1
             },
             "uncoveredCategories": {
-                "string": 2
+                "string": 1
             },
             "highValueSurvivors": 1,
             "equivalent": 1,
@@ -3881,19 +3854,19 @@
             "openGaps": 0
         },
         "src/features/dashboard/commands/configure.ts": {
-            "score": 93,
-            "killed": 412,
-            "survived": 24,
-            "noCoverage": 7,
-            "timeout": 0,
+            "score": 93.03,
+            "killed": 383,
+            "survived": 23,
+            "noCoverage": 6,
+            "timeout": 4,
             "survivorCategories": {
                 "branch": 5,
-                "logPresentation": 12,
+                "logPresentation": 11,
                 "block": 2,
                 "string": 5
             },
             "uncoveredCategories": {
-                "logPresentation": 6,
+                "logPresentation": 5,
                 "block": 1
             },
             "highValueSurvivors": 7,
@@ -3913,14 +3886,14 @@
             "openGaps": 0
         },
         "src/features/dashboard/commands/openAi.ts": {
-            "score": 93.33,
-            "killed": 56,
-            "survived": 4,
+            "score": 93.75,
+            "killed": 45,
+            "survived": 3,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
                 "branch": 1,
-                "string": 2,
+                "string": 1,
                 "logPresentation": 1
             },
             "uncoveredCategories": {},
@@ -3929,22 +3902,22 @@
             "openGaps": 0
         },
         "src/features/dashboard/commands/showDashboard.ts": {
-            "score": 95.69,
-            "killed": 200,
-            "survived": 9,
+            "score": 93.87,
+            "killed": 153,
+            "survived": 10,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "string": 2,
+                "branch": 3,
                 "other": 1,
-                "branch": 2,
-                "block": 1,
-                "logPresentation": 3
+                "block": 2,
+                "logPresentation": 3,
+                "string": 1
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 3,
+            "highValueSurvivors": 5,
             "equivalent": 4,
-            "openGaps": 0
+            "openGaps": 2
         },
         "src/features/dashboard/handlers/aiHandlers.ts": {
             "score": 77.69,
@@ -4019,23 +3992,24 @@
             "openGaps": 0
         },
         "src/features/dashboard/handlers/consoleApiHandlers.ts": {
-            "score": 89.53,
-            "killed": 171,
-            "survived": 18,
+            "score": 89.75,
+            "killed": 219,
+            "survived": 23,
             "noCoverage": 2,
             "timeout": 0,
             "survivorCategories": {
-                "string": 2,
+                "string": 5,
                 "other": 2,
-                "logPresentation": 12,
-                "optionalChain": 2
+                "branch": 2,
+                "logPresentation": 11,
+                "optionalChain": 3
             },
             "uncoveredCategories": {
                 "other": 1,
                 "logPresentation": 1
             },
-            "highValueSurvivors": 0,
-            "equivalent": 5,
+            "highValueSurvivors": 2,
+            "equivalent": 8,
             "openGaps": 0
         },
         "src/features/dashboard/handlers/dashboardHandlers.ts": {
@@ -4207,7 +4181,7 @@
         },
         "src/features/dashboard/ui/ProjectDashboardScreen.tsx": {
             "score": 100,
-            "killed": 53,
+            "killed": 54,
             "survived": 0,
             "noCoverage": 0,
             "timeout": 0,
@@ -4278,14 +4252,13 @@
             "openGaps": 0
         },
         "src/features/dashboard/ui/components/ActionGrid.tsx": {
-            "score": 94.38,
-            "killed": 84,
-            "survived": 5,
+            "score": 97.06,
+            "killed": 33,
+            "survived": 1,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "string": 4,
-                "optionalChain": 1
+                "string": 1
             },
             "uncoveredCategories": {},
             "highValueSurvivors": 0,
@@ -4436,23 +4409,17 @@
             "openGaps": 0
         },
         "src/features/dashboard/ui/configure/ConfigureScreen.tsx": {
-            "score": 86.36,
-            "killed": 95,
-            "survived": 10,
-            "noCoverage": 5,
+            "score": 96.97,
+            "killed": 32,
+            "survived": 1,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "other": 5,
-                "string": 2,
-                "branch": 3
+                "other": 1
             },
-            "uncoveredCategories": {
-                "block": 1,
-                "branch": 3,
-                "string": 1
-            },
-            "highValueSurvivors": 3,
-            "equivalent": 12,
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 1,
             "openGaps": 0
         },
         "src/features/dashboard/ui/configure/ConfigureSectionBody.tsx": {
@@ -4514,19 +4481,18 @@
             "openGaps": 0
         },
         "src/features/dashboard/ui/configure/hooks/useConfigureFieldValues.ts": {
-            "score": 94.62,
-            "killed": 123,
-            "survived": 7,
+            "score": 94.55,
+            "killed": 104,
+            "survived": 6,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
                 "branch": 4,
-                "string": 2,
-                "other": 1
+                "string": 2
             },
             "uncoveredCategories": {},
             "highValueSurvivors": 4,
-            "equivalent": 5,
+            "equivalent": 4,
             "openGaps": 0
         },
         "src/features/dashboard/ui/configure/hooks/useServiceGroups.ts": {
@@ -4597,19 +4563,17 @@
             "openGaps": 0
         },
         "src/features/dashboard/ui/integrationsSurface/IntegrationsScreen.tsx": {
-            "score": 89.11,
-            "killed": 90,
-            "survived": 11,
+            "score": 96.43,
+            "killed": 27,
+            "survived": 1,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "other": 8,
-                "optionalChain": 2,
                 "string": 1
             },
             "uncoveredCategories": {},
             "highValueSurvivors": 0,
-            "equivalent": 10,
+            "equivalent": 0,
             "openGaps": 0
         },
         "src/features/data-installer/commands/showDataInstaller.ts": {
@@ -4647,44 +4611,40 @@
             "openGaps": 0
         },
         "src/features/data-installer/handlers/exportHandlers.ts": {
-            "score": 92.37,
-            "killed": 109,
-            "survived": 8,
-            "noCoverage": 1,
+            "score": 87.27,
+            "killed": 96,
+            "survived": 11,
+            "noCoverage": 3,
             "timeout": 0,
             "survivorCategories": {
-                "string": 4,
-                "optionalChain": 3,
-                "logPresentation": 1
+                "string": 2,
+                "logPresentation": 6,
+                "optionalChain": 3
             },
             "uncoveredCategories": {
-                "logPresentation": 1
+                "logPresentation": 3
             },
             "highValueSurvivors": 0,
             "equivalent": 3,
             "openGaps": 0
         },
         "src/features/data-installer/handlers/importHandlers.ts": {
-            "score": 89.57,
-            "killed": 292,
-            "survived": 31,
-            "noCoverage": 3,
+            "score": 89.06,
+            "killed": 114,
+            "survived": 13,
+            "noCoverage": 1,
             "timeout": 0,
             "survivorCategories": {
-                "string": 8,
-                "logPresentation": 15,
-                "block": 2,
-                "branch": 1,
+                "string": 6,
+                "logPresentation": 2,
                 "optionalChain": 4,
                 "other": 1
             },
             "uncoveredCategories": {
-                "logPresentation": 1,
-                "string": 1,
                 "other": 1
             },
-            "highValueSurvivors": 3,
-            "equivalent": 9,
+            "highValueSurvivors": 0,
+            "equivalent": 6,
             "openGaps": 0
         },
         "src/features/data-installer/services/accsCredentialProvisioner.ts": {
@@ -4736,22 +4696,17 @@
             "openGaps": 0
         },
         "src/features/data-installer/services/dataInstallerClient.ts": {
-            "score": 95.65,
-            "killed": 154,
-            "survived": 6,
-            "noCoverage": 1,
+            "score": 98.53,
+            "killed": 67,
+            "survived": 1,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "string": 3,
-                "branch": 1,
-                "other": 1,
-                "block": 1
-            },
-            "uncoveredCategories": {
                 "string": 1
             },
-            "highValueSurvivors": 2,
-            "equivalent": 3,
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
             "openGaps": 0
         },
         "src/features/data-installer/services/dataInstallerConfig.ts": {
@@ -4797,21 +4752,18 @@
             "openGaps": 0
         },
         "src/features/data-installer/services/dataInstallerWriteClient.ts": {
-            "score": 90.48,
-            "killed": 209,
-            "survived": 18,
-            "noCoverage": 4,
+            "score": 91.67,
+            "killed": 110,
+            "survived": 10,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "string": 17,
+                "string": 9,
                 "block": 1
             },
-            "uncoveredCategories": {
-                "string": 3,
-                "other": 1
-            },
+            "uncoveredCategories": {},
             "highValueSurvivors": 1,
-            "equivalent": 2,
+            "equivalent": 1,
             "openGaps": 0
         },
         "src/features/data-installer/services/datapackCatalog.ts": {
@@ -4884,19 +4836,17 @@
             "openGaps": 0
         },
         "src/core/ui/components/selection/ApiAccessPicker.tsx": {
-            "score": 98.48,
-            "killed": 194,
-            "survived": 3,
+            "score": 99.15,
+            "killed": 117,
+            "survived": 1,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "other": 1,
-                "branch": 1,
                 "string": 1
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 1,
-            "equivalent": 2,
+            "highValueSurvivors": 0,
+            "equivalent": 0,
             "openGaps": 0
         },
         "src/core/ui/hooks/useActivateOnKey.ts": {
@@ -5004,24 +4954,24 @@
             "openGaps": 0
         },
         "src/features/components/ui/hooks/useComponentConfig.ts": {
-            "score": 88.52,
-            "killed": 251,
-            "survived": 34,
+            "score": 84.79,
+            "killed": 169,
+            "survived": 32,
             "noCoverage": 1,
-            "timeout": 19,
+            "timeout": 15,
             "survivorCategories": {
-                "branch": 19,
+                "branch": 17,
                 "logPresentation": 4,
                 "string": 3,
-                "block": 2,
                 "other": 4,
+                "block": 2,
                 "optionalChain": 2
             },
             "uncoveredCategories": {
                 "string": 1
             },
-            "highValueSurvivors": 21,
-            "equivalent": 27,
+            "highValueSurvivors": 19,
+            "equivalent": 25,
             "openGaps": 0
         },
         "src/features/dashboard/ui/hooks/useDashboardActions.ts": {
@@ -5264,19 +5214,19 @@
             "openGaps": 0
         },
         "src/features/data-installer/ui/components/ImportDatapackModal.tsx": {
-            "score": 92.41,
-            "killed": 278,
-            "survived": 23,
+            "score": 92.05,
+            "killed": 139,
+            "survived": 12,
             "noCoverage": 0,
-            "timeout": 2,
+            "timeout": 0,
             "survivorCategories": {
                 "other": 8,
-                "branch": 5,
-                "string": 10
+                "branch": 3,
+                "optionalChain": 1
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 5,
-            "equivalent": 13,
+            "highValueSurvivors": 3,
+            "equivalent": 12,
             "openGaps": 0
         },
         "src/features/data-installer/ui/components/ViewSwitcher.tsx": {
@@ -5730,21 +5680,21 @@
             "openGaps": 0
         },
         "src/features/eds/services/blockCollectionHelpers.ts": {
-            "score": 91.25,
-            "killed": 344,
-            "survived": 33,
+            "score": 82.28,
+            "killed": 130,
+            "survived": 28,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 11,
+                "branch": 9,
                 "string": 9,
-                "other": 4,
-                "logPresentation": 8,
-                "block": 1
+                "other": 1,
+                "block": 1,
+                "logPresentation": 8
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 12,
-            "equivalent": 16,
+            "highValueSurvivors": 10,
+            "equivalent": 11,
             "openGaps": 0
         },
         "src/features/eds/services/brandAssetPublisher.ts": {
@@ -5768,24 +5718,23 @@
             "openGaps": 0
         },
         "src/features/eds/services/catalogPrewarmService.ts": {
-            "score": 77.52,
-            "killed": 197,
-            "survived": 52,
-            "noCoverage": 6,
-            "timeout": 3,
+            "score": 68.13,
+            "killed": 62,
+            "survived": 27,
+            "noCoverage": 2,
+            "timeout": 0,
             "survivorCategories": {
-                "logPresentation": 24,
-                "string": 10,
-                "branch": 11,
-                "block": 6,
-                "optionalChain": 1
+                "logPresentation": 15,
+                "string": 5,
+                "branch": 4,
+                "block": 3
             },
             "uncoveredCategories": {
-                "logPresentation": 4,
-                "string": 2
+                "logPresentation": 1,
+                "string": 1
             },
-            "highValueSurvivors": 17,
-            "equivalent": 18,
+            "highValueSurvivors": 7,
+            "equivalent": 7,
             "openGaps": 0
         },
         "src/features/eds/services/cleanupService.ts": {
@@ -5823,21 +5772,19 @@
             "openGaps": 0
         },
         "src/features/eds/services/configGenerator.ts": {
-            "score": 92.57,
-            "killed": 162,
+            "score": 90.24,
+            "killed": 111,
             "survived": 12,
-            "noCoverage": 1,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
                 "string": 4,
-                "logPresentation": 7,
-                "branch": 1
+                "logPresentation": 6,
+                "branch": 2
             },
-            "uncoveredCategories": {
-                "string": 1
-            },
-            "highValueSurvivors": 1,
-            "equivalent": 1,
+            "uncoveredCategories": {},
+            "highValueSurvivors": 2,
+            "equivalent": 2,
             "openGaps": 0
         },
         "src/features/eds/services/configService/configAccessRecovery.ts": {
@@ -5902,25 +5849,23 @@
             "openGaps": 0
         },
         "src/features/eds/services/configService/configurationService.ts": {
-            "score": 72.32,
-            "killed": 128,
-            "survived": 47,
+            "score": 67.16,
+            "killed": 45,
+            "survived": 20,
             "noCoverage": 2,
             "timeout": 0,
             "survivorCategories": {
-                "block": 5,
-                "string": 4,
-                "logPresentation": 15,
-                "branch": 16,
-                "other": 3,
-                "optionalChain": 4
+                "block": 4,
+                "string": 1,
+                "logPresentation": 9,
+                "branch": 6
             },
             "uncoveredCategories": {
                 "block": 1,
                 "string": 1
             },
-            "highValueSurvivors": 21,
-            "equivalent": 29,
+            "highValueSurvivors": 10,
+            "equivalent": 11,
             "openGaps": 0
         },
         "src/features/eds/services/configService/repairSiteConfigForProject.ts": {
@@ -5954,22 +5899,22 @@
             "openGaps": 0
         },
         "src/features/eds/services/configService/siteAccessManagerHeadless.ts": {
-            "score": 93.1,
+            "score": 90.5,
             "killed": 162,
-            "survived": 11,
+            "survived": 16,
             "noCoverage": 1,
             "timeout": 0,
             "survivorCategories": {
-                "block": 1,
-                "logPresentation": 1,
-                "string": 6,
-                "branch": 3
+                "logPresentation": 6,
+                "branch": 4,
+                "block": 2,
+                "string": 4
             },
             "uncoveredCategories": {
                 "string": 1
             },
-            "highValueSurvivors": 4,
-            "equivalent": 4,
+            "highValueSurvivors": 6,
+            "equivalent": 6,
             "openGaps": 0
         },
         "src/features/eds/services/configService/siteConfigRegistrar.ts": {
@@ -6063,20 +6008,20 @@
             "openGaps": 0
         },
         "src/features/eds/services/daLive/daLiveAuthService.ts": {
-            "score": 86.39,
-            "killed": 165,
-            "survived": 26,
+            "score": 86.52,
+            "killed": 154,
+            "survived": 24,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 9,
-                "block": 6,
+                "branch": 8,
                 "logPresentation": 10,
+                "block": 5,
                 "optionalChain": 1
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 15,
-            "equivalent": 16,
+            "highValueSurvivors": 13,
+            "equivalent": 14,
             "openGaps": 0
         },
         "src/features/eds/services/daLive/daLiveConfigOperations.ts": {
@@ -6101,24 +6046,19 @@
             "openGaps": 0
         },
         "src/features/eds/services/daLive/daLiveConfigService.ts": {
-            "score": 83.43,
-            "killed": 287,
-            "survived": 50,
-            "noCoverage": 7,
+            "score": 86.49,
+            "killed": 96,
+            "survived": 15,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "logPresentation": 26,
-                "other": 5,
-                "string": 5,
-                "branch": 7,
-                "block": 3,
-                "optionalChain": 4
+                "logPresentation": 11,
+                "string": 2,
+                "other": 2
             },
-            "uncoveredCategories": {
-                "string": 7
-            },
-            "highValueSurvivors": 10,
-            "equivalent": 19,
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 2,
             "openGaps": 0
         },
         "src/features/eds/services/daLive/daLiveConstants.ts": {
@@ -6184,7 +6124,7 @@
         },
         "src/features/eds/services/daLive/daLiveContentOperations.ts": {
             "score": 100,
-            "killed": 33,
+            "killed": 3,
             "survived": 0,
             "noCoverage": 0,
             "timeout": 0,
@@ -6238,22 +6178,19 @@
             "openGaps": 0
         },
         "src/features/eds/services/errorFormatters.ts": {
-            "score": 85.02,
-            "killed": 244,
-            "survived": 40,
-            "noCoverage": 3,
+            "score": 95.6,
+            "killed": 87,
+            "survived": 4,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "other": 5,
-                "optionalChain": 4,
-                "string": 28,
-                "branch": 3
+                "string": 1,
+                "branch": 1,
+                "other": 2
             },
-            "uncoveredCategories": {
-                "string": 3
-            },
-            "highValueSurvivors": 3,
-            "equivalent": 12,
+            "uncoveredCategories": {},
+            "highValueSurvivors": 1,
+            "equivalent": 3,
             "openGaps": 0
         },
         "src/features/eds/services/ewSettingChangeListener.ts": {
@@ -6287,20 +6224,23 @@
             "openGaps": 0
         },
         "src/features/eds/services/github/githubAppService.ts": {
-            "score": 74.02,
-            "killed": 94,
-            "survived": 33,
-            "noCoverage": 0,
+            "score": 70.16,
+            "killed": 87,
+            "survived": 35,
+            "noCoverage": 2,
             "timeout": 0,
             "survivorCategories": {
-                "logPresentation": 20,
-                "block": 4,
-                "optionalChain": 3,
-                "branch": 6
+                "block": 2,
+                "optionalChain": 4,
+                "logPresentation": 21,
+                "branch": 8
             },
-            "uncoveredCategories": {},
+            "uncoveredCategories": {
+                "string": 1,
+                "logPresentation": 1
+            },
             "highValueSurvivors": 10,
-            "equivalent": 13,
+            "equivalent": 14,
             "openGaps": 0
         },
         "src/features/eds/services/github/githubCredentialProbe.ts": {
@@ -6322,24 +6262,18 @@
             "openGaps": 0
         },
         "src/features/eds/services/github/githubFileOperations.ts": {
-            "score": 84.67,
-            "killed": 231,
-            "survived": 38,
-            "noCoverage": 4,
-            "timeout": 1,
+            "score": 95.92,
+            "killed": 94,
+            "survived": 4,
+            "noCoverage": 0,
+            "timeout": 0,
             "survivorCategories": {
                 "string": 2,
-                "optionalChain": 2,
-                "branch": 5,
-                "logPresentation": 28,
-                "block": 1
+                "logPresentation": 2
             },
-            "uncoveredCategories": {
-                "string": 3,
-                "logPresentation": 1
-            },
-            "highValueSurvivors": 6,
-            "equivalent": 8,
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
             "openGaps": 0
         },
         "src/features/eds/services/github/githubHelpers.ts": {
@@ -6370,37 +6304,37 @@
             "openGaps": 0
         },
         "src/features/eds/services/github/githubRepoOperations.ts": {
-            "score": 85.35,
-            "killed": 229,
-            "survived": 40,
+            "score": 85.71,
+            "killed": 86,
+            "survived": 15,
             "noCoverage": 0,
             "timeout": 4,
             "survivorCategories": {
-                "logPresentation": 29,
-                "other": 3,
+                "logPresentation": 8,
                 "branch": 4,
-                "block": 2,
-                "string": 2
+                "other": 1,
+                "block": 1,
+                "string": 1
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 6,
-            "equivalent": 9,
+            "highValueSurvivors": 5,
+            "equivalent": 6,
             "openGaps": 0
         },
         "src/features/eds/services/github/githubTokenService.ts": {
-            "score": 86.49,
-            "killed": 64,
-            "survived": 10,
+            "score": 89.29,
+            "killed": 75,
+            "survived": 9,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
                 "logPresentation": 3,
-                "block": 4,
-                "branch": 3
+                "branch": 3,
+                "block": 3
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 7,
-            "equivalent": 7,
+            "highValueSurvivors": 6,
+            "equivalent": 6,
             "openGaps": 0
         },
         "src/features/eds/services/helix/helixApiClient.ts": {
@@ -6652,16 +6586,16 @@
             "openGaps": 0
         },
         "src/features/eds/services/quickEditPublisher.ts": {
-            "score": 77.63,
-            "killed": 59,
-            "survived": 15,
+            "score": 77.05,
+            "killed": 47,
+            "survived": 12,
             "noCoverage": 2,
             "timeout": 0,
             "survivorCategories": {
                 "logPresentation": 8,
-                "string": 5,
                 "block": 1,
-                "branch": 1
+                "branch": 1,
+                "string": 2
             },
             "uncoveredCategories": {
                 "string": 2
@@ -6753,36 +6687,32 @@
             "openGaps": 0
         },
         "src/features/eds/services/reset/edsResetService.ts": {
-            "score": 91.87,
-            "killed": 111,
-            "survived": 10,
-            "noCoverage": 0,
-            "timeout": 2,
-            "survivorCategories": {
-                "logPresentation": 9,
-                "block": 1
-            },
-            "uncoveredCategories": {},
-            "highValueSurvivors": 1,
-            "equivalent": 1,
-            "openGaps": 0
-        },
-        "src/features/eds/services/reset/edsResetUI.ts": {
-            "score": 91.29,
-            "killed": 241,
-            "survived": 23,
+            "score": 94.59,
+            "killed": 35,
+            "survived": 2,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "optionalChain": 3,
-                "string": 12,
-                "logPresentation": 6,
-                "block": 1,
-                "other": 1
+                "logPresentation": 2
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 1,
-            "equivalent": 5,
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/eds/services/reset/edsResetUI.ts": {
+            "score": 93.46,
+            "killed": 100,
+            "survived": 7,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 2,
+                "logPresentation": 5
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
             "openGaps": 0
         },
         "src/features/eds/services/resourceCleanupHelpers.ts": {
@@ -7057,45 +6987,31 @@
             "openGaps": 0
         },
         "src/features/eds/ui/steps/RepoSelectionInline.tsx": {
-            "score": 83,
-            "killed": 285,
-            "survived": 51,
-            "noCoverage": 8,
-            "timeout": 3,
+            "score": 91.28,
+            "killed": 136,
+            "survived": 13,
+            "noCoverage": 0,
+            "timeout": 0,
             "survivorCategories": {
-                "string": 15,
-                "branch": 16,
-                "other": 10,
-                "optionalChain": 8,
-                "logPresentation": 1,
-                "block": 1
-            },
-            "uncoveredCategories": {
-                "string": 3,
-                "block": 2,
+                "string": 11,
                 "other": 1,
-                "branch": 2
+                "optionalChain": 1
             },
-            "highValueSurvivors": 17,
-            "equivalent": 40,
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 2,
             "openGaps": 0
         },
         "src/features/eds/ui/steps/StorefrontSetupStep.tsx": {
-            "score": 92.83,
-            "killed": 233,
-            "survived": 16,
-            "noCoverage": 2,
+            "score": 100,
+            "killed": 55,
+            "survived": 0,
+            "noCoverage": 0,
             "timeout": 0,
-            "survivorCategories": {
-                "branch": 6,
-                "other": 8,
-                "string": 2
-            },
-            "uncoveredCategories": {
-                "string": 2
-            },
-            "highValueSurvivors": 6,
-            "equivalent": 14,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
             "openGaps": 0
         },
         "src/features/lifecycle/commands/managedStorefrontFiles.ts": {
@@ -7175,18 +7091,19 @@
             "openGaps": 0
         },
         "src/features/lifecycle/services/projectResetService.ts": {
-            "score": 93.51,
-            "killed": 216,
-            "survived": 15,
+            "score": 91.18,
+            "killed": 186,
+            "survived": 18,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "logPresentation": 14,
-                "string": 1
+                "branch": 1,
+                "logPresentation": 12,
+                "string": 5
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 0,
-            "equivalent": 0,
+            "highValueSurvivors": 1,
+            "equivalent": 1,
             "openGaps": 0
         },
         "src/features/mesh/commands/deployMesh.ts": {
@@ -7448,20 +7365,19 @@
             "openGaps": 0
         },
         "src/features/mesh/services/stalenessDetector.ts": {
-            "score": 88.32,
-            "killed": 295,
-            "survived": 39,
+            "score": 80,
+            "killed": 84,
+            "survived": 21,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "logPresentation": 18,
-                "branch": 15,
-                "other": 1,
-                "block": 5
+                "branch": 10,
+                "logPresentation": 8,
+                "block": 3
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 20,
-            "equivalent": 21,
+            "highValueSurvivors": 13,
+            "equivalent": 13,
             "openGaps": 0
         },
         "src/features/mesh/utils/errorFormatter.ts": {
@@ -7497,13 +7413,12 @@
             "openGaps": 0
         },
         "src/features/prerequisites/handlers/checkHandler.ts": {
-            "score": 80.59,
-            "killed": 243,
-            "survived": 59,
+            "score": 79.93,
+            "killed": 225,
+            "survived": 57,
             "noCoverage": 0,
             "timeout": 2,
             "survivorCategories": {
-                "other": 2,
                 "optionalChain": 5,
                 "logPresentation": 39,
                 "branch": 10,
@@ -7512,27 +7427,23 @@
             },
             "uncoveredCategories": {},
             "highValueSurvivors": 12,
-            "equivalent": 19,
+            "equivalent": 17,
             "openGaps": 0
         },
         "src/features/prerequisites/handlers/continueHandler.ts": {
-            "score": 90.82,
-            "killed": 188,
-            "survived": 18,
-            "noCoverage": 1,
+            "score": 92.68,
+            "killed": 114,
+            "survived": 9,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "string": 4,
-                "other": 4,
-                "branch": 8,
-                "logPresentation": 1,
+                "branch": 6,
+                "string": 2,
                 "optionalChain": 1
             },
-            "uncoveredCategories": {
-                "string": 1
-            },
-            "highValueSurvivors": 8,
-            "equivalent": 13,
+            "uncoveredCategories": {},
+            "highValueSurvivors": 6,
+            "equivalent": 7,
             "openGaps": 0
         },
         "src/features/prerequisites/handlers/shared.ts": {
@@ -7556,22 +7467,22 @@
             "openGaps": 0
         },
         "src/features/prerequisites/services/PrerequisitesManager.ts": {
-            "score": 82.74,
-            "killed": 187,
-            "survived": 39,
+            "score": 83.77,
+            "killed": 191,
+            "survived": 37,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
                 "optionalChain": 2,
                 "branch": 14,
-                "other": 3,
-                "logPresentation": 13,
+                "other": 2,
+                "logPresentation": 12,
                 "block": 4,
                 "string": 3
             },
             "uncoveredCategories": {},
             "highValueSurvivors": 18,
-            "equivalent": 23,
+            "equivalent": 22,
             "openGaps": 0
         },
         "src/features/prerequisites/services/prerequisitesCacheManager.ts": {
@@ -7656,17 +7567,17 @@
             "openGaps": 0
         },
         "src/features/project-creation/commands/createProject.ts": {
-            "score": 67.23,
-            "killed": 238,
-            "survived": 103,
+            "score": 67.71,
+            "killed": 237,
+            "survived": 100,
             "noCoverage": 13,
             "timeout": 0,
             "survivorCategories": {
                 "branch": 37,
                 "block": 6,
                 "optionalChain": 3,
-                "string": 34,
-                "logPresentation": 16,
+                "string": 32,
+                "logPresentation": 15,
                 "other": 7
             },
             "uncoveredCategories": {
@@ -7701,11 +7612,11 @@
             "noCoverage": 1,
             "timeout": 0,
             "survivorCategories": {
-                "block": 2,
                 "logPresentation": 17,
                 "string": 6,
-                "other": 1,
-                "branch": 10
+                "block": 2,
+                "branch": 10,
+                "other": 1
             },
             "uncoveredCategories": {
                 "logPresentation": 1
@@ -7799,25 +7710,20 @@
             "openGaps": 0
         },
         "src/features/project-creation/helpers/envFileGenerator.ts": {
-            "score": 86,
-            "killed": 301,
-            "survived": 45,
-            "noCoverage": 4,
+            "score": 87.88,
+            "killed": 58,
+            "survived": 8,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "other": 11,
-                "branch": 16,
-                "logPresentation": 14,
                 "optionalChain": 1,
-                "string": 1,
-                "block": 2
-            },
-            "uncoveredCategories": {
-                "string": 3,
+                "branch": 5,
+                "other": 1,
                 "logPresentation": 1
             },
-            "highValueSurvivors": 18,
-            "equivalent": 30,
+            "uncoveredCategories": {},
+            "highValueSurvivors": 5,
+            "equivalent": 7,
             "openGaps": 0
         },
         "src/features/project-creation/helpers/formatters.ts": {
@@ -8512,22 +8418,15 @@
             "openGaps": 0
         },
         "src/features/project-creation/ui/steps/ProjectCreationStep.tsx": {
-            "score": 92,
-            "killed": 230,
-            "survived": 19,
-            "noCoverage": 1,
+            "score": 100,
+            "killed": 12,
+            "survived": 0,
+            "noCoverage": 0,
             "timeout": 0,
-            "survivorCategories": {
-                "logPresentation": 2,
-                "string": 3,
-                "branch": 9,
-                "other": 5
-            },
-            "uncoveredCategories": {
-                "string": 1
-            },
-            "highValueSurvivors": 9,
-            "equivalent": 14,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
             "openGaps": 0
         },
         "src/features/project-creation/ui/steps/ReviewStep.tsx": {
@@ -8727,21 +8626,18 @@
             "openGaps": 0
         },
         "src/features/project-creation/ui/wizard/WizardContainer.tsx": {
-            "score": 82.64,
-            "killed": 115,
-            "survived": 25,
+            "score": 90.77,
+            "killed": 56,
+            "survived": 6,
             "noCoverage": 0,
-            "timeout": 4,
+            "timeout": 3,
             "survivorCategories": {
-                "other": 7,
-                "branch": 1,
-                "logPresentation": 8,
-                "optionalChain": 2,
-                "string": 7
+                "other": 1,
+                "string": 5
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 1,
-            "equivalent": 10,
+            "highValueSurvivors": 0,
+            "equivalent": 1,
             "openGaps": 0
         },
         "src/features/project-creation/ui/wizard/appBuilderComponentSelectionState.ts": {
@@ -8813,13 +8709,13 @@
             "openGaps": 0
         },
         "src/features/projects-dashboard/commands/showProjectsList.ts": {
-            "score": 90.11,
-            "killed": 82,
-            "survived": 9,
+            "score": 94.59,
+            "killed": 70,
+            "survived": 4,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "string": 7,
+                "string": 2,
                 "branch": 1,
                 "logPresentation": 1
             },
@@ -8828,48 +8724,23 @@
             "equivalent": 1,
             "openGaps": 0
         },
-        "src/features/projects-dashboard/handlers/dashboardHandlers.ts": {
-            "score": 88.56,
-            "killed": 387,
-            "survived": 48,
-            "noCoverage": 2,
-            "timeout": 0,
+        "src/features/projects-dashboard/services/projectDeletionService.ts": {
+            "score": 81.71,
+            "killed": 65,
+            "survived": 14,
+            "noCoverage": 1,
+            "timeout": 2,
             "survivorCategories": {
-                "string": 6,
-                "logPresentation": 32,
-                "block": 4,
-                "branch": 4,
-                "optionalChain": 2
-            },
-            "uncoveredCategories": {
+                "branch": 10,
+                "string": 2,
                 "block": 1,
                 "logPresentation": 1
             },
-            "highValueSurvivors": 8,
-            "equivalent": 11,
-            "openGaps": 0
-        },
-        "src/features/projects-dashboard/services/projectDeletionService.ts": {
-            "score": 74.41,
-            "killed": 309,
-            "survived": 100,
-            "noCoverage": 8,
-            "timeout": 5,
-            "survivorCategories": {
-                "branch": 33,
-                "string": 32,
-                "other": 9,
-                "block": 3,
-                "logPresentation": 13,
-                "optionalChain": 10
-            },
             "uncoveredCategories": {
-                "string": 2,
-                "block": 3,
-                "logPresentation": 3
+                "string": 1
             },
-            "highValueSurvivors": 36,
-            "equivalent": 58,
+            "highValueSurvivors": 11,
+            "equivalent": 11,
             "openGaps": 0
         },
         "src/features/projects-dashboard/services/projectRenameService.ts": {
@@ -9055,14 +8926,14 @@
             "openGaps": 0
         },
         "src/features/updates/commands/updateExecutor.ts": {
-            "score": 88.94,
-            "killed": 209,
-            "survived": 26,
+            "score": 88.58,
+            "killed": 194,
+            "survived": 25,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "string": 20,
-                "logPresentation": 5,
+                "string": 7,
+                "logPresentation": 17,
                 "optionalChain": 1
             },
             "uncoveredCategories": {},
@@ -9237,19 +9108,17 @@
             "openGaps": 0
         },
         "src/features/updates/services/updateApplyService.ts": {
-            "score": 89.47,
-            "killed": 187,
-            "survived": 21,
-            "noCoverage": 1,
+            "score": 89.44,
+            "killed": 144,
+            "survived": 17,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "logPresentation": 9,
-                "string": 11,
+                "logPresentation": 12,
+                "string": 4,
                 "other": 1
             },
-            "uncoveredCategories": {
-                "string": 1
-            },
+            "uncoveredCategories": {},
             "highValueSurvivors": 0,
             "equivalent": 1,
             "openGaps": 0
@@ -9561,6 +9430,1343 @@
             "highValueSurvivors": 29,
             "equivalent": 0,
             "openGaps": 31
+        },
+        "src/features/authentication/services/adobeSignIn.ts": {
+            "score": 44.74,
+            "killed": 32,
+            "survived": 42,
+            "noCoverage": 0,
+            "timeout": 2,
+            "survivorCategories": {
+                "string": 6,
+                "logPresentation": 28,
+                "other": 3,
+                "optionalChain": 2,
+                "block": 2,
+                "branch": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 3,
+            "equivalent": 9,
+            "openGaps": 0
+        },
+        "src/features/eds/services/github/githubRepoArchive.ts": {
+            "score": 69.17,
+            "killed": 83,
+            "survived": 36,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 23,
+                "branch": 9,
+                "string": 1,
+                "other": 1,
+                "block": 2
+            },
+            "uncoveredCategories": {
+                "string": 1
+            },
+            "highValueSurvivors": 11,
+            "equivalent": 12,
+            "openGaps": 0
+        },
+        "src/features/eds/services/github/githubTreeCommits.ts": {
+            "score": 88.1,
+            "killed": 73,
+            "survived": 7,
+            "noCoverage": 3,
+            "timeout": 1,
+            "survivorCategories": {
+                "optionalChain": 2,
+                "branch": 1,
+                "logPresentation": 4
+            },
+            "uncoveredCategories": {
+                "string": 2,
+                "logPresentation": 1
+            },
+            "highValueSurvivors": 1,
+            "equivalent": 3,
+            "openGaps": 0
+        },
+        "src/features/eds/services/github/githubAuthenticatedOperations.ts": {
+            "score": 100,
+            "killed": 11,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/core/utils/progressUnifier/ProgressUnifier.ts": {
+            "score": 87.32,
+            "killed": 61,
+            "survived": 8,
+            "noCoverage": 1,
+            "timeout": 1,
+            "survivorCategories": {
+                "block": 1,
+                "string": 4,
+                "branch": 3
+            },
+            "uncoveredCategories": {
+                "branch": 1
+            },
+            "highValueSurvivors": 4,
+            "equivalent": 9,
+            "openGaps": 0
+        },
+        "src/core/utils/progressUnifier/exactProgress.ts": {
+            "score": 94.51,
+            "killed": 82,
+            "survived": 5,
+            "noCoverage": 0,
+            "timeout": 4,
+            "survivorCategories": {
+                "string": 1,
+                "logPresentation": 4
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 1,
+            "openGaps": 0
+        },
+        "src/core/utils/progressUnifier/fnmCommands.ts": {
+            "score": 95.92,
+            "killed": 47,
+            "survived": 2,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 2
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 2,
+            "equivalent": 2,
+            "openGaps": 0
+        },
+        "src/core/utils/progressUnifier/milestoneProgress.ts": {
+            "score": 90.57,
+            "killed": 44,
+            "survived": 5,
+            "noCoverage": 0,
+            "timeout": 4,
+            "survivorCategories": {
+                "other": 1,
+                "logPresentation": 4
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 1,
+            "openGaps": 0
+        },
+        "src/core/utils/progressUnifier/timedProgress.ts": {
+            "score": 94.53,
+            "killed": 111,
+            "survived": 7,
+            "noCoverage": 0,
+            "timeout": 10,
+            "survivorCategories": {
+                "logPresentation": 4,
+                "other": 1,
+                "branch": 2
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 2,
+            "equivalent": 3,
+            "openGaps": 0
+        },
+        "src/features/eds/services/helix/helixPageDiscovery.ts": {
+            "score": 92.31,
+            "killed": 60,
+            "survived": 4,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 1,
+                "branch": 1,
+                "string": 2
+            },
+            "uncoveredCategories": {
+                "string": 1
+            },
+            "highValueSurvivors": 1,
+            "equivalent": 4,
+            "openGaps": 0
+        },
+        "src/features/eds/services/helix/helixBulkPublish.ts": {
+            "score": 84.55,
+            "killed": 104,
+            "survived": 19,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 18,
+                "string": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/eds/services/helix/helixSiteContent.ts": {
+            "score": 82.76,
+            "killed": 71,
+            "survived": 15,
+            "noCoverage": 0,
+            "timeout": 1,
+            "survivorCategories": {
+                "logPresentation": 10,
+                "string": 5
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/data-installer/handlers/provisionAccsHandler.ts": {
+            "score": 93.1,
+            "killed": 54,
+            "survived": 3,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 3
+            },
+            "uncoveredCategories": {
+                "logPresentation": 1
+            },
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/data-installer/services/dataInstallerExportClient.ts": {
+            "score": 97.37,
+            "killed": 111,
+            "survived": 0,
+            "noCoverage": 3,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {
+                "string": 2,
+                "other": 1
+            },
+            "highValueSurvivors": 0,
+            "equivalent": 1,
+            "openGaps": 0
+        },
+        "src/features/data-installer/handlers/importJobWatch.ts": {
+            "score": 87.37,
+            "killed": 83,
+            "survived": 12,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 9,
+                "block": 2,
+                "branch": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 3,
+            "equivalent": 3,
+            "openGaps": 0
+        },
+        "src/features/data-installer/handlers/importTargetHandlers.ts": {
+            "score": 100,
+            "killed": 59,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/data-installer/services/dataInstallerTransport.ts": {
+            "score": 96.81,
+            "killed": 91,
+            "survived": 3,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 1,
+                "branch": 1,
+                "other": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 1,
+            "equivalent": 3,
+            "openGaps": 0
+        },
+        "src/features/eds/services/github/githubRepoLifecycle.ts": {
+            "score": 90,
+            "killed": 108,
+            "survived": 12,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 11,
+                "string": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/project-creation/ui/steps/projectCreationStepContent.tsx": {
+            "score": 97.92,
+            "killed": 47,
+            "survived": 0,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {
+                "string": 1
+            },
+            "highValueSurvivors": 0,
+            "equivalent": 4,
+            "openGaps": 0
+        },
+        "src/features/project-creation/ui/hooks/useCreationProgressPhase.ts": {
+            "score": 94.44,
+            "killed": 68,
+            "survived": 4,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 3,
+                "string": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 3,
+            "equivalent": 4,
+            "openGaps": 0
+        },
+        "src/features/project-creation/ui/hooks/useGitHubAppPreflight.ts": {
+            "score": 89.42,
+            "killed": 93,
+            "survived": 11,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 3,
+                "other": 5,
+                "logPresentation": 2,
+                "string": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 3,
+            "equivalent": 9,
+            "openGaps": 0
+        },
+        "src/features/project-creation/ui/steps/projectCreationStepFooter.tsx": {
+            "score": 100,
+            "killed": 23,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/project-creation/ui/hooks/useWizardCatalog.ts": {
+            "score": 94.12,
+            "killed": 47,
+            "survived": 3,
+            "noCoverage": 0,
+            "timeout": 1,
+            "survivorCategories": {
+                "other": 2,
+                "branch": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 1,
+            "equivalent": 5,
+            "openGaps": 0
+        },
+        "src/features/project-creation/ui/hooks/useWizardSettings.ts": {
+            "score": 85.71,
+            "killed": 12,
+            "survived": 2,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 2
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 2,
+            "openGaps": 0
+        },
+        "src/features/project-creation/ui/wizard/architectureChange.ts": {
+            "score": 65.63,
+            "killed": 21,
+            "survived": 11,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 9,
+                "optionalChain": 2
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 3,
+            "openGaps": 0
+        },
+        "src/features/project-creation/ui/wizard/wizardFooter.tsx": {
+            "score": 100,
+            "killed": 9,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/eds/services/daLive/daLiveTokenProviders.ts": {
+            "score": 100,
+            "killed": 13,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/authentication/services/adobeEntityReads.ts": {
+            "score": 67.44,
+            "killed": 29,
+            "survived": 14,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 3,
+                "branch": 4,
+                "block": 1,
+                "logPresentation": 6
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 5,
+            "equivalent": 5,
+            "openGaps": 0
+        },
+        "src/features/authentication/services/adobeOrgReads.ts": {
+            "score": 78.95,
+            "killed": 45,
+            "survived": 12,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 5,
+                "logPresentation": 3,
+                "branch": 4
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 4,
+            "equivalent": 4,
+            "openGaps": 0
+        },
+        "src/features/authentication/services/adobeProjectReads.ts": {
+            "score": 63.29,
+            "killed": 50,
+            "survived": 29,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 13,
+                "block": 3,
+                "logPresentation": 7,
+                "string": 6
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 16,
+            "equivalent": 16,
+            "openGaps": 0
+        },
+        "src/features/authentication/services/adobeWorkspaceReads.ts": {
+            "score": 69.77,
+            "killed": 60,
+            "survived": 26,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 6,
+                "optionalChain": 2,
+                "logPresentation": 7,
+                "branch": 10,
+                "block": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 11,
+            "equivalent": 13,
+            "openGaps": 0
+        },
+        "src/features/dashboard/ui/integrationsSurface/IntegrationsActionBand.tsx": {
+            "score": 96,
+            "killed": 24,
+            "survived": 1,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "optionalChain": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 1,
+            "openGaps": 0
+        },
+        "src/features/dashboard/ui/integrationsSurface/useIntegrationCardSearch.ts": {
+            "score": 100,
+            "killed": 23,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/dashboard/ui/integrationsSurface/useIntegrationCards.ts": {
+            "score": 100,
+            "killed": 14,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/dashboard/ui/integrationsSurface/useIntegrationsScreenActions.ts": {
+            "score": 84,
+            "killed": 42,
+            "survived": 8,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 8
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 8,
+            "openGaps": 0
+        },
+        "src/features/eds/services/reset/edsResetCodeSyncStep.ts": {
+            "score": 73.33,
+            "killed": 11,
+            "survived": 4,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 3,
+                "block": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 1,
+            "equivalent": 1,
+            "openGaps": 0
+        },
+        "src/features/eds/services/reset/edsResetContentStep.ts": {
+            "score": 98.08,
+            "killed": 51,
+            "survived": 1,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/eds/services/reset/edsResetFinalize.ts": {
+            "score": 92,
+            "killed": 44,
+            "survived": 4,
+            "noCoverage": 0,
+            "timeout": 2,
+            "survivorCategories": {
+                "logPresentation": 4
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/eds/services/reset/edsResetNotifications.ts": {
+            "score": 98.61,
+            "killed": 71,
+            "survived": 1,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/eds/services/reset/edsResetPreflight.ts": {
+            "score": 84.71,
+            "killed": 72,
+            "survived": 13,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "optionalChain": 3,
+                "logPresentation": 6,
+                "branch": 1,
+                "string": 2,
+                "block": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 2,
+            "equivalent": 5,
+            "openGaps": 0
+        },
+        "src/features/eds/services/reset/edsResetSampleData.ts": {
+            "score": 90.32,
+            "killed": 56,
+            "survived": 6,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 1,
+                "string": 3,
+                "branch": 2
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 2,
+            "equivalent": 3,
+            "openGaps": 0
+        },
+        "src/features/eds/services/configService/configServiceRequest.ts": {
+            "score": 71.11,
+            "killed": 64,
+            "survived": 26,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 6,
+                "branch": 10,
+                "other": 3,
+                "block": 1,
+                "string": 2,
+                "optionalChain": 4
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 11,
+            "equivalent": 18,
+            "openGaps": 0
+        },
+        "src/features/eds/services/configService/siteConfigParams.ts": {
+            "score": 100,
+            "killed": 21,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/dashboard/ui/configure/hooks/useConfigureSave.ts": {
+            "score": 69.7,
+            "killed": 23,
+            "survived": 9,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 2,
+                "branch": 6,
+                "block": 1
+            },
+            "uncoveredCategories": {
+                "string": 1
+            },
+            "highValueSurvivors": 7,
+            "equivalent": 9,
+            "openGaps": 0
+        },
+        "src/features/dashboard/ui/configure/hooks/useConfigureFieldRow.tsx": {
+            "score": 100,
+            "killed": 16,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/dashboard/ui/configure/hooks/useConfigureSections.ts": {
+            "score": 96.15,
+            "killed": 25,
+            "survived": 1,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/dashboard/ui/configure/hooks/useProjectNameField.ts": {
+            "score": 90.91,
+            "killed": 10,
+            "survived": 1,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 1,
+            "openGaps": 0
+        },
+        "src/features/authentication/services/eventProviderBinding.ts": {
+            "score": 100,
+            "killed": 19,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/authentication/services/ioEventsTransport.ts": {
+            "score": 98.39,
+            "killed": 61,
+            "survived": 1,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "block": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 1,
+            "equivalent": 1,
+            "openGaps": 0
+        },
+        "src/features/eds/services/quickEditSnippet.ts": {
+            "score": 100,
+            "killed": 15,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/dashboard/ui/components/DashboardDialogs.tsx": {
+            "score": 100,
+            "killed": 9,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/project-creation/helpers/componentConfigFiles.ts": {
+            "score": 80.67,
+            "killed": 121,
+            "survived": 26,
+            "noCoverage": 3,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 12,
+                "branch": 11,
+                "string": 1,
+                "block": 2
+            },
+            "uncoveredCategories": {
+                "string": 2,
+                "logPresentation": 1
+            },
+            "highValueSurvivors": 13,
+            "equivalent": 13,
+            "openGaps": 0
+        },
+        "src/features/project-creation/helpers/envVarResolution.ts": {
+            "score": 98.65,
+            "killed": 73,
+            "survived": 0,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {
+                "string": 1
+            },
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/project-creation/helpers/envFileRegeneration.ts": {
+            "score": 89.47,
+            "killed": 51,
+            "survived": 6,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 1,
+                "other": 5
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 5,
+            "openGaps": 0
+        },
+        "src/features/eds/ui/helpers/storefrontSetupState.ts": {
+            "score": 98.23,
+            "killed": 111,
+            "survived": 2,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 2
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 2,
+            "equivalent": 2,
+            "openGaps": 0
+        },
+        "src/features/eds/ui/hooks/useStorefrontSetup.ts": {
+            "score": 91,
+            "killed": 91,
+            "survived": 9,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 8,
+                "branch": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 1,
+            "equivalent": 9,
+            "openGaps": 0
+        },
+        "src/features/mesh/services/deployedMeshConfig.ts": {
+            "score": 88.89,
+            "killed": 56,
+            "survived": 7,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 7
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/mesh/services/meshDeployBaseline.ts": {
+            "score": 96.88,
+            "killed": 31,
+            "survived": 1,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/mesh/services/meshEnvVars.ts": {
+            "score": 88.06,
+            "killed": 59,
+            "survived": 8,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 5,
+                "other": 1,
+                "block": 2
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 7,
+            "equivalent": 8,
+            "openGaps": 0
+        },
+        "src/features/mesh/services/meshSourceHash.ts": {
+            "score": 97.22,
+            "killed": 35,
+            "survived": 1,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/eds/services/storefrontConfigParams.ts": {
+            "score": 96.23,
+            "killed": 51,
+            "survived": 1,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 1
+            },
+            "uncoveredCategories": {
+                "string": 1
+            },
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/eds/services/catalogEnumeration.ts": {
+            "score": 91.8,
+            "killed": 53,
+            "survived": 4,
+            "noCoverage": 1,
+            "timeout": 3,
+            "survivorCategories": {
+                "optionalChain": 1,
+                "branch": 3
+            },
+            "uncoveredCategories": {
+                "logPresentation": 1
+            },
+            "highValueSurvivors": 3,
+            "equivalent": 4,
+            "openGaps": 0
+        },
+        "src/features/eds/services/catalogSampleSku.ts": {
+            "score": 69.12,
+            "killed": 47,
+            "survived": 19,
+            "noCoverage": 2,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 4,
+                "branch": 3,
+                "logPresentation": 9,
+                "block": 3
+            },
+            "uncoveredCategories": {
+                "logPresentation": 2
+            },
+            "highValueSurvivors": 6,
+            "equivalent": 6,
+            "openGaps": 0
+        },
+        "src/features/eds/services/storefrontIdentityGuard.ts": {
+            "score": 100,
+            "killed": 36,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/projects-dashboard/services/deletionConfirmation.ts": {
+            "score": 77.61,
+            "killed": 100,
+            "survived": 30,
+            "noCoverage": 0,
+            "timeout": 4,
+            "survivorCategories": {
+                "string": 14,
+                "other": 2,
+                "branch": 8,
+                "optionalChain": 6
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 8,
+            "equivalent": 16,
+            "openGaps": 0
+        },
+        "src/features/projects-dashboard/services/edsExternalCleanup.ts": {
+            "score": 92.76,
+            "killed": 141,
+            "survived": 11,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 4,
+                "optionalChain": 3,
+                "other": 1,
+                "logPresentation": 3
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 5,
+            "openGaps": 0
+        },
+        "src/features/eds/services/blockLibraryComponentMerge.ts": {
+            "score": 97.72,
+            "killed": 214,
+            "survived": 5,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 3,
+                "branch": 2
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 2,
+            "equivalent": 5,
+            "openGaps": 0
+        },
+        "src/features/data-installer/ui/components/importModalView.ts": {
+            "score": 100,
+            "killed": 106,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/eds/services/storefront/storefrontContentRepublishService.ts": {
+            "score": 72.41,
+            "killed": 42,
+            "survived": 16,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 6,
+                "logPresentation": 6,
+                "block": 4
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 10,
+            "equivalent": 10,
+            "openGaps": 0
+        },
+        "src/features/eds/services/storefront/storefrontRepublishService.ts": {
+            "score": 88.43,
+            "killed": 107,
+            "survived": 14,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 10,
+                "branch": 3,
+                "block": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 4,
+            "equivalent": 4,
+            "openGaps": 0
+        },
+        "src/features/eds/ui/steps/DefaultBranchNotice.tsx": {
+            "score": 100,
+            "killed": 13,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/eds/ui/steps/NewRepoForm.tsx": {
+            "score": 100,
+            "killed": 42,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/eds/ui/steps/ResetToTemplateOption.tsx": {
+            "score": 100,
+            "killed": 24,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/eds/ui/steps/repoSelectionInline.helpers.ts": {
+            "score": 100,
+            "killed": 78,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/eds/ui/hooks/useRepoCreation.ts": {
+            "score": 97.5,
+            "killed": 78,
+            "survived": 2,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 1,
+                "logPresentation": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 1,
+            "openGaps": 0
+        },
+        "src/features/eds/ui/hooks/useRepoReadiness.ts": {
+            "score": 97.22,
+            "killed": 35,
+            "survived": 1,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "optionalChain": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 1,
+            "openGaps": 0
+        },
+        "src/features/authentication/services/adobeConsoleWorkspaceOps.ts": {
+            "score": 85.64,
+            "killed": 160,
+            "survived": 26,
+            "noCoverage": 1,
+            "timeout": 1,
+            "survivorCategories": {
+                "string": 1,
+                "logPresentation": 16,
+                "block": 2,
+                "branch": 5,
+                "other": 2
+            },
+            "uncoveredCategories": {
+                "string": 1
+            },
+            "highValueSurvivors": 7,
+            "equivalent": 9,
+            "openGaps": 0
+        },
+        "src/features/authentication/services/adobeConsoleProjectOps.ts": {
+            "score": 86.96,
+            "killed": 100,
+            "survived": 15,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 14,
+                "block": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 1,
+            "equivalent": 1,
+            "openGaps": 0
+        },
+        "src/features/updates/services/updateSelections.ts": {
+            "score": 93.42,
+            "killed": 71,
+            "survived": 5,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 5
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/eds/handlers/daLive/daLiveAuthGuard.ts": {
+            "score": 94.23,
+            "killed": 49,
+            "survived": 3,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 1,
+                "logPresentation": 2
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/eds/services/daLive/daLiveTokenValidation.ts": {
+            "score": 100,
+            "killed": 67,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/dashboard/ui/components/BuildZone.tsx": {
+            "score": 100,
+            "killed": 11,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/eds/services/github/githubWriteRejection.ts": {
+            "score": 92.79,
+            "killed": 103,
+            "survived": 8,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 2,
+                "optionalChain": 4,
+                "string": 2
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 6,
+            "openGaps": 0
+        },
+        "src/core/ui/components/selection/apiAccessFilters.ts": {
+            "score": 100,
+            "killed": 79,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/core/utils/jwtPayload.ts": {
+            "score": 86.67,
+            "killed": 13,
+            "survived": 2,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 1,
+                "block": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 2,
+            "equivalent": 2,
+            "openGaps": 0
+        },
+        "src/features/dashboard/commands/showIntegrations.ts": {
+            "score": 98.25,
+            "killed": 56,
+            "survived": 1,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 1,
+            "equivalent": 1,
+            "openGaps": 0
+        },
+        "src/commands/bundledPanelCommand.ts": {
+            "score": 100,
+            "killed": 16,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/projects-dashboard/handlers/projectFromPath.ts": {
+            "score": 100,
+            "killed": 36,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 1,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/authentication/handlers/consoleCreateGate.ts": {
+            "score": 100,
+            "killed": 41,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/project-creation/services/componentDefinitionEntry.ts": {
+            "score": 100,
+            "killed": 5,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/data-installer/handlers/datapackWriteGate.ts": {
+            "score": 100,
+            "killed": 44,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
         }
     }
 }

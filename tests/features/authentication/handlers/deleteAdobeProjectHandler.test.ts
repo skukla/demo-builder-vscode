@@ -23,7 +23,6 @@ import {
 } from '@/features/authentication/handlers/deleteAdobeProjectHandler';
 import { teardownConsoleProject } from '@/features/authentication/services/consoleProjectTeardown';
 import type { ConsoleProjectTeardownResult } from '@/features/authentication/services/consoleProjectTeardown';
-import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { ErrorCode } from '@/types/errorCodes';
 import {
     makeJwt,
@@ -31,6 +30,7 @@ import {
     TEST_USER_ID as USER_ID,
 } from '../imsTestTokens';
 import { createMockContext } from './projectHandlers.testUtils';
+import { createMockAuthenticationService, entityServicesOf } from '../../../helpers/authenticationServiceFake';
 
 jest.mock('@/core/di/serviceLocator');
 jest.mock('@/core/validation/validators/AdobeResourceValidator');
@@ -100,13 +100,13 @@ function createDeleteContext() {
     // The target project is present and owned by the current user by default,
     // so the ownership gate passes unless a test overrides it.
     context.authManager.getProjects.mockResolvedValue([OWNED_PROJECT]);
-    context.authManager.getCachedProject = jest.fn().mockReturnValue(undefined);
-    context.authManager.clearConsoleContext = jest.fn().mockResolvedValue(undefined);
-    context.authManager.getWorkspaces = jest.fn().mockResolvedValue([]);
-    context.authManager.getWorkspaceS2SCredential = jest.fn();
-    context.authManager.createWorkspaceS2SCredentialFor = jest.fn();
-    context.authManager.deleteConsoleProject = jest.fn();
-    context.authManager.subscribeOAuthServerToServerIntegrationToServices = jest.fn();
+    context.authManager.getCacheManager().getCachedProject = jest.fn().mockReturnValue(undefined);
+    entityServicesOf(context.authManager).selector.clearConsoleContext = jest.fn().mockResolvedValue(undefined);
+    entityServicesOf(context.authManager).workspaceReads.getWorkspaces = jest.fn().mockResolvedValue([]);
+    entityServicesOf(context.authManager).credentials.getWorkspaceS2SCredential = jest.fn();
+    entityServicesOf(context.authManager).credentials.createWorkspaceS2SCredentialFor = jest.fn();
+    entityServicesOf(context.authManager).projectOps.deleteConsoleProject = jest.fn();
+    entityServicesOf(context.authManager).orgServices.subscribeOAuthServerToServerIntegrationToServices = jest.fn();
     context.authManager.getTokenManager = jest.fn().mockReturnValue({
         inspectToken: jest
             .fn()
@@ -490,48 +490,48 @@ describe('handleDeleteAdobeProject', () => {
         });
 
         it('clears the console selection when the cached project IS the deleted one', async () => {
-            mockContext.authManager.getCachedProject.mockReturnValue({
+            jest.mocked(mockContext.authManager.getCacheManager().getCachedProject).mockReturnValue({
                 id: 'proj-1',
                 name: 'My Project',
             });
 
             await handleDeleteAdobeProject(mockContext, PAYLOAD);
 
-            expect(mockContext.authManager.clearConsoleContext).toHaveBeenCalledTimes(1);
+            expect(entityServicesOf(mockContext.authManager).selector.clearConsoleContext).toHaveBeenCalledTimes(1);
         });
 
         it('does NOT clear the selection when the teardown says not to, even for the cached project', async () => {
             mockTeardown.mockResolvedValue({ ...DELETED_RESULT, shouldClearConsoleSelection: false });
-            mockContext.authManager.getCachedProject.mockReturnValue({ id: 'proj-1', name: 'My Project' });
+            jest.mocked(mockContext.authManager.getCacheManager().getCachedProject).mockReturnValue({ id: 'proj-1', name: 'My Project' });
 
             await handleDeleteAdobeProject(mockContext, PAYLOAD);
 
-            expect(mockContext.authManager.clearConsoleContext).not.toHaveBeenCalled();
+            expect(entityServicesOf(mockContext.authManager).selector.clearConsoleContext).not.toHaveBeenCalled();
         });
 
         it('does NOT clear the console selection when the cached project differs', async () => {
-            mockContext.authManager.getCachedProject.mockReturnValue({
+            jest.mocked(mockContext.authManager.getCacheManager().getCachedProject).mockReturnValue({
                 id: 'proj-other',
                 name: 'Other',
             });
 
             await handleDeleteAdobeProject(mockContext, PAYLOAD);
 
-            expect(mockContext.authManager.clearConsoleContext).not.toHaveBeenCalled();
+            expect(entityServicesOf(mockContext.authManager).selector.clearConsoleContext).not.toHaveBeenCalled();
         });
 
         it('does NOT clear the console selection when nothing is cached', async () => {
             await handleDeleteAdobeProject(mockContext, PAYLOAD);
 
-            expect(mockContext.authManager.clearConsoleContext).not.toHaveBeenCalled();
+            expect(entityServicesOf(mockContext.authManager).selector.clearConsoleContext).not.toHaveBeenCalled();
         });
 
         it('still succeeds when the selection clear fails (best-effort)', async () => {
-            mockContext.authManager.getCachedProject.mockReturnValue({
+            jest.mocked(mockContext.authManager.getCacheManager().getCachedProject).mockReturnValue({
                 id: 'proj-1',
                 name: 'My Project',
             });
-            mockContext.authManager.clearConsoleContext.mockRejectedValue(
+            entityServicesOf(mockContext.authManager).selector.clearConsoleContext.mockRejectedValue(
                 new Error('clear failed')
             );
 
@@ -578,14 +578,14 @@ describe('handleDeleteAdobeProject', () => {
         });
 
         it('neither clears the selection nor refreshes the project list', async () => {
-            mockContext.authManager.getCachedProject.mockReturnValue({
+            jest.mocked(mockContext.authManager.getCacheManager().getCachedProject).mockReturnValue({
                 id: 'proj-1',
                 name: 'My Project',
             });
 
             await handleDeleteAdobeProject(mockContext, PAYLOAD);
 
-            expect(mockContext.authManager.clearConsoleContext).not.toHaveBeenCalled();
+            expect(entityServicesOf(mockContext.authManager).selector.clearConsoleContext).not.toHaveBeenCalled();
             // Exactly ONE getProjects call — the ownership gate; no refresh fetch or push.
             expect(mockContext.authManager.getProjects).toHaveBeenCalledTimes(1);
             expect(mockContext.sendMessage).not.toHaveBeenCalledWith(
@@ -617,23 +617,33 @@ describe('createTeardownDeps', () => {
     const inspectToken = jest.fn();
 
     const createAuthService = () =>
-        ({
-            getWorkspaces: jest.fn().mockResolvedValue([
-                { id: 'ws-1', name: 'Stage', title: 'Stage' },
-                { id: 'ws-2', name: 'Production', title: 'Production' },
-            ]),
-            getWorkspaceS2SCredential: jest
-                .fn()
-                .mockResolvedValue({ clientId: 'cid', idIntegration: 'iid' }),
-            createWorkspaceS2SCredentialFor: jest
-                .fn()
-                .mockResolvedValue({ clientId: 'cid2', idIntegration: 'iid2' }),
-            subscribeOAuthServerToServerIntegrationToServices: jest
-                .fn()
-                .mockResolvedValue(undefined),
-            deleteConsoleProject: jest.fn().mockResolvedValue(undefined),
-            getTokenManager: jest.fn().mockReturnValue({ inspectToken }),
-        }) as unknown as AuthenticationService;
+        createMockAuthenticationService(
+            { getTokenManager: jest.fn().mockReturnValue({ inspectToken }) },
+            {
+                entities: {
+                    credentials: {
+                        getWorkspaceS2SCredential: jest
+                            .fn()
+                            .mockResolvedValue({ clientId: 'cid', idIntegration: 'iid' }),
+                        createWorkspaceS2SCredentialFor: jest
+                            .fn()
+                            .mockResolvedValue({ clientId: 'cid2', idIntegration: 'iid2' }),
+                    },
+                    orgServices: {
+                        subscribeOAuthServerToServerIntegrationToServices: jest
+                            .fn()
+                            .mockResolvedValue(undefined),
+                    },
+                    workspaceReads: {
+                        getWorkspaces: jest.fn().mockResolvedValue([
+                            { id: 'ws-1', name: 'Stage', title: 'Stage' },
+                            { id: 'ws-2', name: 'Production', title: 'Production' },
+                        ]),
+                    },
+                    projectOps: { deleteConsoleProject: jest.fn().mockResolvedValue(undefined) },
+                },
+            },
+        );
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -646,7 +656,7 @@ describe('createTeardownDeps', () => {
 
         await deps.subscribeManagementApi('org-1', 'integ-1');
 
-        expect(authService.subscribeOAuthServerToServerIntegrationToServices).toHaveBeenCalledWith(
+        expect(entityServicesOf(authService).orgServices.subscribeOAuthServerToServerIntegrationToServices).toHaveBeenCalledWith(
             'org-1',
             'integ-1',
             [{ sdkCode: 'AdobeIOManagementAPISDK', licenseConfigs: null, roles: null }]
@@ -679,7 +689,7 @@ describe('createTeardownDeps', () => {
 
         const workspaces = await deps.getWorkspaces({ orgId: 'org-1', projectId: 'proj-1' });
 
-        expect(authService.getWorkspaces).toHaveBeenCalledWith({
+        expect(entityServicesOf(authService).workspaceReads.getWorkspaces).toHaveBeenCalledWith({
             orgId: 'org-1',
             projectId: 'proj-1',
         });
@@ -703,9 +713,9 @@ describe('createTeardownDeps', () => {
         });
         await deps.deleteConsoleProject('o', 'p');
 
-        expect(authService.getWorkspaceS2SCredential).toHaveBeenCalledWith('o', 'p', 'w');
-        expect(authService.createWorkspaceS2SCredentialFor).toHaveBeenCalledWith('o', 'p', 'w');
-        expect(authService.deleteConsoleProject).toHaveBeenCalledWith('o', 'p');
+        expect(entityServicesOf(authService).credentials.getWorkspaceS2SCredential).toHaveBeenCalledWith('o', 'p', 'w');
+        expect(entityServicesOf(authService).credentials.createWorkspaceS2SCredentialFor).toHaveBeenCalledWith('o', 'p', 'w');
+        expect(entityServicesOf(authService).projectOps.deleteConsoleProject).toHaveBeenCalledWith('o', 'p');
     });
 
     it('createEventsClient mints a client exposing the teardown surface', () => {

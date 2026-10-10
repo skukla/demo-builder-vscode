@@ -9,7 +9,7 @@
  * handed out to callers that clear its IMS + email-domain guard.
  *
  * **This never throws, and never blocks for long.** It runs in front of a modal
- * (`edsResetUI.confirmSampleDataRemoval`) and inside project creation
+ * (`edsResetSampleData.beginSampleDataCredentialCheck`) and inside project creation
  * (`sampleDataInstallDeps`), so every failure — no session, 403, timeout, a
  * gateway HTML page where JSON was expected — comes back as `undefined`, meaning
  * "no credential from here". The caller then reports the same missing-credential
@@ -229,11 +229,13 @@ export function createProjectCredentialBroker(deps: ProjectBrokerDeps): Credenti
 /**
  * The broker for a project, built from a handler context.
  *
- * Four of the five credential call sites have a `HandlerContext` and would
- * otherwise assemble these three arguments identically; the fifth
- * (`edsResetUI.confirmSampleDataRemoval`) has no context and calls
- * {@link createProjectCredentialBroker} directly with a `ServiceLocator` auth
- * service. Extracted at the fourth caller rather than the second, and it exists
+ * All five credential call sites have a `HandlerContext` and would otherwise
+ * assemble these three arguments identically; each reaches this through
+ * {@link resolveProjectCredentials} (checked 2026-10-08: the export, import and
+ * import-target handlers, `sampleDataInstallDeps`, and the reset's
+ * `edsResetSampleData.beginSampleDataCredentialCheck`, which once had no context
+ * and called {@link createProjectCredentialBroker} directly). Extracted at the
+ * fourth caller rather than the second, and it exists
  * so the org argument in particular cannot drift between surfaces — a project
  * resolving its credential from a different service depending on which screen
  * asked would be invisible until it wrote to the wrong instance.

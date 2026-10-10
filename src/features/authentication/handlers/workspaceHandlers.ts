@@ -11,6 +11,10 @@ import { withTimeout } from '@/core/utils/promiseUtils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { isTimeoutError } from '@/core/utils/timeoutError';
 import { validateWorkspaceId } from '@/core/validation/validators/AdobeResourceValidator';
+import {
+    gateConsoleCreate,
+    type ConsoleCreatePayload,
+} from '@/features/authentication/handlers/consoleCreateGate';
 import { isConsoleOpFailure, type AdobeWorkspace } from '@/features/authentication/services/types';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -29,7 +33,8 @@ export async function handleGetWorkspaces(
 ): Promise<DataResult<AdobeWorkspace[]>> {
     try {
         // Send loading status with sub-message
-        const currentProject = await context.authManager?.getCurrentProject();
+        const currentProject = await context.authManager?.getEntityServices()
+            .then((units) => units.resolver.getCurrentProject());
         if (currentProject) {
             await context.sendMessage('workspace-loading-status', {
                 isLoading: true,
@@ -40,7 +45,8 @@ export async function handleGetWorkspaces(
 
         // Wrap getWorkspaces with timeout (30 seconds). Thread the selected org + project
         // (webview state) so the fetch targets them, not the stale in-memory cache.
-        const workspacesPromise = context.authManager?.getWorkspaces(payload);
+        const workspacesPromise = context.authManager?.getEntityServices()
+            .then((units) => units.workspaceReads.getWorkspaces(payload));
         if (!workspacesPromise) {
             throw new Error('Auth manager not available');
         }
@@ -138,34 +144,17 @@ export async function handleSelectWorkspace(
  */
 export async function handleCreateAdobeWorkspace(
     context: HandlerContext,
-    payload: { name: string; description?: string; projectId?: string },
+    payload: ConsoleCreatePayload & { projectId?: string },
 ): Promise<HandlerResponse> {
-    if (!context.authManager) {
-        return { success: false, error: 'Authentication not available' };
-    }
-
-    const name = (payload?.name ?? '').trim();
-    const description = payload?.description ?? '';
-
     try {
-        // Defensive permission re-check (guards a stale probe) → UI drops to Flow B.
-        const { hasPermissions, error: permError } =
-            await context.authManager.testDeveloperPermissions();
-        if (!hasPermissions) {
-            return {
-                success: false,
-                code: ErrorCode.AUTH_FORBIDDEN,
-                error:
-                    permError ||
-                    'You do not have permission to create workspaces in this organization. Select an existing workspace instead.',
-            };
+        const gate = await gateConsoleCreate(context, payload, 'workspace');
+        if (gate.refusal) {
+            return gate.refusal;
         }
+        const { authManager, name, description } = gate;
 
-        if (!name) {
-            return { success: false, error: 'Workspace name is required.' };
-        }
-
-        const workspace = await context.authManager.createWorkspace(name, description);
+        const { workspaceOps } = await authManager.getEntityServices();
+        const workspace = await workspaceOps.createWorkspace(name, description);
         if (isConsoleOpFailure(workspace)) {
             // The service carries Console's own reason now — surface it instead
             // of the old quota guess, which the measured failure never matched.
@@ -184,7 +173,7 @@ export async function handleCreateAdobeWorkspace(
         // to the stale-org CLI.
         let workspaces: AdobeWorkspace[] | undefined;
         try {
-            workspaces = await context.authManager.getWorkspaces({
+            workspaces = await (await authManager.getEntityServices()).workspaceReads.getWorkspaces({
                 projectId: payload?.projectId,
             });
         } catch (refreshError) {

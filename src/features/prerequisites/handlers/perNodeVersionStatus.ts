@@ -5,11 +5,61 @@
  * check command under each required major and reports which have it.
  */
 
+import type { PerNodeVersionStatusEntry } from './prerequisiteStatusMessages';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
+import { toolInstalledUnder } from '@/core/shell/ensureNodeVersion';
+import { listNodeFolderMajors } from '@/core/shell/nodeFolder';
 import { formatDuration } from '@/core/utils/timeFormatting';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { HandlerContext } from '@/types/handlers';
+
+/**
+ * What the check and continue flows learn about a per-Node tool: which required
+ * majors have it, and whether any is missing.
+ */
+export interface PerNodeVariantStatus {
+    perNodeVariantMissing: boolean;
+    missingVariantMajors: string[];
+    perNodeVersionStatus: PerNodeVersionStatusEntry[];
+}
+
+/**
+ * The status when the main tool is NOT installed at all: every required major is
+ * missing, and nothing needs to run under fnm to know it.
+ */
+function buildUninstalledPerNodeStatus(requiredMajors: string[]): PerNodeVariantStatus {
+    const perNodeVersionStatus = requiredMajors.map((major) => ({
+        version: `Node ${major}`,
+        major,
+        component: '',
+        installed: false,
+    }));
+    return { perNodeVariantMissing: true, missingVariantMajors: [...requiredMajors], perNodeVersionStatus };
+}
+
+/**
+ * The decision the check and continue flows share for a per-Node tool: no required
+ * majors means nothing to report; a tool that is not installed is missing everywhere;
+ * otherwise the flow's own `whenInstalled` says which majors have it (the first pass
+ * reuses cached per-version results, the continue pass re-checks).
+ *
+ * `requiredMajors` is undefined when the prerequisite is not per-Node or no Node
+ * versions are required. The caller decides that, because it reads the handlers'
+ * shared helpers (hasNodeVersions, perNodeVersionMajors) through their one import path.
+ */
+export async function resolvePerNodeVariantStatus(
+    requiredMajors: string[] | undefined,
+    installed: boolean,
+    whenInstalled: (requiredMajors: string[]) => Promise<PerNodeVariantStatus>,
+): Promise<PerNodeVariantStatus> {
+    if (!requiredMajors) {
+        return { perNodeVariantMissing: false, missingVariantMajors: [], perNodeVersionStatus: [] };
+    }
+    if (!installed) {
+        return buildUninstalledPerNodeStatus(requiredMajors);
+    }
+    return whenInstalled(requiredMajors);
+}
 
 /**
  * Check per-node-version prerequisite status
@@ -50,16 +100,7 @@ export async function checkPerNodeVersionStatus(
     // Narrowed to the one field this reads, so PrerequisitesManager's minimal
     // context calls it without a widening cast.
     context: Pick<HandlerContext, 'logger'>,
-): Promise<{
-    perNodeVersionStatus: {
-        version: string;
-        major: string;
-        component: string;
-        installed: boolean;
-    }[];
-    perNodeVariantMissing: boolean;
-    missingVariantMajors: string[];
-}> {
+): Promise<PerNodeVariantStatus> {
     if (!prereq.perNodeVersion || nodeVersions.length === 0) {
         return {
             perNodeVersionStatus: [],
@@ -68,32 +109,13 @@ export async function checkPerNodeVersionStatus(
         };
     }
 
-    const perNodeVersionStatus: {
-        version: string;
-        major: string;
-        component: string;
-        installed: boolean;
-    }[] = [];
+    const perNodeVersionStatus: PerNodeVersionStatusEntry[] = [];
     const missingVariantMajors: string[] = [];
     const commandManager = ServiceLocator.getCommandExecutor();
 
     // CRITICAL: Get list of actually installed Node versions FIRST
     // This prevents false positives when fnm falls back to other versions
-    const fnmListResult = await commandManager.execute('fnm list', {
-        timeout: TIMEOUTS.PREREQUISITE_CHECK,
-        shell: DEFAULT_SHELL, // Add shell context for fnm availability (fixes ENOENT errors)
-    });
-    const installedVersions = fnmListResult.stdout
-        .trim()
-        .split('\n')
-        .filter((v) => v.trim());
-    const installedMajors = new Set<string>();
-    for (const version of installedVersions) {
-        const match = /v?(\d+)/.exec(version);
-        if (match) {
-            installedMajors.add(match[1]);
-        }
-    }
+    const installedMajors = new Set(await listNodeFolderMajors(commandManager));
 
     // Helper to create version status object
     const createVersionStatus = (major: string, installed: boolean, component = '') => ({
@@ -129,7 +151,10 @@ export async function checkPerNodeVersionStatus(
             // CRITICAL BUG FIX: Check exit code to determine command success
             // Exit code 0 = success, non-zero = failure (e.g., 127 = command not found)
             // Previously used try-catch which incorrectly treated non-zero exit codes as success
-            if (result.code === 0) {
+            // A 0 can come from a copy under ANOTHER Node on the PATH, so it counts only
+            // when the tool sits beside THIS Node (PR-1a: the one answer the ensure uses).
+            const binary = prereq.check.command.trim().split(/\s+/)[0];
+            if (result.code === 0 && (await toolInstalledUnder(commandManager, major, binary))) {
                 // Scenario 2: Tool is installed and working
                 // Parse CLI version if regex provided
                 let cliVersion = '';

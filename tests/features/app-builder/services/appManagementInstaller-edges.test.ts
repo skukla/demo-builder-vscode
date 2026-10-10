@@ -404,6 +404,24 @@ describe('installAppManagementApp — the guards before any call', () => {
         expect(result.detail).toContain('workspaceName');
         expect(client.setAssociation).not.toHaveBeenCalled();
     });
+
+    it('stops with no sign-in, naming the install call and building no client', async () => {
+        const clientFactory = jest.fn();
+        const deps = makeInstallerDeps(makeInstallerClient(), {
+            getAuth: jest.fn().mockResolvedValue(undefined),
+            clientFactory,
+        });
+
+        const result = await installAppManagementApp(paasProject(), 'app', DEPLOYED_URLS, deps);
+
+        expect(result).toEqual({
+            status: 'failed',
+            detail:
+                'No Adobe sign-in is available to authenticate the install call. ' +
+                APP_MANAGEMENT_HANDS_BACK,
+        });
+        expect(clientFactory).not.toHaveBeenCalled();
+    });
 });
 
 describe('installAppManagementApp — the default client', () => {
@@ -438,5 +456,35 @@ describe('installAppManagementApp — the default client', () => {
         } finally {
             global.fetch = originalFetch;
         }
+    });
+});
+
+describe('installAppManagementApp — a timed-out call still running when the poll gives up', () => {
+    it('hands back as still running, after saying it is following the installation', async () => {
+        const timeout = Object.assign(new Error('The operation was aborted due to timeout'), {
+            name: 'TimeoutError',
+        });
+        const client = makeInstallerClient({
+            reconcileInstallation: jest.fn().mockRejectedValue(timeout),
+            getInstallationState: jest.fn().mockResolvedValue({ id: 'i1', status: 'in-progress' }),
+        });
+        const onProgress = jest.fn();
+
+        const result = await installAppManagementApp(
+            paasProject(), 'app',
+            DEPLOYED_URLS,
+            makeInstallerDeps(client, { onProgress })
+        );
+
+        expect(result).toEqual({
+            status: 'failed',
+            detail:
+                'The install call timed out and the installation is still running. ' +
+                APP_MANAGEMENT_HANDS_BACK,
+        });
+        expect(onProgress).toHaveBeenLastCalledWith(
+            'The install call is taking long; following the installation instead'
+        );
+        expect(client.getInstallationState).toHaveBeenCalledTimes(POLL_ROUNDS);
     });
 });

@@ -17,7 +17,7 @@ import {
     type TeardownItem,
     type TeardownProgress,
 } from '@/features/authentication/services/consoleProjectTeardown';
-import type { RawProvider } from '@/features/authentication/services/ioEventsClient';
+import type { RawProvider } from '@/features/authentication/services/ioEventsTransport';
 import {
     TARGET,
     CRED_WS1,

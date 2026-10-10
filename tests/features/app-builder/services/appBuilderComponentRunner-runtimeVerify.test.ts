@@ -26,10 +26,11 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
     listDeclaredTriggersAndRules: (...a: unknown[]) => mockListDeclaredTriggersAndRules(...a),
 }));
 
-import { removeAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
+import { removeAppBuilderComponent } from '@/features/app-builder/services/appBuilderRemoveRun';
 import { deriveOwPackage } from '@/features/app-builder/services/owPackageName';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { createDeps, createProject } from './appBuilderComponentRunner.testUtils';
 
 const ID = 'app-builder-shell';
@@ -251,7 +252,7 @@ describe('post-undeploy runtime verification', () => {
         expect(deps.commandManager.execute).toHaveBeenCalledWith(
             'aio runtime package list --json',
             {
-                useNodeVersion: 'auto',
+                useNodeVersion: demoBuilderNode(),
                 enhancePath: true,
                 shell: true,
                 timeout: TIMEOUTS.LONG,
@@ -272,7 +273,7 @@ describe('post-undeploy runtime verification', () => {
         expect(deps.commandManager.execute).toHaveBeenCalledWith(
             `aio runtime package delete ${owPackage} --recursive`,
             {
-                useNodeVersion: 'auto',
+                useNodeVersion: demoBuilderNode(),
                 enhancePath: true,
                 shell: true,
                 timeout: TIMEOUTS.LONG,

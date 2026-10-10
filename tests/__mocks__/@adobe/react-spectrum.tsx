@@ -310,11 +310,14 @@ export const Checkbox: React.FC<any> = ({
 
 // Button mock - handles both onPress (Spectrum) and onClick (DOM)
 // Uses forwardRef to support buttonRef.current.focus()
+// `variant` is surfaced as `data-variant` (as StatusLight and Badge do): which
+// button is the accent one is a decision, and filtering it made it unobservable.
 export const Button = React.forwardRef<HTMLButtonElement, any>(
-    ({ children, onPress, onClick, isDisabled, ...props }, ref) => (
+    ({ children, onPress, onClick, isDisabled, variant, ...props }, ref) => (
         <button
             ref={ref}
             data-testid="spectrum-button"
+            data-variant={variant}
             tabIndex={0}
             onClick={(e) => {
                 onClick?.(e);

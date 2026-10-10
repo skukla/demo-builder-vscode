@@ -10,6 +10,7 @@
 import './installHandler.mocks';
 
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import * as shared from '@/features/prerequisites/handlers/shared';
 import { handleInstallPrerequisite } from '@/features/prerequisites/handlers/installHandler';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -38,6 +39,8 @@ function pluginRunVersions(execute: jest.Mock, command: string): (string | undef
 }
 
 const PLUGIN_CMD = 'aio plugins:install @adobe/aio-cli-plugin-api-mesh';
+/** The Node a per-node-version prerequisite and its plugins live under (`perNodeVersionMajors`). */
+const CLI_NODE = demoBuilderNode();
 
 function prereqWithPlugin(over: Partial<PrerequisiteDefinition> = {}, requiredFor?: string[]): PrerequisiteDefinition {
     return {
@@ -72,16 +75,21 @@ beforeEach(() => {
     (context.prereqManager!.getInstallSteps as jest.Mock).mockReturnValue({
         steps: [{ name: 'Install CLI', message: 'Installing CLI', commands: [] }],
     });
-    // Both mapped majors are missing the tool, and both are present in fnm.
+    // The tool is missing under its own Node, which fnm has.
     (shared.checkPerNodeVersionStatus as jest.Mock).mockResolvedValue({
-        perNodeVersionStatus: [
-            { version: 'Node 18', component: '', installed: false },
-            { version: 'Node 20', component: '', installed: false },
-        ],
+        perNodeVersionStatus: [{ version: `Node ${CLI_NODE}`, component: '', installed: false }],
         perNodeVariantMissing: true,
-        missingVariantMajors: ['18', '20'],
+        missingVariantMajors: [CLI_NODE],
     });
 });
+
+/** fnm without the CLI's Node: only 18 and 20 are installed. */
+function withoutCliNode(): void {
+    const base = execute.getMockImplementation()!;
+    execute.mockImplementation((cmd: string, opts?: unknown) => (cmd === 'fnm list'
+        ? Promise.resolve({ stdout: 'v18.20.8\nv20.19.5\n', stderr: '', code: 0, duration: 1 })
+        : base(cmd, opts)));
+}
 
 function aim(prereq: PrerequisiteDefinition): void {
     context.sharedState.currentPrerequisiteStates = new Map([
@@ -90,36 +98,30 @@ function aim(prereq: PrerequisiteDefinition): void {
 }
 
 describe('which Node versions a plugin is installed for', () => {
-    it('installs it only for the majors whose component declares it', async () => {
+    it("installs it under the CLI's own Node, whatever component its requiredFor names", async () => {
         aim(prereqWithPlugin({}, ['React App']));
 
         await handleInstallPrerequisite(context, { prereqId: 0 });
 
-        expect(pluginRunVersions(execute, PLUGIN_CMD)).toStrictEqual(['18']);
+        expect(pluginRunVersions(execute, PLUGIN_CMD)).toStrictEqual(shared.perNodeVersionMajors());
+        expect(shared.getNodeVersionMapping).not.toHaveBeenCalled();
     });
 
-    it('installs it for every major whose component declares it', async () => {
-        aim(prereqWithPlugin({}, ['React App', 'Node Backend']));
-
-        await handleInstallPrerequisite(context, { prereqId: 0 });
-
-        expect(pluginRunVersions(execute, PLUGIN_CMD)).toStrictEqual(['18', '20']);
-    });
-
-    it('falls back to the first target version when the plugin names no component', async () => {
+    it("installs it under the CLI's own Node when the plugin names no component", async () => {
         aim(prereqWithPlugin());
 
         await handleInstallPrerequisite(context, { prereqId: 0 });
 
-        expect(pluginRunVersions(execute, PLUGIN_CMD)).toStrictEqual(['18']);
+        expect(pluginRunVersions(execute, PLUGIN_CMD)).toStrictEqual([CLI_NODE]);
     });
 
-    it('falls back to the first target version when the plugin names an unmapped component', async () => {
-        aim(prereqWithPlugin({}, ['something-else']));
+    it("installs it under the CLI's own Node even when no component requires Node", async () => {
+        (shared.getNodeVersionMapping as jest.Mock).mockResolvedValue({});
+        aim(prereqWithPlugin({}, ['React App']));
 
         await handleInstallPrerequisite(context, { prereqId: 0 });
 
-        expect(pluginRunVersions(execute, PLUGIN_CMD)).toStrictEqual(['18']);
+        expect(pluginRunVersions(execute, PLUGIN_CMD)).toStrictEqual([CLI_NODE]);
     });
 
     it('installs it once, with NO Node version, for a tool that is not per-node-version', async () => {
@@ -130,9 +132,10 @@ describe('which Node versions a plugin is installed for', () => {
         expect(pluginRunVersions(execute, PLUGIN_CMD)).toStrictEqual([undefined]);
     });
 
-    it('installs it once, with NO Node version, when no component requires Node', async () => {
-        (shared.getNodeVersionMapping as jest.Mock).mockResolvedValue({});
-        (shared.getRequiredNodeVersions as jest.Mock).mockResolvedValue([]);
+    it('installs the plugin beside the tool, on the Node the caller named', async () => {
+        // The tool installs under Node 20; its plugin goes with it, not to the CLI's
+        // default Node, so a CLI installed for a named Node is complete.
+        withoutCliNode();
         (shared.checkPerNodeVersionStatus as jest.Mock).mockResolvedValue({
             perNodeVersionStatus: [{ version: 'Node 20', component: '', installed: false }],
             perNodeVariantMissing: true,
@@ -140,22 +143,30 @@ describe('which Node versions a plugin is installed for', () => {
         });
         aim(prereqWithPlugin({}, ['React App']));
 
-        await handleInstallPrerequisite(context, { prereqId: 0 });
+        const result = await handleInstallPrerequisite(context, { prereqId: 0, version: '20' });
 
-        expect(pluginRunVersions(execute, PLUGIN_CMD)).toStrictEqual([undefined]);
+        expect((context.progressUnifier!.executeStep as jest.Mock).mock.calls.map((c) => c[4]))
+            .toEqual([{ nodeVersion: '20' }]);
+        expect(pluginRunVersions(execute, PLUGIN_CMD)).toStrictEqual(['20']);
+        expect(result).toEqual(expect.objectContaining({ success: true }));
     });
 
-    it('skips the plugin entirely when the majors it needs are not installed in fnm', async () => {
-        // fnm reports 18 and 20; the plugin's component sits on 22.
-        (shared.getNodeVersionMapping as jest.Mock).mockResolvedValue({
-            '18': 'React App', '20': 'Node Backend', '22': 'Edge',
+    it('installs the plugin ONCE when the tool goes under several Nodes (plugins are per user)', async () => {
+        // `aio plugins:install` writes to the SC's user folder, shared by every aio
+        // whatever Node runs it, so a second install would only repeat the first.
+        jest.spyOn(shared, 'perNodeVersionMajors').mockReturnValue(['20', CLI_NODE]);
+        (shared.checkPerNodeVersionStatus as jest.Mock).mockResolvedValue({
+            perNodeVersionStatus: [],
+            perNodeVariantMissing: true,
+            missingVariantMajors: ['20', CLI_NODE],
         });
-        aim(prereqWithPlugin({}, ['Edge']));
+        aim(prereqWithPlugin({}, ['React App']));
 
-        const result = await handleInstallPrerequisite(context, { prereqId: 0 });
+        await handleInstallPrerequisite(context, { prereqId: 0 });
 
-        expect(pluginRunVersions(execute, PLUGIN_CMD)).toStrictEqual([]);
-        expect(result).toEqual(expect.objectContaining({ success: true }));
+        expect((context.progressUnifier!.executeStep as jest.Mock).mock.calls.map((c) => c[4]))
+            .toEqual([{ nodeVersion: '20' }, { nodeVersion: CLI_NODE }]);
+        expect(pluginRunVersions(execute, PLUGIN_CMD)).toStrictEqual(['20']);
     });
 
     it('runs the plugin command with the long timeout', async () => {
@@ -165,7 +176,7 @@ describe('which Node versions a plugin is installed for', () => {
 
         expect(execute).toHaveBeenCalledWith(PLUGIN_CMD, {
             timeout: TIMEOUTS.LONG,
-            useNodeVersion: '18',
+            useNodeVersion: CLI_NODE,
         });
     });
 });
@@ -210,22 +221,22 @@ describe('which majors the tool ITSELF is installed for', () => {
 });
 
 describe('the plugin loop itself', () => {
-    it('does not look up a Node mapping for a prerequisite whose plugin list is empty', async () => {
+    it('does not ask for plugin commands for a prerequisite whose plugin list is empty', async () => {
         aim({
             id: 'git', name: 'Git', description: 'v', check: { command: 'git --version' }, plugins: [],
         });
 
         await handleInstallPrerequisite(context, { prereqId: 0 });
 
-        expect(shared.getNodeVersionMapping).not.toHaveBeenCalled();
+        expect(context.prereqManager!.getPluginInstallCommands).not.toHaveBeenCalled();
     });
 
-    it('does not look up a Node mapping for a prerequisite with no plugins at all', async () => {
+    it('does not ask for plugin commands for a prerequisite with no plugins at all', async () => {
         aim({ id: 'git', name: 'Git', description: 'v', check: { command: 'git --version' } });
 
         await handleInstallPrerequisite(context, { prereqId: 0 });
 
-        expect(shared.getNodeVersionMapping).not.toHaveBeenCalled();
+        expect(context.prereqManager!.getPluginInstallCommands).not.toHaveBeenCalled();
     });
 
     it('skips a plugin the manager has no install commands for', async () => {
@@ -268,7 +279,7 @@ describe('the plugin loop itself', () => {
         expect((context.sendMessage as jest.Mock).mock.calls
             .filter(([t]) => t === 'prerequisite-status')
             .map(([, p]) => (p as { message?: string }).message),
-        ).toContain('Installing API Mesh Plugin for Node 18');
+        ).toContain(`Installing API Mesh Plugin for Node ${CLI_NODE}`);
     });
 
     it('carries on to the next command when one plugin command fails', async () => {
@@ -278,7 +289,7 @@ describe('the plugin loop itself', () => {
         (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue({
             execute: execute.mockImplementation(async (cmd: string) => {
                 if (cmd === PLUGIN_CMD) throw new Error('registry down');
-                return { stdout: 'v18.20.8\nv20.19.5\n', stderr: '', code: 0, duration: 1 };
+                return { stdout: `v18.20.8\nv${CLI_NODE}.1.0\n`, stderr: '', code: 0, duration: 1 };
             }),
         });
         aim(prereqWithPlugin({}, ['React App']));

@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
+import { BundledPanelCommand } from '@/commands/bundledPanelCommand';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import { ServiceLocator } from '@/core/di/serviceLocator';
@@ -9,8 +9,6 @@ import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHan
 import { getLogger } from '@/core/logging/debugLogger';
 import { StepLogger } from '@/core/logging/stepLogger';
 import { readViewModeSetting } from '@/core/state/viewModePreference';
-import { getBundleUri } from '@/core/utils/bundleUri';
-import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { showOneTimeTip } from '@/core/utils/oneTimeTip';
 // Prerequisites checking is handled by PrerequisitesManager
 import { getEndpoint as getEndpointHelper } from '@/features/mesh/services/meshEndpoint';
@@ -55,7 +53,10 @@ function formatComponentDefaults(defaults: ComponentSelection | null): string {
     return `frontend=${frontend}, backend=${backend}, ${depCount} dependencies`;
 }
 
-export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitialData> {
+export class CreateProjectWebviewCommand extends BundledPanelCommand<WizardInitialData> {
+    protected readonly bundleName = 'wizard';
+    protected override readonly servesLocalMedia = true;
+
     // The prerequisites, auth, error-logging and progress managers are NOT held
     // here: createPanelHandlerContext builds them, and the session's shared
     // instances are the point — a second PrerequisitesManager starts with an
@@ -221,29 +222,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
         return { title: this.getWebviewTitle(), subtitle: this.editProject?.projectName };
     }
 
-    protected async getWebviewContent(): Promise<string> {
-        if (!this.panel) {
-            throw new Error('Panel must be created before getting webview content');
-        }
-        const scriptUri = getBundleUri({
-            webview: this.panel.webview,
-            extensionPath: this.context.extensionPath,
-            featureBundleName: 'wizard',
-        });
-
-        const nonce = this.getNonce();
-
-        // Get base URI for media assets
-        const mediaPath = vscode.Uri.file(path.join(this.context.extensionPath, 'dist'));
-        const baseUri = this.panel.webview.asWebviewUri(mediaPath);
-
-        return getWebviewHTML({
-            scriptUri,
-            nonce,
-            cspSource: this.panel.webview.cspSource,
-            title: 'Adobe Demo Builder',
-            baseUri,
-        });
+    /** The page keeps the product name while the tab says create or edit. */
+    protected override documentTitle(): string {
+        return 'Adobe Demo Builder';
     }
 
     protected async getInitialData(): Promise<WizardInitialData> {
@@ -362,7 +343,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
      * Provides handlers with access to all required managers, loggers,
      * and shared state (passed by reference for automatic synchronization).
      */
-    private async createHandlerContext(): Promise<HandlerContext> {
+    private async createWizardHandlerContext(): Promise<HandlerContext> {
         // Built by the shared factory, not by hand. Hand-listing the managers is
         // how this surface shipped WITHOUT `componentRegistry` (2026-09-02): the
         // Connection view asks for `get-components-data`, the handler threw
@@ -371,15 +352,8 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
         // other panel already used the factory; the wizard was the one that
         // duplicated it, so it was the one that fell behind.
         return {
-            ...createPanelHandlerContext({
-                context: this.context,
-                panel: this.panel,
-                stateManager: this.stateManager,
-                communicationManager: this.communicationManager,
-                sendMessage: (type: string, data?: unknown) => this.sendMessage(type, data),
-                // By reference — handler changes persist automatically.
-                sharedState: this.sharedState,
-            }),
+            // By reference — handler changes persist automatically.
+            ...super.createHandlerContext(this.sharedState),
 
             // The three the wizard genuinely owns. Its step logger is NOT the
             // factory's: it loads `wizard-steps.json` so log lines carry real step
@@ -447,7 +421,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
 
         for (const messageType of messageTypes) {
             comm.onStreaming(messageType, async (data: unknown) => {
-                const context = await this.createHandlerContext();
+                const context = await this.createWizardHandlerContext();
                 return dispatchHandler(projectCreationHandlers, context, messageType, data);
             });
         }

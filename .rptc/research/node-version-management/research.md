@@ -137,3 +137,80 @@ register is the same kind of groundwork), and buildable without PR-1's welcome p
 2. Should Node 18 for the ingestion tool stay, or move to the same version as everything else?
 3. Should the prerequisites screen prepare Node for integrations a project MIGHT add later, or
    only those already chosen (today's "ensure at the door" for later choices)?
+
+## Revision, 2026-10-07: read the version from each component, keep none in Demo Builder
+
+**Owner direction.** Demo Builder should not carry Node versions of its own. A version goes up
+only when a delivered tool demands it, and nobody should have to read every component's code
+and copy a number that can drift. PR-1a steps 1 to 6 built a register over hand-kept
+`nodeVersion` fields; this revision replaces those fields with what each component already
+declares.
+
+**Evidence (2026-10-07, a read-only probe, since replaced by `npm run node:resolve` (`scripts/resolve-node-version.mjs`)).** Every component we
+ship already declares a Node range in its own `package.json` `engines.node`:
+
+| Component | Declared range | Read from |
+|---|---|---|
+| demo-erp | `>=20` | GitHub |
+| commerce-erp-integration | `^24.0.0` | GitHub |
+| Adobe commerce-integration-starter-kit | `^24.0.0` | GitHub |
+| app-builder-shell | `>=18` | GitHub |
+| eds-accs-mesh | `>=18` | GitHub |
+| headless-commerce-mesh | `^14 \|\| ^16 \|\| ^18` | GitHub |
+| commerce-eds-mesh | `^14 \|\| ^16 \|\| ^18` | GitHub |
+| citisignal-nextjs (headless storefront) | none | GitHub |
+| commerce-demo-ingestion | unreadable (private, PMET-public) | GitHub |
+| @adobe/aio-cli 11.1.4 | `>=20` | npm |
+| @adobe/aio-cli-plugin-api-mesh 5.7.3 | `^16.13 \|\| >=18.0.0` | npm |
+| @adobe-commerce/commerce-extensibility-tools | `>=22.0.0` | npm |
+| @playwright/mcp | `>=18` | npm |
+| @dropins/ai-tools 1.0.0 | `>=18.0.0` | npm |
+
+**The rule tested.** One Node for everything Demo Builder ships = the LOWEST long-term-support
+major every declared range accepts, at its newest patch. "Lowest", not "newest": newest would
+move fresh machines to the next LTS on its own; lowest rises only when a range's floor rises.
+
+**What the probe found.**
+
+1. **No shared Node today, because of two stale ranges.** The two older mesh repos cap at 18
+   (`^14 || ^16 || ^18`) while the ERP integration and the starter kit require `^24`. Step 0
+   deployed a mesh on Node 24 successfully, so the caps are out of date, not real. Without them,
+   every range agrees on **24**: the `^24` ceilings force it, and `>=22` from the extensibility
+   tools is the highest floor.
+2. **Per-project resolution would split machines across Nodes.** A project without the ERP
+   integration resolves to 22 on its own. So the shared Node must be resolved across EVERYTHING
+   Demo Builder can install, not per project, or one machine holds 22 and 24.
+3. **One component declares nothing** (the headless storefront, ours) and one cannot be read
+   (the ingestion tool, DI-4). A component with no range takes the shared Node.
+4. **Ceilings are the real hazard.** `^24` means "not 26". When something we ship later demands
+   `>=26`, the ranges stop overlapping. That is a true conflict and must fail at release, never on
+   an SC's machine.
+
+**Not yet verified (needs live runs).** headless-commerce-mesh and commerce-eds-mesh deploying on
+24 (only one mesh was tried in step 0); the headless storefront running on 24 (the catalog says
+24 today, so likely, not proven); reading ranges when offline or rate-limited.
+
+### Live verification, 2026-10-07 (owner-approved)
+
+All on Node 24.21.0 from Demo Builder's own store (`~/.demo-builder/node`), set up the way the
+extension now does it: `fnm install 24`, then `npm install -g @adobe/aio-cli` (11.1.4) and
+`aio plugins:install @adobe/aio-cli-plugin-api-mesh` (5.7.3), no engine warnings.
+
+| Check | Result |
+|---|---|
+| headless-commerce-mesh: npm install, build, deploy, query | PASS. Built; provisioned in a throwaway workspace (zzNode24Mesh2, Kukla Justrite); a custom resolver answered and a catalog query reached the Commerce search service |
+| commerce-eds-mesh: same | PASS. Provisioned; `storeConfig` answered with real store data |
+| citisignal-nextjs (headless storefront): npm install, `next dev` | PASS. Ready in 1.3s, home page served (HTTP 200) |
+| Cleanup | Both meshes deleted; the workspace deleted by a script that refused any other name; the project's three real workspaces untouched |
+
+**Ranges fixed in the repos (owner-approved, pushed):** headless-commerce-mesh `>=20` (`f35b082`)
+and commerce-eds-mesh `>=20` (`596d916`): Demo Builder ran every mesh on Node 20 for months, they
+passed on 24 today, and their own aio-cli dependency needs 20+. citisignal-nextjs `>=24`
+(`6b26bbc`): what it has always run on and passed on today. **After the fix the probe resolves
+one Node for everything: 24.21.0.**
+
+**New finding: aio plugins are per USER, not per Node.** `aio plugins:install` writes to
+`~/.local/share/@adobe/aio-cli`, which every `aio` on the machine shares, whatever Node runs it.
+So "install the mesh plugin beside the CLI under each Node" (step 5's plugin loop) installs the
+same plugin into the same place once per Node. Harmless, but the per-Node plugin logic models
+something that does not exist; the plan should simplify it to "once".

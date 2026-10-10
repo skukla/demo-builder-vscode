@@ -30,7 +30,6 @@ import { orgGuard } from './appBuilderComponentGuards';
 import {
     guardOrBlock,
     postComponentsSnapshot,
-    postRowStatus,
     refreshProjectStatus,
     withComponentProgress,
     type GuardableResult,
@@ -45,6 +44,9 @@ import {
 } from '@/features/app-builder/services/integrationPairUpdate';
 import { checkIntegrationUpdates, type IntegrationUpdateCheck } from '@/features/app-builder/services/integrationUpdateCheck';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
+import {
+    sendAppBuilderComponentStatusUpdate,
+} from '@/features/dashboard/services/projectPanelPushes';
 import type { IntegrationUpdateProbe } from '@/features/updates/services/integrationUpdates';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
@@ -151,7 +153,7 @@ export async function updateIntegrationPairFor(
     const result = await updateIntegrationPair(project, pairUpdateOrder(project, id, getAppBuilderComponentCatalog()), {
         runnerDepsFor: (position) =>
             runnerDepsFor(context, project, isCurrent, (message, step) => report(message, step, position)),
-        postRowStatus: isCurrent ? (rowId, status, message) => postRowStatus(rowId, status, message) : async () => undefined,
+        postRowStatus: isCurrent ? (rowId, status, message) => sendAppBuilderComponentStatusUpdate(rowId, status, message) : async () => undefined,
     });
     await postComponentsSnapshot(context);
     await refreshProjectStatus(context);

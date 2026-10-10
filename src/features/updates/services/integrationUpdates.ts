@@ -23,7 +23,7 @@ import {
     type IntegrationUpdateCheck,
 } from '@/features/app-builder/services/integrationUpdateCheck';
 import { integrationUsing, systemsUsedBy } from '@/features/components/services/appBuilderComponentLinks';
-import type { CategoryResult } from '@/features/updates/services/updateApplyService';
+import { emptyResult, type CategoryResult } from '@/features/updates/services/updateApplyResult';
 import type { UpdateContext } from '@/features/updates/services/updateCore';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';
@@ -143,7 +143,7 @@ export async function applyIntegrationUpdates(
     ctx: UpdateContext,
     onProgress?: (message: string) => void,
 ): Promise<CategoryResult> {
-    const result: CategoryResult = { successCount: 0, failCount: 0, errors: [] };
+    const result = emptyResult();
     for (const item of items) {
         const where = `${item.label} in ${item.project.name}`;
         if (item.otherOrg) {

@@ -1,7 +1,7 @@
 /**
  * The component-definition merge, driven with the SHAPES real repos have.
  *
- * `buildMergedComponentDefinitionMultiSource` walks four levels of two JSON
+ * `buildMergedComponentDefinitionMultiSource` (blockLibraryComponentMerge.ts) walks four levels of two JSON
  * documents it did not write — a source `component-definition.json` from each
  * library and the destination's own — and every level is optional in practice.
  * A group with no `components`, a definition with no `groups`, an entry whose
@@ -24,6 +24,7 @@ import type { AddonSource } from '@/types/demoPackages';
 import {
     createBlockFileEntries,
     setupBlockCollectionMocks,
+    type MockGithubFileOps,
 } from './blockCollectionHelpers.testUtils';
 
 const DEST_OWNER = 'dest-owner';
@@ -40,7 +41,7 @@ type Group = {
 };
 
 describe('the component-definition merge — shapes it must survive', () => {
-    let mockGithubFileOps: jest.Mocked<GitHubFileOperations>;
+    let mockGithubFileOps: MockGithubFileOps;
     let mockLogger: jest.Mocked<Logger>;
 
     beforeEach(() => {
@@ -210,7 +211,7 @@ describe('the component-definition merge — shapes it must survive', () => {
  * a `plugins` object with no `da`, a destination group with no components.
  */
 describe('the unsafeHTML enrichment pass', () => {
-    let mockGithubFileOps: jest.Mocked<GitHubFileOperations>;
+    let mockGithubFileOps: MockGithubFileOps;
     let mockLogger: jest.Mocked<Logger>;
 
     beforeEach(() => {

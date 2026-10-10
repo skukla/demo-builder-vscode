@@ -190,7 +190,7 @@ export const handleRepublishContent: MessageHandler<StorefrontActionPayload> =
 
                 report('Republishing the content');
                 const { republishStorefrontContent } = await import(
-                    '@/features/eds/services/storefront/storefrontRepublishService'
+                    '@/features/eds/services/storefront/storefrontContentRepublishService'
                 );
                 const contentResult = await republishStorefrontContent({
                     project,

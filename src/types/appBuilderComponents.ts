@@ -200,14 +200,11 @@ export interface AppBuilderComponentCatalogEntry {
      */
     lifecycle?: 'deploy-only' | 'app-management';
     /**
-     * Node.js MAJOR version this app's install/build/deploy must run under
-     * (e.g. `"24"`). The add door ensures it via fnm before installing —
-     * measured 2026-08-27: the starter kit ships `.npmrc engine-strict` with
-     * `engines: node ^24.0.0`, so npm under an older node refuses outright.
-     * The graphical prerequisites step cannot know this (integrations are
-     * selected after it runs, and the dashboard/MCP add paths never pass it),
-     * so the add door is the one chokepoint every path shares. Omitted = the
-     * executor's default node.
+     * Node.js MAJOR version a CUSTOM integration installs and deploys on, set at the
+     * add door from its own repo's `engines.node` when that range excludes Demo
+     * Builder's Node (`withCustomIntegrationNode`, PR-1a). Bundled catalog entries
+     * never carry it: their ranges are part of the generated Demo Builder Node, and
+     * the catalog JSON and its schema have no such field. Omitted = Demo Builder's Node.
      */
     nodeVersion?: string;
     /**

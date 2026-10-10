@@ -35,10 +35,10 @@ describe('Token Expiry Detection - handleAuthenticate()', () => {
             // Arrange
             (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
             (mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
-            (mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
+            (mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
             mockTokenManager.inspectToken.mockResolvedValue({ valid: true, expiresIn: 120 });
             (mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
-            (mockContext.authManager!.setCachedOrganization as jest.Mock).mockReturnValue(undefined);
+            (mockContext.authManager!.getCacheManager().setCachedOrganization as jest.Mock).mockReturnValue(undefined);
 
             // Act
             await handleAuthenticate(mockContext);
@@ -58,7 +58,7 @@ describe('Token Expiry Detection - handleAuthenticate()', () => {
             // Arrange
             (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
             (mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
-            (mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
+            (mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
             mockTokenManager.inspectToken.mockResolvedValue({ valid: false, expiresIn: -30 });
 
             // Act
@@ -83,7 +83,7 @@ describe('Token Expiry Detection - handleAuthenticate()', () => {
             // Arrange
             (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
             (mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
-            (mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
+            (mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
             mockTokenManager.inspectToken.mockResolvedValue({ valid: false, expiresIn: -30 });
 
             // Act
@@ -100,7 +100,7 @@ describe('Token Expiry Detection - handleAuthenticate()', () => {
             // Arrange
             (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
             (mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
-            (mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
+            (mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
             mockTokenManager.inspectToken.mockResolvedValue({ valid: true, expiresIn: 120 });
             (mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([]);
 
@@ -125,16 +125,16 @@ describe('Token Expiry Detection - handleAuthenticate()', () => {
             // Arrange
             (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
             (mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
-            (mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
+            (mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
             mockTokenManager.inspectToken.mockResolvedValue({ valid: true, expiresIn: 120 });
             (mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
-            (mockContext.authManager!.setCachedOrganization as jest.Mock).mockReturnValue(undefined);
+            (mockContext.authManager!.getCacheManager().setCachedOrganization as jest.Mock).mockReturnValue(undefined);
 
             // Act
             await handleAuthenticate(mockContext);
 
             // Assert - normal flow continues; Phase 4a: org is cached/carried,
-            expect(mockContext.authManager!.setCachedOrganization).toHaveBeenCalledWith(mockOrg);
+            expect(mockContext.authManager!.getCacheManager().setCachedOrganization).toHaveBeenCalledWith(mockOrg);
             expect(mockContext.sendMessage).toHaveBeenCalledWith('auth-status', expect.objectContaining({
                 authenticated: true,
                 isAuthenticated: true,
@@ -148,10 +148,10 @@ describe('Token Expiry Detection - handleAuthenticate()', () => {
             // Arrange
             (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
             (mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
-            (mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
+            (mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
             mockTokenManager.inspectToken.mockRejectedValue(new Error('CLI timeout'));
             (mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
-            (mockContext.authManager!.setCachedOrganization as jest.Mock).mockReturnValue(undefined);
+            (mockContext.authManager!.getCacheManager().setCachedOrganization as jest.Mock).mockReturnValue(undefined);
 
             // Act
             await handleAuthenticate(mockContext);
@@ -168,7 +168,7 @@ describe('Token Expiry Detection - handleAuthenticate()', () => {
         beforeEach(() => {
             (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
             (mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
-            (mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
+            (mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
             mockTokenManager.inspectToken.mockResolvedValue({ valid: true, expiresIn: 120 });
         });
 

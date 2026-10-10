@@ -12,7 +12,7 @@
 
 import { claudeFootprintLines, type ClaudeCodeFootprint } from './claudeCodeFootprint';
 import { maskEmail } from '@/core/utils/maskEmail';
-import type { SamplePdp } from '@/features/eds/services/catalogPrewarmService';
+import type { SamplePdp } from '@/features/eds/services/catalogSampleSku';
 import { type ConfigServiceProbeResult } from '@/features/eds/services/configService/configServiceProbe';
 import { type CredentialServiceProbeResult } from '@/features/eds/services/credentialServiceProbe';
 import type { CredentialProbeResult } from '@/features/eds/services/github/githubCredentialProbe';

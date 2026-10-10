@@ -17,7 +17,6 @@
  * @module features/app-builder/services/appManagementUninstaller
  */
 
-import { buildAppData } from './appManagementAppData';
 import {
     AppManagementApiError,
     AppManagementClient,
@@ -27,9 +26,9 @@ import {
 import {
     APP_MANAGEMENT_HANDS_BACK,
     deriveAppManagementBaseUrl,
-    deriveCommerceTarget,
     IO_EVENTS_ENV,
     IO_EVENTS_URL,
+    prepareAppManagementCall,
 } from './appManagementInstaller';
 import { isRetryableInstallFailure } from './appManagementInstallFailures';
 import { sleep } from '@/core/utils/sleep';
@@ -146,23 +145,12 @@ export async function uninstallAppManagementApp(
         // Never deployed (or predates URL persistence): nothing installed.
         return { status: 'skipped', detail: 'The app exposes no App Management API.' };
     }
-    const target = deriveCommerceTarget(project);
-    if ('error' in target) {
-        return fail(target.error);
+    const inputs = await prepareAppManagementCall(project, componentId, deps.getAuth, 'uninstall');
+    if ('error' in inputs) {
+        return fail(inputs.error);
     }
-    const appData = buildAppData(project, componentId);
-    if ('error' in appData) {
-        return fail(appData.error);
-    }
-    const auth = await deps.getAuth();
-    if (!auth) {
-        return fail('No Adobe sign-in is available to authenticate the uninstall call.');
-    }
-
-    const factory =
-        deps.clientFactory ??
-        ((url: string, clientAuth: AppManagementAuth) => new AppManagementClient(url, clientAuth));
-    const client = factory(baseUrl, auth);
+    const { target, appData, auth } = inputs;
+    const client = deps.clientFactory?.(baseUrl, auth) ?? new AppManagementClient(baseUrl, auth);
 
     try {
         const budget: PollBudget = { roundsLeft: Math.ceil(POLL_BUDGET_MS / POLL_INTERVAL_MS) };

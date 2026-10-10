@@ -35,8 +35,9 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
 // Imports (after mocks)
 // =============================================================================
 
-import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
+import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderAddRun';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import {
     MESH_ENTRY,
     INTEGRATION_ENTRY,
@@ -146,6 +147,52 @@ describe('addAppBuilderComponent — the definition handed to the installer', ()
             url: 'https://github.com/acme/erp-bridge.git',
             branch: 'release/2026-09',
         });
+    });
+
+    it("installs on the entry's own Node, the one its deploy runs on (PR-1a)", async () => {
+        const deps = createDeps();
+
+        await addAppBuilderComponent(createProject(), { ...INTEGRATION_ENTRY, nodeVersion: '26' }, deps);
+
+        expect(deps.componentManager.installComponent.mock.calls[0][2]).toStrictEqual({ nodeVersion: '26' });
+    });
+
+    it("installs on Demo Builder's Node when the entry has none of its own", async () => {
+        const deps = createDeps();
+
+        await addAppBuilderComponent(createProject(), INTEGRATION_ENTRY, deps);
+
+        expect(deps.componentManager.installComponent.mock.calls[0][2]).toStrictEqual({ nodeVersion: demoBuilderNode() });
+    });
+});
+
+// =============================================================================
+// A custom integration that needs another Node (PR-1a step 8)
+// =============================================================================
+
+describe("addAppBuilderComponent — a custom integration's Node", () => {
+    it('ensures, installs on and records the Node the repo needs', async () => {
+        const ensureNodeVersion = jest.fn().mockResolvedValue(undefined);
+        const deps = createDeps({
+            resolveCustomIntegrationNode: jest.fn().mockResolvedValue({ ok: true, major: '26' }),
+            ensureNodeVersion,
+        });
+        const project = createProject();
+
+        await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps);
+
+        expect(ensureNodeVersion).toHaveBeenCalledWith('26');
+        expect(deps.componentManager.installComponent.mock.calls[0][2]).toStrictEqual({ nodeVersion: '26' });
+        expect(project.appBuilderComponents?.[INTEGRATION_ENTRY.id]?.nodeVersion).toBe('26');
+    });
+
+    it("refuses the add before anything runs when no Node meets the repo's range", async () => {
+        const deps = createDeps({ resolveCustomIntegrationNode: jest.fn().mockResolvedValue({ ok: false, range: '>=99' }) });
+
+        const result = await addAppBuilderComponent(createProject(), INTEGRATION_ENTRY, deps);
+
+        expect(result).toStrictEqual({ success: false, error: expect.stringContaining('asks for Node >=99') });
+        expect(deps.componentManager.installComponent).not.toHaveBeenCalled();
     });
 });
 

@@ -13,7 +13,7 @@
 
 import type { ConfigurationService } from './configService/configurationService';
 import type { DaLiveOrgOperations } from './daLive/daLiveOrgOperations';
-import type { GitHubRepoOperations } from './github/githubRepoOperations';
+import type { GitHubRepoLifecycle } from './github/githubRepoLifecycle';
 import type { ToolManager } from './toolManager';
 import type {
     EdsMetadata,
@@ -33,7 +33,7 @@ import type { Logger } from '@/types/logger';
  */
 export class CleanupService {
     private logger: Logger;
-    private githubRepoOps: GitHubRepoOperations;
+    private githubRepoOps: GitHubRepoLifecycle;
     private daLiveOrgOps: DaLiveOrgOperations;
     private configurationService?: ConfigurationService;
     private toolManager: ToolManager;
@@ -47,7 +47,7 @@ export class CleanupService {
      * @param configurationService - Optional Configuration Service for site config deletion
      */
     constructor(
-        githubRepoOps: GitHubRepoOperations,
+        githubRepoOps: GitHubRepoLifecycle,
         daLiveOrgOps: DaLiveOrgOperations,
         toolManager: ToolManager,
         logger?: Logger,

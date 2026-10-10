@@ -41,6 +41,11 @@ export const OPERATION_STAGES = {
         expectation: 'Up to 30 seconds, the first time only',
         detail: 'The Node version this app runs on',
     },
+    reinstallingPackages: {
+        label: 'Reinstalling packages',
+        expectation: 'About a minute per component',
+        detail: 'Moving a component onto the new Node',
+    },
     subscribingApis: {
         label: 'Adding Adobe services',
         expectation: 'Usually under a minute',
@@ -249,6 +254,11 @@ export const OPERATION_STAGES = {
         label: 'Installing the datapack',
         expectation: 'Minutes, depending on the pack',
         detail: 'Into your Commerce instance',
+    },
+    removingDatapack: {
+        label: 'Removing the sample data',
+        expectation: 'Minutes, depending on the pack',
+        detail: 'From your Commerce instance',
     },
     applyingChanges: {
         label: 'Applying the changes',

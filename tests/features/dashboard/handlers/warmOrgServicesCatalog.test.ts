@@ -25,6 +25,7 @@ import { createMockHandlerContext } from '../../../helpers/handlerContextTestHel
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { poolUnits } from '../../../helpers/authenticationServiceFake';
 
 const mockGetTokenStatus = jest.fn();
 const mockGetServicesForOrg = jest.fn();
@@ -36,10 +37,10 @@ const PROJECT = createMockProject({
 });
 
 function contextFor(project: Project = PROJECT) {
-    (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue({
+    (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(poolUnits({
         getTokenStatus: mockGetTokenStatus,
         getServicesForOrg: mockGetServicesForOrg,
-    });
+    }));
     return createMockHandlerContext({
         logger: createMockLogger(),
         stateManager: createMockStateManager({

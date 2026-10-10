@@ -26,7 +26,7 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
     listDeclaredTriggersAndRules: jest.fn().mockResolvedValue({ triggers: [], rules: [] }),
 }));
 
-import { removeAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
+import { removeAppBuilderComponent } from '@/features/app-builder/services/appBuilderRemoveRun';
 import { deriveOwPackage } from '@/features/app-builder/services/owPackageName';
 import { createDeps, createProject } from './appBuilderComponentRunner.testUtils';
 

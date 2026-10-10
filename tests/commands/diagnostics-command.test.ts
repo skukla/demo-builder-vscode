@@ -43,14 +43,14 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 jest.mock('@/features/eds/handlers/edsServiceCache', () => ({
     getGitHubServices: jest.fn(() => ({ tokenService: mockTokenService })),
 }));
-jest.mock('@/features/eds/services/catalogPrewarmService', () => ({ pickSampleSku: jest.fn() }));
+jest.mock('@/features/eds/services/catalogSampleSku', () => ({ pickSampleSku: jest.fn() }));
 jest.mock('@/features/eds/services/configService/configServiceProbe', () => ({
     probeConfigService: jest.fn(),
 }));
 jest.mock('@/features/eds/services/credentialServiceProbe', () => ({
     probeCredentialService: jest.fn(),
 }));
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
     createDaLiveServiceTokenProvider: jest.fn(() => mockTokenProvider),
 }));
 jest.mock('@/features/eds/services/github/githubCredentialProbe', () => ({
@@ -89,8 +89,8 @@ import type {
 } from '@/commands/diagnosticsReport';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { probeInExtensionMcpTools } from '@/features/ai/server/mcpToolProbe';
-import { pickSampleSku } from '@/features/eds/services/catalogPrewarmService';
-import type { SamplePdp } from '@/features/eds/services/catalogPrewarmService';
+import { pickSampleSku } from '@/features/eds/services/catalogSampleSku';
+import type { SamplePdp } from '@/features/eds/services/catalogSampleSku';
 import { probeConfigService } from '@/features/eds/services/configService/configServiceProbe';
 import type { ConfigServiceProbeResult } from '@/features/eds/services/configService/configServiceProbe';
 import { probeCredentialService } from '@/features/eds/services/credentialServiceProbe';

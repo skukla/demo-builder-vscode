@@ -15,11 +15,11 @@
 import * as vscode from 'vscode';
 import { CleanupService } from '../../services/cleanupService';
 import { ConfigurationService } from '../../services/configService/configurationService';
+import { DaLiveOrgOperations } from '../../services/daLive/daLiveOrgOperations';
 import {
     createDaLiveTokenProvider,
     createDaLiveServiceTokenProvider,
-} from '../../services/daLive/daLiveContentOperations';
-import { DaLiveOrgOperations } from '../../services/daLive/daLiveOrgOperations';
+} from '../../services/daLive/daLiveTokenProviders';
 import { ToolManager } from '../../services/toolManager';
 import type { EdsMetadata, EdsCleanupOptions } from '../../services/types';
 import {
@@ -414,7 +414,7 @@ async function createCleanupService(context: HandlerContext): Promise<CleanupSer
     // Both come from the cache — it builds the repo operations FROM the same
     // token service, so building them here produced a second pair with a cold
     // validation cache (D-2).
-    const { repoOperations: githubRepoOps } = getGitHubServices(context.context.secrets);
+    const { repoLifecycle: githubRepoOps } = getGitHubServices(context.context.secrets);
 
     // Create TokenProvider adapter from AuthenticationService if available
     const tokenProvider = createDaLiveTokenProvider(context.authManager);

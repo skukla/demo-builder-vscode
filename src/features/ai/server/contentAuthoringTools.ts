@@ -323,7 +323,7 @@ export function registerContentAuthoringTools(
                 // retry/429 handling, the timeout, and the size cap this response
                 // needs because a model pays for the body as context.
                 const res = await runWithAdobeTarget(() =>
-                    daLiveOps(r.ctx).readSource(r.target.daLiveOrg, r.target.daLiveSite, sourcePath),
+                    daLiveOps(r.ctx).sourceOps.readSource(r.target.daLiveOrg, r.target.daLiveSite, sourcePath),
                 );
                 if (res.status === 404) {
                     return asText({
@@ -392,7 +392,7 @@ export function registerContentAuthoringTools(
             let write;
             try {
                 write = await runWithAdobeTarget(() =>
-                    daLiveOps(r.ctx).createSource(daLiveOrg, daLiveSite, sourcePath, content, {
+                    daLiveOps(r.ctx).sourceOps.createSource(daLiveOrg, daLiveSite, sourcePath, content, {
                         overwrite: true,
                     }),
                 );
@@ -493,7 +493,7 @@ export function registerContentAuthoringTools(
 
             try {
                 const entries = await runWithAdobeTarget(() =>
-                    daLiveOps(r.ctx).listDirectory(r.target.daLiveOrg, r.target.daLiveSite, dir),
+                    daLiveOps(r.ctx).sourceOps.listDirectory(r.target.daLiveOrg, r.target.daLiveSite, dir),
                 );
                 const skip = Math.max(0, Math.trunc(args?.skip ?? 0));
                 const limit = Math.max(1, Math.trunc(args?.limit ?? CONTENT_PAGE_SIZE));
@@ -595,7 +595,7 @@ export function registerContentAuthoringTools(
             // having succeeded, so there is no error to report alongside.
             try {
                 const result = await runWithAdobeTarget(() =>
-                    daLiveOps(r.ctx).deleteSource(daLiveOrg, daLiveSite, sourcePath),
+                    daLiveOps(r.ctx).sourceOps.deleteSource(daLiveOrg, daLiveSite, sourcePath),
                 );
                 return asText({
                     deleted: result.success,

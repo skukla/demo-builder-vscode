@@ -20,7 +20,7 @@ import { assertDefined } from '../../../helpers/resultAssertions';
  * - Handling successful completion
  * - Optional prerequisite handling
  *
- * Total tests: 11 (7 core + 4 per-node-version filtering)
+ * Total tests: 11 (7 core + 4 per-node-version scope)
  */
 
 // Mock shared utilities - preserve real implementations, mock async functions
@@ -29,12 +29,10 @@ jest.mock('@/features/prerequisites/handlers/shared', () => {
     return {
         ...actual,
         getNodeVersionMapping: jest.fn(),
-        getNodeVersionIdMapping: jest.fn(),
         checkPerNodeVersionStatus: jest.fn(),
         areDependenciesInstalled: jest.fn(),
         hasNodeVersions: jest.fn(),
         getNodeVersionKeys: jest.fn(),
-        getPluginNodeVersions: jest.fn(),
     };
 });
 
@@ -236,14 +234,13 @@ describe('Prerequisites Check Handler - Core Operations', () => {
 });
 
 /**
- * Per-Node-Version Prerequisite Filtering Tests
+ * Per-Node-Version Prerequisite Scope Tests
  *
- * Tests that per-node-version prerequisites (like Adobe I/O CLI) only show
- * and check Node versions that actually require them based on the requiredFor array.
- *
- * Total tests: 4
+ * A per-node-version prerequisite (the Adobe I/O CLI) is checked under the
+ * per-node-version prerequisite's own majors (`perNodeVersionMajors`), whatever its `requiredFor`
+ * names and whatever other majors the stack's components need.
  */
-describe('Prerequisites Check Handler - Per-Node-Version Filtering', () => {
+describe('Prerequisites Check Handler - Per-Node-Version Scope', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         setupStandardMocks();
@@ -253,299 +250,69 @@ describe('Prerequisites Check Handler - Per-Node-Version Filtering', () => {
         cleanupTests();
     });
 
-    it('should filter Node versions by requiredFor for per-node-version prerequisite', async () => {
-        // Given: nodeVersionMapping with Node 18 (eds) and Node 20 (commerce-paas)
-        // and a perNodeVersion prereq with requiredFor: ['commerce-paas']
-        const perNodeVersionConfig = {
+    /** Run the check for one installed per-Node CLI and return the majors its status carries. */
+    async function majorsCheckedFor(prereq: Record<string, unknown>): Promise<string[]> {
+        const config = {
             version: '1.0',
-            prerequisites: [
-                {
-                    id: 'adobe-cli',
-                    name: 'Adobe I/O CLI',
-                    description: 'Adobe CLI tool',
-                    perNodeVersion: true,
-                    requiredFor: ['commerce-paas'], // Only required for commerce-paas (Node 20)
-                    check: { command: 'aio --version' },
-                },
-            ],
-        };
-
-        const context = createCheckHandlerContext();
-        context.sharedState.currentComponentSelection = {
-            frontend: undefined,
-            backend: 'commerce-paas',
-            dependencies: [],
-            integrations: [],
-        };
-
-        (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(perNodeVersionConfig);
-        (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
-            perNodeVersionConfig.prerequisites
-        );
-
-        // Node 18 for eds, Node 20 for commerce-paas
-        const nodeVersionMapping = { '18': 'eds', '20': 'commerce-paas' };
-        const nodeVersionIdMapping = { '18': 'eds', '20': 'commerce-paas' };
-        (shared.getNodeVersionMapping as jest.Mock).mockResolvedValue(nodeVersionMapping);
-        (shared.getNodeVersionIdMapping as jest.Mock).mockResolvedValue(nodeVersionIdMapping);
-        (shared.hasNodeVersions as jest.Mock).mockReturnValue(true);
-        (shared.getNodeVersionKeys as jest.Mock).mockReturnValue(['18', '20']);
-
-        // CLI is installed
-        (context.prereqManager!.checkPrerequisite as jest.Mock).mockResolvedValue({
-            installed: true,
-            version: '10.0.0',
-            canInstall: true,
-        });
-
-        // Cached per-version results (only Node 20 should be used)
-        (context.prereqManager!.getCacheManager as jest.Mock).mockReturnValue({
-            getPerVersionResults: jest.fn().mockReturnValue([
-                { version: 'Node 18', major: '18', component: '', installed: false },
-                { version: 'Node 20', major: '20', component: '10.0.0', installed: true },
-            ]),
-            clearAll: jest.fn(),
-        });
-
-        // When: handleCheckPrerequisites is called
-        await handleCheckPrerequisites(context);
-
-        // Then: the status carries ONLY the requiredFor-matched major (20), not
-        // eds's 18. Asserted by EFFECT: resolveRequiredMajors moved into shared
-        // (2026-08-27) and calls getPluginNodeVersions module-internally, where
-        // this suite's spy cannot see it — the real filter runs on the real
-        // idMapping instead, which is the stronger check anyway.
-        expect(context.sendMessage).toHaveBeenCalledWith(
-            'prerequisite-status',
-            expect.objectContaining({
+            prerequisites: [{
+                id: 'adobe-cli',
                 name: 'Adobe I/O CLI',
-                nodeVersionStatus: [expect.objectContaining({ major: '20' })],
-            })
-        );
-
-        // Verify Node 18 is NOT in the filtered result
-        const statusCalls = (context.sendMessage as jest.Mock).mock.calls.filter(
-            call => call[0] === 'prerequisite-status' && call[1].name === 'Adobe I/O CLI'
-        );
-        // `if (lastStatusCall && ...nodeVersionStatus)` used to wrap these, so a run
-        // that sent NO status message — the most likely regression — passed having
-        // checked nothing. Both are asserted now.
-        const lastStatusCall = statusCalls[statusCalls.length - 1];
-        assertDefined(lastStatusCall, 'a prerequisite-status message must be sent');
-        assertDefined(lastStatusCall[1].nodeVersionStatus, 'it must carry nodeVersionStatus');
-
-        const majors = lastStatusCall[1].nodeVersionStatus.map((v: any) => v.major);
-        expect(majors).not.toContain('18');
-        expect(majors).toContain('20');
-    });
-
-    it('should return empty nodeVersionStatus when no components match requiredFor', async () => {
-        // Given: nodeVersionMapping with only Node 18 (eds)
-        // and a perNodeVersion prereq with requiredFor: ['api-mesh'] (no match)
-        const perNodeVersionConfig = {
-            version: '1.0',
-            prerequisites: [
-                {
-                    id: 'adobe-cli',
-                    name: 'Adobe I/O CLI',
-                    description: 'Adobe CLI tool',
-                    perNodeVersion: true,
-                    requiredFor: ['api-mesh'], // Not in nodeVersionMapping
-                    check: { command: 'aio --version' },
-                },
-            ],
+                description: 'Adobe CLI tool',
+                perNodeVersion: true,
+                check: { command: 'aio --version' },
+                ...prereq,
+            }],
         };
-
         const context = createCheckHandlerContext();
         context.sharedState.currentComponentSelection = {
-            frontend: undefined,
-            backend: undefined,
+            frontend: 'eds',
+            backend: 'commerce-paas',
             dependencies: [],
             integrations: [],
         };
-
-        (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(perNodeVersionConfig);
-        (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
-            perNodeVersionConfig.prerequisites
-        );
-
-        const nodeVersionMapping = { '18': 'eds' };
-        const nodeVersionIdMapping = { '18': 'eds' };
-        (shared.getNodeVersionMapping as jest.Mock).mockResolvedValue(nodeVersionMapping);
-        (shared.getNodeVersionIdMapping as jest.Mock).mockResolvedValue(nodeVersionIdMapping);
-        (shared.hasNodeVersions as jest.Mock).mockReturnValue(true);
-        (shared.getNodeVersionKeys as jest.Mock).mockReturnValue(['18']);
-
-        // CLI is installed
+        (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(config);
+        (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(config.prerequisites);
+        // The stack needs Node 18 and 20; neither is the CLI's
+        (shared.getNodeVersionMapping as jest.Mock).mockResolvedValue({ '18': 'eds', '20': 'commerce-paas' });
         (context.prereqManager!.checkPrerequisite as jest.Mock).mockResolvedValue({
             installed: true,
             version: '10.0.0',
             canInstall: true,
         });
-
         (context.prereqManager!.getCacheManager as jest.Mock).mockReturnValue({
-            getPerVersionResults: jest.fn().mockReturnValue([]),
+            getPerVersionResults: jest.fn().mockReturnValue(
+                ['18', '20', ...shared.perNodeVersionMajors()].map((major) => ({
+                    version: `Node ${major}`, major, component: '10.0.0', installed: true,
+                })),
+            ),
             clearAll: jest.fn(),
         });
 
-        // Mock checkPerNodeVersionStatus for fallback case (empty requiredMajors)
-        (shared.checkPerNodeVersionStatus as jest.Mock).mockResolvedValue({
-            perNodeVersionStatus: [],
-            perNodeVariantMissing: false,
-            missingVariantMajors: [],
-        });
-
-        // When: handleCheckPrerequisites is called
         await handleCheckPrerequisites(context);
 
-        // Then (by EFFECT — see the filtering test above): no component in the
-        // idMapping matches 'api-mesh', so the resolved majors are empty and
-        expect(context.sendMessage).toHaveBeenCalledWith(
-            'prerequisite-status',
-            expect.objectContaining({
-                name: 'Adobe I/O CLI',
-                nodeVersionStatus: [],
-            })
-        );
-    });
-
-    it('should include dependency components when filtering Node versions', async () => {
-        // Given: nodeVersionMapping with Node 20 (commerce-paas)
-        // and a perNodeVersion prereq with requiredFor: ['commerce-mesh']
-        // and dependencies: ['commerce-mesh']
-        const perNodeVersionConfig = {
-            version: '1.0',
-            prerequisites: [
-                {
-                    id: 'mesh-plugin',
-                    name: 'API Mesh Plugin',
-                    description: 'Mesh plugin',
-                    perNodeVersion: true,
-                    requiredFor: ['commerce-mesh'], // Required for mesh component
-                    check: { command: 'aio plugins' },
-                },
-            ],
-        };
-
-        const context = createCheckHandlerContext();
-        context.sharedState.currentComponentSelection = {
-            frontend: undefined,
-            backend: 'commerce-paas',
-            dependencies: ['commerce-mesh'], // Dependency on mesh
-            integrations: [],
-        };
-
-        (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(perNodeVersionConfig);
-        (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
-            perNodeVersionConfig.prerequisites
-        );
-
-        const nodeVersionMapping = { '20': 'commerce-paas' };
-        const nodeVersionIdMapping = { '20': 'commerce-mesh' };
-        (shared.getNodeVersionMapping as jest.Mock).mockResolvedValue(nodeVersionMapping);
-        (shared.getNodeVersionIdMapping as jest.Mock).mockResolvedValue(nodeVersionIdMapping);
-        (shared.hasNodeVersions as jest.Mock).mockReturnValue(true);
-        (shared.getNodeVersionKeys as jest.Mock).mockReturnValue(['20']);
-
-        // Plugin is installed
-        (context.prereqManager!.checkPrerequisite as jest.Mock).mockResolvedValue({
-            installed: true,
-            version: '1.0.0',
-            canInstall: true,
-        });
-
-        (context.prereqManager!.getCacheManager as jest.Mock).mockReturnValue({
-            getPerVersionResults: jest.fn().mockReturnValue([
-                { version: 'Node 20', major: '20', component: '1.0.0', installed: true },
-            ]),
-            clearAll: jest.fn(),
-        });
-
-        // When: handleCheckPrerequisites is called
-        await handleCheckPrerequisites(context);
-
-        // Then (by EFFECT — see the filtering test above): the dependency id
-        // 'commerce-mesh' matches the idMapping, so Node 20 is required
-        expect(context.sendMessage).toHaveBeenCalledWith(
-            'prerequisite-status',
-            expect.objectContaining({
-                name: 'API Mesh Plugin',
-                nodeVersionStatus: expect.arrayContaining([
-                    expect.objectContaining({ major: '20', installed: true }),
-                ]),
-            })
-        );
-    });
-
-    it('should fall back to all Node versions when requiredFor is not specified', async () => {
-        // Given: A perNodeVersion prereq WITHOUT requiredFor (backward compatibility)
-        const perNodeVersionConfig = {
-            version: '1.0',
-            prerequisites: [
-                {
-                    id: 'adobe-cli',
-                    name: 'Adobe I/O CLI',
-                    description: 'Adobe CLI tool',
-                    perNodeVersion: true,
-                    // NO requiredFor - should use all Node versions
-                    check: { command: 'aio --version' },
-                },
-            ],
-        };
-
-        const context = createCheckHandlerContext();
-        context.sharedState.currentComponentSelection = {
-            frontend: undefined,
-            backend: 'commerce-paas',
-            dependencies: [],
-            integrations: [],
-        };
-
-        (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(perNodeVersionConfig);
-        (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
-            perNodeVersionConfig.prerequisites
-        );
-
-        const nodeVersionMapping = { '18': 'eds', '20': 'commerce-paas' };
-        const nodeVersionIdMapping = { '18': 'eds', '20': 'commerce-paas' };
-        (shared.getNodeVersionMapping as jest.Mock).mockResolvedValue(nodeVersionMapping);
-        (shared.getNodeVersionIdMapping as jest.Mock).mockResolvedValue(nodeVersionIdMapping);
-        (shared.hasNodeVersions as jest.Mock).mockReturnValue(true);
-        // getNodeVersionKeys returns all versions
-        (shared.getNodeVersionKeys as jest.Mock).mockReturnValue(['18', '20']);
-
-        // CLI is installed
-        (context.prereqManager!.checkPrerequisite as jest.Mock).mockResolvedValue({
-            installed: true,
-            version: '10.0.0',
-            canInstall: true,
-        });
-
-        (context.prereqManager!.getCacheManager as jest.Mock).mockReturnValue({
-            getPerVersionResults: jest.fn().mockReturnValue([
-                { version: 'Node 18', major: '18', component: '10.0.0', installed: true },
-                { version: 'Node 20', major: '20', component: '10.0.0', installed: true },
-            ]),
-            clearAll: jest.fn(),
-        });
-
-        // When: handleCheckPrerequisites is called
-        await handleCheckPrerequisites(context);
-
-        // Then: getPluginNodeVersions should NOT be called (fallback to getNodeVersionKeys)
-        expect(shared.getPluginNodeVersions).not.toHaveBeenCalled();
-
-        // Then (by EFFECT — the fallback path derives ALL majors from the real
-        // mapping now that resolveRequiredMajors lives in shared): both 18 and 20
         const statusCalls = (context.sendMessage as jest.Mock).mock.calls.filter(
             call => call[0] === 'prerequisite-status' && call[1].name === 'Adobe I/O CLI'
         );
         const lastStatusCall = statusCalls[statusCalls.length - 1];
         assertDefined(lastStatusCall, 'a prerequisite-status message must be sent');
         assertDefined(lastStatusCall[1].nodeVersionStatus, 'it must carry nodeVersionStatus');
+        return lastStatusCall[1].nodeVersionStatus.map((v: { major: string }) => v.major);
+    }
 
-        const majors = lastStatusCall[1].nodeVersionStatus.map((v: any) => v.major);
-        expect(majors).toContain('18');
-        expect(majors).toContain('20');
+    it("checks the CLI's own Node, not the major requiredFor points at", async () => {
+        expect(await majorsCheckedFor({ requiredFor: ['commerce-paas'] })).toStrictEqual(shared.perNodeVersionMajors());
+    });
+
+    it("checks the CLI's own Node when requiredFor names nothing in the stack", async () => {
+        expect(await majorsCheckedFor({ requiredFor: ['api-mesh'] })).toStrictEqual(shared.perNodeVersionMajors());
+    });
+
+    it("checks the CLI's own Node, not every major, when requiredFor is absent", async () => {
+        expect(await majorsCheckedFor({})).toStrictEqual(shared.perNodeVersionMajors());
+    });
+
+    it('ignores plugin requiredFor lists too', async () => {
+        const plugins = [{ id: 'api-mesh', name: 'API Mesh', requiredFor: ['commerce-paas'] }];
+        expect(await majorsCheckedFor({ plugins })).toStrictEqual(shared.perNodeVersionMajors());
     });
 });

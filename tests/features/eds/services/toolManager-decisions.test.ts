@@ -38,6 +38,7 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 }));
 
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import type { ToolManager } from '@/features/eds/services/toolManager';
 import type { ACOConfig } from '@/features/eds/services/types';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
@@ -124,13 +125,13 @@ describe('ToolManager decisions', () => {
             );
         });
 
-        it('installs dependencies in the tool directory under Node 18', async () => {
+        it("installs dependencies in the tool directory under Demo Builder's Node", async () => {
             await toolManager.ensureToolInstalled();
 
             expect(executor.execute).toHaveBeenCalledWith('npm install --no-fund', {
                 cwd: TOOL_PATH,
                 timeout: 180000,
-                useNodeVersion: '18',
+                useNodeVersion: demoBuilderNode(),
             });
         });
 
@@ -176,7 +177,7 @@ describe('ToolManager decisions', () => {
             expect(executor.execute).toHaveBeenCalledWith('npm run import:aco', {
                 cwd: TOOL_PATH,
                 timeout: 600000,
-                useNodeVersion: '18',
+                useNodeVersion: demoBuilderNode(),
                 streaming: false,
                 onOutput: undefined,
             });

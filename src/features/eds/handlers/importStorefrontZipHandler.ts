@@ -92,11 +92,11 @@ export async function handleImportStorefrontZip(
     // Public unless asked otherwise (owner, 2026-09-14): a demo package is for sharing.
     const isPrivate = request?.isPrivate ?? false;
 
-    const { repoOperations, fileOperations } = getGitHubServices(context.context.secrets);
+    const { repoLifecycle, treeCommits } = getGitHubServices(context.context.secrets);
     try {
         context.logger.info(`[Zip] ${zipPath}: ${unpacked.files.size} files, ${unpacked.dropped} dropped${unpacked.setup ? ', setup included' : ''}`);
         const created = await createRepositoryFromZip(
-            { repoOps: repoOperations, fileOps: fileOperations, logger: context.logger, onProgress: report },
+            { repoOps: repoLifecycle, fileOps: treeCommits, logger: context.logger, onProgress: report },
             unpacked.files,
             { repoName, isPrivate, leftOut: unpacked.dropped },
         );
@@ -188,9 +188,9 @@ export async function importDemoBundle(context: HandlerContext, zipPath: string)
     let settings = unpacked.setup;
     try {
         if (hasStorefront) {
-            const { repoOperations, fileOperations } = getGitHubServices(context.context.secrets);
+            const { repoLifecycle, treeCommits } = getGitHubServices(context.context.secrets);
             const created = await createRepositoryFromZip(
-                { repoOps: repoOperations, fileOps: fileOperations, logger: context.logger },
+                { repoOps: repoLifecycle, fileOps: treeCommits, logger: context.logger },
                 unpacked.files,
                 { repoName: suggestRepoName(unpacked.rootName, 'storefront'), isPrivate: false },
             );

@@ -13,10 +13,8 @@
 
 import { registerContentAuthoringTools } from '@/features/ai/server/contentAuthoringTools';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
-import {
-    DaLiveContentOperations,
-    createDaLiveServiceTokenProvider,
-} from '@/features/eds/services/daLive/daLiveContentOperations';
+import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveTokenProviders';
 import type { HelixService } from '@/features/eds/services/helix/helixService';
 import { isEdsProject } from '@/types/typeGuards';
 
@@ -26,6 +24,8 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 }));
 jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn(),
+}));
+jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
     createDaLiveServiceTokenProvider: jest.fn(() => ({ getAccessToken: async () => 'da-token' })),
 }));
 jest.mock('@/types/typeGuards', () => ({
@@ -230,7 +230,7 @@ export function setupContentAuthoring(): ContentAuthoringDoubles {
             truncated: false,
         })),
     };
-    DaLiveContentOperationsMock.mockImplementation(() => daOps);
+    DaLiveContentOperationsMock.mockImplementation(() => ({ sourceOps: daOps }));
 
     const helix: HelixDouble = {
         previewAndPublishPage: jest.fn(async () => undefined),

@@ -60,6 +60,18 @@ left alone. This is what makes the rest of the refresh redesign safe to build â€
 silent tiers can be silent because overwriting is now provably confined to content
 the extension owns.
 
+
+### Out of scope, decided: a component's generated config files (owner, 2026-10-09)
+
+A component's `.env` / `.env.local`, its json config files and the EDS `config.json`
+are written straight to disk by `envFileGenerator.ts` and `componentConfigFiles.ts`, and
+Regenerate, Configure, EDS Reset and a mesh redeploy rewrite them. That is deliberate, not a
+gap in this ADR: those files are FULLY GENERATED from the project, and the place to change
+their values is Configure. Hash-and-skip was considered and rejected for them, because a
+skipped `.env` would deploy stale values without saying so. A hand edit to one of them is
+overwritten on the next write; the SC edits the value on Configure instead. Raised by the
+EDS-8 split of `envFileGenerator.ts`; decided by the owner.
+
 ## Consequences
 
 - **Unblocks** the tiered-refresh steps in `tier-the-ai-bundle-refresh`: silent

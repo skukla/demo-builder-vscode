@@ -14,6 +14,7 @@
  * primitives would remove the thing being measured.
  */
 
+import { mockRequest } from '../../../../helpers/webviewClientMock';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
@@ -21,18 +22,6 @@ import '@testing-library/jest-dom';
 import { settle } from '../../../../helpers/reactSettle';
 import type { WizardState, EDSConfig } from '@/types/webview';
 
-const mockPostMessage = jest.fn();
-const mockOnMessage = jest.fn(() => jest.fn());
-const mockRequest = jest.fn();
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: mockPostMessage,
-        onMessage: mockOnMessage,
-        request: mockRequest,
-        ready: jest.fn().mockResolvedValue(undefined),
-    },
-}));
 
 const TEMPLATE = { templateOwner: 'adobe', templateRepo: 'aem-boilerplate' };
 

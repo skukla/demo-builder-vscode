@@ -3,7 +3,7 @@
  *
  * Tests boundary conditions and unusual scenarios including:
  * - No version specified for single-version install
- * - Node versions empty array
+ * - Per-node prerequisite for a caller-named version
  * - Per-node prerequisite with no Node versions installed
  * - Per-node prerequisite partially installed
  * - Install steps empty array
@@ -26,7 +26,8 @@ import {
     mockNodeResult,
     createInstallHandlerContext,
     setupMockCommandExecutor,
-    setupSharedUtilityMocks,    arrangePerNodeAdobeCliInstall,
+    setupSharedUtilityMocks,
+    arrangePerNodeAdobeCliInstall,
 } from './installHandler.testUtils';
 
 describe('Install Handler - Edge Cases', () => {
@@ -53,24 +54,34 @@ describe('Install Handler - Edge Cases', () => {
         );
     });
 
-    it('should handle Node versions empty array', async () => {
-        (shared.getRequiredNodeVersions as jest.Mock).mockResolvedValue([]);
+    it('should install a per-node prerequisite for the version the caller named', async () => {
         const states = new Map();
         states.set(0, { prereq: mockAdobeCliPrereq, result: mockNodeResult });
         mockContext.sharedState.currentPrerequisiteStates = states;
 
         const result = await handleInstallPrerequisite(mockContext, { prereqId: 0, version: '20' });
 
-        // Should use provided version as fallback
         expect(result.success).toBe(true);
+        expect(shared.checkPerNodeVersionStatus).toHaveBeenNthCalledWith(
+            1, mockAdobeCliPrereq, ['20'], mockContext,
+        );
     });
 
     it('should handle per-node prerequisite with no Node versions installed', async () => {
         const states = new Map();
         states.set(0, { prereq: mockAdobeCliPrereq, result: mockNodeResult });
         mockContext.sharedState.currentPrerequisiteStates = states;
-        // Mock getRequiredNodeVersions to return empty array (no Node versions available)
-        (shared.getRequiredNodeVersions as jest.Mock).mockResolvedValue([]);
+        // The tool is missing under its own Node, and fnm has only 18 and 20.
+        (shared.checkPerNodeVersionStatus as jest.Mock).mockResolvedValue({
+            perNodeVersionStatus: [],
+            perNodeVariantMissing: true,
+            missingVariantMajors: shared.perNodeVersionMajors(),
+        });
+        const execute = setupMockCommandExecutor();
+        const base = execute.getMockImplementation()!;
+        execute.mockImplementation((cmd: string) => (cmd === 'fnm list'
+            ? Promise.resolve({ stdout: 'v18.20.8\nv20.19.5\n', stderr: '', code: 0, duration: 1 })
+            : base(cmd)));
 
         const result = await handleInstallPrerequisite(mockContext, { prereqId: 0 });
 

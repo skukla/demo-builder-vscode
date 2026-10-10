@@ -7,7 +7,7 @@
  */
 
 /** base64url-encode a JSON value as a JWT segment. */
-export function encodeSegment(value: unknown): string {
+function encodeSegment(value: unknown): string {
     return Buffer.from(JSON.stringify(value)).toString('base64url');
 }
 

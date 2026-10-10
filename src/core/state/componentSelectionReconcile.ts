@@ -7,7 +7,7 @@
  * `projectResetService` rebuilds the whole component list from it.
  *
  * Nothing on the live add path maintained it. The dashboard adds through
- * `appBuilderComponentRunner.addAppBuilderComponent`, which never touched
+ * `appBuilderAddRun.addAppBuilderComponent`, which never touched
  * selections; the only code that did lived in a parallel add/remove service left
  * over from the singular model, which had no callers at all (deleted with this
  * fix).

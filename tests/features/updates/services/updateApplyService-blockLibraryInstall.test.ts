@@ -20,11 +20,11 @@ import {
     resetFakes,
 } from './updateApplyService.testUtils';
 import * as vscode from 'vscode';
+import { applyUpdatesHeadless } from '@/features/updates/services/updateApplyService';
 import {
-    applyUpdatesHeadless,
     computeProjectUpdateSelections,
     countSelections,
-} from '@/features/updates/services/updateApplyService';
+} from '@/features/updates/services/updateSelections';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
 const LIBRARY = {

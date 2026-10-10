@@ -26,10 +26,8 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
 }));
 
 import { createDeps, createProject } from './appBuilderComponentRunner.testUtils';
-import {
-    addAppBuilderComponent,
-    deployAppBuilderComponent,
-} from '@/features/app-builder/services/appBuilderComponentRunner';
+import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderAddRun';
+import { deployAppBuilderComponent } from '@/features/app-builder/services/appBuilderRedeployRun';
 
 const SYSTEM: AppBuilderComponentCatalogEntry = {
     id: 'demo-erp',

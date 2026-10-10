@@ -22,10 +22,10 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
-import {
-    removeAppBuilderComponent,
-    type RuntimeCleanupSummary,
+import type {
+    RuntimeCleanupSummary,
 } from '@/features/app-builder/services/appBuilderComponentRunner';
+import { removeAppBuilderComponent } from '@/features/app-builder/services/appBuilderRemoveRun';
 import type { CommerceDetachResult } from '@/features/app-builder/services/erpDetach';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { systemsUsedBy } from '@/features/components/services/appBuilderComponentLinks';

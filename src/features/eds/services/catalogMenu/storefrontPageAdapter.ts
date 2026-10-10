@@ -10,13 +10,13 @@
 
 import type { StorefrontPages } from './catalogMenuService';
 import { resolveDaPath } from '@/features/eds/services/daLive/daLiveContentHelpers';
-import type { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
 import { listDaLivePages } from '@/features/eds/services/daLive/daLivePageWalk';
+import type { DaLiveSourceOperations } from '@/features/eds/services/daLive/daLiveSourceOperations';
 import type { HelixService } from '@/features/eds/services/helix/helixService';
 
 /** The two clients the page adapter drives — narrowed to the calls it makes. */
 export interface PageTransport {
-    daLive: Pick<DaLiveContentOperations, 'readSource' | 'createSource' | 'deleteSource' | 'listDirectory'>;
+    daLive: Pick<DaLiveSourceOperations, 'readSource' | 'createSource' | 'deleteSource' | 'listDirectory'>;
     helix: Pick<HelixService, 'previewAndPublishPage' | 'unpublishPage'>;
 }
 

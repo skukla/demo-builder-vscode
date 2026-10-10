@@ -15,10 +15,10 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { classifyTransience, extractErrorMessage } from '@/core/errors';
 import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
-import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { withTimeout } from '@/core/utils/promiseUtils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateProjectNameSecurity as validateProjectName } from '@/core/validation/validators/ProjectNameValidator';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
 import { ErrorCode } from '@/types/errorCodes';
 import { HandlerContext } from '@/types/handlers';
@@ -187,14 +187,14 @@ async function cleanupOrphanedMesh(
             const commandManager = ServiceLocator.getCommandExecutor();
             const target = buildOrgTargetFromProjectAdobe(
                 { ...adobeRef, workspace },
-                context.authManager?.getCachedOrganization(),
+                context.authManager?.getCacheManager().getCachedOrganization(),
             );
             const deleteResult = await withOrgContext(target, () =>
                 commandManager.execute(MESH_DELETE_COMMAND, {
                     timeout: TIMEOUTS.LONG,
                     configureTelemetry: false,
                     enhancePath: true,
-                    useNodeVersion: getMeshNodeVersion(),
+                    useNodeVersion: demoBuilderNode(),
                 }),
             );
 

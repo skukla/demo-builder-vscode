@@ -74,7 +74,7 @@ describe('DaLiveContentOperations - HTML transformation', () => {
                 return mockFetchResponse(200);
             });
 
-        await service.copyContentFromSource(
+        await service.copyOps.copyContentFromSource(
             {
                 org: 'source-org',
                 site: 'source-site',

@@ -159,6 +159,15 @@ export function getAppBuilderComponentEntry(
 }
 
 /**
+ * Whether two GitHub sources are the same repo: owner AND repo, so a fork under
+ * another owner is a different repo. The one comparison for "is this the catalog's
+ * repo" (blank recognition, seed recognition, a custom integration's Node).
+ */
+export function isSameRepo(a: { owner: string; repo: string }, b: { owner: string; repo: string }): boolean {
+    return a.owner === b.owner && a.repo === b.repo;
+}
+
+/**
  * Whether a GitHub source matches a blank/starter (`blank: true`) catalog
  * entry — the "built with AI" recognition used by the dashboard card model.
  * Matches on owner AND repo, so a fork of the shell repo under a different
@@ -168,12 +177,7 @@ export function getAppBuilderComponentEntry(
  * @returns true when the source is a blank catalog entry's repo
  */
 export function isBlankSource(source: { owner: string; repo: string }): boolean {
-    return config.appBuilderComponents.some(
-        (entry) =>
-            entry.blank === true &&
-            entry.source.owner === source.owner &&
-            entry.source.repo === source.repo,
-    );
+    return config.appBuilderComponents.some((entry) => entry.blank === true && isSameRepo(entry.source, source));
 }
 
 /**
@@ -204,7 +208,6 @@ function seedCapabilityFields(
     return {
         layout: seed.layout,
         lifecycle: seed.lifecycle,
-        nodeVersion: seed.nodeVersion,
         requiredApis: seed.requiredApis,
         compatibleBackends: seed.compatibleBackends,
         compatibleFrontends: seed.compatibleFrontends,
@@ -229,10 +232,10 @@ function seedCapabilityFields(
  * SEED RECOGNITION: a source matching an AUTHORED catalog entry (owner+repo,
  * exact — a fork is deliberately not recognized, same rule as
  * {@link isBlankSource}) inherits that entry's CAPABILITY fields —
- * layout/lifecycle/nodeVersion/requiredApis/axes. Without this, "start a custom
+ * layout/lifecycle/requiredApis/axes. Without this, "start a custom
  * app from the starter kit" produced an entry the deploy path would treat as a
- * standalone app: ow-package rewrite applied, workspace config never imported,
- * Node version unknown — a broken deploy from a correct repo.
+ * standalone app: ow-package rewrite applied and workspace config never
+ * imported — a broken deploy from a correct repo.
  *
  * @param source - The GitHub source ({owner, repo, branch?, name?})
  * @param id - Optional explicit instance id (the sources-map key)
@@ -259,9 +262,7 @@ export function buildCustomIntegrationEntry(
     }
     // Authored entries only: derived meshes share no repos with custom adds, and
     // matching them would be coincidence, not a seed.
-    const seed = authored.appBuilderComponents.find(
-        (entry) => entry.source.owner === source.owner && entry.source.repo === source.repo,
-    );
+    const seed = authored.appBuilderComponents.find((entry) => isSameRepo(entry.source, source));
     return {
         ...(seed ? seedCapabilityFields(seed) : {}),
         id: id ?? `${source.owner}-${source.repo}`,

@@ -15,7 +15,7 @@
 
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
-import { removeAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
+import { removeAppBuilderComponent } from '@/features/app-builder/services/appBuilderRemoveRun';
 import { pairWithSameErpElsewhere } from '@/features/app-builder/services/pairWithSameErpElsewhere';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';

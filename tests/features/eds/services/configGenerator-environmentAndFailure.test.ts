@@ -11,10 +11,12 @@
  */
 
 import {
-    generateConfigJson,
     extractConfigParams,
     extractConfigParamsFromConfigs,
     buildConfigGeneratorParams,
+} from '@/features/eds/services/storefrontConfigParams';
+import {
+    generateConfigJson,
     type ConfigGeneratorParams,
 } from '@/features/eds/services/configGenerator';
 import type { Logger } from '@/types/logger';

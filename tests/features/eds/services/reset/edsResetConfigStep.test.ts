@@ -43,8 +43,10 @@ jest.mock('@/features/eds/services/configService/configAccessRecovery', () => ({
 // output of, so it is mocked. The SERVICE normally arrives through the seam; the
 // class is mocked only so the DEFAULT seam (production never passes services) can
 // be pinned — what its constructor is handed is the one thing that path decides.
-jest.mock('@/features/eds/services/configService/configurationService', () => ({
+jest.mock('@/features/eds/services/configService/siteConfigParams', () => ({
     buildSiteConfigParams: (...a: unknown[]) => mockBuildSiteConfigParams(...a),
+}));
+jest.mock('@/features/eds/services/configService/configurationService', () => ({
     ConfigurationService: class {
         constructor(...a: unknown[]) {
             mockConfigurationServiceCtor(...a);

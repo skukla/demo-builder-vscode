@@ -81,7 +81,10 @@ Removed from develop, ~1,800 lines across six modules and six suites:
 **`ioEventsClient.ts` STAYS**, and that is the load-bearing detail. Console
 project teardown and `deleteAdobeProjectHandler` both use it, so deleting an
 Adobe project still cleans up its event entities. What went is the surface for
-managing them one at a time, not the ability to tear them down.
+managing them one at a time, not the ability to tear them down. (Since
+2026-10-08, EDS-8: the client names the endpoints, `ioEventsTransport.ts` carries
+each request, and `eventProviderBinding.ts` holds the rule for which providers a
+project owns. All three stay.)
 
 Pinned counts that moved with it, all of which are the reason a removal like
 this cannot be a one-file delete: MCP tools 114 -> 109, adobe-provider tools

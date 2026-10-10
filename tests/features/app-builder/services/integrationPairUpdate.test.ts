@@ -20,7 +20,7 @@ import { createDeps } from './appBuilderComponentRunner.testUtils';
 import { createMockProject } from '../../../helpers/projectFake';
 
 const mockUpdate = jest.fn();
-jest.mock('@/features/app-builder/services/appBuilderComponentRunner', () => ({
+jest.mock('@/features/app-builder/services/appBuilderRedeployRun', () => ({
     updateAppBuilderComponent: (...a: unknown[]) => mockUpdate(...a),
 }));
 

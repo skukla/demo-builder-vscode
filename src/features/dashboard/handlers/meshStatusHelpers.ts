@@ -11,7 +11,7 @@
 
 import { buildStatusPayload } from '../services/dashboardStatusService';
 import { hasMeshDeploymentRecord, getMeshEndpoint } from '@/core/state/appBuilderComponentState';
-import { detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
+import { detectFrontendChanges } from '@/core/state/projectStateSync';
 import { Project } from '@/types/base';
 import { HandlerContext } from '@/types/handlers';
 import { getMeshComponentInstance } from '@/types/typeGuards';

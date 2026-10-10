@@ -11,7 +11,8 @@
  * So this is not a tidy-up. It is the thing 16 conversions are waiting on, chosen
  * by measurement rather than taste.
  *
- * COVERS THE WHOLE PUBLIC SURFACE — 44 methods — for the reason `stateManagerFake`
+ * COVERS THE WHOLE PUBLIC SURFACE — 12 methods since 2026-10-08, when thirty-six
+ * pass-throughs left the class (decompose-god-file) — for the reason `stateManagerFake`
  * documents: a builder narrower than the need is one nobody adopts, and the
  * divergence it was meant to stop grows around it instead. That fake answered one
  * method, and 50 suites hand-rolled their own rather than use it.
@@ -29,7 +30,31 @@
  * @see .rptc/backlog/2026-09-01-cast-and-builder-worklog.md — section B
  */
 
+import {
+    createMockAuthCacheManager,
+    createMockEntityServices,
+    createMockSDKClient,
+    type EntityServiceOverrides,
+    type MockEntityServices,
+} from './adobeAuthUnitsFake';
+import type { EntityServices } from '@/features/authentication/services/adobeEntityService';
+import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
+
+const entitiesByFake = new WeakMap<object, MockEntityServices>();
+
+/**
+ * The entity services a fake from {@link createMockAuthenticationService} resolves
+ * `getEntityServices()` to — read synchronously, so a test can stage an answer or
+ * assert a call without awaiting anything.
+ */
+export function entityServicesOf(auth: object | undefined): MockEntityServices {
+    const entities = auth && entitiesByFake.get(auth);
+    if (!entities) {
+        throw new Error('entityServicesOf: not a fake from createMockAuthenticationService');
+    }
+    return entities;
+}
 
 /**
  * An AuthenticationService whose every method is a jest mock.
@@ -40,73 +65,79 @@ import type { AuthenticationService } from '@/features/authentication/services/a
  * to exercise. Every list resolves empty and every getter resolves null, so a test
  * asserting "no organizations" needs no override either.
  *
+ * The units it hands out are fakes too, and the SAME object on every call:
+ * `getCacheManager()` (see {@link createMockAuthCacheManager}), `getEntityServices()`
+ * (reach it with {@link entityServicesOf}) and `getSdkClient()`. The unit fakes
+ * live in `adobeAuthUnitsFake.ts`, so this file fakes exactly the class's surface
+ * (`tests/sop/fake-mirrors-subject.test.ts` reads it).
+ *
  * @param overrides - methods to replace. Typed, so a member that is not on
  *   AuthenticationService fails `typecheck:tests` instead of silently faking a
  *   method the real object does not have.
+ * @param units - methods to replace on the units it hands out: `entities` by owning
+ *   unit, `cache` on the cache manager
  */
 export function createMockAuthenticationService(
-    overrides: Partial<jest.Mocked<AuthenticationService>> = {}
+    overrides: Partial<jest.Mocked<AuthenticationService>> = {},
+    units: {
+        entities?: EntityServiceOverrides;
+        cache?: Partial<jest.Mocked<AuthCacheManager>>;
+    } = {}
 ): jest.Mocked<AuthenticationService> {
-    return {
-        // --- state and cache ---
-        clearCache: jest.fn(),
-        clearConsoleContext: jest.fn(),
-        getCacheManager: jest.fn(),
-        getValidationCache: jest.fn(),
-        getCachedOrganization: jest.fn().mockReturnValue(null),
-        getCachedProject: jest.fn().mockReturnValue(null),
-        setCachedOrganization: jest.fn(),
-        setOrgRejectedFlag: jest.fn(),
-        wasOrgClearedDueToValidation: jest.fn().mockReturnValue(false),
+    const entities = createMockEntityServices(units.entities);
+    const cacheManager = createMockAuthCacheManager(units.cache);
+    const sdkClient = createMockSDKClient();
+    const fake = {
+        // --- the units ---
+        getCacheManager: jest.fn().mockReturnValue(cacheManager),
+        getEntityServices: jest.fn().mockResolvedValue(entities),
+        getTokenManager: jest.fn(),
+        getSdkClient: jest.fn().mockReturnValue(sdkClient),
 
         // --- session ---
         isAuthenticated: jest.fn().mockResolvedValue(true),
-        isFullyAuthenticated: jest.fn().mockResolvedValue(true),
         login: jest.fn().mockResolvedValue(undefined),
         loginAndRestoreProjectContext: jest.fn().mockResolvedValue(undefined),
         logout: jest.fn().mockResolvedValue(undefined),
-        getTokenManager: jest.fn(),
         getTokenStatus: jest.fn().mockResolvedValue({ isAuthenticated: true }),
-        ensureSDKInitialized: jest.fn().mockResolvedValue(undefined),
-
-        // --- console entities ---
-        getCurrentContext: jest.fn().mockResolvedValue(null),
-        getCurrentOrganization: jest.fn().mockResolvedValue(null),
-        getCurrentProject: jest.fn().mockResolvedValue(null),
-        getCurrentWorkspace: jest.fn().mockResolvedValue(null),
-        getOrganizations: jest.fn().mockResolvedValue([]),
-        getOrganizationsSdkOnly: jest.fn().mockResolvedValue([]),
-        getProjects: jest.fn().mockResolvedValue([]),
-        getProjectsSdkOnly: jest.fn().mockResolvedValue([]),
-        getWorkspaces: jest.fn().mockResolvedValue([]),
-        getWorkspacesSdkOnly: jest.fn().mockResolvedValue([]),
-        createProject: jest.fn().mockResolvedValue(undefined),
-        createWorkspace: jest.fn().mockResolvedValue(undefined),
-        deleteWorkspace: jest.fn().mockResolvedValue(undefined),
-        listWorkspaceExtensionPoints: jest.fn().mockResolvedValue([]),
-        removeWorkspaceExtensionPoints: jest.fn().mockResolvedValue({ remaining: [] }),
-        deleteConsoleProject: jest.fn().mockResolvedValue(undefined),
-        renameRemoteProject: jest.fn().mockResolvedValue({ ok: true }),
-
-        // --- credentials ---
-        createAdobeIdCredential: jest.fn().mockResolvedValue(undefined),
-        createWorkspaceCredential: jest.fn().mockResolvedValue(undefined),
-        createWorkspaceS2SCredentialFor: jest.fn().mockResolvedValue(undefined),
-        ensureOAuthCredentialId: jest.fn().mockResolvedValue(undefined),
-        listCredentialIds: jest.fn().mockResolvedValue([]),
-        getS2SDeployCredentials: jest.fn().mockResolvedValue(undefined),
-        getWorkspaceCredential: jest.fn().mockResolvedValue(undefined),
-        getWorkspaceS2SCredential: jest.fn().mockResolvedValue(undefined),
-
-        // --- services and permissions ---
-        getServicesForOrg: jest.fn().mockResolvedValue([]),
-        getSubscribedServiceCodes: jest.fn().mockResolvedValue([]),
-        getSubscribedServices: jest.fn().mockResolvedValue([]),
-        subscribeAdobeIdIntegrationToServices: jest.fn().mockResolvedValue(undefined),
-        subscribeOAuthServerToServerIntegrationToServices: jest.fn().mockResolvedValue(undefined),
         testDeveloperPermissions: jest.fn().mockResolvedValue(true),
-        ensureWorkspaceRuntimeNamespace: jest.fn().mockResolvedValue(undefined),
+
+        // --- kept for the structural interfaces (see the class) ---
+        getOrganizations: jest.fn().mockResolvedValue([]),
+        getProjects: jest.fn().mockResolvedValue([]),
 
         ...overrides,
     } as unknown as jest.Mocked<AuthenticationService>;
+    entitiesByFake.set(fake, entities);
+    return fake;
+}
+
+/**
+ * Give a hand-rolled FLAT fake the two ways in that callers now use:
+ * `getEntityServices()` resolves to units that are all the fake itself, and
+ * `getCacheManager()` returns the fake. A method the fake carries then answers
+ * whichever unit owns it. Which unit a caller reaches for is the compiler's to
+ * check, not a fake's.
+ *
+ * Plain functions, not `jest.fn`, so the config's `resetMocks` cannot empty them.
+ *
+ * @param flat - the fake to extend (mutated and returned)
+ */
+export function poolUnits<T extends object>(flat: T): T {
+    const pool = {
+        orgReads: flat,
+        projectReads: flat,
+        workspaceReads: flat,
+        credentials: flat,
+        orgServices: flat,
+        projectOps: flat,
+        workspaceOps: flat,
+        extensionPoints: flat,
+        resolver: flat,
+        selector: flat,
+    } as unknown as EntityServices;
+    return Object.assign(flat, {
+        getEntityServices: async (): Promise<EntityServices> => pool,
+        getCacheManager: (): T => flat,
+    });
 }

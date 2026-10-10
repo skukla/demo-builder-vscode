@@ -18,7 +18,7 @@
 import type { AuthCacheManager } from './authCacheManager';
 import { getLogger } from '@/core/logging/debugLogger';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
-import { getMeshNodeVersion } from '@/core/utils/meshConfig';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 
 /**
  * Clears Adobe CLI console context (token-preserving).
@@ -39,9 +39,9 @@ export class AdobeEntitySelector {
         try {
             // Use established pattern: Promise.all for parallel execution
             await Promise.all([
-                this.commandManager.execute('aio config delete console.org', { encoding: 'utf8', useNodeVersion: getMeshNodeVersion() }),
-                this.commandManager.execute('aio config delete console.project', { encoding: 'utf8', useNodeVersion: getMeshNodeVersion() }),
-                this.commandManager.execute('aio config delete console.workspace', { encoding: 'utf8', useNodeVersion: getMeshNodeVersion() }),
+                this.commandManager.execute('aio config delete console.org', { encoding: 'utf8', useNodeVersion: demoBuilderNode() }),
+                this.commandManager.execute('aio config delete console.project', { encoding: 'utf8', useNodeVersion: demoBuilderNode() }),
+                this.commandManager.execute('aio config delete console.workspace', { encoding: 'utf8', useNodeVersion: demoBuilderNode() }),
             ]);
 
             // Clear console.where cache since context was cleared

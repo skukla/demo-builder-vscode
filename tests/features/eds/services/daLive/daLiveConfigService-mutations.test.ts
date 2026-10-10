@@ -21,7 +21,7 @@ import {
     type MultiSheetConfig,
     type PermissionRow,
 } from './daLiveConfigService.testUtils';
-import type { TokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
+import type { TokenProvider } from '@/features/eds/services/daLive/daLiveApiClient';
 
 describe('DaLiveConfigService - mutations', () => {
     let service: DaLiveConfigService;

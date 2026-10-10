@@ -19,10 +19,16 @@ const mockOverlayAccountChrome = jest.fn();
 
 jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn().mockImplementation(() => ({
-        copyContentFromSource: mockCopyContentFromSource,
-        createBlockLibraryFromTemplate: mockCreateBlockLibraryFromTemplate,
-        overlayAccountChrome: mockOverlayAccountChrome,
+        copyOps: {
+            copyContentFromSource: mockCopyContentFromSource,
+            overlayAccountChrome: mockOverlayAccountChrome,
+        },
+        blockLibOps: {
+            createBlockLibraryFromTemplate: mockCreateBlockLibraryFromTemplate,
+        },
     })),
+}));
+jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
     createDaLiveServiceTokenProvider: jest
         .fn()
         .mockImplementation((service: { getAccessToken: () => Promise<string> }) => ({

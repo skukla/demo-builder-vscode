@@ -18,8 +18,9 @@ the DA.live sign-in had expired. The Debug Logs show the truth one line above th
 [Helix] No publishable pages found
 ```
 
-`helixSiteContent.ts` (`listAllPages`, then `publishAllSiteContent`) catches the listing
-failure, logs a warning, returns an empty list, and the caller reads empty as "no content".
+`helixPageDiscovery.ts` (`listAllPages`; it was in `helixSiteContent.ts` until the 2026-10-08
+EDS-8 cut) catches the listing failure, logs a warning and returns an empty list; its caller,
+`publishAllSiteContent` in `helixSiteContent.ts`, reads empty as "no content".
 An SC is told to go and fix their content when the fix is to sign in.
 
 ## The fix

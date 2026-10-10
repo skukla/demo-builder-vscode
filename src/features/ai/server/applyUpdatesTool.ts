@@ -1,11 +1,12 @@
 /**
  * apply_updates (Phase 4) — check and apply available updates for the current
  * project across all categories (fork sync, template, components, Adobe MCP,
- * block libraries, inspector SDK, integration pairs), via the headless
- * updateApplyService. It also installs a block library the project has selected
- * but never received (EDS-28). An integration pair (an integration and its ERPs)
- * with newer code is applied through the same pair update the card's Update
- * button runs (AB-73); one in another Adobe org is reported, not deployed.
+ * block libraries, inspector SDK, integration pairs): updateSelections finds
+ * them and the headless updateApplyService applies them. It also installs a
+ * block library the project has selected but never received (EDS-28). An
+ * integration pair (an integration and its ERPs) with newer code is applied
+ * through the same pair update the card's Update button runs (AB-73); one in
+ * another Adobe org is reported, not deployed.
  *
  * Two modes in one tool:
  *  - WITHOUT confirm: read-only — reports what's available (acts as the check).
@@ -28,12 +29,12 @@ import {
 } from '@/features/dashboard/handlers/integrationUpdateHandlers';
 import { describePendingInstall } from '@/features/updates/services/blockLibraryInstall';
 import { describeIntegrationUpdate } from '@/features/updates/services/integrationUpdates';
+import { applyUpdatesHeadless } from '@/features/updates/services/updateApplyService';
 import {
-    applyUpdatesHeadless,
     computeProjectUpdateSelections,
     countSelections,
     type UpdateSelections,
-} from '@/features/updates/services/updateApplyService';
+} from '@/features/updates/services/updateSelections';
 import type { HandlerContext } from '@/types/handlers';
 
 /** Compact, human-readable summary of pending updates. */

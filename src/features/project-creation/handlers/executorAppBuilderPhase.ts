@@ -11,6 +11,7 @@
 
 import { buildDeployOrgTarget } from './executorMeshPhase';
 import type { ProgressTracker } from './shared';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { withOrgContext } from '@/core/shell/orgContextEnv';
 import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
 import { OPERATION_STAGES, detailFor } from '@/core/utils/operationStages';
@@ -80,8 +81,12 @@ export async function ensureWorkspaceRuntimeReady(
     // The namespace check runs via CLI (needs withOrgContext targeting); the SDK
     // `createRuntimeNamespace` provision takes explicit ids (targeting-agnostic).
     await withOrgContext(target, () =>
-        ensureWorkspaceRuntime(commandManager, context.logger, 'auto', () =>
-            authService.ensureWorkspaceRuntimeNamespace(organization, projectId, workspace),
+        ensureWorkspaceRuntime(commandManager, context.logger, demoBuilderNode(), async () =>
+            (await authService.getEntityServices()).workspaceOps.ensureWorkspaceRuntimeNamespace(
+                organization,
+                projectId,
+                workspace,
+            ),
         ),
     );
 }
@@ -123,7 +128,7 @@ export async function executeAppBuilderIntegrationsPhase(
         '@/features/project-creation/services/appBuilderComponentRunnerDeps'
     );
     const { addAppBuilderComponent } = await import(
-        '@/features/app-builder/services/appBuilderComponentRunner'
+        '@/features/app-builder/services/appBuilderAddRun'
     );
     const { replaceDeployedElsewhere } = await import(
         '@/features/dashboard/handlers/replaceDeployedElsewhere'

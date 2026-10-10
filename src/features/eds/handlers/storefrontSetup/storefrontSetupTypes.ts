@@ -12,6 +12,7 @@ import type { DaLiveAuthService } from '../../services/daLive/daLiveAuthService'
 import type { DaLiveContentOperations } from '../../services/daLive/daLiveContentOperations';
 import type { GitHubAppService } from '../../services/github/githubAppService';
 import type { GitHubFileOperations } from '../../services/github/githubFileOperations';
+import type { GitHubRepoLifecycle } from '../../services/github/githubRepoLifecycle';
 import type { GitHubRepoOperations } from '../../services/github/githubRepoOperations';
 import type { HelixService } from '../../services/helix/helixService';
 import type { TemplateSyncService } from '@/features/updates/services/templateSyncService';
@@ -50,6 +51,8 @@ export type SetupGitHubAppService = Pick<GitHubAppService, 'getInstallUrl' | 'is
 
 export interface SetupServices {
     githubRepoOps: GitHubRepoOperations;
+    /** Creates the repository and polls until GitHub has populated it. */
+    githubRepoLifecycle: GitHubRepoLifecycle;
     /** Resets an existing repository to its template — the same reset Check for Updates runs. */
     templateSync: Pick<TemplateSyncService, 'resetRepository'>;
     githubFileOps: GitHubFileOperations;

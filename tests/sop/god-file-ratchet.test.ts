@@ -25,9 +25,11 @@
  *   `godFileCoupled`    — over threshold AND showing a coupling signal. The work.
  *
  * Pinning only the first would reward splitting cohesive files to move a number,
- * which is the opposite of the point: `appBuilderComponentRunner.ts` is 1,122 lines
- * with 11 imports and a 7-symbol public surface, and `edsPipeline.ts` is 973 lines
- * with 5 imports and ONE export. Both are long and neither is a god file.
+ * which is the opposite of the point: `edsPipeline.ts` is 976 lines with 6 imports
+ * and ONE export. It is long and it is not a god file. (This sentence used to cite
+ * `appBuilderComponentRunner.ts` beside it as the same case. A reader found three
+ * jobs in it that no count here could see, and it was split on 2026-10-07: the
+ * counts are a floor for the work list, not a verdict.)
  * Pinning only the second would let the population grow as long as each file stayed
  * simple.
  *

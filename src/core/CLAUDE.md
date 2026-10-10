@@ -36,19 +36,17 @@ keeps the dependency graph acyclic and makes "if two features need it, move it t
 core" a safe answer rather than a way to close a loop.
 
 Enforced by the `layerDirection` ledger in
-`tests/sop/architecture-rules.exemptions.json`. **Seven files predate the rule and
-the set may only shrink** — a new crossing fails the build, and so does a ledger row
-for a file that no longer violates. Clearing one means fixing the file *and* deleting
-its row.
+`tests/sop/architecture-rules.exemptions.json`. **The set may only shrink** — a new
+crossing fails the build, and so does a ledger row for a file that no longer violates.
+Clearing one means fixing the file *and* deleting its row.
 
-The seven are not all the same problem, and the ledger says so per row:
-
-| | |
-|---|---|
-| `commands/ResetAllCommand.ts`, `commands/ResetAiOnboardingCommand.ts` | **Misplaced, not miswritten.** A command orchestrating features is doing its job; it is in the wrong directory. Fix by moving to `src/commands/` |
-| `di/serviceLocator.ts` | `import type` only — no runtime coupling, no cycle. Move the two interfaces to `@/types`, or ratify: a locator has to name what it locates |
-| `state/apiOwners.ts`, `state/projectFileLoader.ts`, `state/projectStateSync.ts` | Real runtime crossings into `features/components` |
-| `utils/progressUnifier/ProgressUnifier.ts` | Imports `InstallStep`, which looks like a TYPE — probably clears with `import type` alone |
+Seven files predated the rule when it was ratified. One row remains, and it is not
+debt: `di/serviceLocator.ts`, ratified by the owner on 2026-08-31 as a permanent
+exception (`import type` only, so no runtime coupling and no cycle; a locator has to
+name what it locates). The other six were cleared: two commands that merely lived in
+the wrong directory, three real runtime crossings from `state/` into
+`features/components`, and one more. (This section listed all seven as current until
+2026-10-08, long after the ledger held one.)
 
 Cross-boundary imports also use the path alias, never a relative path, enforced by
 `no-restricted-imports` in `eslint.config.mjs`.

@@ -8,7 +8,7 @@
  */
 
 const mockRemove = jest.fn();
-jest.mock('@/features/app-builder/services/appBuilderComponentRunner', () => ({
+jest.mock('@/features/app-builder/services/appBuilderRemoveRun', () => ({
     removeAppBuilderComponent: (...a: unknown[]) => mockRemove(...a),
 }));
 const mockBuildDefaultRunnerDeps = jest.fn((..._a: unknown[]) => ({ _deps: true }));

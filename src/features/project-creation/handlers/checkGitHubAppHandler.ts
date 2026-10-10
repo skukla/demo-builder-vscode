@@ -20,6 +20,7 @@
 
 import { getGitHubServices, tryCreateDaLiveTokenProvider } from '@/features/eds/handlers/edsHelpers';
 import { buildUndeterminedAppCheckError } from '@/features/eds/services/appInstallationResolver';
+import type { AppInstalledResult } from '@/features/eds/services/github/githubAppService';
 import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
 import type { HelixCodePreview } from '@/features/eds/services/helix/helixCapabilities';
 import { HelixService } from '@/features/eds/services/helix/helixService';
@@ -67,6 +68,35 @@ interface CheckGitHubAppResponse {
     [key: string]: unknown;
 }
 
+/** The two GitHubAppService calls this handler makes. */
+export interface CheckGitHubAppService {
+    isAppInstalled(
+        owner: string,
+        repo: string,
+        options?: { lenient?: boolean },
+    ): Promise<AppInstalledResult>;
+    getInstallUrl(owner: string, repo: string): string;
+}
+
+/**
+ * Service seam. Defaults to the two services this handler builds from the context's
+ * credentials; production never passes it.
+ *
+ * Both are STATELESS — credentials arrive at construction and are never mutated — so
+ * ADR-015 leaves the construction here. What it cost was test design: a suite that
+ * cannot hand them in has to `jest.mock` both modules, which is the wall ADR-016
+ * lists for this file. Handlers take (context, payload), so this rides as a third
+ * optional parameter — extra optional parameters stay assignable to `MessageHandler`.
+ */
+export interface CheckGitHubAppServices {
+    makeHelix?: (logger: Logger, tokenService: GitHubTokenService) => HelixCodePreview;
+    makeGitHubAppService?: (
+        tokenService: GitHubTokenService,
+        logger: Logger,
+        daLiveTokenProvider: ReturnType<typeof tryCreateDaLiveTokenProvider>,
+    ) => CheckGitHubAppService;
+}
+
 /**
  * Ask Helix to index this repository.
  *
@@ -103,43 +133,6 @@ interface CheckGitHubAppResponse {
  * @param logger - Logger instance
  * @returns True if Helix accepted the request
  */
-/** The two GitHubAppService calls this handler makes. */
-export interface CheckGitHubAppService {
-    isAppInstalled(
-        owner: string,
-        repo: string,
-        options?: { lenient?: boolean },
-    ): Promise<{
-        isInstalled: boolean;
-        codeStatus?: number;
-        transient?: boolean;
-        httpNotFound?: boolean;
-        httpStatus?: number;
-        helixError?: string;
-        noCredential?: boolean;
-    }>;
-    getInstallUrl(owner: string, repo: string): string;
-}
-
-/**
- * Service seam. Defaults to the two services this handler builds from the context's
- * credentials; production never passes it.
- *
- * Both are STATELESS — credentials arrive at construction and are never mutated — so
- * ADR-015 leaves the construction here. What it cost was test design: a suite that
- * cannot hand them in has to `jest.mock` both modules, which is the wall ADR-016
- * lists for this file. Handlers take (context, payload), so this rides as a third
- * optional parameter — extra optional parameters stay assignable to `MessageHandler`.
- */
-export interface CheckGitHubAppServices {
-    makeHelix?: (logger: Logger, tokenService: GitHubTokenService) => HelixCodePreview;
-    makeGitHubAppService?: (
-        tokenService: GitHubTokenService,
-        logger: Logger,
-        daLiveTokenProvider: ReturnType<typeof tryCreateDaLiveTokenProvider>,
-    ) => CheckGitHubAppService;
-}
-
 async function triggerCodeSync(
     owner: string,
     repo: string,

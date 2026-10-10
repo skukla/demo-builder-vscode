@@ -13,7 +13,7 @@ import { ProgressTracker } from '../handlers/shared';
 import type { ComponentDefinitionEntry } from './componentInstallationOrchestrator';
 import { isMeshComponentId } from '@/core/constants';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { generateComponentConfigFiles } from '@/features/project-creation/helpers/envFileGenerator';
+import { generateComponentConfigFiles } from '@/features/project-creation/helpers/componentConfigFiles';
 import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
 import { getComponentIds, getEntryCount } from '@/types/typeGuards';
 

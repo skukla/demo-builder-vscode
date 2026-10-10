@@ -36,17 +36,13 @@ beforeEach(installDefaults);
 
 describe('resetRepoToTemplate — the bulk template reset', () => {
     it('hands GitHub the template, the repo, fstab for the DA.live site and both config files', async () => {
-        mocks.generateConfigJson.mockReturnValue({ success: true, content: '{"cfg":1}' });
+        mocks.generateProjectConfigJson.mockReturnValue({ success: true, content: '{"cfg":1}' });
         const params = buildParams();
 
         const { resetMock, overrides, report, context, githubFileOps } = await runReset(params);
 
         expect(mocks.generateFstabContent).toHaveBeenCalledWith({ daLiveOrg: 'acme', daLiveSite: 'shop' });
-        expect(mocks.buildConfigGeneratorParams).toHaveBeenCalledWith(params.project);
-        expect(mocks.generateConfigJson).toHaveBeenCalledWith(
-            mocks.buildConfigGeneratorParams.mock.results[0].value,
-            context.logger,
-        );
+        expect(mocks.generateProjectConfigJson).toHaveBeenCalledWith(params.project, context.logger);
         expect(resetMock).toHaveBeenCalledWith(
             'tpl-owner',
             'tpl-repo',
@@ -97,7 +93,7 @@ describe('resetRepoToTemplate — the bulk template reset', () => {
     });
 
     it('leaves config.json out of the commit when generation fails, even if stale content is returned', async () => {
-        mocks.generateConfigJson.mockReturnValue({
+        mocks.generateProjectConfigJson.mockReturnValue({
             success: false,
             content: '{"stale":1}',
             error: 'no backend',
@@ -110,7 +106,7 @@ describe('resetRepoToTemplate — the bulk template reset', () => {
     });
 
     it('leaves config.json out when generation succeeds without content', async () => {
-        mocks.generateConfigJson.mockReturnValue({ success: true });
+        mocks.generateProjectConfigJson.mockReturnValue({ success: true });
 
         const { overrides } = await runReset(buildParams());
 

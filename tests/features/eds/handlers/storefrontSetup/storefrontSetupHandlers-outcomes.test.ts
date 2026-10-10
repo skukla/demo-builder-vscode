@@ -34,7 +34,7 @@ jest.mock('@/features/eds/handlers/storefrontSetup/storefrontSetupPhases', () =>
 
 jest.mock('@/features/eds/services/cleanupService');
 jest.mock('@/features/eds/services/configService/configurationService');
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
     createDaLiveTokenProvider: jest.fn(),
     createDaLiveServiceTokenProvider: jest.fn(),
 }));

@@ -52,12 +52,10 @@ function serve(opts: { authed?: boolean; noManager?: boolean } = {}) {
         createMockHandlerContext({
             authManager: opts.noManager
                 ? undefined
-                : createMockAuthenticationService({
-                      isAuthenticated,
-                      createProject,
-                      createWorkspace,
-                      getOrganizations,
-                  }),
+                : createMockAuthenticationService(
+                      { isAuthenticated, getOrganizations },
+                      { entities: { projectOps: { createProject }, workspaceOps: { createWorkspace } } },
+                  ),
             logger: createMockLogger(),
         });
 

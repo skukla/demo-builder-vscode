@@ -40,7 +40,8 @@ const mockPinRepoToLkg = pinRepoToLkg as jest.Mock;
 function makeServices(): SetupServices {
     return {
         githubFileOps: {} as unknown,
-        githubRepoOps: {
+        githubRepoOps: {},
+        githubRepoLifecycle: {
             createFromTemplate: jest.fn(),
             waitForContent: jest.fn(),
         },

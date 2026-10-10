@@ -9,12 +9,12 @@
  */
 
 const mockCommandExecutor = { execute: jest.fn() };
-const mockAuthService = {
+const mockAuthService = poolUnits({
     isAuthenticated: jest.fn(),
     loginAndRestoreProjectContext: jest.fn(),
     getCachedOrganization: jest.fn(),
     testDeveloperPermissions: jest.fn(),
-};
+});
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getCommandExecutor: () => mockCommandExecutor,
@@ -53,6 +53,7 @@ import type { TransformedComponentDefinition } from '@/types/components';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../helpers/projectFake';
+import { poolUnits } from '../../../helpers/authenticationServiceFake';
 
 const MESH_ID = 'commerce-mesh';
 const MESH_PATH = '/projects/demo/components/commerce-mesh';

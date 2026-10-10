@@ -15,10 +15,8 @@ jest.mock('@/features/mesh/services/deployMeshHeadless', () => ({
 }));
 
 const mockSendMeshStatusUpdate = jest.fn();
-jest.mock('@/features/dashboard/commands/showDashboard', () => ({
-    ProjectDashboardWebviewCommand: {
-        sendMeshStatusUpdate: (...args: unknown[]) => mockSendMeshStatusUpdate(...args),
-    },
+jest.mock('@/features/dashboard/services/projectPanelPushes', () => ({
+    sendMeshStatusUpdate: (...args: unknown[]) => mockSendMeshStatusUpdate(...args),
 }));
 
 

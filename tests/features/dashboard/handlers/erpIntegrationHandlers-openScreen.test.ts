@@ -24,7 +24,7 @@ jest.mock('@/core/utils/browserUtils', () => ({
     openInIncognito: (...a: unknown[]) => mockOpenInIncognito(...a),
 }));
 
-jest.mock('@/features/dashboard/handlers/dashboardHandlers', () => ({
+jest.mock('@/features/dashboard/handlers/statusHandlers', () => ({
     handleRequestStatus: jest.fn().mockResolvedValue({ success: true }),
 }));
 

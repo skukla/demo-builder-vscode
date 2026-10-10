@@ -44,7 +44,7 @@ export interface PollOptions {
  */
 export interface ExecuteOptions extends Omit<ExecOptions, 'shell'> {
     // Environment setup
-    useNodeVersion?: string | 'auto' | null;  // Use specific Node version ('auto' for Adobe CLI detection, null to skip)
+    useNodeVersion?: string | null;  // A Node major (or 'current'), run from Demo Builder's Node folder; null to skip
     enhancePath?: boolean;                     // Add npm global paths to PATH
     configureTelemetry?: boolean;              // Ensure Adobe CLI telemetry configured
 

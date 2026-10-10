@@ -1,19 +1,11 @@
 /**
- * Tests for EnvironmentSetup configuration and environment setup
- * - ensureAdobeCLINodeVersion
+ * Tests for EnvironmentSetup configuration
  * - ensureAdobeCLIConfigured
- * - buildCommandWithEnvironment
- * - session management
  */
 import { EnvironmentSetup } from '@/core/shell/environmentSetup';
-import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
-import * as fsSync from 'fs';
 import * as os from 'os';
-import * as vscode from 'vscode';
 import {
     createEnvironmentSetup,
-    createMockExecuteCommand,
-    mockVSCodeExtension,
     resetAllMocks,
     mockLogger
 } from './environmentSetup.testUtils';
@@ -39,123 +31,6 @@ describe('EnvironmentSetup - Configuration', () => {
         mockHomeDir = '/mock/home';
         (os.homedir as jest.Mock).mockReturnValue(mockHomeDir);
         environmentSetup = createEnvironmentSetup(mockHomeDir);
-    });
-
-    describe('ensureAdobeCLINodeVersion', () => {
-        it('should pass shell option when checking fnm availability', async () => {
-            environmentSetup.resetSession();
-
-            mockVSCodeExtension({
-                infrastructure: {
-                    'adobe-cli': {
-                        nodeVersion: '18'
-                    }
-                }
-            });
-
-            const executeCommand = createMockExecuteCommand();
-
-            await environmentSetup.ensureAdobeCLINodeVersion(executeCommand);
-
-            // Verify shell option passed to fnm --version check
-            const fnmVersionCall = executeCommand.mock.calls.find(call =>
-                call[0].includes('fnm --version')
-            );
-            expect(fnmVersionCall).toBeDefined();
-            expect(fnmVersionCall![1]).toHaveProperty('shell', DEFAULT_SHELL);
-        });
-
-        it('should pass shell option when getting fnm version', async () => {
-            environmentSetup.resetSession();
-
-            mockVSCodeExtension({
-                infrastructure: {
-                    'adobe-cli': {
-                        nodeVersion: '18'
-                    }
-                }
-            });
-
-            const executeCommand = createMockExecuteCommand();
-
-            await environmentSetup.ensureAdobeCLINodeVersion(executeCommand);
-
-            // Verify shell option passed to fnm current check
-            const fnmCurrentCall = executeCommand.mock.calls.find(call =>
-                call[0].includes('fnm current')
-            );
-            expect(fnmCurrentCall).toBeDefined();
-            expect(fnmCurrentCall![1]).toHaveProperty('shell', DEFAULT_SHELL);
-        });
-
-        it('should skip if already set for session', async () => {
-            // Reset mocks to ensure no Node version is found
-            (vscode.extensions.getExtension as jest.Mock).mockReturnValue(undefined);
-            (fsSync.existsSync as jest.Mock).mockReturnValue(false);
-
-            const executeCommand = jest.fn();
-
-            // Call twice
-            await environmentSetup.ensureAdobeCLINodeVersion(executeCommand);
-            await environmentSetup.ensureAdobeCLINodeVersion(executeCommand);
-
-            // Should only setup once (no commands executed because no Node version found)
-            expect(executeCommand).not.toHaveBeenCalled();
-        });
-
-        it('should switch Node version when needed', async () => {
-            // Reset session first
-            environmentSetup.resetSession();
-
-            mockVSCodeExtension({
-                infrastructure: {
-                    'adobe-cli': {
-                        nodeVersion: '18'
-                    }
-                }
-            });
-
-            const executeCommand = jest.fn()
-                .mockResolvedValueOnce({ stdout: '9.4.0', stderr: '', code: 0, duration: 100 }) // fnm --version
-                .mockResolvedValueOnce({ stdout: 'v16.0.0', stderr: '', code: 0, duration: 100 }) // fnm current
-                .mockResolvedValueOnce({ stdout: '', stderr: '', code: 0, duration: 100 }); // fnm use
-
-            await environmentSetup.ensureAdobeCLINodeVersion(executeCommand);
-
-            expect(executeCommand).toHaveBeenCalledWith(
-                'fnm use 18 --silent-if-unchanged',
-                expect.any(Object)
-            );
-        });
-
-        it('should handle concurrent calls with lock', async () => {
-            environmentSetup.resetSession();
-
-            mockVSCodeExtension({
-                infrastructure: {
-                    'adobe-cli': {
-                        nodeVersion: '18'
-                    }
-                }
-            });
-
-            const executeCommand = jest.fn().mockResolvedValue({
-                stdout: '',
-                stderr: '',
-                code: 0,
-                duration: 100
-            });
-
-            // Call multiple times concurrently
-            await Promise.all([
-                environmentSetup.ensureAdobeCLINodeVersion(executeCommand),
-                environmentSetup.ensureAdobeCLINodeVersion(executeCommand),
-                environmentSetup.ensureAdobeCLINodeVersion(executeCommand)
-            ]);
-
-            // Setup should only happen once despite concurrent calls
-            expect(executeCommand.mock.calls.length).toBeLessThanOrEqual(3);
-        });
     });
 
     describe('ensureAdobeCLIConfigured', () => {
@@ -253,55 +128,4 @@ describe('EnvironmentSetup - Configuration', () => {
         });
     });
 
-    describe('buildCommandWithEnvironment', () => {
-        it('should wrap command with fnm exec for specific version', () => {
-            const result = environmentSetup.buildCommandWithEnvironment('node --version', {
-                useNodeVersion: '18'
-            });
-
-            expect(result).toContain('fnm use 18');
-            expect(result).toContain('node --version');
-        });
-
-        it('should use fnm env for current version', () => {
-            const result = environmentSetup.buildCommandWithEnvironment('node --version', {
-                useNodeVersion: 'current'
-            });
-
-            expect(result).toContain('fnm env');
-            expect(result).toContain('node --version');
-        });
-
-        it('should skip fnm when already on target version', () => {
-            const result = environmentSetup.buildCommandWithEnvironment('node --version', {
-                useNodeVersion: '18',
-                currentFnmVersion: 'v18.1.0'
-            });
-
-            expect(result).toBe('node --version');
-        });
-
-        it('should return original command when no version specified', () => {
-            const result = environmentSetup.buildCommandWithEnvironment('node --version', {});
-
-            expect(result).toBe('node --version');
-        });
-    });
-
-    describe('session management', () => {
-        it('should track session Node version', () => {
-            expect(environmentSetup.isSessionNodeVersionSet()).toBe(false);
-
-            environmentSetup.resetSession();
-
-            expect(environmentSetup.getSessionNodeVersion()).toBeNull();
-        });
-
-        it('should reset session state', () => {
-            environmentSetup.resetSession();
-
-            expect(environmentSetup.isSessionNodeVersionSet()).toBe(false);
-            expect(environmentSetup.getSessionNodeVersion()).toBeNull();
-        });
-    });
 });

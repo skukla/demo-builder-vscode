@@ -71,7 +71,7 @@ which is the single persisted authority. The mesh is one component kind in that 
 The singular `meshState`/`appState` fields are legacy-read-only — manifests migrate
 on load and forward-migrate on first save.
 
-Add and remove are additive and per-id (`appBuilderComponentRunner.ts`): add leaves
+Add and remove are additive and per-id (`appBuilderAddRun.ts`, `appBuilderRemoveRun.ts`): add leaves
 siblings untouched, keys the entry, and reconciles the selection lists; remove
 undeploys remotely, then cleans up only that integration's files and keyed state.
 

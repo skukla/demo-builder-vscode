@@ -62,7 +62,7 @@ export const mockListDirectory = jest.fn();
  * `jest.mock` registers, so it binds to the real class.
  */
 export const mockDaLiveContentOperations = jest.fn().mockImplementation(() => ({
-    listDirectory: mockListDirectory,
+    sourceOps: { listDirectory: mockListDirectory },
 }));
 
 jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({

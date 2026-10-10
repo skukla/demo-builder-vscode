@@ -26,6 +26,7 @@ import {
 import { getLogger } from '@/core/logging/debugLogger';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import type { Logger } from '@/types/logger';
 
 // ==========================================================
@@ -46,8 +47,11 @@ const DATA_REPO_CONFIG = {
     branch: 'accs',
 };
 
-/** Node version for tool execution (LTS) */
-const NODE_VERSION = '18';
+/**
+ * Demo Builder's one Node (PR-1a). The tool's repo is private, so its own range is not
+ * read; it installed and started on Node 24 on 2026-10-07, and DI-4 decides its future.
+ */
+const NODE_VERSION = demoBuilderNode();
 
 /** npm install flags for faster installation */
 const NPM_INSTALL_FLAGS = '--no-fund';

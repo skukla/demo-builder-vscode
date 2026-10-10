@@ -7,8 +7,8 @@
  * compiler nothing about what the code under test goes looking for.
  *
  * Production names this shape itself. `errorFormatters.ts` declares
- * `error as Error & { code?: string; status?: number }` three times, and reads
- * `status` on two paths while reading `statusCode` on a third — so this type spans
+ * `error as Error & { code?: string; status?: number }` in its one table matcher,
+ * while DA.live's errors (`DaLiveError`) carry `statusCode` — so this type spans
  * both names deliberately. A fixture setting the wrong one prints "Status: N/A" and
  * still looks right, which is exactly the sort of thing a shared shape prevents.
  *

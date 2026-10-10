@@ -18,7 +18,7 @@
  * makes the header rearrange itself as the list grows past it — the same screen renders two
  * different layouts depending on how much data came back.
  *
- * Page-level surfaces therefore pass 0 (`ProjectsDashboard`, `IntegrationsScreen`) so the
+ * Page-level surfaces therefore pass 0 (`ProjectsDashboard`, `IntegrationsActionBand`) so the
  * field is present from the first item and the layout never moves. Pick non-zero only for a
  * bounded in-page list where you have decided both layouts are acceptable.
  */

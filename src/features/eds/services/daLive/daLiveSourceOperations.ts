@@ -4,8 +4,8 @@
  * The source-CRUD cluster carved out of `DaLiveContentOperations`: listing a
  * directory, creating/deleting a single source, deleting a site root, deleting
  * an entire site tree, and probing a source's existence. Builds on the shared
- * `DaLiveApiClient` (token + fetch-with-retry + error mapping); the facade
- * constructs one instance and delegates to it.
+ * `DaLiveApiClient` (token + fetch-with-retry + error mapping);
+ * DaLiveContentOperations constructs one instance and hands it out as `sourceOps`.
  *
  * Keep this module `vscode`-free (the MCP server constructs it in a separate
  * Node process).

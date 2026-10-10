@@ -12,8 +12,8 @@ import type { EdsResetResult } from './edsResetParams';
 import { CommandExecutor } from '@/core/shell/commandExecutor';
 import { buildOrgTargetFromProjectAdobe, withOrgContext, type OrgContextTarget } from '@/core/shell/orgContextEnv';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
+import { updateMeshState } from '@/features/mesh/services/meshDeployBaseline';
 import { deployMeshCreateOrUpdate } from '@/features/mesh/services/meshRedeploy';
-import { updateMeshState } from '@/features/mesh/services/stalenessDetector';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 import { getMeshComponentInstance } from '@/types/typeGuards';
@@ -142,7 +142,7 @@ export async function redeployApiMesh(
     // org code/name from the cached org on an id match (less leaky than ID-only).
     const target: OrgContextTarget = buildOrgTargetFromProjectAdobe(
         project.adobe,
-        authService.getCachedOrganization(),
+        authService.getCacheManager().getCachedOrganization(),
     );
 
     return withOrgContext(target, () =>

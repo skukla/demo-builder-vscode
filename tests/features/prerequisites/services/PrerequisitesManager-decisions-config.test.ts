@@ -6,7 +6,6 @@
 jest.mock('@/features/prerequisites/services/versioning/MultiVersionDetector', () => ({
     checkMultipleNodeVersions: jest.fn(),
     getInstalledNodeVersions: jest.fn().mockResolvedValue([]),
-    getLatestInFamily: jest.fn(),
 }));
 jest.mock('@/features/prerequisites/services/versioning/VersionSatisfactionChecker', () => ({
     checkVersionSatisfaction: jest.fn(),
@@ -22,7 +21,7 @@ import { setupMocks, setupConfigLoader, type TestMocks } from './PrerequisitesMa
 import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 import { PrerequisitesCacheManager } from '@/features/prerequisites/services/prerequisitesCacheManager';
 import { getInstallSteps } from '@/features/prerequisites/services/installation/InstallStepBuilder';
-import { checkMultipleNodeVersions, getLatestInFamily } from '@/features/prerequisites/services/versioning/MultiVersionDetector';
+import { checkMultipleNodeVersions } from '@/features/prerequisites/services/versioning/MultiVersionDetector';
 import { checkVersionSatisfaction } from '@/features/prerequisites/services/versioning/VersionSatisfactionChecker';
 import { join } from 'path';
 import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
@@ -206,13 +205,6 @@ describe('PrerequisitesManager — config-derived decisions', () => {
             expect(checkMultipleNodeVersions).toHaveBeenCalledWith(
                 { '20': 'backend' }, mocks.executor, mocks.logger,
             );
-        });
-
-        it('hands getLatestInFamily the family, the executor and the logger', async () => {
-            (getLatestInFamily as jest.Mock).mockResolvedValue('20.11.0');
-
-            expect(await manager.getLatestInFamily('20')).toBe('20.11.0');
-            expect(getLatestInFamily).toHaveBeenCalledWith('20', mocks.executor, mocks.logger);
         });
 
         it('reduces the satisfaction check to its boolean, discarding the rest of the answer', async () => {

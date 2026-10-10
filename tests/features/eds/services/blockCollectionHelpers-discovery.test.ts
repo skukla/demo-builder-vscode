@@ -8,12 +8,12 @@
 
 import { installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
 import type { Logger } from '@/types/logger';
-import type { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
 import type { AddonSource } from '@/types/demoPackages';
 import {
     createDestComponentDef,
     createBlockFileEntries,
     setupBlockCollectionMocks,    primeCommitPath,
+    type MockGithubFileOps,
 } from './blockCollectionHelpers.testUtils';
 
 describe('installBlockCollections (single library)', () => {
@@ -23,7 +23,7 @@ describe('installBlockCollections (single library)', () => {
         branch: 'main',
     };
     const DEFAULT_BLOCKS = ['hero-cta', 'newsletter', 'search-bar'];
-    let mockGithubFileOps: jest.Mocked<GitHubFileOperations>;
+    let mockGithubFileOps: MockGithubFileOps;
     let mockLogger: jest.Mocked<Logger>;
 
     beforeEach(() => {

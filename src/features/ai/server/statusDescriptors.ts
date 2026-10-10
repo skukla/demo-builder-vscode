@@ -35,7 +35,7 @@ export const STATUS_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: false,
         readOnly: true,
         description:
-            'Check the tools a stack needs (Node versions, aio CLI, plugins) and whether each is installed. Requires a stack id from list_stacks.',
+            'Check the tools a stack needs (the Node in the Demo Builder Node folder, the aio CLI and its plugins under that Node) and whether each is installed. Requires a stack id from list_stacks.',
         map: prerequisitesHandlers,
         type: 'check-prerequisites',
         inputSchema: {

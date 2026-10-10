@@ -60,7 +60,7 @@ function clients(pages: Map<string, string>, hasBlock = true) {
     };
     const githubFileOps = { getFileContent: jest.fn().mockResolvedValue(hasBlock ? { content: '//' } : null) };
     return {
-        daLiveContentOps,
+        daLiveContentOps: { sourceOps: daLiveContentOps },
         githubFileOps,
         githubTokenService: {},
         tokenProvider: { getAccessToken: jest.fn() },

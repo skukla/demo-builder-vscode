@@ -223,12 +223,23 @@ describe('DataInstallerWriteClient', () => {
 
         // A 202 with no activation id leaves the runner nothing to poll, so it is
         // a failure — not a job that silently never reports.
-        it('fails when a 202 carries no activation id', async () => {
+        it('fails when a 202 carries no activation id, naming the action', async () => {
             const fetchImpl = ok({ success: true, status: 'pending' }, 202);
 
-            await expect(makeLoggingClient(fetchImpl).startImport(REQUEST)).rejects.toBeInstanceOf(
-                DataInstallerApiError,
-            );
+            await expect(makeLoggingClient(fetchImpl).startImport(REQUEST)).rejects.toMatchObject({
+                status: 202,
+                action: 'process-datapack-async',
+            });
+        });
+
+        it('POSTs JSON', async () => {
+            const fetchImpl = ok({ success: true, activation_id: 'act-1' }, 202);
+
+            await makeLoggingClient(fetchImpl).startImport(REQUEST);
+
+            const init = fetchImpl.mock.calls[0][1];
+            expect(init.method).toBe('POST');
+            expect(init.headers['Content-Type']).toBe('application/json');
         });
 
         it('surfaces a rejected start as an API error', async () => {
@@ -276,12 +287,13 @@ describe('DataInstallerWriteClient', () => {
             expect(fetchImpl).not.toHaveBeenCalled();
         });
 
-        it('fails when a 202 carries no activation id', async () => {
+        it('fails when a 202 carries no activation id, naming the action', async () => {
             const fetchImpl = ok({ success: true }, 202);
 
-            await expect(makeLoggingClient(fetchImpl).startDelete(REQUEST)).rejects.toBeInstanceOf(
-                DataInstallerApiError,
-            );
+            await expect(makeLoggingClient(fetchImpl).startDelete(REQUEST)).rejects.toMatchObject({
+                status: 202,
+                action: 'process-datapack-async',
+            });
         });
     });
 
@@ -338,6 +350,7 @@ describe('DataInstallerWriteClient', () => {
             await makeLoggingClient(fetchImpl).checkCredentials(REQUEST);
 
             expect(String(fetchImpl.mock.calls[0][0])).toBe(`${BASE}/get-websites-and-stores`);
+            expect(fetchImpl.mock.calls[0][1].method).toBe('POST');
         });
 
         it('reports usable credentials', async () => {

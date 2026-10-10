@@ -10,7 +10,7 @@
  * @module features/eds/services/reset/edsResetFileOverrides
  */
 
-import { buildConfigGeneratorParams, generateConfigJson } from '../configGenerator';
+import { generateProjectConfigJson } from '../configGenerator';
 import { carrySharedDemoFile } from '../demoPackage/sharedDemoFile';
 import { generateFstabContent } from '../fstabGenerator';
 import type { GitHubFileOperations } from '../github/githubFileOperations';
@@ -33,7 +33,7 @@ export async function buildResetFileOverrides(
     fileOverrides.set('fstab.yaml', generateFstabContent({ daLiveOrg, daLiveSite }));
 
     // Generate config.json with Commerce configuration
-    const configResult = generateConfigJson(buildConfigGeneratorParams(project), logger);
+    const configResult = generateProjectConfigJson(project, logger);
     if (configResult.success && configResult.content) {
         fileOverrides.set('config.json', configResult.content);
         fileOverrides.set('demo-config.json', configResult.content);

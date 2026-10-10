@@ -82,6 +82,20 @@ close into a cycle and "move it to `core/`" stops being a safe answer.
 > wrong directory, one is `import type` only, and four are real. A prohibition that exists
 > in one directory's prose is a wish; this is the version with a check behind it.
 
+> **Convention.** No import cycles in `src/`. A module never reaches itself through its
+> own imports, and an `await import()` does not exempt a loop: deferring it keeps load
+> order working and leaves the loop in place. `import type` edges do not count; they are
+> erased at compile. When a handler or service needs something a command owns, the shared
+> piece moves to a module both can import (`dashboard/services/projectPanelPushes.ts` is
+> the worked example); the handler does not import the command, because the command
+> imports the handler map. Enforced by `tests/sop/import-cycles.test.ts`, a ban with no
+> ledger.
+> *Why:* a cycle makes load order matter, and the failure it causes is a symbol that is
+> `undefined` at import time, in whichever file happened to load first. Until 2026-10-08
+> cycles were only measured when someone ran `circular-dependency-scan`, and four sat in
+> `src/` unnoticed, three of them through the dashboard command, each hidden behind a
+> lazy import. All four were broken on 2026-10-07; the check went in at zero.
+
 > **Convention.** Features do not import other features; commands may.
 > [src/features/CLAUDE.md](../../src/features/CLAUDE.md) · enforced by eslint.
 > *Why:* it keeps a feature replaceable. Cross-feature imports are how two features quietly become one.
@@ -299,6 +313,17 @@ check says so and names the file.
 > spelled a default, a demo built from one brand read as "no published pages" in the probe while
 > the copy step knew better — found live, 2026-09-12.
 > Enforced by `tests/sop/content-index-path.test.ts`.
+
+> **Convention.** Demo Builder states no Node version of its own. Each component declares the
+> Node it accepts in its own repo (`engines.node`); `npm run node:resolve` reads them all at a
+> release cut and writes the one Node they accept to `node-version.generated.json`, and every
+> reader asks `core/shell/demoBuilderNode.ts`. The only other Node is one a custom integration
+> needs, worked out when it is added.
+> *Why:* before PR-1a the same "24" was typed into four catalogs and backed by five hardcoded
+> "20"s, and the mesh's two lookups asked VS Code for the extension under a name it does not
+> have, so mesh ran on the fallback for months while every test passed. A number nobody types
+> cannot drift from the components it describes.
+> Enforced by `tests/sop/node-versions-from-components.test.ts`.
 
 ## 5. What survives between calls
 
@@ -1730,11 +1755,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 25 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 58 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 60 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
-- **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
+- **Scans** measure at release cuts: duplication, dead code, agent coverage (import cycles moved to an enforcer suite on 2026-10-08)
 
-**This handbook states 126 conventions. 125 of them are enforced; 1 is not.**
+**This handbook states 128 conventions. 127 of them are enforced; 1 is not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a

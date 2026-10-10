@@ -4,10 +4,9 @@
  * Detects and manages multiple Node.js versions installed via fnm.
  */
 
-import { buildMajorToFullVersionMap, parseMajorVersions, isValidVersionFamily } from './NodeVersionParser';
+import { buildMajorToFullVersionMap } from './NodeVersionParser';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
-import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { listNodeFolderMajors, readNodeFolderList } from '@/core/shell/nodeFolder';
 import { Logger } from '@/types/logger';
 
 export interface NodeVersionStatus {
@@ -30,12 +29,7 @@ export async function checkMultipleNodeVersions(
     const results: NodeVersionStatus[] = [];
 
     try {
-        const fnmListResult = await commandManager.execute('fnm list', {
-            timeout: TIMEOUTS.PREREQUISITE_CHECK,
-            shell: DEFAULT_SHELL, // Add shell context for fnm availability (fixes ENOENT errors)
-        });
-
-        const majorToFullVersion = buildMajorToFullVersionMap(fnmListResult.stdout);
+        const majorToFullVersion = buildMajorToFullVersionMap(await readNodeFolderList(commandManager));
 
         // Check each required version
         for (const [version, componentName] of Object.entries(versionToComponentMapping)) {
@@ -73,56 +67,9 @@ export async function getInstalledNodeVersions(
     logger: Logger,
 ): Promise<string[]> {
     try {
-        const fnmListResult = await commandManager.execute('fnm list', {
-            timeout: TIMEOUTS.PREREQUISITE_CHECK,
-            shell: DEFAULT_SHELL,
-        });
-
-        return parseMajorVersions(fnmListResult.stdout);
+        return await listNodeFolderMajors(commandManager);
     } catch (error) {
         logger.warn(`[Prerequisites] Could not get installed Node versions: ${error}`);
         return [];
     }
-}
-
-/**
- * Get the latest available version in a version family from fnm remote list
- * @param versionFamily - Version family (e.g., '20' for 20.x)
- * @param logger - Logger instance
- * @returns Latest version string or null if not found
- */
-export async function getLatestInFamily(
-    versionFamily: string,
-    commandManager: CommandExecutor,
-    logger: Logger,
-): Promise<string | null> {
-    // SECURITY: Validate versionFamily to prevent command injection
-    // Only allow digits (e.g., "18", "20", "22")
-    if (!isValidVersionFamily(versionFamily)) {
-        logger.warn(`[Prerequisites] Invalid version family rejected: ${versionFamily}`);
-        return null;
-    }
-
-    try {
-        // SECURITY: Use Node.js string processing instead of shell pipes
-        // Eliminates shell injection risk entirely (defense-in-depth)
-        const { stdout } = await commandManager.execute('fnm list-remote', {
-            timeout: TIMEOUTS.PREREQUISITE_CHECK,
-        });
-
-        if (stdout) {
-            // Filter versions using Node.js (no shell involved)
-            const versions = stdout
-                .split('\n')
-                .filter(line => line.trim().startsWith(`v${versionFamily}.`));
-
-            if (versions.length > 0) {
-                // Return first match (latest)
-                return versions[0].trim().replace('v', '');
-            }
-        }
-    } catch (error) {
-        logger.warn(`Could not get latest version for Node ${versionFamily}: ${error}`);
-    }
-    return null;
 }

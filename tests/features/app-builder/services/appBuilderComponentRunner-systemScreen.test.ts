@@ -19,11 +19,9 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
     detectAppLayout: jest.fn(async (path: string) => (path.includes('demo-erp') ? 'standalone' : 'extension')),
 }));
 
-import {
-    addAppBuilderComponent,
-    deployAppBuilderComponent,
-    removeAppBuilderComponent,
-} from '@/features/app-builder/services/appBuilderComponentRunner';
+import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderAddRun';
+import { deployAppBuilderComponent } from '@/features/app-builder/services/appBuilderRedeployRun';
+import { removeAppBuilderComponent } from '@/features/app-builder/services/appBuilderRemoveRun';
 import {
     forgetAppBuilderComponentSecrets,
     resolveSecretDeployEnv,

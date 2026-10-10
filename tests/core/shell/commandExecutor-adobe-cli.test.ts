@@ -288,21 +288,4 @@ describe('CommandExecutor - Adobe CLI Integration', () => {
         });
     });
 
-    describe('Adobe CLI Node version management', () => {
-        it('should ensure Adobe CLI Node version is set', async () => {
-            const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess);
-
-            const promise = commandExecutor.execute('aio console:org:list');
-
-            // Use nextTick to emit events
-            process.nextTick(() => {
-                simulateSubprocessComplete(mockSubprocess, 'org list\n', '', 0);
-            });
-
-            await promise;
-
-            expect(mockDependencies.mockEnvironmentSetup().ensureAdobeCLINodeVersion).toHaveBeenCalled();
-        });
-    });
 });

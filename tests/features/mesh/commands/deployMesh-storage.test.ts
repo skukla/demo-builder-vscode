@@ -22,6 +22,7 @@ import type { Project, ComponentInstance } from '@/types/base';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { poolUnits } from '../../../helpers/authenticationServiceFake';
 
 // MUST stay in this file: this spec imports fs/promises directly, and a
 // jest.mock only hoists above the imports of the module it appears in. Moved to
@@ -48,10 +49,8 @@ jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
 }));
 
 // Mock dynamic imports
-jest.mock('@/features/dashboard/commands/showDashboard', () => ({
-    ProjectDashboardWebviewCommand: {
-        sendMeshStatusUpdate: jest.fn().mockResolvedValue(undefined),
-    },
+jest.mock('@/features/dashboard/services/projectPanelPushes', () => ({
+    sendMeshStatusUpdate: jest.fn().mockResolvedValue(undefined),
 }));
 // A FAITHFUL double. The previous one simulated behaviour production had already
 // retired — it wrote the legacy `meshState` singleton and nothing else — and the
@@ -60,7 +59,7 @@ jest.mock('@/features/dashboard/commands/showDashboard', () => ({
 // suite asserted an instance status that, in production, comes from
 // recordDeployOutcome inside updateMeshState. The real thing is mocked because it
 // reads the mesh .env and hashes the source tree; what it WRITES is reproduced.
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
+jest.mock('@/features/mesh/services/meshDeployBaseline', () => ({
     updateMeshState: jest.fn().mockImplementation(async (project, endpoint) => {
         const { recordDeployOutcome } = jest.requireActual(
             '@/features/app-builder/services/appBuilderDeployOutcome'
@@ -169,7 +168,7 @@ describe('DeployMeshCommand - Storage Behavior', () => {
 
         // Setup mock AuthManager — org-123 is reachable, matching the project's
         // org, so the canonical detectProjectOrgMismatch check passes.
-        mockAuthManager = {
+        mockAuthManager = poolUnits({
             isAuthenticated: jest.fn().mockResolvedValue(true),
             getOrganizations: jest
                 .fn()
@@ -178,7 +177,7 @@ describe('DeployMeshCommand - Storage Behavior', () => {
             // Read by the deploy core to enrich the org target. Omitted, it throws
             // inside the core's try and every assertion below sees a failed deploy.
             getCachedOrganization: jest.fn().mockReturnValue({ id: 'org-123', name: 'Org 123' }),
-        };
+        });
 
         // Setup mock CommandExecutor
         mockCommandExecutor = {

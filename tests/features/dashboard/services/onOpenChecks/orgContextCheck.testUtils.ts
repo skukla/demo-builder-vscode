@@ -15,6 +15,7 @@ import type { OrgContextCheckDeps } from '@/features/dashboard/services/onOpenCh
 import type { OnOpenCheck, OnOpenCheckContext } from '@/features/dashboard/services/onOpenChecks/types';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import type { AdobeConfig, Project } from '@/types/base';
+import type { MockEntityServices } from '../../../../helpers/adobeAuthUnitsFake';
 import { createMockAuthenticationService } from '../../../../helpers/authenticationServiceFake';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 import { createMockProject } from '../../../../helpers/projectFake';
@@ -28,18 +29,21 @@ import { createMockProject } from '../../../../helpers/projectFake';
  */
 export function makeOrgContextAuth(
     overrides: Partial<jest.Mocked<AuthenticationService>> = {},
+    orgReads: Partial<MockEntityServices['orgReads']> = {},
 ): jest.Mocked<AuthenticationService> {
-    return createMockAuthenticationService({
-        isAuthenticated: jest.fn().mockResolvedValue(true),
-        getOrganizationsSdkOnly: jest.fn().mockResolvedValue([]),
-        getOrganizations: jest.fn().mockImplementation(() => {
-            throw new Error('CLI fallback path used on open (P1 violation)');
-        }),
-        loginAndRestoreProjectContext: jest.fn().mockImplementation(() => {
-            throw new Error('interactive login used on open (P1 violation)');
-        }),
-        ...overrides,
-    });
+    return createMockAuthenticationService(
+        {
+            isAuthenticated: jest.fn().mockResolvedValue(true),
+            getOrganizations: jest.fn().mockImplementation(() => {
+                throw new Error('CLI fallback path used on open (P1 violation)');
+            }),
+            loginAndRestoreProjectContext: jest.fn().mockImplementation(() => {
+                throw new Error('interactive login used on open (P1 violation)');
+            }),
+            ...overrides,
+        },
+        { entities: { orgReads: { getOrganizationsSdkOnly: jest.fn().mockResolvedValue([]), ...orgReads } } },
+    );
 }
 
 /** A run context with a captured `post` spy. */

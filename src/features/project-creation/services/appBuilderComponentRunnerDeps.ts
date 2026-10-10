@@ -1,21 +1,14 @@
 /**
  * Default deps factory for the deploy-contract runner (Step 08).
  *
- * The runner ({@link appBuilderComponentRunner}) is pure orchestration with every external
- * boundary injected. This factory wires the REAL implementations — the existing
- * deploy tails (`deployMeshComponent`/`deployAppComponent`, NOT forked), the
- * step-07 API subscriber, and the step-04 storefront republish — so callers
- * (D2 dashboard/wizard wiring) get a ready-to-use deps bundle.
- *
- * This is the cross-feature orchestration seam: it imports from `@/features/mesh`
- * and `@/features/eds` here (orchestration layer), keeping `appBuilderComponentRunner.ts`
- * itself free of cross-feature deploy imports.
+ * The runner ({@link appBuilderComponentRunner}) is pure orchestration with every boundary
+ * injected; this wires the REAL implementations (deploy tails, API subscriber, storefront
+ * republish). The cross-feature seam: it imports mesh and eds so the runner need not.
  */
 
 import * as vscode from 'vscode';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
-import { ensureFnmNodeVersion } from '@/core/shell/ensureNodeVersion';
 import type { CachedOrgRef } from '@/core/shell/orgContextEnv';
 import { resolveDesiredApis } from '@/core/state/componentApiPicks';
 import { formatDuration } from '@/core/utils/timeFormatting';
@@ -38,6 +31,7 @@ import {
     ensureComponentWorkspace,
 } from '@/features/app-builder/services/componentWorkspace';
 import { buildWorkspaceReleaseDeps } from '@/features/app-builder/services/componentWorkspaceRelease';
+import { githubRepoTextReader, customIntegrationNodeResolver } from '@/features/app-builder/services/customIntegrationNode';
 import { deployAppComponentIsolated } from '@/features/app-builder/services/deployAppIsolated';
 import { displayNameInProject } from '@/features/app-builder/services/deployInputs';
 import { subscriberTarget } from '@/features/app-builder/services/ensureMeshApiSubscribed';
@@ -52,14 +46,13 @@ import { buildS2SDeployEnv } from '@/features/app-builder/services/s2sDeployEnv'
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { ComponentManager } from '@/features/components/services/componentManager';
-import { ensureDaLiveAuth } from '@/features/eds/handlers/edsHelpers';
+import { ensureNode, prerequisitesOf, type AdobeCliPrerequisites } from '@/features/components/services/nodeEnsure';
+import { ensureDaLiveAuth, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { republishStorefrontConfig } from '@/features/eds/services/storefront/storefrontRepublishService';
 import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
-import {
-    calculateMeshSourceHash,
-    readMeshEnvVarsFromFile,
-} from '@/features/mesh/services/stalenessDetector';
-import { regenerateComponentEnvFile } from '@/features/project-creation/helpers/envFileGenerator';
+import { readMeshEnvVarsFromFile } from '@/features/mesh/services/meshEnvVars';
+import { calculateMeshSourceHash } from '@/features/mesh/services/meshSourceHash';
+import { regenerateComponentEnvFile } from '@/features/project-creation/helpers/envFileRegeneration';
 import { erpRunnerDeps } from '@/features/project-creation/services/erpRunnerDeps';
 import { buildWorkspaceRegistryDeps } from '@/features/project-creation/services/workspaceRegistryDeps';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
@@ -75,6 +68,8 @@ export interface RunnerDepsContext {
     commandManager: CommandExecutor;
     /** ADR-015: the auth service, so the factory never reaches for it. */
     authManager: AuthenticationService;
+    /** Where the Adobe CLI's install commands come from (`nodeEnsure`). */
+    prerequisites: AdobeCliPrerequisites;
     logger: Logger;
     saveProject: (project: Project) => Promise<void>;
     getCachedOrganization: () => CachedOrgRef | undefined;
@@ -130,7 +125,7 @@ export async function resolveAppManagementAuth(
     if (!orgId) {
         return undefined;
     }
-    const cached = authManager.getCachedOrganization();
+    const cached = authManager.getCacheManager().getCachedOrganization();
     const code =
         cached?.id === orgId
             ? cached.code
@@ -148,6 +143,7 @@ export function buildDefaultRunnerDeps(
     onProgress?: (message: string, subMessage?: string, position?: OperationPosition) => void,
     confirmToolchainRefresh?: () => Promise<boolean>,
 ): AppBuilderComponentRunnerDeps {
+    const entities = () => ctx.authManager.getEntityServices();
     // Git in an integration's clone: update, its check, and the commit a deploy ships.
     const gitIn: GitRunner = (command, cwd) =>
         ctx.commandManager.execute(command, {
@@ -196,10 +192,11 @@ export function buildDefaultRunnerDeps(
         // The ONE isolating deploy seam (ADR-011 D3 Step 03) — every deploy routes
         // through it, so no un-isolated deploy survives.
         deployApp: deployAppComponentIsolated,
-        // Choice-dependent node versions resolve at the add door — the one
-        // chokepoint the wizard's early prerequisites screen cannot cover.
+        // The add door's Node and the Adobe CLI under it; a custom integration's Node from its package.json.
         ensureNodeVersion: (version) =>
-            ensureFnmNodeVersion(ctx.commandManager, version, ctx.logger),
+            ensureNode(ctx.commandManager, ctx.prerequisites, { major: version, adobeCli: true }, ctx.logger),
+        resolveCustomIntegrationNode: (source) => customIntegrationNodeResolver(githubRepoTextReader(
+            getGitHubServices(ctx.secrets).fileOperations), ctx.commandManager, ctx.logger)(source),
         // Post-deploy install for app-management lifecycle apps (automatic with
         // hands-back — owner decision 2026-08-27). The runner records the
         // outcome; a failure never fails the deploy.
@@ -221,8 +218,8 @@ export function buildDefaultRunnerDeps(
             fastForwardClone(componentPath, branch, gitIn),
         checkComponentSource: (componentPath, branch) =>
             checkCloneForUpdate(componentPath, branch, gitIn),
-        installComponentDependencies: (componentPath, definition) =>
-            ctx.componentManager.installNpmDependencies(componentPath, definition),
+        installComponentDependencies: (componentPath, definition, nodeVersion) =>
+            ctx.componentManager.installNpmDependencies(componentPath, definition, nodeVersion),
         // The app's own uninstall API ahead of a remove (the ERP undo and wipe: erpRunnerDeps):
         uninstallAppManagement: (project, componentId, uninstallProgress) =>
             uninstallAppManagementApp(project, componentId, deployedUrlsOf(project, componentId), {
@@ -247,7 +244,7 @@ export function buildDefaultRunnerDeps(
                     'The project has no Adobe org/project/workspace context to resolve credentials from.',
                 );
             }
-            const credentials = await ctx.authManager.getS2SDeployCredentials(
+            const credentials = await (await entities()).credentials.getS2SDeployCredentials(
                 adobe.organization,
                 adobe.projectId,
                 workspaceId,
@@ -258,8 +255,8 @@ export function buildDefaultRunnerDeps(
             ensureComponentWorkspace(project, entry, {
                 onMaking,
                 maker: {
-                    createWorkspace: (title, description, target) =>
-                        ctx.authManager.createWorkspace(title, description, target),
+                    createWorkspace: async (title, description, target) =>
+                        (await entities()).workspaceOps.createWorkspace(title, description, target),
                 },
                 saveProject: ctx.saveProject,
                 // The name the SC gave it (a rename, else the one typed at add),
@@ -361,6 +358,7 @@ export async function buildRunnerDepsContext(
         componentManager: new ComponentManager(context.logger, commandManager),
         commandManager,
         authManager,
+        prerequisites: prerequisitesOf(context),
         logger: context.logger,
         saveProject: (p: Project) => context.stateManager.saveProject(p),
         // Tiers 1+2 and the stamp. Package INSTALLS (tier 3) are not needed
@@ -377,7 +375,7 @@ export async function buildRunnerDepsContext(
             // the files we just wrote as user-edited.
             await context.stateManager.saveProjectConfigOnly(p);
         },
-        getCachedOrganization: () => authManager.getCachedOrganization(),
+        getCachedOrganization: () => authManager.getCacheManager().getCachedOrganization(),
         subscriberClient: createApiSubscriberClient(authManager),
         catalog: resolveCatalog(project),
         secrets: context.context.secrets,

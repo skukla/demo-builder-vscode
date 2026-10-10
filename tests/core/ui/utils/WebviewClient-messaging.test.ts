@@ -206,21 +206,6 @@ describe('WebviewClient - messaging', () => {
         });
     });
 
-    describe('state', () => {
-        it('reads state straight from the host', () => {
-            loaded.api.getState.mockReturnValue({ step: 'welcome' });
-
-            expect(loaded.client.getState()).toEqual({ step: 'welcome' });
-            expect(loaded.api.getState).toHaveBeenCalled();
-        });
-
-        it('writes state straight to the host', () => {
-            loaded.client.setState({ step: 'review' });
-
-            expect(loaded.api.setState).toHaveBeenCalledWith({ step: 'review' });
-        });
-    });
-
     describe('the fixed-shape helpers', () => {
         beforeEach(() => {
             completeHandshake(loaded);
@@ -228,33 +213,6 @@ describe('WebviewClient - messaging', () => {
         });
 
         const lastMessage = () => loaded.posted()[loaded.posted().length - 1];
-
-        it('requestValidation names the field and its value', () => {
-            loaded.client.requestValidation('projectName', 'my-demo');
-
-            expect(lastMessage()).toMatchObject({
-                type: 'validate',
-                payload: { field: 'projectName', value: 'my-demo' },
-            });
-        });
-
-        it('reportProgress carries step, percentage and optional message', () => {
-            loaded.client.reportProgress('install', 40, 'installing');
-
-            expect(lastMessage()).toMatchObject({
-                type: 'progress',
-                payload: { step: 'install', progress: 40, message: 'installing' },
-            });
-        });
-
-        it('reportProgress leaves the message undefined when none is given', () => {
-            loaded.client.reportProgress('install', 40);
-
-            expect(lastMessage()).toMatchObject({
-                type: 'progress',
-                payload: { step: 'install', progress: 40, message: undefined },
-            });
-        });
 
         it('requestAuth does not force a re-login unless asked to', () => {
             loaded.client.requestAuth();
@@ -272,22 +230,6 @@ describe('WebviewClient - messaging', () => {
                 type: 'authenticate',
                 payload: { force: true },
             });
-        });
-
-        it('requestProjects names the org', () => {
-            loaded.client.requestProjects('org-123');
-
-            expect(lastMessage()).toMatchObject({
-                type: 'get-projects',
-                payload: { orgId: 'org-123' },
-            });
-        });
-
-        it('reDetectContext carries no payload', () => {
-            loaded.client.reDetectContext();
-
-            expect(lastMessage()).toMatchObject({ type: 're-detect-context' });
-            expect(lastMessage().payload).toBeUndefined();
         });
 
         it('createProject sends the config through unchanged', () => {

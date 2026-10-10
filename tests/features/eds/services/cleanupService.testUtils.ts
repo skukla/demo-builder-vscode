@@ -20,7 +20,7 @@
 import { CleanupService } from '@/features/eds/services/cleanupService';
 import type { ConfigurationService } from '@/features/eds/services/configService/configurationService';
 import type { DaLiveOrgOperations } from '@/features/eds/services/daLive/daLiveOrgOperations';
-import type { GitHubRepoOperations } from '@/features/eds/services/github/githubRepoOperations';
+import type { GitHubRepoLifecycle } from '@/features/eds/services/github/githubRepoLifecycle';
 import type { ToolManager } from '@/features/eds/services/toolManager';
 
 export { CleanupService };
@@ -28,7 +28,7 @@ export type { EdsCleanupOptions, EdsMetadata } from '@/features/eds/services/typ
 
 /** Everything a spec arranges against, plus the two ways to build the subject. */
 export interface CleanupHarness {
-    githubRepoOps: jest.Mocked<Partial<GitHubRepoOperations>>;
+    githubRepoOps: jest.Mocked<Partial<GitHubRepoLifecycle>>;
     daLiveOrgOps: jest.Mocked<Partial<DaLiveOrgOperations>>;
     toolManager: jest.Mocked<Partial<ToolManager>>;
     configurationService: jest.Mocked<Partial<ConfigurationService>>;
@@ -49,7 +49,7 @@ export interface CleanupHarness {
 export function setupCleanupHarness(): CleanupHarness {
     const operationOrder: string[] = [];
 
-    const githubRepoOps: jest.Mocked<Partial<GitHubRepoOperations>> = {
+    const githubRepoOps: jest.Mocked<Partial<GitHubRepoLifecycle>> = {
         deleteRepository: jest.fn().mockImplementation(async () => {
             operationOrder.push('github');
             return { success: true };
@@ -100,7 +100,7 @@ export function setupCleanupHarness(): CleanupHarness {
 
     function buildService(injected?: ConfigurationService): CleanupService {
         return new CleanupService(
-            githubRepoOps as unknown as GitHubRepoOperations,
+            githubRepoOps as unknown as GitHubRepoLifecycle,
             daLiveOrgOps as unknown as DaLiveOrgOperations,
             toolManager as unknown as ToolManager,
             undefined,

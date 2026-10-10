@@ -9,11 +9,11 @@
 
 import type { GitHubTreeInput } from '../types';
 import { isBinary } from './archiveFile';
-import { batchTreeEntries, type GitHubFileOperations } from './githubFileOperations';
+import { batchTreeEntries, type GitHubTreeCommits } from './githubTreeCommits';
 import type { Logger } from '@/types/logger';
 
 export type TreePushOps = Pick<
-    GitHubFileOperations,
+    GitHubTreeCommits,
     'getBranchInfo' | 'createBlob' | 'createTree' | 'createCommit' | 'updateBranchRef'
 >;
 

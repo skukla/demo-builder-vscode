@@ -42,7 +42,7 @@ import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import { probeInExtensionMcpTools } from '@/features/ai/server/mcpToolProbe';
 import { getDaLiveAuthService, resolveByomOverlayUrl } from '@/features/eds/handlers/edsHelpers';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
-import { pickSampleSku } from '@/features/eds/services/catalogPrewarmService';
+import { pickSampleSku } from '@/features/eds/services/catalogSampleSku';
 import {
     probeConfigService,
     type ConfigServiceProbeResult,
@@ -51,7 +51,7 @@ import {
     probeCredentialService,
     type CredentialServiceProbeResult,
 } from '@/features/eds/services/credentialServiceProbe';
-import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveTokenProviders';
 import {
     probeGitHubCredential,
     type CredentialProbeResult,

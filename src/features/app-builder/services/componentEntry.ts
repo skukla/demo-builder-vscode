@@ -11,7 +11,13 @@
  * @module features/app-builder/services/componentEntry
  */
 
-import { buildCustomIntegrationEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
+import type { RepoNodeChoice } from '@/core/shell/nodeRangeRule';
+import {
+    buildCustomIntegrationEntry,
+    getAppBuilderComponentCatalog,
+    isSameRepo,
+} from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { pairedInstanceId } from '@/features/components/services/appBuilderComponentLinks';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState, Project } from '@/types/base';
@@ -89,7 +95,40 @@ export function entryFromState(
     );
     return {
         ...entry,
+        ...(state.nodeVersion ? { nodeVersion: state.nodeVersion } : {}),
         kind: state.kind,
         providesEnvVars: state.providesEnvVars ? Object.keys(state.providesEnvVars) : undefined,
     };
 }
+
+/** Reads a custom integration's Node range and picks its Node (`customIntegrationNode.ts` builds it). */
+export type CustomIntegrationNodeResolver = (source: { owner: string; repo: string; branch?: string }) => Promise<RepoNodeChoice>;
+
+/** A repo the bundled catalog ships: its range is already part of Demo Builder's Node. */
+function isCatalogRepo(source: { owner: string; repo: string }): boolean {
+    return getAppBuilderComponentCatalog().some((entry) => isSameRepo(entry.source, source));
+}
+
+/**
+ * The entry to add, carrying the Node its repo needs when that is not Demo Builder's
+ * own (PR-1a step 8). Only a custom integration's repo is read: every catalog repo's range is
+ * already part of the generated Node. An entry that already carries one (a redeploy
+ * from its record) keeps it.
+ *
+ * @returns the entry, or the reason the repo's range cannot be met
+ */
+export async function withCustomIntegrationNode(
+    entry: AppBuilderComponentCatalogEntry,
+    resolve: CustomIntegrationNodeResolver | undefined,
+): Promise<{ entry: AppBuilderComponentCatalogEntry } | { error: string }> {
+    if (!resolve || entry.nodeVersion || isCatalogRepo(entry.source)) return { entry };
+    const choice = await resolve(entry.source);
+    if (!choice.ok) {
+        return {
+            error: `${entry.source.owner}/${entry.source.repo} asks for Node ${choice.range}, and no Node release `
+                + 'satisfies it. Fix "engines.node" in its package.json, then add it again.',
+        };
+    }
+    return { entry: choice.major === demoBuilderNode() ? entry : { ...entry, nodeVersion: choice.major } };
+}
+

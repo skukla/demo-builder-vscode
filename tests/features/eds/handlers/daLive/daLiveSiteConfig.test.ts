@@ -65,7 +65,9 @@ import {
     configureDaLivePermissions,
 } from '@/features/eds/handlers/daLive/daLiveSiteConfig';
 import { DaLiveConfigService } from '@/features/eds/services/daLive/daLiveConfigService';
-import type { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
+import type {
+    DaLiveContentOperations,
+} from '@/features/eds/services/daLive/daLiveContentOperations';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
@@ -89,8 +91,10 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
         mockApplySiteConfig = jest.fn().mockResolvedValue({ success: true });
         mockApplyOrgConfig = jest.fn().mockResolvedValue({ success: true });
         mockContentOps = {
-            applySiteConfig: mockApplySiteConfig,
-            applyOrgConfig: mockApplyOrgConfig,
+            configOps: {
+                applySiteConfig: mockApplySiteConfig,
+                applyOrgConfig: mockApplyOrgConfig,
+            },
         } as unknown as DaLiveContentOperations;
 
         mockLogger = createMockLogger() as unknown as Logger;

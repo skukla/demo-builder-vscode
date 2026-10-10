@@ -1,34 +1,20 @@
-# Step 8: Clean up the shared fnm once; remove the own store on uninstall
+# Step 8: Outside repos at runtime; plugins installed once
 
-**When.** After step 2's store has the Node the register needs and a command has run on it
-successfully. Once per machine, recorded in `~/.demo-builder/` so it is never offered again.
+**Outside repos.** `integrationRepoReader.nodeMajorOf` takes the first number in a range, so
+`>=18` installs Node 18. It returns the RANGE instead, and the add door resolves it: the shared
+Node if the range accepts it, else a Node already in the folder that does, else the lowest LTS
+that does (`fnm list-remote --lts` + semver). When NO long-term release fits (a repo that needs a
+Node newer than any LTS yet, e.g. 26 before it goes LTS), fall back to the lowest regular release
+that fits, rather than refusing the integration. The Adobe CLI is installed under the chosen Node
+too (it deploys through `aio`); sign-in and the mesh plugin carry over (user folders). The chosen
+major is recorded on the project's App Builder component, the same record cleanup reads
+(step 11).
 
-**What is offered** (decided by the owner, 2026-10-07):
+**Plugins once.** `aio plugins:install` writes to `~/.local/share/@adobe/aio-cli`, shared by every
+`aio` on the machine (verified 2026-10-07). The per-Node plugin loop in `installHandler`
+(`installPlugins` over `toolVersions`) becomes one install; the plugin check reads once.
 
-- every version in the user's shared fnm (`fnm list` with the default `FNM_DIR`) whose major is
-  one Demo Builder has ever required: **18, 20, 22, 24**, a constant read from the catalogs' git
-  history on 2026-10-07 and kept beside the cleanup code with that provenance;
-- **ticked by default**, except the user's fnm default (`fnm default`, 20.19.6 on the owner's
-  machine), which is listed but **not ticked**;
-- nothing outside those majors, ever.
-
-**One confirmation**, a modal naming each version and what goes with it: "Demo Builder now keeps
-its own Node. Remove these versions it installed for itself before? You can untick any.
-`fnm install <version>` brings one back." Cancel removes nothing.
-
-**What runs:** `fnm uninstall <version>` on the shared fnm, per ticked version. A version's
-global packages (the old Adobe CLI) live inside its folder (verified 2026-10-07: v18.20.8's
-`installation/lib/node_modules/@adobe`), so they go with it. The result lists what was removed
-and anything that failed, with the reason.
-
-**Agent surface:** a read tool that lists what would be offered, and a confirm-gated tool that
-runs it (the `mcp-tool-authoring` skill), so an agent can do it with the user's yes.
-
-**Uninstall.** VS Code runs a package's `vscode:uninstall` script after an uninstall (not
-present in `package.json` today). Add one that deletes `~/.demo-builder/node/`. When and whether
-VS Code runs it is to be confirmed against VS Code's documentation before relying on it; if it
-cannot be relied on, the cleanup is offered from the command palette instead.
-
-**Tests:** the offer for the owner's machine shape (seven versions, default unticked, a `system`
-entry and an unrelated major like 16 never offered); cancel removes nothing; a failed uninstall
-is reported and the rest proceed; the once-only record.
+**Tests:** `>=18` resolves to the shared Node; `^22` with a shared 24 installs 22; a range only a
+non-LTS release fits picks that release; an
+unsatisfiable range is refused at the add, with the range named; the plugin installs once
+whatever the number of Nodes.

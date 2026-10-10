@@ -36,7 +36,7 @@ import {
     readSiteAccess,
     revokeSiteAdmin,
 } from '@/features/eds/services/configService/configServiceAccess';
-import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveTokenProviders';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { getEdsRepoParts } from '@/types/typeGuards';
@@ -247,6 +247,49 @@ async function confirm(
 
 const sameEmail = (a: string, b: string): boolean => a.toLowerCase() === b.toLowerCase();
 
+/** One role change: the call that makes it, and what the re-read must show after. */
+interface RoleChange {
+    apply: typeof ensureSiteAdmin;
+    landed: (admins: string[]) => boolean;
+    /** Called when the change reported ok but the re-read does not show it. */
+    onUnverified?: (site: string) => void;
+}
+
+/**
+ * Resolve the site, run one role change, and confirm it by a re-read. A refused
+ * or failed change is reported as it came back, unverified. Shared by grant and
+ * revoke, which differ only in the call and the check.
+ */
+async function changeSiteAdmin(
+    project: Project,
+    email: string,
+    deps: { context: vscode.ExtensionContext; logger: Logger },
+    change: RoleChange,
+): Promise<SiteAccessMutation> {
+    const { context, logger } = deps;
+    const resolved = resolveSite(project, context);
+    if (!resolved) return { status: 'no_site', canManage: false, verified: false };
+
+    const { owner, repo, tokenProvider } = resolved;
+    const site = `${owner}/${repo}`;
+    const result = await change.apply(tokenProvider, owner, repo, email.trim(), logger);
+    if (result.status !== 'ok') {
+        return {
+            status: result.status,
+            site,
+            canManage: canManageFrom(result.status),
+            verified: false,
+            error: result.error,
+        };
+    }
+
+    const { admins, verified } = await confirm(tokenProvider, owner, repo, logger, change.landed);
+    if (!verified) {
+        change.onUnverified?.(site);
+    }
+    return { status: 'ok', site, siteAdmins: admins, canManage: true, verified };
+}
+
 /**
  * Add an admin to this project's storefront configuration, then verify it stuck.
  */
@@ -266,31 +309,12 @@ export async function addSiteAdmin(
             error: 'not an email address',
         };
     }
-    const resolved = resolveSite(project, context);
-    if (!resolved) return { status: 'no_site', canManage: false, verified: false };
-
-    const { owner, repo, tokenProvider } = resolved;
-    const site = `${owner}/${repo}`;
-    const result = await ensureSiteAdmin(tokenProvider, owner, repo, email.trim(), logger);
-    if (result.status !== 'ok') {
-        return {
-            status: result.status,
-            site,
-            canManage: canManageFrom(result.status),
-            verified: false,
-            error: result.error,
-        };
-    }
-
-    const { admins, verified } = await confirm(tokenProvider, owner, repo, logger, (list) =>
-        list.some((entry) => sameEmail(entry, email.trim())),
-    );
-    if (!verified) {
-        logger.warn(
-            `[SiteAccess] ${site}: grant for ${maskEmail(email)} did not verify on re-read`,
-        );
-    }
-    return { status: 'ok', site, siteAdmins: admins, canManage: true, verified };
+    return changeSiteAdmin(project, email, { context, logger }, {
+        apply: ensureSiteAdmin,
+        landed: (list) => list.some((entry) => sameEmail(entry, email.trim())),
+        onUnverified: (site) =>
+            logger.warn(`[SiteAccess] ${site}: grant for ${maskEmail(email)} did not verify on re-read`),
+    });
 }
 
 /**
@@ -299,30 +323,14 @@ export async function addSiteAdmin(
  * The last-admin refusal comes from `revokeSiteAdmin` and is passed through: a
  * site with no admin cannot be granted one back from inside the app.
  */
-export async function removeSiteAdmin(
+export function removeSiteAdmin(
     project: Project,
     email: string,
     context: vscode.ExtensionContext,
     logger: Logger,
 ): Promise<SiteAccessMutation> {
-    const resolved = resolveSite(project, context);
-    if (!resolved) return { status: 'no_site', canManage: false, verified: false };
-
-    const { owner, repo, tokenProvider } = resolved;
-    const site = `${owner}/${repo}`;
-    const result = await revokeSiteAdmin(tokenProvider, owner, repo, email.trim(), logger);
-    if (result.status !== 'ok') {
-        return {
-            status: result.status,
-            site,
-            canManage: canManageFrom(result.status),
-            verified: false,
-            error: result.error,
-        };
-    }
-
-    const { admins, verified } = await confirm(tokenProvider, owner, repo, logger, (list) =>
-        list.every((entry) => !sameEmail(entry, email.trim())),
-    );
-    return { status: 'ok', site, siteAdmins: admins, canManage: true, verified };
+    return changeSiteAdmin(project, email, { context, logger }, {
+        apply: revokeSiteAdmin,
+        landed: (list) => list.every((entry) => !sameEmail(entry, email.trim())),
+    });
 }

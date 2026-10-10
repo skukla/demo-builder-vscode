@@ -19,12 +19,11 @@ import type {
     TeardownEventsClient,
 } from './consoleProjectTeardown';
 import {
-    isEventsAccessDenied,
     parseProviderBinding,
     THIRD_PARTY_PROVIDER_METADATA,
     type ProviderBinding,
-    type RawProvider,
-} from './ioEventsClient';
+} from './eventProviderBinding';
+import { isEventsAccessDenied, type RawProvider } from './ioEventsTransport';
 import type { WorkspaceS2SCredentialIds } from './types';
 import { withTimeout } from '@/core/utils/promiseUtils';
 import { sleep } from '@/core/utils/sleep';

@@ -13,6 +13,9 @@ jest.mock('@/features/lifecycle/services/projectResetService', () => ({
 }));
 jest.mock('@/features/eds/services/reset/edsResetService', () => ({
     executeEdsReset: jest.fn(),
+}));
+jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
+    ...jest.requireActual('@/features/eds/services/reset/edsResetParams'),
     extractResetParams: jest.fn(),
 }));
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
@@ -20,7 +23,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getDaLiveAuthService: jest.fn(),
     resolveByomOverlayConfig: jest.fn(),
 }));
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
     createDaLiveServiceTokenProvider: jest.fn(() => ({})),
 }));
 

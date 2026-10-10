@@ -14,6 +14,7 @@ import * as path from 'path';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { TransformedComponentDefinition } from '@/types/components';
 import type { Logger } from '@/types/logger';
 
@@ -49,15 +50,15 @@ export class ComponentDependencies {
     private async runInstallAndBuild(
         componentPath: string,
         componentDef: TransformedComponentDefinition,
+        nodeVersion: string,
     ): Promise<string | undefined> {
         this.logger.debug(`[ComponentManager] Installing dependencies for ${componentDef.name}`);
 
         const commandManager = this.commandManager;
-        const nodeVersion = componentDef.configuration?.nodeVersion;
         const installCommand = 'npm install';
 
         this.logger.debug(
-            `[ComponentManager] Running: ${installCommand} with Node ${nodeVersion || 'default'} in ${componentPath}`,
+            `[ComponentManager] Running: ${installCommand} with Node ${nodeVersion} in ${componentPath}`,
         );
 
         const installTimeout = componentDef.source?.timeouts?.install || TIMEOUTS.VERY_LONG;
@@ -66,7 +67,7 @@ export class ComponentDependencies {
             cwd: componentPath,
             timeout: installTimeout,
             enhancePath: true,
-            useNodeVersion: nodeVersion || null,
+            useNodeVersion: nodeVersion,
             shell: DEFAULT_SHELL,
         });
 
@@ -89,7 +90,7 @@ export class ComponentDependencies {
             cwd: componentPath,
             timeout: TIMEOUTS.LONG,
             enhancePath: true,
-            useNodeVersion: nodeVersion || null,
+            useNodeVersion: nodeVersion,
             shell: DEFAULT_SHELL,
         });
 
@@ -109,6 +110,7 @@ export class ComponentDependencies {
     async installNpmDependencies(
         componentPath: string,
         componentDef: TransformedComponentDefinition,
+        nodeVersion: string = demoBuilderNode(),
     ): Promise<{ success: boolean; error?: string }> {
         const packageJsonPath = path.join(componentPath, 'package.json');
 
@@ -120,7 +122,7 @@ export class ComponentDependencies {
             return { success: true };
         }
 
-        const fatal = await this.runInstallAndBuild(componentPath, componentDef);
+        const fatal = await this.runInstallAndBuild(componentPath, componentDef, nodeVersion);
         if (fatal) {
             return { success: false, error: fatal };
         }
@@ -137,6 +139,7 @@ export class ComponentDependencies {
         componentPath: string,
         componentDef: TransformedComponentDefinition,
         skipDependencies: boolean,
+        nodeVersion: string = demoBuilderNode(),
     ): Promise<{ success: boolean; error?: string }> {
         const packageJsonPath = path.join(componentPath, 'package.json');
 
@@ -151,7 +154,7 @@ export class ComponentDependencies {
             return { success: true };
         }
 
-        const fatal = await this.runInstallAndBuild(componentPath, componentDef);
+        const fatal = await this.runInstallAndBuild(componentPath, componentDef, nodeVersion);
         return fatal ? { success: false, error: fatal } : { success: true };
     }
 }

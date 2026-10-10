@@ -27,10 +27,11 @@ const clonedComponents: Map<string, any> = new Map();
 
 // Mock dependencies
 jest.mock('@/features/mesh/services/meshDeployment');
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
+jest.mock('@/features/mesh/services/meshEnvVars', () => ({
     readMeshEnvVarsFromFile: jest.fn().mockResolvedValue({}),
+}));
+jest.mock('@/features/mesh/services/meshDeployBaseline', () => ({
     updateMeshState: jest.fn().mockResolvedValue(undefined),
-    fetchDeployedMeshConfig: jest.fn().mockResolvedValue({}),
 }));
 
 jest.mock('@/core/di/serviceLocator', () => ({
@@ -110,6 +111,9 @@ jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
 
 jest.mock('@/features/project-creation/helpers/envFileGenerator', () => ({
     generateComponentEnvFile: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('@/features/project-creation/helpers/componentConfigFiles', () => ({
     generateComponentConfigFiles: jest.fn().mockResolvedValue(undefined),
 }));
 

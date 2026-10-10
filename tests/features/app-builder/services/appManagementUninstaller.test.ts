@@ -248,6 +248,18 @@ describe('uninstallAppManagementApp', () => {
         expect(result.detail).toContain('No Adobe sign-in');
         expect(client.startUninstallation).not.toHaveBeenCalled();
     });
+
+    it('names the UNINSTALL call in the no-sign-in refusal', async () => {
+        const deps = makeDeps(makeClient(), { getAuth: jest.fn().mockResolvedValue(undefined) });
+
+        const result = await uninstallAppManagementApp(paasProject(), 'app', DEPLOYED_URLS, deps);
+
+        expect(result.detail).toBe(
+            'No Adobe sign-in is available to authenticate the uninstall call. ' +
+                APP_MANAGEMENT_HANDS_BACK
+        );
+    });
+
     it('constructs the real client from the derived base URL and the resolved auth', async () => {
         const constructed = AppManagementClient as unknown as jest.Mock;
         constructed.mockReset();

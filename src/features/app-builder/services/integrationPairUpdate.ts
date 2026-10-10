@@ -19,11 +19,8 @@
  * @module features/app-builder/services/integrationPairUpdate
  */
 
-import {
-    updateAppBuilderComponent,
-    type AppBuilderComponentRunnerDeps,
-    type RunnerResult,
-} from './appBuilderComponentRunner';
+import type { AppBuilderComponentRunnerDeps, RunnerResult } from './appBuilderComponentRunner';
+import { updateAppBuilderComponent } from './appBuilderRedeployRun';
 import { getAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { integrationUsing, systemsUsedBy } from '@/features/components/services/appBuilderComponentLinks';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';

@@ -35,7 +35,7 @@
  * @module features/eds/services/storefront/leftoverPages
  */
 
-import { EXCLUDED_FOLDERS, EXCLUDED_NAMES } from '../helix/helixSiteContent';
+import { EXCLUDED_FOLDERS, EXCLUDED_NAMES } from '../helix/helixPageDiscovery';
 import { aemLiveBaseUrl } from './storefrontProbe';
 import { WHOLE_SITE, type UnpublishHelix } from './storefrontUnpublish';
 import type { Logger } from '@/types/logger';

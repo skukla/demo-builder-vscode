@@ -30,12 +30,12 @@
  *   - `extractConfigParams(project)` — single source of truth for
  *     endpoint/auth config; reads the same data we write into the
  *     storefront's config.json
- *   - `generateHeaders(params)` — builds ACCS request headers
+ *   - `enumerateAccsCatalog(params)` (`catalogEnumeration.ts`) — the
+ *     Catalog Service read, with the storefront's own `generateHeaders`
  *   - `runInBatches(items, 5, fn)` — concurrency primitive already
  *     used by HelixService for bulk delete; batch size 5 respects
  *     Helix admin's 10 req/s rate limit
- *   - `derivePrepublishUrl(overlayUrl)` — builds the action URL
- *   - `AbortSignal.timeout(TIMEOUTS.NORMAL)` — per-request 30s cap
+ *   - `derivePrepublishUrl(overlayUrl)` — validates the overlay URL
  *
  * Non-fatal at every step. Failures log a warning and the pipeline
  * continues; the smart-404 fallback we vendored into delayed.js,
@@ -44,114 +44,23 @@
  * @module features/eds/services/catalogPrewarmService
  */
 
-import {
-    extractConfigParams,
-    generateHeaders,
-    type ConfigGeneratorParams,
-} from './configGenerator';
+import { enumerateAccsCatalog, type SkuPath } from './catalogEnumeration';
+import type { ConfigGeneratorParams } from './configGenerator';
 import { derivePrepublishUrl } from './pdp/pdp404HandlerPublisher';
 import { pdpPathFor } from './pdp/pdpPath';
-import {
-    describeScope,
-    fetchServedStorefrontConfig,
-    scopesMatch,
-    type StoreScope,
-} from './storefront/servedStorefrontConfig';
+import { describeScope } from './storefront/servedStorefrontConfig';
+import { extractConfigParams } from './storefrontConfigParams';
 import type { EdsPipelineProgressCallback } from './types';
 import { runInBatches } from '@/core/utils/promiseUtils';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
-import { getEdsGithubRepo } from '@/types/typeGuards';
 
 /**
- * Concurrency for the bulk prepublish-pdp POST calls. Helix admin
- * enforces ~10 req/s per project. The action triggers Helix admin
- * preview+publish per path, so concurrency-here translates 1:1 to
- * Helix admin request rate. 5 is conservative and avoids 429s.
+ * Concurrency for the per-SKU publishes. Helix admin enforces ~10 req/s per
+ * project, and each SKU is one preview+publish pair, so concurrency here
+ * translates 1:1 to Helix admin request rate. 5 is conservative and avoids 429s.
  */
 const BATCH_SIZE = 5;
-
-/**
- * Per-page result size for the catalog enumeration query. Catalog
- * Service handles up to 500 per page comfortably; 100 is a balance
- * between page count and response size.
- */
-const PAGE_SIZE = 100;
-
-/**
- * Safety cap on total SKUs pre-warmed. A typical demo catalog is
- * 5–50 SKUs; the largest POC we expect is several hundred. 1000 is
- * the soft upper bound: any storefront with a larger catalog opts
- * out of full pre-warming (smart-404 fallback handles the rest).
- */
-const MAX_SKUS = 1000;
-
-/**
- * GraphQL query for enumerating product `(sku, urlKey)` pairs from
- * Catalog Service. Uses `productSearch` which is the standard ACCS
- * Catalog Service query; both `sku` and `urlKey` come from the
- * `productView` field per Catalog Service's response shape.
- */
-/**
- * Is this project the one whose storefront is being set up?
- *
- * `storefront-setup-start` is registered by BOTH the wizard
- * (`ProjectCreationHandlerRegistry`) and the dashboard (`edsHandlers`). In the
- * wizard the project being created does not exist yet, so a `getCurrentProject()`
- * read there returns WHATEVER WAS LAST OPEN — and prewarm would then enumerate
- * that other project's Commerce scope and publish its product paths onto this
- * site. `configureHandlers.ts:91-95` documents the same hazard for the same call.
- *
- * Measured 2026-08-18: a colleague with one existing project created a second
- * storefront, prewarm ran against the FIRST project's store view, and the run
- * reported `No index was found for this request` — a truthful answer about a
- * scope nobody wanted. On a machine with zero projects the same code skipped
- * prewarm entirely and looked clean, which is why it read as a per-person issue.
- *
- * Fails CLOSED: no project, or no recorded repo, means we cannot prove identity,
- * and prewarming the wrong catalog is worse than not prewarming at all.
- *
- * @param project - The project the caller believes owns this storefront
- * @param repoOwner - GitHub owner of the storefront being set up
- * @param repoName - GitHub repo of the storefront being set up
- * @returns True only when the project's recorded storefront repo matches
- */
-export function projectTargetsStorefront(
-    project: Project | undefined,
-    repoOwner: string,
-    repoName: string,
-): boolean {
-    const recorded = project?.componentInstances?.['eds-storefront']?.metadata?.githubRepo;
-    if (typeof recorded !== 'string') {
-        return false;
-    }
-    const [owner, name, ...rest] = recorded.split('/');
-    if (!owner || !name || rest.length > 0) {
-        return false;
-    }
-    // GitHub treats owner and repo case-insensitively; so must this.
-    return (
-        owner.toLowerCase() === repoOwner.toLowerCase() &&
-        name.toLowerCase() === repoName.toLowerCase()
-    );
-}
-
-const ENUMERATE_QUERY = `
-query GetProductsForPrewarm($pageSize: Int!, $currentPage: Int!) {
-  productSearch(phrase: "", page_size: $pageSize, current_page: $currentPage) {
-    items {
-      productView {
-        sku
-        urlKey
-      }
-    }
-    page_info {
-      total_pages
-      current_page
-    }
-  }
-}`;
 
 /**
  * Outcome of a catalog pre-warming attempt. Returned from
@@ -165,23 +74,14 @@ query GetProductsForPrewarm($pageSize: Int!, $currentPage: Int!) {
 export interface PrewarmResult {
     /** Total SKUs we attempted to pre-warm (sum of succeeded + failed) */
     attempted: number;
-    /** SKUs whose prepublish-pdp POST returned 2xx */
+    /** SKUs whose page published */
     succeeded: number;
-    /** SKUs whose prepublish-pdp POST returned non-2xx or threw */
+    /** SKUs whose publish threw */
     failed: number;
     /** True if we skipped pre-warming entirely (gate failed) */
     skipped: boolean;
     /** Set when skipped=true to explain why */
     skipReason?: string;
-}
-
-/**
- * One (urlKey, sku) pair from the catalog. Combined to form a path
- * `/products/<urlKey>/<sku>` to publish.
- */
-interface SkuPath {
-    urlKey: string;
-    sku: string;
 }
 
 /**
@@ -197,14 +97,14 @@ export interface PdpPublisher {
 }
 
 /**
- * Pre-warm every SKU in the storefront's catalog by triggering
- * prepublish-pdp for each.
+ * Pre-warm every SKU in the storefront's catalog by publishing its PDP path.
  *
  * Steps:
- *   1. Derive prepublish-pdp URL from the configured overlay URL.
+ *   1. Check the configured overlay URL is well formed (BYOM gate).
  *   2. Determine the backend type (ACCS-only in v1).
  *   3. Enumerate the catalog via Catalog Service GraphQL.
- *   4. For each `(urlKey, sku)`, POST to prepublish-pdp.
+ *   4. For each `(urlKey, sku)`, preview and publish its page through the
+ *      authenticated `PdpPublisher`.
  *   5. Return summary counts.
  *
  * Non-fatal at every step. Returns `skipped: true` for the no-op
@@ -352,100 +252,6 @@ export async function prewarmCatalog(
 }
 
 /**
- * Enumerate every `(urlKey, sku)` pair in the catalog via ACCS
- * Catalog Service GraphQL. Pages through results until the catalog
- * is exhausted or the safety cap is hit.
- *
- * Throws on:
- *   - HTTP non-2xx from Catalog Service
- *   - GraphQL `errors` in the response
- *   - Unexpected response shape (missing `productSearch.items`)
- *
- * Caller treats throws as non-fatal and skips pre-warming entirely
- * for that storefront.
- */
-async function enumerateAccsCatalog(
-    params: ConfigGeneratorParams,
-    logger: Logger,
-    maxItems: number = MAX_SKUS,
-): Promise<SkuPath[]> {
-    // generateHeaders() returns { all: {...}, cs: {...} }. The catalog
-    // GraphQL endpoint expects both groups merged on every request —
-    // `all` is the shared base (Store: storeViewCode), `cs` is the
-    // Catalog Service-specific block (Magento-Customer-Group, store
-    // codes). Flatten before handing to fetch().
-    const configHeaders = generateHeaders(params);
-    const headers: Record<string, string> = {
-        ...(configHeaders.all ?? {}),
-        ...(configHeaders.cs ?? {}),
-        'Content-Type': 'application/json',
-    };
-    const endpoint = params.commerceEndpoint;
-    if (!endpoint) throw new Error('catalog prewarm requires a commerceEndpoint');
-
-    const allPaths: SkuPath[] = [];
-    let currentPage = 1;
-    let totalPages = 1;
-
-    do {
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({
-                query: ENUMERATE_QUERY,
-                variables: { pageSize: PAGE_SIZE, currentPage },
-            }),
-            signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status} from ${params.commerceEndpoint}`);
-        }
-
-        const data = (await response.json()) as {
-            data?: {
-                productSearch?: {
-                    items?: Array<{ productView?: { sku?: string; urlKey?: string } }>;
-                    page_info?: { total_pages?: number; current_page?: number };
-                };
-            };
-            errors?: Array<{ message: string }>;
-        };
-
-        if (data.errors && data.errors.length > 0) {
-            throw new Error(`GraphQL errors: ${data.errors.map((e) => e.message).join('; ')}`);
-        }
-
-        const result = data.data?.productSearch;
-        if (!result?.items) {
-            throw new Error('Catalog response missing productSearch.items');
-        }
-
-        for (const item of result.items) {
-            const view = item.productView;
-            if (view?.sku && view?.urlKey) {
-                allPaths.push({ sku: view.sku, urlKey: view.urlKey });
-                if (allPaths.length >= maxItems) {
-                    // Only the real cap is worth warning about. A caller asking
-                    // for a small sample (the diagnostics probe wants one) is
-                    // hitting its own limit, not a catalog that is too big.
-                    if (maxItems !== MAX_SKUS) return allPaths;
-                    logger.warn(
-                        `[Catalog Prewarm] Hit max SKU cap (${MAX_SKUS}); remaining pages skipped — smart-404 will warm them at runtime`,
-                    );
-                    return allPaths;
-                }
-            }
-        }
-
-        totalPages = result.page_info?.total_pages ?? 1;
-        currentPage += 1;
-    } while (currentPage <= totalPages);
-
-    return allPaths;
-}
-
-/**
  * Publish one (urlKey, sku) through the AUTHENTICATED Helix path, at
  * `pdpPathFor` — the path the storefront's `getProductLink` links to and the
  * one Helix stores the page under (ADR-024).
@@ -480,167 +286,4 @@ async function publishOne(
 
 function makeSkipped(reason: string): PrewarmResult {
     return { attempted: 0, succeeded: 0, failed: 0, skipped: true, skipReason: reason };
-}
-
-/** One catalog product, plus the PDP path the storefront will generate for it. */
-export interface SamplePdp {
-    sku: string;
-    urlKey: string;
-    /** Built with the SAME helpers the storefront's `getProductLink` uses. */
-    path: string;
-    /** Which config the store scope came from. `manifest` means the CDN read failed. */
-    scopeSource: 'served' | 'manifest';
-    /**
-     * Set when the served and manifest scopes disagree.
-     *
-     * Usually EXPECTED: a Configure save marks the project stale and the scopes
-     * differ until Republish. `unexpected` is the case worth acting on — the
-     * project claims `published` yet the CDN serves a different scope, meaning a
-     * publish did not take. `edsStorefrontStatusSummary` cannot see that,
-     * because it compares bookkeeping to intent and never reads the CDN.
-     */
-    scopeDivergence?: {
-        served: StoreScope;
-        manifest: StoreScope;
-        unexpected: boolean;
-    };
-}
-
-/** What {@link applyServedScope} resolved: the params to enumerate with, and why. */
-interface ScopedEnumeration {
-    params: Partial<ConfigGeneratorParams>;
-    scopeSource: 'served' | 'manifest';
-    scopeDivergence?: SamplePdp['scopeDivergence'];
-}
-
-/**
- * Swap the manifest's store scope for the one the storefront is actually serving.
- *
- * The probe asks the LIVE storefront whether a PDP renders, so the sample product
- * has to come from the scope that storefront is querying. Picking from the
- * manifest instead is what turns a scope mismatch into a "broken storefront"
- * verdict on a storefront that is serving its own scope correctly.
- *
- * Only the SCOPE is taken from the served config. The endpoint stays the
- * manifest's: enumeration talks to Catalog Service directly, which is not
- * necessarily what `commerce-endpoint` names.
- *
- * Falls back to the manifest whenever the CDN cannot be read — no answer at all
- * is worse than one built from the project's own intent.
- */
-async function applyServedScope(
-    project: Project,
-    params: Partial<ConfigGeneratorParams>,
-    logger: Logger,
-): Promise<ScopedEnumeration> {
-    const manifestScope: StoreScope = {
-        websiteCode: params.websiteCode,
-        storeCode: params.storeCode,
-        storeViewCode: params.storeViewCode,
-    };
-
-    const githubRepo = getEdsGithubRepo(project);
-    const [owner, repo] = (githubRepo ?? '').split('/');
-    if (!owner || !repo) {
-        return { params, scopeSource: 'manifest' };
-    }
-
-    const served = await fetchServedStorefrontConfig(owner, repo, logger);
-    if (!served) {
-        logger.debug('[Storefront Probe] Served config unreadable — sampling from the manifest');
-        return { params, scopeSource: 'manifest' };
-    }
-
-    const matched = scopesMatch(served.scope, manifestScope);
-    if (!matched) {
-        // A save-then-Republish gap makes this expected; `published` here means a
-        // publish silently did not take, which nothing else measures.
-        const unexpected = project.edsStorefrontStatusSummary === 'published';
-        const detail =
-            `[Storefront Probe] Serving ${describeScope(served.scope)}, ` +
-            `project configured for ${describeScope(manifestScope)}`;
-        if (unexpected) {
-            logger.warn(`${detail} — project reads 'published', so a publish did not take`);
-        } else {
-            logger.info(
-                `${detail} (status: ${project.edsStorefrontStatusSummary ?? 'unknown'}) — ` +
-                    'sampling from the served scope',
-            );
-        }
-
-        return {
-            params: { ...params, ...served.scope },
-            scopeSource: 'served',
-            scopeDivergence: { served: served.scope, manifest: manifestScope, unexpected },
-        };
-    }
-
-    return { params, scopeSource: 'served' };
-}
-
-/**
- * Pick one real product and the PDP path it should resolve at.
- *
- * Exists for the diagnostics probe. `/products/default` proves only that the
- * overlay's SOURCE template is published — it answers 200 whether or not the
- * overlay is registered or the action is deployed. A path built for a SKU the
- * catalog just confirmed exists is the only fetch that exercises the whole
- * chain: overlay registered → `render-pdp` reachable → template fetched → page
- * written to the content bus.
- *
- * It is also the only live check on the path contract: this builds the path
- * with `pdpPathFor` and asks the storefront and `render-pdp` to serve it, so a
- * disagreement about where a product's page lives shows up as a 404.
- *
- * READ-ONLY. Enumeration is a GraphQL POST to Catalog Service, which is a query;
- * this must never call `prewarmOne`, which POSTs to prepublish-pdp and publishes.
- *
- * Every failure returns undefined — a Commerce outage, a PaaS backend, or an
- * empty catalog is not a storefront fault and must not colour the verdict.
- *
- * @param project - the project whose Commerce config to read
- * @param logger - for the skip reason
- * @returns a sample product and its PDP path, or undefined when unavailable
- */
-export async function pickSampleSku(
-    project: Project,
-    logger: Logger,
-): Promise<SamplePdp | undefined> {
-    const params = extractConfigParams(project);
-    if (params.environmentType !== 'accs') {
-        logger.debug(
-            `[Storefront Probe] No SKU sample for ${params.environmentType ?? 'unknown'} backend (enumeration is ACCS-only)`,
-        );
-        return undefined;
-    }
-    if (!params.commerceEndpoint) {
-        logger.debug('[Storefront Probe] No SKU sample — no Commerce endpoint configured');
-        return undefined;
-    }
-
-    const scoped = await applyServedScope(project, params, logger);
-
-    try {
-        const [first] = await enumerateAccsCatalog(
-            scoped.params as ConfigGeneratorParams,
-            logger,
-            1,
-        );
-        if (!first) {
-            logger.debug('[Storefront Probe] No SKU sample — catalog returned no products');
-            return undefined;
-        }
-        return {
-            sku: first.sku,
-            urlKey: first.urlKey,
-            path: pdpPathFor(first.urlKey, first.sku),
-            scopeSource: scoped.scopeSource,
-            scopeDivergence: scoped.scopeDivergence,
-        };
-    } catch (error) {
-        logger.debug(
-            `[Storefront Probe] No SKU sample — catalog enumeration failed: ${(error as Error).message}`,
-        );
-        return undefined;
-    }
 }

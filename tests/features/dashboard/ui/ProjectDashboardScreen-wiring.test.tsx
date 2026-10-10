@@ -166,6 +166,20 @@ describe('ProjectDashboardScreen - screen-owned wiring', () => {
             expect(screen.getByText('Headless + PaaS')).toBeInTheDocument();
         });
 
+        it("hands the status's broken-link count to the Storefront Report tile", () => {
+            renderDashboard({ isEds: true });
+
+            ctx.triggerMessage('statusUpdate', {
+                name: 'Test Project',
+                path: '/test/path',
+                status: 'ready',
+                brokenLinkCount: 3,
+            });
+
+            // `?? 0` keeps a real count; `&& 0` would zero it and hide the dot.
+            expect(screen.getByTestId('storefront-report-dot')).toBeInTheDocument();
+        });
+
         it('ignores mesh health entirely when the project has no mesh', () => {
             renderDashboard({ hasAdobeContext: true, appBuilderComponents: {} });
 

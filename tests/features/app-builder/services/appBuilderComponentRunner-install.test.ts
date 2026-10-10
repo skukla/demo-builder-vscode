@@ -8,10 +8,8 @@
  * entries never invoke it.
  */
 
-import {
-    addAppBuilderComponent,
-    deployAppBuilderComponent,
-} from '@/features/app-builder/services/appBuilderComponentRunner';
+import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderAddRun';
+import { deployAppBuilderComponent } from '@/features/app-builder/services/appBuilderRedeployRun';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import {
     INTEGRATION_ENTRY,

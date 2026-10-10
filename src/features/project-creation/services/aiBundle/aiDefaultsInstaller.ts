@@ -35,18 +35,12 @@ import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { ensureFnmNodeVersion } from '@/core/shell/ensureNodeVersion';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import type { AiDefaults } from '@/types/aiDefaults';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
 const aiDefaults: AiDefaults = aiDefaultsConfig as AiDefaults;
-
-/**
- * The Node every ai-defaults tool installs, updates and runs under (AI-13).
- * One value, read by the installer, the update path (`adobeMcpUpdateCore`) and
- * the launch line (`mcpConfigWriter`), so the three cannot disagree.
- */
-export const AI_TOOLS_NODE_VERSION = aiDefaults.nodeVersion;
 
 /** Isolated MCP tools directory name, at the project root (outside any git repo). */
 const MCP_TOOLS_DIRNAME = '.demo-builder-mcp';
@@ -166,7 +160,7 @@ export async function installAiDefaultsMcpTools(
     // (EBADENGINE). Same mechanism as an integration's `nodeVersion` (AB-3): fnm
     // supplies the major, and npm runs under it. The servers then RUN under it too
     // (mcpConfigWriter launches them through fnm).
-    const nodeError = await ensureFnmNodeVersion(executor, AI_TOOLS_NODE_VERSION, {
+    const nodeError = await ensureFnmNodeVersion(executor, demoBuilderNode(), {
         debug: (message: string) => logger?.debug(message),
     });
     if (nodeError) return { success: false, error: nodeError };
@@ -180,7 +174,7 @@ export async function installAiDefaultsMcpTools(
             cwd: toolsDir,
             timeout: TIMEOUTS.VERY_LONG,
             enhancePath: true,
-            useNodeVersion: AI_TOOLS_NODE_VERSION,
+            useNodeVersion: demoBuilderNode(),
             shell: DEFAULT_SHELL,
             ...(onProgress
                 ? {

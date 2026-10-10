@@ -7,7 +7,7 @@
  * import everything from here and never reach for the SUT directly.
  */
 
-import '../../../../helpers/webviewClientMock';
+import { mockPostMessage } from '../../../../helpers/webviewClientMock';
 import React from 'react';
 
 // The canonical act-settling helpers (ADR-016) — re-exported so specs keep a
@@ -22,6 +22,10 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { ImportDatapackModal } from '@/features/data-installer/ui/components/ImportDatapackModal';
 
 export const mockRequest = webviewClient.request as jest.Mock;
+
+// The same double's postMessage, for the close handover (a running job goes on
+// in a progress notification).
+export { mockPostMessage };
 
 // Re-exported so specs can rerender with new props without importing the SUT
 // themselves — see the module docstring for why that import must live here.

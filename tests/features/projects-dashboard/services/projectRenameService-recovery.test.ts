@@ -24,6 +24,7 @@ import {
 } from './projectRenameService.testUtils';
 import { commerceSecretKey } from '@/features/components/services/commerceCredentialStore';
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { poolUnits } from '../../../helpers/authenticationServiceFake';
 
 beforeEach(() => {
     resetRenameMocks();
@@ -193,9 +194,9 @@ describe('remote Adobe I/O project title sync', () => {
 
     function contextWithAuth(): HandlerContext {
         const ctx = renameHandlerContext();
-        (ctx as unknown as { authManager: unknown }).authManager = {
+        (ctx as unknown as { authManager: unknown }).authManager = poolUnits({
             renameRemoteProject: remoteRename,
-        };
+        });
         return ctx;
     }
 

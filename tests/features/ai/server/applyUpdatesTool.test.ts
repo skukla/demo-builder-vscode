@@ -1,7 +1,8 @@
 /**
  * apply_updates tool — check mode (no confirm), the up-to-date short-circuit, the
- * running-demo guard, and the apply path. The headless updateApplyService is
- * mocked; this verifies the tool's gating + shaping, not the apply mechanics.
+ * running-demo guard, and the apply path. The headless updateSelections and
+ * updateApplyService are mocked; this verifies the tool's gating + shaping, not
+ * the check or apply mechanics.
  */
 
 jest.mock('@/core/utils/agentPhaseChannel', () => ({
@@ -9,18 +10,20 @@ jest.mock('@/core/utils/agentPhaseChannel', () => ({
 }));
 
 jest.mock('@/features/updates/services/updateApplyService', () => ({
-    computeProjectUpdateSelections: jest.fn(),
     applyUpdatesHeadless: jest.fn(),
+}));
+jest.mock('@/features/updates/services/updateSelections', () => ({
+    computeProjectUpdateSelections: jest.fn(),
     countSelections: jest.fn(),
 }));
 
 import { registerApplyUpdatesTool } from '@/features/ai/server/applyUpdatesTool';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
+import { applyUpdatesHeadless } from '@/features/updates/services/updateApplyService';
 import {
     computeProjectUpdateSelections,
-    applyUpdatesHeadless,
     countSelections,
-} from '@/features/updates/services/updateApplyService';
+} from '@/features/updates/services/updateSelections';
 import type { HandlerContext } from '@/types/handlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockLogger } from '../../../helpers/loggerFake';

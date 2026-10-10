@@ -33,7 +33,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     resolveByomOverlayConfig: (...a: unknown[]) => mockResolveByomOverlayConfig(...a),
     getDaLiveAuthService: (...a: unknown[]) => mockGetDaLiveAuthService(...a),
 }));
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
     createDaLiveServiceTokenProvider: (...a: unknown[]) => mockCreateTokenProvider(...a),
 }));
 jest.mock('@/features/eds/services/catalogPrewarmService', () => ({

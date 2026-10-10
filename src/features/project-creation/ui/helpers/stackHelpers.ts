@@ -16,7 +16,8 @@ import type { WizardState } from '@/types/webview';
  * must reset on a stack change — otherwise a tile could keep a stale ✓ badge and
  * enable Continue with config that the stack change dropped, without the modal ever
  * re-opening to re-derive the verdict. The single choke point for stack changes is
- * WizardContainer.handleArchitectureChange.
+ * the handler `buildArchitectureChangeHandler` (ui/wizard/architectureChange.ts) builds
+ * for WizardContainer.
  *
  * @returns Partial wizard state with the cleared/false fields to spread into setState
  */

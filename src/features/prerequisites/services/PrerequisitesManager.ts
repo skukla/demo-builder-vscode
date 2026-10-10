@@ -17,7 +17,7 @@ import { formatDuration } from '@/core/utils/timeFormatting';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getInstallSteps } from '@/features/prerequisites/services/installation/InstallStepBuilder';
 import { resolveDependencies } from '@/features/prerequisites/services/versioning/DependencyResolver';
-import { checkMultipleNodeVersions, getInstalledNodeVersions, getLatestInFamily } from '@/features/prerequisites/services/versioning/MultiVersionDetector';
+import { checkMultipleNodeVersions, getInstalledNodeVersions } from '@/features/prerequisites/services/versioning/MultiVersionDetector';
 import { checkVersionSatisfaction } from '@/features/prerequisites/services/versioning/VersionSatisfactionChecker';
 import { Logger } from '@/types/logger';
 import type { InstallStep, ProgressMilestone } from '@/types/prerequisites';
@@ -163,30 +163,33 @@ export class PrerequisitesManager {
             // Step 2 Fix: Use fnm-aware logic for perNodeVersion prerequisites
             if (prereq.perNodeVersion && prereq.id !== 'node' && prereq.id !== 'npm') {
                 await this.checkPerNodeVersionPrerequisite(prereq, status);
-
-                const totalDuration = Date.now() - startTime;
-                this.logger.debug(
-                    `[Prerequisites] ${prereq.id}: ✓ Complete in ${formatDuration(totalDuration)}, installed=${status.installed}`,
-                );
-
-                this.cacheManager.setCachedResult(prereq.id, status, undefined, nodeVersion);
-                return status;
+            } else {
+                // Standard check for non-perNodeVersion prerequisites
+                await this.checkStandardPrerequisite(prereq, status);
             }
-
-            // Standard check for non-perNodeVersion prerequisites
-            await this.checkStandardPrerequisite(prereq, status);
-
-            const totalDuration = Date.now() - startTime;
-            this.logger.debug(
-                `[Prerequisites] ${prereq.id}: ✓ Complete in ${formatDuration(totalDuration)}, installed=${status.installed}`,
-            );
-
-            this.cacheManager.setCachedResult(prereq.id, status, undefined, nodeVersion);
+            this.recordCheckComplete(prereq, status, startTime, nodeVersion);
         } catch (error) {
             this.handleCheckError(prereq, status, error, startTime, nodeVersion);
         }
 
         return status;
+    }
+
+    /**
+     * Log a finished check and cache its result. Both check paths end this way.
+     */
+    private recordCheckComplete(
+        prereq: PrerequisiteDefinition,
+        status: PrerequisiteStatus,
+        startTime: number,
+        nodeVersion?: string,
+    ): void {
+        const totalDuration = Date.now() - startTime;
+        this.logger.debug(
+            `[Prerequisites] ${prereq.id}: ✓ Complete in ${formatDuration(totalDuration)}, installed=${status.installed}`,
+        );
+
+        this.cacheManager.setCachedResult(prereq.id, status, undefined, nodeVersion);
     }
 
     /**
@@ -427,11 +430,6 @@ export class PrerequisitesManager {
             commands,
             message: firstStep?.message || (plugin.install as { message?: string }).message,
         };
-    }
-
-    // Delegate to extracted module
-    async getLatestInFamily(versionFamily: string): Promise<string | null> {
-        return getLatestInFamily(versionFamily, this.commandManager, this.logger);
     }
 
     // Delegate to extracted module

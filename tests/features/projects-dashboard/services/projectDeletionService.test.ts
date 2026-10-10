@@ -33,8 +33,12 @@ import {
     mockExecuteCommand,
     mockGetConfiguration,
     mockGetToken,
+    mockProgressReport,
     mockRm,
+    mockShowInformationMessage,
     mockShowWarningMessage,
+    mockSleep,
+    mockWithProgressOptions,
 } from './projectDeletionService.testUtils';
 import {
     SERVICES,
@@ -48,6 +52,8 @@ import {
     mockUnpublishPages,
     plainProject,
 } from './projectDeletionService.fixtures';
+import { startModalRun } from '@/core/vscode/operationProgress';
+import type { OperationProgressPayload } from '@/types/webviewPayloads';
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -432,5 +438,172 @@ describe("a confirmed delete takes the project's secrets with it", () => {
             deleteProject(ctx, plainProject({ adobe: { workspace: 'ws-1' } }), SERVICES),
         ).rejects.toThrow('Failed to delete project: denied');
         expect(remove).not.toHaveBeenCalled();
+    });
+});
+
+describe('the one-time cleanup-settings tip', () => {
+    beforeEach(() => {
+        // showOneTimeTip chains .then on this, so it must always be a promise.
+        mockShowInformationMessage.mockResolvedValue(undefined);
+        mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
+        mockDeleteDaLiveSite.mockResolvedValue({ success: true });
+        mockGetToken.mockResolvedValue('gh-token');
+        mockDeleteRepository.mockResolvedValue(undefined);
+    });
+
+    /**
+     * A context where the tip has NOT been shown before. The shared handler-context
+     * fake answers `true` to every globalState read so tips stay out of other suites'
+     * way — which here means the tip never fires and the assertions pass on nothing.
+     */
+    function freshTipContext(): ReturnType<typeof context> {
+        const ctx = context();
+        (ctx.context.globalState.get as jest.Mock).mockReturnValue(false);
+        return ctx;
+    }
+
+    it('appears after a cleanup ran, offering the settings it configures', async () => {
+        armQuickPick('accept', ['github', 'daLive']);
+        const ctx = freshTipContext();
+
+        await deleteProject(ctx, edsProject(), SERVICES);
+
+        expect(mockShowInformationMessage).toHaveBeenCalledWith(
+            expect.any(String),
+            'Open Settings',
+        );
+        expect(ctx.context.globalState.update).toHaveBeenCalledWith(
+            'edsCleanup.settingsTipShown',
+            true,
+        );
+    });
+
+    it('does not appear when nothing was cleaned up', async () => {
+        armQuickPick('accept', []);
+
+        await deleteProject(freshTipContext(), edsProject(), SERVICES);
+
+        expect(mockShowInformationMessage).not.toHaveBeenCalled();
+    });
+
+    it('does not appear a second time', async () => {
+        armQuickPick('accept', ['github', 'daLive']);
+        const ctx = context();
+        (ctx.context.globalState.get as jest.Mock).mockReturnValue(true);
+
+        await deleteProject(ctx, edsProject(), SERVICES);
+
+        expect(mockShowInformationMessage).not.toHaveBeenCalled();
+    });
+
+    it('opens the cleanupBehavior setting when its action is chosen', async () => {
+        armQuickPick('accept', ['github', 'daLive']);
+        mockShowInformationMessage.mockResolvedValue('Open Settings');
+
+        await deleteProject(freshTipContext(), edsProject(), SERVICES);
+        // The tip is fire-and-forget; let its .then run.
+        await Promise.resolve();
+
+        expect(mockExecuteCommand).toHaveBeenCalledWith(
+            'workbench.action.openSettings',
+            'demoBuilder.cleanupBehavior',
+        );
+    });
+});
+
+describe('removing the local footprint', () => {
+    beforeEach(() => {
+        mockSleep.mockResolvedValue(undefined);
+    });
+
+    it('removes the directory recursively and forcibly', async () => {
+        await deleteProjectFiles(context(), plainProject());
+
+        expect(mockRm).toHaveBeenCalledWith('/projects/demo', { recursive: true, force: true });
+    });
+
+    it('touches nothing on disk when the project has no path', async () => {
+        const ctx = context();
+
+        await deleteProjectFiles(ctx, plainProject({ path: '' }));
+
+        expect(mockRm).not.toHaveBeenCalled();
+        expect(ctx.stateManager.removeFromRecentProjects).not.toHaveBeenCalled();
+    });
+
+    it('backs off exponentially between retries, from a bounded base', async () => {
+        const transient = Object.assign(new Error('busy'), { code: 'EBUSY' });
+        mockRm.mockRejectedValue(transient);
+
+        await expect(deleteProjectFiles(context(), plainProject())).rejects.toThrow();
+
+        // The first sleep is the file-handle release, not a retry delay.
+        const delays = mockSleep.mock.calls.slice(1).map((c) => c[0]);
+        expect(delays).toEqual([100, 200, 400, 800]);
+    });
+
+    it('makes exactly five attempts — the ceiling is a number, not "several"', async () => {
+        const transient = Object.assign(new Error('busy'), { code: 'EBUSY' });
+        mockRm.mockRejectedValue(transient);
+
+        await expect(deleteProjectFiles(context(), plainProject())).rejects.toThrow();
+
+        expect(mockRm).toHaveBeenCalledTimes(5);
+    });
+
+    it('treats an error with NO code as non-retryable', async () => {
+        mockRm.mockRejectedValue(new Error('something else'));
+
+        await expect(deleteProjectFiles(context(), plainProject())).rejects.toThrow(
+            /something else/,
+        );
+        expect(mockRm).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not claim it tried repeatedly when it gave up on the first attempt', async () => {
+        const denied = Object.assign(new Error('permission denied'), { code: 'EACCES' });
+        mockRm.mockRejectedValue(denied);
+
+        await expect(deleteProjectFiles(context(), plainProject())).rejects.toThrow(
+            /^Failed to delete project: permission denied$/,
+        );
+    });
+});
+
+describe('where a delete narrates', () => {
+    /** The non-empty lines the progress notification was handed, in order. */
+    const notified = (): string[] =>
+        mockProgressReport.mock.calls
+            .map(([update]) => (update as { message?: string }).message ?? '')
+            .filter((message) => message !== '');
+
+    it('a delete started from a screen narrates in that screen\'s modal, by its id, and ends it as succeeded', async () => {
+        mockShowWarningMessage.mockResolvedValue('Delete');
+        const pushed: OperationProgressPayload[] = [];
+        startModalRun('screen-op-1', async (_type: string, payload?: unknown) => {
+            pushed.push(payload as OperationProgressPayload);
+        });
+
+        await deleteProject(context(), plainProject(), SERVICES, {
+            progress: 'modal',
+            operationId: 'screen-op-1',
+        });
+
+        // One surface per operation (PL-59 R1): no notification beside the modal.
+        expect(mockWithProgressOptions).not.toHaveBeenCalled();
+        expect(pushed.at(-1)).toStrictEqual({ id: 'screen-op-1', state: 'succeeded' });
+    });
+
+    it("the cleanup's own step reaches the notification ahead of the file removal", async () => {
+        armQuickPick('accept', ['github']);
+        mockGetToken.mockResolvedValue('gh-token');
+        mockDeleteRepository.mockResolvedValue(undefined);
+
+        await deleteProject(context(), edsProject(), SERVICES);
+
+        // One line from the repository cleanup, one for the files. Dropping the
+        // forwarding, or forwarding blanks, leaves the file removal alone.
+        expect(notified()).toHaveLength(2);
+        expect(mockDeleteRepository).toHaveBeenCalled();
     });
 });

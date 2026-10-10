@@ -3,7 +3,7 @@
  * (2026-08-23 audit of project-level facts stored per-component).
  *
  * Configure's fan-out writes a shared field only to SELECTED declaring
- * components, while envFileGenerator's fallback loop and configGenerator's
+ * components, while envVarResolution's fallback loop and configGenerator's
  * merge sweep EVERY entry in `componentConfigs` — configGenerator with
  * mesh-overrides-non-mesh priority. A component removed from the project
  * used to leave its config entry behind forever, so its stale copy could

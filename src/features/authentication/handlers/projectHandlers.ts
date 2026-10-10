@@ -12,6 +12,10 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { isTimeoutError } from '@/core/utils/timeoutError';
 import { validateProjectId } from '@/core/validation/validators/AdobeResourceValidator';
 import {
+    gateConsoleCreate,
+    type ConsoleCreatePayload,
+} from '@/features/authentication/handlers/consoleCreateGate';
+import {
     ensureOrgContext,
     type EnsureOrgContextResult,
 } from '@/features/authentication/services/ensureOrgContext';
@@ -120,7 +124,8 @@ export async function handleGetProjects(
 
     try {
         // Send loading status with sub-message
-        const currentOrg = await context.authManager?.getCurrentOrganization();
+        const currentOrg = await context.authManager?.getEntityServices()
+            .then((units) => units.resolver.getCurrentOrganization());
         if (currentOrg) {
             await context.sendMessage('project-loading-status', {
                 isLoading: true,
@@ -132,7 +137,9 @@ export async function handleGetProjects(
         // Wrap getProjects with timeout (30 seconds). Thread orgId so the fetch
         // runs under org-context targeting (AIO_CONSOLE_* env, no global mutation).
         const projectsPromise = quiet
-            ? context.authManager?.getProjectsSdkOnly(orgId ? { orgId } : undefined)
+            ? context.authManager?.getEntityServices().then((units) =>
+                  units.projectReads.getProjectsSdkOnly(orgId ? { orgId } : undefined),
+              )
             : orgId
               ? context.authManager?.getProjects({ orgId })
               : context.authManager?.getProjects();
@@ -198,7 +205,8 @@ export async function handleSelectProject(
 
     try {
         // Get org ID for context guard (required for drift protection)
-        const currentOrg = await context.authManager?.getCurrentOrganization();
+        const currentOrg = await context.authManager?.getEntityServices()
+            .then((units) => units.resolver.getCurrentOrganization());
         if (!currentOrg?.id) {
             throw new Error('No organization selected - cannot select project without org context');
         }
@@ -259,34 +267,17 @@ export async function handleSelectProject(
  */
 export async function handleCreateAdobeProject(
     context: HandlerContext,
-    payload: { name: string; description?: string },
+    payload: ConsoleCreatePayload,
 ): Promise<HandlerResponse> {
-    if (!context.authManager) {
-        return { success: false, error: 'Authentication not available' };
-    }
-
-    const name = (payload?.name ?? '').trim();
-    const description = payload?.description ?? '';
-
     try {
-        // Defensive permission re-check (guards a stale probe) → UI drops to Flow B.
-        const { hasPermissions, error: permError } =
-            await context.authManager.testDeveloperPermissions();
-        if (!hasPermissions) {
-            return {
-                success: false,
-                code: ErrorCode.AUTH_FORBIDDEN,
-                error:
-                    permError ||
-                    'You do not have permission to create projects in this organization. Select an existing project instead.',
-            };
+        const gate = await gateConsoleCreate(context, payload, 'project');
+        if (gate.refusal) {
+            return gate.refusal;
         }
+        const { authManager, name, description } = gate;
 
-        if (!name) {
-            return { success: false, error: 'Project name is required.' };
-        }
-
-        const project = await context.authManager.createProject(name, description);
+        const { projectOps } = await authManager.getEntityServices();
+        const project = await projectOps.createProject(name, description);
         if (isConsoleOpFailure(project)) {
             // The service carries Console's own reason now — surface it instead
             // of the old quota guess, which the measured failure never matched.
@@ -304,10 +295,7 @@ export async function handleCreateAdobeProject(
         // Goes through the SAME deletable stamping as get-projects.
         let projects: AdobeProject[] | undefined;
         try {
-            projects = await stampProjectsDeletable(
-                context.authManager,
-                await context.authManager.getProjects(),
-            );
+            projects = await stampProjectsDeletable(authManager, await authManager.getProjects());
         } catch (refreshError) {
             // Omitted, not empty: the caller clears its cache and reloads.
             context.debugLogger.debug('[Project] Post-create refresh failed:', refreshError);

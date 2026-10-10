@@ -18,15 +18,12 @@ import type { PrerequisiteDefinition } from '../services/PrerequisitesManager';
 import { HandlerContext } from '@/types/handlers';
 
 export {
-    getNodeVersionIdMapping,
     getNodeVersionKeys,
     getNodeVersionMapping,
-    getPluginNodeVersions,
-    getRequiredNodeVersions,
     hasNodeVersions,
-    resolveRequiredMajors,
+    perNodeVersionMajors,
 } from './nodeVersionRequirements';
-export type { NodeVersionIdMapping, NodeVersionMapping } from './nodeVersionRequirements';
+export type { NodeVersionMapping } from './nodeVersionRequirements';
 export {
     determinePrerequisiteStatus,
     formatProgressMessage,
@@ -35,7 +32,8 @@ export {
     getPrerequisiteStatusMessage,
 } from './prerequisiteStatusMessages';
 export type { PerNodeVersionStatusEntry } from './prerequisiteStatusMessages';
-export { checkPerNodeVersionStatus } from './perNodeVersionStatus';
+export { checkPerNodeVersionStatus, resolvePerNodeVariantStatus } from './perNodeVersionStatus';
+export type { PerNodeVariantStatus } from './perNodeVersionStatus';
 export { handlePrerequisiteCheckError } from './prerequisiteCheckError';
 
 /**

@@ -9,7 +9,7 @@
 
 import { ProgressTracker } from '../handlers/shared';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
-import { getMeshNodeVersion } from '@/core/utils/meshConfig';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
@@ -76,7 +76,7 @@ async function fetchMeshInfoFromDescribe(
         const describeResult = await commandManager.execute('aio api-mesh:describe', {
             timeout: TIMEOUTS.NORMAL,
             configureTelemetry: false,
-            useNodeVersion: getMeshNodeVersion(),
+            useNodeVersion: demoBuilderNode(),
             enhancePath: true,
         });
 
@@ -436,7 +436,7 @@ export async function linkExistingMesh(
  * @param endpoint - The mesh endpoint URL (optional)
  */
 async function updateProjectMeshState(project: Project, logger: Logger, endpoint?: string): Promise<void> {
-    const { updateMeshState } = await import('@/features/mesh/services/stalenessDetector');
+    const { updateMeshState } = await import('@/features/mesh/services/meshDeployBaseline');
 
     await updateMeshState(project, endpoint);
     logger.debug('[Project Creation] Updated mesh state after deployment');

@@ -6,9 +6,9 @@ import { promises as fsPromises } from 'fs';
 import * as path from 'path';
 import { buildComponent } from '@/core/shell/buildComponent';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
-import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import type { MeshDeploymentResult } from '@/features/mesh/services/types';
 import type { Logger } from '@/types/logger';
 import { parseJSON, toError } from '@/types/typeGuards';
@@ -39,7 +39,7 @@ async function buildMeshComponent(
         componentPath,
         commandManager,
         {
-            nodeVersion: getMeshNodeVersion(),
+            nodeVersion: demoBuilderNode(),
             kind: 'mesh',
             buildArgs: '-- --force',
             logPrefix: '[Mesh Deployment]',
@@ -182,7 +182,7 @@ export async function deployMeshComponent(
                         }
                     },
                     configureTelemetry: false,
-                    useNodeVersion: getMeshNodeVersion(),
+                    useNodeVersion: demoBuilderNode(),
                     enhancePath: true,
                 },
             );

@@ -27,7 +27,7 @@ jest.setTimeout(5000);
 // =============================================================================
 
 
-jest.mock('@/features/mesh/services/stalenessDetector');
+jest.mock('@/core/state/projectStateSync');
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: { getAuthenticationService: jest.fn() },
 }));
@@ -39,9 +39,9 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getGitHubServices: jest.fn().mockReturnValue({ tokenService: {} }),
 }));
 
-// storefrontRepublishService - the shared pipeline (dynamically imported)
+// storefrontContentRepublishService - the shared pipeline (dynamically imported)
 const mockRepublishStorefrontContent = jest.fn();
-jest.mock('@/features/eds/services/storefront/storefrontRepublishService', () => ({
+jest.mock('@/features/eds/services/storefront/storefrontContentRepublishService', () => ({
     republishStorefrontContent: (...args: unknown[]) => mockRepublishStorefrontContent(...args),
 }));
 

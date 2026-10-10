@@ -14,11 +14,9 @@
  * one PROFILE row per demo package (b2b, citisignal, citisignal-b2b, buildright…).
  */
 
-import {
-    DaLiveContentOperations,
-    type DaLiveContentSource,
-    type TokenProvider,
-} from '@/features/eds/services/daLive/daLiveContentOperations';
+import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { type DaLiveContentSource } from '@/features/eds/services/types';
+import { type TokenProvider } from '@/features/eds/services/daLive/daLiveApiClient';
 import { createPatchReport, getUnapplied } from '@/features/eds/services/patches/patchReportHelper';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
@@ -135,7 +133,7 @@ describe('content-completeness smoke (per-package)', () => {
         };
         const report = createPatchReport();
 
-        const result = await service.copyContentFromSource(source, 'user-org', 'user-site', undefined, undefined, undefined, report);
+        const result = await service.copyOps.copyContentFromSource(source, 'user-org', 'user-site', undefined, undefined, undefined, report);
 
         for (const path of profile.expectCopied) {
             expect(result.copiedFiles).toContain(path);

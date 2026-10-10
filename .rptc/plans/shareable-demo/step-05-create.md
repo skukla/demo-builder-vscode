@@ -52,7 +52,7 @@ code patches run as a dry check whose misses become caveats.
   `project.datapack` is written as today; no install runs.
 - Storefront area (D21): `buildSummary.ts` `storefrontSummaryGroup` gains a first row
   "Demo — {name} · {kind}" for every EDS brand; the existing-repo tick in
-  `repoSelectionInline.helpers.tsx:826` reads "Reset to {name} (replaces all content)".
+  `ResetToTemplateOption.tsx` reads "Reset to {name} (replaces all content)".
 
 ## Design
 

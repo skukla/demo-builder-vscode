@@ -6,11 +6,11 @@
  * PL-1 phase 2 made it the ONLY in-memory carrier — legacy manifests fold into
  * it at load via the quarantined read-migration). No I/O, no `vscode`.
  *
- * @module features/app-builder/services/appBuilderComponentState
+ * @module core/state/appBuilderComponentState
  */
 
 import type { Project, AppBuilderComponentState } from '@/types/base';
-import { hasEntries, getMeshEndpointUrl } from '@/types/typeGuards';
+import { hasEntries } from '@/types/typeGuards';
 
 /** The canonical key a migrated legacy mesh lands under. */
 const MESH_ID = 'mesh';
@@ -94,6 +94,19 @@ export function getIdentifiedMeshAppBuilderComponent(
  */
 export function getMeshAppBuilderComponent(project: Project): AppBuilderComponentState | undefined {
     return getIdentifiedMeshAppBuilderComponent(project)?.state;
+}
+
+/**
+ * The mesh endpoint as recorded on the keyed mesh entry, unchecked. Takes a missing
+ * project so callers holding an optional one need no guard. `getMeshEndpoint` below
+ * is the checked read (a non-empty string, else undefined).
+ *
+ * Lived in `@/types/typeGuards` until 2026-10-07, which made that file and this one
+ * import each other.
+ */
+export function getMeshEndpointUrl(project: Project | undefined | null): string | undefined {
+    if (!project) return undefined;
+    return getMeshAppBuilderComponent(project)?.endpoint;
 }
 
 /** List every keyed appBuilderComponent with the id it is stored under. */
@@ -194,7 +207,7 @@ export function hasMeshDeploymentRecord(project: Project): boolean {
 }
 
 /**
- * Get the deployed mesh endpoint (via getMeshEndpointUrl, ADR-011 D3 Step 06).
+ * Get the deployed mesh endpoint, checked (via getMeshEndpointUrl, ADR-011 D3 Step 06).
  *
  * See docs/architecture/state-ownership.md for details.
  *

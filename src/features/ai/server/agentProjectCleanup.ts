@@ -164,11 +164,11 @@ export async function cleanUpProjectCloud(
         const [owner, repo] = metadata.githubRepo.split('/');
         try {
             const { getGitHubServices } = await import('@/features/eds/handlers/edsHelpers');
-            const { repoOperations } = getGitHubServices(context.context.secrets);
+            const { repoLifecycle } = getGitHubServices(context.context.secrets);
             if (!owner || !repo) {
                 throw new Error(`"${metadata.githubRepo}" is not an owner/repo pair`);
             }
-            await repoOperations.deleteRepository(owner, repo);
+            await repoLifecycle.deleteRepository(owner, repo);
             outcome.githubRepo = { name: metadata.githubRepo, deleted: true };
         } catch (error) {
             outcome.githubRepo = {

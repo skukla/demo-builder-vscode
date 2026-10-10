@@ -1,0 +1,139 @@
+/**
+ * Tests for the DA.live TokenProvider adapters (daLiveTokenProviders.ts)
+ *
+ * Verifies the factory that wraps a DaLiveAuthService (or any object
+ * with getAccessToken) into a TokenProvider interface.
+ */
+
+import {
+    createDaLiveServiceTokenProvider,
+    createDaLiveTokenProvider,
+} from '@/features/eds/services/daLive/daLiveTokenProviders';
+import { type TokenProvider } from '@/features/eds/services/daLive/daLiveApiClient';
+
+describe('createDaLiveServiceTokenProvider', () => {
+    it('should return a TokenProvider object', () => {
+        // Given: An auth service with getAccessToken
+        const authService = { getAccessToken: jest.fn().mockResolvedValue('test-token') };
+
+        // When: Creating a token provider
+        const provider = createDaLiveServiceTokenProvider(authService);
+
+        // Then: Should return an object with getAccessToken
+        expect(provider).toBeDefined();
+        expect(typeof provider.getAccessToken).toBe('function');
+    });
+
+    it('should delegate getAccessToken to the auth service', async () => {
+        // Given: An auth service that returns a specific token
+        const expectedToken = 'my-dalive-token-123';
+        const authService = { getAccessToken: jest.fn().mockResolvedValue(expectedToken) };
+        const provider = createDaLiveServiceTokenProvider(authService);
+
+        // When: Calling getAccessToken on the provider
+        const token = await provider.getAccessToken();
+
+        // Then: Should return the token from the auth service
+        expect(token).toBe(expectedToken);
+        expect(authService.getAccessToken).toHaveBeenCalledTimes(1);
+    });
+
+    it('should propagate errors from the auth service', async () => {
+        // Given: An auth service that rejects
+        const authService = {
+            getAccessToken: jest.fn().mockRejectedValue(new Error('Token expired')),
+        };
+        const provider = createDaLiveServiceTokenProvider(authService);
+
+        // When/Then: Should propagate the error
+        await expect(provider.getAccessToken()).rejects.toThrow('Token expired');
+    });
+
+    it('should work with any object matching the interface (duck typing)', async () => {
+        // Given: A plain object (not a DaLiveAuthService instance) with getAccessToken
+        const plainAdapter = {
+            getAccessToken: async () => 'duck-typed-token',
+            someOtherMethod: () => 'ignored',
+        };
+        const provider = createDaLiveServiceTokenProvider(plainAdapter);
+
+        // When: Calling getAccessToken
+        const token = await provider.getAccessToken();
+
+        // Then: Should work with duck-typed objects
+        expect(token).toBe('duck-typed-token');
+    });
+
+    it('should satisfy the TokenProvider interface', () => {
+        // Given: An auth service
+        const authService = { getAccessToken: jest.fn().mockResolvedValue('token') };
+
+        // When: Creating a provider
+        const provider = createDaLiveServiceTokenProvider(authService);
+
+        // Then: Should be assignable to TokenProvider
+        const tokenProvider: TokenProvider = provider;
+        expect(tokenProvider.getAccessToken).toBeDefined();
+    });
+});
+
+/**
+ * The auth-manager flavour of the same factory.
+ *
+ * Its callers hand it an optional AuthenticationService, so both halves are
+ * live: signed-out startup passes nothing, and the signed-in path has to turn
+ * an `inspectToken()` answer with no `token` field into the `null` the
+ * TokenProvider contract requires — DA.live callers branch on `null`, and an
+ * `undefined` leaking through would be sent as the literal string
+ * "undefined" in an Authorization header.
+ */
+describe('createDaLiveTokenProvider', () => {
+    const managerYielding = (inspection: { valid: boolean; expiresIn: number; token?: string }) => ({
+        getTokenManager: jest.fn().mockReturnValue({
+            inspectToken: jest.fn().mockResolvedValue(inspection),
+        }),
+    });
+
+    it('yields a provider that answers null when there is no auth manager', async () => {
+        const provider = createDaLiveTokenProvider(undefined);
+
+        await expect(provider.getAccessToken()).resolves.toBeNull();
+    });
+
+    it('treats an explicitly null auth manager the same way', async () => {
+        const provider = createDaLiveTokenProvider(null);
+
+        await expect(provider.getAccessToken()).resolves.toBeNull();
+    });
+
+    it('returns the token the manager is currently holding', async () => {
+        const manager = managerYielding({ valid: true, expiresIn: 3600, token: 'ims-abc123' });
+
+        const token = await createDaLiveTokenProvider(manager).getAccessToken();
+
+        expect(token).toBe('ims-abc123');
+        expect(manager.getTokenManager).toHaveBeenCalledTimes(1);
+    });
+
+    it('converts a missing token to null rather than passing undefined on', async () => {
+        const manager = managerYielding({ valid: false, expiresIn: 0 });
+
+        const token = await createDaLiveTokenProvider(manager).getAccessToken();
+
+        expect(token).toBeNull();
+    });
+
+    it('asks the manager again on every call rather than caching the first answer', async () => {
+        // Tokens expire mid-run; a provider that captured one at construction
+        // would keep sending a dead Bearer for the rest of the session.
+        const inspectToken = jest
+            .fn()
+            .mockResolvedValueOnce({ valid: true, expiresIn: 10, token: 'first' })
+            .mockResolvedValueOnce({ valid: true, expiresIn: 3600, token: 'second' });
+        const manager = { getTokenManager: jest.fn().mockReturnValue({ inspectToken }) };
+        const provider = createDaLiveTokenProvider(manager);
+
+        await expect(provider.getAccessToken()).resolves.toBe('first');
+        await expect(provider.getAccessToken()).resolves.toBe('second');
+    });
+});

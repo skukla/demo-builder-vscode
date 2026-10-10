@@ -22,7 +22,7 @@ import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { promisify } from 'util';
 import aiDefaultsConfig from '../../config/ai-defaults.json';
-import { AI_TOOLS_NODE_VERSION, resolveMcpToolsDir } from './aiDefaultsInstaller';
+import { resolveMcpToolsDir } from './aiDefaultsInstaller';
 import { aiDefaultsEntryApplies } from './aiToolingGate';
 import {
     generateClaudeSettings,
@@ -31,7 +31,9 @@ import {
 } from './claudeSettingsWriter';
 import type { GeneratedFileWriter } from './generatedFileWriter';
 import { getLogger } from '@/core/logging/debugLogger';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { EnvironmentSetup } from '@/core/shell/environmentSetup';
+import { nodeFolderEnv } from '@/core/shell/nodeFolder';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 import type { AiDefaults } from '@/types/aiDefaults';
 import type { Project } from '@/types/base';
@@ -215,17 +217,23 @@ async function buildMcpConfig(
 }
 
 /**
- * How an ai-defaults server is launched: a `node` server runs on the Node the
- * tools were installed for (`AI_TOOLS_NODE_VERSION`, AI-13), through fnm, as
- * `fnm exec --using=<major> node <script>`. Not an absolute path to that Node:
- * fnm's patch directories come and go as it updates, and `fnm exec` resolves the
- * major each time. Measured 2026-10-07: it runs with a bare environment (no fnm
- * shell setup), which is how an agent spawns a server. Without fnm the entry
- * keeps its declared command, as before; the install will already have said why.
+ * How an ai-defaults server is launched: a `node` server runs on Demo Builder's Node,
+ * the one the tools were installed under (AI-13, PR-1a), as
+ * `fnm exec --using=<major> node <script>` with the entry's `env` pointing fnm at
+ * Demo Builder's Node folder (`nodeFolderEnv`). Without that env, fnm reads the SC's own
+ * folder, which may not have the Node at all. Not an absolute path to the Node: fnm's
+ * patch directories come and go as it updates, and `fnm exec` resolves the major each
+ * time. Measured 2026-10-07: it runs with a bare environment (no fnm shell setup),
+ * which is how an agent spawns a server. Without fnm the entry keeps its declared
+ * command, as before; the install will already have said why.
  */
 function launchUnderNode(command: string, args: string[], fnmPath: string | null): McpServerEntry {
     if (command !== 'node' || !fnmPath) return { command, args };
-    return { command: fnmPath, args: ['exec', `--using=${AI_TOOLS_NODE_VERSION}`, 'node', ...args] };
+    return {
+        command: fnmPath,
+        args: ['exec', `--using=${demoBuilderNode()}`, 'node', ...args],
+        env: nodeFolderEnv(),
+    };
 }
 
 /**

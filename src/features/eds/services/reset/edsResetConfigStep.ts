@@ -13,8 +13,9 @@ import {
     byomRegistrationFailureMessage,
 } from '../../handlers/edsHelpers';
 import { logConfigAccessState } from '../configService/configAccessRecovery';
-import { buildSiteConfigParams, ConfigurationService } from '../configService/configurationService';
+import { ConfigurationService } from '../configService/configurationService';
 import { lostGrantsMessage } from '../configService/lostGrantsMessage';
+import { buildSiteConfigParams } from '../configService/siteConfigParams';
 import {
     registerSiteConfig,
     type RegistrarConfigService,

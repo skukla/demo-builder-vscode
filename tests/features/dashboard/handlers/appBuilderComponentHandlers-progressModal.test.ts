@@ -124,7 +124,6 @@ describe('withComponentProgress — started from the integrations screen', () =>
             'erp-sync',
             'deploying',
             'Deploying Integration',
-            undefined,
         );
     });
 

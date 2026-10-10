@@ -4,7 +4,7 @@
  * The content-copy entry point of the DA.live stack: single-file and recursive
  * copy, whole-site duplication, and the whole-site content copy that runs during
  * project creation and reset. Extracted from `DaLiveContentOperations` as part of
- * its decomposition; the facade constructs one and delegates.
+ * its decomposition; DaLiveContentOperations constructs one (`copyOps`).
  *
  * What is left here is the ORCHESTRATION. Each step lives in its own module and is
  * called, not reimplemented:
@@ -47,8 +47,6 @@ import { copyDaLiveSite as copyDaLiveSiteImpl, type SiteCopyResult } from './daL
 import type { DaLiveSourceOperations } from './daLiveSourceOperations';
 import type { ContentPatchSource } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
-
-export { extractReferencedPaths, filterProductOverlays } from './daLiveContentReferences';
 
 /** Copy authored content between DA.live sites. */
 // TRANSPORT JURISDICTION (2026-08-22 consolidation): writes to admin.da.live

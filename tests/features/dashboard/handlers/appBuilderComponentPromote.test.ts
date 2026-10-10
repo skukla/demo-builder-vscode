@@ -30,7 +30,7 @@ const getUserOrgs = jest.fn();
 const createEmptyRepository = jest.fn();
 const waitForContent = jest.fn();
 const deleteRepository = jest.fn();
-const fileOperations = {
+const treeCommits = {
     getBranchInfo: jest.fn(),
     createBlob: jest.fn(),
     createTree: jest.fn(),
@@ -40,8 +40,8 @@ const fileOperations = {
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getGitHubServices: () => ({
         tokenService: { validateToken, getUserOrgs },
-        repoOperations: { createEmptyRepository, waitForContent, deleteRepository },
-        fileOperations,
+        repoLifecycle: { createEmptyRepository, waitForContent, deleteRepository },
+        treeCommits,
     }),
 }));
 jest.mock('@/features/dashboard/handlers/appBuilderComponentPush', () => ({
@@ -100,9 +100,9 @@ beforeEach(() => {
         defaultBranch: 'main',
     });
     waitForContent.mockResolvedValue(true);
-    fileOperations.getBranchInfo.mockResolvedValue({ commitSha: 'head', treeSha: 't0' });
-    fileOperations.createTree.mockResolvedValue('tree-1');
-    fileOperations.createCommit.mockResolvedValue('c1');
+    treeCommits.getBranchInfo.mockResolvedValue({ commitSha: 'head', treeSha: 't0' });
+    treeCommits.createTree.mockResolvedValue('tree-1');
+    treeCommits.createCommit.mockResolvedValue('c1');
     deleteRepository.mockResolvedValue(undefined);
 });
 
@@ -183,7 +183,7 @@ describe('handlePromoteAppBuilderComponent', () => {
     it('saves nothing when the push fails, and says the repository was created', async () => {
         const { stateManager, context } = setup();
         warn.mockResolvedValueOnce(CREATE_REPOSITORY);
-        fileOperations.createTree.mockRejectedValueOnce(new Error('rate limited'));
+        treeCommits.createTree.mockRejectedValueOnce(new Error('rate limited'));
 
         const result = await handlePromoteAppBuilderComponent(context, { id: 'my-app' });
 

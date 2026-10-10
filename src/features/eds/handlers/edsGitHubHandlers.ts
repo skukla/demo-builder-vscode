@@ -393,7 +393,7 @@ interface CreateGitHubRepoPayload {
  * Create a GitHub repository from a template
  *
  * Creates the repository and waits for template content to be populated.
- * This is called from RepoSelectionInline when creating a new repository,
+ * This is called from useRepoCreation (the repo picker's create flow),
  * allowing the repo to exist before proceeding to code sync verification.
  *
  * @param context - Handler context with logging and messaging
@@ -414,7 +414,7 @@ export async function handleCreateGitHubRepo(
 
     try {
         context.logger.info(`[EDS] Creating GitHub repository: ${repoName} from ${templateOwner}/${templateRepo}`);
-        const { repoOperations } = getGitHubServices(context.context.secrets);
+        const { repoOperations, repoLifecycle } = getGitHubServices(context.context.secrets);
 
         // Create repository from template — or, for an added demo whose source
         // is not a template, an empty repository reset onto the source.
@@ -424,7 +424,7 @@ export async function handleCreateGitHubRepo(
             ServiceLocator.getCommandExecutor(),
         );
         const repo = await createRepoFromSource(
-            { repoOps: repoOperations, templateSync },
+            { repoOps: repoOperations, repoLifecycle, templateSync },
             { newRepoName: repoName, isPrivate: isPrivate ?? false, fromAddedDemo: Boolean(fromAddedDemo) },
             templateOwner,
             templateRepo,
@@ -435,7 +435,7 @@ export async function handleCreateGitHubRepo(
 
         // Wait for template content to be populated
         context.logger.debug('[EDS] Waiting for repository content');
-        await repoOperations.waitForContent(repo.fullName.split('/')[0], repo.name);
+        await repoLifecycle.waitForContent(repo.fullName.split('/')[0], repo.name);
 
         context.logger.info(`[EDS] Repository ready: ${repo.htmlUrl}`);
 

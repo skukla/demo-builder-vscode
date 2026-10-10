@@ -10,6 +10,7 @@
  */
 
 import {
+    applyFieldUpdate,
     findFieldValue,
     removeKeysFromComponents,
     resolveWriteTargets,
@@ -154,6 +155,99 @@ describe('resolveWriteTargets', () => {
 
         expect(next[BACKEND].ACCS_WEBSITE_CODE).toBe('citisignal');
         expect(next['eds-accs-mesh']).toBeUndefined();
+    });
+});
+
+/**
+ * `applyFieldUpdate` — the edit both config surfaces apply (PL-69 pairs 11 and 12).
+ *
+ * The wizard's `useComponentConfig` and Configure's `useConfigureFieldValues` carried
+ * this block verbatim: write the value where `resolveWriteTargets` says, and when the
+ * PaaS Commerce URL changes, fill the GraphQL endpoint from it unless the user has
+ * already typed one. The hook suites still drive it through `updateField`; these cases
+ * pin the pure function on its own.
+ */
+describe('applyFieldUpdate', () => {
+    const BACKEND = 'adobe-commerce-paas';
+    const untouched: ReadonlySet<string> = new Set();
+    const paasUrlField = { key: 'ADOBE_COMMERCE_URL', componentIds: ['headless', BACKEND] };
+    const graphqlKey = 'ADOBE_COMMERCE_GRAPHQL_ENDPOINT';
+
+    it('writes the value to every component that declares the field', () => {
+        const next = applyFieldUpdate({}, sharedField, 'https://edited.test', {
+            backendId: undefined,
+            touchedFields: untouched,
+        });
+
+        expect(next.headless.ADOBE_COMMERCE_URL).toBe('https://edited.test');
+        expect(next.backend.ADOBE_COMMERCE_URL).toBe('https://edited.test');
+    });
+
+    it('derives the GraphQL endpoint from a PaaS URL edit, trailing slash dropped', () => {
+        const next = applyFieldUpdate({}, paasUrlField, 'https://commerce.test/', {
+            backendId: BACKEND,
+            touchedFields: untouched,
+        });
+
+        expect(next.headless[graphqlKey]).toBe('https://commerce.test/graphql');
+        expect(next[BACKEND][graphqlKey]).toBe('https://commerce.test/graphql');
+    });
+
+    it('leaves a GraphQL endpoint the user has already touched alone', () => {
+        const configs = { headless: { [graphqlKey]: 'https://custom.test/gql' } };
+
+        const next = applyFieldUpdate(configs, paasUrlField, 'https://commerce.test', {
+            backendId: BACKEND,
+            touchedFields: new Set([graphqlKey]),
+        });
+
+        expect(next.headless[graphqlKey]).toBe('https://custom.test/gql');
+        expect(next.headless.ADOBE_COMMERCE_URL).toBe('https://commerce.test');
+    });
+
+    it('derives nothing for a field that is not the PaaS URL', () => {
+        const other = { key: 'NOTES', componentIds: ['headless'] };
+
+        const next = applyFieldUpdate({}, other, 'https://commerce.test', {
+            backendId: BACKEND,
+            touchedFields: untouched,
+        });
+
+        expect(next.headless).toEqual({ NOTES: 'https://commerce.test' });
+    });
+
+    it('derives nothing when the PaaS URL is set to a boolean', () => {
+        // The type allows it (ConfigFieldRenderer writes real booleans), and a
+        // boolean has no URL to derive from.
+        const next = applyFieldUpdate({}, paasUrlField, true, {
+            backendId: BACKEND,
+            touchedFields: untouched,
+        });
+
+        expect(next.headless).toEqual({ ADOBE_COMMERCE_URL: true });
+    });
+
+    it('narrows a backend-owned scope key to the backend alone', () => {
+        const scopeField = { key: 'ACCS_WEBSITE_CODE', componentIds: ['eds-accs-mesh', BACKEND] };
+
+        const next = applyFieldUpdate({}, scopeField, 'citisignal', {
+            backendId: BACKEND,
+            touchedFields: untouched,
+        });
+
+        expect(next[BACKEND].ACCS_WEBSITE_CODE).toBe('citisignal');
+        expect(next['eds-accs-mesh']).toBeUndefined();
+    });
+
+    it('does not mutate the configs it was given', () => {
+        const configs = { headless: { ADOBE_COMMERCE_URL: 'https://original.test' } };
+
+        applyFieldUpdate(configs, paasUrlField, 'https://edited.test', {
+            backendId: undefined,
+            touchedFields: untouched,
+        });
+
+        expect(configs).toEqual({ headless: { ADOBE_COMMERCE_URL: 'https://original.test' } });
     });
 });
 

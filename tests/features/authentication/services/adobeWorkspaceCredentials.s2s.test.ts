@@ -346,3 +346,45 @@ describe('getS2SDeployCredentials — a 504 on a credential read is retried once
         expect(client.getIntegration).toHaveBeenCalledTimes(1);
     });
 });
+
+describe('listCredentialIds — the read-only id list the subscribe shortcut asks for', () => {
+    it('lists the given workspace and returns every id_integration, any kind, in order', async () => {
+        const { client, sdkClient } = makeSdkClient({
+            getCredentials: jest.fn().mockResolvedValue({
+                body: [
+                    { integration_type: 'oauth_server_to_server', id_integration: '1055555' },
+                    { integration_type: 'apikey', id_integration: '1022842' },
+                ],
+            }),
+        });
+
+        const ids = await makeCredentials(sdkClient).listCredentialIds(ORG, PROJ, WS);
+
+        expect(client.getCredentials).toHaveBeenCalledWith(ORG, PROJ, WS);
+        expect(ids).toEqual(['1055555', '1022842']);
+    });
+
+    it('drops entries with no id_integration; no body, or no answer at all, is []', async () => {
+        const { sdkClient } = makeSdkClient({
+            getCredentials: jest
+                .fn()
+                .mockResolvedValueOnce({ body: [{ integration_type: 'apikey' }, { id_integration: '7' }] })
+                .mockResolvedValueOnce({})
+                .mockResolvedValueOnce(undefined),
+        });
+        const credentials = makeCredentials(sdkClient);
+
+        expect(await credentials.listCredentialIds(ORG, PROJ, WS)).toEqual(['7']);
+        expect(await credentials.listCredentialIds(ORG, PROJ, WS)).toStrictEqual([]);
+        expect(await credentials.listCredentialIds(ORG, PROJ, WS)).toStrictEqual([]);
+    });
+
+    it('creates nothing', async () => {
+        const { client, sdkClient } = makeSdkClient();
+
+        await makeCredentials(sdkClient).listCredentialIds(ORG, PROJ, WS);
+
+        expect(client.createOAuthServerToServerCredential).not.toHaveBeenCalled();
+        expect(client.createAdobeIdCredential).not.toHaveBeenCalled();
+    });
+});

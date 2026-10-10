@@ -32,7 +32,11 @@ jest.mock('@/features/eds/services/daLive/daLiveOrgOperations', () => ({
     DaLiveOrgOperations: jest.fn(() => ({ listOrgSites: mockListOrgSites })),
 }));
 jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
-    DaLiveContentOperations: jest.fn(() => ({ deleteAllSiteContent: mockDeleteAllSiteContent })),
+    DaLiveContentOperations: jest.fn(() => ({
+        sourceOps: { deleteAllSiteContent: mockDeleteAllSiteContent },
+    })),
+}));
+jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
     createDaLiveServiceTokenProvider: (service: { getAccessToken(): Promise<string | null> }) => ({
         getAccessToken: () => service.getAccessToken(),
     }),
@@ -133,6 +137,8 @@ export function gh(
         tokenService: { validateToken },
         repoOperations: {
             listUserRepositories: jest.fn(async () => overrides.repos ?? []),
+        },
+        repoLifecycle: {
             deleteRepository: overrides.deleteRepository ?? jest.fn(async () => undefined),
             // Shape from GitHubRepo (`types.ts:47-66`): fullName/htmlUrl/defaultBranch,
             // and NO `owner` field — the tool derives the owner from fullName.

@@ -560,6 +560,7 @@
         "eds:drift": "node scripts/edsDrift.js",
         "generate:manifest-schema": "node scripts/generate-manifest-schema.js",
         "docs:conventions": "node scripts/generate-convention-index.mjs",
+        "node:resolve": "node scripts/resolve-node-version.mjs",
         "docs:tools": "node scripts/generate-tool-catalog.mjs",
         "docs:tools:check": "node scripts/generate-tool-catalog.mjs --check",
         "docs:conventions:check": "node scripts/generate-convention-index.mjs --check",

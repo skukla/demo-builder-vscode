@@ -8,16 +8,13 @@
  */
 
 import * as vscode from 'vscode';
-import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
+import { BundledPanelCommand } from '@/commands/bundledPanelCommand';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { readViewModeSetting, VIEW_MODE_SETTING } from '@/core/state/viewModePreference';
-import { getBundleUri } from '@/core/utils/bundleUri';
-import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { projectsListHandlers } from '@/features/projects-dashboard/handlers/projectsListHandlers';
-import { HandlerContext } from '@/types/handlers';
 import type { ConfigChangedPayload, ProjectsUpdatedPayload , ProjectsListInitialData } from '@/types/webviewPayloads';
 
 /**
@@ -27,7 +24,9 @@ import type { ConfigChangedPayload, ProjectsUpdatedPayload , ProjectsListInitial
  * Follows BaseWebviewCommand pattern with object literal handler maps.
  * Updated in Step 3 to use dispatchHandler instead of class-based registry.
  */
-export class ShowProjectsListCommand extends BaseWebviewCommand<ProjectsListInitialData> {
+export class ShowProjectsListCommand extends BundledPanelCommand<ProjectsListInitialData> {
+    protected readonly bundleName = 'projectsList';
+
     constructor(
         context: vscode.ExtensionContext,
         stateManager: import('@/types/state').StateManager,
@@ -46,26 +45,6 @@ export class ShowProjectsListCommand extends BaseWebviewCommand<ProjectsListInit
 
     protected getWebviewTitle(): string {
         return 'Projects';
-    }
-
-    protected async getWebviewContent(): Promise<string> {
-        if (!this.panel) {
-            throw new Error('Panel must be created before getting webview content');
-        }
-        const scriptUri = getBundleUri({
-            webview: this.panel.webview,
-            extensionPath: this.context.extensionPath,
-            featureBundleName: 'projectsList',
-        });
-
-        const nonce = this.getNonce();
-
-        return getWebviewHTML({
-            scriptUri,
-            nonce,
-            cspSource: this.panel.webview.cspSource,
-            title: 'Projects',
-        });
     }
 
     protected async getInitialData(): Promise<ProjectsListInitialData> {
@@ -196,24 +175,5 @@ export class ShowProjectsListCommand extends BaseWebviewCommand<ProjectsListInit
         } catch (error) {
             this.logger.error('[ProjectsList] Failed to refresh projects list', error as Error);
         }
-    }
-
-    // ============================================================================
-    // Helper Methods
-    // ============================================================================
-
-    /**
-     * Create handler context with all dependencies
-     */
-    private createHandlerContext(): HandlerContext {
-        // ONE complete context from the shared factory — no per-panel guessing about
-        // which managers its (possibly reused) handlers will reach for.
-        return createPanelHandlerContext({
-            context: this.context,
-            panel: this.panel,
-            stateManager: this.stateManager,
-            communicationManager: this.communicationManager,
-            sendMessage: (type: string, data?: unknown) => this.sendMessage(type, data),
-        });
     }
 }

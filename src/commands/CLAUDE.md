@@ -23,14 +23,15 @@ works, because each file carries a substantial header comment.
 | `refreshBlockLibrary.ts` | Dashboard kebab action, EDS-only — a destructive full re-sync of the DA.live block library |
 | `showPromptsPicker.ts` | Prompt QuickPick; dispatches to `openInClaude` (insert) or `openAi` (manage) |
 
-Four modules here are not commands but support them:
+Six modules here are not commands but support them:
 
 | File | Purpose |
 |------|---------|
 | `diagnosticsChecks.ts` | The collection half of Diagnostics — environment, tools, Adobe CLI, capability probes. Free functions, because none needs the command's state |
 | `diagnosticsReport.ts` | The rendering half. Split from collection deliberately: the two change for different reasons |
 | `handlerContextFactory.ts` | Builds a COMPLETE `HandlerContext` for a webview panel. Every panel command used to hand-roll one, and most filled it in partially |
-| `standalonePanelCommand.ts` | Base for webviews that stand beside whatever is open and work with no project — the Data Installer and Site access. Owns the bundle HTML, registering every handler map in one loop, and the panel handler context |
+| `bundledPanelCommand.ts` | Base for every panel whose page is one esbuild bundle (all but the sidebar). Owns the page HTML around the bundle named by `bundleName` and the panel handler context. Lives here, not on `BaseWebviewCommand`, because core may not import the context factory |
+| `standalonePanelCommand.ts` | Extends `BundledPanelCommand` for webviews that stand beside whatever is open and work with no project — the Data Installer and Site access. Adds registering every handler map in one loop, and opening |
 | `orphanedSettings.ts` | Finds settings a user has set that the extension no longer reads — renaming a contributed setting does not migrate the value, so it strands silently |
 
 ## Registration
@@ -172,9 +173,9 @@ each leg has its own timeout and degrades independently.
 **Authentication is checked before expensive Adobe work, never triggered by
 surprise.** A command that needs Adobe I/O calls `isAuthenticated()` first — a
 token-only check — and on failure asks the user before starting a browser login.
-`isFullyAuthenticated()` also validates the org and is materially slower, so it is
-used only where org validity is the actual question. Silent browser launches are the
-failure this prevents.
+Where the org is the actual question, use `ensureOrgContext` or
+`detectProjectOrgMismatch` (the `adobe-org-context` skill), not a second sign-in check.
+Silent browser launches are the failure this prevents.
 
 **An Adobe CLI timeout is not proof of failure.** The CLI is often slow rather than
 broken, so a catch block that sees success text in `error.stdout` should treat the

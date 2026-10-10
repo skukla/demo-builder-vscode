@@ -60,14 +60,14 @@ jest.mock('@/features/eds/services/daLive/daLiveOrgOperations', () => ({
 
 const ADOBE_TOKEN_PROVIDER = { kind: 'adobe-token-provider' };
 const DA_LIVE_TOKEN_PROVIDER = { kind: 'da-live-token-provider' };
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
     createDaLiveTokenProvider: jest.fn(() => ADOBE_TOKEN_PROVIDER),
     createDaLiveServiceTokenProvider: jest.fn(() => DA_LIVE_TOKEN_PROVIDER),
 }));
 
 const REPO_OPERATIONS = { kind: 'repo-operations' };
 jest.mock('@/features/eds/handlers/edsServiceCache', () => ({
-    getGitHubServices: jest.fn(() => ({ repoOperations: REPO_OPERATIONS })),
+    getGitHubServices: jest.fn(() => ({ repoLifecycle: REPO_OPERATIONS })),
 }));
 
 const DA_LIVE_AUTH_SERVICE = { kind: 'da-live-auth-service' };
@@ -97,7 +97,7 @@ import { getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
 import {
     createDaLiveTokenProvider,
     createDaLiveServiceTokenProvider,
-} from '@/features/eds/services/daLive/daLiveContentOperations';
+} from '@/features/eds/services/daLive/daLiveTokenProviders';
 import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 import { createMockAuthenticationService } from '../../../../helpers/authenticationServiceFake';

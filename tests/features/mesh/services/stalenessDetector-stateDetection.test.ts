@@ -1,9 +1,6 @@
 // IMPORTANT: Mock must be declared before imports
 
-import {
-    getCurrentMeshState,
-    detectMeshChanges,
-} from '@/features/mesh/services/stalenessDetector';
+import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import {
     createStalenessProject,
     setupMockCommandExecutor,
@@ -15,14 +12,12 @@ import type { Project } from '@/types/base';
 /**
  * StalenessDetector - State Detection Tests
  *
- * Tests mesh state retrieval and unknown deployed state handling:
- * - Get current mesh state from project
- * - Handle missing/partial mesh state
+ * Tests unknown deployed state handling:
  * - Detect unknown deployed state when fetch fails
  * - Populate baseline mesh state when fetch succeeds
  * - Handle scenarios where mesh is not deployed
  *
- * Total tests: 7
+ * The getCurrentMeshState tests live in meshDeployBaseline.test.ts.
  */
 
 
@@ -35,104 +30,6 @@ import type { Project } from '@/types/base';
 describe('StalenessDetector - State Detection', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-    });
-
-    describe('getCurrentMeshState', () => {
-        it('should return mesh state from project', () => {
-            const project = createStalenessProject({
-                appBuilderComponents: {
-                    mesh: {
-                        kind: 'mesh',
-                        status: 'deployed',
-                        source: { owner: '', repo: '' },
-                        envVars: { VAR1: 'value1' },
-                        sourceHash: 'abc123',
-                        lastDeployed: '2024-01-01T00:00:00Z',
-                    },
-                },
-            });
-
-            const result = getCurrentMeshState(project);
-
-            expect(result).toEqual({
-                envVars: { VAR1: 'value1' },
-                sourceHash: 'abc123',
-                lastDeployed: new Date('2024-01-01T00:00:00Z'),
-            });
-        });
-
-        it('should return null when no mesh state', () => {
-            const project = createStalenessProject();
-
-            const result = getCurrentMeshState(project);
-
-            expect(result).toBeNull();
-        });
-
-        it('should handle partial mesh state', () => {
-            const project = createStalenessProject({
-                appBuilderComponents: {
-                    mesh: {
-                        kind: 'mesh',
-                        status: 'deployed',
-                        source: { owner: '', repo: '' },
-                        envVars: {},
-                        sourceHash: null,
-                        lastDeployed: '',
-                    },
-                },
-            });
-
-            const result = getCurrentMeshState(project);
-
-            expect(result).toEqual({
-                envVars: {},
-                sourceHash: null,
-                lastDeployed: null,
-            });
-        });
-
-        // The deployed baseline reads from the keyed mesh appBuilderComponents
-        // entry — the only carrier since PL-1 phase 2.
-        describe('keyed-first read (ADR-011 D3 Step 06)', () => {
-            it('should read envVars/sourceHash/lastDeployed from the keyed mesh entry (keyed-only)', () => {
-                const project = createStalenessProject({
-                    appBuilderComponents: {
-                        'commerce-mesh': {
-                            kind: 'mesh',
-                            status: 'deployed',
-                            source: { owner: '', repo: '' },
-                            endpoint: 'https://mesh/graphql',
-                            envVars: { VAR1: 'keyed-value' },
-                            sourceHash: 'keyed-hash',
-                            lastDeployed: '2026-07-01T00:00:00Z',
-                        },
-                    },
-                });
-
-                const result = getCurrentMeshState(project);
-
-                expect(result).toEqual({
-                    envVars: { VAR1: 'keyed-value' },
-                    sourceHash: 'keyed-hash',
-                    lastDeployed: new Date('2026-07-01T00:00:00Z'),
-                });
-            });
-
-            it('should return null for an undeployed keyed entry with no runtime fields (fresh-deploy semantics)', () => {
-                const project = createStalenessProject({
-                    appBuilderComponents: {
-                        mesh: {
-                            kind: 'mesh',
-                            status: 'not-deployed',
-                            source: { owner: '', repo: '' },
-                        },
-                    },
-                });
-
-                expect(getCurrentMeshState(project)).toBeNull();
-            });
-        });
     });
 
     describe('detectMeshChanges - unknownDeployedState handling', () => {

@@ -19,6 +19,7 @@ import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { poolUnits } from '../../../helpers/authenticationServiceFake';
 
 jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
     getAppBuilderComponentCatalog: jest.fn(() => [
@@ -101,7 +102,7 @@ const stateManager = createMockStateManager({ getCurrentProject });
 function ctx(withAuth = true): HandlerContext {
     const context = createMockHandlerContext({ stateManager });
     if (withAuth) {
-        Object.assign(context.authManager as object, { isAuthenticated, getS2SDeployCredentials });
+        poolUnits(Object.assign(context.authManager as object, { isAuthenticated, getS2SDeployCredentials }));
     } else {
         context.authManager = undefined;
     }

@@ -118,6 +118,8 @@ it('opens da.live and asks again, keeping what was already typed', async () => {
     await withModalAsking('op', () => showDaLiveAuthQuickPick(context()));
 
     expect(vscode.env.openExternal).toHaveBeenCalledTimes(1);
+    // da.live itself, where the bookmarklet runs.
+    expect((vscode.env.openExternal as jest.Mock).mock.calls[0][0].toString()).toBe('https://da.live');
     expect(asked).toHaveLength(2);
     expect(asked[1].fields?.find((field) => field.id === 'orgName')?.value).toBe('acme');
 });
@@ -148,7 +150,10 @@ it('re-asks with the reason when the token is refused, and opens no error popup'
 
     await withModalAsking('op', () => showDaLiveAuthQuickPick(context()));
 
-    expect(asked[1].fields?.find((field) => field.id === 'token')?.description).toBeTruthy();
+    // The strict check's own reason, not the generic fallback.
+    expect(asked[1].fields?.find((field) => field.id === 'token')?.description).toBe(
+        'Invalid token format. Please copy the complete token.',
+    );
     // The modal already says it, under the field it belongs to.
     expect(vscode.window.showErrorMessage).not.toHaveBeenCalled();
 });
@@ -169,4 +174,105 @@ it('reads a dismissal as cancelled, storing nothing', async () => {
 
     expect(result).toEqual({ success: false, cancelled: true });
     expect(mockStoreToken).not.toHaveBeenCalled();
+});
+
+/** What the SC sees in a field of the question asked at `index`. */
+function field(index: number, id: string) {
+    return asked[index].fields?.find((candidate) => candidate.id === id);
+}
+
+it('starts with empty fields and offers Sign In and Open DA.live', async () => {
+    answers = [{ action: undefined, values: {} }];
+
+    await withModalAsking('op', () => showDaLiveAuthQuickPick(context()));
+
+    expect(asked[0].message).toBe(
+        'Sign in to DA.live: run the bookmarklet on da.live to copy a token, then paste it here.',
+    );
+    expect(field(0, 'orgName')?.value).toBe('');
+    expect(field(0, 'token')?.value).toBe('');
+    expect(asked[0].actions).toEqual(['Sign In', 'Open DA.live']);
+});
+
+it('puts the reason and the instruction one space apart', async () => {
+    answers = [{ action: undefined, values: {} }];
+
+    await withModalAsking('op', () => showDaLiveAuthQuickPick(context(), 'Expired.'));
+
+    expect(asked[0].message).toBe(
+        'Expired. Sign in to DA.live: run the bookmarklet on da.live to copy a token, then paste it here.',
+    );
+});
+
+it('brings back the token the bookmarklet copied after the trip to da.live', async () => {
+    const token = freshToken();
+    (vscode.env.clipboard.readText as jest.Mock).mockResolvedValueOnce(token);
+    answers = [
+        { action: 'Open DA.live', values: { orgName: 'acme', token: '' } },
+        { action: undefined, values: {} },
+    ];
+
+    await withModalAsking('op', () => showDaLiveAuthQuickPick(context()));
+
+    expect(field(1, 'token')?.value).toBe(token);
+});
+
+it('treats a namespace of spaces as missing, storing nothing', async () => {
+    answers = [
+        { action: 'Sign In', values: { orgName: '   ', token: freshToken() } },
+        { action: undefined, values: {} },
+    ];
+
+    await withModalAsking('op', () => showDaLiveAuthQuickPick(context()));
+
+    expect(field(1, 'orgName')?.description).toBe('Enter your DA.live namespace.');
+    expect(mockStoreToken).not.toHaveBeenCalled();
+});
+
+it('treats a token of spaces as missing, not as a malformed token', async () => {
+    answers = [
+        { action: 'Sign In', values: { orgName: 'acme', token: '   ' } },
+        { action: undefined, values: {} },
+    ];
+
+    await withModalAsking('op', () => showDaLiveAuthQuickPick(context()));
+
+    expect(field(1, 'token')?.description).toBe('Paste the token the bookmarklet copied.');
+});
+
+it('names only the field that is missing', async () => {
+    answers = [
+        { action: 'Sign In', values: { orgName: 'acme', token: '' } },
+        { action: undefined, values: {} },
+    ];
+
+    await withModalAsking('op', () => showDaLiveAuthQuickPick(context()));
+
+    expect(field(1, 'orgName')?.description).toBeUndefined();
+    expect(field(1, 'token')?.description).toBe('Paste the token the bookmarklet copied.');
+});
+
+it('says under the token field when storing it fails, and opens no popup', async () => {
+    mockStoreToken.mockRejectedValueOnce(new Error('keychain is locked'));
+    answers = [
+        { action: 'Sign In', values: { orgName: 'acme', token: freshToken() } },
+        { action: undefined, values: {} },
+    ];
+
+    await withModalAsking('op', () => showDaLiveAuthQuickPick(context()));
+
+    expect(field(1, 'token')?.description).toBe('keychain is locked');
+    expect(vscode.window.showErrorMessage).not.toHaveBeenCalled();
+});
+
+it('says "Unknown error" when storing fails with something that is not an Error', async () => {
+    mockStoreToken.mockRejectedValueOnce('a bare string');
+    answers = [
+        { action: 'Sign In', values: { orgName: 'acme', token: freshToken() } },
+        { action: undefined, values: {} },
+    ];
+
+    await withModalAsking('op', () => showDaLiveAuthQuickPick(context()));
+
+    expect(field(1, 'token')?.description).toBe('Unknown error');
 });

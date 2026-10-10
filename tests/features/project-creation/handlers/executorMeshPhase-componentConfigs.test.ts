@@ -8,7 +8,7 @@
  */
 
 const mockReadMeshEnvVarsFromFile = jest.fn();
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
+jest.mock('@/features/mesh/services/meshEnvVars', () => ({
     readMeshEnvVarsFromFile: (...args: unknown[]) => mockReadMeshEnvVarsFromFile(...args),
 }));
 

@@ -1,14 +1,12 @@
 /**
- * ProjectDashboardWebviewCommand — opening it, wiring it, and pushing to it.
+ * ProjectDashboardWebviewCommand — opening it and wiring it. Its pushes are
+ * `projectPanelPushes` (tests/features/dashboard/services/).
  *
  * `execute()` does five things in an order that matters: the on-open checks are
  * re-armed BEFORE the panel exists (the panel triggers the first status request,
  * and arming after it leaves that request guarded), and the projects list is
  * disposed AFTER, so the user never sees a flash of empty window.
- *
- * The static push channels below are the only way an already-open dashboard
- * learns anything, so each is asserted on the exact message it posts — a payload
- * that loses its field renders an empty tile with no error anywhere.
+
  */
 
 import * as vscode from 'vscode';
@@ -379,121 +377,6 @@ describe('ProjectDashboardWebviewCommand - lifecycle and push channels', () => {
             );
 
             expect(() => ProjectDashboardWebviewCommand.disposeActivePanel()).not.toThrow();
-        });
-    });
-
-    describe('push channels', () => {
-        /** Make the given panel id the only live one. */
-        function livePanel(id: string): jest.Mock {
-            const postMessage = jest.fn().mockResolvedValue(true);
-            jest.spyOn(BaseWebviewCommand, 'getActivePanel').mockImplementation((wanted: string) =>
-                wanted === id
-                    ? ({ webview: { postMessage } } as unknown as vscode.WebviewPanel)
-                    : undefined
-            );
-            return postMessage;
-        }
-
-        it('posts the destination crumb to whichever project panel is live', async () => {
-            const postMessage = livePanel('demoBuilder.integrations');
-
-            await ProjectDashboardWebviewCommand.sendProjectDestinationUpdate({
-                projectTitle: 'Acme',
-                workspaceTitle: 'Stage',
-            });
-
-            expect(postMessage).toHaveBeenCalledWith({
-                type: 'projectDestinationUpdate',
-                payload: { destination: { projectTitle: 'Acme', workspaceTitle: 'Stage' } },
-            });
-        });
-
-        it('is a silent no-op when no project panel is live', async () => {
-            jest.spyOn(BaseWebviewCommand, 'getActivePanel').mockReturnValue(undefined);
-
-            await expect(
-                ProjectDashboardWebviewCommand.sendProjectDestinationUpdate({
-                    projectTitle: 'Acme',
-                    workspaceTitle: 'Stage',
-                })
-            ).resolves.toBeUndefined();
-        });
-
-        it('posts the mesh status with its message and endpoint', async () => {
-            const postMessage = livePanel('demoBuilder.projectDashboard');
-
-            await ProjectDashboardWebviewCommand.sendMeshStatusUpdate(
-                'deployed',
-                'Mesh is live',
-                'https://mesh.test/graphql'
-            );
-
-            expect(postMessage).toHaveBeenCalledWith({
-                type: 'meshStatusUpdate',
-                payload: {
-                    status: 'deployed',
-                    message: 'Mesh is live',
-                    endpoint: 'https://mesh.test/graphql',
-                },
-            });
-        });
-
-        it('does not post mesh status when no panel is live', async () => {
-            jest.spyOn(BaseWebviewCommand, 'getActivePanel').mockReturnValue(undefined);
-
-            await expect(
-                ProjectDashboardWebviewCommand.sendMeshStatusUpdate('deployed')
-            ).resolves.toBeUndefined();
-        });
-
-        it('posts a per-row status update carrying the row id and its new name', async () => {
-            const postMessage = livePanel('demoBuilder.projectDashboard');
-
-            await ProjectDashboardWebviewCommand.sendAppBuilderComponentStatusUpdate(
-                'erp-sync',
-                'deployed',
-                'Deployed',
-                'ERP Sync'
-            );
-
-            expect(postMessage).toHaveBeenCalledWith({
-                type: 'appBuilderComponentStatusUpdate',
-                payload: {
-                    id: 'erp-sync',
-                    status: 'deployed',
-                    message: 'Deployed',
-                    name: 'ERP Sync',
-                },
-            });
-        });
-
-        it('does not post a row status update when no panel is live', async () => {
-            jest.spyOn(BaseWebviewCommand, 'getActivePanel').mockReturnValue(undefined);
-
-            await expect(
-                ProjectDashboardWebviewCommand.sendAppBuilderComponentStatusUpdate(
-                    'erp-sync',
-                    'deployed'
-                )
-            ).resolves.toBeUndefined();
-        });
-
-        it('posts the full components map, not an empty envelope', async () => {
-            const postMessage = livePanel('demoBuilder.projectDashboard');
-            const components = {
-                'erp-sync': {
-                    kind: 'integration' as const,
-                    status: 'deployed' as const,
-                    source: { owner: 'acme', repo: 'erp' },
-                },
-            };
-
-            await ProjectDashboardWebviewCommand.sendAppBuilderComponentsSnapshot(components);
-
-            expect(postMessage).toHaveBeenCalledWith({
-                type: 'appBuilderComponentsSnapshot',
-                payload: { components },
-            });
         });
     });
 

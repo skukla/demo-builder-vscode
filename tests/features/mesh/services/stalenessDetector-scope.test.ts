@@ -205,7 +205,7 @@ describe('mesh staleness resolves the store scope from the backend', () => {
  * environment id and catalog key — the question is not "who owns this?" but
  * "what will actually be deployed?". The baseline was read FROM the mesh `.env`,
  * and the next deploy regenerates that `.env` via
- * `envFileGenerator.resolveFromComponentConfigs`, which takes the FIRST component
+ * `envVarResolution.resolveFromComponentConfigs`, which takes the FIRST component
  * defining a key.
  *
  * The detector flattened LAST-wins — the exact opposite — so it could compare the

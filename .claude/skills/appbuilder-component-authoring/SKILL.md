@@ -48,7 +48,7 @@ silently if you don't know them. Learned the hard way shipping the blank shell
 
 ## The spine (what happens on add/deploy)
 
-`addAppBuilderComponent` (`appBuilderComponentRunner.ts`): subscribe required APIs →
+`addAppBuilderComponent` (`appBuilderAddRun.ts`): subscribe required APIs →
 clone+install (`componentManager.installComponent`) → kind-dispatched deploy under
 `withOrgContext` → persist `project.appBuilderComponents[id]` → republish if it
 provides env vars. Creation Phase 3b (`executor.ts` `executeAppBuilderIntegrationsPhase`)

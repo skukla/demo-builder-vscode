@@ -16,7 +16,7 @@
  *   @/core/logging            NEEDED (34 fail) — moved HERE
  *   githubFileOperations      NEEDED (30 fail) — moved HERE
  *   timeoutConfig             NEEDED (9 fail)  — 3 variants, stays local
- *   githubRepoOperations      NEEDED           — 2 variants, stays local
+ *   githubRepoLifecycle       NEEDED           — 2 variants, stays local (was githubRepoOperations until the 2026-10-08 split)
  *   blockLibraryLoader        NEEDED (6 fail)  — SPEC-imported, cannot move
  *   blockCollectionHelpers    NEEDED (6 fail)  — SPEC-imported, cannot move
  *   edsPipeline               NEEDED (12 fail) — SPEC-imported, cannot move

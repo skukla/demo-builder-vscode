@@ -820,8 +820,10 @@ config when a project is created (and on "Regenerate AI files"):
   Anchored to the per-project isolated MCP tools dir
   (`<project>/.demo-builder-mcp/node_modules/`) — decoupled from the storefront's
   own `node_modules` so they install even when the storefront's `npm install` can't.
-  They install and run on ai-defaults' `nodeVersion` (24) through fnm, launched as
-  `fnm exec --using=24 node <script>`, not on the PATH's Node (AI-13).
+  They install into, and run from, Demo Builder's Node folder (`~/.demo-builder/node`)
+  on Demo Builder's Node (`demoBuilderNode()`, generated from every component's own
+  `engines.node` range, PR-1a): launched as `fnm exec --using=<major> node <script>` with
+  the entry's `env.FNM_DIR` pointing at that folder, not on the PATH's Node (AI-13).
 - **`.claude/settings.json`** — a `PostToolUse` git-sync hook for EDS projects
   (commit/push storefront edits the agent makes). Skipped if the path contains
   shell metacharacters. The extractor reads the tool-call JSON on **stdin** and
@@ -847,7 +849,7 @@ config when a project is created (and on "Regenerate AI files"):
 Additionally, the **Demo Builder: Register Global MCP** palette command
 (`src/features/project-creation/services/aiBundle/globalMcpRegistration.ts`) upserts a
 `demo-builder` entry into the user-scope config of every agent that keeps one
-(`FILE_BACKED_ENGINES`: `~/.claude.json` and `~/.copilot/mcp-config.json`) — same
+(`GLOBAL_MCP_CONFIGS`: `~/.claude.json` and `~/.copilot/mcp-config.json`) — same
 command/args but **no** socket env, so the proxy discovers a running window at
 launch (see §5). Explicit opt-in only; it merge-preserves everything else in the
 file and refuses to overwrite a malformed one.

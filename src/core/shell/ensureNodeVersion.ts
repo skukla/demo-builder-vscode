@@ -15,14 +15,37 @@
  * the latest patch — which matters: kit dependencies pinned patch-level
  * floors (`^24.15.0`) that an older already-installed v24 failed.
  *
+ * Everything installs into Demo Builder's Node folder (`nodeFolder.ts`, PR-1a), never
+ * the user's fnm. `ensureNodeWithAdobeCli` adds the Adobe CLI under the same Node
+ * when it is missing: installing Node alone left a folder Node 24 with no `aio`
+ * under it (the owner's machine, 2026-10-07: aio under 24.12.0, none under 24.21.0,
+ * which is what `fnm exec --using=24` picks).
+ *
  * @module core/shell/ensureNodeVersion
  */
 
+import * as fs from 'fs';
+import * as path from 'path';
 import type { CommandExecutor } from './commandExecutor';
 import { EnvironmentSetup } from './environmentSetup';
+import { nodeFolderProcessEnv } from './nodeFolder';
+import type { CommandResult } from './types';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
+
+/**
+ * What a failed install said, for the log: the last three stderr lines, else the tail
+ * of stdout, else why there is nothing (the command never ran). Both streams may be
+ * absent: a killed or never-spawned process answers that way (measured 2026-08-27).
+ */
+export function failureDetail(result: { code: CommandResult['code']; stderr?: string; stdout?: string }): string {
+    return (
+        result.stderr?.trim().split('\n').slice(-3).join(' ')
+        || result.stdout?.trim().slice(-200)
+        || `exit code ${result.code ?? 'unknown (command did not run)'}`
+    );
+}
 
 /**
  * Ensure fnm can supply Node `<major>`. Returns an error string when it
@@ -38,7 +61,7 @@ export async function ensureFnmNodeVersion(
     logger: Pick<Logger, 'debug'>,
 ): Promise<string | undefined> {
     if (!/^\d+$/.test(major)) {
-        return `Invalid Node version "${major}" — expected a major version like "24".`;
+        return `Invalid Node version "${major}" — expected a whole-number major version.`;
     }
 
     // The extension host's PATH does not carry fnm (measured live 2026-08-27:
@@ -56,22 +79,78 @@ export async function ensureFnmNodeVersion(
     const result = await executor.execute(`${fnmPath} install ${major}`, {
         timeout: TIMEOUTS.LONG,
         enhancePath: true,
+        // Into Demo Builder's Node folder, never the user's fnm.
+        env: nodeFolderProcessEnv(),
         // Without a shell the executor hands the whole string to the spawner
         // as one binary name and nothing runs (code undefined — measured live).
         shell: DEFAULT_SHELL,
     });
 
     if (result.code !== 0) {
-        const detail =
-            result.stderr?.trim().split('\n').slice(-3).join(' ') ||
-            result.stdout?.trim().slice(-200) ||
-            `exit code ${result.code ?? 'unknown (command did not run)'}`;
-        return (
-            `Node ${major} is required but could not be installed via fnm: ${detail}. ` +
-            `Install it manually (\`fnm install ${major}\`) and retry.`
-        );
+        const detail = failureDetail(result);
+        // The SC reads the sentence; fnm's own words go to the log (ADR-023). A manual
+        // `fnm install` would land in the SC's own fnm, which Demo Builder does not read.
+        logger.debug(`[EnsureNode] fnm install ${major} failed: ${detail}`);
+        return `Could not install Node ${major}. See Debug Logs for details.`;
     }
 
-    logger.debug(`[EnsureNode] Node ${major} available via fnm`);
+    logger.debug(`[EnsureNode] Node ${major} available in Demo Builder's Node folder`);
+    return undefined;
+}
+
+/**
+ * Whether a global tool (`binary`, e.g. `aio`) is installed under Demo Builder's Node
+ * `<major>`: the file beside that Node's own binary, not whatever copy the PATH would
+ * find. The ONE answer to "is it installed under this Node": the prerequisites
+ * screen's per-Node check and the add door's ensure both ask it, because running
+ * `aio --version` under the Node also finds an `aio` from any other Node on the PATH.
+ */
+export async function toolInstalledUnder(
+    executor: Pick<CommandExecutor, 'execute'>,
+    major: string,
+    binary: string,
+): Promise<boolean> {
+    const result = await executor.execute(`node -p "require('path').dirname(process.execPath)"`, {
+        useNodeVersion: major,
+        shell: DEFAULT_SHELL,
+        timeout: TIMEOUTS.NORMAL,
+    });
+    if (result.code !== 0 || !result.stdout) return false;
+    return fs.existsSync(path.join(result.stdout.trim(), binary));
+}
+
+/** Whether the Adobe CLI is installed under Demo Builder's Node `<major>`. */
+export function adobeCliInstalledUnder(executor: Pick<CommandExecutor, 'execute'>, major: string): Promise<boolean> {
+    return toolInstalledUnder(executor, major, 'aio');
+}
+
+/**
+ * Ensure Node `<major>` in Demo Builder's Node folder and, when it is missing, the Adobe CLI under
+ * it, by running `installCommands` (the prerequisites' own `aio-cli` steps and its
+ * plugins', handed in by the caller so there is one definition of "install the
+ * Adobe CLI"). Returns an error string, or undefined to proceed.
+ */
+export async function ensureNodeWithAdobeCli(
+    executor: CommandExecutor,
+    major: string,
+    installCommands: readonly string[],
+    logger: Pick<Logger, 'debug'>,
+): Promise<string | undefined> {
+    const nodeError = await ensureFnmNodeVersion(executor, major, logger);
+    if (nodeError) return nodeError;
+    if (await adobeCliInstalledUnder(executor, major)) return undefined;
+
+    logger.debug(`[EnsureNode] Installing the Adobe CLI under Node ${major} in Demo Builder's Node folder`);
+    for (const command of installCommands) {
+        const result = await executor.execute(command, {
+            useNodeVersion: major,
+            shell: DEFAULT_SHELL,
+            timeout: TIMEOUTS.VERY_LONG,
+        });
+        if (result.code !== 0) {
+            logger.debug(`[EnsureNode] "${command}" failed under Node ${major}: ${failureDetail(result)}`);
+            return `Could not install the Adobe CLI for Node ${major}. See Debug Logs for details.`;
+        }
+    }
     return undefined;
 }

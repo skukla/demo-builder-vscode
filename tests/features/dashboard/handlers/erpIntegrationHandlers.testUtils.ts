@@ -81,15 +81,17 @@ export const mockDetectProjectOrgMismatch = jest.fn();
 jest.mock('@/features/authentication/services/detectProjectOrgMismatch', () => ({
     detectProjectOrgMismatch: (...a: unknown[]) => mockDetectProjectOrgMismatch(...a),
 }));
-jest.mock('@/features/dashboard/handlers/dashboardHandlers', () => ({
+jest.mock('@/features/dashboard/handlers/statusHandlers', () => ({
     handleRequestStatus: jest.fn().mockResolvedValue({ success: true }),
 }));
 jest.mock('@/features/dashboard/commands/showDashboard', () => ({
     ProjectDashboardWebviewCommand: {
-        sendAppBuilderComponentStatusUpdate: jest.fn(),
-        sendAppBuilderComponentsSnapshot: jest.fn(),
         refreshStatus: jest.fn(),
     },
+}));
+jest.mock('@/features/dashboard/services/projectPanelPushes', () => ({
+    sendAppBuilderComponentStatusUpdate: jest.fn(),
+    sendAppBuilderComponentsSnapshot: jest.fn(),
 }));
 
 // Below the mocks on purpose: the handlers must bind to them.

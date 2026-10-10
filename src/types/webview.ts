@@ -526,7 +526,7 @@ export interface EDSConfig {
         headSnippet?: string;
     };
 
-    // Repository creation state (set by RepoSelectionInline when creating a new repo)
+    // Repository creation state (set by useRepoCreation, the repo picker's create flow)
     /** Created repository info - set when repo is created in selection step, before proceeding */
     createdRepo?: {
         owner: string;

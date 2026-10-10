@@ -15,9 +15,12 @@
  * method here delegates: credentials in `helixAdminAuth`, single-page preview /
  * publish / status in `helixPageContent`, DELETE and unpublish in
  * `helixPageDeletion`, code preview and cache purge in `helixCodeOperations`,
- * Admin API keys in `helixApiKeys`, whole-site publication in `helixSiteContent`.
+ * Admin API keys in `helixApiKeys`, the bulk preview/publish in `helixBulkPublish`,
+ * the DA.live page listing in `helixPageDiscovery`, and the whole-site publish
+ * policy (bulk first, page-by-page fallback) in `helixSiteContent`.
  * The fourth cut (2026-10-03, EDS-8) moved the page, deletion and code operations
- * out; every public signature is unchanged, so callers and suites were untouched.
+ * out; the fifth (2026-10-08) split the site-content unit by job. Every public
+ * signature is unchanged, so callers and suites were untouched.
  */
 
 import * as vscode from 'vscode';
@@ -26,6 +29,7 @@ import type { GitHubTokenService } from '../github/githubTokenService';
 import { HelixAdminAuth } from './helixAdminAuth';
 import { HelixApiKeys } from './helixApiKeys';
 import type { BulkProgressCallback } from './helixBulkJobs';
+import { HelixBulkPublish } from './helixBulkPublish';
 import { previewCode, purgeCacheAll } from './helixCodeOperations';
 import * as keyStore from './helixKeyStore';
 import {
@@ -36,6 +40,7 @@ import {
     type ResourceStatus,
 } from './helixPageContent';
 import { deleteResource, unpublishPages, type UnpublishPagesResult } from './helixPageDeletion';
+import { HelixPageDiscovery } from './helixPageDiscovery';
 import { listPublishedPaths } from './helixPublishedPaths';
 import {
     HelixSiteContent,
@@ -62,6 +67,8 @@ export class HelixService {
     private logger: Logger;
     private auth: HelixAdminAuth;
     private apiKeys: HelixApiKeys;
+    private bulkPublish: HelixBulkPublish;
+    private pageDiscovery: HelixPageDiscovery;
     private siteContent: HelixSiteContent;
 
     /** Clear all cached API keys */
@@ -175,10 +182,12 @@ export class HelixService {
             logger: this.logger,
             getDaLiveToken: () => this.auth.getDaLiveToken(),
         });
+        this.bulkPublish = new HelixBulkPublish({ logger: this.logger, auth: this.auth });
+        this.pageDiscovery = new HelixPageDiscovery({ logger: this.logger, daLiveOps: daLiveOps.sourceOps });
         this.siteContent = new HelixSiteContent({
             logger: this.logger,
-            daLiveOps,
-            auth: this.auth,
+            bulk: this.bulkPublish,
+            discovery: this.pageDiscovery,
             previewAndPublishPage: (org, site, path, branch) =>
                 this.previewAndPublishPage(org, site, path, branch),
         });
@@ -311,7 +320,7 @@ export class HelixService {
     /** Progress phases for {@link publishAllSiteContent} (re-exposed for callers). */
     public static readonly PublishPhases = SITE_PUBLISH_PHASES;
 
-    /** Bulk-preview all content. Delegates to {@link HelixSiteContent}. */
+    /** Bulk-preview all content. Delegates to {@link HelixBulkPublish}. */
     async previewAllContent(
         org: string,
         site: string,
@@ -319,10 +328,10 @@ export class HelixService {
         onProgress?: BulkProgressCallback,
         paths?: string[],
     ): Promise<void> {
-        return this.siteContent.previewAllContent(org, site, branch, onProgress, paths);
+        return this.bulkPublish.previewAllContent(org, site, branch, onProgress, paths);
     }
 
-    /** Bulk-publish all content to live. Delegates to {@link HelixSiteContent}. */
+    /** Bulk-publish all content to live. Delegates to {@link HelixBulkPublish}. */
     async publishAllContent(
         org: string,
         site: string,
@@ -330,12 +339,12 @@ export class HelixService {
         onProgress?: BulkProgressCallback,
         paths?: string[],
     ): Promise<void> {
-        return this.siteContent.publishAllContent(org, site, branch, onProgress, paths);
+        return this.bulkPublish.publishAllContent(org, site, branch, onProgress, paths);
     }
 
-    /** List all publishable pages from DA.live. Delegates to {@link HelixSiteContent}. */
+    /** List all publishable pages from DA.live. Delegates to {@link HelixPageDiscovery}. */
     async listAllPages(org: string, site: string, path: string = '/'): Promise<string[]> {
-        return this.siteContent.listAllPages(org, site, path);
+        return this.pageDiscovery.listAllPages(org, site, path);
     }
 
     /**

@@ -5,8 +5,13 @@
  * These functions manage frontend environment variable tracking.
  */
 
-import { getFrontendEnvVars, updateFrontendState } from '@/core/state/projectStateSync';
+import {
+    detectFrontendChanges,
+    getFrontendEnvVars,
+    updateFrontendState,
+} from '@/core/state/projectStateSync';
 import { Project } from '@/types/base';
+import { createMockProject } from '../../helpers/projectFake';
 
 describe('projectStateSync', () => {
     describe('getFrontendEnvVars', () => {
@@ -343,5 +348,102 @@ describe('projectStateSync', () => {
             expect(project.frontendEnvState?.envVars.MESH_ENDPOINT).toBe('https://new-mesh.example.com');
             expect(project.frontendEnvState?.capturedAt).not.toBe('2024-01-01T00:00:00.000Z');
         });
+    });
+});
+
+/*
+ * detectFrontendChanges — has the frontend's config moved since the demo started?
+ *
+ * Moved here from the stalenessDetector suites when that file was split by job
+ * (EDS-8): the comparison sits beside `updateFrontendState`, which records the
+ * state it compares against. These tests use the REAL `getFrontendEnvVars`, so
+ * the recorded state is built the way `updateFrontendState` builds it.
+ */
+
+const FRONTEND_INSTANCES: Project['componentInstances'] = {
+    headless: {
+        id: 'headless',
+        name: 'Frontend',
+        type: 'frontend',
+        path: '/test/frontend',
+        status: 'running',
+    },
+};
+
+const STARTED_CONFIG = { MESH_ENDPOINT: 'https://mesh.example.com/graphql' };
+
+/** The state `updateFrontendState` would have recorded for `config`. */
+function recorded(config: Record<string, unknown>): Project['frontendEnvState'] {
+    return { envVars: getFrontendEnvVars(config), capturedAt: '2024-01-01T00:00:00Z' };
+}
+
+function frontendProject(overrides: Partial<Project> = {}): Project {
+    return createMockProject({
+        componentInstances: FRONTEND_INSTANCES,
+        componentConfigs: { headless: STARTED_CONFIG },
+        frontendEnvState: recorded(STARTED_CONFIG),
+        ...overrides,
+    });
+}
+
+describe('projectStateSync - detectFrontendChanges', () => {
+    it('reports a change when a watched value differs from the recorded one', () => {
+        const project = frontendProject({
+            componentConfigs: { headless: { MESH_ENDPOINT: 'https://other.example.com/graphql' } },
+        });
+
+        expect(detectFrontendChanges(project)).toBe(true);
+    });
+
+    it('reports no change when the config matches what was recorded', () => {
+        expect(detectFrontendChanges(frontendProject())).toBe(false);
+    });
+
+    it('reports no change when there is no frontend component', () => {
+        const project = createMockProject({
+            componentInstances: {},
+            frontendEnvState: recorded({ MESH_ENDPOINT: 'https://old.example.com' }),
+        });
+
+        expect(detectFrontendChanges(project)).toBe(false);
+    });
+
+    it('reports no change when the demo has no recorded frontend state', () => {
+        const project = frontendProject({
+            componentConfigs: { headless: { MESH_ENDPOINT: 'https://other.example.com/graphql' } },
+            frontendEnvState: undefined,
+        });
+
+        expect(detectFrontendChanges(project)).toBe(false);
+    });
+
+    it("compares against THAT frontend's own config, not another component's", () => {
+        const project = frontendProject({
+            componentConfigs: {
+                headless: STARTED_CONFIG,
+                'some-other-component': { MESH_ENDPOINT: 'https://wrong.example.com' },
+            },
+        });
+
+        expect(detectFrontendChanges(project)).toBe(false);
+    });
+
+    it('ignores keys it does not watch', () => {
+        const project = frontendProject({
+            componentConfigs: { headless: { ...STARTED_CONFIG, UNWATCHED_VAR: 'changed' } },
+        });
+
+        expect(detectFrontendChanges(project)).toBe(false);
+    });
+
+    it('reads a project with no componentConfigs as an empty config', () => {
+        const unchanged = frontendProject({
+            componentConfigs: undefined,
+            frontendEnvState: recorded({}),
+        });
+        const changed = frontendProject({ componentConfigs: undefined });
+
+        expect(detectFrontendChanges(unchanged)).toBe(false);
+        expect(detectFrontendChanges(changed)).toBe(true);
     });
 });

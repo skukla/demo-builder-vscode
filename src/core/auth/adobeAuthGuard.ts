@@ -4,7 +4,7 @@
  * Shared "check -> warn -> Sign In -> loginAndRestoreProjectContext -> verify"
  * pattern extracted from:
  * - Mesh deployment (deployMesh.ts)
- * - EDS project reset (edsResetUI.ts)
+ * - EDS project reset (edsResetPreflight.ts)
  * - Storefront setup (storefrontSetupHandlers.ts)
  *
  * @module core/auth/adobeAuthGuard

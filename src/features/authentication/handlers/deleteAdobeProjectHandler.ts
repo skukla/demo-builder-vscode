@@ -56,19 +56,28 @@ export interface DeleteAdobeProjectPayload {
 export function createTeardownDeps(authService: AuthenticationService): TeardownDeps {
     return {
         getWorkspaces: async ({ orgId, projectId }) => {
-            const workspaces = await authService.getWorkspaces({ orgId, projectId });
+            const { workspaceReads } = await authService.getEntityServices();
+            const workspaces = await workspaceReads.getWorkspaces({ orgId, projectId });
             return workspaces.map((workspace) => ({ id: workspace.id, name: workspace.name }));
         },
-        getWorkspaceS2SCredential: (orgId, projectId, workspaceId) =>
-            authService.getWorkspaceS2SCredential(orgId, projectId, workspaceId),
-        createWorkspaceS2SCredentialFor: (orgId, projectId, workspaceId) =>
-            authService.createWorkspaceS2SCredentialFor(orgId, projectId, workspaceId),
-        subscribeManagementApi: (orgId, idIntegration) =>
-            authService.subscribeOAuthServerToServerIntegrationToServices(orgId, idIntegration, [
+        getWorkspaceS2SCredential: async (orgId, projectId, workspaceId) => {
+            const { credentials } = await authService.getEntityServices();
+            return credentials.getWorkspaceS2SCredential(orgId, projectId, workspaceId);
+        },
+        createWorkspaceS2SCredentialFor: async (orgId, projectId, workspaceId) => {
+            const { credentials } = await authService.getEntityServices();
+            return credentials.createWorkspaceS2SCredentialFor(orgId, projectId, workspaceId);
+        },
+        subscribeManagementApi: async (orgId, idIntegration) => {
+            const { orgServices } = await authService.getEntityServices();
+            return orgServices.subscribeOAuthServerToServerIntegrationToServices(orgId, idIntegration, [
                 { sdkCode: BASELINE_API, licenseConfigs: null, roles: null },
-            ]),
-        deleteConsoleProject: (orgId, projectId) =>
-            authService.deleteConsoleProject(orgId, projectId),
+            ]);
+        },
+        deleteConsoleProject: async (orgId, projectId) => {
+            const { projectOps } = await authService.getEntityServices();
+            return projectOps.deleteConsoleProject(orgId, projectId);
+        },
         getAccessToken: async () => {
             const inspection = await authService.getTokenManager().inspectToken();
             if (!inspection.valid || !inspection.token) {
@@ -158,9 +167,10 @@ async function clearSelectionIfCurrent(
         return;
     }
     try {
-        const cached = context.authManager?.getCachedProject();
+        const cached = context.authManager?.getCacheManager().getCachedProject();
         if (cached?.id === projectId) {
-            await context.authManager?.clearConsoleContext();
+            await context.authManager?.getEntityServices()
+                .then((units) => units.selector.clearConsoleContext());
         }
     } catch (clearError) {
         context.debugLogger.debug('[Project] Post-delete selection clear failed:', clearError);

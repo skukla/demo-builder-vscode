@@ -33,6 +33,11 @@ printf '%s\n' "99002 /bin/zsh -l" > "$TMP/idle"
 # Watch mode is deliberately excluded: it is a long-lived editor companion, not a
 # competing run, so it must not block a one-shot suite.
 printf '%s\n' "99003 node /repo/node_modules/.bin/jest --watch" > "$TMP/watch"
+# A shell whose TEXT names the jest binary — a status watcher grepping ps for it.
+# Counted as a live run on 2026-10-08, with no jest anywhere on the machine.
+printf '%s\n' "99004 /bin/zsh -c while true; do ps -Ao args= | python3 -c \"import sys; print(any('node_modules/.bin/jest' in l for l in sys.stdin))\"; sleep 45; done" > "$TMP/mention"
+# A node binary named by full path still counts.
+printf '%s\n' "99005 /opt/homebrew/bin/node /repo/node_modules/.bin/jest --ci" > "$TMP/pathed"
 
 run() {
   local cmd="$1" snap="$2" label="$3" expect="$4"
@@ -79,3 +84,5 @@ echo
 echo "=== nothing in flight, or nothing that competes ==="
 run "$NPX" "$TMP/idle"  'npx jest with an idle machine'               pass
 run "$NPX" "$TMP/watch" 'a --watch jest does not count as competing'  pass
+run "$NPX" "$TMP/mention" 'a shell whose text names the binary is not a run' pass
+run "$NPX" "$TMP/pathed"  'a node named by full path still counts'    BLOCK

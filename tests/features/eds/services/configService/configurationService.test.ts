@@ -2,18 +2,21 @@
  * Configuration Service Tests
  *
  * Tests for the AEM Configuration Service API client that manages
- * site registration, folder mapping, and site deletion.
+ * site registration and site deletion.
+ *
+ * Since 2026-10-08 (EDS-8) the registration params and body schema are pinned in
+ * `siteConfigParams.test.ts`, and the status-to-message mapping and failure
+ * logging in `configServiceRequest.test.ts`. This suite pins what the client
+ * sends where: the URL, the method, the body it hands over.
  */
 
 import {
     ConfigurationService,
-    buildSiteConfigParams,
     MOCK_IMS_TOKEN,
     mockLogger,
     mockTokenProvider,
     spyOnFetch,
 } from './configurationService.testUtils';
-import { createMockLogger } from '../../../../helpers/loggerFake';
 import type { SiteRegistrationParams } from './configurationService.testUtils';
 
 describe('ConfigurationService', () => {
@@ -92,16 +95,6 @@ describe('ConfigurationService', () => {
             expect(body.content.source.type).toBe('html');
         });
 
-        it('should return error for 401 unauthorized', async () => {
-            fetchSpy.mockResolvedValueOnce(new Response('Unauthorized', { status: 401 }));
-
-            const result = await service.registerSite(params);
-
-            expect(result.success).toBe(false);
-            expect(result.error).toContain('auth failed');
-            expect(result.statusCode).toBe(401);
-        });
-
         it('should return error for 403 forbidden', async () => {
             fetchSpy.mockResolvedValueOnce(new Response('Forbidden', { status: 403 }));
 
@@ -110,65 +103,6 @@ describe('ConfigurationService', () => {
             expect(result.success).toBe(false);
             expect(result.error).toContain('Not authorized');
             expect(result.statusCode).toBe(403);
-        });
-
-        it('should return error for 409 conflict (site exists)', async () => {
-            fetchSpy.mockResolvedValueOnce(new Response('Conflict', { status: 409 }));
-
-            const result = await service.registerSite(params);
-
-            expect(result.success).toBe(false);
-            expect(result.error).toContain('already exists');
-            expect(result.statusCode).toBe(409);
-        });
-
-        // A 404 is only "already gone, treat as success" for a DELETE. On a PUT it is
-        // a real failure, and the guard that says so is one `&&` away from turning
-        // every failed registration into a silent success.
-        it('reports a 404 on the PUT as a failure, not as an already-deleted config', async () => {
-            fetchSpy.mockResolvedValueOnce(new Response('Not Found', { status: 404 }));
-
-            const result = await service.registerSite(params);
-
-            expect(result).toEqual({
-                success: false,
-                statusCode: 404,
-                error: 'Configuration Service error (404): Not Found',
-            });
-        });
-
-        it('carries the response body out for a status it has no specific message for', async () => {
-            fetchSpy.mockResolvedValueOnce(new Response('upstream exploded', { status: 500 }));
-
-            const result = await service.registerSite(params);
-
-            expect(result.error).toBe('Configuration Service error (500): upstream exploded');
-        });
-
-        it('says "Unknown error" when such a response carries no body', async () => {
-            fetchSpy.mockResolvedValueOnce(new Response('', { status: 500 }));
-
-            const result = await service.registerSite(params);
-
-            expect(result.error).toBe('Configuration Service error (500): Unknown error');
-        });
-
-        it('should handle network errors', async () => {
-            fetchSpy.mockRejectedValueOnce(new Error('Network timeout'));
-
-            const result = await service.registerSite(params);
-
-            expect(result.success).toBe(false);
-            expect(result.error).toBe('Network timeout');
-        });
-
-        it('should throw when IMS token is missing', async () => {
-            mockTokenProvider.getAccessToken.mockResolvedValueOnce(null);
-
-            const result = await service.registerSite(params);
-
-            expect(result.success).toBe(false);
-            expect(result.error).toContain('DA.live authentication required');
         });
 
         it('should include content.overlay block with suffix:".html" when contentOverlayUrl is provided', async () => {
@@ -214,65 +148,6 @@ describe('ConfigurationService', () => {
     });
 
     // ==========================================================
-    // buildSiteConfigParams (BYOM overlay)
-    // ==========================================================
-
-    describe('buildSiteConfigParams', () => {
-        it('omits contentOverlayUrl when no overlay URL is provided', () => {
-            const params = buildSiteConfigParams('owner', 'repo', 'org');
-            expect(params.contentOverlayUrl).toBeUndefined();
-        });
-
-        it('includes contentOverlayUrl when an overlay URL is provided', () => {
-            const params = buildSiteConfigParams(
-                'owner',
-                'repo',
-                'org',
-                'https://byom.example.com'
-            );
-            expect(params.contentOverlayUrl).toBe('https://byom.example.com');
-        });
-
-        // legacyLookupKey retired 2026-08-23: reset AND repair both migrate a
-        // mismatched DA site name before registering, so every caller reaches
-        // this function with the DA site name equal to the repo name. The
-        // param is gone — this pins that it stays gone.
-        it('exposes no legacyLookupKey field', () => {
-            const params = buildSiteConfigParams('owner', 'repo', 'org');
-            expect('legacyLookupKey' in params).toBe(false);
-        });
-
-        // Helix's preview/publish/live operations look up the site config at
-        // /config/{githubOwner}/sites/{githubRepo}.json — using the GitHub
-        // identifiers, not the DA.live identifiers. Registering under the
-        // DA.live name (the old behavior) leaves the config invisible to those
-        // operations and every preview/publish silently fails.
-        describe('Config Service lookup key (Helix preview/publish contract)', () => {
-            it('uses the GitHub owner/repo as the Config Service lookup key', () => {
-                const params = buildSiteConfigParams('my-owner', 'my-repo', 'my-dalive-org');
-
-                expect(params.org).toBe('my-owner');
-                expect(params.site).toBe('my-repo');
-            });
-
-            it('keeps codeOwner/codeRepo identical to the lookup key (Helix code source)', () => {
-                const params = buildSiteConfigParams('my-owner', 'my-repo', 'my-dalive-org');
-
-                expect(params.codeOwner).toBe('my-owner');
-                expect(params.codeRepo).toBe('my-repo');
-            });
-
-            it('points the content source URL at the DA.live org and the REPO name (the one identifier)', () => {
-                const params = buildSiteConfigParams('my-owner', 'my-repo', 'my-dalive-org');
-
-                expect(params.contentSourceUrl).toBe(
-                    'https://content.da.live/my-dalive-org/my-repo/'
-                );
-            });
-        });
-    });
-
-    // ==========================================================
     // deleteSiteConfig
     // ==========================================================
 
@@ -299,15 +174,6 @@ describe('ConfigurationService', () => {
             expect(call[1].headers['content-type']).toBeUndefined();
         });
 
-        it('should treat 404 as success (already deleted)', async () => {
-            fetchSpy.mockResolvedValueOnce(new Response('Not Found', { status: 404 }));
-
-            const result = await service.deleteSiteConfig('test-user', 'my-site');
-
-            expect(result.success).toBe(true);
-            expect(result.statusCode).toBe(404);
-        });
-
         it('should return error for non-404 failures', async () => {
             fetchSpy.mockResolvedValueOnce(new Response('Forbidden', { status: 403 }));
 
@@ -317,10 +183,6 @@ describe('ConfigurationService', () => {
             expect(result.statusCode).toBe(403);
         });
     });
-
-    // ==========================================================
-    // updateSiteConfig
-    // ==========================================================
 
     // ==========================================================
     // Authentication
@@ -339,101 +201,5 @@ describe('ConfigurationService', () => {
             const call = fetchSpy.mock.calls[0];
             expect(call[1].headers.Authorization).toBe(`Bearer ${MOCK_IMS_TOKEN}`);
         });
-    });
-});
-
-/**
- * Config Service failure reporting.
- *
- * Field case (2026-07-28): a colleague's storefront failed four times with
- * `PUT /config/{org}/sites/{site}.json -> 403`, and the message told him to
- * install AEM Code Sync — on a run where code sync had been verified and 62
- * pages published seconds earlier. The advice was unfollowable, and the log
- * carried nothing to diagnose from: the 403 body is empty, and Adobe's stated
- * reason lives in the `x-error` header, which was discarded.
- *
- * Two requirements follow: record what Adobe actually said, and stop naming a
- * remedy the evidence contradicts.
- */
-describe('ConfigurationService — failure reporting', () => {
-    const logger = createMockLogger();
-    const tokenProvider = { getAccessToken: jest.fn().mockResolvedValue('ims-token') };
-    const params: SiteRegistrationParams = {
-        org: 'acme-corp',
-        site: 'storefront-demo',
-        codeOwner: 'acme-corp',
-        codeRepo: 'storefront-demo',
-        contentSourceUrl: 'https://content.da.live/acme-corp/storefront-demo/',
-    };
-
-    let service: ConfigurationService;
-    let fetchSpy: jest.SpyInstance;
-
-    function forbidden(headers: Record<string, string> = {}) {
-        return new Response('', { status: 403, headers });
-    }
-
-    function loggedText(): string {
-        return (['debug', 'info', 'warn', 'error'] as const)
-            .flatMap((lvl) => logger[lvl].mock.calls)
-            .map((c) => String(c[0]))
-            .join('\n');
-    }
-
-    beforeEach(() => {
-        jest.clearAllMocks();
-        service = new ConfigurationService(tokenProvider, logger);
-    });
-
-    afterEach(() => fetchSpy?.mockRestore());
-
-    it("records Adobe's stated reason from x-error", async () => {
-        fetchSpy = jest
-            .spyOn(global, 'fetch')
-            .mockResolvedValue(forbidden({ 'x-error': '[admin] not authorized' }));
-
-        await service.registerSite(params);
-
-        expect(loggedText()).toContain('[admin] not authorized');
-    });
-
-    it("records Adobe's request id, which is what support needs", async () => {
-        fetchSpy = jest
-            .spyOn(global, 'fetch')
-            .mockResolvedValue(forbidden({ 'x-invocation-id': 'abc-123' }));
-
-        await service.registerSite(params);
-
-        expect(loggedText()).toContain('abc-123');
-    });
-
-    it('does not tell the user to install AEM Code Sync', async () => {
-        // The failing runs had code sync verified and publishing in the same
-        // session. Naming it as the remedy sends people to reinstall a working
-        // app — the exact loop this project already burned days on.
-        fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(forbidden());
-
-        const result = await service.registerSite(params);
-
-        expect(result.error).not.toMatch(/install AEM Code Sync/i);
-        expect(result.error).not.toMatch(/aem\.live\/developer\/tutorial/i);
-    });
-
-    it('still explains a 403 and stays actionable', async () => {
-        fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(forbidden());
-
-        const result = await service.registerSite(params);
-
-        expect(result.error).toMatch(/not authorized|permission|access/i);
-        expect(result.statusCode).toBe(403);
-    });
-
-    it('tolerates a response carrying neither header', async () => {
-        fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(forbidden());
-
-        await service.registerSite(params);
-
-        expect(loggedText()).not.toContain('undefined');
-        expect(loggedText()).not.toContain('null');
     });
 });

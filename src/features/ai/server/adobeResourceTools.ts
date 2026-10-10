@@ -6,8 +6,8 @@
  *
  * ## Every tool here passes its target EXPLICITLY. That is the point.
  *
- * `AdobeConsoleProjectOps.createProject` / `createWorkspace` resolved their target
- * from `cacheManager.getCachedOrganization()` / `getCachedProject()` — the
+ * `AdobeConsoleProjectOps.createProject` / `AdobeConsoleWorkspaceOps.createWorkspace`
+ * resolved their target from `cacheManager.getCachedOrganization()` / `getCachedProject()` — the
  * selection made in the EXTENSION UI. The agent's selection lives somewhere
  * else entirely: `select_org` / `select_project` write only `adobeTargetStore`
  * (`adobeTools.ts:263`) and never touch that cache.
@@ -114,7 +114,7 @@ export function registerAdobeResourceTools(
             const target = await resolveAgentOrg(mgr);
             if ('error' in target) return asText(target);
 
-            const project = await mgr.createProject(
+            const project = await (await mgr.getEntityServices()).projectOps.createProject(
                 String(args?.name ?? ''),
                 String(args?.description ?? ''),
                 { orgId: target.orgId },
@@ -154,7 +154,7 @@ export function registerAdobeResourceTools(
             const target = await requireProject(mgr);
             if ('error' in target) return asText(target);
 
-            const workspace = await mgr.createWorkspace(
+            const workspace = await (await mgr.getEntityServices()).workspaceOps.createWorkspace(
                 String(args?.name ?? ''),
                 String(args?.description ?? ''),
                 { orgId: target.orgId, projectId: target.projectId },
@@ -216,7 +216,8 @@ export function registerAdobeResourceTools(
             const target = await requireProject(mgr);
             if ('error' in target) return asText(target);
 
-            const result = await mgr.deleteWorkspace(workspaceId, {
+            const { workspaceOps } = await mgr.getEntityServices();
+            const result = await workspaceOps.deleteWorkspace(workspaceId, {
                 orgId: target.orgId,
                 projectId: target.projectId,
                 workspaceName,

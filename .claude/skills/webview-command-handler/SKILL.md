@@ -23,9 +23,9 @@ description: Add a webview message handler/command end-to-end (MessageType → h
 
 Two traps that fail SILENTLY — nothing throws, nothing logs, the UI just never updates:
 
-- **Static push senders address ONE panel id.** The senders in
-  `showDashboard.ts` (`sendMeshStatusUpdate`, `sendAppBuilderComponentStatusUpdate`,
-  `sendAppBuilderComponentsSnapshot`, …) look up `getActivePanel('demoBuilder.projectDashboard')`.
+- **Push senders must not address ONE panel id.** The senders in
+  `dashboard/services/projectPanelPushes.ts` (`sendMeshStatusUpdate`, `sendAppBuilderComponentStatusUpdate`,
+  `sendAppBuilderComponentsSnapshot`, …) once looked up `getActivePanel('demoBuilder.projectDashboard')`.
   Surfaces open by tab REPLACEMENT — the dashboard panel is disposed — so on a new
   project-scoped surface every push reaches nobody. Resolve whichever panel is live
   (`getLiveProjectPanel()`), preferring one so a push renders once. Symptom: the surface
@@ -36,7 +36,10 @@ Two traps that fail SILENTLY — nothing throws, nothing logs, the UI just never
   is not "no more registration": the map you register must cover every message the surface's
   components send, INCLUDING components borrowed from another feature — see below.
 
-Precedents to copy rather than invent: `showProjectsList.ts` (command shape),
+Precedents to copy rather than invent: `showProjectsList.ts` (command shape — it extends
+`BundledPanelCommand`, so the page HTML and the handler context come from setting
+`bundleName`, not from copying either method; `StandalonePanelCommand` for a panel that
+works with no project),
 `src/features/dashboard/ui/aiSurface/index.tsx` (entry point), `WEBVIEW_ENTRIES` in
 `esbuild.config.js` (bundle key), `commandManager.ts` `registerCommands()` (registration +
 sibling-panel disposal).

@@ -181,15 +181,20 @@ describe('spine choke-points', () => {
         expect(hits.filter((f) => !spine.includes(f))).toStrictEqual([]);
     });
 
-    it('adobe SIGN-IN/OUT: aio auth login/logout run only in authenticationService', () => {
+    it('adobe SIGN-IN/OUT: aio auth login/logout run only in the auth service and its sign-in unit', () => {
         // Audited 2026-08-22: one login site (forced/normal ternary) and one
         // logout site, both in the service every auth door routes through.
+        // 2026-10-08 (decompose-god-file): the login site moved, unchanged, to
+        // adobeSignIn.ts, which only the service's sign-in gate calls; logout stayed.
         // Excluded by the pattern: diagnostics' `aio auth login --help`
         // capability probe (a read, not a sign-in — the lookahead skips it)
         // and ResetAllCommand's "run: aio auth logout" instruction text in a
         // log message (not quote-prefixed, so it never matches).
         const primitive = /['"`]aio (auth )?(login|logout)(?! --help)/;
-        const spine = ['features/authentication/services/authenticationService.ts'];
+        const spine = [
+            'features/authentication/services/authenticationService.ts',
+            'features/authentication/services/adobeSignIn.ts',
+        ];
 
         const hits = filesTouchingPrimitive(primitive);
 
@@ -333,7 +338,9 @@ describe('spine choke-points', () => {
         // top), configServiceAccess owns the admin-role GRANTS object
         // (read-merge-write), configServiceProbe is the read-only diagnostics
         // oracle. Verified: the probe and access-checker GET the site config,
-        // never write it.
+        // never write it. Since 2026-10-08 (EDS-8) configurationService sends
+        // its writes through configServiceRequest, which is handed the URL and
+        // builds no path, so the site-config doors are still the ones pinned here.
         const primitive = /\/config\/\$\{encodeURIComponent\(org\)\}/;
         const spine = [
             'features/eds/services/configService/configServiceAccess.ts',
@@ -348,18 +355,23 @@ describe('spine choke-points', () => {
     });
 
     it('github MUTATIONS: repo/content writes go through the two eds owners only', () => {
-        // Audited 2026-08-22: a clean split — githubRepoOperations owns
-        // repo-level mutations (create-from-template, delete, settings PATCH),
-        // githubFileOperations owns content mutations (file put/delete and the
-        // tree/commit/ref bulk-reset machinery). The four other files touching
-        // api.github.com (component install, patch fetcher, updates, auto-
-        // updater) are read-only — verified: no mutating method anywhere in
+        // Audited 2026-08-22: a clean split — githubRepoLifecycle owns
+        // repo-level mutations (create-from-template, empty create, Actions
+        // off, template flag, delete, archive; until 2026-10-08 these were in
+        // githubRepoOperations, which now holds only reads — EDS-8 split by
+        // job), githubFileOperations owns content mutations (file put/delete).
+        // The tree/commit/ref machinery those two shared a file with until
+        // 2026-10-08 is githubTreeCommits (EDS-8 split by job); the template
+        // reset drives it and makes no request of its own. The four other files
+        // touching api.github.com (component install, patch fetcher, updates,
+        // auto-updater) are read-only — verified: no mutating method anywhere in
         // them. Mutations ride octokit.request with a verb-prefixed route,
         // which is what the pattern anchors on.
         const primitive = /octokit\.request\(\s*['"`](POST|DELETE|PATCH|PUT) /;
         const spine = [
             'features/eds/services/github/githubFileOperations.ts',
-            'features/eds/services/github/githubRepoOperations.ts',
+            'features/eds/services/github/githubRepoLifecycle.ts',
+            'features/eds/services/github/githubTreeCommits.ts',
         ];
 
         const hits = filesTouchingPrimitive(primitive);
@@ -424,7 +436,7 @@ describe('spine choke-points', () => {
         const doors = [
             'features/eds/services/catalogMenu/catalogMenuStep.ts',
             'features/eds/services/reset/edsResetCatalogMenu.ts',
-            'features/eds/services/storefront/storefrontRepublishService.ts',
+            'features/eds/services/storefront/storefrontContentRepublishService.ts',
             'features/project-creation/services/catalogMenuPhase.ts',
         ];
         const stepHits = filesTouchingPrimitive(/\b(applyCatalogMenuStep|removeCatalogMenuStep)\(/);
@@ -440,7 +452,8 @@ describe('spine choke-points', () => {
         // and reports a live-only removal as such.
         //
         // Traced down, every delete door converges on tearDownStorefront: the
-        // delete-project button (projectDeletionService), the agent's delete_project
+        // delete-project button (edsExternalCleanup, split from projectDeletionService
+        // 2026-10-09), the agent's delete_project
         // (agentProjectCleanup), cleanup_dalive_site (cloudResourceTools) and the
         // "Manage DA.live Sites" command (cleanupDaLiveSites, since EDS-31: it used to
         // delete content alone and leave every page live). Reset has its own door
@@ -458,7 +471,7 @@ describe('spine choke-points', () => {
             'features/ai/server/cloudResourceTools.ts',
             'features/eds/commands/cleanupDaLiveSites.ts',
             'features/eds/services/storefront/storefrontTeardown.ts',
-            'features/projects-dashboard/services/projectDeletionService.ts',
+            'features/projects-dashboard/services/edsExternalCleanup.ts',
         ]);
         expect(sorted(/\btakeOutProductPages\(/)).toStrictEqual([
             'features/eds/services/reset/edsResetProductPages.ts',

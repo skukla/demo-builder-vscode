@@ -16,7 +16,7 @@ The item's three live blockers still hold; the fourth is still dead.
   Commerce area's Backend step resolves the stack from the backend among the package's
   storefront keys (`commerceSections.ts`, `allowedStackIds` + `resolveStackForBackend`).
   There is no "no storefront" choice anywhere today.
-- The env sink: `regenerateProjectEnvFiles` (`envFileGenerator.ts`) writes a `.env` per
+- The env sink: `regenerateProjectEnvFiles` (`envFileRegeneration.ts`) writes a `.env` per
   installed component with a path, so with no frontend it writes nothing and does not fail.
   The deployed values are kept on `appBuilderComponents[id].providesEnvVars` and today only
   the EDS `config.json` reads them.

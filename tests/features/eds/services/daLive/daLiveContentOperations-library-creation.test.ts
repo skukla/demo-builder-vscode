@@ -46,7 +46,7 @@ describe('createBlockLibraryFromTemplate', () => {
         });
         mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => ({}) } as Response);
 
-        const result = await service.createBlockLibraryFromTemplate(
+        const result = await service.blockLibOps.createBlockLibraryFromTemplate(
             destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
         );
 
@@ -82,7 +82,7 @@ describe('createBlockLibraryFromTemplate', () => {
     it('should return success with zero blocks when template has no component-definition.json', async () => {
         mockGetFileContent.mockResolvedValue(null);
 
-        const result = await service.createBlockLibraryFromTemplate(
+        const result = await service.blockLibOps.createBlockLibraryFromTemplate(
             destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
         );
 
@@ -97,7 +97,7 @@ describe('createBlockLibraryFromTemplate', () => {
             sha: 'abc123',
         });
 
-        const result = await service.createBlockLibraryFromTemplate(
+        const result = await service.blockLibOps.createBlockLibraryFromTemplate(
             destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
         );
 
@@ -130,7 +130,7 @@ describe('createBlockLibraryFromTemplate', () => {
         });
         mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => ({}) } as Response);
 
-        const result = await service.createBlockLibraryFromTemplate(
+        const result = await service.blockLibOps.createBlockLibraryFromTemplate(
             destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
         );
 
@@ -143,7 +143,7 @@ describe('createBlockLibraryFromTemplate', () => {
     it('should handle getFileContent errors gracefully', async () => {
         mockGetFileContent.mockRejectedValue(new Error('GitHub API error'));
 
-        const result = await service.createBlockLibraryFromTemplate(
+        const result = await service.blockLibOps.createBlockLibraryFromTemplate(
             destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
         );
 
@@ -164,7 +164,7 @@ describe('createBlockLibraryFromTemplate', () => {
             return { ok: false, status: 500 } as Response;
         });
 
-        const result = await service.createBlockLibraryFromTemplate(
+        const result = await service.blockLibOps.createBlockLibraryFromTemplate(
             destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
         );
 
@@ -179,7 +179,7 @@ describe('createBlockLibraryFromTemplate', () => {
         });
         mockFetch.mockResolvedValue({ ok: false, status: 404 } as Response);
 
-        const result = await service.createBlockLibraryFromTemplate(
+        const result = await service.blockLibOps.createBlockLibraryFromTemplate(
             destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
         );
 
@@ -241,7 +241,7 @@ describe('createBlockLibraryFromTemplate', () => {
             });
             mockFetch.mockImplementation(createStubMockFetch());
 
-            const result = await service.createBlockLibraryFromTemplate(
+            const result = await service.blockLibOps.createBlockLibraryFromTemplate(
                 destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
                 undefined,
                 ['accordion', 'carousel'], // hero-v2 is NOT in installedBlockIds
@@ -270,7 +270,7 @@ describe('createBlockLibraryFromTemplate', () => {
             });
             mockFetch.mockImplementation(createStubMockFetch({ existingDocPages: ['accordion'] }));
 
-            const result = await service.createBlockLibraryFromTemplate(
+            const result = await service.blockLibOps.createBlockLibraryFromTemplate(
                 destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
             );
 
@@ -298,7 +298,7 @@ describe('createBlockLibraryFromTemplate', () => {
             });
             mockFetch.mockImplementation(createStubMockFetch());
 
-            const result = await service.createBlockLibraryFromTemplate(
+            const result = await service.blockLibOps.createBlockLibraryFromTemplate(
                 destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
             );
 
@@ -336,7 +336,7 @@ describe('createBlockLibraryFromTemplate', () => {
                 return { ok: true, status: 200 } as Response;
             });
 
-            await service.createBlockLibraryFromTemplate(
+            await service.blockLibOps.createBlockLibraryFromTemplate(
                 destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
             );
 
@@ -355,7 +355,7 @@ describe('createBlockLibraryFromTemplate', () => {
             });
             mockFetch.mockImplementation(createStubMockFetch({ failBlockIds: ['accordion'] }));
 
-            const result = await service.createBlockLibraryFromTemplate(
+            const result = await service.blockLibOps.createBlockLibraryFromTemplate(
                 destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
             );
 
@@ -374,7 +374,7 @@ describe('createBlockLibraryFromTemplate', () => {
             });
             mockFetch.mockImplementation(createStubMockFetch());
 
-            const result = await service.createBlockLibraryFromTemplate(
+            const result = await service.blockLibOps.createBlockLibraryFromTemplate(
                 destOrg, destSite, templateOwner, templateRepo, mockGetFileContent,
                 // no installedBlockIds — stubs run for all blocks regardless
             );

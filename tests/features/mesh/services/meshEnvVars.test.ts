@@ -1,0 +1,329 @@
+// IMPORTANT: Mock must be declared before imports
+
+jest.mock('fs/promises', () => ({
+    readFile: jest.fn(),
+}));
+
+import * as fs from 'fs/promises';
+import { ACCS_GRAPHQL_ENDPOINT, PAAS_GRAPHQL_ENDPOINT } from '@/core/config/envVarKeys';
+import { COMPONENT_IDS } from '@/core/constants';
+import {
+    getMeshEnvVars,
+    getRelevantMeshEnvVars,
+    readMeshEnvVarsFromFile,
+} from '@/features/mesh/services/meshEnvVars';
+
+/**
+ * meshEnvVars - getMeshEnvVars Tests
+ *
+ * Tests mesh environment variable extraction and filtering:
+ * - Extract mesh-related env vars from config
+ * - Handle missing/null/undefined values
+ * - Type conversion and filtering
+ *
+ * Total tests: 5
+ */
+
+describe('meshEnvVars', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    describe('getMeshEnvVars', () => {
+        it('should extract mesh-related env vars from config', () => {
+            const config = {
+                ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
+                ADOBE_CATALOG_SERVICE_ENDPOINT: 'https://catalog.example.com',
+                ADOBE_CATALOG_API_KEY: 'test-key',
+                UNRELATED_VAR: 'should-not-appear',
+            };
+
+            const result = getMeshEnvVars(config);
+
+            expect(result).toEqual({
+                ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
+                ADOBE_CATALOG_SERVICE_ENDPOINT: 'https://catalog.example.com',
+                ADOBE_CATALOG_API_KEY: 'test-key',
+            });
+        });
+
+        it('should handle missing env vars', () => {
+            const config = {
+                ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
+            };
+
+            const result = getMeshEnvVars(config);
+
+            expect(result).toEqual({
+                ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
+            });
+        });
+
+        it('should filter out null and undefined values', () => {
+            const config = {
+                ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
+                ADOBE_CATALOG_API_KEY: null,
+                ADOBE_CATALOG_SERVICE_ENDPOINT: undefined,
+            };
+
+            const result = getMeshEnvVars(config);
+
+            expect(result).toEqual({
+                ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
+            });
+        });
+
+        it('should convert values to strings', () => {
+            const config = {
+                ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 12345,
+            };
+
+            const result = getMeshEnvVars(config);
+
+            expect(result).toEqual({
+                ADOBE_COMMERCE_GRAPHQL_ENDPOINT: '12345',
+            });
+        });
+
+        it('should return empty object for empty config', () => {
+            const result = getMeshEnvVars({});
+
+            expect(result).toStrictEqual({});
+        });
+    });
+
+    describe('getRelevantMeshEnvVars', () => {
+        it('watches only the ACCS keys for the ACCS mesh', () => {
+            const keys = getRelevantMeshEnvVars(COMPONENT_IDS.EDS_ACCS_MESH);
+
+            expect(keys).toContain(ACCS_GRAPHQL_ENDPOINT);
+            expect(keys).not.toContain(PAAS_GRAPHQL_ENDPOINT);
+        });
+
+        it('watches only the PaaS keys for any other mesh', () => {
+            const keys = getRelevantMeshEnvVars(COMPONENT_IDS.EDS_COMMERCE_MESH);
+
+            expect(keys).toContain(PAAS_GRAPHQL_ENDPOINT);
+            expect(keys).not.toContain(ACCS_GRAPHQL_ENDPOINT);
+        });
+    });
+});
+
+const mockFs = fs as jest.Mocked<typeof fs>;
+
+/**
+ * meshEnvVars - Env File Reader Tests
+ *
+ * Tests for reading mesh environment variables from .env file:
+ * - Parse standard .env format
+ * - Filter to only MESH_ENV_VARS keys
+ * - Handle missing .env file gracefully
+ * - Handle empty .env file
+ * - Handle malformed lines
+ * - Handle quoted values
+ *
+ * Total tests: 8
+ */
+
+describe('meshEnvVars - readMeshEnvVarsFromFile', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    describe('Happy Path - .env file parsing', () => {
+        it('should extract mesh env vars from .env file', async () => {
+            const envContent = `
+ADOBE_COMMERCE_GRAPHQL_ENDPOINT=https://example.com/graphql
+ADOBE_CATALOG_SERVICE_ENDPOINT=https://catalog.example.com
+ADOBE_CATALOG_API_KEY=test-key-123
+OTHER_VARIABLE=should-be-ignored
+`;
+            mockFs.readFile.mockResolvedValue(envContent);
+
+            const result = await readMeshEnvVarsFromFile('/test/mesh');
+
+            expect(result).toEqual({
+                ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
+                ADOBE_CATALOG_SERVICE_ENDPOINT: 'https://catalog.example.com',
+                ADOBE_CATALOG_API_KEY: 'test-key-123',
+            });
+            expect(mockFs.readFile).toHaveBeenCalledWith('/test/mesh/.env', 'utf-8');
+        });
+
+        it('should extract all supported mesh env vars', async () => {
+            const envContent = `
+ADOBE_COMMERCE_GRAPHQL_ENDPOINT=https://example.com/graphql
+ADOBE_CATALOG_SERVICE_ENDPOINT=https://catalog.example.com
+ADOBE_CATALOG_API_KEY=api-key
+ADOBE_COMMERCE_ENVIRONMENT_ID=env-123
+ADOBE_COMMERCE_WEBSITE_CODE=base
+ADOBE_COMMERCE_STORE_VIEW_CODE=default
+ADOBE_COMMERCE_STORE_CODE=main_website_store
+`;
+            mockFs.readFile.mockResolvedValue(envContent);
+
+            const result = await readMeshEnvVarsFromFile('/test/mesh');
+
+            expect(result).toEqual({
+                ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
+                ADOBE_CATALOG_SERVICE_ENDPOINT: 'https://catalog.example.com',
+                ADOBE_CATALOG_API_KEY: 'api-key',
+                ADOBE_COMMERCE_ENVIRONMENT_ID: 'env-123',
+                ADOBE_COMMERCE_WEBSITE_CODE: 'base',
+                ADOBE_COMMERCE_STORE_VIEW_CODE: 'default',
+                ADOBE_COMMERCE_STORE_CODE: 'main_website_store',
+            });
+        });
+
+        it('should handle quoted values in .env file', async () => {
+            const envContent = `
+ADOBE_COMMERCE_GRAPHQL_ENDPOINT="https://example.com/graphql"
+ADOBE_CATALOG_API_KEY='my-secret-key'
+`;
+            mockFs.readFile.mockResolvedValue(envContent);
+
+            const result = await readMeshEnvVarsFromFile('/test/mesh');
+
+            expect(result).toEqual({
+                ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
+                ADOBE_CATALOG_API_KEY: 'my-secret-key',
+            });
+        });
+
+        it('should filter out non-mesh env vars', async () => {
+            const envContent = `
+ADOBE_COMMERCE_GRAPHQL_ENDPOINT=https://example.com/graphql
+NODE_ENV=production
+DATABASE_URL=postgres://localhost/db
+UNRELATED_VAR=should-be-ignored
+`;
+            mockFs.readFile.mockResolvedValue(envContent);
+
+            const result = await readMeshEnvVarsFromFile('/test/mesh');
+
+            expect(result).toEqual({
+                ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
+            });
+            expect(result).not.toHaveProperty('NODE_ENV');
+            expect(result).not.toHaveProperty('DATABASE_URL');
+            expect(result).not.toHaveProperty('UNRELATED_VAR');
+        });
+    });
+
+    describe('Edge Cases - File handling', () => {
+        it('should return empty object when .env file does not exist', async () => {
+            const error = new Error('ENOENT: no such file or directory');
+            (error as NodeJS.ErrnoException).code = 'ENOENT';
+            mockFs.readFile.mockRejectedValue(error);
+
+            const result = await readMeshEnvVarsFromFile('/test/mesh');
+
+            expect(result).toStrictEqual({});
+        });
+
+        it('should return empty object for empty .env file', async () => {
+            mockFs.readFile.mockResolvedValue('');
+
+            const result = await readMeshEnvVarsFromFile('/test/mesh');
+
+            expect(result).toStrictEqual({});
+        });
+
+        it('should handle malformed lines gracefully', async () => {
+            const envContent = `
+ADOBE_COMMERCE_GRAPHQL_ENDPOINT=https://example.com/graphql
+THIS_LINE_HAS_NO_EQUALS
+=MISSING_KEY
+# This is a comment
+
+ADOBE_CATALOG_API_KEY=valid-key
+`;
+            mockFs.readFile.mockResolvedValue(envContent);
+
+            const result = await readMeshEnvVarsFromFile('/test/mesh');
+
+            expect(result).toEqual({
+                ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
+                ADOBE_CATALOG_API_KEY: 'valid-key',
+            });
+        });
+
+        it('should handle values containing equals signs', async () => {
+            const envContent = `
+ADOBE_COMMERCE_GRAPHQL_ENDPOINT=https://example.com/graphql?key=value&other=123
+`;
+            mockFs.readFile.mockResolvedValue(envContent);
+
+            const result = await readMeshEnvVarsFromFile('/test/mesh');
+
+            expect(result).toEqual({
+                ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql?key=value&other=123',
+            });
+        });
+    });
+    /**
+     * The parser's own decisions, asserted through what it RETURNS.
+     *
+     * Every case below distinguishes the real line-handling from a plausible
+     * mis-handling of it: whitespace that must be stripped before the key is
+     * matched against the watch list, and the paired-quote rule, which strips
+     * only when BOTH ends carry the same quote character.
+     */
+    describe('Line handling decisions', () => {
+        it('strips surrounding whitespace before matching the key against the watch list', async () => {
+            mockFs.readFile.mockResolvedValue('   ADOBE_CATALOG_API_KEY=padded-key   \n');
+
+            const result = await readMeshEnvVarsFromFile('/test/mesh');
+
+            expect(result).toEqual({ ADOBE_CATALOG_API_KEY: 'padded-key' });
+        });
+
+        it('strips whitespace around the separator on both sides', async () => {
+            mockFs.readFile.mockResolvedValue('ADOBE_CATALOG_API_KEY \t=  spaced-value\n');
+
+            const result = await readMeshEnvVarsFromFile('/test/mesh');
+
+            expect(result).toEqual({ ADOBE_CATALOG_API_KEY: 'spaced-value' });
+        });
+
+        it('keeps a value that merely ENDS with the comment character', async () => {
+            mockFs.readFile.mockResolvedValue('ADOBE_CATALOG_API_KEY=trailing-hash#\n');
+
+            const result = await readMeshEnvVarsFromFile('/test/mesh');
+
+            expect(result).toEqual({ ADOBE_CATALOG_API_KEY: 'trailing-hash#' });
+        });
+
+        it('leaves a value with only a TRAILING double quote untouched', async () => {
+            mockFs.readFile.mockResolvedValue('ADOBE_CATALOG_API_KEY=unbalanced"\n');
+
+            const result = await readMeshEnvVarsFromFile('/test/mesh');
+
+            expect(result).toEqual({ ADOBE_CATALOG_API_KEY: 'unbalanced"' });
+        });
+
+        it('leaves a value with only a LEADING double quote untouched', async () => {
+            mockFs.readFile.mockResolvedValue('ADOBE_CATALOG_API_KEY="unbalanced\n');
+
+            const result = await readMeshEnvVarsFromFile('/test/mesh');
+
+            expect(result).toEqual({ ADOBE_CATALOG_API_KEY: '"unbalanced' });
+        });
+
+        it('leaves a value with only a TRAILING single quote untouched', async () => {
+            mockFs.readFile.mockResolvedValue("ADOBE_CATALOG_API_KEY=unbalanced'\n");
+
+            const result = await readMeshEnvVarsFromFile('/test/mesh');
+
+            expect(result).toEqual({ ADOBE_CATALOG_API_KEY: "unbalanced'" });
+        });
+
+        it('leaves a value with only a LEADING single quote untouched', async () => {
+            mockFs.readFile.mockResolvedValue("ADOBE_CATALOG_API_KEY='unbalanced\n");
+
+            const result = await readMeshEnvVarsFromFile('/test/mesh');
+
+            expect(result).toEqual({ ADOBE_CATALOG_API_KEY: "'unbalanced" });
+        });
+    });
+});

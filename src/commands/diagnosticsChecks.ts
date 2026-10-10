@@ -29,6 +29,7 @@ import {
 import { collectUserSetKeys, contributedKeysFrom, orphanedKeys } from './orphanedSettings';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getLogger, type CommandResultWithContext } from '@/core/logging/debugLogger';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { parseJSON } from '@/types/typeGuards';
 
 export async function getSystemInfo(): Promise<SystemInfo> {
@@ -306,7 +307,7 @@ export async function checkCommand(command: string): Promise<CommandCheckResult>
             execResult = await commandManager.execute(command, {
                 enhancePath: true,
                 configureTelemetry: true,
-                useNodeVersion: 'auto',
+                useNodeVersion: demoBuilderNode(),
             });
         } else {
             // Other tools (git, fnm): run through a shell so the multi-word

@@ -16,13 +16,12 @@
 import * as vscode from 'vscode';
 import { ConfigurationService } from '../../services/configService/configurationService';
 import { withDaLiveAuthRetry, MAX_REAUTH_ATTEMPTS } from '../../services/daLive/daLiveAuthRetry';
-import {
-    createDaLiveServiceTokenProvider,
-    DaLiveContentOperations,
-} from '../../services/daLive/daLiveContentOperations';
+import { DaLiveContentOperations } from '../../services/daLive/daLiveContentOperations';
+import { createDaLiveServiceTokenProvider } from '../../services/daLive/daLiveTokenProviders';
 import { executeEdsPipeline } from '../../services/edsPipeline';
 import { GitHubAppService } from '../../services/github/githubAppService';
 import { GitHubFileOperations } from '../../services/github/githubFileOperations';
+import { GitHubRepoLifecycle } from '../../services/github/githubRepoLifecycle';
 import { GitHubRepoOperations } from '../../services/github/githubRepoOperations';
 import { HelixService } from '../../services/helix/helixService';
 import {
@@ -40,7 +39,7 @@ import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefron
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getBlockLibraryContentSource } from '@/features/components/services/blockLibraryLoader';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
-import { projectTargetsStorefront } from '@/features/eds/services/catalogPrewarmService';
+import { projectTargetsStorefront } from '@/features/eds/services/storefrontIdentityGuard';
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
@@ -63,11 +62,8 @@ function createSetupServices(context: HandlerContext): SetupServices {
     const daLiveAuthService = getDaLiveAuthService(context.context);
     const daLiveTokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
     return {
-        githubRepoOps: new GitHubRepoOperations(
-            githubTokenService,
-            ServiceLocator.getCommandExecutor(),
-            context.logger,
-        ),
+        githubRepoOps: new GitHubRepoOperations(githubTokenService, context.logger),
+        githubRepoLifecycle: new GitHubRepoLifecycle(githubTokenService, context.logger),
         templateSync: new TemplateSyncService(
             context.context.secrets,
             context.logger,

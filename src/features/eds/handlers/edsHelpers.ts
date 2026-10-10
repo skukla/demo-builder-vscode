@@ -14,7 +14,9 @@
  * | Module | Owns |
  * |---|---|
  * | `edsServiceCache` | cached GitHub + DA.live service instances |
- * | `daLiveAuthPrompt` | token validation and the sign-in flow |
+ * | `daLiveTokenValidation` (services) | whether a string is a DA.live token we can store |
+ * | `daLiveAuthGuard` | checking the session before an operation, and asking to sign in |
+ * | `daLiveAuthPrompt` | the interactive sign-in flow |
  * | `byomOverlay` | overlay URL resolution and its failure messages |
  * | `authoringExperience` | which AEM authoring experience a project uses |
  * | `blockLibraryPublish` | publishing the block library and verifying it |
@@ -35,11 +37,11 @@ export {
     type DaLiveTokenValidationResult,
     validateDaLiveToken,
     validateDaLiveTokenStrict,
-    type QuickPickAuthResult,
-    type DaLiveGuardResult,
-    ensureDaLiveAuth,
-    showDaLiveAuthQuickPick,
-} from './daLive/daLiveAuthPrompt';
+} from '../services/daLive/daLiveTokenValidation';
+
+export { type DaLiveGuardResult, ensureDaLiveAuth } from './daLive/daLiveAuthGuard';
+
+export { type QuickPickAuthResult, showDaLiveAuthQuickPick } from './daLive/daLiveAuthPrompt';
 
 export {
     resolveByomOverlayUrl,

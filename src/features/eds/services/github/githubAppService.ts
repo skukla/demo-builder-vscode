@@ -38,6 +38,25 @@ export function describeTokenType(token: string): string {
 }
 
 /**
+ * What {@link GitHubAppService.isAppInstalled} answers.
+ *
+ * `isInstalled: false` on its own asserts the App is absent; `transient` says
+ * the check never resolved (a refused credential, no credential, an unreachable
+ * admin API), and `httpNotFound` is the one signal meaning Helix has never heard
+ * of the repository. The fields are carried whole so a caller can log what the
+ * admin API actually returned.
+ */
+export interface AppInstalledResult {
+    isInstalled: boolean;
+    codeStatus?: number;
+    transient?: boolean;
+    httpNotFound?: boolean;
+    httpStatus?: number;
+    helixError?: string;
+    noCredential?: boolean;
+}
+
+/**
  * GitHub App Service for AEM Code Sync app detection and installation
  */
 export class GitHubAppService {
@@ -108,15 +127,7 @@ export class GitHubAppService {
         owner: string,
         repo: string,
         options?: { lenient?: boolean },
-    ): Promise<{
-        isInstalled: boolean;
-        codeStatus?: number;
-        transient?: boolean;
-        httpNotFound?: boolean;
-        httpStatus?: number;
-        helixError?: string;
-        noCredential?: boolean;
-    }> {
+    ): Promise<AppInstalledResult> {
         const lenient = options?.lenient ?? false;
         this.logger.debug(
             `[GitHub App] Checking if app is installed on ${owner}/${repo} (lenient: ${lenient})`,

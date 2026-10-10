@@ -25,8 +25,9 @@ import {
     getDaLiveAuthService,
     resolveByomOverlayConfig,
 } from '@/features/eds/handlers/edsHelpers';
-import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
-import { executeEdsReset, extractResetParams } from '@/features/eds/services/reset/edsResetService';
+import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveTokenProviders';
+import { extractResetParams } from '@/features/eds/services/reset/edsResetParams';
+import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 import { getMeshComponentInstance } from '@/types/typeGuards';

@@ -34,10 +34,11 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
 // Imports (after mocks)
 // =============================================================================
 
-import { removeAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
+import { removeAppBuilderComponent } from '@/features/app-builder/services/appBuilderRemoveRun';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import {
     INTEGRATION_ENTRY,
     MESH_ENTRY,
@@ -122,7 +123,7 @@ describe('removeAppBuilderComponent — the teardown command', () => {
         expect(deps.commandManager.execute).toHaveBeenCalledWith('aio app undeploy', {
             cwd: `/proj/components/${APP_ID}`,
             streaming: true,
-            useNodeVersion: 'auto',
+            useNodeVersion: demoBuilderNode(),
             enhancePath: true,
             shell: true,
             timeout: TIMEOUTS.LONG,
@@ -137,7 +138,7 @@ describe('removeAppBuilderComponent — the teardown command', () => {
 
         expect(deps.commandManager.execute).toHaveBeenCalledWith(MESH_DELETE_COMMAND, {
             cwd: `/proj/components/${MESH_ID}`,
-            useNodeVersion: 'auto',
+            useNodeVersion: demoBuilderNode(),
             enhancePath: true,
             streaming: true,
             shell: true,

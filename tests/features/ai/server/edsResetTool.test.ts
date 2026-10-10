@@ -12,6 +12,9 @@ jest.mock('@/features/lifecycle/services/projectResetService', () => ({
 
 jest.mock('@/features/eds/services/reset/edsResetService', () => ({
     executeEdsReset: jest.fn(),
+}));
+jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
+    ...jest.requireActual('@/features/eds/services/reset/edsResetParams'),
     extractResetParams: jest.fn(),
 }));
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
@@ -22,7 +25,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
             fromConfigUrl ? `${fromConfigUrl}?org=${org}&site=${site}&key=test-secret` : undefined
     ),
 }));
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
     createDaLiveServiceTokenProvider: jest.fn(() => ({})),
 }));
 jest.mock('@/types/typeGuards', () => ({
@@ -47,7 +50,8 @@ jest.mock('@/features/ai/server/adobeTargetStore', () => ({
 import { registerResetProjectTool } from '@/features/ai/server/resetProjectTool';
 import { executeProjectReset } from '@/features/lifecycle/services/projectResetService';
 import { runWithAdobeTarget } from '@/features/ai/server/adobeTargetStore';
-import { executeEdsReset, extractResetParams } from '@/features/eds/services/reset/edsResetService';
+import { extractResetParams } from '@/features/eds/services/reset/edsResetParams';
+import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { isEdsProject, getMeshComponentInstance } from '@/types/typeGuards';
 import { createMockLogger } from '../../../helpers/loggerFake';

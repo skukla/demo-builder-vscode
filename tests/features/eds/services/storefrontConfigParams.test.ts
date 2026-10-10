@@ -1,0 +1,358 @@
+/**
+ * Tests for the storefront config params: the backend-to-environment map, the
+ * component-config merge, and the params extracted from it.
+ *
+ * The merge lets mesh values take priority over non-mesh values — EXCEPT the
+ * Commerce store scope, which the backend component owns (mesh configs carry a
+ * stale duplicate).
+ */
+
+import type { ConfigGeneratorParams, EnvironmentType } from '@/features/eds/services/configGenerator';
+import {
+    extractConfigParamsFromConfigs,
+    mapBackendToEnvironmentType,
+    mergeComponentConfigs,
+} from '@/features/eds/services/storefrontConfigParams';
+
+describe('mapBackendToEnvironmentType', () => {
+    it.each<[string, string | undefined, EnvironmentType]>([
+        ['the PaaS backend id', 'adobe-commerce-paas', 'paas'],
+        ['the ACCS backend id', 'adobe-commerce-accs', 'accs'],
+        ['the ACO backend id', 'adobe-commerce-aco', 'aco'],
+        // The default arm has to be a real environment, not "neither": a
+        // project whose backend was never recorded still generates a config.
+        ['an id the switch does not name', 'unknown-backend', 'paas'],
+        ['no backend id at all', undefined, 'paas'],
+    ])('%s maps to %s', (_label, backendComponentId, expected) => {
+        expect(mapBackendToEnvironmentType(backendComponentId)).toBe(expected);
+    });
+});
+
+describe('mergeComponentConfigs', () => {
+    it('should return empty object for undefined componentConfigs', () => {
+        expect(mergeComponentConfigs(undefined)).toStrictEqual({});
+    });
+
+    it('should return empty object for empty componentConfigs', () => {
+        expect(mergeComponentConfigs({})).toStrictEqual({});
+    });
+
+    it('should merge all component env vars into flat object', () => {
+        const result = mergeComponentConfigs({
+            'eds-storefront': { AEM_ASSETS_ENABLED: 'true' },
+            'adobe-commerce-accs': { ACCS_GRAPHQL_ENDPOINT: 'https://backend.example.com' },
+        });
+        expect(result).toEqual({
+            AEM_ASSETS_ENABLED: 'true',
+            ACCS_GRAPHQL_ENDPOINT: 'https://backend.example.com',
+        });
+    });
+
+    it('should let mesh values override non-mesh values', () => {
+        const result = mergeComponentConfigs({
+            'adobe-commerce-accs': { ACCS_GRAPHQL_ENDPOINT: 'https://direct.example.com' },
+            'eds-accs-mesh': { ACCS_GRAPHQL_ENDPOINT: 'https://mesh.example.com' },
+        });
+        expect(result.ACCS_GRAPHQL_ENDPOINT).toBe('https://mesh.example.com');
+    });
+
+    it('should use non-mesh value when no mesh component exists', () => {
+        const result = mergeComponentConfigs({
+            'adobe-commerce-accs': { ACCS_GRAPHQL_ENDPOINT: 'https://direct.example.com' },
+            'eds-storefront': { AEM_ASSETS_ENABLED: 'true' },
+        });
+        expect(result.ACCS_GRAPHQL_ENDPOINT).toBe('https://direct.example.com');
+    });
+
+    it('should set MESH_ENDPOINT when meshEndpoint provided', () => {
+        const result = mergeComponentConfigs(
+            { 'eds-storefront': { AEM_ASSETS_ENABLED: 'true' } },
+            'https://mesh-endpoint.example.com'
+        );
+        expect(result.MESH_ENDPOINT).toBe('https://mesh-endpoint.example.com');
+    });
+
+    it('should not set MESH_ENDPOINT when meshEndpoint not provided', () => {
+        const result = mergeComponentConfigs({
+            'eds-storefront': { AEM_ASSETS_ENABLED: 'true' },
+        });
+        expect(result.MESH_ENDPOINT).toBeUndefined();
+    });
+
+    it('should handle mesh values winning even with multiple non-mesh sources', () => {
+        // Uses the ENDPOINT key. This case previously used ACCS_STORE_CODE, which
+        // was incidental — the assertion is about precedence with several
+        // non-mesh sources, and every other precedence case here uses the
+        // endpoint. The store scope turned out to be a key the mesh must NOT own
+        // (see the store-scope describe below): mesh configs carry a stale copy,
+        // and letting it win published the wrong Commerce website.
+        const result = mergeComponentConfigs({
+            'eds-storefront': { ACCS_GRAPHQL_ENDPOINT: 'from-frontend' },
+            'adobe-commerce-accs': { ACCS_GRAPHQL_ENDPOINT: 'from-backend' },
+            'eds-accs-mesh': { ACCS_GRAPHQL_ENDPOINT: 'from-mesh' },
+        });
+        expect(result.ACCS_GRAPHQL_ENDPOINT).toBe('from-mesh');
+    });
+
+    /**
+     * The store scope is the backend's, not the mesh's.
+     *
+     * Mesh component configs carry a duplicate copy of website/store/store-view,
+     * and only the backend's copy is updated when the user changes them. Live
+     * 2026-08-10: a project moved to the `citisignal` website kept publishing
+     * `base`, so the storefront queried a website with no products — every PDP
+     * returned a valid 200 with an empty product block, and republish reported
+     * success because it published exactly what the merge produced.
+     */
+    describe('store scope is owned by the backend', () => {
+        const BACKEND = {
+            ACCS_WEBSITE_CODE: 'citisignal',
+            ACCS_STORE_CODE: 'citisignal_store',
+            ACCS_STORE_VIEW_CODE: 'citisignal_us',
+        };
+        const STALE_MESH = {
+            ACCS_WEBSITE_CODE: 'base',
+            ACCS_STORE_CODE: 'main_website_store',
+            ACCS_STORE_VIEW_CODE: 'default',
+        };
+
+        it('keeps the backend scope over a stale mesh copy', () => {
+            const result = mergeComponentConfigs({
+                'eds-accs-mesh': STALE_MESH,
+                'adobe-commerce-accs': BACKEND,
+            });
+
+            expect(result.ACCS_WEBSITE_CODE).toBe('citisignal');
+            expect(result.ACCS_STORE_CODE).toBe('citisignal_store');
+            expect(result.ACCS_STORE_VIEW_CODE).toBe('citisignal_us');
+        });
+
+        it('keeps the backend scope regardless of key order', () => {
+            // The original bug was order-dependent via spread; the fix must not be.
+            const result = mergeComponentConfigs({
+                'adobe-commerce-accs': BACKEND,
+                'eds-accs-mesh': STALE_MESH,
+            });
+
+            expect(result.ACCS_WEBSITE_CODE).toBe('citisignal');
+        });
+
+        it('falls back to the mesh copy when the backend defines no scope', () => {
+            // Only override when the backend actually has the key.
+            const result = mergeComponentConfigs({ 'eds-accs-mesh': STALE_MESH });
+
+            expect(result.ACCS_WEBSITE_CODE).toBe('base');
+        });
+    });
+});
+
+/**
+ * The BACKEND owns the store scope — not "whichever non-mesh component sorted
+ * last".
+ *
+ * The first fix split components into mesh / non-mesh and let the non-mesh side
+ * win the scope keys. That was right about the mesh and wrong about everything
+ * else: `headless` is a FRONTEND and declares all three `ADOBE_COMMERCE_*` scope
+ * keys (components.json), so on a headless project the scope was decided by
+ * whichever of frontend/backend iterated last — the same order-dependence, just
+ * moved. `extractConfigParamsFromConfigs` has known the backend id all along and
+ * simply was not passing it down.
+ */
+describe('mergeComponentConfigs — the backend owns the scope, not the last non-mesh component', () => {
+    const PAAS_BACKEND = {
+        ADOBE_COMMERCE_WEBSITE_CODE: 'citisignal',
+        ADOBE_COMMERCE_STORE_VIEW_CODE: 'citisignal_us',
+    };
+    const STALE_FRONTEND = {
+        ADOBE_COMMERCE_WEBSITE_CODE: 'base',
+        ADOBE_COMMERCE_STORE_VIEW_CODE: 'default',
+    };
+
+    it("takes the backend's scope over a stale FRONTEND copy", () => {
+        const result = mergeComponentConfigs(
+            { 'adobe-commerce-paas': PAAS_BACKEND, headless: STALE_FRONTEND },
+            undefined,
+            'adobe-commerce-paas',
+        );
+
+        expect(result.ADOBE_COMMERCE_WEBSITE_CODE).toBe('citisignal');
+        expect(result.ADOBE_COMMERCE_STORE_VIEW_CODE).toBe('citisignal_us');
+    });
+
+    it('reaches the same answer with the components in the opposite order', () => {
+        const result = mergeComponentConfigs(
+            { headless: STALE_FRONTEND, 'adobe-commerce-paas': PAAS_BACKEND },
+            undefined,
+            'adobe-commerce-paas',
+        );
+
+        expect(result.ADOBE_COMMERCE_WEBSITE_CODE).toBe('citisignal');
+    });
+
+    it('keeps the old non-mesh behaviour when no backend id is supplied', () => {
+        // The control. Callers that cannot name the backend must be unaffected,
+        // which is what lets the existing suite above stand unedited.
+        const result = mergeComponentConfigs({
+            'eds-accs-mesh': { ACCS_WEBSITE_CODE: 'base' },
+            'adobe-commerce-accs': { ACCS_WEBSITE_CODE: 'citisignal' },
+        });
+
+        expect(result.ACCS_WEBSITE_CODE).toBe('citisignal');
+    });
+    it('does NOT plant a MESH_ENDPOINT key when no deployed endpoint was supplied', () => {
+        // `merged.MESH_ENDPOINT = undefined` is not the same as no key: the
+        // merged map is spread into config params and iterated downstream, so a
+        // present-but-undefined key reads as "the mesh answered with nothing"
+        // rather than "there is no mesh".
+        const result = mergeComponentConfigs({
+            'adobe-commerce-accs': { ACCS_GRAPHQL_ENDPOINT: 'https://direct.example.com' },
+        });
+
+        expect(result).toStrictEqual({ ACCS_GRAPHQL_ENDPOINT: 'https://direct.example.com' });
+    });
+
+    it('overrides the merged endpoint with the deployed one when supplied', () => {
+        const result = mergeComponentConfigs(
+            { 'adobe-commerce-accs': { MESH_ENDPOINT: 'https://stale.example.com' } },
+            'https://deployed.example.com/graphql',
+        );
+
+        expect(result.MESH_ENDPOINT).toBe('https://deployed.example.com/graphql');
+    });
+});
+
+describe('extractConfigParamsFromConfigs', () => {
+    it('should use backendComponentId for environment type', () => {
+        const componentConfigs = {
+            'eds-storefront': {
+                ADOBE_CATALOG_API_KEY: 'api-key-123',
+            },
+        };
+
+        const result = extractConfigParamsFromConfigs(componentConfigs, undefined, 'adobe-commerce-accs');
+
+        expect(result.environmentType).toBe('accs');
+        // ACCS doesn't use API keys — commerceApiKey should be undefined
+        expect(result.commerceApiKey).toBeUndefined();
+    });
+
+    it('should default to paas when backendComponentId not provided', () => {
+        const componentConfigs = {
+            'eds-storefront': {
+                ACCS_CATALOG_SERVICE_ENDPOINT: 'https://accs.example.com/graphql',
+            },
+        };
+
+        const result = extractConfigParamsFromConfigs(componentConfigs);
+
+        expect(result.environmentType).toBe('paas');
+    });
+
+    it('should prefer mesh endpoint over direct endpoint', () => {
+        const componentConfigs = {
+            'eds-storefront': {
+                ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://direct.example.com/graphql',
+            },
+        };
+
+        const result = extractConfigParamsFromConfigs(
+            componentConfigs,
+            'https://mesh.example.com/graphql', // mesh endpoint
+        );
+
+        expect(result.commerceEndpoint).toBe('https://mesh.example.com/graphql');
+    });
+
+    it('should extract all store codes from config', () => {
+        const componentConfigs = {
+            'eds-storefront': {
+                ADOBE_COMMERCE_STORE_CODE: 'us_store',
+                ADOBE_COMMERCE_STORE_VIEW_CODE: 'en_us',
+                ADOBE_COMMERCE_WEBSITE_CODE: 'us_website',
+                ADOBE_COMMERCE_CUSTOMER_GROUP: 'b2c_group',
+            },
+        };
+
+        const result = extractConfigParamsFromConfigs(componentConfigs, undefined, 'adobe-commerce-paas');
+
+        expect(result.storeCode).toBe('us_store');
+        expect(result.storeViewCode).toBe('en_us');
+        expect(result.websiteCode).toBe('us_website');
+        expect(result.customerGroup).toBe('b2c_group');
+    });
+
+    it('should extract AEM Assets enabled from config', () => {
+        const componentConfigs = {
+            'eds-storefront': {
+                AEM_ASSETS_ENABLED: 'true',
+            },
+        };
+
+        const result = extractConfigParamsFromConfigs(componentConfigs, undefined, 'adobe-commerce-paas');
+
+        expect(result.aemAssetsEnabled).toBe(true);
+    });
+
+    // Regression, both environments: when the wizard populates
+    // componentConfigs the store scope lands under the MESH component, not
+    // 'eds-storefront'. Each row asserts the entire returned params object —
+    // the environment fork decides which keys are read AND which are dropped,
+    // so a per-key assertion cannot see half of what the fork does.
+    it.each<[string, Record<string, Record<string, string>>, string, Partial<ConfigGeneratorParams>]>([
+        [
+            'ACCS reads the scope off eds-accs-mesh and drops the PaaS-only fields',
+            {
+                'eds-storefront': { AEM_ASSETS_ENABLED: 'true' },
+                'eds-accs-mesh': {
+                    ACCS_STORE_VIEW_CODE: 'citisignal_us',
+                    ACCS_STORE_CODE: 'citisignal_store',
+                    ACCS_WEBSITE_CODE: 'citisignal',
+                    ACCS_CUSTOMER_GROUP: 'citisignal_group',
+                    ACCS_GRAPHQL_ENDPOINT: 'https://accs.example.com/graphql',
+                },
+            },
+            'adobe-commerce-accs',
+            {
+                environmentType: 'accs',
+                commerceEndpoint: 'https://accs.example.com/graphql',
+                catalogServiceEndpoint: undefined,
+                commerceApiKey: undefined,
+                commerceEnvironmentId: undefined,
+                storeViewCode: 'citisignal_us',
+                storeCode: 'citisignal_store',
+                websiteCode: 'citisignal',
+                customerGroup: 'citisignal_group',
+                aemAssetsEnabled: true,
+            },
+        ],
+        [
+            'PaaS reads the scope off eds-commerce-mesh',
+            {
+                'eds-storefront': { AEM_ASSETS_ENABLED: 'false' },
+                'eds-commerce-mesh': {
+                    ADOBE_COMMERCE_STORE_VIEW_CODE: 'default',
+                    ADOBE_COMMERCE_STORE_CODE: 'main_website_store',
+                    ADOBE_COMMERCE_WEBSITE_CODE: 'base',
+                    ADOBE_COMMERCE_CUSTOMER_GROUP: 'hash123',
+                },
+            },
+            'adobe-commerce-paas',
+            {
+                environmentType: 'paas',
+                commerceEndpoint: undefined,
+                catalogServiceEndpoint: undefined,
+                commerceApiKey: undefined,
+                commerceEnvironmentId: undefined,
+                storeViewCode: 'default',
+                storeCode: 'main_website_store',
+                websiteCode: 'base',
+                customerGroup: 'hash123',
+                aemAssetsEnabled: false,
+            },
+        ],
+    ])('%s', (_label, componentConfigs, backendComponentId, expected) => {
+        expect(
+            extractConfigParamsFromConfigs(componentConfigs, undefined, backendComponentId),
+        ).toStrictEqual(expected);
+    });
+});

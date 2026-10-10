@@ -39,7 +39,7 @@ import {
     repairSiteConfig,
     type RepairSiteConfigResult,
 } from '@/features/eds/services/configService/repairSiteConfigHeadless';
-import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveTokenProviders';
 import { resolveStorefrontConfig } from '@/features/eds/services/reset/edsResetParams';
 import {
     findStorefrontNameMismatch,

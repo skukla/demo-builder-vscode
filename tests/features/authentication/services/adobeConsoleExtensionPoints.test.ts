@@ -13,7 +13,7 @@
 import { AdobeConsoleExtensionPoints } from '@/features/authentication/services/adobeConsoleExtensionPoints';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
-import { TARGET } from './adobeConsoleProjectOps.testUtils';
+import { TARGET } from './adobeConsoleWorkspaceOps.testUtils';
 import { READ_ONLY_PROJECT_REFUSAL } from '../../../helpers/adobeConsoleRefusals';
 import { ADMIN_UI_POINT, ONLY_OTHER, OTHER_POINT, TWO_POINTS } from '../../../helpers/workspaceEndpointsFixtures';
 

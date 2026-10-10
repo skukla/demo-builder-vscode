@@ -591,16 +591,6 @@ export type GitHubErrorCode =
     | 'UNKNOWN';
 
 /**
- * Error codes for DA.live operations
- */
-export type DaLiveErrorCode =
-    | 'ACCESS_DENIED'
-    | 'NETWORK_ERROR'
-    | 'TIMEOUT'
-    | 'NOT_FOUND'
-    | 'UNKNOWN';
-
-/**
  * Error codes for Helix operations
  */
 export type HelixErrorCode =

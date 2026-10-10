@@ -19,133 +19,40 @@
  */
 
 import type { Project } from '@/types/base';
-
-const mockRm = jest.fn();
-const mockReaddir = jest.fn();
-jest.mock('fs/promises', () => ({
-    rm: (...a: unknown[]) => mockRm(...a),
-    readdir: (...a: unknown[]) => mockReaddir(...a),
-}));
-
-const mockGetFrontends = jest.fn();
-const mockGetDependencies = jest.fn();
-const mockGetComponentById = jest.fn();
-const mockLoadRegistry = jest.fn();
-const mockGetComponentRegistryManager = jest.fn((..._a: unknown[]) => ({
-    loadRegistry: mockLoadRegistry,
-    getFrontends: mockGetFrontends,
-    getDependencies: mockGetDependencies,
-    getComponentById: mockGetComponentById,
-}));
-jest.mock('@/features/components/services/componentRegistryInstance', () => ({
-    getComponentRegistryManager: (...a: unknown[]) => mockGetComponentRegistryManager(...a),
-}));
-
-const mockGetStackById = jest.fn();
-jest.mock('@/features/components/services/demoPackageLoader', () => ({
-    getStackById: (...a: unknown[]) => mockGetStackById(...a),
-}));
-
-const mockCloneAllComponents = jest.fn();
-const mockInstallAllComponents = jest.fn();
-jest.mock('@/features/project-creation/services/componentInstallationOrchestrator', () => ({
-    cloneAllComponents: (...a: unknown[]) => mockCloneAllComponents(...a),
-    installAllComponents: (...a: unknown[]) => mockInstallAllComponents(...a),
-}));
-
-const mockRegenerateProjectEnvFiles = jest.fn();
-jest.mock('@/features/project-creation/helpers/envFileGenerator', () => ({
-    regenerateProjectEnvFiles: (...a: unknown[]) => mockRegenerateProjectEnvFiles(...a),
-}));
-
-// No mesh component by default: the mesh leg has its own suite
-// (projectResetService-meshContext). One test here flips it on to pin the
-// early return and the success wording.
-const mockGetMeshComponentInstance = jest.fn();
-jest.mock('@/types/typeGuards', () => ({
-    getMeshComponentInstance: (...a: unknown[]) => mockGetMeshComponentInstance(...a),
-}));
-const mockEnsureProjectAdobeContext = jest.fn();
-jest.mock('@/features/authentication/services/ensureProjectAdobeContext', () => ({
-    ensureProjectAdobeContext: (...a: unknown[]) => mockEnsureProjectAdobeContext(...a),
-}));
-const mockWithOrgContext = jest.fn((_t: unknown, fn: () => Promise<unknown>) => fn());
-jest.mock('@/core/shell/orgContextEnv', () => ({
-    ...jest.requireActual('@/core/shell/orgContextEnv'),
-    withOrgContext: (t: unknown, fn: () => Promise<unknown>) => mockWithOrgContext(t, fn),
-}));
-const mockDeployMeshCreateOrUpdate = jest.fn();
-jest.mock('@/features/mesh/services/meshRedeploy', () => ({
-    deployMeshCreateOrUpdate: (...a: unknown[]) => mockDeployMeshCreateOrUpdate(...a),
-}));
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
-    updateMeshState: jest.fn(),
-}));
-
-const mockSleep = jest.fn(async (..._a: unknown[]) => undefined);
-jest.mock('@/core/utils/sleep', () => ({ sleep: (...a: unknown[]) => mockSleep(...a) }));
-
-import * as vscode from 'vscode';
-import {
-    executeProjectReset,
-    resetProjectWithUI,
-} from '@/features/lifecycle/services/projectResetService';
 import {
     FRONTEND_DEF,
     MESH_DEF,
-    DECOY_FRONTEND,
-    DECOY_DEP,
     REGISTRY,
     STACK,
     authManager,
     commandManager,
     createResetHandlerContext,
     createResetProject,
-} from './projectResetService.testUtils';
+    executeCommand,
+    executeProjectReset,
+    handedDefinitions,
+    installResetDefaults,
+    mockCloneAllComponents,
+    mockDeployMeshCreateOrUpdate,
+    mockGetComponentById,
+    mockGetComponentRegistryManager,
+    mockGetDependencies,
+    mockGetFrontends,
+    mockGetMeshComponentInstance,
+    mockGetStackById,
+    mockInstallAllComponents,
+    mockReaddir,
+    mockRegenerateProjectEnvFiles,
+    mockRm,
+    mockSleep,
+    progressReport,
+    run,
+    showErrorMessage,
+    showWarningMessage,
+    withProgress,
+} from './projectResetService-resetWithUI.testUtils';
 
-const showWarningMessage = vscode.window.showWarningMessage as jest.Mock;
-const showErrorMessage = vscode.window.showErrorMessage as jest.Mock;
-const withProgress = vscode.window.withProgress as jest.Mock;
-const executeCommand = vscode.commands.executeCommand as jest.Mock;
-
-function run(project = createResetProject(), context = createResetHandlerContext(), logPrefix?: string) {
-    return resetProjectWithUI({ project, context, logPrefix, commandManager, authManager });
-}
-
-/** The definitions the orchestrator was handed, as a plain object for `toEqual`. */
-function handedDefinitions(): Record<string, unknown> {
-    const ctx = mockCloneAllComponents.mock.calls[0][0] as {
-        componentDefinitions: Map<string, unknown>;
-    };
-    return Object.fromEntries(ctx.componentDefinitions);
-}
-
-let progressReport: jest.Mock;
-
-beforeEach(() => {
-    jest.clearAllMocks();
-    progressReport = jest.fn();
-    withProgress.mockImplementation(async (_o: unknown, task: (p: unknown) => Promise<unknown>) =>
-        task({ report: progressReport }),
-    );
-    showWarningMessage.mockResolvedValue('Reset Project');
-    mockRm.mockResolvedValue(undefined);
-    mockReaddir.mockResolvedValue([]);
-    mockLoadRegistry.mockResolvedValue(REGISTRY);
-    mockGetStackById.mockReturnValue(STACK);
-    mockGetFrontends.mockResolvedValue([DECOY_FRONTEND, FRONTEND_DEF]);
-    mockGetDependencies.mockResolvedValue([DECOY_DEP, MESH_DEF]);
-    mockGetComponentById.mockResolvedValue(undefined);
-    mockCloneAllComponents.mockResolvedValue(undefined);
-    mockInstallAllComponents.mockResolvedValue(undefined);
-    mockRegenerateProjectEnvFiles.mockResolvedValue(undefined);
-    mockGetMeshComponentInstance.mockReturnValue(undefined);
-    mockEnsureProjectAdobeContext.mockResolvedValue({ ready: true });
-    mockDeployMeshCreateOrUpdate.mockResolvedValue({
-        success: true,
-        data: { endpoint: 'https://mesh.example/graphql' },
-    });
-});
+beforeEach(installResetDefaults);
 
 describe('resetProjectWithUI — the gate and the demo stop', () => {
     it('asks the SC with a modal naming the project, and does nothing when they decline', async () => {

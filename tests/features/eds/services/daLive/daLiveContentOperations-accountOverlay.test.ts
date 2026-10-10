@@ -7,10 +7,8 @@
  * the already-copied brand content — pulled live from the public CDN, no fork.
  */
 
-import {
-    DaLiveContentOperations,
-    type TokenProvider,
-} from '@/features/eds/services/daLive/daLiveContentOperations';
+import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { type TokenProvider } from '@/features/eds/services/daLive/daLiveApiClient';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
@@ -63,7 +61,7 @@ describe('overlayAccountChrome', () => {
             return notFound();
         });
 
-        const result = await service.overlayAccountChrome({ org: accountOrg, site: accountSite }, destOrg, destSite);
+        const result = await service.copyOps.overlayAccountChrome({ org: accountOrg, site: accountSite }, destOrg, destSite);
 
         expect(result.copiedFiles).toContain('/customer/account');
         expect(result.copiedFiles).toContain('/customer/nav');
@@ -83,14 +81,14 @@ describe('overlayAccountChrome', () => {
             return notFound();
         });
 
-        const result = await service.overlayAccountChrome({ org: accountOrg, site: accountSite }, destOrg, destSite);
+        const result = await service.copyOps.overlayAccountChrome({ org: accountOrg, site: accountSite }, destOrg, destSite);
         expect(result.copiedFiles).toEqual(['/customer/account']);
         expect(result.copiedFiles).not.toContain('/customer/login');
     });
 
     it('no-ops cleanly when the account source has no auth pages', async () => {
         mockFetch.mockImplementation(async () => notFound());
-        const result = await service.overlayAccountChrome({ org: accountOrg, site: accountSite }, destOrg, destSite);
+        const result = await service.copyOps.overlayAccountChrome({ org: accountOrg, site: accountSite }, destOrg, destSite);
         expect(result).toEqual({ success: true, copiedFiles: [], failedFiles: [], totalFiles: 0 });
         expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('no auth pages found'));
     });

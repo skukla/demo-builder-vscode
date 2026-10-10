@@ -14,7 +14,7 @@
  *   `get-export-items` refuses it and needs the REST base URL, because the
  *   deployment config that enables the id shorthand is not set for that action.
  *   {@link deriveRestBaseUrl} produces the second from the project.
- * - **`verbose` is mandatory**, enforced in the write client: without it a
+ * - **`verbose` is mandatory**, enforced in the export client: without it a
  *   failed export returns an all-zero summary and no reason at all.
  * - **A failed export is a VERDICT**, not a failed call — `success: true` with
  *   the per-type reasons in `data`, matching the dry run's shape.
@@ -26,30 +26,16 @@
  * @module features/data-installer/handlers/exportHandlers
  */
 
-import { canProvisionAccsCredentials } from '../services/accsProvisionEligibility';
-import { resolveProjectCredentials } from '../services/commerceCredentialBroker';
 import {
-    DataInstallerWriteClient,
+    DataInstallerExportClient,
     type ExportRequest,
     type ExportOutcome,
-} from '../services/dataInstallerWriteClient';
-import { resolveDataInstallerAccess } from './dataInstallerHandlers';
+} from '../services/dataInstallerExportClient';
+import { resolveDatapackWriteAccess } from './datapackWriteGate';
 import { ACCS_GRAPHQL_ENDPOINT, PAAS_URL } from '@/core/config/envVarKeys';
 import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
-
-/** Wording for each credential gap, mirroring the import spine's. */
-const CREDENTIAL_MESSAGES: Record<string, string> = {
-    'missing-paas-admin':
-        'This project has no Commerce admin username and password saved, so an export cannot authenticate.',
-    'needs-accs-credentials':
-        'ACCS exports need an Adobe OAuth Server-to-Server client id and secret, and the shared credential service did not supply one. Add the pair to this project, or ask an administrator for access to the shared credential.',
-    'unsupported-backend':
-        'This project has no Adobe Commerce backend, so there is nothing to export from.',
-    'no-credential-service':
-        'ACCS exports need an Adobe OAuth Server-to-Server client id and secret, and no shared credential service is configured to supply one. Add a service under demoBuilder.accsDiscovery.services, or add the pair to this project.',
-};
 
 export const exportHandlers = defineHandlers({
     /**
@@ -94,7 +80,7 @@ export const exportHandlers = defineHandlers({
      *
      * A failed export is a VERDICT, not a failed call: `success: true` with the
      * per-type reasons in `data`, the same shape the dry run uses. The reason
-     * only exists because the client asks for `verbose` — see the write client.
+     * only exists because the client asks for `verbose` — see the export client.
      */
     'start-datapack-export': async (
         context: HandlerContext,
@@ -170,7 +156,7 @@ async function prepareExport(
     context: HandlerContext,
     payload: ExportPayload | undefined,
 ): Promise<
-    { writeClient: DataInstallerWriteClient; request: ExportRequest } | { response: HandlerResponse }
+    { writeClient: DataInstallerExportClient; request: ExportRequest } | { response: HandlerResponse }
 > {
     const name = payload?.datapackName;
     const version = payload?.version;
@@ -191,45 +177,23 @@ async function prepareExport(
         return { response: { success: false, error: 'Select at least one data type to export.' } };
     }
 
-    const access = await resolveDataInstallerAccess(context);
-    if (!access.ok) {
-        return { response: access.response };
-    }
-    const project = await context.stateManager.getCurrentProject();
-    if (!project) {
-        return { response: { success: false, error: 'Open a project before exporting.' } };
-    }
-
-    const credentials = await resolveProjectCredentials(context, project);
-    if (!credentials.ok) {
-        return {
-            response: {
-                success: false,
-                error: CREDENTIAL_MESSAGES[credentials.reason] ?? 'Commerce credentials are missing.',
-                code: ErrorCode.INVALID_OPERATION,
-                // Gated on the Adobe binding for the same reason the import
-                // spine is: the offer must lead somewhere.
-                data: {
-                    needsAccsCredentials:
-                        credentials.reason === 'needs-accs-credentials' &&
-                        canProvisionAccsCredentials(project.adobe),
-                },
-            },
-        };
+    const gate = await resolveDatapackWriteAccess(context, 'export');
+    if ('response' in gate) {
+        return gate;
     }
 
     return {
-        writeClient: new DataInstallerWriteClient({
-            baseUrl: access.baseUrl,
-            getToken: access.getToken,
+        writeClient: new DataInstallerExportClient({
+            baseUrl: gate.baseUrl,
+            getToken: gate.getToken,
             log: (line) => context.debugLogger.debug(`[Data Installer] ${line}`),
         }),
         request: {
             id: { name, version },
             commerceInstance,
-            restBaseUrl: deriveRestBaseUrl(project.componentConfigs ?? {}),
+            restBaseUrl: deriveRestBaseUrl(gate.project.componentConfigs ?? {}),
             dataTypes,
-            credentials: credentials.credentials,
+            credentials: gate.credentials,
             ...(payload?.selections ? { selections: payload.selections } : {}),
         },
     };

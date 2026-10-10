@@ -121,7 +121,7 @@ export async function ensureMeshApiSubscribed(
     }
 
     const client = createApiSubscriberClient(authService);
-    const cachedOrg = authService.getCachedOrganization();
+    const cachedOrg = authService.getCacheManager().getCachedOrganization();
     const orgTarget = buildOrgTargetFromProjectAdobe(project.adobe, cachedOrg);
 
     logger.info('[Mesh Subscribe] Subscribing required APIs before mesh deploy');

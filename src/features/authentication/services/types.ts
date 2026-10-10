@@ -1,8 +1,8 @@
 /**
  * Shared types for authentication module
  *
- * Note: Adobe entity types (Organization, Project, Workspace, AdobeContext) are defined
- * in src/core/ui/types/index.ts and re-exported here for backward compatibility.
+ * Note: Adobe entity types (Organization, Project, Workspace) are defined in
+ * src/types/webview.ts and re-exported here for backward compatibility.
  */
 
 import type { CloudGrouping } from '@/types/adobeApis';
@@ -77,20 +77,12 @@ export interface AdobeContext {
     workspace?: string | { id: string; name: string; title?: string };
 }
 
-export interface AdobeConsoleWhereResponse {
-    org?: string | { id: string; name: string; code: string };
-    project?:
-        | string
-        | {
-              id: string;
-              name: string;
-              title?: string;
-              description?: string;
-              type?: string;
-              org_id?: string;
-          };
-    workspace?: string | { id: string; name: string; title?: string };
-}
+/**
+ * What `aio console where` prints: the same three selections as
+ * {@link AdobeContext}, each either an id string or the entity. One body, two
+ * names, so the parsed CLI answer and the resolver's context cannot drift apart.
+ */
+export type AdobeConsoleWhereResponse = AdobeContext;
 
 export interface SDKResponse<T = unknown> {
     body?: T;

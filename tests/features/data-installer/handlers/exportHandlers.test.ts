@@ -17,7 +17,7 @@
 import * as vscode from 'vscode';
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
 import { resolveCommerceCredentials } from '@/features/data-installer/services/commerceCredentials';
-import { DataInstallerWriteClient } from '@/features/data-installer/services/dataInstallerWriteClient';
+import { DataInstallerExportClient } from '@/features/data-installer/services/dataInstallerExportClient';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
@@ -34,7 +34,7 @@ import { createMockAuthenticationService } from '../../../helpers/authentication
 jest.mock('@/features/data-installer/services/commerceCredentials', () => ({
     resolveCommerceCredentials: jest.fn(),
 }));
-jest.mock('@/features/data-installer/services/dataInstallerWriteClient');
+jest.mock('@/features/data-installer/services/dataInstallerExportClient');
 jest.mock('@/features/data-installer/services/importJobRunner', () => ({
     watchImportJob: jest.fn(),
     IMPORT_POLL: { maxAttempts: 120, timeout: 600_000 },
@@ -43,7 +43,7 @@ jest.mock('@/features/data-installer/services/importJobRunner', () => ({
 const mockedCredentials = resolveCommerceCredentials as jest.MockedFunction<
     typeof resolveCommerceCredentials
 >;
-const MockedClient = DataInstallerWriteClient as jest.MockedClass<typeof DataInstallerWriteClient>;
+const MockedClient = DataInstallerExportClient as jest.MockedClass<typeof DataInstallerExportClient>;
 
 const ACCS_ENDPOINT = 'https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/graphql';
 
@@ -120,7 +120,7 @@ beforeEach(() => {
     listExportItems = jest.fn().mockResolvedValue({ items: [], totalCount: 0, excludedCount: 0 });
     startExport = jest.fn().mockResolvedValue({ success: true, perType: [] });
     MockedClient.mockImplementation(
-        () => ({ listExportItems, startExport }) as unknown as DataInstallerWriteClient
+        () => ({ listExportItems, startExport }) as unknown as DataInstallerExportClient
     );
 });
 
@@ -256,6 +256,20 @@ describe('start-datapack-export', () => {
         expect(harness.logger.warn).not.toHaveBeenCalled();
     });
 
+    /** A failure with no per-type entry would otherwise leave no trace at all. */
+    it('warns when a failed export names no data type, and not when a success names none', async () => {
+        startExport.mockResolvedValue({ success: false, perType: [] });
+        const failed = makeImportHarness();
+        await importHandlers['start-datapack-export'](failed, PAYLOAD);
+
+        startExport.mockResolvedValue({ success: true, perType: [] });
+        const succeeded = makeImportHarness();
+        await importHandlers['start-datapack-export'](succeeded, PAYLOAD);
+
+        expect(failed.logger.warn).toHaveBeenCalledTimes(1);
+        expect(succeeded.logger.warn).not.toHaveBeenCalled();
+    });
+
     it('refuses when the project has no usable Commerce credentials', async () => {
         mockedCredentials.mockResolvedValue({ ok: false, reason: 'needs-accs-credentials' });
 
@@ -352,7 +366,7 @@ describe('prepareExport guards', () => {
         expect(startExport).not.toHaveBeenCalled();
     });
 
-    it('builds the write client against the configured API base URL', async () => {
+    it('builds the export client against the configured API base URL', async () => {
         await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
 
         expect(MockedClient).toHaveBeenCalledWith(

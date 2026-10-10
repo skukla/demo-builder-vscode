@@ -40,10 +40,8 @@ const JWT_LITERAL = /eyJ[A-Za-z0-9_-]{12,}/g;
 
 const JWT_CEILINGS: Record<string, number> = {
     'tests/core/validation/securityValidation-network.test.ts': 6,
-    'tests/features/eds/handlers/daLive/daLiveAuthPrompt-tokenStrict.test.ts': 2,
     'tests/features/eds/handlers/edsHelpers.test.ts': 3,
     'tests/features/eds/services/configService/configurationService.testUtils.ts': 1,
-    'tests/features/eds/services/daLive/daLiveAuthService-parseJwt.test.ts': 2,
 };
 
 /**

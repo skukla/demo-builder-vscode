@@ -1,16 +1,10 @@
-import { View, Flex, Heading, Button, Text } from '@adobe/react-spectrum';
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { loadStacks } from '../helpers/brandStackLoader';
-import { getPackageById, getSelectablePackages } from '../helpers/demoPackageLoader';
-import {
-    filterComponentConfigsForStackChange,
-    buildStackChangeStateReset,
-} from '../helpers/stackHelpers';
-import { addedDemoCards, withAddedDemo } from './addedDemoCards';
+import { View, Heading, Text } from '@adobe/react-spectrum';
+import React, { useEffect, useRef } from 'react';
+import { buildArchitectureChangeHandler } from './architectureChange';
 import { buildAreaWalk } from './buildAreaWalk';
+import { WizardFooter } from './wizardFooter';
 import {
     getCompletedStepIndices,
-    getNextButtonText,
     getNavigationDirection,
     shouldShowWizardFooter,
     getWizardTitle,
@@ -19,31 +13,22 @@ import {
 import { renderWizardStep } from './wizardStepRouter';
 import { ErrorBoundary } from '@/core/ui/components/ErrorBoundary';
 import { LoadingOverlay } from '@/core/ui/components/feedback/LoadingOverlay';
-import { PageFooter } from '@/core/ui/components/layout/PageFooter';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { TimelineNav, TimelineStep } from '@/core/ui/components/TimelineNav';
 import { useFocusTrap } from '@/core/ui/hooks/useFocusTrap';
 import { cn } from '@/core/ui/utils/classNames';
-import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { usePackageCards, useWizardCatalog } from '@/features/project-creation/ui/hooks/useWizardCatalog';
+import { useWizardSettings } from '@/features/project-creation/ui/hooks/useWizardSettings';
 import { useMessageListeners } from '@/features/project-creation/ui/wizard/hooks/useMessageListeners';
 import { useWizardEffects } from '@/features/project-creation/ui/wizard/hooks/useWizardEffects';
 import { useWizardNavigation } from '@/features/project-creation/ui/wizard/hooks/useWizardNavigation';
 import { useWizardState } from '@/features/project-creation/ui/wizard/hooks/useWizardState';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
-import type { DemoPackage } from '@/types/demoPackages';
-import { ADDED_DEMO_ID_PREFIX, type AddedDemo } from '@/types/projectFile';
-import type { Stack } from '@/types/stacks';
+import type { AddedDemo } from '@/types/projectFile';
 import { ComponentSelection } from '@/types/webview';
-import type {
-    AddedDemosUpdatedPayload,
-    BlockLibraryDefaultsUpdatedPayload,
-    CustomBlockLibraryDefaultsUpdatedPayload,
-} from '@/types/webviewPayloads';
 import type { EditProjectConfig, ImportedSettings, WizardStepDefinition } from '@/types/wizard';
-
-// Extracted hooks
 
 const log = webviewLogger('WizardContainer');
 
@@ -78,55 +63,19 @@ export function WizardContainer({
     customBlockLibraryDefaults: initialCustomBlockLibraryDefaults,
     addedDemos: initialAddedDemos = NO_ADDED_DEMOS,
 }: WizardContainerProps) {
-    // Block-library defaults — live state, refreshed when VS Code settings change.
-    // The Project Builder step pre-selects built-in libs (`blockLibraryDefaults`)
-    // and seeds the custom block-library checkboxes (`customBlockLibraryDefaults`).
-    const [blockLibraryDefaults, setBlockLibraryDefaults] = useState(initialBlockLibraryDefaults);
-    const [customBlockLibraryDefaults, setCustomBlockLibraryDefaults] = useState(
-        initialCustomBlockLibraryDefaults,
-    );
-    // The remembered demos, in the same shape: read at open, pushed live on change,
-    // and appended optimistically when the dialog adds one (the push then echoes it).
-    const [addedDemos, setAddedDemos] = useState<AddedDemo[]>(initialAddedDemos);
-
-    useEffect(() => {
-        const unsubDefaults = vscode.onMessage(
-            'blockLibraryDefaultsUpdated',
-            (data: BlockLibraryDefaultsUpdatedPayload) => {
-                setBlockLibraryDefaults(data.blockLibraryDefaults);
-            },
-        );
-        const unsubCustom = vscode.onMessage(
-            'customBlockLibraryDefaultsUpdated',
-            (data: CustomBlockLibraryDefaultsUpdatedPayload) => {
-                setCustomBlockLibraryDefaults(data.customBlockLibraryDefaults);
-            },
-        );
-        const unsubDemos = vscode.onMessage('addedDemosUpdated', (data: AddedDemosUpdatedPayload) => {
-            setAddedDemos(data.addedDemos);
+    // The three VS Code settings the wizard keeps live (block-library defaults,
+    // custom libraries, added demos); see the hook for what each feeds.
+    const { blockLibraryDefaults, customBlockLibraryDefaults, addedDemos, handleDemoAdded } =
+        useWizardSettings({
+            blockLibraryDefaults: initialBlockLibraryDefaults,
+            customBlockLibraryDefaults: initialCustomBlockLibraryDefaults,
+            addedDemos: initialAddedDemos,
         });
-        return () => {
-            unsubDefaults();
-            unsubCustom();
-            unsubDemos();
-        };
-    }, []);
 
     // Packages and stacks - loaded once on mount
     // NOTE: Must be declared BEFORE useWizardState so stacks can be passed for step filtering
-    const [packages, setPackages] = useState<DemoPackage[]>([]);
-    const [stacks, setStacks] = useState<Stack[]>([]);
-    // Distinguishes "no packages yet" from "loaded, and this one is absent" —
-    // the hidden-package effect below cannot tell them apart from an empty array,
-    // and without this it fires a lookup for EVERY project before the list lands.
-    const [packagesLoaded, setPackagesLoaded] = useState(false);
-    useEffect(() => {
-        getSelectablePackages().then((loaded) => {
-            setPackages(loaded);
-            setPackagesLoaded(true);
-        });
-        loadStacks().then(setStacks);
-    }, []);
+    const catalog = useWizardCatalog();
+    const { packages, stacks } = catalog;
 
     // State management hook
     // Receives stacks for dynamic step filtering based on selectedStack
@@ -160,59 +109,10 @@ export function WizardContainer({
         stacks,
     });
 
-    /**
-     * A project already ON a hidden package must still see it.
-     *
-     * `getSelectablePackages()` above drops anything marked `hidden`, which is
-     * right for the NEW-project picker and wrong for a project that already uses
-     * one: Configure rendered no brand at all, so the project appeared to have
-     * lost its package. `demoPackageLoader`'s own docstring already states the
-     * rule — "a hidden package must still resolve by id so existing projects keep
-     * working" — the wizard just never applied it.
-     *
-     * Appends only the CURRENT package, never every hidden one: hidden still
-     * means "not selectable", so this restores what the project has without
-     * offering a switch to something unreleased.
-     *
-     * Separate from the mount effect because `packages` loads before
-     * `useWizardState` runs (stacks feed step filtering), so `state` does not
-     * exist up there.
-     */
-    const currentPackageId = state.selectedPackage;
-    useEffect(() => {
-        // Wait for the selectable list — an empty `packages` on first render is
-        // "not loaded", not "absent", and acting on it looks up every project's
-        // package needlessly. A control test caught exactly that.
-        if (!packagesLoaded || !currentPackageId) return;
-        // An added demo's card comes from its row, never from the catalog.
-        if (currentPackageId.startsWith(ADDED_DEMO_ID_PREFIX)) return;
-        if (packages.some((p) => p.id === currentPackageId)) return;
-        let cancelled = false;
-        void getPackageById(currentPackageId).then((own) => {
-            if (!cancelled && own) {
-                setPackages((prev) => (prev.some((p) => p.id === own.id) ? prev : [...prev, own]));
-            }
-        });
-        return () => {
-            cancelled = true;
-        };
-    }, [currentPackageId, packages, packagesLoaded]);
-
-    // The grid's cards: the shipped catalog, then the remembered demos (`addedDemoCards`
-    // says which, and why a project's own row survives a removed setting).
-    const addedDemoPackages = useMemo(
-        () => addedDemoCards(addedDemos, state.demo, state.selectedStack),
-        [addedDemos, state.demo, state.selectedStack],
-    );
-    const allPackages = useMemo(
-        () => (addedDemoPackages.length === 0 ? packages : [...packages, ...addedDemoPackages]),
-        [packages, addedDemoPackages],
-    );
-
-    /** The dialog added (and the host remembered) a demo: show its card at once. */
-    const handleDemoAdded = useCallback((demo: AddedDemo): void => {
-        setAddedDemos((prev) => withAddedDemo(prev, demo));
-    }, []);
+    // The grid's cards: the shipped catalog, the project's own hidden package if it
+    // is on one, then the remembered demos. Below useWizardState because it reads
+    // `state.selectedPackage` (see the hook for why the lookup is separate).
+    const allPackages = usePackageCards({ catalog, addedDemos, state });
 
     // Reconcile committed custom library selections against current settings.
     // Runs on mount (edit mode may have stale saved libraries) and when
@@ -273,55 +173,13 @@ export function WizardContainer({
         setComponentsData,
     });
 
-    /**
-     * Called when user changes architecture (stack) on WelcomeStep
-     * Intelligently filters dependent state based on component overlap between stacks
-     *
-     * Components REMOVED by the new stack → Clear their configs
-     * Components RETAINED in the new stack → Keep their configs
-     * Components NEW in the new stack → Will be initialized with defaults later
-     *
-     * Note: Import mode fast-forward is controlled by comparing state.selectedStack
-     * with importedSettings.selectedStack - no flag needed.
-     */
-    const handleArchitectureChange = (oldStackId: string, newStackId: string) => {
-        log.info(`Architecture changed: ${oldStackId} → ${newStackId}`);
-
-        // Find the old and new stack definitions
-        const oldStack = stacks?.find((s) => s.id === oldStackId);
-        const newStack = stacks?.find((s) => s.id === newStackId);
-
-        if (!newStack) {
-            log.warn(`New stack not found: ${newStackId}`);
-            return;
-        }
-
-        // Filter component configs - retain configs for components that exist in both stacks
-        const filteredConfigs = filterComponentConfigsForStackChange(
-            oldStack,
-            newStack,
-            state.componentConfigs || {},
-        );
-
-        log.info(
-            `Retained configs for components: ${Object.keys(filteredConfigs).join(', ') || 'none'}`,
-        );
-
-        // Stack change resets all steps except welcome (user must re-traverse)
-        // Consistent behavior across all wizard modes (create, import, edit)
-        setCompletedSteps(['welcome']);
-
-        // Update state with filtered configs
-        // Clear EDS-specific state since it's architecture-dependent
-        // Preserve: projectName, selectedBrand, Adobe auth/org (still valid)
-        setState((prev) => ({
-            ...prev,
-            componentConfigs: filteredConfigs,
-            // Clear architecture-dependent EDS state/caches AND the cached config-tile
-            // validity verdicts, so a stale ✓ tile can't survive a stack change.
-            ...buildStackChangeStateReset(),
-        }));
-    };
+    // The stack-change handler WelcomeStep receives (the single choke point).
+    const handleArchitectureChange = buildArchitectureChangeHandler({
+        stacks,
+        componentConfigs: state.componentConfigs,
+        setCompletedSteps,
+        setState,
+    });
 
     // Configuration error check - AFTER all hooks to comply with Rules of Hooks
     if (WIZARD_STEPS.length === 0) {
@@ -450,45 +308,17 @@ export function WizardContainer({
 
                     {/* Footer - hidden on project-creation, mesh-deployment (own buttons) */}
                     {shouldShowWizardFooter(isLastStep, state.currentStep) && (
-                        <PageFooter
-                            leftContent={
-                                <Button
-                                    variant="secondary"
-                                    onPress={handleCancel}
-                                    isQuiet
-                                    isDisabled={isConfirmingSelection}
-                                >
-                                    Cancel
-                                </Button>
-                            }
-                            rightContent={
-                                <Flex gap="size-100">
-                                    {canGoBack && (
-                                        <Button
-                                            variant="secondary"
-                                            onPress={handleBack}
-                                            isQuiet
-                                            isDisabled={isConfirmingSelection}
-                                        >
-                                            Back
-                                        </Button>
-                                    )}
-                                    <Button
-                                        variant="accent"
-                                        onPress={handleNext}
-                                        isDisabled={!canProceed || isConfirmingSelection}
-                                    >
-                                        {getNextButtonText(
-                                            isConfirmingSelection,
-                                            currentStepIndex,
-                                            WIZARD_STEPS.length,
-                                            state.wizardMode,
-                                            state.currentStep,
-                                        )}
-                                    </Button>
-                                </Flex>
-                            }
-                            constrainWidth={true}
+                        <WizardFooter
+                            canGoBack={canGoBack}
+                            canProceed={canProceed}
+                            isConfirmingSelection={isConfirmingSelection}
+                            currentStepIndex={currentStepIndex}
+                            stepCount={WIZARD_STEPS.length}
+                            wizardMode={state.wizardMode}
+                            currentStep={state.currentStep}
+                            onCancel={handleCancel}
+                            onBack={handleBack}
+                            onNext={handleNext}
                         />
                     )}
                 </div>

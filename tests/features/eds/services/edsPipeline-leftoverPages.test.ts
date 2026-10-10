@@ -71,15 +71,19 @@ describe('executeEdsPipeline - pages left over after a reset', () => {
         };
         services = pipelineServices({
             daLiveContentOps: {
-                deleteAllSiteContent: jest.fn().mockResolvedValue({
-                    success: true,
-                    deletedCount: 3,
-                    deletedPaths: ['/index.html', '/about.html', '/old-campaign.html'],
-                }),
-                copyContentFromSource: jest
-                    .fn()
-                    .mockResolvedValue({ success: true, totalFiles: 2, copiedFiles: [], failedFiles: [] }),
-                createBlockLibraryFromTemplate: jest.fn(),
+                sourceOps: {
+                    deleteAllSiteContent: jest.fn().mockResolvedValue({
+                        success: true,
+                        deletedCount: 3,
+                        deletedPaths: ['/index.html', '/about.html', '/old-campaign.html'],
+                    }),
+                },
+                copyOps: {
+                    copyContentFromSource: jest
+                        .fn()
+                        .mockResolvedValue({ success: true, totalFiles: 2, copiedFiles: [], failedFiles: [] }),
+                },
+                blockLibOps: { createBlockLibraryFromTemplate: jest.fn() },
             },
             githubFileOps: { getFileContent: jest.fn() },
             helixService: helix as unknown as EdsPipelineServices['helixService'],

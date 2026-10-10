@@ -268,35 +268,9 @@ class WebviewClient {
         };
     }
 
-    // State management
-    public getState<T>(): T | undefined {
-        return this.getApi().getState() as T;
-    }
-
-    public setState<T>(state: T): void {
-        this.getApi().setState(state);
-    }
-
     // Helper methods for common operations
-    public requestValidation(field: string, value: string): void {
-        this.postMessage('validate', { field, value });
-    }
-
-    public reportProgress(step: string, progress: number, message?: string): void {
-        this.postMessage('progress', { step, progress, message });
-    }
-
     public requestAuth(force: boolean = false): void {
         this.postMessage('authenticate', { force });
-    }
-
-
-    public requestProjects(orgId: string): void {
-        this.postMessage('get-projects', { orgId });
-    }
-
-    public reDetectContext(): void {
-        this.postMessage('re-detect-context');
     }
 
     public createProject(config: ProjectCreationConfig): void {

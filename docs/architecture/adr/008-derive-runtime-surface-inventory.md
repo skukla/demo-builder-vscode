@@ -231,7 +231,7 @@ This does not replace either existing mechanism — it strengthens the backstop:
 - **Producer (drift gate)**: `skukla/eds-demo-patches#1` — `scripts/runtime-surfaces/deriveRuntimeSurfaces.mjs`, the per-ledger check in `scripts/lkg-gate.sh`, `b2b/runtime-surfaces.json`, and the `lkg/surface-drift` PR step in `.github/workflows/lkg-gate.yml`
 - **Consumer (fetch + merge)**: `src/features/eds/services/runtimeSurfaceResolver.ts` (`getRuntimeSurfaces` / `mergeRuntimeSurfaces`), called from `src/features/eds/services/daLive/daLiveContentCopy.ts` (`backfillEssentialPaths`)
 - **Static hand list (floor)**: `src/features/eds/services/runtimeSurfaceInventory.ts`
-- **Discovery + orphan seeding**: `src/features/eds/services/daLive/daLiveContentOperations.ts` (`copyContentFromSource`, reference-following)
+- **Discovery + orphan seeding**: `src/features/eds/services/daLive/daLiveContentCopy.ts` (`copyContentFromSource`, reference-following)
 - **Production home for the gate**: `skukla/eds-demo-patches` (`scripts/lkg-gate.sh`) per ADR-006
 - **Subject boilerplate**: `adobe-commerce/boilerplate-b2b-template` @ `160b453e`
 

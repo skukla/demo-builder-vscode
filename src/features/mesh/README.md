@@ -21,14 +21,21 @@ success against a mesh that is still building.
 ## Staleness — the part that is not obvious
 
 The extension cannot ask Adobe "is this the same config?", so it decides locally by
-comparing two things captured at deploy time (`stalenessDetector.ts`):
+comparing two things captured at deploy time. `stalenessDetector.ts` makes the
+decision; each input has its own file:
 
-- **Environment variables** the mesh reads. A changed value means a different mesh
-  even though `mesh.json` is byte-identical.
-- **A hash of the source files** — resolvers, schemas, `mesh.json`.
+- **Environment variables** the mesh reads (`meshEnvVars.ts`). A changed value means
+  a different mesh even though `mesh.json` is byte-identical.
+- **A hash of the source files** (`meshSourceHash.ts`) — resolvers, schemas,
+  `mesh.config.js`.
 
-A project whose recorded state is missing reports `unknownDeployedState` rather than
-guessing. That case is deliberate: telling a user their mesh is current when nobody
+What was deployed is recorded after every deploy and read back by
+`meshDeployBaseline.ts`. A record with no env vars is filled from the live mesh on
+Adobe I/O (`deployedMeshConfig.ts`), after checking the sign-in so no browser opens.
+
+A record with no env vars whose live read fails (signed out, timeout) reports
+`unknownDeployedState` rather than guessing. A project with no record at all reports
+changes, because it has never been deployed. That case is deliberate: telling a user their mesh is current when nobody
 knows is worse than asking them to redeploy.
 
 ## Two accessors, and they are not interchangeable

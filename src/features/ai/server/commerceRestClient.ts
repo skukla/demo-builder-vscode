@@ -249,8 +249,12 @@ export async function resolveRestTargetFor(
     const storeView =
         typeof storeViewArg === 'string' && storeViewArg ? storeViewArg : facts.headers.all?.Store;
     try {
-        const fromConsole = (): Promise<RestCredential> =>
-            authManager.getS2SDeployCredentials(organization, projectId, workspaceId);
+        const fromConsole = async (): Promise<RestCredential> =>
+            (await authManager.getEntityServices()).credentials.getS2SDeployCredentials(
+                organization,
+                projectId,
+                workspaceId,
+            );
         const signed =
             cachedToken(workspaceId) ??
             (await signOnce(workspaceId, () => mintWithSaved(workspaceId, credentials, fromConsole, fetchImpl)));

@@ -28,6 +28,7 @@ import {
 } from '@/features/components/services/demoPackageLoader';
 import type { HandlerContext } from '@/types/handlers';
 import type { StorefrontSetupCompletePayload } from '@/types/webviewPayloads';
+import { poolUnits } from '../../../helpers/authenticationServiceFake';
 
 jest.mock('@/features/project-creation/handlers/executor', () => ({
     executeProjectCreation: jest.fn(async () => undefined),
@@ -138,7 +139,7 @@ export function fakeServer(tool = 'create_project'): FakeServer {
     };
 }
 
-export const authManager = {
+export const authManager = poolUnits({
     isAuthenticated: jest.fn(async () => true),
     getCurrentOrganization: jest.fn(async () => ({ id: 'org-1', name: 'Org' })),
     getCurrentProject: jest.fn(async () => ({ id: 'proj-1', name: 'Proj' })),
@@ -152,7 +153,7 @@ export const authManager = {
             name: 'Stage',
         })
     ),
-};
+});
 
 export const ctxFactory = (): HandlerContext =>
     ({

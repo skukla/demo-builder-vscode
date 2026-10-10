@@ -11,7 +11,7 @@
  * reference-FOLLOWING discovery and never calls this function.
  */
 
-import { extractReferencedPaths } from '@/features/eds/services/daLive/daLiveContentCopy';
+import { extractReferencedPaths } from '@/features/eds/services/daLive/daLiveContentReferences';
 
 describe('extractReferencedPaths', () => {
     const base = 'https://main--boilerplate-b2b--adobe-commerce.aem.live';

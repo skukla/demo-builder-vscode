@@ -208,7 +208,9 @@ export function registerAdobeTools(server: McpToolServer, ctxFactory: () => Hand
             // getWorkspaces has no org/project option, so run it under the stored
             // target's env (mirrors select_workspace). Untargeted when none set.
             try {
-                const workspaces = await runWithAdobeTarget(() => mgr.getWorkspaces());
+                const workspaces = await runWithAdobeTarget(async () =>
+                    (await mgr.getEntityServices()).workspaceReads.getWorkspaces(),
+                );
                 return asText(workspaces.map(lean));
             } catch (err) {
                 // A deleted target answers a bare 404, and a bare 404 is a
@@ -325,7 +327,9 @@ export function registerAdobeTools(server: McpToolServer, ctxFactory: () => Hand
             if (!stored?.projectId) return asText({ error: 'No project selected — call select_project first.' });
             // List workspaces within the stored org/project via env targeting
             // (getWorkspaces has no orgId/projectId option, so wrap it).
-            const workspaces = await withOrgContext(stored, () => mgr.getWorkspaces());
+            const workspaces = await withOrgContext(stored, async () =>
+                (await mgr.getEntityServices()).workspaceReads.getWorkspaces(),
+            );
             const workspace = workspaces.find((w) => w.id === args.workspaceId);
             if (!workspace) {
                 return asText({ error: `Unknown workspaceId: ${args.workspaceId}`, validOptions: workspaces.map(lean) });

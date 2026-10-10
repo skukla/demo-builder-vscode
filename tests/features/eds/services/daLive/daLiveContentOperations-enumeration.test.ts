@@ -42,7 +42,7 @@ describe('DaLiveContentOperations - Content Enumeration', () => {
             // Mock copySingleFile responses (token + per-file copy)
             mockFetch.mockResolvedValue(mockFetchResponse(200));
 
-            const result = await service.copyContentFromSource(
+            const result = await service.copyOps.copyContentFromSource(
                 {
                     org: 'source-org',
                     site: 'source-site',
@@ -71,7 +71,7 @@ describe('DaLiveContentOperations - Content Enumeration', () => {
             // Mock essential config HEAD checks + copy responses
             mockFetch.mockResolvedValue(mockFetchResponse(200));
 
-            const result = await service.copyContentFromSource(
+            const result = await service.copyOps.copyContentFromSource(
                 {
                     org: 'source-org',
                     site: 'source-site',
@@ -98,7 +98,7 @@ describe('DaLiveContentOperations - Content Enumeration', () => {
             // Mock HEAD checks + copy responses
             mockFetch.mockResolvedValue(mockFetchResponse(200));
 
-            const result = await service.copyContentFromSource(
+            const result = await service.copyOps.copyContentFromSource(
                 {
                     org: 'source-org',
                     site: 'source-site',
@@ -123,7 +123,7 @@ describe('DaLiveContentOperations - Content Enumeration', () => {
 
             mockFetch.mockResolvedValue(mockFetchResponse(200));
 
-            await service.copyContentFromSource(
+            await service.copyOps.copyContentFromSource(
                 {
                     org: 'source-org',
                     site: 'source-site',
@@ -154,7 +154,7 @@ describe('DaLiveContentOperations - Content Enumeration', () => {
 
             mockFetch.mockResolvedValue(mockFetchResponse(200));
 
-            const result = await service.copyContentFromSource(
+            const result = await service.copyOps.copyContentFromSource(
                 {
                     org: 'source-org',
                     site: 'source-site',
@@ -178,7 +178,7 @@ describe('DaLiveContentOperations - Content Enumeration', () => {
 
             mockFetch.mockResolvedValue(mockFetchResponse(200));
 
-            const result = await service.copyContentFromSource(
+            const result = await service.copyOps.copyContentFromSource(
                 {
                     org: 'source-org',
                     site: 'source-site',
@@ -210,7 +210,7 @@ describe('DaLiveContentOperations - Content Enumeration', () => {
                 return mockFetchResponse(200);
             });
 
-            const result = await service.copyContentFromSource(
+            const result = await service.copyOps.copyContentFromSource(
                 {
                     org: 'source-org',
                     site: 'source-site',
@@ -260,7 +260,7 @@ describe('DaLiveContentOperations - Content Enumeration', () => {
                 return mockFetchResponse(200);
             });
 
-            const result = await service.copyContentFromSource(
+            const result = await service.copyOps.copyContentFromSource(
                 {
                     org: 'source-org',
                     site: 'source-site',
@@ -293,7 +293,7 @@ describe('DaLiveContentOperations - Content Enumeration', () => {
 
             mockFetch.mockResolvedValue(mockFetchResponse(200));
 
-            await service.copyContentFromSource(
+            await service.copyOps.copyContentFromSource(
                 {
                     org: 'source-org',
                     site: 'source-site',
@@ -340,7 +340,7 @@ describe('DaLiveContentOperations - Content Enumeration', () => {
                 return mockFetchResponse(200);
             });
 
-            const result = await service.copyContentFromSource(
+            const result = await service.copyOps.copyContentFromSource(
                 {
                     org: 'source-org',
                     site: 'source-site',
@@ -379,7 +379,7 @@ describe('DaLiveContentOperations - Content Enumeration', () => {
                 return mockFetchResponse(200);
             });
 
-            await service.copyContentFromSource(
+            await service.copyOps.copyContentFromSource(
                 {
                     org: 'source-org',
                     site: 'source-site',

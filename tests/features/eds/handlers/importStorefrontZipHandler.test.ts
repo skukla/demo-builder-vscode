@@ -37,12 +37,13 @@ const mockRemember = rememberAddedDemo as jest.Mock;
 const SETUP = projectFileV2();
 
 const tokenService = { validateToken: jest.fn() };
-const repoOperations = {
+const repoLifecycle = {
     createEmptyRepository: jest.fn(),
     waitForContent: jest.fn().mockResolvedValue(true),
     setTemplateFlag: jest.fn().mockResolvedValue(undefined),
 };
-const fileOperations = {};
+/** The tree-commit unit the push takes; the handler hands it on untouched. */
+const treeCommits = {};
 
 const STOREFRONT = new Map<string, Buffer>([
     ['scripts/scripts.js', Buffer.from('x')],
@@ -59,10 +60,10 @@ function ctx() {
 
 beforeEach(() => {
     jest.clearAllMocks();
-    mockServices.mockReturnValue({ repoOperations, fileOperations, tokenService });
+    mockServices.mockReturnValue({ repoLifecycle, treeCommits, tokenService });
     tokenService.validateToken.mockResolvedValue({ valid: true, user: { login: 'steve' } });
     mockRead.mockReturnValue({ files: STOREFRONT, rootName: 'citisignal-b2b-summit-main', dropped: 7 });
-    repoOperations.createEmptyRepository.mockResolvedValue({ fullName: 'steve/citisignal-b2b-summit', name: 'citisignal-b2b-summit', defaultBranch: 'main' });
+    repoLifecycle.createEmptyRepository.mockResolvedValue({ fullName: 'steve/citisignal-b2b-summit', name: 'citisignal-b2b-summit', defaultBranch: 'main' });
     mockExecute.mockResolvedValue(undefined);
     mockPush.mockResolvedValue({ commitSha: 'c1', fileCount: 3 });
 });
@@ -73,17 +74,17 @@ describe('handleImportStorefrontZip', () => {
         const result = await handleImportStorefrontZip(ctx(), {});
         expect(mockOpen).toHaveBeenCalledWith(expect.objectContaining({ filters: { 'Zip file': ['zip'] } }));
         expect(result).toEqual({ success: true, result: { cancelled: true } });
-        expect(repoOperations.createEmptyRepository).not.toHaveBeenCalled();
+        expect(repoLifecycle.createEmptyRepository).not.toHaveBeenCalled();
     });
 
     it('creates a public repository named after the zip in the SC\'s own account, pushes, flags it a template, and answers owner/repo', async () => {
         const result = await handleImportStorefrontZip(ctx(), { zipPath: '/tmp/summit.zip' });
 
         expect(mockOpen).not.toHaveBeenCalled();
-        expect(repoOperations.createEmptyRepository).toHaveBeenCalledWith('citisignal-b2b-summit', false);
-        expect(repoOperations.waitForContent).toHaveBeenCalledWith('steve', 'citisignal-b2b-summit');
-        expect(mockPush).toHaveBeenCalledWith(fileOperations, 'steve', 'citisignal-b2b-summit', STOREFRONT, 'Add storefront from a zip file', expect.anything(), expect.any(Function));
-        expect(repoOperations.setTemplateFlag).toHaveBeenCalledWith('steve', 'citisignal-b2b-summit', true);
+        expect(repoLifecycle.createEmptyRepository).toHaveBeenCalledWith('citisignal-b2b-summit', false);
+        expect(repoLifecycle.waitForContent).toHaveBeenCalledWith('steve', 'citisignal-b2b-summit');
+        expect(mockPush).toHaveBeenCalledWith(treeCommits, 'steve', 'citisignal-b2b-summit', STOREFRONT, 'Add storefront from a zip file', expect.anything(), expect.any(Function));
+        expect(repoLifecycle.setTemplateFlag).toHaveBeenCalledWith('steve', 'citisignal-b2b-summit', true);
         expect(result).toEqual({
             success: true,
             result: { owner: 'steve', repo: 'citisignal-b2b-summit', fullName: 'steve/citisignal-b2b-summit', fileCount: 3, dropped: 7, isPrivate: false },
@@ -92,7 +93,7 @@ describe('handleImportStorefrontZip', () => {
 
     it('says plainly when the account already has a repository by that name, and names it so the dialog can offer it', async () => {
         // Measured 2026-09-14: GitHub answers a 422 whose message the dialog showed raw, JSON and docs link included.
-        repoOperations.createEmptyRepository.mockRejectedValue(
+        repoLifecycle.createEmptyRepository.mockRejectedValue(
             new Error('Repository creation failed.: {"resource":"Repository","code":"custom","field":"name","message":"name already exists on this account"} - https://docs.github.com/rest/repos/repos#create-a-repository-for-the-authenticated-user'),
         );
 
@@ -108,7 +109,7 @@ describe('handleImportStorefrontZip', () => {
     });
 
     it('turns any other GitHub refusal into one sentence, without the JSON or the docs link', async () => {
-        repoOperations.createEmptyRepository.mockRejectedValue(
+        repoLifecycle.createEmptyRepository.mockRejectedValue(
             new Error('Repository creation failed.: {"message":"Repository creation failed: quota reached"} - https://docs.github.com/rest'),
         );
 
@@ -131,16 +132,16 @@ describe('handleImportStorefrontZip', () => {
     });
 
     it('takes a name and private visibility when asked', async () => {
-        repoOperations.createEmptyRepository.mockResolvedValue({ fullName: 'steve/summit-demo', name: 'summit-demo' });
+        repoLifecycle.createEmptyRepository.mockResolvedValue({ fullName: 'steve/summit-demo', name: 'summit-demo' });
         await handleImportStorefrontZip(ctx(), { zipPath: '/tmp/summit.zip', repoName: 'summit-demo', isPrivate: true });
-        expect(repoOperations.createEmptyRepository).toHaveBeenCalledWith('summit-demo', true);
+        expect(repoLifecycle.createEmptyRepository).toHaveBeenCalledWith('summit-demo', true);
     });
 
     it('refuses a zip that is not a storefront, naming what is missing, before creating anything', async () => {
         mockRead.mockReturnValue({ files: new Map([['README.md', Buffer.from('hi')]]), rootName: 'notes', dropped: 0 });
         const result = await handleImportStorefrontZip(ctx(), { zipPath: '/tmp/notes.zip' });
         expect(result).toEqual({ success: false, error: 'This zip is not an Edge Delivery storefront: it has no scripts/scripts.js, scripts/delayed.js, head.html.' });
-        expect(repoOperations.createEmptyRepository).not.toHaveBeenCalled();
+        expect(repoLifecycle.createEmptyRepository).not.toHaveBeenCalled();
     });
 
     it('refuses an unreadable zip and a bad repository name in words', async () => {
@@ -190,11 +191,11 @@ describe('importDemoBundle', () => {
         const files = new Map(STOREFRONT);
         files.set('demo.demo-builder.json', Buffer.from('{"kind":"demo","version":1,"name":"Bodea"}'));
         mockRead.mockReturnValue({ files, rootName: 'bodea-demo-bundle', dropped: 0, setup: SETUP });
-        repoOperations.createEmptyRepository.mockResolvedValue({ fullName: 'steve/bodea', name: 'bodea', defaultBranch: 'main' });
+        repoLifecycle.createEmptyRepository.mockResolvedValue({ fullName: 'steve/bodea', name: 'bodea', defaultBranch: 'main' });
 
         const result = await importDemoBundle(ctx(), '/x/bodea-demo-bundle.zip');
 
-        expect(repoOperations.createEmptyRepository).toHaveBeenCalledWith('bodea', false);
+        expect(repoLifecycle.createEmptyRepository).toHaveBeenCalledWith('bodea', false);
         const card = { kind: 'demo', version: 1, name: 'Bodea', source: { owner: 'steve', repo: 'bodea', branch: 'main' }, storefrontKind: 'eds', createdFromZip: true };
         expect(mockRemember).toHaveBeenCalledWith(card);
         expect(mockExecute).toHaveBeenCalledWith('demoBuilder.createProject', {
@@ -206,7 +207,7 @@ describe('importDemoBundle', () => {
 
     it('with a storefront that carries no description, remembers a card named after the repository, recorded as made from the zip', async () => {
         mockRead.mockReturnValue({ files: new Map(STOREFRONT), rootName: 'summit', dropped: 0 });
-        repoOperations.createEmptyRepository.mockResolvedValue({ fullName: 'steve/summit', name: 'summit', defaultBranch: 'main' });
+        repoLifecycle.createEmptyRepository.mockResolvedValue({ fullName: 'steve/summit', name: 'summit', defaultBranch: 'main' });
 
         await importDemoBundle(ctx(), '/x/summit.zip');
 
@@ -219,7 +220,7 @@ describe('importDemoBundle', () => {
         const files = new Map(STOREFRONT);
         files.set('package.json', Buffer.from('{"name":"@adobe/aem-boilerplate-commerce","version":"4.0.1"}'));
         mockRead.mockReturnValue({ files, rootName: 'summit', dropped: 0 });
-        repoOperations.createEmptyRepository.mockResolvedValue({ fullName: 'steve/summit', name: 'summit', defaultBranch: 'main' });
+        repoLifecycle.createEmptyRepository.mockResolvedValue({ fullName: 'steve/summit', name: 'summit', defaultBranch: 'main' });
 
         await importDemoBundle(ctx(), '/x/summit.zip');
 
@@ -231,7 +232,7 @@ describe('importDemoBundle', () => {
     it('with setup alone opens the wizard from the setup as a settings file would; with neither, refuses in words', async () => {
         mockRead.mockReturnValue({ files: new Map(), rootName: 'b', dropped: 0, setup: SETUP });
         await importDemoBundle(ctx(), '/x/setup-only.zip');
-        expect(repoOperations.createEmptyRepository).not.toHaveBeenCalled();
+        expect(repoLifecycle.createEmptyRepository).not.toHaveBeenCalled();
         expect(mockExecute).toHaveBeenCalledWith('demoBuilder.createProject', expect.objectContaining({ importedSettings: SETUP }));
 
         mockRead.mockReturnValue({ files: new Map([['README.md', Buffer.from('x')]]), rootName: 'notes', dropped: 0 });
@@ -245,6 +246,6 @@ describe('importDemoBundle', () => {
         mockRead.mockReturnValue({ files: STOREFRONT, rootName: 'b', dropped: 0, setupError: 'Missing required field: version' });
         const result = await importDemoBundle(ctx(), '/x/bad.zip');
         expect(result).toEqual({ success: true, data: { success: false, error: "The bundle's setup file could not be read: Missing required field: version" } });
-        expect(repoOperations.createEmptyRepository).not.toHaveBeenCalled();
+        expect(repoLifecycle.createEmptyRepository).not.toHaveBeenCalled();
     });
 });

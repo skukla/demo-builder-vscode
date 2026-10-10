@@ -7,9 +7,9 @@
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
 import { buildOrgTargetFromProjectAdobe, withOrgContext, type OrgContextTarget } from '@/core/shell/orgContextEnv';
-import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateWorkspaceId } from '@/core/validation/validators/AdobeResourceValidator';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { ensureAuthenticated } from '@/features/mesh/handlers/shared';
 import { ErrorCode } from '@/types/errorCodes';
 import { HandlerContext } from '@/types/handlers';
@@ -67,7 +67,9 @@ export async function handleDeleteApiMesh(
         // reason; the difference is that this one is destructive and runs with
         // --autoConfirmAction, so there is no prompt to catch a wrong target.
         const project = await context.stateManager.getCurrentProject();
-        const cachedOrg = ServiceLocator.getAuthenticationService().getCachedOrganization();
+        const cachedOrg = ServiceLocator.getAuthenticationService()
+            .getCacheManager()
+            .getCachedOrganization();
         const target: OrgContextTarget = buildOrgTargetFromProjectAdobe(
             {
                 organization: project?.adobe?.organization,
@@ -82,7 +84,7 @@ export async function handleDeleteApiMesh(
             commandManager.execute(MESH_DELETE_COMMAND, {
                 timeout: TIMEOUTS.NORMAL,
                 configureTelemetry: false,
-                useNodeVersion: getMeshNodeVersion(),
+                useNodeVersion: demoBuilderNode(),
                 enhancePath: true,
             }),
         );

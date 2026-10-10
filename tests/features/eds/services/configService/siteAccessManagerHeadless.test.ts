@@ -14,7 +14,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getGitHubServices: jest.fn(() => ({ tokenService: { getUserEmails: () => mockGitHubEmails() } })),
 }));
 
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
     createDaLiveServiceTokenProvider: jest.fn(() => ({
         getAccessToken: jest.fn().mockResolvedValue('ims-token'),
     })),
@@ -203,6 +203,18 @@ describe('addSiteAdmin', () => {
         expect(result.status).toBe('invalid');
         expect(mockEnsure).not.toHaveBeenCalled();
     });
+
+    it('names the site it changed, on success and on a refusal', async () => {
+        mockEnsure.mockResolvedValue({ status: 'ok', changed: true });
+        expect((await addSiteAdmin(project, 'new@adobe.com', context, logger)).site).toBe(
+            'skukla/bodea-source',
+        );
+
+        mockEnsure.mockResolvedValue({ status: 'not_authorized' });
+        expect((await addSiteAdmin(project, 'new@adobe.com', context, logger)).site).toBe(
+            'skukla/bodea-source',
+        );
+    });
 });
 
 describe('removeSiteAdmin', () => {
@@ -228,6 +240,14 @@ describe('removeSiteAdmin', () => {
 
         expect(result.status).toBe('invalid');
         expect(result.error).toMatch(/last admin/i);
+    });
+
+    it('names the site it changed', async () => {
+        mockRevoke.mockResolvedValue({ status: 'ok', changed: true });
+
+        const result = await removeSiteAdmin(project, 'gone@adobe.com', context, logger);
+
+        expect(result.site).toBe('skukla/bodea-source');
     });
 });
 
@@ -308,7 +328,7 @@ describe('canManage never contradicts the status', () => {
     it('listSiteAccess reports no_credential rather than a generic failure', async () => {
         // A signed-out user must be told to sign in, not to read the Debug Logs.
         const { createDaLiveServiceTokenProvider } = jest.requireMock(
-            '@/features/eds/services/daLive/daLiveContentOperations',
+            '@/features/eds/services/daLive/daLiveTokenProviders',
         );
         createDaLiveServiceTokenProvider.mockReturnValueOnce({
             getAccessToken: jest.fn().mockResolvedValue(null),
@@ -389,6 +409,20 @@ describe('listSiteAccess distinguishes the probe outcomes', () => {
 
         expect(result.status).toBe('failed');
         expect(result.error).toBeUndefined();
+    });
+
+    it('explains an identity mismatch only for a refusal, never for a 401', async () => {
+        // The mismatch explains a missing ROLE. A 401 is the session, and telling
+        // that user to change their GitHub email would send them the wrong way.
+        mockProbe.mockResolvedValue('unauthenticated');
+        mockAdobeEmail.mockResolvedValue('sc@adobe.example');
+        mockGitHubEmails.mockResolvedValue([
+            { email: 'personal@example.com', primary: true, verified: true },
+        ]);
+
+        const result = await listSiteAccess(project, context, logger);
+
+        expect(result.identityMismatch).toBeUndefined();
     });
 });
 

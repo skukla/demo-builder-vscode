@@ -14,6 +14,7 @@
  * @module features/authentication/services/adobeWorkspaceCredentials
  */
 
+import { ensureSDKReady } from './adobeEntityReads';
 import type { AdobeSDKClient } from './adobeSDKClient';
 import type { AuthCacheManager } from './authCacheManager';
 import type {
@@ -47,6 +48,25 @@ function oauthCredentialNameFor(workspaceId: string): string {
     return `${OAUTH_CREDENTIAL_NAME_PREFIX}-${workspaceId.slice(-CREDENTIAL_NAME_SUFFIX_LENGTH)}`;
 }
 
+/** The ids a cache-driven credential call is aimed at. */
+interface CachedTarget {
+    orgId: string;
+    projectId: string;
+    workspaceId: string;
+}
+
+/** The debug lines each cache-driven caller leaves when it cannot proceed. */
+const CACHED_TARGET_LOGS = {
+    fetch: {
+        missing: '[Entity Fetcher] Cannot fetch credentials: missing org/project/workspace ID',
+        notReady: '[Entity Fetcher] SDK not available for credential fetch',
+    },
+    create: {
+        missing: '[Entity Fetcher] Cannot create credential: missing org/project/workspace ID',
+        notReady: '[Entity Fetcher] SDK not available for credential creation',
+    },
+} as const;
+
 /**
  * Reads and creates credentials on Adobe Console workspaces.
  */
@@ -61,15 +81,6 @@ export class AdobeWorkspaceCredentials {
     ) {}
 
     /**
-     * Ensure SDK is initialized (lazy init pattern)
-     */
-    private async ensureSDKReady(): Promise<void> {
-        if (!this.sdkClient.isInitialized()) {
-            await this.sdkClient.ensureInitialized();
-        }
-    }
-
-    /**
      * The shared one-retry (`@/core/utils/transientRetry`) for Console READS.
      * Never used on a create: credential names are org-unique and a repeated
      * create answers 409.
@@ -78,6 +89,30 @@ export class AdobeWorkspaceCredentials {
         return withOneTransientRetry(`[Workspace Credentials] ${label}`, run, (message) =>
             this.debugLogger.warn(message),
         );
+    }
+
+    /**
+     * The cached org/project/workspace selection the cache-driven pair targets,
+     * or `undefined` (logged) when a piece is missing or the SDK is not up.
+     * Both `getWorkspaceCredential` and `createWorkspaceCredential` opened with
+     * this same lookup (PL-69 pair 34); only the log lines name the purpose.
+     */
+    private resolveCachedTarget(purpose: keyof typeof CACHED_TARGET_LOGS): CachedTarget | undefined {
+        const orgId = this.cacheManager.getCachedOrganization()?.id;
+        const projectId = this.cacheManager.getCachedProject()?.id;
+        const workspaceId = this.cacheManager.getCachedWorkspace()?.id;
+
+        if (!orgId || !projectId || !workspaceId) {
+            this.debugLogger.debug(CACHED_TARGET_LOGS[purpose].missing);
+            return undefined;
+        }
+
+        if (!this.sdkClient.isInitialized()) {
+            this.debugLogger.debug(CACHED_TARGET_LOGS[purpose].notReady);
+            return undefined;
+        }
+
+        return { orgId, projectId, workspaceId };
     }
 
     /**
@@ -98,27 +133,13 @@ export class AdobeWorkspaceCredentials {
         }
 
         try {
-            await this.ensureSDKReady();
+            await ensureSDKReady(this.sdkClient);
 
-            const cachedOrg = this.cacheManager.getCachedOrganization();
-            const cachedProject = this.cacheManager.getCachedProject();
-            const cachedWorkspace = this.cacheManager.getCachedWorkspace();
-
-            const orgId = cachedOrg?.id;
-            const projectId = cachedProject?.id;
-            const workspaceId = cachedWorkspace?.id;
-
-            if (!orgId || !projectId || !workspaceId) {
-                this.debugLogger.debug(
-                    '[Entity Fetcher] Cannot fetch credentials: missing org/project/workspace ID',
-                );
+            const target = this.resolveCachedTarget('fetch');
+            if (!target) {
                 return undefined;
             }
-
-            if (!this.sdkClient.isInitialized()) {
-                this.debugLogger.debug('[Entity Fetcher] SDK not available for credential fetch');
-                return undefined;
-            }
+            const { orgId, projectId, workspaceId } = target;
 
             const client = this.sdkClient.getClient() as {
                 getCredentials: (
@@ -213,29 +234,13 @@ export class AdobeWorkspaceCredentials {
         }
 
         try {
-            await this.ensureSDKReady();
+            await ensureSDKReady(this.sdkClient);
 
-            const cachedOrg = this.cacheManager.getCachedOrganization();
-            const cachedProject = this.cacheManager.getCachedProject();
-            const cachedWorkspace = this.cacheManager.getCachedWorkspace();
-
-            const orgId = cachedOrg?.id;
-            const projectId = cachedProject?.id;
-            const workspaceId = cachedWorkspace?.id;
-
-            if (!orgId || !projectId || !workspaceId) {
-                this.debugLogger.debug(
-                    '[Entity Fetcher] Cannot create credential: missing org/project/workspace ID',
-                );
+            const target = this.resolveCachedTarget('create');
+            if (!target) {
                 return undefined;
             }
-
-            if (!this.sdkClient.isInitialized()) {
-                this.debugLogger.debug(
-                    '[Entity Fetcher] SDK not available for credential creation',
-                );
-                return undefined;
-            }
+            const { orgId, projectId, workspaceId } = target;
 
             const client = this.sdkClient.getClient() as {
                 createOAuthServerToServerCredential: (
@@ -314,7 +319,7 @@ export class AdobeWorkspaceCredentials {
         workspaceId: string,
         input: AdobeIdCredentialInput,
     ): Promise<string | undefined> {
-        await this.ensureSDKReady();
+        await ensureSDKReady(this.sdkClient);
         const client = this.sdkClient.getClient() as {
             getCredentials: (
                 orgId: string,
@@ -389,7 +394,7 @@ export class AdobeWorkspaceCredentials {
      * without provisioning a credential it may not need.
      */
     async listCredentialIds(orgId: string, projectId: string, workspaceId: string): Promise<string[]> {
-        await this.ensureSDKReady();
+        await ensureSDKReady(this.sdkClient);
         const client = this.sdkClient.getClient() as {
             getCredentials: (
                 orgId: string,
@@ -397,8 +402,11 @@ export class AdobeWorkspaceCredentials {
                 workspaceId: string
             ) => Promise<SDKResponse<RawWorkspaceCredential[]>>;
         };
-        const credentials = (await client.getCredentials(orgId, projectId, workspaceId))?.body ?? [];
-        return credentials.map((c) => c.id_integration).filter((id): id is string => Boolean(id));
+        const listed = (await client.getCredentials(orgId, projectId, workspaceId))?.body;
+        if (!Array.isArray(listed)) {
+            return [];
+        }
+        return listed.map((c) => c.id_integration).filter((id): id is string => Boolean(id));
     }
 
     /**
@@ -485,7 +493,7 @@ export class AdobeWorkspaceCredentials {
         projectId: string,
         workspaceId: string,
     ): Promise<WorkspaceS2SCredentialIds | undefined> {
-        await this.ensureSDKReady();
+        await ensureSDKReady(this.sdkClient);
 
         if (!orgId || !projectId || !workspaceId) {
             throw new Error(
@@ -535,7 +543,7 @@ export class AdobeWorkspaceCredentials {
         projectId: string,
         workspaceId: string,
     ): Promise<WorkspaceS2SCredentialIds> {
-        await this.ensureSDKReady();
+        await ensureSDKReady(this.sdkClient);
 
         if (!orgId || !projectId || !workspaceId) {
             throw new Error(

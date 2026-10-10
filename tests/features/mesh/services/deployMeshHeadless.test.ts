@@ -31,12 +31,12 @@ jest.mock('@/features/mesh/services/meshDeployment', () => ({ deployMeshComponen
 // Dynamically imported across the feature boundary (same pattern as
 // projectResetService), so the mock targets the module it imports.
 const mockRegenerateComponentEnvFile = jest.fn().mockResolvedValue(undefined);
-jest.mock('@/features/project-creation/helpers/envFileGenerator', () => ({
-    ...jest.requireActual('@/features/project-creation/helpers/envFileGenerator'),
+jest.mock('@/features/project-creation/helpers/envFileRegeneration', () => ({
+    ...jest.requireActual('@/features/project-creation/helpers/envFileRegeneration'),
     regenerateComponentEnvFile: (...args: unknown[]) => mockRegenerateComponentEnvFile(...args),
 }));
 const mockUpdateMeshState = jest.fn().mockResolvedValue(undefined);
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
+jest.mock('@/features/mesh/services/meshDeployBaseline', () => ({
     updateMeshState: (...args: unknown[]) => mockUpdateMeshState(...args),
 }));
 
@@ -134,16 +134,20 @@ describe('deployMeshHeadless', () => {
         // App Builder gate ON left it on for every test declared after it.
         mockRequiresAppBuilder.mockReturnValue(false);
         mockRegenerateComponentEnvFile.mockResolvedValue(undefined);
-        currentAuthManager = createMockAuthenticationService({
-            testDeveloperPermissions: jest.fn().mockResolvedValue({ hasPermissions: true }),
-            // Enriches the org target with code/name when the id matches
-            // (buildOrgTargetFromProjectAdobe).
-            getCachedOrganization: jest.fn(() => ({
-                id: 'org',
-                code: 'ORG@AdobeOrg',
-                name: 'Adobe Demo System',
-            })),
-        });
+        currentAuthManager = createMockAuthenticationService(
+            { testDeveloperPermissions: jest.fn().mockResolvedValue({ hasPermissions: true }) },
+            {
+                cache: {
+                    // Enriches the org target with code/name when the id matches
+                    // (buildOrgTargetFromProjectAdobe).
+                    getCachedOrganization: jest.fn(() => ({
+                        id: 'org',
+                        code: 'ORG@AdobeOrg',
+                        name: 'Adobe Demo System',
+                    })),
+                },
+            }
+        );
         mockPreflight.mockResolvedValue({ ready: true });
         mockFetchInfo.mockResolvedValue({ meshId: 'existing-1', endpoint: 'https://old/graphql' });
         mockDeploy.mockResolvedValue({

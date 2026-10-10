@@ -27,6 +27,7 @@ import { ForkSyncService } from '@/features/updates/services/forkSyncService';
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import {
     applyBlockLibraryUpdateResolved,
+    findInstalledLibrary,
     updateCommitShaWithRollback,
     type UpdateContext,
 } from '@/features/updates/services/updateCore';
@@ -464,13 +465,7 @@ async function applyBlockLibraryUpdate(
     syncBehavior: BlockLibrarySyncBehavior,
     ctx: UpdateContext,
 ): Promise<void> {
-    const lib = item.project.installedBlockLibraries?.find((l) => l.name === item.library.name);
-    if (!lib) {
-        ctx.logger.warn(
-            `[Updates] Block library "${item.library.name}" not in installedBlockLibraries; skipping`,
-        );
-        return;
-    }
+    if (!findInstalledLibrary(item, ctx)) return;
 
     // Narrowed by RESOLUTION, not by cast: 'ask' either becomes a concrete
     // choice below or the function returns. The `as` this replaces silenced

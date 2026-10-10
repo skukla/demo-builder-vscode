@@ -8,7 +8,7 @@
  * The token lives in SecretStorage (the OS keychain), like every other credential
  * the extension holds. Its expiry, the user's email and the org are not secrets and
  * live in globalState. Builds before 2026-10-09 kept the token in globalState too;
- * `daLiveTokenMigration` moves it, once, on activation or on the first read.
+ * `daLiveTokenHome` (the storage) moves it, once, on activation or on the first read.
  *
  * Note: The OAuth PKCE flow was removed as it requires the app to be hosted
  * on the da.live domain for OAuth callbacks, which VS Code extensions cannot do.
@@ -17,14 +17,9 @@
 import * as vscode from 'vscode';
 import { readDaAuthHelperToken, writeDaAuthHelperToken } from '../daAuthHelperToken';
 import { DA_LIVE_BASE_URL } from './daLiveConstants';
-import {
-    DA_LIVE_TOKEN_SECRET_KEY,
-    LEGACY_TOKEN_STATE_KEY,
-    forgetDaLiveToken,
-    migrateDaLiveTokenToSecretStorage,
-    storeDaLiveToken,
-} from './daLiveTokenMigration';
+import { createDaLiveTokenHome, type DaLiveTokenHome } from './daLiveTokenHome';
 import { getLogger } from '@/core/logging/debugLogger';
+import { decodeJwtPayload } from '@/core/utils/jwtPayload';
 
 // ==========================================================
 // Constants
@@ -49,34 +44,6 @@ export interface DaLiveTokenInfo {
 }
 
 // ==========================================================
-// JWT Utilities
-// ==========================================================
-
-/**
- * Parse a JWT token's payload section (base64-decode + JSON.parse).
- *
- * Returns the decoded payload as a plain object, or null if the token
- * cannot be parsed (too few parts, invalid base64, or invalid JSON).
- *
- * Shared by storeToken (to extract email/expiry) and
- * validateDaLiveToken in daLiveAuthPrompt (to validate client_id/expiry).
- *
- * @param token - JWT token string
- * @returns Decoded payload or null on failure
- */
-export function parseJwtPayload(token: string): Record<string, unknown> | null {
-    try {
-        const parts = token.split('.');
-        if (parts.length < 2) {
-            return null;
-        }
-        return JSON.parse(Buffer.from(parts[1], 'base64').toString());
-    } catch {
-        return null;
-    }
-}
-
-// ==========================================================
 // DA.live Authentication Service
 // ==========================================================
 
@@ -98,11 +65,12 @@ export class DaLiveAuthService {
      */
     readonly onDidSignIn = this.signInEmitter.event;
 
-    /** The one-time move out of globalState, run at most once per instance. */
-    private legacyMigration: Promise<void> | undefined;
+    /** Where the token is kept: SecretStorage, after the one-time move out of globalState. */
+    private readonly tokenHome: DaLiveTokenHome;
 
     constructor(context: vscode.ExtensionContext) {
         this.context = context;
+        this.tokenHome = createDaLiveTokenHome(context, this.logger);
     }
 
     /**
@@ -134,43 +102,14 @@ export class DaLiveAuthService {
         return this.hydrateFromDaAuthHelper();
     }
 
-    /**
-     * Move a token an older build left in globalState into SecretStorage
-     * (verify-then-delete; see `daLiveTokenMigration`). Runs once per instance:
-     * activation calls it, and every read, store and sign-out awaits it first, so
-     * a stale globalState copy can never land on top of a newer sign-in or
-     * survive a sign-out. Never rejects.
-     */
+    /** The one-time token move out of globalState (`daLiveTokenHome`). Never rejects. */
     migrateLegacyToken(): Promise<void> {
-        this.legacyMigration ??= migrateDaLiveTokenToSecretStorage(
-            this.context.globalState,
-            this.context.secrets,
-            (line) => this.logger.info(`[DA.live Auth] ${line}`),
-        ).then(() => undefined);
-        return this.legacyMigration;
-    }
-
-    /**
-     * The raw token, from SecretStorage. Falls back to a globalState copy only
-     * when the keychain refused to take it, so an SC is never signed out by the
-     * move itself.
-     */
-    private async readAccessToken(): Promise<string | undefined> {
-        await this.migrateLegacyToken();
-        try {
-            const stored = await this.context.secrets.get(DA_LIVE_TOKEN_SECRET_KEY);
-            if (stored) {
-                return stored;
-            }
-        } catch {
-            this.logger.warn('[DA.live Auth] Could not read the token from SecretStorage');
-        }
-        return this.context.globalState.get<string>(LEGACY_TOKEN_STATE_KEY);
+        return this.tokenHome.migrateLegacyToken();
     }
 
     /** Read a still-valid stored token (with the 5-minute buffer), or null. */
     private async readValidStoredToken(): Promise<DaLiveTokenInfo | null> {
-        const accessToken = await this.readAccessToken();
+        const accessToken = await this.tokenHome.read();
         const expiresAt = this.context.globalState.get<number>(STATE_KEYS.tokenExpiration);
         const email = this.context.globalState.get<string>(STATE_KEYS.userEmail);
 
@@ -275,11 +214,10 @@ export class DaLiveAuthService {
      * The DA.live token is an Adobe IMS token. The user's email is not reliably
      * in the JWT claims, so we fetch it from the IMS profile endpoint.
      *
-     * @param token - Optional token to use (defaults to stored token)
      * @returns User email or null if fetch fails
      */
-    async fetchUserEmail(token?: string): Promise<string | null> {
-        const accessToken = token || (await this.getAccessToken());
+    async fetchUserEmail(): Promise<string | null> {
+        const accessToken = await this.getAccessToken();
         if (!accessToken) {
             return null;
         }
@@ -344,12 +282,7 @@ export class DaLiveAuthService {
         token: string,
         opts?: { expiresAt?: number; email?: string; orgName?: string },
     ): Promise<void> {
-        // Let any pending move finish first, so an old globalState token cannot
-        // be copied over this one afterwards.
-        await this.migrateLegacyToken();
-        await storeDaLiveToken(this.context.secrets, token);
-        // A copy the keychain once refused to take is now stale; drop it.
-        await this.clearLegacyToken();
+        await this.tokenHome.store(token);
 
         // Use pre-validated data if provided, otherwise extract from JWT
         if (opts?.expiresAt) {
@@ -361,7 +294,7 @@ export class DaLiveAuthService {
 
         // Extract from JWT payload if not provided via opts
         if (!opts?.expiresAt || !opts?.email) {
-            const payload = parseJwtPayload(token);
+            const payload = decodeJwtPayload(token);
             if (payload) {
                 if (!opts?.expiresAt && payload.created_at && payload.expires_in) {
                     const createdAt = parseInt(String(payload.created_at), 10);
@@ -427,10 +360,7 @@ export class DaLiveAuthService {
      * Token revocation is not performed as tokens expire naturally.
      */
     async logout(): Promise<void> {
-        // A move still in flight would otherwise write the token back afterwards.
-        await this.migrateLegacyToken();
-        await forgetDaLiveToken(this.context.secrets);
-        await this.clearLegacyToken();
+        await this.tokenHome.forget();
         await this.context.globalState.update(STATE_KEYS.tokenExpiration, undefined);
         await this.context.globalState.update(STATE_KEYS.userEmail, undefined);
         await this.context.globalState.update(STATE_KEYS.orgName, undefined);
@@ -449,13 +379,6 @@ export class DaLiveAuthService {
         await this.context.globalState.update(STATE_KEYS.setupComplete, undefined);
 
         this.logger.info('[DA.live Auth] Full reset complete');
-    }
-
-    /** Drop a globalState token copy, if an older build left one. */
-    private async clearLegacyToken(): Promise<void> {
-        if (this.context.globalState.get(LEGACY_TOKEN_STATE_KEY) !== undefined) {
-            await this.context.globalState.update(LEGACY_TOKEN_STATE_KEY, undefined);
-        }
     }
 
     /** Get stored org name */

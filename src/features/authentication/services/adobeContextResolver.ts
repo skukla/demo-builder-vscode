@@ -12,12 +12,14 @@
  * Dependencies:
  * - CommandExecutor for CLI operations
  * - AuthCacheManager for caching
- * - AdobeEntityReads for ID resolution
+ * - AdobeOrgReads and AdobeProjectReads for ID resolution
  * - Logger for logging
  */
 
-import type { AdobeEntityReads } from './adobeEntityReads';
+import type { AdobeOrgReads } from './adobeOrgReads';
+import type { AdobeProjectReads } from './adobeProjectReads';
 import type { AuthCacheManager } from './authCacheManager';
+import { withTiming } from './performanceTracker';
 import type {
     AdobeOrg,
     AdobeProject,
@@ -27,8 +29,8 @@ import type {
 } from './types';
 import { getLogger } from '@/core/logging/debugLogger';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
-import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { parseJSON } from '@/types/typeGuards';
 
 /**
@@ -40,7 +42,8 @@ export class AdobeContextResolver {
     constructor(
         private commandManager: CommandExecutor,
         private cacheManager: AuthCacheManager,
-        private reads: AdobeEntityReads,
+        private orgReads: AdobeOrgReads,
+        private projectReads: AdobeProjectReads,
     ) {}
 
     /**
@@ -61,7 +64,7 @@ export class AdobeContextResolver {
             const result = await this.commandManager.execute('aio console where --json', {
                 encoding: 'utf8',
                 timeout: TIMEOUTS.NORMAL,
-                useNodeVersion: getMeshNodeVersion(),
+                useNodeVersion: demoBuilderNode(),
             });
 
             if (result.code === 0 && result.stdout) {
@@ -119,7 +122,7 @@ export class AdobeContextResolver {
      */
     private async fetchOrgListSafely(): Promise<AdobeOrg[]> {
         try {
-            return await this.reads.getOrganizations();
+            return await this.orgReads.getOrganizations();
         } catch (error) {
             this.debugLogger.trace(
                 '[Context Resolver] Failed to fetch org list for ID resolution:',
@@ -161,6 +164,10 @@ export class AdobeContextResolver {
      * Get current organization from CLI
      */
     async getCurrentOrganization(): Promise<AdobeOrg | undefined> {
+        return withTiming('getCurrentOrganization', () => this.readCurrentOrganization());
+    }
+
+    private async readCurrentOrganization(): Promise<AdobeOrg | undefined> {
         try {
             const cachedOrg = this.cacheManager.getCachedOrganization();
             if (cachedOrg) return cachedOrg;
@@ -204,10 +211,10 @@ export class AdobeContextResolver {
     ): Promise<AdobeProject | undefined> {
         try {
             // getProjects resolves the org itself: threaded → cached → TOKEN org via the
-            // SDK (see AdobeEntityReads.resolveEffectiveOrgId). That systemic fallback
+            // SDK (see resolveEffectiveOrgId in adobeEntityReads.ts). That systemic fallback
             // keeps this best-effort project-ID lookup on the SDK path — no need to thread
             // the token org here — while avoiding the stale-console CLI 403 -> ORG_MISMATCH.
-            const projects = await this.reads.getProjects({ silent: true });
+            const projects = await this.projectReads.getProjects({ silent: true });
             const matched = projects.find(
                 (p) => p.name === projectString || p.title === projectString,
             );
@@ -262,6 +269,10 @@ export class AdobeContextResolver {
      * Get current project from CLI
      */
     async getCurrentProject(): Promise<AdobeProject | undefined> {
+        return withTiming('getCurrentProject', () => this.readCurrentProject());
+    }
+
+    private async readCurrentProject(): Promise<AdobeProject | undefined> {
         try {
             const cachedProject = this.cacheManager.getCachedProject();
             if (cachedProject) return cachedProject;
@@ -287,6 +298,10 @@ export class AdobeContextResolver {
      * Get current workspace from CLI
      */
     async getCurrentWorkspace(): Promise<AdobeWorkspace | undefined> {
+        return withTiming('getCurrentWorkspace', () => this.readCurrentWorkspace());
+    }
+
+    private async readCurrentWorkspace(): Promise<AdobeWorkspace | undefined> {
         try {
             // Check cache first
             const cachedWorkspace = this.cacheManager.getCachedWorkspace();

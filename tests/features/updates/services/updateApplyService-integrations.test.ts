@@ -12,11 +12,11 @@ import {
     recordsIntegrationProbe,
     resetFakes,
 } from './updateApplyService.testUtils';
+import { applyUpdatesHeadless } from '@/features/updates/services/updateApplyService';
 import {
-    applyUpdatesHeadless,
     computeProjectUpdateSelections,
     countSelections,
-} from '@/features/updates/services/updateApplyService';
+} from '@/features/updates/services/updateSelections';
 import type { IntegrationUpdateProbe } from '@/features/updates/services/integrationUpdates';
 import type { AppBuilderComponentState, Project } from '@/types/base';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';

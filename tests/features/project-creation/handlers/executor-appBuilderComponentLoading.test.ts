@@ -15,7 +15,8 @@
 
 import './executorComponentLoading.testUtils';
 import * as meshDeployment from '@/features/mesh/services/meshDeployment';
-import * as stalenessDetector from '@/features/mesh/services/stalenessDetector';
+import { updateMeshState } from '@/features/mesh/services/meshDeployBaseline';
+import { readMeshEnvVarsFromFile } from '@/features/mesh/services/meshEnvVars';
 import { HandlerContext } from '@/types/handlers';
 
 // Capture every definition passed to installComponent so we can assert on the
@@ -95,9 +96,8 @@ jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
 }));
 
 const mockDeployMeshComponent = meshDeployment.deployMeshComponent as jest.Mock;
-const mockUpdateMeshState = stalenessDetector.updateMeshState as jest.Mock;
-const mockFetchDeployedMeshConfig = stalenessDetector.fetchDeployedMeshConfig as jest.Mock;
-const mockReadMeshEnvVarsFromFile = stalenessDetector.readMeshEnvVarsFromFile as jest.Mock;
+const mockUpdateMeshState = jest.mocked(updateMeshState);
+const mockReadMeshEnvVarsFromFile = jest.mocked(readMeshEnvVarsFromFile);
 
 // Import executor AFTER mocks are set up
 import { executeProjectCreation } from '@/features/project-creation/handlers/executor';
@@ -135,7 +135,6 @@ describe('Executor - App Builder Component Loading', () => {
 
         mockDeployMeshComponent.mockResolvedValue({ success: true });
         mockUpdateMeshState.mockResolvedValue(undefined);
-        mockFetchDeployedMeshConfig.mockResolvedValue({});
         mockReadMeshEnvVarsFromFile.mockResolvedValue({});
     });
 

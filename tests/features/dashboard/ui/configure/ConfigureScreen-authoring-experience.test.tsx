@@ -202,6 +202,31 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
         });
     });
 
+    it('saves DA.live classic for an EDS project whose init carried no preference', async () => {
+        const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+
+        renderWithProvider(
+            <ConfigureScreen
+                project={mockProject}
+                componentsData={mockComponentsData}
+                existingEnvValues={validConfig}
+                isEds
+            />
+        );
+
+        await waitFor(() => {
+            expect(screen.getByText('Save Changes')).not.toBeDisabled();
+        });
+        await user.click(screen.getByText('Save Changes'));
+
+        await waitFor(() => {
+            expect(mockRequest).toHaveBeenCalledWith(
+                'save-configuration',
+                expect.objectContaining({ authoringExperience: 'da-live-classic' })
+            );
+        });
+    });
+
     it('renders the DA.live & authoring settings link inside the Authoring section', () => {
         renderWithProvider(
             <ConfigureScreen

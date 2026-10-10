@@ -20,8 +20,9 @@
  * @module features/app-builder/services/componentRelocation
  */
 
-import { deployAppBuilderComponent, type AppBuilderComponentRunnerDeps } from './appBuilderComponentRunner';
+import type { AppBuilderComponentRunnerDeps } from './appBuilderComponentRunner';
 import { cleanUpBeforeUndeploy } from './appBuilderComponentTeardown';
+import { deployAppBuilderComponent } from './appBuilderRedeployRun';
 import { catalogEntryFor, entryFromState } from './componentEntry';
 import { entriesSharingWorkspace } from './componentWorkspace';
 import type { ProjectAdobeRef } from '@/core/shell/orgContextEnv';

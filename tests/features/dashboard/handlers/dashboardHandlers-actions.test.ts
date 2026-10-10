@@ -49,8 +49,8 @@ jest.mock(
     { virtual: true }
 );
 
-// Mock stalenessDetector
-jest.mock('@/features/mesh/services/stalenessDetector');
+// Mock projectStateSync (detectFrontendChanges)
+jest.mock('@/core/state/projectStateSync');
 
 // Mock authentication
 

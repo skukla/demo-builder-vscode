@@ -34,7 +34,8 @@ import {
     partitionProjectProviders,
     withEventsAccess,
 } from './consoleProjectTeardownEvents';
-import { isEventsAccessDenied, type EventRegistrationSummary } from './ioEventsClient';
+import type { EventRegistrationSummary } from './ioEventsClient';
+import { isEventsAccessDenied } from './ioEventsTransport';
 
 /** The teardown deps this service drives — the same adapter, a narrower view. */
 type EventLifecycleDeps = Pick<

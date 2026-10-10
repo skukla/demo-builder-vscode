@@ -23,10 +23,11 @@ import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
 
 jest.mock('@/features/mesh/services/meshDeployment');
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
+jest.mock('@/features/mesh/services/meshEnvVars', () => ({
     readMeshEnvVarsFromFile: jest.fn().mockResolvedValue({}),
+}));
+jest.mock('@/features/mesh/services/meshDeployBaseline', () => ({
     updateMeshState: jest.fn().mockResolvedValue(undefined),
-    fetchDeployedMeshConfig: jest.fn().mockResolvedValue({}),
 }));
 
 jest.mock('@/core/di/serviceLocator', () => ({

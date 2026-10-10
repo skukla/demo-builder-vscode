@@ -33,8 +33,10 @@ jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () 
 // ---- Model B runner (the live engine — fully mocked) -----------------------
 const mockAddAppBuilderComponent = jest.fn();
 const mockRemoveAppBuilderComponent = jest.fn();
-jest.mock('@/features/app-builder/services/appBuilderComponentRunner', () => ({
+jest.mock('@/features/app-builder/services/appBuilderAddRun', () => ({
     addAppBuilderComponent: (...a: unknown[]) => mockAddAppBuilderComponent(...a),
+}));
+jest.mock('@/features/app-builder/services/appBuilderRemoveRun', () => ({
     removeAppBuilderComponent: (...a: unknown[]) => mockRemoveAppBuilderComponent(...a),
 }));
 

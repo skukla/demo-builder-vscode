@@ -21,10 +21,17 @@ jest.mock('@/features/prerequisites/handlers/shared', () => {
         areDependenciesInstalled: jest.fn(),
         hasNodeVersions: jest.fn(),
         getNodeVersionKeys: jest.fn(),
+        perNodeVersionMajors: jest.fn(),
         // Keep handlePrerequisiteCheckError as the real implementation
     };
 });
 jest.mock('@/core/di/serviceLocator');
+// The per-Node check also asks whether the tool's file sits beside that Node.
+// Default yes, so a check command's exit code decides, as it did before.
+jest.mock('@/core/shell/ensureNodeVersion', () => ({
+    ...jest.requireActual('@/core/shell/ensureNodeVersion'),
+    toolInstalledUnder: jest.fn(() => Promise.resolve(true)),
+}));
 
 export * as shared from '@/features/prerequisites/handlers/shared';
 export { ServiceLocator } from '@/core/di/serviceLocator';
@@ -146,6 +153,9 @@ export function setupContinueHandler(): ContinueHandlerHarness {
         '18': 'React App',
         '20': 'Node Backend',
     });
+    // Two majors, so the per-major probe is visible. The real set (the CLI's own
+    // Node) is pinned in continueHandler-perNodeScope.
+    (shared.perNodeVersionMajors as jest.Mock).mockReturnValue(['18', '20']);
     (shared.areDependenciesInstalled as jest.Mock).mockReturnValue(true);
     (shared.hasNodeVersions as jest.Mock).mockImplementation(
         (mapping: Record<string, string>) => Boolean(mapping) && Object.keys(mapping).length > 0

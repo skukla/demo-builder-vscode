@@ -8,7 +8,7 @@
 
 import { validateProjectPath } from '@/core/validation/PathSafetyValidator';
 import type { Project } from '@/types/base';
-import type { HandlerContext, HandlerResponse } from '@/types/handlers';
+import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
 
 /**
  * Resolve the target project from a `{ projectPath }` payload WITHOUT touching
@@ -40,4 +40,25 @@ export async function resolveProjectFromPath(
         return { ok: false, error: { success: false, error: 'Project not found' } };
     }
     return { ok: true, project };
+}
+
+/**
+ * A handler that runs only once its `{ projectPath }` payload names a project:
+ * the resolve, the early return on failure and the unwrap that five handlers
+ * each opened with (PL-69 pairs 15 to 17, 2026-10-09).
+ *
+ * Not for a handler whose try/catch must also cover the load (delete, edit):
+ * there a load that throws answers with that handler's own failure message,
+ * and wrapping would move the load outside the catch.
+ */
+export function withProjectFromPath<P extends { projectPath?: string }>(
+    run: (context: HandlerContext, project: Project, payload?: P) => Promise<HandlerResponse>,
+): MessageHandler<P> {
+    return async (context, payload) => {
+        const resolved = await resolveProjectFromPath(context, payload);
+        if (!resolved.ok) {
+            return resolved.error;
+        }
+        return run(context, resolved.project, payload);
+    };
 }

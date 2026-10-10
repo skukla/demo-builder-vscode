@@ -14,20 +14,25 @@
  *   - That error stays FINDABLE. `hasError` rides each section onto its rail tab,
  *     because a disabled Save with no visible cause is a dead end.
  *
+ * This file is the wiring and the page chrome. The jobs live in hooks (EDS-8): the
+ * project-name field in `useProjectNameField`, Save/Close and the busy flags in
+ * `useConfigureSave`, the sections, global validation and rail in `useConfigureSections`,
+ * and the field row with store discovery in `useConfigureFieldRow`. A new rail tab is a
+ * new section kind in `buildConfigureSections` plus its body in `ConfigureSectionBody`.
+ *
  * @module features/dashboard/ui/configure/ConfigureScreen
  */
 
 import { Form, Button, View } from '@adobe/react-spectrum';
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { validateServiceGroups } from './configureFieldValidation';
+import React, { useState } from 'react';
 import { ConfigureSectionBody } from './ConfigureSectionBody';
-import { buildConfigureSections, toStepRailTabs } from './configureSections';
-import type { SaveConfigurationResponse, ServiceGroup, UniqueField } from './configureTypes';
+import { useConfigureFieldRow } from './hooks/useConfigureFieldRow';
 import { useConfigureFieldValues } from './hooks/useConfigureFieldValues';
+import { useConfigureSave } from './hooks/useConfigureSave';
+import { useConfigureSections } from './hooks/useConfigureSections';
+import { useProjectNameField } from './hooks/useProjectNameField';
 import { useSelectedComponents } from './hooks/useSelectedComponents';
 import { useServiceGroups } from './hooks/useServiceGroups';
-import { withStoredSecretsPreserved } from './storedSecretPayload';
-import { ACCS_OAUTH_CLIENT_ID } from '@/core/config/envVarKeys';
 import { PageFooter } from '@/core/ui/components/layout/PageFooter';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 // Direct paths, not the barrels: several Configure suites mock `components/layout`
@@ -37,16 +42,8 @@ import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { StepAreaShell } from '@/core/ui/components/layout/StepAreaShell';
 import { StepRail } from '@/core/ui/components/navigation/StepRail';
 import { useFocusTrap } from '@/core/ui/hooks/useFocusTrap';
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
-import { normalizeProjectName, getProjectNameError } from '@/core/validation/normalizers';
-import { StoreConfigFieldRow } from '@/features/components/ui/components/StoreConfigFieldRow';
-import { useAutoStoreDetect } from '@/features/components/ui/hooks/useAutoStoreDetect';
-import { useCredentialService } from '@/features/components/ui/hooks/useCredentialService';
-import { useStoreDiscovery } from '@/features/components/ui/hooks/useStoreDiscovery';
 import type { AuthoringExperience } from '@/types/base';
-import { hasEntries } from '@/types/typeGuards';
-import type { DeploymentStatusPayload, ConfigureInitialData } from '@/types/webviewPayloads';
+import type { ConfigureInitialData } from '@/types/webviewPayloads';
 
 /** Stable empty reference for an optional prop (avoid hook churn). */
 const EMPTY_SECRET_FLAGS: Record<string, Record<string, boolean>> = {};
@@ -78,22 +75,13 @@ export function ConfigureScreen({
     const [authoringExperience, setAuthoringExperience] = useState<AuthoringExperience>(
         initialAuthoringExperience ?? 'da-live-classic',
     );
-    const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-    const [isSaving, setIsSaving] = useState(false);
-    const [isDeploying, setIsDeploying] = useState(false);
-    // Which section the rail is on. Re-opening Configure re-sends `init` WITHOUT
-    // remounting React (baseWebviewCommand.createOrRevealPanel), so this deliberately
-    // survives a re-open and puts the user back where they were — matching
-    // `retainContextWhenHidden`, which already preserves it across a tab-away.
-    // `componentConfigs` does reset on that init; the asymmetry is accepted.
-    const [activeSectionId, setActiveSectionId] = useState('project-info');
-    // The TITLE as typed, not the slug. `handleRenameProject` derives the slug
-    // from it on save, so this field never has to show hyphens.
-    // Explicitly `string`: this holds RAW user input while they type. It is
-    // seeded from the display name but stops being one the moment a key lands,
-    // so branding the state would be a lie the compiler then enforces.
-    const [projectName, setProjectName] = useState<string>(getProjectDisplayName(project));
-    const [projectNameTouched, setProjectNameTouched] = useState(false);
+    const {
+        projectName,
+        projectNameTouched,
+        projectNameError,
+        projectFolder,
+        handleProjectNameChange,
+    } = useProjectNameField({ project, existingProjectNames });
 
     // Focus trap for keyboard navigation
     const containerRef = useFocusTrap<HTMLDivElement>({
@@ -113,35 +101,15 @@ export function ConfigureScreen({
         normalizeUrlField,
     } = useConfigureFieldValues({ project, existingEnvValues });
 
-    // Listen for deployment status updates from backend
-    // This keeps the Save button disabled during mesh/storefront deployment
-    useEffect(() => {
-        const unsubscribe = webviewClient.onMessage('deployment-status', (data) => {
-            const payload = data as DeploymentStatusPayload;
-            setIsDeploying(payload.isDeploying);
-        });
-        return unsubscribe;
-    }, []);
-
-    // Validate project name
-    const projectNameError = useMemo(() => {
-        if (!projectNameTouched) return undefined;
-        // Validate the DERIVED slug: it is what has to be a legal folder and what
-        // `existingProjectNames` holds. Validating the raw title would reject
-        // every capital and space the field now exists to allow.
-        return getProjectNameError(
-            normalizeProjectName(projectName),
-            existingProjectNames,
-            project.name,
-        );
-    }, [projectName, existingProjectNames, project.name, projectNameTouched]);
-
-    // Keep what was typed. It used to run `normalizeProjectName` on every
-    // keystroke, so "My Bodea Demo" rewrote itself under the cursor.
-    const handleProjectNameChange = useCallback((value: string) => {
-        setProjectName(value);
-        setProjectNameTouched(true);
-    }, []);
+    const { isSaving, isDeploying, handleSave, handleCancel } = useConfigureSave({
+        project,
+        projectName,
+        componentConfigs,
+        componentSecretFlags,
+        touchedFields,
+        isEds,
+        authoringExperience,
+    });
 
     // Get all selected components with their data (using extracted hook)
     const selectedComponents = useSelectedComponents({ project, componentsData });
@@ -149,181 +117,26 @@ export function ConfigureScreen({
     // Deduplicate fields and organize by service group
     const serviceGroups = useServiceGroups({ selectedComponents, componentsData });
 
-    // Commerce store discovery — matches wizard UX. Connection fields (ACCS endpoint,
-    // PaaS URL + credentials) trigger automatic discovery; store-code fields render as
-    // cascading Pickers once results arrive.
-    const {
-        isFetching,
-        fetchError,
-        hasStoreData,
-        fetchStores,
-        getWebsiteItems,
-        getStoreGroupItems,
-        getStoreViewItems,
-        isStoreGroup,
-    } = useStoreDiscovery();
+    const { validationErrors, activeSection, railTabs, setActiveSectionId, canSave } =
+        useConfigureSections({
+            serviceGroups,
+            getValueFromConfigs,
+            isFieldComplete,
+            isEds,
+            projectNameError,
+        });
 
-    const { autoDetectKey, forceFetch } = useAutoStoreDetect({
-        configs: componentConfigs,
-        orgId: project.adobe?.organization,
-        fetchStores,
-        hasStoreData,
-        isFetching,
-        // Configure is the surface that renders a SAVED project, so it is the one
-        // whose password may already have migrated out of the config map.
-        secretFlags: componentSecretFlags,
-    });
-
-    // GLOBAL validation: every service group, not the one on screen. An error the user
-    // cannot see must still block Save, and its rail tab is what points them at it.
-    useEffect(() => {
-        setValidationErrors(validateServiceGroups(serviceGroups, getValueFromConfigs));
-    }, [serviceGroups, getValueFromConfigs]);
-
-    const fieldHasError = useCallback(
-        (field: UniqueField): boolean => validationErrors[field.key] !== undefined,
-        [validationErrors],
-    );
-
-    // Validate project name — see projectNameError above; the rail reads it too.
-    const sections = useMemo(
-        () =>
-            buildConfigureSections({
-                serviceGroups,
-                isFieldComplete,
-                fieldHasError,
-                isEds,
-                isProjectNameValid: !projectNameError,
-            }),
-        [serviceGroups, isFieldComplete, fieldHasError, isEds, projectNameError],
-    );
-
-    // Sections come and go as components are configured, so the stored id can go stale;
-    // fall back to the first tab (Project, which is always present) rather than a blank view.
-    const activeSection = sections.find((section) => section.id === activeSectionId) ?? sections[0];
-
-    const railTabs = useMemo(
-        () => toStepRailTabs(sections, activeSection.id),
-        [sections, activeSection.id],
-    );
-
-    const handleSave = useCallback(async () => {
-        setIsSaving(true);
-        try {
-            // Include projectName if it changed
-            // Compare against the TITLE, so editing only the capitalisation of a
-            // title still counts as a change. Comparing to the slug would treat
-            // "bodea demo" -> "Bodea Demo" as a no-op and silently discard it.
-            const newProjectName =
-                projectName.trim() !== getProjectDisplayName(project)
-                    ? projectName.trim()
-                    : undefined;
-            // The authoring-experience preference is EDS-only; for non-EDS projects
-            // it is omitted entirely so the payload shape is unchanged.
-            const result = await webviewClient.request<SaveConfigurationResponse>(
-                'save-configuration',
-                {
-                    componentConfigs: withStoredSecretsPreserved(
-                        componentConfigs,
-                        componentSecretFlags,
-                        touchedFields,
-                    ),
-                    newProjectName,
-                    ...(isEds ? { authoringExperience } : {}),
-                },
-            );
-            if (!result.success) {
-                throw new Error(result.error || 'Failed to save configuration');
-            }
-        } catch {
-            // Error handled by extension - no action needed
-            // Extension shows user-facing error message via webview communication
-        } finally {
-            setIsSaving(false);
-        }
-    }, [
-        componentConfigs,
-        // Both feed the stored-secret filter. A stale closure here would send the
-        // blank placeholder and delete the credential — the exact failure the
-        // filter exists to prevent.
-        componentSecretFlags,
-        touchedFields,
-        projectName,
-        // `project`, not `project.name`: handleSave now compares against
-        // `getProjectDisplayName(project)`, which reads `title` too. Depending on
-        // `.name` alone left a stale closure that would compare a new title
-        // against an old one and silently drop the rename.
+    const { renderFieldRow, autoDetectKey } = useConfigureFieldRow({
         project,
-        isEds,
-        authoringExperience,
-    ]);
-
-    const handleCancel = useCallback(() => {
-        webviewClient.postMessage('cancel');
-    }, []);
-
-    // Can save if no validation errors (env vars and project name). This walks EVERY
-    // group's errors, not the rendered one's — a hidden section can still block Save,
-    // and its rail tab carries `hasError` so the user can reach it.
-    const canSave = !hasEntries(validationErrors) && !projectNameError;
-
-    // Same treatment the wizard's Connection step gets: these two fields are an
-    // override, and an empty box that cannot say so is what sent people to the
-    // Developer Console. One config entry, two surfaces — they must agree.
-    const hasBrokeredCredentialField = useMemo(
-        () =>
-            serviceGroups.some((group) =>
-                group.fields.some((field) => field.key === ACCS_OAUTH_CLIENT_ID),
-            ),
-        [serviceGroups],
-    );
-    const credentialService = useCredentialService(
-        hasBrokeredCredentialField,
-        project.adobe?.organization,
-    );
-
-    const renderFieldRow = useCallback(
-        (field: UniqueField, group: ServiceGroup) => (
-            <StoreConfigFieldRow
-                field={field}
-                group={group}
-                credentialService={credentialService}
-                secretFlags={componentSecretFlags}
-                autoDetectKey={autoDetectKey}
-                isFetching={isFetching}
-                hasStoreData={hasStoreData}
-                fetchError={fetchError}
-                isStoreGroup={isStoreGroup}
-                getFieldValue={getFieldValue}
-                updateField={updateField}
-                validationErrors={validationErrors}
-                touchedFields={touchedFields}
-                normalizeUrlField={normalizeUrlField}
-                getWebsiteItems={getWebsiteItems}
-                getStoreGroupItems={getStoreGroupItems}
-                getStoreViewItems={getStoreViewItems}
-                onRefresh={forceFetch}
-            />
-        ),
-        [
-            autoDetectKey,
-            isFetching,
-            hasStoreData,
-            fetchError,
-            isStoreGroup,
-            getFieldValue,
-            updateField,
-            validationErrors,
-            touchedFields,
-            normalizeUrlField,
-            getWebsiteItems,
-            getStoreGroupItems,
-            getStoreViewItems,
-            forceFetch,
-            credentialService,
-            componentSecretFlags,
-        ],
-    );
+        componentConfigs,
+        componentSecretFlags,
+        serviceGroups,
+        getFieldValue,
+        updateField,
+        validationErrors,
+        touchedFields,
+        normalizeUrlField,
+    });
 
     return (
         <div ref={containerRef} className="container-configure">
@@ -358,7 +171,7 @@ export function ConfigureScreen({
                                 onProjectNameChange={handleProjectNameChange}
                                 projectNameError={projectNameError}
                                 projectNameTouched={projectNameTouched}
-                                projectFolder={normalizeProjectName(projectName)}
+                                projectFolder={projectFolder}
                                 authoringExperience={authoringExperience}
                                 onAuthoringExperienceChange={setAuthoringExperience}
                             />

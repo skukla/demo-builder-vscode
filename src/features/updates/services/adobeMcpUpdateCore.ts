@@ -27,12 +27,12 @@ import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { ensureFnmNodeVersion } from '@/core/shell/ensureNodeVersion';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import {
     generateAIContextFiles,
     type AiBundleRefreshResult,
 } from '@/features/project-creation/services/aiBundle/aiBundleService';
 import {
-    AI_TOOLS_NODE_VERSION,
     resolveMcpToolsDir,
 } from '@/features/project-creation/services/aiBundle/aiDefaultsInstaller';
 import type { Project } from '@/types/base';
@@ -65,14 +65,14 @@ export async function applyAdobeMcpUpdate(
 
     // The same Node the tools were installed for and run on (AI-13). Without it the
     // update ran on the PATH's Node and npm warned EBADENGINE, as the install did.
-    const nodeError = await ensureFnmNodeVersion(commandManager, AI_TOOLS_NODE_VERSION, ctx.logger);
+    const nodeError = await ensureFnmNodeVersion(commandManager, demoBuilderNode(), ctx.logger);
     if (nodeError) throw new Error(nodeError);
     const result = await commandManager.execute(`npm update ${packageName} --no-fund`, {
         cwd: toolsDir,
         timeout: TIMEOUTS.VERY_LONG,
         shell: DEFAULT_SHELL,
         enhancePath: true,
-        useNodeVersion: AI_TOOLS_NODE_VERSION,
+        useNodeVersion: demoBuilderNode(),
     });
     if (result.code !== 0) {
         throw new Error(`npm update failed: ${result.stderr || result.stdout}`);

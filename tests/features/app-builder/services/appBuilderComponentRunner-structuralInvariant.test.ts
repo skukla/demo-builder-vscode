@@ -41,10 +41,8 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
     detectAppLayout: jest.fn().mockResolvedValue('standalone'),
 }));
 
-import {
-    addAppBuilderComponent,
-    removeAppBuilderComponent,
-} from '@/features/app-builder/services/appBuilderComponentRunner';
+import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderAddRun';
+import { removeAppBuilderComponent } from '@/features/app-builder/services/appBuilderRemoveRun';
 import { deriveOwPackage } from '@/features/app-builder/services/owPackageName';
 
 import { createDeps as sharedCreateDeps, createProject } from './appBuilderComponentRunner.testUtils';

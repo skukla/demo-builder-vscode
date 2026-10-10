@@ -20,7 +20,6 @@ jest.mock('@/features/prerequisites/handlers/shared', () => {
     const actual = jest.requireActual('@/features/prerequisites/handlers/shared');
     return {
         ...actual,
-        getRequiredNodeVersions: jest.fn(),
         getNodeVersionMapping: jest.fn(),
         checkPerNodeVersionStatus: jest.fn(),
         hasNodeVersions: jest.fn(),

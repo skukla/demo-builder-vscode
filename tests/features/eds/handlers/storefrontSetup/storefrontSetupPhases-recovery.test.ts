@@ -37,8 +37,8 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     }),
 }));
 
-jest.mock('@/features/eds/services/github/githubRepoOperations', () => ({
-    GitHubRepoOperations: jest.fn().mockImplementation(() => ({
+jest.mock('@/features/eds/services/github/githubRepoLifecycle', () => ({
+    GitHubRepoLifecycle: jest.fn().mockImplementation(() => ({
         createFromTemplate: jest.fn(),
         waitForContent: jest.fn(),
     })),

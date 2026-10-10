@@ -254,7 +254,8 @@ async function syncRemoteProjectTitle(
         return;
     }
     try {
-        const renamed = await context.authManager.renameRemoteProject(
+        const { projectOps } = await context.authManager.getEntityServices();
+        const renamed = await projectOps.renameRemoteProject(
             adobe.organization,
             adobe.projectId,
             newTitle,

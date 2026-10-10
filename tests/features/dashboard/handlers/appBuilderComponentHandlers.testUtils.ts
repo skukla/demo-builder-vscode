@@ -23,9 +23,13 @@ import type { AppBuilderComponentState, Project } from '@/types/base';
 export const mockAddAppBuilderComponent = jest.fn();
 export const mockDeployAppBuilderComponent = jest.fn();
 export const mockRemoveAppBuilderComponent = jest.fn();
-jest.mock('@/features/app-builder/services/appBuilderComponentRunner', () => ({
+jest.mock('@/features/app-builder/services/appBuilderAddRun', () => ({
     addAppBuilderComponent: (...a: unknown[]) => mockAddAppBuilderComponent(...a),
+}));
+jest.mock('@/features/app-builder/services/appBuilderRedeployRun', () => ({
     deployAppBuilderComponent: (...a: unknown[]) => mockDeployAppBuilderComponent(...a),
+}));
+jest.mock('@/features/app-builder/services/appBuilderRemoveRun', () => ({
     removeAppBuilderComponent: (...a: unknown[]) => mockRemoveAppBuilderComponent(...a),
 }));
 
@@ -96,20 +100,22 @@ export const mockSendProjectDestinationUpdate = jest.fn();
  * refresh happens — and, for rename, that it does not.
  */
 export const mockHandleRequestStatus = jest.fn().mockResolvedValue({ success: true });
-jest.mock('@/features/dashboard/handlers/dashboardHandlers', () => ({
+jest.mock('@/features/dashboard/handlers/statusHandlers', () => ({
     handleRequestStatus: (...a: unknown[]) => mockHandleRequestStatus(...a),
 }));
 
 jest.mock('@/features/dashboard/commands/showDashboard', () => ({
     ProjectDashboardWebviewCommand: {
-        sendAppBuilderComponentStatusUpdate: (...a: unknown[]) =>
-            mockSendAppBuilderComponentStatusUpdate(...a),
-        sendAppBuilderComponentsSnapshot: (...a: unknown[]) =>
-            mockSendAppBuilderComponentsSnapshot(...a),
-        sendMeshStatusUpdate: (...a: unknown[]) => mockSendMeshStatusUpdate(...a),
-        sendProjectDestinationUpdate: (...a: unknown[]) => mockSendProjectDestinationUpdate(...a),
         refreshStatus: jest.fn(),
     },
+}));
+jest.mock('@/features/dashboard/services/projectPanelPushes', () => ({
+    sendAppBuilderComponentStatusUpdate: (...a: unknown[]) =>
+        mockSendAppBuilderComponentStatusUpdate(...a),
+    sendAppBuilderComponentsSnapshot: (...a: unknown[]) =>
+        mockSendAppBuilderComponentsSnapshot(...a),
+    sendMeshStatusUpdate: (...a: unknown[]) => mockSendMeshStatusUpdate(...a),
+    sendProjectDestinationUpdate: (...a: unknown[]) => mockSendProjectDestinationUpdate(...a),
 }));
 
 export {
@@ -121,9 +127,6 @@ export {
     handleRemoveAppBuilderComponent,
     handleRenameAppBuilderComponent,
     postComponentsSnapshot,
-    postDestination,
-    postMeshStatus,
-    postRowStatus,
     resolveAddEntry,
     resolveComponentTarget,
     runGuards,

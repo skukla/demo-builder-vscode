@@ -107,17 +107,21 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 // Note: copyMediaFromContent is no longer called - Admin API downloads images during preview
 jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn().mockImplementation(() => ({
-        copyContentFromSource: jest.fn().mockResolvedValue({
-            success: true,
-            totalFiles: 10,
-            copiedFiles: ['file1', 'file2'],
-            failedFiles: [],
-        }),
-        createBlockLibraryFromTemplate: jest.fn().mockResolvedValue({
-            success: true,
-            blocksCount: 0,
-            paths: [],
-        }),
+        copyOps: {
+            copyContentFromSource: jest.fn().mockResolvedValue({
+                success: true,
+                totalFiles: 10,
+                copiedFiles: ['file1', 'file2'],
+                failedFiles: [],
+            }),
+        },
+        blockLibOps: {
+            createBlockLibraryFromTemplate: jest.fn().mockResolvedValue({
+                success: true,
+                blocksCount: 0,
+                paths: [],
+            }),
+        },
     })),
 }));
 
@@ -141,15 +145,6 @@ jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
 // Mock GitHubAppService (dynamically imported for Code Sync verification)
 // GitHubAppService is NOT mocked. Measured 2026-08-31: removing the mock changes
 // nothing this suite observes — it was silencing a construction with no side effects.
-
-// Mock configGenerator (dynamically imported for config.json generation)
-jest.mock('@/features/eds/services/configGenerator', () => ({
-    generateConfigJson: jest.fn().mockResolvedValue({
-        success: true,
-        content: '{"host":"example.com"}',
-    }),
-    extractConfigParams: jest.fn().mockReturnValue({}),
-}));
 
 // Mock configSyncService for CDN verification
 jest.mock('@/features/eds/services/configSyncService', () => ({

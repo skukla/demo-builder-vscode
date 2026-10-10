@@ -27,6 +27,7 @@ import {
     createBlockFileEntries,
     primeCommitPath,
     setupBlockCollectionMocks,
+    type MockGithubFileOps,
 } from './blockCollectionHelpers.testUtils';
 
 const DEST_OWNER = 'dest-owner';
@@ -40,7 +41,7 @@ const entries = (...paths: string[]): FileEntry[] =>
     paths.map((path) => ({ path, sha: `sha-${path}` }));
 
 describe('installBlockCollections — which paths name a block', () => {
-    let mockGithubFileOps: jest.Mocked<GitHubFileOperations>;
+    let mockGithubFileOps: MockGithubFileOps;
     let mockLogger: jest.Mocked<Logger>;
 
     beforeEach(() => {
@@ -131,7 +132,7 @@ describe('installBlockCollections — which paths name a block', () => {
 });
 
 describe('installBlockCollections — the order ids come back in', () => {
-    let mockGithubFileOps: jest.Mocked<GitHubFileOperations>;
+    let mockGithubFileOps: MockGithubFileOps;
     let mockLogger: jest.Mocked<Logger>;
 
     beforeEach(() => {
@@ -219,7 +220,7 @@ describe('installBlockCollections — the order ids come back in', () => {
  * as the blocks, and an absent or empty list must not disturb it.
  */
 describe('installBlockCollections — additional tree entries', () => {
-    let mockGithubFileOps: jest.Mocked<GitHubFileOperations>;
+    let mockGithubFileOps: MockGithubFileOps;
     let mockLogger: jest.Mocked<Logger>;
 
     beforeEach(() => {

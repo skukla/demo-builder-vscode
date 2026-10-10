@@ -15,7 +15,6 @@ import * as path from 'path';
 import {
     mockRawRegistry,
     COMPONENT_SECTIONS,
-    createMaliciousRegistry,
 } from './ComponentRegistryManager.testUtils';
 import { assertDefined } from '../../../helpers/resultAssertions';
 
@@ -75,7 +74,6 @@ describe('Mock Structure Validation', () => {
 
             const problems: string[] = [];
             Object.entries(frontends).forEach(([id, component]) => {
-                // Note: nodeVersion is optional - some components (EDS, PaaS) don't need Node
                 if (component.name === undefined) problems.push(`frontends.${id}: no name`);
                 if (component.description === undefined) problems.push(`frontends.${id}: no description`);
             });
@@ -89,57 +87,9 @@ describe('Mock Structure Validation', () => {
 
             const problems: string[] = [];
             Object.entries(backends).forEach(([id, component]) => {
-                // Note: nodeVersion is optional - PaaS is a remote service without Node requirement
                 if (component.name === undefined) problems.push(`backends.${id}: no name`);
             });
             expect(problems).toStrictEqual([]);
-        });
-
-        it('should have nodeVersion for components that require local Node.js', () => {
-            // headless (Next.js) requires Node for local development
-            expect(mockRawRegistry.frontends?.headless?.configuration?.nodeVersion).toBe('24');
-            // commerce-mesh requires Node
-            expect(mockRawRegistry.mesh?.['commerce-mesh']?.configuration?.nodeVersion).toBe('20');
-        });
-
-        it('should NOT have nodeVersion for browser-only components', () => {
-            // test-tool is a browser overlay, not a Node.js tool
-            expect(mockRawRegistry.dependencies?.['test-tool']?.configuration?.nodeVersion).toBeUndefined();
-        });
-
-        it('should NOT have nodeVersion for remote services', () => {
-            // EDS runs on Edge Delivery, not local Node
-            expect(mockRawRegistry.frontends?.eds?.configuration?.nodeVersion).toBeUndefined();
-            // PaaS is a remote Commerce instance
-            expect(mockRawRegistry.backends?.['adobe-commerce-paas']?.configuration?.nodeVersion).toBeUndefined();
-        });
-    });
-
-    describe('createMaliciousRegistry', () => {
-        it('should create malicious registry for frontends section', () => {
-            const malicious = createMaliciousRegistry('frontends.eds', '20; rm -rf /');
-
-            expect(malicious.version).toBe('3.0.0');
-            expect(malicious.frontends?.eds.configuration?.nodeVersion).toBe('20; rm -rf /');
-        });
-
-        it('should create malicious registry for backends section', () => {
-            const malicious = createMaliciousRegistry('backends.adobe-commerce-paas', '20 && cat /etc/passwd');
-
-            expect(malicious.backends?.['adobe-commerce-paas'].configuration?.nodeVersion).toBe('20 && cat /etc/passwd');
-        });
-
-        it('should create malicious registry for mesh section', () => {
-            const malicious = createMaliciousRegistry('mesh.commerce-mesh', '20`whoami`');
-
-            expect(malicious.mesh?.['commerce-mesh'].configuration?.nodeVersion).toBe('20`whoami`');
-        });
-
-        it('should handle infrastructure section', () => {
-            const malicious = createMaliciousRegistry('infrastructure.adobe-cli', '20; evil');
-
-            // adobe-cli in mock doesn't have configuration, so this tests adding one
-            expect(malicious.infrastructure?.['adobe-cli'].configuration?.nodeVersion).toBe('20; evil');
         });
     });
 

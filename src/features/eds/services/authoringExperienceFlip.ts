@@ -18,10 +18,8 @@
 
 import * as vscode from 'vscode';
 import { applyDaLiveOrgConfigSettings, getDaLiveAuthService } from '../handlers/edsHelpers';
-import {
-    DaLiveContentOperations,
-    createDaLiveServiceTokenProvider,
-} from './daLive/daLiveContentOperations';
+import { DaLiveContentOperations } from './daLive/daLiveContentOperations';
+import { createDaLiveServiceTokenProvider } from './daLive/daLiveTokenProviders';
 import { GitHubFileOperations } from './github/githubFileOperations';
 import type { GitHubTokenService } from './github/githubTokenService';
 import type { HelixCodePreview } from './helix/helixCapabilities';

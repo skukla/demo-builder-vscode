@@ -1,80 +1,25 @@
 /**
  * HelixSiteContent — whole-site content publication.
  *
- * The bulk half of the Helix client: discover every publishable page from
- * DA.live, bulk-preview and bulk-publish them (202-and-poll via
- * `helixBulkJobs`), and fall back to page-by-page when the bulk API refuses.
- * Also the exclusion lists that keep non-content files (metadata, redirects,
- * placeholder folders) out of a publish.
+ * The policy half of a site publish: discover every publishable page from
+ * DA.live (`helixPageDiscovery`), try the Admin API's bulk preview and bulk
+ * publish (`helixBulkPublish`), and fall back to page-by-page when the bulk
+ * API refuses. Also the progress phases a whole-site publish reports.
  *
- * Extracted from `helixService.ts` (god-file cut 3, 2026-08-23). Auth arrives
- * through the injected {@link HelixAdminAuth}; the single-page
- * preview-and-publish used by the fallback is injected as a callback by the
- * facade, keeping this class free of the page-op half.
+ * Extracted from `helixService.ts` (god-file cut 3, 2026-08-23); the bulk
+ * calls and the DA.live page listing moved out on 2026-10-08 (EDS-8). The
+ * single-page preview-and-publish used by the fallback is injected as a
+ * callback by the facade, keeping this class free of the page-op half.
  *
  * @module features/eds/services/helix/helixSiteContent
  */
 
-import type { DaLiveContentOperations } from '../daLive/daLiveContentOperations';
-import type { HelixAdminAuth } from './helixAdminAuth';
-import { ADMIN_API_401_MESSAGE, throwCredentialRefused } from './helixAdminErrors';
-import { buildPartitionUrl } from './helixApiClient';
-import {
-    parseBulkJobResponse,
-    pollJobCompletion,
-    type BulkJobDeps,
-    type BulkProgressCallback,
-} from './helixBulkJobs';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { HelixBulkPublish } from './helixBulkPublish';
+import type { HelixPageDiscovery } from './helixPageDiscovery';
 import type { Logger } from '@/types/logger';
 
 /** Default branch for Helix operations */
 const DEFAULT_BRANCH = 'main';
-
-/** Explicit paths when provided, otherwise the site root (`/`) for a bulk operation. */
-function getPathsOrDefault(paths?: string[]): string[] {
-    return paths && paths.length > 0 ? paths : ['/'];
-}
-
-/** How one bulk POST names itself in logs and errors, per partition. */
-const BULK_OPS = {
-    preview: { doing: 'Previewing', verb: 'preview' },
-    live: { doing: 'Publishing', verb: 'publish' },
-} as const;
-
-/** What one bulk POST is asked to do. */
-interface BulkRequest {
-    org: string;
-    site: string;
-    branch: string;
-    onProgress?: BulkProgressCallback;
-    paths?: string[];
-}
-
-/**
- * File names to exclude from publishing (non-content files). Exported because a reset's
- * leftover-page check (`storefront/leftoverPages.ts`) must not read "not republished"
- * as "left over" for a page this step never publishes.
- */
-export const EXCLUDED_NAMES = [
-    'metadata', // metadata.json
-    'redirects', // redirects.json
-    'placeholders', // placeholders.json
-    'query-index', // query-index.json
-    'test-index', // test files
-];
-
-/**
- * Folder names to exclude from publishing. Exported for the same reason as
- * {@link EXCLUDED_NAMES}.
- */
-export const EXCLUDED_FOLDERS = [
-    '.helix',
-    '.milo',
-    'placeholders',
-    'experiments', // A/B test config
-    'enrichment', // PDP enrichment data
-];
 
 /**
  * Progress callback phases for publish operations
@@ -109,8 +54,10 @@ function parseRepoFullName(fullName: string): [string, string] {
 /** What the site-content operations need from their host. */
 export interface HelixSiteContentDeps {
     logger: Logger;
-    daLiveOps: DaLiveContentOperations;
-    auth: HelixAdminAuth;
+    /** The Admin API's bulk preview and bulk publish (the fast path). */
+    bulk: Pick<HelixBulkPublish, 'previewAllContent' | 'publishAllContent'>;
+    /** The DA.live listing that decides which pages a publish covers. */
+    discovery: Pick<HelixPageDiscovery, 'listAllPages'>;
     /** The single-page preview+publish used by the page-by-page fallback. */
     previewAndPublishPage(org: string, site: string, path: string, branch: string): Promise<void>;
 }
@@ -123,244 +70,6 @@ export class HelixSiteContent {
 
     private get logger(): Logger {
         return this.deps.logger;
-    }
-
-    private getGitHubToken(): Promise<string> {
-        return this.deps.auth.getGitHubToken();
-    }
-
-    private getDaLiveToken(): Promise<string> {
-        return this.deps.auth.getDaLiveToken();
-    }
-
-    private bulkJobDeps(): BulkJobDeps {
-        return {
-            logger: this.logger,
-            getJobStatusHeaders: () => this.deps.auth.jobStatusHeaders(),
-        };
-    }
-
-    /**
-     * Preview all content (bulk operation)
-     * Uses the bulk API endpoint to sync all content from DA.live to preview CDN.
-     * Polls for job completion before returning.
-     *
-     * @param org - Organization/owner name
-     * @param site - Site/repository name
-     * @param branch - Branch name (default: main)
-     * @param onProgress - Optional callback for progress updates (processed, total)
-     * @param paths - Optional explicit list of paths to preview
-     */
-    previewAllContent(
-        org: string,
-        site: string,
-        branch: string = DEFAULT_BRANCH,
-        onProgress?: BulkProgressCallback,
-        paths?: string[],
-    ): Promise<void> {
-        return this.bulkPost('preview', { org, site, branch, onProgress, paths });
-    }
-
-    /**
-     * Publish all content to live (bulk operation)
-     * Uses the bulk API endpoint to sync all content from preview to live CDN.
-     * Polls for job completion before returning.
-     *
-     * @param org - Organization/owner name
-     * @param site - Site/repository name
-     * @param branch - Branch name (default: main)
-     * @param onProgress - Optional callback for progress updates (processed, total)
-     * @param paths - Optional explicit list of paths to publish (if not provided, uses "/" which only processes root)
-     * @see https://www.aem.live/docs/admin.html
-     */
-    publishAllContent(
-        org: string,
-        site: string,
-        branch: string = DEFAULT_BRANCH,
-        onProgress?: BulkProgressCallback,
-        paths?: string[],
-    ): Promise<void> {
-        return this.bulkPost('live', { org, site, branch, onProgress, paths });
-    }
-
-    /**
-     * One bulk POST to a partition, then poll its job. Preview and publish were
-     * two copies of this that differed only in the partition and the words —
-     * and, until 2026-10-09, in what a 403 meant: preview re-prompted for an
-     * expired session and publish blamed the user's role. Both now raise the
-     * refused-credential error (see `throwCredentialRefused`).
-     *
-     * The bulk API requires a `Content-Type: application/json` header and a JSON
-     * body with a paths array; the `/*` in the URL triggers bulk/async processing
-     * (202), while small batches answer 200 synchronously.
-     */
-    private async bulkPost(partition: keyof typeof BULK_OPS, request: BulkRequest): Promise<void> {
-        const { org, site, branch, onProgress, paths } = request;
-        const op = BULK_OPS[partition];
-        const githubToken = await this.getGitHubToken();
-        const imsToken = await this.getDaLiveToken();
-        const url = buildPartitionUrl(partition, org, site, branch, '/*');
-
-        // Use explicit paths if provided, otherwise default to root
-        const pathsToProcess = getPathsOrDefault(paths);
-
-        this.logger.debug(
-            `[Helix] ${op.doing} all content (bulk): ${url} - ${pathsToProcess.length} paths`,
-        );
-
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                // Authorization FIRST: once the site has any `access.admin` role the
-                // admin API closes to callers without an accepted admin identity,
-                // and the GitHub token is not one. See ADMIN_API_401_MESSAGE.
-                Authorization: `Bearer ${imsToken}`,
-                'x-auth-token': githubToken,
-                'x-content-source-authorization': `Bearer ${imsToken}`, // Required for DA.live content source
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                paths: pathsToProcess,
-                forceUpdate: true,
-            }),
-            signal: AbortSignal.timeout(TIMEOUTS.VERY_LONG),
-        });
-
-        if (response.status === 401) {
-            throw new Error(ADMIN_API_401_MESSAGE);
-        }
-
-        if (response.status === 403) {
-            await throwCredentialRefused(response, `${op.verb} this content`);
-        }
-
-        // 400 = Bad request - log details for debugging
-        if (response.status === 400) {
-            let errorBody: string | undefined;
-            try {
-                errorBody = await response.text();
-            } catch {
-                // Ignore parse errors
-            }
-            this.logger.error(
-                `[Helix] Bulk ${op.verb} returned 400 Bad Request. Response: ${errorBody || 'empty'}`,
-            );
-            throw new Error(
-                `Failed to ${op.verb} all content: 400 Bad Request - ${errorBody || 'Invalid request'}`,
-            );
-        }
-
-        // 202 = Bulk job scheduled (async job created)
-        if (response.status === 202) {
-            this.logger.debug(`[Helix] Bulk ${op.verb} job created, polling for completion`);
-
-            const { jobName, jobTopic } = await parseBulkJobResponse(
-                response,
-                partition,
-                this.logger,
-            );
-
-            if (jobName) {
-                await pollJobCompletion(
-                    this.bulkJobDeps(),
-                    { org, site, branch, jobName, topic: jobTopic },
-                    onProgress,
-                );
-            } else {
-                this.logger.warn('[Helix] No job info in response, assuming operation completed');
-            }
-            return;
-        }
-
-        if (response.ok) {
-            // 200 OK = synchronous success (small path count processed immediately)
-            this.logger.debug(`[Helix] Bulk ${op.verb} completed synchronously (200)`);
-            return;
-        }
-
-        throw new Error(
-            `Failed to ${op.verb} all content: ${response.status} ${response.statusText}`,
-        );
-    }
-
-    /**
-     * Recursively list all publishable pages from DA.live
-     *
-     * DA.live API response structure:
-     * - Files have: { name, path, ext, lastModified }
-     * - Folders have: { name, path } (no ext field)
-     *
-     * @param org - Organization name (DA.live org)
-     * @param site - Site name in DA.live
-     * @param path - Starting path (default: root)
-     * @returns Array of web paths to publish
-     */
-    async listAllPages(org: string, site: string, path: string = '/'): Promise<string[]> {
-        const pages: string[] = [];
-        // DA.live paths include org/site prefix, need to strip it for recursion
-        const pathPrefix = `/${org}/${site}`;
-
-        try {
-            const entries = await this.deps.daLiveOps.listDirectory(org, site, path);
-
-            for (const entry of entries) {
-                // Determine if it's a folder (no ext field) or file (has ext field)
-                const isFolder = !entry.ext;
-
-                if (isFolder) {
-                    // Skip excluded folders
-                    if (EXCLUDED_FOLDERS.includes(entry.name)) {
-                        continue;
-                    }
-
-                    // Recursively list subdirectory
-                    // The path in the response is like /org/site/folder, need to strip prefix for recursion
-                    const relativePath = entry.path.replace(pathPrefix, '') || '/';
-                    const subPages = await this.listAllPages(org, site, relativePath);
-                    pages.push(...subPages);
-                } else {
-                    // It's a file - check if it's publishable HTML content
-                    if (entry.ext !== 'html') {
-                        continue;
-                    }
-
-                    // Skip excluded names
-                    if (EXCLUDED_NAMES.includes(entry.name)) {
-                        continue;
-                    }
-
-                    // Convert DA.live path to web path
-                    // entry.path is like /org/site/accessories.html
-                    // We need /accessories (strip prefix and .html)
-                    const webPath = this.daLivePathToWebPath(entry.path, pathPrefix);
-                    pages.push(webPath);
-                }
-            }
-        } catch (error) {
-            this.logger.warn(`[Helix] Failed to list ${path}: ${(error as Error).message}`);
-        }
-
-        return pages;
-    }
-
-    /**
-     * Convert a DA.live path to a web path
-     * DA.live path: /org/site/accessories.html -> /accessories
-     * DA.live path: /org/site/products/index.html -> /products
-     */
-    private daLivePathToWebPath(daLivePath: string, pathPrefix: string): string {
-        // Strip the org/site prefix
-        let webPath = daLivePath.replace(pathPrefix, '');
-
-        // Remove .html extension
-        webPath = webPath.replace(/\.html$/i, '');
-
-        // Convert /index to /
-        if (webPath === '/index' || webPath.endsWith('/index')) {
-            webPath = webPath.slice(0, -6) || '/';
-        }
-
-        return webPath || '/';
     }
 
     /**
@@ -400,7 +109,7 @@ export class HelixSiteContent {
         });
 
         // List all publishable pages from DA.live to get count for progress reporting
-        const pages = await this.listAllPages(contentOrg, contentSite);
+        const pages = await this.deps.discovery.listAllPages(contentOrg, contentSite);
 
         if (pages.length === 0) {
             this.logger.warn('[Helix] No publishable pages found');
@@ -447,7 +156,7 @@ export class HelixSiteContent {
             total: pages.length,
         });
 
-        await this.previewAllContent(
+        await this.deps.bulk.previewAllContent(
             githubOrg,
             githubSite,
             branch,
@@ -472,7 +181,7 @@ export class HelixSiteContent {
             total: pages.length,
         });
 
-        await this.publishAllContent(
+        await this.deps.bulk.publishAllContent(
             githubOrg,
             githubSite,
             branch,

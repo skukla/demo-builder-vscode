@@ -2,7 +2,6 @@
  * ComponentManager Installation Tests - Git Dependencies & Build
  *
  * Tests for Git component post-clone operations:
- * - .node-version file creation
  * - npm install execution
  * - Build script execution
  * - Node version handling
@@ -14,20 +13,17 @@
  */
 
 import { ComponentManager } from '@/features/components/services/componentManager';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { Project } from '@/types/base';
 import { TransformedComponentDefinition } from '@/types/components';
 import { Logger } from '@/types/logger';
 import { CommandExecutor } from '@/core/shell/commandExecutor';
-import {
-    mockFileNotFound,
-    mockFileExists,
-} from './testHelpers';
+import { mockFileExists } from './testHelpers';
 import { setupComponentManager } from './componentManager.testUtils';
 
 
 // Mock fs/promises
 jest.mock('fs/promises');
-const fs = require('fs/promises');
 
 describe('ComponentManager - Installation (Git Dependencies)', () => {
     let componentManager: ComponentManager;
@@ -41,60 +37,7 @@ describe('ComponentManager - Installation (Git Dependencies)', () => {
     });
 
     describe('Node version management', () => {
-        it('should create .node-version file when configured', async () => {
-            mockFileNotFound();
-            (fs.writeFile as jest.Mock).mockResolvedValue(undefined);
-
-            const componentDef: TransformedComponentDefinition = {
-                id: 'test-component',
-                name: 'Test Component',
-                type: 'frontend',
-                source: {
-                    type: 'git',
-                    url: 'https://github.com/test/repo.git'
-                },
-                configuration: {
-                    nodeVersion: '20.11.0'
-                }
-            };
-
-            await componentManager.installComponent(mockProject, componentDef);
-
-            expect(fs.writeFile).toHaveBeenCalledWith(
-                expect.stringContaining('.node-version'),
-                '20.11.0\n',
-                'utf-8'
-            );
-        });
-
-        it('should skip creating .node-version if already exists', async () => {
-            mockFileExists();
-            (fs.writeFile as jest.Mock).mockResolvedValue(undefined);
-
-            const componentDef: TransformedComponentDefinition = {
-                id: 'test-component',
-                name: 'Test Component',
-                type: 'frontend',
-                source: {
-                    type: 'git',
-                    url: 'https://github.com/test/repo.git'
-                },
-                configuration: {
-                    nodeVersion: '20.11.0'
-                }
-            };
-
-            await componentManager.installComponent(mockProject, componentDef);
-
-            // writeFile should not be called for .node-version
-            const writeFileCalls = (fs.writeFile as jest.Mock).mock.calls;
-            const nodeVersionCall = writeFileCalls.find(call =>
-                call[0].includes('.node-version')
-            );
-            expect(nodeVersionCall).toBeUndefined();
-        });
-
-        it('should use correct Node version for npm install', async () => {
+        it("runs npm install on Demo Builder's Node", async () => {
             mockFileExists();
 
             const componentDef: TransformedComponentDefinition = {
@@ -105,9 +48,6 @@ describe('ComponentManager - Installation (Git Dependencies)', () => {
                     type: 'git',
                     url: 'https://github.com/test/repo.git'
                 },
-                configuration: {
-                    nodeVersion: '18.19.0'
-                }
             };
 
             await componentManager.installComponent(mockProject, componentDef);
@@ -117,7 +57,7 @@ describe('ComponentManager - Installation (Git Dependencies)', () => {
                 call => call[0].includes('npm install')
             );
             expect(npmInstallCall[1]).toMatchObject({
-                useNodeVersion: '18.19.0'
+                useNodeVersion: demoBuilderNode(),
             });
         });
     });

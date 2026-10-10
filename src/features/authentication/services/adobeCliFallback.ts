@@ -9,7 +9,8 @@
  * whose LENGTH solved issue #63. It knows nothing about the SDK.
  *
  * Extracted from `adobeEntityFetcher.ts` (god-file decomposition, 2026-08-23);
- * the fetcher facade wires one instance into `AdobeEntityReads`.
+ * `createEntityCollaborators` wires one instance into the org, project and
+ * workspace reads (`AdobeOrgReads`, `AdobeProjectReads`, `AdobeWorkspaceReads`).
  *
  * @module features/authentication/services/adobeCliFallback
  */

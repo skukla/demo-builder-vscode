@@ -9,6 +9,7 @@
 
 import type { McpToolSchema, McpToolServer } from '@/features/ai/server/mcpToolServer';
 import type { HandlerContext } from '@/types/handlers';
+import { poolUnits } from '../../../helpers/authenticationServiceFake';
 
  
 type ToolHandler = (args?: any) => Promise<{ content: Array<{ text: string }> }>;
@@ -62,7 +63,7 @@ export function withToken(userId?: string) {
 }
 
 export function makeAuth(overrides: Record<string, unknown> = {}) {
-    return {
+    return poolUnits({
         isAuthenticated: jest.fn(async () => true),
         getOrganizations: jest.fn(async () => [
             { id: 'org-1', code: 'C1@AdobeOrg', name: 'Org One' },
@@ -75,7 +76,7 @@ export function makeAuth(overrides: Record<string, unknown> = {}) {
         getCurrentOrganization: jest.fn(async () => ({ id: 'org-1', name: 'Org One' })),
         getCurrentProject: jest.fn(async () => ({ id: 'proj-1', name: 'Proj One' })),
         ...overrides,
-    };
+    });
 }
 
 export function ctxFactoryWith(auth: unknown): () => HandlerContext {

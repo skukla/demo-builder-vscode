@@ -19,8 +19,8 @@
 
 import * as vscode from 'vscode';
 import { announceConfigAccess, pinSiteAdmin } from '../services/configService/configAccessRecovery';
-import { buildSiteConfigParams } from '../services/configService/configurationService';
 import { lostGrantsMessage } from '../services/configService/lostGrantsMessage';
+import { buildSiteConfigParams } from '../services/configService/siteConfigParams';
 import { registerSiteConfig } from '../services/configService/siteConfigRegistrar';
 import { DaLiveAuthError } from '../services/types';
 import {

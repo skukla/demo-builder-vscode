@@ -31,24 +31,18 @@ export class DaLiveOrgOperations {
     private readonly apiClient: DaLiveApiClient;
 
     constructor(
-        private tokenProvider: TokenProvider,
+        tokenProvider: TokenProvider,
         private logger: Logger,
     ) {
         this.apiClient = new DaLiveApiClient(tokenProvider, logger);
     }
 
     /**
-     * Get IMS token from TokenProvider
+     * The IMS token, from the shared client.
      * @throws DaLiveAuthError if not authenticated
      */
-    private async getImsToken(): Promise<string> {
-        const token = await this.tokenProvider.getAccessToken();
-
-        if (!token) {
-            throw new DaLiveAuthError('Not authenticated. Please log in to Adobe.');
-        }
-
-        return token;
+    private getImsToken(): Promise<string> {
+        return this.apiClient.getImsToken();
     }
 
     /**
@@ -252,31 +246,12 @@ export class DaLiveOrgOperations {
     }
 
     /**
-     * Create user-friendly error from HTTP response
+     * Map a failed response to a user-friendly DaLiveError, through the shared
+     * client. Its 401 branch never fires from here: every response this class
+     * maps came through `fetchWithRetry` above, which throws on a 401 first.
      */
     private createErrorFromResponse(response: Response, operation: string): DaLiveError {
-        const status = response.status;
-        let message: string;
-
-        switch (status) {
-            // Note: 401 is handled by fetchWithRetry (throws DaLiveAuthError immediately)
-            case 403:
-                message = `Access denied when trying to ${operation}. Check your permissions.`;
-                break;
-            case 404:
-                message = `Resource not found when trying to ${operation}.`;
-                break;
-            case 500:
-            case 502:
-            case 503:
-            case 504:
-                message = `Server error occurred while trying to ${operation}. Please try again later.`;
-                break;
-            default:
-                message = `Unexpected error (${status}) while trying to ${operation}.`;
-        }
-
-        return new DaLiveError(message, `HTTP_${status}`, status);
+        return this.apiClient.createErrorFromResponse(response, operation);
     }
 }
 

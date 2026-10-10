@@ -28,7 +28,7 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
     listDeclaredExtensionPoints: (...a: unknown[]) => mockListDeclaredExtensionPoints(...a),
 }));
 
-import { removeAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
+import { removeAppBuilderComponent } from '@/features/app-builder/services/appBuilderRemoveRun';
 import { createDeps, createProject } from './appBuilderComponentRunner.testUtils';
 import { ADMIN_UI_POINT, OTHER_POINT } from '../../../helpers/workspaceEndpointsFixtures';
 

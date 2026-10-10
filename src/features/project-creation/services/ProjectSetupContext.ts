@@ -12,10 +12,10 @@
  * - Easier to test and mock
  */
 
+import { getMeshEndpointUrl } from '@/core/state/appBuilderComponentState';
 import type { Project } from '@/types/base';
 import type { ComponentConfigs , ComponentRegistry, EnvVarDefinition, TransformedComponentDefinition } from '@/types/components';
 import type { HandlerContext } from '@/types/handlers';
-import { getMeshEndpointUrl } from '@/types/typeGuards';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 
 /**

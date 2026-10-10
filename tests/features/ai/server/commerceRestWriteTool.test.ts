@@ -12,6 +12,7 @@ import type { McpToolSchema } from '@/features/ai/server/mcpToolServer';
 import type { HandlerContext } from '@/types/handlers';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { poolUnits } from '../../../helpers/authenticationServiceFake';
 
 jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
     getAppBuilderComponentCatalog: jest.fn(() => [
@@ -80,7 +81,7 @@ const getS2SDeployCredentials = jest.fn();
 const stateManager = createMockStateManager({ getCurrentProject });
 const ctx = (): HandlerContext => {
     const context = createMockHandlerContext({ stateManager });
-    Object.assign(context.authManager as object, { isAuthenticated, getS2SDeployCredentials });
+    poolUnits(Object.assign(context.authManager as object, { isAuthenticated, getS2SDeployCredentials }));
     return context;
 };
 

@@ -55,9 +55,15 @@ describe('executeEdsPipeline - clearing content', () => {
 
         services = pipelineServices({
             daLiveContentOps: {
-                deleteAllSiteContent: mockDeleteAllSiteContent,
-                copyContentFromSource: jest.fn(),
-                createBlockLibraryFromTemplate: jest.fn(),
+                sourceOps: {
+                    deleteAllSiteContent: mockDeleteAllSiteContent,
+                },
+                copyOps: {
+                    copyContentFromSource: jest.fn(),
+                },
+                blockLibOps: {
+                    createBlockLibraryFromTemplate: jest.fn(),
+                },
             },
             githubFileOps: { getFileContent: jest.fn() },
             helixService: {

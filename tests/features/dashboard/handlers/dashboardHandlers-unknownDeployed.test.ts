@@ -28,7 +28,7 @@ describe('dashboardHandlers - handleRequestStatus - persisted mesh status', () =
     });
 
     it('should show "not-deployed" when meshStatusSummary is not-deployed', async () => {
-        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
+        const { detectFrontendChanges } = require('@/core/state/projectStateSync');
         detectFrontendChanges.mockReturnValue(false);
 
         const { mockContext } = setupMocks({
@@ -46,7 +46,7 @@ describe('dashboardHandlers - handleRequestStatus - persisted mesh status', () =
     });
 
     it('should show "config-changed" when meshStatusSummary is stale', async () => {
-        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
+        const { detectFrontendChanges } = require('@/core/state/projectStateSync');
         detectFrontendChanges.mockReturnValue(false);
 
         const { mockContext } = setupMocks({
@@ -64,7 +64,7 @@ describe('dashboardHandlers - handleRequestStatus - persisted mesh status', () =
     });
 
     it('should show "deployed" when meshStatusSummary is deployed', async () => {
-        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
+        const { detectFrontendChanges } = require('@/core/state/projectStateSync');
         detectFrontendChanges.mockReturnValue(false);
 
         const { mockContext } = setupMocks({
@@ -82,7 +82,7 @@ describe('dashboardHandlers - handleRequestStatus - persisted mesh status', () =
     });
 
     it('should show "config-incomplete" when meshStatusSummary is config-incomplete', async () => {
-        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
+        const { detectFrontendChanges } = require('@/core/state/projectStateSync');
         detectFrontendChanges.mockReturnValue(false);
 
         const { mockContext } = setupMocks({
@@ -100,7 +100,7 @@ describe('dashboardHandlers - handleRequestStatus - persisted mesh status', () =
     });
 
     it('should show "needs-auth" when not authenticated, regardless of persisted status', async () => {
-        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
+        const { detectFrontendChanges } = require('@/core/state/projectStateSync');
         detectFrontendChanges.mockReturnValue(false);
 
         const { mockContext } = setupMocks({
@@ -131,7 +131,7 @@ describe('dashboardHandlers - handleRequestStatus - persisted mesh status', () =
     // depending on which message landed last.
     describe('a failed mesh component beats the persisted summary', () => {
         function withFailedMesh(summary: Project['meshStatusSummary']) {
-            const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
+            const { detectFrontendChanges } = require('@/core/state/projectStateSync');
             detectFrontendChanges.mockReturnValue(false);
             const { mockContext, mockProject } = setupMocks({ meshStatusSummary: summary });
             mockProject.componentInstances!['commerce-mesh'].status = 'error';
@@ -160,7 +160,7 @@ describe('dashboardHandlers - handleRequestStatus - persisted mesh status', () =
     });
 
     it('should default to "deployed" when meshStatusSummary is unknown', async () => {
-        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
+        const { detectFrontendChanges } = require('@/core/state/projectStateSync');
         detectFrontendChanges.mockReturnValue(false);
 
         const { mockContext } = setupMocks({

@@ -16,8 +16,7 @@
 import '../../../../helpers/edsPlaceholderStubMocks';
 
 jest.mock('@/features/eds/services/configGenerator', () => ({
-    generateConfigJson: jest.fn(),
-    buildConfigGeneratorParams: jest.fn(),
+    generateProjectConfigJson: jest.fn(),
 }));
 jest.mock('@/features/eds/services/patches/lkgReader', () => ({
     readLkgSha: jest.fn(),
@@ -28,10 +27,7 @@ jest.mock('@/features/eds/services/patches/codePatchPipelineHelpers', () => ({
 
 import { resetRepoToTemplate } from '@/features/eds/services/reset/edsResetRepoHelper';
 import { installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
-import {
-    generateConfigJson,
-    buildConfigGeneratorParams,
-} from '@/features/eds/services/configGenerator';
+import { generateProjectConfigJson } from '@/features/eds/services/configGenerator';
 import { generateFstabContent } from '@/features/eds/services/fstabGenerator';
 import {
     generateInspectorTreeEntries,
@@ -62,9 +58,8 @@ export const mocks = {
     installBlockCollections: installBlockCollections as jest.MockedFunction<
         typeof installBlockCollections
     >,
-    generateConfigJson: generateConfigJson as jest.MockedFunction<typeof generateConfigJson>,
-    buildConfigGeneratorParams: buildConfigGeneratorParams as jest.MockedFunction<
-        typeof buildConfigGeneratorParams
+    generateProjectConfigJson: generateProjectConfigJson as jest.MockedFunction<
+        typeof generateProjectConfigJson
     >,
     generateFstabContent: generateFstabContent as jest.MockedFunction<typeof generateFstabContent>,
     generateInspectorTreeEntries: generateInspectorTreeEntries as jest.MockedFunction<
@@ -117,13 +112,7 @@ export function installDefaults(): void {
     // so call history and per-test implementations would otherwise leak between tests.
     jest.resetAllMocks();
     mocks.generateFstabContent.mockReturnValue('mock-fstab');
-    mocks.generateConfigJson.mockReturnValue({ success: true, content: '{"mock":"config"}' });
-    mocks.buildConfigGeneratorParams.mockReturnValue({
-        githubOwner: 'me',
-        repoName: 'shop',
-        daLiveOrg: 'acme',
-        daLiveSite: 'shop',
-    });
+    mocks.generateProjectConfigJson.mockReturnValue({ success: true, content: '{"mock":"config"}' });
     mocks.generateInspectorTreeEntries.mockResolvedValue([]);
     mocks.installInspectorTagging.mockResolvedValue({ success: true });
     mocks.installBlockCollections.mockResolvedValue({

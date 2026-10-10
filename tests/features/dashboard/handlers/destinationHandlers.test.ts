@@ -23,9 +23,9 @@ import {
     makeContextWithComponents,
     mockMove,
     mockPostComponentsSnapshot,
-    mockPostDestination,
-    mockPostMeshStatus,
-    mockPostRowStatus,
+    mockSendDestination,
+    mockSendMeshStatus,
+    mockSendRowStatus,
     mockProgressReport,
     mockRunGuards,
     mockWithProgress,
@@ -85,9 +85,16 @@ describe('handleSetProjectDestination', () => {
         function contextSignedInto(adobe: Record<string, unknown> | undefined) {
             const made = makeDestinationContext(adobe);
             (made.context as { authManager: unknown }).authManager =
-                createMockAuthenticationService({
-                    getCurrentOrganization: jest.fn().mockResolvedValue(SIGNED_IN),
-                });
+                createMockAuthenticationService(
+                    {},
+                    {
+                        entities: {
+                            resolver: {
+                                getCurrentOrganization: jest.fn().mockResolvedValue(SIGNED_IN),
+                            },
+                        },
+                    }
+                );
             return made;
         }
 
@@ -193,7 +200,7 @@ describe('handleSetProjectDestination — moving existing integrations', () => {
         // Without this the move is invisible: the progress notification is
         // project-scoped and owns no card, so every row sat at DEPLOYED for the
         // whole run (found by inspection 2026-08-07). Assert the callback actually
-        // reaches postRowStatus rather than merely being passed — a callback wired
+        // reaches sendAppBuilderComponentStatusUpdate rather than merely being passed — a callback wired
         // to nothing looks identical at the call site.
         const { context } = withComponents();
 
@@ -206,7 +213,7 @@ describe('handleSetProjectDestination — moving existing integrations', () => {
         ) => void;
         expect(typeof onRowStatus).toBe('function');
         onRowStatus('erp-sync', 'deploying', 'Deploying Integration');
-        expect(mockPostRowStatus).toHaveBeenCalledWith(
+        expect(mockSendRowStatus).toHaveBeenCalledWith(
             'erp-sync',
             'deploying',
             'Deploying Integration'
@@ -232,8 +239,8 @@ describe('handleSetProjectDestination — moving existing integrations', () => {
         ) => void;
         onRowStatus('eds-accs-mesh', 'deploying', 'Deploying Mesh');
 
-        expect(mockPostMeshStatus).toHaveBeenCalledWith('deploying', 'Deploying Mesh');
-        expect(mockPostRowStatus).not.toHaveBeenCalled();
+        expect(mockSendMeshStatus).toHaveBeenCalledWith('deploying', 'Deploying Mesh');
+        expect(mockSendRowStatus).not.toHaveBeenCalled();
     });
 
     it('refreshes the grid from the persisted map once the move ends', async () => {
@@ -288,7 +295,7 @@ describe('handleSetProjectDestination — moving existing integrations', () => {
 
         await handleSetProjectDestination(context, NEW_DESTINATION);
 
-        expect(mockPostDestination).toHaveBeenCalledWith(
+        expect(mockSendDestination).toHaveBeenCalledWith(
             expect.objectContaining({ projectTitle: 'New Project', workspaceTitle: 'Production' })
         );
     });

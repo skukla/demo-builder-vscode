@@ -108,7 +108,9 @@ describe('appBuilderComponentCatalogLoader', () => {
             expect(entry.name).toBe('Order Sync');
             expect(entry.layout).toBe('extension');
             expect(entry.lifecycle).toBe('app-management');
-            expect(entry.nodeVersion).toBe('24');
+            // No Node of its own: the bundled kit carries none since PR-1a, so it
+            // runs on the shared one (nodeForAppBuilderEntry).
+            expect(entry.nodeVersion).toBeUndefined();
             expect(entry.compatibleBackends).toEqual([
                 'adobe-commerce-paas',
                 'adobe-commerce-accs',

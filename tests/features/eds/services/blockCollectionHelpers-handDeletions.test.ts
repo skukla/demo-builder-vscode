@@ -13,7 +13,6 @@
 
 import { installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
 import type { BlockLibraryEntry } from '@/features/eds/services/blockCollectionHelpers';
-import type { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
 import type { GitHubTreeInput } from '@/features/eds/services/types';
 import type { AddedComponentEntries } from '@/types/blockLibraries';
 import type { AddonSource } from '@/types/demoPackages';
@@ -27,6 +26,7 @@ import {
     createDestComponentFilters,
     createDestComponentModels,
     setupBlockCollectionMocks,
+    type MockGithubFileOps,
 } from './blockCollectionHelpers.testUtils';
 
 const SOURCE: AddonSource = { owner: 'stephen-garner-adobe', repo: 'isle5', branch: 'main' };
@@ -74,7 +74,7 @@ interface PrimeOptions {
 }
 
 function prime(
-    mock: jest.Mocked<GitHubFileOperations>,
+    mock: MockGithubFileOps,
     dest: Record<string, string>,
     { source = SOURCE_FILES, storefrontBlocks = [] }: PrimeOptions = {},
 ): void {
@@ -119,7 +119,7 @@ function expectedFiles(
 }
 
 /** The three authoring files in the tree handed to the commit, by path. */
-function committedFiles(mock: jest.Mocked<GitHubFileOperations>): Record<string, string | undefined> {
+function committedFiles(mock: MockGithubFileOps): Record<string, string | undefined> {
     expect(mock.commitTreeToBranch).toHaveBeenCalledTimes(1);
     const [owner, repo, branch, tree] = mock.commitTreeToBranch.mock.calls[0] as [
         string, string, string, GitHubTreeInput[], string,
@@ -134,7 +134,7 @@ function committedFiles(mock: jest.Mocked<GitHubFileOperations>): Record<string,
 }
 
 describe('installBlockCollections — entries removed by hand (EDS-36)', () => {
-    let mockGithubFileOps: jest.Mocked<GitHubFileOperations>;
+    let mockGithubFileOps: MockGithubFileOps;
     let mockLogger: jest.Mocked<Logger>;
 
     beforeEach(() => {
@@ -245,13 +245,13 @@ describe('installBlockCollections — entries removed by hand (EDS-36)', () => {
 });
 
 /** The block files in the tree handed to the commit, by path. */
-function committedBlockPaths(mock: jest.Mocked<GitHubFileOperations>): string[] {
+function committedBlockPaths(mock: MockGithubFileOps): string[] {
     const tree = mock.commitTreeToBranch.mock.calls[0][3] as GitHubTreeInput[];
     return tree.map((e) => e.path).filter((path) => path.startsWith('blocks/'));
 }
 
 describe('installBlockCollections — block folders removed by hand (EDS-36)', () => {
-    let mockGithubFileOps: jest.Mocked<GitHubFileOperations>;
+    let mockGithubFileOps: MockGithubFileOps;
     let mockLogger: jest.Mocked<Logger>;
 
     beforeEach(() => {
@@ -314,7 +314,7 @@ describe('installBlockCollections — block folders removed by hand (EDS-36)', (
 });
 
 describe('installBlockCollections — HTML examples removed by hand (EDS-36)', () => {
-    let mockGithubFileOps: jest.Mocked<GitHubFileOperations>;
+    let mockGithubFileOps: MockGithubFileOps;
     let mockLogger: jest.Mocked<Logger>;
 
     /** The library, with an HTML example for the storefront's own hero and for hero-cta. */
@@ -381,7 +381,7 @@ describe('installBlockCollections — HTML examples removed by hand (EDS-36)', (
 });
 
 describe('installBlockCollections — each file keeps its own indentation', () => {
-    let mockGithubFileOps: jest.Mocked<GitHubFileOperations>;
+    let mockGithubFileOps: MockGithubFileOps;
     let mockLogger: jest.Mocked<Logger>;
 
     beforeEach(() => {

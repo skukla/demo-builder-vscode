@@ -14,12 +14,12 @@ import type { Project } from '@/types/base';
 import type { ComponentDefinitionEntry } from '@/features/project-creation/services/componentInstallationOrchestrator';
 
 // Mock dependencies
-jest.mock('@/features/project-creation/helpers/envFileGenerator', () => ({
+jest.mock('@/features/project-creation/helpers/componentConfigFiles', () => ({
     generateComponentConfigFiles: jest.fn(),
 }));
 
 // Import mocked functions
-import { generateComponentConfigFiles } from '@/features/project-creation/helpers/envFileGenerator';
+import { generateComponentConfigFiles } from '@/features/project-creation/helpers/componentConfigFiles';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe('projectFinalizationService', () => {

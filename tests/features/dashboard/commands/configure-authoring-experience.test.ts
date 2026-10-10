@@ -42,9 +42,6 @@ jest.mock('@/types/typeGuards', () => ({
 jest.mock('@/features/eds/services/storefront/storefrontStalenessDetector', () => ({
     detectStorefrontChanges: jest.fn(() => ({ hasChanges: false })),
 }));
-jest.mock('@/features/eds/services/storefront/storefrontRepublishService', () => ({
-    republishStorefrontConfig: (...args: unknown[]) => mockRepublishStorefrontConfig(...args),
-}));
 
 // The config.json regen now runs through the shared authoringExperienceFlip
 // service, which imports republishStorefrontConfig directly from its module
@@ -65,8 +62,10 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 }));
 
 jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
-    createDaLiveServiceTokenProvider: jest.fn(() => ({})),
     DaLiveContentOperations: jest.fn().mockImplementation(() => ({})),
+}));
+jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
+    createDaLiveServiceTokenProvider: jest.fn(() => ({})),
 }));
 
 // Quick Edit vendoring — flipping to Experience Workspace must vendor Quick Edit
@@ -103,10 +102,12 @@ jest.mock('@/features/eds/services/github/githubTokenService', () => ({
 const mockSendAuthoringExperienceUpdate = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/features/dashboard/commands/showDashboard', () => ({
     ProjectDashboardWebviewCommand: {
-        sendAuthoringExperienceUpdate: (...args: unknown[]) =>
-            mockSendAuthoringExperienceUpdate(...args),
         refreshStatus: jest.fn().mockResolvedValue(undefined),
     },
+}));
+jest.mock('@/features/dashboard/services/projectPanelPushes', () => ({
+    sendAuthoringExperienceUpdate: (...args: unknown[]) =>
+        mockSendAuthoringExperienceUpdate(...args),
 }));
 
 const NO_REPO = Symbol('no-repo');
@@ -177,10 +178,12 @@ function captureSaveHandler(
 beforeEach(() => {
     ServiceLocator.setCommandExecutor(createMockCommandExecutor());
     ServiceLocator.setAuthenticationService(
-        createMockAuthenticationService({
-            getCachedOrganization: jest.fn(),
-            getTokenStatus: jest.fn(async () => ({ isAuthenticated: true, expiresInMinutes: 60 })),
-        })
+        createMockAuthenticationService(
+            {
+                getTokenStatus: jest.fn(async () => ({ isAuthenticated: true, expiresInMinutes: 60 })),
+            },
+            { cache: { getCachedOrganization: jest.fn() } },
+        )
     );
 });
 

@@ -162,7 +162,6 @@ export interface RawComponentDefinition {
         };
         configFiles?: Record<string, ConfigFileDefinition>;
         port?: number;
-        nodeVersion?: string;
         /**
          * Treat a failed `npm install` as FATAL for this component. Default
          * (absent) keeps the historical warn-and-continue, which suits

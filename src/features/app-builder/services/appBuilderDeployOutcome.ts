@@ -55,7 +55,7 @@ export type DeployOutcome = Pick<
  * id stands (several = the N-integration model; siblings must not be touched).
  *
  * Shared by the deploy-outcome write below and the per-id remove
- * ({@link import('./appBuilderComponentRunner').removeAppBuilderComponent}),
+ * ({@link import('./appBuilderRemoveRun').removeAppBuilderComponent}),
  * which must clear the SAME entry a deploy would have written.
  */
 export function resolveKeyedComponentId(

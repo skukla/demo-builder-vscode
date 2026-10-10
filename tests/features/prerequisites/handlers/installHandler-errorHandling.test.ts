@@ -9,7 +9,6 @@
  * - Post-installation verification general error
  * - Node version check failures
  * - Per-node prerequisite check failures
- * - fnm list failures
  * - sendMessage failures
  * - Complete error with error logging
  */
@@ -19,7 +18,6 @@ jest.mock('@/features/prerequisites/handlers/shared');
 jest.mock('@/core/di/serviceLocator');
 
 import { handleInstallPrerequisite } from '@/features/prerequisites/handlers/installHandler';
-import * as shared from '@/features/prerequisites/handlers/shared';
 import {
     mockNodePrereq,
     mockAdobeCliPrereq,
@@ -159,19 +157,6 @@ describe('Install Handler - Error Handling', () => {
 
         // Should continue with installation even if check fails
         expect(result.success).toBe(true);
-    });
-
-    it('should handle fnm list failures', async () => {
-        const states = new Map();
-        states.set(0, { prereq: mockAdobeCliPrereq, result: mockNodeResult });
-        mockContext.sharedState.currentPrerequisiteStates = states;
-        // Mock getRequiredNodeVersions to throw error (simulates fnm list failure internally)
-        (shared.getRequiredNodeVersions as jest.Mock).mockRejectedValue(new Error('List failed'));
-
-        const result = await handleInstallPrerequisite(mockContext, { prereqId: 0 });
-
-        expect(result.success).toBe(false);
-        expect(mockContext.errorLogger!.logError).toHaveBeenCalled();
     });
 
     it('should handle sendMessage failures gracefully', async () => {

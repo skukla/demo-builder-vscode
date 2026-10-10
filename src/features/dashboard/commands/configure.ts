@@ -4,16 +4,14 @@ import * as vscode from 'vscode';
 import { configureHandlers } from '../handlers/configureHandlers';
 import { mergeEnvValuesFromSources } from './configureEnvLoader';
 import { ProjectDashboardWebviewCommand } from './showDashboard';
-import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
+import { BundledPanelCommand } from '@/commands/bundledPanelCommand';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import { COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
-import { getBundleUri } from '@/core/utils/bundleUri';
 import { parseEnvFile } from '@/core/utils/envParser';
-import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { keepIntegrationSettings } from '@/features/app-builder/services/componentSettings';
 import {
     loadDeclaredSecretFlags,
@@ -21,6 +19,7 @@ import {
 } from '@/features/components/services/commerceSecretMigration';
 import { getComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
 import { withEnvVarKeys } from '@/features/components/services/componentTransforms';
+import { sendAuthoringExperienceUpdate } from '@/features/dashboard/services/projectPanelPushes';
 import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,
@@ -34,11 +33,10 @@ import { republishStorefrontConfig } from '@/features/eds/services/storefront/st
 import { detectStorefrontChanges } from '@/features/eds/services/storefront/storefrontStalenessDetector';
 import { markMeshUpdateDeclined } from '@/features/mesh/services/meshUpdateDecline';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
-import { regenerateProjectEnvFiles } from '@/features/project-creation/helpers/envFileGenerator';
+import { regenerateProjectEnvFiles } from '@/features/project-creation/helpers/envFileRegeneration';
 import { handleRenameProject } from '@/features/projects-dashboard/handlers/dashboardHandlers';
 import { Project, type AuthoringExperience } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
-import type { HandlerContext } from '@/types/handlers';
 import { getComponentInstanceEntries, getEdsDaLiveUrl, isEdsProject } from '@/types/typeGuards';
 import type { DeploymentStatusPayload, ConfigureInitialData } from '@/types/webviewPayloads';
 
@@ -56,7 +54,10 @@ interface SaveConfigurationData {
     authoringExperience?: AuthoringExperience;
 }
 
-export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<ConfigureInitialData> {
+export class ConfigureProjectWebviewCommand extends BundledPanelCommand<ConfigureInitialData> {
+    protected readonly bundleName = 'configure';
+    protected override readonly servesLocalMedia = true;
+
     /**
      * Helix seam, forwarded to the shared authoring-experience flip. Production
      * leaves it undefined and the flip builds the real service.
@@ -134,31 +135,6 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
         } catch (error) {
             await this.showError('Failed to open configuration', error as Error);
         }
-    }
-
-    protected async getWebviewContent(): Promise<string> {
-        if (!this.panel) {
-            throw new Error('Panel must be created before getting webview content');
-        }
-        const scriptUri = getBundleUri({
-            webview: this.panel.webview,
-            extensionPath: this.context.extensionPath,
-            featureBundleName: 'configure',
-        });
-
-        const nonce = this.getNonce();
-
-        // Get base URI for media assets
-        const mediaPath = vscode.Uri.file(path.join(this.context.extensionPath, 'dist'));
-        const baseUri = this.panel.webview.asWebviewUri(mediaPath);
-
-        return getWebviewHTML({
-            scriptUri,
-            nonce,
-            cspSource: this.panel.webview.cspSource,
-            title: 'Configure Project',
-            baseUri,
-        });
     }
 
     protected async getInitialData(): Promise<ConfigureInitialData> {
@@ -327,7 +303,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
                         data.authoringExperience,
                         getEwCanvasBranch(),
                     );
-                    await ProjectDashboardWebviewCommand.sendAuthoringExperienceUpdate(
+                    await sendAuthoringExperienceUpdate(
                         edsDaLiveUrl,
                     );
                 } catch (error) {
@@ -844,21 +820,6 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
         }
 
         return true;
-    }
-
-    /**
-     * Create handler context for message handlers
-     */
-    private createHandlerContext(): HandlerContext {
-        // ONE complete context from the shared factory — no per-panel guessing about
-        // which managers its (possibly reused) handlers will reach for.
-        return createPanelHandlerContext({
-            context: this.context,
-            panel: this.panel,
-            stateManager: this.stateManager,
-            communicationManager: this.communicationManager,
-            sendMessage: (type: string, data?: unknown) => this.sendMessage(type, data),
-        });
     }
 
     /**

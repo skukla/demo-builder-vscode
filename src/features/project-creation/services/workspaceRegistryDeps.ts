@@ -1,5 +1,6 @@
 /**
- * The runner's deps that reach a component's Adobe WORKSPACE through the auth facade:
+ * The runner's deps that reach a component's Adobe WORKSPACE through the auth service's
+ * entity units (`workspaceOps` and `extensionPoints`):
  * deleting it when the component is removed (AB-23), and reading and unpublishing what
  * the deploy put in Adobe's extension-point registry on it (2026-10-08). Each names the
  * project's org and Console project outright, so an agent's selection (which never
@@ -21,21 +22,22 @@ export type WorkspaceRegistryDeps = Pick<
     'deleteComponentWorkspace' | 'workspaceExtensionPointsOf' | 'removeWorkspaceExtensionPoints'
 >;
 
-/** The project's org and Console project, as the facade's workspace ops take them. */
+/** The project's org and Console project, as the workspace ops take them. */
 function targetOf(project: Project): { orgId?: string; projectId?: string } {
     return { orgId: project.adobe?.organization, projectId: project.adobe?.projectId };
 }
 
 /**
- * Build the workspace deps over the auth facade.
+ * Build the workspace deps over the auth service's entity units.
  *
  * @param authManager - the auth service the handler resolved at the boundary (ADR-015)
  * @returns the deps, ready to spread into the runner's
  */
 export function buildWorkspaceRegistryDeps(authManager: AuthenticationService): WorkspaceRegistryDeps {
+    const entities = () => authManager.getEntityServices();
     return {
         deleteComponentWorkspace: async (project, workspace) => {
-            const result = await authManager.deleteWorkspace(workspace.id, {
+            const result = await (await entities()).workspaceOps.deleteWorkspace(workspace.id, {
                 ...targetOf(project),
                 workspaceName: workspace.name,
             });
@@ -46,10 +48,13 @@ export function buildWorkspaceRegistryDeps(authManager: AuthenticationService): 
             // the project teardown's registration sweep is the thing to reuse.
             return 'error' in result ? { error: result.error } : undefined;
         },
-        workspaceExtensionPointsOf: (project, workspace) =>
-            authManager.listWorkspaceExtensionPoints(workspace.id, targetOf(project)),
+        workspaceExtensionPointsOf: async (project, workspace) =>
+            (await entities()).extensionPoints.listWorkspaceExtensionPoints(
+                workspace.id,
+                targetOf(project),
+            ),
         removeWorkspaceExtensionPoints: async (project, workspace, keys) => {
-            const result = await authManager.removeWorkspaceExtensionPoints(
+            const result = await (await entities()).extensionPoints.removeWorkspaceExtensionPoints(
                 workspace.id,
                 keys,
                 targetOf(project),

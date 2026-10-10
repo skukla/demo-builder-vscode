@@ -77,7 +77,7 @@ export async function executeCatalogPrewarmPhase(
         }
 
         const { createDaLiveServiceTokenProvider } = await import(
-            '@/features/eds/services/daLive/daLiveContentOperations'
+            '@/features/eds/services/daLive/daLiveTokenProviders'
         );
         const { getDaLiveAuthService } = await import('@/features/eds/handlers/edsHelpers');
         const { getGitHubServices } = await import('@/features/eds/handlers/edsServiceCache');

@@ -8,7 +8,8 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/daLive/daLiveBlockLibraryOperations.ts"
+        "src/features/projects-dashboard/handlers/projectFromPath.ts",
+        "src/features/dashboard/commands/showIntegrations.ts"
     ],
     "reporters": [
         "clear-text",

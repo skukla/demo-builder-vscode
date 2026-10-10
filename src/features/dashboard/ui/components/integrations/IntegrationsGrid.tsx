@@ -218,7 +218,7 @@ export function IntegrationsGrid({
             // An integration's operation is keyed by the COMPONENT id, so the
             // lookup goes through componentId. The MESH deploy is keyed by the
             // card's own id ('mesh') — it is started before any component of that
-            // name has to exist (IntegrationsScreen's MESH_OPERATION).
+            // name has to exist (MESH_OPERATION, useIntegrationsScreenActions).
             const card = cards.find((candidate) => candidate.id === id);
             const operationId = card?.isMesh ? card.id : (card?.componentId ?? id);
             if (card?.status === 'deploying' && operations.reopen(operationId)) return;

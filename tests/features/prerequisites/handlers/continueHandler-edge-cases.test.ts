@@ -24,6 +24,8 @@ describe('Prerequisites Continue Handler - Edge Cases', () => {
             '18': 'React App',
             '20': 'Node Backend',
         });
+        // Two majors, as setupContinueHandler does
+        (shared.perNodeVersionMajors as jest.Mock).mockReturnValue(['18', '20']);
         (shared.areDependenciesInstalled as jest.Mock).mockReturnValue(true);
         // Object utility helpers (used for Object.keys patterns)
         (shared.hasNodeVersions as jest.Mock).mockImplementation(

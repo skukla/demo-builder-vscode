@@ -2,7 +2,7 @@
  * EDS Content Pipeline
  *
  * Shared pipeline that orchestrates the content/publish sequence used by both
- * the setup flow (storefrontSetupHandlers) and the reset flow (edsResetService).
+ * the setup flow (storefrontSetupHandlers) and the reset flow (edsResetContentStep).
  *
  * Operations executed in order:
  * 0. Clear existing DA.live content (gated by clearExistingContent). Nothing is
@@ -245,7 +245,7 @@ async function pipelineClearContent(
     });
     logger.info(`[EdsPipeline] Clearing all DA.live content for ${daLiveOrg}/${daLiveSite}`);
 
-    const clearResult = await daLiveContentOps.deleteAllSiteContent(
+    const clearResult = await daLiveContentOps.sourceOps.deleteAllSiteContent(
         daLiveOrg,
         daLiveSite,
         (info) => {
@@ -311,7 +311,7 @@ async function pipelineCopyContent(
         `[EdsPipeline] Copying content from ${contentSource.org}/${contentSource.site} to ${daLiveOrg}/${daLiveSite}`,
     );
 
-    const contentResult = await daLiveContentOps.copyContentFromSource(
+    const contentResult = await daLiveContentOps.copyOps.copyContentFromSource(
         fullContentSource,
         daLiveOrg,
         daLiveSite,
@@ -343,7 +343,7 @@ async function pipelineCopyContent(
     // from the canonical B2B content site on top of the brand content.
     let overlaidFiles = 0;
     if (accountContentSource) {
-        const overlay = await daLiveContentOps.overlayAccountChrome(
+        const overlay = await daLiveContentOps.copyOps.overlayAccountChrome(
             accountContentSource,
             daLiveOrg,
             daLiveSite,
@@ -475,7 +475,7 @@ async function pipelineConfigureBlockLibrary(
     const compDefOwner = blockCollectionIds ? repoOwner : templateOwner;
     const compDefRepo = blockCollectionIds ? repoName : templateRepo;
 
-    const libResult = await daLiveContentOps.createBlockLibraryFromTemplate(
+    const libResult = await daLiveContentOps.blockLibOps.createBlockLibraryFromTemplate(
         daLiveOrg,
         daLiveSite,
         compDefOwner,
@@ -516,7 +516,7 @@ async function copyLibraryDocPages(
             logger.info(
                 `[EdsPipeline] Copying block doc pages from ${libSource.org}/${libSource.site}`,
             );
-            await daLiveContentOps.copyContent(
+            await daLiveContentOps.copyOps.copyContent(
                 { org: libSource.org, site: libSource.site, path: '.da/library/blocks' },
                 { org: daLiveOrg, site: daLiveSite, path: '.da/library/blocks' },
                 { recursive: true },
@@ -815,7 +815,7 @@ async function pipelinePublishLibrary({ params, services, ctx, onProgress }: Pip
         // is the leading suspect when publishing reports success and the CDN
         // still 404s. Print it here, once, where the user is already being told
         // something is wrong.
-        const siteConfig = await daLiveContentOps.readSiteConfigForDiagnostics(
+        const siteConfig = await daLiveContentOps.configOps.readSiteConfigForDiagnostics(
             params.daLiveOrg,
             params.daLiveSite,
         );

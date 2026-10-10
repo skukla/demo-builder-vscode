@@ -7,7 +7,7 @@
  * IDENTICALLY were moved here. Each spec keeps its own disputed mocks inline,
  * and therefore ends up with exactly the set it started with.
  *
- * Moved here (all specs agreed): @/core/ui/components/feedback/LoadingDisplay, @/core/ui/components/layout/CenteredFeedbackContainer, @/core/ui/components/layout/SingleColumnLayout, @/features/eds/ui/components, @adobe/react-spectrum
+ * Moved here (all specs agreed): @/core/ui/components/feedback/LoadingDisplay, @/core/ui/components/layout/CenteredFeedbackContainer, @/core/ui/components/layout/SingleColumnLayout, @/features/eds/ui/components
  * Left inline (specs disagree):  @/core/ui/utils/vscode-api
  *
  * Extracted 2026-08-30 (lane C2). Resolving the disputed ones is a separate
@@ -16,13 +16,11 @@
 
 import { StorefrontSetupStep } from '@/features/eds/ui/steps/StorefrontSetupStep';
 
-// ---- Spectrum + icon mocks (only what the tree renders) ----
-jest.mock('@adobe/react-spectrum', () => ({
-    Text: ({ children }: any) => <span>{children}</span>,
-    Flex: ({ children }: any) => <div>{children}</div>,
-    Button: ({ children, onPress }: any) => <button onClick={onPress}>{children}</button>,
-}));
-// No icon mocks here. jest.config.js maps EVERY '@spectrum-icons/workflow/*'
+// No Spectrum mock here. jest.config.js maps '@adobe/react-spectrum' to the
+// shared stub, which surfaces UNSAFE_className and the dimension props. The
+// three-component stub that sat here dropped both, so the end screens' colours
+// and sizing (StatusDisplay since EDS-8, 2026-10-09) were unobservable.
+// No icon mocks either. jest.config.js maps EVERY '@spectrum-icons/workflow/*'
 // specifier to one file (tests/__mocks__/@spectrum-icons/workflow.tsx), so a
 // per-icon jest.mock does not scope to that icon — it replaces the shared
 // module for all of them, and the last one registered wins. The pair that used
@@ -45,8 +43,14 @@ jest.mock('@/core/ui/components/feedback/LoadingDisplay', () => ({
         </div>
     ),
 }));
+// `fill` is surfaced: whether a state centres in the whole pane is the step's
+// decision, and the stub used to make it invisible.
 jest.mock('@/core/ui/components/layout/CenteredFeedbackContainer', () => ({
-    CenteredFeedbackContainer: ({ children }: any) => <div>{children}</div>,
+    CenteredFeedbackContainer: ({ children, fill }: any) => (
+        <div data-testid="centered-feedback" data-fill={String(Boolean(fill))}>
+            {children}
+        </div>
+    ),
 }));
 jest.mock('@/core/ui/components/layout/SingleColumnLayout', () => ({
     SingleColumnLayout: ({ children }: any) => <div>{children}</div>,
