@@ -16468,6 +16468,32 @@
             "decision": "none \u2014 the swallow is asserted; the mutant removes only the warn wording",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-03"
+        },
+        {
+            "module": "src/features/eds/ui/hooks/useGitHubAuth.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 100,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces the empty dependency array with a one-element array holding a constant string. React compares dependency arrays element-wise with Object.is and never compares the array's identity, and that element is the same primitive on every render, so the callback keeps one identity for the life of the hook exactly as it does with []. The callback closes over nothing but module-level values and a ref, so there is no stale value a wider list could refresh. Same case as the rows for lines 123 and 184 of this file; the mutant that DOES matter on this hook, replacing a real dependency list with [], is killed by 'writes the LATEST edsConfig, not the one present at mount'.",
+            "decision": "none \u2014 the empty deps array is correct; the mutant is a no-op array of equal primitives",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-03"
+        },
+        {
+            "module": "src/features/eds/ui/hooks/useGitHubAuth.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 109,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces the empty dependency array with a one-element array holding a constant string. React compares dependency arrays element-wise with Object.is and never compares the array's identity, and that element is the same primitive on every render, so the callback keeps one identity for the life of the hook exactly as it does with []. The callback closes over nothing but module-level values and a ref, so there is no stale value a wider list could refresh. Same case as the rows for lines 123 and 184 of this file; the mutant that DOES matter on this hook, replacing a real dependency list with [], is killed by 'writes the LATEST edsConfig, not the one present at mount'.",
+            "decision": "none \u2014 the empty deps array is correct; the mutant is a no-op array of equal primitives",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-03"
         }
     ]
 }
