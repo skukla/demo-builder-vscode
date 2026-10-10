@@ -56,11 +56,7 @@ class SessionUIState {
 
     /** Keep the list's choice for this session; `undefined` forgets it. */
     setViewModeOverride(list: ViewModeList, value: ViewMode | undefined): void {
-        if (value === undefined) {
-            delete this._viewModeOverrides[list];
-        } else {
-            this._viewModeOverrides[list] = value;
-        }
+        this._viewModeOverrides[list] = value;
     }
 
     // =====================================================
