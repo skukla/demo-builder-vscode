@@ -2,6 +2,7 @@ import { AuthenticationService } from '@/features/authentication/services/authen
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { Logger } from '@/types/logger';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
+import type { TokenManager } from '@/features/authentication/services/tokenManager';
 import {
     createSuccessResult,
     mockOrg,
@@ -412,6 +413,48 @@ describe('AuthenticationService - Login/Logout Operations', () => {
             expect(clearAuthStatus).toHaveBeenCalledTimes(1);
             expect(clearValidation).toHaveBeenCalledTimes(1);
             expect(clearInspection).toHaveBeenCalledTimes(1);
+        });
+
+        describe('a sign-in the browser gave up on', () => {
+            const gaveUp = { code: 1, stdout: '', stderr: 'timed out', duration: 0 };
+            const units = () =>
+                authService as unknown as {
+                    cacheManager: AuthCacheManager;
+                    tokenManager: TokenManager;
+                };
+
+            it('counts as signed in when a valid token is there, read fresh, and drops the old sign-in', async () => {
+                const { cacheManager, tokenManager } = units();
+                const clearInspection = jest.spyOn(cacheManager, 'clearTokenInspectionCache');
+                const forgetOrg = jest.spyOn(cacheManager, 'setCachedOrganization');
+                const clearOrgList = jest.spyOn(cacheManager, 'clearOrgListCache');
+                const isTokenValid = jest.spyOn(tokenManager, 'isTokenValid').mockResolvedValue(true);
+                mockCommandExecutor.execute.mockResolvedValue(gaveUp);
+
+                await expect(authService.login()).resolves.toBe(true);
+
+                // Fresh: the inspection cache is dropped BEFORE the token is read.
+                expect(isTokenValid).toHaveBeenCalledTimes(1);
+                expect(clearInspection.mock.invocationCallOrder[0]).toBeLessThan(
+                    isTokenValid.mock.invocationCallOrder[0],
+                );
+                // Taken up as a completed sign-in would be: nothing of the old one is kept.
+                expect(mockSDKClient.clear).toHaveBeenCalledTimes(1);
+                expect(forgetOrg).toHaveBeenCalledWith(undefined);
+                expect(clearOrgList).toHaveBeenCalledTimes(1);
+            });
+
+            it('stays a failed sign-in when no valid token is there, and keeps what was cached', async () => {
+                const { cacheManager, tokenManager } = units();
+                const forgetOrg = jest.spyOn(cacheManager, 'setCachedOrganization');
+                jest.spyOn(tokenManager, 'isTokenValid').mockResolvedValue(false);
+                mockCommandExecutor.execute.mockResolvedValue(gaveUp);
+
+                await expect(authService.login()).resolves.toBe(false);
+
+                expect(mockSDKClient.clear).not.toHaveBeenCalled();
+                expect(forgetOrg).not.toHaveBeenCalled();
+            });
         });
 
         it('answers false when the step logger cannot be created', async () => {

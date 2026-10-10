@@ -270,15 +270,14 @@
             "recorded": "2026-10-09T22:48:10.215Z"
         },
         "src/features/authentication/services/authenticationService.ts": {
-            "score": 60.82,
-            "killed": 59,
-            "survived": 27,
+            "score": 62.89,
+            "killed": 61,
+            "survived": 25,
             "noCoverage": 11,
             "timeout": 0,
             "survivorCategories": {
                 "string": 7,
-                "block": 1,
-                "logPresentation": 17,
+                "logPresentation": 16,
                 "branch": 2
             },
             "uncoveredCategories": {
@@ -286,10 +285,10 @@
                 "block": 2,
                 "branch": 3
             },
-            "highValueSurvivors": 3,
+            "highValueSurvivors": 2,
             "equivalent": 7,
-            "openGaps": 1,
-            "recorded": "2026-10-10T01:50:39.723Z"
+            "openGaps": 0,
+            "recorded": "2026-10-10T14:38:08.177Z"
         },
         "src/commands/ResetAllCommand.ts": {
             "score": 67.78,
