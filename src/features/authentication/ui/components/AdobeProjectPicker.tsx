@@ -182,7 +182,7 @@ export function AdobeProjectPicker({
                         adobeProject: {
                             id: project.id,
                             name: project.name,
-                            title: title.trim(),
+                            title,
                             description: project.description,
                             org_id: project.org_id,
                         },

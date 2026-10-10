@@ -33,12 +33,16 @@ const mockUpdateState = jest.fn();
 
 function renderPicker(state: Partial<WizardState> = baseState) {
     (useSelectionStep as jest.Mock).mockImplementation(() =>
-        createMockSelectionStep({ items: mockProjects, filteredItems: mockProjects, hasLoadedOnce: true }),
+        createMockSelectionStep({
+            items: mockProjects,
+            filteredItems: mockProjects,
+            hasLoadedOnce: true,
+        })
     );
     return render(
         <Provider theme={defaultTheme}>
             <AdobeProjectPicker state={state as WizardState} updateState={mockUpdateState} />
-        </Provider>,
+        </Provider>
     );
 }
 
@@ -72,7 +76,10 @@ describe('AdobeProjectPicker — rename', () => {
     });
 
     it("shows Adobe's refusal under the field and keeps it open", async () => {
-        mockRequest.mockResolvedValue({ success: false, error: 'You are not a developer on every profile.' });
+        mockRequest.mockResolvedValue({
+            success: false,
+            error: 'You are not a developer on every profile.',
+        });
         renderPicker();
 
         await renameTo('Test Project 1', 'Kukla Bodea');
@@ -97,6 +104,109 @@ describe('AdobeProjectPicker — rename', () => {
         await renameTo('Test Project 1', 'Kukla Bodea');
 
         expect(mockUpdateState).not.toHaveBeenCalled();
+    });
+
+    it('writes the selected project back with exactly the fields a row click writes', async () => {
+        renderPicker({ ...baseState, adobeProject: { ...mockProjects[0] } });
+
+        await renameTo('Test Project 1', 'Kukla Bodea');
+
+        // toStrictEqual: the row's `deletable` stamp must not ride into wizard state.
+        expect(mockUpdateState).toHaveBeenCalledTimes(1);
+        expect(mockUpdateState.mock.calls[0][0]).toStrictEqual({
+            adobeProject: {
+                id: 'project1',
+                name: 'project-1',
+                title: 'Kukla Bodea',
+                description: 'First test project',
+                org_id: 'org123',
+            },
+        });
+    });
+
+    it('closes the field and writes nothing when no project is selected', async () => {
+        renderPicker({ ...baseState, adobeProject: undefined });
+
+        await renameTo('Test Project 1', 'Kukla Bodea');
+
+        expect(screen.queryByLabelText('New name for Test Project 1')).not.toBeInTheDocument();
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+        expect(mockUpdateState).not.toHaveBeenCalled();
+    });
+
+    it('sends an undefined orgId when the wizard has no org', async () => {
+        renderPicker({ ...baseState, adobeOrg: undefined });
+
+        await renameTo('Test Project 1', 'Kukla Bodea');
+
+        expect(mockRequest).toHaveBeenCalledWith('rename-adobe-project', {
+            orgId: undefined,
+            projectId: 'project1',
+            title: 'Kukla Bodea',
+        });
+    });
+
+    it('renames against the org and selection the wizard holds NOW, not at first render', async () => {
+        const view = renderPicker();
+        const later: Partial<WizardState> = {
+            ...baseState,
+            adobeOrg: { id: 'org2', code: 'ORG2', name: 'Other Organization' },
+            adobeProject: { ...mockProjects[0] },
+        };
+        view.rerender(
+            <Provider theme={defaultTheme}>
+                <AdobeProjectPicker state={later as WizardState} updateState={mockUpdateState} />
+            </Provider>
+        );
+
+        await renameTo('Test Project 1', 'Kukla Bodea');
+
+        expect(mockRequest).toHaveBeenCalledWith('rename-adobe-project', {
+            orgId: 'org2',
+            projectId: 'project1',
+            title: 'Kukla Bodea',
+        });
+        expect(mockUpdateState).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('AdobeProjectPicker — a rename that does not succeed', () => {
+    it('shows the fallback when the refusal carries no reason', async () => {
+        mockRequest.mockResolvedValue({ success: false });
+        renderPicker({ ...baseState, adobeProject: { ...mockProjects[0] } });
+
+        await renameTo('Test Project 1', 'Kukla Bodea');
+
+        expect(screen.getByRole('alert')).toHaveTextContent('Could not rename the project.');
+        expect(mockUpdateState).not.toHaveBeenCalled();
+    });
+
+    it('shows the fallback when the handler answers with nothing at all', async () => {
+        mockRequest.mockResolvedValue(undefined);
+        renderPicker();
+
+        await renameTo('Test Project 1', 'Kukla Bodea');
+
+        expect(screen.getByRole('alert')).toHaveTextContent('Could not rename the project.');
+    });
+
+    it("shows a rejected request's own message", async () => {
+        mockRequest.mockRejectedValue(new Error('Request timed out'));
+        renderPicker({ ...baseState, adobeProject: { ...mockProjects[0] } });
+
+        await renameTo('Test Project 1', 'Kukla Bodea');
+
+        expect(screen.getByRole('alert')).toHaveTextContent('Request timed out');
+        expect(mockUpdateState).not.toHaveBeenCalled();
+    });
+
+    it('shows the fallback when the request rejects with no message', async () => {
+        mockRequest.mockRejectedValue(new Error(''));
+        renderPicker();
+
+        await renameTo('Test Project 1', 'Kukla Bodea');
+
+        expect(screen.getByRole('alert')).toHaveTextContent('Could not rename the project.');
     });
 });
 
