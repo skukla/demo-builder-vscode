@@ -314,6 +314,27 @@ describe('executeAppBuilderIntegrationsPhase', () => {
                 'Reading Commerce companies'
             );
         });
+
+        it('drops a plain line that arrives before any stage has started', async () => {
+            mockGetAppBuilderComponentEntry.mockReturnValue(INTEGRATION_ENTRY);
+            mockAddAppBuilderComponent.mockImplementation(async () => {
+                reportPhase('Reading Commerce companies');
+                return { success: true };
+            });
+
+            await executeAppBuilderIntegrationsPhase(
+                context,
+                project,
+                config({ selectedAppBuilderComponents: ['erp-sync'] }),
+                progressTracker
+            );
+
+            // No stage to file it under, so the screen keeps the phase's own two lines.
+            expect(progressTracker.mock.calls.map((call) => call[2])).toStrictEqual([
+                'Enabling API access',
+                'Deploying ERP Sync',
+            ]);
+        });
     });
 
     // A copied project deploys its integrations here, into the Adobe project its original

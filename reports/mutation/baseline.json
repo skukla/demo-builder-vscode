@@ -9758,24 +9758,23 @@
             "recorded": "2026-10-10T01:47:31.548Z"
         },
         "src/features/project-creation/handlers/executorAppBuilderPhase.ts": {
-            "score": 89.87,
-            "killed": 71,
-            "survived": 5,
+            "score": 91.36,
+            "killed": 74,
+            "survived": 4,
             "noCoverage": 3,
             "timeout": 0,
             "survivorCategories": {
                 "optionalChain": 2,
                 "logPresentation": 1,
-                "string": 1,
                 "branch": 1
             },
             "uncoveredCategories": {
                 "string": 3
             },
             "highValueSurvivors": 1,
-            "equivalent": 2,
-            "openGaps": 1,
-            "recorded": "2026-10-10T01:45:36.954Z"
+            "equivalent": 3,
+            "openGaps": 0,
+            "recorded": "2026-10-10T15:08:47.299Z"
         },
         "src/features/project-creation/handlers/executorMeshPhase.ts": {
             "score": 78.79,

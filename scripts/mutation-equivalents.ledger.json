@@ -14491,6 +14491,18 @@
             "source": "PL-22 batch MUT-02"
         },
         {
+            "module": "src/features/project-creation/handlers/executorAppBuilderPhase.ts",
+            "anchors": [
+                "if (current) show(current.stage, message, current.name);"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing the guard true makes a plain line that arrives before any stage read `current.stage` off undefined, which throws. The line reaches this sink only through reportPhase (agentPhaseChannel.ts), which calls every sink inside a try/catch and discards what it throws, so the throw never leaves the channel and the progress tracker is not called either way: the guarded return and the swallowed throw produce the same screen. Verified by planting the mutation on 2026-10-10: all 13 tests in executorAppBuilderPhase-integrations still passed, including 'drops a plain line that arrives before any stage has started', which drives exactly that case and asserts the tracker's full call list.",
+            "decision": "none \u2014 the guard states the intent and the compiler needs it; the channel's catch makes its absence unobservable",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-07"
+        },
+        {
             "module": "src/features/authentication/services/adobeEntitySelector.ts",
             "anchors": [
                 "this.debugLogger.debug('[Entity Selector] Failed to clear console context (non-critical):', error);"
