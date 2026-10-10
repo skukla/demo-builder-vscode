@@ -7657,28 +7657,23 @@
             "recorded": "2026-10-10T00:47:15.966Z"
         },
         "src/features/mesh/services/meshEndpoint.ts": {
-            "score": 67.24,
-            "killed": 77,
-            "survived": 24,
-            "noCoverage": 14,
+            "score": 83.62,
+            "killed": 96,
+            "survived": 18,
+            "noCoverage": 1,
             "timeout": 1,
             "survivorCategories": {
                 "logPresentation": 13,
                 "block": 3,
-                "branch": 6,
-                "other": 2
+                "branch": 2
             },
             "uncoveredCategories": {
-                "logPresentation": 1,
-                "block": 3,
-                "other": 3,
-                "string": 3,
-                "branch": 4
+                "logPresentation": 1
             },
-            "highValueSurvivors": 9,
+            "highValueSurvivors": 5,
             "equivalent": 5,
-            "openGaps": 16,
-            "recorded": "2026-10-10T01:29:24.817Z"
+            "openGaps": 0,
+            "recorded": "2026-10-10T16:50:54.268Z"
         },
         "src/features/mesh/services/meshRedeploy.ts": {
             "score": 100,
