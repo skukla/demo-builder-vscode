@@ -22,6 +22,7 @@ import {
 } from '@/features/project-creation/ui/wizard/wizardHelpers';
 import type { CustomBlockLibrary, InstalledBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage } from '@/types/demoPackages';
+import type { StorefrontBrokenLink } from '@/types/webviewPayloads';
 import type { WizardState } from '@/types/webview';
 import type { ImportedSettings } from '@/types/wizard';
 
@@ -34,7 +35,9 @@ const NEUTRAL_AUTH: WizardState['adobeAuth'] = { isAuthenticated: false, isCheck
 
 describe('filterRemovedCustomLibraries', () => {
     it('should return an empty list when nothing was selected', () => {
-        expect(filterRemovedCustomLibraries(undefined, [library('A', 'acme', 'a')])).toStrictEqual([]);
+        expect(filterRemovedCustomLibraries(undefined, [library('A', 'acme', 'a')])).toStrictEqual(
+            []
+        );
         expect(filterRemovedCustomLibraries([], [library('A', 'acme', 'a')])).toStrictEqual([]);
     });
 
@@ -273,7 +276,9 @@ describe('buildProjectConfig', () => {
     it('should resolve no frontend source when the package lists no storefronts at all', () => {
         const packages = [{ id: 'citisignal', name: 'CitiSignal' }];
 
-        expect(buildProjectConfig(base, null, packages as unknown as DemoPackage[]).frontendSource).toBeUndefined();
+        expect(
+            buildProjectConfig(base, null, packages as unknown as DemoPackage[]).frontendSource
+        ).toBeUndefined();
     });
 
     it('should resolve no frontend source when no package list was supplied', () => {
@@ -395,6 +400,14 @@ describe('buildProjectConfig', () => {
                 installedBlockLibraries: installed,
             });
             expect(withEds({})).not.toHaveProperty('installedBlockLibraries');
+        });
+
+        it('should hand over the broken links storefront setup found, and no key when it found none', () => {
+            const brokenLinks: StorefrontBrokenLink[] = [{ link: '/fr', pages: ['/footer'] }];
+
+            expect(withEds({ brokenLinks })?.brokenLinks).toStrictEqual(brokenLinks);
+            expect(withEds({})).not.toHaveProperty('brokenLinks');
+            expect(withEds({ brokenLinks: [] })).not.toHaveProperty('brokenLinks');
         });
     });
 });
