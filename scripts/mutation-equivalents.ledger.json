@@ -16510,6 +16510,19 @@
             "decision": "none \u2014 the row keeps SEVERITY a complete ranking of the health vocabulary, and the render-site check is where 'healthy says nothing' is stated; removing either would leave the other as the only place that rule lives",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-01"
+        },
+        {
+            "module": "src/commands/diagnostics.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 373,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch in checkStorefrontOrigin holds a logger.debug call and 'return undefined'. Emptying it leaves the catch in place, so the failed read is still swallowed, and the function then falls off its end \u2014 which answers undefined, the same value. The only difference is whether the debug line prints. Planted 2026-10-10 with the body removed and all 23 tests pass, including the one that makes the read throw and checks the section is left out.",
+            "decision": "none \u2014 the explicit return says what a failed read means; pinning the log line would mean asserting a logger call's arguments",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-01"
         }
     ]
 }

@@ -340,22 +340,22 @@
             "recorded": "2026-10-10T00:02:55.569Z"
         },
         "src/commands/diagnostics.ts": {
-            "score": 77.55,
-            "killed": 76,
-            "survived": 22,
+            "score": 79.59,
+            "killed": 78,
+            "survived": 20,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "string": 4,
+                "string": 3,
                 "logPresentation": 15,
-                "branch": 2,
-                "block": 1
+                "block": 1,
+                "branch": 1
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 3,
-            "equivalent": 1,
-            "openGaps": 2,
-            "recorded": "2026-10-10T00:17:26.402Z"
+            "highValueSurvivors": 2,
+            "equivalent": 2,
+            "openGaps": 0,
+            "recorded": "2026-10-10T20:18:09.426Z"
         },
         "src/commands/diagnosticsChecks.ts": {
             "score": 86.28,

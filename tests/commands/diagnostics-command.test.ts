@@ -336,6 +336,17 @@ describe('the storefront origin section (EDS-13f)', () => {
         expect(reportFrom(logger).storefrontOrigin).toEqual(origin);
     });
 
+    it('reads nothing for an open project that has no EDS storefront', async () => {
+        // A project IS open, so only the repo half of the guard can stop the read.
+        // Reading anyway asks GitHub about a repository this project does not have.
+        const { command, logger } = setup(createMockProject({ selectedStack: 'headless-paas' }));
+
+        await command.execute();
+
+        expect(readStorefrontReport).not.toHaveBeenCalled();
+        expect(reportFrom(logger).storefrontOrigin).toBeUndefined();
+    });
+
     it('reads nothing without an EDS project, and leaves the section out when the read throws', async () => {
         const { command } = setup(null);
         await command.execute();
@@ -509,6 +520,10 @@ describe('the completion notification', () => {
         expect(typeof copied).toBe('string');
         expect(copied).toContain('DIAGNOSTICS SUMMARY');
         expect(copied).toContain('MCP Server (in-extension):');
+        // One line per summary line: the report is pasted into tickets, and a
+        // summary run together on one line is unreadable there.
+        const shown = (copied ?? '').split('\n').map((line) => line.trim());
+        expect(shown).toContain('MCP Server (in-extension):');
     });
 
     it('rethrows a collector failure instead of reporting a run that did not happen', async () => {
