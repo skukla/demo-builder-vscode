@@ -16242,6 +16242,18 @@
             "decision": "Recorded, not killed: the optional chain is defensive on an 'any' parameter the earlier guard has already excluded.",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-01"
+        },
+        {
+            "module": "src/features/app-builder/services/apiSubscriber.ts",
+            "anchors": [
+                ".filter((entry): entry is AppBuilderComponentCatalogEntry => Boolean(entry));"
+            ],
+            "mutants": 1,
+            "category": "equivalent",
+            "reason": "Removing this filter would keep an undefined entry, but there is never one to keep. catalogEntryFor answers undefined only when the project has no component under the id, and every id it is asked about here was just read from the project's own map; for those it returns the catalog's entry, the copy's template, or one rebuilt from the record. Verified by planting the map without the filter (141 tests across nine suites green) against a control on the line above ('&&' turned to '||': suite red).",
+            "decision": "Recorded, not killed: the filter is what narrows the type catalogEntryFor returns; its runtime branch cannot be reached from this call.",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-01"
         }
     ]
 }

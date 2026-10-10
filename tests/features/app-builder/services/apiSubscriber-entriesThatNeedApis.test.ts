@@ -48,4 +48,23 @@ describe('entriesThatNeedApis', () => {
         expect(copy).toMatchObject({ catalogId: 'erp-integration', requiredApis: ['ACCS-REST-API'] });
         expect(entries.map((e) => e.id)).toEqual(['commerce-mesh', 'erp-integration', 'erp-integration-2']);
     });
+
+    // The whole list, in order and with nothing extra: catalog rows first, as the
+    // catalog orders them, whether the project has them or is adding them.
+    it('answers exactly the kept rows, in catalog order, when one is being added', () => {
+        const [mesh, erp] = CATALOG;
+
+        expect(entriesThatNeedApis([erp, mesh], {}, [erp])).toStrictEqual([erp, mesh]);
+        expect(entriesThatNeedApis([erp, mesh], {})).toStrictEqual([mesh]);
+    });
+
+    // A copy is answered through the catalog entry it was made from. When the
+    // catalog no longer has that entry, there are no required APIs to read.
+    it('leaves out a copy whose catalog entry the catalog no longer has', () => {
+        const ids = entriesThatNeedApis(CATALOG, {
+            appBuilderComponents: { 'retired-2': record('retired') },
+        }).map((e) => e.id);
+
+        expect(ids).toStrictEqual(['commerce-mesh']);
+    });
 });
