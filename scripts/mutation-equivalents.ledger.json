@@ -15847,6 +15847,43 @@
             "decision": "none \u2014 the explicit return states the contract (unknown, never a partial list) where a reader looks for it",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-01"
+        },
+        {
+            "module": "src/features/eds/services/reset/edsResetRepoHelper.ts",
+            "anchors": [
+                "`[EdsReset] Block library '${libraryId}' selected but no source configured`,"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The else after 'if (source)' in collectLibrarySources holds one logger.warn and nothing else. Emptying it changes what is logged; the library is left out of the install list either way, which the blockLibraries suite pins by the list installBlockCollections receives ('leaves out a selected library with no source'). The classifier reads the mutated line '} else {' and its statement scan stops at that brace, so it cannot see the logger call inside. Asserting the log is what no-logger-wording-assertions forbids.",
+            "decision": "none \u2014 the line is the Debug Logs record of a selected library with no source",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-02, edsResetRepoHelper focus run"
+        },
+        {
+            "module": "src/features/eds/services/reset/edsResetRepoHelper.ts",
+            "anchors": [
+                "logger.warn(`[EdsReset] Inspector tagging skipped: ${(error as Error).message}`);"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch around generateInspectorTreeEntries holds one logger.warn. Emptying it changes what is logged; inspectorEntries keeps its [] initialiser either way, and the blockLibraries suite pins that the installer then receives no extra tree entries and the standalone install does not run ('proceeds with no extra tree entries when inspector generation throws'). The mutated line is '} catch (error) {', where the statement scan stops, so the classifier cannot see the logger call. Asserting the log is what no-logger-wording-assertions forbids.",
+            "decision": "none \u2014 the line is the Debug Logs record of why inspector tagging was skipped",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-02, edsResetRepoHelper focus run"
+        },
+        {
+            "module": "src/features/eds/services/reset/edsResetRepoHelper.ts",
+            "anchors": [
+                "if (templateCommitSha) {",
+                "`[EdsReset] Template commit unresolved \u2014 resetting from ${templateBranch}; synced commit not updated`,"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "The if/else after templateRef is computed chooses between an info line (pinned) and a warn line (unresolved) and nothing else: templateRef and the returned templateCommitSha are both set before it, and the template suite pins each for a resolved and an unresolved commit by the ref githubFileOps.resetRepoToTemplate receives and the commit the result carries. Forcing the condition false or emptying either body changes which line is logged and nothing observable. The classifier reads the brace lines, where its statement scan stops, so it does not see the logger calls. Asserting the log is what no-logger-wording-assertions forbids.",
+            "decision": "none \u2014 the two lines are the Debug Logs record of whether the reset was pinned",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-02, edsResetRepoHelper focus run"
         }
     ]
 }

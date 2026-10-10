@@ -264,4 +264,11 @@ describe('resetRepoToTemplate — the bulk template reset', () => {
 
         expect(report).not.toHaveBeenCalledWith(1, SMART_404_WARNING);
     });
+
+    it('carries no boilerplate when the repository has no package.json to read it from', async () => {
+        const { result, getFileContent } = await runReset(buildParams());
+
+        expect(getFileContent).toHaveBeenCalledWith('me', 'shop', 'package.json', undefined);
+        expect('boilerplate' in result).toBe(false);
+    });
 });
