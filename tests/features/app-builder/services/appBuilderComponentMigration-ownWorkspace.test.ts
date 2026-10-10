@@ -159,3 +159,181 @@ describe('a move into a DIFFERENT Adobe project', () => {
         expect(onRowStatus).toHaveBeenCalledWith('erp-integration', 'error', 'boom');
     });
 });
+
+describe('a move into a DIFFERENT Adobe project — what the own-workspace cards are told', () => {
+    const PREVIOUS = { organization: '100000', projectId: 'old-proj', workspace: 'ws-old-production' };
+
+    function movedBodea(): Project {
+        const project = bodea('ws-new-production');
+        project.adobe = { ...project.adobe!, projectId: 'new-proj' };
+        return project;
+    }
+
+    // The pair is in flight from the moment the move starts, although its turn
+    // comes last: a card still reading Deployed through the whole project-workspace
+    // half is the "grid looks idle" report the up-front marking exists to end.
+    it('marks the pair as moving up front, before the subscribe, and settles each as it lands', async () => {
+        const events: string[] = [];
+        const deps = createDeps({
+            catalog: CATALOG,
+            subscribeRequiredApis: jest.fn(async () => {
+                events.push('subscribe');
+            }),
+        });
+
+        await moveAppBuilderComponentsToDestination(movedBodea(), PREVIOUS, deps, (id, status, message) => {
+            events.push([id, status, message].filter(Boolean).join(' | '));
+        });
+
+        expect(events.slice(0, events.indexOf('subscribe'))).toStrictEqual([
+            'eds-accs-mesh | deploying | Deploying Mesh',
+            'demo-erp | deploying | Deploying Integration',
+            'erp-integration | deploying | Deploying Integration',
+        ]);
+        expect(events).toContain('demo-erp | deployed');
+        expect(events).toContain('erp-integration | deployed');
+    });
+
+    // Nothing in the project's workspace is not "nothing to move": the pair still
+    // belongs to the Adobe project being left.
+    it('moves a project whose ONLY components have a workspace of their own', async () => {
+        const project = movedBodea();
+        delete project.appBuilderComponents!['eds-accs-mesh'];
+
+        const result = await moveAppBuilderComponentsToDestination(project, PREVIOUS, createDeps({ catalog: CATALOG }));
+
+        expect(result).toStrictEqual({ success: true, moved: ['demo-erp', 'erp-integration'], failed: [] });
+        expect(mockDeployAppBuilderComponent.mock.calls.map(([, id]) => id)).toStrictEqual([
+            'demo-erp',
+            'erp-integration',
+        ]);
+    });
+});
+
+/**
+ * Two groups, each in a workspace of its own. Once ANY group's old side is gone the
+ * move cannot be rolled back — pointing the project at the old Adobe project would
+ * strand what already left it — so a later group that fails is reported, not undone.
+ */
+describe('a move into a DIFFERENT Adobe project — two own-workspace groups', () => {
+    const PREVIOUS = { organization: '100000', projectId: 'old-proj', workspace: 'ws-old-production' };
+    const TWO = [catalogEntry('erp-a', 'integration'), catalogEntry('erp-b', 'integration')];
+
+    function twoGroups(): Project {
+        const state = (workspace: string) => ({
+            kind: 'integration' as const,
+            status: 'deployed' as const,
+            source: { owner: 'o', repo: 'r' },
+            workspace: { id: workspace, name: workspace, title: workspace },
+        });
+        return createMockProject({
+            adobe: { organization: '100000', projectId: 'new-proj', workspace: 'ws-new-production' },
+            appBuilderComponents: { 'erp-a': state('ws-a'), 'erp-b': state('ws-b') },
+            componentInstances: {},
+        });
+    }
+
+    /** The second group cannot get a workspace in the new Adobe project: nothing of it has left the old one. */
+    const secondGroupCannotStart = () =>
+        jest.fn(async (_project: Project, entry: AppBuilderComponentCatalogEntry) =>
+            entry.id === 'erp-b' ? { error: 'workspace quota reached' } : undefined,
+        );
+
+    it('does not roll back when a later group cannot start after an earlier one moved', async () => {
+        const project = twoGroups();
+        const deps = createDeps({ catalog: TWO, createComponentWorkspace: secondGroupCannotStart() });
+
+        const result = await moveAppBuilderComponentsToDestination(project, PREVIOUS, deps);
+
+        expect(result).toStrictEqual({
+            success: false,
+            moved: ['erp-a'],
+            failed: [{ id: 'erp-b', error: 'Nothing of it was moved: workspace quota reached' }],
+            rolledBack: false,
+        });
+        expect(project.adobe?.projectId).toBe('new-proj');
+    });
+
+    it('does not roll back when a later group cannot start after an earlier one left and then failed', async () => {
+        const project = twoGroups();
+        mockDeployAppBuilderComponent.mockImplementation(async (_p: Project, id: string) =>
+            id === 'erp-a' ? { success: false, error: 'boom' } : { success: true },
+        );
+        const deps = createDeps({ catalog: TWO, createComponentWorkspace: secondGroupCannotStart() });
+
+        const result = await moveAppBuilderComponentsToDestination(project, PREVIOUS, deps);
+
+        expect(result).toStrictEqual({
+            success: false,
+            moved: [],
+            failed: [
+                { id: 'erp-a', error: 'boom' },
+                { id: 'erp-b', error: 'Nothing of it was moved: workspace quota reached' },
+            ],
+            rolledBack: false,
+        });
+        expect(project.adobe?.projectId).toBe('new-proj');
+    });
+
+    it('control: the FIRST group failing to start rolls the whole move back', async () => {
+        const project = twoGroups();
+        const deps = createDeps({
+            catalog: TWO,
+            createComponentWorkspace: jest.fn(async () => ({ error: 'workspace quota reached' })),
+        });
+
+        const result = await moveAppBuilderComponentsToDestination(project, PREVIOUS, deps);
+
+        expect(result).toMatchObject({ success: false, moved: [], rolledBack: true });
+        expect(project.adobe).toStrictEqual(PREVIOUS);
+    });
+});
+
+describe('the subscribe before a move', () => {
+    const PREVIOUS = { organization: '100000', projectId: 'proj-1', workspace: 'ws-stage' };
+
+    // The stack's mesh counts towards the union whether or not the project has
+    // deployed one, so the entries can name a component the project holds no
+    // record for. That is an entry on the project's workspace, not a crash.
+    it('includes a catalog mesh the project holds no record for', async () => {
+        const project = createMockProject({
+            adobe: { organization: '100000', projectId: 'proj-1', workspace: 'ws-production' },
+            appBuilderComponents: {
+                'erp-sync': { kind: 'integration', status: 'deployed', source: { owner: 'o', repo: 'r' } },
+            },
+            componentInstances: {},
+        });
+        const deps = createDeps({
+            catalog: [catalogEntry('eds-accs-mesh', 'mesh'), catalogEntry('erp-sync', 'integration')],
+        });
+
+        await moveAppBuilderComponentsToDestination(project, PREVIOUS, deps);
+
+        const [entries, subscribedFor] = (deps.subscribeRequiredApis as jest.Mock).mock.calls[0];
+        expect((entries as AppBuilderComponentCatalogEntry[]).map((e) => e.id)).toStrictEqual([
+            'eds-accs-mesh',
+            'erp-sync',
+        ]);
+        expect(subscribedFor).toBe(project);
+    });
+
+    // A project whose destination was cleared has nothing to compare the previous
+    // one against: that is a different destination, never a reason to throw.
+    it('moves a project that names no destination rather than failing on the comparison', async () => {
+        const project = createMockProject({
+            appBuilderComponents: {
+                'erp-sync': { kind: 'integration', status: 'deployed', source: { owner: 'o', repo: 'r' } },
+            },
+            componentInstances: {},
+        });
+        delete project.adobe;
+
+        const result = await moveAppBuilderComponentsToDestination(
+            project,
+            PREVIOUS,
+            createDeps({ catalog: [catalogEntry('erp-sync', 'integration')] }),
+        );
+
+        expect(result).toStrictEqual({ success: true, moved: ['erp-sync'], failed: [] });
+    });
+});

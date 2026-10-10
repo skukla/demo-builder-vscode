@@ -16426,6 +16426,18 @@
             "decision": "none \u2014 required by the type, unreachable in the state that would differ",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-05 \u2014 the guard is exercised from both sides by dashboardHandlers-deployMesh.test.ts (no payload, an id without the modal surface, the modal surface with and without an id)"
+        },
+        {
+            "module": "src/features/app-builder/services/appBuilderComponentMigration.ts",
+            "anchors": [
+                "(entry) => !project.appBuilderComponents?.[entry.id]?.workspace,"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Of the two ?. on this line, the SECOND is tested (a catalog mesh the project holds no record for) and its mutant is killed. This row is the FIRST: dropping it throws only when project.appBuilderComponents itself is undefined, and the filter cannot run in that state. Both ids and groups are derived from Object.entries(project.appBuilderComponents ?? {}), so an absent record makes both empty and the function returns at the no-op guard before reaching the subscribe; nothing between that guard and this line replaces the record. The compiler requires the ?. because the field is optional on Project.",
+            "decision": "none \u2014 required by the type, unreachable in the state that would differ",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-05 \u2014 same shape as the two rows recorded for this module on 2026-09-06"
         }
     ]
 }
