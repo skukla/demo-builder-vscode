@@ -16520,6 +16520,18 @@
             "decision": "none - the + says what is meant and the collapse behind it is the safety net, not the intent",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-04"
+        },
+        {
+            "module": "src/features/ai/server/commerceQueryTool.ts",
+            "anchors": [
+                "args?.customerGroupId,"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Stryker drops the `?.`, which matters only when `args` is nullish. This line sits AFTER the handler's own required-argument check: `String(args?.query ?? '')` yields '' for a nullish `args` and the next statement returns 'Error: `query` is required.', so the line cannot be reached with `args` nullish and `args.customerGroupId` cannot throw. It is the third of three such guards in this handler; the other two (`args?.endpoint`, `args?.variables`) are already recorded for the same reason. Planted and re-run: all 34 tests pass. Control on the same line (reading a misspelt property): 3 tests fail, so the line is exercised.",
+            "decision": "none \u2014 `args` is the SDK's untyped `any`, and the guard keeps correctness from depending on statement order in the handler",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-05, 2026-10-10"
         }
     ]
 }
