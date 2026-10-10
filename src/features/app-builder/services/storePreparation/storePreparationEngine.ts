@@ -15,6 +15,7 @@
  * @module features/app-builder/services/storePreparation/storePreparationEngine
  */
 
+import { isStepDone } from '../setupChecklist';
 import type { SetupCheckResult } from '../setupChecks';
 import { errorText, type FixDeps } from './fixContract';
 import { fixFor } from './fixRegistry';
@@ -31,14 +32,32 @@ export interface PreparationDeps extends FixDeps {
 
 type Saved = Pick<AppBuilderComponentState, 'setupSteps' | 'storePreparation'>;
 
-/** Where a step stands before any apply. */
-export function stepState(step: SetupStep, saved: Saved): PreparationStepState {
-    if (saved.storePreparation?.steps[step.id]) return 'applied';
-    if (saved.setupSteps?.[step.id]?.state === 'done') return 'done';
-    return step.fix ? 'applicable' : 'manual';
+/** The saved check's words when it could not tell; nothing otherwise. */
+function couldNotCheck(step: SetupStep, saved: Saved): string | undefined {
+    const record = saved.setupSteps?.[step.id];
+    return record?.lastCheck === 'unknown' ? record.note : undefined;
 }
 
-const report = (step: SetupStep, state: PreparationStepState, changes: string[] = [], rejected: string[] = [], manual?: string): PreparationStepReport => ({
+/**
+ * Where a step stands before any apply. A step whose check could not tell is NEVER done:
+ * with a fix it stays applicable (the fix reads for itself), without one it is unknown.
+ */
+export function stepState(step: SetupStep, saved: Saved): PreparationStepState {
+    if (saved.storePreparation?.steps[step.id]) return 'applied';
+    const record = saved.setupSteps?.[step.id];
+    if (isStepDone(record)) return 'done';
+    if (step.fix) return 'applicable';
+    return record?.lastCheck === 'unknown' ? 'unknown' : 'manual';
+}
+
+const report = (
+    step: SetupStep,
+    state: PreparationStepState,
+    changes: string[] = [],
+    rejected: string[] = [],
+    manual?: string,
+    note?: string,
+): PreparationStepReport => ({
     id: step.id,
     label: step.label ?? step.title,
     title: step.title,
@@ -46,6 +65,7 @@ const report = (step: SetupStep, state: PreparationStepState, changes: string[] 
     changes,
     rejected,
     ...(manual ? { manual } : {}),
+    ...(note ? { note } : {}),
 });
 
 /** The steps an apply covers: the ones asked for, else every one. */
@@ -60,15 +80,17 @@ export async function previewPreparation(steps: SetupStep[], saved: Saved, deps:
     const reports: PreparationStepReport[] = [];
     for (const step of chosen(steps, stepIds)) {
         const state = stepState(step, saved);
+        const note = couldNotCheck(step, saved);
         if (state !== 'applicable' || !step.fix) {
-            reports.push(report(step, state));
+            reports.push(report(step, state, [], [], undefined, note));
             continue;
         }
         try {
             const preview = await fixFor(step.fix).preview(deps);
-            reports.push(report(step, state, preview.changes, [], preview.manual));
+            reports.push(report(step, state, preview.changes, [], preview.manual, note));
         } catch (error) {
-            reports.push(report(step, 'rejected', [], [`Could not read what would change: ${errorText(error)}`]));
+            // The check could not tell and the fix cannot read either: "could not check".
+            reports.push(report(step, 'unknown', [], [`Could not read what would change: ${errorText(error)}`], undefined, note));
         }
     }
     return reports;

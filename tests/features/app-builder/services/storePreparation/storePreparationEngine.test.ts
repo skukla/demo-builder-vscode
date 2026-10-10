@@ -61,6 +61,39 @@ describe('stepState', () => {
     });
 });
 
+describe('a check that could not tell', () => {
+    const COULD_NOT = { state: 'done' as const, lastCheck: 'unknown' as const, note: 'Could not check the attribute sets: Unterminated string in JSON.' };
+
+    it('never reads as done: with a fix it stays applicable, without one it is unknown', () => {
+        expect(stepState(STEPS[1], { setupSteps: { 'price-scope': COULD_NOT } })).toBe('applicable');
+        expect(stepState(STEPS[0], { setupSteps: { status: COULD_NOT } })).toBe('unknown');
+    });
+
+    it('previews from the fix\'s own read, and carries the check\'s note', async () => {
+        const d = deps([['catalog/price/scope', '0']]);
+        const reports = await previewPreparation(STEPS, { setupSteps: { 'price-scope': COULD_NOT, status: COULD_NOT } }, d);
+        expect(reports[1]).toMatchObject({ state: 'applicable', changes: ['catalog/price/scope at the default scope: 0 → 1'], note: COULD_NOT.note });
+        expect(reports[0]).toMatchObject({ state: 'unknown', note: COULD_NOT.note, changes: [] });
+    });
+
+    it('is "could not check" when the fix cannot preview either, with the reason', async () => {
+        const d = deps([['catalog/price/scope', '0']]);
+        d.commerce.get.mockImplementation(async () => {
+            throw new Error('Commerce answered 500 for system/config');
+        });
+        const reports = await previewPreparation(STEPS, {}, d, ['price-scope']);
+        expect(reports[0]).toMatchObject({ state: 'unknown', rejected: ['Could not read what would change: Commerce answered 500 for system/config'] });
+    });
+
+    it('is never skipped on apply when the check cannot tell: the fix applies from its own read', async () => {
+        const d = deps([['catalog/price/scope', '0']]);
+        (d.runCheck as jest.Mock).mockResolvedValue({ note: 'Could not check: the read timed out.' });
+        const { reports, record } = await applyPreparation(STEPS, { setupSteps: { 'price-scope': COULD_NOT } }, d, ['price-scope']);
+        expect(reports[0].state).toBe('applied');
+        expect(Object.keys(record?.steps ?? {})).toEqual(['price-scope']);
+    });
+});
+
 describe('previewPreparation', () => {
     it('lists every step with its state and what the applicable ones would change, writing nothing', async () => {
         const d = deps([['catalog/price/scope', '0']]);

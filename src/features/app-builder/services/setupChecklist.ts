@@ -32,6 +32,22 @@ function lastCheckOf(saved: SetupStepRecord | undefined): SetupCheckOutcome | un
     return saved.lastCheck ?? inferredOutcome(saved);
 }
 
+/**
+ * Whether a step reads as done: marked done, and its last check did not come back unable to
+ * tell. A check that could not tell must never read as done (Justrite 2026-10-10: a step
+ * saved done, then checked "could not", previewed as done and would have skipped seven
+ * attribute sets without `erp_owner`). Shared with the preparation engine.
+ */
+export function isStepDone(saved: SetupStepRecord | undefined): boolean {
+    return saved?.state === 'done' && lastCheckOf(saved) !== 'unknown';
+}
+
+/** The state the checklist reports: dismissed stays, done only when the check agrees, else open. */
+function stateOf(saved: SetupStepRecord | undefined): SetupChecklistItem['state'] {
+    if (saved?.state === 'dismissed') return 'dismissed';
+    return isStepDone(saved) ? 'done' : 'open';
+}
+
 /** The placeholder a step's `enter` value carries for the ERP it is entered for. */
 const ERP_NAME = '<ERP name>';
 
@@ -76,9 +92,10 @@ export function setupChecklistOf(
             ...(step.then ? { then: step.then } : {}),
             ...(step.icon ? { icon: step.icon } : {}),
             ...(step.optional ? { optional: true } : {}),
-            state: saved?.state ?? 'open',
+            state: stateOf(saved),
             ...(saved?.note ? { note: saved.note } : {}),
             ...(lastCheck ? { lastCheck } : {}),
+            checkState: lastCheck ?? 'unchecked',
             checkable: step.check !== undefined,
             ...(step.fix ? { fix: step.fix } : {}),
             applicable: step.fix !== undefined,

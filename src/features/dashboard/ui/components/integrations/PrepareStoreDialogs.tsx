@@ -46,6 +46,7 @@ export const STATE_WORDS: Record<PreparationStepState, string> = {
     done: 'Done',
     applicable: 'Will apply',
     manual: 'By hand',
+    unknown: 'Could not check',
     applied: 'Applied',
     skipped: 'Already done',
     undone: 'Undone',
@@ -247,7 +248,8 @@ function PreviewList({
                                         ))}
                                     </ul>
                                 )}
-                                {step.manual && <Text>{step.manual}</Text>}
+                                {step.note && <Text>{step.note}</Text>}
+                            {step.manual && <Text>{step.manual}</Text>}
                             </li>
                         ))}
                     </ul>

@@ -17,6 +17,7 @@ import React from 'react';
 import {
     PREPARE_STORE_COPY,
     PrepareStoreDialogs,
+    STATE_WORDS,
     usePrepareStoreDialogs,
     type PrepareStoreControls,
 } from '@/features/dashboard/ui/components/integrations/PrepareStoreDialogs';
@@ -28,6 +29,7 @@ const STEPS: PreparationStepReport[] = [
     { id: 'confirmed-status', label: 'Confirmed status', title: 't', state: 'manual', changes: [], rejected: [] },
     { id: 'price-scope-website', label: 'Price scope', title: 't', state: 'applicable', changes: ['catalog/price/scope at the default scope: 0 → 1'], rejected: [] },
     { id: 'card-payments', label: 'Card payments', title: 't', state: 'applicable', changes: [], rejected: [], manual: 'Connect PayPal by hand.' },
+    { id: 'partially-held-status', label: 'Partially Held status', title: 't', state: 'unknown', changes: [], rejected: [], note: 'Could not check: the read timed out.' },
 ];
 
 function operations(): ComponentOperationControls {
@@ -77,7 +79,11 @@ describe('the preview modal', () => {
         expect(mockRequest).toHaveBeenCalledWith('prepareCommerceStore', { id: 'erp-integration' });
         expect(await screen.findByText('catalog/price/scope at the default scope: 0 → 1')).toBeInTheDocument();
         expect(screen.getByText('Connect PayPal by hand.')).toBeInTheDocument();
-        expect(screen.getByTestId('prepare-store-steps').querySelectorAll('li[data-state]')).toHaveLength(3);
+        expect(screen.getByTestId('prepare-store-steps').querySelectorAll('li[data-state]')).toHaveLength(4);
+        // A check that could not tell is said so, with the check's words, and never as done.
+        const row = screen.getByTestId('prepare-store-steps').querySelector('li[data-state="unknown"]');
+        expect(row).toHaveTextContent(`Partially Held status — ${STATE_WORDS.unknown}`);
+        expect(row).toHaveTextContent('Could not check: the read timed out.');
         fireEvent.click(screen.getByRole('button', { name: PREPARE_STORE_COPY.prepare }));
         expect(ops.start).toHaveBeenCalledWith({
             id: 'erp-integration',

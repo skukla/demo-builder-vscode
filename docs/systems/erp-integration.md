@@ -388,6 +388,13 @@ integration (`appBuilderComponents[id].storePreparation`, by step id) so **Undo 
 (the card, the guide's **Undo this step**, `undo_commerce_store_preparation`) puts it back,
 newest step first.
 
+The checks and the engine read Commerce through an UNCUT signed GET (`setupCheckReader`),
+not the agent tool's `sendRest`, which cuts an answer at 30,000 characters: a set's attribute
+list is longer than that on Justrite, and the cut read broke the attribute-set check mid-JSON
+(2026-10-10). A check that could not tell (`checkState: unknown`) is NEVER read as done, by
+the checklist, the guide or the engine: a step with a fix previews and applies from the fix's
+own read; one without is "could not check", with the check's words shown.
+
 Two rules whatever the step: a step is checked first and SKIPPED when its check says done,
 so a datapack that already loaded the attributes, sources or shared catalogs is never redone
 and never relied on; and a refused item stops nothing else — what Commerce took stands and is

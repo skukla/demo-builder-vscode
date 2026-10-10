@@ -90,6 +90,12 @@ export type PreparationStepState =
     | 'applicable'
     /** It declares no fix: the guide keeps its text. */
     | 'manual'
+    /**
+     * Its check could not tell and it has no fix that could read for itself (or that read
+     * failed too): "could not check", with the reason in `note` or `rejected`. Never done,
+     * and not applied.
+     */
+    | 'unknown'
     /** Demo Builder applied it and recorded what it changed. */
     | 'applied'
     /** Its check found it done before the apply wrote anything (a datapack did it): nothing written. */
@@ -111,4 +117,6 @@ export interface PreparationStepReport {
     rejected: string[];
     /** What stays by hand after the step, if anything. */
     manual?: string;
+    /** What the step's last check said, when it could not tell: shown beside the state. */
+    note?: string;
 }

@@ -17,7 +17,7 @@
 import { postComponentsSnapshot, resolveComponentTarget } from './appBuilderComponentHandlers';
 import { getAppBuilderComponent, setAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { buildCommerceEndpoints } from '@/features/ai/server/commerceEndpointsTool';
-import { resolveRestTarget, sendRest } from '@/features/ai/server/commerceRestClient';
+import { explainStatus, requestRest, resolveRestTarget } from '@/features/ai/server/commerceRestClient';
 import { catalogEntryFor } from '@/features/app-builder/services/componentEntry';
 import { setupChecklistOf } from '@/features/app-builder/services/setupChecklist';
 import { runSetupCheck, type CommerceRead, type SetupCheckResult, type SetupCheckScope } from '@/features/app-builder/services/setupChecks';
@@ -147,11 +147,25 @@ function stepsToCheck(
 /**
  * The signed Commerce GET a check reads with, and the project's store scope. Shared with
  * "Prepare this store" (`storePreparationHandlers.ts`), which checks a step before it writes it.
+ *
+ * UNCUT and unbounded, unlike the agent tool's `sendRest`: that one cuts an answer at
+ * 30,000 characters and pages a search at 20, which is right for a chat answer and fatal
+ * for a check that parses the body (Justrite 2026-10-10: `products/attribute-sets/<id>/attributes`
+ * answers more than that, and the attribute-set check died mid-JSON). The error lines keep
+ * `sendRest`'s words, which the checks match on.
  */
-export async function setupCheckReader(context: HandlerContext, project: Project): Promise<{ read: CommerceRead; scope: SetupCheckScope }> {
-    const target = await resolveRestTarget(context, undefined, fetch);
-    const read = (path: string): Promise<string> =>
-        'refusal' in target ? Promise.resolve(target.refusal) : sendRest('GET', target, path, undefined, fetch);
+export async function setupCheckReader(
+    context: HandlerContext,
+    project: Project,
+    fetchImpl: typeof fetch = fetch,
+): Promise<{ read: CommerceRead; scope: SetupCheckScope }> {
+    const target = await resolveRestTarget(context, undefined, fetchImpl);
+    const read = async (path: string): Promise<string> => {
+        if ('refusal' in target) return target.refusal;
+        const answer = await requestRest('GET', target, path, undefined, fetchImpl);
+        if ('failed' in answer) return `Error: the request failed — ${answer.failed}`;
+        return answer.ok ? answer.text : explainStatus(answer.status, answer.text);
+    };
     // The project's store, for a check of one website's own setting (Payment on Account).
     return { read, scope: { websiteCode: buildCommerceEndpoints(project).scope.websiteCode } };
 }

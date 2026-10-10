@@ -71,6 +71,9 @@ export interface WebActionCall {
     path: string;
 }
 
+/** A check's state as the checklist says it: what it concluded, or that none has run. */
+export type SetupCheckState = SetupCheckOutcome | 'unchecked';
+
 /** How Demo Builder can tell a setup step is done, when it can (`setupChecks.ts`). */
 export type SetupCheck =
     | 'companies-have-own-catalogs'
@@ -204,6 +207,12 @@ export interface SetupChecklistItem {
     note?: string;
     /** What that check concluded, when one ran. */
     lastCheck?: SetupCheckOutcome;
+    /**
+     * The check's state, said outright (AB-77 fix): passed, failed, unknown (it could not tell,
+     * and the step is then NEVER read as done, whatever was saved) or unchecked (no check has
+     * run). On every item `setupChecklistOf` builds.
+     */
+    checkState?: SetupCheckState;
     /** Demo Builder can check this one itself. */
     checkable: boolean;
     /** What Demo Builder can do about it itself (see `SetupStep`). */

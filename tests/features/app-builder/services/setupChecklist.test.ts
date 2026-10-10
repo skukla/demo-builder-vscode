@@ -70,6 +70,23 @@ describe('setupChecklistOf', () => {
         ]);
     });
 
+    it('never reads a step as done when its last check could not tell, and says the check state outright', () => {
+        const items = setupChecklistOf('erp-integration', {
+            setupSteps: {
+                'erp-attributes': { state: 'done', lastCheck: 'unknown', note: 'Could not check the attribute sets: Unterminated string in JSON.' },
+                'company-catalogs': { state: 'done', lastCheck: 'passed', note: 'Acme has its own shared catalog.' },
+                'price-scope-website': { lastCheck: 'failed', note: 'Catalog Price Scope is Global; it must be Website.' },
+                'confirmed-status': { state: 'dismissed' },
+            },
+        });
+        const byId = Object.fromEntries((items ?? []).map((item) => [item.id, [item.state, item.checkState]]));
+        expect(byId['erp-attributes']).toEqual(['open', 'unknown']);
+        expect(byId['company-catalogs']).toEqual(['done', 'passed']);
+        expect(byId['price-scope-website']).toEqual(['open', 'failed']);
+        expect(byId['confirmed-status']).toEqual(['dismissed', 'unchecked']);
+        expect(byId['second-source']).toEqual(['open', 'unchecked']);
+    });
+
     it("fills each ERP's own name into a value entered once per ERP, and keeps the placeholder with none", () => {
         const warehouse = (erpNames?: string[]) =>
             setupChecklistOf('erp-integration', {}, erpNames)?.find((item) => item.id === 'second-source')?.enter;
