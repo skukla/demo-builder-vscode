@@ -15648,6 +15648,42 @@
             "decision": "none \u2014 the explicit check reads as the lookup table it is",
             "recorded": "2026-10-09",
             "source": "PL-69 sitting 9, 2026-10-09"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/WelcomeStep.tsx",
+            "anchors": [
+                "if (answer?.result?.forgotten && state.selectedPackage === packageId) {"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "Stryker drops either '?.', which throws a TypeError when the host answers undefined or an answer with no result. The read sits inside a .then whose chain ends in .catch(() => undefined), so the throw is swallowed and nothing happens \u2014 exactly what the original does when the chain short-circuits to undefined and the condition is false. No state update, no request and no rejection differs between the two.",
+            "decision": "none \u2014 the chain says the answer may be absent, and the catch is what makes an absent answer harmless either way",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-01"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/WelcomeStep.tsx",
+            "anchors": [
+                "const closeAddDemo = useCallback(() => setAddDemoOpen(false), []);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The mutant replaces the callback's empty dependency array with a constant one-element array. React compares dependencies with Object.is per element and that element is the same string literal on every render, so the callback is still created once and never re-created. Same reasoning as the mount effect's array already recorded for this module.",
+            "decision": "none \u2014 a constant dependency list behaves as an empty one",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-01"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/WelcomeStep.tsx",
+            "anchors": [
+                "const openAddDemo = useCallback(() => setAddDemoOpen(true), []);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The same mutant on the callback that opens the dialog: a constant one-element dependency array in place of the empty one. The element never changes between renders, so the callback keeps its identity exactly as before, and it closes over nothing but a state setter.",
+            "decision": "none \u2014 a constant dependency list behaves as an empty one",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-01"
         }
     ]
 }
