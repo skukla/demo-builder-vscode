@@ -400,24 +400,23 @@
             "recorded": "2026-10-10T00:51:21.630Z"
         },
         "src/commands/openInClaude.ts": {
-            "score": 79.52,
-            "killed": 132,
-            "survived": 33,
+            "score": 81.93,
+            "killed": 136,
+            "survived": 29,
             "noCoverage": 1,
             "timeout": 0,
             "survivorCategories": {
-                "string": 7,
-                "branch": 2,
-                "logPresentation": 22,
-                "other": 2
+                "string": 6,
+                "branch": 1,
+                "logPresentation": 22
             },
             "uncoveredCategories": {
                 "string": 1
             },
-            "highValueSurvivors": 2,
-            "equivalent": 0,
-            "openGaps": 4,
-            "recorded": "2026-10-10T01:10:43.834Z"
+            "highValueSurvivors": 1,
+            "equivalent": 1,
+            "openGaps": 0,
+            "recorded": "2026-10-10T19:26:31.941Z"
         },
         "src/commands/openModernizationAgent.ts": {
             "score": 69.23,

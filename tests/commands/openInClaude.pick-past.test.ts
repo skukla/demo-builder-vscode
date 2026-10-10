@@ -16,6 +16,7 @@ jest.mock('@/features/project-creation/services/aiBundle/homeAiContextWriter', (
     refreshHomeAgentsMd: jest.fn().mockResolvedValue(undefined),
 }));
 
+import * as vscode from 'vscode';
 import { OpenInClaudeCommand } from '@/commands/openInClaude';
 import {
     setupVscodeMocks,
@@ -66,6 +67,18 @@ describe('OpenInClaudeCommand — pickPast (resume an earlier chat)', () => {
         expect(mocks.createTerminalMock).toHaveBeenCalledTimes(1);
         expect(mocks.terminalSendTextMock).toHaveBeenCalledTimes(1);
         expect(mocks.terminalSendTextMock).toHaveBeenCalledWith('claude --resume');
+    });
+
+    it('opens the picker as a tab beside the dashboard, at the projects root', async () => {
+        const mocks = setupVscodeMocks({ hasClaudeConversation: true });
+
+        await makeCommand().execute({ pickPast: true });
+
+        expect(mocks.createTerminalMock).toHaveBeenCalledWith({
+            name: 'Claude Code',
+            cwd: PROJECTS_ROOT,
+            location: { viewColumn: vscode.ViewColumn.Active },
+        });
     });
 
     it('asks the session store about the projects root — where the home Chat lives', async () => {

@@ -16463,6 +16463,18 @@
             "decision": "none \u2014 the guard stays so a silent failure does not add an empty 'last lines' entry to the Debug Logs.",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-06"
+        },
+        {
+            "module": "src/commands/openInClaude.ts",
+            "anchors": [
+                "if (!installed && descriptor.launch.kind === 'terminal') {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "resolveActiveEngine (features/ai/engine/activeEngine.ts) computes installed as 'kind === terminal ? isAgentCliInstalled(...) : true', so installed is false only for a terminal engine. Replacing the second operand with true therefore selects exactly the same launches: there is no engine the real resolver reports as not installed whose launch is not a terminal. Killing it needs a hand-built resolver answer (not installed, vscode-chat) that the function it stands in for cannot return.",
+            "decision": "none \u2014 the operand stays because it is what narrows descriptor.launch to TerminalLaunch for explainMissingCli; without it the call does not compile.",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-06"
         }
     ]
 }

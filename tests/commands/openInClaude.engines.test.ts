@@ -105,6 +105,25 @@ describe('OpenInClaudeCommand — per engine', () => {
             expect(ids).toEqual(['workbench.action.chat.newChat', 'workbench.action.chat.open']);
         });
 
+        it('leaves the chat the SC is already in alone when New Chat was not asked for', async () => {
+            setupVscodeMocks({ engine: 'copilot-vscode' });
+
+            await makeCommand(only()).execute({ prompt: 'hi' });
+
+            const ids = (vscode.commands.executeCommand as jest.Mock).mock.calls.map((c) => c[0]);
+            expect(ids).toStrictEqual(['workbench.action.chat.open']);
+        });
+
+        it('opens the chat in agent mode, with nothing typed, when there is no prompt', async () => {
+            setupVscodeMocks({ engine: 'copilot-vscode' });
+
+            await makeCommand(only()).execute();
+
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('workbench.action.chat.open', {
+                mode: 'agent',
+            });
+        });
+
         it("opens VS Code's agent sessions list for an earlier chat", async () => {
             setupVscodeMocks({ engine: 'copilot-vscode' });
 
