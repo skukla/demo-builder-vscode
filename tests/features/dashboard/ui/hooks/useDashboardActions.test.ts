@@ -250,6 +250,39 @@ describe('useDashboardActions', () => {
 
             expect(mockPostMessage).toHaveBeenCalledWith('editProject');
         });
+
+        it('should send openSiteAccess message', () => {
+            const { result } = renderActionsHook();
+
+            act(() => {
+                result.current.handleOpenSiteAccess();
+            });
+
+            expect(mockPostMessage.mock.calls).toStrictEqual([['openSiteAccess']]);
+        });
+
+        it('should send openStorefrontReport message', () => {
+            const { result } = renderActionsHook();
+
+            act(() => {
+                result.current.handleOpenStorefrontReport();
+            });
+
+            expect(mockPostMessage.mock.calls).toStrictEqual([['openStorefrontReport']]);
+        });
+
+        // Verifying the org is a status request and nothing else: it must not
+        // start a sign-in, which is what reAuthenticate and switchOrg do.
+        it('should re-run the status checks to verify the org, without a sign-in', () => {
+            const { result } = renderActionsHook();
+
+            act(() => {
+                result.current.handleVerifyOrg();
+            });
+
+            expect(mockPostMessage.mock.calls).toStrictEqual([['requestStatus']]);
+            expect(webviewClient.request).not.toHaveBeenCalled();
+        });
     });
 
     // The authoring-experience flip was relocated to the Configure webview

@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "PL-70 MUT-07: aiHandlers, appBuilderComponentHandlers, servedStorefrontConfig to zero open gaps",
+    "_note": "PL-70 MUT-07: AddIntegrationFlowAdapter, useDashboardActions to zero open gaps",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -4719,21 +4719,20 @@
             "recorded": "2026-10-10T01:36:49.719Z"
         },
         "src/features/dashboard/ui/integrationsSurface/AddIntegrationFlowAdapter.tsx": {
-            "score": 93.33,
-            "killed": 98,
-            "survived": 7,
+            "score": 97.14,
+            "killed": 102,
+            "survived": 3,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 3,
-                "optionalChain": 2,
+                "branch": 1,
                 "other": 2
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 3,
+            "highValueSurvivors": 1,
             "equivalent": 3,
-            "openGaps": 4,
-            "recorded": "2026-10-10T01:03:53.804Z"
+            "openGaps": 0,
+            "recorded": "2026-10-10T19:58:36.213Z"
         },
         "src/features/dashboard/ui/integrationsSurface/IntegrationsScreen.tsx": {
             "score": 96.43,
@@ -5157,22 +5156,19 @@
             "openGaps": 0
         },
         "src/features/dashboard/ui/hooks/useDashboardActions.ts": {
-            "score": 78.38,
-            "killed": 58,
+            "score": 86.49,
+            "killed": 64,
             "survived": 10,
-            "noCoverage": 6,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
                 "other": 10
             },
-            "uncoveredCategories": {
-                "block": 3,
-                "string": 3
-            },
+            "uncoveredCategories": {},
             "highValueSurvivors": 0,
-            "equivalent": 9,
-            "openGaps": 4,
-            "recorded": "2026-10-10T00:40:43.395Z"
+            "equivalent": 10,
+            "openGaps": 0,
+            "recorded": "2026-10-10T19:58:36.213Z"
         },
         "src/features/dashboard/ui/hooks/useDashboardStatus.ts": {
             "score": 96.6,
