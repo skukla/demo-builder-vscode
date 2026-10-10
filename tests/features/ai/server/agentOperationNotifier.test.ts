@@ -54,6 +54,7 @@ import {
     createAgentOperationNotifier,
     phaseLine,
 } from '@/features/ai/server/agentOperationNotifier';
+import { alertCopyFor } from '@/features/ai/server/agentAlertCopy';
 import { asText } from '@/features/ai/server/mcpToolResult';
 import { reportHandBack } from '@/core/utils/agentPhaseChannel';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -94,6 +95,45 @@ describe('createAgentOperationNotifier', () => {
             'Install App',
         );
         expect(mockOpenExternal).toHaveBeenCalledWith({ parsed: 'https://github.com/apps/aem-code-sync' });
+    });
+
+    it('opens nothing when the user closes a hand-back toast without pressing its button', async () => {
+        // Dismissing the toast is not a request to open a browser tab.
+        const notifier = createAgentOperationNotifier(logger);
+        mockShowWarningMessage.mockResolvedValueOnce(undefined);
+
+        await notifier('create_project', async () => {
+            reportHandBack({
+                title: 'install the AEM Code Sync GitHub App on acme/shop',
+                detail: 'The run resumes by itself once it is installed.',
+                action: { label: 'Install App', url: 'https://github.com/apps/aem-code-sync' },
+            });
+            return { ok: true };
+        });
+        await new Promise((resolve) => setImmediate(resolve));
+
+        expect(mockShowWarningMessage).toHaveBeenCalledTimes(1);
+        expect(mockOpenExternal).not.toHaveBeenCalled();
+    });
+
+    it('shows a hand-back that has nothing to open as a toast with no button', async () => {
+        const notifier = createAgentOperationNotifier(logger);
+        mockShowWarningMessage.mockResolvedValueOnce(undefined);
+
+        await notifier('create_project', async () => {
+            reportHandBack({
+                title: 'approve the sign-in in your browser',
+                detail: 'The run resumes by itself once you have.',
+            });
+            return { ok: true };
+        });
+        await new Promise((resolve) => setImmediate(resolve));
+
+        expect(mockShowWarningMessage.mock.calls[0]).toStrictEqual([
+            'Agent · Waiting for you: approve the sign-in in your browser. ' +
+                'The run resumes by itself once you have.',
+        ]);
+        expect(mockOpenExternal).not.toHaveBeenCalled();
     });
 
     it('wraps the call in a named progress notification and returns its result', async () => {
@@ -210,6 +250,21 @@ describe('createAgentOperationNotifier', () => {
         expect(phaseLine('Publishing to CDN…')).toBe('Publishing to CDN');
         expect(phaseLine('Published 49 pages to CDN')).toBe('Published 49 pages to CDN');
         expect(phaseLine('Site is live!')).toBe('Site is live!');
+    });
+
+    it('keeps the step counter that follows the dots, whatever its size and spacing', () => {
+        expect(phaseLine('Publishing pages… (12/20)')).toBe('Publishing pages (12/20)');
+        expect(phaseLine('Publishing pages...(2/5)')).toBe('Publishing pages(2/5)');
+    });
+
+    it('leaves dots that are not at the end of the line alone', () => {
+        expect(phaseLine('Waiting... for Commerce to answer')).toBe(
+            'Waiting... for Commerce to answer'
+        );
+    });
+
+    it('trims what the dots leave behind at the end, and nothing at the start', () => {
+        expect(phaseLine('  Publishing pages …')).toBe('  Publishing pages');
     });
 
     it("feeds the operation's own phase strings into the notification", async () => {
@@ -384,6 +439,13 @@ describe('createAgentConsentGate', () => {
         expect(text).toContain('declined');
         expect(text).toContain('reset_project');
         expect(text).toContain('demoBuilder.ai.requireAgentConsent');
+        // The whole instruction, once: it is what the agent acts on next.
+        expect(text).toBe(
+            'The user declined "reset_project" in the VS Code consent dialog — the operation ' +
+                'was NOT run. Ask the user how to proceed; do not retry without new ' +
+                'instructions. (They can turn this dialog off with the ' +
+                'demoBuilder.ai.requireAgentConsent setting, e.g. for unattended use.)'
+        );
     });
 
     it('times out an unanswered dialog into a "nobody answered" refusal — never hangs (AI-5)', async () => {
@@ -406,6 +468,13 @@ describe('createAgentConsentGate', () => {
             expect(text).toContain('Nobody answered');
             expect(text).toContain('NOT run');
             expect(text).not.toContain('declined');
+            expect(text).toBe(
+                'Nobody answered the consent dialog for "reset_project" in the VS Code window, ' +
+                    'so the operation was NOT run. The user may be away from that window — ' +
+                    'tell them a consent dialog may still be open there, and retry only when ' +
+                    'they are ready to answer it. (For unattended use they can turn the dialog ' +
+                    'off with the demoBuilder.ai.requireAgentConsent setting.)'
+            );
             // The wait names itself in the log BEFORE the dialog opens.
             expect(logger.info).toHaveBeenCalledWith(
                 expect.stringContaining('awaiting the user consent dialog')
@@ -531,5 +600,29 @@ describe('createAgentConsentGate', () => {
         expect(mockShowWarningMessage).toHaveBeenCalledTimes(1);
         const detail = consentDetail(mockShowWarningMessage.mock.calls[0]);
         expect(detail).not.toContain('Project:');
+        // Nothing stands in for the missing line: the consequence, and only that.
+        expect(detail).toBe(alertCopyFor('republish')!.consequence);
+    });
+
+    it('adds no project line for an open project that has no name', async () => {
+        settingIs(true);
+        mockGetStateManager.mockReturnValue(makeStateManager(createMockProject({ name: '' })));
+        mockShowWarningMessage.mockResolvedValue('Allow');
+        const gate = createAgentConsentGate(logger);
+
+        await gate('republish', { confirm: true });
+
+        expect(consentDetail(mockShowWarningMessage.mock.calls[0])).toBe(
+            alertCopyFor('republish')!.consequence
+        );
+    });
+
+    it('reads the consent setting from the extension’s own section', async () => {
+        settingIs(false);
+        const gate = createAgentConsentGate(logger);
+
+        await gate('republish', { confirm: true });
+
+        expect(mockGetConfiguration).toHaveBeenCalledWith('demoBuilder');
     });
 });
