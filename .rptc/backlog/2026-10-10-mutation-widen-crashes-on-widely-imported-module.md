@@ -46,3 +46,32 @@ reject by hand; the tool could reject it too. The mixed-environment crash may
 also affect a small widen that happens to include one React suite and one
 Node-only suite using `setImmediate`, which is worth checking when this is picked
 up.
+
+## Two more ways it fails (PL-70 batch MUT-03, 2026-10-10)
+
+Both met on a three-module group that included
+`src/features/dashboard/handlers/appManagementInstallHandlers.ts`, which widened by
+72 importing suites.
+
+**A suite that reads `src/` as text fails the dry run.**
+`tests/features/ai/server/toolNarration.test.ts` finds directly registered tools by
+running a regex over the source files (`^\s*server\.registerTool\(\s*\n?\s*'([a-z_]+)'`).
+In Stryker's sandbox the suite reports `get_component_requirements` as a phrase for
+a tool that does not exist. The likely cause is that the sandbox copy of a module
+under measurement is instrumented, so the regex no longer matches it; that was read
+off the failure and not tested. The command printed
+`ERROR DryRunExecutor One or more tests failed in the initial test run` and exited 1.
+The suite passes in an ordinary run. Removing that one line from
+`jest.focus.config.js` by hand let the dry run pass.
+
+**With the dry run passing, the same widen hit the 12-minute limit** (exit 124). The
+83 suites included nine `tests/extension-*` suites and three `commandManager` ones.
+
+The batch carried on by measuring each module alone on its own suites. For
+`componentRequirementsTool.ts` alone the widen was 17 suites, finished in 1.4
+minutes and settled 8 of 9 reported gaps without a test being written, so the
+feature earns its keep on a module with few importers.
+
+Added to the recommendation: when the dry run of a widened focus fails, name the
+failing suite, drop it and try once more; and refuse or rank a widen that adds more
+than a few dozen suites for one module.
