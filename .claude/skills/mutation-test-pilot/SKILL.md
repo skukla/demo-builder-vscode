@@ -62,6 +62,22 @@ du -sh .stryker-tmp .stryker-tmp-pl22 2>/dev/null
 ```
 
 
+## "Test runner process ran out of memory" on a long run
+
+Known behaviour, not a new leak: heap accumulates across test files inside one process
+(`.rptc/research/test-file-organization-and-memory-optimization/research.md`, 2025-11-18).
+Plain jest answers it by recycling workers (`workerIdleMemoryLimit: '256MB'` in
+`jest.config.js`, with its measurements in the comment). Stryker's jest runner gets no such
+recycling, so its workers grew until four of them died on 2026-10-10, twenty minutes into
+a nine-module run of 1,112 mutants against 176 suites.
+
+All three Stryker configs now set `maxTestRunnerReuse: 50`: each test runner process is
+restarted after 50 mutant runs (the option and its meaning are in
+`node_modules/@stryker-mutator/core/schema/stryker-schema.json`; 0, the default, means
+never). 50 is a conservative choice, not a measured optimum: a restart costs a few seconds
+and a one-module run of under 200 mutants on four workers never reaches it. Do not edit
+suites to chase this, and measure ONE module per run.
+
 ## Working a module in a loop — the cycle
 
 The sample is a release check. THIS is the working cadence, and every step is

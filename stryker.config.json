@@ -22,6 +22,7 @@
     },
     "coverageAnalysis": "perTest",
     "concurrency": 4,
+    "maxTestRunnerReuse": 50,
     "timeoutMS": 20000,
     "disableTypeChecks": true,
     "tempDirName": ".stryker-tmp",
