@@ -3402,11 +3402,11 @@
         {
             "module": "src/features/project-creation/ui/steps/IntegrationsStep.tsx",
             "anchors": [
-                "if (action === 'manage-apis') {"
+                "if (action === 'settings') {"
             ],
             "mutants": 1,
             "category": "branch",
-            "reason": "CardAction spans nine verbs, but the wizard's card only ever emits two: menuActionsFor gives a pre-deploy card just Remove and Manage APIs, and onOpen calls handleCardAction with 'manage-apis' explicitly. Remove returns before this line, so the only value that reaches it is already 'manage-apis' and the comparison cannot answer false. It stays because the shared CardAction union does carry the other seven.",
+            "reason": "CardAction spans nine verbs, but the wizard's card only ever emits three: menuActionsFor gives a pre-deploy card Manage APIs, Settings (for the ERP pair) and Remove, and onOpen calls handleCardAction with 'manage-apis' explicitly. Remove and Manage APIs each return before this line, so the only value that reaches it is already 'settings' and the comparison cannot answer false. It stays because the shared CardAction union does carry the other six. Re-triaged 2026-10-10 (PL-70 MUT-02): this row was written for the 'manage-apis' comparison when it was the last one; Settings arrived after it, the 'manage-apis' mutant is now killed by the ERP Settings test, and the unanswerable comparison moved one line down.",
             "decision": "none \u2014 no other action reaches this line from the wizard's card",
             "recorded": "2026-09-04",
             "source": "mutationLedger add"
@@ -14902,18 +14902,6 @@
             "source": "mutationLedger add"
         },
         {
-            "module": "src/features/project-creation/ui/steps/IntegrationsStep.tsx",
-            "anchors": [
-                "() => integrationEntries.filter((entry) => !entry.blank && entry.kind === 'integration'),"
-            ],
-            "mutants": 1,
-            "category": "other",
-            "reason": "The consumer re-filters. IntegrationsStep hands the modal a 'catalog' prop, and AddIntegrationFlowModal immediately narrows it again \u2014 'prebuiltCatalog = catalog.filter(isPrebuiltIntegration)' for the gallery and 'seedCatalog = catalog.filter(isSeedIntegration)' for the Build-custom seeds \u2014 while useIntegrationFlow only ever looks entries up by an id the user picked from those narrowed lists. So a blank or mesh-kind entry that survives this step's filter is dropped by the next one, and a junk entry is dropped by both. The step's own filter is the honest expression of what it means to pass along, but no surface can see it removed. Re-anchored 2026-09-14 after the ERP pair landed in this module; the equivalence argument is unchanged.",
-            "decision": "none \u2014 the modal narrows the same list again before rendering it",
-            "recorded": "2026-09-04",
-            "source": "mutationLedger add"
-        },
-        {
             "module": "src/features/app-builder/services/appBuilderDeploySteps.ts",
             "anchors": [
                 "const state = project.appBuilderComponents?.[entry.id];",
@@ -15884,6 +15872,43 @@
             "decision": "none \u2014 the two lines are the Debug Logs record of whether the reset was pinned",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-02, edsResetRepoHelper focus run"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/IntegrationsStep.tsx",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 198,
+            "mutants": 1,
+            "category": "other",
+            "reason": "A useCallback whose dependency array is empty is stable for the component's whole life. The mutant replaces it with a one-element array holding the SAME string literal on every render, and React compares dependencies with Object.is per element, so the callback is still created once and never recreated. Nothing observable differs. Same argument as the row for line 202: this is openAdd's array, that one openDestination's.",
+            "decision": "none \u2014 equivalent by React's dependency comparison",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-02, IntegrationsStep focus run"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/IntegrationsStep.tsx",
+            "anchors": [
+                "const closeSettings = useCallback((): void => setSettingsTarget(null), []);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "A useCallback whose dependency array is empty is stable for the component's whole life. The mutant replaces it with a one-element array holding the SAME string literal on every render, and React compares dependencies with Object.is per element, so the callback is still created once and never recreated. Nothing observable differs. The callback's BODY is not equivalent and is killed by the ERP Settings test, which asserts the dialog is gone after Save.",
+            "decision": "none \u2014 equivalent by React's dependency comparison",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-02, IntegrationsStep focus run"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/IntegrationsStep.tsx",
+            "anchors": [
+                "subline={sublineFor(card, row?.companion).map((line) => ("
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Stryker drops the '?.', which would throw only if rowsById had no row for the card being rendered. The cards are built FROM the rows \u2014 'cards = toIntegrationCards(rows)' maps one card per row with the row's own id, and rowsById is a Map over the same rows from the same memo input \u2014 so every card.id resolves and the chain never short-circuits. Map.get is typed as possibly undefined, which is why the compiler wants the '?.'. Killing it would need a card with no row, which this component cannot produce. Same guarantee as the 'if (!row) return;' row.",
+            "decision": "none \u2014 every rendered card has the row it was built from",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-02, IntegrationsStep focus run"
         }
     ]
 }

@@ -515,6 +515,40 @@ describe('IntegrationsStep — the ERP pair before creation', () => {
                 'erp-integration': { INTEGRATION_DISPLAY_NAME: 'ERP Integration', ERP_DISPLAY_NAME: 'Justrite ERP' },
             },
         });
+        // Saving closes the Settings dialog; it does not wait for a second press.
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
+    // The wizard used to hand the modal a list with the ERP filtered out, so the
+    // modal could not see the pair: a typed ERP name forked the integration under
+    // a minted id ('northwind') as a custom source, and the pairing was lost.
+    it('adds the pair under its OWN id when the ERP is named in the Add journey', async () => {
+        const { updateState } = await renderStep(baseState({ ...SIGNED_IN, ...COMMITTED_DEST }));
+        await press(screen.getByRole('button', { name: 'Add Integration' }));
+        const dialog = screen.getByRole('dialog');
+        await press(within(dialog).getByRole('button', { name: /Pre-built integration/ }));
+        await press(within(dialog).getByRole('button', { name: 'Continue' }));
+        await press(within(dialog).getByRole('button', { name: /ERP Integration/ }));
+        await change(within(dialog).getByLabelText(/^ERP name/), 'Northwind');
+        // Walk the rest of the journey to its terminal stage, whatever length it is.
+        for (let step = 0; step < 4; step += 1) {
+            const next = within(dialog).queryByRole('button', { name: 'Continue' });
+            if (!next) break;
+            await press(next);
+        }
+        await press(within(dialog).getByRole('button', { name: 'Add Integration' }));
+
+        expect(updateState.mock.calls.map((c) => c[0])).toStrictEqual([
+            {
+                selectedAppBuilderComponents: ['erp-integration'],
+                componentConfigs: {
+                    'erp-integration': {
+                        INTEGRATION_DISPLAY_NAME: 'ERP Integration',
+                        ERP_DISPLAY_NAME: 'Northwind ERP',
+                    },
+                },
+            },
+        ]);
     });
 });
 

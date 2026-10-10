@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "PL-70 MUT-02: edsResetRepoHelper to zero open gaps — absent boilerplate pinned; five log-only bodies ledgered",
+    "_note": "PL-70 MUT-02: IntegrationsStep to zero open gaps — the ERP pair keeps its id when named in the Add journey (defect fixed); Settings closing on Save pinned",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -8878,25 +8878,25 @@
             "openGaps": 0
         },
         "src/features/project-creation/ui/steps/IntegrationsStep.tsx": {
-            "score": 83.66,
-            "killed": 169,
-            "survived": 31,
+            "score": 85.34,
+            "killed": 163,
+            "survived": 26,
             "noCoverage": 2,
             "timeout": 0,
             "survivorCategories": {
-                "other": 16,
+                "other": 14,
                 "optionalChain": 5,
                 "string": 3,
-                "branch": 7
+                "branch": 4
             },
             "uncoveredCategories": {
                 "optionalChain": 1,
                 "branch": 1
             },
-            "highValueSurvivors": 7,
-            "equivalent": 23,
-            "openGaps": 7,
-            "recorded": "2026-10-09T23:20:18.871Z"
+            "highValueSurvivors": 4,
+            "equivalent": 25,
+            "openGaps": 0,
+            "recorded": "2026-10-10T13:23:23.427Z"
         },
         "src/features/project-creation/ui/steps/ProjectCreationStep.tsx": {
             "score": 100,

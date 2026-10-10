@@ -240,13 +240,13 @@ export function IntegrationsStep({
         () => packages.find((candidate) => candidate.id === state.selectedPackage),
         [packages, state.selectedPackage],
     );
-    // Integration-kind entries, split: the FINISHED catalog (the "Pre-built
-    // integration" gallery) vs. the blank starter app (the "Build custom"
-    // card) — the blank is NOT a pre-built integration and never shows in the
-    // gallery. From the ANNOTATED, package-scoped selection (not the raw
-    // loader): `onlyForPackages` exclusions apply to the gallery, and each
-    // entry carries its resolved requirement so a required row locks
-    // (`resolveIntegrationRows` reads it).
+    // Integration-kind entries, with the systems they bring (the ERP) riding
+    // along so a row can name what comes with it. The modal takes this list
+    // whole and narrows it itself: finished integrations to the "Pre-built
+    // integration" gallery, seeds to "Build custom". From the ANNOTATED,
+    // package-scoped selection (not the raw loader): `onlyForPackages`
+    // exclusions apply to the gallery, and each entry carries its resolved
+    // requirement so a required row locks (`resolveIntegrationRows` reads it).
     const integrationEntries = useMemo<SelectableAppBuilderComponent[]>(
         () =>
             pkg && stack
@@ -258,12 +258,6 @@ export function IntegrationsStep({
                   ).filter((entry) => entry.kind === 'integration' || entry.kind === 'system')
                 : [],
         [pkg, stack],
-    );
-    const catalog = useMemo(
-        // Systems (the ERP) ride `integrationEntries` so a catalog row can name
-        // what comes with it; they are never gallery rows themselves.
-        () => integrationEntries.filter((entry) => !entry.blank && entry.kind === 'integration'),
-        [integrationEntries],
     );
     const blankComponent = useMemo(
         () => integrationEntries.find((entry) => entry.blank),
@@ -295,8 +289,7 @@ export function IntegrationsStep({
     );
 
     // Resolve rows against the FULL entry list (incl. the blank starter) so a
-    // committed "Build custom" app gets a row — `catalog` (blank-filtered) is only
-    // the modal's gallery, not the source of truth for configured integrations.
+    // committed "Build custom" app gets a row.
     const rows = useMemo(
         () => resolveIntegrationRows(state, meshComponent, integrationEntries),
         [state, meshComponent, integrationEntries],
@@ -431,7 +424,11 @@ export function IntegrationsStep({
                 state={state}
                 updateState={updateState}
                 meshComponent={meshComponent}
-                catalog={catalog}
+                // The whole list, systems included: the modal narrows it to the
+                // gallery and the seeds itself, and its commit looks the ERP up
+                // here to keep a pair together. A list filtered to integrations
+                // hid the ERP, so naming it forked the integration under a new id.
+                catalog={integrationEntries}
                 blankComponent={blankComponent}
                 reservedIds={reservedIds}
                 builder={builder}
