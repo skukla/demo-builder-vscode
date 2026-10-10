@@ -90,3 +90,5 @@ A module is done when no decision is unpinned, not when its score is high.
 - 2026-10-10  test(ai): the action tools' input guards are tested by parsing them (`ac0a3312d`)
 - 2026-10-10  test(dashboard): what the install handlers hand the installer is tested (`ca4daf0f6`)
 - 2026-10-10  docs(backlog): PL-70 records the commits that named it (`4ca8d1ff3`)
+- 2026-10-10  test(ai): the two toolDescriptors suites share one fake server (`85b18d240`)
+- 2026-10-10  docs(backlog): PL-70 records the commits that named it (`df63b912e`)
