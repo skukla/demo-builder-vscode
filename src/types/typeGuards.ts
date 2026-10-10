@@ -305,6 +305,23 @@ export function isEdsProject(project: Project | undefined | null): boolean {
 }
 
 /**
+ * The EDS storefront's component instance, or undefined when the project is not
+ * an EDS project or has none.
+ *
+ * Every EDS accessor below starts here. Each used to repeat the same two lines —
+ * an `isEdsProject` return, then an optional-chained read — and because that
+ * guard does not narrow the parameter's type, the read carried a `project?.`
+ * no input could reach. One function states the rule once, with nothing
+ * unreachable in it.
+ */
+function getEdsStorefrontInstance(
+    project: Project | undefined | null,
+): ComponentInstance | undefined {
+    if (!project || !isEdsStackId(project.selectedStack)) return undefined;
+    return project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
+}
+
+/**
  * The DA.live org/site pair for an EDS project, or undefined when absent.
  *
  * This addresses CONTENT — `content.da.live/{org}/{site}` and the DA.live
@@ -321,8 +338,7 @@ export function isEdsProject(project: Project | undefined | null): boolean {
 export function getEdsDaLiveTarget(
     project: Project | undefined | null,
 ): { org: string; site: string } | undefined {
-    if (!isEdsProject(project)) return undefined;
-    const edsInstance = project?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
+    const edsInstance = getEdsStorefrontInstance(project);
     // Legacy-first, repo fallback — the same rule the site below uses, and the
     // one republish and the agent's storefront tools already apply: the DA.live
     // org IS the GitHub namespace, so a project with no stored one is not a
@@ -370,8 +386,7 @@ export function getEdsRepoParts(
  * @returns `owner/repo`, or undefined when absent, malformed, or not an EDS project
  */
 export function getEdsGithubRepo(project: Project | undefined | null): string | undefined {
-    if (!isEdsProject(project)) return undefined;
-    const edsInstance = project?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
+    const edsInstance = getEdsStorefrontInstance(project);
     const githubRepo = edsInstance?.metadata?.githubRepo as string | undefined;
 
     if (!githubRepo) return undefined;
@@ -391,8 +406,7 @@ export function getEdsGithubRepo(project: Project | undefined | null): string | 
  * @returns The live URL, or undefined if not available
  */
 export function getEdsLiveUrl(project: Project | undefined | null): string | undefined {
-    if (!isEdsProject(project)) return undefined;
-    const edsInstance = project?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
+    const edsInstance = getEdsStorefrontInstance(project);
 
     // Return stored URL if available
     const storedUrl = edsInstance?.metadata?.liveUrl as string | undefined;
@@ -443,8 +457,7 @@ export function getAdminPanelUrl(project: Project | undefined | null): string | 
  * @returns The preview URL, or undefined if not available
  */
 export function getEdsPreviewUrl(project: Project | undefined | null): string | undefined {
-    if (!isEdsProject(project)) return undefined;
-    const edsInstance = project?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
+    const edsInstance = getEdsStorefrontInstance(project);
 
     // Return stored URL if available
     const storedUrl = edsInstance?.metadata?.previewUrl as string | undefined;
@@ -494,8 +507,7 @@ export function getEdsDaLiveUrl(
     experience: 'da-live-classic' | 'experience-workspace' = 'da-live-classic',
     ewCanvasBranch: string = '',
 ): string | undefined {
-    if (!isEdsProject(project)) return undefined;
-    const edsInstance = project?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
+    const edsInstance = getEdsStorefrontInstance(project);
     const daLiveOrg =
         (edsInstance?.metadata?.daLiveOrg as string | undefined) ??
         (edsInstance?.metadata?.githubRepo as string | undefined)?.split('/')[0];
