@@ -16254,6 +16254,66 @@
             "decision": "Recorded, not killed: the filter is what narrows the type catalogEntryFor returns; its runtime branch cannot be reached from this call.",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-01"
+        },
+        {
+            "module": "src/features/dashboard/handlers/destinationHandlers.ts",
+            "anchors": [
+                "id: payload?.id ?? DESTINATION_OPERATION_ID,"
+            ],
+            "mutants": 1,
+            "category": "equivalent",
+            "reason": "Dropping the '?.' throws only for a missing payload, and the handler has already returned by then: the guard above answers CONFIG_INVALID unless payload.project and payload.workspace both carry an id. The '??' turned to '&&' IS killed (the screen's own id must be on every push). Verified by planting it (all 58 destination tests green) against a control on the same file (Math.max turned to Math.min in the position: suite red).",
+            "decision": "Recorded, not killed: the optional chain is what the handler's optional payload type requires; the earlier guard excludes the case.",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-01"
+        },
+        {
+            "module": "src/features/dashboard/handlers/destinationHandlers.ts",
+            "anchors": [
+                "(payload) => payload?.id ?? '',"
+            ],
+            "mutants": 1,
+            "category": "equivalent",
+            "reason": "narrateOutcomeToModal calls this only after reading payload?.progress === 'modal', so the payload is always an object here and dropping the '?.' cannot throw. The emptied arrow and the '??' turned to '&&' ARE killed. Verified by planting it (all 58 destination tests green) against a control on the same file (Math.max turned to Math.min in the position: suite red).",
+            "decision": "Recorded, not killed: the caller has already established the payload exists.",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-01"
+        },
+        {
+            "module": "src/features/dashboard/handlers/destinationHandlers.ts",
+            "anchors": [
+                "if (stored) return { organization: stored, organizationName: project.adobe?.organizationName };"
+            ],
+            "mutants": 2,
+            "category": "equivalent",
+            "reason": "Two mutants. Emptying the returned object changes nothing because the one caller spreads it immediately after '...project.adobe', which already holds the same organization and organizationName. Dropping the '?.' cannot throw because 'stored' was read from project.adobe, so a truthy 'stored' means project.adobe exists. Verified by planting it (all 58 destination tests green) against a control on the same file (Math.max turned to Math.min in the position: suite red).",
+            "decision": "Recorded, not killed: the stored-org arm restates what the spread before it carries; it is there to say the org is kept on purpose.",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-01"
+        },
+        {
+            "module": "src/features/dashboard/handlers/destinationHandlers.ts",
+            "anchors": [
+                "name: project.appBuilderComponents?.[id]?.name ?? id,"
+            ],
+            "mutants": 1,
+            "category": "equivalent",
+            "reason": "Dropping the FIRST '?.' throws only when the project has no component map, and this helper runs only after movingIds, read from that map, was found non-empty. The second '?.' is reachable and IS killed (a component the map has lost is named by its id). Verified by planting it (all 58 destination tests green) against a control on the same file (Math.max turned to Math.min in the position: suite red).",
+            "decision": "Recorded, not killed: same unreachable undefined map as the routeCardStatus row.",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-01"
+        },
+        {
+            "module": "src/features/dashboard/handlers/destinationHandlers.ts",
+            "anchors": [
+                "project.adobe?.projectTitle ?? project.adobe?.projectName ?? 'the previous Adobe project';"
+            ],
+            "mutants": 2,
+            "category": "equivalent",
+            "reason": "Both '?.' are evaluated only when an own-workspace group was found, which needs project.adobe?.projectId to be set and different from the new one two lines above. So project.adobe exists whenever this line runs, and dropping either chain cannot throw. Verified by planting it (all 58 destination tests green) against a control on the same file (Math.max turned to Math.min in the position: suite red).",
+            "decision": "Recorded, not killed: the optional chains are what the optional 'adobe' type requires.",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-01"
         }
     ]
 }
