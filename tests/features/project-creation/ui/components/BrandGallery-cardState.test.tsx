@@ -26,6 +26,15 @@ const CUSTOM_LIBRARY: CustomBlockLibrary = {
 };
 
 describe('BrandGallery — selection and dimming', () => {
+    it('gives every package card the grid’s card class', () => {
+        renderGallery();
+
+        expect(cards()).toHaveLength(3);
+        for (const card of cards()) {
+            expect(card).toHaveClass('expandable-brand-card');
+        }
+    });
+
     it('marks the chosen card and dims every other one', () => {
         const { container } = renderGallery({ selectedPackage: 'other-brand' });
 
@@ -119,6 +128,28 @@ describe('BrandGallery — the block-library summary on a complete card', () => 
         // Both sources are named in the hover detail, not just counted.
         expect(screen.getByText('commerce-blocks')).toBeInTheDocument();
         expect(screen.getByText('My Own Blocks')).toBeInTheDocument();
+    });
+
+    it('names two custom libraries from different repositories, each once', () => {
+        // Each line is keyed by its repository; a key that dropped the owner and
+        // repo would collide here and React would say so.
+        renderGallery({
+            ...complete,
+            customBlockLibraries: [
+                CUSTOM_LIBRARY,
+                {
+                    ...CUSTOM_LIBRARY,
+                    name: 'Their Blocks',
+                    source: { ...CUSTOM_LIBRARY.source, repo: 'their-blocks' },
+                },
+            ],
+        });
+
+        expect(screen.getAllByText('My Own Blocks')).toHaveLength(1);
+        expect(screen.getAllByText('Their Blocks')).toHaveLength(1);
+        expect(document.querySelector('.brand-card-detail-link')?.textContent).toBe(
+            '2 block libraries',
+        );
     });
 
     it('says "library", singular, for exactly one', () => {

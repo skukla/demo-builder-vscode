@@ -15909,6 +15909,18 @@
             "decision": "none \u2014 a per-node-version prerequisite reaches the plugin loop only with a non-empty version list",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-02, installHandler focus run"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/BrandGallery.tsx",
+            "anchors": [
+                "onAction={(key) => (key === 'edit' ? onEdit?.() : onForget?.())}"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "Dropping either '?.' would throw only if the menu reported a key whose handler is missing. CardActionsMenu fires onAction with the key of a rendered Item and nothing else, and each Item is rendered only when its handler exists: 'edit' only inside 'onEdit ? <Item key=\"edit\"> : null', 'forget' only inside 'onForget ? <Item key=\"forget\"> : null'. So 'edit' never arrives without onEdit, and any other key never arrives without onForget. The '?.' answers the optional prop types, not a call that can happen.",
+            "decision": "none \u2014 each handler is only callable from the menu item its own presence renders",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-03"
         }
     ]
 }
