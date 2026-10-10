@@ -15996,6 +15996,18 @@
             "decision": "none \u2014 the callback must stay memoised because runEnable, runWorkspace and runCreate list it as a dependency",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-05, 2026-10-10"
+        },
+        {
+            "module": "src/core/state/projectConfigWriter.ts",
+            "anchors": [
+                "if (project.demo !== undefined) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The fifth twin of the row held for datapack, selectedPackage, selectedStack and commerceStoreStructure; the demo field was added after that row was written. Forcing the guard true assigns manifest.demo whatever the project holds, which in the only case the guard would have skipped is undefined. writeManifest hands the manifest to JSON.stringify, which omits a key whose value is undefined, so the written file is byte-identical. Both sides are tested against the written file in projectConfigWriter-manifestFields.test.ts: a project with a demo row writes it whole, and one without has no demo key. Project types the field as AddedDemo | undefined, so null, the one value that would be written, cannot be held.",
+            "decision": "none \u2014 kept for the same reason as its four neighbours: it states intent and keeps the field list reading consistently",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-05, 2026-10-10"
         }
     ]
 }
