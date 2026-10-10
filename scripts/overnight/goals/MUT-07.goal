@@ -1,12 +1,11 @@
 Work backlog item PL-70 — the mutation burn-down, batch MUT-07. Bring each
 of these modules to ZERO open gaps, in this order:
 
-  - src/features/project-creation/ui/steps/areaSubSteps.ts  (1 open gaps, 91 mutants)
-  - src/features/project-creation/handlers/executorAppBuilderPhase.ts  (1 open gaps, 79 mutants)
-  - src/core/state/sessionUIState.ts  (1 open gaps, 12 mutants)
-  - src/features/ai/server/adobeResourceTools.ts  (52 open gaps, 255 mutants)
-  - src/extension.ts  (32 open gaps, 286 mutants)
-  - src/features/dashboard/ui/components/integrations/integrationCardModel.ts  (26 open gaps, 530 mutants)
+  - src/features/dashboard/handlers/aiHandlers.ts  (4 open gaps, 138 mutants)
+  - src/features/dashboard/handlers/appBuilderComponentHandlers.ts  (4 open gaps, 43 mutants)
+  - src/features/dashboard/ui/integrationsSurface/AddIntegrationFlowAdapter.tsx  (4 open gaps, 105 mutants)
+  - src/features/dashboard/ui/hooks/useDashboardActions.ts  (4 open gaps, 74 mutants)
+  - src/features/eds/services/storefront/servedStorefrontConfig.ts  (4 open gaps, 75 mutants)
 
 READ scripts/overnight/BURNDOWN.md FIRST. It carries the evidence for every rule below —
 what each has cost when skipped, and the traps that have burned real time. Read it once;
