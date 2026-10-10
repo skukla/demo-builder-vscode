@@ -445,3 +445,4 @@ in favour of the EDS-34 version, and lower the pin. That also turns the floor of
 - 2026-10-09  refactor(cross-feature): one GitHub App result type, one orchestrator entry builder (`669ed12b5`)
 - 2026-10-09  feat(mutation): the sweep lists baseline rows older than their module (`27586ea0b`)
 - 2026-10-09  chore(sweep): the sweep reports and never starts Stryker (`9ac4fc15f`)
+- 2026-10-09  chore(mutation): re-measure the 405 stale baseline rows (`7fb1dcc8e`)
