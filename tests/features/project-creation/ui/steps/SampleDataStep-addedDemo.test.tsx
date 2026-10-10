@@ -4,9 +4,20 @@
  * line says why — or says the pack is not published yet.
  */
 
+import React from 'react';
 import { screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { CATALOG, envelope, mockExecute, renderStep, setMockState } from './SampleDataStep.testUtils';
+import {
+    CATALOG,
+    SampleDataStep,
+    envelope,
+    mockExecute,
+    notConfigured,
+    notYetAsked,
+    renderStep,
+    setMockState,
+} from './SampleDataStep.testUtils';
+import type { WizardState } from '@/types/webview';
 
 const demo = (datapack: { name: string; version?: string }) => ({
     kind: 'demo' as const,
@@ -51,6 +62,34 @@ describe('SampleDataStep — a demo that asks for a pack', () => {
         const { updateState } = renderStep({ demo: demo({ name: 'bodea' }), datapack: { name: 'citisignal_new', version: 'main' } });
         await screen.findByTestId('demo-datapack-note');
         expect(updateState).not.toHaveBeenCalled();
+    });
+
+    it('pre-selects the pack when the catalog lands after the first frame', async () => {
+        // Every real mount starts with no catalog: the fetch runs from an effect.
+        // The pack has to be found, and chosen, when the answer arrives.
+        const state = { demo: demo({ name: 'bodea', version: 'hold' }) } as WizardState;
+        setMockState(notYetAsked());
+        const view = renderStep(state);
+        expect(view.updateState).not.toHaveBeenCalled();
+
+        setMockState(envelope(CATALOG));
+        view.rerender(
+            <SampleDataStep state={state} updateState={view.updateState} setCanProceed={jest.fn()} />
+        );
+
+        await waitFor(() =>
+            expect(view.updateState).toHaveBeenCalledWith({ datapack: { name: 'bodea', version: 'hold' } })
+        );
+        expect(screen.getByTestId('demo-datapack-note')).toHaveTextContent('This demo asks for Bodea.');
+    });
+
+    it('says the project can be created without a datapack when the installer is not set up', async () => {
+        setMockState(notConfigured());
+        renderStep({});
+
+        expect(
+            await screen.findByText(/You can create this project without a datapack\./)
+        ).toBeInTheDocument();
     });
 
     it('fetches the curated catalog only when no demo asks', () => {

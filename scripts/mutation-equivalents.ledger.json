@@ -15923,6 +15923,30 @@
             "source": "PL-70 batch MUT-03"
         },
         {
+            "module": "src/features/project-creation/ui/steps/SampleDataStep.tsx",
+            "anchors": [
+                "if (version) updateState({ datapack: { name: askedGroup.name, version } });"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing the guard true changes something only when 'version' is empty. It is 'askedVersion' on the arm that already tested askedVersion truthy, and otherwise pickDefaultVersion(askedGroup), which returns the first of the group's ordered versions. groupDatapacks builds a group only from catalog rows, so every group carries at least one version and the default is never undefined. The same unreachable group shape as the chooseGroup row above.",
+            "decision": "none \u2014 the guard protects against a group with no versions, which the grouping function cannot emit",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-03"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/SampleDataStep.tsx",
+            "anchors": [
+                "return browsing[group.name] ?? pickDefaultVersion(group) ?? '';"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The final '' is read only when the user has browsed no version AND pickDefaultVersion returns undefined, which needs a group with no versions. groupDatapacks builds a group only from catalog rows, so each has at least one. No test reaches the literal because no catalog can; Stryker reports it uncovered, not survived.",
+            "decision": "none \u2014 the empty-string fallback is for a group the catalog cannot produce",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-03"
+        },
+        {
             "module": "src/features/project-creation/ui/components/ConnectStoreStepContent.tsx",
             "anchors": [
                 "? mergeSlices(disclosedGroups, section === 'connection' ? ['connection', 'credentials'] : [section])"
