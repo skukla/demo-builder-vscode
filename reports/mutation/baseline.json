@@ -8340,9 +8340,9 @@
                 "logPresentation": 4
             },
             "highValueSurvivors": 2,
-            "equivalent": 2,
-            "openGaps": 1,
-            "recorded": "2026-10-09T23:29:41.223Z"
+            "equivalent": 3,
+            "openGaps": 0,
+            "recorded": "2026-10-10T14:55:49.924Z"
         },
         "src/features/project-creation/services/aiBundle/skillsWriter.ts": {
             "score": 94.78,
