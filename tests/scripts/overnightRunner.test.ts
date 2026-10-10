@@ -26,12 +26,21 @@ class FixtureRepo {
 
     constructor(claudeBody: string) {
         for (const f of ['run.sh', 'status.mjs']) {
-            this.write(`scripts/overnight/${f}`, fs.readFileSync(path.join(OVERNIGHT, f), 'utf8'), 0o755);
+            this.write(
+                `scripts/overnight/${f}`,
+                fs.readFileSync(path.join(OVERNIGHT, f), 'utf8'),
+                0o755
+            );
         }
         this.write('scripts/overnight/queue', 'ONE\nTWO\n');
         this.write('scripts/overnight/goals/ONE.goal', 'first condition\n');
         this.write('scripts/overnight/goals/TWO.goal', 'second condition\n');
-        this.write('reports/mutation/baseline.json', JSON.stringify({ modules: { 'src/a.ts': { openGaps: 7 }, 'src/b.ts': { openGaps: 0 } } }));
+        this.write(
+            'reports/mutation/baseline.json',
+            JSON.stringify({
+                modules: { 'src/a.ts': { openGaps: 7 }, 'src/b.ts': { openGaps: 0 } },
+            })
+        );
         this.write('.gitignore', '*.log\n.rptc/handoff/overnight-*/\nbin/\n');
         this.write('bin/caffeinate', '#!/usr/bin/env bash\nshift\nexec "$@"\n', 0o755);
         this.write('bin/claude', `#!/usr/bin/env bash\n${claudeBody}\n`, 0o755);
@@ -41,7 +50,11 @@ class FixtureRepo {
     }
 
     env(extra: Record<string, string> = {}): NodeJS.ProcessEnv {
-        const inherited = Object.entries(process.env).filter(([k]) => !k.startsWith('GIT_'));
+        // RUNS_LOOP too: a batch the loop itself started carries it, and it then
+        // marked every queue this suite starts `loop=1` (2026-10-10, at pre-push).
+        const inherited = Object.entries(process.env).filter(
+            ([k]) => !k.startsWith('GIT_') && k !== 'RUNS_LOOP'
+        );
         return {
             ...Object.fromEntries(inherited),
             HOME: this.dir,
@@ -63,9 +76,18 @@ class FixtureRepo {
         fs.writeFileSync(abs, content, { mode });
     }
     run(extra: Record<string, string> = {}) {
-        const r = spawnSync('bash', ['scripts/overnight/run.sh'], { cwd: this.dir, env: this.env(extra), encoding: 'utf8', timeout: 30_000 });
+        const r = spawnSync('bash', ['scripts/overnight/run.sh'], {
+            cwd: this.dir,
+            env: this.env(extra),
+            encoding: 'utf8',
+            timeout: 30_000,
+        });
         const logPath = path.join(this.dir, '.rptc/handoff/runs.log');
-        return { code: r.status, out: `${r.stdout}${r.stderr}`, log: fs.existsSync(logPath) ? fs.readFileSync(logPath, 'utf8') : '' };
+        return {
+            code: r.status,
+            out: `${r.stdout}${r.stderr}`,
+            log: fs.existsSync(logPath) ? fs.readFileSync(logPath, 'utf8') : '',
+        };
     }
     dispose(): void {
         fs.rmSync(this.dir, { recursive: true, force: true });
@@ -82,10 +104,17 @@ describe('the overnight runner', () => {
         const { code, out, log } = repo.run();
 
         expect(code).toBe(0);
-        const lines = log.trim().split('\n').map((l) => l.replace(/^\d{4}-\d\d-\d\d \d\d:\d\d {2}/, ''));
+        const lines = log
+            .trim()
+            .split('\n')
+            .map((l) => l.replace(/^\d{4}-\d\d-\d\d \d\d:\d\d {2}/, ''));
         expect(lines).toHaveLength(6);
-        expect(lines[0]).toMatch(/^queue start — gaps=7 modules=1 sha=[0-9a-f]{7,} batches=2 cap=150$/);
-        expect(lines[1]).toMatch(/^batch start — ONE pid=\d+ cap=150 log=\.rptc\/handoff\/overnight-[\d-]+\/ONE\.jsonl$/);
+        expect(lines[0]).toMatch(
+            /^queue start — gaps=7 modules=1 sha=[0-9a-f]{7,} batches=2 cap=150$/
+        );
+        expect(lines[1]).toMatch(
+            /^batch start — ONE pid=\d+ cap=150 log=\.rptc\/handoff\/overnight-[\d-]+\/ONE\.jsonl$/
+        );
         expect(lines[2]).toBe('batch end — ONE exit=0');
         expect(lines[3]).toMatch(/^batch start — TWO pid=\d+ /);
         expect(lines[4]).toBe('batch end — TWO exit=0');
@@ -121,6 +150,8 @@ describe('the overnight runner', () => {
         const dir = path.join(repo.dir, '.rptc/handoff');
         const session = fs.readdirSync(dir).find((d) => d.startsWith('overnight-')) as string;
 
-        expect(fs.readFileSync(path.join(dir, session, 'ONE.jsonl'), 'utf8')).toContain('stub got: /goal first condition');
+        expect(fs.readFileSync(path.join(dir, session, 'ONE.jsonl'), 'utf8')).toContain(
+            'stub got: /goal first condition'
+        );
     });
 });
