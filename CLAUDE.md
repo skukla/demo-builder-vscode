@@ -168,7 +168,7 @@ Feature config lives per-feature in `src/features/*/config/*.json`.
 → Check "Demo Builder: Debug Logs" output channel
 → `docs/systems/debugging.md`
 
-## The quality instruments — one registry, four cadences
+## The quality instruments — one registry, five cadences
 
 `tests/sop/toolingRegistry.ts` lists every instrument this repo owns and how
 often it runs. `tests/sop/tooling-registry.test.ts` fails the build when the
@@ -181,7 +181,11 @@ red, and so is a registry entry for something deleted.
 | per-jest-run | 60 enforcer suites in `tests/sop/` | automatic |
 | per-push | lint, both typecheckers, 2 validators | CI |
 | per-push (local) | the CSS baseline check — `.githooks/pre-push` only, never CI | the git hook |
-| periodic | 15 scripted checks + 10 guided reviews | **`npm run sweep`** |
+| periodic | 13 scripted checks + 10 guided reviews | **`npm run sweep`** |
+| overnight | 2 Stryker runs — the stale-row re-measure (`npm run test:mutation:sweep -- --stale --minutes 480`) and the pilot. Never inside the sweep | a person, when no other test run needs the machine |
+
+The sweep REPORTS and never starts Stryker: it lists stale mutation rows, and the
+overnight re-measure corrects them.
 
 Read a sweep by its labels, not its exit code: a `reported` row always exits 0
 and its OUTPUT is the result; a failing `gate` row is a real failure; `COULD NOT

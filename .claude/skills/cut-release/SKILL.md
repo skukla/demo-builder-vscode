@@ -41,11 +41,13 @@ whole thing rather than the thing you just changed" is cheap. Both passes PROPOS
 and never apply, so neither blocks the cut; run them, show the user, and let them
 decide what (if anything) to fix before tagging.
 
-- **`npm run sweep`** — every scripted periodic check in one command (~25s), driven by
+- **`npm run sweep`** — every scripted periodic check in one command (~15 min measured 2026-10-09,
+  about 12 of them `validate:convention-proofs`), driven by
   `tests/sop/toolingRegistry.ts` so it cannot silently omit one. Read the labels: a
   `reported` row ALWAYS exits 0 and its output is the result; a failing `gate` row is a
   real failure; `COULD NOT RUN` is a broken instrument, not a finding. It closes by
-  naming the guided reviews it did NOT run, so a skipped one is a stated decision.
+  naming the guided reviews it did NOT run, so a skipped one is a stated decision, and
+  the mutation runs it never starts (they are the `overnight` cadence, started by hand).
 - **`codebase-sweep`** — the judgement half of the above: triage the sweep's hits against
   measured baselines and decide what to fix. The sweep gathers; this decides.
 - **`dream`** — memory / skills / CLAUDE.md staleness across recent sessions.

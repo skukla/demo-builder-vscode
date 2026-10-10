@@ -197,9 +197,25 @@ export function summarise(reportPath, equivalents = {}) {
  *   measurement but never RAISE it, so the floor sat two shipped improvements stale
  *   and would have accepted a regression back to it as "held". Overwriting outright
  *   instead would delete the rows the focused run never measured, which is worse.
+ * @param recordedAt  stamped on every MEASURED row as `recorded`; kept rows keep theirs.
+ *   It exists so that every write changes the row's text. `mutationStaleRows.mjs` reads
+ *   a row's date from the git commit that last changed the row, and a re-measure that
+ *   found the same numbers would otherwise change nothing — the row would read stale
+ *   forever and be re-measured every night by `mutationSweep.mjs --stale`.
  */
-export function writeBaseline(reportPath, baselinePath, note, merge = false) {
-    const measured = summarise(reportPath, loadEquivalents().counts);
+export function writeBaseline(
+    reportPath,
+    baselinePath,
+    note,
+    merge = false,
+    recordedAt = new Date().toISOString()
+) {
+    const measured = Object.fromEntries(
+        Object.entries(summarise(reportPath, loadEquivalents().counts)).map(([p, row]) => [
+            p,
+            { ...row, recorded: recordedAt },
+        ])
+    );
     const kept =
         merge && existsSync(baselinePath)
             ? JSON.parse(readFileSync(baselinePath, 'utf8')).modules
