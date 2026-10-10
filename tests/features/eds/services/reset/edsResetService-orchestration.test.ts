@@ -38,7 +38,7 @@ import {
     getDaLiveAuthService,
     getGitHubServices,
 } from '@/features/eds/handlers/edsHelpers';
-import { DaLiveAuthError } from '@/features/eds/services/types';
+import { DaLiveAuthError, GitHubAppNotInstalledError } from '@/features/eds/services/types';
 
 jest.setTimeout(5000);
 
@@ -144,9 +144,7 @@ describe('executeEdsReset - repo, code sync and permissions', () => {
             totalSteps: 11,
             message: 'Waiting for the publish',
         });
-        expect(progress).not.toContainEqual(
-            expect.objectContaining({ message: 'Code published' })
-        );
+        expect(progress).not.toContainEqual(expect.objectContaining({ message: 'Code published' }));
         expect(configureDaLivePermissions).toHaveBeenCalledTimes(1);
     });
 
@@ -316,10 +314,7 @@ describe('executeEdsReset - content pipeline', () => {
         const { progress } = await runReset();
 
         const stepEight = progress.filter((p) => p.step === 8).map((p) => p.message);
-        expect(stepEight).toStrictEqual([
-            'Sign in to DA.live again',
-            'Resuming the content copy',
-        ]);
+        expect(stepEight).toStrictEqual(['Sign in to DA.live again', 'Resuming the content copy']);
     });
 
     it('names the operation in the cancellation error', async () => {
@@ -335,12 +330,69 @@ describe('executeEdsReset - content pipeline', () => {
     });
 });
 
+describe('executeEdsReset - what it counts and hands on', () => {
+    it('counts the mesh redeploy as a twelfth step on every progress line', async () => {
+        const { progress } = await runReset({ redeployMesh: true });
+
+        expect(progress.length).toBeGreaterThan(0);
+        expect(new Set(progress.map((p) => p.totalSteps))).toStrictEqual(new Set([12]));
+    });
+
+    it("hands the last step the repo reset's caveats and fixes for an added demo", async () => {
+        mockResetRepoToTemplate.mockResolvedValue({
+            ...REPO_RESULT,
+            demoCaveats: ['Product links may not work.'],
+            demoFixes: { applied: ['pdp-empty-data-redirect'], offered: undefined },
+        });
+
+        const { result } = await runReset();
+
+        expect(result).toStrictEqual({
+            success: true,
+            filesReset: 5,
+            contentCopied: 3,
+            meshRedeployed: false,
+            demoCaveats: ['Product links may not work.'],
+            demoFixes: { applied: ['pdp-empty-data-redirect'], offered: undefined },
+        });
+    });
+});
+
+describe('executeEdsReset - a step that throws', () => {
+    it('names the missing GitHub App, with the repo and the link that installs it', async () => {
+        mockResetRepoToTemplate.mockRejectedValue(
+            new GitHubAppNotInstalledError('acme', 'shop', 'https://github.com/apps/aem-code-sync')
+        );
+
+        const { result } = await runReset();
+
+        expect(result).toStrictEqual({
+            success: false,
+            error: 'GitHub App not installed. Code sync requires the AEM Code Sync app.',
+            errorType: 'GITHUB_APP_NOT_INSTALLED',
+            errorDetails: {
+                owner: 'acme',
+                repo: 'shop',
+                installUrl: 'https://github.com/apps/aem-code-sync',
+            },
+        });
+    });
+
+    it('carries any other failure as its message alone, with no error type', async () => {
+        mockResetRepoToTemplate.mockRejectedValue(new Error('GitHub is down'));
+
+        const { result } = await runReset();
+
+        expect(result).toStrictEqual({ success: false, error: 'GitHub is down' });
+    });
+});
+
 describe('executeEdsReset - the product pages the overlay published (EDS-26)', () => {
     it('removes them BEFORE the content pipeline, whose last step pre-warms the current catalog', async () => {
         const { params, context } = await runReset();
 
         expect(mockTakeOutProductPages.mock.invocationCallOrder[0]).toBeLessThan(
-            mockExecuteEdsPipeline.mock.invocationCallOrder[0],
+            mockExecuteEdsPipeline.mock.invocationCallOrder[0]
         );
         expect(mockTakeOutProductPages).toHaveBeenCalledTimes(1);
         expect(mockTakeOutProductPages).toHaveBeenCalledWith(
@@ -350,12 +402,14 @@ describe('executeEdsReset - the product pages the overlay published (EDS-26)', (
                 daLiveContentOps: expect.any(DaLiveSourceOperations),
                 tokenProvider: mockTokenProvider,
             }),
-            expect.any(Function),
+            expect.any(Function)
         );
     });
 
     it('carries the sentence on the result, beside the category pages one', async () => {
-        mockTakeOutProductPages.mockResolvedValue('Removed 40 product pages from o/r, live and preview.');
+        mockTakeOutProductPages.mockResolvedValue(
+            'Removed 40 product pages from o/r, live and preview.'
+        );
         mockPutBackCatalogMenu.mockResolvedValue('Wrote and published 3 category pages.');
 
         const { result } = await runReset();
@@ -375,8 +429,17 @@ describe('executeEdsReset - the product pages the overlay published (EDS-26)', (
 
 describe('executeEdsReset - the pages left over from before (EDS-33)', () => {
     it('carries what the pipeline did with them on the result', async () => {
-        const leftoverPages = { status: 'not-listed', removed: 0, summary: 'Pages from before the reset may still be live.' };
-        mockExecuteEdsPipeline.mockResolvedValue({ success: true, contentFilesCopied: 3, libraryPaths: [], leftoverPages });
+        const leftoverPages = {
+            status: 'not-listed',
+            removed: 0,
+            summary: 'Pages from before the reset may still be live.',
+        };
+        mockExecuteEdsPipeline.mockResolvedValue({
+            success: true,
+            contentFilesCopied: 3,
+            libraryPaths: [],
+            leftoverPages,
+        });
 
         const { result } = await runReset();
 
@@ -388,7 +451,11 @@ describe('executeEdsReset - the pages left over from before (EDS-33)', () => {
             success: true,
             contentFilesCopied: 3,
             libraryPaths: [],
-            leftoverPages: { status: 'none', removed: 0, summary: 'No pages from before the reset were left.' },
+            leftoverPages: {
+                status: 'none',
+                removed: 0,
+                summary: 'No pages from before the reset were left.',
+            },
         });
 
         const { result } = await runReset();
@@ -414,18 +481,20 @@ describe('executeEdsReset - category pages and the catalog menu (EDS-24)', () =>
                 daLiveContentOps: expect.any(DaLiveContentOperations),
                 tokenProvider: mockTokenProvider,
             }),
-            expect.any(Function),
+            expect.any(Function)
         );
         expect(mockPutBackCatalogMenu).toHaveBeenCalledWith(
             params,
             CATALOG_MENU_SITE,
             context.logger,
-            expect.any(Function),
+            expect.any(Function)
         );
     });
 
     it("carries the step's sentence on the result, so the agent and the SC see the clash report", async () => {
-        mockPutBackCatalogMenu.mockResolvedValue("Left 1 page alone because Demo Builder didn't write it.");
+        mockPutBackCatalogMenu.mockResolvedValue(
+            "Left 1 page alone because Demo Builder didn't write it."
+        );
 
         const { result } = await runReset();
 
