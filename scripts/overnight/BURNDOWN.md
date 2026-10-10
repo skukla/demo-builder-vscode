@@ -39,10 +39,37 @@ survey's detector cannot see.
 A focused run selects the suites NAMED for the module. A mutant it reports uncovered may
 be reached by a consumer's suite that was never selected, and a test written for it then
 duplicates one that exists. After the first measurement run
-`node scripts/focusModule.mjs --widen`: it adds the importing suites for every module the
-run left uncovered and exits 3 when there is nothing to add. Measure again only if it
-added any. Found 2026-10-10 working the 754 gaps the stale-row re-measure exposed; the
+`npm run test:mutation:measure -- --widen`: it adds the importing suites for every module
+the run left uncovered and measures again, or says there is nothing to add. A later
+measurement of the same modules keeps the widened suites. Found 2026-10-10 working the 754 gaps the stale-row re-measure exposed; the
 evidence is in the `mutation-test-pilot` skill.
+
+## Why there is one way to measure, and it has limits
+
+`npm run test:mutation:measure -- <module(s)>` (`scripts/mutationMeasure.mjs`). On
+2026-10-10 a session working these gaps outside the runner stalled four ways in one
+morning, and each rule in the goal is one of them:
+
+- **Nothing bounded a measurement's size or its time.** Nine files, 1,112 mutants, one
+  run: 45 minutes with no result, killed by hand. The command refuses a GROUP over 400
+  mutants before starting (a module's size is its baseline row; with no row it is
+  estimated from its line count, and the output says which) and kills the whole process
+  tree at 12 minutes, exit 124.
+- **The session waited in a shell loop for `Done in`**, a line a dead run never prints,
+  and in a jest run with `--detectOpenHandles`, which does not exit. So: never wait in a
+  loop for output, and never start an open-ended run. The command returns by itself, with
+  one final line to paste.
+- **Stryker's workers ran out of memory**, and the session diagnosed it from scratch. It
+  was already written down: test memory growth is in
+  `.rptc/research/test-file-organization-and-memory-optimization/research.md` and in the
+  comments of `jest.config.js`. So: grep the research, the docs, this file and the
+  config's comments BEFORE diagnosing, and say what was found. (The fix is in
+  `stryker.focus.config.json`: `maxTestRunnerReuse: 50`.)
+- **Nobody could tell how far along it was.** `npm run mutation:status` now can.
+
+The temp directory and the incremental cache are removed on every exit, so the
+stale-cache trap below cannot happen through this command. It does not write the
+baseline: pinning stays a separate act, after the ratchet check.
 
 ## Why small modules share one measurement
 
@@ -57,6 +84,11 @@ attributable to one change.
 
 It refuses a group in which any module has no suites, rather than measuring the rest and
 reporting that module a confident zero.
+
+Sharing and the 400-mutant budget are the same rule seen from both ends: group SMALL
+modules until the group nears 400 mutants, and measure anything larger alone. Each
+module in the goal is listed with its mutant count so the grouping can be done by
+reading. A single module over 400 is measured alone with `--timeout-min 30`.
 
 ## Why the check is scoped per module and the gate runs once per batch
 
@@ -81,8 +113,10 @@ list of your own paths does.
 - **The incremental cache goes stale.** After editing the code or tests under measurement,
   delete `reports/mutation/focus-incremental.json`. It reported a wrong score three times
   on 2026-09-05, each caught only because a run finished suspiciously fast.
-- **Wait on `Done in`, never `mutation score`.** Stryker capitalises it, so a
-  case-sensitive match never fires — 16 minutes lost on 2026-09-04.
+- **Do not wait on a line of output at all.** The advice here used to be "wait on
+  `Done in`, never `mutation score`" (16 minutes lost on 2026-09-04 to the wrong
+  string). On 2026-10-10 a session waited on the RIGHT string for a run that had died.
+  `npm run test:mutation:measure` returns when the run ends or its limit does.
 - **`expect([undefined]).toEqual([])` passes.** Emptiness assertions with `toEqual` let a
   wrong result through; use `toStrictEqual`. Backlog PL-43.
 - **A mock missing a method makes the code abort into a catch, and the test still passes.**

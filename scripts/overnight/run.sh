@@ -23,6 +23,15 @@ REPO="$(cd "$HERE/../.." && pwd)"
 GOALS="$HERE/goals"
 STAMP="$(date +%Y-%m-%d-%H%M)"
 LOGDIR="$REPO/.rptc/handoff/overnight-$STAMP"
+RUNS_LOG="$REPO/.rptc/handoff/runs.log"
+
+# BOUNDARY LINES. `npm run mutation:status` answers "how far along is it, and is it
+# still moving" from these and from nothing else — the queue's starting numbers, and
+# each batch's start (with the pid to ask about) and end. They go into the SAME log
+# runs.sh keeps, in its format, rather than into a second one. On 2026-10-10 the only
+# way to tell how far a run had got was a hand-written line that searched `ps` and
+# matched its own command.
+mark() { mkdir -p "$(dirname "$RUNS_LOG")"; echo "$(date '+%Y-%m-%d %H:%M')  $*" >> "$RUNS_LOG"; }
 
 DRY=0
 [[ "${1:-}" == "--dry-run" ]] && { DRY=1; shift; }
@@ -88,11 +97,24 @@ for f in "${FILES[@]}"; do
     [[ -f "$f" ]] || { echo "ABORT: $f is not present on $BRANCH"; exit 1; }
 done
 
+# The cap on one batch, in minutes; the reasoning is beside the watchdog below.
+# BATCH_TIMEOUT_SEC exists so the watchdog can be exercised in a second by
+# tests/scripts/overnightRunner.test.ts; nothing else sets it.
+BATCH_TIMEOUT_MIN="${BATCH_TIMEOUT_MIN:-150}"
+BATCH_TIMEOUT_SEC="${BATCH_TIMEOUT_SEC:-$((BATCH_TIMEOUT_MIN * 60))}"
+
 echo "queue:    ${#FILES[@]} item(s)"
+echo "progress: npm run mutation:status      (exit 3 = stalled, 4 = nothing running)"
 echo "logs:     $LOGDIR"
 echo "started:  $(date)"
 [[ $DRY -eq 1 ]] && echo "MODE:     dry run — nothing will be invoked"
 mkdir -p "$LOGDIR"
+if [[ $DRY -eq 0 ]]; then
+    # A count that could not be read is recorded as unknown, never as zero.
+    GAPS="$(cd "$REPO" && node scripts/overnight/status.mjs --gaps 2>/dev/null)"
+    [[ "$GAPS" =~ ^gaps=[0-9]+\ modules=[0-9]+$ ]] || GAPS="gaps=unknown modules=unknown"
+    mark "queue start — $GAPS sha=$START_SHA batches=${#FILES[@]} cap=$BATCH_TIMEOUT_MIN${RUNS_LOOP:+ loop=1}"
+fi
 
 RAN=0
 for f in "${FILES[@]}"; do
@@ -121,16 +143,22 @@ for f in "${FILES[@]}"; do
     # something genuinely wrong. Killing one batch costs nothing that is not already
     # committed: every module commits on its own, and the queue rebuilds from the
     # baseline, so whatever it did not reach comes back in the next run.
-    BATCH_TIMEOUT_MIN="${BATCH_TIMEOUT_MIN:-150}"
+    #
+    # A measurement the batch started runs in its own process group, so killing the
+    # batch does not reach it. It is asked to stop by the pid it recorded; left alone it
+    # would end at its own 12-minute limit, and the next batch's first measurement would
+    # be refused until then.
     caffeinate -ims claude -p "/goal $(cat "$f")" \
         --permission-mode auto \
         --output-format stream-json --verbose \
         >> "$log" 2>&1 &
     batch_pid=$!
-    ( sleep $((BATCH_TIMEOUT_MIN * 60)); kill -0 "$batch_pid" 2>/dev/null && {
+    mark "batch start — $name pid=$batch_pid cap=$BATCH_TIMEOUT_MIN log=${log#"$REPO"/}"
+    ( sleep "$BATCH_TIMEOUT_SEC"; kill -0 "$batch_pid" 2>/dev/null && {
         echo "$name EXCEEDED ${BATCH_TIMEOUT_MIN} min — killing it so the queue continues"
         pkill -P "$batch_pid" 2>/dev/null
         kill "$batch_pid" 2>/dev/null
+        (cd "$REPO" && node scripts/overnight/status.mjs --stop-measurement)
     } ) &
     watchdog_pid=$!
     wait "$batch_pid"
@@ -139,6 +167,7 @@ for f in "${FILES[@]}"; do
     wait "$watchdog_pid" 2>/dev/null
 
     echo "$name finished at $(date +%H:%M), exit=$code"
+    mark "batch end — $name exit=$code"
     # A non-zero exit ends THIS item only. The queue continues on purpose: an
     # exhausted credit balance or a cleared goal should not cost the rest.
 done
@@ -148,5 +177,7 @@ if [[ $DRY -eq 0 && $RAN -eq 0 ]]; then
     echo "NOTHING RAN — exiting non-zero so this cannot read as success."
     exit 1
 fi
+[[ $DRY -eq 0 ]] && mark "queue end — invoked=$RAN"
 echo "queue done: $(date) — $RAN item(s) invoked"
+echo "where it stands:     npm run mutation:status"
 echo "read the logs with:  scripts/overnight/summarise.sh $LOGDIR"

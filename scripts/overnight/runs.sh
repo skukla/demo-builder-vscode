@@ -36,6 +36,15 @@ SWEEP_MINUTES="${SWEEP_MINUTES:-300}"
 log() { echo "$(date '+%Y-%m-%d %H:%M')  $*" | tee -a "$LOG"; }
 
 log "runs.sh started — LIMIT=$LIMIT MAX_RUNS=$MAX_RUNS  (stop file: $STOP)"
+# The whole loop's starting numbers, for `npm run mutation:status`: gaps closed and
+# the pace are measured from this line, across every queue the loop runs. RUNS_LOOP
+# tells run.sh its queues belong to a loop, so status measures from here and not from
+# the latest queue.
+GAPS="$(node scripts/overnight/status.mjs --gaps 2>/dev/null)"
+[[ "$GAPS" =~ ^gaps=[0-9]+\ modules=[0-9]+$ ]] || GAPS="gaps=unknown modules=unknown"
+log "loop start — $GAPS sha=$(git rev-parse --short HEAD) limit=$LIMIT max_runs=$MAX_RUNS"
+log "how far along: npm run mutation:status   (stop after the current run: touch $STOP)"
+export RUNS_LOOP=1
 [[ -f "$STOP" ]] && { rm -f "$STOP"; log "cleared a stale stop file"; }
 
 # 1. A queue already running finishes on its own terms. The patterns are anchored
@@ -85,7 +94,7 @@ while :; do
     git commit -q -F - <<MSG
 chore(overnight): run $run queue — $queued modules, regenerated from the baseline
 
-Backlog: PL-22
+Backlog: PL-70
 MSG
     before="$(git rev-parse HEAD)"
     log "run $run: $queued modules queued; starting run.sh from $(git rev-parse --short HEAD)"
@@ -100,6 +109,7 @@ MSG
     fi
 done
 
+log "loop end — runs=$run"
 log "starting the redundancy sweep over every finished module (--minutes $SWEEP_MINUTES)"
 caffeinate -ims node scripts/mutationRedundancySweep.mjs --minutes "$SWEEP_MINUTES" >> "$LOG" 2>&1
 log "redundancy sweep finished — runs.sh done"

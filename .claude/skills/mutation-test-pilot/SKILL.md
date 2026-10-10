@@ -84,13 +84,29 @@ The sample is a release check. THIS is the working cadence, and every step is
 verifiable, which is what makes it safe to run unattended.
 
 ```bash
-npm run test:mutation:focus        # ~3 min, ONE module
+npm run test:mutation:measure -- src/path/to/module.ts   # focus + a bounded run
 npm run test:mutation:worklist     # the ranked decisions nothing constrains
 # ... read the top line, understand the decision, write the test ...
-npm run test:mutation:focus
+npm run test:mutation:measure -- src/path/to/module.ts
 node scripts/checkMutationBaseline.mjs --report reports/mutation/focus.json
 npm run gate                       # and only then commit
 ```
+
+**Measure with `test:mutation:measure`, not with `test:mutation:focus` in the
+background.** It is the same focused run with the limits the bare one lacks
+(`scripts/mutationMeasure.mjs`): a GROUP over 400 mutants is refused before it starts
+(exit 2, with each module's count, so it can be split); the whole Stryker process tree
+is killed at 12 minutes (exit 124; `--timeout-min` for one large module); the temp
+directory and the incremental cache are removed on every exit, a signal included; and
+`reports/mutation/run-status.json` records what is being measured and by which pid. It
+prints one final line to paste. It never writes the baseline. `-- --widen` adds the
+importing suites and measures again.
+
+Never wait in a shell loop for a line of Stryker's output, and never run jest with
+`--detectOpenHandles`, `--detectLeaks` or `--watch` to investigate a slow run: on
+2026-10-10 a session did all three and lost the morning (nine files in one run, 45
+minutes, no result). `npm run mutation:status` says how far a burn-down is and whether
+it has stalled, from recorded pids and timestamps (`scripts/overnight/status.mjs`).
 
 **The ratchet is the safety net, and it reads THREE numbers.** A score that falls is a
 regression. A score that RISES while nothing got better tested is also flagged — that

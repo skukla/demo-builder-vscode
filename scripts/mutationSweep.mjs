@@ -39,6 +39,7 @@ import { spawnSync } from 'child_process';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname } from 'path';
 
+import { runBounded } from './boundedRun.mjs';
 import { suitesFor } from './focusModule.mjs';
 import { findStaleRows } from './mutationStaleRows.mjs';
 
@@ -82,16 +83,12 @@ function includedModules() {
 const pinned = () =>
     existsSync(BASELINE) ? new Set(Object.keys(JSON.parse(readFileSync(BASELINE, 'utf8')).modules)) : new Set();
 
-/** Run a command, inheriting nothing — the sweep's own log is the record. */
-function run(cmd, args, timeoutMs) {
-    const r = spawnSync(cmd, args, { encoding: 'utf8', timeout: timeoutMs, maxBuffer: 64 * 1024 * 1024 });
-    return {
-        ok: r.status === 0,
-        status: r.status,
-        timedOut: r.error?.code === 'ETIMEDOUT',
-        out: `${r.stdout ?? ''}${r.stderr ?? ''}`,
-    };
-}
+/**
+ * Run a command under a hard time limit. The shared runner kills the whole process
+ * tree on expiry — the `spawnSync` this replaced stopped `npx` and left Stryker's
+ * workers running — and the sweep's own log is the record of what happened.
+ */
+const run = (cmd, args, timeoutMs) => runBounded(cmd, args, timeoutMs);
 
 function scoreOf(modulePath) {
     if (!existsSync(BASELINE)) return undefined;
@@ -141,14 +138,14 @@ function buildQueue() {
  *
  * Returns true when a widened measurement replaced the row.
  */
-function measureWidened(mod, started) {
-    const widen = run('node', ['scripts/focusModule.mjs', '--widen'], 60_000);
+async function measureWidened(mod, started) {
+    const widen = await run('node', ['scripts/focusModule.mjs', '--widen'], 60_000);
     if (widen.status !== 0) return false;
     const left = PER_MODULE_MIN * 60_000 - (Date.now() - started);
     if (left < 60_000) return false;
-    const again = run('npx', ['stryker', 'run', 'stryker.focus.config.json'], left);
+    const again = await run('npx', ['stryker', 'run', 'stryker.focus.config.json'], left);
     if (again.timedOut || !again.ok || !existsSync(FOCUS_REPORT)) return false;
-    const write = run(
+    const write = await run(
         'node',
         ['scripts/checkMutationBaseline.mjs', '--report', FOCUS_REPORT, '--write', 'baseline sweep, widened to the importing suites'],
         120_000
@@ -156,7 +153,7 @@ function measureWidened(mod, started) {
     return write.ok;
 }
 
-function main() {
+async function main() {
     const { queue, all, header } = buildQueue();
     if (DRY) {
         console.log(`${header}\n\nDry run — nothing measured. Queue, in order:`);
@@ -203,7 +200,7 @@ function main() {
             continue;
         }
 
-        const focus = run('node', ['scripts/focusModule.mjs', mod], 60_000);
+        const focus = await run('node', ['scripts/focusModule.mjs', mod], 60_000);
         if (!focus.ok) {
             tally.skipped += 1;
             console.log(`${label}\n    SKIP  ${focus.out.trim().split('\n')[0]}`);
@@ -211,7 +208,7 @@ function main() {
             continue;
         }
 
-        const stryker = run('npx', ['stryker', 'run', 'stryker.focus.config.json'], PER_MODULE_MIN * 60_000);
+        const stryker = await run('npx', ['stryker', 'run', 'stryker.focus.config.json'], PER_MODULE_MIN * 60_000);
         const mins = ((Date.now() - started) / 60_000).toFixed(1);
 
         if (stryker.timedOut) {
@@ -260,7 +257,7 @@ function main() {
             continue;
         }
 
-        const write = run(
+        const write = await run(
             'node',
             ['scripts/checkMutationBaseline.mjs', '--report', FOCUS_REPORT, '--write', 'baseline sweep'],
             120_000
@@ -273,7 +270,7 @@ function main() {
         }
 
         tally.measured += 1;
-        const widened = measureWidened(mod, started);
+        const widened = await measureWidened(mod, started);
         const row = scoreOf(mod);
         console.log(
             `${label}\n    ${String(row?.score ?? '?').padStart(6)}%  ` +
@@ -293,4 +290,4 @@ function main() {
     console.log(`log: ${LOG}`);
 }
 
-main();
+await main();

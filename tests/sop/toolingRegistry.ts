@@ -349,6 +349,26 @@ const MUTATION: readonly Instrument[] = [
             'a working-session step on one chosen module; it starts Stryker, so it is never swept',
     },
     {
+        id: 'test:mutation:measure',
+        kind: 'npm-script',
+        cadence: 'on-demand',
+        what: 'the BOUNDED focused measurement, and the way a working session measures: refuses a group over 400 mutants, kills the whole Stryker tree at a 12-minute limit, cleans up on every exit path and records what it is doing in reports/mutation/run-status.json',
+        runs: 'npm run test:mutation:measure -- <src/module.ts>',
+        resultKind: 'gate',
+        unwiredReason:
+            'a working-session step on a chosen module; it starts Stryker, so it is never swept',
+    },
+    {
+        id: 'mutation:status',
+        kind: 'npm-script',
+        cadence: 'on-demand',
+        what: 'how far the mutation burn-down is and whether it is still moving: gaps now against the run start, the batch and measurement in flight, pace, and a STALLED line decided by recorded pids and timestamps, never by searching the process list',
+        runs: 'npm run mutation:status',
+        resultKind: 'gate',
+        unwiredReason:
+            'describes a run in progress — exit 4 means nothing is running, which in a sweep would read as a failure',
+    },
+    {
         id: 'test:mutation:worklist',
         kind: 'npm-script',
         cadence: 'on-demand',
