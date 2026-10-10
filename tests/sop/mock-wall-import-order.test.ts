@@ -93,7 +93,6 @@ function misorderedSuites(walls: Set<string>): string[] {
  */
 const LEDGERED = [
     'tests/features/dashboard/handlers/aiHandlers.logAiVerification.test.ts',
-    'tests/features/dashboard/handlers/appManagementInstallHandlers.test.ts',
     'tests/features/dashboard/handlers/dashboardHandlers-actions.test.ts',
     'tests/features/dashboard/handlers/dashboardHandlers-deployMesh.test.ts',
     'tests/features/dashboard/handlers/dashboardHandlers-requestStatus.test.ts',

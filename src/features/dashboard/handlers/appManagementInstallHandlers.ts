@@ -371,7 +371,7 @@ export const handleInstallAppBuilderComponent: MessageHandler<{
                 return deps.installAppManagement(project, id, report, { appVersion });
             },
         ),
-    (payload) => payload?.id,
+    (payload) => payload.id,
 );
 
 /**
@@ -409,5 +409,5 @@ export const handleReinstallAppBuilderComponent: MessageHandler<{
                 });
             },
         ),
-    (payload) => payload?.id,
+    (payload) => payload.id,
 );

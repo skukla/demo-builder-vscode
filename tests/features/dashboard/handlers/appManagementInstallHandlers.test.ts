@@ -8,171 +8,33 @@
  * outcome — a mock cannot see a malformed call.
  */
 
-import type { AppBuilderComponentState, Project } from '@/types/base';
-
-// ---- the progress notification, RECORDED rather than mocked away -----------
-// `vscode` is walled twice in this suite's import chain: the shared testUtils
-// registers its own factory, but only AFTER the subject has bound the file mock
-// (this suite is on mock-wall-import-order's ledger). So the vscode a test can
-// reach is not the one the handler reports progress to. Recording here — above
-// every import — is what makes the notification observable at all. Plain
-// functions, not jest.fn, so no mock reset can quietly empty them.
-const mockProgressTitles: string[] = [];
-const mockProgressSteps: unknown[] = [];
-jest.mock('vscode', () => {
-    const vscode = jest.requireActual('../../../__mocks__/vscode') as {
-        window: Record<string, unknown>;
-    };
-    vscode.window.withProgress = async (
-        options: { title: string },
-        task: (p: { report: (value: { message?: string }) => void }) => unknown
-    ) => {
-        mockProgressTitles.push(options.title);
-        return task({ report: (value) => mockProgressSteps.push(value?.message) });
-    };
-    return vscode;
-});
-
-// ---- runner deps + auth resolver (all mocked) ------------------------------
-const mockInstallAppManagement = jest.fn();
-const mockUninstallAppManagement = jest.fn();
-// Declared with its arguments, not as a bare `jest.fn(() => ...)`: the second
-// one is the progress adapter, and a zero-arity signature makes it unreadable.
-const mockBuildDefaultRunnerDeps = jest.fn((..._args: unknown[]) => ({
-    installAppManagement: mockInstallAppManagement,
-    uninstallAppManagement: mockUninstallAppManagement,
-}));
-const mockBuildRunnerDepsContext = jest.fn(async () => ({}));
-const mockResolveAppManagementAuth = jest.fn();
-jest.mock('@/features/project-creation/services/appBuilderComponentRunnerDeps', () => ({
-    buildDefaultRunnerDeps: (...a: unknown[]) => mockBuildDefaultRunnerDeps(...(a as [])),
-    buildRunnerDepsContext: (...a: unknown[]) => mockBuildRunnerDepsContext(...(a as [])),
-    resolveAppManagementAuth: (...a: unknown[]) => mockResolveAppManagementAuth(...a),
-}));
-
-// ---- the App Management client (status read constructs it directly) --------
-const mockGetInstallationState = jest.fn();
-const mockClientCtor = jest.fn();
-jest.mock('@/features/app-builder/services/appManagementClient', () => ({
-    AppManagementClient: class {
-        constructor(...args: unknown[]) {
-            mockClientCtor(...args);
-        }
-        getInstallationState = (...a: unknown[]) => mockGetInstallationState(...a);
-    },
-}));
-
-// ---- catalog loader (lifecycle resolution) ---------------------------------
-const mockGetAppBuilderComponentEntry = jest.fn();
-const mockBuildCustomIntegrationEntry = jest.fn();
-jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
-    getAppBuilderComponentEntry: (...a: unknown[]) => mockGetAppBuilderComponentEntry(...a),
-    buildCustomIntegrationEntry: (...a: unknown[]) => mockBuildCustomIntegrationEntry(...(a as [])),
-    entryFitsProjectAxes: jest.fn().mockReturnValue(true),
-}));
-
-// ---- DI (runGuards resolves the auth service through it) -------------------
-// Mocked HERE, not only via dashboardHandlers.testUtils: that module's own
-// jest.mock('@/core/di/serviceLocator') registers after this spec's SUT import chain has
-// already required the real ServiceLocator.
-jest.mock('@/core/di/serviceLocator', () => ({
-    ServiceLocator: {
-        getAuthenticationService: jest.fn(() => ({
-            getTokenManager: () => ({ inspectToken: jest.fn(async () => ({ valid: false })) }),
-            getCachedOrganization: jest.fn(),
-            getS2SDeployCredentials: jest.fn(),
-        })),
-        // ADR-015 (2026-08-28): the handler resolves these when assembling
-        // runner deps, so the module mock must answer them.
-        getCommandExecutor: jest.fn(() => ({ execute: jest.fn() })),
-    },
-}));
-
-// ---- guards ----------------------------------------------------------------
-const mockEnsureAdobeIOAuth = jest.fn();
-jest.mock('@/core/auth/adobeAuthGuard', () => ({
-    ensureAdobeIOAuth: (...a: unknown[]) => mockEnsureAdobeIOAuth(...a),
-}));
-const mockDetectProjectOrgMismatch = jest.fn();
-jest.mock('@/features/authentication/services/detectProjectOrgMismatch', () => ({
-    detectProjectOrgMismatch: (...a: unknown[]) => mockDetectProjectOrgMismatch(...a),
-}));
-
-// ---- dashboard channels (imported by the shared handler module) ------------
-jest.mock('@/features/dashboard/handlers/statusHandlers', () => ({
-    handleRequestStatus: jest.fn().mockResolvedValue({ success: true }),
-}));
-jest.mock('@/features/dashboard/commands/showDashboard', () => ({
-    ProjectDashboardWebviewCommand: {
-        refreshStatus: jest.fn(),
-    },
-}));
-jest.mock('@/features/dashboard/services/projectPanelPushes', () => ({
-    sendAppBuilderComponentStatusUpdate: jest.fn(),
-    sendAppBuilderComponentsSnapshot: jest.fn(),
-}));
-
+import type { Project } from '@/types/base';
+import { ErrorCode } from '@/types/errorCodes';
 import {
+    APP_URLS,
+    KIT_STATE,
     handleGetAppBuilderInstallStatus,
     handleInstallAppBuilderComponent,
     handleReinstallAppBuilderComponent,
-} from '@/features/dashboard/handlers/appManagementInstallHandlers';
-import { setupMocks } from './dashboardHandlers.testUtils';
-import { ErrorCode } from '@/types/errorCodes';
+    kitProject,
+    mockBuildCustomIntegrationEntry,
+    mockBuildDefaultRunnerDeps,
+    mockBuildRunnerDepsContext,
+    mockClientCtor,
+    mockDeveloperPermissions,
+    mockEnsureAdobeIOAuth,
+    mockGetAppBuilderComponentEntry,
+    mockGetInstallationState,
+    mockInstallAppManagement,
+    mockProgressSteps,
+    mockProgressTitles,
+    mockResolveAppManagementAuth,
+    mockUninstallAppManagement,
+    resetInstallHandlerMocks,
+    setupMocks,
+} from './appManagementInstallHandlers.testUtils';
 
-const APP_URLS = {
-    'app-management/installation':
-        'https://ns.adobeioruntime.net/api/v1/web/app-management/installation',
-};
-
-const KIT_STATE: AppBuilderComponentState = {
-    kind: 'integration',
-    status: 'deployed',
-    name: 'Kit App',
-    source: { owner: 'adobe', repo: 'commerce-integration-starter-kit', branch: 'main' },
-    deployedUrls: APP_URLS,
-    installation: { status: 'failed', detail: 'earlier failure', at: '2026-08-27T00:00:00Z' },
-};
-
-function kitProject(): Partial<Project> {
-    return { appBuilderComponents: { 'kit-app': { ...KIT_STATE } } };
-}
-
-function mockDeveloperPermissions(): void {
-    const { ServiceLocator } = require('@/core/di/serviceLocator');
-    ServiceLocator.getAuthenticationService().testDeveloperPermissions = jest
-        .fn()
-        .mockResolvedValue({ hasPermissions: true });
-}
-
-beforeEach(() => {
-    jest.clearAllMocks();
-    mockProgressTitles.length = 0;
-    mockProgressSteps.length = 0;
-    mockGetAppBuilderComponentEntry.mockReturnValue({
-        id: 'kit-app',
-        lifecycle: 'app-management',
-    });
-    mockResolveAppManagementAuth.mockResolvedValue({
-        accessToken: 'fake-test-pw-not-a-secret',
-        imsOrgId: 'ABC@AdobeOrg',
-    });
-    mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
-    mockDetectProjectOrgMismatch.mockResolvedValue({ reachable: true });
-    mockInstallAppManagement.mockResolvedValue({ status: 'installed' });
-    mockUninstallAppManagement.mockResolvedValue({ status: 'uninstalled' });
-    // clearAllMocks keeps a mockReturnValue; the "not wired" tests set one.
-    mockBuildDefaultRunnerDeps.mockReturnValue({
-        installAppManagement: mockInstallAppManagement,
-        uninstallAppManagement: mockUninstallAppManagement,
-    });
-    mockGetInstallationState.mockResolvedValue({
-        id: 'i-1',
-        status: 'succeeded',
-        startedAt: '2026-08-27T01:00:00Z',
-        completedAt: '2026-08-27T01:02:00Z',
-    });
-});
+beforeEach(resetInstallHandlerMocks);
 
 describe('handleGetAppBuilderInstallStatus', () => {
     const INSTALLED = {
