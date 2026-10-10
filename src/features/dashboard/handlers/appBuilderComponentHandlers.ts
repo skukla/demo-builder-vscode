@@ -80,17 +80,13 @@ export { handleRenameAppBuilderComponent } from './appBuilderComponentRename';
  * left it behind (`strandedSystem`): it would run with nothing to talk to, under the
  * default name. Undefined for anything else.
  */
-function strandedRefusal(project: Project, id: string): string | undefined {
+function strandedRefusal(project: Project, id: string, displayName: string): string | undefined {
     const catalog = getAppBuilderComponentCatalog();
     const stranded = strandedSystem(project, id, catalog);
     if (!stranded) return undefined;
     const integrationName =
         catalog.find((entry) => entry.id === stranded.integrationKind)?.name ?? stranded.integrationKind;
-    return strandedSystemMessage(
-        getAppBuilderComponent(project, id)?.name ?? id,
-        integrationName,
-        stranded.reusedByAdd,
-    );
+    return strandedSystemMessage(displayName, integrationName, stranded.reusedByAdd);
 }
 
 /** Shared deploy/redeploy: guards → D1 deployAppBuilderComponent {id}. */
@@ -103,12 +99,12 @@ async function deployById(
     const target = await resolveComponentTarget(context, requestedId);
     if (!target.ok) return target.error;
     const { id, project } = target;
-    const stranded = strandedRefusal(project, id);
-    if (stranded) return { success: false, error: stranded };
-
     // The display name, as Add and Remove already pass — the notification title is
     // now its whole content, so a raw slug is what a background user would read.
     const displayName = getAppBuilderComponent(project, id)?.name ?? id;
+    const stranded = strandedRefusal(project, id, displayName);
+    if (stranded) return { success: false, error: stranded };
+
     const result = await withGuardedComponentProgress(
         context,
         project,
@@ -160,7 +156,7 @@ export const handleDeployAppBuilderComponent: MessageHandler<{
 }> = narrateOutcomeToModal(
     (context, payload) =>
         deployById(context, payload?.id, payload?.refreshCli, progressSurfaceOf(payload)),
-    (payload) => payload?.id,
+    (payload) => payload.id,
 );
 
 /** Redeploy is the same path (idempotent re-run of the deploy tail). */
