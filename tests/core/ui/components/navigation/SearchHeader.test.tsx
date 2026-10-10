@@ -36,9 +36,7 @@ describe('SearchHeader', () => {
                 />
             );
 
-            expect(
-                screen.getByPlaceholderText(/type to filter/i)
-            ).toBeInTheDocument();
+            expect(screen.getByPlaceholderText(/type to filter/i)).toBeInTheDocument();
         });
 
         it('should hide search field when totalCount <= threshold', () => {
@@ -51,9 +49,7 @@ describe('SearchHeader', () => {
                 />
             );
 
-            expect(
-                screen.queryByPlaceholderText(/type to filter/i)
-            ).not.toBeInTheDocument();
+            expect(screen.queryByPlaceholderText(/type to filter/i)).not.toBeInTheDocument();
         });
 
         it('should use custom placeholder text', () => {
@@ -65,9 +61,7 @@ describe('SearchHeader', () => {
                 />
             );
 
-            expect(
-                screen.getByPlaceholderText(/filter projects/i)
-            ).toBeInTheDocument();
+            expect(screen.getByPlaceholderText(/filter projects/i)).toBeInTheDocument();
         });
 
         it('should call onSearchQueryChange when typing', () => {
@@ -103,11 +97,7 @@ describe('SearchHeader', () => {
 
         it('should hide count when hasLoadedOnce is false', () => {
             renderWithProvider(
-                <SearchHeader
-                    {...defaultProps}
-                    totalCount={10}
-                    hasLoadedOnce={false}
-                />
+                <SearchHeader {...defaultProps} totalCount={10} hasLoadedOnce={false} />
             );
 
             expect(screen.queryByText(/items/i)).not.toBeInTheDocument();
@@ -157,31 +147,20 @@ describe('SearchHeader', () => {
 
     describe('refresh button', () => {
         it('should show refresh button when onRefresh is provided', () => {
-            renderWithProvider(
-                <SearchHeader
-                    {...defaultProps}
-                    onRefresh={jest.fn()}
-                />
-            );
+            renderWithProvider(<SearchHeader {...defaultProps} onRefresh={jest.fn()} />);
 
-            expect(
-                screen.getByRole('button', { name: /refresh/i })
-            ).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /refresh/i })).toBeInTheDocument();
         });
 
         it('should hide refresh button when onRefresh is not provided', () => {
             renderWithProvider(<SearchHeader {...defaultProps} />);
 
-            expect(
-                screen.queryByRole('button', { name: /refresh/i })
-            ).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /refresh/i })).not.toBeInTheDocument();
         });
 
         it('should call onRefresh when button is clicked', () => {
             const onRefresh = jest.fn();
-            renderWithProvider(
-                <SearchHeader {...defaultProps} onRefresh={onRefresh} />
-            );
+            renderWithProvider(<SearchHeader {...defaultProps} onRefresh={onRefresh} />);
 
             fireEvent.click(screen.getByRole('button', { name: /refresh/i }));
 
@@ -190,16 +169,10 @@ describe('SearchHeader', () => {
 
         it('should be disabled when isRefreshing is true', () => {
             renderWithProvider(
-                <SearchHeader
-                    {...defaultProps}
-                    onRefresh={jest.fn()}
-                    isRefreshing={true}
-                />
+                <SearchHeader {...defaultProps} onRefresh={jest.fn()} isRefreshing={true} />
             );
 
-            expect(
-                screen.getByRole('button', { name: /refresh/i })
-            ).toBeDisabled();
+            expect(screen.getByRole('button', { name: /refresh/i })).toBeDisabled();
         });
 
         it('should use custom refresh aria label', () => {
@@ -211,9 +184,7 @@ describe('SearchHeader', () => {
                 />
             );
 
-            expect(
-                screen.getByRole('button', { name: /reload projects/i })
-            ).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /reload projects/i })).toBeInTheDocument();
         });
     });
 
@@ -272,11 +243,47 @@ describe('SearchHeader', () => {
         });
 
         it('hides the count for an empty list when alwaysShowCount is omitted', () => {
-            renderWithProvider(
-                <SearchHeader {...defaultProps} totalCount={0} filteredCount={0} />
-            );
+            renderWithProvider(<SearchHeader {...defaultProps} totalCount={0} filteredCount={0} />);
 
             expect(screen.queryByText(/items/i)).not.toBeInTheDocument();
+        });
+    });
+
+    /**
+     * `countText` replaces the built count line for a list holding more than
+     * one kind of thing — and only while nothing is filtered, where "Showing N
+     * of M" is the answer whatever the kinds are.
+     */
+    describe('countText', () => {
+        it('replaces the built count line when nothing is filtered', () => {
+            renderWithProvider(
+                <SearchHeader {...defaultProps} countText="1 integration, 1 system" />
+            );
+
+            expect(screen.getByText('1 integration, 1 system')).toBeInTheDocument();
+            expect(screen.queryByText('10 items')).not.toBeInTheDocument();
+        });
+
+        it('gives way to the filtered count while filtering', () => {
+            renderWithProvider(
+                <SearchHeader
+                    {...defaultProps}
+                    searchQuery="erp"
+                    filteredCount={3}
+                    countText="1 integration, 1 system"
+                />
+            );
+
+            expect(screen.getByText('Showing 3 of 10 items')).toBeInTheDocument();
+            expect(screen.queryByText('1 integration, 1 system')).not.toBeInTheDocument();
+        });
+    });
+
+    describe('the search field label', () => {
+        it('names what is being filtered, from the plural noun', () => {
+            renderWithProvider(<SearchHeader {...defaultProps} itemNoun="project" />);
+
+            expect(screen.getByLabelText('Filter projects')).toBeInTheDocument();
         });
     });
 
