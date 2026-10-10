@@ -16544,6 +16544,18 @@
             "decision": "none - the same unreachable no-definition case as the three hops already recorded in this file (shaped?.inputSchema, the consent description, extra?._meta)",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-05, 2026-10-10"
+        },
+        {
+            "module": "src/features/dashboard/ui/hooks/useDashboardStatus.ts",
+            "anchors": [
+                "const [orgSignedOut, setOrgSignedOut] = useState(false);"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The initial value of orgSignedOut is never read. deriveOrgCheckState reads it only when orgChecked is true and orgStatus is unknown or error, and both of those are set only by routeCheckOutcome's org-context branch, which calls setOrgSignedOut in the same handler on every path (pending sets false, a resolved outcome sets data.signedOut === true). The flag is not returned from the hook. Verified by planting useState(true): all 840 tests in the hook suites and the dashboard consumer suites pass, including the one asserting a signed-in unknown outcome reads Not verified.",
+            "decision": "none \u2014 false is the honest starting value; the first org-context outcome overwrites it before anything reads it",
+            "recorded": "2026-10-10",
+            "source": "PL-70 MUT-06"
         }
     ]
 }
