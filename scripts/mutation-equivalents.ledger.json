@@ -15921,6 +15921,18 @@
             "decision": "none \u2014 each handler is only callable from the menu item its own presence renders",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-03"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/ConnectStoreStepContent.tsx",
+            "anchors": [
+                "? mergeSlices(disclosedGroups, section === 'connection' ? ['connection', 'credentials'] : [section])"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The mutant replaces the first slice name 'connection' with an empty string. filterGroupsForSection hands the name to sectionFilter (storeFieldHelpers.ts), where 'connection' is deliberately the DEFAULT arm: any name that is not 'credentials', 'business-structure' or 'catalog' keeps exactly the connection fields. So '' selects the same fields as 'connection'. Verified by planting it: all 66 ConnectStoreStepContent tests pass, including the one asserting the endpoint and the OAuth field render as one merged group.",
+            "decision": "none \u2014 the connection slice is the filter's default, so its name is not what selects it",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-03"
         }
     ]
 }
