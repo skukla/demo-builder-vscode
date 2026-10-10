@@ -263,5 +263,94 @@ describe('ACTION_DESCRIPTORS — per-row contract', () => {
             const apis = row('set_console_apis').inputSchema!.apis;
             expect(apis.parse([])).toStrictEqual([]);
         });
+
+        // An id handed on as '' reaches a handler that reads it as "no id given"
+        // and falls back to a default — the wrong integration, or the first ERP.
+        it.each([
+            ['delete_undeclared_runtime_code', 'componentId', 'erp-integration'],
+            ['assign_erp_products', 'erp', 'erp-brand-b'],
+            ['undo_erp_assignment', 'erp', 'erp-brand-b'],
+            ['invoke_runtime_action', 'componentId', 'erp-integration'],
+        ])('%s.%s refuses an empty id and takes a real one', (tool, field, real) => {
+            const id = row(tool).inputSchema![field];
+            expect(id.safeParse('').success).toBe(false);
+            expect(id.parse(real)).toBe(real);
+        });
+
+        it('invoke_runtime_action.componentId may be left out', () => {
+            const id = row('invoke_runtime_action').inputSchema!.componentId;
+            expect(id.parse(undefined)).toBeUndefined();
+        });
+
+        it('add_erp.name takes one to forty characters', () => {
+            // The name becomes a Commerce Admin menu entry; the cap is its width.
+            const name = row('add_erp').inputSchema!.name;
+            expect(name.safeParse('').success).toBe(false);
+            expect(name.parse('Brand B')).toBe('Brand B');
+            expect(name.parse('x'.repeat(40))).toBe('x'.repeat(40));
+            expect(name.safeParse('x'.repeat(41)).success).toBe(false);
+        });
+    });
+
+    /**
+     * The closed lists. Each names every value a handler dispatches on, so an
+     * emptied or shortened list is a tool that refuses what its description
+     * offers — and a widened one hands the handler a value it has no branch for.
+     */
+    describe('closed lists take exactly their own values', () => {
+        it.each([
+            ['set_setup_step', 'state', ['done', 'dismissed', 'open'], 'finished'],
+            ['write_erp_rest', 'method', ['POST', 'PUT', 'PATCH', 'DELETE'], 'GET'],
+        ])('%s.%s', (tool, field, allowed, refused) => {
+            const schema = row(tool).inputSchema![field];
+            for (const value of allowed) {
+                expect(schema.parse(value)).toBe(value);
+            }
+            expect(schema.safeParse(refused).success).toBe(false);
+        });
+
+        it('set_erp_settings.values takes a string to set and null to clear, nothing else', () => {
+            const values = row('set_erp_settings').inputSchema!.values;
+            expect(values.parse({ ERP_URL: 'https://erp.example.com', ERP_REGION: null })).toStrictEqual({
+                ERP_URL: 'https://erp.example.com',
+                ERP_REGION: null,
+            });
+            expect(values.safeParse({ ERP_TIMEOUT: 30 }).success).toBe(false);
+        });
+
+        it('add_erp.owns keeps the rule it was given, by attribute or by website', () => {
+            const owns = row('add_erp').inputSchema!.owns;
+            expect(owns.parse({ mode: 'attribute', attribute: 'erp_owner=brand-b' })).toStrictEqual({
+                mode: 'attribute',
+                attribute: 'erp_owner=brand-b',
+            });
+            expect(owns.parse({ mode: 'websites', websites: ['base', 'eu'] })).toStrictEqual({
+                mode: 'websites',
+                websites: ['base', 'eu'],
+            });
+            expect(owns.safeParse({ mode: 'everything' }).success).toBe(false);
+        });
+
+        it('assign_erp_products.selection takes each of its four ways to pick products', () => {
+            const selection = row('assign_erp_products').inputSchema!.selection;
+            const ways = [
+                { by: 'category', categoryId: 12 },
+                { by: 'brand', brand: 'Acme' },
+                { by: 'skuPrefix', prefix: 'ACM-' },
+                { by: 'skus', skus: ['ACM-1', 'ACM-2'] },
+            ];
+            for (const way of ways) {
+                expect(selection.parse(way)).toStrictEqual(way);
+            }
+            expect(selection.safeParse({ by: 'everything' }).success).toBe(false);
+        });
+
+        it('assign_erp_products.selection refuses a pick that names nothing', () => {
+            // An empty brand, prefix or SKU list would match every product or none.
+            const selection = row('assign_erp_products').inputSchema!.selection;
+            expect(selection.safeParse({ by: 'brand', brand: '' }).success).toBe(false);
+            expect(selection.safeParse({ by: 'skuPrefix', prefix: '' }).success).toBe(false);
+            expect(selection.safeParse({ by: 'skus', skus: [] }).success).toBe(false);
+        });
     });
 });
