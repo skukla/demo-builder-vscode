@@ -12,6 +12,7 @@
 
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 import type { HandlerContext } from '@/types/handlers';
+import type { StorefrontBrokenLink } from '@/types/webviewPayloads';
 
 // =============================================================================
 // Mocks — before the imports of the module under test
@@ -30,6 +31,12 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 
 jest.mock('@/features/eds/handlers/storefrontSetup/storefrontSetupPhases', () => ({
     executeStorefrontSetupPhases: jest.fn(),
+}));
+
+// Answers the config it was given unless a test says otherwise, which is what the
+// real one does for every payload here (none names both a package and a stack).
+jest.mock('@/features/eds/handlers/storefrontSetup/storefrontSetupConfigRehydration', () => ({
+    rehydratePackageDerivedConfig: jest.fn((edsConfig: unknown) => edsConfig),
 }));
 
 jest.mock('@/features/eds/services/cleanupService');
@@ -52,6 +59,7 @@ import {
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { ensureDaLiveAuth, resolveByomOverlayConfig } from '@/features/eds/handlers/edsHelpers';
 import { executeStorefrontSetupPhases } from '@/features/eds/handlers/storefrontSetup/storefrontSetupPhases';
+import { rehydratePackageDerivedConfig } from '@/features/eds/handlers/storefrontSetup/storefrontSetupConfigRehydration';
 import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 import { createMockAuthenticationService } from '../../../../helpers/authenticationServiceFake';
@@ -63,6 +71,9 @@ const mockResolveByomOverlayConfig = resolveByomOverlayConfig as jest.MockedFunc
 >;
 const mockExecutePhases = executeStorefrontSetupPhases as jest.MockedFunction<
     typeof executeStorefrontSetupPhases
+>;
+const mockRehydrate = rehydratePackageDerivedConfig as jest.MockedFunction<
+    typeof rehydratePackageDerivedConfig
 >;
 
 // =============================================================================
@@ -109,6 +120,7 @@ function messagePayload(context: HandlerContext, type: string) {
 
 beforeEach(() => {
     jest.clearAllMocks();
+    mockRehydrate.mockImplementation((edsConfig) => edsConfig);
     mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
     mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
     mockResolveByomOverlayConfig.mockReturnValue('https://overlay.example/render-pdp');
@@ -194,6 +206,130 @@ describe('handleStartStorefrontSetup — the Adobe I/O guard runs only for mesh'
         await handleStartStorefrontSetup(context, payload({ dependencies: undefined }));
 
         expect(mockEnsureAdobeIOAuth).not.toHaveBeenCalled();
+    });
+});
+
+describe('handleStartStorefrontSetup — what a refused sign-in tells the UI', () => {
+    it('asks for an Adobe sign-in when a mesh run has no auth service at all', async () => {
+        const context = createContext({ authManager: undefined });
+
+        await handleStartStorefrontSetup(context, payload({ dependencies: ['eds-accs-mesh'] }));
+
+        expect(messagePayload(context, 'storefront-setup-error')).toEqual({
+            message: 'Authentication required',
+            error: 'Please authenticate with Adobe before starting storefront setup',
+        });
+        expect(mockExecutePhases).not.toHaveBeenCalled();
+    });
+
+    it('names Adobe, not DA.live, when the Adobe sign-in did not happen', async () => {
+        mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: false });
+        const context = createContext();
+
+        await handleStartStorefrontSetup(context, payload({ dependencies: ['eds-accs-mesh'] }));
+
+        expect(messagePayload(context, 'storefront-setup-error')).toEqual({
+            message: 'Authentication required',
+            error: 'Adobe sign-in failed. Please try again.',
+        });
+    });
+
+    it('says the DA.live session expired when the guard gave no reason of its own', async () => {
+        mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: false });
+        const context = createContext();
+
+        await handleStartStorefrontSetup(context, payload());
+
+        expect(messagePayload(context, 'storefront-setup-error')).toEqual({
+            message: 'DA.live authentication expired',
+            error: 'Your DA.live session has expired.',
+        });
+    });
+
+    it("passes on the DA.live guard's own reason when it has one", async () => {
+        mockEnsureDaLiveAuth.mockResolvedValue({
+            authenticated: false,
+            error: 'DA.live refused this token for demo-org.',
+        });
+        const context = createContext();
+
+        await handleStartStorefrontSetup(context, payload());
+
+        expect(messagePayload(context, 'storefront-setup-error')).toEqual({
+            message: 'DA.live authentication expired',
+            error: 'DA.live refused this token for demo-org.',
+        });
+    });
+});
+
+describe('handleStartStorefrontSetup — package settings are restored before any phase reads them', () => {
+    it('looks the settings up by the package, the stack and the added demo', async () => {
+        const demo = { kind: 'demo', version: 1, name: 'Isle5 by Jen', source: { owner: 'jen', repo: 'isle5-demo' }, storefrontKind: 'eds' } as const;
+        const context = createContext();
+
+        await handleStartStorefrontSetup(
+            context,
+            payload({ selectedPackage: 'citisignal', selectedStack: 'eds-accs', demo }),
+        );
+
+        expect(mockRehydrate).toHaveBeenCalledWith(
+            EDS_CONFIG,
+            { selectedPackage: 'citisignal', selectedStack: 'eds-accs', demo },
+            context.logger,
+        );
+    });
+
+    it('hands the phases the restored config, not the one the wizard sent', async () => {
+        // Edit mode sends a config with no package-derived settings; the phases
+        // must read the restored one or every patch is skipped without a word.
+        mockRehydrate.mockImplementation((edsConfig) => ({
+            ...edsConfig,
+            daLiveSite: 'restored-site',
+        }));
+        mockResolveByomOverlayConfig.mockReturnValue(undefined);
+        const context = createContext();
+
+        await handleStartStorefrontSetup(context, payload());
+
+        expect(mockResolveByomOverlayConfig).toHaveBeenCalledWith(
+            undefined,
+            'demo-org',
+            'restored-site',
+        );
+        expect(mockExecutePhases).toHaveBeenCalledWith(
+            context,
+            expect.objectContaining({ daLiveSite: 'restored-site' }),
+            expect.anything(),
+            expect.anything(),
+        );
+        expect(messagePayload(context, 'storefront-setup-complete')).toMatchObject({
+            daLiveSite: 'https://da.live/demo-org/restored-site',
+        });
+    });
+});
+
+describe("handleStartStorefrontSetup — applying an added demo's fixes is opt-in", () => {
+    /** The config the phases were handed on the first call. */
+    function phaseConfig(): Record<string, unknown> {
+        return mockExecutePhases.mock.calls[0]?.[1] as Record<string, unknown>;
+    }
+
+    it('tells the phases to apply the fixes when the SC asked for them', async () => {
+        await handleStartStorefrontSetup(createContext(), payload({ applyDemoFixes: true }));
+
+        expect(phaseConfig().applyDemoFixes).toBe(true);
+    });
+
+    it('says nothing about fixes when the SC declined them', async () => {
+        await handleStartStorefrontSetup(createContext(), payload({ applyDemoFixes: false }));
+
+        expect(phaseConfig()).not.toHaveProperty('applyDemoFixes');
+    });
+
+    it('says nothing about fixes when the payload never mentioned them', async () => {
+        await handleStartStorefrontSetup(createContext(), payload());
+
+        expect(phaseConfig()).not.toHaveProperty('applyDemoFixes');
     });
 });
 
@@ -344,6 +480,37 @@ describe('handleStartStorefrontSetup — the two outcomes', () => {
             repoOwner: 'demo-org',
             repoName: 'demo-repo',
         });
+    });
+
+    it('hands back the broken links the run found, for the Storefront Report', async () => {
+        const brokenLinks: StorefrontBrokenLink[] = [{ link: '/fr', pages: ['/footer'] }];
+        mockExecutePhases.mockResolvedValue({
+            success: true,
+            repoUrl: 'https://github.com/demo-org/demo-repo',
+            brokenLinks,
+        });
+        const context = createContext();
+
+        await handleStartStorefrontSetup(context, payload());
+
+        expect(messagePayload(context, 'storefront-setup-complete')?.brokenLinks).toStrictEqual(
+            brokenLinks,
+        );
+    });
+
+    it('leaves broken links off the message when the run found none', async () => {
+        mockExecutePhases.mockResolvedValue({
+            success: true,
+            repoUrl: 'https://github.com/demo-org/demo-repo',
+            brokenLinks: [],
+        });
+        const context = createContext();
+
+        await handleStartStorefrontSetup(context, payload());
+
+        expect(messagePayload(context, 'storefront-setup-complete')).not.toHaveProperty(
+            'brokenLinks',
+        );
     });
 
     it('hands back the block libraries it installed, for creation to record on the new project', async () => {
