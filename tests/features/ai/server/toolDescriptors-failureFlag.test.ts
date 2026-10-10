@@ -18,15 +18,11 @@ import type { McpTextResult } from '@/features/ai/server/mcpToolResult';
 import { registerDescriptorTools } from '@/features/ai/server/toolDescriptors';
 import type { HandlerMap } from '@/types/handlers';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { fakeServer } from './toolDescriptors.testUtils';
 
 /** Captures what the registrar hands the SDK, without an SDK. */
 function capture(handlerResult: unknown, confirm?: true) {
-    const tools = new Map<string, (args: unknown) => Promise<unknown>>();
-    const server = {
-        registerTool(name: string, _def: unknown, handler: (args: unknown) => Promise<unknown>) {
-            tools.set(name, handler);
-        },
-    };
+    const server = fakeServer();
     const map = { probe: async () => handlerResult } as unknown as HandlerMap;
 
     registerDescriptorTools(
@@ -44,7 +40,7 @@ function capture(handlerResult: unknown, confirm?: true) {
         ],
         () => createMockHandlerContext()
     );
-    return tools.get('probe_tool')!;
+    return server.tools.get('probe_tool')!.handler;
 }
 
 describe('every descriptor row declares its failures', () => {
