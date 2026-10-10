@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "MUT-03: action descriptors — every min-length guard and closed list in the input schemas is parsed",
+    "_note": "MUT-03: component requirements — measured with its importing suites (declaredEnvVarKeys is driven from createProjectFromFileTool); unknown id pinned directly",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -2364,23 +2364,19 @@
             "recorded": "2026-10-10T00:48:26.511Z"
         },
         "src/features/ai/server/componentRequirementsTool.ts": {
-            "score": 79.31,
-            "killed": 46,
-            "survived": 3,
-            "noCoverage": 9,
+            "score": 96.55,
+            "killed": 56,
+            "survived": 2,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "string": 3
+                "string": 2
             },
-            "uncoveredCategories": {
-                "block": 3,
-                "branch": 4,
-                "other": 2
-            },
+            "uncoveredCategories": {},
             "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 9,
-            "recorded": "2026-10-10T01:04:48.564Z"
+            "openGaps": 0,
+            "recorded": "2026-10-10T18:02:27.007Z"
         },
         "src/features/ai/server/configureProjectTool.ts": {
             "score": 89.27,

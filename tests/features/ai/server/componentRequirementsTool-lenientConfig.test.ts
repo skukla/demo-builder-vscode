@@ -14,7 +14,10 @@
  */
 
 import { serve } from './componentRequirementsTool.testUtils';
-import type { ComponentCatalog } from '@/features/ai/server/componentRequirementsTool';
+import {
+    declaredEnvVarKeys,
+    type ComponentCatalog,
+} from '@/features/ai/server/componentRequirementsTool';
 
 const MALFORMED: ComponentCatalog = {
     frontends: {
@@ -79,5 +82,20 @@ describe('get_component_requirements — a malformed catalog', () => {
 
         expect(out.error).toBe('No component "no-such-component".');
         expect(out.known).toStrictEqual(['bad-lists', 'lonely-addon']);
+    });
+});
+
+describe('declaredEnvVarKeys — a malformed catalog', () => {
+    it('answers no keys at all for an id the catalog does not have', () => {
+        // The caller filters this list for secrets to ask the user for. Anything
+        // but an empty list here is a secret prompt for a component nobody chose.
+        expect(declaredEnvVarKeys('no-such-component', MALFORMED)).toStrictEqual([]);
+    });
+
+    it('lists the string keys, required then optional, past the broken sections', () => {
+        expect(declaredEnvVarKeys('bad-lists', MALFORMED)).toStrictEqual([
+            'GOOD_KEY',
+            'UNREGISTERED_KEY',
+        ]);
     });
 });
