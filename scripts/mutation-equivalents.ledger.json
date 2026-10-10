@@ -16122,6 +16122,90 @@
             "decision": "none \u2014 an explicit return beats an implicit one, and the two agree",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-08"
+        },
+        {
+            "module": "src/features/dashboard/ui/components/integrations/IntegrationsGrid.tsx",
+            "anchors": [
+                "const operationId = card?.isMesh ? card.id : (card?.componentId ?? id);"
+            ],
+            "mutants": 2,
+            "category": "equivalent",
+            "reason": "Dropping either '?.' throws only when no card has the pressed id. openCard is handed to the card and row items alone, and each calls it with the id of the model it was rendered from, so the lookup one line above always finds a card. Verified by planting it (all 123 grid tests green) against a control on the same file (closeResetDialog emptied: suite red).",
+            "decision": "Recorded, not killed: the optional chains are what the find() return type requires; a press on a card that is not rendered cannot happen.",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-01"
+        },
+        {
+            "module": "src/features/dashboard/ui/components/integrations/IntegrationsGrid.tsx",
+            "anchors": [
+                "if (card?.status === 'deploying' && operations.reopen(operationId)) return;"
+            ],
+            "mutants": 1,
+            "category": "equivalent",
+            "reason": "Dropping the '?.' throws only when no card has the pressed id, which cannot happen: openCard is only ever called by a rendered item with its own model's id. The condition itself is killed by the two tile-press tests. Verified by planting it (all 123 grid tests green) against a control on the same file (closeResetDialog emptied: suite red).",
+            "decision": "Recorded, not killed: same unreachable undefined as the line above it.",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-01"
+        },
+        {
+            "module": "src/features/dashboard/ui/components/integrations/IntegrationsGrid.tsx",
+            "anchors": [
+                "const closeResetDialog = useCallback((): void => setPendingReset(null), []);"
+            ],
+            "mutants": 1,
+            "category": "equivalent",
+            "reason": "Replacing the empty dependency list with a non-empty constant one changes nothing: the callback closes over a state setter only. The emptied body IS killed (the reset confirm closes on Close). Verified by planting it (all 123 grid tests green) against a control on the same file (closeResetDialog emptied: suite red).",
+            "decision": "Recorded, not killed: a dependency list holding a constant memoises exactly as an empty one does.",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-01"
+        },
+        {
+            "module": "src/features/dashboard/ui/components/integrations/IntegrationsGrid.tsx",
+            "anchors": [
+                "const closeAddErp = useCallback((): void => setAddingErpTo(null), []);"
+            ],
+            "mutants": 1,
+            "category": "equivalent",
+            "reason": "Replacing the empty dependency list with a non-empty constant one changes nothing: the callback closes over a state setter only. The emptied body IS killed (the Add another ERP prompt closes on Close). Verified by planting it (all 123 grid tests green) against a control on the same file (closeResetDialog emptied: suite red).",
+            "decision": "Recorded, not killed: a dependency list holding a constant memoises exactly as an empty one does.",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-01"
+        },
+        {
+            "module": "src/features/dashboard/ui/components/integrations/IntegrationsGrid.tsx",
+            "anchors": [
+                "erpNames={pendingReset?.erpNames ?? []}"
+            ],
+            "mutants": 1,
+            "category": "equivalent",
+            "reason": "The fallback list is used only while pendingReset is null, and then isOpen on the line above is false, so the dialog renders nothing and never reads the names. Verified by planting it (all 123 grid tests green) against a control on the same file (closeResetDialog emptied: suite red).",
+            "decision": "Recorded, not killed: the fallback exists for the prop's type; no surface shows it.",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-01"
+        },
+        {
+            "module": "src/features/dashboard/ui/components/integrations/IntegrationsGrid.tsx",
+            "anchors": [
+                "if (pendingReset) {"
+            ],
+            "mutants": 1,
+            "category": "equivalent",
+            "reason": "confirmReset runs only from the reset dialog's Reset button, and the dialog renders solely while isOpen={pendingReset !== null}. The guard cannot be reached with null, so forcing it true changes nothing. Verified by planting it (all 123 grid tests green) against a control on the same file (closeResetDialog emptied: suite red).",
+            "decision": "Recorded, not killed: reaching it would mean confirming a dialog that is not open. Same shape as the pendingRemoveId row.",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-01"
+        },
+        {
+            "module": "src/features/dashboard/ui/components/integrations/IntegrationsGrid.tsx",
+            "anchors": [
+                "if (addingErpTo) operations.addErp(addingErpTo.id, name, owns);"
+            ],
+            "mutants": 1,
+            "category": "equivalent",
+            "reason": "addErp runs only from the Add another ERP prompt's Add button, and the prompt's form mounts solely while target (addingErpTo) is set. The guard cannot be reached with null, so forcing it true changes nothing. Verified by planting it (all 123 grid tests green) against a control on the same file (closeResetDialog emptied: suite red).",
+            "decision": "Recorded, not killed: reaching it would mean pressing Add on a prompt that is not open.",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-01"
         }
     ]
 }
