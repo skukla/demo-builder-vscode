@@ -185,6 +185,25 @@ describe('Project Creation - Create Handler - Decisions', () => {
             );
         });
 
+        it('reports a rejection with no value at all as a failure, rather than throwing', async () => {
+            // `Promise.reject()` carries undefined. Reading `.code` off it without
+            // the optional chain throws inside the catch, and the handler rejects
+            // instead of telling the wizard anything.
+            (executor.executeProjectCreation as jest.Mock).mockRejectedValue(undefined);
+
+            const result = await handleCreateProject(mockContext, mockConfig);
+
+            expect(result).toStrictEqual({ success: true });
+            expect(mockContext.sendMessage).toHaveBeenCalledWith(
+                'creationProgress',
+                expect.objectContaining({ currentOperation: 'Failed' })
+            );
+            expect(mockContext.sendMessage).toHaveBeenCalledWith(
+                'creationFailed',
+                expect.objectContaining({ isTimeout: false })
+            );
+        });
+
         it('reports the elapsed time in minutes and seconds', async () => {
             let call = 0;
             const now = jest.spyOn(Date, 'now').mockImplementation(() => {
