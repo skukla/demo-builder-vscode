@@ -1,11 +1,11 @@
 Work backlog item PL-70 — the mutation burn-down, batch MUT-02. Bring each
 of these modules to ZERO open gaps, in this order:
 
-  - src/core/utils/githubUrlParser.ts  (15 open gaps, 90 mutants)
-  - src/features/eds/services/patches/patchReportHelper.ts  (15 open gaps, 135 mutants)
-  - src/features/ai/server/deleteProjectTool.ts  (12 open gaps, 77 mutants)
-  - src/features/sidebar/providers/sidebarProvider.ts  (11 open gaps, 225 mutants)
-  - src/features/app-builder/services/appBuilderDeployOutcome.ts  (10 open gaps, 78 mutants)
+  - src/features/ai/server/contentAuthoringTools.ts  (2 open gaps, 472 mutants)
+  - src/features/app-builder/services/apiSubscriberClientAdapter.ts  (2 open gaps, 17 mutants)
+  - src/features/app-builder/services/appManagementClient.ts  (2 open gaps, 119 mutants)
+  - src/features/dashboard/commands/showDashboard.ts  (2 open gaps, 163 mutants)
+  - src/features/dashboard/ui/components/ManageApisModal.tsx  (2 open gaps, 124 mutants)
 
 READ scripts/overnight/BURNDOWN.md FIRST. It carries the evidence for every rule below —
 what each has cost when skipped, and the traps that have burned real time. Read it once;

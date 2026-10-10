@@ -1,11 +1,13 @@
 Work backlog item PL-70 — the mutation burn-down, batch MUT-04. Bring each
 of these modules to ZERO open gaps, in this order:
 
-  - src/features/app-builder/services/ensureMeshApiSubscribed.ts  (7 open gaps, 50 mutants)
-  - src/features/eds/handlers/storefrontSetup/storefrontSetupHandlers.ts  (7 open gaps, 227 mutants)
-  - src/features/eds/services/daLive/daLiveBlockLibraryOperations.ts  (7 open gaps, 103 mutants)
-  - src/features/eds/ui/hooks/useStorefrontSetup.ts  (7 open gaps, 89 mutants)
-  - src/features/ai/server/siteTools.ts  (6 open gaps, 319 mutants)
+  - src/commands/commandManager.ts  (1 open gaps, 276 mutants)
+  - src/core/shell/environmentSetup.ts  (1 open gaps, 95 mutants)
+  - src/core/shell/rateLimiter.ts  (1 open gaps, 39 mutants)
+  - src/core/validation/normalizers.ts  (1 open gaps, 95 mutants)
+  - src/core/ui/components/selection/SelectionStepContent.tsx  (1 open gaps, 59 mutants)
+  - src/features/ai/server/applyUpdatesTool.ts  (1 open gaps, 65 mutants)
+  - src/features/ai/server/authTools.ts  (1 open gaps, 129 mutants)
 
 READ scripts/overnight/BURNDOWN.md FIRST. It carries the evidence for every rule below —
 what each has cost when skipped, and the traps that have burned real time. Read it once;

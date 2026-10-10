@@ -1,12 +1,11 @@
 Work backlog item PL-70 — the mutation burn-down, batch MUT-05. Bring each
 of these modules to ZERO open gaps, in this order:
 
-  - src/features/ai/server/readDescriptors.ts  (6 open gaps, 436 mutants)
-  - src/features/dashboard/handlers/dashboardHandlers.ts  (6 open gaps, 69 mutants)
-  - src/core/shell/ensureNodeVersion.ts  (5 open gaps, 72 mutants)
-  - src/core/vscode/progressRegister.ts  (5 open gaps, 43 mutants)
-  - src/features/ai/server/cloudResourceTools.ts  (5 open gaps, 298 mutants)
-  - src/features/app-builder/services/appBuilderComponentMigration.ts  (5 open gaps, 129 mutants)
+  - src/features/ai/server/commerceQueryTool.ts  (1 open gaps, 140 mutants)
+  - src/features/ai/server/inExtensionMcpServer.ts  (1 open gaps, 213 mutants)
+  - src/features/dashboard/ui/aiSurface/components/PromptGrid.tsx  (1 open gaps, 46 mutants)
+  - src/features/dashboard/ui/components/DashboardTile.tsx  (1 open gaps, 17 mutants)
+  - src/features/dashboard/ui/components/integrations/IntegrationDetailPanel.tsx  (1 open gaps, 44 mutants)
 
 READ scripts/overnight/BURNDOWN.md FIRST. It carries the evidence for every rule below —
 what each has cost when skipped, and the traps that have burned real time. Read it once;
