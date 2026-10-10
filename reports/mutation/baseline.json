@@ -4455,20 +4455,19 @@
             "recorded": "2026-10-10T01:36:35.846Z"
         },
         "src/features/dashboard/ui/components/DashboardTile.tsx": {
-            "score": 88.24,
-            "killed": 15,
-            "survived": 2,
+            "score": 94.12,
+            "killed": 16,
+            "survived": 1,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 1,
                 "string": 1
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 1,
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 1,
-            "recorded": "2026-10-09T22:42:44.485Z"
+            "openGaps": 0,
+            "recorded": "2026-10-10T21:41:11.077Z"
         },
         "src/features/dashboard/ui/components/DataInstallerTile.tsx": {
             "score": 100,
