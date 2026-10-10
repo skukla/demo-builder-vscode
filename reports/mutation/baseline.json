@@ -3738,24 +3738,22 @@
             "recorded": "2026-10-10T01:31:37.447Z"
         },
         "src/features/components/services/commerceSecretMigration.ts": {
-            "score": 89.12,
-            "killed": 131,
+            "score": 91.84,
+            "killed": 135,
             "survived": 9,
-            "noCoverage": 7,
+            "noCoverage": 3,
             "timeout": 0,
             "survivorCategories": {
                 "string": 7,
                 "optionalChain": 2
             },
             "uncoveredCategories": {
-                "string": 3,
-                "block": 3,
-                "other": 1
+                "string": 3
             },
             "highValueSurvivors": 0,
             "equivalent": 2,
-            "openGaps": 4,
-            "recorded": "2026-10-10T00:48:47.206Z"
+            "openGaps": 0,
+            "recorded": "2026-10-10T19:44:28.918Z"
         },
         "src/features/components/services/commerceSecretSweep.ts": {
             "score": 96.43,
