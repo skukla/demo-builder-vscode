@@ -15,7 +15,7 @@
  * Strict TDD: written BEFORE the component exists.
  */
 
-import { screen, fireEvent } from '@testing-library/react';
+import { act, screen, fireEvent, within } from '@testing-library/react';
 
 import {
     ORG_APIS,
@@ -26,6 +26,9 @@ import {
     modal,
     renderModal,
 } from './ManageApisModal.testUtils';
+
+import { webviewClientHandlers } from '../../../../helpers/webviewClientMock';
+import type { OperationProgressPayload } from '@/types/webviewPayloads';
 
 type RequestImpl = (type: string, payload?: unknown) => Promise<unknown>;
 
@@ -236,6 +239,52 @@ describe('ManageApisModal', () => {
 
             const busy = screen.getByRole('button', { name: /applying/i });
             expect(busy).toHaveAttribute('aria-disabled', 'true');
+        });
+
+        it("shows the subscribe's own stage and step once it reports them, and a plain Applying before", async () => {
+            mockRequest((type) =>
+                type === 'listConsoleApis'
+                    ? Promise.resolve({ success: true, data: { apis: ORG_APIS } })
+                    : new Promise(() => {})
+            );
+            renderModal();
+            await flush();
+
+            fireEvent.click(checkboxFor('Firefly Services'));
+            fireEvent.click(applyButton());
+            await flush();
+
+            expect(within(screen.getByRole('status')).getByText('Applying')).toBeInTheDocument();
+
+            const progress: OperationProgressPayload = {
+                id: 'console-apis',
+                state: 'running',
+                stage: 'Reading workspace credentials',
+                step: 'Waiting on Adobe',
+            };
+            act(() => webviewClientHandlers.get('operationProgress')?.(progress));
+
+            const status = within(screen.getByRole('status'));
+            expect(status.getByText('Reading workspace credentials')).toBeInTheDocument();
+            expect(status.getByText('Waiting on Adobe')).toBeInTheDocument();
+            expect(status.queryByText('Applying')).not.toBeInTheDocument();
+        });
+
+        it('starts each apply as a NEW run: it never asks where an earlier run got to', async () => {
+            mockRequest((type) =>
+                type === 'listConsoleApis'
+                    ? Promise.resolve({ success: true, data: { apis: ORG_APIS } })
+                    : new Promise(() => {})
+            );
+            renderModal();
+            await flush();
+
+            fireEvent.click(checkboxFor('Firefly Services'));
+            fireEvent.click(applyButton());
+            await flush();
+
+            const asked = getClient().request.mock.calls.map(([type]: [string]) => type);
+            expect(asked).toStrictEqual(['listConsoleApis', 'setConsoleApis']);
         });
 
         it('closes the modal on success', async () => {

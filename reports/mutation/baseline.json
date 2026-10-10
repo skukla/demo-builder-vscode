@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "showDashboard: the demo card is matched by repository among several, and the Author Content URL is asserted end to end",
+    "_note": "ManageApisModal: the apply view shows the subscribe's stage and step, and an apply never asks for an earlier run's progress",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -4512,21 +4512,21 @@
             "recorded": "2026-10-10T20:18:09.426Z"
         },
         "src/features/dashboard/ui/components/ManageApisModal.tsx": {
-            "score": 87.1,
-            "killed": 108,
-            "survived": 16,
+            "score": 89.52,
+            "killed": 111,
+            "survived": 13,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "string": 4,
-                "branch": 6,
+                "string": 3,
+                "branch": 4,
                 "other": 6
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 6,
+            "highValueSurvivors": 4,
             "equivalent": 10,
-            "openGaps": 2,
-            "recorded": "2026-10-10T00:49:42.018Z"
+            "openGaps": 0,
+            "recorded": "2026-10-10T20:53:38.671Z"
         },
         "src/features/dashboard/ui/components/integrations/IntegrationDetailPanel.tsx": {
             "score": 93.18,
