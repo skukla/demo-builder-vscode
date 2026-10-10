@@ -114,17 +114,18 @@ function s2sCredentialOf(config: WorkspaceJson | undefined): WorkspaceS2SCredent
     const credential = config?.project?.workspace?.details?.credentials?.find(
         (c) => c.integration_type === 'oauth_server_to_server',
     )?.oauth_server_to_server;
-    const clientId = credential?.client_id;
-    const clientSecret = credential?.client_secrets?.[0];
     const orgId = config?.project?.org?.ims_org_id;
+    if (!credential) return undefined;
+    const clientId = credential.client_id;
+    const clientSecret = credential.client_secrets?.[0];
     if (!clientId || !clientSecret || !orgId) return undefined;
     return {
         clientId,
         clientSecret,
         orgId,
-        scopes: credential?.scopes ?? [],
-        ...(credential?.technical_account_id ? { technicalAccountId: credential.technical_account_id } : {}),
-        ...(credential?.technical_account_email ? { technicalAccountEmail: credential.technical_account_email } : {}),
+        scopes: credential.scopes ?? [],
+        ...(credential.technical_account_id ? { technicalAccountId: credential.technical_account_id } : {}),
+        ...(credential.technical_account_email ? { technicalAccountEmail: credential.technical_account_email } : {}),
     };
 }
 
@@ -341,7 +342,7 @@ export function extractAioErrorDetail(stderr: string | undefined): string {
     return kept.join(' ');
 }
 
-/** Spinner frames and progress glyphs oclif redraws; noise in a log. */
+/** Spinner frames and progress glyphs oclif redraws, and blank lines; noise in a log. */
 const SPINNER_LINE = /^[\s\-\\|/⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏✔✖ℹ⚠]*$/;
 /** A long token-shaped run: masked, since CLI output can echo keys. */
 const TOKEN_LIKE = /[A-Za-z0-9_-]{40,}/g;
@@ -365,7 +366,7 @@ export function aioOutputTail(stdout: string | undefined, stderr: string | undef
         .replace(ANSI, '')
         .split(/\r?\n|\r/)
         .map((line) => line.trimEnd())
-        .filter((line) => line.trim() && !SPINNER_LINE.test(line))
+        .filter((line) => !SPINNER_LINE.test(line))
         .filter((line, index, all) => line !== all[index - 1])
         .map((line) => line.replace(TOKEN_LIKE, '<masked>'));
     return lines.slice(-maxLines).join('\n');

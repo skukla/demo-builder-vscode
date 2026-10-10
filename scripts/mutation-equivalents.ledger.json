@@ -16096,6 +16096,19 @@
             "decision": "none \u2014 the compiler needs the narrowing because Map.get is typed to allow a miss",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-07"
+        },
+        {
+            "module": "src/features/app-builder/services/runtimeCredentials.ts",
+            "anchors": [
+                ".filter((line, index, all) => line !== all[index - 1])"
+            ],
+            "line": 370,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Comparing each line with the NEXT one (index + 1) instead of the previous one collapses a run of identical lines just the same: one copy of each run survives, the last instead of the first, and the copies are equal strings, so the joined output is identical for every input. Planted the mutation and ran runtimeCredentials.test.ts: 60 tests green, including the repeated '- Deploying...' case.",
+            "decision": "none \u2014 which copy of a repeated line is kept cannot be observed in the output",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-08"
         }
     ]
 }

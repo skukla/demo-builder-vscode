@@ -9,6 +9,8 @@
  */
 
 import * as fsPromises from 'fs/promises';
+import * as os from 'os';
+import * as path from 'path';
 import {
     ensureWorkspaceRuntime,
     aioOutputTail,
@@ -103,6 +105,18 @@ describe('readRuntimeCredentials', () => {
 
         await expect(readRuntimeCredentials('/tmp/x.json', logger)).rejects.toThrow(/no Adobe I\/O Runtime namespace/);
     });
+
+    it('says where to enable Runtime, not only that it is missing', async () => {
+        // The second half is the part the SC can act on.
+        (fsPromises.readFile as jest.Mock).mockResolvedValue('{}');
+
+        await expect(readRuntimeCredentials('/tmp/x.json', logger)).rejects.toThrow(
+            new Error(
+                'The targeted workspace has no Adobe I/O Runtime namespace. Enable Runtime ' +
+                    'for the workspace in the Adobe Developer Console, then retry the deploy.'
+            )
+        );
+    });
 });
 
 describe('fetchRuntimeCredentials', () => {
@@ -127,6 +141,20 @@ describe('fetchRuntimeCredentials', () => {
             namespace: '12345-myproject-stage',
             auth: 'fake-test-pw-not-a-secret',
         });
+    });
+
+    it('downloads to a random file in a private temp dir and reads that same file back', async () => {
+        executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
+        (fsPromises.readFile as jest.Mock).mockResolvedValue(WORKSPACE_JSON);
+
+        await fetchRuntimeCredentials(commandManager, logger, demoBuilderNode());
+
+        expect(fsPromises.mkdtemp).toHaveBeenCalledWith(path.join(os.tmpdir(), 'db-ws-'));
+        const command = executeMock.mock.calls[0][0] as string;
+        const downloaded = /^aio console workspace download "(.+)"$/.exec(command)?.[1];
+        // Inside the dir mkdtemp made, so the one `rm` of that dir takes the key with it.
+        expect(downloaded).toMatch(new RegExp(`^${path.join('/tmp/db-ws-abc', 'ws-')}[0-9a-f]{12}\\.json$`));
+        expect(fsPromises.readFile).toHaveBeenCalledWith(downloaded, 'utf-8');
     });
 
     it("carries the workspace S2S credential as the four IMS_OAUTH_S2S values aio app use writes", async () => {
@@ -269,6 +297,59 @@ describe('fetchWorkspaceS2SCredential', () => {
 
         await expect(fetchWorkspaceS2SCredential(commandManager, demoBuilderNode())).rejects.toThrow(/404 - Not Found/);
     });
+
+    const S2S = { client_id: 's2s-client', client_secrets: ['fake-test-pw-not-a-secret-1'], scopes: ['AdobeID'] };
+    const ORG = { ims_org_id: 'ABC123@AdobeOrg' };
+    /** `org` is spread, so `{}` is a project with no org block at all. */
+    const withCredentials = (credentials: unknown[], org: Record<string, unknown> = { org: ORG }): string =>
+        JSON.stringify({ project: { ...org, workspace: { details: { credentials } } } });
+    const s2sEntry = (fields: Record<string, unknown>): Record<string, unknown> => ({
+        integration_type: 'oauth_server_to_server',
+        oauth_server_to_server: fields,
+    });
+
+    // Every level of the download is optional in practice: a workspace nobody has added
+    // a credential to stops at `details`, and one with only an API key has a list with
+    // no S2S entry. Each must answer "no credential", never a crash in the caller.
+    it.each([
+        ['unparseable output', 'not json at all {'],
+        ['no project', '{}'],
+        ['no details', JSON.stringify({ project: { workspace: {} } })],
+        ['no credentials list', JSON.stringify({ project: { workspace: { details: {} } } })],
+        ['no S2S entry among the credentials', withCredentials([{ integration_type: 'apikey' }])],
+        ['an S2S entry with no credential block', withCredentials([{ integration_type: 'oauth_server_to_server' }])],
+    ])('answers undefined, not a crash, when the download has %s', async (_label, raw) => {
+        (fsPromises.readFile as jest.Mock).mockResolvedValue(raw);
+
+        await expect(fetchWorkspaceS2SCredential(commandManager, demoBuilderNode())).resolves.toBeUndefined();
+    });
+
+    // A credential missing ONE of the three is as unusable as none: the token request
+    // fails later with a message that names neither the workspace nor the missing part.
+    it.each([
+        ['no client id', withCredentials([s2sEntry({ ...S2S, client_id: undefined })])],
+        ['no secrets list', withCredentials([s2sEntry({ ...S2S, client_secrets: undefined })])],
+        ['an empty secrets list', withCredentials([s2sEntry({ ...S2S, client_secrets: [] })])],
+        ['no org block', withCredentials([s2sEntry(S2S)], {})],
+        ['an org with no id', withCredentials([s2sEntry(S2S)], { org: {} })],
+    ])('answers undefined for a credential with %s', async (_label, raw) => {
+        (fsPromises.readFile as jest.Mock).mockResolvedValue(raw);
+
+        await expect(fetchWorkspaceS2SCredential(commandManager, demoBuilderNode())).resolves.toBeUndefined();
+    });
+
+    it('answers no scopes and no technical account when the download carries neither', async () => {
+        (fsPromises.readFile as jest.Mock).mockResolvedValue(
+            withCredentials([s2sEntry({ ...S2S, scopes: undefined })])
+        );
+
+        await expect(fetchWorkspaceS2SCredential(commandManager, demoBuilderNode())).resolves.toStrictEqual({
+            clientId: 's2s-client',
+            clientSecret: 'fake-test-pw-not-a-secret-1',
+            orgId: 'ABC123@AdobeOrg',
+            scopes: [],
+        });
+    });
 });
 
 const NO_NS_JSON = JSON.stringify({
@@ -346,7 +427,13 @@ describe('ensureWorkspaceRuntime (provision-if-missing)', () => {
 
         await expect(
             ensureWorkspaceRuntime(commandManager, logger, demoBuilderNode(), provision, 0)
-        ).rejects.toThrow(/Could not provision an Adobe I\/O Runtime namespace/);
+        ).rejects.toThrow(
+            new Error(
+                'Could not provision an Adobe I/O Runtime namespace for the workspace. Confirm your ' +
+                    'account has the Developer role, or enable Runtime for the workspace in the Adobe ' +
+                    'Developer Console, then retry.'
+            )
+        );
         expect(provision).toHaveBeenCalledTimes(1);
     });
 
@@ -442,6 +529,32 @@ describe('extractAioErrorDetail — a wrapped error keeps its continuation', () 
 
         expect(extractAioErrorDetail(stderr)).toBe('Error: first thing');
     });
+
+    it('keeps no › line that comes before any error', () => {
+        // oclif marks warnings and notices the same way; without an error line above
+        // them they are not part of one.
+        expect(extractAioErrorDetail(' ›   a notice about something\nplain output')).toBe('');
+    });
+
+    it('ends the block at the first unmarked line — a later › line is not the same error', () => {
+        const stderr = ' ›   Error: first thing\nsome unrelated output\n ›   a notice about something';
+
+        expect(extractAioErrorDetail(stderr)).toBe('Error: first thing');
+    });
+
+    it('keeps the continuation when the marker starts the line with no space before it', () => {
+        expect(extractAioErrorDetail('›   Error: Request x to\n›   v1/db failed with code 504')).toBe(
+            'Error: Request x to v1/db failed with code 504'
+        );
+    });
+
+    it('does not treat a › inside an unmarked error as the start of a block', () => {
+        // Only a LEADING › is oclif's marker. This error line is plain output that
+        // happens to contain one, so the marked line after it belongs to something else.
+        const stderr = 'Error: open Console › Runtime to enable it\n ›   a notice about something';
+
+        expect(extractAioErrorDetail(stderr)).toBe('Error: open Console › Runtime to enable it');
+    });
 });
 
 describe('aioOutputTail', () => {
@@ -469,5 +582,13 @@ describe('aioOutputTail', () => {
 
     it('answers empty for no output', () => {
         expect(aioOutputTail(undefined, undefined)).toBe('');
+    });
+
+    it('drops a line of several spinner glyphs, spaced or not, and blank lines', () => {
+        expect(aioOutputTail('-\\|/\n⠋ ⠙ ⠹\n   \n\n✔ ✔', 'kept')).toBe('kept');
+    });
+
+    it('keeps a one-word line — only glyphs and spaces are spinner noise', () => {
+        expect(aioOutputTail('Deployed\n-', '')).toBe('Deployed');
     });
 });
