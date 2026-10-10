@@ -21,6 +21,7 @@ import type { Project } from '@/types/base';
 import type { CustomBlockLibrary, InstalledBlockLibrary } from '@/types/blockLibraries';
 import type { CommerceStoreStructure } from '@/types/commerceStore';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
+import { makeAddedDemo } from '../../../helpers/demoPackageFixtures';
 import { createMockProject, edsStorefrontInstance } from '../../../helpers/projectFake';
 
 const PROJECT_PATH = '/home/user/.demo-builder/projects/demo';
@@ -261,6 +262,25 @@ describe('buildInitialProject — the fields the wire config decides', () => {
         const project = buildInitialProject(config(), PROJECT_PATH, existing);
 
         expect(project.datapack).toEqual(kept);
+    });
+
+    it('takes the added demo from the config on a project that has none', () => {
+        // A new project built on an added demo has no existing row to fall back to;
+        // the row the config carries is the only one there is.
+        const demo = makeAddedDemo();
+
+        const project = buildInitialProject(config({ demo }), PROJECT_PATH);
+
+        expect(project.demo).toEqual(demo);
+    });
+
+    it('falls back to the existing project’s added demo when the config names none', () => {
+        const kept = makeAddedDemo({ name: 'Kept demo' });
+        const existing = createMockProject({ demo: kept });
+
+        const project = buildInitialProject(config(), PROJECT_PATH, existing);
+
+        expect(project.demo).toEqual(kept);
     });
 });
 

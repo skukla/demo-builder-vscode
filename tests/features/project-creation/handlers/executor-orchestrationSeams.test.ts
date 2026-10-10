@@ -71,6 +71,20 @@ jest.mock('@/features/components/services/commerceSecretMigration', () => ({
         .mockResolvedValue({ sanitizedConfigs: {}, retained: [] }),
 }));
 
+jest.mock('@/features/project-creation/services/catalogMenuPhase', () => ({
+    executeCatalogMenuPhase: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('@/core/utils/agentPhaseChannel', () => ({
+    reportPhase: jest.fn(),
+}));
+
+// The real phase, wrapped so the path it is handed can be read.
+jest.mock('@/features/project-creation/handlers/executorEdsPhase', () => {
+    const actual = jest.requireActual('@/features/project-creation/handlers/executorEdsPhase');
+    return { ...actual, syncEdsConfigToRemote: jest.fn(actual.syncEdsConfigToRemote) };
+});
+
 jest.mock('@/features/project-creation/services/aiBundle/aiBundleService', () => ({
     generateAIContextFiles: jest.fn().mockResolvedValue(undefined),
 }));
@@ -96,6 +110,12 @@ jest.mock('@/features/project-creation/services/projectFinalizationService', () 
 }));
 
 import * as fsPromises from 'fs/promises';
+import * as os from 'os';
+import * as path from 'path';
+import { reportPhase } from '@/core/utils/agentPhaseChannel';
+import { migrateDeclaredSecrets } from '@/features/components/services/commerceSecretMigration';
+import { syncEdsConfigToRemote } from '@/features/project-creation/handlers/executorEdsPhase';
+import { executeCatalogMenuPhase } from '@/features/project-creation/services/catalogMenuPhase';
 import { generateAIContextFiles } from '@/features/project-creation/services/aiBundle/aiBundleService';
 import { executeProjectCreation } from '@/features/project-creation/handlers/executor';
 import {
@@ -296,5 +316,122 @@ describe('executeProjectCreation — the AI bundle step', () => {
         expect(saveProjectConfigOnly).toHaveBeenCalledWith(
             expect.objectContaining({ name: 'seam-demo' })
         );
+    });
+});
+
+describe('executeProjectCreation — where a new project lives', () => {
+    it('puts a NEW project under ~/.demo-builder/projects/<name>', async () => {
+        const { context } = makeContext();
+        const home = path.join(os.homedir(), '.demo-builder', 'projects', 'seam-demo');
+
+        await executeProjectCreation(context, config());
+
+        expect(madeDirectories().map(([p]) => p)).toEqual([
+            path.join(home, 'components'),
+            path.join(home, 'logs'),
+        ]);
+    });
+
+    it('hands the config sync the storefront’s own folder under components/', async () => {
+        const { context } = makeContext();
+        const home = path.join(os.homedir(), '.demo-builder', 'projects', 'seam-demo');
+
+        await executeProjectCreation(context, config());
+
+        const [, , , isEdsStack, edsComponentPath] = (syncEdsConfigToRemote as jest.Mock).mock
+            .calls[0];
+        expect(isEdsStack).toBe(true);
+        expect(edsComponentPath).toBe(path.join(home, 'components', 'eds-storefront'));
+    });
+});
+
+describe('executeProjectCreation — what an agent and the wizard are told', () => {
+    it('names each early step to both, the agent hearing "<stage> — <step>"', async () => {
+        const { context, sendMessage } = makeContext();
+
+        await executeProjectCreation(context, config());
+
+        const setUp = OPERATION_STAGES.settingUpProject.label;
+        const loading = OPERATION_STAGES.loadingComponents.label;
+        expect(sendMessage).toHaveBeenCalledWith(
+            'creationProgress',
+            expect.objectContaining({ progress: 15, message: 'Initializing project configuration' })
+        );
+        expect(sendMessage).toHaveBeenCalledWith(
+            'creationProgress',
+            expect.objectContaining({ progress: 20, message: 'Preparing component definitions' })
+        );
+        expect(reportPhase).toHaveBeenCalledWith(`${setUp} — Creating project directory structure`);
+        expect(reportPhase).toHaveBeenCalledWith(`${loading} — Preparing component definitions`);
+    });
+
+    it('sends an empty message, and the bare stage to the agent, when a step names none', async () => {
+        const { context, sendMessage } = makeContext();
+        (cloneAllComponents as jest.Mock).mockImplementation(
+            async (ctx: { progressTracker: (operation: string, progress: number) => void }) => {
+                ctx.progressTracker('Cloning', 30);
+            }
+        );
+
+        await executeProjectCreation(context, config());
+
+        expect(sendMessage).toHaveBeenCalledWith('creationProgress', {
+            currentOperation: 'Cloning',
+            progress: 30,
+            message: '',
+            logs: [],
+            meshPhase: undefined,
+        });
+        expect(reportPhase).toHaveBeenCalledWith('Cloning');
+    });
+});
+
+describe('executeProjectCreation — the settings the defaults are filled into', () => {
+    it('fills defaults into the settings the secret step returned, keeping every value', async () => {
+        const { context } = makeContext();
+        (migrateDeclaredSecrets as jest.Mock).mockResolvedValueOnce({
+            sanitizedConfigs: { 'adobe-commerce-paas': { ADOBE_COMMERCE_URL: 'https://shop.test' } },
+            retained: [],
+        });
+
+        await executeProjectCreation(context, config());
+
+        const [{ project }] = (cloneAllComponents as jest.Mock).mock.calls[0];
+        expect(project.componentConfigs).toMatchObject({
+            'adobe-commerce-paas': { ADOBE_COMMERCE_URL: 'https://shop.test' },
+        });
+    });
+});
+
+describe('executeProjectCreation — category pages and the catalog menu', () => {
+    it('runs the step for an EDS storefront, handing it the project being edited', async () => {
+        const { context } = makeContext();
+        const existing = { name: 'seam-demo', created: new Date('2026-01-01') };
+        (loadExistingProjectForEdit as jest.Mock).mockResolvedValueOnce(existing);
+
+        await executeProjectCreation(context, config({ editProjectPath: EDIT_PATH }));
+
+        expect(executeCatalogMenuPhase).toHaveBeenCalledTimes(1);
+        expect(executeCatalogMenuPhase).toHaveBeenCalledWith(
+            context,
+            expect.objectContaining({ name: 'seam-demo', path: EDIT_PATH }),
+            expect.any(Function),
+            existing
+        );
+    });
+
+    it('skips the step for a headless storefront, which has no catalog menu', async () => {
+        const { context } = makeContext();
+
+        await executeProjectCreation(
+            context,
+            config({
+                selectedStack: 'headless-paas',
+                components: { frontend: 'headless', dependencies: [] },
+            })
+        );
+
+        expect(sendCompletionAndCleanup).toHaveBeenCalled();
+        expect(executeCatalogMenuPhase).not.toHaveBeenCalled();
     });
 });
