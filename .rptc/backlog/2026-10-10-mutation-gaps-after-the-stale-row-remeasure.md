@@ -39,3 +39,7 @@ A module is done when no decision is unpinned, not when its score is high.
 - `fieldValidation.ts`: the run was interrupted.
 
 ## Shipped so far
+- 2026-10-10  chore(mutation): a measurement has a size limit and a time limit, and a run can be asked how far along it is (`2fa316cdd`)
+- 2026-10-10  chore(mutation): restart each Stryker test runner after 50 mutant runs (`e9f7a81e8`)
+- 2026-10-10  test(eds): the phase 1 App gate suite stops sleeping, so the module can be measured (`5f3229834`)
+- 2026-10-10  chore(mutation): the focus tool adds the importing suites where a run left mutants uncovered (`fa2ea4869`)
