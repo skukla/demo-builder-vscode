@@ -30,30 +30,18 @@ import type { DeployMeshWithFeedbackDeps } from '@/features/mesh/services/deploy
 import { meshDeployLock } from '@/features/mesh/services/meshDeployLock';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { ErrorCode } from '@/types/errorCodes';
-import type { Project } from '@/types/base';
-import type { HandlerContext } from '@/types/handlers';
-import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
-import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
-import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
-import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
-import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
-import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { ctx as contextFor, seedRegistry } from './deployHandler.testUtils';
 
-const PROJECT = { name: 'p', path: '/p' } as Project;
+const PROJECT = createMockProject({ name: 'p', path: '/p' });
 const DEPLOYED = { success: true, meshId: 'm1', endpoint: 'https://mesh/graphql' };
 const ACTION_TAKEN = 'demoBuilder._internal.meshActionTaken';
 
-const authManager = createMockAuthenticationService();
-const commandManager = createMockCommandExecutor();
+let registered: ReturnType<typeof seedRegistry>;
 
-function ctx(project: Project | null = PROJECT): HandlerContext {
-    return createMockHandlerContext({
-        stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(project) }),
-        logger: createMockLogger(),
-        context: createMockExtensionContext({ extensionPath: '/ext' }),
-    });
-}
+/** A context with PROJECT open; pass null for no project. */
+const ctx = (project: unknown = PROJECT): ReturnType<typeof contextFor> => contextFor(project);
 
 /** The deps the deploy was handed on its only call. */
 function handedDeps(): DeployMeshWithFeedbackDeps {
@@ -63,9 +51,7 @@ function handedDeps(): DeployMeshWithFeedbackDeps {
 
 beforeEach(() => {
     jest.clearAllMocks();
-    // The shared node setup empties the registry after every test (ADR-015).
-    ServiceLocator.setAuthenticationService(authManager);
-    ServiceLocator.setCommandExecutor(commandManager);
+    registered = seedRegistry();
     mockDeployMeshWithFeedback.mockResolvedValue(DEPLOYED);
 });
 
@@ -162,8 +148,8 @@ describe("the deploy's inputs, from either door", () => {
         await handleDeployApiMesh(context);
 
         const deps = handedDeps();
-        expect(deps.authManager).toBe(authManager);
-        expect(deps.commandManager).toBe(commandManager);
+        expect(deps.authManager).toBe(registered.authManager);
+        expect(deps.commandManager).toBe(registered.commandManager);
         expect(deps.secrets).toBe(secrets);
         expect(deps.project).toBe(PROJECT);
         expect(deps.stateManager).toBe(context.stateManager);
@@ -179,7 +165,7 @@ describe("the deploy's inputs, from either door", () => {
 
     it('republishes the DEPLOYED project, saving through the state manager', async () => {
         const context = ctx();
-        const deployed = { name: 'p', path: '/p', status: 'ready' } as Project;
+        const deployed = createMockProject({ name: 'p', path: '/p' });
         const outcome = { success: true, cdnPublished: true };
         mockRepublishStorefrontConfig.mockResolvedValue(outcome);
         await deployMeshFromScreen(context, 'op-42');
@@ -194,7 +180,7 @@ describe("the deploy's inputs, from either door", () => {
         expect(params.secrets).toBe(context.context.secrets);
         expect(params.logger).toBe(context.logger);
 
-        const saved = { name: 'p', path: '/p', status: 'ready' } as Project;
+        const saved = createMockProject({ name: 'p', path: '/p' });
         await params.persist(saved);
         expect(context.stateManager.saveProject).toHaveBeenCalledWith(saved);
     });
