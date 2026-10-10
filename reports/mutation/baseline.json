@@ -8953,22 +8953,21 @@
             "recorded": "2026-10-10T12:08:26.551Z"
         },
         "src/features/project-creation/ui/steps/areaSubSteps.ts": {
-            "score": 91.21,
+            "score": 93.26,
             "killed": 83,
-            "survived": 8,
+            "survived": 6,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 3,
                 "other": 1,
-                "string": 2,
-                "optionalChain": 2
+                "branch": 3,
+                "string": 2
             },
             "uncoveredCategories": {},
             "highValueSurvivors": 3,
-            "equivalent": 5,
-            "openGaps": 1,
-            "recorded": "2026-10-09T23:20:35.955Z"
+            "equivalent": 4,
+            "openGaps": 0,
+            "recorded": "2026-10-10T15:08:47.299Z"
         },
         "src/features/project-creation/ui/steps/buildSummary.ts": {
             "score": 95.71,
