@@ -15983,6 +15983,32 @@
             "decision": "none \u2014 the empty fallback is the correct shape guard for a user-authored file",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-04"
+        },
+        {
+            "module": "src/features/project-creation/ui/hooks/useProjectCreationPhases.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 175,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces newToken's empty dependency list with a one-element list holding a constant string. React compares dependencies element by element with Object.is, and the same string literal is equal on every render, so useCallback returns the same memoised function either way. newToken reads only the activeToken ref, so there is no stale value a changed list could expose. Identity, call count and the token handed back are identical; the widened run (consumer suites included) also left it surviving.",
+            "decision": "none \u2014 the callback must stay memoised because start, retry and reset list it as a dependency",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-05, 2026-10-10"
+        },
+        {
+            "module": "src/features/project-creation/ui/hooks/useProjectCreationPhases.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 181,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Same replacement on fail's dependency list: an empty list becomes a list of one constant string, which Object.is finds equal on every render, so the memoised function never changes. fail calls only three state setters, which React guarantees are stable, so it closes over nothing that could go stale. No test can observe a difference in identity or behaviour; the widened run left it surviving.",
+            "decision": "none \u2014 the callback must stay memoised because runEnable, runWorkspace and runCreate list it as a dependency",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-05, 2026-10-10"
         }
     ]
 }

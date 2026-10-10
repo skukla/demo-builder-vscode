@@ -320,6 +320,20 @@ describe('useProjectCreationPhases', () => {
             expect(hook.result.current.enableResult).toEqual(failedResult);
         });
 
+        it('an enable failure that carries no reason still tells the SC what could not be done', async () => {
+            const route = routeDeferred();
+            const hook = renderPhases();
+
+            await startThroughWorkspace(route, hook);
+            await act(async () => {
+                route.latest('ensure-mesh-api-subscribed').resolve({ success: false });
+            });
+
+            expect(hook.result.current.phase).toBe('failed');
+            expect(hook.result.current.failedPhase).toBe('enabling');
+            expect(hook.result.current.error).toBe('Could not enable API access.');
+        });
+
         it('an enable rejection fails at "enabling" with the thrown message', async () => {
             const route = routeDeferred();
             const hook = renderPhases();
