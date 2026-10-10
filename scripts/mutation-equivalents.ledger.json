@@ -16556,6 +16556,19 @@
             "decision": "none \u2014 false is the honest starting value; the first org-context outcome overwrites it before anything reads it",
             "recorded": "2026-10-10",
             "source": "PL-70 MUT-06"
+        },
+        {
+            "module": "src/features/dashboard/ui/hooks/useRowStatusOverrides.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 66,
+            "mutants": 1,
+            "category": "other",
+            "reason": "The snapshot-prune effect's empty dependency list, with Stryker's filler-array substitution. A one-element array of the same constant string equals itself on every render, so the effect still subscribes once on mount and unsubscribes once. The row for line 82 records the second effect's list; this is the first effect's. Verified by planting the mutation here: the hook suite and every integrations consumer suite pass (840 tests).",
+            "decision": "none \u2014 an array of constants and an empty array both subscribe once on mount",
+            "recorded": "2026-10-10",
+            "source": "PL-70 MUT-06"
         }
     ]
 }

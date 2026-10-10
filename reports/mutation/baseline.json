@@ -5243,9 +5243,9 @@
             },
             "uncoveredCategories": {},
             "highValueSurvivors": 0,
-            "equivalent": 2,
-            "openGaps": 1,
-            "recorded": "2026-10-10T01:35:46.768Z"
+            "equivalent": 3,
+            "openGaps": 0,
+            "recorded": "2026-10-10T21:48:43.903Z"
         },
         "src/features/data-installer/services/importJobRunner.ts": {
             "score": 95.65,
