@@ -204,6 +204,17 @@ describe('storefrontSummaryGroup', () => {
         expect(storefrontSummaryGroup(state({})).rows[0].label).not.toBe('Demo');
     });
 
+    it('calls a headless demo Headless, and never says its site starts empty', () => {
+        // No content source on purpose: the empty-site note is about Edge Delivery pages,
+        // so a headless demo without one must still read as the bare name and kind.
+        const demo = { kind: 'demo' as const, version: 1, name: 'Bodea', source: { owner: 'jen', repo: 'bodea-demo' }, storefrontKind: 'headless' as const };
+        expect(storefrontSummaryGroup(state({ demo })).rows[0]).toEqual({
+            label: 'Demo',
+            value: 'Bodea · Headless',
+            done: true,
+        });
+    });
+
     it('heads "Storefront" and mirrors the three sub-steps', () => {
         const group = storefrontSummaryGroup(state({}));
         expect(group.heading).toBe('Storefront');

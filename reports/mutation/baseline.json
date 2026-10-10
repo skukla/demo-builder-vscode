@@ -8978,24 +8978,21 @@
             "recorded": "2026-10-09T23:20:35.955Z"
         },
         "src/features/project-creation/ui/steps/buildSummary.ts": {
-            "score": 92.86,
-            "killed": 130,
-            "survived": 9,
-            "noCoverage": 1,
+            "score": 95.71,
+            "killed": 134,
+            "survived": 6,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
                 "other": 3,
                 "optionalChain": 1,
-                "branch": 2,
-                "string": 3
+                "string": 2
             },
-            "uncoveredCategories": {
-                "string": 1
-            },
-            "highValueSurvivors": 2,
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
             "equivalent": 4,
-            "openGaps": 2,
-            "recorded": "2026-10-09T23:21:46.503Z"
+            "openGaps": 0,
+            "recorded": "2026-10-10T14:32:08.004Z"
         },
         "src/features/project-creation/ui/steps/buildYourProjectAreas.ts": {
             "score": 96.15,
