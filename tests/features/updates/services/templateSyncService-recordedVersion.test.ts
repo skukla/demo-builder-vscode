@@ -47,6 +47,11 @@ describe('the recorded version a merge starts from', () => {
     it.each([
         ['absent', undefined],
         ['not a commit sha', 'main'],
+        // The record is interpolated into git commands, so a sha is the WHOLE value.
+        ['a sha with something after it', `${BASE_SHA}; rm -rf .`],
+        ['a sha with something before it', `HEAD~${BASE_SHA}`],
+        // A hand-edited manifest: seven digits read as a sha once coerced to text.
+        ['a number rather than text', 1234567],
     ])('a recorded version that is %s: refuses before making a temp dir', async (_label, recorded) => {
         const result = await service().syncWithTemplate(
             edsProject({ lastSyncedCommit: recorded }),
@@ -97,6 +102,18 @@ describe('the recorded version a merge starts from', () => {
         expect(result).toEqual({ success: false, strategy: 'merge', syncedCommit: '', error: NOT_IN_TEMPLATE });
         expect(gitCalls()).not.toContainEqual(expect.stringMatching(/diff-tree|git apply/));
         expect(pushed()).toBe(false);
+    });
+
+    it('names a full-length recorded version by its first seven characters', async () => {
+        const full = `c0ffee1${'d'.repeat(33)}`;
+        failOn(/merge-base --is-ancestor/);
+
+        const result = await service().syncWithTemplate(
+            edsProject({ lastSyncedCommit: full }),
+            { strategy: 'merge' },
+        );
+
+        expect(result.error).toBe(NOT_IN_TEMPLATE.replace(BASE_SHA, 'c0ffee1'));
     });
 
     it('already at the template head: succeeds without diffing or pushing', async () => {

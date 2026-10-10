@@ -15708,6 +15708,30 @@
             "decision": "none \u2014 the two checks narrow two separate types for the compiler; collapsing them would need a cast",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-01"
+        },
+        {
+            "module": "src/features/updates/services/templateSyncService.ts",
+            "anchors": [
+                "const gitOutput = error instanceof TemplateSyncStepError ? `: ${error.gitOutput.trim()}` : '';"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker drops the .trim(). gitOutput is read on exactly one line, two below: the message handed to this.logger.error. The result the caller gets comes from describeStepFailure(error), which does not read it. So the mutant changes only trailing whitespace in a Debug Logs line, and the one way to see that is to assert the logger's arguments, which pins wording and which the logger-assertion enforcer refuses.",
+            "decision": "none \u2014 it feeds a log line only; the classifier counts it as behavioural because the logger call is a separate statement",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-01"
+        },
+        {
+            "module": "src/features/updates/services/templateSyncService.ts",
+            "anchors": [
+                "const label = strategy === 'merge' ? 'Merge' : 'Reset';"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "All three mutants change which of two words, Merge or Reset, opens the message on the next line's this.logger.error call. label is read nowhere else: the returned failure carries the strategy itself and describeStepFailure(error), neither built from it. Nothing a caller or the SC receives differs, so only an assertion on the logger's arguments could tell them apart, and that pins wording.",
+            "decision": "none \u2014 it feeds a log line only; the classifier counts it as behavioural because the logger call is a separate statement",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-01"
         }
     ]
 }
