@@ -52,8 +52,9 @@ describe('EnvironmentSetup — session decisions', () => {
         });
 
         it('does not try again after a non-zero exit', async () => {
-            const fn = jest.fn(async () => ({ code: 1, stdout: '', stderr: 'boom' }) as
-                unknown as CommandResult);
+            const fn = jest.fn(
+                async () => ({ code: 1, stdout: '', stderr: 'boom' }) as unknown as CommandResult
+            );
 
             await environmentSetup.ensureAdobeCLIConfigured(fn);
             await environmentSetup.ensureAdobeCLIConfigured(fn);
@@ -114,4 +115,20 @@ describe('EnvironmentSetup — session decisions', () => {
         });
     });
 
+    describe('resetting the session', () => {
+        it('forgets the remembered fnm lookup, so the next one reads the disk again', () => {
+            const fs = jest.requireMock('fs') as { existsSync: jest.Mock };
+            fs.existsSync.mockReturnValue(false);
+            expect(environmentSetup.findFnmPath()).toBeNull();
+
+            // fnm is installed mid-session: the remembered "not found" still answers…
+            fs.existsSync.mockImplementation((p: string) => p === '/opt/homebrew/bin/fnm');
+            expect(environmentSetup.findFnmPath()).toBeNull();
+
+            // …until the session is reset.
+            environmentSetup.resetSession();
+
+            expect(environmentSetup.findFnmPath()).toBe('/opt/homebrew/bin/fnm');
+        });
+    });
 });
