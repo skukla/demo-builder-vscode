@@ -8,166 +8,29 @@
  * (with UI callbacks) and the deploy_mesh MCP handler (headless) call it.
  */
 
-jest.mock('@/features/authentication/services/ensureProjectAdobeContext', () => ({
-    ensureProjectAdobeContext: jest.fn(),
-}));
-jest.mock('@/features/components/services/projectAppBuilderPredicate', () => ({
-    projectRequiresAppBuilder: jest.fn(() => false),
-}));
-import { resetComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
-
-jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
-    ComponentRegistryManager: jest.fn().mockImplementation(() => ({
-        loadRegistry: jest.fn().mockResolvedValue({ components: {} }),
-    })),
-}));
-jest.mock('@/features/app-builder/services/ensureMeshApiSubscribed', () => ({
-    ensureMeshApiSubscribed: jest.fn().mockResolvedValue([]),
-}));
-jest.mock('@/features/mesh/services/meshVerifier', () => ({
-    fetchMeshInfoFromAdobeIO: jest.fn(),
-}));
-jest.mock('@/features/mesh/services/meshDeployment', () => ({ deployMeshComponent: jest.fn() }));
-// Dynamically imported across the feature boundary (same pattern as
-// projectResetService), so the mock targets the module it imports.
-const mockRegenerateComponentEnvFile = jest.fn().mockResolvedValue(undefined);
-jest.mock('@/features/project-creation/helpers/envFileRegeneration', () => ({
-    ...jest.requireActual('@/features/project-creation/helpers/envFileRegeneration'),
-    regenerateComponentEnvFile: (...args: unknown[]) => mockRegenerateComponentEnvFile(...args),
-}));
-const mockUpdateMeshState = jest.fn().mockResolvedValue(undefined);
-jest.mock('@/features/mesh/services/meshDeployBaseline', () => ({
-    updateMeshState: (...args: unknown[]) => mockUpdateMeshState(...args),
-}));
-
-import { getActiveOrgContext, type OrgContextTarget } from '@/core/shell/orgContextEnv';
-import { ensureProjectAdobeContext } from '@/features/authentication/services/ensureProjectAdobeContext';
-import { projectRequiresAppBuilder } from '@/features/components/services/projectAppBuilderPredicate';
-import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderDeployOutcome';
+import {
+    arrangeSuccessfulDeploy,
+    authManagerInUse,
+    deployMeshHeadless,
+    deps,
+    meshInstanceOf,
+    mockDeploy,
+    mockFetchInfo,
+    mockPreflight,
+    mockRegenerateComponentEnvFile,
+    mockRequiresAppBuilder,
+    mockUpdateMeshState,
+    project,
+    useAuthManager,
+} from './deployMeshHeadless.testUtils';
 import { listAppBuilderComponents } from '@/core/state/appBuilderComponentState';
-import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
-import { fetchMeshInfoFromAdobeIO } from '@/features/mesh/services/meshVerifier';
-import { deployMeshHeadless } from '@/features/mesh/services/deployMeshHeadless';
-import type { AppBuilderComponentState, Project, ComponentInstance } from '@/types/base';
-import { createMockLogger } from '../../../helpers/loggerFake';
-import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
+import { getActiveOrgContext, type OrgContextTarget } from '@/core/shell/orgContextEnv';
+import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderDeployOutcome';
+import type { AppBuilderComponentState, Project } from '@/types/base';
 import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
-import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
-import { createMockStateManager } from '../../../helpers/stateManagerFake';
-import type { DeployMeshHeadlessDeps } from '@/features/mesh/services/deployMeshHeadless';
-import { createMockProject } from '../../../helpers/projectFake';
-
-const mockRequiresAppBuilder = projectRequiresAppBuilder as jest.MockedFunction<
-    typeof projectRequiresAppBuilder
->;
-const mockPreflight = ensureProjectAdobeContext as jest.Mock;
-const mockDeploy = deployMeshComponent as jest.MockedFunction<typeof deployMeshComponent>;
-const mockFetchInfo = fetchMeshInfoFromAdobeIO as jest.MockedFunction<
-    typeof fetchMeshInfoFromAdobeIO
->;
-
-function project(withMesh = true): Project {
-    return createMockProject({
-        name: 'p',
-        path: '/p',
-        status: 'ready',
-        created: new Date(),
-        lastModified: new Date(),
-        adobe: { organization: 'org', projectId: 'proj', workspace: 'ws', authenticated: true },
-        componentInstances: withMesh
-            ? {
-                  'commerce-mesh': {
-                      id: 'commerce-mesh',
-                      name: 'Mesh',
-                      type: 'app-builder',
-                      subType: 'mesh',
-                      path: '/p/mesh',
-                      status: 'ready',
-                  } as ComponentInstance,
-              }
-            : {},
-        componentConfigs: {},
-    });
-}
-
-/** The fixture's mesh instance, resolved once so a fixture drift fails loudly. */
-function meshInstanceOf(p: Project): ComponentInstance {
-    const instance = p.componentInstances?.['commerce-mesh'];
-    if (!instance) throw new Error('fixture has no commerce-mesh instance');
-    return instance;
-}
-
-/**
- * CONVERTED 2026-08-28 (ADR-015): the auth manager and executor are handed in
- * through this bag now, so the suite mocks the service registry NOT AT ALL.
- * `currentAuthManager` is what the old registry stub used to return.
- */
-/**
- * Typed `unknown` until 2026-09-01, which is why every member below needed
- * `as never`: one untyped variable in an object literal erases the whole argument
- * at the call site, and `deployMeshHeadless` then accepted anything. It holds the
- * canonical `AuthenticationService` fake now, so an override naming a method the
- * real service does not have fails `typecheck:tests`.
- */
-let currentAuthManager: ReturnType<typeof createMockAuthenticationService>;
-
-function deps(overrides: Partial<DeployMeshHeadlessDeps> = {}): DeployMeshHeadlessDeps {
-    return {
-        project: project(),
-        authManager: currentAuthManager,
-        commandManager: createMockCommandExecutor(),
-        secrets: createMockSecretStorage().secrets,
-        stateManager: createMockStateManager(),
-        logger: createMockLogger(),
-        extensionPath: '/ext',
-        ...overrides,
-    };
-}
 
 describe('deployMeshHeadless', () => {
-    beforeEach(() => {
-        jest.clearAllMocks();
-        // The registry manager is a SESSION singleton now; without this the first
-        // test's instance (and its memoised registry) leaks into every later one.
-        resetComponentRegistryManager();
-        // `mockReturnValue` outlives clearAllMocks, so the one test that turns the
-        // App Builder gate ON left it on for every test declared after it.
-        mockRequiresAppBuilder.mockReturnValue(false);
-        mockRegenerateComponentEnvFile.mockResolvedValue(undefined);
-        currentAuthManager = createMockAuthenticationService(
-            { testDeveloperPermissions: jest.fn().mockResolvedValue({ hasPermissions: true }) },
-            {
-                cache: {
-                    // Enriches the org target with code/name when the id matches
-                    // (buildOrgTargetFromProjectAdobe).
-                    getCachedOrganization: jest.fn(() => ({
-                        id: 'org',
-                        code: 'ORG@AdobeOrg',
-                        name: 'Adobe Demo System',
-                    })),
-                },
-            }
-        );
-        mockPreflight.mockResolvedValue({ ready: true });
-        mockFetchInfo.mockResolvedValue({ meshId: 'existing-1', endpoint: 'https://old/graphql' });
-        mockDeploy.mockResolvedValue({
-            success: true,
-            data: { meshId: 'mesh-1', endpoint: 'https://new/graphql' },
-        });
-        // Mirror the REAL writer chokepoint (ADR-011 D3 Steps 07+09):
-        // updateMeshState lands the deploy outcome on the keyed mesh entry via
-        // the real (pure) recordDeployOutcome, so key resolution / source
-        // preservation / providesEnvVars refresh are exercised for real.
-        mockUpdateMeshState.mockImplementation(async (p: unknown, endpoint?: unknown) => {
-            recordDeployOutcome(p as Project, 'mesh', 'commerce-mesh', {
-                status: 'deployed',
-                endpoint: endpoint as string | undefined,
-                lastDeployed: new Date().toISOString(),
-                userDeclinedUpdate: undefined,
-                declinedAt: undefined,
-            });
-        });
-    });
+    beforeEach(arrangeSuccessfulDeploy);
 
     // REGRESSION (2026-08-03): the CLI half of this core ran with NO org
     // targeting. `aio`'s org/project/workspace selection is a process-global the
@@ -352,11 +215,13 @@ describe('deployMeshHeadless', () => {
 
     it('blocks on missing Developer permission when the project needs App Builder', async () => {
         mockRequiresAppBuilder.mockReturnValue(true);
-        currentAuthManager = createMockAuthenticationService({
-            testDeveloperPermissions: jest
-                .fn()
-                .mockResolvedValue({ hasPermissions: false, error: 'no role' }),
-        });
+        useAuthManager(
+            createMockAuthenticationService({
+                testDeveloperPermissions: jest
+                    .fn()
+                    .mockResolvedValue({ hasPermissions: false, error: 'no role' }),
+            }),
+        );
 
         const result = await deployMeshHeadless(deps());
         expect(result.success).toBe(false);
@@ -372,7 +237,7 @@ describe('deployMeshHeadless', () => {
 
         const result = await deployMeshHeadless(deps());
 
-        expect(currentAuthManager.testDeveloperPermissions).toHaveBeenCalled();
+        expect(authManagerInUse().testDeveloperPermissions).toHaveBeenCalled();
         expect(result.success).toBe(true);
         expect(mockDeploy).toHaveBeenCalledTimes(1);
     });
@@ -380,15 +245,17 @@ describe('deployMeshHeadless', () => {
     it('skips the Developer-permission probe when the project needs no App Builder', async () => {
         // projectRequiresAppBuilder is mocked false by default: a mesh-only project
         // must not pay an IMS round-trip, and must not be blocked when it fails.
-        currentAuthManager = createMockAuthenticationService({
-            testDeveloperPermissions: jest
-                .fn()
-                .mockResolvedValue({ hasPermissions: false, error: 'no role' }),
-        });
+        useAuthManager(
+            createMockAuthenticationService({
+                testDeveloperPermissions: jest
+                    .fn()
+                    .mockResolvedValue({ hasPermissions: false, error: 'no role' }),
+            }),
+        );
 
         const result = await deployMeshHeadless(deps());
 
-        expect(currentAuthManager.testDeveloperPermissions).not.toHaveBeenCalled();
+        expect(authManagerInUse().testDeveloperPermissions).not.toHaveBeenCalled();
         expect(result.success).toBe(true);
     });
 
