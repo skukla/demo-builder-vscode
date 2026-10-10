@@ -164,4 +164,66 @@ describe('a call is narrated with the name it acts on', () => {
     it.each(NAMED_NARRATION_TOOLS)('%s is a real tool with a phrase to fall back to', (tool) => {
         expect(TOOL_NARRATION[tool]).toBeDefined();
     });
+
+    it('trims the name it shows', () => {
+        expect(narrationForCall('delete_adobe_workspace', { workspaceName: '  Stage \n' })).toBe(
+            'Deleting the Stage workspace'
+        );
+    });
+
+    it('keeps the tool phrase when the name is not text', () => {
+        // An agent can send any JSON. A number or an object is not a name a person reads.
+        expect(narrationForCall('delete_adobe_workspace', { workspaceName: 4566 })).toBe(
+            narrationFor('delete_adobe_workspace')
+        );
+        expect(narrationForCall('delete_page', { path: { toString: () => '/x' } })).toBe(narrationFor('delete_page'));
+    });
+});
+
+// Each named form reads its OWN argument and has its own words. Until 2026-10-10 only
+// two of the twelve were ever called by a test, so ten could have read the wrong
+// argument, or said nothing, with the suite green.
+describe('every named form says what it acts on, from the argument that names it', () => {
+    /** tool, the arguments a real call carries, what the notification says. */
+    const NAMED: Array<[string, Record<string, unknown>, string]> = [
+        ['delete_adobe_workspace', { workspaceId: '4566', workspaceName: 'Stage' }, 'Deleting the Stage workspace'],
+        ['delete_adobe_project', { projectId: '77', projectName: 'Bodea Demo' }, 'Deleting the Bodea Demo project'],
+        ['rename_adobe_project', { projectId: '77', projectName: 'Bodea Demo' }, 'Renaming Bodea Demo'],
+        ['delete_project', { name: 'bodea-b2b', confirm: true }, 'Deleting the bodea-b2b project'],
+        ['delete_github_repo', { owner: 'skukla', repo: 'kukla-bodea' }, 'Deleting skukla/kukla-bodea'],
+        ['cleanup_dalive_site', { org: 'skukla', site: 'kukla-bodea' }, 'Deleting skukla/kukla-bodea content'],
+        ['delete_page', { path: '/drafts/spring-sale' }, 'Deleting /drafts/spring-sale'],
+        ['reset_datapack', { datapackName: 'Bodea B2B' }, 'Resetting Bodea B2B'],
+        ['start_datapack_import', { datapackName: 'Bodea B2B' }, 'Importing Bodea B2B'],
+        ['start_datapack_export', { datapackName: 'Bodea B2B' }, 'Exporting Bodea B2B'],
+        ['remove_block_from_library', { blockId: 'hero-banner' }, 'Removing the hero-banner block'],
+        ['set_site_admin', { email: 'fake-user@example.com' }, "Changing fake-user@example.com's access"],
+    ];
+
+    it('covers every tool that has a named form', () => {
+        // A thirteenth named form added without a row here is the gap this suite closes.
+        expect(NAMED.map(([tool]) => tool).sort()).toStrictEqual([...NAMED_NARRATION_TOOLS].sort());
+    });
+
+    it.each(NAMED)('%s names its target', (tool, args, expected) => {
+        expect(narrationForCall(tool, args)).toBe(expected);
+    });
+
+    it.each(NAMED)('%s keeps its tool phrase when ANY one name it uses is missing', (tool, args) => {
+        // Proves which arguments the form reads: dropping one it uses must fall back.
+        const named = Object.keys(args).filter((key) => !['workspaceId', 'projectId', 'confirm'].includes(key));
+        expect(named.length).toBeGreaterThan(0);
+
+        for (const dropped of named) {
+            const partial = { ...args, [dropped]: undefined };
+            expect(narrationForCall(tool, partial)).toBe(narrationFor(tool));
+        }
+    });
+
+    it.each(NAMED)('%s is not named from an argument it does not read', (tool, args, expected) => {
+        // The ids travel with the names in a real call; they are never what is shown.
+        const idsOnly = { workspaceId: '4566', projectId: '77', confirm: true };
+        expect(narrationForCall(tool, idsOnly)).toBe(narrationFor(tool));
+        expect(narrationForCall(tool, { ...idsOnly, ...args })).toBe(expected);
+    });
 });

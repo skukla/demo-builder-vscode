@@ -280,10 +280,11 @@ export function narrationFor(toolName: string): string | undefined {
     return TOOL_NARRATION[toolName];
 }
 
-/** An argument's value when it is a non-empty string. */
+/** An argument's value, trimmed, when it is a non-blank string. */
 function arg(args: Record<string, unknown> | undefined, key: string): string | undefined {
     const value = args?.[key];
-    return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+    const trimmed = typeof value === 'string' ? value.trim() : '';
+    return trimmed || undefined;
 }
 
 /** Build a phrase from named arguments, or nothing when any is missing. */
