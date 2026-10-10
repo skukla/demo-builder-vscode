@@ -340,6 +340,11 @@ describe('every mutated module has a test selected to cover it', () => {
     });
 });
 
+/** Does any suite outside `tests/sop/` reach `module` through jest's import graph? */
+function importedBySomeSuite(module: string): boolean {
+    return relatedSuites(module).some((t) => t.startsWith('tests/') && !t.startsWith('tests/sop/'));
+}
+
 describe('the mutation baseline covers what the config mutates', () => {
     /**
      * The per-build half of the mutation ratchet. The comparison itself only runs
@@ -357,8 +362,15 @@ describe('the mutation baseline covers what the config mutates', () => {
      * baseline at 16 rows forever — which is the 3.2% coverage the sweep exists to fix.
      *
      * So the direction that still means something is kept, in the form that is now
-     * true: a row must name a file that exists AND has a mirrored suite, because
-     * either one missing is a number that cannot be produced again.
+     * true: a row must name a file that exists AND has a suite to run against,
+     * because either one missing is a number that cannot be produced again.
+     *
+     * "A suite to run against" was "a mirrored suite" until 2026-10-10. The focus tool
+     * has answered from jest's import graph for a module no suite is named after since
+     * 2026-09-08, so such a module IS re-measurable, and this check was what kept
+     * refusing its row: the ten files `appBuilderComponentRunner.ts` was split into
+     * are tested by twenty-five suites that kept the old name. The graph is asked only
+     * for a row the mirror rule cannot answer for.
      */
     const BASELINE = join(ROOT, 'reports/mutation/baseline.json');
 
@@ -385,15 +397,24 @@ describe('the mutation baseline covers what the config mutates', () => {
             const stem = basename(m).replace(/\.tsx?$/, '');
             const dir = join(ROOT, 'tests', dirname(m).slice('src/'.length));
             if (!existsSync(dir)) return true;
-            return !readdirSync(dir).some(
+            const mirrored = readdirSync(dir).some(
                 (f) =>
                     f === `${stem}.test.ts` ||
                     f === `${stem}.test.tsx` ||
                     ((f.startsWith(`${stem}-`) || f.startsWith(`${stem}.`)) &&
                         /\.test\.tsx?$/.test(f))
             );
+            return !mirrored && !importedBySomeSuite(m);
         });
         expect(unreproducible).toStrictEqual([]);
+    });
+
+    it('CONTROL: a module nothing imports is still unreproducible', () => {
+        // Without this the graph half above could be answering "yes" to everything.
+        // A webview entry point: nothing mirrors it and nothing imports it.
+        expect(importedBySomeSuite('src/features/project-creation/ui/wizard/index.tsx')).toBe(false);
+        // And it does answer yes where a suite really reaches the module.
+        expect(importedBySomeSuite('src/features/updates/services/envMerge.ts')).toBe(true);
     });
 
     it('every baseline row carries the fields the ratchet compares', () => {

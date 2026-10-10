@@ -34,6 +34,16 @@ The survey is backlog PL-45. It is a floor: `demoPackageLoader.ts`'s suite sat i
 feature's directory entirely, reaching the module through a re-export barrel, which the
 survey's detector cannot see.
 
+## Why an uncovered mutant is checked against the importing suites before a test is written
+
+A focused run selects the suites NAMED for the module. A mutant it reports uncovered may
+be reached by a consumer's suite that was never selected, and a test written for it then
+duplicates one that exists. After the first measurement run
+`node scripts/focusModule.mjs --widen`: it adds the importing suites for every module the
+run left uncovered and exits 3 when there is nothing to add. Measure again only if it
+added any. Found 2026-10-10 working the 754 gaps the stale-row re-measure exposed; the
+evidence is in the `mutation-test-pilot` skill.
+
 ## Why small modules share one measurement
 
 A module pays a fixed toll — one measurement, a re-measure, the scoped check, a commit —

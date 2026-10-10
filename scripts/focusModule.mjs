@@ -5,6 +5,8 @@
  *   node scripts/focusModule.mjs src/features/eds/services/siteTools.ts
  *   node scripts/focusModule.mjs src/a.ts src/b.ts src/c.ts   # one measurement, three modules
  *   node scripts/focusModule.mjs --check      # the two configs still agree with each other
+ *   node scripts/focusModule.mjs --widen      # after a run: add the importing suites for
+ *                                             # every module the run left mutants uncovered in
  *
  * SEVERAL AT ONCE, and why. A module pays a fixed toll — one measurement, a re-measure,
  * the scoped check, a commit — whatever its size. Measured over 61 modules on 2026-09-05:
@@ -44,6 +46,7 @@ const JEST = 'jest.focus.config.js';
 const SAMPLE_STRYKER = 'stryker.pl22.config.json';
 const SAMPLE_JEST = 'jest.pl22.config.js';
 const INCREMENTAL = 'reports/mutation/focus-incremental.json';
+const FOCUS_REPORT = 'reports/mutation/focus.json';
 
 /**
  * The suites a focused run measures `modulePath` against.
@@ -166,6 +169,102 @@ export function relatedSuites(modulePath) {
         .map((abs) => relative(process.cwd(), abs))
         .filter((p) => p.startsWith('tests/') && !p.startsWith('tests/sop/'))
         .sort();
+}
+
+/**
+ * The modules a finished run left mutants UNCOVERED in — no selected test entered them.
+ *
+ * This is the evidence the widening rule below acts on, and it is Stryker's own: a
+ * `NoCoverage` status means the per-test coverage of every selected suite missed the
+ * mutant. Two text heuristics for "does this suite exercise the module" were tried on
+ * 2026-09-03 and both were wrong (see the note in `main`); this reads a measurement
+ * instead of guessing at one.
+ */
+export function uncoveredModules(report) {
+    return Object.entries(report.files ?? {})
+        .filter(([, file]) => file.mutants.some((m) => m.status === 'NoCoverage'))
+        .map(([path]) => path)
+        .sort();
+}
+
+/**
+ * Add the IMPORTING suites for the modules a run left uncovered. Never removes.
+ *
+ * WHY. `suitesFor` takes the mirror INSTEAD of the import graph, so the day a module
+ * gains a suite of its own name, every suite that used to reach it through a consumer
+ * stops counting. Three sittings met it in two days (2026-10-09): `updateCore.ts` got a
+ * first suite with four helper cases and would have re-measured with the marker write
+ * and the re-install reported uncovered, against 74.63% with every related suite;
+ * `perNodeVersionStatus.ts` the same; and after the EDS-8 split the twenty-five
+ * `appBuilderComponentRunner-*` suites mirror a file that is now declarations only.
+ * "Uncovered" is a claim that no test goes there. When an importing suite does, the
+ * claim is false and the gap it files is work nobody needs to do.
+ *
+ * WHY NOT ALWAYS. Keying every module on the graph multiplies a sweep 24.5x for no
+ * gain on the modules measured under both rules (see `suitesFor`). So the first run
+ * stays mirror-only and every pinned row keeps its meaning; the graph is asked only
+ * for a module whose mirror run PROVED it left something unreached, and only its
+ * importers are added. A module the mirror covers fully is never widened, which is
+ * the property `focusModule.selftest.mjs` holds.
+ *
+ * @param mutate     the modules the focus is aimed at
+ * @param selected   the suites the jest config names now
+ * @param uncovered  `uncoveredModules(report)` for the run just finished
+ * @param related    module -> importing suites; handed in so the controls need no jest
+ * @returns `{ suites, added }` — the new selection, and what was added per module
+ */
+export function widenSelection({ mutate, selected, uncovered, related }) {
+    const suites = new Set(selected);
+    const added = {};
+    for (const m of mutate) {
+        if (!uncovered.includes(m)) continue;
+        const extra = related(m).filter((s) => !suites.has(s));
+        if (!extra.length) continue;
+        added[m] = extra;
+        for (const s of extra) suites.add(s);
+    }
+    return { suites: [...suites].sort(), added };
+}
+
+/** The suites `jest.focus.config.js` names now, as repo-relative paths. */
+function selectedSuites() {
+    return [...readFileSync(JEST, 'utf8').matchAll(/'\*\*\/([^']+)'/g)].map((m) => m[1]);
+}
+
+/**
+ * `--widen`. Exit 0 when suites were added (measure again), 3 when there was nothing
+ * to add (the first measurement stands), 1 when the report is not for this focus.
+ */
+function widen(stryker) {
+    const mutate = stryker.mutate ?? [];
+    if (!existsSync(FOCUS_REPORT)) {
+        console.error(`No report at ${FOCUS_REPORT}. Measure first: npm run test:mutation:focus`);
+        process.exit(1);
+    }
+    const report = JSON.parse(readFileSync(FOCUS_REPORT, 'utf8'));
+    const unmeasured = mutate.filter((m) => !(m in (report.files ?? {})));
+    if (unmeasured.length) {
+        console.error(`${FOCUS_REPORT} does not cover ${unmeasured.join(', ')} — it is from another focus.`);
+        console.error('Measure first: npm run test:mutation:focus');
+        process.exit(1);
+    }
+    const { suites, added } = widenSelection({
+        mutate,
+        selected: selectedSuites(),
+        uncovered: uncoveredModules(report),
+        related: relatedSuites,
+    });
+    if (!Object.keys(added).length) {
+        console.log('Nothing to add: every mutant is covered, or nothing else imports the module(s).');
+        process.exit(3);
+    }
+    writeFileSync(JEST, renderJest(suites));
+    if (existsSync(INCREMENTAL)) rmSync(INCREMENTAL);
+    for (const [m, extra] of Object.entries(added)) {
+        console.log(`Widened ${m}: + ${extra.length} importing suite(s)`);
+        for (const s of extra) console.log(`  + ${s}`);
+    }
+    console.log('\nIncremental cache cleared. Measure again: npm run test:mutation:focus');
 }
 
 function renderJest(suites) {
@@ -294,12 +393,22 @@ function main() {
     }
     const stryker = JSON.parse(readFileSync(STRYKER, 'utf8'));
 
+    if (arg === '--widen') {
+        widen(stryker);
+        return;
+    }
+
     if (arg === '--check') {
         const current = stryker.mutate;
         const expected = [...new Set(current.flatMap((m) => suitesFor(m)))].sort();
         const actual = [...readFileSync(JEST, 'utf8').matchAll(/'\*\*\/([^']+)'/g)].map((m) => m[1]);
         const missing = expected.filter((s) => !actual.includes(s));
-        const extra = actual.filter((s) => !expected.includes(s));
+        // A WIDENED focus names importing suites on top of the mirror ones. Those are
+        // not a disagreement, so an extra is only reported when it is not an importer
+        // of any mutated module. The graph is asked only when there IS an extra.
+        const unexpected = actual.filter((s) => !expected.includes(s));
+        const importers = unexpected.length ? new Set(current.flatMap((m) => relatedSuites(m))) : new Set();
+        const extra = unexpected.filter((s) => !importers.has(s));
         if (missing.length || extra.length) {
             console.error(`The focused configs disagree for ${current.join(', ')}:`);
             for (const s of missing) console.error(`  missing from ${JEST}: ${s}`);
@@ -307,14 +416,15 @@ function main() {
             console.error(`\nRegenerate: node scripts/focusModule.mjs ${current.join(' ')}`);
             process.exit(1);
         }
-        console.log(`Focused configs agree: ${current.length} module(s) <- ${expected.length} suite(s).`);
+        const widened = unexpected.length ? ` + ${unexpected.length} importing (widened)` : '';
+        console.log(`Focused configs agree: ${current.length} module(s) <- ${expected.length} suite(s)${widened}.`);
         return;
     }
 
     const paths = process.argv.slice(2).filter((a) => !a.startsWith('--'));
     if (!paths.length) {
         console.error(
-            'Usage: node scripts/focusModule.mjs <src/path/to/module.ts> [more modules...] | --check | --sync-sample'
+            'Usage: node scripts/focusModule.mjs <src/path/to/module.ts> [more modules...] | --check | --widen | --sync-sample'
         );
         process.exit(1);
     }

@@ -146,6 +146,34 @@ matters and is not a preference: keying everything on the graph multiplies a swe
 Only 15 modules are still refused, and for those nothing imports them either. Reasoning and
 the four Stryker runs behind it: `.rptc/plans/unmeasured-fifth/attribution-design.md`.
 
+**When the mirror finds a suite that leaves mutants UNCOVERED, widen — once, on evidence.**
+
+```bash
+npm run test:mutation:focus                    # the mirror-only run
+npm run test:mutation:focus:on -- --widen      # adds the importing suites, or exits 3
+npm run test:mutation:focus                    # only if it added any
+```
+
+The mirror is taken INSTEAD of the import graph, so the day a module gains a suite of its
+own name, every suite that reached it through a consumer stops counting. `updateCore.ts`
+got a first suite of four helper cases and would have re-measured with its marker write and
+re-install reported uncovered, against 74.63% with every related suite; the twenty-five
+`appBuilderComponentRunner-*` suites mirror a file that has been declarations only since
+the EDS-8 split. "Uncovered" claims no test goes there, and when an importing suite does,
+the gap it files is work nobody needs. `--widen` reads the report the run just wrote and,
+for each module with a `NoCoverage` mutant, adds the suites jest's graph says import it.
+A module the mirror covered fully is never widened, which keeps the 24.5x cost above off
+the table and leaves every pinned row meaning what it meant. `mutationSweep.mjs` does the
+same second pass by itself, after pinning the mirror-only row. Controls:
+`node scripts/focusModule.selftest.mjs`, run with the suite by
+`tests/scripts/focusModule.test.ts`.
+
+**A file of declarations only has nothing to measure.** Stryker instruments it to zero
+mutants and stops with "No tests were executed", the same line a suite that never reaches
+its module produces. The sweep now tells the two apart (`skip-no-mutants`). A pinned row
+for such a file is a leftover from before its code moved: delete the row and measure the
+files the code went to.
+
 **It picks the jest PROJECT from the suites, not from the file extension.** This repo
 runs two: `node`, and `react` on jsdom, which owns `tests/core/ui/**` and every
 `.test.tsx` under `tests/features`. The generated config takes whichever project the

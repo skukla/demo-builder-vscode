@@ -130,6 +130,32 @@ function buildQueue() {
     return { queue, all, header };
 }
 
+/**
+ * The second pass, for a module whose mirror-only run left mutants UNCOVERED.
+ *
+ * `focusModule.mjs --widen` reads the report just written and adds the suites that
+ * import the module; it exits 3 when the run covered everything or nothing else imports
+ * it, and then the first measurement stands. The mirror-only row is already pinned
+ * before this runs, so a widened run that fails or times out costs minutes and loses
+ * nothing. A widened run can only add tests, so the row it pins cannot be lower.
+ *
+ * Returns true when a widened measurement replaced the row.
+ */
+function measureWidened(mod, started) {
+    const widen = run('node', ['scripts/focusModule.mjs', '--widen'], 60_000);
+    if (widen.status !== 0) return false;
+    const left = PER_MODULE_MIN * 60_000 - (Date.now() - started);
+    if (left < 60_000) return false;
+    const again = run('npx', ['stryker', 'run', 'stryker.focus.config.json'], left);
+    if (again.timedOut || !again.ok || !existsSync(FOCUS_REPORT)) return false;
+    const write = run(
+        'node',
+        ['scripts/checkMutationBaseline.mjs', '--report', FOCUS_REPORT, '--write', 'baseline sweep, widened to the importing suites'],
+        120_000
+    );
+    return write.ok;
+}
+
 function main() {
     const { queue, all, header } = buildQueue();
     if (DRY) {
@@ -194,6 +220,19 @@ function main() {
             appendFileSync(LOG, JSON.stringify({ mod, outcome: 'timeout', minutes: Number(mins) }) + '\n');
             continue;
         }
+        // NOTHING TO MUTATE. A file of declarations only (interfaces, types) instruments
+        // to zero mutants, and Stryker then stops with the same "No tests were executed"
+        // line as the case below — which is how `appBuilderComponentRunner.ts`, a
+        // contract file since the EDS-8 split, was filed on 2026-10-10 as "named suites
+        // never exercise the module" beside twenty-five suites that do. The suites are
+        // fine; the file has no decision in it, and a pinned row for it describes code
+        // that now lives in other files.
+        if (/Instrumented \d+ source file\(s\) with 0 mutant\(s\)/.test(stryker.out)) {
+            tally.skipped += 1;
+            console.log(`${label}\n    SKIP  nothing to mutate — declarations only; a pinned row for it is a leftover`);
+            appendFileSync(LOG, JSON.stringify({ mod, outcome: 'skip-no-mutants' }) + '\n');
+            continue;
+        }
         // Stryker found nothing on the module's import graph to run. That is a suite
         // that matched by NAME without exercising the module — a "no suite" case the
         // text check in focusModule.mjs could not see — not a broken run. Filed as a
@@ -234,14 +273,15 @@ function main() {
         }
 
         tally.measured += 1;
+        const widened = measureWidened(mod, started);
         const row = scoreOf(mod);
         console.log(
             `${label}\n    ${String(row?.score ?? '?').padStart(6)}%  ` +
-                `openGaps ${row?.openGaps ?? '?'}   ${mins} min`
+                `openGaps ${row?.openGaps ?? '?'}   ${mins} min${widened ? '   (widened to the importing suites)' : ''}`
         );
         appendFileSync(
             LOG,
-            JSON.stringify({ mod, outcome: 'measured', minutes: Number(mins), ...row }) + '\n'
+            JSON.stringify({ mod, outcome: 'measured', minutes: Number(mins), widened, ...row }) + '\n'
         );
     }
 
