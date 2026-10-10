@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: high
-status: backlog
+status: built
 ---
 
 # Prepare this store: the ERP setup steps the extension can apply, not only check
@@ -60,3 +60,7 @@ Also: the `price-scope-website` step text still says "No API sets this". Stale s
 
 Every ERP demo needs these steps, whichever ownership mode it uses, and they are where the
 SC's setup time goes. AB-74 and AB-75 only help the multi-ERP case.
+
+## Shipped so far
+
+- 2026-10-10  feat(app-builder): prepare this store applies the ERP setup steps, with undo (`fa832c75b`)
