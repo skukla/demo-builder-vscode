@@ -75,7 +75,7 @@ describe('registerGlobalMcp — the engines that keep a user-level config', () =
         await fsPromises.mkdir(path.join(home, '.copilot'), { recursive: true });
         await fsPromises.writeFile(
             path.join(home, '.copilot/mcp-config.json'),
-            JSON.stringify({ mcpServers: { other: { command: 'x' } }, somethingElse: 1 }),
+            JSON.stringify({ mcpServers: { other: { command: 'x' } }, somethingElse: 1 })
         );
 
         await registerGlobalMcp(DIST, NODE, ['copilot']);
@@ -103,7 +103,7 @@ describe('registerGlobalMcp — the engines that keep a user-level config', () =
 
         await expect(registerGlobalMcp(DIST, NODE, ['copilot'])).rejects.toThrow(/malformed/);
         await expect(
-            fsPromises.readFile(path.join(home, '.copilot/mcp-config.json'), 'utf-8'),
+            fsPromises.readFile(path.join(home, '.copilot/mcp-config.json'), 'utf-8')
         ).resolves.toBe('{ not json');
     });
 });
@@ -265,15 +265,17 @@ describe('refreshGlobalMcpIfPresent', () => {
         await fsPromises.writeFile(
             path.join(home, '.copilot/mcp-config.json'),
             JSON.stringify({
-                mcpServers: { 'demo-builder': { command: NODE, args: ['/old/build/mcp-proxy.js'] } },
-            }),
+                mcpServers: {
+                    'demo-builder': { command: NODE, args: ['/old/build/mcp-proxy.js'] },
+                },
+            })
         );
 
         const repaired = await refreshGlobalMcpIfPresent(DIST, NODE);
 
         expect(repaired).toBe(true);
         const config = JSON.parse(
-            await fsPromises.readFile(path.join(home, '.copilot/mcp-config.json'), 'utf-8'),
+            await fsPromises.readFile(path.join(home, '.copilot/mcp-config.json'), 'utf-8')
         );
         expect(config.mcpServers['demo-builder'].args).toStrictEqual([
             path.join(DIST, 'mcp-proxy.js'),
@@ -332,6 +334,28 @@ describe('refreshGlobalMcpIfPresent', () => {
 
         expect(await refreshGlobalMcpIfPresent(DIST, NODE)).toBe(true);
         expect(await entryArgs()).toEqual([path.join(DIST, 'mcp-proxy.js')]);
+    });
+
+    it('repairs with the node binary it was HANDED, not one it resolves itself', async () => {
+        // A path no machine has, so a repair that ignored the argument and went to
+        // `which node` instead cannot land on the same answer by accident.
+        const handed = '/handed/in/by/the/caller/node';
+        await writeConfig({
+            mcpServers: {
+                'demo-builder': {
+                    command: '/gone/versions/node/v22.0.0/bin/node',
+                    args: [path.join(DIST, 'mcp-proxy.js')],
+                },
+            },
+        });
+
+        expect(await refreshGlobalMcpIfPresent(DIST, handed)).toBe(true);
+
+        const c = JSON.parse(await fsPromises.readFile(configPath, 'utf-8'));
+        expect(c.mcpServers['demo-builder']).toStrictEqual({
+            command: handed,
+            args: [path.join(DIST, 'mcp-proxy.js')],
+        });
     });
 
     it('leaves a bare command name alone rather than guessing', async () => {
