@@ -3,7 +3,9 @@
  *
  * The shared harness, mocks and fixtures live in `siteTools.testUtils.ts`; what these
  * tools declare about themselves, and how big their answers are, live in
- * `siteTools-contract.test.ts`. Split 2026-09-02 at the 750-line CI limit.
+ * `siteTools-contract.test.ts`. Split 2026-09-02 at the 750-line CI limit. The content
+ * pair (`get_content_access`, `set_content_reader`) moved to
+ * `siteTools-contentAccess.test.ts` on 2026-10-10 for the same reason.
  *
  * What is pinned here, and why each would otherwise fail silently:
  *
@@ -34,9 +36,6 @@ import {
     mockListSiteAccess,
     mockAddSiteAdmin,
     mockRemoveSiteAdmin,
-    mockListContentReaders,
-    mockAddContentReader,
-    mockRemoveContentReader,
     mockRepairSiteConfigForProject,
     mockFindStorefrontNameMismatch,
     mockMigrateStorefrontNameForProject,
@@ -57,91 +56,6 @@ it('registers the eight Group 6 tools', () => {
         'set_content_reader',
         'set_site_admin',
     ]);
-});
-
-// The content pair (EDS-22) mirrors the site-access pair: refuse before doing
-// anything without confirm, route on `read`, pass the verified result through.
-describe('get_content_access', () => {
-    it("lists the readers of the project's DA.live site", async () => {
-        const out = await harness().call('get_content_access');
-
-        expect(mockListContentReaders).toHaveBeenCalledWith(
-            { org: 'someone', site: 'demo' },
-            extensionContext,
-            logger,
-        );
-        expect(out).toMatchObject({ status: 'ok', readers: [{ email: 'owner@example.test', actions: 'write' }] });
-    });
-
-    it('refuses a project that records no DA.live site, naming the tool', async () => {
-        const out = await buildHarness({ ...project, componentInstances: {} }).call('get_content_access');
-        expect(String(out.error)).toContain('get_content_access needs a DA.live site');
-        expect(mockListContentReaders).not.toHaveBeenCalled();
-    });
-
-    it('refuses a headless project', async () => {
-        const out = await buildHarness(headlessProject).call('get_content_access');
-        expect(String(out.error)).toContain('applies only to EDS storefront projects');
-    });
-});
-
-describe('set_content_reader', () => {
-    it('refuses without confirm:true and changes nothing', async () => {
-        const out = await harness().call('set_content_reader', { email: 'someone@example.test', read: true });
-
-        expect(String(out.error)).toMatch(/confirm:true/);
-        expect(mockAddContentReader).not.toHaveBeenCalled();
-        expect(mockRemoveContentReader).not.toHaveBeenCalled();
-    });
-
-    it('lets the address read when read is true', async () => {
-        await harness().call('set_content_reader', { email: 'someone@example.test', read: true, confirm: true });
-
-        expect(mockAddContentReader).toHaveBeenCalledWith(
-            { org: 'someone', site: 'demo' },
-            'someone@example.test',
-            extensionContext,
-            logger,
-        );
-        expect(mockRemoveContentReader).not.toHaveBeenCalled();
-    });
-
-    it('stops the address when read is false', async () => {
-        await harness().call('set_content_reader', { email: 'someone@example.test', read: false, confirm: true });
-
-        expect(mockRemoveContentReader).toHaveBeenCalledWith(
-            { org: 'someone', site: 'demo' },
-            'someone@example.test',
-            extensionContext,
-            logger,
-        );
-        expect(mockAddContentReader).not.toHaveBeenCalled();
-    });
-
-    it('passes the mutation result through, verified flag and all', async () => {
-        mockAddContentReader.mockResolvedValue({
-            status: 'ok',
-            org: 'someone',
-            site: 'demo',
-            readers: [{ email: 'someone@example.test', actions: 'read' }],
-            verified: false,
-        });
-
-        const out = await harness().call('set_content_reader', { email: 'someone@example.test', read: true, confirm: true });
-
-        expect(out).toEqual({
-            status: 'ok',
-            org: 'someone',
-            site: 'demo',
-            readers: [{ email: 'someone@example.test', actions: 'read' }],
-            verified: false,
-        });
-    });
-
-    it('refuses with no current project', async () => {
-        const out = await harnessWithNoProject().call('set_content_reader', { email: 'x@example.test', read: true, confirm: true });
-        expect(out.error).toBe('No current project is open');
-    });
 });
 
 describe('get_site_access', () => {
@@ -276,6 +190,9 @@ describe('repair_site_configuration', () => {
 
         expect(out.status).toBe('repaired');
         expect(out.nextStep).toBe('republish');
+        // A repair that worked is not a hand-back: an agent told to fetch the user
+        // here would stop a job it can finish with one more call.
+        expect(out).not.toHaveProperty('needsUser');
     });
 
     it('hands a refusal to the user instead of claiming a next step', async () => {
