@@ -140,7 +140,8 @@ export function registerApplyUpdatesTool(
                     phases.push(m);
                     reportPhase(m);
                 },
-                { templateConflicts: args?.resetTemplateOnConflict === true ? 'reset' : 'stop' },
+                // `args` is present here: a call without confirm:true returned above.
+                { templateConflicts: args.resetTemplateOnConflict === true ? 'reset' : 'stop' },
             );
 
             return asText({

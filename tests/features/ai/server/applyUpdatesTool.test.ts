@@ -17,7 +17,14 @@ jest.mock('@/features/updates/services/updateSelections', () => ({
     countSelections: jest.fn(),
 }));
 
+// Only the pair update is replaced: the probe the check uses stays real.
+jest.mock('@/features/dashboard/handlers/integrationUpdateHandlers', () => ({
+    ...jest.requireActual('@/features/dashboard/handlers/integrationUpdateHandlers'),
+    updateIntegrationPairFor: jest.fn(),
+}));
+
 import { registerApplyUpdatesTool } from '@/features/ai/server/applyUpdatesTool';
+import { updateIntegrationPairFor } from '@/features/dashboard/handlers/integrationUpdateHandlers';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import { applyUpdatesHeadless } from '@/features/updates/services/updateApplyService';
 import {
@@ -343,5 +350,30 @@ describe('apply_updates — integrations', () => {
 
         expect(applyMock.mock.calls[0][1]).toMatchObject({ updateIntegrationPair: expect.any(Function) });
         expect(res.categories.integration).toStrictEqual(integration);
+    });
+
+    it('the pair update it hands over runs the card\'s update under THIS call\'s context', async () => {
+        // The updater only ever sees a function. What it forwards, and under which
+        // context, is decided here and nowhere else.
+        const pairUpdate = updateIntegrationPairFor as jest.Mock;
+        const outcome = { success: true, message: 'Updated from a to b.' };
+        pairUpdate.mockResolvedValueOnce(outcome);
+        applyMock.mockResolvedValueOnce({ totalApplied: 0, totalFailed: 0 });
+        const ctx = ctxFactory();
+        const s = fakeServer();
+        registerApplyUpdatesTool(s, () => ctx);
+        await s.call({ confirm: true });
+        const handed = applyMock.mock.calls[0][1] as {
+            updateIntegrationPair: (project: unknown, id: string, report: unknown) => Promise<unknown>;
+        };
+        const project = { name: 'Justrite', path: '/p' };
+        const report = jest.fn();
+
+        const result = await handed.updateIntegrationPair(project, 'demo-erp', report);
+
+        expect(pairUpdate.mock.calls).toStrictEqual([[ctx, project, 'demo-erp', report]]);
+        expect(pairUpdate.mock.calls[0][0]).toBe(ctx);
+        expect(pairUpdate.mock.calls[0][3]).toBe(report);
+        expect(result).toBe(outcome);
     });
 });
