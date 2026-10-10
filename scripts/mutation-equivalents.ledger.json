@@ -15993,6 +15993,97 @@
             "decision": "none \u2014 the compiler needs the chain because the store's getter is typed to allow an empty store",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-07"
+        },
+        {
+            "module": "src/extension.ts",
+            "anchors": [
+                "} catch (err) {"
+            ],
+            "line": 179,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body is a single logger call (debugLogger.warn that the agent-trace file sink is unavailable). That the catch EXISTS is tested: extension-activationSeams 'degrades to channel-only when the storage path cannot be created' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed.",
+            "decision": "none \u2014 the body is narration; the swallow is what is tested",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-07"
+        },
+        {
+            "module": "src/extension.ts",
+            "anchors": [
+                "} catch (err) {"
+            ],
+            "line": 290,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body is a single logger call (logger.error that seeding the default AI prompts failed). That the catch EXISTS is tested: extension-activationSeams 'does not abort activation when seeding fails' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed.",
+            "decision": "none \u2014 the body is narration; the swallow is what is tested",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-07"
+        },
+        {
+            "module": "src/extension.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 585,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body is a single logger call (logger.warn that the global MCP entry could not be refreshed). That the catch EXISTS is tested: extension-mcpAndHome 'does not abort activation when the repair throws' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed.",
+            "decision": "none \u2014 the body is narration; the swallow is what is tested",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-07"
+        },
+        {
+            "module": "src/extension.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 861,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body is a single logger call (logger.debug that the secret sweep was skipped). That the catch EXISTS is tested: extension-activationSweeps 'does not let a failed secret sweep stop the sweeps after it' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed.",
+            "decision": "none \u2014 the body is narration; the swallow is what is tested",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-07"
+        },
+        {
+            "module": "src/extension.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 876,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body is a single logger call (logger.debug that the DA.live token move was skipped). That the catch EXISTS is tested: extension-activationSweeps 'does not let a failed DA.live token move take activation down' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed.",
+            "decision": "none \u2014 the body is narration; the swallow is what is tested",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-07"
+        },
+        {
+            "module": "src/extension.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 898,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body is a single logger call (logger.debug that the publish-key renewal sweep was skipped). That the catch EXISTS is tested: extension-activationSweeps 'does not let a failing sweep take activation down with it' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed.",
+            "decision": "none \u2014 the body is narration; the swallow is what is tested",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-07"
+        },
+        {
+            "module": "src/extension.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 972,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body is a single logger call (logger.debug that the Node sweep was skipped). That the catch EXISTS is tested: extension-nodeSweep 'shows nothing, and does not fail activation, when the sweep throws' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed.",
+            "decision": "none \u2014 the body is narration; the swallow is what is tested",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-07"
         }
     ]
 }

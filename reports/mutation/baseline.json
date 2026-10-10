@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "MUT-07: delete_adobe_workspace gets its first tests (descriptor, required ids, the confirm gate, targeting, refusal, note); rename gains its schema, trim and no-argument cases; the unreachable optional chains on both confirm gates are removed",
+    "_note": "MUT-07: the Node sweep glue gets its own suite (what the sweep is handed, the reinstall callback, what the SC is shown); the EW listener's dashboard push and the sidebar's agent-CLI probe are driven; seven log-only catch bodies planted and ledgered",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -2111,30 +2111,29 @@
             "recorded": "2026-10-10T01:22:15.271Z"
         },
         "src/extension.ts": {
-            "score": 54.9,
-            "killed": 157,
-            "survived": 69,
-            "noCoverage": 60,
+            "score": 68.28,
+            "killed": 198,
+            "survived": 58,
+            "noCoverage": 34,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 8,
-                "block": 10,
-                "logPresentation": 37,
-                "string": 11,
-                "other": 3
-            },
-            "uncoveredCategories": {
-                "block": 7,
-                "optionalChain": 2,
-                "branch": 21,
-                "string": 17,
-                "logPresentation": 12,
+                "branch": 5,
+                "block": 9,
+                "logPresentation": 31,
+                "string": 12,
                 "other": 1
             },
-            "highValueSurvivors": 18,
-            "equivalent": 20,
-            "openGaps": 32,
-            "recorded": "2026-10-09T23:56:57.824Z"
+            "uncoveredCategories": {
+                "block": 4,
+                "optionalChain": 1,
+                "branch": 7,
+                "string": 9,
+                "logPresentation": 13
+            },
+            "highValueSurvivors": 14,
+            "equivalent": 27,
+            "openGaps": 0,
+            "recorded": "2026-10-10T15:29:53.459Z"
         },
         "src/features/ai/aiSetupVerifier.ts": {
             "score": 94.58,

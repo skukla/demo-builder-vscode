@@ -33,7 +33,11 @@ import {
     mockRegisterLifecycleTools,
     mockWatcherManagerCtor,
     mockEnvWatcherInitialize,
+    mockSendAuthoringExperienceUpdate,
 } from './extension.testUtils';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
+import { SidebarProvider } from '@/features/sidebar/providers/sidebarProvider';
 
 const mockRegisterCommand = vscode.commands.registerCommand as jest.Mock;
 
@@ -140,6 +144,67 @@ describe('the seams activate() hands away', () => {
             // SHARED: its validation cache is per-instance, so a fresh one
             // downstream costs a GitHub round trip.
             expect(args.githubTokenService).toBeDefined();
+        });
+
+        // The open dashboard shows ONE project's authoring link. A republish of
+        // some other project must not replace it with that project's link.
+        describe('once a project has been republished', () => {
+            const REPUBLISHED = { name: 'demo-a', path: '/projects/demo-a' };
+            const LINK = 'https://da.live/#/acme/demo-a/index';
+
+            async function onReapplied(): Promise<(project: unknown) => Promise<void>> {
+                await activate(createActivationContext());
+                return mockRegisterEwListener.mock.calls[0][0].onReapplied as (
+                    project: unknown,
+                ) => Promise<void>;
+            }
+
+            beforeEach(() => {
+                jest.spyOn(ProjectDashboardWebviewCommand, 'authoringUrlFor').mockReturnValue(LINK);
+            });
+
+            it("pushes that project's authoring link to the dashboard when it is the open one", async () => {
+                const reapplied = await onReapplied();
+                mockGetCurrentProject.mockResolvedValue({ name: 'demo-a', path: '/projects/demo-a' });
+
+                await reapplied(REPUBLISHED);
+
+                expect(ProjectDashboardWebviewCommand.authoringUrlFor).toHaveBeenCalledWith(REPUBLISHED);
+                expect(mockSendAuthoringExperienceUpdate.mock.calls).toStrictEqual([[LINK]]);
+            });
+
+            it('pushes nothing when a different project is the open one', async () => {
+                const reapplied = await onReapplied();
+                mockGetCurrentProject.mockResolvedValue({ name: 'demo-b', path: '/projects/demo-b' });
+
+                await reapplied(REPUBLISHED);
+
+                expect(mockSendAuthoringExperienceUpdate).not.toHaveBeenCalled();
+            });
+
+            it('pushes nothing, without failing, when no project is open', async () => {
+                const reapplied = await onReapplied();
+                mockGetCurrentProject.mockResolvedValue(undefined);
+
+                await expect(reapplied(REPUBLISHED)).resolves.toBeUndefined();
+
+                expect(mockSendAuthoringExperienceUpdate).not.toHaveBeenCalled();
+            });
+        });
+    });
+
+    describe('the agent-CLI probe the sidebar is given', () => {
+        it('asks the shared command executor whether the named command exists', async () => {
+            const commandExists = jest.fn().mockResolvedValue(true);
+            (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue({ commandExists });
+
+            await activate(createActivationContext());
+            const probe = (SidebarProvider as unknown as jest.Mock).mock.calls[0][3] as {
+                commandExists: (name: string) => Promise<boolean>;
+            };
+
+            await expect(probe.commandExists('claude')).resolves.toBe(true);
+            expect(commandExists).toHaveBeenCalledWith('claude');
         });
     });
 

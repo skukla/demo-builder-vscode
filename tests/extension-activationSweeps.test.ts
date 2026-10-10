@@ -108,6 +108,16 @@ describe('the activation upkeep sweeps', () => {
         expect(vscode.window.showErrorMessage).not.toHaveBeenCalled();
     });
 
+    it('does not let a failed secret sweep stop the sweeps after it', async () => {
+        mockSweepCommerceSecrets.mockRejectedValue(new Error('keychain locked'));
+
+        await activate(createActivationContext());
+        await settleSweeps();
+
+        expect(mockSweepManifestFormat).toHaveBeenCalled();
+        expect(vscode.window.showErrorMessage).not.toHaveBeenCalled();
+    });
+
     it('hands the secret sweep every project and the extension SecretStorage', async () => {
         const context = createActivationContext();
 

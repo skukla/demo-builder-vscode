@@ -87,6 +87,28 @@ jest.mock('@/core/state/manifestFormatSweep', () => ({
 }));
 
 /**
+ * The fifth sweep in the chain (PR-1a): moving installed components onto Demo
+ * Builder's Node. Stubbed for the same reason as the four above. The jest config
+ * resets every mock between tests, so a suite that cares what the sweep answered
+ * says so in its own `beforeEach`; {@link NODE_SWEEP_NOT_NEEDED} is the quiet answer.
+ * `bareDefinition` stays real: the glue calls it, and what it builds is part of
+ * what the installer is handed.
+ */
+export const NODE_SWEEP_NOT_NEEDED: NodeSweepResult = { ran: false, moved: [], failed: [], running: [] };
+export const mockSweepOntoDemoBuilderNode = jest.fn<Promise<NodeSweepResult>, [NodeSweepDeps]>();
+jest.mock('@/features/components/services/demoBuilderNodeSweep', () => ({
+    ...jest.requireActual('@/features/components/services/demoBuilderNodeSweep'),
+    sweepOntoDemoBuilderNode: (deps: NodeSweepDeps) => mockSweepOntoDemoBuilderNode(deps),
+}));
+
+/** The dashboard push the EW-setting listener's callback makes. */
+export const mockSendAuthoringExperienceUpdate = jest.fn<Promise<void>, [string | undefined]>();
+jest.mock('@/features/dashboard/services/projectPanelPushes', () => ({
+    ...jest.requireActual('@/features/dashboard/services/projectPanelPushes'),
+    sendAuthoringExperienceUpdate: (url?: string) => mockSendAuthoringExperienceUpdate(url),
+}));
+
+/**
  * The in-extension MCP server, stubbed.
  *
  * Unmocked it binds a REAL Unix socket on every activation, and these suites
@@ -290,6 +312,7 @@ jest.mock('@/features/dashboard/services/defaultPromptsSeeder', () => ({
 // and re-exported so specs never bind the real ones.
 import * as vscode from 'vscode';
 import { createMockExtensionContext as createMockExtensionContextBase } from './helpers/extensionContextFake';
+import type { NodeSweepDeps, NodeSweepResult } from '@/features/components/services/demoBuilderNodeSweep';
 export { activate, deactivate, shouldReHomeToRoot } from '../src/extension';
 export { vscode };
 
