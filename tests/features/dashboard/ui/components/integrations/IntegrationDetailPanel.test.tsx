@@ -346,6 +346,30 @@ describe('IntegrationDetailPanel', () => {
             expect(panel.querySelector('.integration-panel-actions-divider')).toBeNull();
         });
 
+        // The Demo setup section's link is the flyout's own way into the guide; the
+        // grid opens it, as it opens every other action.
+        it('opens the setup guide through onAction, for the integration on screen', () => {
+            const model = makeModel({
+                setupChecklist: [
+                    {
+                        id: 'confirmed-status',
+                        title: 'Create the order status',
+                        why: 'why',
+                        where: 'Stores > Settings > Order Status',
+                        state: 'open',
+                        checkable: false,
+                    },
+                ],
+            });
+            const { onAction, panel } = renderPanel(model);
+
+            const section = within(panel).getByRole('region', { name: 'Demo setup' });
+            fireEvent.click(within(section).getByText('Open setup guide'));
+
+            expect(onAction).toHaveBeenCalledTimes(1);
+            expect(onAction).toHaveBeenCalledWith(model, 'setup-guide');
+        });
+
         it('offers nothing at all mid-deploy — every action would race the runner', () => {
             renderPanel(
                 makeModel({
