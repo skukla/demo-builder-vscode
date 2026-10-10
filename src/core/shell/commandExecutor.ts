@@ -135,9 +135,6 @@ export class CommandExecutor {
             );
         }
 
-        if (options.configureTelemetry === undefined) {
-            options.configureTelemetry = false;
-        }
         if (options.enhancePath === undefined) {
             options.enhancePath = true;
         }
@@ -212,14 +209,10 @@ export class CommandExecutor {
     /**
      * Apply enhanced PATH environment variable
      */
-    private applyEnhancedPath(
-        options: ExecuteOptions,
-        command: string,
-        finalOptions: ExecOptions,
-    ): void {
-        const shouldEnhance = options.enhancePath ||
-            (options.useNodeVersion === undefined && command.startsWith('aio '));
-        if (!shouldEnhance) return;
+    private applyEnhancedPath(options: ExecuteOptions, finalOptions: ExecOptions): void {
+        // `enhancePath` alone decides: an Adobe CLI command has already been given
+        // its default (true) by applyAdobeCLIDefaults before it reaches here.
+        if (!options.enhancePath) return;
 
         const extraPaths = this.environmentSetup.findNpmGlobalPaths();
         if (extraPaths.length > 0) {
@@ -253,8 +246,9 @@ export class CommandExecutor {
      */
     private checkTelemetryNeeded(command: string, options: ExecuteOptions): Promise<void> | null {
         const isVersionCheck = command.includes('--version') || command.includes('-v');
-        const needsTelemetry = !isVersionCheck &&
-            (options.configureTelemetry || (command.startsWith('aio ') && options.configureTelemetry !== false));
+        // `configureTelemetry` alone decides, and unset means no: an Adobe CLI
+        // command is configured only when its caller asks.
+        const needsTelemetry = !isVersionCheck && options.configureTelemetry;
         if (needsTelemetry) {
             return this.environmentSetup.ensureAdobeCLIConfigured(this.execute.bind(this));
         }
@@ -292,7 +286,7 @@ export class CommandExecutor {
         }
 
         // Step 3: Handle enhanced PATH
-        this.applyEnhancedPath(options, command, state.finalOptions);
+        this.applyEnhancedPath(options, state.finalOptions);
 
         // Step 4: Set and validate timeout
         state.finalOptions.timeout = this.validateTimeout(options.timeout);

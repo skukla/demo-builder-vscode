@@ -9404,35 +9404,9 @@
         {
             "module": "src/core/shell/commandExecutor.ts",
             "anchors": [
-                "(options.useNodeVersion === undefined && command.startsWith('aio '));"
-            ],
-            "line": 221,
-            "mutants": 2,
-            "category": "branch",
-            "reason": "This clause can never be true. It asks whether useNodeVersion is still undefined on a command starting 'aio ' - but every such command has already been through applyAdobeCLIDefaults, which sets useNodeVersion to null when it was undefined. For any other command the startsWith half is false. So forcing the clause false, or reading the command from its END instead of its start, changes no decision: shouldEnhance is decided entirely by options.enhancePath. The three mutants that WIDEN the clause are killed by the enhancePath:false case, because widening makes it fire where it never did.",
-            "decision": "Recorded as equivalent. The clause is unreachable-true rather than wrong; removing it is a source change outside this batch's scope, and is noted rather than made.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/core/shell/commandExecutor.ts",
-            "anchors": [
-                "(options.configureTelemetry || (command.startsWith('aio ') && options.configureTelemetry !== false));"
-            ],
-            "line": 257,
-            "mutants": 2,
-            "category": "branch",
-            "reason": "The second clause here is unreachable-true for the same reason as its sibling on line 254: a command starting 'aio ' has already passed through applyAdobeCLIDefaults, which sets configureTelemetry to a boolean, so 'configureTelemetry !== false' is false whenever startsWith is true - and when configureTelemetry is true the first operand has short-circuited already. Forcing the clause false, or reading the command from its end, therefore leaves needsTelemetry decided by options.configureTelemetry alone, which is what it is decided by today.",
-            "decision": "Recorded as equivalent. Noted as dead logic rather than deleted, since removing it is a source change outside this batch.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/core/shell/commandExecutor.ts",
-            "anchors": [
                 "if (isAdobeCLI) {"
             ],
-            "line": 289,
+            "line": 283,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true runs checkAdobeCLICache for a non-Adobe command, and that helper compares the command against the two literals 'aio --version' and 'aio plugins' before touching the cache at all. A command that is not Adobe CLI matches neither, so the helper returns undefined and execution continues exactly as it would have. There is no input for which the guard and the helper's own comparisons disagree.",
@@ -9445,7 +9419,7 @@
             "anchors": [
                 "if (isAdobeCLI) {"
             ],
-            "line": 314,
+            "line": 308,
             "mutants": 1,
             "category": "branch",
             "reason": "The write-side twin of the cache-read guard: forcing it true calls cacheAdobeCLIResult for a non-Adobe command, and that helper returns early on a non-zero code and otherwise compares the command against the same two literals before storing anything. A non-Adobe command matches neither, so nothing is written and nothing downstream can observe the difference.",

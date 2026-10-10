@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "MUT-01: webviewCommunicationManager — dead enableLogging option removed, ledger re-triaged",
+    "_note": "MUT-01: commandExecutor — shell default pinned, two never-true clauses and an inert default removed",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -712,22 +712,21 @@
             "recorded": "2026-10-10T01:15:04.299Z"
         },
         "src/core/shell/commandExecutor.ts": {
-            "score": 91.88,
-            "killed": 293,
-            "survived": 26,
+            "score": 93.27,
+            "killed": 276,
+            "survived": 20,
             "noCoverage": 0,
             "timeout": 1,
             "survivorCategories": {
-                "branch": 12,
-                "block": 2,
                 "logPresentation": 10,
-                "other": 2
+                "branch": 9,
+                "block": 1
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 14,
-            "equivalent": 14,
-            "openGaps": 2,
-            "recorded": "2026-10-10T00:22:23.239Z"
+            "highValueSurvivors": 10,
+            "equivalent": 10,
+            "openGaps": 0,
+            "recorded": "2026-10-10T20:37:16.046Z"
         },
         "src/core/shell/commandSequencer.ts": {
             "score": 45.9,

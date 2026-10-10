@@ -53,6 +53,20 @@ describe('the shell an aio command runs in', () => {
         expect(execaOptions.shell).toBe(DEFAULT_SHELL);
     });
 
+    it('defaults to the platform shell even when no Node version wraps the command', async () => {
+        // The Node wrap names a shell of its own, which hid this default: with the
+        // wrap declined, the Adobe CLI default is the only thing between `aio` and
+        // execa treating the whole command line as one executable name.
+        const { executor } = build();
+
+        const { execaOptions } = await runThroughExeca(executor, mockExeca, 'aio console where', {
+            configureTelemetry: false,
+            useNodeVersion: null,
+        });
+
+        expect(execaOptions.shell).toBe(DEFAULT_SHELL);
+    });
+
     it('keeps a shell the caller chose', async () => {
         const { executor } = build();
 
