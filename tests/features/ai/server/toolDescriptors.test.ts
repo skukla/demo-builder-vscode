@@ -102,6 +102,11 @@ describe('defaultShape', () => {
         expect(defaultShape(res)).toBe('Error: plain');
     });
 
+    it('says the operation failed when a failure carries no reason at all', () => {
+        // An agent handed "Error: " or "Error: undefined" has nothing to report.
+        expect(defaultShape({ success: false } as HandlerResponse)).toBe('Error: operation failed');
+    });
+
     it('never pretty-prints (no newlines)', () => {
         const res = { success: true, data: { a: { b: [1, 2, 3] } } } as HandlerResponse;
         expect(defaultShape(res)).not.toContain('\n');

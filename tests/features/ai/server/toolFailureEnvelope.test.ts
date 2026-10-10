@@ -30,41 +30,17 @@
  * just declined. That case is pinned below and is the reason this is a suite rather
  * than a one-line assertion.
  *
+ * THIS FILE holds the half the two builders own: `asText` reads the flag off the
+ * answer, `asRawText` is told. The half the descriptor registrar owns — a handler
+ * failure, a cancellation and a confirm refusal coming back through a row — is in
+ * `toolDescriptors-failureFlag.test.ts`, named for the module it drives so a
+ * mutation measurement of `toolDescriptors.ts` counts it.
+ *
  * @see https://modelcontextprotocol.io/specification/2025-11-25/server/tools
  * @see tests/features/ai/server/responseEnvelope.test.ts — the shape half
+ * @see tests/features/ai/server/toolDescriptors-failureFlag.test.ts — the registrar half
  */
-import { asRawText, asText, type McpTextResult } from '@/features/ai/server/mcpToolResult';
-import { registerDescriptorTools } from '@/features/ai/server/toolDescriptors';
-import type { HandlerMap } from '@/types/handlers';
-import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
-
-/** Captures what the registrar hands the SDK, without an SDK. */
-function capture(handlerResult: unknown, confirm?: true) {
-    const tools = new Map<string, (args: unknown) => Promise<unknown>>();
-    const server = {
-        registerTool(name: string, _def: unknown, handler: (args: unknown) => Promise<unknown>) {
-            tools.set(name, handler);
-        },
-    };
-    const map = { probe: async () => handlerResult } as unknown as HandlerMap;
-
-    registerDescriptorTools(
-        server,
-        [
-            {
-                needsAuth: false,
-                tool: 'probe_tool',
-                description: 'probe',
-                map,
-                type: 'probe',
-                readOnly: true,
-                ...(confirm ? { confirm: true } : {}),
-            },
-        ],
-        () => createMockHandlerContext()
-    );
-    return tools.get('probe_tool')!;
-}
+import { asRawText, asText } from '@/features/ai/server/mcpToolResult';
 
 describe('the builders declare failure', () => {
     it('asText marks a failed answer', () => {
@@ -97,45 +73,5 @@ describe('the builders declare failure', () => {
     // Control: the assertions above must be capable of failing.
     it('control: the flag is readable and distinguishes the two cases', () => {
         expect(asText({ success: false }).isError).not.toEqual(asText({ success: true }).isError);
-    });
-});
-
-describe('every descriptor row declares its failures', () => {
-    it('marks a handler failure', async () => {
-        const result = (await capture({ success: false, error: 'nope' })({})) as McpTextResult;
-        expect(result.isError).toBe(true);
-        // The text is unchanged — only the envelope now says it failed.
-        expect(result.content[0].text).toContain('nope');
-    });
-
-    it('leaves a handler success unmarked', async () => {
-        const result = (await capture({ success: true, data: { a: 1 } })({})) as McpTextResult;
-        expect(result.isError).toBeUndefined();
-    });
-
-    it('does NOT mark a cancellation that came back through a descriptor', async () => {
-        const result = (await capture({
-            success: true,
-            data: { success: false, error: 'cancelled' },
-        })({})) as McpTextResult;
-        expect(result.isError).toBeUndefined();
-    });
-
-    it('marks a confirm refusal — an input validation error the agent can correct', async () => {
-        // MCP names input validation as a tool execution error, and the correction
-        // here is mechanical: call again with confirm: true.
-        const result = (await capture({ success: true }, true)({})) as McpTextResult;
-        expect(result.isError).toBe(true);
-        expect(result.content[0].text).toContain('requires confirm:true');
-    });
-
-    it('a confirmed call is not a refusal', async () => {
-        const result = (await capture(
-            { success: true, data: { ok: 1 } },
-            true
-        )({
-            confirm: true,
-        })) as McpTextResult;
-        expect(result.isError).toBeUndefined();
     });
 });

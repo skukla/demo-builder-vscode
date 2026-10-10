@@ -132,7 +132,7 @@ should be anchored on something that stays true when the corpus is clean.
 |---|---|
 | Translate at the boundary | `tests/sop/user-facing-errors.test.ts` + its shrink-only ledger |
 | Errors live with their domain | the `coreErrorClasses` ratchet in `tests/sop/architecture-rules.test.ts`, pinned at 0 |
-| Failed tool calls report failure | `tests/features/ai/server/toolFailureEnvelope.test.ts` |
+| Failed tool calls report failure | `tests/features/ai/server/toolFailureEnvelope.test.ts` (the builders) and `tests/features/ai/server/toolDescriptors-failureFlag.test.ts` (descriptor rows) |
 
 Each of those conventions carries a proof in `scripts/convention-proofs.mjs` — a planted
 violation that the named enforcer must reject at the named assertion.
