@@ -7,11 +7,8 @@
  * what it will NOT probe and how often it waits between rounds.
  */
 
-import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { answeringEndpoint, meshAnswersAt } from '@/features/mesh/services/meshEndpoint';
-
-jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(undefined) }));
+import { answeringEndpoint, meshAnswersAt, mockSleep } from './meshEndpoint.testUtils';
 
 const SANDBOX = 'https://edge-sandbox-graph.adobe.io/api/mesh-1/graphql';
 
@@ -91,7 +88,7 @@ describe('answeringEndpoint — what it will not probe', () => {
 
 describe('answeringEndpoint — the wait between rounds', () => {
     beforeEach(() => {
-        (sleep as jest.Mock).mockClear();
+        mockSleep.mockClear();
     });
 
     // Three rounds, so two waits: after the last round there is nothing left to
@@ -101,8 +98,8 @@ describe('answeringEndpoint — the wait between rounds', () => {
 
         await answeringEndpoint(SANDBOX, ask);
 
-        expect(sleep).toHaveBeenCalledTimes(2);
-        expect(sleep).toHaveBeenCalledWith(TIMEOUTS.MESH_ENDPOINT_PROBE_INTERVAL);
+        expect(mockSleep).toHaveBeenCalledTimes(2);
+        expect(mockSleep).toHaveBeenCalledWith(TIMEOUTS.MESH_ENDPOINT_PROBE_INTERVAL);
     });
 
     it('does not wait at all when the first round answers', async () => {
@@ -110,6 +107,6 @@ describe('answeringEndpoint — the wait between rounds', () => {
 
         await answeringEndpoint(SANDBOX, ask);
 
-        expect(sleep).not.toHaveBeenCalled();
+        expect(mockSleep).not.toHaveBeenCalled();
     });
 });

@@ -3,14 +3,14 @@
  * Tests endpoint extraction from CLI output, URL parsing, and validation
  */
 
-import { answeringEndpoint, getEndpoint } from '@/features/mesh/services/meshEndpoint';
+import { answeringEndpoint, getEndpoint } from './meshEndpoint.testUtils';
 import type { Logger } from '@/types/logger';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 // Mock validation
-jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(undefined) }));
+// The sleep mock and the module import live in meshEndpoint.testUtils.
 jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
     validateMeshId: jest.fn(),
 }));
