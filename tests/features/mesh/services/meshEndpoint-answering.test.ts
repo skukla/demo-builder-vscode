@@ -7,8 +7,9 @@
  * what it will NOT probe and how often it waits between rounds.
  */
 
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+// The shared setup FIRST: it registers the sleep mock before anything loads the module.
 import { answeringEndpoint, meshAnswersAt, mockSleep } from './meshEndpoint.testUtils';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 const SANDBOX = 'https://edge-sandbox-graph.adobe.io/api/mesh-1/graphql';
 
