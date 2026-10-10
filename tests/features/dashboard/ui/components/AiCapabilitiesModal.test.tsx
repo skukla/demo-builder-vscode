@@ -11,6 +11,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import React from 'react';
 import { AiCapabilitiesModal } from '@/features/dashboard/ui/components/AiCapabilitiesModal';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { SkillInventoryEntry, McpInventoryEntry } from '@/types/ai';
 import '@testing-library/jest-dom';
 
@@ -467,5 +468,41 @@ describe('AiCapabilitiesModal — a refreshed inventory', () => {
         );
 
         expect(screen.getByTestId('ai-integration-browser')).toBeInTheDocument();
+    });
+});
+
+// ─── Closing while a regenerate is still running ─────────────────────────────
+// Closing cancels nothing. A regenerate that is still running is handed to a
+// progress notification so it does not finish unseen (PL-59 R8); an idle dialog
+// has nothing to hand over.
+describe('AiCapabilitiesModal — closing', () => {
+    let postMessage: jest.SpyInstance;
+
+    beforeEach(() => {
+        postMessage = jest.spyOn(webviewClient, 'postMessage').mockImplementation(() => undefined);
+    });
+
+    afterEach(() => postMessage.mockRestore());
+
+    it('hands a running regenerate to the background, by its operation id, then closes', () => {
+        const { onClose } = renderModal({ skills: SKILLS, mcps: MCPS, isBusy: true });
+
+        fireEvent.click(screen.getByRole('button', { name: 'Run in background' }));
+
+        expect(postMessage).toHaveBeenCalledTimes(1);
+        expect(postMessage).toHaveBeenCalledWith('backgroundOperation', {
+            id: 'ai-files',
+            title: 'Regenerating AI files',
+        });
+        expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('just closes when nothing is running — no handover is sent', () => {
+        const { onClose } = renderModal({ skills: SKILLS, mcps: MCPS });
+
+        fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+
+        expect(postMessage).not.toHaveBeenCalled();
+        expect(onClose).toHaveBeenCalledTimes(1);
     });
 });
