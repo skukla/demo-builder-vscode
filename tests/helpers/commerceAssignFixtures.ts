@@ -6,9 +6,12 @@
  * Where they come from (said per fixture too):
  * - products: NOT here; the suites read the Bodea sandbox's captured `GET products` page
  *   (tests/fixtures/commerce-rest/products-page.json, 2026-09-27) for the product shape;
- * - bulk accept / status: the examples on Adobe's `bulk-endpoints` and
- *   `operation-status-endpoints` pages (read 2026-10-09), with our own SKUs and uuid. No live
- *   status answer is recorded in the repo;
+ * - bulk accept: the example on Adobe's `bulk-endpoints` page (read 2026-10-09), with our own
+ *   SKUs and uuid;
+ * - bulk status: a LIVE answer, recorded 2026-10-09 from the Justrite ACCS store after a
+ *   three-product assign (tests/fixtures/commerce-rest/bulk-status-products.json; the bulk id
+ *   and user id replaced with stand-ins). `bulkStatus` builds the same shape for other counts;
+ *   its success message is the one that answer carried;
  * - attribute sets, their attributes, their groups: Magento's service contracts for those routes
  *   (read 2026-10-09). No live answer is recorded in the repo. Set 4 "Default" and group 7
  *   "Product Details" follow the reference note on product create gotchas (Justrite, 2026-09-30).
@@ -32,20 +35,20 @@ export function bulkAccepted(count: number, uuid = '799a59c0-09ca-4d60-b432-2953
     };
 }
 
-/** The operation-status page's example answer, one operation per status given. */
+/** The recorded status answer's shape (bulk-status-products.json), one operation per status given. */
 export function bulkStatus(statuses: number[], messages: Record<number, string> = {}): CommerceBulkStatus {
     return {
         operations_list: statuses.map((status, id) => ({
             id,
             status,
-            result_message: messages[id] ?? (status === 1 ? 'Service execution success Magento\\Catalog\\Model\\ProductRepository\\Interceptor::save' : null),
+            result_message: messages[id] ?? (status === 1 ? 'Service execution success Magento\\Catalog\\Api\\ProductRepositoryInterface\\Proxy::save' : null),
             error_code: null,
         })),
         user_type: 2,
         bulk_id: '799a59c0-09ca-4d60-b432-2953986c1c38',
         description: 'Topic async.magento.catalog.api.productrepositoryinterface.save.put',
-        start_time: '2026-10-09 10:00:00',
-        user_id: null,
+        start_time: '2026-10-10 00:19:08',
+        user_id: 1,
         operation_count: statuses.length,
     };
 }

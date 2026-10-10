@@ -4,8 +4,13 @@
  * Answers are the typed fixtures in tests/helpers/commerceAssignFixtures.ts.
  */
 
+import recordedStatus from '../../../fixtures/commerce-rest/bulk-status-products.json';
 import { bulkAccepted, bulkStatus } from '../../../helpers/commerceAssignFixtures';
 import { followBulk, startBulk, type BulkFollowDeps } from '@/features/app-builder/services/commerceBulk';
+import type { CommerceBulkStatus } from '@/types/commerceWire';
+
+/** Typed, so a recorded answer the wire type no longer describes fails typecheck:tests. */
+const RECORDED: CommerceBulkStatus = recordedStatus;
 
 function clock(step = 3000): Pick<BulkFollowDeps, 'now' | 'sleep'> & { slept: number[] } {
     let at = 0;
@@ -36,6 +41,18 @@ describe('startBulk', () => {
 });
 
 describe('followBulk', () => {
+    it('reads the answer Commerce really gave for three saved products (recorded 2026-10-09)', async () => {
+        const get = jest.fn(async () => RECORDED);
+        const outcome = await followBulk(get, RECORDED.bulk_id ?? '', 3, { ...clock(), intervalMs: 3000, deadlineMs: 60_000 });
+        expect(get).toHaveBeenCalledWith(`bulk/${RECORDED.bulk_id}/status`);
+        expect(outcome).toMatchObject({ total: 3, complete: 3, open: 0, timedOut: false });
+        expect(outcome.failed).toStrictEqual([]);
+    });
+
+    it('the builder makes the recorded shape', () => {
+        expect(bulkStatus([1, 1, 1])).toStrictEqual(RECORDED);
+    });
+
     it('reads the status until no operation is open, reporting progress', async () => {
         const answers = [bulkStatus([1, 4, 4]), bulkStatus([1, 1, 4]), bulkStatus([1, 1, 1])];
         const get = jest.fn(async () => answers.shift());
