@@ -9,7 +9,7 @@ import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { nodeForInstall } from '@/core/shell/demoBuilderNode';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { Project } from '@/types/base';
+import type { ComponentInstance, Project } from '@/types/base';
 import type { TransformedComponentDefinition } from '@/types/components';
 import type { Logger } from '@/types/logger';
 import { parseJSON } from '@/types/typeGuards';
@@ -114,7 +114,7 @@ export class ComponentUpdater {
                 await this.mergeEnvFiles(component.path, envFiles);
 
                 // 6.5. Record the Node it was just installed under, so Start Demo runs it there
-                await this.recordNodeVersion(project, componentId);
+                await this.recordNodeVersion(component, componentId);
 
                 // 7. Update version tracking ONLY after successful verification
                 if (!project.componentVersions) {
@@ -127,9 +127,7 @@ export class ComponentUpdater {
 
                 // Also update componentInstances.version to stay in sync
                 // (projectFileLoader.discoverComponents prefers this over componentVersions)
-                if (project.componentInstances?.[componentId]) {
-                    project.componentInstances[componentId].version = newVersion;
-                }
+                component.version = newVersion;
 
                 this.logger.info(`[Updates] Successfully updated ${componentId} to ${newVersion}`);
 
@@ -289,10 +287,9 @@ export class ComponentUpdater {
      * and left `npm run dev` on the old one. A component that installs nothing (an
      * EDS storefront) keeps whatever it had.
      */
-    private async recordNodeVersion(project: Project, componentId: string): Promise<void> {
+    private async recordNodeVersion(instance: ComponentInstance, componentId: string): Promise<void> {
         const declared = nodeForInstall(await this.componentDefinition(componentId));
-        const instance = project.componentInstances?.[componentId];
-        if (!declared || !instance) return;
+        if (!declared) return;
         instance.metadata = { ...instance.metadata, nodeVersion: declared };
     }
 

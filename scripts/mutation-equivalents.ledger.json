@@ -44,19 +44,6 @@
             "source": ".rptc/handoff/2026-09-02-equivalent-mutants.md"
         },
         {
-            "module": "src/features/updates/services/componentUpdater.ts",
-            "anchors": [
-                "if (project.componentInstances?.[componentId]) {"
-            ],
-            "mutants": 2,
-            "category": "branch",
-            "reason": "updateComponent reads the component out of componentInstances in its first statement and throws if it is not there, so by this line the entry is guaranteed to exist. A test that removed it never reaches this line \u2014 it gets the refusal instead, which is what happened when one was written. The version sync on this line is real and is tested; only the guard around it is unreachable.",
-            "decision": "none, but worth a comment \u2014 it reads as if the entry might be missing, which sent one test after a state the method forbids",
-            "recorded": "2026-09-02",
-            "source": ".rptc/handoff/2026-09-02-equivalent-mutants.md",
-            "note": "Recorded as 3 on 2026-09-02; re-measured at 2 on 2026-09-03 after the plumbing suite pinned the version sync on a project whose instance exists (the ConditionalExpression->false mutant now dies). The two left are the guard-always-true and the dropped `?.`, both unreachable for the reason above."
-        },
-        {
             "module": "src/features/authentication/services/authenticationService.ts",
             "anchors": [
                 "this.debugLogger.error('[Auth] Quick authentication check failed', error as Error);"
