@@ -2,7 +2,7 @@
  * DA.live Content Operations Tests - ensureBlockDocPages
  *
  * Tests for ensureBlockDocPages (creating doc pages for blocks with exampleHtml).
- * Split from daLiveContentOperations-library-creation.test.ts to keep each file
+ * Split from daLiveBlockLibraryOperations-library-creation.test.ts to keep each file
  * under the max-lines limit; shared mock setup is imported from the sibling
  * testUtils module.
  */
@@ -15,7 +15,7 @@ import type { Logger } from '@/types/logger';
 import {
     createLibraryCreationMocks,
     createComponentDef,
-} from './daLiveContentOperations-library-creation.testUtils';
+} from './daLiveBlockLibraryOperations-library-creation.testUtils';
 
 global.fetch = mockFetch;
 

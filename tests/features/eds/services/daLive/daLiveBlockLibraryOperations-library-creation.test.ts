@@ -6,7 +6,7 @@
  * - Creating block library with spreadsheet and config
  * - Handling missing/empty template definitions
  *
- * ensureBlockDocPages tests live in daLiveContentOperations-blockDocPages.test.ts.
+ * ensureBlockDocPages tests live in daLiveBlockLibraryOperations-blockDocPages.test.ts.
  */
 
 import {
@@ -17,7 +17,7 @@ import type { Logger } from '@/types/logger';
 import {
     createLibraryCreationMocks,
     createComponentDef,
-} from './daLiveContentOperations-library-creation.testUtils';
+} from './daLiveBlockLibraryOperations-library-creation.testUtils';
 
 global.fetch = mockFetch;
 

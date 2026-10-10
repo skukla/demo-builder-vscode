@@ -7,10 +7,10 @@
  * behind in a spec loads the real module before these mocks register.
  *
  * Extracted 2026-08-30 (lane C1) from byte-identical copies in:
- *   daLiveContentOperations-blockDocPages.test.ts
+ *   daLiveBlockLibraryOperations-blockDocPages.test.ts   (renamed 2026-10-10)
  *   daLiveContentOperations-enumeration.test.ts
- *   daLiveContentOperations-library-cdnCopy.test.ts
- *   daLiveContentOperations-library-creation.test.ts
+ *   daLiveBlockLibraryOperations-library-cdnCopy.test.ts   (renamed 2026-10-10)
+ *   daLiveBlockLibraryOperations-library-creation.test.ts   (renamed 2026-10-10)
  *   daLiveContentOperations-transform.test.ts
  *   daLiveContentOperations-utils.test.ts
  */

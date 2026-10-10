@@ -16390,6 +16390,30 @@
             "decision": "none \u2014 the body is narration; the swallow is what is tested",
             "recorded": "2026-10-10",
             "source": "PL-70 MUT-02, 2026-10-10"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveBlockLibraryOperations.ts",
+            "anchors": [
+                "const blocks = (parsed.groups ?? []).flatMap("
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The mutant replaces the empty-array fallback with ['Stryker was here']. flatMap then visits one string, reads .components off it, gets undefined, and the inner '?? []' yields no blocks - the same empty list the real fallback produces. That the fallback EXISTS is tested: 'tolerates a definition with no groups key at all' would get a TypeError from undefined.flatMap without it. What the fallback array holds cannot matter unless an element has a components array, and no array literal can stand in for parsed JSON there. Planted by hand on 2026-10-10 against all eleven suites of the module, including 'asks DA.live for nothing when the definition has no groups key at all': 139 tests green.",
+            "decision": "none - any array of non-group values flattens to no blocks",
+            "recorded": "2026-10-10",
+            "source": "PL-70 MUT-04, 2026-10-10"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveBlockLibraryOperations.ts",
+            "anchors": [
+                "if (!configResult.success) {"
+            ],
+            "mutants": 4,
+            "category": "branch",
+            "reason": "The body of this guard is a single logger.warn. A failed site-config registration is not returned, not thrown and not added to the result: createBlockLibrary goes on to write the sheet and answers success either way. So forcing the condition true or false, dropping the negation, or emptying the body changes only whether a warning reaches the log, and a test may not pin a logger call's arguments. That updateSiteConfig is CALLED, with the exact 'Blocks' title and sheet path, is tested in the libraryCreation suite. Whether a failed registration SHOULD fail the library (the sheet exists but DA.live's palette is never told about it) is a product question raised in the MUT-04 report, not something this guard decides today.",
+            "decision": "none - the guard selects a log line; the registration call itself is tested by its arguments",
+            "recorded": "2026-10-10",
+            "source": "PL-70 MUT-04, 2026-10-10"
         }
     ]
 }
