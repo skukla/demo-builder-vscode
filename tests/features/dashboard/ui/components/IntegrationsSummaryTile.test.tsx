@@ -190,6 +190,18 @@ describe('IntegrationsSummaryTile', () => {
         expect(screen.getByTestId('integrations-tile-dot')).toHaveAttribute('data-variant', 'error');
     });
 
+    // 'unknown' is a real persisted status and ranks nowhere, so a stopped removal
+    // can be the ONLY thing the tile has to say. It must still say it.
+    it('reads a stopped removal as amber when nothing else on the tile is rankable', () => {
+        const stopped = { ...DEPLOYED, status: 'unknown', removalStopped: 'Nothing was removed.' };
+        const map = { a: stopped } as unknown as Record<string, AppBuilderComponentState>;
+
+        render(<IntegrationsSummaryTile hasAdobeContext appBuilderComponents={map} />);
+
+        expect(screen.getByTestId('integrations-tile-dot')).toHaveAttribute('data-variant', 'warning');
+        expect(screen.getByRole('tooltip')).toHaveTextContent('Removal stopped');
+    });
+
     describe('mesh health folds into the same dot', () => {
         // Without this the mesh could be broken and the dashboard would look
         // healthy — the regression the tile exists to prevent, since the mesh

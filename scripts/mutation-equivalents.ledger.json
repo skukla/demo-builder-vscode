@@ -10622,7 +10622,7 @@
             "line": 132,
             "mutants": 10,
             "category": "other",
-            "reason": "Twelve handlers in this hook are memoised with an EMPTY dependency list (handleSyncStorefront, handleRefreshBlockLibrary, handleOpenAdminPanel, handleConfigure, handleEditProject, handleOpenDevConsole, handleDeleteProject, handleRepublishContent, handleResetProject, handleNavigateBack, handleReAuthenticate, handleSwitchOrg), and their closing lines are textually identical so they cannot be anchored apart \u2014 this row covers the one mutant on each. Stryker does not empty these lists; it replaces the empty array with a one-element array holding a constant string. React compares dependency lists element by element with Object.is, and that constant is identical on every render, so the callback is created once and never recreated \u2014 exactly as with the empty list. Each of these handlers also closes over nothing but the imported webviewClient, so there is no captured value that could go stale even if the memo did invalidate. No sequence of renders, messages or payloads can distinguish the two. (2026-09-24, develop merged: three of the twelve \u2014 delete, republish, reset \u2014 left this hook for the Export dialog and the reset flow; nine remain. 2026-09-30, EDS-21: handleOpenAemAssets joins them, same shape; ten. 2026-10-06: handleOpenDevConsole left with the dashboard's Dev Console tile; nine. 2026-10-10, PL-70 MUT-07: the count had drifted — handleOpenSiteAccess, handleOpenStorefrontReport and handleVerifyOrg were added uncovered, so their lists read as uncovered rather than surviving; with each now driven by a test the hook has ten such lists (open admin panel, configure, edit project, AEM assets, site access, storefront report, navigate back, re-authenticate, verify org, switch org). Re-verified by planting ['Stryker was here'] on all ten at once: 32 tests green, against a control that emptied the live-site handler's real dependency list, which the suite fails.)",
+            "reason": "Twelve handlers in this hook are memoised with an EMPTY dependency list (handleSyncStorefront, handleRefreshBlockLibrary, handleOpenAdminPanel, handleConfigure, handleEditProject, handleOpenDevConsole, handleDeleteProject, handleRepublishContent, handleResetProject, handleNavigateBack, handleReAuthenticate, handleSwitchOrg), and their closing lines are textually identical so they cannot be anchored apart \u2014 this row covers the one mutant on each. Stryker does not empty these lists; it replaces the empty array with a one-element array holding a constant string. React compares dependency lists element by element with Object.is, and that constant is identical on every render, so the callback is created once and never recreated \u2014 exactly as with the empty list. Each of these handlers also closes over nothing but the imported webviewClient, so there is no captured value that could go stale even if the memo did invalidate. No sequence of renders, messages or payloads can distinguish the two. (2026-09-24, develop merged: three of the twelve \u2014 delete, republish, reset \u2014 left this hook for the Export dialog and the reset flow; nine remain. 2026-09-30, EDS-21: handleOpenAemAssets joins them, same shape; ten. 2026-10-06: handleOpenDevConsole left with the dashboard's Dev Console tile; nine. 2026-10-10, PL-70 MUT-07: the count had drifted \u2014 handleOpenSiteAccess, handleOpenStorefrontReport and handleVerifyOrg were added uncovered, so their lists read as uncovered rather than surviving; with each now driven by a test the hook has ten such lists (open admin panel, configure, edit project, AEM assets, site access, storefront report, navigate back, re-authenticate, verify org, switch org). Re-verified by planting ['Stryker was here'] on all ten at once: 32 tests green, against a control that emptied the live-site handler's real dependency list, which the suite fails.)",
             "decision": "none \u2014 an empty dependency list is correct for a handler that closes over nothing",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-06"
@@ -16486,6 +16486,30 @@
             "decision": "Recorded, not killed: the only observable difference is the wording of a debug line, and asserting log wording is banned. The guard stays because the log line it chooses is the useful one.",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-07"
+        },
+        {
+            "module": "src/features/dashboard/ui/components/IntegrationsSummaryTile.tsx",
+            "anchors": [
+                "return worst && label ? { variant: worst.variant, label } : undefined;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Replacing && with || is only visible when exactly one of worst and label is set, and the two are always set together. Every status in SEVERITY is a key of the shared STATUS_DISPLAY table, so a found rank always has a label; with no rank, getStatusDisplay(undefined) answers null and the label is undefined too. Planted 2026-10-10 as 'worst || label' and all 33 tests pass, including the ones that drive an unrankable status and an empty project.",
+            "decision": "none \u2014 the label check is what narrows the type for the returned object; it guards against a SEVERITY row the vocabulary does not name, which the two tables cannot currently disagree about",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-01"
+        },
+        {
+            "module": "src/features/dashboard/ui/components/IntegrationsSummaryTile.tsx",
+            "anchors": [
+                "{ status: 'deployed', variant: 'success' },"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Emptying the 'deployed' row makes a healthy project unrankable, so worstFace answers undefined and the tile wears no dot. The unmutated row ranks it as success, and the render then drops any face whose variant is success \u2014 also no dot, and no words. Being the LAST row it cannot outrank anything either. Both forms render the same tile for every input. Planted 2026-10-10 as an empty object and all 33 tests pass, including 'wears no dot and no words when everything is deployed'.",
+            "decision": "none \u2014 the row keeps SEVERITY a complete ranking of the health vocabulary, and the render-site check is where 'healthy says nothing' is stated; removing either would leave the other as the only place that rule lives",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-01"
         }
     ]
 }
