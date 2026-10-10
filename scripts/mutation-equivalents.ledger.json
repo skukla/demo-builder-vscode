@@ -15970,6 +15970,19 @@
             "decision": "none \u2014 replacing a run at once is the clearer statement of intent and costs nothing",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-04"
+        },
+        {
+            "module": "src/features/project-creation/services/aiBundle/claudeSettingsWriter.ts",
+            "anchors": [
+                "const hooks = Array.isArray(entry?.hooks) ? entry.hooks : [];"
+            ],
+            "line": 109,
+            "mutants": 1,
+            "category": "other",
+            "reason": "The isAioGuardHook twin of the row already recorded for isGitSyncHook (line 164): Stryker replaces the empty fallback array with ['Stryker was here']. The fallback is reached only when the entry's hooks field is not an array, and the next call is .some(h => typeof h?.command === 'string' && h.command.includes(AIO_GUARD_SIGNATURE)). A bare string has no .command, so the predicate is false for the injected element exactly as it is vacuously false for the empty array. Planted 2026-10-10: the injected array answers false, the control ({command}) answers true.",
+            "decision": "none \u2014 the empty fallback is the correct shape guard for a user-authored file",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-04"
         }
     ]
 }

@@ -132,6 +132,8 @@ describe('generateClaudeSettings', () => {
         const hook = settings.hooks?.['PostToolUse']?.[0];
 
         expect(hook?.matcher).toMatch(/Write|Edit/);
+        // Claude Code runs only hooks declared as a command.
+        expect(hook?.hooks.map((h) => h.type)).toEqual(['command']);
     });
 
     it('PostToolUse hook command references the storefront local path', () => {
@@ -231,6 +233,29 @@ describe('generateClaudeSettings', () => {
             );
 
             expect(out).toBe('/demo/storefront/blocks/hero/hero.js');
+        });
+
+        it('EXECUTES: takes the camelCase filePath spelling too, at any depth', () => {
+            const project = makeEdsProject();
+            const command =
+                generateClaudeSettings(project, NODE_PATH).hooks?.['PostToolUse']?.[0]?.hooks?.[0]
+                    ?.command ?? '';
+            const script = command.slice(
+                command.indexOf("-e '") + 4,
+                command.indexOf("'); ")
+            );
+            const payload = JSON.stringify({
+                toolName: 'edit',
+                toolArgs: { filePath: '/demo/storefront/blocks/hero/hero.css' },
+            });
+
+            const out = require('child_process').execFileSync(
+                process.execPath,
+                ['-e', script],
+                { input: payload, encoding: 'utf8' }
+            );
+
+            expect(out).toBe('/demo/storefront/blocks/hero/hero.css');
         });
 
         it('EXECUTES: yields empty (and the guard skips) when there is no file_path', () => {
@@ -357,7 +382,7 @@ describe('buildHomeGitSyncCommand', () => {
         expect(command).toContain(`case "$TOP" in "${HOME_ROOT}"/*) ;; *) exit 0 ;; esac`);
     });
 
-    it('applies the origin-remote guard (the own-storefront guard is proved by running it, in homeGitSyncHook.test.ts)', () => {
+    it('applies the origin-remote guard (the own-storefront guard is proved by running it, in claudeSettingsWriter.homeGitSync.test.ts)', () => {
         const command = buildHomeGitSyncCommand(HOME_ROOT, NODE_PATH);
         expect(command).toContain('git -C "$TOP" remote get-url origin >/dev/null 2>&1 || exit 0');
     });
@@ -386,6 +411,7 @@ describe('generateHomeClaudeSettings', () => {
         const hook = settings.hooks?.['PostToolUse']?.[0];
 
         expect(hook?.matcher).toBe('Write|Edit');
+        expect(hook?.hooks.map((h) => h.type)).toEqual(['command']);
         const command = hook?.hooks?.[0]?.command ?? '';
         expect(command).toBe(buildHomeGitSyncCommand(HOME_ROOT, NODE_PATH));
         expect(command).toContain(`case "$TOP" in "${HOME_ROOT}"/*)`);
@@ -451,6 +477,12 @@ describe('PreToolUse aio-global guard', () => {
             },
         });
     }
+
+    it('is declared as a command hook, the only kind Claude Code runs', () => {
+        const entry = guardEntry(generateClaudeSettings(makeMeshOnlyProject(), NODE_PATH));
+
+        expect(entry?.hooks.map((h) => h.type)).toEqual(['command']);
+    });
 
     describe('the command, executed', () => {
         it('EXECUTES: exits 2 (block) and names the alternative on stderr', () => {
