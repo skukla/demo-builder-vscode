@@ -39,6 +39,9 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
         NORMAL: 30000,
         LONG: 180000,
         VERY_LONG: 300000,
+        // Read by the published-paths poll. Absent, its deadline is NaN and the
+        // poll gives up before asking once.
+        HELIX_STATUS_JOB_MAX: 120000,
     },
     CACHE_TTL: {
         SHORT: 60000,
