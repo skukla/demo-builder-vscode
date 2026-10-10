@@ -15810,6 +15810,18 @@
             "decision": "none \u2014 the empty list is what \"this callback closes over nothing\" is spelled as",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-01"
+        },
+        {
+            "module": "src/features/project-creation/ui/wizard/hooks/useWizardState.ts",
+            "anchors": [
+                "initialProjectName && initialProjectName === importedSettings?.source?.project"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "Both optional links on importedSettings?.source?.project sit to the right of the initialProjectName guard, and initializeProjectName returns a non-empty name only when importedSettings.source.project is itself non-empty (wizardHelpers.ts: it returns the empty string for a missing import, a missing source and a missing project alike). So whenever the comparison is evaluated, both links exist and the chains never short-circuit; whenever one is missing, the guard has already stopped evaluation. Verified by planting non-null assertions in place of both chains: all 14 suites that reach the hook (175 tests, create mode included) stay green.",
+            "decision": "none \u2014 the chains are what lets the expression typecheck against a nullable import; dropping the guard instead would hand a title to an import whose source name is the empty string",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-01"
         }
     ]
 }
