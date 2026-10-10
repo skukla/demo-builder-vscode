@@ -5797,23 +5797,21 @@
             "recorded": "2026-10-10T21:00:39.504Z"
         },
         "src/features/eds/handlers/storefrontSetup/storefrontSetupPhases.ts": {
-            "score": 90.27,
-            "killed": 167,
+            "score": 90.91,
+            "killed": 170,
             "survived": 17,
-            "noCoverage": 1,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
                 "branch": 1,
                 "string": 4,
                 "logPresentation": 12
             },
-            "uncoveredCategories": {
-                "other": 1
-            },
+            "uncoveredCategories": {},
             "highValueSurvivors": 1,
             "equivalent": 1,
-            "openGaps": 1,
-            "recorded": "2026-10-09T23:36:29.470Z"
+            "openGaps": 0,
+            "recorded": "2026-10-10T22:06:29.008Z"
         },
         "src/features/eds/services/accsDiscoveryConfig.ts": {
             "score": 100,

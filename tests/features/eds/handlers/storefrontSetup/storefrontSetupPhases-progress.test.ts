@@ -52,6 +52,7 @@ import {
 } from './storefrontSetupPhases.testUtils';
 import type { SetupServices } from '@/features/eds/handlers/storefrontSetup/storefrontSetupTypes';
 import { executeEdsPipeline } from '@/features/eds/services/edsPipeline';
+import type { StorefrontBrokenLink } from '@/types/webviewPayloads';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockCommandExecutor } from '../../../../helpers/commandExecutorFake';
 
@@ -266,5 +267,35 @@ describe('the two interpolated positions', () => {
         });
 
         expect(payload.progress).toBe(66);
+    });
+});
+
+/**
+ * What the run hands back once the bar reaches 100.
+ *
+ * The content copy records links to pages the source lacks too on the patch
+ * report it is handed. They are never in the toast: project creation reads them
+ * off THIS result and records them, and the Storefront Report lists them. A
+ * result that dropped them would leave that report saying nothing is broken.
+ */
+describe('the result of a finished run', () => {
+    it('carries the broken links the content copy recorded', async () => {
+        const brokenLinks: StorefrontBrokenLink[] = [{ link: '/fr', pages: ['/footer'] }];
+        mockExecuteEdsPipeline.mockImplementation(async (input) => {
+            if (!input.patchReport) throw new Error('setup hands the pipeline its patch report');
+            input.patchReport.brokenLinks = brokenLinks;
+            return { success: true, contentFilesCopied: 0, libraryPaths: [] };
+        });
+
+        const result = await executeStorefrontSetupPhases(
+            createSetupContext(),
+            createEdsConfig(),
+            new AbortController().signal,
+            undefined,
+            SERVICES
+        );
+
+        expect(result.success).toBe(true);
+        expect(result.brokenLinks).toStrictEqual(brokenLinks);
     });
 });
