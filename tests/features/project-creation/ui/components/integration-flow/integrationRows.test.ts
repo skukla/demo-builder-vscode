@@ -229,6 +229,29 @@ describe('resolveIntegrationRows — catalog rows', () => {
         expect(unnamed[0]).toMatchObject({ name: pairEntry.name, companion: 'ERP', renamable: true });
     });
 
+    it('a pair name left blank (only spaces) falls back to the catalog name, like one never set', () => {
+        const pairEntry: AppBuilderComponentCatalogEntry = { ...ERP_ENTRY, nameFromEnvVar: 'INTEGRATION_DISPLAY_NAME' };
+        const erpSystem: AppBuilderComponentCatalogEntry = {
+            id: 'demo-erp',
+            name: 'ERP',
+            description: 'the ERP',
+            kind: 'system',
+            boundTo: 'erp-sync',
+            nameFromEnvVar: 'ERP_DISPLAY_NAME',
+            source: { owner: 'skukla', repo: 'demo-erp', branch: 'main' },
+        };
+        const catalog = [...CATALOG.filter((entry) => entry.id !== 'erp-sync'), pairEntry, erpSystem];
+        const rows = resolveIntegrationRows(
+            state({
+                selectedAppBuilderComponents: ['erp-sync'],
+                componentConfigs: { 'erp-sync': { INTEGRATION_DISPLAY_NAME: '   ', ERP_DISPLAY_NAME: '' } },
+            }),
+            MESH_ENTRY,
+            catalog
+        );
+        expect(rows[0]).toMatchObject({ name: pairEntry.name, companion: 'ERP' });
+    });
+
     it('a catalog entry whose system has no name input is not renamable', () => {
         const erpSystem: AppBuilderComponentCatalogEntry = {
             id: 'demo-erp',
