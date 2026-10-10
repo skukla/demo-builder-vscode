@@ -72,6 +72,11 @@ interface McpConfig {
  *
  * `nodePath` is the pre-resolved Node binary (see `resolveNodePath`); pass it
  * to skip re-resolving when refreshing many projects.
+ *
+ * `defaults` is the ai-defaults declaration, the bundled `ai-defaults.json`
+ * unless a caller hands in another. Production never does; it is the seam a
+ * test uses to supply an entry the bundled file does not have (a config leaf
+ * is injected, never module-mocked).
  */
 export async function writeMcpConfigs(
     projectPath: string,
@@ -79,12 +84,13 @@ export async function writeMcpConfigs(
     extensionDistPath: string,
     writer: GeneratedFileWriter,
     nodePath?: string,
+    defaults: AiDefaults = aiDefaults,
 ): Promise<void> {
     // Resolve the Node binary once and thread it to BOTH the MCP proxy entry
     // and the git-sync hook extractor (which parses tool input via `node -e`).
     const resolvedNode = nodePath ?? (await resolveNodePath());
 
-    const mcpConfig = await buildMcpConfig(extensionDistPath, project, resolvedNode);
+    const mcpConfig = await buildMcpConfig(extensionDistPath, project, resolvedNode, defaults);
     const mcpJson = JSON.stringify(mcpConfig, null, 2);
 
     await writer.write('.claude/mcp.json', mcpJson);
@@ -181,6 +187,7 @@ async function buildMcpConfig(
     extensionDistPath: string,
     project: Project,
     nodePath: string,
+    defaults: AiDefaults,
 ): Promise<McpConfig> {
     // The in-extension MCP server listens on a socket keyed to the OPEN
     // WORKSPACE — under the always-root home-Chat model (PR #36) that's the
@@ -207,7 +214,7 @@ async function buildMcpConfig(
     // attached component); Playwright stays storefront-only.
     const toolsDir = resolveMcpToolsDir(project.path);
     const fnmPath = new EnvironmentSetup().findFnmPath();
-    for (const entry of aiDefaults.mcpServers) {
+    for (const entry of defaults.mcpServers) {
         if (!aiDefaultsEntryApplies(entry, project)) continue;
         const args = entry.args.map((arg) => (path.isAbsolute(arg) ? arg : path.join(toolsDir, arg)));
         mcpServers[entry.id] = launchUnderNode(entry.command, args, fnmPath);

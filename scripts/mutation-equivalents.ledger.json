@@ -4545,10 +4545,10 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 116,
+            "line": 122,
             "mutants": 1,
             "category": "block",
-            "reason": "readOrUndefined's catch body is a single 'return undefined'. Emptying the block makes control fall off the end of the function, which returns undefined as well \u2014 the two versions produce the identical value for the identical inputs, and the function has no other effect. There is no input, and no collaborator, that can tell them apart.",
+            "reason": "readOrUndefined's catch body is a single 'return undefined'. Emptying the block makes control fall off the end of the function, which returns undefined as well \u2014 the two versions produce the identical value for the identical inputs, and the function has no other effect. There is no input, and no collaborator, that can tell them apart. Re-anchored 2026-10-10 (116 -> 122): unchanged code, shifted by the `defaults` parameter added to writeMcpConfigs above it; the mutant was re-measured surviving at the new line.",
             "decision": "keep \u2014 the explicit return states the contract the fall-through would only imply",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-04"
@@ -15995,18 +15995,6 @@
             "decision": "none \u2014 kept for the same reason as its four neighbours: it states intent and keeps the field list reading consistently",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-05, 2026-10-10"
-        },
-        {
-            "module": "src/features/project-creation/services/aiBundle/mcpConfigWriter.ts",
-            "anchors": [
-                "if (command !== 'node' || !fnmPath) return { command, args };"
-            ],
-            "mutants": 1,
-            "category": "branch",
-            "reason": "Stryker replaces the `command !== 'node'` half with false, leaving `!fnmPath`. The two differ only for an ai-defaults entry whose command is not node, and the bundled ai-defaults.json has none: all three entries declare \"command\": \"node\" (lines 8, 19, 31), so the half is constantly false in production and in every suite that reads the real file. Verified by planting rather than by reasoning: a suite that swapped the config for one with a `uvx` entry killed the mutant on 2026-10-10, and was then deleted because tests/sop/no-config-leaf-mocks.test.ts refuses a jest.mock of a config/*.json leaf (its allowlist is empty and shrink-only). The only other route is an injected-defaults parameter on writeMcpConfigs, which is a production signature change for an entry that does not exist yet.",
-            "decision": "keep the guard: the schema allows any command string, and without it a future non-node server would be launched as fnm exec node <command>. Kill it through an injected defaults seam in the same change that ships the first non-node entry",
-            "recorded": "2026-10-10",
-            "source": "PL-70 batch MUT-06, focus run 2026-10-10"
         }
     ]
 }
