@@ -16438,6 +16438,19 @@
             "decision": "none \u2014 required by the type, unreachable in the state that would differ",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-05 \u2014 same shape as the two rows recorded for this module on 2026-09-06"
+        },
+        {
+            "module": "src/features/ai/server/cloudResourceTools.ts",
+            "anchors": [
+                "{ daLiveOrg: org, daLiveSite: site, githubRepo: args?.githubRepo },",
+                "...(torn.stillPublished && !args?.githubRepo"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "Both reads sit in cleanup_dalive_site AFTER its required-field guard, which reads args?.org and args?.site and returns early unless both are non-empty strings, and after the confirmation gate that reads args?.confirm. Reaching either line therefore proves args is an object, so dropping the optional chain cannot throw on any input that gets here. The chains on the guard's own reads ARE killed, by the test that calls the tool with no argument object at all. What each line DECIDES is tested in cloudResourceTools-teardown.test.ts: the repo reaches the teardown when given and is undefined when not, and the retry note appears only when pages are still live and no repo was passed.",
+            "decision": "Recorded as equivalent, for the same reason as this tool's confirmation gate (line 329): the file writes every reader as args?.x on purpose, and behind the guard the chain is redundant.",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-05"
         }
     ]
 }
