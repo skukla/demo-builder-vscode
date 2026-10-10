@@ -66,6 +66,33 @@ describe('createApiSubscriberClient', () => {
         expect(codes).toStrictEqual(['AdobeAnalytics']);
     });
 
+    it('should forward getSubscribedServices with both arguments and hand back the rows', async () => {
+        // The full-union PUT is built from these rows. An adapter answering nothing
+        // here would drop every API the credential already holds.
+        const rows = [{ sdkCode: 'AdobeAnalytics', licenseConfigs: null, roles: null }];
+        (entities.orgServices.getSubscribedServices as jest.Mock).mockResolvedValue(rows);
+
+        const result = await adapter.getSubscribedServices('org1', 'int-1');
+
+        expect(entities.orgServices.getSubscribedServices).toHaveBeenCalledWith('org1', 'int-1');
+        expect(result).toBe(rows);
+    });
+
+    it('should unwrap OrgTarget for listCredentialIds and hand back the ids', async () => {
+        const ids = ['int-oauth', 'int-apikey'];
+        (entities.credentials.listCredentialIds as jest.Mock).mockResolvedValue(ids);
+
+        // Optional on the interface; this adapter always supplies it.
+        const result = await adapter.listCredentialIds?.({
+            orgId: 'o',
+            projectId: 'p',
+            workspaceId: 'w',
+        });
+
+        expect(entities.credentials.listCredentialIds).toHaveBeenCalledWith('o', 'p', 'w');
+        expect(result).toBe(ids);
+    });
+
     it('should forward subscribeAdobeIdIntegrationToServices one-to-one', async () => {
         const services = [{ sdkCode: 'X', licenseConfigs: null, roles: null }];
         await adapter.subscribeAdobeIdIntegrationToServices('o', 'int-1', services);
