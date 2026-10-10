@@ -236,7 +236,7 @@ each item's own file; what has already landed against an item is in its
 | `AI-71` | fix | [An agent's project delete ignores the "deleteAll" setting](2026-10-10-agent-delete-ignores-delete-all-setting.md) | — | low | backlog |
 | `EDS-33` | fix | [A storefront teardown leaves its pages live when the DA.live content is already gone](2026-10-09-teardown-unpublish-lists-from-deleted-content.md) | — | high | built |
 
-### eds  (44)
+### eds  (45)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -283,6 +283,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-35` | fix | [The DA.live access token sat in plaintext globalState](2026-10-09-dalive-token-secretstorage.md) | — | med | built |
 | `EDS-36` | fix | [A block library install put back block entries the SC had deleted](2026-10-09-block-library-respects-hand-deletions.md) | — | med | built |
 | `EDS-37` | fix | [Storefront setup recorded its block libraries on the wrong project](2026-10-09-storefront-setup-records-block-libraries-on-the-open-project.md) | — | med | built |
+| `EDS-38` | question | [Should a block library report success when its site-config registration failed?](2026-10-10-block-library-success-when-site-config-registration-fails.md) | — | low | open |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | built |
 
 ### app-builder  (120)
@@ -657,7 +658,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — built
 
-*257 item(s) sit outside the A–G chain.*
+*258 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

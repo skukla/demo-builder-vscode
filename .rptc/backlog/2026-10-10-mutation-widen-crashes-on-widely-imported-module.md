@@ -75,3 +75,18 @@ feature earns its keep on a module with few importers.
 Added to the recommendation: when the dry run of a widened focus fails, name the
 failing suite, drop it and try once more; and refuse or rank a widen that adds more
 than a few dozen suites for one module.
+
+## The same timeout again (PL-70 batch MUT-04, 2026-10-10)
+
+A two-module group, `ensureMeshApiSubscribed.ts` (50 mutants) and
+`storefrontSetupHandlers.ts` (227). The first measurement took 0.7 minutes. The widen
+added about 60 importing suites for the first module (the `checkUpdates`,
+`meshSetupService` and `appBuilderComponentRunnerDeps` families among them) and 8 for
+the second, passed its dry run in 0.8 minutes, and then hit the 12-minute limit with no
+result (exit 124).
+
+One further cost, not recorded above: the timed-out run leaves the focus WIDENED, and
+a later measurement of the same module list keeps it, so repeating the command would
+time out again. Measuring each module alone re-aimed the focus. Both then closed on
+direct tests in under a minute per measurement; every uncovered mutant was in a
+function no importing suite's test would have had a reason to enter.

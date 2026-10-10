@@ -92,3 +92,8 @@ A module is done when no decision is unpinned, not when its score is high.
 - 2026-10-10  docs(backlog): PL-70 records the commits that named it (`4ca8d1ff3`)
 - 2026-10-10  test(ai): the two toolDescriptors suites share one fake server (`85b18d240`)
 - 2026-10-10  docs(backlog): PL-70 records the commits that named it (`df63b912e`)
+- 2026-10-10  test(ai): the content-access tools refuse before touching DA.live, and a repair that worked is not a hand-back (`ad76bc37b`)
+- 2026-10-10  test(eds): the storefront setup step shows a failed run, and survives the wizard changing under it (`a7bc19be0`)
+- 2026-10-10  test(eds): the block library's suites are filed under its name, and an empty template asks DA.live for nothing (`9984356f9`)
+- 2026-10-10  test(eds): what storefront setup hands its phases, and tells the UI on a refused sign-in, is tested (`a0621225e`)
+- 2026-10-10  test(app-builder): which workspace and which Commerce profile a subscribe targets is tested (`526ae0b93`)
