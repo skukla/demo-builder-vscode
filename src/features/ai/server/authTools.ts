@@ -95,7 +95,7 @@ async function githubStatus(ctx: HandlerContext): Promise<ProviderStatus> {
  * out" and recommended a needless sign-in; VS Code holding the session is the
  * common case, so the answer must say where the credential actually lives.
  */
-async function githubVsCodeSessionStatus(storedTokenRejected = false): Promise<ProviderStatus> {
+async function githubVsCodeSessionStatus(storedTokenRejected: boolean): Promise<ProviderStatus> {
     let session: vscode.AuthenticationSession | undefined;
     try {
         session = await vscode.authentication.getSession('github', [...GITHUB_SCOPES], {
