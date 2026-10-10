@@ -16487,6 +16487,18 @@
             "decision": "none \u2014 the ?. matches the declared 'args | undefined' parameter type; the confirm gate has already excluded the shape it guards.",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-06"
+        },
+        {
+            "module": "src/features/eds/services/storefront/servedStorefrontConfig.ts",
+            "anchors": [
+                "if (!parsed) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Both mutants (the condition turned to false, and the block emptied) let an unparseable config fall through to the next line, which destructures 'parsed'. Destructuring undefined throws, the function's own catch takes it, and the catch returns undefined: the same value the guard returns, for every input. The guard exists to log WHICH reason applied ('no public.default block' rather than 'Could not read'), and the debug line is the only thing that differs. Verified 2026-10-10 by planting each in turn: all 25 tests green, including the two that feed a body with no public.default block and a non-object one, against a CONTROL on line 52 of the same file ('||' turned to '&&'), which the suite fails.",
+            "decision": "Recorded, not killed: the only observable difference is the wording of a debug line, and asserting log wording is banned. The guard stays because the log line it chooses is the useful one.",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-07"
         }
     ]
 }
