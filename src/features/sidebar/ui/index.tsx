@@ -82,11 +82,6 @@ function SidebarApp(): React.ReactElement {
         sendMessage('navigate', { target });
     }, []);
 
-    // Handle back navigation
-    const handleBack = useCallback(() => {
-        sendMessage('back');
-    }, []);
-
     // Handle create project
     const handleCreateProject = useCallback(() => {
         sendMessage('createProject');
@@ -182,7 +177,6 @@ function SidebarApp(): React.ReactElement {
             <Sidebar
                 context={context}
                 onNavigate={handleNavigate}
-                onBack={handleBack}
                 onCreateProject={handleCreateProject}
                 onOpenTools={handleOpenTools}
                 onOpenHelp={handleOpenHelp}

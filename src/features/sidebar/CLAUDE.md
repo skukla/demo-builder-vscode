@@ -136,7 +136,6 @@ Handlers follow Pattern B: they return a result, never push a message back.
 | `aiChatMenu` | Extension → UI | `{ menu }` — whether Chat offers New / Pick-earlier |
 | `setContext` | UI → Extension | `{ context }` |
 | `navigate` | UI → Extension | `{ target }` |
-| `back` | UI → Extension | — |
 | `openAiChat` | UI → Extension | routes to `demoBuilder.openAiExperience` |
 | `showPrompts` | UI → Extension | routes to `demoBuilder.showPromptsPicker` |
 | `openLogs` | UI → Extension | routes to `toggleLogsPanel` |

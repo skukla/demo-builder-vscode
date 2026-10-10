@@ -3,7 +3,7 @@
  * lifecycle around them.
  *
  * The sibling suite covers the update-check throttle and the basics of
- * resolving the view. This one is the routing table: sixteen message types,
+ * resolving the view. This one is the routing table: fifteen message types,
  * each mapped to one command, each wrapped in a try/catch so a failed command
  * is reported rather than left as an unhandled rejection in a webview nobody
  * is watching.
@@ -105,11 +105,18 @@ describe('SidebarProvider messages', () => {
             expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
         });
 
-        it('records a back message without running anything', async () => {
-            await view.deliver!({ type: 'back' });
+        // The refusal is an answer, not a crash: a webview waiting on the
+        // request is told it finished, with no error to show.
+        it('answers a navigate that carries no payload without an error', async () => {
+            view.webview.postMessage.mockClear();
 
-            expect(made.logger.info).toHaveBeenCalled();
-            expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+            await view.deliver!({ id: 'm1', type: 'navigate', expectsResponse: true });
+
+            const answers = view.webview.postMessage.mock.calls
+                .map(([m]) => m as { isResponse?: boolean; responseToId?: string; error?: string })
+                .filter((m) => m.isResponse && m.responseToId === 'm1');
+            expect(answers).toHaveLength(1);
+            expect(answers[0].error).toBeUndefined();
         });
 
         it('runs nothing for a message type it does not know', async () => {
@@ -204,6 +211,35 @@ describe('SidebarProvider messages', () => {
             expect(view.webview.postMessage).toHaveBeenCalledWith(
                     expect.objectContaining({ type: 'contextResponse', payload: { context: { type: 'projects' } } }),
             );
+        });
+    });
+
+    // The Chat menu is an extra. Failing to work out which agent is set must
+    // not cost the sidebar its context, or reject into the channel.
+    describe('when the AI engine cannot be worked out', () => {
+        afterEach(() => {
+            (vscode.workspace.getConfiguration as jest.Mock).mockReset();
+            (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+                get: jest.fn().mockReturnValue(true),
+            });
+        });
+
+        it('still answers with the context, sends no Chat menu, and reports no error', async () => {
+            (vscode.workspace.getConfiguration as jest.Mock).mockImplementation(() => {
+                throw new Error('settings unavailable');
+            });
+            view.webview.postMessage.mockClear();
+
+            await view.deliver!({ id: 'm2', type: 'getContext', expectsResponse: true });
+
+            const sent = view.webview.postMessage.mock.calls.map(
+                ([m]) => m as { type: string; isResponse?: boolean; responseToId?: string; error?: string },
+            );
+            expect(sent.map((m) => m.type)).toContain('contextResponse');
+            expect(sent.map((m) => m.type)).not.toContain('aiChatMenu');
+            const answer = sent.find((m) => m.isResponse && m.responseToId === 'm2');
+            expect(answer).toBeDefined();
+            expect(answer?.error).toBeUndefined();
         });
     });
 
@@ -303,6 +339,12 @@ describe('SidebarProvider messages', () => {
                     (u) => u.path,
                 ),
             ).toEqual(['/mock/extension/path/dist/webview', '/mock/extension/path/media']);
+        });
+
+        it('loads the sidebar bundle from the built webview folder', () => {
+            const html = resolve(makeProvider().provider).webview.html;
+
+            expect(html).toContain('src="/mock/extension/path/dist/webview/sidebar-bundle.js"');
         });
 
         // A predictable nonce is a CSP that blocks nothing.

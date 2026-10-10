@@ -31,30 +31,12 @@ import type { StateManager } from '@/types/state';
 const UPDATE_CHECK_THROTTLE_MS = 60 * 60 * 1000;
 
 /**
- * The message types the sidebar webview sends.
- *
- * This list and `handleMessage`'s switch must agree: a type here with no case
- * warns as unknown, and a case missing from here is never delivered at all.
+ * The message types with a handler of their own in `handleMessage`. Every other
+ * type the sidebar webview sends is a key of `COMMAND_BUTTONS`, and is
+ * registered from that map — so there is no second list to keep in step.
  */
-const SIDEBAR_MESSAGE_TYPES = [
-    'getContext',
-    'navigate',
-    'back',
-    'createProject',
-    'openTools',
-    'openHelp',
-    'openSettings',
-    'openLogs',
-    'openAiChat',
-    'showPrompts',
-    'newAiChat',
-    'pickAiChat',
-    'startDemo',
-    'stopDemo',
-    'openDashboard',
-    'openConfigure',
-    'checkUpdates',
-] as const;
+const HANDLED_MESSAGE_TYPES = ['getContext', 'navigate', 'openHelp', 'openLogs'] as const;
+type HandledMessageType = (typeof HANDLED_MESSAGE_TYPES)[number];
 
 /** A sidebar button whose whole job is to run one VS Code command. */
 interface CommandButton {
@@ -169,8 +151,11 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         void createWebviewCommunication(webviewView, { handshakeTimeout: TIMEOUTS.NORMAL }, (comm) => {
             channel = comm;
             this.comm = comm;
-            for (const type of SIDEBAR_MESSAGE_TYPES) {
+            for (const type of HANDLED_MESSAGE_TYPES) {
                 comm.on(type, (payload: unknown) => this.handleMessage({ type, payload }));
+            }
+            for (const [type, button] of COMMAND_BUTTONS) {
+                comm.on(type, () => this.handleCommandButton(button));
             }
         }).catch(() => {
             // The factory disposes the manager when the handshake times out, so the
@@ -338,18 +323,14 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     /**
      * Handle messages from the webview
      */
-    private async handleMessage(message: { type: string; payload?: unknown }): Promise<void> {
+    private async handleMessage(message: { type: HandledMessageType; payload?: unknown }): Promise<void> {
         switch (message.type) {
             case 'getContext':
                 await this.handleGetContext();
                 break;
 
             case 'navigate':
-                await this.handleNavigate(message.payload as { target: string } | undefined);
-                break;
-
-            case 'back':
-                await this.handleBack();
+                await this.handleNavigate(message.payload as { target?: string });
                 break;
 
             case 'openHelp':
@@ -359,9 +340,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             case 'openLogs':
                 await this.handleOpenLogs();
                 break;
-
-            default:
-                await this.handleCommandButton(message.type);
         }
     }
 
@@ -423,8 +401,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     /**
      * Handle navigation request
      */
-    private async handleNavigate(payload?: { target: string }): Promise<void> {
-        if (!payload?.target) {
+    private async handleNavigate(payload: { target?: string }): Promise<void> {
+        // The channel hands a handler `{}` for a message with no payload.
+        if (!payload.target) {
             this.logger.warn('Navigation target not provided');
             return;
         }
@@ -441,17 +420,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 error instanceof Error ? error : undefined,
             );
         }
-    }
-
-    /**
-     * Handle back navigation
-     */
-    private async handleBack(): Promise<void> {
-        this.logger.info('Sidebar back navigation');
-
-        // No-op for now — back navigation in surfaces that need it lives
-        // in the webview's own header, not the sidebar.
-        this.logger.debug('Back navigation: no-op');
     }
 
     /**
@@ -492,12 +460,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     }
 
     /** Run a forwarding button's command; a failure is logged, never thrown. */
-    private async handleCommandButton(type: string): Promise<void> {
-        const button = COMMAND_BUTTONS.get(type);
-        if (!button) {
-            this.logger.warn(`Unknown sidebar message: ${type}`);
-            return;
-        }
+    private async handleCommandButton(button: CommandButton): Promise<void> {
         const { label, command, argument } = button;
         this.logger.info(`Sidebar: ${label}`);
         try {

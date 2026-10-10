@@ -24,8 +24,6 @@ export interface SidebarProps {
     context: SidebarContext;
     /** Callback for navigation actions */
     onNavigate: (target: string) => void;
-    /** Callback for back navigation */
-    onBack?: () => void;
     /** Callback for creating a new project */
     onCreateProject: () => void;
     /** Callback for opening tools */
@@ -61,7 +59,6 @@ export interface SidebarProps {
 export function Sidebar({
     context: _context,
     onNavigate: _onNavigate,
-    onBack: _onBack,
     onCreateProject: _onCreateProject,
     onOpenTools,
     onOpenHelp,

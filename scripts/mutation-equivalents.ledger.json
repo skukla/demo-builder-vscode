@@ -16353,6 +16353,43 @@
             "decision": "none \u2014 args is proven non-null by the name guard above; the chain matches the other reads of args in this handler",
             "recorded": "2026-10-10",
             "source": "PL-70 MUT-02, 2026-10-10"
+        },
+        {
+            "module": "src/features/sidebar/providers/sidebarProvider.ts",
+            "anchors": [
+                "}).catch(() => {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "Stryker empties the handler that runs when the webview never completes the handshake, so the provider keeps its reference to the manager the factory has already disposed and the debug line is not written. Nothing a test may assert changes. A disposed manager whose handshake never completed does not post: sendMessage finds handshakeComplete false and pushes onto a queue nothing will flush, where the real code finds no channel and returns after a warn line. Either way the webview receives nothing, the later disposal is safe (dispose is idempotent), and the next resolve replaces the reference. That the handler EXISTS and takes only its own channel is tested: sidebarProvider-handshake 'gives up once its own budget has passed', 'can still be disposed after a handshake that never arrived' and 'keeps the newer channel when an older handshake times out' all reach it, and Stryker planted the empty body against them: all green.",
+            "decision": "none \u2014 dropping the dead reference turns silent queueing into a visible warn line; the difference is a log line and a queue in a disposed object",
+            "recorded": "2026-10-10",
+            "source": "PL-70 MUT-02, 2026-10-10"
+        },
+        {
+            "module": "src/features/sidebar/providers/sidebarProvider.ts",
+            "anchors": [
+                "if (this.comm === channel) this.comm = undefined;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Stryker replaces the condition with false, so a timed-out handshake never drops the provider's reference to its disposed manager. This is the same unobservable outcome as emptying the handler it sits in: a disposed manager that never completed its handshake queues instead of posting, so the webview receives nothing either way and only a warn line differs. The two mutants that DO change behaviour on this line are killed: replacing the condition with true, and flipping it to !==, both take a newer working channel down, which 'keeps the newer channel when an older handshake times out' catches by asserting the message reaches the newer webview.",
+            "decision": "none \u2014 the guard's observable half (never clear a newer channel) is tested; its other half only changes a log line",
+            "recorded": "2026-10-10",
+            "source": "PL-70 MUT-02, 2026-10-10"
+        },
+        {
+            "module": "src/features/sidebar/providers/sidebarProvider.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 370,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body in sendAiChatMenu is a single logger.debug call. That the catch EXISTS is tested: sidebarProvider-messages 'still answers with the context, sends no Chat menu, and reports no error' makes the engine lookup throw and asserts the context is still sent, no aiChatMenu follows and the request is answered without an error. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Stryker planted the empty body against that test: green.",
+            "decision": "none \u2014 the body is narration; the swallow is what is tested",
+            "recorded": "2026-10-10",
+            "source": "PL-70 MUT-02, 2026-10-10"
         }
     ]
 }
