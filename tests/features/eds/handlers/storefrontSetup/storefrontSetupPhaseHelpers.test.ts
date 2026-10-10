@@ -114,13 +114,12 @@ describe('checkGitHubAppForExistingRepo', () => {
             const context = makeContext();
             const services = makeServices(
                 { isInstalled: false, codeStatus: 404 },
-                { isInstalled: true, codeStatus: 200 },
+                { isInstalled: true, codeStatus: 200 }
             );
             const result = await checkGitHubAppForExistingRepo(context, services, REPO_INFO);
             expect(sentMessageTypes(context)).toContain('storefront-setup-github-app-required');
             expect(result).toBeNull();
         });
-
     });
 
     describe('Helix has no SITE for the repo (the outer 404)', () => {
@@ -257,7 +256,7 @@ describe('checkGitHubAppForExistingRepo', () => {
             const context = makeContext();
             const services = makeServices(
                 { isInstalled: false, httpStatus: 404, codeStatus: 404 },
-                { isInstalled: true, codeStatus: 200 },
+                { isInstalled: true, codeStatus: 200 }
             );
             const result = await checkGitHubAppForExistingRepo(context, services, REPO_INFO);
             expect(sentMessageTypes(context)).toContain('storefront-setup-github-app-required');
@@ -276,7 +275,7 @@ describe('checkGitHubAppForExistingRepo', () => {
             const context = makeContext();
             const services = makeServices(
                 { isInstalled: false, codeStatus: 404 },
-                { isInstalled: true, codeStatus: 200 },
+                { isInstalled: true, codeStatus: 200 }
             );
 
             await checkGitHubAppForExistingRepo(context, services, REPO_INFO);
@@ -502,6 +501,38 @@ describe('checkGitHubAppForExistingRepo — an inner 400 that says nothing', () 
         });
     });
 
+    /**
+     * The hand-on is for an UNDETERMINED inner 400 only. An installed App whose
+     * code status reads 400 is a verdict (kukla-justrite read exactly that once
+     * the App covered it), so the gate passes with nothing more to say; and a
+     * definitive "not installed" beside a 400 still earns the dialog.
+     */
+    it('says nothing more when the App is installed and the code status reads 400', async () => {
+        const context = makeContext();
+        const services = makeServices({ isInstalled: true, codeStatus: 400 });
+
+        const result = await checkGitHubAppForExistingRepo(context, services, REPO_INFO);
+
+        expect(result).toBeNull();
+        const progress = (context.sendMessage as jest.Mock).mock.calls
+            .filter((c) => c[0] === 'storefront-setup-progress')
+            .map((c) => (c[1] as { message: string }).message);
+        expect(progress).toHaveLength(1);
+        expect(progress[0]).not.toMatch(/checked again/i);
+    });
+
+    it('still shows the dialog for a definitive not-installed beside a 400', async () => {
+        const context = makeContext();
+        const services = makeServices(
+            { isInstalled: false, codeStatus: 400 },
+            { isInstalled: true, codeStatus: 200 }
+        );
+
+        await checkGitHubAppForExistingRepo(context, services, REPO_INFO);
+
+        expect(sentMessageTypes(context)).toContain('storefront-setup-github-app-required');
+    });
+
     it('CONTROL — an undetermined answer with no inner 400 still fails as before', async () => {
         const context = makeContext();
         const services = makeServices({ isInstalled: false, transient: true, httpStatus: 401 });
@@ -565,7 +596,7 @@ describe('checkGitHubAppForExistingRepo — pausing for the App, not failing', (
         const services = makeServices(
             { isInstalled: false, codeStatus: 404 },
             { isInstalled: false, codeStatus: 404 },
-            { isInstalled: true, codeStatus: 400 },
+            { isInstalled: true, codeStatus: 400 }
         );
         const result = await checkGitHubAppForExistingRepo(context, services, REPO_INFO);
         expect(sentMessageTypes(context)).toContain('storefront-setup-github-app-required');
@@ -574,11 +605,37 @@ describe('checkGitHubAppForExistingRepo — pausing for the App, not failing', (
         expect(services.githubAppService.isAppInstalled).toHaveBeenCalledTimes(3);
     });
 
+    /**
+     * The dialog is built from this payload alone: the repository it names and
+     * the link its Install button opens. An empty one is a dialog with nowhere
+     * to send the person.
+     */
+    it('hands the dialog the repository, the install link and what to do', async () => {
+        const context = makeContext();
+        const services = makeServices(
+            { isInstalled: false, codeStatus: 404 },
+            { isInstalled: true, codeStatus: 200 }
+        );
+
+        await checkGitHubAppForExistingRepo(context, services, REPO_INFO);
+
+        expect(services.githubAppService.getInstallUrl).toHaveBeenCalledWith(
+            'acme-demos',
+            'aircraft-demo'
+        );
+        expect(sentPayload(context, 'storefront-setup-github-app-required')).toEqual({
+            owner: 'acme-demos',
+            repo: 'aircraft-demo',
+            installUrl: INSTALL_URL,
+            message: expect.stringMatching(/AEM Code Sync GitHub App must be installed/),
+        });
+    });
+
     it('announces the resume on the same progress row the pause interrupted', async () => {
         const context = makeContext();
         const services = makeServices(
             { isInstalled: false, codeStatus: 404 },
-            { isInstalled: true, codeStatus: 200 },
+            { isInstalled: true, codeStatus: 200 }
         );
         await checkGitHubAppForExistingRepo(context, services, REPO_INFO);
         const progress = (context.sendMessage as jest.Mock).mock.calls
@@ -596,7 +653,7 @@ describe('checkGitHubAppForExistingRepo — pausing for the App, not failing', (
         const services = makeServices(
             { isInstalled: false, codeStatus: 404 },
             { isInstalled: false, transient: true, httpStatus: 401 },
-            { isInstalled: true, codeStatus: 200 },
+            { isInstalled: true, codeStatus: 200 }
         );
         const result = await checkGitHubAppForExistingRepo(context, services, REPO_INFO);
         expect(result).toBeNull();
@@ -612,7 +669,9 @@ describe('checkGitHubAppForExistingRepo — pausing for the App, not failing', (
             return { isInstalled: false, codeStatus: 404 };
         });
         await expect(
-            checkGitHubAppForExistingRepo(context, services, REPO_INFO, { signal: controller.signal }),
+            checkGitHubAppForExistingRepo(context, services, REPO_INFO, {
+                signal: controller.signal,
+            })
         ).rejects.toThrow('Operation cancelled');
     });
 
