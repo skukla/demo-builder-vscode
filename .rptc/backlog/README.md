@@ -186,7 +186,7 @@ each item's own file; what has already landed against an item is in its
 
 <!-- BEGIN GENERATED registry -->
 
-### ai  (44)
+### ai  (45)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -233,6 +233,7 @@ each item's own file; what has already landed against an item is in its
 | `AI-13` | fix | [The AI tools install and run on whatever Node is first on the PATH](2026-10-07-ai-tools-wrong-node.md) | — | med | built |
 | `AI-14` | fix | [Agent-run project creation waited for the AEM Code Sync App and told nobody](2026-10-09-agent-creation-waits-for-code-sync-silently.md) | — | med | built |
 | `AI-15` | fix | [A screen opened for one project acts on whichever project is current](2026-10-09-screens-act-on-the-current-project.md) | — | high | active |
+| `AI-71` | fix | [An agent's project delete ignores the "deleteAll" setting](2026-10-10-agent-delete-ignores-delete-all-setting.md) | — | low | backlog |
 | `EDS-33` | fix | [A storefront teardown leaves its pages live when the DA.live content is already gone](2026-10-09-teardown-unpublish-lists-from-deleted-content.md) | — | high | built |
 
 ### eds  (44)
@@ -427,7 +428,7 @@ each item's own file; what has already landed against an item is in its
 | `PR-1` | epic | [Reframe prerequisites: extension-wide tools vs project-shape requirements (Path A)](2026-06-11-prereqs-architecture-reframe.md) | — | low | backlog |
 | `PR-1a` | feature | └ [Node versions in one place: one register, one resolver, one runner](2026-10-07-node-versions-in-one-place.md) | — | med | active |
 
-### platform  (75)
+### platform  (76)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -506,6 +507,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-68` | fix | ["Features do not import other features" says it is enforced by eslint; nothing enforces it](2026-10-08-features-import-features-unenforced.md) | — | med | backlog |
 | `PL-69` | chore | [Every clone pair gets a verdict, and the 34 that are the same job get extracted](2026-10-08-every-clone-pair-gets-a-verdict.md) | — | med | built |
 | `PL-70` | chore | [Mutation gaps after the stale row remeasure](2026-10-10-mutation-gaps-after-the-stale-row-remeasure.md) | — | med | active |
+| `PL-71` | fix | [Widening a mutation measurement crashes when the module is imported everywhere](2026-10-10-mutation-widen-crashes-on-widely-imported-module.md) | — | low | backlog |
 
 <!-- END GENERATED registry -->
 
@@ -654,7 +656,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — built
 
-*254 item(s) sit outside the A–G chain.*
+*256 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 
