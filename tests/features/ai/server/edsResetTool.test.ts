@@ -48,6 +48,7 @@ jest.mock('@/features/ai/server/adobeTargetStore', () => ({
 }));
 
 import { registerResetProjectTool } from '@/features/ai/server/resetProjectTool';
+import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
 import { executeProjectReset } from '@/features/lifecycle/services/projectResetService';
 import { runWithAdobeTarget } from '@/features/ai/server/adobeTargetStore';
 import { extractResetParams } from '@/features/eds/services/reset/edsResetParams';
@@ -212,6 +213,36 @@ describe('reset_project on an Edge Delivery project', () => {
         });
         const res = await s.call({ confirm: true });
         expect(res).toMatchObject({ reset: true, leftoverPages });
+    });
+
+    it('says what happened to the category pages and the product pages, and no key for either otherwise', async () => {
+        const s = fakeServer();
+        registerResetProjectTool(s, ctxFactory);
+        const plain = await s.call({ confirm: true });
+        expect('categoryPages' in plain).toBe(false);
+        expect('productPages' in plain).toBe(false);
+
+        executeEdsResetMock.mockResolvedValueOnce({
+            success: true,
+            filesReset: 12,
+            contentCopied: 5,
+            meshRedeployed: false,
+            catalogMenu: 'Wrote 4 category pages; left 1 page someone else made (sale).',
+            productPages: 'Removed 18 product pages from the old catalog.',
+        });
+        const res = await s.call({ confirm: true });
+        expect(res.categoryPages).toBe('Wrote 4 category pages; left 1 page someone else made (sale).');
+        expect(res.productPages).toBe('Removed 18 product pages from the old catalog.');
+    });
+
+    it('reports each step live as it runs, numbered the way the button shows it', async () => {
+        const s = fakeServer();
+        registerResetProjectTool(s, ctxFactory);
+        const lines: string[] = [];
+
+        await withPhaseSinks([(line) => lines.push(line)], () => s.call({ confirm: true }));
+
+        expect(lines).toStrictEqual(['Resetting repo (1 of 2)', 'Publishing (2 of 2)']);
     });
 
     it("passes the SC's yes to Demo Builder's fixes, and says what was applied and what was offered (EDS-13f)", async () => {

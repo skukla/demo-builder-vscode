@@ -16475,6 +16475,18 @@
             "decision": "none \u2014 the operand stays because it is what narrows descriptor.launch to TerminalLaunch for explainMissingCli; without it the call does not compile.",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-06"
+        },
+        {
+            "module": "src/features/ai/server/edsResetTool.ts",
+            "anchors": [
+                "applyDemoFixes: args?.applyFixes === true,"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Same position as the two reads recorded above it (includeBlockLibrary, verifyCdn): the line runs only after resetProjectTool's confirm gate, which returns the refusal whenever args?.confirm !== true, and that holds for undefined and null args alike. So args is a non-null object here and args.applyFixes behaves exactly as args?.applyFixes. The suite already pins that a call with no arguments is refused before this line. Killing it needs a call that omits args and still passes the confirm gate, which cannot exist.",
+            "decision": "none \u2014 the ?. matches the declared 'args | undefined' parameter type; the confirm gate has already excluded the shape it guards.",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-06"
         }
     ]
 }
