@@ -107,6 +107,13 @@ describe('starting the run', () => {
         expect(posted('storefront-setup-start')).toHaveLength(1);
     });
 
+    it('starts with no backend named when the wizard has no component selections yet', () => {
+        renderRun(wizardState({ components: undefined }));
+        const [start] = posted<StorefrontSetupStartPayload>('storefront-setup-start');
+        expect(start.backendComponentId).toBeUndefined();
+        expect(start.dependencies).toStrictEqual(['eds-commerce-mesh']);
+    });
+
     it('does not start an incomplete config, and says why', () => {
         const { result } = renderRun(wizardState({ edsConfig: { ...EDS, daLiveSite: '' } }));
         expect(posted('storefront-setup-start')).toStrictEqual([]);
@@ -151,6 +158,35 @@ describe('pushes from the extension', () => {
                 brokenLinks: [],
             },
         });
+    });
+
+    it('shows a failed run with its message and its reason, and keeps Continue shut', () => {
+        const { result, setCanProceed } = renderRun();
+        push('storefront-setup-error', { message: 'Storefront setup failed', error: 'HTTP 502' });
+        expect(result.current.setupState.phase).toBe('error');
+        expect(result.current.setupState.message).toBe('Storefront setup failed');
+        expect(result.current.setupState.error).toBe('HTTP 502');
+        expect(setCanProceed).toHaveBeenLastCalledWith(false);
+    });
+
+    it("records the repo through the wizard's CURRENT updater when the wizard swaps it", () => {
+        // The wizard is free to hand a new updater on any render. A completion that
+        // reached the first one would write the repo into state the wizard dropped.
+        const first = jest.fn();
+        const second = jest.fn();
+        const setCanProceed = jest.fn();
+        const state = wizardState();
+        const { rerender } = renderHook(
+            ({ update }: { update: (updates: Partial<WizardState>) => void }) =>
+                useStorefrontSetup(state, update, setCanProceed),
+            { initialProps: { update: first } },
+        );
+        rerender({ update: second });
+
+        pushComplete({ message: 'Done', githubRepo: 'test-owner/test-repo' });
+
+        expect(first).not.toHaveBeenCalled();
+        expect(second).toHaveBeenCalledTimes(1);
     });
 
     it('stops listening once the step is gone', () => {
@@ -204,6 +240,18 @@ describe('Retry', () => {
         expect(start.dependencies).toStrictEqual(['eds-commerce-mesh']);
     });
 
+    it('restarts with no backend named when the component selections were cleared', () => {
+        const { result, rerender } = renderRun();
+        rerender({ state: wizardState({ components: undefined }) });
+        mockPostMessage.mockClear();
+
+        act(() => result.current.handleRetry());
+
+        const [start] = posted<StorefrontSetupStartPayload>('storefront-setup-start');
+        expect(start.backendComponentId).toBeUndefined();
+        expect(start.dependencies).toStrictEqual(['eds-commerce-mesh']);
+    });
+
     it('does not restart an incomplete config', () => {
         const { result, rerender } = renderRun();
         rerender({ state: wizardState({ edsConfig: { ...EDS, repoName: '' } }) });
@@ -244,6 +292,20 @@ describe('closing the wizard', () => {
                 edsConfig: { daLiveOrg: 'test-org', daLiveSite: 'later-site' },
             },
         ]);
+    });
+
+    it('still cancels a running setup when the wizard no longer holds a storefront config', () => {
+        // Going back and clearing the storefront area empties the config while the
+        // run is live. The cancel must still go out, or the repo it made is orphaned.
+        const { rerender, unmount } = renderRun();
+        pushProgress({ phase: 'repository', message: 'Repository ready', progress: 12 });
+        rerender({ state: wizardState({ edsConfig: undefined }) });
+
+        unmount();
+
+        const [cancel] = posted<StorefrontSetupCancelPayload>('storefront-setup-cancel');
+        expect(cancel.edsConfig).toStrictEqual({ daLiveOrg: undefined, daLiveSite: undefined });
+        expect(cancel.partialState?.phase).toBe('repository');
     });
 
     it('sends no cancel once setup has finished', () => {
