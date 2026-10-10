@@ -237,7 +237,8 @@ const INCLUDE_IMS_CREDENTIALS = 'include-ims-credentials';
 
 /** Whether a parsed config value declares the annotation as true, anywhere inside it. */
 function asksForImsCredentials(value: unknown): boolean {
-    if (Array.isArray(value)) return value.some(asksForImsCredentials);
+    // An array needs no branch of its own: its entries are its indices and items,
+    // and an index is never the annotation's name.
     if (!value || typeof value !== 'object') return false;
     return Object.entries(value).some(
         ([key, inner]) => (key === INCLUDE_IMS_CREDENTIALS && inner === true) || asksForImsCredentials(inner),
@@ -282,7 +283,8 @@ export interface DeclaredAction {
 
 /** `web: yes` parses as the STRING "yes" under YAML 1.2, so the flag is read by value. */
 function isWebAction(def: unknown): boolean {
-    if (!def || typeof def !== 'object') return false;
+    // Only null and undefined cannot be read from; a scalar simply carries neither flag.
+    if (!def) return false;
     const { web, 'web-export': webExport } = def as { web?: unknown; 'web-export'?: unknown };
     const flag = web ?? webExport;
     if (flag === true) return true;

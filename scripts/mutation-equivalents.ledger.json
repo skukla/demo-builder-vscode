@@ -16109,6 +16109,19 @@
             "decision": "none \u2014 which copy of a repeated line is kept cannot be observed in the output",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-08"
+        },
+        {
+            "module": "src/features/app-builder/services/appConfigPackages.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 252,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Emptying readYaml's catch drops its 'return undefined' and the function falls off its end, which returns undefined anyway. A missing or unparseable file answers undefined by either route. Planted the mutation and ran the appConfigPackages suites plus runtimeUndeclaredActions and appDeployment-urlSources: 97 tests green, including the unreadable-include and no-config cases.",
+            "decision": "none \u2014 an explicit return beats an implicit one, and the two agree",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-08"
         }
     ]
 }
