@@ -16451,6 +16451,18 @@
             "decision": "Recorded as equivalent, for the same reason as this tool's confirmation gate (line 329): the file writes every reader as args?.x on purpose, and behind the guard the chain is redundant.",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-05"
+        },
+        {
+            "module": "src/features/app-builder/services/appDeployment.ts",
+            "anchors": [
+                "if (tail) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The guarded body is a single logger.debug call that prints the last lines of the CLI's output, so forcing the condition true changes one thing only: a failed deploy that printed nothing writes a debug line with an empty tail. The failure result, the failure-log file and the thrown error are all built after the block and do not read it. The only assertion that could tell the two apart is one on the logger's calls, which pins log wording and is refused by the logger-argument enforcer.",
+            "decision": "none \u2014 the guard stays so a silent failure does not add an empty 'last lines' entry to the Debug Logs.",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-06"
         }
     ]
 }

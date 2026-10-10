@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "MUT-05: cloudResourceTools to zero open gaps — what cleanup_dalive_site hands the storefront teardown, and when it suggests passing the repo",
+    "_note": "MUT-06: appDeployment and openInClaude to zero open gaps — progress steps, config-URL success, build options, chat-open arguments, picker terminal location; two ledger rows",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -3013,25 +3013,23 @@
             "recorded": "2026-10-10T16:09:34.219Z"
         },
         "src/features/app-builder/services/appDeployment.ts": {
-            "score": 84.66,
-            "killed": 160,
-            "survived": 27,
-            "noCoverage": 2,
+            "score": 90.48,
+            "killed": 171,
+            "survived": 18,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "string": 7,
-                "logPresentation": 11,
+                "string": 4,
+                "logPresentation": 9,
                 "other": 1,
                 "optionalChain": 3,
-                "branch": 5
+                "branch": 1
             },
-            "uncoveredCategories": {
-                "string": 2
-            },
-            "highValueSurvivors": 5,
-            "equivalent": 4,
-            "openGaps": 5,
-            "recorded": "2026-10-10T00:17:59.394Z"
+            "uncoveredCategories": {},
+            "highValueSurvivors": 1,
+            "equivalent": 5,
+            "openGaps": 0,
+            "recorded": "2026-10-10T19:26:31.941Z"
         },
         "src/features/app-builder/services/appManagementClient.ts": {
             "score": 94.96,
