@@ -15732,6 +15732,84 @@
             "decision": "none \u2014 it feeds a log line only; the classifier counts it as behavioural because the logger call is a separate statement",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-01"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/integration-flow/useIntegrationFlow.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 349,
+            "mutants": 1,
+            "category": "other",
+            "reason": "One of the eight draft setters memoised with an empty dependency list. Each updates the draft through the functional form of setDraft, so it closes over nothing that can change. Stryker rewrites the list to a constant string literal, which React compares element-wise with Object.is and finds equal on every render, so useCallback returns the same function either way: neither its identity, its call count nor the resulting draft differs in any way a test can observe. Same argument as the two rows already recorded at lines 359 and 386.",
+            "decision": "none \u2014 the empty list is what \"this callback closes over nothing\" is spelled as",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-01"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/integration-flow/useIntegrationFlow.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 353,
+            "mutants": 1,
+            "category": "other",
+            "reason": "One of the eight draft setters memoised with an empty dependency list. Each updates the draft through the functional form of setDraft, so it closes over nothing that can change. Stryker rewrites the list to a constant string literal, which React compares element-wise with Object.is and finds equal on every render, so useCallback returns the same function either way: neither its identity, its call count nor the resulting draft differs in any way a test can observe. Same argument as the two rows already recorded at lines 359 and 386.",
+            "decision": "none \u2014 the empty list is what \"this callback closes over nothing\" is spelled as",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-01"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/integration-flow/useIntegrationFlow.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 364,
+            "mutants": 1,
+            "category": "other",
+            "reason": "One of the eight draft setters memoised with an empty dependency list. Each updates the draft through the functional form of setDraft, so it closes over nothing that can change. Stryker rewrites the list to a constant string literal, which React compares element-wise with Object.is and finds equal on every render, so useCallback returns the same function either way: neither its identity, its call count nor the resulting draft differs in any way a test can observe. Same argument as the two rows already recorded at lines 359 and 386.",
+            "decision": "none \u2014 the empty list is what \"this callback closes over nothing\" is spelled as",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-01"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/integration-flow/useIntegrationFlow.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 369,
+            "mutants": 1,
+            "category": "other",
+            "reason": "One of the eight draft setters memoised with an empty dependency list. Each updates the draft through the functional form of setDraft, so it closes over nothing that can change. Stryker rewrites the list to a constant string literal, which React compares element-wise with Object.is and finds equal on every render, so useCallback returns the same function either way: neither its identity, its call count nor the resulting draft differs in any way a test can observe. Same argument as the two rows already recorded at lines 359 and 386.",
+            "decision": "none \u2014 the empty list is what \"this callback closes over nothing\" is spelled as",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-01"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/integration-flow/useIntegrationFlow.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 378,
+            "mutants": 1,
+            "category": "other",
+            "reason": "One of the eight draft setters memoised with an empty dependency list. Each updates the draft through the functional form of setDraft, so it closes over nothing that can change. Stryker rewrites the list to a constant string literal, which React compares element-wise with Object.is and finds equal on every render, so useCallback returns the same function either way: neither its identity, its call count nor the resulting draft differs in any way a test can observe. Same argument as the two rows already recorded at lines 359 and 386.",
+            "decision": "none \u2014 the empty list is what \"this callback closes over nothing\" is spelled as",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-01"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/integration-flow/useIntegrationFlow.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 382,
+            "mutants": 1,
+            "category": "other",
+            "reason": "One of the eight draft setters memoised with an empty dependency list. Each updates the draft through the functional form of setDraft, so it closes over nothing that can change. Stryker rewrites the list to a constant string literal, which React compares element-wise with Object.is and finds equal on every render, so useCallback returns the same function either way: neither its identity, its call count nor the resulting draft differs in any way a test can observe. Same argument as the two rows already recorded at lines 359 and 386.",
+            "decision": "none \u2014 the empty list is what \"this callback closes over nothing\" is spelled as",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-01"
         }
     ]
 }

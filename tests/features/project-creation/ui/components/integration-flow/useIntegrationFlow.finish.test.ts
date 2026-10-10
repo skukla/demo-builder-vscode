@@ -70,24 +70,26 @@ describe('useIntegrationFlow — catalog/custom finish (deterministic, no API pi
     // forking it under a minted id loses the pairing — the add then refused with
     // "Provider demo-erp is not deployed yet", naming something the SC had never
     // heard of and could not add (owner, 2026-09-20).
+    const INTEGRATION: AppBuilderComponentCatalogEntry = {
+        id: 'erp-integration',
+        name: 'ERP integration',
+        description: 'Talks to an ERP',
+        kind: 'integration',
+        source: { owner: 'skukla', repo: 'erp-integration', branch: 'main' },
+    };
+    const SYSTEM: AppBuilderComponentCatalogEntry = {
+        id: 'demo-erp',
+        name: 'ERP',
+        description: 'The ERP it talks to',
+        kind: 'system',
+        boundTo: 'erp-integration',
+        nameFromEnvVar: 'ERP_DISPLAY_NAME',
+        source: { owner: 'skukla', repo: 'demo-erp', branch: 'main' },
+    };
+    const PAIRED_CATALOG = [INTEGRATION, SYSTEM];
+
     it('a RENAMED pick of a PAIRED entry keeps the identity and names the SYSTEM', () => {
-        const INTEGRATION: AppBuilderComponentCatalogEntry = {
-            id: 'erp-integration',
-            name: 'ERP integration',
-            description: 'Talks to an ERP',
-            kind: 'integration',
-            source: { owner: 'skukla', repo: 'erp-integration', branch: 'main' },
-        };
-        const SYSTEM: AppBuilderComponentCatalogEntry = {
-            id: 'demo-erp',
-            name: 'ERP',
-            description: 'The ERP it talks to',
-            kind: 'system',
-            boundTo: 'erp-integration',
-            nameFromEnvVar: 'ERP_DISPLAY_NAME',
-            source: { owner: 'skukla', repo: 'demo-erp', branch: 'main' },
-        };
-        const s = setup({ initial: LATER_ADD, catalog: [INTEGRATION, SYSTEM] });
+        const s = setup({ initial: LATER_ADD, catalog: PAIRED_CATALOG });
         pickKindAndContinue(s, 'catalog');
         act(() => s.result.current.pickCatalog(INTEGRATION.id));
         act(() => s.result.current.setLabel('Northwind ERP'));
@@ -99,6 +101,30 @@ describe('useIntegrationFlow — catalog/custom finish (deterministic, no API pi
             'Northwind ERP',
         );
         expect(s.builder.onAddCustomAppBuilderComponent).not.toHaveBeenCalled();
+    });
+
+    it('a PAIRED pick names the system with the typed name trimmed of stray spaces', () => {
+        const s = setup({ initial: LATER_ADD, catalog: PAIRED_CATALOG });
+        pickKindAndContinue(s, 'catalog');
+        act(() => s.result.current.pickCatalog(INTEGRATION.id));
+        act(() => s.result.current.setLabel('  Northwind ERP  '));
+        act(() => s.result.current.onContinue());
+
+        expect(s.builder.onAppBuilderComponentToggle.mock.calls).toStrictEqual([
+            ['erp-integration', true, 'Northwind ERP'],
+        ]);
+    });
+
+    it('a PAIRED pick with no name typed still commits, passing no system name', () => {
+        const s = setup({ initial: LATER_ADD, catalog: PAIRED_CATALOG });
+        pickKindAndContinue(s, 'catalog');
+        act(() => s.result.current.pickCatalog(INTEGRATION.id));
+        act(() => s.result.current.onContinue());
+
+        expect(s.builder.onAppBuilderComponentToggle.mock.calls).toStrictEqual([
+            ['erp-integration', true, undefined],
+        ]);
+        expect(s.onClose).toHaveBeenCalledTimes(1);
     });
 
     // The unpaired case is unchanged: naming one of those still commits an
