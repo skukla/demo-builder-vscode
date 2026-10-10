@@ -132,6 +132,22 @@ describe('which Node versions a plugin is installed for', () => {
         expect(pluginRunVersions(execute, PLUGIN_CMD)).toStrictEqual([undefined]);
     });
 
+    it('installs it with NO Node version for Node itself, even though Node has target versions', async () => {
+        // Node is not per-node-version, but it is the one other prerequisite that
+        // reaches the plugin loop holding a version list. That list says which
+        // Nodes to install, not which Node a plugin belongs under.
+        (shared.getNodeVersionMapping as jest.Mock).mockResolvedValue({});
+        aim(prereqWithPlugin({ id: 'node', name: 'Node.js', perNodeVersion: false }));
+
+        await handleInstallPrerequisite(context, { prereqId: 0, version: '20' });
+
+        expect(context.prereqManager!.getInstallSteps).toHaveBeenCalledWith(
+            expect.objectContaining({ id: 'node' }),
+            { nodeVersions: ['20'] },
+        );
+        expect(pluginRunVersions(execute, PLUGIN_CMD)).toStrictEqual([undefined]);
+    });
+
     it('installs the plugin beside the tool, on the Node the caller named', async () => {
         // The tool installs under Node 20; its plugin goes with it, not to the CLI's
         // default Node, so a CLI installed for a named Node is complete.
@@ -234,9 +250,11 @@ describe('the plugin loop itself', () => {
     it('does not ask for plugin commands for a prerequisite with no plugins at all', async () => {
         aim({ id: 'git', name: 'Git', description: 'v', check: { command: 'git --version' } });
 
-        await handleInstallPrerequisite(context, { prereqId: 0 });
+        const result = await handleInstallPrerequisite(context, { prereqId: 0 });
 
         expect(context.prereqManager!.getPluginInstallCommands).not.toHaveBeenCalled();
+        // And the install goes on to its verdict rather than failing on the missing list.
+        expect(result.success).toBe(true);
     });
 
     it('skips a plugin the manager has no install commands for', async () => {

@@ -11,6 +11,7 @@
 import './installHandler.mocks';
 
 import * as vscode from 'vscode';
+import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
 import { handleInstallPrerequisite } from '@/features/prerequisites/handlers/installHandler';
 import type { PrerequisiteDefinition } from '@/features/prerequisites/services/types';
 import type { HandlerContext } from '@/types/handlers';
@@ -50,6 +51,27 @@ function errorPayload(ctx: HandlerContext): unknown {
         .map(([, p]) => p)
         .at(-1);
 }
+
+describe('what an agent hears while the steps run', () => {
+    it('reports each step by name with its place in the run, counted from one', async () => {
+        context.sharedState.currentPrerequisiteStates = new Map([
+            [0, { prereq: GIT, result: mockNodeResult }],
+        ]);
+        (context.prereqManager!.getInstallSteps as jest.Mock).mockReturnValue({
+            steps: [
+                { name: 'Download Git', message: 'Downloading', commands: [] },
+                { name: 'Link Git', message: 'Linking', commands: [] },
+            ],
+        });
+        const heard: string[] = [];
+
+        await withPhaseSinks([(line) => heard.push(line)], () =>
+            handleInstallPrerequisite(context, { prereqId: 0 }),
+        );
+
+        expect(heard).toStrictEqual(['Download Git (1 of 2)', 'Link Git (2 of 2)']);
+    });
+});
 
 describe('addressing a prerequisite by its id', () => {
     beforeEach(() => {

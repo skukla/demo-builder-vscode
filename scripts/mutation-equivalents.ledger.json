@@ -8,18 +8,6 @@
     ],
     "entries": [
         {
-            "module": "src/features/prerequisites/handlers/installHandler.ts",
-            "anchors": [
-                "const isDynamicInstall = prereq.id === 'node' && prereq.install?.dynamic;"
-            ],
-            "mutants": 1,
-            "category": "optionalChain",
-            "reason": "Stryker drops the `?.`, which would throw only if `prereq.install` were undefined. The type makes `install` optional so the compiler requires the `?.`, but a prerequisite without an install block cannot reach this line: getInstallSteps returns null for one, and the handler throws 'No installation steps defined' on a null plan before executeInstallSteps runs. Killing it would mean mocking getInstallSteps to return a plan for a prerequisite that has no install block, which the real collaborator cannot produce.",
-            "decision": "none \u2014 the `?.` is required by the type and correct as written",
-            "recorded": "2026-09-02",
-            "source": ".rptc/handoff/2026-09-02-equivalent-mutants.md"
-        },
-        {
             "module": "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts",
             "anchors": [
                 "if (!clipped) {"
@@ -1754,7 +1742,7 @@
             "anchors": [
                 "if (overallInstalled) {"
             ],
-            "line": 409,
+            "line": 411,
             "mutants": 4,
             "category": "branch",
             "reason": "Anchored at 463 and covering the else at 469 too. Both arms of this if/else do nothing but call logger.info/logger.warn and debugLogger.debug; overallInstalled is read again below for the status, installed and canInstall fields of the payload, which tests do pin. Flipping or emptying either arm changes only which line is logged.",
@@ -1767,7 +1755,7 @@
             "anchors": [
                 "const index = resolved?.findIndex((p) => p.id === payload.prerequisiteId) ?? -1;"
             ],
-            "line": 462,
+            "line": 464,
             "mutants": 1,
             "category": "other",
             "reason": "The -1 default applies only when resolved is undefined, and the very next line returns undefined on `!resolved` regardless of the index. findIndex itself returns -1 rather than undefined when it finds nothing, so the coalesce never fires on a defined list.",
@@ -1780,7 +1768,7 @@
             "anchors": [
                 "if (typeof payload.prereqId !== 'number') return undefined;"
             ],
-            "line": 470,
+            "line": 472,
             "mutants": 1,
             "category": "branch",
             "reason": "Removing the guard reads currentPrerequisiteStates.get(undefined), which is undefined, so the function returns undefined exactly as the guard would have \u2014 and the caller's error message is chosen from the payload, not from how the resolution failed. No payload distinguishes the two.",
@@ -1832,7 +1820,7 @@
             "anchors": [
                 "installResult = prereq ? await context.prereqManager?.checkPrerequisite(prereq) : undefined;"
             ],
-            "line": 588,
+            "line": 590,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Reaching this line requires an install plan, and the plan comes from `context.prereqManager?.getInstallSteps(...)` earlier in the SAME invocation \u2014 a context with no manager gets undefined there and throws \"No installation steps defined\" before any of this runs. So no input can distinguish the optional chain from a plain member access.",
@@ -1845,7 +1833,7 @@
             "anchors": [
                 "finalNodeVersionStatus = await context.prereqManager?.checkMultipleNodeVersions(mapping);"
             ],
-            "line": 604,
+            "line": 606,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Reaching this line requires an install plan, and the plan comes from `context.prereqManager?.getInstallSteps(...)` earlier in the SAME invocation \u2014 a context with no manager gets undefined there and throws \"No installation steps defined\" before any of this runs. So no input can distinguish the optional chain from a plain member access.",
@@ -15909,6 +15897,18 @@
             "decision": "none \u2014 every rendered card has the row it was built from",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-02, IntegrationsStep focus run"
+        },
+        {
+            "module": "src/features/prerequisites/handlers/installHandler.ts",
+            "anchors": [
+                "const versionsToInstall: (string | undefined)[] = prereq.perNodeVersion && toolVersions?.length"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Stryker drops the '?.', which would throw only if toolVersions were undefined while prereq.perNodeVersion is true (the '&&' short-circuits otherwise). For a per-node-version prerequisite the single caller has just assigned toolVersions from resolvePerNodeTargetVersions, which returns earlyReturn \u2014 and the handler returns \u2014 whenever the list would be missing or empty. So on this line a per-node-version prerequisite always holds a non-empty array and the chain never short-circuits; the parameter is typed optional because the non-per-node callers pass undefined. Killing it would need a per-node-version install with no target versions, which the handler cannot reach.",
+            "decision": "none \u2014 a per-node-version prerequisite reaches the plugin loop only with a non-empty version list",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-02, installHandler focus run"
         }
     ]
 }

@@ -250,7 +250,7 @@ async function installPlugins(
     prereqId: number,
     toolVersions: string[] | undefined,
 ): Promise<void> {
-    if (!prereq.plugins || prereq.plugins.length === 0) return;
+    if (!prereq.plugins?.length) return;
 
     context.logger.debug(`[Prerequisites] ${prereq.name} has ${prereq.plugins.length} plugin(s) to check`);
     for (const plugin of prereq.plugins) {
@@ -402,7 +402,9 @@ async function sendFinalInstallStatus(
     }
 
     const finalMessage = buildFinalStatusMessage(prereq.name, installResult, finalNodeVersionStatus);
-    const overallInstalled = prereq.perNodeVersion && finalPerNodeVersionStatus && finalPerNodeVersionStatus.length > 0
+    // The per-node list is only ever populated for a per-node-version prerequisite
+    // (its single caller assigns it in that branch), so its presence already says so.
+    const overallInstalled = finalPerNodeVersionStatus && finalPerNodeVersionStatus.length > 0
         ? finalPerNodeVersionStatus.every(s => s.installed)
         : installResult.installed;
 

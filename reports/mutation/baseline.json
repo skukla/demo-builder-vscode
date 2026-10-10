@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "PL-70 MUT-02: appBuilderComponentState to zero open gaps — stale system links, older-code check and update clearing pinned directly; two unkillable guards deleted",
+    "_note": "PL-70 MUT-02: installHandler to zero open gaps — agent step lines and Node's plugin install pinned; two redundant guards removed",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -108,24 +108,24 @@
             "recorded": "2026-10-09T23:49:47.508Z"
         },
         "src/features/prerequisites/handlers/installHandler.ts": {
-            "score": 81.86,
-            "killed": 379,
-            "survived": 84,
+            "score": 82.79,
+            "killed": 380,
+            "survived": 79,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
                 "logPresentation": 55,
-                "branch": 15,
+                "branch": 12,
                 "block": 4,
-                "other": 3,
                 "optionalChain": 6,
-                "string": 1
+                "string": 1,
+                "other": 1
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 19,
+            "highValueSurvivors": 16,
             "equivalent": 23,
-            "openGaps": 5,
-            "recorded": "2026-10-09T23:12:07.774Z"
+            "openGaps": 0,
+            "recorded": "2026-10-10T13:31:59.060Z"
         },
         "src/core/ui/utils/spectrumTokens.ts": {
             "score": 94.12,
