@@ -131,6 +131,18 @@ describe('failureDetail', () => {
         // Neither stream present, and no exit code: an fnm that was never spawned.
         expect(failureDetail({ code: null })).toBe('exit code unknown (command did not run)');
     });
+
+    it('names the exit code when the command ran and said nothing', () => {
+        expect(failureDetail({ code: 7, stderr: '', stdout: '' })).toBe('exit code 7');
+    });
+
+    it('trims stdout before taking its tail, so trailing blank lines are not the answer', () => {
+        expect(failureDetail({ code: 1, stderr: '', stdout: '  npm ERR! E403  \n\n' })).toBe('npm ERR! E403');
+    });
+
+    it('does not let a whitespace-only stderr hide what stdout said', () => {
+        expect(failureDetail({ code: 1, stderr: ' \n ', stdout: 'the real reason' })).toBe('the real reason');
+    });
 });
 
 // ---- PR-1a step 2: the Adobe CLI under Demo Builder's Node -------------------
@@ -183,10 +195,70 @@ describe('toolInstalledUnder', () => {
         expect(await toolInstalledUnder(exec, '24', 'aio')).toBe(true);
         expect(await toolInstalledUnder(exec, '24', 'other')).toBe(false);
     });
+
+    // A Node that could not be asked answers nothing usable: a path printed by a
+    // FAILED command is not where that Node lives, and no path at all is not "here".
+    it('is false when the Node could not be asked, even if it printed a folder holding the binary', async () => {
+        fs.writeFileSync(path.join(binDir, 'aio'), '');
+        const exec = createMockCommandExecutor({
+            execute: jest.fn().mockResolvedValue({ code: 1, stdout: `${binDir}\n`, stderr: '' }),
+        });
+
+        expect(await toolInstalledUnder(exec, '24', 'aio')).toBe(false);
+    });
+
+    it('is false when the command succeeded and printed nothing', async () => {
+        const exec = createMockCommandExecutor({
+            execute: jest.fn().mockResolvedValue({ code: 0, stderr: '' }),
+        });
+
+        expect(await toolInstalledUnder(exec, '24', 'aio')).toBe(false);
+    });
+
+    it("asks that Node for its own folder, through a shell, within the normal timeout", async () => {
+        const { exec } = executor();
+
+        await toolInstalledUnder(exec, '24', 'aio');
+
+        expect((exec.execute as jest.Mock).mock.calls).toStrictEqual([
+            [
+                `node -p "require('path').dirname(process.execPath)"`,
+                { useNodeVersion: '24', shell: DEFAULT_SHELL, timeout: TIMEOUTS.NORMAL },
+            ],
+        ]);
+    });
 });
 
 describe('ensureNodeWithAdobeCli', () => {
     const INSTALL = ['npm install -g @adobe/aio-cli', 'aio plugins:install @adobe/aio-cli-plugin-api-mesh'];
+
+    beforeEach(() => {
+        mockFnmPath = '/opt/homebrew/bin/fnm';
+    });
+
+    it('stops at the Node error and asks nothing about the Adobe CLI', async () => {
+        mockFnmPath = null;
+        const { exec, calls } = executor();
+
+        const error = await ensureNodeWithAdobeCli(exec, '24', INSTALL, logger);
+
+        expect(error).toContain('fnm was not found');
+        expect(calls).toStrictEqual([]);
+    });
+
+    it('runs each install step under that Node, through a shell, with the very long timeout', async () => {
+        const { exec } = executor();
+
+        await ensureNodeWithAdobeCli(exec, '24', INSTALL, logger);
+
+        const installCalls = (exec.execute as jest.Mock).mock.calls.filter(([c]) => INSTALL.includes(c));
+        expect(installCalls).toStrictEqual(
+            INSTALL.map((command) => [
+                command,
+                { useNodeVersion: '24', shell: DEFAULT_SHELL, timeout: TIMEOUTS.VERY_LONG },
+            ]),
+        );
+    });
 
     it('installs the Adobe CLI and its plugins under that Node when it is missing', async () => {
         const { exec, calls } = executor();
