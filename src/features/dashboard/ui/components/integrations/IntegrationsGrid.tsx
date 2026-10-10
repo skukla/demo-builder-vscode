@@ -35,9 +35,10 @@ import type { ErpAssignControls } from './ErpAssignDialogs';
 import { FlaggedCardDialogs, needsReinstall, removalStopped } from './FlaggedCardDialogs';
 import { type CardAction, type IntegrationCardModel } from './integrationCardModel';
 import { IntegrationDetailPanel } from './IntegrationDetailPanel';
+import type { PrepareStoreControls } from './PrepareStoreDialogs';
 import { removalConsequence } from './removalConsequence';
 import { requestRename } from './requestRename';
-import { handleIntegrationErpAction, handleRepositoryAction, handleSystemAction } from './systemCardActions';
+import { routeOwnDialogs } from './systemCardActions';
 import { useFlaggedCardDialog } from './useFlaggedCardDialog';
 import { useIntegrationSettings } from './useIntegrationSettings';
 import { IntegrationCard } from '@/core/ui/components/integrations/IntegrationCard';
@@ -77,6 +78,8 @@ export interface IntegrationsGridProps {
     onAdd?: () => void;
     /** "Assign products" on an ERP's card and its undo (AB-74); the screen holds the dialogs. */
     erpAssign?: Pick<ErpAssignControls, 'openAssign' | 'confirmUndoAssignment'>;
+    /** "Prepare this store" and its undo (AB-77); the screen holds the dialogs. */
+    storePrep?: Pick<PrepareStoreControls, 'openPrepare' | 'confirmUndo'>;
 }
 
 const NO_SETTINGS: Record<string, ComponentSettings> = {};
@@ -92,6 +95,7 @@ export function IntegrationsGrid({
     onOpenGuide,
     onAdd,
     erpAssign,
+    storePrep,
 }: IntegrationsGridProps): React.ReactElement {
     const settings = useIntegrationSettings(derivedCards, componentSettings);
     const { cards, open: openSettings } = settings;
@@ -142,19 +146,15 @@ export function IntegrationsGrid({
 
     const handleAction = useCallback(
         (model: IntegrationCardModel, action: CardAction): void => {
-            const erpHandlers = {
+            const own = {
                 confirmReset: setPendingReset,
                 loadErpData: operations.loadErpData,
                 openDowntime: setDowntime,
                 openAssign: erpAssign?.openAssign,
                 confirmUndoAssignment: erpAssign?.confirmUndoAssignment,
+                preparation: storePrep,
             };
-            const routed = model.isSystem
-                ? handleSystemAction(model, action, erpHandlers)
-                : handleIntegrationErpAction(model, action, erpHandlers);
-            if (routed || handleRepositoryAction(model, action)) {
-                return;
-            }
+            if (routeOwnDialogs(model, action, own)) return;
             // Open: the integration's Adobe workspace in the Developer Console
             // (owner, 2026-09-21).
             if (action === 'open') {
@@ -208,7 +208,7 @@ export function IntegrationsGrid({
             }
             operations.run(model.id, model.name, action);
         },
-        [erpAssign, handleMeshAction, onOpenGuide, openReinstall, openRemoveAnyway, openSettings, operations],
+        [erpAssign, handleMeshAction, onOpenGuide, openReinstall, openRemoveAnyway, openSettings, operations, storePrep],
     );
 
     // A tile whose operation started here and is still running reopens its progress

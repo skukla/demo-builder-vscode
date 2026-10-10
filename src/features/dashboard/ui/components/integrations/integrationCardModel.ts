@@ -460,10 +460,14 @@ export function deriveIntegrationCard(
         installation,
         menuActions: withPromotionActions(
             entry,
-            withErpActions(
+            withPreparationActions(
                 entry,
                 face.status,
-                buildMenuActions(face.status, primaryUrl, installation, Boolean(entry.updateAvailable)),
+                withErpActions(
+                    entry,
+                    face.status,
+                    buildMenuActions(face.status, primaryUrl, installation, Boolean(entry.updateAvailable)),
+                ),
             ),
         ),
         canRename: entry.kind === 'integration' && facet.renamable,
@@ -492,6 +496,23 @@ function withErpActions(
         listedSystemOf(kind, getAppBuilderComponentCatalog());
     if (status !== 'deployed' || !addsErps) return actions;
     const own: CardAction[] = ['add-erp', 'load-demo-data', 'reset-records'];
+    const at = actions.indexOf('remove');
+    return at === -1 ? [...actions, ...own] : [...actions.slice(0, at), ...own, ...actions.slice(at)];
+}
+
+/**
+ * "Prepare this store" on a deployed integration whose setup steps declare a fix Demo
+ * Builder can apply (AB-77), and "Undo preparation" once a run is recorded on it. Just above
+ * Remove, after the ERP verbs.
+ */
+function withPreparationActions(
+    entry: IdentifiedAppBuilderComponent,
+    status: IntegrationStatus,
+    actions: CardAction[],
+): CardAction[] {
+    const steps = getAppBuilderComponentEntry(entry.catalogId ?? entry.id)?.setupSteps ?? [];
+    if (status !== 'deployed' || !steps.some((step) => step.fix)) return actions;
+    const own: CardAction[] = ['prepare-store', ...(entry.storePreparation ? (['undo-store-preparation'] as CardAction[]) : [])];
     const at = actions.indexOf('remove');
     return at === -1 ? [...actions, ...own] : [...actions.slice(0, at), ...own, ...actions.slice(at)];
 }

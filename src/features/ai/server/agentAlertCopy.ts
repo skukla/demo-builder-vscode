@@ -315,6 +315,27 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: ['id'],
         sessionGrant: false,
     },
+    prepare_commerce_store: {
+        action: 'Prepare the Commerce store for the demo',
+        consequence:
+            "Writes the integration's setup steps into the live Commerce store: settings at the default and the website scope, the erp_owner and brand attributes, a warehouse and stock, and a shared catalog per company without one. Each step is checked first and skipped when already done; what was changed is recorded so Undo preparation can put it back.",
+        target: ['id'],
+        sessionGrant: false,
+    },
+    undo_commerce_store_preparation: {
+        action: 'Undo the Commerce store preparation',
+        consequence:
+            'Puts back what Prepare this store recorded in the live Commerce store: settings to their previous values, and the attributes, stock and shared catalogs it created deleted (a source it created is disabled, since Commerce cannot delete one).',
+        target: ['id', 'stepId'],
+        sessionGrant: false,
+    },
+    set_commerce_config: {
+        action: 'Change Commerce settings',
+        consequence:
+            "Writes the named settings into the live Commerce store at the default or the project's website scope, and records the previous values so the same tool can put them back.",
+        target: [],
+        sessionGrant: false,
+    },
     reset_erp_records: {
         action: 'Reset the ERP records',
         consequence:

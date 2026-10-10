@@ -204,9 +204,44 @@
                 ]
               },
               "fix": {
-                "type": "string",
-                "enum": ["add-erp-owner-to-attribute-sets"],
-                "description": "What Demo Builder can do itself when the check finds the step undone, offered as a confirmed action (AB-74)."
+                "description": "What Demo Builder can do itself when the check finds the step undone, offered as a confirmed, previewed and reversible action (AB-74, AB-77): settings declared as data, or a named handler.",
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "required": ["kind", "items"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "kind": { "const": "config" },
+                      "items": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {
+                          "type": "object",
+                          "required": ["path", "value", "scope"],
+                          "additionalProperties": false,
+                          "properties": {
+                            "path": { "type": "string", "pattern": "^[a-z0-9_]+(/[a-z0-9_]+)+$" },
+                            "value": { "type": "string" },
+                            "scope": { "type": "string", "enum": ["default", "website"] }
+                          }
+                        }
+                      },
+                      "manual": { "type": "string", "minLength": 1, "description": "What stays by hand after the settings are written." }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": ["kind", "handler"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "kind": { "const": "handler" },
+                      "handler": {
+                        "type": "string",
+                        "enum": ["create-erp-attributes", "erp-warehouse-in-website-stock", "company-shared-catalogs"]
+                      }
+                    }
+                  }
+                ]
               },
               "optional": {
                 "type": "boolean",

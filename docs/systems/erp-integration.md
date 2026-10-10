@@ -362,8 +362,8 @@ the storefront returns switch (`sales/magento_rma/enabled`).
 checklist asks for Commerce's Catalog Price Scope to be Website (Stores > Configuration >
 Catalog > Catalog > Price). The ERP publishes a company's prices into its shared catalog per
 website — each tier price carries a website — and at the default scope, Global, Commerce
-ignores that website and every site shows the same prices. The SC sets it once in the Admin;
-Demo Builder checks it by reading the setting through `GET /V1/system/config`.
+ignores that website and every site shows the same prices. Demo Builder checks it by reading the setting through `GET /V1/system/config`, and
+"Prepare this store" sets it (below).
 
 **For a demo where the buyer pays by card**, the checklist has an optional step: switch on
 Payment Services, Commerce's own card payments (powered by PayPal), for the project's website.
@@ -372,6 +372,50 @@ Services needs its own sandbox onboarding (Sales > Payment Services > Sandbox on
 PayPal sandbox business account) before it can be switched on. An optional step is still listed,
 checked and marked like any other, but while it is open it is not counted as left to do: the
 card's "Demo setup" line, the flyout's Next step and the guide's opening step all pass over it.
+
+## Preparing the store (AB-77)
+
+Adobe Commerce as a Cloud Service gained `GET` and `PUT /V1/system/config` on 2026-09-08
+(measured live on Justrite 2026-10-10: `sales/totals_sort/tax` 40 → 41 → 40; a refused path
+comes back in the answer's `errors` list under HTTP 200, so every write reads that list).
+Since then the extension APPLIES the setup steps it can, not only checks them. **Prepare this
+store** on the integration's card, the setup guide's per-step **Apply this step**, and the
+agent's `prepare_commerce_store` all run one engine
+(`src/features/app-builder/services/storePreparation/`): it lists each step's state (done,
+applicable, by hand, applied), PREVIEWS what each applicable step would change after reading
+the current values, APPLIES in the guide's order, and RECORDS what each step changed on the
+integration (`appBuilderComponents[id].storePreparation`, by step id) so **Undo preparation**
+(the card, the guide's **Undo this step**, `undo_commerce_store_preparation`) puts it back,
+newest step first.
+
+Two rules whatever the step: a step is checked first and SKIPPED when its check says done,
+so a datapack that already loaded the attributes, sources or shared catalogs is never redone
+and never relied on; and a refused item stops nothing else — what Commerce took stands and is
+recorded, what it refused is named by step and item in the result.
+
+A step says how it is applied in its catalog entry's `fix` (`app-builder-components.json`,
+schema beside it). A fix that is settings is DATA, with no code: `{ "kind": "config",
+"items": [{ "path": "payment/companycredit/active", "value": "1", "scope": "website" }] }`;
+`website` resolves to the project's website code when applied, and a `manual` sentence says
+what stays by hand. A fix that needs code names a handler (`{ "kind": "handler", "handler":
+"create-erp-attributes" }`); each handler implements the same preview / apply / undo contract
+(`fixContract.ts`), so the engine drives both alike. A second catalog entry declares config
+fixes in JSON alone.
+
+| Step | Written | Undo | Still by hand |
+|---|---|---|---|
+| Catalog price scope | `catalog/price/scope` = 1, default scope | the previous value | — |
+| Payment on Account | `payment/companycredit/active` = 1, website | the previous value (a value that was inherited is set explicitly after the undo, to what it inherited) | — |
+| Returns | `sales/magento_rma/enabled` = 1, website | same | — |
+| Card payments | `payment/payment_services/active` = 1, website | same | the PayPal sandbox connection |
+| `erp_owner` and `brand` | each missing one created as a Text Field (`POST products/attributes`), then `erp_owner` into every attribute set the products use (AB-74) | deletes only an attribute this run created; takes `erp_owner` out of only the sets it added it to; refuses while a product carries a value it would lose | — |
+| A warehouse per ERP | a source per ERP (`POST inventory/sources`, `<erp>_warehouse`), a stock for the website with it as sales channel (`POST inventory/stocks`), the links (`POST inventory/stock-source-links`); an existing source or stock is reused | unlinks, deletes a stock it created, DISABLES a source it created — Commerce cannot delete a source, and the result says so | moving product quantities to the new source (a per-product decision; not offered) |
+| A shared catalog per company | a custom catalog (`POST sharedCatalog`) and `assignCompanies` for each company the check finds in no catalog or sharing a custom one | unassigns (the company returns to the public catalog) and deletes only a catalog it created | — |
+| "Confirmed in ERP", "Partially Held" | nothing: `POST /V1/order-statuses` is 404 | — | the whole step |
+
+`set_commerce_config` is the one settings write outside a catalog step: the same read-first,
+write-only-what-differs, read-`errors` path, recording the previous values on the project
+(`commerceConfigChange`, the last write only) so `undo: true` puts them back.
 
 ## Filling the ERP
 

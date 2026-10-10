@@ -347,6 +347,7 @@ describe('rows with no output safety net are classified', () => {
         // Category 2, read before listing (AB-74): both answer `{confirmed, …}` or a named refusal.
         ...['assign_erp_products', 'add_erp_owner_to_attribute_sets'],
         ...['undo_erp_assignment', 'remove_erp_owner_from_attribute_sets'],
+        ...['prepare_commerce_store', 'undo_commerce_store_preparation', 'set_commerce_config'], // AB-77: `{confirmed, steps}`
         // Category 2, read before listing: `handleListRuntimePackages` returns
         // `{data: {namespace, packages}}` or a named refusal (runtimePackageHandlers.ts).
         'list_runtime_packages',
@@ -535,6 +536,7 @@ describe('the ceiling table tracks the tool surface', () => {
         'add_erp',
         // AB-74: one short row per attribute set; the undo's counts and five SKUs.
         ...['add_erp_owner_to_attribute_sets', 'remove_erp_owner_from_attribute_sets', 'undo_erp_assignment'],
+        ...['prepare_commerce_store', 'undo_commerce_store_preparation', 'set_commerce_config'], // AB-77: nine short rows
         'delete_undeclared_runtime_code',
         'deploy_mesh',
         'delete_mesh',

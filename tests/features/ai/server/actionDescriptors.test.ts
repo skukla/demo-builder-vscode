@@ -113,6 +113,10 @@ describe('ACTION_DESCRIPTORS', () => {
             'assign_erp_products',
             'remove_erp_owner_from_attribute_sets',
             'undo_erp_assignment',
+            // AB-77: the same shape — a call without confirm previews.
+            'prepare_commerce_store',
+            'undo_commerce_store_preparation',
+            'set_commerce_config',
         ];
         for (const tool of PREVIEWING) {
             const row = actionRows().find((d) => d.tool === tool);

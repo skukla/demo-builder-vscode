@@ -63,3 +63,128 @@ export interface CommerceAttributeGroupList {
     }>;
     total_count?: number;
 }
+
+/*
+ * "Prepare this store" (AB-77). Where each shape comes from:
+ * - system/config GET and PUT: Adobe's Commerce as a Cloud Service REST reference,
+ *   `saas-integrations/system-config` (fields `path`, `value`, `scope`, `scope_code`; the PUT
+ *   answer's `items` and `errors`). The round trip was run live on Justrite on 2026-10-10
+ *   (`sales/totals_sort/tax` 40 -> 41 -> 40; a refused path comes back in `errors` under
+ *   HTTP 200). The literal JSON was not recorded in the repo.
+ * - product attribute create: Magento's `Catalog/Api/Data/ProductAttributeInterface` and the
+ *   data installer's `config/schemas/product_attributes.json` (read 2026-10-10). Not recorded live.
+ * - sources, stocks, stock-source links, source items: Magento's `InventoryApi` service
+ *   contracts (`SourceInterface`, `StockInterface`, `StockSourceLinkInterface`) and the data
+ *   installer's schemas and processors for the same routes (read 2026-10-10). The GET lists
+ *   are what `setupChecks.ts` already reads. Not recorded live.
+ * - shared catalogs and company assignment: Magento's `SharedCatalog/Api/Data/SharedCatalogInterface`
+ *   and the data installer's `shared_catalogs_*` endpoints and processors (read 2026-10-10).
+ *   Not recorded live.
+ */
+
+/** One row of `GET /V1/system/config`. */
+export interface CommerceSystemConfigRow {
+    path: string;
+    value: string | null;
+    scope: 'default' | 'website' | 'store' | string;
+    scope_code?: string | null;
+}
+
+/** `GET /V1/system/config?…`: the rows at the asked scope. */
+export interface CommerceSystemConfigList {
+    items?: CommerceSystemConfigRow[];
+}
+
+/** One item of the `PUT /V1/system/config` body. */
+export interface CommerceSystemConfigWrite {
+    path: string;
+    value: string;
+    scope: 'default' | 'website' | 'store';
+    scope_code?: string;
+}
+
+/** `PUT /V1/system/config`: what was saved, and what was refused, under HTTP 200. */
+export interface CommerceSystemConfigPutAnswer {
+    items?: CommerceSystemConfigRow[];
+    errors?: Array<{ path: string; scope?: string; scope_code?: string | null; message: string }>;
+}
+
+/** `POST /V1/products/attributes`: the body, and the row it answers (and `GET products/attributes/<code>`). */
+export interface CommerceProductAttribute {
+    attribute_code: string;
+    frontend_input: string;
+    default_frontend_label?: string;
+    frontend_labels?: Array<{ store_id: number; label: string }>;
+    is_required?: boolean;
+    is_user_defined?: boolean;
+    scope?: string;
+    backend_type?: string;
+    attribute_id?: number;
+}
+
+/** `GET /V1/inventory/sources` item, `POST /V1/inventory/sources` body (`{ source }`). */
+export interface CommerceInventorySource {
+    source_code: string;
+    name: string;
+    enabled?: boolean;
+    country_id?: string;
+    postcode?: string;
+    description?: string;
+}
+
+export interface CommerceInventorySourceList {
+    items?: CommerceInventorySource[];
+    total_count?: number;
+}
+
+/** `GET /V1/inventory/stocks` item, `POST /V1/inventory/stocks` body (`{ stock }`); the POST answers the new id. */
+export interface CommerceInventoryStock {
+    stock_id?: number;
+    name: string;
+    extension_attributes?: { sales_channels?: Array<{ type: string; code: string }> };
+}
+
+export interface CommerceInventoryStockList {
+    items?: CommerceInventoryStock[];
+    total_count?: number;
+}
+
+/** `GET /V1/inventory/stock-source-links` item, and one of `POST …/stock-source-links` `{ links }`. */
+export interface CommerceStockSourceLink {
+    stock_id: number;
+    source_code: string;
+    priority?: number;
+}
+
+export interface CommerceStockSourceLinkList {
+    items?: CommerceStockSourceLink[];
+    total_count?: number;
+}
+
+/** `GET /V1/company` item. */
+export interface CommerceCompanyRow {
+    id: number;
+    company_name?: string;
+    customer_group_id?: number;
+}
+
+export interface CommerceCompanyList {
+    items?: CommerceCompanyRow[];
+    total_count?: number;
+}
+
+/** `GET /V1/sharedCatalog` item; `POST /V1/sharedCatalog` body (`{ sharedCatalog }`) answers the new id. */
+export interface CommerceSharedCatalog {
+    id?: number;
+    name: string;
+    /** 1 public, 0 custom. */
+    type?: number;
+    customer_group_id?: number;
+    store_id?: number;
+    tax_class_id?: number;
+}
+
+export interface CommerceSharedCatalogList {
+    items?: CommerceSharedCatalog[];
+    total_count?: number;
+}

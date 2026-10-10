@@ -13,7 +13,7 @@
  * @module types/webviewRequests
  */
 
-import type { ComponentSettings } from './appBuilderComponents';
+import type { ComponentSettings, SetupConfigFixItem } from './appBuilderComponents';
 import type { AdobeConfig } from './base';
 import type { CustomBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
@@ -761,6 +761,40 @@ export interface ErpOwnerSetsRequestPayload {
     id?: string;
     confirm?: boolean;
     progress?: 'modal';
+}
+
+/**
+ * `prepareCommerceStore` (AB-77): `id` is the integration whose setup steps are applied.
+ * Without `confirm: true` it previews (reads only). `stepIds` limits the run to those steps
+ * (the setup guide's per-step Apply); absent, every applicable step.
+ */
+export interface PrepareStoreRequestPayload {
+    id?: string;
+    confirm?: boolean;
+    stepIds?: string[];
+    progress?: 'modal';
+}
+
+/**
+ * `undoCommerceStorePreparation` (AB-77): put back what "Prepare this store" recorded, every
+ * step newest first, or the one `stepId` names. Without `confirm: true` it says what it would put back.
+ */
+export interface UndoStorePreparationRequestPayload {
+    id?: string;
+    confirm?: boolean;
+    stepId?: string;
+    progress?: 'modal';
+}
+
+/**
+ * `setCommerceConfig` (AB-77): write one or more settings through `PUT /V1/system/config`.
+ * Without `confirm: true` it previews. `undo: true` puts back the values the last write
+ * recorded on the project (`commerceConfigChange`), ignoring `items`.
+ */
+export interface SetCommerceConfigRequestPayload {
+    items?: SetupConfigFixItem[];
+    confirm?: boolean;
+    undo?: boolean;
 }
 
 export interface AddAppBuilderComponentRequestPayload {

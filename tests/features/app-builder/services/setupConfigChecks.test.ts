@@ -23,7 +23,7 @@ const statuses = (rows: object[]): jest.Mock<Promise<string>, [string]> =>
 
 const FILTER = 'searchCriteria[filterGroups][0][filters][0]';
 const configAt = (setting: string, website?: string): string =>
-    `system/config?${website ? `scope=websites&scopeCode=${website}&` : ''}${FILTER}[field]=path&${FILTER}[value]=${setting}`;
+    `system/config?${website ? `scope=website&scopeCode=${website}&` : ''}${FILTER}[field]=path&${FILTER}[value]=${setting}`;
 
 /** A config read answering each path's stored value, or no item when it has none. */
 function config(values: Record<string, string>): jest.Mock<Promise<string>, [string]> {

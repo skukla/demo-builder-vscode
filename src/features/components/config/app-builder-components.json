@@ -115,14 +115,18 @@
             "Add Shared Catalog"
           ],
           "then": "Assign the company under Assign Companies.",
-          "check": "companies-have-own-catalogs"
+          "check": "companies-have-own-catalogs",
+          "fix": {
+            "kind": "handler",
+            "handler": "company-shared-catalogs"
+          }
         },
         {
           "id": "price-scope-website",
           "check": "price-scope-website",
           "label": "Price scope",
           "title": "Set the catalog price scope to Website",
-          "why": "The ERP publishes a company's prices per website; at the default scope, Global, every site would show the same prices. No API sets this.",
+          "why": "The ERP publishes a company's prices per website; at the default scope, Global, every site would show the same prices. Prepare this store sets it through PUT /V1/system/config.",
           "where": "Stores > Configuration > Catalog > Catalog > Price > Catalog Price Scope: set to Website, Save Config. Catalog > Shared Catalogs > Set Pricing and Structure then shows a Website chooser above the prices.",
           "path": [
             "Stores",
@@ -135,7 +139,17 @@
           "enter": [
             "Website"
           ],
-          "then": "Save Config."
+          "then": "Save Config.",
+          "fix": {
+            "kind": "config",
+            "items": [
+              {
+                "path": "catalog/price/scope",
+                "value": "1",
+                "scope": "default"
+              }
+            ]
+          }
         },
         {
           "id": "second-source",
@@ -153,7 +167,11 @@
             "<ERP name> Warehouse"
           ],
           "then": "Add a stock for the website and assign the warehouses to it, move the products' quantities to them, and save each product once.",
-          "check": "erp-source-in-website-stock"
+          "check": "erp-source-in-website-stock",
+          "fix": {
+            "kind": "handler",
+            "handler": "erp-warehouse-in-website-stock"
+          }
         },
         {
           "id": "erp-attributes",
@@ -173,7 +191,10 @@
           ],
           "then": "erp_owner is a Text Field in every attribute set your products use; a value for an attribute not in a product's set is dropped without an error. Give each additional ERP its products with Assign products on its card; untagged products stay with the ERP on everything.",
           "check": "erp-attributes-exist",
-          "fix": "add-erp-owner-to-attribute-sets"
+          "fix": {
+            "kind": "handler",
+            "handler": "create-erp-attributes"
+          }
         },
         {
           "id": "partially-held-status",
@@ -210,7 +231,17 @@
           "enter": [
             "Enabled: Yes"
           ],
-          "then": "At the website's scope, untick Use Default first, then Save Config."
+          "then": "At the website's scope, untick Use Default first, then Save Config.",
+          "fix": {
+            "kind": "config",
+            "items": [
+              {
+                "path": "payment/companycredit/active",
+                "value": "1",
+                "scope": "website"
+              }
+            ]
+          }
         },
         {
           "id": "storefront-returns",
@@ -229,7 +260,17 @@
           "enter": [
             "Enable RMA on Storefront: Yes"
           ],
-          "then": "Leave Enable RMA on Product Level at Yes so every product can be returned, and Save Config."
+          "then": "Leave Enable RMA on Product Level at Yes so every product can be returned, and Save Config.",
+          "fix": {
+            "kind": "config",
+            "items": [
+              {
+                "path": "sales/magento_rma/enabled",
+                "value": "1",
+                "scope": "website"
+              }
+            ]
+          }
         },
         {
           "id": "card-payments",
@@ -247,7 +288,18 @@
           "enter": [
             "Enable: Yes"
           ],
-          "then": "Finish Sandbox onboarding first, and keep Payment mode at Sandbox so no real card is charged."
+          "then": "Finish Sandbox onboarding first, and keep Payment mode at Sandbox so no real card is charged.",
+          "fix": {
+            "kind": "config",
+            "items": [
+              {
+                "path": "payment/payment_services/active",
+                "value": "1",
+                "scope": "website"
+              }
+            ],
+            "manual": "The PayPal sandbox connection stays by hand: Sales > Payment Services > Sandbox onboarding, with a PayPal sandbox business account, before the switch takes effect."
+          }
         }
       ],
       "description": "Connects Commerce to an ERP: orders, prices and stock stay in sync.",

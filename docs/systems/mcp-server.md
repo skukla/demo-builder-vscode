@@ -421,6 +421,19 @@ records each product's previous value on the ERP, and applies ownership across e
 undos, `undo_erp_assignment` and `remove_erp_owner_from_attribute_sets`, follow the same
 pattern and dispatch into the same handlers as the card's "Undo last assignment" and the
 setup guide's "Take erp_owner out again".
+`prepare_commerce_store`, `undo_commerce_store_preparation` and `set_commerce_config`
+(2026-10-10, AB-77) take the same shape: without `confirm` they read Commerce and answer what
+would change, and write nothing; with `confirm: true` they raise the consent dialog and
+write. The first applies an integration's setup steps through one engine shared with the
+card's "Prepare this store" and the guide's per-step Apply — settings through
+`PUT /V1/system/config` (whose `errors` list under HTTP 200 is read on every write), the
+`erp_owner`/`brand` attributes, a warehouse and stock per ERP, a shared catalog per company
+— checking each step first and skipping one a datapack already did, and recording what each
+changed on the integration so the second puts it back newest first (a source it created is
+disabled, not deleted: Commerce cannot). The third writes settings outside a catalog step and
+records the previous values on the project, which `undo: true` writes back. The setup
+checklist tools say which steps are applicable (`fix` on the item) and which were applied
+(`fixApplied`). Details: `docs/systems/erp-integration.md`, "Preparing the store".
 The ERP tools that act on one ERP (`load_erp_demo_data`,
 `open_erp_screen`, `run_erp_rest`, `write_erp_rest`, `get_erp_status`) take an optional `erp`,
 the ERP's component id, and default to the integration's first, except `load_erp_demo_data`,

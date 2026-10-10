@@ -23,6 +23,7 @@ import { Flex, Text, View } from '@adobe/react-spectrum';
 import React from 'react';
 import { ErpAssignDialogs, useErpAssignDialogs } from '../components/integrations/ErpAssignDialogs';
 import { IntegrationsGrid } from '../components/integrations/IntegrationsGrid';
+import { PrepareStoreDialogs, usePrepareStoreDialogs } from '../components/integrations/PrepareStoreDialogs';
 import {
     SetupGuideModal,
     setupNextStep,
@@ -103,6 +104,8 @@ export function IntegrationsScreen({
     // "Assign products" and the attribute-set fix (AB-74): opened from a card, the setup
     // guide, and the success view of "Add another ERP".
     const erpAssign = useErpAssignDialogs(operations);
+    // "Prepare this store" and its undo (AB-77): from a card's menu and the setup guide's steps.
+    const storePrep = usePrepareStoreDialogs(operations);
 
     // Status has not resolved yet — the mesh card would otherwise pop in a beat
     // after the integration cards. Same LoadingDisplay as ProjectsDashboard's gate.
@@ -173,6 +176,7 @@ export function IntegrationsScreen({
                         operations={operations}
                         onOpenGuide={openGuide}
                         erpAssign={erpAssign}
+                        storePrep={storePrep}
                         // The add card steps aside while a filter is on: it is
                         // not a result, and alone it would read as "add one"
                         // rather than "nothing matched".
@@ -225,8 +229,9 @@ export function IntegrationsScreen({
                     next={setupNextStep(cards, operations.open?.id, openGuide)}
                     offerStep={erpAssign.offerStep}
                 />
-                <SetupGuideModal {...guideModal} onFix={erpAssign.changeSets} />
+                <SetupGuideModal {...guideModal} onFix={storePrep.prepareStep} />
                 <ErpAssignDialogs {...erpAssign.dialogs} />
+                <PrepareStoreDialogs {...storePrep.dialogs} />
             </FullScreenSurface>
         </PageLayout>
     );

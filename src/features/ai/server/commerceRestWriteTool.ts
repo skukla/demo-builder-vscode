@@ -73,7 +73,10 @@ export function registerCommerceRestWriteTool(
                 'MANY records at once: bulk:true sends the body — an ARRAY of request bodies — to the ' +
                 'asynchronous bulk API (V1/async/bulk/<path>, e.g. "products" or "products/bySku"); Commerce ' +
                 'answers a bulk_uuid to poll with run_commerce_rest "bulk/<uuid>/status". One call for a ' +
-                'whole catalog instead of one per product.',
+                'whole catalog instead of one per product. Settings (Stores > Configuration) are writable too: ' +
+                'PUT system/config with { items: [{ path, value, scope, scope_code }] }, and its answer carries an errors ' +
+                'list under HTTP 200 that MUST be read, since a refused path is reported there, not as a failure ' +
+                '(set_commerce_config does that and records the previous values).',
             inputSchema: {
                 method: z
                     .enum(WRITE_METHODS)

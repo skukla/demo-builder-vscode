@@ -141,6 +141,8 @@ describe('deriveIntegrationCard with systems', () => {
             'add-erp',
             'load-demo-data',
             'reset-records',
+            // Prepare this store, on an entry whose setup steps declare a fix (AB-77).
+            'prepare-store',
             'remove',
         ]);
     });

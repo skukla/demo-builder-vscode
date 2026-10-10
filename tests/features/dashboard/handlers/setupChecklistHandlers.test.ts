@@ -209,7 +209,7 @@ describe('checkSetupSteps', () => {
         await handleCheckSetupSteps(context, { id: 'erp-integration' });
         const paths = mockSendRest.mock.calls.map((call) => call[2] as string);
         expect(paths).toContain(
-            'system/config?scope=websites&scopeCode=acme&searchCriteria[filterGroups][0][filters][0][field]=path' +
+            'system/config?scope=website&scopeCode=acme&searchCriteria[filterGroups][0][filters][0][field]=path' +
                 '&searchCriteria[filterGroups][0][filters][0][value]=payment/companycredit/active',
         );
     });

@@ -128,12 +128,7 @@ import {
     handleDeleteUndeclaredRuntimeCode,
     handleListRuntimePackages,
 } from '@/features/dashboard/handlers/runtimePackageHandlers';
-import {
-    handleCheckSetupSteps,
-    handlePrepareSetupChecks,
-    handleGetSetupChecklist,
-    handleSetSetupStep,
-} from '@/features/dashboard/handlers/setupChecklistHandlers';
+import { setupHandlerMap } from '@/features/dashboard/handlers/setupHandlerMap';
 import { handleAddSharedDemo } from '@/features/eds/handlers/addSharedDemoHandler';
 import { handleChangeDemoSource } from '@/features/eds/handlers/changeDemoSourceHandler';
 import {
@@ -426,12 +421,8 @@ export const dashboardHandlers = defineHandlers({
     // redeploys.
     getIntegrationSettings: handleGetIntegrationSettings,
     saveIntegrationSettings: handleSaveIntegrationSettings,
-    // An integration's demo setup checklist (AB-26x): the saved steps, marking one, and
-    // the checks Demo Builder runs itself.
-    getSetupChecklist: handleGetSetupChecklist,
-    setSetupStep: handleSetSetupStep,
-    checkSetupSteps: handleCheckSetupSteps,
-    prepareSetupChecks: handlePrepareSetupChecks,
+    // An integration's demo setup: the checklist (AB-26x) and "Prepare this store" (AB-77).
+    ...setupHandlerMap,
     // The latest progress of an operation the SC started here, for its modal (PL-59).
     getOperationProgress: handleGetOperationProgress,
     // "Run in background": the operation carries on in a progress notification (PL-59).

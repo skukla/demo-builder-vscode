@@ -298,7 +298,10 @@ describe('dashboardHandlers', () => {
             // addErpOwnerToAttributeSets + removeErpOwnerFromAttributeSets (86 → 91, AB-74,
             // 2026-10-09): "Assign products" on an ERP's card and its undo, and the
             // attribute-set fix the erp-attributes check offers and its undo.
-            expect(types).toHaveLength(91);
+            // prepareCommerceStore + undoCommerceStorePreparation + setCommerceConfig (91 → 94,
+            // AB-77, 2026-10-10): "Prepare this store" on the integration's card and the guide's
+            // per-step Apply, its undo, and the one settings write outside a catalog step.
+            expect(types).toHaveLength(94);
         });
 
         it('should have handlers as functions', () => {

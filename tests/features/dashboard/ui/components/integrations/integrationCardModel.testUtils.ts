@@ -49,6 +49,16 @@ const FAKE_CATALOG: Record<string, AppBuilderComponentCatalogEntry> = {
         // Named from an input, so it can be renamed (AB-16o).
         nameFromEnvVar: 'INTEGRATION_DISPLAY_NAME',
         source: { owner: 'skukla', repo: 'commerce-erp-integration', branch: 'main' },
+        // One step Demo Builder can apply (AB-77), so the card offers Prepare this store.
+        setupSteps: [
+            {
+                id: 'price-scope-website',
+                title: 'Set the catalog price scope to Website',
+                why: 'w',
+                where: 'Admin',
+                fix: { kind: 'config', items: [{ path: 'catalog/price/scope', value: '1', scope: 'default' }] },
+            },
+        ],
     },
     'demo-erp': {
         id: 'demo-erp',
