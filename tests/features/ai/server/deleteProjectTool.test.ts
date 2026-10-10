@@ -9,11 +9,20 @@ jest.mock('@/features/projects-dashboard/services/projectFilesDeletion', () => (
     deleteProjectFiles: jest.fn(),
 }));
 
+// The real resolver decides; only the step that would touch the cloud is held
+// back, so what it is HANDED can be read.
+jest.mock('@/features/ai/server/agentProjectCleanup', () => ({
+    ...jest.requireActual('@/features/ai/server/agentProjectCleanup'),
+    cleanUpProjectCloud: jest.fn(),
+}));
+
+import * as vscode from 'vscode';
 import { z } from 'zod';
 
 import { registerDeleteProjectTool } from '@/features/ai/server/deleteProjectTool';
 import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
 import type { McpToolSchema } from '@/features/ai/server/mcpToolServer';
+import { cleanUpProjectCloud } from '@/features/ai/server/agentProjectCleanup';
 import { deleteProjectFiles } from '@/features/projects-dashboard/services/projectFilesDeletion';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
@@ -21,6 +30,13 @@ import { createMockExtensionContext } from '../../../helpers/extensionContextFak
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 const deleteProjectFilesMock = deleteProjectFiles as jest.Mock;
+const cleanUpProjectCloudMock = cleanUpProjectCloud as jest.Mock;
+const getConfiguration = vscode.workspace.getConfiguration as jest.Mock;
+
+/** Put the SC's `cleanupBehavior` setting where the resolver reads it. */
+function cleanupBehavior(value: string): void {
+    getConfiguration.mockReturnValue({ get: () => value });
+}
 
 /**
  * The schema is KEPT, not discarded: `readOnlyHint`/`destructiveHint`, `needsAuth`
@@ -67,6 +83,8 @@ describe('delete_project', () => {
         ]);
         loadProjectFromPath.mockResolvedValue({ name: 'alpha', path: '/p/alpha' });
         deleteProjectFilesMock.mockResolvedValue(undefined);
+        cleanUpProjectCloudMock.mockResolvedValue({});
+        cleanupBehavior('ask');
     });
 
     describe('what the tool declares to a client', () => {
@@ -235,5 +253,165 @@ describe('what it says while it runs', () => {
 
         expect(seen).toEqual(['Removing the project files']);
         expect(deleteProjectFilesMock).toHaveBeenCalled();
+    });
+});
+
+/**
+ * The two cloud choices (AI-9). What the tool hands the cleanup step is the
+ * decision: the step itself is tested where it lives.
+ */
+describe('the two cloud choices', () => {
+    const CONFIRMED = { name: 'alpha', confirm: true, confirmName: 'alpha' };
+    const PROJECT = { name: 'alpha', path: '/p/alpha' };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        getAllProjects.mockResolvedValue([{ name: 'alpha', path: '/p/alpha' }]);
+        loadProjectFromPath.mockResolvedValue(PROJECT);
+        deleteProjectFilesMock.mockResolvedValue(undefined);
+        cleanUpProjectCloudMock.mockResolvedValue({});
+        cleanupBehavior('ask');
+    });
+
+    it('asks for neither when the call names neither', async () => {
+        const s = fakeServer();
+        registerDeleteProjectTool(s, ctxFactory);
+
+        await s.call(CONFIRMED);
+
+        expect(cleanUpProjectCloudMock).toHaveBeenCalledTimes(1);
+        expect(cleanUpProjectCloudMock).toHaveBeenCalledWith(expect.anything(), PROJECT, {
+            deleteGithubRepo: false,
+            deleteDaLiveSite: false,
+        });
+    });
+
+    it('asks for the repository alone when only that is ticked', async () => {
+        const s = fakeServer();
+        registerDeleteProjectTool(s, ctxFactory);
+
+        await s.call({ ...CONFIRMED, deleteGithubRepo: true });
+
+        expect(cleanUpProjectCloudMock).toHaveBeenCalledWith(expect.anything(), PROJECT, {
+            deleteGithubRepo: true,
+            deleteDaLiveSite: false,
+        });
+    });
+
+    it('asks for the site alone when only that is ticked', async () => {
+        const s = fakeServer();
+        registerDeleteProjectTool(s, ctxFactory);
+
+        await s.call({ ...CONFIRMED, deleteDaLiveSite: true });
+
+        expect(cleanUpProjectCloudMock).toHaveBeenCalledWith(expect.anything(), PROJECT, {
+            deleteGithubRepo: false,
+            deleteDaLiveSite: true,
+        });
+    });
+
+    // Same bar as `confirm`: a word is not a tick.
+    it('does not read a truthy word as a tick', async () => {
+        const s = fakeServer();
+        registerDeleteProjectTool(s, ctxFactory);
+
+        await s.call({ ...CONFIRMED, deleteGithubRepo: 'yes', deleteDaLiveSite: 1 });
+
+        expect(cleanUpProjectCloudMock).toHaveBeenCalledWith(expect.anything(), PROJECT, {
+            deleteGithubRepo: false,
+            deleteDaLiveSite: false,
+        });
+    });
+
+    it('reports what the cloud step did alongside the local delete', async () => {
+        cleanUpProjectCloudMock.mockResolvedValue({
+            githubRepo: { name: 'jen/alpha', deleted: true },
+        });
+        const s = fakeServer();
+        registerDeleteProjectTool(s, ctxFactory);
+
+        expect(await s.call({ ...CONFIRMED, deleteGithubRepo: true })).toEqual({
+            deleted: true,
+            name: 'alpha',
+            githubRepo: { name: 'jen/alpha', deleted: true },
+        });
+    });
+
+    it('still reports what the cloud step did when the local delete then fails', async () => {
+        cleanUpProjectCloudMock.mockResolvedValue({
+            githubRepo: { name: 'jen/alpha', deleted: true },
+        });
+        deleteProjectFilesMock.mockRejectedValueOnce('EBUSY');
+        const s = fakeServer();
+        registerDeleteProjectTool(s, ctxFactory);
+
+        expect(await s.call({ ...CONFIRMED, deleteGithubRepo: true })).toEqual({
+            deleted: false,
+            name: 'alpha',
+            githubRepo: { name: 'jen/alpha', deleted: true },
+            error: 'EBUSY',
+        });
+    });
+
+    it('says the setting refused when "localOnly" overrode a tick', async () => {
+        cleanupBehavior('localOnly');
+        const s = fakeServer();
+        registerDeleteProjectTool(s, ctxFactory);
+
+        const res = await s.call({ ...CONFIRMED, deleteDaLiveSite: true });
+
+        expect(cleanUpProjectCloudMock).toHaveBeenCalledWith(
+            expect.anything(),
+            PROJECT,
+            expect.objectContaining({ deleteGithubRepo: false, deleteDaLiveSite: false }),
+        );
+        expect(res).toEqual({
+            deleted: true,
+            name: 'alpha',
+            note: 'demoBuilder.cleanupBehavior is "localOnly", so cloud resources are never deleted. Change the setting to delete them.',
+        });
+    });
+
+    it('adds no note when nothing was refused', async () => {
+        const s = fakeServer();
+        registerDeleteProjectTool(s, ctxFactory);
+
+        const res = await s.call({ ...CONFIRMED, deleteDaLiveSite: true });
+
+        expect(res).toEqual({ deleted: true, name: 'alpha' });
+    });
+
+    it('cleans up the cloud before the local files, which are how it is found', async () => {
+        const order: string[] = [];
+        cleanUpProjectCloudMock.mockImplementation(async () => {
+            order.push('cloud');
+            return {};
+        });
+        deleteProjectFilesMock.mockImplementation(async () => {
+            order.push('local');
+        });
+        const s = fakeServer();
+        registerDeleteProjectTool(s, ctxFactory);
+
+        await s.call(CONFIRMED);
+
+        expect(order).toEqual(['cloud', 'local']);
+    });
+});
+
+describe('what each input is described as', () => {
+    it('tells the agent what every field is for', () => {
+        const s = fakeServer();
+        registerDeleteProjectTool(s, ctxFactory);
+        const shape = s.schema().inputSchema as Record<string, z.ZodTypeAny>;
+
+        expect(Object.fromEntries(Object.entries(shape).map(([k, v]) => [k, v.description]))).toEqual({
+            name: 'Name of the project to delete',
+            confirm: 'Must be true to proceed',
+            confirmName: 'Must equal the project name exactly — guards this irreversible deletion',
+            deleteGithubRepo: "Also delete the project's GitHub repository (default: false)",
+            deleteDaLiveSite:
+                "Also delete the project's DA.live site and take its pages off the CDN (default: false)",
+        });
     });
 });

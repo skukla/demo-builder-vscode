@@ -16327,6 +16327,32 @@
             "decision": "none \u2014 the explicit return states the outcome instead of relying on a regex rejecting the word 'undefined'",
             "recorded": "2026-10-10",
             "source": "PL-70 MUT-02, 2026-10-10"
+        },
+        {
+            "module": "src/features/ai/server/deleteProjectTool.ts",
+            "anchors": [
+                "deleteGithubRepo: args?.deleteGithubRepo === true,"
+            ],
+            "line": 88,
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "The optional chain on this line is unreachable as a guard. The line runs only after the name check returned for an empty name, and name can be non-empty only when args?.name produced a non-empty string, which requires args to be an object. So args is never null or undefined here and the plain read behaves identically on every input the handler can be called with, including a call with no arguments at all, which returns at the name check and has its own test. The same reasoning is already recorded for the two chains on the confirm line; Stryker planted this one against 25 tests, nine of them driving this line with ticked, unticked and non-boolean values, and all stayed green.",
+            "decision": "none \u2014 args is proven non-null by the name guard above; the chain matches the other reads of args in this handler",
+            "recorded": "2026-10-10",
+            "source": "PL-70 MUT-02, 2026-10-10"
+        },
+        {
+            "module": "src/features/ai/server/deleteProjectTool.ts",
+            "anchors": [
+                "deleteDaLiveSite: args?.deleteDaLiveSite === true,"
+            ],
+            "line": 89,
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "The optional chain on this line is unreachable as a guard. The line runs only after the name check returned for an empty name, and name can be non-empty only when args?.name produced a non-empty string, which requires args to be an object. So args is never null or undefined here and the plain read behaves identically on every input the handler can be called with, including a call with no arguments at all, which returns at the name check and has its own test. The same reasoning is already recorded for the two chains on the confirm line; Stryker planted this one against 25 tests, nine of them driving this line with ticked, unticked and non-boolean values, and all stayed green.",
+            "decision": "none \u2014 args is proven non-null by the name guard above; the chain matches the other reads of args in this handler",
+            "recorded": "2026-10-10",
+            "source": "PL-70 MUT-02, 2026-10-10"
         }
     ]
 }
