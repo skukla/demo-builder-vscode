@@ -156,6 +156,39 @@ describe('republish', () => {
         expect(republishMock).not.toHaveBeenCalled();
     });
 
+    // The refusals are what the agent reads back to the user, so each one says which
+    // tool refused and what the sign-in is FOR — not a bare "sign in".
+    it('names itself in the not-EDS refusal', async () => {
+        isEdsProjectMock.mockReturnValueOnce(false);
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+        expect(await s.call('republish', { confirm: true })).toStrictEqual({
+            error: 'republish applies only to EDS storefront projects',
+        });
+    });
+
+    it('says the GitHub sign-in is for pushing config.json', async () => {
+        getGitHubServicesMock.mockReturnValueOnce({
+            tokenService: { validateToken: jest.fn(async () => ({ valid: false })) },
+        });
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+        const res = await s.call('republish', { confirm: true });
+        expect(res.message).toContain('GitHub sign-in required to push config.json.');
+    });
+
+    it('says the DA.live sign-in is for publishing config.json to the CDN', async () => {
+        getDaLiveAuthServiceMock.mockReturnValueOnce({
+            isAuthenticated: jest.fn(async () => false),
+        });
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+        const res = await s.call('republish', { confirm: true });
+        expect(res.message).toContain(
+            'DA.live sign-in required to publish config.json to the CDN.',
+        );
+    });
+
     it('treats a token-validation throw as unauthenticated', async () => {
         getGitHubServicesMock.mockReturnValueOnce({
             tokenService: {
@@ -326,6 +359,51 @@ describe('sync_content', () => {
                 daLiveSite: 'shop',
             })
         );
+    });
+
+    it('names itself in the not-EDS refusal', async () => {
+        isEdsProjectMock.mockReturnValueOnce(false);
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+        expect(await s.call('sync_content', { confirm: true })).toStrictEqual({
+            error: 'sync_content applies only to EDS storefront projects',
+        });
+    });
+
+    it('says the DA.live sign-in is for publishing content', async () => {
+        getDaLiveAuthServiceMock.mockReturnValueOnce({
+            isAuthenticated: jest.fn(async () => false),
+        });
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+        const res = await s.call('sync_content', { confirm: true });
+        expect(res.message).toContain('DA.live sign-in required to publish content.');
+    });
+
+    // EDS-24: the publish also writes or refreshes category pages, and says which
+    // pages it left alone. The agent has no other way to learn that happened.
+    it('reports what happened to the category pages when the publish touched them', async () => {
+        const menu = 'Wrote 2 category pages; left /sale alone (edited by hand).';
+        republishContentMock.mockResolvedValueOnce({
+            success: true,
+            cdnVerified: true,
+            catalogMenu: menu,
+        });
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+
+        const res = await s.call('sync_content', { confirm: true });
+
+        expect(res.categoryPages).toBe(menu);
+    });
+
+    it('leaves the category-pages field out entirely when there was nothing to say', async () => {
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+
+        const res = await s.call('sync_content', { confirm: true });
+
+        expect(Object.keys(res)).not.toContain('categoryPages');
     });
 
     it('runs the content publish under the stored session org context', async () => {

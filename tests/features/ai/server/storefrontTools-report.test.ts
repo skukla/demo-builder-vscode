@@ -115,4 +115,29 @@ describe('get_storefront_report', () => {
         expect(await s.call()).toMatchObject({ needsAuth: 'github' });
         expect(readStorefrontReport).not.toHaveBeenCalled();
     });
+
+    it('says the GitHub sign-in is for reading the storefront', async () => {
+        (getGitHubServices as jest.Mock).mockReturnValue({ tokenService: { validateToken: jest.fn(async () => ({ valid: false })) } });
+        const s = server();
+        registerStorefrontTools(s, ctxFactory);
+
+        const res = await s.call();
+
+        expect(res.message).toContain('GitHub sign-in required to read the storefront.');
+    });
+
+    it('answers a plain error, not an empty report, when the project records no storefront repository', async () => {
+        // readStorefrontReport answers nothing at all for a project with no repo
+        // metadata. Spreading that would hand the agent `{ summary: [...] }`: a report
+        // with words and no facts behind them.
+        (readStorefrontReport as jest.Mock).mockResolvedValue(undefined);
+        const { storefrontReportLines } = jest.requireMock('@/features/eds/services/storefront/storefrontReport');
+        const s = server();
+        registerStorefrontTools(s, ctxFactory);
+
+        const res = await s.call();
+
+        expect(res).toStrictEqual({ error: 'Project is missing GitHub repo metadata' });
+        expect(storefrontReportLines).not.toHaveBeenCalled();
+    });
 });

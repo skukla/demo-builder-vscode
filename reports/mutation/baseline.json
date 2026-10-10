@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "MUT-08: deployMesh storefront-republish callback and not-republished outcome tested; typeGuards EDS instance lookup extracted, four unreachable optional chains deleted",
+    "_note": "MUT-08: storefrontTools category-pages field, missing-repo report error and refusal wording tested",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -2790,24 +2790,20 @@
             "recorded": "2026-10-10T01:04:09.367Z"
         },
         "src/features/ai/server/storefrontTools.ts": {
-            "score": 81.56,
-            "killed": 115,
-            "survived": 23,
-            "noCoverage": 3,
+            "score": 88.65,
+            "killed": 125,
+            "survived": 16,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "string": 20,
-                "optionalChain": 2,
-                "branch": 1
+                "string": 14,
+                "optionalChain": 2
             },
-            "uncoveredCategories": {
-                "other": 2,
-                "string": 1
-            },
-            "highValueSurvivors": 1,
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
             "equivalent": 2,
-            "openGaps": 3,
-            "recorded": "2026-10-10T00:55:32.038Z"
+            "openGaps": 0,
+            "recorded": "2026-10-10T20:09:14.390Z"
         },
         "src/features/ai/server/toolDescriptors.ts": {
             "score": 97.59,
