@@ -64,3 +64,4 @@ SC's setup time goes. AB-74 and AB-75 only help the multi-ERP case.
 ## Shipped so far
 
 - 2026-10-10  feat(app-builder): prepare this store applies the ERP setup steps, with undo (`fa832c75b`)
+- 2026-10-10  fix(app-builder): setup checks read uncut, and a check that could not tell is never done (`3bd031527`)
