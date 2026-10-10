@@ -333,6 +333,64 @@ describe('healPartialComponents', () => {
         expect(healPartialComponents({ 'demo-erp': whole })['demo-erp']).toBe(whole);
     });
 
+    // A hand-edited manifest can hold `null` where a record should be, and the types
+    // say it cannot. It heals like any other half-written record, keyed by its id.
+    it('heals a record that is JSON null rather than throwing on it', () => {
+        const components: Record<string, AppBuilderComponentState> = JSON.parse('{"erp-2": null}');
+
+        expect(healPartialComponents(components)['erp-2']).toStrictEqual({
+            kind: 'integration',
+            status: 'error',
+            name: 'erp-2',
+            source: { owner: 'unknown', repo: 'erp-2' },
+            error: 'Adding this did not finish. Remove it to clean up what it made, then add it again.',
+        });
+    });
+
+    it('heals a record that has a kind and a status and no source at all', () => {
+        const saved = { kind: 'system', status: 'deployed' } as AppBuilderComponentState;
+
+        const healed = healPartialComponents({ 'demo-erp': saved })['demo-erp'];
+
+        // No name and no workspace to borrow a title from: the id is the name.
+        expect(healed).toMatchObject({ kind: 'system', status: 'error', name: 'demo-erp' });
+        expect(healed.source).toStrictEqual({ owner: 'unknown', repo: 'demo-erp' });
+    });
+
+    // Whole means kind AND status: a record with a good source and a kind is still
+    // half-written when the status never landed.
+    it('heals a record whose source is whole and whose status is missing', () => {
+        const saved = {
+            kind: 'integration',
+            source: { owner: 'skukla', repo: 'demo-erp' },
+        } as AppBuilderComponentState;
+
+        const healed = healPartialComponents({ 'demo-erp': saved })['demo-erp'];
+
+        expect(healed.status).toBe('error');
+        expect(healed.source).toStrictEqual({ owner: 'skukla', repo: 'demo-erp' });
+    });
+
+    it('keeps the repo the record already names when only the owner is blank', () => {
+        const saved = {
+            kind: 'integration',
+            status: 'error',
+            source: { owner: '', repo: 'contoso-erp' },
+        } as AppBuilderComponentState;
+
+        const healed = healPartialComponents({ 'erp-integration-2': saved })['erp-integration-2'];
+
+        expect(healed.source).toStrictEqual({ owner: 'unknown', repo: 'contoso-erp' });
+    });
+
+    it('names the repo after the catalog entry before falling back to the id', () => {
+        const saved = { ...partial, catalogId: 'erp-integration' } as AppBuilderComponentState;
+
+        const healed = healPartialComponents({ 'erp-integration-2': saved })['erp-integration-2'];
+
+        expect(healed.source).toStrictEqual({ owner: 'unknown', repo: 'erp-integration' });
+    });
+
     it('answers an empty map for a project with no components', () => {
         expect(healPartialComponents(undefined)).toStrictEqual({});
     });

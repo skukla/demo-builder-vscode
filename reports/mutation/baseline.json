@@ -928,20 +928,19 @@
             "openGaps": 0
         },
         "src/core/state/appBuilderComponentMigration.ts": {
-            "score": 82.56,
-            "killed": 71,
-            "survived": 15,
+            "score": 97.67,
+            "killed": 84,
+            "survived": 2,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "optionalChain": 11,
-                "branch": 4
+                "optionalChain": 2
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 4,
-            "equivalent": 0,
-            "openGaps": 15,
-            "recorded": "2026-10-09T22:56:34.127Z"
+            "highValueSurvivors": 0,
+            "equivalent": 2,
+            "openGaps": 0,
+            "recorded": "2026-10-10T12:08:26.551Z"
         },
         "src/core/state/appBuilderComponentState.ts": {
             "score": 94.05,
