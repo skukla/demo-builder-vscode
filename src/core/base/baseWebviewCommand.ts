@@ -298,7 +298,6 @@ export abstract class BaseWebviewCommand<TInitialData = unknown> extends BaseCom
         // Create communication manager
         // SOP §1: Using TIMEOUTS constants instead of magic numbers
         this.communicationManager = await createWebviewCommunication(this.panel, {
-            enableLogging: true,
             handshakeTimeout: TIMEOUTS.NORMAL,
             messageTimeout: TIMEOUTS.NORMAL,
             maxRetries: 3,

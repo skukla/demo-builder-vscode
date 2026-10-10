@@ -13,7 +13,6 @@ import {
     setupHandshakenManager,
 } from './webviewCommunicationManager.testUtils';
 import { Message } from '@/types/messages';
-import { getLogger } from '@/core/logging/debugLogger';
 
 describe('WebviewCommunicationManager - Edge Cases & Error Handling', () => {
     let mockPanel: vscode.WebviewPanel;
@@ -242,64 +241,6 @@ describe('WebviewCommunicationManager - Edge Cases & Error Handling', () => {
             });
 
             expect(handler).toHaveBeenCalled();
-        });
-    });
-
-    describe('logging configuration', () => {
-        it('should respect enableLogging option', async () => {
-            // The old version said "we can't easily test this without exposing the
-            // logger" and asserted nothing. The logger is a module singleton, so it
-            // can simply be spied on — and the path that logs is QUEUEING, which
-            // happens only before the handshake completes.
-            const debug = jest.spyOn(getLogger(), 'debug');
-            debug.mockClear();
-
-            manager = new WebviewCommunicationManager(mockPanel, {
-                enableLogging: false
-            });
-
-            const initPromise = manager.initialize();
-            await Promise.resolve();
-
-            void manager.sendMessage('queued-while-opening', {});
-
-            listener()({
-                id: 'webview-1',
-                type: '__webview_ready__',
-                timestamp: Date.now()
-            });
-
-            await initPromise;
-
-            expect(debug).not.toHaveBeenCalledWith(
-                expect.stringContaining('[WebviewComm]')
-            );
-        });
-
-        it('should enable logging by default', async () => {
-            // The positive half. Same path, no config — if this did not log, the
-            // negative test above would pass for the wrong reason.
-            const debug = jest.spyOn(getLogger(), 'debug');
-            debug.mockClear();
-
-            manager = new WebviewCommunicationManager(mockPanel);
-
-            const initPromise = manager.initialize();
-            await Promise.resolve();
-
-            void manager.sendMessage('queued-while-opening', {});
-
-            listener()({
-                id: 'webview-1',
-                type: '__webview_ready__',
-                timestamp: Date.now()
-            });
-
-            await initPromise;
-
-            expect(debug).toHaveBeenCalledWith(
-                expect.stringContaining('[WebviewComm]')
-            );
         });
     });
 });

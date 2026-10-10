@@ -98,7 +98,6 @@ describe('BaseWebviewCommand communication', () => {
             await command.startCommunication();
 
             expect(createWebviewCommunication).toHaveBeenCalledWith(mintedPanels()[0], {
-                enableLogging: true,
                 handshakeTimeout: TIMEOUTS.NORMAL,
                 messageTimeout: TIMEOUTS.NORMAL,
                 maxRetries: 3,

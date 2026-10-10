@@ -21,7 +21,6 @@ interface CommunicationConfig {
     messageTimeout?: number;
     maxRetries?: number;
     retryDelay?: number;
-    enableLogging?: boolean;
 }
 
 /**
@@ -162,7 +161,6 @@ export class WebviewCommunicationManager {
             messageTimeout: config.messageTimeout || TIMEOUTS.NORMAL,
             maxRetries: config.maxRetries || 3,
             retryDelay: config.retryDelay || TIMEOUTS.WEBVIEW_RETRY_DELAY,
-            enableLogging: config.enableLogging !== false,
         };
     }
 
@@ -222,9 +220,7 @@ export class WebviewCommunicationManager {
         };
 
         if (!this.handshakeComplete) {
-            if (this.config.enableLogging) {
-                this.logger.debug(`[WebviewComm] Queuing message: ${type}`);
-            }
+            this.logger.debug(`[WebviewComm] Queuing message: ${type}`);
             this.messageQueue.push(message);
             return;
         }
@@ -377,11 +373,9 @@ export class WebviewCommunicationManager {
                             timestamp: Date.now(),
                         }).catch((hintError) => {
                             // Timeout hint is non-critical, log and continue
-                            if (this.config.enableLogging) {
-                                this.logger.warn(
-                                    `[WebviewComm] Failed to send timeout hint (non-fatal): ${hintError}`,
-                                );
-                            }
+                            this.logger.warn(
+                                `[WebviewComm] Failed to send timeout hint (non-fatal): ${hintError}`,
+                            );
                         });
                     }
                 }
@@ -462,11 +456,9 @@ export class WebviewCommunicationManager {
             await this.sendRawMessage(message);
         } catch (error) {
             if (retryCount < this.config.maxRetries) {
-                if (this.config.enableLogging) {
-                    this.logger.debug(
-                        `[WebviewComm] Retrying message ${message.type} (attempt ${retryCount + 1})`,
-                    );
-                }
+                this.logger.debug(
+                    `[WebviewComm] Retrying message ${message.type} (attempt ${retryCount + 1})`,
+                );
 
                 await sleep(this.config.retryDelay);
                 await this.sendWithRetry(message, retryCount + 1);
@@ -488,9 +480,7 @@ export class WebviewCommunicationManager {
         try {
             await this.host.webview.postMessage(message);
         } catch (error) {
-            if (this.config.enableLogging) {
-                this.logger.error(`[WebviewComm] Failed to send message: ${error}`);
-            }
+            this.logger.error(`[WebviewComm] Failed to send message: ${error}`);
             throw error;
         }
     }
@@ -499,7 +489,7 @@ export class WebviewCommunicationManager {
      * Flush queued messages after handshake
      */
     private flushMessageQueue(): void {
-        if (this.config.enableLogging && this.messageQueue.length > 0) {
+        if (this.messageQueue.length > 0) {
             this.logger.debug(`[WebviewComm] Flushing ${this.messageQueue.length} queued messages`);
         }
 
