@@ -1080,3 +1080,4 @@ date and what happened; a failure becomes its own `fix` item.
 - 2026-10-09  refactor(core-ui): the API picker keeps the list and its rows; pill and filter rules get their own file (`bb4745e34`)
 - 2026-10-09  refactor(eds): storefront setup's failed and published screens use StatusDisplay (`ce4093c24`)
 - 2026-10-09  refactor(core): one JWT payload decoder for DA.live and IMS tokens (`d18d9dbbf`)
+- 2026-10-10  merge: the god-file splits (EDS-8) into the integration branch, with the fix branch's behaviour carried into the split files (`c6df529b1`)
