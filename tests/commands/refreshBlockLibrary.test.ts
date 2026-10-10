@@ -194,6 +194,28 @@ describe('RefreshBlockLibraryCommand', () => {
         expect(() => onProgress({ operation: 'block-library', message: 'configuring...' })).not.toThrow();
     });
 
+    it('hands each pipeline message to the progress notification, as its message', async () => {
+        // The reporter the notification was opened with — the only thing the SC
+        // sees for the length of a rebuild.
+        const report = jest.fn();
+        (vscode.window.withProgress as jest.Mock).mockImplementation(
+            async (_options: unknown, callback: (progress: { report: jest.Mock }) => Promise<unknown>) =>
+                callback({ report }),
+        );
+        executePipelineMock.mockImplementation(
+            async (_params: unknown, _services: unknown, onProgress: (info: { message: string }) => void) => {
+                onProgress({ message: 'Configuring block library' });
+                return { success: true, contentFilesCopied: 0, libraryPaths: [] };
+            },
+        );
+        const cmd = new RefreshBlockLibraryCommand(makeContext(), makeStateManager(EDS_PROJECT), makeLogger());
+        cmd.helixService = fakeHelix;
+
+        await cmd.execute();
+
+        expect(report).toHaveBeenCalledWith({ message: 'Configuring block library' });
+    });
+
     /**
      * The command owns the UX and nothing else — which toast fires, and whether one
      * fires at all. Every branch below is invisible to the pipeline assertions above:
@@ -262,7 +284,10 @@ describe('RefreshBlockLibraryCommand', () => {
         });
 
         it('warns and runs nothing when no project is loaded', async () => {
-            await command(null).execute();
+            const result = await command(null).execute();
+
+            // A caller reads this answer, not the toast.
+            expect(result).toStrictEqual({ success: false, error: 'No project loaded.' });
 
             expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
                 'No project loaded.',
