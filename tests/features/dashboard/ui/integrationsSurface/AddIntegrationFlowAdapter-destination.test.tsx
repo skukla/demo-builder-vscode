@@ -17,7 +17,7 @@
  */
 
 import { act } from '@testing-library/react';
-import { mockPostMessage } from '../../../../helpers/webviewClientMock';
+import '../../../../helpers/webviewClientMock';
 import {
     PROJECT_TWO,
     WORKSPACE_TWO,
@@ -68,7 +68,7 @@ describe('AddIntegrationFlowAdapter — persisting a destination change', () => 
 
         pickProject();
 
-        expect(mockPostMessage).not.toHaveBeenCalled();
+        expect(destinationPosts()).toStrictEqual([]);
     });
 
     // The other half of the same rule. The adapter derives a project id from the
@@ -92,8 +92,10 @@ describe('AddIntegrationFlowAdapter — persisting a destination change', () => 
         expect(destinationPosts()).toHaveLength(1);
     });
 
+    // The listener is handed in on purpose: without it these two would pass on
+    // nothing, since there would be no one to tell whatever the journey.
     it('does NOT post in add mode — that journey deploys, it does not re-point', () => {
-        renderAdapter();
+        renderAdapter({ onDestinationChosen });
 
         pickWorkspace();
 
@@ -103,7 +105,7 @@ describe('AddIntegrationFlowAdapter — persisting a destination change', () => 
     // Both halves picked, still add mode: the journey is what decides, not the
     // completeness of the pair.
     it('does NOT post in add mode even once BOTH halves are picked', () => {
-        renderAdapter();
+        renderAdapter({ onDestinationChosen });
 
         pickProject();
         pickWorkspace();
@@ -125,5 +127,17 @@ describe('AddIntegrationFlowAdapter — persisting a destination change', () => 
             project: PROJECT_TWO,
             workspace: WORKSPACE_TWO,
         });
+    });
+
+    // The listener is optional. A screen that hosts the journey without one must
+    // still get its pick recorded in the session, not a crash on Continue.
+    it('records the pick when no one is listening for the destination', () => {
+        renderAdapter({ mode: 'destination' });
+
+        pickProject();
+        pickWorkspace();
+
+        expect(modalProps().state.adobeProject).toStrictEqual(PROJECT_TWO);
+        expect(modalProps().state.adobeWorkspace).toStrictEqual(WORKSPACE_TWO);
     });
 });
