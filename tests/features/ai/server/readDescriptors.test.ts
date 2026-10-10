@@ -219,6 +219,48 @@ describe('list_console_apis takes an integration to scope to', () => {
     });
 });
 
+/**
+ * The Runtime reads' bounds. A schema is the only validation an agent's arguments
+ * get before the handler runs, so each bound is pinned from BOTH sides: a value
+ * inside it parses, the first value outside it does not.
+ */
+describe('the Runtime reads bound their arguments', () => {
+    const schemaFor = (tool: string) => z.object(row(tool)!.inputSchema ?? {});
+    const ACTIVATION = { activationId: 'a'.repeat(32) };
+
+    it.each([
+        ['list_runtime_activations', {}],
+        ['read_runtime_activation', ACTIVATION],
+        ['list_runtime_packages', {}],
+    ])('%s takes an integration id, and refuses an empty one', (tool, base) => {
+        const schema = schemaFor(tool);
+
+        expect(schema.parse({ ...base, componentId: 'erp-integration' })).toStrictEqual({
+            ...base,
+            componentId: 'erp-integration',
+        });
+        expect(schema.safeParse({ ...base, componentId: '' }).success).toBe(false);
+    });
+
+    it('list_runtime_activations takes a limit from 1 to 50', () => {
+        const schema = schemaFor('list_runtime_activations');
+
+        expect(schema.safeParse({ limit: 1 }).success).toBe(true);
+        expect(schema.safeParse({ limit: 30 }).success).toBe(true);
+        expect(schema.safeParse({ limit: 50 }).success).toBe(true);
+        expect(schema.safeParse({ limit: 0 }).success).toBe(false);
+        expect(schema.safeParse({ limit: 51 }).success).toBe(false);
+    });
+
+    it('list_runtime_activations takes any skip from zero up, to page past the limit', () => {
+        const schema = schemaFor('list_runtime_activations');
+
+        expect(schema.safeParse({ skip: 0 }).success).toBe(true);
+        expect(schema.safeParse({ skip: 50 }).success).toBe(true);
+        expect(schema.safeParse({ skip: -1 }).success).toBe(false);
+    });
+});
+
 describe('list_ai_prompts indexes by default and fetches one in full', () => {
     // Two prompts were 4,848 bytes, 97% of it the bodies. Prompt text is
     // unbounded, so the index cannot carry it.
