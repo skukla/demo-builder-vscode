@@ -555,7 +555,7 @@ describe('the code endpoint says the App is not on the repository', () => {
         await run(context, services);
 
         expect(messages(context)).toMatch(
-            /Code not published to the CDN — the AEM Code Sync GitHub App is not on skukla\/kukla-bodea/,
+            /Code not published to the CDN — the AEM Code Sync GitHub App is not on skukla\/kukla-bodea/
         );
     });
 
@@ -603,6 +603,20 @@ describe('an inner 400 from /status', () => {
         const context = makeContext();
 
         const result = await run(context, services);
+
+        expect(result).toBeNull();
+        expect(messages(context)).not.toMatch(/AEM Code Sync verified/);
+        expect(messages(context)).toMatch(/could not verify/i);
+    });
+
+    it('is NOT verified when the answer was a definite "not installed"', async () => {
+        // The publish only settles an answer Helix DECLINED to give. A definite
+        // "not installed" carrying the same number is still a "no", and reporting
+        // it as verified would tell the SC the App is there when Helix said it is not.
+        mockResolve.mockResolvedValue({ kind: 'not-installed', codeStatus: 400 });
+        const context = makeContext();
+
+        const result = await run(context, makeServices());
 
         expect(result).toBeNull();
         expect(messages(context)).not.toMatch(/AEM Code Sync verified/);
