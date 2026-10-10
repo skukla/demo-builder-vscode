@@ -15696,6 +15696,18 @@
             "decision": "none \u2014 kept for symmetry with the two chains beside them that are load-bearing; the && order is what guards them",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-01"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/useProjectBuilder.ts",
+            "anchors": [
+                "if (!systemKey || !names) return;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Stryker turns the || into &&, which differs only when exactly one of systemKey and names is missing. They are never apart: systemKey is pairedSystemOf(entry, catalog)?.nameFromEnvVar, and pairNameInputs returns names exactly when that same pairedSystemOf call finds a system \u2014 which pairedSystemOf only returns when it has a nameFromEnvVar. Both come from 'entry &&', so a missing entry empties both as well. No catalog can make one truthy and the other not.",
+            "decision": "none \u2014 the two checks narrow two separate types for the compiler; collapsing them would need a cast",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-01"
         }
     ]
 }
