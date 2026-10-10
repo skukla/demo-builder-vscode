@@ -15822,6 +15822,31 @@
             "decision": "none \u2014 the chains are what lets the expression typecheck against a nullable import; dropping the guard instead would hand a title to an import whose source name is the empty string",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-01"
+        },
+        {
+            "module": "src/features/authentication/services/adobeOrgServices.ts",
+            "anchors": [
+                "const running = flight.run(() => this.fetchServicesForOrg(orgId));"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "This line is reached only when flight.isInFlight was true on the line above, with no await between the check and the call. SingleFlight.run invokes its function only when no flight is in progress and otherwise returns the promise already running (core/utils/singleFlight.ts), so the arrow handed over here is never called and replacing its body changes nothing. Verified by planting an arrow that throws: all four adobeOrgServices suites (66 tests) stay green, including the two that join a full load already in flight.",
+            "decision": "none \u2014 SingleFlight exposes no way to read the running promise without offering a function, so the arrow is the price of joining",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-01"
+        },
+        {
+            "module": "src/features/authentication/services/adobeOrgServices.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 300,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch block of getSubscribedServices holds a debug log line and \"return undefined\". Emptying it removes the log line and lets the async function fall off its end, which resolves undefined all the same: the caller receives the identical \"unknown\" answer, and nothing else in the block has an effect. Verified by planting an empty catch block: all four adobeOrgServices suites (66 tests) stay green, including the two that pin undefined for a failed credential read and a failed properties read.",
+            "decision": "none \u2014 the explicit return states the contract (unknown, never a partial list) where a reader looks for it",
+            "recorded": "2026-10-10",
+            "source": "PL-70 batch MUT-01"
         }
     ]
 }

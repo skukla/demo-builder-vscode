@@ -183,6 +183,9 @@ describe('AdobeOrgServices — a caller naming its codes', () => {
             'org-1',
             'AdobeIOManagementAPISDK,ACCS-REST-API',
         );
+        // With no full load running there is nothing to race: the full catalog,
+        // a minute cold, is not also fetched.
+        expect(client.getServicesForOrg).toHaveBeenCalledTimes(1);
     });
 
     it('answers from a WARM full catalog with no call at all', async () => {

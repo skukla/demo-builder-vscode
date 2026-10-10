@@ -52,4 +52,29 @@ describe('AdobeOrgServices.getSubscribedServices', () => {
             { sdkCode: 'GraphQLServiceSDK', licenseConfigs: [] },
         ]);
     });
+
+    // A credential nothing has been subscribed to yet. Adobe's answer then carries no
+    // list, and that is a known "none" (an empty array), not the unknown a failed read is.
+    it.each([
+        ['a body with no sdkList', { body: {} }],
+        ['a response with no body', {}],
+        ['no response at all', undefined],
+    ])('reads %s as holding no services, and asks for no profiles', async (_label, response) => {
+        const { service, client } = makeService(true);
+        client.getIntegration.mockResolvedValue(response);
+
+        await expect(service.getSubscribedServices('org-1', 'int-1')).resolves.toStrictEqual([]);
+        expect(client.getIntegration).toHaveBeenCalledWith('org-1', 'int-1');
+        expect(client.getSDKProperties).not.toHaveBeenCalled();
+    });
+
+    it('reads a service whose properties answer carries no body as holding no profiles', async () => {
+        const { service, client } = makeService(true);
+        client.getIntegration.mockResolvedValue({ body: { sdkList: ['ACCS-REST-API'] } });
+        client.getSDKProperties.mockResolvedValue({});
+
+        await expect(service.getSubscribedServices('org-1', 'int-1')).resolves.toStrictEqual([
+            { sdkCode: 'ACCS-REST-API', licenseConfigs: [] },
+        ]);
+    });
 });

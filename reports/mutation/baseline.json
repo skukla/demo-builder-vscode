@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "PL-70 MUT-01: wizardHelpers config warnings (which sink, how many, which ids) and brokenLinks hand-over pinned; WizardContainer-helpers suite renamed so its kills count",
+    "_note": "PL-70 MUT-01: adobeOrgServices bodiless credential and properties answers pinned, narrowed fetch pinned to one call; joined-flight arrow and catch block ledgered",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -3410,26 +3410,24 @@
             "recorded": "2026-10-09T22:53:26.418Z"
         },
         "src/features/authentication/services/adobeOrgServices.ts": {
-            "score": 78.26,
-            "killed": 105,
-            "survived": 29,
-            "noCoverage": 1,
-            "timeout": 3,
+            "score": 81.88,
+            "killed": 108,
+            "survived": 25,
+            "noCoverage": 0,
+            "timeout": 5,
             "survivorCategories": {
-                "block": 2,
                 "logPresentation": 10,
-                "branch": 3,
+                "block": 2,
                 "other": 2,
                 "string": 7,
-                "optionalChain": 5
+                "branch": 2,
+                "optionalChain": 2
             },
-            "uncoveredCategories": {
-                "other": 1
-            },
-            "highValueSurvivors": 5,
-            "equivalent": 6,
-            "openGaps": 7,
-            "recorded": "2026-10-09T23:00:35.756Z"
+            "uncoveredCategories": {},
+            "highValueSurvivors": 4,
+            "equivalent": 8,
+            "openGaps": 0,
+            "recorded": "2026-10-10T12:59:29.920Z"
         },
         "src/features/authentication/services/adobeSDKClient.ts": {
             "score": 84.21,
