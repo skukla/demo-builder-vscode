@@ -29,7 +29,7 @@ jest.mock('@/features/mesh/services/deployMeshHeadless', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { deployMeshWithFeedback } from '@/features/mesh/services/deployMeshWithFeedback';
+import { deployMeshWithFeedback, MESH_OPERATION_ID } from '@/features/mesh/services/deployMeshWithFeedback';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { startModalRun } from '@/core/vscode/operationProgress';
 import type { DeployMeshWithFeedbackDeps } from '@/features/mesh/services/deployMeshWithFeedback';
@@ -211,7 +211,9 @@ describe('progress register', () => {
 describe('started from a button on a screen', () => {
     const screen = jest.fn(async (_type: string, _payload?: unknown): Promise<void> => undefined);
     const modal = (): Array<Record<string, unknown>> =>
-        screen.mock.calls.filter(([type]) => type === 'operationProgress').map(([, p]) => p as Record<string, unknown>);
+        screen.mock.calls
+            .filter(([type]) => type === 'operationProgress')
+            .map(([, p]) => p as Record<string, unknown>);
 
     beforeEach(() => {
         startModalRun('eds-accs-mesh', screen);
@@ -229,7 +231,10 @@ describe('started from a button on a screen', () => {
 
         expect(vscode.window.withProgress).not.toHaveBeenCalled();
         expect(modal()).toContainEqual(
-            expect.objectContaining({ stage: OPERATION_STAGES.deployingMesh.label, step: 'Validating configuration' }),
+            expect.objectContaining({
+                stage: OPERATION_STAGES.deployingMesh.label,
+                step: 'Validating configuration',
+            })
         );
         expect(modal().at(-1)).toEqual({ id: 'eds-accs-mesh', state: 'succeeded' });
     });
@@ -237,7 +242,10 @@ describe('started from a button on a screen', () => {
     it('ends the modal with a reason a person can act on, not a tool instruction', async () => {
         mockDeployMeshHeadless.mockResolvedValue({ success: false, blockedBy: 'no-mesh' });
 
-        const result = await deployMeshWithFeedback(deps(), { progress: 'modal', operationId: 'eds-accs-mesh' });
+        const result = await deployMeshWithFeedback(deps(), {
+            progress: 'modal',
+            operationId: 'eds-accs-mesh',
+        });
 
         expect(result.error).toBe('This project does not have an API Mesh component.');
         expect(modal().at(-1)).toEqual({
@@ -247,7 +255,18 @@ describe('started from a button on a screen', () => {
         });
     });
 
-    it('leaves the core\'s own error for callers that are not a modal (the agent words its own)', async () => {
+    // A screen with no mesh component id to name follows the operation by the
+    // module's own id, so the modal it opened is the one this run closes.
+    it('reports under the mesh operation id when the screen named none', async () => {
+        startModalRun(MESH_OPERATION_ID, screen);
+
+        await deployMeshWithFeedback(deps(), { progress: 'modal' });
+
+        expect(MESH_OPERATION_ID).toBe('mesh');
+        expect(modal().at(-1)).toStrictEqual({ id: 'mesh', state: 'succeeded' });
+    });
+
+    it("leaves the core's own error for callers that are not a modal (the agent words its own)", async () => {
         stubWithProgress();
         mockDeployMeshHeadless.mockResolvedValue({ success: false, blockedBy: 'no-mesh' });
 
@@ -280,21 +299,27 @@ describe('republishing the storefront after a deploy', () => {
 
     it('republishes after a successful deploy, as its own stage', async () => {
         const { report } = stubWithProgress();
-        const republishStorefront = jest.fn().mockResolvedValue({ success: true, cdnPublished: true });
+        const republishStorefront = jest
+            .fn()
+            .mockResolvedValue({ success: true, cdnPublished: true });
         const input = { ...withStorefront(), republishStorefront };
 
         const result = await deployMeshWithFeedback(input);
 
         expect(republishStorefront).toHaveBeenCalledWith(input.project);
         expect(report).toHaveBeenCalledWith(
-            expect.objectContaining({ message: OPERATION_STAGES.republishingStorefront.label }),
+            expect.objectContaining({ message: OPERATION_STAGES.republishingStorefront.label })
         );
-        expect(result).toEqual({ success: true });
+        // Strict: a republish that landed adds NO `storefrontNotRepublished` key.
+        // `toEqual` reads an undefined one as absent, and callers test for the key.
+        expect(result).toStrictEqual({ success: true });
     });
 
     it('says so when the republish does not reach the CDN — the mesh still counts as deployed', async () => {
         stubWithProgress();
-        const republishStorefront = jest.fn().mockResolvedValue({ success: true, cdnPublished: false });
+        const republishStorefront = jest
+            .fn()
+            .mockResolvedValue({ success: true, cdnPublished: false });
 
         const result = await deployMeshWithFeedback({ ...withStorefront(), republishStorefront });
 
@@ -304,9 +329,44 @@ describe('republishing the storefront after a deploy', () => {
         });
     });
 
+    // A republish that ANSWERS a failure is a third outcome, distinct from one that
+    // throws and one that lands short of the CDN: the mesh is deployed, the
+    // storefront is not, and the reason is the republish's own.
+    it('reports a republish that answered a failure, with the reason it gave', async () => {
+        stubWithProgress();
+        const republishStorefront = jest
+            .fn()
+            .mockResolvedValue({ success: false, error: 'config.json could not be written' });
+
+        const result = await deployMeshWithFeedback({ ...withStorefront(), republishStorefront });
+
+        expect(result).toStrictEqual({
+            success: true,
+            storefrontNotRepublished: 'config.json could not be written',
+        });
+    });
+
+    it('still says the storefront was not republished when the failure carries no reason', async () => {
+        stubWithProgress();
+        // cdnPublished: false as well — the failure outranks it, so the CDN wording
+        // must not be what the SC reads about a republish that never finished.
+        const republishStorefront = jest
+            .fn()
+            .mockResolvedValue({ success: false, cdnPublished: false });
+
+        const result = await deployMeshWithFeedback({ ...withStorefront(), republishStorefront });
+
+        expect(result).toStrictEqual({
+            success: true,
+            storefrontNotRepublished: 'the republish did not finish',
+        });
+    });
+
     it('reports a republish that throws, in its own words', async () => {
         stubWithProgress();
-        const republishStorefront = jest.fn().mockRejectedValue(new Error('GitHub sign-in expired'));
+        const republishStorefront = jest
+            .fn()
+            .mockRejectedValue(new Error('GitHub sign-in expired'));
 
         const result = await deployMeshWithFeedback({ ...withStorefront(), republishStorefront });
 
