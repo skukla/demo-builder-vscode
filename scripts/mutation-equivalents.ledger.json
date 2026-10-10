@@ -6898,18 +6898,6 @@
         {
             "module": "src/features/eds/services/storefront/storefrontStalenessDetector.ts",
             "anchors": [
-                "if (config && typeof config === 'object') {"
-            ],
-            "mutants": 3,
-            "category": "branch",
-            "reason": "The three mutants here (whole condition to true, the truthiness half to true, && to ||) all widen the guard so more component-config values reach Object.assign, and Object.assign cannot tell the difference for any value this loop can see. It ignores null, undefined, numbers and booleans outright, so a falsy or scalar config contributes nothing whether the guard admits it or not; the || form additionally sends null through typeof null === 'object', which lands on the same no-op. The one input that would differ is a non-empty STRING config, whose own enumerable keys are the numeric indices '0','1',... \u2014 and the caller reads only the fourteen named keys in STOREFRONT_CONFIG_ENV_VARS, none of which is a number. So no value of newComponentConfigs distinguishes the mutants from the original at the function's output, which is pinned by 'collects only the watched keys, ignoring everything else in the config' and the ACCS/PaaS diff tests.",
-            "decision": "none \u2014 the guard states that a component with no config contributes nothing, which is worth reading even though Object.assign would enforce it anyway",
-            "recorded": "2026-09-05",
-            "source": "PL-22 MUT-03, 2026-09-05"
-        },
-        {
-            "module": "src/features/eds/services/storefront/storefrontStalenessDetector.ts",
-            "anchors": [
                 "if (hasChanges) {"
             ],
             "mutants": 3,

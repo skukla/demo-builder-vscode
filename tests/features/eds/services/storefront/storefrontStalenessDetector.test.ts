@@ -338,3 +338,36 @@ describe('the store scope is read as config.json reads it: the backend wins over
         );
     });
 });
+
+// ==========================================================================
+// What reaches the shared merge: objects only, and a backend that may be unnamed
+// ==========================================================================
+
+describe('only a component with an object config reaches the merge', () => {
+    it('compares a project that records no component selections at all', () => {
+        // `componentSelections` is optional on Project, and a project file written
+        // before the field existed has none. There is then no backend to name, and
+        // the answer must still be a verdict rather than a TypeError.
+        const project = makeAccsProject(CITISIGNAL);
+        delete project.componentSelections;
+
+        expect(
+            detectStorefrontChanges(project, { accs: { ...CITISIGNAL, [ACCS_WEBSITE_CODE]: 'bodea' } }),
+        ).toStrictEqual({ hasChanges: true, changedEnvVars: [ACCS_WEBSITE_CODE] });
+    });
+
+    it('lets a backend whose config is not an object contribute nothing, rather than be read as one', () => {
+        // The named backend's entry is what the merge treats as authoritative for the
+        // store scope, and it is searched with `in`, which throws on a string. So a
+        // scalar config must be dropped BEFORE the merge: the mesh's values then stand.
+        const project = makeAccsProject(CITISIGNAL);
+        project.componentSelections = { ...project.componentSelections, backend: 'adobe-commerce-accs' };
+
+        expect(
+            detectStorefrontChanges(project, {
+                'adobe-commerce-accs': 'not-a-config',
+                'eds-accs-mesh': { ...CITISIGNAL, [ACCS_STORE_CODE]: 'bodea_store' },
+            }),
+        ).toStrictEqual({ hasChanges: true, changedEnvVars: [ACCS_STORE_CODE] });
+    });
+});
