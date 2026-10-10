@@ -155,7 +155,7 @@ describe('CheckUpdatesCommand — check phase', () => {
             await command.execute();
 
             const messages = harness.mockProgress.report.mock.calls.map(([p]) => p.message);
-            expect(messages.slice(0, 7)).toEqual([
+            expect(messages.slice(0, 8)).toEqual([
                 'Checking for updates',
                 'Checking all projects',
                 'Checking source repos',
@@ -164,6 +164,7 @@ describe('CheckUpdatesCommand — check phase', () => {
                 'Checking EDS templates',
                 'Checking add-ons',
                 'Checking the AI tools',
+                'Checking integrations',
             ]);
         });
 
@@ -394,6 +395,9 @@ describe('CheckUpdatesCommand — check phase', () => {
             await command.execute();
 
             expect(pickerItems()[0]).toMatchObject({
+                label: '$(repo-forked) aem-boilerplate-commerce',
+                detail: '    3 commits behind adobe/aem-boilerplate-commerce',
+                description: 'adobe/aem-boilerplate-commerce',
                 isForkSync: true,
                 picked: true,
                 owner: 'adobe',
@@ -430,6 +434,49 @@ describe('CheckUpdatesCommand — check phase', () => {
             expect(MockForkSync.prototype.checkForkStatus).toHaveBeenCalledWith('adobe', 'aem-boilerplate-commerce');
             expect(showErrorMock).not.toHaveBeenCalled();
             expect(pickerItems()).toHaveLength(1);
+        });
+
+        it('checks two different source repos separately: the once-only rule is per owner and repo', async () => {
+            const withSource = (name: string, templateRepo: string) => {
+                const project = projectWithAddons({ name, path: `/projects/${name}` });
+                const eds = project.componentInstances!['eds-storefront'];
+                eds.metadata = { ...eds.metadata, templateRepo };
+                return project;
+            };
+            loadProjects(harness.mockStateManager, withSource('a', 'boilerplate-one'), withSource('b', 'boilerplate-two'));
+
+            await command.execute();
+
+            expect(MockForkSync.prototype.checkForkStatus.mock.calls).toEqual([
+                ['adobe', 'boilerplate-one'],
+                ['adobe', 'boilerplate-two'],
+            ]);
+        });
+    });
+
+    describe('add-on items', () => {
+        it('a block library and the inspector SDK each read as the project, with what is behind', async () => {
+            const project = projectWithAddons();
+            loadProjects(harness.mockStateManager, project);
+            blockLibraryUpdateFor(project);
+            MockAddonChecker.prototype.checkInspectorSdk.mockResolvedValue({
+                hasUpdate: true,
+                currentCommit: 'a',
+                latestCommit: 'b',
+                commitsBehind: 2,
+            });
+
+            await command.execute();
+
+            const items = pickerItems();
+            expect(items.find((i) => 'isBlockLibraryUpdate' in i)).toMatchObject({
+                label: 'test-project',
+                detail: '    $(package) Demo Team Blocks  1 commit behind',
+            });
+            expect(items.find((i) => 'isInspectorUpdate' in i)).toMatchObject({
+                label: 'test-project',
+                detail: '    $(tools) Demo Inspector SDK  2 commits behind',
+            });
         });
     });
 });

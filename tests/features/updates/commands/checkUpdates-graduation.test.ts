@@ -28,10 +28,16 @@ describe('CheckUpdatesCommand - Graduation Off-Ramp', () => {
 
     function setChannel(channel: string): void {
         mockConfigUpdate = jest.fn();
-        (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
-            get: jest.fn((key: string, def?: any) => (key === 'updateChannel' ? channel : def)),
-            update: mockConfigUpdate,
-        });
+        // Only the extension's own section answers: a read or a write aimed at any
+        // other section finds no channel and reaches no update.
+        (vscode.workspace.getConfiguration as jest.Mock).mockImplementation((section?: string) =>
+            section === 'demoBuilder'
+                ? {
+                    get: jest.fn((key: string, def?: any) => (key === 'updateChannel' ? channel : def)),
+                    update: mockConfigUpdate,
+                }
+                : { get: jest.fn((_key: string, def?: any) => def), update: jest.fn() },
+        );
     }
 
     function mockUpdates(opts: { installed: string; latestFinal: string | null }): void {
@@ -84,7 +90,8 @@ describe('CheckUpdatesCommand - Graduation Off-Ramp', () => {
         await run();
 
         expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
-            expect.stringContaining('supersedes'),
+            'A final release (v2.0.0) now supersedes your preview build (v2.0.0-alpha.5). '
+            + 'Switch off the early-access channel to keep receiving updates?',
             'Switch to Beta',
             'Switch to Stable',
             'Stay',

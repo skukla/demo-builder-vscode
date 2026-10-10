@@ -16,6 +16,8 @@ import {
 } from './checkUpdates.testUtils';
 import * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { performBlockLibraryInstalls } from '@/features/updates/commands/blockLibraryInstallExecutor';
+import { performIntegrationUpdates } from '@/features/updates/commands/integrationUpdatePicker';
 import {
     performAddonUpdates,
     performAdobeMcpUpdates,
@@ -25,9 +27,11 @@ import {
 } from '@/features/updates/commands/updateExecutor';
 import type {
     AdobeMcpUpdateItem,
+    BlockLibraryInstallItem,
     BlockLibraryUpdateItem,
     ForkSyncItem,
     InspectorUpdateItem,
+    IntegrationUpdateItem,
     ProjectUpdateItem,
     TemplateUpdateItem,
 } from '@/features/updates/commands/updateTypes';
@@ -36,6 +40,12 @@ import type { Project } from '@/types/base';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 jest.mock('@/features/updates/commands/updateExecutor');
+jest.mock('@/features/updates/commands/blockLibraryInstallExecutor');
+jest.mock('@/features/updates/commands/integrationUpdatePicker', () => ({
+    detectIntegrationUpdateItems: jest.fn(async () => []),
+    integrationPairUpdater: jest.fn(() => jest.fn()),
+    performIntegrationUpdates: jest.fn(),
+}));
 jest.mock('@/features/updates/services/adobeMcpUpdateChecker');
 jest.mock('@/core/utils/sleep');
 
@@ -45,6 +55,8 @@ const templateMock = performTemplateUpdates as jest.Mock;
 const componentMock = performComponentUpdates as jest.Mock;
 const mcpMock = performAdobeMcpUpdates as jest.Mock;
 const addonMock = performAddonUpdates as jest.Mock;
+const installMock = performBlockLibraryInstalls as jest.Mock;
+const integrationMock = performIntegrationUpdates as jest.Mock;
 
 const fork = (): ForkSyncItem => ({
     label: 'fork', owner: 'adobe', repo: 'r', branch: 'main', behindBy: 1, parentFullName: 'a/r', isForkSync: true,
@@ -71,6 +83,14 @@ const blockLibrary = (project: Project): BlockLibraryUpdateItem => ({
 });
 const inspector = (project: Project): InspectorUpdateItem => ({
     label: 'inspector', project, latestCommit: 'x', commitsBehind: 1, isInspectorUpdate: true,
+});
+const libraryInstall = (project: Project): BlockLibraryInstallItem => ({
+    label: 'install', project, library: project.installedBlockLibraries![0], isBlockLibraryInstall: true,
+});
+const integration = (project: Project): IntegrationUpdateItem => ({
+    label: 'integration',
+    update: { project, componentId: 'demo-erp', members: ['demo-erp'], label: 'ERP Integration', otherOrg: false },
+    isIntegrationUpdate: true,
 });
 const adobeMcp = (project: Project): AdobeMcpUpdateItem => ({
     label: 'mcp', project, currentVersion: '1.0.0', latestVersion: '1.1.0', packageName: 'pkg', isAdobeMcpUpdate: true,
@@ -104,13 +124,18 @@ describe('CheckUpdatesCommand — dispatch', () => {
     });
 
     it('hands every executor its own items, in order, with one shared context', async () => {
-        const items = [fork(), template(project), component(project), blockLibrary(project), inspector(project), adobeMcp(project)];
+        const items = [
+            fork(), template(project), component(project), blockLibrary(project), inspector(project), adobeMcp(project),
+            libraryInstall(project), integration(project),
+        ];
         const order: string[] = [];
         forkMock.mockImplementation(async () => { order.push('fork'); });
         templateMock.mockImplementation(async () => { order.push('template'); return synced; });
         componentMock.mockImplementation(async () => { order.push('component'); });
         mcpMock.mockImplementation(async () => { order.push('mcp'); });
         addonMock.mockImplementation(async () => { order.push('addon'); });
+        installMock.mockImplementation(async () => { order.push('install'); });
+        integrationMock.mockImplementation(async () => { order.push('integration'); });
 
         await runWithSelection(items);
 
@@ -128,7 +153,10 @@ describe('CheckUpdatesCommand — dispatch', () => {
         expect(componentMock).toHaveBeenCalledWith([items[2]], ctx);
         expect(mcpMock).toHaveBeenCalledWith([items[5]], ctx);
         expect(addonMock).toHaveBeenCalledWith([items[3]], [items[4]], synced, ctx);
-        expect(order).toEqual(['fork', 'template', 'component', 'mcp', 'addon']);
+        // Each of the last two gets ONLY its own kind out of a mixed selection.
+        expect(installMock).toHaveBeenCalledWith([items[6]], ctx);
+        expect(integrationMock).toHaveBeenCalledWith([items[7]], ctx);
+        expect(order).toEqual(['fork', 'template', 'component', 'mcp', 'addon', 'install', 'integration']);
     });
 
     it('forks only: nothing else is called, not even with an empty list', async () => {
@@ -139,6 +167,8 @@ describe('CheckUpdatesCommand — dispatch', () => {
         expect(componentMock).not.toHaveBeenCalled();
         expect(mcpMock).not.toHaveBeenCalled();
         expect(addonMock).not.toHaveBeenCalled();
+        expect(installMock).not.toHaveBeenCalled();
+        expect(integrationMock).not.toHaveBeenCalled();
     });
 
     it('components only', async () => {

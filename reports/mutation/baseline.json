@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "PL-70 MUT-03: SampleDataStep to zero open gaps — the asked pack is chosen when the catalog lands late; two guards for a version-less group are recorded",
+    "_note": "MUT-04: dispatch pins the install and integration executors; picker labels, per-repo fork checks and the settings section are asserted",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -9408,23 +9408,21 @@
             "recorded": "2026-10-10T01:41:42.983Z"
         },
         "src/features/updates/commands/checkUpdates.ts": {
-            "score": 91.46,
-            "killed": 289,
-            "survived": 27,
+            "score": 93.77,
+            "killed": 256,
+            "survived": 17,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "logPresentation": 13,
-                "other": 1,
-                "branch": 2,
-                "string": 10,
+                "logPresentation": 14,
+                "string": 2,
                 "block": 1
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 3,
+            "highValueSurvivors": 1,
             "equivalent": 1,
-            "openGaps": 3,
-            "recorded": "2026-10-09T22:46:22.116Z"
+            "openGaps": 0,
+            "recorded": "2026-10-10T14:03:34.999Z"
         },
         "src/features/updates/commands/updateExecutor.ts": {
             "score": 88.58,
