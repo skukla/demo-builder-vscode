@@ -38,3 +38,7 @@ products and a stock holding that ERP's warehouse.
 Nothing waits on it, and the attribute path, which is the default and the common one, is
 covered by AB-74 and AB-75. It mainly stops a website-only setup from showing a step that does
 not apply.
+
+## Shipped so far
+
+- 2026-10-09  docs(backlog): file AB-76, the ERP setup checklist follows the ownership mode (`500073df6`)
