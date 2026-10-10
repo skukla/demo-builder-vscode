@@ -1563,21 +1563,19 @@
             "openGaps": 0
         },
         "src/core/ui/components/integrations/IntegrationCard.tsx": {
-            "score": 88.1,
-            "killed": 37,
-            "survived": 5,
+            "score": 97.62,
+            "killed": 41,
+            "survived": 1,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 3,
-                "other": 1,
                 "optionalChain": 1
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 3,
+            "highValueSurvivors": 0,
             "equivalent": 1,
-            "openGaps": 4,
-            "recorded": "2026-10-10T01:34:40.468Z"
+            "openGaps": 0,
+            "recorded": "2026-10-10T19:29:49.717Z"
         },
         "src/core/ui/components/layout/CenteredFeedbackContainer.tsx": {
             "score": 66.67,

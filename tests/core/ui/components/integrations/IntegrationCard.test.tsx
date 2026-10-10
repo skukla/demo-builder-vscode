@@ -416,6 +416,20 @@ describe('IntegrationCard', () => {
 
     // Names in a row ran out of room on long ERP names (owner, 2026-10-01). One link
     // shows its name; several show a count, and the flyout lists them.
+    describe('type badge', () => {
+        it('shows what kind of system the card is, beside its name', () => {
+            const { container } = renderCard(makeModel({ typeBadge: 'ERP' }));
+
+            expect(container.querySelector('.integration-card-badge')).toHaveTextContent('ERP');
+        });
+
+        it('shows no badge on a card that names no type', () => {
+            const { container } = renderCard(makeModel());
+
+            expect(container.querySelector('.integration-card-badge')).toBeNull();
+        });
+    });
+
     describe('linked line', () => {
         const link = (id: string, name: string, typeBadge?: string): LinkedCard => ({
             id,
@@ -447,6 +461,20 @@ describe('IntegrationCard', () => {
 
             expect(shown(container)).toBe('2 ERPs');
             expect(screen.getByTitle('Connected to Justrite ERP, Accuform ERP')).toBeInTheDocument();
+        });
+
+        it('shows no linked line on a card that is linked to nothing', () => {
+            const { container } = renderCard(makeModel());
+
+            expect(container.querySelector('.integration-card-link')).toBeNull();
+        });
+
+        it('counts several cards that name no type as connected, never by a missing type', () => {
+            const { container } = renderCard(
+                makeModel({ linked: { cards: [link('a', 'One'), link('b', 'Two')] } })
+            );
+
+            expect(shown(container)).toBe('2 connected');
         });
 
         it('counts several of mixed or unknown type as connected', () => {

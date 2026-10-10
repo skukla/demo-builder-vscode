@@ -33,6 +33,11 @@ jest.mock('@adobe/react-spectrum', () => ({
             {children}
         </button>
     ),
+    Badge: ({ children, variant, UNSAFE_className, ...props }: any) => (
+        <span data-variant={variant} className={UNSAFE_className} {...props}>
+            {children}
+        </span>
+    ),
     Button: ({ children, onPress, isDisabled, variant, ...props }: any) => (
         <button onClick={onPress} disabled={isDisabled} data-variant={variant} {...props}>
             {children}
