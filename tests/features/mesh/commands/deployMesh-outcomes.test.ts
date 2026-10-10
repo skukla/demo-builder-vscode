@@ -18,6 +18,8 @@ import { DeployMeshCommand } from './deployMesh.testUtils';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { deployMeshWithFeedback } from '@/features/mesh/services/deployMeshWithFeedback';
 import { meshDeployLock } from '@/features/mesh/services/meshDeployLock';
+import { republishStorefrontConfig } from '@/features/eds/services/storefront/storefrontRepublishService';
+import { ensureDaLiveAuth } from '@/features/eds/handlers/edsHelpers';
 import type { StateManager } from '@/types/state';
 import type { Logger } from '@/types/logger';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
@@ -33,6 +35,20 @@ const mockRefreshStatus = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/features/dashboard/commands/showDashboard', () => ({
     ProjectDashboardWebviewCommand: { refreshStatus: mockRefreshStatus },
 }));
+
+// The two collaborators the command's `republishStorefront` callback reaches. The
+// core is mocked here, so nothing but the callback itself ever calls them.
+jest.mock('@/features/eds/services/storefront/storefrontRepublishService', () => ({
+    republishStorefrontConfig: jest.fn(),
+}));
+jest.mock('@/features/eds/handlers/edsHelpers', () => ({
+    ensureDaLiveAuth: jest.fn(),
+}));
+
+const mockedRepublish = republishStorefrontConfig as jest.MockedFunction<
+    typeof republishStorefrontConfig
+>;
+const mockedEnsureDaLive = ensureDaLiveAuth as jest.MockedFunction<typeof ensureDaLiveAuth>;
 
 const mockedDeploy = deployMeshWithFeedback as jest.MockedFunction<typeof deployMeshWithFeedback>;
 
@@ -52,6 +68,8 @@ describe('DeployMeshCommand — result mapping', () => {
     let command: DeployMeshCommand;
     let stateManager: jest.Mocked<StateManager>;
     let logger: Logger;
+    let context: vscode.ExtensionContext;
+    let showSuccessMessage: jest.Mock;
     let showErrorMessage: jest.Mock;
     let showWarningMessage: jest.Mock;
     let executeCommand: jest.Mock;
@@ -74,14 +92,12 @@ describe('DeployMeshCommand — result mapping', () => {
         }) as unknown as jest.Mocked<StateManager>;
         logger = createMockLogger() as unknown as Logger;
 
-        command = new DeployMeshCommand(
-            createMockExtensionContext({ extensionPath: '/ext' }),
-            stateManager,
-            logger,
-        );
+        context = createMockExtensionContext({ extensionPath: '/ext' });
+        command = new DeployMeshCommand(context, stateManager, logger);
         // The success toast stands up a progress notification that sleeps; the
         // decision under test is WHICH branch ran, not how the toast is drawn.
-        Object.assign(command, { showSuccessMessage: jest.fn().mockResolvedValue(undefined) });
+        showSuccessMessage = jest.fn().mockResolvedValue(undefined);
+        Object.assign(command, { showSuccessMessage });
 
         showErrorMessage = jest.fn().mockResolvedValue(undefined);
         showWarningMessage = jest.fn().mockResolvedValue(undefined);
@@ -127,6 +143,61 @@ describe('DeployMeshCommand — result mapping', () => {
                 }),
             );
         });
+
+        it('hands the core no secret storage at all when none is registered', async () => {
+            (ServiceLocator.getSecretStorage as jest.Mock).mockReturnValue(null);
+
+            await answering({ success: true });
+
+            // The core's field is optional, and `null` is not "absent" to it.
+            expect(mockedDeploy.mock.calls[0][0].secrets).toBeUndefined();
+        });
+    });
+
+    describe('the storefront republish the core is handed', () => {
+        const DEPLOYED = createMockProject({ name: 'demo-after-deploy', path: '/demo' });
+
+        /** Run a deploy, then call the callback the core was given, as the core would. */
+        async function republishing(): Promise<unknown> {
+            await answering({ success: true });
+            const { republishStorefront } = mockedDeploy.mock.calls[0][0];
+            return republishStorefront?.(DEPLOYED);
+        }
+
+        it('republishes the DEPLOYED project, not the one read before the deploy', async () => {
+            const outcome = { success: true, githubPushed: true, cdnPublished: true };
+            mockedRepublish.mockResolvedValue(outcome);
+
+            const answer = await republishing();
+
+            expect(mockedRepublish).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    project: DEPLOYED,
+                    secrets: context.secrets,
+                    logger,
+                }),
+            );
+            expect(answer).toBe(outcome);
+        });
+
+        it('saves what the republish changed through the command state manager', async () => {
+            await republishing();
+            const changed = createMockProject({ name: 'demo-republished', path: '/demo' });
+
+            await mockedRepublish.mock.calls[0][0].persist?.(changed);
+
+            expect(stateManager.saveProject).toHaveBeenCalledWith(changed);
+        });
+
+        it('asks for the DA.live session with the command context, tagged as a mesh deploy', async () => {
+            mockedEnsureDaLive.mockResolvedValue({ authenticated: true });
+            await republishing();
+
+            const session = await mockedRepublish.mock.calls[0][0].ensureDaLiveSession?.();
+
+            expect(mockedEnsureDaLive).toHaveBeenCalledWith({ context, logger }, '[Mesh Deploy]');
+            expect(session).toStrictEqual({ authenticated: true });
+        });
     });
 
     describe('success', () => {
@@ -134,8 +205,44 @@ describe('DeployMeshCommand — result mapping', () => {
             await answering({ success: true });
 
             expect(executeCommand).toHaveBeenCalledWith('demoBuilder._internal.meshActionTaken');
+            expect(showSuccessMessage).toHaveBeenCalledWith('API Mesh deployed successfully');
+            expect(showWarningMessage).not.toHaveBeenCalled();
             expect(showErrorMessage).not.toHaveBeenCalled();
             expect(mockRefreshStatus).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('deployed, but the storefront was not republished', () => {
+        const REASON = 'DA.live sign-in is needed to publish config.json';
+
+        it('warns with the reason instead of claiming a clean success', async () => {
+            await answering({ success: true, storefrontNotRepublished: REASON });
+
+            expect(showWarningMessage).toHaveBeenCalledWith(
+                `API Mesh deployed, but the storefront was not republished: ${REASON}`,
+            );
+            expect(showSuccessMessage).not.toHaveBeenCalled();
+        });
+
+        it('still clears the mesh notification flag, because the mesh DID deploy', async () => {
+            await answering({ success: true, storefrontNotRepublished: REASON });
+
+            expect(executeCommand).toHaveBeenCalledWith('demoBuilder._internal.meshActionTaken');
+            expect(showErrorMessage).not.toHaveBeenCalled();
+        });
+
+        it('says nothing of the storefront when the deploy itself failed', async () => {
+            // The field can ride on a failed result; a failure is reported as a failure.
+            await answering({ success: false, storefrontNotRepublished: REASON });
+
+            expect(showWarningMessage).not.toHaveBeenCalled();
+            expect(executeCommand).not.toHaveBeenCalledWith(
+                'demoBuilder._internal.meshActionTaken',
+            );
+            expect(showErrorMessage).toHaveBeenCalledWith(
+                'Mesh deployment failed. Check logs for details.',
+                'View Logs',
+            );
         });
     });
 
