@@ -64,7 +64,9 @@ describe("the integration's own ERP verbs", () => {
         expect(card.menuActions).toStrictEqual(['open', 'redeploy', 'manage-apis', 'remove']);
     });
 
-    it('sit just above Remove on the ERP integration', () => {
+    // "Prepare this store" (AB-77) goes after them: the ERP integration's setup steps
+    // declare fixes, so its deployed card offers it too.
+    it('sit above Prepare this store and Remove on the ERP integration', () => {
         const card = deriveIntegrationCard(
             integration({ id: 'erp-integration', status: 'deployed' }),
         );
@@ -76,6 +78,7 @@ describe("the integration's own ERP verbs", () => {
             'add-erp',
             'load-demo-data',
             'reset-records',
+            'prepare-store',
             'remove',
         ]);
     });
