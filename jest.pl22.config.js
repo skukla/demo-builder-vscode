@@ -109,5 +109,6 @@ module.exports = {
         '**/tests/features/dashboard/ui/components/integrations/integrationCardModel-promotion.test.ts',
         '**/tests/features/dashboard/ui/components/integrations/integrationCardModel-assign.test.ts',
         '**/tests/features/dashboard/ui/components/integrations/integrationCardModel-menuEdges.test.ts',
+        '**/tests/features/dashboard/ui/components/integrations/integrationCardModel-prepare.test.ts',
     ],
 };

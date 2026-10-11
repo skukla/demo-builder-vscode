@@ -459,10 +459,14 @@ export function deriveIntegrationCard(
         installation,
         menuActions: withPromotionActions(
             entry,
-            withErpActions(
+            withPreparationActions(
                 entry,
                 face.status,
-                buildMenuActions(face.status, installation, Boolean(entry.updateAvailable)),
+                withErpActions(
+                    entry,
+                    face.status,
+                    buildMenuActions(face.status, installation, Boolean(entry.updateAvailable)),
+                ),
             ),
         ),
         canRename: entry.kind === 'integration' && facet.renamable,
@@ -495,11 +499,27 @@ function withErpActions(
 
 /**
  * `own` placed just above Remove. Every non-empty integration menu ends with Remove
- * ({@link buildMenuActions}), and both callers return before this for an empty one.
+ * ({@link buildMenuActions}), and every caller returns before this for an empty one.
  */
 function aboveRemove(actions: CardAction[], own: CardAction[]): CardAction[] {
     const at = actions.indexOf('remove');
     return [...actions.slice(0, at), ...own, ...actions.slice(at)];
+}
+
+/**
+ * "Prepare this store" on a deployed integration whose setup steps declare a fix Demo
+ * Builder can apply (AB-77), and "Undo preparation" once a run is recorded on it. Just above
+ * Remove, after the ERP verbs.
+ */
+function withPreparationActions(
+    entry: IdentifiedAppBuilderComponent,
+    status: IntegrationStatus,
+    actions: CardAction[],
+): CardAction[] {
+    const steps = getAppBuilderComponentEntry(entry.catalogId ?? entry.id)?.setupSteps ?? [];
+    if (status !== 'deployed' || !steps.some((step) => step.fix)) return actions;
+    const own: CardAction[] = ['prepare-store', ...(entry.storePreparation ? (['undo-store-preparation'] as CardAction[]) : [])];
+    return aboveRemove(actions, own);
 }
 
 /** The repository verb an integration offers: the undo once saved, the save while blank. */

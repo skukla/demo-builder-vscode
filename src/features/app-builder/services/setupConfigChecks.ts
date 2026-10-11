@@ -90,7 +90,7 @@ export async function websiteNamer(read: Read): Promise<(code: string) => string
 /** The path a config read filters on, at a scope or at the default. */
 function configPath(setting: string, websiteCode?: string): string {
     const filter = 'searchCriteria[filterGroups][0][filters][0]';
-    const scope = websiteCode ? `scope=websites&scopeCode=${encodeURIComponent(websiteCode)}&` : '';
+    const scope = websiteCode ? `scope=website&scopeCode=${encodeURIComponent(websiteCode)}&` : '';
     return `system/config?${scope}${filter}[field]=path&${filter}[value]=${setting}`;
 }
 

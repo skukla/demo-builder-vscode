@@ -71,6 +71,9 @@ export interface WebActionCall {
     path: string;
 }
 
+/** A check's state as the checklist says it: what it concluded, or that none has run. */
+export type SetupCheckState = SetupCheckOutcome | 'unchecked';
+
 /** How Demo Builder can tell a setup step is done, when it can (`setupChecks.ts`). */
 export type SetupCheck =
     | 'companies-have-own-catalogs'
@@ -84,11 +87,50 @@ export type SetupCheck =
     | 'card-payments-enabled';
 
 /**
- * Something Demo Builder can DO about a setup step its check found undone, offered as a
- * confirmed action beside the check (AB-74). `add-erp-owner-to-attribute-sets` adds
- * `erp_owner` to the attribute sets the store's products use that lack it.
+ * A setup step's fix that is settings: the `path` = `value` rows "Prepare this store" writes
+ * through `PUT /V1/system/config` (AB-77). `scope: 'website'` is resolved to the project's
+ * website code when applied; `'default'` writes the default scope. A second catalog entry
+ * declares its own in JSON alone, with no code.
  */
-export type SetupFix = 'add-erp-owner-to-attribute-sets';
+export interface SetupConfigFixItem {
+    /** The setting's path, e.g. `catalog/price/scope`. */
+    path: string;
+    /** The value Commerce stores: a string, as the API takes it ("1" for Yes). */
+    value: string;
+    scope: 'default' | 'website';
+}
+
+/** A fix that is settings alone (see `SetupConfigFixItem`). */
+export interface SetupConfigFix {
+    kind: 'config';
+    items: SetupConfigFixItem[];
+    /** What stays by hand after the settings are written, said in the preview and the result. */
+    manual?: string;
+}
+
+/**
+ * The fixes that need code: each a handler in `storePreparation/` implementing the same
+ * preview / apply / undo contract as the config fix, so the engine drives them alike.
+ * - `create-erp-attributes`: `erp_owner` and `brand` as Text Fields, then `erp_owner` into
+ *   every attribute set the products use (AB-74's fix).
+ * - `erp-warehouse-in-website-stock`: a source per ERP, a stock for the website, linked.
+ * - `company-shared-catalogs`: a custom shared catalog per company the check finds without one.
+ */
+export type SetupFixHandler = 'create-erp-attributes' | 'erp-warehouse-in-website-stock' | 'company-shared-catalogs';
+
+/** A fix a named handler applies (see `SetupFixHandler`). */
+export interface SetupHandlerFix {
+    kind: 'handler';
+    handler: SetupFixHandler;
+}
+
+/**
+ * Something Demo Builder can DO about a setup step, offered as a confirmed action beside the
+ * check (AB-74, generalized by AB-77): either settings declared as data, or a named handler.
+ * Every fix previews before it writes, records what it changed on the component
+ * (`storePreparation`) and can be undone step by step.
+ */
+export type SetupFix = SetupConfigFix | SetupHandlerFix;
 
 /** How a system is known in its integration's list of systems (see `listedAs`). */
 export interface SystemListing {
@@ -165,11 +207,19 @@ export interface SetupChecklistItem {
     note?: string;
     /** What that check concluded, when one ran. */
     lastCheck?: SetupCheckOutcome;
+    /**
+     * The check's state, said outright (AB-77 fix): passed, failed, unknown (it could not tell,
+     * and the step is then NEVER read as done, whatever was saved) or unchecked (no check has
+     * run). On every item `setupChecklistOf` builds.
+     */
+    checkState?: SetupCheckState;
     /** Demo Builder can check this one itself. */
     checkable: boolean;
     /** What Demo Builder can do about it itself (see `SetupStep`). */
     fix?: SetupFix;
-    /** Demo Builder applied the fix and recorded it, so it can be undone (AB-74). */
+    /** Demo Builder can apply this one itself ("Prepare this store", AB-77): it declares a fix. Set on every item `setupChecklistOf` builds. */
+    applicable?: boolean;
+    /** Demo Builder applied the fix and recorded it, so it can be undone (AB-74, AB-77). */
     fixApplied?: boolean;
 }
 

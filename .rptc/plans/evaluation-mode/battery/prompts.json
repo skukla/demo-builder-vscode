@@ -1310,7 +1310,7 @@
         ],
         "cwd": "project",
         "why": "Added 2026-10-03 with the tool (EDS-13f): the storefront report is the one place that says what a storefront was built on and which of Demo Builder's fixes fit. Read-only, so a reach is safe; a MISS means agents cannot find the report from a plain question, and would read package.json by hand instead."
-        },
+    },
     {
         "id": "t2-write-page",
         "prompt": "Put an About page on my storefront that says we are a family-owned outdoor gear shop, and make it live.",
@@ -1348,6 +1348,36 @@
         ],
         "cwd": "project",
         "why": "Added 2026-10-05 with the tool (EDS-27): the add-only write. A MISS means the agent runs sync_content (which refreshes pages and edits the nav) or writes pages one at a time with write_page, outside the record that lets a reset remove them. Tier 2: it writes and publishes pages on a live storefront.",
+        "tier": 2
+    },
+    {
+        "id": "prepare-commerce-store",
+        "prompt": "My ERP demo store isn't set up yet. Show me what Demo Builder can prepare in Commerce for the ERP integration, then go ahead and do it.",
+        "expect": [
+            "prepare_commerce_store"
+        ],
+        "cwd": "project",
+        "why": "Added 2026-10-10 with the tool (AB-77): the preview-then-apply of the setup steps Demo Builder can do itself (settings through PUT system/config, the attributes, the warehouse and stock, the shared catalogs), each checked first and recorded. A MISS means the agent writes settings one at a time with write_commerce_rest, with nothing recorded and no undo. Tier 2: it writes to the live store with confirm.",
+        "tier": 2
+    },
+    {
+        "id": "undo-commerce-store-preparation",
+        "prompt": "Undo what Demo Builder just prepared in my Commerce store for the ERP demo and put the settings back the way they were.",
+        "expect": [
+            "undo_commerce_store_preparation"
+        ],
+        "cwd": "project",
+        "why": "Added 2026-10-10 with the tool (AB-77): the undo from the per-step record. A MISS means the agent guesses the previous values and rewrites them by hand, or deletes a source Commerce cannot delete. Tier 2: it writes to the live store with confirm.",
+        "tier": 2
+    },
+    {
+        "id": "set-commerce-config",
+        "prompt": "Switch the catalog price scope in my Commerce store to Website, and tell me what it was before so I can put it back.",
+        "expect": [
+            "set_commerce_config"
+        ],
+        "cwd": "project",
+        "why": "Added 2026-10-10 with the tool (AB-77): one settings write through PUT system/config that reads first, reads the answer's errors list and records the previous values. A MISS means a raw write_commerce_rest PUT whose refused rows go unread under HTTP 200. Tier 2: it writes to the live store with confirm.",
         "tier": 2
     }
 ]

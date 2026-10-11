@@ -17,26 +17,35 @@
 import { postComponentsSnapshot, resolveComponentTarget } from './appBuilderComponentHandlers';
 import { getAppBuilderComponent, setAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { buildCommerceEndpoints } from '@/features/ai/server/commerceEndpointsTool';
-import { resolveRestTarget, sendRest } from '@/features/ai/server/commerceRestClient';
+import { explainStatus, requestRest, resolveRestTarget } from '@/features/ai/server/commerceRestClient';
 import { catalogEntryFor } from '@/features/app-builder/services/componentEntry';
 import { setupChecklistOf } from '@/features/app-builder/services/setupChecklist';
-import { runSetupCheck } from '@/features/app-builder/services/setupChecks';
+import { runSetupCheck, type CommerceRead, type SetupCheckResult, type SetupCheckScope } from '@/features/app-builder/services/setupChecks';
 import {
     getAppBuilderComponentCatalog,
     getAppBuilderComponentEntry,
 } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { systemsUsedBy } from '@/features/components/services/appBuilderComponentLinks';
-import type { SetupStep } from '@/types/appBuilderComponents';
+import type { SetupCheck, SetupStep } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState, Project, SetupCheckOutcome, SetupStepRecord } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
 
-type Opened =
-    | { project: Project; id: string; state: AppBuilderComponentState; steps: SetupStep[] }
-    | { error: HandlerResponse };
+/** An integration with setup steps: the project, the component, its saved state and the steps. */
+export interface OpenedChecklist {
+    project: Project;
+    id: string;
+    state: AppBuilderComponentState;
+    steps: SetupStep[];
+}
 
-/** The component and the steps its entry declares, or the refusal. */
-async function openChecklist(context: HandlerContext, idArg: unknown): Promise<Opened> {
+type Opened = OpenedChecklist | { error: HandlerResponse };
+
+/**
+ * The component and the steps its entry declares, or the refusal. Shared with "Prepare this
+ * store" (`storePreparationHandlers.ts`), which opens the same thing and then Commerce.
+ */
+export async function openChecklist(context: HandlerContext, idArg: unknown): Promise<Opened> {
     const target = await resolveComponentTarget(context, typeof idArg === 'string' ? idArg : undefined);
     if (!target.ok) return { error: target.error };
     const { id, project } = target;
@@ -54,7 +63,7 @@ async function openChecklist(context: HandlerContext, idArg: unknown): Promise<O
  * The names of the ERPs the integration uses, as their cards show them, for a step value
  * entered once per ERP (`setupChecklistOf`). The same lookups the ERP list is built from.
  */
-function erpNamesOf(project: Project, integrationId: string): string[] {
+export function erpNamesOf(project: Project, integrationId: string): string[] {
     const catalog = getAppBuilderComponentCatalog();
     return systemsUsedBy(project, integrationId, catalog).map(
         (id) => project.appBuilderComponents?.[id]?.name ?? catalogEntryFor(project, id, catalog)?.name ?? id,
@@ -86,13 +95,13 @@ export const handleGetSetupChecklist: MessageHandler<{ id?: string }> = async (c
 const STATES = new Set(['done', 'dismissed', 'open']);
 
 /** What a check concluded: set up, not set up, or it could not tell. */
-function outcomeOf(done: boolean | undefined): SetupCheckOutcome {
+export function outcomeOf(done: boolean | undefined): SetupCheckOutcome {
     if (done === undefined) return 'unknown';
     return done ? 'passed' : 'failed';
 }
 
 /** A passing check marks the step done, a failing one opens it, one that could not tell leaves it. */
-function stateAfterCheck(previous: SetupStepRecord['state'], done: boolean | undefined): SetupStepRecord['state'] {
+export function stateAfterCheck(previous: SetupStepRecord['state'], done: boolean | undefined): SetupStepRecord['state'] {
     if (done === undefined) return previous;
     return done ? 'done' : undefined;
 }
@@ -136,6 +145,32 @@ function stepsToCheck(
 }
 
 /**
+ * The signed Commerce GET a check reads with, and the project's store scope. Shared with
+ * "Prepare this store" (`storePreparationHandlers.ts`), which checks a step before it writes it.
+ *
+ * UNCUT and unbounded, unlike the agent tool's `sendRest`: that one cuts an answer at
+ * 30,000 characters and pages a search at 20, which is right for a chat answer and fatal
+ * for a check that parses the body (Justrite 2026-10-10: `products/attribute-sets/<id>/attributes`
+ * answers more than that, and the attribute-set check died mid-JSON). The error lines keep
+ * `sendRest`'s words, which the checks match on.
+ */
+export async function setupCheckReader(
+    context: HandlerContext,
+    project: Project,
+    fetchImpl: typeof fetch = fetch,
+): Promise<{ read: CommerceRead; scope: SetupCheckScope }> {
+    const target = await resolveRestTarget(context, undefined, fetchImpl);
+    const read = async (path: string): Promise<string> => {
+        if ('refusal' in target) return target.refusal;
+        const answer = await requestRest('GET', target, path, undefined, fetchImpl);
+        if ('failed' in answer) return `Error: the request failed — ${answer.failed}`;
+        return answer.ok ? answer.text : explainStatus(answer.status, answer.text);
+    };
+    // The project's store, for a check of one website's own setting (Payment on Account).
+    return { read, scope: { websiteCode: buildCommerceEndpoints(project).scope.websiteCode } };
+}
+
+/**
  * Handle 'checkSetupSteps' — run the checks the steps declare (a dismissed step is skipped),
  * save what each found, and answer the checklist. A check that passes marks its step done;
  * one that fails opens it again; one that cannot tell leaves the state alone. With a
@@ -147,16 +182,26 @@ export const handleCheckSetupSteps: MessageHandler<{ id?: string; stepId?: strin
     if ('error' in opened) return opened.error;
     const steps = stepsToCheck(opened, payload?.stepId);
     if (!Array.isArray(steps)) return steps;
-    const target = await resolveRestTarget(context, undefined, fetch);
-    const read = (path: string): Promise<string> =>
-        'refusal' in target ? Promise.resolve(target.refusal) : sendRest('GET', target, path, undefined, fetch);
-    // The project's store, for a check of one website's own setting (Payment on Account).
-    const scope = { websiteCode: buildCommerceEndpoints(opened.project).scope.websiteCode };
-    const records: Record<string, SetupStepRecord> = { ...opened.state.setupSteps };
+    const { read, scope } = await setupCheckReader(context, opened.project);
+    const records = await checkedRecords(steps, opened.state.setupSteps, (check) => runSetupCheck(check, read, scope));
+    return saveSteps(context, opened, records);
+};
+
+/**
+ * The step records after the given steps are checked: a passing check marks its step done,
+ * a failing one opens it, one that cannot tell leaves the state. Shared with "Prepare this
+ * store", which rechecks the steps it applied or undid.
+ */
+export async function checkedRecords(
+    steps: readonly SetupStep[],
+    saved: Record<string, SetupStepRecord> | undefined,
+    runCheck: (check: SetupCheck) => Promise<SetupCheckResult>,
+): Promise<Record<string, SetupStepRecord>> {
+    const records: Record<string, SetupStepRecord> = { ...saved };
     const checkedAt = new Date().toISOString();
     for (const step of steps) {
         if (!step.check) continue;
-        const result = await runSetupCheck(step.check, read, scope);
+        const result = await runCheck(step.check);
         const { state: previous, ...kept } = records[step.id] ?? {};
         const state = stateAfterCheck(previous, result.done);
         records[step.id] = {
@@ -167,8 +212,8 @@ export const handleCheckSetupSteps: MessageHandler<{ id?: string; stepId?: strin
             checkedAt,
         };
     }
-    return saveSteps(context, opened, records);
-};
+    return records;
+}
 
 /**
  * Handle 'prepareSetupChecks' — sign in to Commerce ahead of a check, so the slow part (the

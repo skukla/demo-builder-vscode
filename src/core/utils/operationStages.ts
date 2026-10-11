@@ -119,6 +119,7 @@ export const OPERATION_STAGES = {
         expectation: 'Usually under a minute',
         detail: 'Writing erp_owner in one bulk call to Commerce',
     },
+    preparingStore: { label: 'Preparing the store', expectation: 'Usually under a minute', detail: 'Each step checked first' },
     changingAttributeSets: {
         label: 'Changing attribute sets',
         expectation: 'Usually a few seconds a set',

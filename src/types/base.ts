@@ -10,6 +10,7 @@ import type { CommerceStoreStructure } from './commerceStore';
 import type { ServiceDefinition } from './components';
 import type { ErpAssignmentRecord, ErpOwnerSetsRecord } from './erpAssign';
 import type { AddedDemo } from './projectFile';
+import type { CommerceConfigChangeRecord, StorePreparationRecord } from './storePreparation';
 
 /**
  * AiPrompt - A user-saved AI prompt
@@ -250,6 +251,11 @@ export interface Project {
      * Pin/Unpin kebab item.
      */
     pinned?: boolean;
+    /**
+     * The values the settings held before `set_commerce_config`'s last write (AB-77), so the
+     * same tool can put them back (`undo: true`). Replaced by each write.
+     */
+    commerceConfigChange?: CommerceConfigChangeRecord;
     // Aliases for compatibility
     createdAt?: Date;
     updatedAt?: Date;
@@ -340,6 +346,12 @@ export interface AppBuilderComponentState {
      * (AB-74), so the addition can be undone. Removed by the undo and with the component.
      */
     erpOwnerSets?: ErpOwnerSetsRecord;
+    /**
+     * What "Prepare this store" changed in Commerce for this component's setup steps (AB-77),
+     * by step id, so each can be undone. A step's entry goes with its undo; the record goes
+     * with the component.
+     */
+    storePreparation?: StorePreparationRecord;
     /**
      * The catalog entry this component was made from, when its id is not that entry's
      * id: a second copy of a kind the project already holds (`demo-erp-2`). ABSENT

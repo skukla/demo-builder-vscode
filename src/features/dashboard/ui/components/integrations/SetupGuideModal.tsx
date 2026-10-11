@@ -43,16 +43,16 @@ export interface SetupGuideModalProps {
     /** Opens Commerce Admin (the grid's 'openAdminPanel' request). */
     onOpenAdmin: () => void;
     /**
-     * A step's fix, or its undo (AB-74): the screen confirms it and runs it. Absent, the
-     * guide offers no fix.
+     * A step's fix, or its undo (AB-74, AB-77): the screen confirms it and runs it through
+     * "Prepare this store". Absent, the guide offers no fix.
      */
-    onFix?: (integrationId: string, mode: 'add' | 'remove') => void;
+    onFix?: (target: { id: string; name: string; mode: 'apply' | 'undo'; stepId: string; label: string }) => void;
 }
 
 /** The fix buttons' words, in one place. */
 export const FIX_COPY = {
-    fix: 'Add erp_owner to the attribute sets',
-    undo: 'Take erp_owner out again',
+    fix: 'Apply this step',
+    undo: 'Undo this step',
 };
 
 /** Where the guide opens: the first step still to do (not an optional one), else the first. */
@@ -70,20 +70,22 @@ interface FooterInput {
     checkAll: () => void;
     openAdmin: () => void;
     /** The step's fix or its undo, when the guide offers one. */
-    fix?: (mode: 'add' | 'remove') => void;
+    fix?: (mode: 'apply' | 'undo') => void;
 }
 
 /**
- * The step's fix, when its last check failed, or the undo of a fix Demo Builder applied
- * (AB-74). Nothing for a step with no fix, or when the screen offers none.
+ * The step's Apply when Demo Builder can do it, and the Undo of one it applied and recorded
+ * (AB-77). Apply is offered on a step SAVED done too: the apply checks the store fresh and
+ * writes only if the step is not done there, so the saved state must not hide it. Once
+ * applied, Apply returns only when a check found the store has lost it. Nothing for a step
+ * with no fix, a skipped step, or when the screen offers none.
  */
 function fixButtons(item: SetupChecklistItem, fix: FooterInput['fix'], busy: boolean): ActionButton[] {
     if (!item.fix || !fix || item.state === 'dismissed') return [];
-    if (item.lastCheck === 'failed') {
-        return [{ label: FIX_COPY.fix, variant: 'secondary', onPress: () => fix('add'), isDisabled: busy }];
-    }
-    if (item.fixApplied) return [{ label: FIX_COPY.undo, variant: 'secondary', onPress: () => fix('remove'), isDisabled: busy }];
-    return [];
+    const apply: ActionButton = { label: FIX_COPY.fix, variant: 'secondary', onPress: () => fix('apply'), isDisabled: busy };
+    const undo: ActionButton = { label: FIX_COPY.undo, variant: 'secondary', onPress: () => fix('undo'), isDisabled: busy };
+    if (!item.fixApplied) return [apply];
+    return item.state === 'open' ? [apply, undo] : [undo];
 }
 
 /**
@@ -207,12 +209,13 @@ function Guide({
         checkAll: () => void checkAll(),
         openAdmin: onOpenAdmin,
         // The confirm opens over the screen, not over the guide: the guide closes first.
-        fix: onFix
-            ? (mode) => {
-                  onClose();
-                  onFix(model.id, mode);
-              }
-            : undefined,
+        fix:
+            onFix && item
+                ? (mode) => {
+                      onClose();
+                      onFix({ id: model.id, name: model.name, mode, stepId: item.id, label: item.label ?? item.title });
+                  }
+                : undefined,
     });
     return (
         <Modal

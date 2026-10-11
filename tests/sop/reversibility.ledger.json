@@ -118,6 +118,11 @@
             "tool": "add_category_pages",
             "reverses": "reset_project",
             "note": "Added 2026-10-05 with the tool (EDS-27). Every page it writes goes on the catalog menu's record with its hash, and reset removes exactly the recorded pages nobody has edited since (catalogMenuStep.removeCatalogMenuStep). There is no narrower undo - no tool removes only the pages added after setup; a single one can be taken out with delete_page."
+        },
+        {
+            "tool": "prepare_commerce_store",
+            "reverses": "undo_commerce_store_preparation",
+            "note": "Not create-shaped by name, listed because it creates: what each step changed is recorded per step on the integration (storePreparation); the undo puts settings back, deletes the attributes, stock and shared catalogs the run created, and DISABLES a source it created, since Commerce cannot delete one (AB-77)."
         }
     ]
 }

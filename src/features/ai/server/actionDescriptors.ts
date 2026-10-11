@@ -702,6 +702,85 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         },
     },
     {
+        tool: 'prepare_commerce_store',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            'Prepare the Commerce store for an integration\'s demo ("Prepare this store" on its card): ' +
+            'apply the setup steps Demo Builder can do itself, in the guide\'s order. For the ERP ' +
+            'integration: catalog price scope = Website, Payment on Account, storefront returns and ' +
+            'card payments on (settings written through PUT /V1/system/config at the default or the ' +
+            'website scope), the erp_owner and brand attributes as Text Fields with erp_owner in every ' +
+            'attribute set, a warehouse per ERP in a stock the website sells from, and a shared catalog ' +
+            'per company without one. WITHOUT confirm it only previews, and it READS THE STORE to do ' +
+            'so: every step\'s check runs fresh (never the saved checklist) and is saved on the ' +
+            'checklist; data.steps lists every step with where it stands now (done, applicable, ' +
+            'manual, applied, unknown = could not check) with the check\'s note, and what each ' +
+            'applicable one would change. Show the preview to the user, then call again ' +
+            'with confirm:true: each step is checked again just before it is decided and SKIPPED ' +
+            'when the store shows it done (a datapack or the user did it), what Commerce refused is named by step and item (rejected), the previous ' +
+            'values are recorded so undo_commerce_store_preparation puts them back, and the steps left ' +
+            'by hand (the two order statuses, the PayPal sandbox connection, moving stock) are listed ' +
+            'as manual. stepIds limits the run to some steps. Takes the integration id.',
+        map: dashboardHandlers,
+        type: 'prepareCommerceStore',
+        inputSchema: {
+            id: z.string().describe('The integration id (from get_project)'),
+            stepIds: z.array(z.string()).optional().describe('Only these setup step ids (from get_setup_checklist); default every applicable step'),
+            confirm: z.boolean().optional().describe('true writes; omitted or false previews only. Show the preview to the user first.'),
+        },
+    },
+    {
+        tool: 'undo_commerce_store_preparation',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            'Undo prepare_commerce_store ("Undo preparation" on the card): put back what it recorded, ' +
+            'newest step first, or the one stepId names. Settings go back to the value in force before; ' +
+            'an attribute or shared catalog the run created is deleted (never one that pre-existed); a ' +
+            'stock the run created is deleted and a source the run created is DISABLED, because Commerce ' +
+            'cannot delete a source. A step whose undo Commerce refuses keeps its record. WITHOUT confirm ' +
+            'it only answers which steps are recorded and what each holds. Takes the integration id.',
+        map: dashboardHandlers,
+        type: 'undoCommerceStorePreparation',
+        inputSchema: {
+            id: z.string().describe('The integration id (from get_project)'),
+            stepId: z.string().optional().describe('One recorded step id to undo; default every recorded step, newest first'),
+            confirm: z.boolean().optional().describe('true writes; omitted or false previews only'),
+        },
+    },
+    {
+        tool: 'set_commerce_config',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            "Change one or more of this project's Commerce settings (Stores > Configuration) through " +
+            'PUT /V1/system/config: each item is a path (section/group/field, e.g. catalog/price/scope), ' +
+            'the value as a string ("1" for Yes) and the scope, default or website (the project\'s ' +
+            'website). WITHOUT confirm it only previews: data.changes says each value now and after, ' +
+            'reading first; a value already in force is not written. With confirm:true it writes the ' +
+            'rest in one call, names what Commerce refused (rejected, from the answer\'s errors list), ' +
+            'and records the previous values on the project (data.previous); undo:true writes those ' +
+            'back and forgets them. Only the LAST write is recorded. For the settings a setup step ' +
+            'declares, use prepare_commerce_store instead, which records per step.',
+        map: dashboardHandlers,
+        type: 'setCommerceConfig',
+        inputSchema: {
+            items: z
+                .array(
+                    z.object({
+                        path: z.string().describe('The setting path, e.g. "payment/companycredit/active"'),
+                        value: z.string().describe('The value Commerce stores, as a string ("1" for Yes, "0" for No)'),
+                        scope: z.enum(['default', 'website']).describe("default, or website (the project's website)"),
+                    }),
+                )
+                .optional()
+                .describe('The settings to write; ignored with undo:true'),
+            confirm: z.boolean().optional().describe('true writes; omitted or false previews only'),
+            undo: z.boolean().optional().describe('true puts back the values the last write recorded'),
+        },
+    },
+    {
         tool: 'reset_erp_records',
         needsAuth: ['adobe'],
         readOnly: false,

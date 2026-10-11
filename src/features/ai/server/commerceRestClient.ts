@@ -315,7 +315,7 @@ async function signOnce(workspaceId: string, mint: () => Promise<string>): Promi
 /** Commerce's ACL refusal — the one 403 that IS about the credential. */
 const ACL_REFUSAL = /isn't authorized to access/u;
 
-function explainStatus(status: number, body: string): string {
+export function explainStatus(status: number, body: string): string {
     // A 403 is only a credential problem when Commerce says so. Its other 403s carry
     // their own reason — "Adding a new gallery entry has been disabled by AEM Assets
     // Integration" (2026-09-30) — and blaming the credential for those sent the reader

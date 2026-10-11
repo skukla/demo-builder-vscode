@@ -71,7 +71,9 @@ const EXPECTED: Record<string, number> = {
     // 58 -> 62 on 2026-10-09: assign_erp_products, undo_erp_assignment,
     // add_erp_owner_to_attribute_sets and remove_erp_owner_from_attribute_sets read and write
     // Commerce with the workspace credential and read the ERPs' rules through the sign-in (AB-74).
-    adobe: 62,
+    // 62 -> 65 on 2026-10-10: prepare_commerce_store, undo_commerce_store_preparation and
+    // set_commerce_config read and write Commerce with the workspace credential (AB-77).
+    adobe: 65,
     // 21 -> 23 on 2026-09-30 (hotfix beta.149 merged): get_content_access and
     // set_content_reader read and write the DA.live org permissions sheet (EDS-22).
     // 23 -> 24 on 2026-10-03: create_project_from_file, the same creation as create_project.
@@ -121,7 +123,7 @@ const EXPECTED: Record<string, number> = {
  * files. That counts text, not declarations, and was roughly double. The CONTROL below
  * caught it — which is the argument for having one.)
  */
-const EXPECTED_TOOLS = 162; // 158 -> 162 on 2026-10-09: the four AB-74 tools. Earlier: 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x); 144 with add_erp (AB-16).
+const EXPECTED_TOOLS = 165; // 162 -> 165 on 2026-10-10: the three AB-77 store-preparation tools. 158 -> 162 on 2026-10-09: the four AB-74 tools. Earlier: 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x); 144 with add_erp (AB-16).
 // 141 -> 142 on 2026-09-27: delete_undeclared_runtime_code.
 // 142 -> 143 on 2026-09-27: load_erp_demo_data.
 // 144 -> 146 on 2026-09-29: get_erp_settings and set_erp_settings (AB-16j).

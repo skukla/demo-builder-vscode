@@ -7,8 +7,10 @@
 const mockSendRest = jest.fn();
 const mockResolveRestTarget = jest.fn();
 jest.mock('@/features/ai/server/commerceRestClient', () => ({
+    ...jest.requireActual('@/features/ai/server/commerceRestClient'),
     resolveRestTarget: (...a: unknown[]) => mockResolveRestTarget(...a),
-    sendRest: (...a: unknown[]) => mockSendRest(...a),
+    // The checks read UNCUT through requestRest (AB-77 fix); the fake answers the text as a 200.
+    requestRest: async (...a: unknown[]) => ({ ok: true, status: 200, text: String(await mockSendRest(...a)) }),
 }));
 const mockScope = jest.fn((): { websiteCode?: string } => ({}));
 jest.mock('@/features/ai/server/commerceEndpointsTool', () => ({
@@ -209,7 +211,7 @@ describe('checkSetupSteps', () => {
         await handleCheckSetupSteps(context, { id: 'erp-integration' });
         const paths = mockSendRest.mock.calls.map((call) => call[2] as string);
         expect(paths).toContain(
-            'system/config?scope=websites&scopeCode=acme&searchCriteria[filterGroups][0][filters][0][field]=path' +
+            'system/config?scope=website&scopeCode=acme&searchCriteria[filterGroups][0][filters][0][field]=path' +
                 '&searchCriteria[filterGroups][0][filters][0][value]=payment/companycredit/active',
         );
     });
