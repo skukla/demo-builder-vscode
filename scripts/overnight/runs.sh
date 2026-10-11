@@ -42,6 +42,15 @@ SWEEP_MINUTES="${SWEEP_MINUTES:-300}"
 log() { echo "$(date '+%Y-%m-%d %H:%M')  $*" | tee -a "$LOG"; }
 
 log "runs.sh started — LIMIT=$LIMIT MAX_RUNS=$MAX_RUNS  (stop file: $STOP)"
+# The resource guard watches this loop from its first minute to its last, the sweep
+# included: it kills one runaway node/Python process and, if the machine stays short
+# of memory, drops the stop file. It was a hand-started script until 2026-10-10, and
+# the one stretch it missed was the stretch nobody restarted it for.
+GUARD_LOG="$REPO/.rptc/handoff/resource-guard.log"
+python3 "$HERE/resource_guard.py" "$REPO" "$GUARD_LOG" "$$" &
+GUARD_PID=$!
+trap 'kill "$GUARD_PID" 2>/dev/null' EXIT
+log "resource guard started (pid $GUARD_PID; log: $GUARD_LOG)"
 # The whole loop's starting numbers, for `npm run mutation:status`: gaps closed and
 # the pace are measured from this line, across every queue the loop runs. RUNS_LOOP
 # tells run.sh its queues belong to a loop, so status measures from here and not from
