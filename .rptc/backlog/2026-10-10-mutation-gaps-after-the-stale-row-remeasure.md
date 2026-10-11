@@ -136,3 +136,4 @@ A module is done when no decision is unpinned, not when its score is high.
 - 2026-10-10  test(mesh): a republish that answers a failure is reported with its reason, and one that lands adds no key (`571b3ae23`)
 - 2026-10-10  test(dashboard): the integrations tile reports a stopped removal when nothing else on it is rankable (`5c6f52d4b`)
 - 2026-10-10  chore(overnight): the loop starts its own resource guard (`f05162268`)
+- 2026-10-11  chore(mutation): judge each test once across every redundancy report (`eccb59af9`)

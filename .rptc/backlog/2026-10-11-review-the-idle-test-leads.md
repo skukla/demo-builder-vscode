@@ -57,3 +57,7 @@ the same fault is often deliberate. Nothing here proposes removing them.
 
 Each file with idle tests has been read and each idle test is either removed, given an
 assertion that kills something, or left with a one-line reason.
+
+## Shipped so far
+
+- 2026-10-11  docs(backlog): file PL-73, review the tests the redundancy sweep found idle (`e854fad8f`)
