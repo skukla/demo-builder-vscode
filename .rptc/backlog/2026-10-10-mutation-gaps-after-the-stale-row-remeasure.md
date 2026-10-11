@@ -56,6 +56,7 @@ A module is done when no decision is unpinned, not when its score is high.
 - 2026-10-10  test(app-builder): the subscribe's optional observers and the entries list are tested exactly (`c0bd73259`)
 - 2026-10-10  test(ai): what a project file's seed adds to an agent creation is tested from the arguments (`0fbc7deb8`)
 - 2026-10-10  test(dashboard): the integrations grid's own decisions are each held by a test (`36d29c34e`)
+- 2026-10-10  chore(overnight): run the redundancy sweep only when the burn-down is done (`1c9b37b31`)
 - 2026-10-10  chore(overnight): run 1 queue — 40 modules, regenerated from the baseline (`7fec4912e`)
 - 2026-10-10  test(mesh): the two deploy handler suites share one setup, and build projects with the builder (`644b35eb4`)
 - 2026-10-10  test(app-builder): a hand-edited app.config declares nothing instead of throwing (`4a1e33146`)

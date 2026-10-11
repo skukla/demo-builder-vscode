@@ -118,6 +118,13 @@ repeats until no module has open gaps — or until you `touch
 .rptc/handoff/STOP-RUNS`, which lets the current run finish and then stops. It
 also stops on a run that produced no commits (an exhausted balance would otherwise
 regenerate the same queue forever) and on a queue size it could not read. It logs
-every boundary to `.rptc/handoff/runs.log`, and runs the redundancy sweep once, at
-the end. Started 2026-09-04 at the owner's request: "move straight into run three
+every boundary to `.rptc/handoff/runs.log`.
+
+The redundancy sweep (a five-hour Stryker pass) runs once, and only when the loop
+ended because no module has open gaps. After a stop file, `MAX_RUNS`, a run with no
+commits, or an unreadable queue size, the loop is going to be started again, so the
+sweep is skipped and the log says why. To run it by hand:
+`node scripts/mutationRedundancySweep.mjs --minutes 300`.
+
+Started 2026-09-04 at the owner's request: "move straight into run three
 and so on until I stop you or you run out of runs".
