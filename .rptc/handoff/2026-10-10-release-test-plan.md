@@ -1,0 +1,368 @@
+# Release test plan, 2026-10-10: what to walk by hand before the next beta
+
+Written 2026-10-10 for the owner. It covers the work of 2026-10-08 to 2026-10-10: the file
+splits, the ERP ownership work, the storefront fixes, and the big merge. Ordered the way an SC
+moves through Demo Builder, so you walk it once without going back. Item ids are in brackets at
+the end of each row, for the record only. Part 1 is the walk. Part 2 is what the last plan left
+open.
+
+**65 checks in Part 1. About 2¼ hours for all of them**, plus waiting (adding an ERP takes
+about 10 minutes, a fill about 3). **The 19 ★ rows alone take about 1½ hours** and cover what
+is most likely to be broken. **Part 2 holds 65 more rows** carried from the 2026-10-04 plan,
+which was never finished. It is a second sitting.
+
+Checks per section (starred ones in brackets): startup and updates 9 (2), creating a project
+9 (3), the dashboard and storefront 9 (2), integrations and ERPs 19 (8), the ERP's own screens
+6 (2), agent tools 5 (0), cleanup 8 (2).
+
+## Before you start
+
+1. **The build.** Test `loop/2026-10-10-goal-queue`. That is the big merge
+   (`integration/2026-10-10`) plus the test-writing run's commits, and one of those commits is a
+   real fix: the wizard's ERP naming bug (`2f1c7ea58`, row 2.4). The fix is NOT on
+   `integration/2026-10-10` yet. Merge the run's branch into whatever you test, or test that
+   branch itself. The run is still committing, so note the commit you tested. Rows 4.13 to
+   4.19 (Prepare this store) are on `feature/prepare-this-store` (`fa832c75b`, `3bd031527`),
+   which is on neither branch: merge it in too, or those rows have nothing to press.
+2. **Start it properly.** Run `npm run compile`, then press F5. A window reload is not enough:
+   almost every change is on the extension side.
+3. **Justrite** is needed for 29 rows (marked `[needs Justrite]`). It has two ERPs today:
+   Justrite ERP owns everything nobody else claims, and Accuform ERP owns the 96 products tagged
+   `erp_owner=accuform`. The ERPs and the integration were redeployed there on 2026-10-09.
+4. **A scratch project** is needed for 22 rows (marked `[scratch project]`). You create it in
+   section 2 and delete it in section 7. Three rules for it:
+   - Point it at a Commerce that is **not** Justrite's. Commerce holds one install of the ERP
+     integration per store, so removing it from a scratch project would remove Justrite's too.
+   - Use an Adobe project that is not Justrite's, and never name its ERP "Justrite ERP" or
+     "Accuform ERP". A second ERP of the same name in one Adobe project replaces the first.
+   - Rows marked `[no cloud]` (14 of them) need neither.
+5. **One project at a time.** A screen acts on the project that is current, not the project
+   named in its title. If an agent or another window opens a different project, close and
+   reopen the screen before you press anything on it. This is a known open problem [AI-15].
+6. **The button names.** An ERP card's menu says **Fill from Commerce**; the integration's says
+   **Fill ERPs from Commerce**. Some messages still call this "Load demo data". They are the
+   same thing.
+
+Rows that change live data say so, and say how to undo it.
+
+# Part 1. The walk
+
+## 1. Startup and updates
+
+| # | Do this | Expect | Needs | Result |
+|---|---|---|---|---|
+| 1.1 ★ | Press F5. Do not sign in to anything. | You are still signed in to DA.live from before. Nothing asks you to sign in again [EDS-35] | `[no cloud]` |  |
+| 1.2 | Sign out of DA.live, then sign in again with a fresh token on the clipboard. Then ask the agent "am I signed in to DA.live?" | No token box opens. The status bar names the namespace and your email. The agent says yes [EDS-35, EDS-8] | `[no cloud]` |  |
+| 1.3 | Sign in to DA.live again, this time with an empty clipboard. Paste an expired token first, then a good one. | The token box opens. The expired token is refused in words ("Token has expired...") and nothing is stored. The good one signs in [EDS-8] | `[no cloud]` |  |
+| 1.4 | Sign out of Adobe and sign in again. Then open a project that lives in a different Adobe org. | The browser opens once. The org list refreshes. The other-org project shows the "Switch IMS Org" warning, and no browser opens by itself [EDS-8] | `[no cloud]` |  |
+| 1.5 ★ | Open every screen once: Create Project, Edit Project, Project Dashboard, Configure, the sidebar, Your Projects, the AI overview and Prompt Library, Integrations, Data Installer, Manage Site Access. | Each one draws and loads its data. Your Projects ends with a dashed **New project** card. Integrations ends with a dashed **Add an integration** card [EDS-8, PL-69, PL-62] | `[no cloud]` |  |
+| 1.6 | On the dashboard of a storefront project and of a non-storefront one, look at the tiles. Open and close Export, Save as Package, and View AI Capabilities (close that one with Esc). Click AEM Assets. | Tiles are where they were: Open, Storefront (storefront projects only), Build, Share. Each dialog opens and closes. AEM Assets opens for this project [EDS-8, EDS-21] | `[no cloud]` |  |
+| 1.7 | Open the dashboard of a project whose mesh is deployed and unchanged. | No "redeploy" prompt [EDS-8] | `[no cloud]` |  |
+| 1.8 | Run **Check for Updates** with Justrite open. *Only shows a row if the ERP or the integration has newer code.* If you apply it: **changes live data** (redeploys to Justrite; there is no undo, and it is what you want anyway). | One row per pair, "Justrite: ERP Integration and Justrite ERP", ticked because Justrite is open. Applying it deploys the new code and then brings Commerce up to it [AB-73, AB-13] | `[needs Justrite]` |  |
+| 1.9 | *Only if you have a project in another Adobe org with an integration update waiting.* Run Check for Updates. | Its row is not ticked and says to open that project and update it from its Integrations screen [AB-73] | `[no cloud]` |  |
+
+## 2. Creating a project (the wizard)
+
+Open any project that is **not** Justrite first, and leave it open. Then start a new project:
+an Edge Delivery storefront, with a block library ticked.
+
+| # | Do this | Expect | Needs | Result |
+|---|---|---|---|---|
+| 2.1 | Walk the Adobe steps. | The org, project and workspace lists fill. Back, Continue and Cancel work on every step [EDS-8] | `[scratch project]` |  |
+| 2.2 | In the Storefront area, make a new repository: **New**, type a name, **Create**. Then try a name that is already taken. **Changes live data** (a GitHub repository; row 7.4 deletes it). | The field gets a checkmark, the line under it reads "Created as", and the new repository is first in the list and selected. The taken name shows an error under the field and selects nothing [EDS-8, EDS-18] | `[scratch project]` |  |
+| 2.3 | In the Integrations area, open Add Integration and reach the API access stage. Type in the filter and press a product pill. | The list narrows. Ticking an API does not move the rows [EDS-8] | `[scratch project]` |  |
+| 2.4 ★ | Still in the Integrations area: add the **ERP Integration** and type a name for its ERP, for example "Scratch ERP". Finish the wizard. **Changes live data** (an Adobe workspace and an install in the scratch Commerce; row 7.3 removes it). | After creation the project has ONE pair: the ERP Integration under its own name, with an ERP called what you typed. There is no second, custom integration named after the ERP [PL-70, AB-16o] | `[scratch project]` |  |
+| 2.5 ★ | Watch the storefront setup step. If the repository does not have the AEM Code Sync app, install it when asked. | Progress is shown for each phase. The install dialog pauses the run, and it carries on by itself after the install, with no Retry. It ends on a centred green check and "Click Continue to proceed with project creation." [EDS-8, EDS-20, EDS-23] | `[scratch project]` |  |
+| 2.6 | Watch the last step to the end, then press **View Projects**. | "Initializing" and a Cancel button are there from the first moment. While it runs you see what it is doing. It ends on "Project Created Successfully", and View Projects opens Your Projects [EDS-8] | `[scratch project]` |  |
+| 2.7 | Open the new storefront in a browser. Open a category page and a product page. Open the site in DA.live. | The menu has the catalog. The category page lists products. The product page opens at once. The block library is in DA.live and the AEM Assets panel shows [EDS-8, EDS-24] | `[scratch project]` |  |
+| 2.8 ★ | Press F5 again, then run **Check for Updates**. | Nothing offers "<library>: install" for the new project. The project that was open during creation shows no library it never picked [EDS-37] | `[scratch project]` |  |
+| 2.9 | Copy the new project's `.env` files and the storefront's `config.json` somewhere. Press Save on Configure without changing anything. Compare. | Only the "Generated" time line differs [EDS-8] | `[no cloud]` |  |
+
+## 3. The project dashboard and storefront
+
+All on the scratch project. Deleting it is row 7.4, once nothing else needs it.
+
+| # | Do this | Expect | Needs | Result |
+|---|---|---|---|---|
+| 3.1 | On Configure, rename the project with capitals and spaces and save. Then blank a required field in a section that is not on screen. | The title changes and the folder name under the field matches. The section's tab shows the error and Save is disabled [EDS-8] | `[no cloud]` |  |
+| 3.2 ★ | On Configure, change the store view code and save. Accept the prompt. **Changes live data** (the scratch storefront's `config.json`; change it back the same way). | The republish prompt appears, and the mesh redeploy prompt too if the project has a mesh. After accepting, `config.json` on GitHub has the new code, and the prompt and the amber Republish tile clear [EDS-8] | `[scratch project]` |  |
+| 3.3 | Copy `config.json` from the repository. Press **Republish** on the dashboard. Compare. | The republish finishes, the pages are live, the tile stays green, and `config.json` is identical [EDS-8] | `[scratch project]` |  |
+| 3.4 | Hand-edit one entry in `component-definition.json` on GitHub. Then tick a second block library on Configure and run **Check for Updates**. **Changes live data** (one commit to the scratch repository). | One item, "<library>: install". After it, the library's entries are there once each, your hand edit is still there, and the file's indentation has not changed [EDS-28, EDS-36, EDS-8] | `[scratch project]` |  |
+| 3.5 | *Only if a library you installed has a newer commit.* Delete one of its block folders on GitHub and remove the HTML example from one of its entries. Run Check for Updates and apply it. | Neither comes back. A "Left out ... removed by hand" line names both [EDS-36] | `[scratch project]` |  |
+| 3.6 | In DA.live, make a page that is not in the template (for example `/leftover-test`) and publish it. | It answers on the live site. This sets up row 3.7 [EDS-33] | `[scratch project]` |  |
+| 3.7 ★ | Press **Reset** on the dashboard. Reload the live home page a few times while it runs. **Changes live data** (it rebuilds the scratch storefront; there is no undo, which is why this is a scratch project). | Under "Checking requirements" it names your DA.live sign-in, your Adobe sign-in, the Adobe organization and the GitHub app. The home page never goes down. It says how many product pages it removed, and product pages answer again afterwards. At the end `/leftover-test` answers 404 and nothing warns that old pages may still be live. Check for Updates then finds nothing [EDS-33, EDS-26, EDS-8] | `[scratch project]` |  |
+| 3.8 | *Only when your DA.live session has really expired, for example first thing tomorrow.* Start a Reset or a Republish. | The progress window shows a sign-in form headed "Your DA.live session has expired." You sign in and it carries on. It does not stop and say you lack permission [EDS-34, EDS-8] | `[scratch project]` |  |
+| 3.9 | Open the Data Installer, pick a pack, press **Dry run**. Then **Start import**, and close the window while it runs. **Changes live data** (products in the scratch Commerce; **Remove data** in the same window undoes it). | Dry run reads "Checking", then a result with Back. The import shows progress per type. The close button reads "Run in background" and a notification named "Importing <pack>" takes over [EDS-8] | `[scratch project]` |  |
+
+## 4. Integrations and ERPs
+
+On Justrite, unless a row says otherwise. Rows 4.2 to 4.9 are one story: add a test ERP, give it
+products, take them back, remove it. Rows 4.13 to 4.19 are **Prepare this store** [AB-77]: the
+setup steps the extension now applies instead of only checking. Row 4.14 and row 4.4 put
+`erp_owner` into the same attribute sets, so whichever runs first leaves the other nothing to
+add. Nothing of AB-77 has been written live yet; row 4.14 is the first write.
+
+| # | Do this | Expect | Needs | Result |
+|---|---|---|---|---|
+| 4.1 | Open Justrite's Integrations screen. Type in the filter. | The mesh card is first. The grid and the "N of M" count follow what you type, and the add card steps aside. The "Deploys to" row names the Adobe project [EDS-8] | `[no cloud]` |  |
+| 4.2 ★ | Press **Add another ERP**. Do not press Add yet. Read the dialog, change the name, switch between the two ownership choices. | The wording is short plain sentences. While the store is being read you see a loading view, never "The store has no websites." "After adding" has one line per ERP: its count, its rule in words and up to three example SKUs. The lines follow what you change. Owning by product attribute is the default [AB-75, AB-70] | `[needs Justrite]` |  |
+| 4.3 ★ | Name it "Test ERP", keep "by product attribute", press **Add**. Keep the Project Dashboard open beside it. About 10 minutes. **Changes live data** (a new Adobe workspace and ERP on Justrite; row 4.9 removes it). | The card shows it deploying, on both screens, then done. The result says Test ERP owns no products yet and offers **Assign products**. Justrite ERP still owns everything nobody claims; its rule did not change [AB-75, AB-74, AB-72, EDS-8] | `[needs Justrite]` |  |
+| 4.4 ★ | Open the integration's setup guide and read the check about the `erp_owner` attribute. Press its fix. *If row 4.14 ran first, the check already passes and there is nothing to press.* **Changes live data** (adds `erp_owner` to attribute sets on Justrite; row 4.8 takes it out). | It names the attribute sets that lack `erp_owner` (seven on Justrite on 2026-10-09, eight on 2026-10-10). After the fix the check passes [AB-74] | `[needs Justrite]` |  |
+| 4.5 ★ | On Test ERP's card, press **Assign products**. Pick a few by SKU, including one that was in a set from row 4.4. Read the preview, then run it. About 2 minutes. **Changes live data** (tags products on Justrite; row 4.6 undoes it). | The preview shows the count, a few SKUs, who owns them today (it says they move), and anything it cannot write. The progress window follows the job to the end. Test ERP then holds those products, and Justrite ERP shows them as discontinued [AB-74, AB-70] | `[needs Justrite]` |  |
+| 4.6 ★ | On Test ERP's card, press **Undo last assignment**. | The products go back to how they were tagged. Test ERP owns none. In Justrite ERP they are sellable again, not discontinued [AB-74, AB-70] | `[needs Justrite]` |  |
+| 4.7 | On the integration's card, press **Fill ERPs from Commerce**. About 3 minutes. **Changes live data** (refills both ERPs; safe to repeat). | Justrite ERP gets only what Accuform does not claim. It ends on a green tick with counts. If the price step runs long it says "Publishing prices, still running" once and still ends green, with no orange warning about 60 seconds. Open an ERP afterwards: it has its own products, companies, price groups and price lists [AB-72, AB-26z, AB-26y, AB-44] | `[needs Justrite]` |  |
+| 4.8 | In the setup guide, press **Take erp_owner out again**. If you want Justrite to keep the attribute (it does help), press the fix from row 4.4 once more afterwards. | It takes the attribute out of the sets it added, because no product in them is tagged now [AB-74] | `[needs Justrite]` |  |
+| 4.9 ★ | Remove Test ERP from its card. **Changes live data** (this is the undo of row 4.3). | The progress window runs the removal and shows its notes inside the window. No separate pop-up opens. Afterwards the integration's flyout names only Justrite ERP and Accuform ERP: no Test ERP, and no old Kukla ERP [PL-59, AB-70] | `[needs Justrite]` |  |
+| 4.10 | *Only if a card offers them* (after an install or a removal that did not finish): press **Reinstall in Commerce** or **Remove anyway**. | Each opens the progress window. Neither runs as a bare notification [PL-59] | `[needs Justrite]` |  |
+| 4.11 | *Only if an Update fails at its deploy step* (Adobe answering 504 is the usual cause): press **Update** again. | It deploys the code it already fetched and says so. It does not say "already up to date". The update badge stays on until the deploy works [AB-71] | `[needs Justrite]` |  |
+| 4.12 | Open the Integrations screen of a project that has the ERP integration. Leave it open. From Your Projects, open a project that has **no** ERP integration. Go back to the first screen and press **Add another ERP**, then Add. | It refuses before anything is deployed: the ERP integration "is not in the current project", naming the project that is current, and tells you to open the one that has it. If the first screen closed or switched by itself instead, write that down: it is also fine [AI-15] | `[no cloud]` |  |
+| 4.13 | On the ERP Integration card's menu press **Prepare this store**. Do not press Prepare. Read the nine steps against Commerce Admin (Stores, Configuration; Stores, Attribute Set; Stores, Inventory; Catalog, Shared Catalogs; Stores, Order Status). | Nine steps, each with a state. On Justrite on 2026-10-10: seven **Done** (the two order statuses among them, since Justrite already has them), and two **Will apply** with the exact changes under them: `erp_owner` added to eight attribute sets (Phones, Watches, Server, Accessories, Audio, Cables, Coolers, Plans) and `payment/payment_services/active` 0 to 1 at the website, with a line that the PayPal sandbox connection stays by hand. Each state matches what the Admin shows. Close it: nothing is written [AB-77] | `[needs Justrite]` |  |
+| 4.14 ★ | Open the setup guide. On the `erp_owner` and `brand` attributes step press **Apply this step** and confirm. **Changes live data** (adds `erp_owner` to eight attribute sets on Justrite; **Undo this step** on the same step takes it out again, and row 4.8 can too). | The progress window ends with the step **Applied**, naming the eight sets and nothing refused. It did not create `erp_owner` or `brand`: both exist. In Admin, Stores, Attribute Set, each of the eight sets (Phones, Watches, Server, Accessories, Audio, Cables, Coolers, Plans) now has `erp_owner`. The guide's check passes and the step offers **Undo this step** [AB-77, AB-74] | `[needs Justrite]` |  |
+| 4.15 | Open **Prepare this store** again, read the preview (card payments is now the only Will apply), press **Prepare**. Then, from the card's menu, **Undo preparation** and confirm. **Changes live data** (round trip: the undo puts the switch back). | Progress stays in the modal. The result lists card payments **Applied** (0 to 1 at the website), the attributes step **Already done**, nothing refused, and the PayPal sandbox connection by hand. In Admin, Stores, Configuration, Sales, Payment Methods, Payment Services is on for the website. After the undo it is off again, and the preview reads Will apply for it once more [AB-77] | `[needs Justrite]` |  |
+| 4.16 | *Only if a step reads **Could not check** in the preview* (its check could not read Commerce when the preview opened, for example a dropped connection). | The step shows the check's own words beside the state. It is not counted done anywhere: the card's "Demo setup" line, the guide and the preview all leave it open, and Prepare does not apply it [AB-77] | `[needs Justrite]` |  |
+| 4.17 | Open the setup guide and read every step's buttons without pressing any. | A step whose check passes offers neither button. A step with a fix that is not done offers **Apply this step**. A step this walk applied and has not undone offers **Undo this step**. The two order statuses offer nothing: they stay a guided Admin walk. The price scope step no longer says "No API sets this" [AB-77] | `[needs Justrite]` |  |
+| 4.18 | With Justrite open, ask the agent: "What would preparing this store change? Do not apply anything." | It answers the same nine steps and states as row 4.13, through `prepare_commerce_store`, and writes nothing. No confirmation is asked for a preview [AB-77] | `[needs Justrite]` |  |
+| 4.19 ★ | On a scratch project whose Commerce has none of the nine steps done (not a store a datapack already set up), open **Prepare this store**, read the preview, press **Prepare**. Then **Undo preparation**. **Changes live data** (settings, two attributes, a warehouse source and stock, a shared catalog per company in the scratch Commerce; the undo is the second half of this row). | The preview shows seven **Will apply** and the two order statuses **By hand**. The result lists all seven **Applied** with nothing refused: price scope, Payment on Account, returns, card payments, the two attributes created and `erp_owner` in every set, `<erp>_warehouse` as a source linked to a stock for the website, and a custom shared catalog with its company for each company that had none. Check each in Admin. After the undo: the four settings are back to what they were, the attributes and the stock and the shared catalogs are gone, and the warehouse source is still there but **disabled**, which the result says in words [AB-77] | `[scratch project]` |  |
+
+## 5. The ERP's own screens (order to cash)
+
+On Justrite. Open each ERP from its card. Buyer: Northgate. If an ERP's order page has no
+next-step button, that ERP is on older code: press Update on its card first.
+
+| # | Do this | Expect | Needs | Result |
+|---|---|---|---|---|
+| 5.1 | Open Justrite ERP's Sales Orders. | The two old open orders are gone (the 2026-10-09 reset cleared them) [AB-16n] | `[needs Justrite]` |  |
+| 5.2 ★ | Place one order on the storefront with a product tagged for Accuform and a product with no tag. **Changes live data** (an order in Commerce and both ERPs; row 7.1 clears the ERP side). | The order goes through. It is not refused as claimed by two ERPs. Accuform ERP gets only the tagged line. Justrite ERP gets only the untagged one. Checkout does not hang [AB-72, AB-16, AB-55] | `[needs Justrite]` |  |
+| 5.3 ★ | In one ERP, open the order and keep pressing its main button. | The button reads, in turn: Confirm, Create shipment, Post shipment (with its number), Create invoice, Post payment. Commerce shows the shipment and the invoice. The ERP's stock drops by what shipped. The invoice ends up Paid and the company's credit in Commerce comes back [AB-26s, AB-63; demo-erp, contract v21] | `[needs Justrite]` |  |
+| 5.4 | In the other ERP, confirm its order and create a shipment but do not post it. Try to create a second shipment for the same goods. Then press **Close remaining**. | The second shipment is refused. Close remaining closes only the quantity that is not on a shipment [demo-erp, contract v21] | `[needs Justrite]` |  |
+| 5.5 | On that same order, press **Cancel** on the waiting shipment. | The waiting shipment is removed [demo-erp, contract v21] | `[needs Justrite]` |  |
+| 5.6 | In Commerce Admin, open Sales, Orders and press **Refresh registrations**. Then open Apps, App Management. | The Orders grid has ONE set of ERP columns. App Management lists the integration once [AB-69] | `[needs Justrite]` |  |
+
+## 6. Agent tools
+
+Only the ones where a real window is the point. Ask in a project's chat.
+
+| # | Ask the agent | Expect | Needs | Result |
+|---|---|---|---|---|
+| 6.1 | "Create a storefront project called agent-scratch" on a repository that does not have the AEM Code Sync app. **Changes live data** (a repository and a site; row 6.2 removes them). | VS Code shows a message with a button that opens the app's install page. The progress card shows each phase, not a bare "Creating the project". After you install the app it finishes. Note: the new project becomes the current one [AI-14, AI-15] | `[scratch project]` |  |
+| 6.2 | "Delete agent-scratch, including its repository and its DA.live site." | It asks first. Then the files, the repository and the site are gone, and its pages answer 404 [AI-9, EDS-33, EDS-8] | `[scratch project]` |  |
+| 6.3 | With Justrite open: "What would adding an ERP called Preview ERP look like? Do not add it." | It answers the same preview as the dialog in row 4.2 and deploys nothing [AB-75] | `[needs Justrite]` |  |
+| 6.4 | With Justrite open: "What updates are waiting? Do not apply any." | It lists the same things Check for Updates did in row 1.8, integration pairs included [AB-73] | `[needs Justrite]` |  |
+| 6.5 | On the scratch project: "Reset this project's storefront." **Changes live data** (same as row 3.7). | It asks first, resets, and its answer says whether any old pages were left live [EDS-33, EDS-8] | `[scratch project]` |  |
+
+## 7. Cleanup of what the test left behind
+
+| # | Do this | Expect | Needs | Result |
+|---|---|---|---|---|
+| 7.1 ★ | On Justrite's integration card, press **Reset ERPs**. **Changes live data** (this is the undo of section 5: it closes the test orders and wipes and refills both ERPs). | It does not stop at 60 seconds. It ends on a green tick with counts and no warning. Both ERPs have no orders and are refilled [AB-26z, AB-16n, AB-61, AB-47] | `[needs Justrite]` |  |
+| 7.2 | Look at each ERP's product count. | Close to where it started: about 225 for Justrite ERP and 96 for Accuform ERP [AB-72] | `[needs Justrite]` |  |
+| 7.3 | On the scratch project, remove the ERP integration. | It warns that the App Management listing stays until you unassociate it in Commerce Admin. It says what it checked and reports anything left behind. Its Adobe workspace is gone [AB-69, AB-12, AB-33] | `[scratch project]` |  |
+| 7.4 ★ | Delete the scratch project from Your Projects. In the question, press **Select all**. | Select all ticks both boxes. The files are gone, the repository is gone on GitHub, the DA.live site is gone, and the home page, a category page and a product page all answer 404 on aem.live. The result does not say it fell back to the DA.live list [EDS-33, EDS-26, EDS-8] | `[scratch project]` |  |
+| 7.5 | In Adobe Developer Console, check that the Test ERP workspace from row 4.3 is gone from Justrite's project. | It is gone. A workspace's Runtime namespace can take about 11 minutes more to go [AB-69] | `[needs Justrite]` |  |
+| 7.6 | Run **Manage GitHub Repositories**. Look for `skukla/bodea-jen`, left by the agent run of 2026-10-08, and anything from today. Delete them there. | Nothing from the tests is left [AI-14] | `[no cloud]` |  |
+| 7.7 | The Adobe project **Kukla Bodea Mesh**: it cannot be deleted while it is read-only. Revoke, then delete. *Carried from 2026-10-09 as written; see the note under "Open questions".* | The project is gone from Developer Console | `[no cloud]` |  |
+| 7.8 | Run **Check for Updates** one last time with Justrite open. | Nothing unexpected is waiting, and no block library offers "install" on Justrite [EDS-37] | `[needs Justrite]` |  |
+
+## 8. Release steps
+
+Follow the `cut-release` skill (`.claude/skills/cut-release/SKILL.md`). It is not repeated here.
+In short, it asks for:
+
+1. The tested branch merged to `develop`, a clean tree, and a green gate.
+2. `npm run node:resolve -- --check`.
+3. The out-of-band passes offered (`npm run sweep` and the others it names). You can decline
+   them, and the release notes then say so.
+4. The version bump by hand (never `npm version`), curated notes, the changelog, the merge to
+   `master`, the tag, the package, and the GitHub pre-release.
+
+Before that, fill in each row's **Result** here (`pass`, or `fail` and a few words), then run:
+
+`node .claude/skills/backlog-item/backlog.mjs readiness`
+
+It reads this file and says what is ready, what failed and what is still unchecked.
+
+## Open questions
+
+- **Row 7.7** came to this list as one line: "the Kukla Bodea Mesh project cannot be deleted
+  while read-only (revoke, then delete)". What has to be revoked is not written down anywhere in
+  the backlog. You know; the list does not.
+- **Part 2 is the unfinished 2026-10-04 plan.** Decide whether to walk its ★ rows before this
+  beta or to ship without them. `readiness` will keep saying "not ready" until every ★ row in
+  both parts has a result. The old file, `2026-10-04-release-test-plan.md`, is now a copy that
+  nothing reads: delete it once you accept this one.
+- **"Load demo data" and "Fill from Commerce" are the same button under two names.** The menu
+  was renamed on 2026-10-01; the messages were not.
+- **Row 4.19 needs a Commerce with nothing prepared.** The scratch Commerce from section 2 may
+  already have the attributes or a shared catalog from row 3.9's datapack. If it does, those
+  steps read Done and are skipped, which is correct but proves less. Say which store you used.
+
+## Not on this list, and why
+
+- **The rest of the file-split checks.** In each one the code was moved, not changed, and the
+  tests prove the move. Left out: the
+  prerequisites install progress, the Quick Edit commits, the product page pre-publish log,
+  Repair Site Configuration, Manage Site Access after an edit, Import Storefront Zip, Export Demo
+  Bundle, the Manage APIs dialog, the repository picker's not-ready cases, the storefront setup
+  failure screen, creating and renaming Adobe projects and workspaces, deleting an Adobe project
+  that has event providers, applying a component update and its rollback, and deleting a project
+  with neither box ticked. Several rows in sections 1 to 3 pass through the same code anyway.
+- **`set_commerce_config` through the agent.** It is the same read-first, write-what-differs
+  path the card's settings steps use, and it was proven live on Justrite on 2026-10-10
+  (`sales/totals_sort/tax` 40 to 41 and back). Rows 4.15 and 4.19 cover the path [AB-77].
+- **The PayPal sandbox connection, the two order statuses, and moving stock to the new
+  warehouse.** Prepare this store leaves all three by hand: Commerce has no write route for an
+  order status, and moving quantities is a per-product decision the feature does not offer.
+  The preview says so on each step; row 4.13 reads it [AB-77].
+- **Assign products through the agent tool.** Proven live on Justrite on 2026-10-09, with an
+  undo. Rows 4.5 and 4.6 test the screen, which was not.
+- **The first ownership pass** (a fill that says "Kukla ERP owns no products yet"). Passed live
+  on 2026-10-09.
+- **An order refused because two ERPs claim a product.** Setting it up means giving two ERPs
+  the same product on a live store. Tests only.
+- **The DA.live token's move out of the old storage.** It runs once per machine and has already
+  run on yours if row 1.1 passes. Tests cover the rest.
+- **Reset from Your Projects** (a notification instead of a window) and **the datapack question
+  inside a reset**. Same code as row 3.7; tests cover the difference.
+- **The rest of the test-writing run's commits.** They add tests and change nothing an SC
+  would see. Row 2.4 is the one exception found so far.
+- **The test-writing work itself, the clone clean-up notes "for the owner", and the node
+  version work.** Nothing to click. A green gate is the proof [PL-70, PL-69, PR-1a].
+
+# Part 2. Still open from the 2026-10-04 plan
+
+**65 rows, carried over word for word. 11 already have a result. 17 are starred.** Not
+part of the two hours above. The old plan put itself at about 3 hours in full, and most of it
+is here. The rows are here because this file is now the newest plan, and `readiness` reads only
+the newest.
+The 14 rows of the old plan that a row in Part 1 now covers were left behind. "Today" in a row
+means 2026-10-04.
+
+**Opening Demo Builder and the AI tools**
+
+| | Do this | Expect | Result |
+|---|---|---|---|
+| ★ | Sidebar → Chat → **Pick an earlier chat** | Claude Code opens its own list of past chats in a new tab [AI-4b] | pass (2026-10-06) |
+| ★ | With **AI Assistant → Engine** (`demoBuilder.ai.engine`) left at its default (Copilot in VS Code), Sidebar → **Chat**, ask "list my projects" | VS Code's chat panel opens in agent mode and answers from the demo-builder tools; no terminal opens [AI-12] | pass (2026-10-06) |
+| ★ | From the dashboard's **Prompts**, pick any prompt | It is sent in VS Code's chat panel and runs [AI-12] | Pass 2026-10-06: sent with the active-project preamble; 3 tool steps, answered "justrite (active)" |
+| | With Engine at Copilot in VS Code, look at the sidebar's **Chat**; then set Engine to Claude Code | A plain button (no menu) that opens the panel; with Claude Code it becomes the Continue / Pick earlier / New menu, without a reload [AI-12] |  |
+| | In a terminal at the projects root, run `copilot` yourself and type `/mcp` | demo-builder is listed (trust the folder when asked) — Copilot CLI is no Chat choice, but its tools still work [AI-12] |  |
+| | Set **AI Assistant → Permissions** to Auto, then Full access, and start Claude Code | The terminal's command line carries `--permission-mode auto` / `--dangerously-skip-permissions` [AI-12] |  |
+| | On a scratch project, ask Copilot in the panel to delete it | Demo Builder asks once in the chat, naming the project; declining changes nothing [AI-12] |  |
+| | On a machine (or user) without Claude Code, set **Engine** to Claude Code | A warning appears at once, "Claude Code (the command-line tool) is not installed…"; **Use Copilot in VS Code** sets Engine back to the default [AI-12] |  |
+| | On a machine (or user) without Claude Code, click **Open in Claude Code** | A message says it isn't installed and points at Copilot in VS Code (no install button); the AI badge isn't green [AI-4a] |  |
+
+**Your Projects**
+
+| | Do this | Expect | Result |
+|---|---|---|---|
+| ★ | Look at Your Projects in grid view and list view | No header "New" button. A dashed **New project** card is last; it opens New / Copy from existing / Import from file. It hides while you filter [PL-62] | Pass 2026-10-06: dashed card last, menu offers all three, hidden while filtering |
+| ★ | **Export** Justrite | The file is named `justrite.project.demo-builder.json`. Open it: no passwords, keys or tokens anywhere [PL-56c] | Pass 2026-10-06: right name; only endpoints, store codes and Adobe ids — no secrets. Notice now names the path with Open File / Reveal in Finder |
+| ★ | **Import from file** using that export (into a new name) | It asks you to sign in to GitHub and DA.live like a new project does. It gets its own repository. Integrations, datapack, store setup and settings all come back [PL-56d] |  |
+| | **Copy from existing** on Justrite | The wizard opens with Justrite's choices, datapack and store structure, no credentials, and a new repository [PL-56e] |  |
+| | **Edit** a project | Its own values are kept, and the datapack and store structure are filled in [PL-56e] |  |
+| | Delete the scratch copy | It's gone, and its stored secrets go with it [PL-64] |  |
+
+**Creating a project: storefront**
+
+| | Do this | Expect | Result |
+|---|---|---|---|
+| | Create a new repository in the Storefront area | The new repository becomes the selected one; the Code Sync notice sits centred [EDS-18, EDS-19] |  |
+| | Pick an **empty repository an organization made for you** | Setup writes a first commit, applies the template and finishes [EDS-17 — *built, not yet tried live*] |  |
+| | Trigger a GitHub organization refusal (single sign-on not authorized, or an org that hasn't approved the app) | A plain message saying what to do, not "Access denied" [EDS-17] |  |
+| ★ | **Add a demo** by link to a colleague's storefront (e.g. `sayurihanki/aistore`) | It shows "Built on Adobe's Commerce boilerplate …", warns if older than 6.0.0, and says whether you can read their DA.live site, and who must grant access if not [EDS-13, EDS-22] |  |
+| | Zip or share a storefront that has a `.env` file in it | The `.env` file is never in the zip, the shared bundle or the sync [security fix] |  |
+
+**The project dashboard**
+
+| | Do this | Expect | Result |
+|---|---|---|---|
+| ★ | Run the **Storefront Report** on a storefront forked from our template | It says what it's built on and which fixes fit. If the template has newer code, it offers to bring it in, and the default is No [EDS-13f] |  |
+
+**Category and product pages (Edge Delivery storefronts)**
+
+| | Do this | Expect | Result |
+|---|---|---|---|
+| | Before creating, hand-build a page for one category at another address (a product list block naming it) | No second page is written; the menu links to your page and the summary says so [EDS-24 — *not yet run live*] |  |
+| | Edit one Demo Builder category page in DA.live, then **Republish** | Your edit survives [EDS-24] |  |
+| | **Reset** the scratch project | The nav and the unedited category pages come back exactly; edited pages are left alone [EDS-24] |  |
+| ★ | With the project open, add a category in Commerce Admin set to "Include in Menu" (wait a few minutes) | A notice names it and offers **Add pages** or **Always add for this project**. **Add pages** writes and publishes it [EDS-27 — *notice not yet seen live*] |  |
+| | Turn on `demoBuilder.categoryPages.autoAdd` and add another category | Its page is added and published without asking, then a notice says what was added, with **Stop for this project** [EDS-27 — *not yet seen live*] |  |
+| | Ask the agent "Are any categories missing pages? Add them." | It lists them, then asks before adding. It can't turn the automatic setting on [EDS-27 — *proven on Justrite*] |  |
+| | Reset or delete a project whose storefront repository another project on this machine also uses | It refuses and names the other project [EDS-26] |  |
+| | Command palette → **Manage DA.live Sites**, delete a throwaway site | The confirmation says its pages come off the live site. Afterwards its aem.live pages answer 404; if any couldn't be unpublished, the message names the site [EDS-31 — *not yet run live*] |  |
+
+**App Builder integrations (scratch project)**
+
+| | Do this | Expect | Result |
+|---|---|---|---|
+| ★ | Add the blank starter app, name it, then use **Save to GitHub** on its card | It asks first (public repository, file count). One commit lands on GitHub, with no `.env`, `node_modules` or `dist`. Then **Delete its GitHub repository** undoes it, and the app is a starter again [AB-1c — *first real run*] |  |
+| | Add any integration | It gets its own Adobe workspace, and no Stage workspace is created [AB-23, AB-24] |  |
+| | Open an integration's **Settings** from its tile | Settings are edited there, not on Configure Project; saving redeploys [AB-21] |  |
+| | Read the integration's detail panel, then **Remove** it | The panel explains the optional App Management listing. Remove warns the listing stays until unassociated in Commerce Admin, and reports anything left behind [AB-11, AB-12, AB-33] |  |
+| | (If you can) use a project where you aren't a developer on the Commerce product profile | A plain explanation of who can fix it, not a raw Adobe error [AB-18] |  |
+| | After redeploying the ERP integration, ask the agent to list the workspace's Runtime triggers | No `erp-prices-hourly-timer` or other timer left from an earlier deploy [AB-58] |  |
+
+**The ERP pair (scratch project, or Justrite after a reset)**
+
+| | Do this | Expect | Result |
+|---|---|---|---|
+| ★ | **Add the ERP integration** and type an ERP name | The first ERP is named what you typed. It can't be renamed later, by design [AB-16o, AB-67] |  |
+| ★ | **Add another ERP** on its card | It asks for a name and which products it owns (by website, product attribute or warehouse) and gets an unused look. **Check the default ownership choice:** through the agent tool today it defaulted to "products sold on the base website" [AB-64, AB-51] |  |
+| | In the ERP, open the **user menu → Appearance**, then **Settings** | Appearance has a live preview of theme, logo and navigation style; Settings is a form an ERP user edits [AB-59] |  |
+
+**Running the demo: order to cash, on Justrite**
+
+| | Do this | Expect | Result |
+|---|---|---|---|
+| ★ | In each ERP, confirm, ship and invoice its part | Commerce shows the shipments and invoices. Each ERP's on-hand stock drops by what it shipped [AB-26g, AB-63] |  |
+| | Ship or invoice from **Commerce Admin** instead | The change reaches the right ERP [AB-26g] |  |
+| | Order with a cart price rule | Each ERP line shows its discount, carried through the invoice, return and credit memo [AB-16l] |  |
+| ★ | Create a return in Commerce Admin for both lines | Each ERP gets a return for its line; receiving it and posting a credit memo gives Commerce a credit memo for just those lines, and the return closes [AB-16e, AB-26r] |  |
+| | **Repeat order** in the ERP | A new order with the same lines [AB-26r] |  |
+| | Rename a product in the ERP twice within 20 seconds | The second edit sticks [AB-62] |  |
+| ★ | At **1280 pixels wide**, go through Pricing, Sales Orders, an order with open lines, Customers and Settings | No button is cut off. Remove, Edit and Close are first in their rows. Settings is one column [today's fix] |  |
+| | Drag a few column edges in any ERP grid | Text and number columns resize [grid audit] |  |
+| | Follow the order's progress strip on an order with a return | All stages fit at 1280 with no sideways scroll [today's fix] |  |
+
+**Using an agent (in a project's Claude Code chat)**
+
+| | Ask the agent | Expect | Result |
+|---|---|---|---|
+| ★ | "Edit the home page headline and publish it" | It asks before writing, and again before publishing [write_page] |  |
+| | "Copy the Justrite project as justrite-copy" | A new project with no credentials [PL-56f] |  |
+| | "Create a project for the Justrite website and store view" | The store scope is set, so the right products show [AI-11] |  |
+| ★ | "Add the ERP integration; call the ERP Brand B ERP" (scratch project) | The first ERP is named Brand B ERP. The agent asks you for the name first, because it can't change later [AB-67] |  |
+| | Give it a short catalog brief (scratch store) | It shows a plan before writing, works in a safe order, checks shoppers can see the result, and lists how to undo it [AI-10 — *first real run*] |  |
+| | "Why did the last deploy fail?" | It reads Runtime activations, including the App Management installer's runs [AB-31, AB-32] |  |
+| | "List this project's event setups and remove the unused one" | It lists them and asks before removing [AB-6] |  |
+| | "Add the blank starter app; call it Test App" (scratch project) | Its answer calls it Test App, not the catalog name [AB-34] |  |
+| | "Does the ERP have a record for SKU NOT-A-REAL-SKU?" | A plain answer that Commerce doesn't have that product, not a 500 error [AB-54] |  |
+| | "Show the Accuform ERP's settings, then set its sales organization for one website" (scratch project) | It reads both settings, asks before the write, and the Admin page's Settings tab shows the same value [AB-16j] |  |
+| | "Delete the test customer you just created" (scratch store) | A consent dialog before anything is deleted; the customer is gone afterwards [AB-29] |  |
+
+**Nothing to click: the gate is the proof**
+
+| | What | Proof | Result |
+|---|---|---|---|
+| | Test and enforcer fixes | The suites that pin them are green [PL-35, PL-36, PL-51, PL-63, PL-67] | gate |
+| | Dead handshake field removed; every AI-bundle writer goes through the hash-and-skip seam | `ai-bundle-coherence.test.ts` reads every writer [PL-37, PL-58] | gate |
+| | A component update carries a renamed environment variable | `envMerge` tests; no shipped component has renamed one yet [PL-24] | gate |
+| | The wizard's two config warnings reach Debug Logs | Only a hand-edited project file triggers them; `wizardHelpers` tests pin the sink [PL-65] | gate |
+| | Moving projects feature page | `docs/systems/moving-projects.md`, pinned by `cited-identifiers.test.ts` [PL-56g] | gate |
+| | ERP research the programme was built on | The findings are the deliverable; AB-26 used them [AB-26a, AB-26x] | gate |
+| | The real-VS-Code UI tests | Run `npm run test:ui` and say whether it passes [PL-66] |  |
+
+**Known gaps as of 2026-10-04: do not report these as bugs** (not re-checked since)
+
+- One ERP heading ("Amount") is still cut at 1280 on an order line that has both a discount and
+  quantity left to close. The button still shows. Fixing it needs a column removed (your call).
+- **Guest prices on Justrite show $0.00.** Signed-in company buyers see prices; guests and the
+  General group get none, while a request with no group gets list prices. Under investigation, not
+  caused by the page work.
+- **Signed-out visitors can't open product pages on Justrite** (they land on Not Found). Commerce's
+  `products(skus:)` returns nothing for the guest group while search works — the same catalog bug as
+  the $0.00 prices, reported to the product team. Signed-in buyers are fine.
+- An expired DA.live sign-in can read as "no publishable pages" on Republish, and as still signed
+  in [EDS-29, EDS-30, filed].
+- Optimizer support (PL-60) and app-only projects (AB-1b) are designs only.
+- The card payment path (AB-26s card half) needs a card payment method on Justrite first.
