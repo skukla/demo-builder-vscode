@@ -248,4 +248,11 @@ path the copy carried, whatever told it to.
   and is a gap only when the source serves it, so a draft, a stub or an unpublished source page
   is never reported. The source is asked only about those.
 
-Not yet re-run live on bodea.
+**Re-run live on bodea, 2026-10-12 17:00 (`ea1712bb9`).** Both enrichment pages answer 200 (404
+before), with the source's content. Cart, checkout, search and wishlist still 200; the cart,
+global and order label sheets match the source's row counts (160, 29, 223) with no hand repair.
+The check read 106 paths, not 57, and named one real gap:
+`/experiments/index5/experiment-demo-2026/challenger-2`. The source serves it (it is in her
+sitemap); the publish skips the `experiments` folder ("A/B test config"). It is a variant of
+an old experiment; the home page's current experiment is `inactive`, ended 2026-05-28, and
+names its variant by an absolute URL on the source site. Left as is pending the owner's call.
