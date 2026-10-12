@@ -66,7 +66,12 @@ export function convertSpreadsheetJsonToHtml(json: Record<string, unknown>): str
                         data?: Record<string, unknown>[];
                     };
                     if (!sheet?.data) return '';
-                    return createHtmlTable(sheet.columns || [], sheet.data, name);
+                    // A served sheet names no columns (format version 3 carries
+                    // total/offset/limit/data only), so they come from the rows, as
+                    // the single-sheet branch below takes them. With `[]` here every
+                    // multi-sheet document was uploaded as an empty table (EDS-40).
+                    const columns = sheet.columns || Object.keys(sheet.data[0] || {});
+                    return createHtmlTable(columns, sheet.data, name);
                 })
                 .filter(Boolean)
                 .join('\n');

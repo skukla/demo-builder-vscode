@@ -16,6 +16,7 @@
  * @module features/eds/services/daLive/daLiveCopyPaths
  */
 
+import { PLACEHOLDER_STUB_PATHS } from '../placeholderStubs';
 import { getRuntimeSurfaces, type RuntimeSurfaceSource } from '../runtimeSurfaceResolver';
 import type { DaLiveContentSource } from '../types';
 import type { DaLiveContentDiscovery } from './daLiveContentDiscovery';
@@ -123,6 +124,16 @@ export async function backfillEssentialPaths(
     // Spreadsheets: served as .json on CDN, stored as .xlsx on DA.live.
     for (const configPath of inventory.spreadsheets) {
         await probeAndAdd(configPath, `${baseUrl}${configPath}.json`);
+    }
+
+    // The label sheets, one per storefront area, at `/placeholders/<area>`. The
+    // inventory's `/placeholders` above is a single sheet of that name, which a
+    // current storefront does not have, so a brand's labels were never asked for
+    // and the copy published the stubs in their place (EDS-40: a colleague's demo
+    // with 160 cart labels arrived with none). The areas are the stub list's: a
+    // sheet copied here is content, and content shadows the stub of the same path.
+    for (const sheet of PLACEHOLDER_STUB_PATHS) {
+        await probeAndAdd(`/${sheet}`, `${baseUrl}/${sheet}.json`);
     }
 
     // HTML fragment documents (nav, footer): not indexed but loaded at runtime.

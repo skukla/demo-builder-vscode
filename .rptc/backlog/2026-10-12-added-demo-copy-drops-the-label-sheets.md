@@ -86,3 +86,25 @@ Two things follow, in this order:
    exact set for that repository, whatever its version, and for blocks its author added.
    The fixed list then stays only as the fallback when the code cannot be read.
 
+## Built 2026-10-12, and what is still unproven
+
+Two faults, one behind the other:
+
+1. **The copy never asked.** `backfillEssentialPaths` now probes `/placeholders/<area>` on
+   the source for every area in `PLACEHOLDER_STUB_PATHS` and adds the ones that answer.
+   Creation and reset both go through it, so they agree.
+2. **Had it asked, the sheets would have arrived empty.** These sheets are served as
+   multi-sheet documents (`data` plus a `dnt` sheet) and a served sheet names no columns.
+   `convertSpreadsheetJsonToHtml` took columns from the rows for a single sheet and used
+   `[]` for a multi-sheet, so every multi-sheet upload was a table with no cells. It now
+   takes them from the rows in both. The `dnt` sheet is still left out, as before.
+
+**Not proven live.** No copy has been run with this build, so nothing has been read back
+from a destination site. Unknown until one is: that DA.live turns the posted table into a
+sheet at `placeholders/<area>`, that the publish step publishes it, and that the published
+sheet then shadows the stub of the same path. The destination will serve a SINGLE sheet
+(no `dnt`), where the source serves a multi-sheet; a storefront's `fetchPlaceholders` has
+to read both, and that was not checked against the 4.0.1 code.
+
+Still to do from this item: derive the stub list from the demo's own code.
+
