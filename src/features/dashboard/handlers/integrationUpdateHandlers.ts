@@ -43,6 +43,8 @@ import {
     updateIntegrationPair,
 } from '@/features/app-builder/services/integrationPairUpdate';
 import { checkIntegrationUpdates, type IntegrationUpdateCheck } from '@/features/app-builder/services/integrationUpdateCheck';
+import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
+import type { OrgAwareAuthManager } from '@/features/authentication/services/detectProjectOrgMismatch';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import {
     sendAppBuilderComponentStatusUpdate,
@@ -92,15 +94,34 @@ export async function checkProjectIntegrationUpdates(
 }
 
 /**
+ * The org list for a check nobody asked for, read WITHOUT the CLI. The ordinary
+ * `getOrganizations` falls back to `aio console org list`, and with an expired
+ * session that command opens a browser to sign in: on 2026-10-11 reloading the
+ * window re-signed the owner in, unasked, because the update check runs on load.
+ * The SDK-only read cannot do that. When it has no answer (signed out, or the SDK
+ * could not say) this throws, which the org step reads as "cannot tell".
+ */
+function orgListWithoutSignIn(authManager: AuthenticationService): OrgAwareAuthManager {
+    return {
+        getOrganizations: async () => {
+            const orgs = await (await authManager.getEntityServices()).orgReads.getOrganizationsSdkOnly();
+            if (!orgs) throw new Error('The Adobe organizations could not be read without a sign-in.');
+            return orgs;
+        },
+    };
+}
+
+/**
  * The finder's probe, bound to this context: the check, the guard chain's own
- * org step (`orgGuard`, the step `runGuards` runs), and the catalog.
+ * org step (`orgGuard`, the step `runGuards` runs), and the catalog. It lists
+ * updates before the SC has chosen anything, so its org step never signs in.
  */
 export function integrationUpdateProbe(context: HandlerContext): IntegrationUpdateProbe {
     return {
         check: (project) => checkProjectIntegrationUpdates(context, project),
         inOtherOrg: async (project) => {
             const authManager = context.authManager ?? ServiceLocator.getAuthenticationService();
-            return (await orgGuard(context, project, authManager)) !== undefined;
+            return (await orgGuard(context, project, orgListWithoutSignIn(authManager))) !== undefined;
         },
         catalog: getAppBuilderComponentCatalog(),
     };

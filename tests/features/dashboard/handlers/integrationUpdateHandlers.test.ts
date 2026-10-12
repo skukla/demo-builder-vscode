@@ -493,6 +493,78 @@ describe('checkProjectIntegrationUpdates and updateIntegrationPairFor — a proj
         expect(await integrationUpdateProbe(mockContext).inOtherOrg(otherProject())).toBe(false);
     });
 
+    // The check runs when the window loads, before the SC has asked for anything. The
+    // org list's ordinary read falls back to `aio console org list`, which opens a
+    // browser to sign in when the session has expired (2026-10-11: a reload re-signed
+    // the owner in unasked). So the ARGUMENT is what matters here, and the real
+    // detector is driven with it: a mocked detector answers the same whatever it is
+    // handed, which is how the wrong read went unnoticed.
+    describe('the probe reads the org list without ever opening a browser', () => {
+        const actual = jest.requireActual('@/features/authentication/services/detectProjectOrgMismatch');
+        const { detectProjectOrgMismatch } = jest.requireMock(
+            '@/features/authentication/services/detectProjectOrgMismatch',
+        );
+
+        function authManagerReaching(orgs: Array<{ id: string; code: string; name: string }> | undefined) {
+            const getOrganizations = jest.fn(async () => {
+                throw new Error('the browser-capable read was used');
+            });
+            const getOrganizationsSdkOnly = jest.fn(async () => orgs);
+            const authManager = {
+                getOrganizations,
+                getEntityServices: async () => ({ orgReads: { getOrganizationsSdkOnly } }),
+            };
+            return { authManager, getOrganizations, getOrganizationsSdkOnly };
+        }
+
+        function contextWith(authManager: unknown) {
+            const { mockContext } = setup(pairProject());
+            (mockContext as { authManager?: unknown }).authManager = authManager;
+            return mockContext;
+        }
+
+        function projectInOrg(organization: string): Project {
+            const project = otherProject();
+            project.adobe = { ...project.adobe, organization };
+            return project;
+        }
+
+        it('says a project is in another org from the SDK-only list', async () => {
+            const { authManager, getOrganizations, getOrganizationsSdkOnly } = authManagerReaching([
+                { id: 'ORG-A', code: 'ORG-A@AdobeOrg', name: 'Org A' },
+            ]);
+            detectProjectOrgMismatch.mockImplementationOnce(actual.detectProjectOrgMismatch);
+
+            const inOtherOrg = await integrationUpdateProbe(contextWith(authManager)).inOtherOrg(projectInOrg('ORG-B'));
+
+            expect(inOtherOrg).toBe(true);
+            expect(getOrganizationsSdkOnly).toHaveBeenCalledTimes(1);
+            expect(getOrganizations).not.toHaveBeenCalled();
+        });
+
+        it('says a project is in this org from the SDK-only list', async () => {
+            const { authManager, getOrganizations } = authManagerReaching([
+                { id: 'ORG-A', code: 'ORG-A@AdobeOrg', name: 'Org A' },
+            ]);
+            detectProjectOrgMismatch.mockImplementationOnce(actual.detectProjectOrgMismatch);
+
+            const inOtherOrg = await integrationUpdateProbe(contextWith(authManager)).inOtherOrg(projectInOrg('ORG-A'));
+
+            expect(inOtherOrg).toBe(false);
+            expect(getOrganizations).not.toHaveBeenCalled();
+        });
+
+        it('cannot tell when the session has expired, and still asks for no sign-in', async () => {
+            const { authManager, getOrganizations } = authManagerReaching(undefined);
+            detectProjectOrgMismatch.mockImplementationOnce(actual.detectProjectOrgMismatch);
+
+            const inOtherOrg = await integrationUpdateProbe(contextWith(authManager)).inOtherOrg(projectInOrg('ORG-B'));
+
+            expect(inOtherOrg).toBe(false);
+            expect(getOrganizations).not.toHaveBeenCalled();
+        });
+    });
+
     it('the pair update runs the guards, updates in order, saves in place, and telegraphs no rows of the open project', async () => {
         const { mockContext } = setup(pairProject());
         const other = otherProject();
