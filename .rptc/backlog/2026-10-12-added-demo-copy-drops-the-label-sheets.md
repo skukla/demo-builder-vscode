@@ -58,3 +58,7 @@ the way the three sheets above are copied. Content then shadows the stub, which 
 
 `/placeholders/company-switcher.json` was requested and stubbed nowhere, so it 404ed. It is
 in the stub list now (`ea374381d`).
+
+## Shipped so far
+
+- 2026-10-12  docs(backlog): file EDS-40, the added-demo copy drops the label sheets; AI-15 gains the 2026-10-12 incident (`137798659`)
