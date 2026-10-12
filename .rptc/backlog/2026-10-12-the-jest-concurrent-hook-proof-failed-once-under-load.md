@@ -47,3 +47,7 @@ Not known: why. Two candidates, neither tested:
 
 The cause is found by a test that reproduces it, or both candidates are closed off: fixture pids
 that cannot collide, and a proof that tells "the router said pass" from "the router did not run".
+
+## Shipped so far
+
+- 2026-10-12  docs(backlog): file PL-74, the jest-concurrent hook proof failed once under load (`e65138333`)
