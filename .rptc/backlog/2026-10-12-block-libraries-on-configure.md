@@ -51,6 +51,7 @@ install at once or leave it to the update check; the first is what an SC expects
 
 - 2026-10-12  docs(backlog): file EDS-39, choose block libraries on Configure; correct test row 3.4 (`961d972f2`)
 - 2026-10-12  feat(configure): choose block libraries on the Authoring tab (`9f2c73f26`)
+- 2026-10-12  feat(configure): Block Libraries is its own tab, and Save applies the change (`70d62496f`)
 
 ## Left open by the first build (2026-10-12)
 
