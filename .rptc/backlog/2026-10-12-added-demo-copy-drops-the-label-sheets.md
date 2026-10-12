@@ -62,3 +62,26 @@ in the stub list now (`ea374381d`).
 ## Shipped so far
 
 - 2026-10-12  docs(backlog): file EDS-40, the added-demo copy drops the label sheets; AI-15 gains the 2026-10-12 incident (`137798659`)
+
+## The stub list cannot know an added demo's code (owner, 2026-10-12)
+
+`company-switcher` was not Jen's own addition and not missing from the list by oversight: it
+is what Adobe's boilerplate asked for until template #1213 (2026-04-22), and her repository
+was made on 4.0.1 in February. The list was measured on the template Demo Builder creates
+from, which is 6.0.0 and asks for `quick-order` instead.
+
+That is the general case for an added demo: it keeps whatever code it was made with, on any
+boilerplate version, plus anything its author wrote. A list fixed in the extension describes
+ONE version of ONE template.
+
+Two things follow, in this order:
+
+1. **Copy the demo's own sheets first** (the body of this item). A stub is a stand-in for a
+   sheet nobody authored. Here the author did write them, and the stub hid that they were
+   lost. For a copy of someone's demo, carrying their content matters more than a quiet console.
+2. **Then stub what the demo's code asks for, not what a list says.** The storefront's code
+   is already in hand when the stubs are committed, and every request is a literal
+   `fetchPlaceholders('placeholders/<area>.json')` call. Reading those call sites gives the
+   exact set for that repository, whatever its version, and for blocks its author added.
+   The fixed list then stays only as the fallback when the code cannot be read.
+

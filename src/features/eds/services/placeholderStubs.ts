@@ -44,10 +44,14 @@ export const PLACEHOLDER_STUB_PATHS: readonly string[] = [
     'placeholders/search',
     'placeholders/wishlist',
     'placeholders/company',
-    // Added 2026-10-12: a storefront on boilerplate 4.0.1 requests it (one call site in
-    // its blocks/) and it 404ed on two Demo Builder storefronts. That version does not
-    // request `quick-order`, so this list is the UNION across versions, not one
-    // version's sixteen; a stub nobody requests costs one small file.
+    // Added 2026-10-12, for storefronts on an OLDER boilerplate. Adobe's
+    // `scripts/initializers/company-switcher.js` fetched this sheet until
+    // adobe-commerce/boilerplate-b2b-template #1213 (2026-04-22, "removed empty
+    // company-switcher placeholders from initializer"). A demo added from a
+    // colleague's repository keeps the code it was made with: one made on 4.0.1 in
+    // February 2026 still asks, and got a 404. Storefronts made from today's
+    // template (6.0.0) do not ask, and ask for `quick-order` instead. So this list
+    // is the UNION across versions; a stub nobody requests costs one small file.
     'placeholders/company-switcher',
     'placeholders/purchase-order',
     'placeholders/quick-order',

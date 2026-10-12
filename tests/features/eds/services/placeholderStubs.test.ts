@@ -23,8 +23,8 @@ describe('PLACEHOLDER_STUB_PATHS', () => {
         // Measured by grepping fetchPlaceholders call sites in a live
         // boilerplate-b2b storefront's scripts/ + blocks/. A new dropin area
         // means a new request path — re-measure, then update here.
-        // `company-switcher` came from a 4.0.1 storefront on 2026-10-12, which
-        // asks for it and not for `quick-order`: the list is the union.
+        // `company-switcher` is what a storefront on boilerplate 4.0.1 asks for;
+        // Adobe stopped asking in April 2026 (template #1213). The list is the union.
         expect([...PLACEHOLDER_STUB_PATHS].sort()).toEqual([
             'placeholders/account',
             'placeholders/auth',
