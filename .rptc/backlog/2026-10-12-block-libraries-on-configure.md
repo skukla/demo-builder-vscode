@@ -50,3 +50,18 @@ install at once or leave it to the update check; the first is what an SC expects
 ## Shipped so far
 
 - 2026-10-12  docs(backlog): file EDS-39, choose block libraries on Configure; correct test row 3.4 (`961d972f2`)
+
+## Left open by the first build (2026-10-12)
+
+- **`wizard-misc.css`'s header is now wrong.** It says the sheet is "imported by the `wizard`
+  entry ALONE". The Configure entry imports it too, for one rule, `.settings-link` (the
+  picker's "Configure custom libraries in Settings" line). The clean fix is to move that rule
+  to a sheet both entries already share and drop the import. Either is a stylesheet edit, which
+  needs a resting visual capture, and the capture browser was not connected in the session that
+  built this. The Configure entry's own comment says what is true.
+- **Not looked at in a browser by the builder.** The owner's check on BJU is the first look.
+- **A custom library changed in VS Code settings shows only after Configure is reopened.**
+- **A custom library that is recorded on the project but no longer in settings** is hidden and
+  kept by Configure. Edit drops it. Decide which is right.
+- **Install on Save.** Save only records; Check for Updates installs. The screen says so.
+

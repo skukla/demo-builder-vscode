@@ -34,6 +34,7 @@ import {
     handleCancelConfigure,
     handleOpenExternal,
     handleOpenEdsSettings,
+    handleOpenBlockLibrarySettings,
 } from '@/features/dashboard/handlers/configureHandlers';
 import { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { validateURL } from '@/core/validation/URLValidator';
@@ -97,6 +98,7 @@ describe('configureHandlers', () => {
             expect(hasHandler(configureHandlers, 'openExternal')).toBe(true);
             expect(hasHandler(configureHandlers, 'open-eds-settings')).toBe(true);
             expect(hasHandler(configureHandlers, 'discover-store-structure')).toBe(true);
+            expect(hasHandler(configureHandlers, 'open-block-library-settings')).toBe(true);
         });
 
         it('should NOT include get-components-data (the wizard owns that message)', () => {
@@ -108,7 +110,7 @@ describe('configureHandlers', () => {
             expect(hasHandler(configureHandlers, 'get-components-data')).toBe(false);
         });
 
-        it('should have exactly 5 handlers', () => {
+        it('should have exactly 6 handlers', () => {
             const types = getRegisteredTypes(configureHandlers) as Array<
                 keyof typeof configureHandlers
             >;
@@ -117,7 +119,10 @@ describe('configureHandlers', () => {
             // fields as the wizard, so it must answer the same probe or the two
             // surfaces disagree about whether those fields need filling in.
             // 6 → 5: get-components-data removed 2026-08-21 (see the test above).
-            expect(types).toHaveLength(5);
+            // 5 → 6: open-block-library-settings added 2026-10-12 (EDS-39) — the
+            // Authoring tab now shows the wizard's block library picker, whose
+            // "Configure custom libraries in Settings" link needs an answer here.
+            expect(types).toHaveLength(6);
         });
 
         it('should NOT include AI handlers (they live in aiHandlers.ts)', () => {
@@ -202,6 +207,19 @@ describe('configureHandlers', () => {
             expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
                 'workbench.action.openSettings',
                 'demoBuilder.daLive'
+            );
+            expect(result.success).toBe(true);
+        });
+    });
+
+    describe('handleOpenBlockLibrarySettings', () => {
+        it('opens VS Code settings at the custom block libraries setting', async () => {
+            const context = createMockContext();
+            const result = await handleOpenBlockLibrarySettings(context);
+
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+                'workbench.action.openSettings',
+                'demoBuilder.blockLibraries.custom'
             );
             expect(result.success).toBe(true);
         });

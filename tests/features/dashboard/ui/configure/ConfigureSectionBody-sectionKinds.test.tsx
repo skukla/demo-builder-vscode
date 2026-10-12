@@ -58,6 +58,8 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
 import {
     CATALOG,
     COMMERCE,
+    CUSTOM_LIBRARY,
+    blockLibrariesOf,
     renderSectionBody,
     sectionOf,
     serviceGroupSection,
@@ -154,6 +156,88 @@ describe('the Authoring section', () => {
         fireEvent.click(screen.getByRole('link'));
 
         expect(mockPostMessage).toHaveBeenCalledWith('open-eds-settings');
+    });
+});
+
+describe('block libraries on the Authoring section', () => {
+    const card = (name: string) => screen.getByRole('button', { name: new RegExp(name) });
+
+    it('shows each library as the wizard does: ticked, unticked, and locked when native', () => {
+        renderSectionBody({ section: AUTHORING_SECTION, blockLibraries: blockLibrariesOf() });
+
+        expect(screen.getByText('Block Libraries')).toBeInTheDocument();
+        expect(card('Demo Team Block Collection')).toHaveAttribute('aria-pressed', 'true');
+        expect(card('Demo Builder Blocks')).toHaveAttribute('aria-pressed', 'false');
+        expect(card('Bodea Blocks')).toBeDisabled();
+    });
+
+    it('reports a tick and an untick to its owner, by library id', () => {
+        const blockLibraries = blockLibrariesOf();
+        renderSectionBody({ section: AUTHORING_SECTION, blockLibraries });
+
+        fireEvent.click(card('Demo Builder Blocks'));
+        fireEvent.click(card('Demo Team Block Collection'));
+
+        expect(blockLibraries.onBlockLibraryToggle).toHaveBeenNthCalledWith(
+            1,
+            'demo-builder-blocks',
+            true
+        );
+        expect(blockLibraries.onBlockLibraryToggle).toHaveBeenNthCalledWith(
+            2,
+            'demo-team-blocks',
+            false
+        );
+    });
+
+    it('says a ticked library is installed by Check for Updates', () => {
+        renderSectionBody({ section: AUTHORING_SECTION, blockLibraries: blockLibrariesOf() });
+
+        expect(screen.getByText(/Check for Updates/)).toBeInTheDocument();
+    });
+
+    it('says plainly that unticking leaves the blocks already added in the storefront', () => {
+        renderSectionBody({ section: AUTHORING_SECTION, blockLibraries: blockLibrariesOf() });
+
+        expect(screen.getByText(/does not remove/i)).toBeInTheDocument();
+    });
+
+    it('offers the custom libraries from settings and reports a tick with the library', () => {
+        const blockLibraries = blockLibrariesOf({
+            choices: { native: [], available: [], customDefaults: [CUSTOM_LIBRARY] },
+        });
+        renderSectionBody({ section: AUTHORING_SECTION, blockLibraries });
+
+        fireEvent.click(card('My Blocks'));
+
+        expect(blockLibraries.onCustomLibraryToggle).toHaveBeenCalledWith(CUSTOM_LIBRARY, true);
+    });
+
+    it('its settings link asks for the block library settings by name', () => {
+        const blockLibraries = blockLibrariesOf({
+            choices: { native: [], available: [], customDefaults: [CUSTOM_LIBRARY] },
+        });
+        renderSectionBody({ section: AUTHORING_SECTION, blockLibraries });
+
+        fireEvent.click(screen.getByText('Configure custom libraries in Settings'));
+
+        expect(mockPostMessage).toHaveBeenCalledWith('open-block-library-settings');
+    });
+
+    it('draws no block library section when the project has none to choose from', () => {
+        const blockLibraries = blockLibrariesOf({
+            choices: { native: [], available: [], customDefaults: [] },
+        });
+        renderSectionBody({ section: AUTHORING_SECTION, blockLibraries });
+
+        expect(screen.queryByText('Block Libraries')).not.toBeInTheDocument();
+        expect(screen.getByText('DA.live Classic')).toBeInTheDocument();
+    });
+
+    it('keeps block libraries off every other section', () => {
+        renderSectionBody({ section: PROJECT_SECTION, blockLibraries: blockLibrariesOf() });
+
+        expect(screen.queryByText('Block Libraries')).not.toBeInTheDocument();
     });
 });
 

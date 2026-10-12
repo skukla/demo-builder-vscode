@@ -92,6 +92,45 @@ describe('useConfigureSave', () => {
         });
     });
 
+    it('sends the block libraries the SC changed, for an EDS project', async () => {
+        const { result } = render({
+            isEds: true,
+            blockLibrarySelection: {
+                selectedBlockLibraries: ['demo-builder-blocks'],
+                customBlockLibraries: [],
+            },
+        });
+
+        await act(() => result.current.handleSave());
+
+        expect(mockRequest.mock.calls[0][1]).toMatchObject({
+            selectedBlockLibraries: ['demo-builder-blocks'],
+            customBlockLibraries: [],
+        });
+    });
+
+    it('sends no block libraries when the SC never touched the picker', async () => {
+        const { result } = render({ isEds: true });
+
+        await act(() => result.current.handleSave());
+
+        expect(mockRequest.mock.calls[0][1]).not.toHaveProperty('selectedBlockLibraries');
+        expect(mockRequest.mock.calls[0][1]).not.toHaveProperty('customBlockLibraries');
+    });
+
+    it('never sends block libraries for a project that is not EDS', async () => {
+        const { result } = render({
+            blockLibrarySelection: {
+                selectedBlockLibraries: ['demo-builder-blocks'],
+                customBlockLibraries: [],
+            },
+        });
+
+        await act(() => result.current.handleSave());
+
+        expect(mockRequest.mock.calls[0][1]).not.toHaveProperty('selectedBlockLibraries');
+    });
+
     it('drops the blank placeholder of a stored secret the user never touched', async () => {
         const { result } = render({
             componentConfigs: { backend: { ADMIN_PASSWORD: '', ADMIN_USER: 'admin' } },

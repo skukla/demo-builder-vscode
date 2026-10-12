@@ -14,6 +14,7 @@
 
 import { Text, Flex, Link, TextField, RadioGroup, Radio } from '@adobe/react-spectrum';
 import React from 'react';
+import { BlockLibrariesSection, type BlockLibrariesSectionProps } from './BlockLibrariesSection';
 import { slicedSectionId, type ConfigureSection } from './configureSections';
 import type { ServiceGroup, UniqueField } from './configureTypes';
 import { ConfigSection } from '@/core/ui/components/forms/ConfigSection';
@@ -52,6 +53,11 @@ export interface ConfigureSectionBodyProps {
     /** EDS authoring-experience preference. */
     authoringExperience: AuthoringExperience;
     onAuthoringExperienceChange: (value: AuthoringExperience) => void;
+    /**
+     * The block libraries choice, drawn under the authoring experience (EDS-39).
+     * Authoring is the one EDS-only tab, so it is the only section that takes it.
+     */
+    blockLibraries?: BlockLibrariesSectionProps;
 }
 
 /**
@@ -255,6 +261,7 @@ export function ConfigureSectionBody({
     storeStructureReady,
     authoringExperience,
     onAuthoringExperienceChange,
+    blockLibraries,
 }: ConfigureSectionBodyProps): React.ReactElement | null {
     if (section.kind === 'project') {
         return (
@@ -271,10 +278,13 @@ export function ConfigureSectionBody({
 
     if (section.kind === 'authoring') {
         return (
-            <AuthoringBody
-                value={authoringExperience}
-                onChange={onAuthoringExperienceChange}
-            />
+            <>
+                <AuthoringBody
+                    value={authoringExperience}
+                    onChange={onAuthoringExperienceChange}
+                />
+                {blockLibraries ? <BlockLibrariesSection {...blockLibraries} /> : null}
+            </>
         );
     }
 

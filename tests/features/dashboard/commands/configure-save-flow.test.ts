@@ -92,6 +92,7 @@ interface SaveInternals {
         componentConfigs: Record<string, Record<string, string>>;
         newProjectName?: string;
         authoringExperience?: string;
+        selectedBlockLibraries?: string[];
     }): Promise<unknown>;
     renameProjectIfRequested(project: Project, newName: string | undefined): Promise<Project>;
     applyAuthoringExperienceMetadata(project: Project, experience: string | undefined): boolean;
@@ -263,6 +264,35 @@ describe('ConfigureProjectWebviewCommand - save spine', () => {
 
             expect(stateManager.saveProject).toHaveBeenCalledWith(project);
             expect(project.componentConfigs).toEqual({ mesh: { A: '1' } });
+        });
+
+        it('records the block libraries the save carries on the project it saves', async () => {
+            const project = edsProject('da-live-classic', {
+                selectedBlockLibraries: ['demo-team-blocks'],
+            });
+            stateManager.getCurrentProject.mockResolvedValue(project);
+
+            await save(command).handleSaveConfiguration({
+                componentConfigs: {},
+                selectedBlockLibraries: ['demo-team-blocks', 'demo-builder-blocks'],
+            });
+
+            expect(stateManager.saveProject).toHaveBeenCalledWith(project);
+            expect(project.selectedBlockLibraries).toEqual([
+                'demo-team-blocks',
+                'demo-builder-blocks',
+            ]);
+        });
+
+        it('keeps the recorded block libraries when the save carries none', async () => {
+            const project = edsProject('da-live-classic', {
+                selectedBlockLibraries: ['demo-team-blocks'],
+            });
+            stateManager.getCurrentProject.mockResolvedValue(project);
+
+            await save(command).handleSaveConfiguration({ componentConfigs: {} });
+
+            expect(project.selectedBlockLibraries).toEqual(['demo-team-blocks']);
         });
 
         it('marks the mesh stale — and only the mesh — when the mesh config changed', async () => {

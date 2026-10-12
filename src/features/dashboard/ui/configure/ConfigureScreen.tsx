@@ -24,8 +24,9 @@
  */
 
 import { Form, Button, View } from '@adobe/react-spectrum';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ConfigureSectionBody } from './ConfigureSectionBody';
+import { useBlockLibrarySelection } from './hooks/useBlockLibrarySelection';
 import { useConfigureFieldRow } from './hooks/useConfigureFieldRow';
 import { useConfigureFieldValues } from './hooks/useConfigureFieldValues';
 import { useConfigureSave } from './hooks/useConfigureSave';
@@ -70,10 +71,36 @@ export function ConfigureScreen({
     existingProjectNames = [],
     isEds = false,
     authoringExperience: initialAuthoringExperience,
+    blockLibraryChoices,
     componentSecretFlags = EMPTY_SECRET_FLAGS,
 }: ConfigureScreenProps) {
     const [authoringExperience, setAuthoringExperience] = useState<AuthoringExperience>(
         initialAuthoringExperience ?? 'da-live-classic',
+    );
+    // The block libraries ticked on the Authoring tab — lifted, like every value here.
+    const {
+        selectedBlockLibraries,
+        customBlockLibraries,
+        toggleBlockLibrary,
+        toggleCustomLibrary,
+        changedSelection,
+    } = useBlockLibrarySelection({ project });
+    const blockLibraries = useMemo(
+        () =>
+            blockLibraryChoices && {
+                choices: blockLibraryChoices,
+                selectedBlockLibraries,
+                customBlockLibraries,
+                onBlockLibraryToggle: toggleBlockLibrary,
+                onCustomLibraryToggle: toggleCustomLibrary,
+            },
+        [
+            blockLibraryChoices,
+            selectedBlockLibraries,
+            customBlockLibraries,
+            toggleBlockLibrary,
+            toggleCustomLibrary,
+        ],
     );
     const {
         projectName,
@@ -109,6 +136,7 @@ export function ConfigureScreen({
         touchedFields,
         isEds,
         authoringExperience,
+        blockLibrarySelection: changedSelection,
     });
 
     // Get all selected components with their data (using extracted hook)
@@ -174,6 +202,7 @@ export function ConfigureScreen({
                                 projectFolder={projectFolder}
                                 authoringExperience={authoringExperience}
                                 onAuthoringExperienceChange={setAuthoringExperience}
+                                blockLibraries={blockLibraries}
                             />
                         </Form>
                     </StepAreaShell>

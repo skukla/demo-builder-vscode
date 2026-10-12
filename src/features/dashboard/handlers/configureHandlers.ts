@@ -58,6 +58,21 @@ export async function handleOpenEdsSettings(_context: HandlerContext): Promise<H
 }
 
 /**
+ * Handle open-block-library-settings — open VS Code settings at the custom
+ * block libraries list. Same message and same target as the creation wizard's
+ * picker, which the Authoring tab reuses (EDS-39).
+ */
+export async function handleOpenBlockLibrarySettings(
+    _context: HandlerContext,
+): Promise<HandlerResponse> {
+    await vscode.commands.executeCommand(
+        'workbench.action.openSettings',
+        'demoBuilder.blockLibraries.custom',
+    );
+    return { success: true };
+}
+
+/**
  * Store discovery, plus: persist the hierarchy it just fetched onto the project.
  *
  * The structure is the only place a store CODE can be turned back into the NAME
@@ -136,6 +151,7 @@ export const configureHandlers = defineHandlers({
     cancel: handleCancelConfigure,
     openExternal: handleOpenExternal,
     'open-eds-settings': handleOpenEdsSettings,
+    'open-block-library-settings': handleOpenBlockLibrarySettings,
     'discover-store-structure': handleDiscoverStoreStructureAndPersist,
     // Whether the OAuth fields need filling in at all. Status only — never a pair.
     'check-credential-service': handleCheckCredentialService,

@@ -7285,7 +7285,7 @@
             "anchors": [
                 "const panel = BaseWebviewCommand.getActivePanel('demoBuilder.configureProject');"
             ],
-            "line": 87,
+            "line": 92,
             "mutants": 1,
             "category": "branch",
             "reason": "Stryker forces the following 'if (panel)' true. With no panel open the body then calls panel.dispose() on undefined, and the TypeError lands in the try/catch that already exists for the already-disposed case \u2014 so the mutant takes the same path to the same no-op. The false variant IS killed (a test asserts the open panel is disposed); only the always-true one is unobservable.",
@@ -10763,7 +10763,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 132,
+            "line": 141,
             "mutants": 1,
             "category": "other",
             "reason": "A useEffect/useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The subscription and the two handlers close over nothing, so identity is the only thing the array can affect and it does not move. Verified by planting all three at once: the sixteen configure suites pass unchanged.",
@@ -13613,7 +13613,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 77,
+            "line": 84,
             "mutants": 1,
             "category": "other",
             "reason": "The deployment-status subscription's dependency array holds no values, so ['Stryker was here'] is just as constant as [] when React compares it element-wise with Object.is on every render: the effect subscribes once on mount and unsubscribes on unmount either way. The listener reads nothing from the render it was created in, only the stable setIsDeploying setter. Survived identically on ConfigureScreen.tsx before the EDS-8 split, where the PL-22 row for the handlers already described the same equivalence.",

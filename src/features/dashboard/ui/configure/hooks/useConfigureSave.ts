@@ -14,6 +14,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { SaveConfigurationResponse } from '../configureTypes';
 import { withStoredSecretsPreserved } from '../storedSecretPayload';
+import type { BlockLibrarySelection } from './useBlockLibrarySelection';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import type { AuthoringExperience, Project } from '@/types/base';
@@ -35,6 +36,11 @@ export interface UseConfigureSaveProps {
     isEds: boolean;
     /** The authoring-experience choice (sent only for EDS projects). */
     authoringExperience: AuthoringExperience;
+    /**
+     * The block libraries to record (EDS only). Undefined while the SC has not
+     * touched the picker, and then nothing about them is sent.
+     */
+    blockLibrarySelection?: BlockLibrarySelection;
 }
 
 export interface UseConfigureSaveReturn {
@@ -62,6 +68,7 @@ export function useConfigureSave({
     touchedFields,
     isEds,
     authoringExperience,
+    blockLibrarySelection,
 }: UseConfigureSaveProps): UseConfigureSaveReturn {
     const [isSaving, setIsSaving] = useState(false);
     const [isDeploying, setIsDeploying] = useState(false);
@@ -88,7 +95,8 @@ export function useConfigureSave({
                     ? projectName.trim()
                     : undefined;
             // The authoring-experience preference is EDS-only; for non-EDS projects
-            // it is omitted entirely so the payload shape is unchanged.
+            // it is omitted entirely so the payload shape is unchanged. The same
+            // goes for the block libraries, which also ride only once changed.
             const result = await webviewClient.request<SaveConfigurationResponse>(
                 'save-configuration',
                 {
@@ -98,7 +106,7 @@ export function useConfigureSave({
                         touchedFields,
                     ),
                     newProjectName,
-                    ...(isEds ? { authoringExperience } : {}),
+                    ...(isEds ? { authoringExperience, ...blockLibrarySelection } : {}),
                 },
             );
             if (!result.success) {
@@ -125,6 +133,7 @@ export function useConfigureSave({
         project,
         isEds,
         authoringExperience,
+        blockLibrarySelection,
     ]);
 
     const handleCancel = useCallback(() => {

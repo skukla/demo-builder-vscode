@@ -19,6 +19,11 @@ import {
 } from '@/features/components/services/commerceSecretMigration';
 import { getComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
 import { withEnvVarKeys } from '@/features/components/services/componentTransforms';
+import {
+    applyBlockLibrarySelection,
+    buildBlockLibraryChoices,
+    type BlockLibrarySelectionInput,
+} from '@/features/dashboard/services/configureBlockLibraries';
 import { sendAuthoringExperienceUpdate } from '@/features/dashboard/services/projectPanelPushes';
 import {
     getEwCanvasBranch,
@@ -48,7 +53,7 @@ const AUTHORING_EXPERIENCES: ReadonlySet<AuthoringExperience> = new Set<Authorin
 // Component configuration type (key-value pairs for environment variables)
 type ComponentConfigs = Record<string, Record<string, string>>;
 
-interface SaveConfigurationData {
+interface SaveConfigurationData extends BlockLibrarySelectionInput {
     componentConfigs: ComponentConfigs;
     newProjectName?: string;
     authoringExperience?: AuthoringExperience;
@@ -186,6 +191,14 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
             existingProjectNames,
             isEds: isEdsProject(project),
             authoringExperience: resolveProjectAuthoringExperience(project),
+            // The setting is read HERE, at the boundary; the lists are built by a
+            // `vscode`-free function from the same loader the wizard's picker uses.
+            blockLibraryChoices: buildBlockLibraryChoices(
+                project,
+                vscode.workspace
+                    .getConfiguration('demoBuilder')
+                    .get<unknown>('blockLibraries.custom'),
+            ),
             componentSecretFlags,
         };
     }
@@ -288,6 +301,10 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
                 project,
                 data.authoringExperience,
             );
+
+            // Record the block libraries ticked on the Authoring tab (EDS-39). Record
+            // only: the update check offers the install, and nothing is removed.
+            applyBlockLibrarySelection(project, data);
 
             await this.stateManager.saveProject(project);
 

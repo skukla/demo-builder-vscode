@@ -20,7 +20,7 @@ import type {
     Project,
     ProjectStatus,
 } from './base';
-import type { CustomBlockLibrary, InstalledBlockLibrary } from './blockLibraries';
+import type { BlockLibrary, CustomBlockLibrary, InstalledBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import type { EnvVarDefinition, TransformedComponentDefinition } from './components';
 import type { AddedDemo } from './projectFile';
@@ -221,6 +221,20 @@ export interface ConfigureComponentsData {
 /**
  * `ConfigureProjectWebviewCommand.getInitialData` → the configure bundle.
  */
+/**
+ * The block libraries the Configure screen can offer one project: the same three
+ * lists the creation wizard's picker takes. All empty unless the project's stack
+ * is Edge Delivery.
+ */
+export interface ConfigureBlockLibraryChoices {
+    /** Libraries that came with the storefront: shown ticked and locked. */
+    native: BlockLibrary[];
+    /** Catalog libraries the SC may tick or untick. */
+    available: BlockLibrary[];
+    /** Custom libraries from the `demoBuilder.blockLibraries.custom` setting. */
+    customDefaults: CustomBlockLibrary[];
+}
+
 export interface ConfigureInitialData {
     theme: ThemeMode;
     project: Project;
@@ -233,6 +247,8 @@ export interface ConfigureInitialData {
     isEds: boolean;
     /** Resolved authoring experience seeding the radio (EDS only). */
     authoringExperience: AuthoringExperience;
+    /** The block libraries this project can choose from (EDS only; else empty lists). */
+    blockLibraryChoices: ConfigureBlockLibraryChoices;
     /**
      * Component-declared secrets this project holds, booleans only.
      *

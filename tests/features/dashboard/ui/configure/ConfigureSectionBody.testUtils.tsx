@@ -18,7 +18,9 @@ import {
     type ConfigureSectionBodyProps,
 } from '@/features/dashboard/ui/configure/ConfigureSectionBody';
 import type { ConfigureSection } from '@/features/dashboard/ui/configure/configureSections';
+import type { BlockLibrariesSectionProps } from '@/features/dashboard/ui/configure/BlockLibrariesSection';
 import type { ServiceGroup, UniqueField } from '@/features/dashboard/ui/configure/configureTypes';
+import type { BlockLibrary, CustomBlockLibrary } from '@/types/blockLibraries';
 
 export const field = (key: string): UniqueField =>
     ({ key, label: key, type: 'text', required: false, componentIds: ['c'] }) as UniqueField;
@@ -51,6 +53,39 @@ export const CATALOG: ServiceGroup = {
     label: 'Catalog Service',
     fields: [field('ADOBE_CATALOG_API_KEY')],
 };
+
+const library = (id: string, name: string): BlockLibrary => ({
+    id,
+    name,
+    description: `${name} description`,
+    type: 'standalone',
+    source: { owner: 'acme', repo: id, branch: 'main' },
+    stackTypes: ['eds-storefront'],
+});
+
+export const CUSTOM_LIBRARY: CustomBlockLibrary = {
+    name: 'My Blocks',
+    source: { owner: 'acme', repo: 'my-blocks', branch: 'main' },
+};
+
+/** The Authoring tab's block-library props: one native, two to choose from, one ticked. */
+export const blockLibrariesOf = (
+    overrides: Partial<BlockLibrariesSectionProps> = {}
+): BlockLibrariesSectionProps => ({
+    choices: {
+        native: [library('bodea-blocks', 'Bodea Blocks')],
+        available: [
+            library('demo-team-blocks', 'Demo Team Block Collection'),
+            library('demo-builder-blocks', 'Demo Builder Blocks'),
+        ],
+        customDefaults: [],
+    },
+    selectedBlockLibraries: ['demo-team-blocks'],
+    customBlockLibraries: [],
+    onBlockLibraryToggle: jest.fn(),
+    onCustomLibraryToggle: jest.fn(),
+    ...overrides,
+});
 
 /** A rail section of any kind; the body branches on `kind` and `id` only. */
 export const sectionOf = (

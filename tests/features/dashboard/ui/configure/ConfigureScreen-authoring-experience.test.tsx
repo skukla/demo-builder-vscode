@@ -7,6 +7,7 @@ import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ConfigureScreen } from '@/features/dashboard/ui/configure/ConfigureScreen';
 import '@testing-library/jest-dom';
+import type { ConfigureBlockLibraryChoices } from '@/types/webviewPayloads';
 import {
     mockProject,
     mockComponentsData,
@@ -83,6 +84,22 @@ const validConfig = {
     'catalog-service': {
         ADOBE_CATALOG_API_KEY: 'test-key-123',
     },
+};
+
+// What the extension offers one Edge Delivery project (typed to the real payload).
+const blockLibraryChoices: ConfigureBlockLibraryChoices = {
+    native: [],
+    available: [
+        {
+            id: 'demo-builder-blocks',
+            name: 'Demo Builder Blocks',
+            description: 'Blocks for demos',
+            type: 'standalone',
+            source: { owner: 'acme', repo: 'demo-builder-blocks', branch: 'main' },
+            stackTypes: ['eds-storefront'],
+        },
+    ],
+    customDefaults: [],
 };
 
 describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
@@ -225,6 +242,62 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
                 expect.objectContaining({ authoringExperience: 'da-live-classic' })
             );
         });
+    });
+
+    it('saves a block library ticked on the Authoring tab, even after leaving the tab', async () => {
+        const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+
+        renderWithProvider(
+            <ConfigureScreen
+                project={mockProject}
+                componentsData={mockComponentsData}
+                existingEnvValues={validConfig}
+                isEds
+                blockLibraryChoices={blockLibraryChoices}
+            />
+        );
+
+        selectSection('Authoring');
+        await user.click(screen.getByRole('button', { name: /Demo Builder Blocks/ }));
+        expect(screen.getByRole('button', { name: /Demo Builder Blocks/ })).toHaveAttribute(
+            'aria-pressed',
+            'true'
+        );
+        // Save submits every section, not the mounted one.
+        selectSection('Project');
+        await user.click(screen.getByText('Save Changes'));
+
+        await waitFor(() => {
+            expect(mockRequest).toHaveBeenCalledWith(
+                'save-configuration',
+                expect.objectContaining({
+                    selectedBlockLibraries: ['demo-builder-blocks'],
+                    customBlockLibraries: [],
+                })
+            );
+        });
+    });
+
+    it('sends no block libraries when none was ticked or unticked', async () => {
+        const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+
+        renderWithProvider(
+            <ConfigureScreen
+                project={mockProject}
+                componentsData={mockComponentsData}
+                existingEnvValues={validConfig}
+                isEds
+                blockLibraryChoices={blockLibraryChoices}
+            />
+        );
+
+        await waitFor(() => {
+            expect(screen.getByText('Save Changes')).not.toBeDisabled();
+        });
+        await user.click(screen.getByText('Save Changes'));
+
+        await waitFor(() => expect(mockRequest).toHaveBeenCalled());
+        expect(mockRequest.mock.calls[0][1]).not.toHaveProperty('selectedBlockLibraries');
     });
 
     it('renders the DA.live & authoring settings link inside the Authoring section', () => {

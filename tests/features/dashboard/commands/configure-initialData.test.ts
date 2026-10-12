@@ -108,4 +108,37 @@ describe('ConfigureProjectWebviewCommand - getInitialData envVars', () => {
         expect(envVars.ACCS_WEBSITE_CODE.label).toBe('Website code');
         expect(envVars.ACCS_GRAPHQL_ENDPOINT.type).toBe('url');
     });
+
+    it('offers an Edge Delivery project the block libraries its stack and package allow', async () => {
+        mockStateManager.getCurrentProject.mockResolvedValue(
+            createMockProject({
+                name: 'eds-project',
+                path: '/nonexistent/test/project',
+                selectedStack: 'eds-accs',
+                selectedPackage: 'bodea',
+            }),
+        );
+
+        const data = await internals(command).getInitialData<{
+            blockLibraryChoices: {
+                native: { id: string }[];
+                available: { id: string }[];
+                customDefaults: unknown[];
+            };
+        }>();
+
+        expect(data.blockLibraryChoices.native.map((lib) => lib.id)).toEqual(['bodea-blocks']);
+        expect(data.blockLibraryChoices.available.map((lib) => lib.id)).toEqual([
+            'demo-team-blocks',
+            'demo-builder-blocks',
+        ]);
+    });
+
+    it('offers a project that is not Edge Delivery no block libraries', async () => {
+        const data = await internals(command).getInitialData<{
+            blockLibraryChoices: { native: unknown[]; available: unknown[] };
+        }>();
+
+        expect(data.blockLibraryChoices).toEqual({ native: [], available: [], customDefaults: [] });
+    });
 });
