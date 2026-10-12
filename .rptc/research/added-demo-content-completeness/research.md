@@ -255,4 +255,4 @@ The check read 106 paths, not 57, and named one real gap:
 `/experiments/index5/experiment-demo-2026/challenger-2`. The source serves it (it is in her
 sitemap); the publish skips the `experiments` folder ("A/B test config"). It is a variant of
 an old experiment; the home page's current experiment is `inactive`, ended 2026-05-28, and
-names its variant by an absolute URL on the source site. Left as is pending the owner's call.
+names its variant by an absolute URL on the source site. Owner, 2026-10-12: leave `experiments` unpublished.

@@ -41,7 +41,7 @@ export const EXCLUDED_FOLDERS = [
     '.helix',
     '.milo',
     'placeholders',
-    'experiments', // A/B test config
+    'experiments', // A/B test variants: kept off a copy on purpose (owner, 2026-10-12; EDS-40 research)
 ];
 
 /** What page discovery needs: the DA.live listing and somewhere to log. */
