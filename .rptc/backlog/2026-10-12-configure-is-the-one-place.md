@@ -58,3 +58,5 @@ automatically.
   'edit'`, `handleEditProject`, the dashboard and projects-list Edit actions).
 
 ## Shipped so far
+- 2026-10-12  docs(rptc): research on Edit and Configure; PL-75 makes Configure the one place (`4f49a174f`)
+- 2026-10-12  fix(edit): an Edit keeps the project's records instead of dropping them (`356ffebea`)
