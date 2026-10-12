@@ -191,54 +191,102 @@ function resolveProvidedEndpoint(project: Project): string | undefined {
 }
 
 /**
- * Extract config parameters from a Project
+ * Everything config.json is generated from, wherever a caller reads it.
  *
- * Convenience wrapper that extracts componentConfigs and the deployed endpoint
- * from the project. The endpoint is resolved via {@link resolveProvidedEndpoint}
- * (the keyed-appBuilderComponent provider), which read-throughs to legacy `meshState`.
- *
- * @param project - The project to extract config from
- * @returns Config parameters for generation
+ * Every key is REQUIRED on purpose, `undefined` included. Creation reads these
+ * from the wizard's answers and a saved project reads them from the manifest;
+ * for a while each assembled its own params, and creation's copy left out the
+ * demo row, so a project built on an added demo was published without the
+ * demo's flags (2026-10-12). A new source added here does not compile until
+ * both readers supply it.
  */
-export function extractConfigParams(project: Project): Partial<ConfigGeneratorParams> {
+export interface ConfigParamSources {
+    /** The storefront instance's saved metadata: `githubRepo`, `daLiveOrg`, `daLiveSite`. */
+    metadata: Record<string, unknown> | undefined;
+    componentConfigs: ComponentConfigs | undefined;
+    /** A deployed endpoint (the mesh's), which wins over the configured one. */
+    providedEndpoint: string | undefined;
+    /** The backend component id, which decides the environment type. */
+    backendId: string | undefined;
+    selectedAddons: string[] | undefined;
+    selectedPackage: string | undefined;
+    /** The project's own demo row, where an added demo keeps its flags. */
+    demo: Project['demo'];
+}
+
+/** What a saved project supplies. */
+function sourcesOfProject(project: Project): ConfigParamSources {
+    const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
     return {
-        ...extractConfigParamsFromConfigs(
-            project.componentConfigs as ComponentConfigs | undefined,
-            resolveProvidedEndpoint(project),
-            project.componentSelections?.backend,
-        ),
+        metadata: edsInstance?.metadata as Record<string, unknown> | undefined,
+        componentConfigs: project.componentConfigs as ComponentConfigs | undefined,
+        providedEndpoint: resolveProvidedEndpoint(project),
+        backendId: project.componentSelections?.backend,
         selectedAddons: project.selectedAddons,
         selectedPackage: project.selectedPackage,
         demo: project.demo,
     };
 }
 
+/** The Commerce half of the params: everything except the repository coordinates. */
+function commerceParamsFrom(sources: ConfigParamSources): Partial<ConfigGeneratorParams> {
+    return {
+        ...extractConfigParamsFromConfigs(
+            sources.componentConfigs,
+            sources.providedEndpoint,
+            sources.backendId,
+        ),
+        selectedAddons: sources.selectedAddons,
+        selectedPackage: sources.selectedPackage,
+        demo: sources.demo,
+    };
+}
+
 /**
- * Build a complete {@link ConfigGeneratorParams} for an existing project.
+ * Extract config parameters from a Project: the Commerce half, without the
+ * repository coordinates (the catalog prewarm and the store-structure reader
+ * need no more).
  *
- * Resolves the GitHub/DA.live repo coordinates from the EDS storefront component's
- * saved metadata and spreads in {@link extractConfigParams}. This is the single
- * assembly point shared by EDS Reset and storefront republish — both previously
- * hand-rolled the identical `{ githubOwner, repoName, daLiveOrg, daLiveSite,
- * ...extractConfigParams(project) }` object from the same metadata source.
+ * @param project - The project to extract config from
+ * @returns Config parameters for generation
+ */
+export function extractConfigParams(project: Project): Partial<ConfigGeneratorParams> {
+    return commerceParamsFrom(sourcesOfProject(project));
+}
+
+/**
+ * The ONE assembly of {@link ConfigGeneratorParams}. Project creation, Reset and
+ * republish all render config.json from what this returns.
  *
- * Coordinates are validated upstream (extractResetParams / extractRepublishParams)
- * before reaching config generation; missing metadata falls back to empty strings.
+ * The repository coordinates come from the storefront's saved metadata. A
+ * `githubRepo` that is not an `owner/repo` pair yields empty coordinates rather
+ * than half of one, and the DA.live org and site fall back to the repository's
+ * two halves: the org IS the GitHub namespace and the site IS the repository
+ * name, and a migrated project stores neither.
+ *
+ * @param sources - everything the params are read from
+ * @returns Full ConfigGeneratorParams ready for generateConfigJson
+ */
+export function configGeneratorParamsFrom(sources: ConfigParamSources): ConfigGeneratorParams {
+    const githubRepo = String(sources.metadata?.githubRepo ?? '');
+    const [githubOwner, repoName] = githubRepo.includes('/') ? githubRepo.split('/') : ['', ''];
+
+    return {
+        githubOwner,
+        repoName,
+        daLiveOrg: String(sources.metadata?.daLiveOrg || githubOwner),
+        daLiveSite: String(sources.metadata?.daLiveSite || repoName),
+        ...commerceParamsFrom(sources),
+    };
+}
+
+/**
+ * Build a complete {@link ConfigGeneratorParams} for a saved project (Reset,
+ * republish, the commerce-endpoints tool).
  *
  * @param project - The project to build generation params from
  * @returns Full ConfigGeneratorParams ready for generateConfigJson
  */
 export function buildConfigGeneratorParams(project: Project): ConfigGeneratorParams {
-    const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
-    const metadata = edsInstance?.metadata as Record<string, unknown> | undefined;
-    const [githubOwner = '', repoName = ''] = String(metadata?.githubRepo ?? '').split('/');
-
-    return {
-        githubOwner,
-        repoName,
-        daLiveOrg: String(metadata?.daLiveOrg ?? ''),
-        // Legacy-first, repo fallback (the loader strips the equal copy).
-        daLiveSite: String(metadata?.daLiveSite ?? repoName),
-        ...extractConfigParams(project),
-    };
+    return configGeneratorParamsFrom(sourcesOfProject(project));
 }

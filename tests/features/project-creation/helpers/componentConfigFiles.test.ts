@@ -13,7 +13,6 @@ import { promises as fsPromises } from 'fs';
 import * as path from 'path';
 import { generateConfigFile } from '@/core/config/configFileGenerator';
 import { generateConfigJson } from '@/features/eds/services/configGenerator';
-import { extractConfigParamsFromConfigs } from '@/features/eds/services/storefrontConfigParams';
 import { generateComponentConfigFiles } from '@/features/project-creation/helpers/componentConfigFiles';
 import { TransformedComponentDefinition, ComponentRegistry } from '@/types/components';
 import type { AddedDemo } from '@/types/projectFile';
@@ -41,15 +40,9 @@ jest.mock('@/core/config/configFileGenerator', () => ({
 jest.mock('@/features/eds/services/configGenerator', () => ({
     generateConfigJson: jest.fn(),
 }));
-jest.mock('@/features/eds/services/storefrontConfigParams', () => ({
-    extractConfigParamsFromConfigs: jest.fn(),
-}));
 
 const mockGenerateConfigFile = generateConfigFile as jest.MockedFunction<typeof generateConfigFile>;
 const mockGenerateConfigJson = generateConfigJson as jest.MockedFunction<typeof generateConfigJson>;
-const mockExtractConfigParams = extractConfigParamsFromConfigs as jest.MockedFunction<
-    typeof extractConfigParamsFromConfigs
->;
 
 /** The write the json branch performs, parsed back into the object it serialised. */
 function writtenJson(callIndex = 0): Record<string, unknown> {
@@ -479,7 +472,6 @@ describe('generateComponentConfigFiles — the eds-config route', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        mockExtractConfigParams.mockReturnValue({ environmentType: 'accs' });
         mockGenerateConfigJson.mockReturnValue({ success: true, content: '{"ok":true}' });
     });
 
@@ -497,9 +489,14 @@ describe('generateComponentConfigFiles — the eds-config route', () => {
         });
     }
 
-    /** The wizard config the EDS route reads addons and package from. */
+    /**
+     * The wizard config the EDS route reads the backend, addons and package from.
+     * The params are assembled by the real `configGeneratorParamsFrom` (it is pure),
+     * so what these tests read off the generator's argument is what it is handed.
+     */
     const edsConfig = {
         projectName: 'test-project',
+        components: { backend: 'adobe-commerce-accs' },
         selectedPackage: 'citisignal',
         selectedAddons: ['b2b'],
     };
@@ -612,10 +609,12 @@ describe('generateComponentConfigFiles — the eds-config route', () => {
 
         await generateComponentConfigFiles('/p/eds', 'eds-storefront', edsComponent, context);
 
-        expect(mockExtractConfigParams).toHaveBeenCalledWith(
-            { backend: { API_URL: 'https://api' } },
-            'https://live-mesh',
-            'adobe-commerce-paas'
+        expect(mockGenerateConfigJson.mock.calls[0][0]).toEqual(
+            expect.objectContaining({
+                environmentType: 'paas',
+                // The deployed mesh endpoint, not anything in componentConfigs.
+                commerceEndpoint: 'https://live-mesh',
+            })
         );
     });
 
@@ -666,9 +665,6 @@ describe('generateComponentConfigFiles — the eds-config route', () => {
         });
 
         it('publishes both B2B flags, with the endpoint and store codes the project asked for', async () => {
-            mockExtractConfigParams.mockImplementation(
-                jest.requireActual('@/features/eds/services/storefrontConfigParams').extractConfigParamsFromConfigs,
-            );
             mockGenerateConfigJson.mockImplementation(
                 jest.requireActual('@/features/eds/services/configGenerator').generateConfigJson,
             );

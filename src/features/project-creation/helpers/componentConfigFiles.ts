@@ -22,11 +22,8 @@ import {
     ACCS_CATALOG_SERVICE_ENDPOINT,
 } from '@/core/config/envVarKeys';
 import { COMPONENT_IDS } from '@/core/constants';
-import {
-    generateConfigJson,
-    type ConfigGeneratorParams,
-} from '@/features/eds/services/configGenerator';
-import { extractConfigParamsFromConfigs } from '@/features/eds/services/storefrontConfigParams';
+import { generateConfigJson } from '@/features/eds/services/configGenerator';
+import { configGeneratorParamsFrom } from '@/features/eds/services/storefrontConfigParams';
 import type { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
 import type { ConfigFileDefinition, TransformedComponentDefinition } from '@/types/components';
 
@@ -219,54 +216,26 @@ async function generateEdsConfigJson(
 ): Promise<void> {
     const logger = context.logger;
 
-    // Get EDS component instance metadata (populated during EDS setup phases)
+    // The ONE assembly every path renders config.json from. Creation reads its
+    // sources from the wizard's answers where a saved project reads the manifest;
+    // the params are built in one place either way.
     const edsInstance = context.project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
-    const metadata = edsInstance?.metadata || {};
-
-    // Extract GitHub owner and repo from githubRepo (format: "owner/repo")
-    const githubRepo = metadata.githubRepo as string | undefined;
-    let githubOwner = '';
-    let repoName = '';
-    if (githubRepo && githubRepo.includes('/')) {
-        [githubOwner, repoName] = githubRepo.split('/');
-    }
-
-    // Get DA.live org and site. Falling back to the repo halves just parsed
-    // above, not to '': the org IS the namespace and the site IS the repo name,
-    // and a migrated project stores neither (owner sweep, 2026-09-20).
-    const daLiveOrg = (metadata.daLiveOrg as string) || githubOwner;
-    const daLiveSite = (metadata.daLiveSite as string) || repoName;
-
-    // Extract Commerce config params from componentConfigs
-    const componentConfigs = context.getComponentConfigs();
-    const meshEndpoint = context.getMeshEndpoint();
-    const backendId = context.getBackendId();
-
-    const configParams = extractConfigParamsFromConfigs(componentConfigs, meshEndpoint, backendId);
-
-    // Build full ConfigGeneratorParams
-    const params: ConfigGeneratorParams = {
-        githubOwner,
-        repoName,
-        daLiveOrg,
-        daLiveSite,
-        ...configParams,
+    const params = configGeneratorParamsFrom({
+        metadata: edsInstance?.metadata,
+        componentConfigs: context.getComponentConfigs(),
+        providedEndpoint: context.getMeshEndpoint(),
+        backendId: context.getBackendId(),
         selectedAddons: context.getSelectedAddons(),
         selectedPackage: context.getSelectedPackage(),
-        // The project's own demo row. An added demo's flags (B2B, companies) live
-        // on it and nowhere in the catalog, so without it creation published a
-        // config.json with neither while reset and republish, which read the row
-        // through `buildConfigGeneratorParams`, published both (2026-10-12).
         demo: context.project.demo,
-    };
+    });
 
-    // Validate required params
-    if (!githubOwner || !repoName) {
+    if (!params.githubOwner || !params.repoName) {
         logger.warn(
             '[Config Generator] Missing GitHub repo info, config.json may have incomplete values',
         );
     }
-    if (!daLiveOrg || !daLiveSite) {
+    if (!params.daLiveOrg || !params.daLiveSite) {
         logger.warn(
             '[Config Generator] Missing DA.live info, config.json may have incomplete values',
         );
@@ -286,6 +255,6 @@ async function generateEdsConfigJson(
     await fsPromises.writeFile(configFilePath, result.content, 'utf-8');
 
     logger.info(
-        `[Config Generator] Created config.json for EDS storefront (env: ${configParams.environmentType || 'paas'})`,
+        `[Config Generator] Created config.json for EDS storefront (env: ${params.environmentType || 'paas'})`,
     );
 }

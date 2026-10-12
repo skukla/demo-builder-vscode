@@ -9,10 +9,15 @@
 
 import type { ConfigGeneratorParams, EnvironmentType } from '@/features/eds/services/configGenerator';
 import {
+    buildConfigGeneratorParams,
+    configGeneratorParamsFrom,
     extractConfigParamsFromConfigs,
     mapBackendToEnvironmentType,
     mergeComponentConfigs,
+    type ConfigParamSources,
 } from '@/features/eds/services/storefrontConfigParams';
+import type { AddedDemo } from '@/types/projectFile';
+import { createMockProject, edsStorefrontInstance } from '../../../helpers/projectFake';
 
 describe('mapBackendToEnvironmentType', () => {
     it.each<[string, string | undefined, EnvironmentType]>([
@@ -354,5 +359,88 @@ describe('extractConfigParamsFromConfigs', () => {
         expect(
             extractConfigParamsFromConfigs(componentConfigs, undefined, backendComponentId),
         ).toStrictEqual(expected);
+    });
+});
+
+// ONE assembly for every path that renders config.json. Creation used to build its
+// own params beside this module's, and the two drifted: creation left out the
+// project's demo row, so a project built on an added demo was published without its
+// B2B flags while a reset of the same project had them (2026-10-12).
+describe('configGeneratorParamsFrom — the one assembly creation, reset and republish share', () => {
+    // The fields a manifest's demo row always carries (read from a real one, 2026-10-12).
+    const demo: AddedDemo = {
+        kind: 'demo',
+        version: 2,
+        name: 'Demo',
+        source: { owner: 'acme', repo: 'demo' },
+        storefrontKind: 'eds',
+    };
+    const sources: ConfigParamSources = {
+        metadata: { githubRepo: 'acme/site', daLiveOrg: 'acme-da', daLiveSite: 'site-da' },
+        componentConfigs: {
+            'adobe-commerce-accs': {
+                ACCS_GRAPHQL_ENDPOINT: 'https://commerce.test/graphql',
+                ACCS_WEBSITE_CODE: 'web',
+                ACCS_STORE_CODE: 'store',
+                ACCS_STORE_VIEW_CODE: 'view',
+            },
+        },
+        providedEndpoint: undefined,
+        backendId: 'adobe-commerce-accs',
+        selectedAddons: ['b2b'],
+        selectedPackage: 'added:acme/demo',
+        demo: undefined,
+    };
+
+    it('carries the repository, the Commerce scope, the addons, the package and the demo row', () => {
+
+        expect(configGeneratorParamsFrom({ ...sources, demo })).toMatchObject({
+            githubOwner: 'acme',
+            repoName: 'site',
+            daLiveOrg: 'acme-da',
+            daLiveSite: 'site-da',
+            environmentType: 'accs',
+            commerceEndpoint: 'https://commerce.test/graphql',
+            websiteCode: 'web',
+            storeCode: 'store',
+            storeViewCode: 'view',
+            selectedAddons: ['b2b'],
+            selectedPackage: 'added:acme/demo',
+            demo,
+        });
+    });
+
+    it('takes the DA.live org and site from the repository when the metadata names neither', () => {
+        const params = configGeneratorParamsFrom({ ...sources, metadata: { githubRepo: 'acme/site' } });
+
+        expect(params).toMatchObject({ daLiveOrg: 'acme', daLiveSite: 'site' });
+    });
+
+    it('answers empty coordinates, never undefined, for a repository name with no owner', () => {
+        const params = configGeneratorParamsFrom({ ...sources, metadata: { githubRepo: 'site' } });
+
+        expect(params).toMatchObject({ githubOwner: '', repoName: '', daLiveOrg: '', daLiveSite: '' });
+    });
+
+    it('prefers a deployed endpoint over the configured one', () => {
+        const params = configGeneratorParamsFrom({ ...sources, providedEndpoint: 'https://mesh.test/graphql' });
+
+        expect(params.commerceEndpoint).toBe('https://mesh.test/graphql');
+    });
+
+    it('gives a saved project the same params whichever way it is read', () => {
+        const project = createMockProject({
+            selectedStack: 'eds-accs',
+            selectedPackage: sources.selectedPackage,
+            selectedAddons: sources.selectedAddons,
+            componentSelections: { backend: sources.backendId },
+            componentConfigs: sources.componentConfigs,
+            demo,
+            componentInstances: {
+                'eds-storefront': { ...edsStorefrontInstance(), metadata: sources.metadata },
+            },
+        });
+
+        expect(buildConfigGeneratorParams(project)).toEqual(configGeneratorParamsFrom({ ...sources, demo }));
     });
 });
