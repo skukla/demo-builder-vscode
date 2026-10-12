@@ -48,7 +48,19 @@ import { handleRenameProject } from '@/features/projects-dashboard/handlers/dash
 import { Project, type AuthoringExperience } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import { getComponentInstanceEntries, getEdsDaLiveUrl, isEdsProject } from '@/types/typeGuards';
-import type { DeploymentStatusPayload, ConfigureInitialData } from '@/types/webviewPayloads';
+import type {
+    ConfigureInitialData,
+    CustomBlockLibraryDefaultsUpdatedPayload,
+    DeploymentStatusPayload,
+} from '@/types/webviewPayloads';
+
+/** The setting custom block libraries are defined in. */
+const CUSTOM_BLOCK_LIBRARY_SETTING = 'demoBuilder.blockLibraries.custom';
+
+/** The custom-library setting as read; `buildBlockLibraryChoices` checks its shape. */
+function readCustomLibrarySetting(): unknown {
+    return vscode.workspace.getConfiguration('demoBuilder').get<unknown>('blockLibraries.custom');
+}
 
 const AUTHORING_EXPERIENCES: ReadonlySet<AuthoringExperience> = new Set<AuthoringExperience>([
     'da-live-classic',
@@ -198,12 +210,7 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
             authoringExperience: resolveProjectAuthoringExperience(project),
             // The setting is read HERE, at the boundary; the lists are built by a
             // `vscode`-free function from the same loader the wizard's picker uses.
-            blockLibraryChoices: buildBlockLibraryChoices(
-                project,
-                vscode.workspace
-                    .getConfiguration('demoBuilder')
-                    .get<unknown>('blockLibraries.custom'),
-            ),
+            blockLibraryChoices: buildBlockLibraryChoices(project, readCustomLibrarySetting()),
             componentSecretFlags,
         };
     }
@@ -225,6 +232,28 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
         comm.onStreaming('save-configuration', async (data: SaveConfigurationData) =>
             this.handleSaveConfiguration(data),
         );
+
+        // The picker's "Configure custom libraries in Settings" link sends the SC to
+        // the setting while this screen stays open: push the new list, as the wizard does.
+        this.disposables.add(
+            vscode.workspace.onDidChangeConfiguration((event) => {
+                if (event.affectsConfiguration(CUSTOM_BLOCK_LIBRARY_SETTING)) {
+                    this.sendCustomLibraryChoices().catch((error: unknown) =>
+                        this.logger.warn('[Configure] Could not refresh custom block libraries', error),
+                    );
+                }
+            }),
+        );
+    }
+
+    /** Push the custom block libraries this project can now choose from. */
+    private async sendCustomLibraryChoices(): Promise<void> {
+        const project = await this.stateManager.getCurrentProject();
+        if (!project) return;
+        const { customDefaults } = buildBlockLibraryChoices(project, readCustomLibrarySetting());
+        await this.sendMessage('customBlockLibraryDefaultsUpdated', {
+            customBlockLibraryDefaults: customDefaults,
+        } satisfies CustomBlockLibraryDefaultsUpdatedPayload);
     }
 
     /** The save-configuration message body (extracted 2026-08-24, function-length pass). */

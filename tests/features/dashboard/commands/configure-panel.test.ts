@@ -15,6 +15,7 @@ import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import { loadDeclaredSecretFlags } from '@/features/components/services/commerceSecretMigration';
+import { parseCustomBlockLibrarySettings } from '@/features/project-creation/services/customBlockLibraryUtils';
 import type { Logger } from '@/types/logger';
 import { internals } from '../../../helpers/commandInternals';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
@@ -374,6 +375,72 @@ describe('ConfigureProjectWebviewCommand - panel lifecycle and initial data', ()
                 'openExternal',
                 { url: 'https://example.test' }
             );
+        });
+    });
+
+    describe('the custom block-library setting changing while Configure is open', () => {
+        const LIBRARY_URL = 'https://github.com/acme/my-blocks';
+        let settingChanged: (event: { affectsConfiguration: (key: string) => boolean }) => void;
+        let sendSpy: jest.SpyInstance;
+
+        beforeEach(() => {
+            (vscode.workspace.onDidChangeConfiguration as jest.Mock).mockImplementation(
+                (listener: typeof settingChanged) => {
+                    settingChanged = listener;
+                    return { dispose: jest.fn() };
+                }
+            );
+            (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+                get: jest.fn((key: string) =>
+                    key === 'blockLibraries.custom' ? [LIBRARY_URL] : undefined
+                ),
+            });
+            stateManager.getCurrentProject.mockResolvedValue(
+                createMockProject({ selectedStack: 'eds-accs' })
+            );
+            sendSpy = jest
+                .spyOn(
+                    command as unknown as {
+                        sendMessage: (t: string, d?: unknown) => Promise<void>;
+                    },
+                    'sendMessage'
+                )
+                .mockResolvedValue(undefined);
+            internals(command).initializeMessageHandlers({ onStreaming: jest.fn() });
+        });
+
+        function changeSetting(key: string): Promise<void> {
+            settingChanged({ affectsConfiguration: (changed) => changed === key });
+            // The push reads the project first; let that settle.
+            return new Promise((resolve) => setImmediate(resolve));
+        }
+
+        it('pushes the new custom libraries to the screen', async () => {
+            await changeSetting('demoBuilder.blockLibraries.custom');
+
+            const expected = parseCustomBlockLibrarySettings([LIBRARY_URL]);
+            expect(expected).toHaveLength(1);
+            expect(sendSpy).toHaveBeenCalledWith('customBlockLibraryDefaultsUpdated', {
+                customBlockLibraryDefaults: expected,
+            });
+        });
+
+        it('pushes nothing when another setting changes', async () => {
+            await changeSetting('demoBuilder.blockLibraries.defaults');
+
+            expect(sendSpy).not.toHaveBeenCalled();
+        });
+
+        it('offers no custom libraries to a project that is not Edge Delivery', async () => {
+            stateManager.getCurrentProject.mockResolvedValue(
+                createMockProject({ selectedStack: 'headless-accs' })
+            );
+
+            await changeSetting('demoBuilder.blockLibraries.custom');
+
+            expect(sendSpy).toHaveBeenCalledWith('customBlockLibraryDefaultsUpdated', {
+                customBlockLibraryDefaults: [],
+            });
         });
     });
 });

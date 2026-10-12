@@ -27,6 +27,7 @@ import { Form, Button, View } from '@adobe/react-spectrum';
 import React, { useMemo, useState } from 'react';
 import { hasBlockLibraryChoices } from './BlockLibrariesSection';
 import { ConfigureSectionBody } from './ConfigureSectionBody';
+import { useBlockLibraryChoices } from './hooks/useBlockLibraryChoices';
 import { useBlockLibrarySelection } from './hooks/useBlockLibrarySelection';
 import { useConfigureFieldRow } from './hooks/useConfigureFieldRow';
 import { useConfigureFieldValues } from './hooks/useConfigureFieldValues';
@@ -72,12 +73,14 @@ export function ConfigureScreen({
     existingProjectNames = [],
     isEds = false,
     authoringExperience: initialAuthoringExperience,
-    blockLibraryChoices,
+    blockLibraryChoices: initialBlockLibraryChoices,
     componentSecretFlags = EMPTY_SECRET_FLAGS,
 }: ConfigureScreenProps) {
     const [authoringExperience, setAuthoringExperience] = useState<AuthoringExperience>(
         initialAuthoringExperience ?? 'da-live-classic',
     );
+    // What the Block Libraries tab offers; the custom list follows the VS Code setting.
+    const blockLibraryChoices = useBlockLibraryChoices(initialBlockLibraryChoices);
     // The block libraries ticked on the Block Libraries tab — lifted, like every value here.
     const {
         selectedBlockLibraries,

@@ -62,7 +62,9 @@ install at once or leave it to the update check; the first is what an SC expects
   needs a resting visual capture, and the capture browser was not connected in the session that
   built this. The Configure entry's own comment says what is true.
 - **Not looked at in a browser by the builder.** The owner's check on BJU is the first look.
-- **A custom library changed in VS Code settings shows only after Configure is reopened.**
+- ~~**A custom library changed in VS Code settings shows only after Configure is reopened.**~~
+  Fixed 2026-10-12: Configure pushes `customBlockLibraryDefaultsUpdated` when the setting
+  changes, the message the wizard already followed (`useBlockLibraryChoices.ts`).
 - **A custom library that is recorded on the project but no longer in settings** is hidden and
   kept by Configure. Edit drops it. Decide which is right.
 - **Install on Save.** Settled by the owner the same day: see the next section.
