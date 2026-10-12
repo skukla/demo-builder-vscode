@@ -162,3 +162,39 @@ What this settles:
 
 Also proven live along the way: the agent's `delete_project`, with today's token fix, unpublished
 114 pages and 49 product pages and every checked page then answered 404.
+
+## 9. The live test on bodea, 2026-10-12 (build `f3fdb09f5`)
+
+A reset of the project built on `sayurihanki/jenhankib2bbodea`, then every sheet read back from
+`main--bodea-storefront--skukla.aem.live` and compared with the source.
+
+| What | Before | After the reset |
+|---|---|---|
+| `/metadata.json`, `/redirects.json` | 404 | 200, same rows as the source |
+| A stub with nothing behind it (`/placeholders/quick-order.json?sheet=data`) | 404 | 200 |
+| The 16 label sheets the source has | 404 to `?sheet=data` | 200, but the STUB's one row, not the source's rows |
+
+The log said `Copied spreadsheet` for all 19 and `Sheets published: 19 of 19`, and DA.live lists
+16 `.json` files under `/placeholders`. So the sheets were written and published, and the site
+still served the stub.
+
+**A stub file in the repository stops the copied sheet at the same path from being served.**
+Shown on one sheet first: with `placeholders/cart.json` deleted from the repository, the site
+went on serving the stub for several minutes; one more publish of `/placeholders/cart.json`
+then gave 160 rows and both of the source's sheets (`data`, `dnt`). Repeated for the other 15.
+Result: all 16 label sheets on the copy have the source's row count and first key (cart 160,
+order 223, purchase-order 134, account 118, requisition-list 83, checkout 72, auth 58, global
+29, search 21, pdp 19, wishlist 17, payment-services 14, recommendations 3, quote-management 2,
+company 1, company-switcher 1).
+
+So `placeholderStubs.ts`'s claim that "content shadows these code files automatically" is
+false for these files: the stub wins. **A stub must not be written for an area the source has a
+sheet for.** The source can be asked at the moment the stubs are decided (one request per
+area), on creation and on reset alike.
+
+Bodea was left in the repaired state: 16 stub files removed from its repository by hand, the
+16 sheets published again. Its next reset will put the stubs back unless the rule above is
+built first.
+
+Still missing on bodea after this: `/cart`, `/checkout` and the other pages in section 4.
+Those are pages, not sheets.
