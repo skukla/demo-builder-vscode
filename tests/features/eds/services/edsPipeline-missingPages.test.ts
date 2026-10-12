@@ -6,7 +6,8 @@
  * pages: they are in no content index and no backfill list. The pipeline now reads
  * the storefront's code from the SC's own repository before the copy, hands the
  * paths it loads to the copy, and after publishing asks the live storefront for
- * every one the source had. Creation and reset both run this pipeline, so both get it.
+ * every one the source had, and for everything else the copy carried. Creation and
+ * reset both run this pipeline, so both get it.
  *
  * Every assertion is on the ARGUMENTS a collaborator was handed (which repository
  * was downloaded, which paths the copy was given, which URLs were asked for) or on
@@ -197,7 +198,33 @@ describe('executeEdsPipeline - what the storefront’s code loads', () => {
             expect(result.missingPages).toBeUndefined();
         });
 
-        it('asks for nothing when the copy found none of the code’s paths on the source', async () => {
+        it('also checks what the copy carried from the source’s index, and names one left unpublished', async () => {
+            // The live run that found it: two enrichment pages copied, never published.
+            const SOURCE_LIVE = 'https://main--src-site--src-org.aem.live';
+            installSiteFetch([
+                `${LIVE}/cart.plain.html`,
+                `${LIVE}/checkout.plain.html`,
+                `${SOURCE_LIVE}/enrichment/category-banner.plain.html`,
+            ]);
+            copyContentFromSource.mockResolvedValue({
+                success: true,
+                totalFiles: 3,
+                copiedFiles: ['/cart', '/checkout', '/enrichment/category-banner'],
+                failedFiles: [],
+                sheetPaths: [],
+                codePathsOnSource: ['/cart', '/checkout'],
+            });
+
+            const result = await run();
+
+            expect(result.missingPages).toEqual({
+                status: 'missing',
+                missing: ['/enrichment/category-banner'],
+                summary: '1 page the source has is missing from this storefront: /enrichment/category-banner',
+            });
+        });
+
+        it('asks for nothing when the copy carried nothing', async () => {
             const site = installSiteFetch([]);
             copyContentFromSource.mockResolvedValue({
                 success: true,

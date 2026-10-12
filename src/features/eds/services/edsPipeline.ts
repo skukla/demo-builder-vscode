@@ -38,7 +38,7 @@ import {
     unpublishLeftoverPages,
     type LeftoverPagesResult,
 } from './storefront/leftoverPages';
-import { findMissingPages, type MissingPagesResult } from './storefront/missingPages';
+import { carriedWebPaths, findMissingPages, type MissingPagesResult } from './storefront/missingPages';
 import { readStorefrontCodePaths } from './storefrontCodeReader';
 import { DaLiveAuthError, DaLiveError, type EdsPipelineProgressCallback } from './types';
 import type { Project } from '@/types/base';
@@ -299,7 +299,7 @@ async function pipelineCopyContent(
     accountContentSource?: { org: string; site: string },
     runtimeSurfaceSource?: CodePatchSource,
     codePaths?: readonly string[],
-): Promise<{ filesCopied: number; sheetPaths: string[]; codePathsOnSource: string[] }> {
+): Promise<{ filesCopied: number; sheetPaths: string[]; codePathsOnSource: string[]; carriedPaths: string[] }> {
     onProgress?.({
         operation: 'content-copy',
         message: 'Populating DA.live content',
@@ -358,6 +358,7 @@ async function pipelineCopyContent(
     // Hybrid packages: overlay the B2B account chrome (/customer/* + /customer/nav)
     // from the canonical B2B content site on top of the brand content.
     let overlaidFiles = 0;
+    const copiedFiles = [...contentResult.copiedFiles];
     if (accountContentSource) {
         const overlay = await daLiveContentOps.copyOps.overlayAccountChrome(
             accountContentSource,
@@ -366,6 +367,7 @@ async function pipelineCopyContent(
             patchReport,
         );
         overlaidFiles = overlay.totalFiles;
+        copiedFiles.push(...overlay.copiedFiles);
         logger.info(
             `[EdsPipeline] Account-chrome overlay: ${overlaidFiles} file(s) from ${accountContentSource.org}/${accountContentSource.site}`,
         );
@@ -380,6 +382,7 @@ async function pipelineCopyContent(
         filesCopied: contentResult.totalFiles + overlaidFiles,
         sheetPaths: contentResult.sheetPaths,
         codePathsOnSource: contentResult.codePathsOnSource,
+        carriedPaths: carriedWebPaths(copiedFiles, contentResult.sheetPaths),
     };
 }
 
@@ -571,6 +574,8 @@ interface PipelineContext {
     codePaths?: string[];
     /** The code paths the source had, which step 1 copied; step 7.5 looks for them. */
     codePathsOnSource: string[];
+    /** Everything else step 1 copied, as web paths; step 7.5 looks for these too. */
+    carriedPaths: string[];
     missingPages?: MissingPagesResult;
     libraryPaths: string[];
     patchReport: PatchReport;
@@ -668,6 +673,7 @@ const PIPELINE_STEPS: PipelineStep[] = [
             ctx.contentFilesCopied = copied.filesCopied;
             ctx.sheetPaths = copied.sheetPaths;
             ctx.codePathsOnSource = copied.codePathsOnSource;
+            ctx.carriedPaths = copied.carriedPaths;
         },
     },
     // Step 2: Block Library
@@ -798,7 +804,9 @@ const PIPELINE_STEPS: PipelineStep[] = [
     // every publish and unpublish above, so it reads the finished site. Never throws.
     {
         name: 'page-check',
-        when: ({ params, ctx }) => !params.skipPublish && ctx.codePathsOnSource.length > 0,
+        when: ({ params, ctx }) =>
+            !params.skipPublish &&
+            (ctx.codePathsOnSource.length > 0 || ctx.carriedPaths.length > 0),
         onError: 'continue',
         failureLog: 'Page check failed',
         run: pipelineCheckMissingPages,
@@ -951,10 +959,13 @@ async function pipelineReadStorefrontCode({ params, services, ctx }: PipelineSte
  * progress line as a warning, and on the pipeline result for the caller to show.
  */
 async function pipelineCheckMissingPages({ params, services, ctx, onProgress }: PipelineStepEnv) {
+    const source = params.contentSource;
+    if (!source) return;
     onProgress?.({ operation: 'page-check', message: 'Checking the copied pages' });
     const result = await findMissingPages(
         { owner: params.repoOwner, repo: params.repoName },
-        ctx.codePathsOnSource,
+        source,
+        { fromCode: ctx.codePathsOnSource, carried: ctx.carriedPaths },
         services.logger,
     );
     ctx.missingPages = result;
@@ -1012,6 +1023,7 @@ export async function executeEdsPipeline(
         contentFilesCopied: 0,
         sheetPaths: [],
         codePathsOnSource: [],
+        carriedPaths: [],
         libraryPaths: [],
         // Reuse the caller's report when threaded through (so canonical-phase
         // results from `resetRepoToTemplate` survive into the final result),

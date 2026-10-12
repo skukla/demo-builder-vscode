@@ -31,13 +31,17 @@ export const EXCLUDED_NAMES = [
 /**
  * Folder names to exclude from publishing. Exported for the same reason as
  * {@link EXCLUDED_NAMES}.
+ *
+ * `enrichment` is NOT here: its pages are what a storefront's enrichment block loads
+ * (`fetchIndex('enrichment/enrichment')`), so a copy that leaves them unpublished
+ * shows an empty block (EDS-40, measured on a colleague's demo 2026-10-12). The
+ * generated robots.txt already keeps them out of search.
  */
 export const EXCLUDED_FOLDERS = [
     '.helix',
     '.milo',
     'placeholders',
     'experiments', // A/B test config
-    'enrichment', // PDP enrichment data
 ];
 
 /** What page discovery needs: the DA.live listing and somewhere to log. */

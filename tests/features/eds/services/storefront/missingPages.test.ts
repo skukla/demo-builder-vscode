@@ -8,13 +8,19 @@
  * worked, so it may never throw and never report a gap it did not see.
  */
 
-import { findMissingPages, missingPagesSentence } from '@/features/eds/services/storefront/missingPages';
+import { carriedWebPaths, findMissingPages, missingPagesSentence } from '@/features/eds/services/storefront/missingPages';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 import { installSiteFetch, restoreFetch } from '../../../../helpers/siteFetchFake';
 
 // GitHub owner and repository: the key the live site is published under.
 const SITE = { owner: 'me', repo: 'shop' };
 const LIVE = 'https://main--shop--me.aem.live';
+// The content site the copy read from.
+const SOURCE = { org: 'jen', site: 'demo' };
+const SOURCE_LIVE = 'https://main--demo--jen.aem.live';
+
+/** Only the code's paths, as the check was first written. */
+const fromCode = (paths: string[]) => ({ fromCode: paths, carried: [] });
 
 afterEach(restoreFetch);
 
@@ -22,7 +28,7 @@ describe('findMissingPages', () => {
     it('asks the storefront for every path the source has, as the source was asked', async () => {
         const site = installSiteFetch([]);
 
-        await findMissingPages(SITE, ['/cart', '/customer/forgotpassword', '/placeholders/cart.json'], createMockLogger());
+        await findMissingPages(SITE, SOURCE, fromCode(['/cart', '/customer/forgotpassword', '/placeholders/cart.json']), createMockLogger());
 
         expect(site.asked().sort()).toEqual([
             `${LIVE}/cart.plain.html`,
@@ -34,7 +40,7 @@ describe('findMissingPages', () => {
     it('names what the storefront does not serve', async () => {
         installSiteFetch([`${LIVE}/cart.plain.html`]);
 
-        const result = await findMissingPages(SITE, ['/cart', '/checkout', '/search'], createMockLogger());
+        const result = await findMissingPages(SITE, SOURCE, fromCode(['/cart', '/checkout', '/search']), createMockLogger());
 
         expect(result.status).toBe('missing');
         expect(result.missing).toEqual(['/checkout', '/search']);
@@ -46,7 +52,7 @@ describe('findMissingPages', () => {
     it('says nothing when the storefront serves them all', async () => {
         installSiteFetch([`${LIVE}/cart.plain.html`, `${LIVE}/placeholders/cart.json`]);
 
-        const result = await findMissingPages(SITE, ['/cart', '/placeholders/cart.json'], createMockLogger());
+        const result = await findMissingPages(SITE, SOURCE, fromCode(['/cart', '/placeholders/cart.json']), createMockLogger());
 
         expect(result).toEqual({ status: 'complete', missing: [] });
     });
@@ -54,7 +60,7 @@ describe('findMissingPages', () => {
     it('does not call a page missing when the request for it failed', async () => {
         installSiteFetch([`${LIVE}/cart.plain.html`], [`${LIVE}/checkout.plain.html`]);
 
-        const result = await findMissingPages(SITE, ['/cart', '/checkout'], createMockLogger());
+        const result = await findMissingPages(SITE, SOURCE, fromCode(['/cart', '/checkout']), createMockLogger());
 
         expect(result).toEqual({ status: 'complete', missing: [] });
     });
@@ -62,7 +68,7 @@ describe('findMissingPages', () => {
     it('says it could not check when the storefront answered nothing', async () => {
         installSiteFetch([], [`${LIVE}/cart.plain.html`, `${LIVE}/checkout.plain.html`]);
 
-        const result = await findMissingPages(SITE, ['/cart', '/checkout'], createMockLogger());
+        const result = await findMissingPages(SITE, SOURCE, fromCode(['/cart', '/checkout']), createMockLogger());
 
         expect(result.status).toBe('not-checked');
         expect(result.missing).toStrictEqual([]);
@@ -80,7 +86,7 @@ describe('findMissingPages', () => {
             throw new Error('output channel closed');
         });
 
-        const result = await findMissingPages(SITE, ['/cart'], logger);
+        const result = await findMissingPages(SITE, SOURCE, fromCode(['/cart']), logger);
 
         expect(result.status).toBe('not-checked');
         expect(result.missing).toStrictEqual([]);
@@ -89,10 +95,83 @@ describe('findMissingPages', () => {
     it('asks for nothing when the source had nothing', async () => {
         const site = installSiteFetch([]);
 
-        const result = await findMissingPages(SITE, [], createMockLogger());
+        const result = await findMissingPages(SITE, SOURCE, fromCode([]), createMockLogger());
 
         expect(site.asked()).toStrictEqual([]);
         expect(result).toEqual({ status: 'complete', missing: [] });
+    });
+});
+
+describe('findMissingPages — what the copy carried', () => {
+    // The first live run (2026-10-12) said "serves all 57 pages the source has" while
+    // two enrichment pages the copy had carried were never published: the check only
+    // looked at the paths read out of the code.
+    it('names a carried page the storefront does not serve and the source does', async () => {
+        installSiteFetch([`${LIVE}/cart.plain.html`, `${SOURCE_LIVE}/enrichment/category-banner.plain.html`]);
+
+        const result = await findMissingPages(
+            SITE,
+            SOURCE,
+            { fromCode: ['/cart'], carried: ['/enrichment/category-banner'] },
+            createMockLogger(),
+        );
+
+        expect(result.status).toBe('missing');
+        expect(result.missing).toEqual(['/enrichment/category-banner']);
+    });
+
+    it('does not name a carried page the source does not serve either', async () => {
+        // A draft, a stub, a page the source never published: copied, never expected live.
+        installSiteFetch([`${LIVE}/cart.plain.html`]);
+
+        const result = await findMissingPages(
+            SITE,
+            SOURCE,
+            { fromCode: ['/cart'], carried: ['/drafts/idea'] },
+            createMockLogger(),
+        );
+
+        expect(result).toEqual({ status: 'complete', missing: [] });
+    });
+
+    it('asks the source only about carried pages the storefront does not serve', async () => {
+        const site = installSiteFetch([`${LIVE}/cart.plain.html`, `${LIVE}/about.plain.html`]);
+
+        await findMissingPages(
+            SITE,
+            SOURCE,
+            { fromCode: ['/cart', '/checkout'], carried: ['/about', '/drafts/idea'] },
+            createMockLogger(),
+        );
+
+        expect(site.asked().filter((url) => url.startsWith(SOURCE_LIVE))).toEqual([
+            `${SOURCE_LIVE}/drafts/idea.plain.html`,
+        ]);
+    });
+
+    it('asks the storefront once for a path on both lists', async () => {
+        const site = installSiteFetch([`${LIVE}/cart.plain.html`]);
+
+        await findMissingPages(SITE, SOURCE, { fromCode: ['/cart'], carried: ['/cart'] }, createMockLogger());
+
+        expect(site.asked()).toEqual([`${LIVE}/cart.plain.html`]);
+    });
+});
+
+describe('carriedWebPaths', () => {
+    it('names a page by its path and a sheet by the web path it was written to', () => {
+        expect(carriedWebPaths(['/cart', '/placeholders/cart'], ['/placeholders/cart.json'])).toEqual([
+            '/placeholders/cart.json',
+            '/cart',
+        ]);
+    });
+
+    it('leaves out configuration under a dot folder and files with an extension', () => {
+        expect(carriedWebPaths(['/.da/library/blocks', '/media/logo.png', '/about'], [])).toEqual(['/about']);
+    });
+
+    it('reads a path written without its leading slash', () => {
+        expect(carriedWebPaths(['enrichment/product-banner'], [])).toEqual(['/enrichment/product-banner']);
     });
 });
 

@@ -78,7 +78,7 @@ describe('HelixPageDiscovery.listAllPages', () => {
         },
     );
 
-    it.each(['.helix', '.milo', 'placeholders', 'experiments', 'enrichment'])(
+    it.each(['.helix', '.milo', 'placeholders', 'experiments'])(
         'does not descend into the "%s" folder',
         async (name) => {
             listDirectory.mockResolvedValueOnce([
@@ -90,6 +90,14 @@ describe('HelixPageDiscovery.listAllPages', () => {
             expect(listDirectory).toHaveBeenCalledTimes(1);
         },
     );
+
+    it('publishes the enrichment pages a storefront’s enrichment block loads', async () => {
+        listDirectory
+            .mockResolvedValueOnce([folder('/org/site/enrichment'), file('/org/site/home.html')])
+            .mockResolvedValueOnce([file('/org/site/enrichment/category-banner.html')]);
+
+        expect(await discovery.listAllPages('org', 'site')).toEqual(['/enrichment/category-banner', '/home']);
+    });
 
     it('recurses into other folders by their path relative to the site', async () => {
         listDirectory

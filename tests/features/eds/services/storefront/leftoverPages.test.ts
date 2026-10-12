@@ -107,7 +107,6 @@ describe('unpublishLeftoverPages', () => {
         const helix = helixFake([
             '/placeholders.json',
             '/media_abc.png',
-            '/enrichment/products',
             '/experiments/test-a',
             '/metadata',
             '/stale',

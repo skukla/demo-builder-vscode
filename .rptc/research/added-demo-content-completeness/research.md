@@ -233,3 +233,19 @@ call.
 paths read out of the code. It does not look at what the copy took from the index, so a page
 that was copied and then left unpublished is invisible to it. The check should cover every
 path the copy carried, whatever told it to.
+
+## 9. Both follow-ups, built 2026-10-12 (owner: "Do it")
+
+- **The enrichment folder is published.** `enrichment` is out of `EXCLUDED_FOLDERS`
+  (`helix/helixPageDiscovery.ts`). The exclusion came with the first publish feature
+  (`a116f0237`, 2026-01-12) with no reason beyond "PDP enrichment data". The generated
+  robots.txt already disallows `/enrichment/`, so publishing them does not put them in
+  search. A reset now also treats a stale enrichment page like any other leftover.
+- **The check covers everything the copy carried.** `findMissingPages` takes two lists: the
+  code's paths the source answered for (a gap if the storefront lacks one), and everything
+  else the copy carried (`carriedWebPaths`: every sheet written, every document copied,
+  overlay included). A carried path the storefront does not serve is asked for on the source,
+  and is a gap only when the source serves it, so a draft, a stub or an unpublished source page
+  is never reported. The source is asked only about those.
+
+Not yet re-run live on bodea.

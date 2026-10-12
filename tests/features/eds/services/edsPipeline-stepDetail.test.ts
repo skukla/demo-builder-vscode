@@ -67,7 +67,7 @@ describe('executeEdsPipeline - step detail', () => {
             sheetPaths: [],
             codePathsOnSource: [],
         });
-        mockOverlayAccountChrome = jest.fn().mockResolvedValue({ totalFiles: 8 });
+        mockOverlayAccountChrome = jest.fn().mockResolvedValue({ success: true, copiedFiles: [], failedFiles: [], totalFiles: 8 });
         mockCreateBlockLibrary = jest
             .fn()
             .mockResolvedValue({ success: true, blocksCount: 5, paths: ['/.da/library/blocks'] });
