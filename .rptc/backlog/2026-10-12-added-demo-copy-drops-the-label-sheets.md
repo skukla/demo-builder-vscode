@@ -67,6 +67,8 @@ in the stub list now (`ea374381d`).
 - 2026-10-12  docs(research): what a storefront copied from a colleague's demo is missing (`8c9e1cd4a`)
 - 2026-10-12  Merge branch 'fix/eds-40-sheets-that-work' into loop/2026-10-05-release-candidate (`5c6e04192`)
 - 2026-10-12  fix(eds): sheets are copied as sheets, published, and the label stubs answer (`98b5c88b0`)
+- 2026-10-12  feat(eds): a storefront copy carries what its code loads, and says what is missing (`8cd987437`)
+- 2026-10-12  docs(research): the live test on bodea; a stub blocks the copied sheet at its path (`cc306f47c`)
 
 ## The stub list cannot know an added demo's code (owner, 2026-10-12)
 
