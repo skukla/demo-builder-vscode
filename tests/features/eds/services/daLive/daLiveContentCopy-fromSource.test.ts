@@ -121,7 +121,81 @@ describe('DaLiveContentCopy.copyContentFromSource', () => {
                 copiedFiles: [...AUTH_STUBS],
                 failedFiles: [],
                 totalFiles: 3,
+                sheetPaths: [],
             });
+        });
+    });
+
+    describe('the sheets it wrote', () => {
+        // The publish step publishes by this list, so it carries the path Helix
+        // is asked for: the web path with `.json`, not the extensionless path the
+        // copy loop works in.
+        const SERVED_SHEET = { total: 1, limit: 1, offset: 0, data: [{ URL: '' }], ':type': 'sheet' };
+
+        /** `sheets` answer as JSON on the source; every other path is an HTML page. */
+        function routeSheets(sheets: string[]): void {
+            const isSheet = (url: string) => sheets.some((sheet) => url === `${LIVE}${sheet}.json`);
+            routeFetch([
+                {
+                    when: (u, i) => i?.method === 'HEAD' && isSheet(u),
+                    respond: mockResponse(200, undefined, 'application/json'),
+                },
+                { when: (_u, i) => i?.method === 'HEAD', respond: mockResponse(404) },
+                { when: (u) => isSheet(u), respond: mockResponse(200, SERVED_SHEET, 'application/json') },
+                { when: (u) => u.endsWith('.plain.html'), respond: mockResponse(200, '<p/>', 'text/html') },
+            ]);
+        }
+
+        it('reports each sheet it wrote as the .json path to publish, and no page', async () => {
+            h.discoveryOps.getContentPathsFromDaLive.mockResolvedValue([
+                '/about',
+                '/metadata',
+                '/placeholders/cart',
+            ]);
+            routeSheets(['/metadata', '/placeholders/cart']);
+
+            const result = await h.copy.copyContentFromSource(SOURCE, 'dest-org', 'dest-site');
+
+            expect(result.sheetPaths).toStrictEqual(['/metadata.json', '/placeholders/cart.json']);
+            expect(writtenUrls()).toEqual(
+                expect.arrayContaining([
+                    'https://admin.da.live/source/dest-org/dest-site/metadata.json',
+                    'https://admin.da.live/source/dest-org/dest-site/placeholders/cart.json',
+                ])
+            );
+        });
+
+        it('reports a label sheet found by the placeholders probe on the index fallback', async () => {
+            h.discoveryOps.getContentPathsFromDaLive.mockResolvedValue([]);
+            h.discoveryOps.getContentPathsFromIndex.mockResolvedValue([]);
+            routeSheets(['/placeholders/cart']);
+
+            const result = await h.copy.copyContentFromSource(SOURCE, 'dest-org', 'dest-site');
+
+            expect(result.sheetPaths).toStrictEqual(['/placeholders/cart.json']);
+        });
+
+        it('does not report a sheet whose write DA.live refused', async () => {
+            h.discoveryOps.getContentPathsFromDaLive.mockResolvedValue(['/metadata']);
+            routeSheets(['/metadata']);
+            h.apiClient.fetchWithRetry.mockResolvedValue(mockResponse(500));
+
+            const result = await h.copy.copyContentFromSource(SOURCE, 'dest-org', 'dest-site');
+
+            expect(result.sheetPaths).toStrictEqual([]);
+            expect(result.failedFiles).toStrictEqual([{ path: '/metadata', error: 'Copy failed' }]);
+        });
+
+        it('keeps one run\'s sheets out of the next run\'s list', async () => {
+            h.discoveryOps.getContentPathsFromDaLive.mockResolvedValue(['/metadata']);
+            routeSheets(['/metadata']);
+            await h.copy.copyContentFromSource(SOURCE, 'dest-org', 'dest-site');
+
+            h.discoveryOps.getContentPathsFromDaLive.mockResolvedValue(['/redirects']);
+            routeSheets(['/redirects']);
+            const second = await h.copy.copyContentFromSource(SOURCE, 'dest-org', 'dest-site');
+
+            expect(second.sheetPaths).toStrictEqual(['/redirects.json']);
         });
     });
 

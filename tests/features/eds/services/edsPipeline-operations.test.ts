@@ -58,6 +58,7 @@ describe('executeEdsPipeline - operations', () => {
                     totalFiles: 42,
                     copiedFiles: Array(42).fill('/page'),
                     failedFiles: [],
+                    sheetPaths: [],
                 }),
                 copyContent: jest.fn().mockResolvedValue({
                     success: true,
@@ -192,6 +193,7 @@ describe('executeEdsPipeline - operations', () => {
                 totalFiles: 10,
                 copiedFiles: [],
                 failedFiles: [{ path: '/page', error: 'fail' }],
+                sheetPaths: [],
             });
 
             const result = await executeEdsPipeline(

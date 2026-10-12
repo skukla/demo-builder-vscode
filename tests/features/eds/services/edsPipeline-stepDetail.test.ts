@@ -20,10 +20,12 @@ import { DaLiveError } from '@/features/eds/services/types';
 import { createPatchReport } from '@/features/eds/services/patches/patchReportHelper';
 
 const mockPublishLibraryPaths = jest.fn().mockResolvedValue(undefined);
+const mockPublishSheetPaths = jest.fn();
 const mockVerifyLibraryPreviewed = jest.fn().mockResolvedValue(true);
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     applyDaLiveOrgConfigSettings: jest.fn().mockResolvedValue(undefined),
     publishLibraryPaths: (...args: unknown[]) => mockPublishLibraryPaths(...args),
+    publishSheetPaths: (...args: unknown[]) => mockPublishSheetPaths(...args),
     verifyLibraryPreviewed: (...args: unknown[]) => mockVerifyLibraryPreviewed(...args),
 }));
 
@@ -62,6 +64,7 @@ describe('executeEdsPipeline - step detail', () => {
             totalFiles: 42,
             copiedFiles: ['/page'],
             failedFiles: [],
+            sheetPaths: [],
         });
         mockOverlayAccountChrome = jest.fn().mockResolvedValue({ totalFiles: 8 });
         mockCreateBlockLibrary = jest
@@ -133,7 +136,7 @@ describe('executeEdsPipeline - step detail', () => {
                         percentage: 30,
                         currentFile: '/products/shoes',
                     });
-                    return { success: true, totalFiles: 10, copiedFiles: [], failedFiles: [] };
+                    return { success: true, totalFiles: 10, copiedFiles: [], failedFiles: [], sheetPaths: [] };
                 }
             );
 
@@ -158,7 +161,7 @@ describe('executeEdsPipeline - step detail', () => {
                     report: (p: Record<string, unknown>) => void
                 ) => {
                     report({ processed: 3, total: 10 });
-                    return { success: true, totalFiles: 10, copiedFiles: [], failedFiles: [] };
+                    return { success: true, totalFiles: 10, copiedFiles: [], failedFiles: [], sheetPaths: [] };
                 }
             );
 
@@ -187,7 +190,7 @@ describe('executeEdsPipeline - step detail', () => {
                     report: (p: Record<string, unknown>) => void
                 ) => {
                     report({ processed: 1, total: 2 });
-                    return { success: true, totalFiles: 2, copiedFiles: [], failedFiles: [] };
+                    return { success: true, totalFiles: 2, copiedFiles: [], failedFiles: [], sheetPaths: [] };
                 }
             );
 
@@ -552,6 +555,127 @@ describe('executeEdsPipeline - step detail', () => {
 
             expect(result.success).toBe(true);
             expect(result.libraryPaths).toEqual(['/a']);
+        });
+    });
+
+    // =========================================================================
+    // Publishing the copied sheets
+    // =========================================================================
+
+    describe('publishing the copied sheets', () => {
+        // A sheet written to DA.live is served only once it is previewed and
+        // published, and the whole-site publish never touches one: it publishes
+        // .html documents and skips metadata, redirects and placeholders by name.
+        const SHEETS = ['/metadata.json', '/placeholders/cart.json'];
+        const withSheets = (sheetPaths: string[]) =>
+            mockCopyContentFromSource.mockResolvedValue({
+                success: true,
+                totalFiles: 3,
+                copiedFiles: ['/page', '/metadata', '/placeholders/cart'],
+                failedFiles: [],
+                sheetPaths,
+            });
+
+        beforeEach(() => {
+            mockPublishSheetPaths.mockResolvedValue({ published: 2, failed: 0 });
+        });
+
+        it('publishes exactly the sheet paths the copy reported, one page at a time', async () => {
+            withSheets(SHEETS);
+
+            await executeEdsPipeline(params, services, onProgress);
+
+            expect(mockPublishSheetPaths).toHaveBeenCalledTimes(1);
+            expect(mockPublishSheetPaths).toHaveBeenCalledWith(
+                services.helixService,
+                'test-owner',
+                'test-repo',
+                SHEETS,
+                services.logger
+            );
+        });
+
+        it('publishes them after the pages', async () => {
+            withSheets(SHEETS);
+            const order: string[] = [];
+            mockPublishAllSiteContent.mockImplementation(async () => {
+                order.push('pages');
+            });
+            mockPublishSheetPaths.mockImplementation(async () => {
+                order.push('sheets');
+                return { published: 2, failed: 0 };
+            });
+
+            await executeEdsPipeline(params, services, onProgress);
+
+            expect(order).toStrictEqual(['pages', 'sheets']);
+        });
+
+        it('says how many sheets it is publishing', async () => {
+            withSheets(SHEETS);
+
+            await executeEdsPipeline(params, services, onProgress);
+
+            expect(progress).toContainEqual({
+                operation: 'sheet-publish',
+                message: 'Publishing sheets',
+                subMessage: 'Publishing 2 sheets',
+            });
+        });
+
+        it('says sheet, not sheets, when there is one', async () => {
+            withSheets(['/metadata.json']);
+
+            await executeEdsPipeline(params, services, onProgress);
+
+            expect(find('sheet-publish', /^Publishing sheets$/)?.subMessage).toBe(
+                'Publishing 1 sheet'
+            );
+        });
+
+        it('publishes nothing when the copy wrote no sheet', async () => {
+            withSheets([]);
+
+            await executeEdsPipeline(params, services, onProgress);
+
+            expect(mockPublishSheetPaths).not.toHaveBeenCalled();
+            expect(progress.some((p) => p.operation === 'sheet-publish')).toBe(false);
+        });
+
+        it('publishes nothing when the run was told not to publish', async () => {
+            withSheets(SHEETS);
+
+            await executeEdsPipeline({ ...params, skipPublish: true }, services, onProgress);
+
+            expect(mockPublishSheetPaths).not.toHaveBeenCalled();
+        });
+
+        it('does not fail the run when the sheet publish throws', async () => {
+            // The sheets are in DA.live; publishing them can be retried.
+            withSheets(SHEETS);
+            mockPublishSheetPaths.mockRejectedValue(new Error('publish refused'));
+
+            const result = await executeEdsPipeline(params, services, onProgress);
+
+            expect(result.success).toBe(true);
+        });
+
+        it('keeps the sheets out of the block library publish, and the library out of the sheets', async () => {
+            withSheets(SHEETS);
+
+            await executeEdsPipeline(
+                { ...params, includeBlockLibrary: true },
+                services,
+                onProgress
+            );
+
+            expect(mockPublishSheetPaths.mock.calls.map((call) => call[3])).toStrictEqual([SHEETS]);
+            expect(mockPublishLibraryPaths.mock.calls.map((call) => call[3])).toStrictEqual([
+                ['/.da/library/blocks'],
+            ]);
+            expect(mockPublishSheetPaths.mock.invocationCallOrder[0]).toBeLessThan(
+                mockPublishLibraryPaths.mock.invocationCallOrder[0]
+            );
         });
     });
 });

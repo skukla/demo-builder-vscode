@@ -233,6 +233,7 @@ export async function ensureEdsContent(
         configureDaLivePermissions,
         applyDaLiveOrgConfigSettings,
         publishLibraryPaths,
+        publishSheetPaths,
         verifyLibraryPreviewed,
     } =
         await import('@/features/eds/handlers/edsHelpers');
@@ -300,6 +301,16 @@ export async function ensureEdsContent(
         config.daLiveOrg,
         config.daLiveSite,
     );
+
+    // Publish the sheets the copy wrote, by path (non-fatal). publishAllSiteContent
+    // publishes pages only, so a copied sheet is served only once this runs.
+    if (contentResult.sheetPaths.length > 0) {
+        await nonFatal('Sheet publish', logger, async () => {
+            await publishSheetPaths(
+                helixService, repoInfo.owner, repoInfo.repo, contentResult.sheetPaths, logger,
+            );
+        });
+    }
 
     // Publish block library paths (non-fatal, may be missed by publishAllSiteContent)
     if (libraryPaths.length > 0) {

@@ -1,12 +1,23 @@
 /**
  * Spreadsheet copy — the one content kind that cannot go through the normal path.
  *
- * A DA.live spreadsheet is an Excel document served as JSON on the CDN. It has no
- * `.plain.html` version, so the HTML copy path cannot see it, and a cross-org copy
- * cannot use the DA.live admin API at all because there is no auth for the SOURCE
- * org. Both facts force the same shape: read the public CDN JSON, convert it to an
- * HTML table, and POST that to the destination, where DA.live turns it back into a
- * sheet.
+ * A sheet is served as JSON on the CDN and has no `.plain.html` version, so the
+ * HTML copy path cannot see it, and a cross-org copy cannot use the DA.live admin
+ * API at all because there is no auth for the SOURCE org. So: read the public CDN
+ * JSON, rebuild DA.live's own sheet document from it, and POST that to the
+ * destination's `<path>.json`.
+ *
+ * It is written as a sheet because nothing else becomes one. Until 2026-10-12 this
+ * posted an HTML table to `<path>.html`, on the belief that DA.live would turn it
+ * back into a sheet. It never did: the result was served as a page and
+ * `<path>.json` answered 404, which is why a storefront whose log said "Copied
+ * spreadsheet /metadata" had no `/metadata.json` (EDS-40, measured on a scratch
+ * storefront). The document shape lives in `daLiveSpreadsheetUtils`, shared with
+ * the block library's sheet, which is the proof the shape is served.
+ *
+ * A sheet in DA.live is not served until it is previewed and published, and the
+ * whole-site publish skips sheets. The caller collects {@link sheetWebPath} for
+ * every sheet written here and the pipeline publishes that list by path.
  *
  * Extracted from `daLiveContentCopy.ts` on 2026-09-10 — 1,157 lines against a
  * 400-line service limit, and coupled. This pair is the cleanest seam in that file:
@@ -24,7 +35,12 @@
 import { DaLiveAuthError } from '../types';
 import type { DaLiveApiClient } from './daLiveApiClient';
 import { DA_LIVE_BASE_URL, normalizePath } from './daLiveConstants';
-import { convertSpreadsheetJsonToHtml } from './daLiveSpreadsheetUtils';
+import {
+    buildSheetDocument,
+    readServedSheets,
+    type ServedSheet,
+    type SheetRow,
+} from './daLiveSpreadsheetUtils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
@@ -63,11 +79,73 @@ export async function isSpreadsheetPath(baseUrl: string, path: string): Promise<
 }
 
 /**
- * Copy one spreadsheet from source to destination.
+ * The web path a copied sheet is previewed and published at: `/metadata` is
+ * served, and published, as `/metadata.json`.
  *
- * Fetches JSON from the public CDN and converts it to an HTML table for upload —
- * the admin API is unavailable for cross-org copies because there is no auth
- * against the source org.
+ * @param destPath - the extensionless content path the sheet was copied to
+ */
+export function sheetWebPath(destPath: string): string {
+    return `/${normalizePath(destPath)}.json`;
+}
+
+/**
+ * The most follow-up pages read for one sheet: the hard stop for a `total` the
+ * server never delivers.
+ */
+const MAX_FOLLOW_UP_PAGES = 50;
+
+/** One follow-up page of a sheet's rows, or null when it cannot be read. */
+async function readSheetPage(pageUrl: string): Promise<SheetRow[] | null> {
+    const response = await fetch(pageUrl, { signal: AbortSignal.timeout(TIMEOUTS.NORMAL) });
+    if (!response.ok) return null;
+    // A sheet asked for by name comes back alone, in single-sheet form.
+    const page = readServedSheets(await response.json());
+    return page?.length === 1 ? page[0].rows : null;
+}
+
+/**
+ * Read the rest of a sheet whose first response was only a page of it.
+ *
+ * The CDN pages a sheet: `total` is the whole sheet and `data` the rows of this
+ * page. Follow-up pages are asked for with `offset` and `limit`, and with
+ * `sheet=<name>` for a sheet of a multi-sheet document. Those parameter names are
+ * the ones the served fields and the storefront's own `?sheet=data` request show;
+ * the paged request itself was NOT measured against a live site when this was
+ * written (2026-10-12), so every way it can go wrong ends the loop: an unreadable
+ * page, an empty page, or {@link MAX_FOLLOW_UP_PAGES}. The sheet is then copied
+ * with the rows in hand and the shortfall is logged.
+ *
+ * Replaces `sheet.rows` with the longer list.
+ */
+async function readRemainingRows(
+    logger: Logger,
+    sheetUrl: string,
+    sheet: ServedSheet,
+): Promise<void> {
+    const pageSize = sheet.rows.length;
+    const selector = sheet.sheetParam ? `sheet=${encodeURIComponent(sheet.sheetParam)}&` : '';
+    for (let page = 0; page < MAX_FOLLOW_UP_PAGES && sheet.rows.length < sheet.total; page++) {
+        const rows = await readSheetPage(
+            `${sheetUrl}?${selector}offset=${sheet.rows.length}&limit=${pageSize}`,
+        );
+        if (!rows || rows.length === 0) break;
+        sheet.rows = [...sheet.rows, ...rows];
+    }
+    if (sheet.rows.length < sheet.total) {
+        logger.warn(
+            `[DA.live] Sheet "${sheet.name}" of ${sheetUrl} copied short: ` +
+                `${sheet.rows.length} of ${sheet.total} rows`,
+        );
+    }
+}
+
+/**
+ * Copy one spreadsheet from source to destination, as a sheet.
+ *
+ * Fetches JSON from the public CDN (the admin API is unavailable for cross-org
+ * copies because there is no auth against the source org) and writes DA.live's
+ * native sheet document, with every sheet the source has and every page of each,
+ * to `<destPath>.json`.
  *
  * @throws DaLiveAuthError on a 401, so the caller can pause and prompt for re-auth
  * @returns false for every other failure; this step is not fatal to a copy run
@@ -97,18 +175,22 @@ export async function copySpreadsheetFile(
             return false;
         }
 
-        const jsonData = await sourceResponse.json();
-
-        // Convert JSON to HTML table format that DA.live can process
-        const htmlContent = convertSpreadsheetJsonToHtml(jsonData);
-        if (!htmlContent) {
-            logger.warn(`[DA.live] Failed to convert spreadsheet ${sourcePath} to HTML`);
+        const sheets = readServedSheets(await sourceResponse.json());
+        if (!sheets) {
+            logger.warn(`[DA.live] Source JSON for ${sourcePath} is not a spreadsheet`);
             return false;
         }
+        for (const sheet of sheets) {
+            if (sheet.rows.length > 0 && sheet.rows.length < sheet.total) {
+                await readRemainingRows(logger, sourceUrl, sheet);
+            }
+        }
+        const sheetJson = JSON.stringify(buildSheetDocument(sheets));
 
-        // Upload as HTML to destination DA.live (will be converted to sheet)
-        const destNormalizedPath = normalizePath(destPath);
-        const destUrl = `${DA_LIVE_BASE_URL}/source/${destination.org}/${destination.site}/${destNormalizedPath}.html`;
+        // A sheet lives at <path>.json. Posted to <path>.html it is stored, and
+        // served, as a page.
+        const destSite = `${DA_LIVE_BASE_URL}/source/${destination.org}/${destination.site}`;
+        const destUrl = `${destSite}${sheetWebPath(destPath)}`;
 
         // DA.live write via the shared client (retry + fresh FormData per
         // attempt; page-level 429 tolerance).
@@ -116,7 +198,7 @@ export async function copySpreadsheetFile(
             destUrl,
             () => {
                 const formData = new FormData();
-                formData.append('data', new Blob([htmlContent], { type: 'text/html' }));
+                formData.append('data', new Blob([sheetJson], { type: 'application/json' }));
                 return {
                     method: 'POST',
                     headers: { Authorization: `Bearer ${token}` },

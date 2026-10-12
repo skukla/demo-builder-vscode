@@ -89,11 +89,13 @@ jest.mock('@/features/eds/services/github/githubFileOperations', () => ({
 const mockConfigureDaLivePermissions = jest.fn();
 const mockApplyDaLiveOrgConfigSettings = jest.fn();
 const mockPublishLibraryPaths = jest.fn();
+const mockPublishSheetPaths = jest.fn();
 
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     configureDaLivePermissions: (...args: unknown[]) => mockConfigureDaLivePermissions(...args),
     applyDaLiveOrgConfigSettings: (...args: unknown[]) => mockApplyDaLiveOrgConfigSettings(...args),
     publishLibraryPaths: (...args: unknown[]) => mockPublishLibraryPaths(...args),
+    publishSheetPaths: (...args: unknown[]) => mockPublishSheetPaths(...args),
     getDaLiveAuthService: jest.fn().mockReturnValue({
         getAccessToken: mockGetAccessToken,
         getUserEmail: mockGetUserEmail,
@@ -138,7 +140,7 @@ function makeDeps() {
 
 function setupDefaultMocks() {
     mockFetch.mockResolvedValue({ ok: false, status: 404 });
-    mockCopyContentFromSource.mockResolvedValue({ success: true, totalFiles: 10, failedFiles: [] });
+    mockCopyContentFromSource.mockResolvedValue({ success: true, totalFiles: 10, failedFiles: [], sheetPaths: [] });
     mockGetUserEmail.mockResolvedValue('user@example.com');
     mockConfigureDaLivePermissions.mockResolvedValue({ success: true });
     mockCreateBlockLibraryFromTemplate.mockResolvedValue({ blocksCount: 3, paths: ['/library'] });
@@ -148,6 +150,7 @@ function setupDefaultMocks() {
     mockGetResourceStatus.mockResolvedValue({ httpStatus: 200 });
     mockPublishAllSiteContent.mockResolvedValue(undefined);
     mockPublishLibraryPaths.mockResolvedValue(undefined);
+    mockPublishSheetPaths.mockResolvedValue({ published: 0, failed: 0 });
     mockGetAccessToken.mockResolvedValue('da-live-token');
     mockOverlayAccountChrome.mockResolvedValue({ success: true, totalFiles: 4, failedFiles: [] });
 }
@@ -206,7 +209,7 @@ describe('ensureEdsContent', () => {
                     applied: false,
                     reason: 'Search pattern not found in content',
                 });
-                return { success: true, totalFiles: 5, failedFiles: [] };
+                return { success: true, totalFiles: 5, failedFiles: [], sheetPaths: [] };
             }
         );
 
@@ -478,7 +481,7 @@ describe('ensureEdsContent — the calls it makes', () => {
             mockCopyContentFromSource.mockImplementation(
                 async (_src, _o, _s, progress: (p: unknown) => void) => {
                     progress({ processed: 1, total: 2 });
-                    return { success: true, totalFiles: 2, failedFiles: [] };
+                    return { success: true, totalFiles: 2, failedFiles: [], sheetPaths: [] };
                 }
             );
             const config = makeConfig({
@@ -568,12 +571,67 @@ describe('ensureEdsContent — the calls it makes', () => {
             success: false,
             totalFiles: 4,
             failedFiles: ['/products/a', '/products/b'],
+            sheetPaths: [],
         });
 
         const result = await ensureEdsContent(makeConfig(), makeDeps());
 
         expect(result).toBe(true);
         expect(mockPublishAllSiteContent).toHaveBeenCalledTimes(1);
+    });
+
+    describe('the sheets the copy wrote', () => {
+        // The whole-site publish skips sheets, so a copied sheet is served only
+        // when it is published by path, the way the pipeline does it.
+        const withSheets = (sheetPaths: string[]) =>
+            mockCopyContentFromSource.mockResolvedValue({
+                success: true,
+                totalFiles: 3,
+                failedFiles: [],
+                sheetPaths,
+            });
+
+        it('publishes exactly the sheet paths the copy reported', async () => {
+            withSheets(['/metadata.json', '/placeholders/cart.json']);
+            const deps = makeDeps();
+
+            await ensureEdsContent(makeConfig(), deps);
+
+            expect(mockPublishSheetPaths).toHaveBeenCalledTimes(1);
+            expect(mockPublishSheetPaths).toHaveBeenCalledWith(
+                helixSeam,
+                'test-owner',
+                'test-repo',
+                ['/metadata.json', '/placeholders/cart.json'],
+                deps.logger
+            );
+        });
+
+        it('publishes them after the pages', async () => {
+            withSheets(['/metadata.json']);
+
+            await ensureEdsContent(makeConfig(), makeDeps());
+
+            expect(mockPublishAllSiteContent.mock.invocationCallOrder[0]).toBeLessThan(
+                mockPublishSheetPaths.mock.invocationCallOrder[0]
+            );
+            expect(mockPublishLibraryPaths).not.toHaveBeenCalled();
+        });
+
+        it('publishes nothing when the copy wrote no sheet', async () => {
+            withSheets([]);
+
+            await ensureEdsContent(makeConfig(), makeDeps());
+
+            expect(mockPublishSheetPaths).not.toHaveBeenCalled();
+        });
+
+        it('carries on when the sheet publish throws', async () => {
+            withSheets(['/metadata.json']);
+            mockPublishSheetPaths.mockRejectedValue(new Error('publish refused'));
+
+            await expect(ensureEdsContent(makeConfig(), makeDeps())).resolves.toBe(true);
+        });
     });
 
     describe('the broken links it hands back for the Storefront Report', () => {
@@ -590,7 +648,7 @@ describe('ensureEdsContent — the calls it makes', () => {
                     patchReport: PatchReport | undefined
                 ) => {
                     if (patchReport) patchReport.brokenLinks = recorded;
-                    return { success: true, totalFiles: 5, failedFiles: [] };
+                    return { success: true, totalFiles: 5, failedFiles: [], sheetPaths: [] };
                 }
             );
             const onBrokenLinks = jest.fn();

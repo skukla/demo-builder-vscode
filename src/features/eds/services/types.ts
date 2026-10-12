@@ -227,6 +227,18 @@ export interface DaLiveCopyResult {
 }
 
 /**
+ * What a whole-site content copy returns: the files, plus the sheets among them.
+ */
+export interface DaLiveSiteContentCopyResult extends DaLiveCopyResult {
+    /**
+     * The sheets the copy wrote, as the web paths to preview and publish
+     * (`/metadata.json`, `/placeholders/cart.json`). The whole-site publish skips
+     * sheets, so whoever publishes after this copy publishes these by path.
+     */
+    sheetPaths: string[];
+}
+
+/**
  * Organization access check result
  */
 export interface DaLiveOrgAccess {

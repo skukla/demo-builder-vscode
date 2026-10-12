@@ -19,6 +19,7 @@ import { type DaLiveSourceResult } from '../types';
 import { DaLiveApiClient } from './daLiveApiClient';
 import { DaLiveConfigOperations } from './daLiveConfigOperations';
 import { DA_LIVE_BASE_URL, normalizePath } from './daLiveConstants';
+import { buildSheetDocument } from './daLiveSpreadsheetUtils';
 import type { Logger } from '@/types/logger';
 
 /** The block-library sheet of one DA.live site. */
@@ -53,19 +54,8 @@ export class DaLiveBlockLibrarySheet {
     ): Promise<DaLiveSourceResult> {
         const token = await this.apiClient.getImsToken();
 
-        // Create DA.live native JSON spreadsheet format
-        const spreadsheetJson = {
-            data: {
-                total: rows.length,
-                limit: rows.length,
-                offset: 0,
-                data: rows,
-                ':colWidths': headers.map(() => 300), // Default column widths
-            },
-            ':names': ['data'],
-            ':version': 3,
-            ':type': 'multi-sheet',
-        };
+        // DA.live's native sheet document: one sheet, named `data`.
+        const spreadsheetJson = buildSheetDocument([{ name: 'data', rows, columns: headers }]);
 
         // Upload with .json extension
         const normalized = normalizePath(destPath);

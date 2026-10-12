@@ -118,6 +118,7 @@ describe('DaLiveContentCopy — reference-following discovery', () => {
             copiedFiles: ['/account'],
             failedFiles: [],
             totalFiles: 1,
+            sheetPaths: [],
         });
     });
 

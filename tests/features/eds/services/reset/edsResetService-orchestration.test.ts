@@ -526,6 +526,7 @@ describe('executeEdsReset - pipeline progress mapping', () => {
         ['block-library', 9],
         ['eds-settings', 10],
         ['cache-purge', 11],
+        ['sheet-publish', 11],
         ['library-publish', 11],
         ['leftover-pages', 11],
         ['catalog-prewarm', 11],

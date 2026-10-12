@@ -128,6 +128,7 @@ describe('every pipeline operation maps to a wizard phase and a bar position', (
         ['eds-settings', 'block-library', 63],
         ['cache-purge', 'publish', 66],
         ['content-publish', 'publish', 67],
+        ['sheet-publish', 'publish', 95],
         ['library-publish', 'publish', 95],
         ['leftover-pages', 'publish', 95],
         ['catalog-prewarm', 'publish', 95],
