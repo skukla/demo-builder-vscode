@@ -373,3 +373,77 @@ describe('buildInitialProject — installed block libraries', () => {
         expect(buildInitialProject(withRecords(), PROJECT_PATH).installedBlockLibraries).toBeUndefined();
     });
 });
+
+describe('buildInitialProject — what an Edit keeps of the project it rebuilds', () => {
+    // The default used to be "drop": this function listed what to keep, and every
+    // record it forgot was deleted from the manifest by the next Edit. Two of them
+    // made every Edit create new Adobe workspaces and overwrite hand-edited AI files.
+    const ERP: NonNullable<Project['appBuilderComponents']>[string] = {
+        kind: 'integration',
+        status: 'deployed',
+        name: 'ERP Integration',
+        source: { owner: 'acme', repo: 'erp-integration', branch: 'main' },
+        workspace: { id: 'ws-1', name: 'ERPIntegration' },
+    };
+    const edited = createMockProject({
+        appBuilderComponents: { 'erp-integration': ERP },
+        aiFileHashes: { 'AGENTS.md': 'abc123' },
+        aiContextVersion: 7,
+        aiPrompts: [{ id: 'p1', title: 'Check orders', prompt: 'List open orders' }],
+        pinned: true,
+        publishKeyRegisteredAt: '2026-10-01T00:00:00Z',
+        frontendEnvState: { envVars: {}, capturedAt: '2026-10-01T00:00:00Z' },
+        meshStatusSummary: 'deployed',
+        additionalConsoleApis: ['AssetComputeSDK'],
+    });
+
+    it("keeps each integration's record, so its Adobe workspace is reused", () => {
+        const project = buildInitialProject(config(), edited.path, edited);
+
+        expect(project.appBuilderComponents).toStrictEqual({ 'erp-integration': ERP });
+    });
+
+    it('keeps the AI file hashes, so a hand-edited file is skipped rather than overwritten', () => {
+        const project = buildInitialProject(config(), edited.path, edited);
+
+        expect(project.aiFileHashes).toStrictEqual({ 'AGENTS.md': 'abc123' });
+    });
+
+    it('keeps the other records nothing in the rebuild writes', () => {
+        const project = buildInitialProject(config(), edited.path, edited);
+
+        expect(project).toMatchObject({
+            aiContextVersion: 7,
+            aiPrompts: edited.aiPrompts,
+            pinned: true,
+            publishKeyRegisteredAt: '2026-10-01T00:00:00Z',
+        });
+    });
+
+    it('starts what the rebuild makes fresh from nothing', () => {
+        const project = buildInitialProject(config(), edited.path, edited);
+
+        expect(project.componentInstances).toStrictEqual({});
+        expect(project.frontendEnvState).toBeUndefined();
+        expect(project.meshStatusSummary).toBeUndefined();
+        expect(project.additionalConsoleApis).toBeUndefined();
+    });
+
+    it('lets the wizard decide what it owns', () => {
+        const project = buildInitialProject(
+            config({ projectName: 'renamed', selectedAddons: ['live-search'] }),
+            edited.path,
+            createMockProject({ selectedAddons: ['old-addon'] }),
+        );
+
+        expect(project.name).toBe('renamed');
+        expect(project.selectedAddons).toStrictEqual(['live-search']);
+    });
+
+    it('carries nothing on a create — control', () => {
+        const project = buildInitialProject(config(), PROJECT_PATH);
+
+        expect(project.appBuilderComponents).toBeUndefined();
+        expect(project.aiFileHashes).toBeUndefined();
+    });
+});

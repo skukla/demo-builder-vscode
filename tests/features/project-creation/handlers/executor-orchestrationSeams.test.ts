@@ -60,6 +60,9 @@ jest.mock('@/features/project-creation/handlers/executorPreflight', () => ({
 }));
 
 jest.mock('@/features/project-creation/handlers/executorEditMode', () => ({
+    // Pure: what an Edit keeps of the old project. The real one, not a fake.
+    carriedOverFromEdit: jest.requireActual('@/features/project-creation/handlers/executorEditMode')
+        .carriedOverFromEdit,
     loadExistingProjectForEdit: jest.fn().mockResolvedValue(undefined),
     prepareEditModeTempDir: jest.fn().mockResolvedValue('/tmp/edit/components.tmp'),
     performAtomicComponentSwap: jest.fn().mockResolvedValue(undefined),

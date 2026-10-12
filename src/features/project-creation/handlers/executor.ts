@@ -25,6 +25,7 @@ import {
 } from './executorAppBuilderPhase';
 import { loadComponentDefinitions } from './executorComponentLoading';
 import {
+    carriedOverFromEdit,
     loadExistingProjectForEdit,
     prepareEditModeTempDir,
     performAtomicComponentSwap,
@@ -100,6 +101,7 @@ function selectedAppBuilderIds(typedConfig: ProjectCreationConfig): string[] {
  * custom/instance SOURCES are NOT persisted (§E) — edit mode derives them from
  * the keyed `appBuilderComponents` map via `extractSettingsFromProject` (Edit
  * and Copy) and `createExportSettings` (the exported project file).
+ * In Edit, the old project's records are kept: see `carriedOverFromEdit`.
  */
 export function buildInitialProject(
     typedConfig: ProjectCreationConfig,
@@ -107,6 +109,7 @@ export function buildInitialProject(
     existingProject?: import('@/types/base').Project,
 ): import('@/types/base').Project {
     return {
+        ...carriedOverFromEdit(existingProject),
         name: typedConfig.projectName,
         // Only when the user actually set one. Seeding it from the slug would
         // render identically and then persist the slug as a genuine title, so a
@@ -157,10 +160,6 @@ export function buildInitialProject(
             ? typedConfig.edsConfig.installedBlockLibraries
             : existingProject?.installedBlockLibraries,
         componentApiPicks: typedConfig.componentApiPicks,
-        // Note: componentVersions, meshState, etc. are NOT preserved during edit
-        // - componentVersions: Regenerated from fresh component installation
-        // - meshState: Must be clean slate - old sourceHash won't match fresh files
-        // - frontendEnvState: Only valid if demo is running (cleared during edit)
     };
 }
 
