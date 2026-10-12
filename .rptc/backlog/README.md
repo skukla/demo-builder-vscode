@@ -432,7 +432,7 @@ each item's own file; what has already landed against an item is in its
 | `PR-1` | epic | [Reframe prerequisites: extension-wide tools vs project-shape requirements (Path A)](2026-06-11-prereqs-architecture-reframe.md) | — | low | backlog |
 | `PR-1a` | feature | └ [Node versions in one place: one register, one resolver, one runner](2026-10-07-node-versions-in-one-place.md) | — | med | active |
 
-### platform  (79)
+### platform  (80)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -515,6 +515,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-72` | chore | [The result builders' failure-flag tests sit in a suite a mutation measurement cannot count](2026-10-10-mutation-suite-named-for-behaviour-hides-mcp-tool-result-tests.md) | — | low | backlog |
 | `PL-73` | chore | [Review the tests the redundancy sweep found idle](2026-10-11-review-the-idle-test-leads.md) | — | low | backlog |
 | `PL-74` | fix | [The jest-concurrent hook proof failed once under the full suite's load](2026-10-12-the-jest-concurrent-hook-proof-failed-once-under-load.md) | — | low | backlog |
+| `PL-75` | feature | [Configure is the one place to change a project; Edit is removed](2026-10-12-configure-is-the-one-place.md) | — | high | active |
 
 <!-- END GENERATED registry -->
 
@@ -663,7 +664,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — built
 
-*263 item(s) sit outside the A–G chain.*
+*264 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 
