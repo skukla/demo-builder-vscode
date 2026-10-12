@@ -34,5 +34,25 @@ mid-removal. `get_erp_status` from the agent answered "not found" for the same r
    refreshes. The wrong-message half is fixed: the add now says the integration is not in the
    current project, naming it (erpAddHandler, same day).
 
+**The same fault from the other side (2026-10-12, 14:02 to 14:14 local).** An agent created
+a project (`create_project`, finished 14:02:36) and went on working on it. At 14:04:01 the
+Your Projects screen sent `selectProject` for JustRite: the log line `Selected project:
+justrite` carries no agent call id, and the only two senders of that message are click
+handlers on a project card (`projects-dashboard/ui/index.tsx`). From then on the agent's
+tools answered for JustRite: `run_commerce_query` at 14:04:02 and `get_storefront_report` at
+14:09:21 (it named `skukla/kukla-justrite`). Nothing told the agent. It called
+`set_current_project` at 14:14 and carried on.
+
+What was ruled out by reading: the named reads (`get_project`, `get_component_config`,
+`list_projects` in `mcp/projectToolHandlers.ts`) read the manifest from disk and write no
+state; and creation does select the new project (`finalizeProject` saves through
+`saveProject`, and a separate create that morning left its project current).
+
+So there is one current project, and a person's click and an agent's task both move it and
+both read it. Point 1 above covers the agent moving it under the person. This is the person
+moving it under the agent, and it needs its own answer: an agent connection that has been
+working on a project should either keep acting on that project, or be told in the tool's
+answer that the current project changed since its last call.
+
 ## Shipped so far
 - 2026-10-09  fix(dashboard): Add another ERP says when the integration is not in the current project (`f045b0c7d`)
