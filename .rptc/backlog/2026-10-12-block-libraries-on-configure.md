@@ -46,3 +46,7 @@ install at once or leave it to the update check; the first is what an SC expects
   not already crowded.
 - **The agent surface.** A person gains an action here. Say whether an agent gets it too
   (there is `refresh_block_library` and `promote_block_to_library`, and no "add a library").
+
+## Shipped so far
+
+- 2026-10-12  docs(backlog): file EDS-39, choose block libraries on Configure; correct test row 3.4 (`961d972f2`)
