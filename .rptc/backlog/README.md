@@ -284,7 +284,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-36` | fix | [A block library install put back block entries the SC had deleted](2026-10-09-block-library-respects-hand-deletions.md) | — | med | built |
 | `EDS-37` | fix | [Storefront setup recorded its block libraries on the wrong project](2026-10-09-storefront-setup-records-block-libraries-on-the-open-project.md) | — | med | built |
 | `EDS-38` | question | [Should a block library report success when its site-config registration failed?](2026-10-10-block-library-success-when-site-config-registration-fails.md) | — | low | open |
-| `EDS-39` | feature | [Choose block libraries on Configure, not only in Edit](2026-10-12-block-libraries-on-configure.md) | — | med | backlog |
+| `EDS-39` | feature | [Choose block libraries on Configure, not only in Edit](2026-10-12-block-libraries-on-configure.md) | — | med | active |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | built |
 
 ### app-builder  (121)

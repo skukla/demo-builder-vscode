@@ -4,7 +4,7 @@ kind: feature
 area: eds
 needs: []
 value: med
-status: backlog
+status: active
 ---
 
 # Choose block libraries on Configure, not only in Edit
@@ -50,6 +50,7 @@ install at once or leave it to the update check; the first is what an SC expects
 ## Shipped so far
 
 - 2026-10-12  docs(backlog): file EDS-39, choose block libraries on Configure; correct test row 3.4 (`961d972f2`)
+- 2026-10-12  feat(configure): choose block libraries on the Authoring tab (`9f2c73f26`)
 
 ## Left open by the first build (2026-10-12)
 
