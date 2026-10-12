@@ -198,3 +198,38 @@ built first.
 
 Still missing on bodea after this: `/cart`, `/checkout` and the other pages in section 4.
 Those are pages, not sheets.
+
+## 10. The second live test on bodea, 2026-10-12 (build `b0df9f441`)
+
+A reset of the same project through the complete-copy code. Nothing was repaired by hand.
+
+What the log said:
+
+```
+[EdsReset]    Label-sheet stubs: 1 (the source has the rest)
+[DA.live]     The storefront's code loads 75 paths: 9 already listed, 48 more found on the source
+[EdsPipeline] Sheets published: 19 of 19
+[EdsPipeline] The storefront serves all 57 pages the source has
+```
+
+What the live site says, read back afterwards:
+
+| What | Result |
+|---|---|
+| The pages measured missing in section 4 (`/cart`, `/checkout`, `/search`, `/wishlist`, the order and return pages, the five `/customer/*` pages, `/store-switcher`), plus `/b2b/quote-checkout` | All answer 200 |
+| `/metadata.json`, `/redirects.json` | 200 |
+| The 16 label sheets the source has | All 16 have the source's row count and first key |
+| Stub files in the repository | One, `placeholders/quick-order.json`, the one area the source has no sheet for; it answers `?sheet=data` |
+
+**Two pages are still missing: `/enrichment/category-banner` and `/enrichment/product-banner`.**
+The source serves both and its index lists them, so they are copied. They are not published:
+`EXCLUDED_FOLDERS` in `helix/helixPageDiscovery.ts:40` leaves out the whole `enrichment`
+folder ("PDP enrichment data"), a rule older than this work. The storefront's enrichment block
+loads them (`blocks/enrichment/enrichment.js:35`, `fetchIndex('enrichment/enrichment')`), so on
+the copy that block has nothing to show. Whether that exclusion is still wanted is the owner's
+call.
+
+**And the check did not report them.** "Serves all 57 pages the source has" was true of the
+paths read out of the code. It does not look at what the copy took from the index, so a page
+that was copied and then left unpublished is invisible to it. The check should cover every
+path the copy carried, whatever told it to.
