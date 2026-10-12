@@ -16,6 +16,7 @@ import { generateConfigJson } from '@/features/eds/services/configGenerator';
 import { extractConfigParamsFromConfigs } from '@/features/eds/services/storefrontConfigParams';
 import { generateComponentConfigFiles } from '@/features/project-creation/helpers/componentConfigFiles';
 import { TransformedComponentDefinition, ComponentRegistry } from '@/types/components';
+import type { AddedDemo } from '@/types/projectFile';
 import {
     createMockSetupContext,
     sharedEnvVars,
@@ -616,6 +617,74 @@ describe('generateComponentConfigFiles — the eds-config route', () => {
             'https://live-mesh',
             'adobe-commerce-paas'
         );
+    });
+
+    // An added demo's flags live on the PROJECT's own demo row, not in the catalog, so
+    // the generator finds them only when it is handed that row. Creation built its own
+    // params and left the row out; reset and republish (`buildConfigGeneratorParams`)
+    // always passed it. Measured 2026-10-12 on a project made from sayurihanki/
+    // jenhankib2bbodea: creation published a 2,347-byte config.json with neither B2B
+    // flag, and the reset that followed published 2,425 bytes with both.
+    describe('a project built on an added demo', () => {
+        // The row as the manifest holds it (read from that project, 2026-10-12).
+        const demo: AddedDemo = {
+            kind: 'demo',
+            version: 2,
+            name: 'Jenhankib2bbodea',
+            configDefaults: { ACCS_WEBSITE_CODE: 'base', ACCS_STORE_CODE: 'bodea', ACCS_STORE_VIEW_CODE: 'bodeab2b' },
+            configFlags: { 'commerce-b2b-enabled': true, 'commerce-companies-enabled': true },
+            source: { owner: 'sayurihanki', repo: 'jenhankib2bbodea', branch: 'main' },
+            storefrontKind: 'eds',
+        };
+        const accs = {
+            ACCS_GRAPHQL_ENDPOINT: 'https://commerce.test/tenant/graphql',
+            ACCS_WEBSITE_CODE: 'bodea',
+            ACCS_STORE_CODE: 'bodea_store',
+            ACCS_STORE_VIEW_CODE: 'bodea_us',
+        };
+
+        function addedDemoContext() {
+            const project = edsProject({ githubRepo: 'o/site', daLiveOrg: 'o', daLiveSite: 'site' });
+            project.demo = demo;
+            project.selectedStack = 'eds-accs';
+            return createMockSetupContext({
+                registry: edsRegistry,
+                config: {
+                    projectName: 'test-project',
+                    selectedPackage: 'added:sayurihanki/jenhankib2bbodea',
+                    components: { backend: 'adobe-commerce-accs' },
+                    componentConfigs: { 'adobe-commerce-accs': accs },
+                },
+                project,
+            });
+        }
+
+        it('hands the generator the project demo row', async () => {
+            await generateComponentConfigFiles('/p/eds', 'eds-storefront', edsComponent, addedDemoContext());
+
+            expect(mockGenerateConfigJson.mock.calls[0][0].demo).toBe(demo);
+        });
+
+        it('publishes both B2B flags, with the endpoint and store codes the project asked for', async () => {
+            mockExtractConfigParams.mockImplementation(
+                jest.requireActual('@/features/eds/services/storefrontConfigParams').extractConfigParamsFromConfigs,
+            );
+            mockGenerateConfigJson.mockImplementation(
+                jest.requireActual('@/features/eds/services/configGenerator').generateConfigJson,
+            );
+
+            await generateComponentConfigFiles('/p/eds', 'eds-storefront', edsComponent, addedDemoContext());
+
+            const settings = (writtenJson().public as { default: Record<string, unknown> }).default;
+            expect(settings['commerce-b2b-enabled']).toBe(true);
+            expect(settings['commerce-companies-enabled']).toBe(true);
+            expect(settings['commerce-endpoint']).toBe(accs.ACCS_GRAPHQL_ENDPOINT);
+            expect((settings.headers as { cs: Record<string, string> }).cs).toMatchObject({
+                'Magento-Website-Code': 'bodea',
+                'Magento-Store-Code': 'bodea_store',
+                'Magento-Store-View-Code': 'bodea_us',
+            });
+        });
     });
 
     it('writes the generated content verbatim to config.json in the component directory', async () => {

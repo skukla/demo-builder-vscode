@@ -253,6 +253,11 @@ async function generateEdsConfigJson(
         ...configParams,
         selectedAddons: context.getSelectedAddons(),
         selectedPackage: context.getSelectedPackage(),
+        // The project's own demo row. An added demo's flags (B2B, companies) live
+        // on it and nowhere in the catalog, so without it creation published a
+        // config.json with neither while reset and republish, which read the row
+        // through `buildConfigGeneratorParams`, published both (2026-10-12).
+        demo: context.project.demo,
     };
 
     // Validate required params
