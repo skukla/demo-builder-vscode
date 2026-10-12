@@ -65,6 +65,8 @@ in the stub list now (`ea374381d`).
 - 2026-10-12  docs(eds): say where the company-switcher sheet request comes from (`07ea0a816`)
 - 2026-10-12  fix(eds): a storefront copied from a published site keeps the source's label sheets (`5bc8251b1`)
 - 2026-10-12  docs(research): what a storefront copied from a colleague's demo is missing (`8c9e1cd4a`)
+- 2026-10-12  Merge branch 'fix/eds-40-sheets-that-work' into loop/2026-10-05-release-candidate (`5c6e04192`)
+- 2026-10-12  fix(eds): sheets are copied as sheets, published, and the label stubs answer (`98b5c88b0`)
 
 ## The stub list cannot know an added demo's code (owner, 2026-10-12)
 
