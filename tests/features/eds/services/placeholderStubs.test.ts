@@ -2,7 +2,7 @@
  * Placeholder stubs — the console-hygiene contract.
  *
  * The storefront's `fetchPlaceholders` (boilerplate `scripts/commerce.js`)
- * requests 16 optional label sheets per page area. Missing sheets 404 (red
+ * requests an optional label sheet per page area (17 names across boilerplate versions). Missing sheets 404 (red
  * browser console lines no JS can suppress) and an EMPTY sheet still warns
  * ("No placeholder data found" — the code checks `json.data?.length > 0`).
  * The stubs therefore carry ONE self-documenting sentinel row: a key no
@@ -19,16 +19,19 @@ import {
 } from '@/features/eds/services/placeholderStubs';
 
 describe('PLACEHOLDER_STUB_PATHS', () => {
-    it('lists exactly the 16 sheets the boilerplate requests (measured 2026-08-23)', () => {
+    it('lists every sheet a boilerplate version requests (measured 2026-08-23 and 2026-10-12)', () => {
         // Measured by grepping fetchPlaceholders call sites in a live
         // boilerplate-b2b storefront's scripts/ + blocks/. A new dropin area
         // means a new request path — re-measure, then update here.
+        // `company-switcher` came from a 4.0.1 storefront on 2026-10-12, which
+        // asks for it and not for `quick-order`: the list is the union.
         expect([...PLACEHOLDER_STUB_PATHS].sort()).toEqual([
             'placeholders/account',
             'placeholders/auth',
             'placeholders/cart',
             'placeholders/checkout',
             'placeholders/company',
+            'placeholders/company-switcher',
             'placeholders/global',
             'placeholders/order',
             'placeholders/payment-services',

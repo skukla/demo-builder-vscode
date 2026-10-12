@@ -1,8 +1,9 @@
 /**
  * Placeholder stubs — console hygiene for the optional label sheets.
  *
- * The boilerplate's `fetchPlaceholders` (`scripts/commerce.js`) requests 16
- * optional UI-label sheets per page area. The sheets are OPTIONAL — dropins
+ * The boilerplate's `fetchPlaceholders` (`scripts/commerce.js`) requests an
+ * optional UI-label sheet per page area: sixteen in any one version, seventeen
+ * names across the versions measured. The sheets are OPTIONAL — dropins
  * ship English defaults compiled in — but a missing sheet 404s, and the
  * browser prints every failed request to the console (no JS can suppress
  * that). During a technical demo, devtools then show a wall of red that looks
@@ -43,6 +44,11 @@ export const PLACEHOLDER_STUB_PATHS: readonly string[] = [
     'placeholders/search',
     'placeholders/wishlist',
     'placeholders/company',
+    // Added 2026-10-12: a storefront on boilerplate 4.0.1 requests it (one call site in
+    // its blocks/) and it 404ed on two Demo Builder storefronts. That version does not
+    // request `quick-order`, so this list is the UNION across versions, not one
+    // version's sixteen; a stub nobody requests costs one small file.
+    'placeholders/company-switcher',
     'placeholders/purchase-order',
     'placeholders/quick-order',
     'placeholders/quote-management',

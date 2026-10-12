@@ -90,7 +90,7 @@ export async function executePhaseHelixConfig(
 
     await pushFstabToGitHub(githubFileOps, repoInfo, edsConfig, context, logger);
 
-    // Placeholder stub sheets, one bulk commit: the boilerplate requests 16
+    // Placeholder stub sheets, one bulk commit: the boilerplate requests 16 or so
     // optional label sheets per page load and the browser prints every 404 to
     // the console (no JS can suppress it) — red noise during any demo with
     // devtools open. Real label overrides are DA.live content and shadow the
