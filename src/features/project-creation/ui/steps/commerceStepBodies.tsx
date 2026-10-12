@@ -15,7 +15,9 @@
 import React from 'react';
 import { ChoiceCard } from '../components/ChoiceCard';
 import { BACKEND_LABELS, type CommerceSectionId } from './commerceSections';
+import { COMMERCE_SET_IN_CONFIGURE, SET_IN_CONFIGURE_TITLE } from './editLocks';
 import { SampleDataStep } from './SampleDataStep';
+import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
 import type { WizardState } from '@/types/webview';
 
@@ -71,6 +73,8 @@ export interface SectionBodyContext {
     updateState: (partial: Partial<WizardState>) => void;
     /** The single ConnectStoreStepContent (rendered only by a config step's body). */
     configForm: React.ReactNode;
+    /** Edit leaves the config steps to Configure: show a notice, not the form. */
+    setInConfigure: boolean;
 }
 
 /** Build the body node for a section (backend cards / sign-in / config form). */
@@ -106,5 +110,12 @@ export function sectionBody(id: CommerceSectionId, ctx: SectionBodyContext): Rea
     // Config steps render ONLY the form — the footer Continue advances to the next
     // sub-step (no in-body "Save & continue" CTA). sectionBody is built only for the
     // active step, so the single configForm instance lives in exactly one place.
+    if (ctx.setInConfigure) {
+        return (
+            <InlineNotice title={SET_IN_CONFIGURE_TITLE} tone="info" testId="commerce-set-in-configure">
+                {COMMERCE_SET_IN_CONFIGURE}
+            </InlineNotice>
+        );
+    }
     return <>{ctx.configForm}</>;
 }

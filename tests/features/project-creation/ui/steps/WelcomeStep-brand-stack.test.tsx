@@ -321,6 +321,8 @@ describe('WelcomeStep - Package + Stack Selection', () => {
                     commerceConnectValid: false,
                     commerceStoreViewChosen: false,
                     committedCommerceSteps: [],
+                    // What this reset must be re-chosen, so Edit unlocks it.
+                    foundationChanged: true,
                 })
             );
         });

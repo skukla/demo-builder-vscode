@@ -4,6 +4,7 @@ import { AddDemoModal } from '../components/add-demo/AddDemoModal';
 import { EditDemoPackageModal } from '../components/add-demo/EditDemoPackageModal';
 import { BrandGallery } from '../components/BrandGallery';
 import { buildEdsConfigFromStorefront } from './edsConfigFromStorefront';
+import { isNameSetInConfigure, projectNameDescription } from './editLocks';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
@@ -140,6 +141,8 @@ export function WelcomeStep({
                     commerceStoreViewChosen: false,
                     committedCommerceSteps: [],
                     packageConfigDefaults: pkg?.configDefaults,
+                    // Edit lets the SC re-choose what this reset (editLocks.ts).
+                    foundationChanged: true,
                 });
             }
         },
@@ -284,10 +287,13 @@ export function WelcomeStep({
                         ? validateProjectName(state.projectName)
                         : undefined
                 }
+                // Edit shows the name without changing it: Configure renames the
+                // folder too (editLocks.ts).
+                isReadOnly={isNameSetInConfigure(state)}
                 // Say where it lands, rather than making them type it. The folder
                 // is browsable on disk, so it is worth showing -- silently
                 // deriving a name the user then cannot find is its own bug.
-                description={state.projectName ? `Folder: ${state.projectName}` : undefined}
+                description={projectNameDescription(state)}
                 width="size-6000"
                 isRequired
                 {...selectableDefaultProps}

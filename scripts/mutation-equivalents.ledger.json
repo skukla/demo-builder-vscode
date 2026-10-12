@@ -3152,7 +3152,7 @@
             "decision": "none \u2014 a fast path the following lookup already covers",
             "recorded": "2026-09-04",
             "source": "mutationLedger add",
-            "line": 224
+            "line": 227
         },
         {
             "module": "src/features/project-creation/ui/steps/WelcomeStep.tsx",
@@ -3165,7 +3165,7 @@
             "decision": "none \u2014 a fast path the following lookup already covers",
             "recorded": "2026-09-04",
             "source": "mutationLedger add",
-            "line": 248
+            "line": 251
         },
         {
             "module": "src/features/project-creation/ui/components/BrandGallery.tsx",
@@ -4325,7 +4325,7 @@
             "anchors": [
                 "[updateState],"
             ],
-            "line": 212,
+            "line": 217,
             "mutants": 1,
             "category": "other",
             "reason": "Stryker empties this useCallback's dependency array. The array's ONLY entry is updateState, and updateState is created by useWizardState with useCallback(fn, []) (src/features/project-creation/ui/wizard/hooks/useWizardState.ts:505) \u2014 it is the same function object for the life of the wizard, and CommerceStep receives it unchanged through BaseStepProps. React therefore builds the callback exactly once either way, closing over the same updateState. No sequence of renders can distinguish them. (handleStoreLoadingChange)",

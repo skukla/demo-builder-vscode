@@ -87,6 +87,41 @@ beforeEach(() => {
 // Tests
 // ---------------------------------------------------------------------------
 
+describe('CommerceStep — in Edit, the settings belong to Configure', () => {
+    const EDITING: Partial<WizardState> = {
+        wizardMode: 'edit',
+        selectedPackage: 'buildright',
+        selectedBackend: PAAS,
+        selectedStack: 'eds-paas',
+        activeCommerceStep: 'connection',
+    };
+
+    it('shows a notice in place of the connection form', () => {
+        setup(EDITING);
+
+        expect(screen.getByTestId('commerce-set-in-configure')).toBeInTheDocument();
+        expect(screen.queryByTestId('connect-store-panel')).not.toBeInTheDocument();
+    });
+
+    it('opens the form again once a different backend is picked', () => {
+        const { updateState } = setup({ ...EDITING, selectedPackage: 'citisignal' });
+        fireEvent.click(stepTab('backend'));
+
+        fireEvent.click(screen.getByTestId(`backend-card-${ACCS}`));
+
+        expect(updateState).toHaveBeenCalledWith({ foundationChanged: true });
+    });
+
+    it('stays locked when the same backend is picked again', () => {
+        const { updateState } = setup(EDITING);
+        fireEvent.click(stepTab('backend'));
+
+        fireEvent.click(screen.getByTestId(`backend-card-${PAAS}`));
+
+        expect(updateState).not.toHaveBeenCalledWith({ foundationChanged: true });
+    });
+});
+
 describe('CommerceStep — Backend→stack bridge (v7)', () => {
     describe('backend cards (selection marker)', () => {
         it('should mark the selected backend card with data-selected="true" (others "false")', () => {

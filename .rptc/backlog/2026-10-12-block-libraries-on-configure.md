@@ -67,7 +67,9 @@ install at once or leave it to the update check; the first is what an SC expects
   Fixed 2026-10-12: Configure pushes `customBlockLibraryDefaultsUpdated` when the setting
   changes, the message the wizard already followed (`useBlockLibraryChoices.ts`).
 - **A custom library that is recorded on the project but no longer in settings** is hidden and
-  kept by Configure. Edit drops it. Decide which is right.
+  kept by Configure. Edit used to drop it; since 2026-10-12 Edit shows the project's own
+  record, locked (see "Edit leaves block libraries to Configure" below), so it is kept there
+  too. Configure still hides it. Whether Configure should show it is open.
 - **Install on Save.** Settled by the owner the same day: see the next section.
 
 ## The owner's decisions, and the second build (2026-10-12)
@@ -118,8 +120,15 @@ Full rules: `docs/systems/custom-block-libraries.md`, "Removing a library from a
 - **Check for Updates does not offer removals.** It offers installs as before.
 - **Agents cannot remove a library.** `configure_project` records the selection and
   `apply_updates` installs. There is no removal tool, and none was added.
-- **Creation and Edit are unchanged.** Unticking in Edit still leaves the blocks. The next
-  Configure save on that project then offers the removal.
+- **Creation is unchanged.** Edit changed afterwards: see the next section.
+
+### Edit leaves block libraries to Configure (2026-10-12)
+
+The owner's line: Edit changes what a project is built from, Configure its settings. In Edit
+the block libraries are now shown, locked, with a note pointing to Configure; so are the
+project name and the Commerce settings (`ui/steps/editLocks.ts`). They open again in Edit
+when the package or backend changes, because that change resets them. So unticking in Edit
+is no longer possible unless the foundation changed.
 
 ### Left open by the second build
 

@@ -50,9 +50,51 @@ export interface BlockLibrariesStepContentProps {
     customBlockLibraries: CustomBlockLibrary[];
     onCustomLibraryToggle: (lib: CustomBlockLibrary, isSelected: boolean) => void;
     onOpenCustomSettings: () => void;
+    /**
+     * Show what the project has without letting it change (Edit leaves block
+     * libraries to Configure). Lists only the chosen libraries, as locked cards.
+     */
+    readOnly?: boolean;
 }
 
-export function BlockLibrariesStepContent({
+export function BlockLibrariesStepContent(props: BlockLibrariesStepContentProps) {
+    return props.readOnly ? <ReadOnlyBlockLibraries {...props} /> : <EditableBlockLibraries {...props} />;
+}
+
+/** The project's block libraries as Edit shows them: chosen ones only, locked. */
+function ReadOnlyBlockLibraries({
+    nativeBlockLibraries,
+    availableBlockLibraries,
+    selectedBlockLibraries,
+    customBlockLibraries,
+}: BlockLibrariesStepContentProps) {
+    const chosen = availableBlockLibraries.filter((lib) => selectedBlockLibraries.includes(lib.id));
+    // No notice here: Configure's bundle draws this picker too, and the caller
+    // that locks it says why (StorefrontStep).
+    return (
+        <>
+            <div className="choice-grid" role="group" aria-label="Block libraries">
+                {nativeBlockLibraries.map((lib) => (
+                    <LibraryCard key={lib.id} name={lib.name} description="Included with your storefront" selected disabled />
+                ))}
+                {chosen.map((lib) => (
+                    <LibraryCard key={lib.id} name={lib.name} description={lib.description} selected disabled />
+                ))}
+                {customBlockLibraries.map((lib) => (
+                    <LibraryCard
+                        key={`${lib.source.owner}/${lib.source.repo}`}
+                        name={lib.name}
+                        description={`${lib.source.owner}/${lib.source.repo}`}
+                        selected
+                        disabled
+                    />
+                ))}
+            </div>
+        </>
+    );
+}
+
+function EditableBlockLibraries({
     nativeBlockLibraries,
     availableBlockLibraries,
     selectedBlockLibraries,

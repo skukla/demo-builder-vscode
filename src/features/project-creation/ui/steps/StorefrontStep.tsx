@@ -28,8 +28,14 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { BlockLibrariesStepContent } from '../components/BlockLibrariesStepContent';
 import { requireAreaSubSteps } from './areaSubSteps';
+import {
+    BLOCK_LIBRARIES_SET_IN_CONFIGURE,
+    isSetInConfigure,
+    SET_IN_CONFIGURE_TITLE,
+} from './editLocks';
 import { isStorefrontConfigured } from './tileStatus';
 import { useProjectBuilder } from './useProjectBuilder';
+import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { StepAreaShell } from '@/core/ui/components/layout/StepAreaShell';
 import { StepRail } from '@/core/ui/components/navigation/StepRail';
 import { useCanProceedAll } from '@/core/ui/hooks/useCanProceed';
@@ -228,17 +234,27 @@ export function StorefrontStep({
         </div>
     );
 
+    // Edit shows the project's libraries and leaves changing them to Configure.
+    const librariesLocked = isSetInConfigure(state);
     const blockLibraries = isEdsStack ? (
-        <BlockLibrariesStepContent
-            nativeBlockLibraries={nativeBlockLibraries}
-            availableBlockLibraries={availableBlockLibraries}
-            selectedBlockLibraries={state.selectedBlockLibraries ?? EMPTY_STRING_ARRAY}
-            onBlockLibraryToggle={handleBlockLibraryToggle}
-            customBlockLibraryDefaults={customBlockLibraryDefaults}
-            customBlockLibraries={state.customBlockLibraries ?? EMPTY_CUSTOM_LIBRARY_ARRAY}
-            onCustomLibraryToggle={handleCustomLibraryToggle}
-            onOpenCustomSettings={handleOpenCustomSettings}
-        />
+        <>
+            {librariesLocked && (
+                <InlineNotice title={SET_IN_CONFIGURE_TITLE} tone="info" testId="block-libraries-set-in-configure">
+                    {BLOCK_LIBRARIES_SET_IN_CONFIGURE}
+                </InlineNotice>
+            )}
+            <BlockLibrariesStepContent
+                nativeBlockLibraries={nativeBlockLibraries}
+                availableBlockLibraries={availableBlockLibraries}
+                selectedBlockLibraries={state.selectedBlockLibraries ?? EMPTY_STRING_ARRAY}
+                onBlockLibraryToggle={handleBlockLibraryToggle}
+                customBlockLibraryDefaults={customBlockLibraryDefaults}
+                customBlockLibraries={state.customBlockLibraries ?? EMPTY_CUSTOM_LIBRARY_ARRAY}
+                onCustomLibraryToggle={handleCustomLibraryToggle}
+                onOpenCustomSettings={handleOpenCustomSettings}
+                readOnly={librariesLocked}
+            />
+        </>
     ) : null;
 
     return (

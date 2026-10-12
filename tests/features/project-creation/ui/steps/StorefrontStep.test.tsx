@@ -336,6 +336,22 @@ describe('StorefrontStep', () => {
             expect(nativeCard).toBeDisabled();
             expect(nativeCard).toHaveAttribute('aria-pressed', 'true');
         });
+
+        it('shows them without letting them change in Edit (Configure owns them)', () => {
+            setup({ ...onBlockLibs, wizardMode: 'edit', selectedBlockLibraries: ['lib-a'] });
+
+            expect(screen.getByTestId('block-libraries-set-in-configure')).toHaveTextContent(
+                'Block libraries are added and removed in Configure.',
+            );
+            expect(screen.getByRole('button', { name: /Library A/i })).toBeDisabled();
+        });
+
+        it('lets them change in Edit once the package or backend changed', () => {
+            setup({ ...onBlockLibs, wizardMode: 'edit', foundationChanged: true });
+
+            expect(screen.queryByTestId('block-libraries-set-in-configure')).not.toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /Library A/i })).not.toBeDisabled();
+        });
     });
 
     describe('Continue gate (isStorefrontConfigured — block libs do NOT gate)', () => {

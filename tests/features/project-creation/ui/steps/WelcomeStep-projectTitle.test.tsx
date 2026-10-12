@@ -114,3 +114,29 @@ describe('what the field shows', () => {
         expect(screen.getByText(/Folder: bodea-b2b-demo/)).toBeInTheDocument();
     });
 });
+
+describe('in Edit', () => {
+    // Configure renames the folder and the Adobe project title too; Edit did not,
+    // so the name is shown here and changed there.
+    const editing = { ...baseState, wizardMode: 'edit' as const, projectTitle: 'Bodea Demo' };
+
+    it('shows the name without letting it change', () => {
+        renderStep(editing);
+
+        expect(nameField()).toHaveValue('Bodea Demo');
+        expect(nameField()).toHaveAttribute('readonly');
+    });
+
+    it('points to Configure instead of naming the folder', () => {
+        renderStep(editing);
+
+        expect(screen.getByText('Rename in Configure.')).toBeInTheDocument();
+        expect(screen.queryByText(/Folder:/)).not.toBeInTheDocument();
+    });
+
+    it('stays editable when creating', () => {
+        renderStep(baseState);
+
+        expect(nameField()).not.toHaveAttribute('readonly');
+    });
+});

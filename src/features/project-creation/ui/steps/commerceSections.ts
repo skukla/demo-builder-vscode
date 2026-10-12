@@ -19,6 +19,7 @@
  * @module features/project-creation/ui/steps/commerceSections
  */
 
+import { isSetInConfigure } from './editLocks';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
 import type { CommerceSectionId, WizardState } from '@/types/webview';
@@ -202,6 +203,13 @@ export function commerceSectionStates(
         );
     }
 
+    if (isSetInConfigure(state)) {
+        // Edit leaves these to Configure: the project already has them, and this
+        // screen shows them without changing them (editLocks.ts).
+        sections.push(...SET_IN_CONFIGURE_SECTIONS, sampleDataSection(state));
+        return sections;
+    }
+
     const signinReason = gated ? 'Sign in to Adobe first' : undefined;
     sections.push(configSection('connection', connectionDone, gated, signinReason, 'Connected'));
 
@@ -232,13 +240,21 @@ export function commerceSectionStates(
     // wizard at all. Locking it behind a reachable backend would gate a choice
     // that has no dependency on one — and picking a demo before the instance
     // exists is the ordinary case.
-    sections.push({
-        id: 'sample-data',
-        status: 'done',
-        value: state.datapack?.name ?? 'None',
-    });
+    sections.push(sampleDataSection(state));
 
     return sections;
+}
+
+/** The three settings sub-steps as Edit shows them when they belong to Configure. */
+const SET_IN_CONFIGURE_SECTIONS: readonly CommerceSectionState[] = [
+    { id: 'connection', status: 'done', value: 'Connected' },
+    { id: 'business-structure', status: 'done', value: 'Selected' },
+    { id: 'catalog', status: 'done', value: 'Configured' },
+];
+
+/** The Datapacks sub-step: never gated, always done. */
+function sampleDataSection(state: WizardState): CommerceSectionState {
+    return { id: 'sample-data', status: 'done', value: state.datapack?.name ?? 'None' };
 }
 
 /**
@@ -306,6 +322,7 @@ export function isCommerceStepComplete(
     stepId: CommerceSectionId,
     ctx: CommerceSectionContext,
 ): boolean {
+    if (isConfigStep(stepId) && isSetInConfigure(state)) return true;
     switch (stepId) {
         case 'backend':
             return Boolean(state.selectedBackend);
@@ -331,6 +348,18 @@ export function isCommerceStepComplete(
             // here can be required to move on.
             return true;
     }
+}
+
+/**
+ * Whether a sub-step is one of the three that set Commerce settings.
+ *
+ * @param stepId - the sub-step
+ * @returns true for Connection, Business Structure and Catalog
+ */
+export function isConfigStep(
+    stepId: CommerceSectionId,
+): stepId is 'connection' | 'business-structure' | 'catalog' {
+    return stepId === 'connection' || stepId === 'business-structure' || stepId === 'catalog';
 }
 
 /** A config section whose `done` is a single boolean (connection / business). */
