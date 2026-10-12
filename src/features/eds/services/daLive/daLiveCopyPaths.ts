@@ -121,7 +121,7 @@ export async function backfillEssentialPaths(
         return false;
     };
 
-    // Spreadsheets: served as .json on CDN, stored as .xlsx on DA.live.
+    // Spreadsheets: served as .json on the CDN, and probed there.
     for (const configPath of inventory.spreadsheets) {
         await probeAndAdd(configPath, `${baseUrl}${configPath}.json`);
     }

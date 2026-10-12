@@ -60,26 +60,42 @@ export const PLACEHOLDER_STUB_PATHS: readonly string[] = [
 ];
 
 /**
- * One sheet-shaped JSON body shared by every stub. `data` must be NON-empty
- * (the fetch code's `hasData` check warns on an empty sheet) and the one row
- * must never use a real label key, which would silently override a
- * compiled-in default.
+ * One JSON body shared by every stub: a MULTI-SHEET document whose one sheet is
+ * called `data`.
+ *
+ * The shape is the whole point. The storefront asks for
+ * `placeholders/<area>.json?sheet=data`, and a file in the repository answers that
+ * only when it is a multi-sheet document holding a sheet of that name. Until
+ * 2026-10-12 the stub was a single sheet, which has no sheet called anything: it
+ * answered the bare URL and 404ed the one the storefront actually sends, on every
+ * storefront, so the console noise it exists to remove was never removed. Measured
+ * on a scratch storefront that day: this shape answers 200 with and without the
+ * query, served as the `data` sheet.
+ *
+ * The sheet's row list must be NON-empty (the fetch code's `hasData` check warns
+ * on an empty sheet) and the one row must never use a real label key, which would
+ * silently override a compiled-in default.
  */
 export function buildPlaceholderStubJson(): string {
     return JSON.stringify(
         {
-            total: 1,
-            offset: 0,
-            limit: 1,
-            data: [
-                {
-                    Key: '_stub',
-                    Value:
-                        'Label overrides are authored as DA.live /placeholders sheets; ' +
-                        'dropin defaults apply until then. This stub only keeps the ' +
-                        'browser console quiet.',
-                },
-            ],
+            data: {
+                total: 1,
+                offset: 0,
+                limit: 1,
+                data: [
+                    {
+                        Key: '_stub',
+                        Value:
+                            'Label overrides are authored as DA.live /placeholders sheets; ' +
+                            'the built-in defaults apply until then. This stub only keeps the ' +
+                            'browser console quiet.',
+                    },
+                ],
+            },
+            ':names': ['data'],
+            ':version': 3,
+            ':type': 'multi-sheet',
         },
         null,
         2,

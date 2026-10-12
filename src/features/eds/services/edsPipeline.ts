@@ -12,6 +12,7 @@
  * 3. Apply EDS settings (AEM Assets, Universal Editor config)
  * 4. Purge CDN cache (conditional)
  * 5. Publish content to CDN
+ * 5.5. Publish the sheets step 1 copied, by path (step 5 publishes pages only)
  * 6. Publish block library paths
  * 7. Unpublish the pages Helix still has published that steps 5-6 did not publish,
  *    product pages excepted (gated by clearExistingContent; EDS-33)
@@ -270,7 +271,7 @@ async function pipelineClearContent(
 
 /**
  * Step 1: Copy content from source to DA.live.
- * @returns Number of files copied.
+ * @returns the number of files copied, and the sheets among them to publish by path
  */
 async function pipelineCopyContent(
     daLiveContentOps: DaLiveContentOperations,
@@ -284,7 +285,7 @@ async function pipelineCopyContent(
     onProgress?: EdsPipelineProgressCallback,
     accountContentSource?: { org: string; site: string },
     runtimeSurfaceSource?: CodePatchSource,
-): Promise<number> {
+): Promise<{ filesCopied: number; sheetPaths: string[] }> {
     onProgress?.({
         operation: 'content-copy',
         message: 'Populating DA.live content',
@@ -360,7 +361,10 @@ async function pipelineCopyContent(
         message: 'Content populated',
     });
 
-    return contentResult.totalFiles + overlaidFiles;
+    return {
+        filesCopied: contentResult.totalFiles + overlaidFiles,
+        sheetPaths: contentResult.sheetPaths,
+    };
 }
 
 /**
@@ -545,6 +549,8 @@ async function copyLibraryDocPages(
  */
 interface PipelineContext {
     contentFilesCopied: number;
+    /** The sheets step 1 wrote, as web paths (`/metadata.json`); step 5.5 publishes them. */
+    sheetPaths: string[];
     libraryPaths: string[];
     patchReport: PatchReport;
     /** What step 5 published; undefined when it did not run or did not say. */
@@ -611,7 +617,7 @@ const PIPELINE_STEPS: PipelineStep[] = [
             if (!params.contentSource) {
                 throw new Error('Content source is required when skipContent is false');
             }
-            ctx.contentFilesCopied = await pipelineCopyContent(
+            const copied = await pipelineCopyContent(
                 services.daLiveContentOps,
                 params.contentSource,
                 params.daLiveOrg,
@@ -626,6 +632,8 @@ const PIPELINE_STEPS: PipelineStep[] = [
                 // (codePatchSource carries owner/repo/path = the patches-repo ledger).
                 params.codePatchSource,
             );
+            ctx.contentFilesCopied = copied.filesCopied;
+            ctx.sheetPaths = copied.sheetPaths;
         },
     },
     // Step 2: Block Library
@@ -724,6 +732,17 @@ const PIPELINE_STEPS: PipelineStep[] = [
             );
         },
     },
+    // Step 5.5: Sheet Publish — the sheets step 1 copied. Step 5 publishes .html
+    // documents only and skips metadata, redirects and placeholders by name, so a
+    // copied sheet is served only if it is published here, by path. Non-fatal: the
+    // sheets are in DA.live and publishing can be retried.
+    {
+        name: 'sheet-publish',
+        when: ({ params, ctx }) => !params.skipPublish && ctx.sheetPaths.length > 0,
+        onError: 'continue',
+        failureLog: 'Sheet publish failed',
+        run: pipelinePublishSheets,
+    },
     // Step 6: Library Publish — non-fatal: library config was created,
     // publishing can be retried.
     {
@@ -767,6 +786,31 @@ const PIPELINE_STEPS: PipelineStep[] = [
         run: pipelinePrewarmCatalog,
     },
 ];
+
+/**
+ * Step 5.5 body: preview and publish each copied sheet at its `.json` web path,
+ * through the same single-page route the block library's sheet takes.
+ */
+async function pipelinePublishSheets({ params, services, ctx, onProgress }: PipelineStepEnv) {
+    const { helixService, logger } = services;
+    const count = ctx.sheetPaths.length;
+    onProgress?.({
+        operation: 'sheet-publish',
+        message: 'Publishing sheets',
+        subMessage: `Publishing ${count} ${count === 1 ? 'sheet' : 'sheets'}`,
+    });
+
+    const { publishSheetPaths } = await import('../handlers/edsHelpers');
+    const { published, failed } = await publishSheetPaths(
+        helixService,
+        params.repoOwner,
+        params.repoName,
+        ctx.sheetPaths,
+        logger,
+    );
+    const log = failed > 0 ? logger.warn : logger.info;
+    log.call(logger, `[EdsPipeline] Sheets published: ${published} of ${count}`);
+}
 
 /**
  * Step 6 body: publish the installed library paths, then verify they actually
@@ -894,6 +938,7 @@ export async function executeEdsPipeline(
 
     const ctx: PipelineContext = {
         contentFilesCopied: 0,
+        sheetPaths: [],
         libraryPaths: [],
         // Reuse the caller's report when threaded through (so canonical-phase
         // results from `resetRepoToTemplate` survive into the final result),

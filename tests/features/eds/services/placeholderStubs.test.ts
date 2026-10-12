@@ -48,20 +48,36 @@ describe('PLACEHOLDER_STUB_PATHS', () => {
 });
 
 describe('buildPlaceholderStubJson', () => {
-    it('parses as a sheet whose data is NON-empty (the hasData contract)', () => {
+    // What the file must BE for a storefront to get an answer. The storefront asks for
+    // `placeholders/<area>.json?sheet=data` (scripts/commerce.js). Measured live
+    // 2026-10-12 on a scratch storefront: a file in the repository shaped as ONE sheet
+    // answers 404 to that query (the stub's shape until then, on three storefronts),
+    // and a file shaped as a multi-sheet document with a sheet called `data` answers
+    // 200, served as that sheet.
+    const stub = (): Record<string, unknown> => JSON.parse(buildPlaceholderStubJson()) as Record<string, unknown>;
+    const dataSheet = (): { total: number; offset: number; limit: number; data: Array<Record<string, string>> } =>
+        stub().data as { total: number; offset: number; limit: number; data: Array<Record<string, string>> };
+
+    it('is a multi-sheet document whose one sheet is called data', () => {
+        expect(stub()[':type']).toBe('multi-sheet');
+        expect(stub()[':names']).toStrictEqual(['data']);
+        expect(stub()[':version']).toBe(3);
+    });
+
+    it('gives that sheet a NON-empty row list (the hasData contract)', () => {
         // commerce.js: `jsons.some((json) => json.data?.length > 0)` — an empty
         // data array still produces a console warn, defeating the stub's job.
-        const sheet = JSON.parse(buildPlaceholderStubJson());
+        const sheet = dataSheet();
         expect(Array.isArray(sheet.data)).toBe(true);
         expect(sheet.data.length).toBeGreaterThan(0);
-        expect(sheet.total).toBe(sheet.data.length);
+        expect(sheet).toMatchObject({ total: sheet.data.length, limit: sheet.data.length, offset: 0 });
     });
 
     it('carries only the self-documenting sentinel row, never a real label key', () => {
-        const sheet = JSON.parse(buildPlaceholderStubJson());
+        const sheet = dataSheet();
         expect(sheet.data).toHaveLength(1);
         const row = sheet.data[0];
-        // A key no dropin looks up — a real label key here would silently
+        // A key nothing looks up — a real label key here would silently
         // override a compiled-in default.
         expect(row.Key).toBe('_stub');
         expect(row.Value).toMatch(/DA\.live/);

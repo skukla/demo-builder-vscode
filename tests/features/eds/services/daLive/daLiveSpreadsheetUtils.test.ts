@@ -1,17 +1,24 @@
 /**
- * convertSpreadsheetJsonToHtml — a served sheet turned into the table DA.live takes.
+ * The DA.live sheet document: reading what aem.live serves, and building what
+ * DA.live stores.
  *
  * The fixtures are what aem.live really serves (read 2026-10-12 from a colleague's
- * storefront, `/placeholders/cart.json` and `/metadata.json`), cut down to two rows.
- * Neither carries a `columns` list: version 3 of the sheet format serves
- * total/offset/limit/data and nothing else, so the column names can only come from
- * the rows. The multi-sheet branch did not know that and wrote a table with no
- * columns at all, which is every label lost (EDS-40).
+ * storefront, `/placeholders/cart.json` and `/redirects.json`), the first cut down to
+ * two rows. Neither carries a `columns` list.
+ *
+ * The expected document is the one shape proven to be a real sheet: it is what
+ * `createJsonSpreadsheet` writes for `/.da/library/blocks.json`, which answers 200 on
+ * a live site, with and without `?sheet=data`.
  */
 
-import { convertSpreadsheetJsonToHtml } from '@/features/eds/services/daLive/daLiveSpreadsheetUtils';
+import {
+    buildSheetDocument,
+    readServedSheets,
+    type DaLiveSheetDocument,
+    type NamedSheet,
+} from '@/features/eds/services/daLive/daLiveSpreadsheetUtils';
 
-const MULTI_SHEET = {
+const SERVED_MULTI_SHEET = {
     data: {
         total: 2,
         offset: 0,
@@ -27,43 +34,105 @@ const MULTI_SHEET = {
     ':type': 'multi-sheet',
 };
 
-const SINGLE_SHEET = { total: 1, limit: 1, offset: 0, data: [{ URL: '/about' }], ':type': 'sheet' };
+const SERVED_SINGLE_SHEET = { total: 1, limit: 1, offset: 0, data: [{ URL: '' }], ':type': 'sheet' };
 
-describe('a multi-sheet document as aem.live serves it', () => {
-    it('keeps every column and row of a sheet that names no columns', () => {
-        const html = convertSpreadsheetJsonToHtml(MULTI_SHEET);
-
-        expect(html).toContain('<th>Key</th><th>Value</th>');
-        expect(html).toContain('<td>Cart.Cart.heading</td><td>Shopping Cart ({count})</td>');
-        expect(html).toContain('<td>Cart.Cart.editCart</td><td>Edit</td>');
+describe('readServedSheets', () => {
+    it('reads every sheet of a multi-sheet document, in the order it names them', () => {
+        expect(readServedSheets(SERVED_MULTI_SHEET)).toStrictEqual([
+            { name: 'data', rows: SERVED_MULTI_SHEET.data.data, total: 2, sheetParam: 'data' },
+            { name: 'dnt', rows: SERVED_MULTI_SHEET.dnt.data, total: 1, sheetParam: 'dnt' },
+        ]);
     });
 
-    it('names the table for its sheet and leaves the do-not-translate sheet out', () => {
-        const html = convertSpreadsheetJsonToHtml(MULTI_SHEET);
+    it('carries the total the server states, which can exceed the rows on this page', () => {
+        const sheets = readServedSheets({ ...SERVED_SINGLE_SHEET, total: 2500 });
 
-        expect(html).toContain('<table class="sheet-data">');
-        expect(html).not.toContain('dnt-sheet');
+        expect(sheets?.[0]).toMatchObject({ total: 2500, rows: [{ URL: '' }] });
     });
 
-    it('uses the columns a sheet does declare, in that order', () => {
-        const html = convertSpreadsheetJsonToHtml({
-            ...MULTI_SHEET,
-            data: { ...MULTI_SHEET.data, columns: ['Value', 'Key'] },
-        });
+    it('takes the row count as the total when the server states none', () => {
+        expect(readServedSheets({ data: [{ a: '1' }, { a: '2' }] })?.[0].total).toBe(2);
+    });
 
-        expect(html).toContain('<th>Value</th><th>Key</th>');
+    it('reads a single sheet as one sheet named data', () => {
+        // No `sheetParam`: a single sheet is the whole document, asked for bare.
+        expect(readServedSheets(SERVED_SINGLE_SHEET)).toStrictEqual([
+            { name: 'data', rows: [{ URL: '' }], total: 1 },
+        ]);
+    });
+
+    it('leaves out a named sheet that has no row list', () => {
+        const sheets = readServedSheets({ ...SERVED_MULTI_SHEET, ':names': ['data', 'gone'] });
+
+        expect(sheets?.map((sheet) => sheet.name)).toStrictEqual(['data']);
+    });
+
+    it.each([
+        ['an error body', { message: 'not found' }],
+        ['a multi-sheet document with no readable sheet', { ':type': 'multi-sheet', ':names': ['x'] }],
+        ['null', null],
+        ['a string', 'nope'],
+    ])('answers null for %s', (_label, served) => {
+        expect(readServedSheets(served)).toBeNull();
     });
 });
 
-describe('a single sheet as aem.live serves it', () => {
-    it('takes its columns from the first row', () => {
-        const html = convertSpreadsheetJsonToHtml(SINGLE_SHEET);
+describe('buildSheetDocument', () => {
+    it('builds the multi-sheet document DA.live stores, one entry per sheet', () => {
+        const sheets: NamedSheet[] = [
+            { name: 'data', rows: [{ Key: 'a', Value: 'b' }, { Key: 'c', Value: 'd' }] },
+            { name: 'dnt', rows: [{ 'dnt-sheet': '*', 'dnt-columns': 'Key' }] },
+        ];
 
-        expect(html).toContain('<th>URL</th>');
-        expect(html).toContain('<td>/about</td>');
+        const expected: DaLiveSheetDocument = {
+            data: {
+                total: 2,
+                limit: 2,
+                offset: 0,
+                data: [{ Key: 'a', Value: 'b' }, { Key: 'c', Value: 'd' }],
+                ':colWidths': [300, 300],
+            },
+            dnt: {
+                total: 1,
+                limit: 1,
+                offset: 0,
+                data: [{ 'dnt-sheet': '*', 'dnt-columns': 'Key' }],
+                ':colWidths': [300, 300],
+            },
+            ':names': ['data', 'dnt'],
+            ':version': 3,
+            ':type': 'multi-sheet',
+        };
+        expect(buildSheetDocument(sheets)).toStrictEqual(expected);
     });
 
-    it('answers null for something that is not a sheet', () => {
-        expect(convertSpreadsheetJsonToHtml({ message: 'not found' })).toBeNull();
+    it('sizes the column widths from the declared columns when a sheet has them', () => {
+        const document = buildSheetDocument([
+            { name: 'data', rows: [], columns: ['name', 'path', 'note'] },
+        ]);
+
+        expect(document.data).toStrictEqual({
+            total: 0,
+            limit: 0,
+            offset: 0,
+            data: [],
+            ':colWidths': [300, 300, 300],
+        });
+    });
+
+    it('turns what aem.live serves into a document with the same sheets and rows', () => {
+        const document = buildSheetDocument(readServedSheets(SERVED_MULTI_SHEET) ?? []);
+
+        expect(document[':names']).toStrictEqual(['data', 'dnt']);
+        expect(document[':type']).toBe('multi-sheet');
+        expect(document.data).toMatchObject({ total: 2, data: SERVED_MULTI_SHEET.data.data });
+        expect(document.dnt).toMatchObject({ total: 1, data: SERVED_MULTI_SHEET.dnt.data });
+    });
+
+    it('turns a single served sheet into a document whose one sheet is named data', () => {
+        const document = buildSheetDocument(readServedSheets(SERVED_SINGLE_SHEET) ?? []);
+
+        expect(document[':names']).toStrictEqual(['data']);
+        expect(document.data).toMatchObject({ total: 1, limit: 1, offset: 0, data: [{ URL: '' }] });
     });
 });

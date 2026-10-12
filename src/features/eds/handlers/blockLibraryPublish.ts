@@ -73,6 +73,38 @@ export async function publishLibraryPaths(
     paths: string[],
     logger: Logger,
 ): Promise<{ published: number; failed: number }> {
+    return publishOneByOne(helixService, { owner, repo }, paths, logger, 'library paths');
+}
+
+/**
+ * Publish copied sheets, one `.json` path at a time.
+ *
+ * The same single-page route as the block library, whose own sheet
+ * (`/.da/library/blocks.json`) is the proof it serves a sheet. The whole-site
+ * publish cannot do this: it lists `.html` documents only. Same contract as
+ * {@link publishLibraryPaths}; only what the log calls the paths differs.
+ *
+ * @param paths - sheet web paths (`/metadata.json`), as the content copy reports them
+ * @returns how many published and how many failed
+ */
+export async function publishSheetPaths(
+    helixService: LibraryPublishHelix,
+    owner: string,
+    repo: string,
+    paths: string[],
+    logger: Logger,
+): Promise<{ published: number; failed: number }> {
+    return publishOneByOne(helixService, { owner, repo }, paths, logger, 'sheets');
+}
+
+/** The single-page publish loop; `what` names the paths in the log. */
+async function publishOneByOne(
+    helixService: LibraryPublishHelix,
+    { owner, repo }: { owner: string; repo: string },
+    paths: string[],
+    logger: Logger,
+    what: string,
+): Promise<{ published: number; failed: number }> {
     if (paths.length === 0) return { published: 0, failed: 0 };
 
     // Absolute, whatever the caller sent. The single-page endpoint normalises
@@ -80,7 +112,7 @@ export async function publishLibraryPaths(
     // consumes it.
     const absolute = paths.map((path) => (path.startsWith('/') ? path : `/${path}`));
 
-    logger.debug(`[EDS] Publishing ${absolute.length} library paths`);
+    logger.debug(`[EDS] Publishing ${absolute.length} ${what}`);
 
     let published = 0;
     const failures: string[] = [];
@@ -104,7 +136,7 @@ export async function publishLibraryPaths(
         // the site to work out which blocks are missing.
         const sample = failures.slice(0, 5).join(', ');
         logger.warn(
-            `[EDS] ${failures.length} of ${absolute.length} library paths failed to publish` +
+            `[EDS] ${failures.length} of ${absolute.length} ${what} failed to publish` +
                 ` (first: ${sample}${failures.length > 5 ? ', ...' : ''})`,
         );
     }

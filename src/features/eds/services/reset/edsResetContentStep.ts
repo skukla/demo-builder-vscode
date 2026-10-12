@@ -30,6 +30,7 @@ const PIPELINE_STEP_MAP: Record<string, number> = {
     'eds-settings': 10,
     'cache-purge': 11,
     'content-publish': 11,
+    'sheet-publish': 11,
     'library-publish': 11,
     'leftover-pages': 11,
     'catalog-prewarm': 11,

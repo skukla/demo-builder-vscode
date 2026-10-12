@@ -131,6 +131,7 @@ function buildPipelineProgressCallback(
                 phase: 'publish',
                 progress: PIPELINE_PROGRESS.CONTENT_PUBLISH_START,
             },
+            'sheet-publish': { phase: 'publish', progress: PIPELINE_PROGRESS.LIBRARY_PUBLISH },
             'library-publish': { phase: 'publish', progress: PIPELINE_PROGRESS.LIBRARY_PUBLISH },
             'leftover-pages': { phase: 'publish', progress: PIPELINE_PROGRESS.LIBRARY_PUBLISH },
             'catalog-prewarm': { phase: 'publish', progress: PIPELINE_PROGRESS.LIBRARY_PUBLISH },

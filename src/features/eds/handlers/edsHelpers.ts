@@ -64,6 +64,10 @@ export {
     getEwCanvasBranch,
 } from './authoringExperience';
 
-export { publishLibraryPaths, verifyLibraryPreviewed } from './blockLibraryPublish';
+export {
+    publishLibraryPaths,
+    publishSheetPaths,
+    verifyLibraryPreviewed,
+} from './blockLibraryPublish';
 
 export { applyDaLiveOrgConfigSettings, configureDaLivePermissions } from './daLive/daLiveSiteConfig';

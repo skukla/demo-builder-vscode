@@ -28,7 +28,12 @@
 
 import type { PatchReport } from '../patches/patchReportHelper';
 import type { RuntimeSurfaceSource } from '../runtimeSurfaceResolver';
-import type { DaLiveCopyResult, DaLiveProgressCallback, DaLiveContentSource } from '../types';
+import type {
+    DaLiveCopyResult,
+    DaLiveProgressCallback,
+    DaLiveContentSource,
+    DaLiveSiteContentCopyResult,
+} from '../types';
 import {
     createAuthPageStubs as createAuthPageStubsImpl,
     overlayAccountChrome as overlayAccountChromeImpl,
@@ -156,6 +161,11 @@ export class DaLiveContentCopy {
      * discoveredPaths?).
      */
     async copySingleFile(...args: Parameters<CopySingleFile>): Promise<boolean> {
+        return this.copyOne(args);
+    }
+
+    /** The one path every document takes; `sheets` collects the sheets one run wrote. */
+    private copyOne(args: Parameters<CopySingleFile>, sheets?: string[]): Promise<boolean> {
         const [
             token,
             source,
@@ -179,6 +189,7 @@ export class DaLiveContentCopy {
                 contentPatchSource,
                 patchReport,
                 discoveredPaths,
+                writtenSheets: sheets,
             },
         );
     }
@@ -201,12 +212,12 @@ export class DaLiveContentCopy {
         );
     }
 
-    /** The batch loops' collaborators: the per-file copy is THIS instance's. */
-    private batchDeps(): BatchCopyDeps {
+    /** The batch loops' collaborators: THIS instance's per-file copy, and one run's sheet list. */
+    private batchDeps(writtenSheets?: string[]): BatchCopyDeps {
         return {
             apiClient: this.apiClient,
             logger: this.logger,
-            copySingleFile: this.copySingleFile.bind(this),
+            copySingleFile: (...args) => this.copyOne(args, writtenSheets),
         };
     }
 
@@ -261,7 +272,7 @@ export class DaLiveContentCopy {
      *   unapplied code patches. Without a report, the old debug-log
      *   behavior is preserved (for callers outside the create/reset
      *   pipeline that don't aggregate patch results).
-     * @returns Copy result
+     * @returns Copy result, with the sheets written listed for publishing
      */
     async copyContentFromSource(
         source: DaLiveContentSource,
@@ -272,7 +283,7 @@ export class DaLiveContentCopy {
         contentPatchSource?: ContentPatchSource,
         patchReport?: PatchReport,
         runtimeSurfaceSource?: RuntimeSurfaceSource,
-    ): Promise<DaLiveCopyResult> {
+    ): Promise<DaLiveSiteContentCopyResult> {
         // Report initialization progress
         progressCallback?.({
             processed: 0,
@@ -325,7 +336,8 @@ export class DaLiveContentCopy {
         };
         const { copiedFiles, failedFiles, discoveredPaths } = outcome;
         let totalFiles = contentPaths.length;
-        const deps = this.batchDeps();
+        const sheetPaths: string[] = [];
+        const deps = this.batchDeps(sheetPaths);
         const dest = { org: destOrg, site: destSite };
         const patches = { contentPatchIds, contentPatchSource, patchReport };
 
@@ -379,6 +391,7 @@ export class DaLiveContentCopy {
             copiedFiles,
             failedFiles,
             totalFiles,
+            sheetPaths,
         };
     }
 }

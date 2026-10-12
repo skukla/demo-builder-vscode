@@ -27,7 +27,7 @@ import type { DaLiveApiClient } from './daLiveApiClient';
 import { DA_LIVE_BASE_URL, MAX_RETRY_ATTEMPTS, getRetryDelay } from './daLiveConstants';
 import { transformHtmlForDaLive, buildSourceUrl, resolveDaPath } from './daLiveContentHelpers';
 import { extractReferencedPaths } from './daLiveContentReferences';
-import { copySpreadsheetFile, isSpreadsheetPath } from './daLiveSpreadsheetCopy';
+import { copySpreadsheetFile, isSpreadsheetPath, sheetWebPath } from './daLiveSpreadsheetCopy';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { ContentPatchSource } from '@/types/demoPackages';
@@ -66,6 +66,12 @@ interface SingleFileCopy {
     contentPatchSource?: ContentPatchSource;
     patchReport?: PatchReport;
     discoveredPaths?: Set<string>;
+    /**
+     * Collects the web path (`/metadata.json`) of each sheet this copy writes. A
+     * sheet is served only once it is published by that path, so a caller that
+     * publishes hands in a list and reads it afterwards.
+     */
+    writtenSheets?: string[];
 }
 
 /**
@@ -243,7 +249,16 @@ export async function copySingleFile(deps: FileCopyDeps, copy: SingleFileCopy): 
     // A DA.live spreadsheet is an Excel doc served as JSON, with no `.plain.html`,
     // so it cannot use the normal copy path at all.
     if (await isSpreadsheetPath(sourceBaseUrl, sourcePath)) {
-        return copySpreadsheetFile(deps, token, source, sourcePath, destination, destPath);
+        const written = await copySpreadsheetFile(
+            deps,
+            token,
+            source,
+            sourcePath,
+            destination,
+            destPath,
+        );
+        if (written) copy.writtenSheets?.push(sheetWebPath(destPath));
+        return written;
     }
 
     const isHtmlPath = !sourcePath.match(/\.[a-z0-9]+$/i) || sourcePath.endsWith('.html');

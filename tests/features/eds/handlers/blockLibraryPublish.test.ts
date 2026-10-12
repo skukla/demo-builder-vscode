@@ -25,6 +25,7 @@ jest.mock('vscode', () => ({ window: {}, workspace: { getConfiguration: () => ({
 
 import {
     publishLibraryPaths,
+    publishSheetPaths,
     verifyLibraryPreviewed,
 } from '@/features/eds/handlers/blockLibraryPublish';
 import type { HelixService } from '@/features/eds/services/helix/helixService';
@@ -138,6 +139,38 @@ describe('publishLibraryPaths', () => {
         await publishLibraryPaths(helix, 'owner', 'repo', ['/a', '/b'], logger);
 
         expect(logger.warn).not.toHaveBeenCalled();
+    });
+});
+
+describe('publishSheetPaths', () => {
+    // Copied sheets take the same single-page route: the whole-site publish
+    // lists .html documents only, so a sheet is published by its .json path.
+    it('previews and publishes each sheet at its .json path, one at a time', async () => {
+        const helix = makeHelix();
+
+        const result = await publishSheetPaths(
+            helix, 'owner', 'repo', ['/metadata.json', '/placeholders/cart.json'], logger,
+        );
+
+        expect(helix.previewAndPublishPage.mock.calls).toStrictEqual([
+            ['owner', 'repo', '/metadata.json'],
+            ['owner', 'repo', '/placeholders/cart.json'],
+        ]);
+        expect(helix.previewAllContent).not.toHaveBeenCalled();
+        expect(result).toStrictEqual({ published: 2, failed: 0 });
+    });
+
+    it('counts a sheet that failed without abandoning the rest', async () => {
+        const helix = makeHelix();
+        helix.previewAndPublishPage
+            .mockRejectedValueOnce(new Error('404'))
+            .mockResolvedValue(undefined);
+
+        const result = await publishSheetPaths(
+            helix, 'owner', 'repo', ['/metadata.json', '/redirects.json'], logger,
+        );
+
+        expect(result).toStrictEqual({ published: 1, failed: 1 });
     });
 });
 
