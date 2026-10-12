@@ -14,7 +14,7 @@ import { generateProjectConfigJson } from '../configGenerator';
 import { carrySharedDemoFile } from '../demoPackage/sharedDemoFile';
 import { generateFstabContent } from '../fstabGenerator';
 import type { GitHubFileOperations } from '../github/githubFileOperations';
-import { addPlaceholderStubOverrides } from '../placeholderStubs';
+import { addPlaceholderStubOverrides, placeholderStubPathsFor } from '../placeholderStubs';
 import type { EdsResetParams } from './edsResetParams';
 import type { Logger } from '@/types/logger';
 
@@ -24,7 +24,10 @@ import type { Logger } from '@/types/logger';
  * @returns the overrides, in the order the commit applies them
  */
 export async function buildResetFileOverrides(
-    params: Pick<EdsResetParams, 'repoOwner' | 'repoName' | 'daLiveOrg' | 'daLiveSite' | 'project'>,
+    params: Pick<
+        EdsResetParams,
+        'repoOwner' | 'repoName' | 'daLiveOrg' | 'daLiveSite' | 'project' | 'contentSource'
+    >,
     githubFileOps: Pick<GitHubFileOperations, 'getFileContent'>,
     logger: Logger,
 ): Promise<Map<string, string>> {
@@ -42,16 +45,16 @@ export async function buildResetFileOverrides(
         logger.warn(`[EdsReset] Failed to generate demo-config.json: ${configResult.error}`);
     }
 
-    // Placeholder sheets are deliberately NOT fetched here (fetch deleted
-    // 2026-08-23). They are UI-label dictionaries and belong to CONTENT: the
-    // DA.live copy's full-tree walk carries any /placeholders sheets a source
-    // authors (sheets are .xlsx on DA.live — see daLiveContentCopy), verified
-    // live on isle5. Dropins ship English defaults compiled in. What DOES go
-    // in are static sentinel STUBS — the boilerplate requests these 16 sheets
-    // per page load and the browser prints every 404 to the console, which no
-    // JS can suppress; the stubs answer 200 and are shadowed by real DA
-    // content the moment a brand authors sheets (content-over-code).
-    addPlaceholderStubOverrides(fileOverrides);
+    // Label-sheet STUBS, for the areas the content source serves no sheet for.
+    // The boilerplate asks for 16 or so optional sheets per page load and the
+    // browser prints every 404 to the console, which no JS can suppress; a stub
+    // answers 200. A stub does NOT step aside for a copied sheet (measured live
+    // 2026-10-12: the file in the repository is what the site serves), so the
+    // source this reset copies its content from is asked first, and an area it has
+    // a sheet for gets none. Creation decides from the same function.
+    const stubPaths = await placeholderStubPathsFor(params.contentSource);
+    addPlaceholderStubOverrides(fileOverrides, stubPaths);
+    logger.info(`[EdsReset] Label-sheet stubs: ${stubPaths.length} (the source has the rest)`);
 
     // A saved demo package keeps its description file through the reset.
     if (project.demoPackage) {

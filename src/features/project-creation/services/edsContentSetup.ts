@@ -194,6 +194,8 @@ export async function ensureEdsContent(
     // would silent-debug-log here and the import path would miss the user signal.
     const patchReport = createPatchReport();
 
+    // No code paths are handed over here: this copy uses the fixed lists (the static
+    // fallback), not the shared pipeline's read of the storefront's code (EDS-40).
     const contentResult = await daLiveContentOps.copyOps.copyContentFromSource(
         {
             org: contentSource.org,

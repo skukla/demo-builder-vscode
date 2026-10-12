@@ -467,6 +467,30 @@ describe('handleStartStorefrontSetup — the two outcomes', () => {
         );
     });
 
+    it('says which pages the source has that the storefront does not serve, after the demo’s caveats (EDS-40)', async () => {
+        mockExecutePhases.mockResolvedValue({
+            success: true,
+            repoUrl: 'https://github.com/demo-org/demo-repo',
+            repoOwner: 'demo-org',
+            repoName: 'demo-repo',
+            demoCaveats: ['Product links on this storefront use a different address format.'],
+            missingPages: '2 pages the source has are missing from this storefront: /cart, /checkout',
+        });
+        const context = createContext();
+
+        await handleStartStorefrontSetup(context, payload());
+
+        expect(messagePayload(context, 'storefront-setup-complete')).toEqual(
+            expect.objectContaining({
+                message: 'Storefront created. A few things to know about this demo.',
+                warnings: [
+                    'Product links on this storefront use a different address format.',
+                    '2 pages the source has are missing from this storefront: /cart, /checkout',
+                ],
+            }),
+        );
+    });
+
     it('hands the completed storefront back with its repo and its da.live site', async () => {
         const context = createContext();
 

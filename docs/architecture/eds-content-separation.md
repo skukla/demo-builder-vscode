@@ -45,9 +45,18 @@ What was measured, 2026-10-12, on a scratch storefront (EDS-40):
 | The native document at `/.da/library/blocks.json`, previewed and published | a real sheet: 200, with and without `?sheet=data` |
 | HTML table as `.html` | an HTML page; `<path>.json` answers 404 |
 
-Not yet measured: a native document OUTSIDE `/.da/` (`/metadata.json`,
-`/placeholders/cart.json`). The copy now writes those the same way; confirm on a live
-site before relying on it.
+Measured the same day on a reset of a project copied from a colleague's demo
+(`.rptc/research/added-demo-content-completeness/research.md`, section 9): a native
+document OUTSIDE `/.da/` is served too. `/metadata.json` and `/redirects.json` went from
+404 to 200 with the source's rows.
+
+**A file in the repository at the same path wins over the sheet.** The 16 label sheets
+(`/placeholders/<area>.json`) were written and published, and the site went on serving
+Demo Builder's one-row stub file for each. With the stub deleted from the repository and
+the sheet published once more, the site served the source's rows (cart: 160). So a
+label-sheet stub is written only for an area the content source serves no sheet for:
+`placeholderStubPathsFor` in `services/placeholderStubs.ts` asks the source, and creation
+and reset both take their list from it.
 
 Earlier attempts, recorded before the native document was understood. The table said
 "JSON directly: 404" without recording which JSON shape was sent or whether the path

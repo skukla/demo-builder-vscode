@@ -110,5 +110,64 @@ sheet then shadows the stub of the same path. The destination will serve a SINGL
 (no `dnt`), where the source serves a multi-sheet; a storefront's `fetchPlaceholders` has
 to read both, and that was not checked against the 4.0.1 code.
 
-Still to do from this item: derive the stub list from the demo's own code.
+Superseded the same day by the two sections below: the table posted as HTML never became
+a sheet (fixed in `98b5c88b0`), and the stub turned out to block the copied sheet.
+
+## Built 2026-10-12, second pass: the stub rule, and a copy that reads the code
+
+Evidence: `.rptc/research/added-demo-content-completeness/research.md` (sections 4, 8, 9).
+
+**1. A stub is not written where the source has a sheet.** Proven live (research section 9):
+a stub file in the repository stops the copied sheet at the same path from being served.
+`placeholderStubPathsFor` (`placeholderStubs.ts`) asks the content source for each area's
+sheet, one request each, and returns the areas it does NOT serve. Creation
+(`storefrontSetupPhase2.ts`, from `edsConfig.contentSource`) and reset
+(`edsResetFileOverrides.ts`, from `params.contentSource`) both take their list from it. An
+unreachable source, or no source, stubs every area, as before.
+
+**2. The copy carries what the storefront's code loads, and says what is missing.** One
+mechanism, in the shared pipeline, so creation and reset agree:
+
+- `storefrontCodeReader.ts` downloads the SC's own repository once, before the copy
+  (pipeline step `storefront-code`). If that fails the copy runs on the fixed lists.
+- `storefrontCodePaths.ts` reads every site path out of `blocks/` and `scripts/`: quoted
+  paths, templates built from plain-string constants, and the sheets `fetchPlaceholders`
+  names. No list of page names anywhere.
+- `backfillCodePaths` (`daLiveCopyPaths.ts`) asks the source for each path not already
+  listed (`sitePathProbe.ts`: at most 400 paths, 8 at a time, 5 s each, 30 s in all) and
+  copies what answers. With code paths in hand, the fixed list of label-sheet areas is
+  not asked for.
+- `storefront/missingPages.ts` (pipeline step `page-check`) asks the published
+  storefront for every path the source had. What is absent goes on the pipeline result,
+  in the log, in the reset's warning dialog, on the wizard's completion card, and in the
+  `caveats` of `reset_project` and `create_project`: "2 pages the source has are missing
+  from this storefront: /cart, /checkout". It cannot fail a copy.
+
+Measured against the real demo's clone and the two live sites (read-only): 75 paths
+derived from 179 files; the source serves 57 of them (answered in 3.4 s); 16 of the 18
+documents in research section 4 are derived, all but `/metadata.json` and
+`/redirects.json`, which no code names and the static list already copies. The existing
+copy lacks 17 of the 57, the research's 16 pages plus `/b2b/quote-checkout`.
+
+The ADR-008 prototype (`scripts/runtime-surfaces/`) was deleted: its logic is
+`storefrontCodePaths.ts`. The gate's script in the patches repository is unchanged.
+
+## What is left
+
+- **Not proven live.** No create or reset has run with this build. To check on a reset of
+  the real project: no stub files under `placeholders/` for the 16 areas the source has;
+  those sheets serve the source's rows; `/cart`, `/checkout` and the rest answer 200; and
+  the result carries no missing-pages sentence.
+- **The stub list is still the fixed list.** Which areas get a stub is decided per source
+  now, but the candidate areas are `PLACEHOLDER_STUB_PATHS`. Deriving them from the
+  storefront's code needs the code in hand when the stubs are committed, which on reset
+  is before the archive is downloaded.
+- **Keep-my-current-content resets.** With the source unreachable every area is stubbed,
+  which would block label sheets copied earlier. Not handled.
+- **`ensureEdsContent`** (project creation's own copy, when the site has no content) uses
+  the fixed lists, not the code.
+- `/enrichment/category-banner` and `/enrichment/product-banner` are in the source's
+  index and were missing on the copy; the cause is still not established.
+- A page check right after a publish can see the CDN's old 404 for a path that has just
+  gone live. Not measured.
 

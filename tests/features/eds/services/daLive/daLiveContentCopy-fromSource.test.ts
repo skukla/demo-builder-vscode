@@ -122,6 +122,7 @@ describe('DaLiveContentCopy.copyContentFromSource', () => {
                 failedFiles: [],
                 totalFiles: 3,
                 sheetPaths: [],
+                codePathsOnSource: [],
             });
         });
     });

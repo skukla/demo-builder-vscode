@@ -57,6 +57,7 @@ describe('executeEdsPipeline - integration', () => {
                     copiedFiles: Array(42).fill('/page'),
                     failedFiles: [],
                     sheetPaths: [],
+                    codePathsOnSource: [],
                 }),
             },
             blockLibOps: {
@@ -123,7 +124,7 @@ describe('executeEdsPipeline - integration', () => {
                     progressCb: (p: Record<string, unknown>) => void
                 ) => {
                     progressCb({ processed: 5, total: 10, percentage: 50, currentFile: '/page-5' });
-                    return { success: true, totalFiles: 10, copiedFiles: [], failedFiles: [], sheetPaths: [] };
+                    return { success: true, totalFiles: 10, copiedFiles: [], failedFiles: [], sheetPaths: [], codePathsOnSource: [] };
                 }
             );
 
@@ -225,7 +226,7 @@ describe('executeEdsPipeline - integration', () => {
             (mockDaLiveContentOps.copyOps.copyContentFromSource as jest.Mock).mockImplementation(
                 async () => {
                     callOrder.push('copyContent');
-                    return { success: true, totalFiles: 10, copiedFiles: [], failedFiles: [], sheetPaths: [] };
+                    return { success: true, totalFiles: 10, copiedFiles: [], failedFiles: [], sheetPaths: [], codePathsOnSource: [] };
                 }
             );
             (mockDaLiveContentOps.blockLibOps.createBlockLibraryFromTemplate as jest.Mock).mockImplementation(

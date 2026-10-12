@@ -34,6 +34,8 @@ export interface StorefrontSetupResult {
     demoCaveats?: string[];
     /** Links the content copy found to pages the source lacks; the project records them. */
     brokenLinks?: StorefrontBrokenLink[];
+    /** See {@link RepoInfo.missingPages} — spread in from the threaded repoInfo. */
+    missingPages?: string;
     /** See {@link RepoInfo.installedBlockLibraries} — spread in from the threaded repoInfo. */
     installedBlockLibraries?: InstalledBlockLibrary[];
     // Note: previewUrl/liveUrl not included - derived from githubRepo by typeGuards
@@ -98,6 +100,13 @@ export interface RepoInfo {
      * will not load at all; these say what may not work on this demo.
      */
     demoCaveats?: string[];
+    /**
+     * Which pages the source has that the new storefront does not serve (EDS-40),
+     * in SC words, or that it could not be checked: the content pipeline's
+     * `missingPages` sentence. Shown last among the caveats. Absent when
+     * everything arrived.
+     */
+    missingPages?: string;
     /**
      * The block libraries phase 2 installed, one record each, spread into
      * {@link StorefrontSetupResult} and on to project creation, which saves them onto

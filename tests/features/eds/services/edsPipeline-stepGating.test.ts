@@ -59,6 +59,7 @@ describe('executeEdsPipeline - step gating', () => {
             copiedFiles: ['/page'],
             failedFiles: [],
             sheetPaths: [],
+            codePathsOnSource: [],
         });
 
         services = pipelineServices({

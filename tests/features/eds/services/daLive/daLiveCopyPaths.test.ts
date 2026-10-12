@@ -9,24 +9,20 @@
  * cart labels (EDS-40).
  */
 
-import { backfillEssentialPaths } from '@/features/eds/services/daLive/daLiveCopyPaths';
+import { backfillCodePaths, backfillEssentialPaths } from '@/features/eds/services/daLive/daLiveCopyPaths';
 import { PLACEHOLDER_STUB_PATHS } from '@/features/eds/services/placeholderStubs';
 import { createMockLogger } from '../../../../helpers/loggerFake';
+import { installSiteFetch, restoreFetch } from '../../../../helpers/siteFetchFake';
 
 const SOURCE = { org: 'colleague', site: 'their-demo' };
 const BASE = 'https://main--their-demo--colleague.aem.live';
 
 /** A source site that answers 200 for exactly these URLs. */
 function sourceServing(urls: string[]): jest.Mock {
-    const fetchMock = jest.fn(async (url: string) => ({ ok: urls.includes(url) }));
-    global.fetch = fetchMock as unknown as typeof fetch;
-    return fetchMock;
+    return installSiteFetch(urls).fetchMock;
 }
 
-const realFetch = global.fetch;
-afterEach(() => {
-    global.fetch = realFetch;
-});
+afterEach(restoreFetch);
 
 describe('the label sheets of a source that can only be read from its published site', () => {
     it('asks the source for every area a storefront reads labels for', async () => {
@@ -58,5 +54,86 @@ describe('the label sheets of a source that can only be read from its published 
         await backfillEssentialPaths(createMockLogger(), SOURCE, ['/placeholders/cart'], []);
 
         expect(fetchMock.mock.calls.map((call) => call[0])).not.toContain(`${BASE}/placeholders/cart.json`);
+    });
+});
+
+describe('the label sheets, when the storefront’s own code has been read', () => {
+    // The list of areas describes one version of one template. A storefront whose
+    // code is in hand says exactly which sheets it fetches, so the list is only
+    // the fallback for when the code could not be read.
+    it('does not ask for the listed areas: the code says which sheets it fetches', async () => {
+        const fetchMock = sourceServing([]);
+
+        await backfillEssentialPaths(createMockLogger(), SOURCE, [], [], undefined, ['/cart']);
+
+        const asked = fetchMock.mock.calls.map((call) => call[0]);
+        for (const sheet of PLACEHOLDER_STUB_PATHS) {
+            expect(asked).not.toContain(`${BASE}/${sheet}.json`);
+        }
+    });
+});
+
+describe('backfillCodePaths: what the storefront’s code loads, copied when the source has it', () => {
+    it('asks the source for each path, a page at the .plain.html the copy reads and a sheet at its .json', async () => {
+        const site = installSiteFetch([]);
+
+        await backfillCodePaths(createMockLogger(), SOURCE, [], [
+            '/cart',
+            '/customer/forgotpassword',
+            '/placeholders/cart.json',
+        ]);
+
+        expect(site.asked().sort()).toEqual([
+            `${BASE}/cart.plain.html`,
+            `${BASE}/customer/forgotpassword.plain.html`,
+            `${BASE}/placeholders/cart.json`,
+        ]);
+    });
+
+    it('adds what the source answers and drops what it does not', async () => {
+        installSiteFetch([`${BASE}/cart.plain.html`, `${BASE}/placeholders/cart.json`]);
+        const contentPaths = ['/about'];
+
+        await backfillCodePaths(createMockLogger(), SOURCE, contentPaths, [
+            '/cart',
+            '/graphql',
+            '/placeholders/cart.json',
+            '/placeholders/quick-order.json',
+        ]);
+
+        // A sheet goes in under the extensionless path every copied document has.
+        expect([...contentPaths].sort()).toEqual(['/about', '/cart', '/placeholders/cart']);
+    });
+
+    it('does not ask for, or add twice, a path the list already holds', async () => {
+        const site = installSiteFetch([]);
+        const contentPaths = ['/cart', '/placeholders/cart'];
+
+        await backfillCodePaths(createMockLogger(), SOURCE, contentPaths, ['/cart', '/placeholders/cart.json']);
+
+        expect(site.asked()).toStrictEqual([]);
+        expect(contentPaths).toEqual(['/cart', '/placeholders/cart']);
+    });
+
+    it('returns the code paths the source has: listed already, or answered', async () => {
+        installSiteFetch([`${BASE}/checkout.plain.html`]);
+
+        const onSource = await backfillCodePaths(createMockLogger(), SOURCE, ['/cart'], [
+            '/cart',
+            '/checkout',
+            '/graphql',
+        ]);
+
+        expect(onSource).toEqual(['/cart', '/checkout']);
+    });
+
+    it('treats a source that cannot be reached as having none of them', async () => {
+        installSiteFetch([], [`${BASE}/cart.plain.html`]);
+        const contentPaths: string[] = [];
+
+        const onSource = await backfillCodePaths(createMockLogger(), SOURCE, contentPaths, ['/cart']);
+
+        expect(onSource).toStrictEqual([]);
+        expect(contentPaths).toStrictEqual([]);
     });
 });

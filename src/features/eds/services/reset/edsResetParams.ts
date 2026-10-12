@@ -143,6 +143,13 @@ export interface EdsResetResult extends HandlerResponse {
      * when the content was kept.
      */
     leftoverPages?: LeftoverPagesResult;
+    /**
+     * Which pages the source has that the storefront does not serve after the reset
+     * (EDS-40), in SC words: "2 pages the source has are missing from this
+     * storefront: /cart, /checkout". Or that it could not be checked. Absent when
+     * everything arrived, or when nothing was copied.
+     */
+    missingPages?: string;
     /** Additional error details */
     errorDetails?: Record<string, unknown>;
 }

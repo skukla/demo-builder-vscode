@@ -30,6 +30,9 @@ import {
 } from '@/features/eds/services/placeholderStubs';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
+import { installSiteFetch, restoreFetch } from '../../../../helpers/siteFetchFake';
+
+afterEach(restoreFetch);
 
 const EDS_CONFIG: StorefrontSetupStartPayload['edsConfig'] = {
     repoName: 'shop',
@@ -95,6 +98,33 @@ describe('executePhaseHelixConfig — placeholder stubs (creation)', () => {
             PLACEHOLDER_STUB_PATHS.map((p) => `${p}.json`).sort()
         );
         expect(entries[0].content).toBe(buildPlaceholderStubJson());
+    });
+
+    it('commits no stub for an area the content source serves a sheet for', async () => {
+        // The source the content copy reads from: a stub at the same path would
+        // stop the copied sheet from being served (measured live 2026-10-12).
+        const base = 'https://main--their-demo--colleague.aem.live';
+        const site = installSiteFetch([`${base}/placeholders/cart.json`]);
+        const githubFileOps = makeGithubFileOps();
+
+        await executePhaseHelixConfig(
+            makeContext(),
+            { ...EDS_CONFIG, contentSource: { org: 'colleague', site: 'their-demo', indexPath: '/full-index.json' } },
+            servicesWith(githubFileOps),
+            REPO_INFO,
+            new AbortController().signal
+        );
+
+        const stubCall = githubFileOps.commitTreeToBranch.mock.calls.find((c: unknown[]) =>
+            String(c[4]).includes('placeholder stub')
+        );
+        const paths = (stubCall?.[3] as Array<{ path: string }>).map((e) => e.path).sort();
+        expect(paths).toEqual(
+            PLACEHOLDER_STUB_PATHS.filter((p) => p !== 'placeholders/cart')
+                .map((p) => `${p}.json`)
+                .sort()
+        );
+        expect(site.asked()).toContain(`${base}/placeholders/cart.json`);
     });
 
     it('a failed stub commit warns and never fails the phase', async () => {

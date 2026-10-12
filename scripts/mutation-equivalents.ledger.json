@@ -4300,7 +4300,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 216,
+            "line": 218,
             "mutants": 1,
             "category": "block",
             "reason": "The else body is one logger.info reporting the copied file count. Emptying it removes that line and changes nothing else \u2014 same reasoning as the condition above. Re-anchored 2026-09-10 (177 -> 207): unchanged code, shifted by the decomposition of ensureEdsContent.",
@@ -5181,7 +5181,7 @@
             "anchors": [
                 "const failures = [];"
             ],
-            "line": 383,
+            "line": 391,
             "mutants": 1,
             "category": "other",
             "reason": "The mutant seeds the failures list with one junk string, which flips the aggregate to 'cleanup had errors'. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -5194,7 +5194,7 @@
             "anchors": [
                 "if (!result.github.success && !result.github.skipped) {"
             ],
-            "line": 384,
+            "line": 392,
             "mutants": 6,
             "category": "branch",
             "reason": "Every variant of this guard \u2014 forced true, forced false, && to ||, either negation dropped, and the body emptied \u2014 changes only whether a 'GitHub: ...' string joins the failure list. The GitHub deletion itself already happened inside CleanupService; this line classifies its report. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -5207,7 +5207,7 @@
             "anchors": [
                 "if (!result.daLive.success && !result.daLive.skipped) {"
             ],
-            "line": 387,
+            "line": 395,
             "mutants": 6,
             "category": "branch",
             "reason": "The DA.live twin of the GitHub guard above, with the same shape and the same fate: it appends a 'DA.live: ...' string to the failure list after the deletion has already been attempted. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -5220,7 +5220,7 @@
             "anchors": [
                 "if (failures.length > 0) {"
             ],
-            "line": 391,
+            "line": 399,
             "mutants": 5,
             "category": "branch",
             "reason": "This is the point where the failure list becomes a success flag, so it is the closest thing here to a decision \u2014 but the flag has one reader and that reader picks a log line. Forcing it either way, or comparing with >= or <=, changes 'Cleanup completed successfully' into 'Cleanup completed with errors' or the reverse. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -5233,7 +5233,7 @@
             "anchors": [
                 "return { success: false, error: failures.join('; ') };"
             ],
-            "line": 392,
+            "line": 400,
             "mutants": 2,
             "category": "other",
             "reason": "Emptying this object literal, or flipping its false to true, changes the shape and the verdict of the cleanup report. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way.",
@@ -5246,7 +5246,7 @@
             "anchors": [
                 "return { success: true };"
             ],
-            "line": 395,
+            "line": 403,
             "mutants": 2,
             "category": "other",
             "reason": "The all-clear answer from the cleanup helper. Emptying the literal or flipping its true to false turns a clean cleanup into a reported failure. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way.",
@@ -5259,7 +5259,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 396,
+            "line": 404,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this catch body makes the helper return undefined instead of a failure verdict. The caller then throws a TypeError reading .success on undefined, which its own catch swallows into a different log line \u2014 so the handler still resolves { success: true } and no resource is treated differently. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way.",
@@ -5272,7 +5272,7 @@
             "anchors": [
                 "return { success: false, error: (error as Error).message };"
             ],
-            "line": 397,
+            "line": 405,
             "mutants": 2,
             "category": "other",
             "reason": "The failure verdict for an exception thrown anywhere in the helper \u2014 including the fail-fast when there is no authenticated session. Emptying the literal or flipping its false to true changes only that verdict. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. The fail-fast ITSELF is tested: with no authManager, no CleanupService is constructed and cleanupEdsResources is never called.",
@@ -5297,7 +5297,7 @@
             "anchors": [
                 "if (!result.success) {"
             ],
-            "line": 214,
+            "line": 226,
             "mutants": 4,
             "category": "branch",
             "reason": "publishBrandAssets never throws \u2014 fetch and write failures come back as a partly-successful result \u2014 and this guard's whole body is a logger.warn naming the targets that did not land. Nothing downstream reads result: the pipeline proceeds to the next step either way, deliberately, because an incomplete brand set degrades to an unbranded storefront rather than a failed run (proceed-and-warn, ADR-006 D1). Forcing the guard either way, or emptying it, changes only whether that warn prints.",
@@ -6612,7 +6612,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 227,
+            "line": 232,
             "mutants": 1,
             "category": "block",
             "reason": "This else block holds one statement, a logger.warn saying a selected block library has no source configured. The library is skipped either way \u2014 the skip is the absent push, not anything this block does \u2014 so emptying it removes a log line and changes neither the list handed to installBlockCollections nor any progress payload.",
@@ -6625,7 +6625,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 348,
+            "line": 353,
             "mutants": 1,
             "category": "block",
             "reason": "The same shape at the end of applyStandaloneInspectorTagging: the else holds one logger.warn naming why standalone inspector tagging was skipped. The function returns void, sends no progress push on this arm and the caller ignores it, so emptying the block is invisible to everything except the log.",

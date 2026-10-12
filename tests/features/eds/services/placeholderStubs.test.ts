@@ -7,16 +7,22 @@
  * ("No placeholder data found" — the code checks `json.data?.length > 0`).
  * The stubs therefore carry ONE self-documenting sentinel row: a key no
  * dropin ever looks up, whose value tells an inspecting human what it is.
- * Real label overrides are DA.live content and shadow these code files
- * (Helix content-over-code).
+ * A stub is a stand-in for a sheet nobody authored. It does NOT yield to a real
+ * one: measured live 2026-10-12, a stub in the repository stops the DA.live sheet
+ * at the same path from being served. So the areas that get a stub are decided
+ * per source (`placeholderStubPathsFor`).
  */
 
 import {
     PLACEHOLDER_STUB_PATHS,
     addPlaceholderStubOverrides,
     buildPlaceholderStubJson,
+    placeholderStubPathsFor,
     placeholderStubTreeEntries,
 } from '@/features/eds/services/placeholderStubs';
+import { installSiteFetch, restoreFetch } from '../../../helpers/siteFetchFake';
+
+afterEach(restoreFetch);
 
 describe('PLACEHOLDER_STUB_PATHS', () => {
     it('lists every sheet a boilerplate version requests (measured 2026-08-23 and 2026-10-12)', () => {
@@ -84,25 +90,82 @@ describe('buildPlaceholderStubJson', () => {
     });
 });
 
+describe('placeholderStubPathsFor: which areas get a stub for this source', () => {
+    // Measured live 2026-10-12 on a reset of a project copied from a colleague's
+    // demo: a stub in the repository at placeholders/<area>.json STOPS the copied
+    // DA.live sheet at the same path from being served. All 16 of the source's
+    // label sheets were written and published, and the site went on serving the
+    // stub's one row. So an area the source has a sheet for gets no stub.
+    const SOURCE = { org: 'colleague', site: 'their-demo' };
+    const BASE = 'https://main--their-demo--colleague.aem.live';
+
+    it('asks the source for every area, at the sheet a storefront reads', async () => {
+        const site = installSiteFetch([]);
+
+        await placeholderStubPathsFor(SOURCE);
+
+        expect(site.asked().sort()).toEqual(PLACEHOLDER_STUB_PATHS.map((p) => `${BASE}/${p}.json`).sort());
+    });
+
+    it('leaves out every area the source serves a sheet for', async () => {
+        installSiteFetch([`${BASE}/placeholders/cart.json`, `${BASE}/placeholders/global.json`]);
+
+        const stubs = await placeholderStubPathsFor(SOURCE);
+
+        expect(stubs).not.toContain('placeholders/cart');
+        expect(stubs).not.toContain('placeholders/global');
+        expect(stubs).toHaveLength(PLACEHOLDER_STUB_PATHS.length - 2);
+        expect(stubs).toContain('placeholders/checkout');
+    });
+
+    it('stubs an area whose URL answers 200 with something that is not a sheet', async () => {
+        installSiteFetch({ [`${BASE}/placeholders/cart.json`]: { notASheet: true } });
+
+        expect(await placeholderStubPathsFor(SOURCE)).toEqual([...PLACEHOLDER_STUB_PATHS]);
+    });
+
+    it('stubs every area when the source cannot be reached', async () => {
+        installSiteFetch(
+            [],
+            PLACEHOLDER_STUB_PATHS.map((p) => `${BASE}/${p}.json`),
+        );
+
+        expect(await placeholderStubPathsFor(SOURCE)).toEqual([...PLACEHOLDER_STUB_PATHS]);
+    });
+
+    it('stubs every area, and asks nobody, when there is no source', async () => {
+        const site = installSiteFetch([]);
+
+        expect(await placeholderStubPathsFor(undefined)).toEqual([...PLACEHOLDER_STUB_PATHS]);
+        expect(site.asked()).toStrictEqual([]);
+    });
+});
+
 describe('addPlaceholderStubOverrides', () => {
-    it('adds one <path>.json override per sheet without touching existing entries', () => {
+    it('adds one <path>.json override per area it is given without touching existing entries', () => {
         const overrides = new Map<string, string>([['fstab.yaml', 'mountpoint']]);
-        addPlaceholderStubOverrides(overrides);
+        addPlaceholderStubOverrides(overrides, ['placeholders/global', 'placeholders/auth']);
 
         expect(overrides.get('fstab.yaml')).toBe('mountpoint');
-        expect(overrides.size).toBe(1 + PLACEHOLDER_STUB_PATHS.length);
+        expect([...overrides.keys()]).toEqual([
+            'fstab.yaml',
+            'placeholders/global.json',
+            'placeholders/auth.json',
+        ]);
         expect(overrides.get('placeholders/global.json')).toBe(buildPlaceholderStubJson());
     });
 });
 
 describe('placeholderStubTreeEntries', () => {
-    it('returns one blob entry per sheet for a commitTreeToBranch call', () => {
-        const entries = placeholderStubTreeEntries();
-        expect(entries).toHaveLength(PLACEHOLDER_STUB_PATHS.length);
+    it('returns one blob entry per area it is given for a commitTreeToBranch call', () => {
+        const entries = placeholderStubTreeEntries(['placeholders/global', 'placeholders/auth']);
+        expect(entries.map((entry) => entry.path)).toEqual([
+            'placeholders/global.json',
+            'placeholders/auth.json',
+        ]);
         for (const entry of entries) {
             expect(entry.mode).toBe('100644');
             expect(entry.type).toBe('blob');
-            expect(entry.path.endsWith('.json')).toBe(true);
             expect(entry.content).toBe(buildPlaceholderStubJson());
         }
     });

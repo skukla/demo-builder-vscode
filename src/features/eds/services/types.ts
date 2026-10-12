@@ -236,6 +236,13 @@ export interface DaLiveSiteContentCopyResult extends DaLiveCopyResult {
      * sheets, so whoever publishes after this copy publishes these by path.
      */
     sheetPaths: string[];
+    /**
+     * The paths the storefront's own code loads that the source has, as a browser
+     * asks for them (`/cart`, `/placeholders/cart.json`). The copy took each one,
+     * so the finished storefront should serve every one; whoever publishes can
+     * check. Empty when the code was not read.
+     */
+    codePathsOnSource: string[];
 }
 
 /**

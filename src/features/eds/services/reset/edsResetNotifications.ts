@@ -59,6 +59,12 @@ export async function showResetResultNotifications(
         if (result.leftoverPages && LEFTOVERS_MAY_REMAIN.has(result.leftoverPages.status)) {
             vscode.window.showWarningMessage(result.leftoverPages.summary);
         }
+
+        // Pages the source has that this storefront does not serve (EDS-40): the
+        // copy is done and the SC would otherwise meet them as blank pages.
+        if (result.missingPages) {
+            vscode.window.showWarningMessage(result.missingPages);
+        }
     } else if (result.errorType === 'GITHUB_APP_NOT_INSTALLED') {
         const selection = await vscode.window.showErrorMessage(
             `Cannot reset EDS project: The AEM Code Sync GitHub App is not installed on ${result.errorDetails?.owner}/${result.errorDetails?.repo}. ` +

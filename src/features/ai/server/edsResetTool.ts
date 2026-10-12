@@ -26,13 +26,22 @@ import {
     resolveByomOverlayConfig,
 } from '@/features/eds/handlers/edsHelpers';
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveTokenProviders';
-import { extractResetParams } from '@/features/eds/services/reset/edsResetParams';
+import { extractResetParams, type EdsResetResult } from '@/features/eds/services/reset/edsResetParams';
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 import { getMeshComponentInstance } from '@/types/typeGuards';
 
 /** Silent Adobe IMS auth pre-flight. */
+/**
+ * The reset's caveats for the agent: what may not work on an added demo, then which
+ * pages the source has that the storefront does not serve. No key when there are none.
+ */
+function caveatsOf(result: Pick<EdsResetResult, 'demoCaveats' | 'missingPages'>): { caveats?: string[] } {
+    const caveats = [...(result.demoCaveats ?? []), ...(result.missingPages ? [result.missingPages] : [])];
+    return caveats.length > 0 ? { caveats } : {};
+}
+
 export async function adobeAuthed(): Promise<boolean> {
     try {
         return (await ServiceLocator.getAuthenticationService().getTokenManager().inspectToken())
@@ -145,8 +154,9 @@ export async function runEdsReset(
             reset: true,
             project: project.name,
             kind: 'storefront',
-            // What may not work on an added demo (D23), in the same words the SC sees.
-            ...(result.demoCaveats?.length ? { caveats: result.demoCaveats } : {}),
+            // What may not work on an added demo (D23), then which pages the source
+            // has that this storefront does not serve (EDS-40), in the words the SC sees.
+            ...caveatsOf(result),
             // Applied by this reset, and fitting but left for the user to accept
             // (call again with applyFixes:true once they agree) (EDS-13f).
             ...(result.demoFixes ? { fixes: result.demoFixes } : {}),

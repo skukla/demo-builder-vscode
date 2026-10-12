@@ -24,7 +24,7 @@ import {
 } from '../../services/inspectorHelpers';
 import { toInstalledBlockLibrary } from '../../services/installedBlockLibraryRecord';
 import { installSmart404Handler } from '../../services/pdp/pdp404HandlerPublisher';
-import { placeholderStubTreeEntries } from '../../services/placeholderStubs';
+import { placeholderStubPathsFor, placeholderStubTreeEntries } from '../../services/placeholderStubs';
 import { installQuickEdit } from '../../services/quickEditPublisher';
 import { type GitHubTreeInput } from '../../services/types';
 import { addPdpCaveat, describeSmart404Skip } from '../edsHelpers';
@@ -93,18 +93,23 @@ export async function executePhaseHelixConfig(
     // Placeholder stub sheets, one bulk commit: the boilerplate requests 16 or so
     // optional label sheets per page load and the browser prints every 404 to
     // the console (no JS can suppress it) — red noise during any demo with
-    // devtools open. Real label overrides are DA.live content and shadow the
-    // stubs (content-over-code). Non-fatal: a failed commit costs console
-    // cosmetics, never the setup.
+    // devtools open. A stub does NOT step aside for a copied sheet (measured live
+    // 2026-10-12: the file in the repository is what the site serves), so the
+    // source the content copy reads from is asked first and an area it has a
+    // sheet for gets no stub. Reset decides from the same function. Non-fatal: a
+    // failed commit costs console cosmetics, never the setup.
     try {
+        const stubPaths = await placeholderStubPathsFor(edsConfig.contentSource);
         await githubFileOps.commitTreeToBranch(
             repoInfo.repoOwner,
             repoInfo.repoName,
             'main',
-            placeholderStubTreeEntries(),
+            placeholderStubTreeEntries(stubPaths),
             'chore: placeholder stub sheets (console hygiene)',
         );
-        logger.info('[Storefront Setup] Placeholder stub sheets committed');
+        logger.info(
+            `[Storefront Setup] Placeholder stub sheets committed: ${stubPaths.length} (the source has the rest)`,
+        );
     } catch (error) {
         logger.warn(
             `[Storefront Setup] Placeholder stubs skipped (non-fatal): ${(error as Error).message}`,

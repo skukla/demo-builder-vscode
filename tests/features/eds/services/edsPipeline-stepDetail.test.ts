@@ -65,6 +65,7 @@ describe('executeEdsPipeline - step detail', () => {
             copiedFiles: ['/page'],
             failedFiles: [],
             sheetPaths: [],
+            codePathsOnSource: [],
         });
         mockOverlayAccountChrome = jest.fn().mockResolvedValue({ totalFiles: 8 });
         mockCreateBlockLibrary = jest
@@ -136,7 +137,7 @@ describe('executeEdsPipeline - step detail', () => {
                         percentage: 30,
                         currentFile: '/products/shoes',
                     });
-                    return { success: true, totalFiles: 10, copiedFiles: [], failedFiles: [], sheetPaths: [] };
+                    return { success: true, totalFiles: 10, copiedFiles: [], failedFiles: [], sheetPaths: [], codePathsOnSource: [] };
                 }
             );
 
@@ -161,7 +162,7 @@ describe('executeEdsPipeline - step detail', () => {
                     report: (p: Record<string, unknown>) => void
                 ) => {
                     report({ processed: 3, total: 10 });
-                    return { success: true, totalFiles: 10, copiedFiles: [], failedFiles: [], sheetPaths: [] };
+                    return { success: true, totalFiles: 10, copiedFiles: [], failedFiles: [], sheetPaths: [], codePathsOnSource: [] };
                 }
             );
 
@@ -190,7 +191,7 @@ describe('executeEdsPipeline - step detail', () => {
                     report: (p: Record<string, unknown>) => void
                 ) => {
                     report({ processed: 1, total: 2 });
-                    return { success: true, totalFiles: 2, copiedFiles: [], failedFiles: [], sheetPaths: [] };
+                    return { success: true, totalFiles: 2, copiedFiles: [], failedFiles: [], sheetPaths: [], codePathsOnSource: [] };
                 }
             );
 
@@ -574,6 +575,7 @@ describe('executeEdsPipeline - step detail', () => {
                 copiedFiles: ['/page', '/metadata', '/placeholders/cart'],
                 failedFiles: [],
                 sheetPaths,
+                codePathsOnSource: [],
             });
 
         beforeEach(() => {

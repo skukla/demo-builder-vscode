@@ -131,6 +131,7 @@ describe('every pipeline operation maps to a wizard phase and a bar position', (
         ['sheet-publish', 'publish', 95],
         ['library-publish', 'publish', 95],
         ['leftover-pages', 'publish', 95],
+        ['page-check', 'publish', 95],
         ['catalog-prewarm', 'publish', 95],
     ])('%s → %s at %i', async (operation, phase, progress) => {
         const payload = await reportProgress({ operation, message: 'working' });
@@ -298,5 +299,45 @@ describe('the result of a finished run', () => {
 
         expect(result.success).toBe(true);
         expect(result.brokenLinks).toStrictEqual(brokenLinks);
+    });
+
+    it('carries the sentence for what the source has that the storefront does not serve (EDS-40)', async () => {
+        const summary = '2 pages the source has are missing from this storefront: /cart, /checkout';
+        mockExecuteEdsPipeline.mockResolvedValue({
+            success: true,
+            contentFilesCopied: 0,
+            libraryPaths: [],
+            missingPages: { status: 'missing', missing: ['/cart', '/checkout'], summary },
+        });
+
+        const result = await executeStorefrontSetupPhases(
+            createSetupContext(),
+            createEdsConfig(),
+            new AbortController().signal,
+            undefined,
+            SERVICES
+        );
+
+        expect(result.success).toBe(true);
+        expect(result.missingPages).toBe(summary);
+    });
+
+    it('carries no such sentence when the storefront serves them all', async () => {
+        mockExecuteEdsPipeline.mockResolvedValue({
+            success: true,
+            contentFilesCopied: 0,
+            libraryPaths: [],
+            missingPages: { status: 'complete', missing: [] },
+        });
+
+        const result = await executeStorefrontSetupPhases(
+            createSetupContext(),
+            createEdsConfig(),
+            new AbortController().signal,
+            undefined,
+            SERVICES
+        );
+
+        expect(result).not.toHaveProperty('missingPages');
     });
 });

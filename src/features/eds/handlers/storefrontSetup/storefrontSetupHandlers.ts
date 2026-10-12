@@ -176,6 +176,14 @@ function completionMessage(pdpBlocked: boolean, hasCaveats: boolean): string {
     return 'Storefront setup completed successfully!';
 }
 
+/**
+ * The caveats after the PDP ones: what may not work on an added demo, then which
+ * pages the source has that this storefront does not serve (EDS-40).
+ */
+function otherCaveats(result: { demoCaveats?: string[]; missingPages?: string }): string[] {
+    return [...(result.demoCaveats ?? []), ...(result.missingPages ? [result.missingPages] : [])];
+}
+
 export async function handleStartStorefrontSetup(
     context: HandlerContext,
     payload?: StorefrontSetupStartPayload,
@@ -300,7 +308,7 @@ export async function handleStartStorefrontSetup(
             // found later. The repo URL still ships: everything except
             // PDPs works, and withholding it would be the opposite lie.
             const pdpCaveats = result.pdpCaveats ?? [];
-            const caveats = [...pdpCaveats, ...(result.demoCaveats ?? [])];
+            const caveats = [...pdpCaveats, ...otherCaveats(result)];
             const hasCaveats = caveats.length > 0;
             context.logger.info(
                 hasCaveats

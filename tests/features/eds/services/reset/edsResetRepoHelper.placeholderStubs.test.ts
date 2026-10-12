@@ -15,7 +15,10 @@ import {
     buildPlaceholderStubJson,
 } from '@/features/eds/services/placeholderStubs';
 
+import { installSiteFetch, restoreFetch } from '../../../../helpers/siteFetchFake';
+
 beforeEach(installDefaults);
+afterEach(restoreFetch);
 
 describe('resetRepoToTemplate — placeholder stubs ride the bulk override commit', () => {
     it('hands one stub per requested sheet to githubFileOps.resetRepoToTemplate', async () => {
@@ -25,5 +28,26 @@ describe('resetRepoToTemplate — placeholder stubs ride the bulk override commi
         for (const sheetPath of PLACEHOLDER_STUB_PATHS) {
             expect(overrides?.get(`${sheetPath}.json`)).toBe(buildPlaceholderStubJson());
         }
+    });
+
+    it('hands over no stub for an area the content source serves a sheet for', async () => {
+        // The same source the reset's content copy reads from. A stub at the same
+        // path would stop the copied sheet from being served (measured live
+        // 2026-10-12), and creation decides the same way from the same function.
+        const base = 'https://main--their-demo--colleague.aem.live';
+        const site = installSiteFetch([`${base}/placeholders/cart.json`]);
+
+        const { overrides } = await runReset(
+            buildParams({ contentSource: { org: 'colleague', site: 'their-demo', indexPath: '/full-index.json' } }),
+        );
+
+        expect(overrides?.has('placeholders/cart.json')).toBe(false);
+        const stubbed = [...(overrides?.keys() ?? [])].filter((key) => key.startsWith('placeholders/')).sort();
+        expect(stubbed).toEqual(
+            PLACEHOLDER_STUB_PATHS.filter((p) => p !== 'placeholders/cart')
+                .map((p) => `${p}.json`)
+                .sort(),
+        );
+        expect(site.asked()).toContain(`${base}/placeholders/cart.json`);
     });
 });

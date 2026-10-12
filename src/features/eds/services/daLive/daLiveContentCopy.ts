@@ -46,7 +46,7 @@ import {
 } from './daLiveBatchCopy';
 import type { DaLiveContentDiscovery } from './daLiveContentDiscovery';
 import { auditUncopiedReferences } from './daLiveContentReferences';
-import { backfillEssentialPaths, enumerateAndFilterContentPaths } from './daLiveCopyPaths';
+import { backfillMissingPaths, enumerateAndFilterContentPaths } from './daLiveCopyPaths';
 import { copySingleFile as copySingleFileImpl, type CopySingleFile } from './daLiveFileCopy';
 import { copyDaLiveSite as copyDaLiveSiteImpl, type SiteCopyResult } from './daLiveSiteCopy';
 import type { DaLiveSourceOperations } from './daLiveSourceOperations';
@@ -272,7 +272,10 @@ export class DaLiveContentCopy {
      *   unapplied code patches. Without a report, the old debug-log
      *   behavior is preserved (for callers outside the create/reset
      *   pipeline that don't aggregate patch results).
-     * @returns Copy result, with the sheets written listed for publishing
+     * @param codePaths - The site paths the storefront's own code loads, when it
+     *   could be read; see `backfillCodePaths`. Absent, the fixed lists are used.
+     * @returns Copy result, with the sheets written listed for publishing and
+     *   the code paths the source has listed for checking afterwards
      */
     async copyContentFromSource(
         source: DaLiveContentSource,
@@ -283,6 +286,7 @@ export class DaLiveContentCopy {
         contentPatchSource?: ContentPatchSource,
         patchReport?: PatchReport,
         runtimeSurfaceSource?: RuntimeSurfaceSource,
+        codePaths?: readonly string[],
     ): Promise<DaLiveSiteContentCopyResult> {
         // Report initialization progress
         progressCallback?.({
@@ -312,18 +316,15 @@ export class DaLiveContentCopy {
         // Auth pages missing from source — stubs created after the main copy loop
         const missingAuthPages: Array<{ path: string; blockClass: string }> = [];
 
-        // When using CDN index fallback, add essential content that may not
-        // be in the content index. The DA.live list API already returns
-        // everything, so this is only needed for the fallback path.
-        if (!usedDaLiveList) {
-            await backfillEssentialPaths(
-                this.logger,
-                source,
-                contentPaths,
-                missingAuthPages,
-                runtimeSurfaceSource,
-            );
-        }
+        // What enumeration leaves out: the unindexed essentials (index fallback
+        // only; the list API returns them) and what the storefront's code loads.
+        const codePathsOnSource = await backfillMissingPaths(
+            this.logger,
+            source,
+            contentPaths,
+            missingAuthPages,
+            { usedDaLiveList, runtimeSurfaceSource, codePaths },
+        );
 
         // Internal document references discovered while copying (e.g. the
         // /customer/nav fragment embedded by the account page) land in
@@ -392,6 +393,7 @@ export class DaLiveContentCopy {
             failedFiles,
             totalFiles,
             sheetPaths,
+            codePathsOnSource,
         };
     }
 }

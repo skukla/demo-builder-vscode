@@ -464,6 +464,35 @@ describe('executeEdsReset - the pages left over from before (EDS-33)', () => {
     });
 });
 
+describe('executeEdsReset - what the source has that did not arrive (EDS-40)', () => {
+    it('carries the pipeline’s sentence on the result', async () => {
+        const summary = '2 pages the source has are missing from this storefront: /cart, /checkout';
+        mockExecuteEdsPipeline.mockResolvedValue({
+            success: true,
+            contentFilesCopied: 3,
+            libraryPaths: [],
+            missingPages: { status: 'missing', missing: ['/cart', '/checkout'], summary },
+        });
+
+        const { result } = await runReset();
+
+        expect(result).toMatchObject({ success: true, missingPages: summary });
+    });
+
+    it('adds nothing to the result when the storefront serves them all', async () => {
+        mockExecuteEdsPipeline.mockResolvedValue({
+            success: true,
+            contentFilesCopied: 3,
+            libraryPaths: [],
+            missingPages: { status: 'complete', missing: [] },
+        });
+
+        const { result } = await runReset();
+
+        expect(result).not.toHaveProperty('missingPages');
+    });
+});
+
 describe('executeEdsReset - category pages and the catalog menu (EDS-24)', () => {
     it('takes them out BEFORE the content pipeline and puts them back AFTER it, on the same site', async () => {
         const { params, context } = await runReset();
@@ -529,6 +558,7 @@ describe('executeEdsReset - pipeline progress mapping', () => {
         ['sheet-publish', 11],
         ['library-publish', 11],
         ['leftover-pages', 11],
+        ['page-check', 11],
         ['catalog-prewarm', 11],
         ['something-new', 8],
     ])('maps %s to step %i with the message unchanged', async (operation, step) => {

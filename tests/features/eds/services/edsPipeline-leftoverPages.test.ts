@@ -81,7 +81,7 @@ describe('executeEdsPipeline - pages left over after a reset', () => {
                 copyOps: {
                     copyContentFromSource: jest
                         .fn()
-                        .mockResolvedValue({ success: true, totalFiles: 2, copiedFiles: [], failedFiles: [], sheetPaths: [] }),
+                        .mockResolvedValue({ success: true, totalFiles: 2, copiedFiles: [], failedFiles: [], sheetPaths: [], codePathsOnSource: [] }),
                 },
                 blockLibOps: { createBlockLibraryFromTemplate: jest.fn() },
             },

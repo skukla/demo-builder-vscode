@@ -7,6 +7,8 @@
  * Operations executed in order:
  * 0. Clear existing DA.live content (gated by clearExistingContent). Nothing is
  *    unpublished here: the site stays up while the content is replaced (EDS-33)
+ * 0.5. Read the storefront's code from the SC's repository, for the paths it loads
+ *    (gated by skipContent; EDS-40). Failing, the copy uses the fixed lists
  * 1. Copy DA.live content from source (gated by skipContent)
  * 2. Create block library from component-definition.json
  * 3. Apply EDS settings (AEM Assets, Universal Editor config)
@@ -16,6 +18,8 @@
  * 6. Publish block library paths
  * 7. Unpublish the pages Helix still has published that steps 5-6 did not publish,
  *    product pages excepted (gated by clearExistingContent; EDS-33)
+ * 7.5. Ask the live storefront for every code path the source had, and report what
+ *    is missing (EDS-40). Never fails the pipeline
  * 8. Pre-warm the catalog's product pages (conditional)
  *
  * @module features/eds/services/edsPipeline
@@ -34,6 +38,8 @@ import {
     unpublishLeftoverPages,
     type LeftoverPagesResult,
 } from './storefront/leftoverPages';
+import { findMissingPages, type MissingPagesResult } from './storefront/missingPages';
+import { readStorefrontCodePaths } from './storefrontCodeReader';
 import { DaLiveAuthError, DaLiveError, type EdsPipelineProgressCallback } from './types';
 import type { Project } from '@/types/base';
 import type { BrandAssetsConfig, ContentPatchSource, CodePatchSource } from '@/types/demoPackages';
@@ -154,6 +160,12 @@ export interface EdsPipelineResult {
     patchReport?: PatchReport;
     /** What step 7 did with the pages left over from before (EDS-33). Absent when it did not run. */
     leftoverPages?: LeftoverPagesResult;
+    /**
+     * What the source has that the published storefront does not serve (EDS-40), with
+     * the sentence to show. Absent when the check did not run: nothing was published,
+     * or the storefront's code could not be read.
+     */
+    missingPages?: MissingPagesResult;
 }
 
 // ==========================================================
@@ -271,7 +283,8 @@ async function pipelineClearContent(
 
 /**
  * Step 1: Copy content from source to DA.live.
- * @returns the number of files copied, and the sheets among them to publish by path
+ * @returns the number of files copied, the sheets among them to publish by path,
+ *   and the code paths the source had, to look for once published
  */
 async function pipelineCopyContent(
     daLiveContentOps: DaLiveContentOperations,
@@ -285,7 +298,8 @@ async function pipelineCopyContent(
     onProgress?: EdsPipelineProgressCallback,
     accountContentSource?: { org: string; site: string },
     runtimeSurfaceSource?: CodePatchSource,
-): Promise<{ filesCopied: number; sheetPaths: string[] }> {
+    codePaths?: readonly string[],
+): Promise<{ filesCopied: number; sheetPaths: string[]; codePathsOnSource: string[] }> {
     onProgress?.({
         operation: 'content-copy',
         message: 'Populating DA.live content',
@@ -332,6 +346,7 @@ async function pipelineCopyContent(
         contentPatchSource,
         patchReport,
         runtimeSurfaceSource,
+        codePaths,
     );
 
     if (!contentResult.success) {
@@ -364,6 +379,7 @@ async function pipelineCopyContent(
     return {
         filesCopied: contentResult.totalFiles + overlaidFiles,
         sheetPaths: contentResult.sheetPaths,
+        codePathsOnSource: contentResult.codePathsOnSource,
     };
 }
 
@@ -551,6 +567,11 @@ interface PipelineContext {
     contentFilesCopied: number;
     /** The sheets step 1 wrote, as web paths (`/metadata.json`); step 5.5 publishes them. */
     sheetPaths: string[];
+    /** The site paths the storefront's code loads (step 0.5); undefined when it was not read. */
+    codePaths?: string[];
+    /** The code paths the source had, which step 1 copied; step 7.5 looks for them. */
+    codePathsOnSource: string[];
+    missingPages?: MissingPagesResult;
     libraryPaths: string[];
     patchReport: PatchReport;
     /** What step 5 published; undefined when it did not run or did not say. */
@@ -608,6 +629,17 @@ const PIPELINE_STEPS: PipelineStep[] = [
                 onProgress,
             ),
     },
+    // Step 0.5: the storefront's code, read from the SC's own repository, which
+    // holds the final code before the copy in every flow (EDS-40). The paths that
+    // code loads tell the copy what to ask the source for. Non-fatal: unread, the
+    // copy falls back to the fixed lists.
+    {
+        name: 'storefront-code',
+        when: ({ params }) => !params.skipContent,
+        onError: 'continue',
+        failureLog: 'Storefront code read failed',
+        run: pipelineReadStorefrontCode,
+    },
     // Step 1: Content Copy
     {
         name: 'copy-content',
@@ -631,9 +663,11 @@ const PIPELINE_STEPS: PipelineStep[] = [
                 // ADR-008 consumer: locate this ledger's generated runtime-surfaces.json
                 // (codePatchSource carries owner/repo/path = the patches-repo ledger).
                 params.codePatchSource,
+                ctx.codePaths,
             );
             ctx.contentFilesCopied = copied.filesCopied;
             ctx.sheetPaths = copied.sheetPaths;
+            ctx.codePathsOnSource = copied.codePathsOnSource;
         },
     },
     // Step 2: Block Library
@@ -759,6 +793,15 @@ const PIPELINE_STEPS: PipelineStep[] = [
         name: 'leftover-pages',
         when: ({ params }) => params.clearExistingContent && !params.skipPublish,
         run: pipelineUnpublishLeftovers,
+    },
+    // Step 7.5: is everything the source had on the storefront now (EDS-40)? After
+    // every publish and unpublish above, so it reads the finished site. Never throws.
+    {
+        name: 'page-check',
+        when: ({ params, ctx }) => !params.skipPublish && ctx.codePathsOnSource.length > 0,
+        onError: 'continue',
+        failureLog: 'Page check failed',
+        run: pipelineCheckMissingPages,
     },
     // (Smart 404 plumbing lives entirely in storefront code now:
     //  - scripts/delayed.js — cold-path action call + Loading state
@@ -891,6 +934,35 @@ async function pipelineUnpublishLeftovers({ params, services, ctx, onProgress }:
     onProgress?.({ operation: 'leftover-pages', message });
 }
 
+/**
+ * Step 0.5 body: read the storefront's code for the site paths it loads. One
+ * download, a second or two; it reports no progress line of its own.
+ */
+async function pipelineReadStorefrontCode({ params, services, ctx }: PipelineStepEnv) {
+    ctx.codePaths = await readStorefrontCodePaths(
+        services.githubFileOps.repoArchive,
+        { owner: params.repoOwner, repo: params.repoName },
+        services.logger,
+    );
+}
+
+/**
+ * Step 7.5 body: ask the live storefront for what the source had. A gap goes on the
+ * progress line as a warning, and on the pipeline result for the caller to show.
+ */
+async function pipelineCheckMissingPages({ params, services, ctx, onProgress }: PipelineStepEnv) {
+    onProgress?.({ operation: 'page-check', message: 'Checking the copied pages' });
+    const result = await findMissingPages(
+        { owner: params.repoOwner, repo: params.repoName },
+        ctx.codePathsOnSource,
+        services.logger,
+    );
+    ctx.missingPages = result;
+    if (result.summary) {
+        onProgress?.({ operation: 'page-check', message: `⚠️ ${result.summary}` });
+    }
+}
+
 /** Step 8 body: pre-warm the catalog; reporting only, all gating is in the descriptor. */
 async function pipelinePrewarmCatalog({ params, services, onProgress }: PipelineStepEnv) {
     const result = await prewarmCatalog(
@@ -939,6 +1011,7 @@ export async function executeEdsPipeline(
     const ctx: PipelineContext = {
         contentFilesCopied: 0,
         sheetPaths: [],
+        codePathsOnSource: [],
         libraryPaths: [],
         // Reuse the caller's report when threaded through (so canonical-phase
         // results from `resetRepoToTemplate` survive into the final result),
@@ -972,6 +1045,7 @@ export async function executeEdsPipeline(
             libraryPaths: ctx.libraryPaths,
             patchReport: ctx.patchReport,
             ...(ctx.leftoverPages ? { leftoverPages: ctx.leftoverPages } : {}),
+            ...(ctx.missingPages ? { missingPages: ctx.missingPages } : {}),
         };
     } catch (error) {
         // Re-throw auth errors so callers can offer re-authentication

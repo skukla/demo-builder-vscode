@@ -194,6 +194,27 @@ describe('reset_project on an Edge Delivery project', () => {
         expect(res).toMatchObject({ reset: true, caveats: ['Product links may not work.'] });
     });
 
+    it('adds the pages the source has that the storefront does not serve to the caveats (EDS-40)', async () => {
+        const missingPages = '2 pages the source has are missing from this storefront: /cart, /checkout';
+        const s = fakeServer();
+        registerResetProjectTool(s, ctxFactory);
+
+        executeEdsResetMock.mockResolvedValueOnce({ success: true, filesReset: 12, contentCopied: 5, missingPages });
+        expect(await s.call({ confirm: true })).toMatchObject({ reset: true, caveats: [missingPages] });
+
+        executeEdsResetMock.mockResolvedValueOnce({
+            success: true,
+            filesReset: 12,
+            contentCopied: 5,
+            demoCaveats: ['Product links may not work.'],
+            missingPages,
+        });
+        expect(await s.call({ confirm: true })).toMatchObject({
+            reset: true,
+            caveats: ['Product links may not work.', missingPages],
+        });
+    });
+
     it('says in words when pages from before the reset may still be live (EDS-33), and no key otherwise', async () => {
         const s = fakeServer();
         registerResetProjectTool(s, ctxFactory);

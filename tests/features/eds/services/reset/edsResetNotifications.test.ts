@@ -183,6 +183,16 @@ describe('reset notifications — pages from before the reset (EDS-33)', () => {
     });
 });
 
+describe('reset notifications — pages the source has that did not arrive (EDS-40)', () => {
+    const sentence = '2 pages the source has are missing from this storefront: /cart, /checkout';
+
+    it('warns with the sentence', async () => {
+        await run({ success: true, missingPages: sentence });
+
+        expect(vscode.window.showWarningMessage).toHaveBeenLastCalledWith(sentence);
+    });
+});
+
 describe('reset notifications — the App is missing', () => {
     const missingApp: EdsResetResult = {
         success: false,

@@ -190,7 +190,8 @@ export async function executeEdsReset(
             configWritten,
             { demoCaveats: repoResetResult.demoCaveats, demoFixes: repoResetResult.demoFixes },
         );
-        return withLeftoverPages(withPageSentences(result, { catalogMenu, productPages }), content.leftoverPages);
+        const sentences = { catalogMenu, productPages, missingPages: content.missingPages };
+        return withLeftoverPages(withPageSentences(result, sentences), content.leftoverPages);
     } catch (error) {
         return handleResetError(error, context.logger);
     }

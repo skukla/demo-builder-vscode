@@ -33,6 +33,7 @@ const PIPELINE_STEP_MAP: Record<string, number> = {
     'sheet-publish': 11,
     'library-publish': 11,
     'leftover-pages': 11,
+    'page-check': 11,
     'catalog-prewarm': 11,
 };
 
@@ -52,12 +53,14 @@ function mapPipelineProgress(
 export interface ContentPipelineOutcome {
     contentCopied: number;
     leftoverPages?: LeftoverPagesResult;
+    /** The sentence for what the source has that the storefront does not serve (EDS-40). */
+    missingPages?: string;
 }
 
 /**
  * Steps 8-11: Run the EDS content pipeline with automatic DA.live re-auth retry.
- * Returns the number of content files copied, and what happened to the pages left
- * over from before (EDS-33).
+ * Returns the number of content files copied, what happened to the pages left
+ * over from before (EDS-33), and what the source has that did not arrive (EDS-40).
  */
 export async function runContentPipeline(
     params: EdsResetParams,
@@ -161,6 +164,7 @@ export async function runContentPipeline(
             return {
                 contentCopied: pipelineResult.contentFilesCopied,
                 leftoverPages: pipelineResult.leftoverPages,
+                missingPages: pipelineResult.missingPages?.summary,
             };
         },
         {

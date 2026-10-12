@@ -59,6 +59,7 @@ describe('executeEdsPipeline - operations', () => {
                     copiedFiles: Array(42).fill('/page'),
                     failedFiles: [],
                     sheetPaths: [],
+                    codePathsOnSource: [],
                 }),
                 copyContent: jest.fn().mockResolvedValue({
                     success: true,
@@ -130,6 +131,9 @@ describe('executeEdsPipeline - operations', () => {
                 expect.objectContaining({ results: expect.any(Array) }),
                 // runtimeSurfaceSource (ADR-008 consumer) — codePatchSource, here undefined.
                 undefined,
+                // codePaths (EDS-40) — this suite's GitHub fake has no repository
+                // archive, so the code is not read and the copy uses the fixed lists.
+                undefined,
             );
         });
 
@@ -151,6 +155,7 @@ describe('executeEdsPipeline - operations', () => {
                 undefined,
                 undefined,
                 expect.objectContaining({ results: expect.any(Array) }),
+                undefined,
                 undefined,
             );
         });
@@ -174,6 +179,7 @@ describe('executeEdsPipeline - operations', () => {
                 contentPatchSource,
                 expect.objectContaining({ results: expect.any(Array) }),
                 undefined,
+                undefined,
             );
         });
 
@@ -194,6 +200,7 @@ describe('executeEdsPipeline - operations', () => {
                 copiedFiles: [],
                 failedFiles: [{ path: '/page', error: 'fail' }],
                 sheetPaths: [],
+                codePathsOnSource: [],
             });
 
             const result = await executeEdsPipeline(

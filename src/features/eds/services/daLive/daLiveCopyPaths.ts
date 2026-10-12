@@ -4,8 +4,9 @@
  * Enumerates the source (DA.live list API, falling back to the CDN content
  * index), drops what must not be copied (product overlays, the library index the
  * pipeline regenerates), and — on the index fallback only — backfills the
- * runtime surfaces the index omits. The copy loop in `daLiveContentCopy.ts`
- * consumes the result.
+ * runtime surfaces the index omits. On either route it then adds what the
+ * storefront's own code loads and the source has (`backfillCodePaths`, EDS-40).
+ * The copy loop in `daLiveContentCopy.ts` consumes the result.
  *
  * Extracted from `daLiveContentCopy.ts` on 2026-10-03 (EDS-8, its third cut).
  * Both were private methods; nothing outside the class called them.
@@ -18,6 +19,7 @@
 
 import { PLACEHOLDER_STUB_PATHS } from '../placeholderStubs';
 import { getRuntimeSurfaces, type RuntimeSurfaceSource } from '../runtimeSurfaceResolver';
+import { contentSiteBaseUrl, probePaths } from '../sitePathProbe';
 import type { DaLiveContentSource } from '../types';
 import type { DaLiveContentDiscovery } from './daLiveContentDiscovery';
 import { filterProductOverlays } from './daLiveContentReferences';
@@ -93,6 +95,10 @@ export async function enumerateAndFilterContentPaths(
  * config spreadsheets, the nav/footer fragments, and the customer auth pages.
  * Mutates `contentPaths` (prepends found paths) and `missingAuthPages`
  * (auth pages absent from source, which get destination stubs later).
+ *
+ * @param codePaths - what the storefront's own code loads, when it could be read.
+ *   Given, the label sheets come from it (`backfillCodePaths`) and the fixed list
+ *   of areas is not asked for; absent, the list is the fallback.
  */
 export async function backfillEssentialPaths(
     logger: Logger,
@@ -100,6 +106,7 @@ export async function backfillEssentialPaths(
     contentPaths: string[],
     missingAuthPages: Array<{ path: string; blockClass: string }>,
     surfaceSource?: RuntimeSurfaceSource,
+    codePaths?: readonly string[],
 ): Promise<void> {
     const baseUrl = `https://main--${source.site}--${source.org}.aem.live`;
     // Static hand list, with the ledger's generated `runtime-surfaces.json`
@@ -129,11 +136,17 @@ export async function backfillEssentialPaths(
     // The label sheets, one per storefront area, at `/placeholders/<area>`. The
     // inventory's `/placeholders` above is a single sheet of that name, which a
     // current storefront does not have, so a brand's labels were never asked for
-    // and the copy published the stubs in their place (EDS-40: a colleague's demo
-    // with 160 cart labels arrived with none). The areas are the stub list's: a
-    // sheet copied here is content, and content shadows the stub of the same path.
-    for (const sheet of PLACEHOLDER_STUB_PATHS) {
-        await probeAndAdd(`/${sheet}`, `${baseUrl}/${sheet}.json`);
+    // (EDS-40: a colleague's demo with 160 cart labels arrived with none).
+    //
+    // FALLBACK ONLY. Which areas a storefront fetches is written in its code, and
+    // when that code was read the sheets come from it (`backfillCodePaths`). This
+    // list describes one version of one template and is asked for only when the
+    // code could not be read. A sheet copied here is served only where no stub
+    // sits at its path: `placeholderStubPathsFor` leaves those areas unstubbed.
+    if (codePaths === undefined) {
+        for (const sheet of PLACEHOLDER_STUB_PATHS) {
+            await probeAndAdd(`/${sheet}`, `${baseUrl}/${sheet}.json`);
+        }
     }
 
     // HTML fragment documents (nav, footer): not indexed but loaded at runtime.
@@ -157,4 +170,85 @@ export async function backfillEssentialPaths(
         const found = await probeAndAdd(authPage.path, `${baseUrl}${authPage.path}.plain.html`);
         if (!found) missingAuthPages.push(authPage);
     }
+}
+
+/**
+ * Add to the enumerated paths what enumeration leaves out, in the order the copy
+ * needs: the unindexed essentials on the index fallback (the DA.live list API
+ * already returns them), then what the storefront's own code loads, on both routes.
+ *
+ * Mutates `contentPaths` and `missingAuthPages`; see the two functions it calls.
+ *
+ * @returns the code paths the source has; empty when the code was not read
+ */
+export async function backfillMissingPaths(
+    logger: Logger,
+    source: { org: string; site: string },
+    contentPaths: string[],
+    missingAuthPages: Array<{ path: string; blockClass: string }>,
+    route: {
+        usedDaLiveList: boolean;
+        runtimeSurfaceSource?: RuntimeSurfaceSource;
+        codePaths?: readonly string[];
+    },
+): Promise<string[]> {
+    const { usedDaLiveList, runtimeSurfaceSource, codePaths } = route;
+    if (!usedDaLiveList) {
+        await backfillEssentialPaths(
+            logger,
+            source,
+            contentPaths,
+            missingAuthPages,
+            runtimeSurfaceSource,
+            codePaths,
+        );
+    }
+    return codePaths ? backfillCodePaths(logger, source, contentPaths, codePaths) : [];
+}
+
+/** The path a document is copied under: a sheet's web path without its `.json`. */
+function contentPathOf(webPath: string): string {
+    return webPath.replace(/\.json$/, '');
+}
+
+/**
+ * Add the documents the storefront's own code loads, when the source has them.
+ *
+ * `codePaths` is everything `deriveStorefrontCodePaths` read out of the
+ * storefront's JavaScript, and it over-reads on purpose: a string that is not a
+ * document is among them. The source is the filter. Each path not already in the
+ * list is asked for on the source's published site (`probePaths`: bounded, and a
+ * request that fails is "not there"), and added when the source answers.
+ *
+ * Runs on both routes. On the list route nearly everything is listed already and
+ * costs no request.
+ *
+ * Mutates `contentPaths` (prepends found paths).
+ *
+ * @param codePaths - web paths: `/cart` for a page, `/placeholders/cart.json` for a sheet
+ * @returns the code paths the source has, listed already or answered just now: what
+ *   the storefront should serve once the copy is published
+ */
+export async function backfillCodePaths(
+    logger: Logger,
+    source: { org: string; site: string },
+    contentPaths: string[],
+    codePaths: readonly string[],
+): Promise<string[]> {
+    const listed = new Set(contentPaths);
+    const unlisted = codePaths.filter((webPath) => !listed.has(contentPathOf(webPath)));
+    const { served } = await probePaths(contentSiteBaseUrl(source), unlisted);
+
+    for (const webPath of served) {
+        const contentPath = contentPathOf(webPath);
+        if (listed.has(contentPath)) continue;
+        listed.add(contentPath);
+        contentPaths.unshift(contentPath);
+    }
+    logger.info(
+        `[DA.live] The storefront's code loads ${codePaths.length} paths: ` +
+            `${codePaths.length - unlisted.length} already listed, ${served.length} more found on the source`,
+    );
+    const answered = new Set(served);
+    return codePaths.filter((webPath) => !unlisted.includes(webPath) || answered.has(webPath));
 }

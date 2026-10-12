@@ -134,6 +134,7 @@ function buildPipelineProgressCallback(
             'sheet-publish': { phase: 'publish', progress: PIPELINE_PROGRESS.LIBRARY_PUBLISH },
             'library-publish': { phase: 'publish', progress: PIPELINE_PROGRESS.LIBRARY_PUBLISH },
             'leftover-pages': { phase: 'publish', progress: PIPELINE_PROGRESS.LIBRARY_PUBLISH },
+            'page-check': { phase: 'publish', progress: PIPELINE_PROGRESS.LIBRARY_PUBLISH },
             'catalog-prewarm': { phase: 'publish', progress: PIPELINE_PROGRESS.LIBRARY_PUBLISH },
         };
         // Fallback for an operation the mapping doesn't know. It used to push
@@ -303,6 +304,7 @@ async function runEdsPipelineWithRecovery(
                 onProgress,
             );
             if (!result.success) throw new Error(result.error || 'Content pipeline failed');
+            if (result.missingPages?.summary) repoInfo.missingPages = result.missingPages.summary;
             return { libraryPaths: result.libraryPaths };
         },
         {
