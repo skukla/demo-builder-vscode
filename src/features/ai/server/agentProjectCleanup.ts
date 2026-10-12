@@ -17,6 +17,8 @@
 import * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
+import { getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
+import { firstUsableDaLiveToken } from '@/features/eds/services/daLive/daLiveTokenChain';
 import { extractEdsMetadata } from '@/features/eds/services/resourceCleanupHelpers';
 import { otherProjectsPublishingTo } from '@/features/eds/services/storefront/sharedRepoProjects';
 import { tearDownStorefront } from '@/features/eds/services/storefront/storefrontTeardown';
@@ -112,10 +114,18 @@ export async function cleanUpProjectCloud(
         reportPhase('Taking the storefront down');
         const name = `${metadata.daLiveOrg}/${metadata.daLiveSite}`;
         try {
-            const tokenManager = ServiceLocator.getAuthenticationService().getTokenManager();
-            const tokenProvider = {
-                getAccessToken: async () => (await tokenManager.inspectToken()).token ?? null,
-            };
+            // The DA.live session FIRST. Helix's admin API on a registered site accepts
+            // only that token; handed the Adobe Console token alone, as this was until
+            // 2026-10-12, it answered every unpublish "[admin] not authenticated" while
+            // the content and the repository were deleted — a live site with nothing
+            // behind it. The button and both clean-up tools already choose it this way.
+            const tokenProvider = await firstUsableDaLiveToken({
+                daLiveSession: () => getDaLiveAuthService(context.context),
+                imsTokenManager: () => ServiceLocator.getAuthenticationService().getTokenManager(),
+            });
+            if (!tokenProvider) {
+                throw new Error('Not signed in to DA.live, so the storefront could not be taken down.');
+            }
             const { HelixService } = await import('@/features/eds/services/helix/helixService');
             const torn = await tearDownStorefront(
                 {
