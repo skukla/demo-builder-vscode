@@ -6,24 +6,23 @@ moves through Demo Builder, so you walk it once without going back. Item ids are
 the end of each row, for the record only. Part 1 is the walk. Part 2 is what the last plan left
 open.
 
-**65 checks in Part 1. About 2¼ hours for all of them**, plus waiting (adding an ERP takes
-about 10 minutes, a fill about 3). **The 19 ★ rows alone take about 1½ hours** and cover what
+**67 checks in Part 1. About 2¼ hours for all of them**, plus waiting (adding an ERP takes
+about 10 minutes, a fill about 3). **The 21 ★ rows alone take about 1½ hours** and cover what
 is most likely to be broken. **Part 2 holds 65 more rows** carried from the 2026-10-04 plan,
 which was never finished. It is a second sitting.
 
-Checks per section (starred ones in brackets): startup and updates 9 (2), creating a project
+Checks per section (starred ones in brackets): startup and updates 10 (3), creating a project
 9 (3), the dashboard and storefront 9 (2), integrations and ERPs 19 (8), the ERP's own screens
-6 (2), agent tools 5 (0), cleanup 8 (2).
+7 (3), agent tools 5 (0), cleanup 8 (2).
 
 ## Before you start
 
-1. **The build.** Test `loop/2026-10-10-goal-queue`. That is the big merge
-   (`integration/2026-10-10`) plus the test-writing run's commits, and one of those commits is a
-   real fix: the wizard's ERP naming bug (`2f1c7ea58`, row 2.4). The fix is NOT on
-   `integration/2026-10-10` yet. Merge the run's branch into whatever you test, or test that
-   branch itself. The run is still committing, so note the commit you tested. Rows 4.13 to
-   4.19 (Prepare this store) are on `feature/prepare-this-store` (`fa832c75b`, `3bd031527`),
-   which is on neither branch: merge it in too, or those rows have nothing to press.
+1. **The build.** Test `loop/2026-10-05-release-candidate`, the branch the dev window runs
+   from. Since 2026-10-11 it holds everything in this list in one place: the big merge, the
+   test-writing run's commits (with the wizard's ERP naming fix, row 2.4), Prepare this store
+   (rows 4.13 to 4.19), and the fix for the browser that opened on reload (row 1.10). The same
+   work without that last fix is pushed as `integration/2026-10-11`. Note the commit you
+   tested; on 2026-10-11 the window was serving `84d3aef1e`.
 2. **Start it properly.** Run `npm run compile`, then press F5. A window reload is not enough:
    almost every change is on the extension side.
 3. **Justrite** is needed for 29 rows (marked `[needs Justrite]`). It has two ERPs today:
@@ -59,6 +58,7 @@ Rows that change live data say so, and say how to undo it.
 | 1.6 | On the dashboard of a storefront project and of a non-storefront one, look at the tiles. Open and close Export, Save as Package, and View AI Capabilities (close that one with Esc). Click AEM Assets. | Tiles are where they were: Open, Storefront (storefront projects only), Build, Share. Each dialog opens and closes. AEM Assets opens for this project [EDS-8, EDS-21] | `[no cloud]` |  |
 | 1.7 | Open the dashboard of a project whose mesh is deployed and unchanged. | No "redeploy" prompt [EDS-8] | `[no cloud]` |  |
 | 1.8 | Run **Check for Updates** with Justrite open. *Only shows a row if the ERP or the integration has newer code.* If you apply it: **changes live data** (redeploys to Justrite; there is no undo, and it is what you want anyway). | One row per pair, "Justrite: ERP Integration and Justrite ERP", ticked because Justrite is open. Applying it deploys the new code and then brings Commerce up to it [AB-73, AB-13] | `[needs Justrite]` |  |
+| 1.10 ★ | *Only when your Adobe session has really expired, for example first thing in the morning.* Reload the window (or press F5) and touch nothing. Then run **Check for Updates** and pick an integration update if one is listed. | No browser opens by itself and nothing asks you to sign in. Debug Logs may say "attempting silent IMS refresh"; that is fine. An integration update is still listed. Only when you apply it does the window ask "Adobe sign-in required to continue", and it carries on after you sign in [AB-73] | `[needs Justrite]` |  |
 | 1.9 | *Only if you have a project in another Adobe org with an integration update waiting.* Run Check for Updates. | Its row is not ticked and says to open that project and update it from its Integrations screen [AB-73] | `[no cloud]` |  |
 
 ## 2. Creating a project (the wizard)
@@ -100,7 +100,10 @@ On Justrite, unless a row says otherwise. Rows 4.2 to 4.9 are one story: add a t
 products, take them back, remove it. Rows 4.13 to 4.19 are **Prepare this store** [AB-77]: the
 setup steps the extension now applies instead of only checking. Row 4.14 and row 4.4 put
 `erp_owner` into the same attribute sets, so whichever runs first leaves the other nothing to
-add. Nothing of AB-77 has been written live yet; row 4.14 is the first write.
+add. On Justrite both were already written on 2026-10-10, through the agent tool: `erp_owner`
+went into eleven attribute sets and is still there, and the card payments switch went on and
+back off. So on Justrite rows 4.13 to 4.15 check the SCREEN against a store that is mostly
+prepared; row 4.19 is the full run on a store that is not.
 
 | # | Do this | Expect | Needs | Result |
 |---|---|---|---|---|
@@ -116,8 +119,8 @@ add. Nothing of AB-77 has been written live yet; row 4.14 is the first write.
 | 4.10 | *Only if a card offers them* (after an install or a removal that did not finish): press **Reinstall in Commerce** or **Remove anyway**. | Each opens the progress window. Neither runs as a bare notification [PL-59] | `[needs Justrite]` |  |
 | 4.11 | *Only if an Update fails at its deploy step* (Adobe answering 504 is the usual cause): press **Update** again. | It deploys the code it already fetched and says so. It does not say "already up to date". The update badge stays on until the deploy works [AB-71] | `[needs Justrite]` |  |
 | 4.12 | Open the Integrations screen of a project that has the ERP integration. Leave it open. From Your Projects, open a project that has **no** ERP integration. Go back to the first screen and press **Add another ERP**, then Add. | It refuses before anything is deployed: the ERP integration "is not in the current project", naming the project that is current, and tells you to open the one that has it. If the first screen closed or switched by itself instead, write that down: it is also fine [AI-15] | `[no cloud]` |  |
-| 4.13 | On the ERP Integration card's menu press **Prepare this store**. Do not press Prepare. Read the nine steps against Commerce Admin (Stores, Configuration; Stores, Attribute Set; Stores, Inventory; Catalog, Shared Catalogs; Stores, Order Status). | Nine steps, each with a state. On Justrite on 2026-10-10: seven **Done** (the two order statuses among them, since Justrite already has them), and two **Will apply** with the exact changes under them: `erp_owner` added to eight attribute sets (Phones, Watches, Server, Accessories, Audio, Cables, Coolers, Plans) and `payment/payment_services/active` 0 to 1 at the website, with a line that the PayPal sandbox connection stays by hand. Each state matches what the Admin shows. Close it: nothing is written [AB-77] | `[needs Justrite]` |  |
-| 4.14 ★ | Open the setup guide. On the `erp_owner` and `brand` attributes step press **Apply this step** and confirm. **Changes live data** (adds `erp_owner` to eight attribute sets on Justrite; **Undo this step** on the same step takes it out again, and row 4.8 can too). | The progress window ends with the step **Applied**, naming the eight sets and nothing refused. It did not create `erp_owner` or `brand`: both exist. In Admin, Stores, Attribute Set, each of the eight sets (Phones, Watches, Server, Accessories, Audio, Cables, Coolers, Plans) now has `erp_owner`. The guide's check passes and the step offers **Undo this step** [AB-77, AB-74] | `[needs Justrite]` |  |
+| 4.13 | On the ERP Integration card's menu press **Prepare this store**. Do not press Prepare. Read the nine steps against Commerce Admin (Stores, Configuration; Stores, Attribute Set; Stores, Inventory; Catalog, Shared Catalogs; Stores, Order Status). | Nine steps, each with a state. On Justrite since 2026-10-10: eight **Done** (the two order statuses among them, since Justrite already has them, and the attributes step, applied that day), and one **Will apply** with the exact change under it: `payment/payment_services/active` 0 to 1 at the website, with a line that the PayPal sandbox connection stays by hand. Each state matches what the Admin shows. Close it: nothing is written [AB-77] | `[needs Justrite]` |  |
+| 4.14 ★ | Open the setup guide and find the `erp_owner` and `brand` attributes step. On Justrite it was applied on 2026-10-10, so there is nothing to apply: press **Undo this step**, confirm, then **Apply this step** again. **Changes live data** (takes `erp_owner` out of eleven attribute sets on Justrite and puts it back; leave it applied). | The step's check passes and it offers **Undo this step**, not Apply. The undo names the eleven sets (Phones, Watches, Server, Accessories, Audio, Cables, Coolers, Plans, Power Supply, Home Internet, Gift Cards) and the step then offers **Apply this step**. Applying ends **Applied** with the same eleven and nothing refused, and creates neither attribute: both exist. In Admin, Stores, Attribute Set, each set has `erp_owner` again [AB-77, AB-74] | `[needs Justrite]` |  |
 | 4.15 | Open **Prepare this store** again, read the preview (card payments is now the only Will apply), press **Prepare**. Then, from the card's menu, **Undo preparation** and confirm. **Changes live data** (round trip: the undo puts the switch back). | Progress stays in the modal. The result lists card payments **Applied** (0 to 1 at the website), the attributes step **Already done**, nothing refused, and the PayPal sandbox connection by hand. In Admin, Stores, Configuration, Sales, Payment Methods, Payment Services is on for the website. After the undo it is off again, and the preview reads Will apply for it once more [AB-77] | `[needs Justrite]` |  |
 | 4.16 | *Only if a step reads **Could not check** in the preview* (its check could not read Commerce when the preview opened, for example a dropped connection). | The step shows the check's own words beside the state. It is not counted done anywhere: the card's "Demo setup" line, the guide and the preview all leave it open, and Prepare does not apply it [AB-77] | `[needs Justrite]` |  |
 | 4.17 | Open the setup guide and read every step's buttons without pressing any. | A step whose check passes offers neither button. A step with a fix that is not done offers **Apply this step**. A step this walk applied and has not undone offers **Undo this step**. The two order statuses offer nothing: they stay a guided Admin walk. The price scope step no longer says "No API sets this" [AB-77] | `[needs Justrite]` |  |
@@ -136,6 +139,7 @@ next-step button, that ERP is on older code: press Update on its card first.
 | 5.3 ★ | In one ERP, open the order and keep pressing its main button. | The button reads, in turn: Confirm, Create shipment, Post shipment (with its number), Create invoice, Post payment. Commerce shows the shipment and the invoice. The ERP's stock drops by what shipped. The invoice ends up Paid and the company's credit in Commerce comes back [AB-26s, AB-63; demo-erp, contract v21] | `[needs Justrite]` |  |
 | 5.4 | In the other ERP, confirm its order and create a shipment but do not post it. Try to create a second shipment for the same goods. Then press **Close remaining**. | The second shipment is refused. Close remaining closes only the quantity that is not on a shipment [demo-erp, contract v21] | `[needs Justrite]` |  |
 | 5.5 | On that same order, press **Cancel** on the waiting shipment. | The waiting shipment is removed [demo-erp, contract v21] | `[needs Justrite]` |  |
+| 5.7 ★ | In Commerce Admin, open the **ERP Integration** page from the menu. Watch it load, then reload the page and watch again. | A spinner the whole way until the page is drawn. No blank white frame between the spinner and the page. *The fix was deployed to Justrite on 2026-10-11 and has not been seen in the Admin yet* [commerce-erp-integration `0d18d10`] | `[needs Justrite]` |  |
 | 5.6 | In Commerce Admin, open Sales, Orders and press **Refresh registrations**. Then open Apps, App Management. | The Orders grid has ONE set of ERP columns. App Management lists the integration once [AB-69] | `[needs Justrite]` |  |
 
 ## 6. Agent tools
@@ -192,6 +196,9 @@ It reads this file and says what is ready, what failed and what is still uncheck
   nothing reads: delete it once you accept this one.
 - **"Load demo data" and "Fill from Commerce" are the same button under two names.** The menu
   was renamed on 2026-10-01; the messages were not.
+- **The ERP Integration page's design in the Admin is being reworked** (two mockups on
+  2026-10-11, neither accepted). Row 5.7 checks only how the page LOADS. Do not judge the
+  page's look against this list.
 - **Row 4.19 needs a Commerce with nothing prepared.** The scratch Commerce from section 2 may
   already have the attributes or a shared catalog from row 3.9's datapack. If it does, those
   steps read Done and are skipped, which is correct but proves less. Say which store you used.
