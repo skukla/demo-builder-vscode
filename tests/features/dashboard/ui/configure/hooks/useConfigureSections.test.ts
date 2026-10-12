@@ -36,6 +36,7 @@ function render(overrides: Partial<UseConfigureSectionsProps> = {}) {
         getValueFromConfigs: filled,
         isFieldComplete: complete,
         isEds: false,
+        hasBlockLibraryChoices: false,
         projectNameError: undefined,
         ...overrides,
     };
@@ -93,6 +94,17 @@ describe('useConfigureSections', () => {
         act(() => result.current.setActiveSectionId('gone'));
 
         expect(result.current.activeSection.id).toBe('project-info');
+    });
+
+    it('adds Block Libraries before Authoring when the project has libraries to choose', () => {
+        const { result } = render({ isEds: true, hasBlockLibraryChoices: true });
+
+        expect(result.current.railTabs.map((tab) => tab.id)).toStrictEqual([
+            'project-info',
+            'catalog-service',
+            'block-libraries',
+            'authoring-experience',
+        ]);
     });
 
     it('adds the Authoring section for an EDS project', () => {

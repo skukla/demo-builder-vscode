@@ -24,7 +24,7 @@ import { getLogger } from '@/core/logging/debugLogger';
 import type { Logger } from '@/types/logger';
 
 /** One file read out of a repository archive: its exact bytes and the mode its tree entry takes. */
-interface ArchivedFile {
+export interface ArchivedFile {
     data: Buffer;
     mode: GitHubTreeInput['mode'];
 }
@@ -115,7 +115,7 @@ export class GitHubRepoArchive {
      * @param ref - Git ref (branch/tag/commit) - default: 'main'
      * @returns Map of path -> the file's bytes and its tree mode
      */
-    private async downloadRepoContents(
+    async downloadRepoContents(
         owner: string,
         repo: string,
         ref = 'main',

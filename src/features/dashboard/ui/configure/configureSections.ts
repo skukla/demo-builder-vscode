@@ -8,6 +8,9 @@
  * they live on its tile, AB-21.) The "Sections" sidebar was therefore not the list of
  * sections on screen. A rail has to show every section, so they had to become one list.
  *
+ * "Block Libraries" is the fourth kind (EDS-39): Edge Delivery only, only when the
+ * project has a library to show, and immediately before Authoring.
+ *
  * Pure: no React, no DOM. The service groups arrive ALREADY filtered and sorted by
  * `useServiceGroups` (empty groups dropped, API Mesh dropped when no mesh component is
  * selected); this module preserves that order and adds nothing to it.
@@ -23,12 +26,12 @@ import {
     type ConnectStoreSection,
 } from '@/features/components/config/storeFieldHelpers';
 
-/** Which of the three sources a section came from. Callers should not need to care. */
-export type ConfigureSectionKind = 'project' | 'serviceGroup' | 'authoring';
+/** Which of the four sources a section came from. Callers should not need to care. */
+export type ConfigureSectionKind = 'project' | 'serviceGroup' | 'blockLibraries' | 'authoring';
 
 /** One configurable section of the Configure screen, whatever its source. */
 export interface ConfigureSection {
-    /** The existing anchor id (`project-info`, `<group.id>`, `authoring-experience`). */
+    /** The anchor id (`project-info`, `<group.id>`, `block-libraries`, `authoring-experience`). */
     id: string;
     /** Tab / heading label. */
     label: string;
@@ -56,8 +59,10 @@ export interface BuildConfigureSectionsInput {
     isFieldComplete: (field: UniqueField) => boolean;
     /** Whether a field currently carries a validation error (keys of `validationErrors`). */
     fieldHasError: (field: UniqueField) => boolean;
-    /** EDS project — gates the Authoring section. */
+    /** EDS project — gates the Block Libraries and Authoring sections. */
     isEds: boolean;
+    /** The project has at least one block library to show (`hasBlockLibraryChoices`). */
+    hasBlockLibraryChoices: boolean;
     /** The project name is set and passes validation. */
     isProjectNameValid: boolean;
 }
@@ -159,7 +164,7 @@ function toSlicedSection(
 /**
  * Build the ordered list of every section the Configure screen renders.
  *
- * Order matches the render order: Project → service groups → Authoring.
+ * Order matches the render order: Project → service groups → Block Libraries → Authoring.
  *
  * @param input - The sources plus the flags that gate them
  * @returns Ordered sections; always at least the Project section
@@ -169,6 +174,7 @@ export function buildConfigureSections({
     isFieldComplete,
     fieldHasError,
     isEds,
+    hasBlockLibraryChoices,
     isProjectNameValid,
 }: BuildConfigureSectionsInput): ConfigureSection[] {
     // The project name is the section's one required field: it is always populated, so
@@ -217,6 +223,12 @@ export function buildConfigureSections({
             continue;
         }
         sections.push(toServiceGroupSection(group, isFieldComplete, fieldHasError));
+    }
+
+    // Block Libraries is a set of tick boxes: any combination, none included, is a
+    // valid choice, so it has nothing required and nothing that can block Save.
+    if (isEds && hasBlockLibraryChoices) {
+        sections.push(unvalidatedSection('block-libraries', 'Block Libraries', 'blockLibraries'));
     }
 
     // Authoring is a single radio that always carries a value, so it has no required

@@ -64,5 +64,80 @@ install at once or leave it to the update check; the first is what an SC expects
 - **A custom library changed in VS Code settings shows only after Configure is reopened.**
 - **A custom library that is recorded on the project but no longer in settings** is hidden and
   kept by Configure. Edit drops it. Decide which is right.
-- **Install on Save.** Save only records; Check for Updates installs. The screen says so.
+- **Install on Save.** Settled by the owner the same day: see the next section.
+
+## The owner's decisions, and the second build (2026-10-12)
+
+Three decisions, all built. Not committed yet when this was written.
+
+1. **Block Libraries is its own item on Configure's rail**, immediately before Authoring.
+   Edge Delivery projects only, and only when the project has a library to show.
+2. **Saving a library change makes it live through the notification Configure already had.**
+   Save records the choice. The notification that follows ("Configuration saved. Republish
+   storefront to apply changes." with Republish and Later, or the mesh-and-storefront one)
+   now also appears when only libraries are pending, and it names them: "Block libraries:
+   add X; remove Y." Republish does the library work first, then the republish it always ran.
+3. **The two sentences are gone from the screen.**
+
+What is pending is read from the project, not from the one save. Selected and not installed
+means install. Installed and not selected means remove. So after Later, the next Configure
+save offers the same work again.
+
+**Install** is the existing installer, unchanged (`applyBlockLibraryInstall`).
+
+**The DA.live block picker is brought up to date in the same action.** When at least one
+block was added or removed, Republish runs the existing Refresh Block Library
+(`refreshBlockLibraryHeadless`) before it shows the result. That rebuilds the DA.live block
+list from the storefront's `component-definition.json` and publishes it. If it fails, the
+result says so and the file changes stay.
+
+**Removal is new** (`blockLibraryRemoval.ts`, `blockLibraryUninstall.ts`). Its rules:
+
+- A block folder is deleted only when its files are exactly the library's files at the
+  recorded commit, compared by git blob sha. An edited block stays and is named.
+- A block another selected, installed library also provides stays and is named.
+- An authoring entry is taken out only when it is still equal to the library's own entry
+  at that commit. One the SC changed stays and is named.
+- The deletions and the authoring files change in one commit.
+- Each removed `component-definition.json` entry is taken off the DA.live block list.
+- A block left because it was edited, or because another library provides it, is named
+  once. The record is then dropped, so no later save offers that removal again. The same
+  goes for an authoring entry the SC changed.
+- The record is kept only when the library could not be read at its commit. It then
+  lists just the blocks that could not be checked, and the next save tries again.
+- A native library is never treated as unselected.
+
+Full rules: `docs/systems/custom-block-libraries.md`, "Removing a library from a storefront".
+
+### Out of scope, on purpose
+
+- **Check for Updates does not offer removals.** It offers installs as before.
+- **Agents cannot remove a library.** `configure_project` records the selection and
+  `apply_updates` installs. There is no removal tool, and none was added.
+- **Creation and Edit are unchanged.** Unticking in Edit still leaves the blocks. The next
+  Configure save on that project then offers the removal.
+
+### Left open by the second build
+
+- **Not run against a real storefront.** Every test uses fakes. No GitHub commit, DA.live
+  write or publish was made while building. The first removal on a real project is the
+  first real run.
+- **An untick made in Edit long ago now produces a removal offer.** Such a library is
+  "installed and not selected", so that project's next Configure save offers to remove it.
+  The notification names the library before anything runs. Accepted by the owner.
+- **The dashboard's own Republish button does no library work.** Only the notification
+  after a Configure save does. Accepted by the owner.
+- **A block left in place can no longer be removed from Configure.** Once it is named and
+  the record is dropped, the extension does not track it. The SC deletes it by hand.
+- **Install through Check for Updates still does not refresh the DA.live block list.**
+  Only the Configure action does.
+- **A library updated through Check for Updates may not be removable.** An update moves the
+  recorded commit but never rewrites blocks already copied. If the library changed those
+  blocks upstream, they no longer match and are left in place.
+- **A private library repository cannot be compared.** The archive download sends no
+  token, so its blocks are left in place ("could not be compared with the library").
+- **An HTML example filled into an entry the storefront already had is not taken back.**
+- **Later marks the storefront "update declined"** even when only libraries were pending.
+- **Removed doc pages are not unpublished from the CDN.** They are deleted from DA.live
+  and dropped from the block list.
 

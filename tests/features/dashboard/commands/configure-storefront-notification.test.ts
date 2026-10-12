@@ -36,6 +36,11 @@ jest.mock('@/features/eds/services/storefront/storefrontRepublishService', () =>
     republishStorefrontConfig: (...args: unknown[]) => mockRepublishStorefrontConfig(...args),
 }));
 
+const mockRunPendingBlockLibraryWork = jest.fn();
+jest.mock('@/features/dashboard/commands/configureBlockLibraryExecutor', () => ({
+    runPendingBlockLibraryWork: (...args: unknown[]) => mockRunPendingBlockLibraryWork(...args),
+}));
+
 jest.mock('@/features/dashboard/commands/showDashboard', () => ({
     ProjectDashboardWebviewCommand: {
         refreshStatus: jest.fn().mockResolvedValue(undefined),
@@ -50,12 +55,16 @@ function makeProject(): Project {
 
 describe('ConfigureProjectWebviewCommand - storefront republish resets notification flag', () => {
     let command: ConfigureProjectWebviewCommand;
+    let mockContext: ReturnType<typeof createMockExtensionContext>;
+    let mockStateManager: ReturnType<typeof createMockStateManager>;
+    let mockLogger: Logger;
 
     beforeEach(() => {
         jest.clearAllMocks();
-        const mockContext = createMockExtensionContext();
-        const mockStateManager = createMockStateManager();
-        const mockLogger = createMockLogger() as unknown as Logger;
+        mockRunPendingBlockLibraryWork.mockResolvedValue(undefined);
+        mockContext = createMockExtensionContext();
+        mockStateManager = createMockStateManager();
+        mockLogger = createMockLogger() as unknown as Logger;
         command = new ConfigureProjectWebviewCommand(mockContext, mockStateManager, mockLogger);
     });
 
@@ -67,6 +76,28 @@ describe('ConfigureProjectWebviewCommand - storefront republish resets notificat
 
         // The reset lets the NEXT storefront change re-prompt to republish.
         expect(vscode.commands.executeCommand).toHaveBeenCalledWith(STOREFRONT_ACTION_TAKEN);
+    });
+
+    it('runs the pending block library work first, then the republish it already ran (EDS-39)', async () => {
+        const order: string[] = [];
+        mockRunPendingBlockLibraryWork.mockImplementation(async () => {
+            order.push('block libraries');
+        });
+        mockRepublishStorefrontConfig.mockImplementation(async () => {
+            order.push('republish');
+            return { success: true };
+        });
+        const project = makeProject();
+
+        await (command as unknown as { republishStorefront: (p: Project) => Promise<void> })
+            .republishStorefront(project);
+
+        expect(order).toEqual(['block libraries', 'republish']);
+        // The same project, and the parts the shell builds its collaborators from.
+        const [handedProject, parts, report] = mockRunPendingBlockLibraryWork.mock.calls[0];
+        expect(handedProject).toBe(project);
+        expect(parts).toEqual({ context: mockContext, stateManager: mockStateManager, logger: mockLogger });
+        expect(typeof report).toBe('function');
     });
 
     it('does NOT reset the flag when republish fails (storefront still stale)', async () => {

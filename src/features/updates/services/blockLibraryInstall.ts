@@ -47,7 +47,7 @@ interface BlockLibraryInstallOutcome {
     blockIds: string[];
 }
 
-function sameRepo(a: AddonSource, b: { owner?: string; repo?: string }): boolean {
+export function sameRepo(a: AddonSource, b: { owner?: string; repo?: string }): boolean {
     return (
         a.owner.toLowerCase() === b.owner?.toLowerCase() &&
         a.repo.toLowerCase() === b.repo?.toLowerCase()

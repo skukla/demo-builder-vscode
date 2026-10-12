@@ -7,7 +7,7 @@
  *
  * `applyBlockLibrarySelection` is what Save records. It only records: nothing
  * here installs or removes block files, and the installed record is not its to
- * touch.
+ * touch. Installing and removing after Save is `configureBlockLibraryWork`.
  */
 
 import {

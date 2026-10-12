@@ -7,11 +7,11 @@
  *    two surfaces cannot offer different libraries for one project.
  *  - `applyBlockLibrarySelection` — what Save records on the project.
  *
- * Save only RECORDS. Nothing here copies or deletes block files, and
- * `installedBlockLibraries` is never written: a newly recorded library is offered
- * as "<library>: install" by the update check (`findUninstalledBlockLibraries`
- * in `@/features/updates/services/blockLibraryInstall`), and a library that is
- * no longer recorded keeps the blocks it already added to the storefront.
+ * This module only RECORDS. Nothing here copies or deletes block files, and
+ * `installedBlockLibraries` is never written. What the storefront then gains or
+ * loses is `configureBlockLibraryWork.ts`: after Save, the apply notification
+ * offers to install a recorded library the storefront lacks and remove one it
+ * has that is no longer recorded. The update check still offers the install too.
  *
  * @module features/dashboard/services/configureBlockLibraries
  */

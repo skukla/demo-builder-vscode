@@ -68,7 +68,7 @@ export const CUSTOM_LIBRARY: CustomBlockLibrary = {
     source: { owner: 'acme', repo: 'my-blocks', branch: 'main' },
 };
 
-/** The Authoring tab's block-library props: one native, two to choose from, one ticked. */
+/** The Block Libraries tab's props: one native, two to choose from, one ticked. */
 export const blockLibrariesOf = (
     overrides: Partial<BlockLibrariesSectionProps> = {}
 ): BlockLibrariesSectionProps => ({

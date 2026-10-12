@@ -1,7 +1,7 @@
 /**
  * useBlockLibrarySelection Hook
  *
- * The block libraries ticked on the Configure screen's Authoring tab (EDS-39).
+ * The block libraries ticked on the Configure screen's Block Libraries tab (EDS-39).
  * Seeded from what the project has recorded, and lifted to ConfigureScreen so a
  * tick survives switching tabs, like every other value on the screen.
  *

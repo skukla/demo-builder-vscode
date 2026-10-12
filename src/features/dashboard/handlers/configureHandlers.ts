@@ -60,7 +60,7 @@ export async function handleOpenEdsSettings(_context: HandlerContext): Promise<H
 /**
  * Handle open-block-library-settings — open VS Code settings at the custom
  * block libraries list. Same message and same target as the creation wizard's
- * picker, which the Authoring tab reuses (EDS-39).
+ * picker, which the Block Libraries tab reuses (EDS-39).
  */
 export async function handleOpenBlockLibrarySettings(
     _context: HandlerContext,

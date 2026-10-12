@@ -20,7 +20,7 @@ jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({
 }));
 
 // Mock layout components. The shell + rail are NOT mocked (direct-path imports) so the
-// Authoring tab these tests click is the real one.
+// Authoring and Block Libraries tabs these tests click are the real ones.
 jest.mock('@/core/ui/components/layout/PageFooter', () => ({
     PageFooter: ({ leftContent, rightContent }: any) => (
         <div data-testid="page-footer">
@@ -102,6 +102,13 @@ const blockLibraryChoices: ConfigureBlockLibraryChoices = {
     customDefaults: [],
 };
 
+// Module-level, so the prop is the same reference on every render.
+const NO_BLOCK_LIBRARY_CHOICES: ConfigureBlockLibraryChoices = {
+    native: [],
+    available: [],
+    customDefaults: [],
+};
+
 describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
     let mockRequest: jest.Mock;
 
@@ -146,6 +153,40 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
             'Catalog Service',
             'Authoring',
         ]);
+    });
+
+    it('adds a "Block Libraries" tab immediately before "Authoring" when there are libraries to choose', () => {
+        renderWithProvider(
+            <ConfigureScreen
+                project={mockProject}
+                componentsData={mockComponentsData}
+                isEds
+                authoringExperience="da-live-classic"
+                blockLibraryChoices={blockLibraryChoices}
+            />
+        );
+
+        expect(railTabLabels()).toEqual([
+            'Project',
+            'Adobe Commerce',
+            'Catalog Service',
+            'Block Libraries',
+            'Authoring',
+        ]);
+    });
+
+    it('adds NO "Block Libraries" tab when the project has no library to choose', () => {
+        renderWithProvider(
+            <ConfigureScreen
+                project={mockProject}
+                componentsData={mockComponentsData}
+                isEds
+                authoringExperience="da-live-classic"
+                blockLibraryChoices={NO_BLOCK_LIBRARY_CHOICES}
+            />
+        );
+
+        expect(railTabLabels()).not.toContain('Block Libraries');
     });
 
     it('adds NO "Authoring" tab for a non-EDS project (the control)', () => {
@@ -244,7 +285,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
         });
     });
 
-    it('saves a block library ticked on the Authoring tab, even after leaving the tab', async () => {
+    it('saves a block library ticked on the Block Libraries tab, even after leaving the tab', async () => {
         const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
 
         renderWithProvider(
@@ -257,7 +298,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
             />
         );
 
-        selectSection('Authoring');
+        selectSection('Block Libraries');
         await user.click(screen.getByRole('button', { name: /Demo Builder Blocks/ }));
         expect(screen.getByRole('button', { name: /Demo Builder Blocks/ })).toHaveAttribute(
             'aria-pressed',

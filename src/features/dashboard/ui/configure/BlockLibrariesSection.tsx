@@ -1,19 +1,15 @@
 /**
  * BlockLibrariesSection
  *
- * The block libraries choice on the Configure screen's Authoring tab (EDS-39).
- * Before this, a storefront's libraries could be chosen only in the creation
- * wizard, so adding one afterwards meant Edit and the whole wizard again.
+ * The Block Libraries item on the Configure screen's rail (EDS-39). Before
+ * this, a storefront's libraries could be chosen only in the creation wizard,
+ * so adding one afterwards meant Edit and the whole wizard again.
  *
  * The picker is the wizard's own {@link BlockLibrariesStepContent}: one picker,
- * two surfaces. This file adds only what Configure has to say that the wizard
- * does not, because here the storefront already exists:
- *   - ticking RECORDS the library; the update check installs it;
- *   - unticking removes the record, never the blocks already in the storefront.
- *
- * Those two sentences are muted text, the same as the Authoring footer above
- * them. `feedback/InlineNotice` was considered and rejected: it is a banner for
- * a warning, and neither sentence is one.
+ * two surfaces. The screen says nothing about when a tick takes effect: Save
+ * records the choice, and the notification that follows offers to add a newly
+ * ticked library to the storefront and remove an unticked one
+ * (`services/configureBlockLibraryWork.ts`).
  *
  * Its `.choice-*` classes come from project-creation's `choice-cards.css`, which
  * the Configure entry imports for exactly this section.
@@ -21,7 +17,6 @@
  * @module features/dashboard/ui/configure/BlockLibrariesSection
  */
 
-import { Text } from '@adobe/react-spectrum';
 import React from 'react';
 import { ConfigSection } from '@/core/ui/components/forms/ConfigSection';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
@@ -45,6 +40,18 @@ function openCustomLibrarySettings(): void {
 }
 
 /**
+ * Whether the project has any block library to show: one to tick, or a native
+ * one shown locked. Decides both the rail item and the section body, so the
+ * rail never offers a tab that draws nothing.
+ *
+ * @param choices - what the extension offers this project, if it sent any
+ */
+export function hasBlockLibraryChoices(choices: ConfigureBlockLibraryChoices | undefined): boolean {
+    if (!choices) return false;
+    return choices.native.length + choices.available.length + choices.customDefaults.length > 0;
+}
+
+/**
  * Draw the block libraries choice, or nothing when the project has none to choose from.
  *
  * @param props - the choices, the current ticks, and the two toggles
@@ -57,11 +64,11 @@ export function BlockLibrariesSection({
     onBlockLibraryToggle,
     onCustomLibraryToggle,
 }: BlockLibrariesSectionProps): React.ReactElement | null {
+    if (!hasBlockLibraryChoices(choices)) return null;
     const { native, available, customDefaults } = choices;
-    if (native.length + available.length + customDefaults.length === 0) return null;
 
     return (
-        <ConfigSection id="block-libraries" label="Block Libraries" showDivider>
+        <ConfigSection id="block-libraries" label="Block Libraries" showDivider={false}>
             <BlockLibrariesStepContent
                 nativeBlockLibraries={native}
                 availableBlockLibraries={available}
@@ -72,12 +79,6 @@ export function BlockLibrariesSection({
                 onCustomLibraryToggle={onCustomLibraryToggle}
                 onOpenCustomSettings={openCustomLibrarySettings}
             />
-            <Text UNSAFE_className="text-gray-600 text-sm">
-                Save, then run Check for Updates to add a newly ticked library to the storefront.
-            </Text>
-            <Text UNSAFE_className="text-gray-600 text-sm">
-                Unticking a library does not remove the blocks it already added to the storefront.
-            </Text>
         </ConfigSection>
     );
 }

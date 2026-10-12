@@ -2,6 +2,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { configureHandlers } from '../handlers/configureHandlers';
+import { runPendingBlockLibraryWork } from './configureBlockLibraryExecutor';
 import { mergeEnvValuesFromSources } from './configureEnvLoader';
 import { ProjectDashboardWebviewCommand } from './showDashboard';
 import { BundledPanelCommand } from '@/commands/bundledPanelCommand';
@@ -24,6 +25,10 @@ import {
     buildBlockLibraryChoices,
     type BlockLibrarySelectionInput,
 } from '@/features/dashboard/services/configureBlockLibraries';
+import {
+    describePendingBlockLibraryWork,
+    hasPendingBlockLibraryWork,
+} from '@/features/dashboard/services/configureBlockLibraryWork';
 import { sendAuthoringExperienceUpdate } from '@/features/dashboard/services/projectPanelPushes';
 import {
     getEwCanvasBranch,
@@ -286,12 +291,17 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
                 project.edsStorefrontStatusSummary = 'stale';
             }
 
+            // Record the ticked block libraries (EDS-39). What the storefront gains or
+            // loses is then read from the project, so a "Later" is offered again.
+            applyBlockLibrarySelection(project, data);
+            const libraryWorkPending = hasPendingBlockLibraryWork(project);
+
             // Re-arm the apply prompts for THIS change. Without it, a
             // single earlier "Later" muted them for the whole session:
             // the handlers below saw `shouldShow === false`, returned
             // before prompting, and the save reported success while the
             // storefront kept serving the previous config.
-            if (meshChanges.hasChanges || storefrontChanges.hasChanges) {
+            if (meshChanges.hasChanges || storefrontChanges.hasChanges || libraryWorkPending) {
                 await vscode.commands.executeCommand('demoBuilder._internal.configChanged');
             }
 
@@ -301,10 +311,6 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
                 project,
                 data.authoringExperience,
             );
-
-            // Record the block libraries ticked on the Authoring tab (EDS-39). Record
-            // only: the update check offers the install, and nothing is removed.
-            applyBlockLibrarySelection(project, data);
 
             await this.stateManager.saveProject(project);
 
@@ -600,6 +606,11 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
                     cancellable: false,
                 },
                 async (progress) => {
+                    // Block libraries first (EDS-39): add what is selected, remove what is not.
+                    const { context, stateManager, logger } = this;
+                    await runPendingBlockLibraryWork(project, { context, stateManager, logger }, (m) =>
+                        progress.report({ message: m }),
+                    );
                     const result = await republishStorefrontConfig({
                         persist: (p) => this.stateManager.saveProject(p),
                         project,
@@ -656,11 +667,13 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
 
         let contextualNotificationShown = false;
         const isEds = isEdsProject(project);
+        // Pending block library work rides the storefront prompt and its action (EDS-39).
+        const storefrontWork = storefrontChanges.hasChanges || hasPendingBlockLibraryWork(project);
 
-        if (meshChanges.hasChanges && storefrontChanges.hasChanges && isEds) {
+        if (meshChanges.hasChanges && storefrontWork && isEds) {
             contextualNotificationShown =
                 await this.handleCombinedMeshStorefrontNotification(project);
-        } else if (storefrontChanges.hasChanges && isEds) {
+        } else if (storefrontWork && isEds) {
             contextualNotificationShown = await this.handleStorefrontOnlyNotification(project);
         } else if (meshChanges.hasChanges) {
             contextualNotificationShown = await this.handleMeshOnlyNotification(project);
@@ -697,7 +710,8 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
         );
 
         const selection = await vscode.window.showWarningMessage(
-            'Configuration saved. Apply changes to mesh and storefront?',
+            'Configuration saved. Apply changes to mesh and storefront?' +
+                describePendingBlockLibraryWork(project),
             'Apply Changes',
             'Later',
         );
@@ -746,7 +760,8 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
         );
 
         const selection = await vscode.window.showInformationMessage(
-            'Configuration saved. Republish storefront to apply changes.',
+            'Configuration saved. Republish storefront to apply changes.' +
+                describePendingBlockLibraryWork(project),
             'Republish',
             'Later',
         );

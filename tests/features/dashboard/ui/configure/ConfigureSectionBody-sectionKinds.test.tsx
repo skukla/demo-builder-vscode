@@ -1,9 +1,9 @@
 /**
- * ConfigureSectionBody draws ONE section, and which one is a four-way decision.
+ * ConfigureSectionBody draws ONE section, and which one is a five-way decision.
  *
- * The Commerce split has its own suite; this one covers the other three kinds —
- * Project, Authoring, and a single App Builder component — plus the fall-through
- * that ends in `null`. Each of those branches was reachable only through the
+ * The Commerce split has its own suite; this one covers the other four kinds —
+ * Project, Block Libraries, Authoring, and a single App Builder component — plus
+ * the fall-through that ends in `null`. Each of those branches was reachable only through the
  * rail, so nothing here was entered by a test before 2026-09-06: the Project
  * body could have stopped rendering its "nothing to configure" note, the
  * Authoring radios could have stopped reporting a choice, and the App Builder
@@ -67,6 +67,7 @@ import {
 
 const PROJECT_SECTION = sectionOf('project', 'project-info', 'Project');
 const AUTHORING_SECTION = sectionOf('authoring', 'authoring-experience', 'Authoring');
+const BLOCK_LIBRARIES_SECTION = sectionOf('blockLibraries', 'block-libraries', 'Block Libraries');
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -159,11 +160,17 @@ describe('the Authoring section', () => {
     });
 });
 
-describe('block libraries on the Authoring section', () => {
+describe('the Block Libraries section', () => {
     const card = (name: string) => screen.getByRole('button', { name: new RegExp(name) });
 
     it('shows each library as the wizard does: ticked, unticked, and locked when native', () => {
-        renderSectionBody({ section: AUTHORING_SECTION, blockLibraries: blockLibrariesOf() });
+        const { container } = renderSectionBody({
+            section: BLOCK_LIBRARIES_SECTION,
+            blockLibraries: blockLibrariesOf(),
+        });
+
+        // Its own tab, so nothing above it to divide from.
+        expect(container.querySelectorAll('hr')).toHaveLength(0);
 
         expect(screen.getByText('Block Libraries')).toBeInTheDocument();
         expect(card('Demo Team Block Collection')).toHaveAttribute('aria-pressed', 'true');
@@ -173,7 +180,7 @@ describe('block libraries on the Authoring section', () => {
 
     it('reports a tick and an untick to its owner, by library id', () => {
         const blockLibraries = blockLibrariesOf();
-        renderSectionBody({ section: AUTHORING_SECTION, blockLibraries });
+        renderSectionBody({ section: BLOCK_LIBRARIES_SECTION, blockLibraries });
 
         fireEvent.click(card('Demo Builder Blocks'));
         fireEvent.click(card('Demo Team Block Collection'));
@@ -190,23 +197,21 @@ describe('block libraries on the Authoring section', () => {
         );
     });
 
-    it('says a ticked library is installed by Check for Updates', () => {
-        renderSectionBody({ section: AUTHORING_SECTION, blockLibraries: blockLibrariesOf() });
+    it('no longer says a library waits for Check for Updates, or that unticking leaves its blocks', () => {
+        // Both were true while Save only recorded the choice. Save now offers to
+        // add and remove, so neither sentence is on the screen.
+        renderSectionBody({ section: BLOCK_LIBRARIES_SECTION, blockLibraries: blockLibrariesOf() });
 
-        expect(screen.getByText(/Check for Updates/)).toBeInTheDocument();
-    });
-
-    it('says plainly that unticking leaves the blocks already added in the storefront', () => {
-        renderSectionBody({ section: AUTHORING_SECTION, blockLibraries: blockLibrariesOf() });
-
-        expect(screen.getByText(/does not remove/i)).toBeInTheDocument();
+        expect(screen.getByText('Block Libraries')).toBeInTheDocument();
+        expect(screen.queryByText(/Check for Updates/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/does not remove/i)).not.toBeInTheDocument();
     });
 
     it('offers the custom libraries from settings and reports a tick with the library', () => {
         const blockLibraries = blockLibrariesOf({
             choices: { native: [], available: [], customDefaults: [CUSTOM_LIBRARY] },
         });
-        renderSectionBody({ section: AUTHORING_SECTION, blockLibraries });
+        renderSectionBody({ section: BLOCK_LIBRARIES_SECTION, blockLibraries });
 
         fireEvent.click(card('My Blocks'));
 
@@ -217,27 +222,39 @@ describe('block libraries on the Authoring section', () => {
         const blockLibraries = blockLibrariesOf({
             choices: { native: [], available: [], customDefaults: [CUSTOM_LIBRARY] },
         });
-        renderSectionBody({ section: AUTHORING_SECTION, blockLibraries });
+        renderSectionBody({ section: BLOCK_LIBRARIES_SECTION, blockLibraries });
 
         fireEvent.click(screen.getByText('Configure custom libraries in Settings'));
 
         expect(mockPostMessage).toHaveBeenCalledWith('open-block-library-settings');
     });
 
-    it('draws no block library section when the project has none to choose from', () => {
-        const blockLibraries = blockLibrariesOf({
-            choices: { native: [], available: [], customDefaults: [] },
+    it('draws nothing when the project has none to choose from, or no choices arrived', () => {
+        const none = renderSectionBody({
+            section: BLOCK_LIBRARIES_SECTION,
+            blockLibraries: blockLibrariesOf({
+                choices: { native: [], available: [], customDefaults: [] },
+            }),
         });
-        renderSectionBody({ section: AUTHORING_SECTION, blockLibraries });
+        expect(none.container).toBeEmptyDOMElement();
+        none.unmount();
 
-        expect(screen.queryByText('Block Libraries')).not.toBeInTheDocument();
-        expect(screen.getByText('DA.live Classic')).toBeInTheDocument();
+        const absent = renderSectionBody({ section: BLOCK_LIBRARIES_SECTION });
+        expect(absent.container).toBeEmptyDOMElement();
     });
 
-    it('keeps block libraries off every other section', () => {
-        renderSectionBody({ section: PROJECT_SECTION, blockLibraries: blockLibrariesOf() });
-
+    it('keeps block libraries off every other section, Authoring included', () => {
+        const project = renderSectionBody({
+            section: PROJECT_SECTION,
+            blockLibraries: blockLibrariesOf(),
+        });
         expect(screen.queryByText('Block Libraries')).not.toBeInTheDocument();
+        project.unmount();
+
+        renderSectionBody({ section: AUTHORING_SECTION, blockLibraries: blockLibrariesOf() });
+        expect(screen.getByText('DA.live Classic')).toBeInTheDocument();
+        expect(screen.queryByText('Block Libraries')).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /Demo Builder Blocks/ })).not.toBeInTheDocument();
     });
 });
 

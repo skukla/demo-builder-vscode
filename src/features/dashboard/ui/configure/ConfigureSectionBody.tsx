@@ -3,7 +3,7 @@
  *
  * Renders the ONE section currently selected on the Configure rail. Which section that
  * is comes from {@link buildConfigureSections}; this module only knows how to draw each
- * of the four kinds.
+ * of the five kinds.
  *
  * Split out of ConfigureScreen because the rail turned "render every section stacked"
  * into "render exactly one", which is a switch — and a switch inside an already
@@ -53,10 +53,7 @@ export interface ConfigureSectionBodyProps {
     /** EDS authoring-experience preference. */
     authoringExperience: AuthoringExperience;
     onAuthoringExperienceChange: (value: AuthoringExperience) => void;
-    /**
-     * The block libraries choice, drawn under the authoring experience (EDS-39).
-     * Authoring is the one EDS-only tab, so it is the only section that takes it.
-     */
+    /** The block libraries choice, drawn by the Block Libraries section alone (EDS-39). */
     blockLibraries?: BlockLibrariesSectionProps;
 }
 
@@ -276,16 +273,12 @@ export function ConfigureSectionBody({
         );
     }
 
+    if (section.kind === 'blockLibraries') {
+        return blockLibraries ? <BlockLibrariesSection {...blockLibraries} /> : null;
+    }
+
     if (section.kind === 'authoring') {
-        return (
-            <>
-                <AuthoringBody
-                    value={authoringExperience}
-                    onChange={onAuthoringExperienceChange}
-                />
-                {blockLibraries ? <BlockLibrariesSection {...blockLibraries} /> : null}
-            </>
-        );
+        return <AuthoringBody value={authoringExperience} onChange={onAuthoringExperienceChange} />;
     }
 
     // Business Structure is its own rail tab, so its id carries the slice suffix.

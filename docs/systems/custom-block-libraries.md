@@ -65,6 +65,46 @@ setup saved them onto whichever project was open, so a project created before th
 can lack its record: its next update check offers each selected library once, and
 applying it records it (EDS-37).
 
+## Removing a library from a storefront
+
+Unticking a library on Configure's Block Libraries tab and saving records the choice.
+The notification that follows names the library, and its action removes what that
+library added (EDS-39). A library ticked there is installed by the same action. Edit,
+Check for Updates and the agent tools do not remove anything.
+
+Removal takes out only what the library's record says it added, and only what is
+still as the library added it:
+
+- **A block folder goes only when it is unedited.** Its files must be exactly the
+  library's files at the recorded `commitSha`, compared by git blob sha. A block with a
+  changed, added or deleted file stays, and the result names it ("hero (changed since
+  it was added)"). So does a block whose library cannot be read at that commit.
+- **A block another selected library provides stays.** It is named with that library.
+- **An authoring entry goes only when it is unchanged.** Each entry in `addedEntries`
+  is compared with the library's own entry at that commit. One the SC changed stays
+  and is named. An entry belonging to a block left in place is not touched. An HTML
+  example the install filled into an entry the storefront already had stays.
+- **One commit.** The deleted files and the three authoring files change in a single
+  commit on `main` ("chore: remove <library> (N blocks)").
+- **DA.live.** Each removed `component-definition.json` entry is taken off the DA.live
+  block list (its doc page and its sheet row). Then, whenever the action added or
+  removed at least one block, it runs Refresh Block Library: the block list is rebuilt
+  from the storefront's `component-definition.json` and published, so the DA.live
+  picker matches. If that fails the result says so; the file changes stay.
+- **A block left in place is named once.** A block left because the SC changed it, or
+  because another library provides it, is the SC's own (or that library's) from then
+  on. The library's record is dropped from `installedBlockLibraries`, so no later save
+  offers the removal again. The same goes for an authoring entry the SC changed.
+- **Only a failed check is retried.** When the library could not be read at its commit,
+  the record is kept for just those blocks and their entries, and the next Configure
+  save offers the removal again.
+- **Native libraries are never removed.** Their card is locked, and a record for one
+  is never treated as unselected.
+
+A library updated through Check for Updates after it was installed has a newer
+`commitSha` than the block files it copied, because an update only adds. If the
+library changed those blocks upstream, they no longer match and are left in place.
+
 ## Registering a block for authoring
 
 A block existing in the repository does not make it available in DA.live's authoring

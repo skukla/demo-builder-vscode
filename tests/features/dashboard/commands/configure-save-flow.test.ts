@@ -103,6 +103,25 @@ function save(command: ConfigureProjectWebviewCommand): SaveInternals {
     return command as unknown as SaveInternals;
 }
 
+/** An EDS project whose storefront has a GitHub repository, so a library can be installed in it. */
+function storefrontProject(overrides: Partial<Project> = {}): Project {
+    return createMockProject({
+        name: 'Test Project',
+        path: '/test/project',
+        selectedStack: 'eds-accs',
+        selectedPackage: 'citisignal',
+        componentInstances: {
+            [COMPONENT_IDS.EDS_STOREFRONT]: {
+                id: COMPONENT_IDS.EDS_STOREFRONT,
+                name: 'EDS Storefront',
+                status: 'ready',
+                metadata: { githubRepo: 'me/demo-storefront' },
+            },
+        },
+        ...overrides,
+    });
+}
+
 /** An EDS project carrying a stored authoring experience. */
 function edsProject(stored = 'da-live-classic', overrides: Partial<Project> = {}): Project {
     return createMockProject({
@@ -319,6 +338,33 @@ describe('ConfigureProjectWebviewCommand - save spine', () => {
 
         it('re-arms the apply prompts when anything went stale', async () => {
             (detectStorefrontChanges as jest.Mock).mockReturnValue({ hasChanges: true });
+
+            await save(command).handleSaveConfiguration({ componentConfigs: {} });
+
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+                'demoBuilder._internal.configChanged'
+            );
+        });
+
+        it('re-arms the apply prompts when a newly ticked block library is not in the storefront', async () => {
+            stateManager.getCurrentProject.mockResolvedValue(storefrontProject());
+
+            await save(command).handleSaveConfiguration({
+                componentConfigs: {},
+                selectedBlockLibraries: ['demo-builder-blocks'],
+            });
+
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+                'demoBuilder._internal.configChanged'
+            );
+        });
+
+        it('re-arms them again on the NEXT save, when the SC answered Later to that library', async () => {
+            // Later left the library selected and not installed. This save carries
+            // no block library fields at all: the work is read from the project.
+            stateManager.getCurrentProject.mockResolvedValue(
+                storefrontProject({ selectedBlockLibraries: ['demo-builder-blocks'] })
+            );
 
             await save(command).handleSaveConfiguration({ componentConfigs: {} });
 

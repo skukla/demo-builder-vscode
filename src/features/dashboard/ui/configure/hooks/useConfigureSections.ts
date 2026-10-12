@@ -33,8 +33,10 @@ export interface UseConfigureSectionsProps {
     getValueFromConfigs: (field: UniqueField) => string | number | boolean | undefined;
     /** Whether a field currently holds a value. */
     isFieldComplete: (field: UniqueField) => boolean;
-    /** EDS project — gates the Authoring section. */
+    /** EDS project — gates the Block Libraries and Authoring sections. */
     isEds: boolean;
+    /** The project has at least one block library to show — gates the Block Libraries section. */
+    hasBlockLibraryChoices: boolean;
     /** The project-name field's error, if any. */
     projectNameError: string | undefined;
 }
@@ -63,6 +65,7 @@ export function useConfigureSections({
     getValueFromConfigs,
     isFieldComplete,
     isEds,
+    hasBlockLibraryChoices,
     projectNameError,
 }: UseConfigureSectionsProps): UseConfigureSectionsReturn {
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -92,9 +95,10 @@ export function useConfigureSections({
                 isFieldComplete,
                 fieldHasError,
                 isEds,
+                hasBlockLibraryChoices,
                 isProjectNameValid: !projectNameError,
             }),
-        [serviceGroups, isFieldComplete, fieldHasError, isEds, projectNameError],
+        [serviceGroups, isFieldComplete, fieldHasError, isEds, hasBlockLibraryChoices, projectNameError],
     );
 
     // Sections come and go as components are configured, so the stored id can go stale;

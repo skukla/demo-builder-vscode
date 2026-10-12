@@ -22,7 +22,7 @@ import '@/core/ui/styles/shared-ui.css';
 import '@/core/ui/styles/vscode-theme.css';
 import '@/core/ui/styles/wizard.css';
 import '@/core/ui/styles/utilities.css';
-// The block library cards on the Authoring tab are the wizard's picker (EDS-39),
+// The block library cards on the Block Libraries tab are the wizard's picker (EDS-39),
 // and a sheet reaches only the bundles whose entry imports it. `.choice-*` is the
 // cards. wizard-misc.css is here for ONE rule, `.settings-link`, the picker's
 // "Configure custom libraries in Settings" line; its other families are the

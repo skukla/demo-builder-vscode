@@ -56,8 +56,19 @@ is, and a block folder, authoring entry or HTML example it added before that the
 SC has since deleted is not put back (`installedBlockLibraries[].blockIds` and
 `.addedEntries`; see
 [custom block libraries](../../../docs/systems/custom-block-libraries.md)). It does not rebuild the DA.live authoring library — run "Refresh Block
-Library" (`refresh_block_library`) for that. Un-selecting a library removes
-nothing.
+Library" (`refresh_block_library`) for that.
+
+Configure offers the same install without the update check. After a Configure
+save, the notification that offers to republish the storefront also names any
+selected library the storefront lacks, and its action runs this installer
+(`dashboard/services/configureBlockLibraryWork.ts`). Unlike the update check, that
+action then runs Refresh Block Library itself when a block was added or removed.
+
+**Un-selecting a library removes nothing here.** Check for Updates and
+`apply_updates` never remove a library. Removal is offered only by that Configure
+notification, for a library the storefront has and the project no longer selects
+(`services/blockLibraryUninstall.ts`; the rules are in
+[custom block libraries](../../../docs/systems/custom-block-libraries.md)).
 
 ## Integration pairs are checked here too, for every project
 

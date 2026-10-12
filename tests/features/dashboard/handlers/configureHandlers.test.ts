@@ -120,7 +120,7 @@ describe('configureHandlers', () => {
             // surfaces disagree about whether those fields need filling in.
             // 6 → 5: get-components-data removed 2026-08-21 (see the test above).
             // 5 → 6: open-block-library-settings added 2026-10-12 (EDS-39) — the
-            // Authoring tab now shows the wizard's block library picker, whose
+            // Block Libraries tab shows the wizard's block library picker, whose
             // "Configure custom libraries in Settings" link needs an answer here.
             expect(types).toHaveLength(6);
         });

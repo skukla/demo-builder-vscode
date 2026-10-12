@@ -25,6 +25,7 @@
 
 import { Form, Button, View } from '@adobe/react-spectrum';
 import React, { useMemo, useState } from 'react';
+import { hasBlockLibraryChoices } from './BlockLibrariesSection';
 import { ConfigureSectionBody } from './ConfigureSectionBody';
 import { useBlockLibrarySelection } from './hooks/useBlockLibrarySelection';
 import { useConfigureFieldRow } from './hooks/useConfigureFieldRow';
@@ -77,7 +78,7 @@ export function ConfigureScreen({
     const [authoringExperience, setAuthoringExperience] = useState<AuthoringExperience>(
         initialAuthoringExperience ?? 'da-live-classic',
     );
-    // The block libraries ticked on the Authoring tab — lifted, like every value here.
+    // The block libraries ticked on the Block Libraries tab — lifted, like every value here.
     const {
         selectedBlockLibraries,
         customBlockLibraries,
@@ -151,6 +152,7 @@ export function ConfigureScreen({
             getValueFromConfigs,
             isFieldComplete,
             isEds,
+            hasBlockLibraryChoices: hasBlockLibraryChoices(blockLibraryChoices),
             projectNameError,
         });
 

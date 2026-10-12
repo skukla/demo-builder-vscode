@@ -71,6 +71,7 @@ const baseInput = {
     isFieldComplete: allComplete,
     fieldHasError: noErrors,
     isEds: true,
+    hasBlockLibraryChoices: false,
     isProjectNameValid: true,
 };
 
@@ -84,6 +85,26 @@ describe('buildConfigureSections', () => {
                 'serviceGroup',
                 'authoring',
             ]);
+        });
+
+        it('puts Block Libraries immediately before Authoring when there are libraries to choose', () => {
+            const sections = buildConfigureSections({ ...baseInput, hasBlockLibraryChoices: true });
+            expect(sections.map((s) => [s.id, s.label, s.kind])).toEqual([
+                ['project-info', 'Project', 'project'],
+                ['adobe-commerce', 'Adobe Commerce', 'serviceGroup'],
+                ['catalog-service', 'Catalog Service', 'serviceGroup'],
+                ['block-libraries', 'Block Libraries', 'blockLibraries'],
+                ['authoring-experience', 'Authoring', 'authoring'],
+            ]);
+        });
+
+        it('has no Block Libraries section for a project that is not Edge Delivery', () => {
+            const sections = buildConfigureSections({
+                ...baseInput,
+                isEds: false,
+                hasBlockLibraryChoices: true,
+            });
+            expect(sections.some((s) => s.id === 'block-libraries')).toBe(false);
         });
 
         it('uses the existing anchor ids so nothing else has to be renamed', () => {
@@ -207,6 +228,20 @@ describe('buildConfigureSections', () => {
                 requiredTotal: 1,
                 requiredComplete: 0,
                 isComplete: false,
+            });
+        });
+
+        it('reports Block Libraries complete with zero required fields (nothing there can block Save)', () => {
+            const sections = buildConfigureSections({
+                ...baseInput,
+                hasBlockLibraryChoices: true,
+                isFieldComplete: () => false,
+            });
+            expect(sections.find((s) => s.id === 'block-libraries')).toMatchObject({
+                requiredTotal: 0,
+                requiredComplete: 0,
+                isComplete: true,
+                hasError: false,
             });
         });
 

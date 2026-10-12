@@ -123,8 +123,11 @@ export interface GitHubTreeInput {
     mode: '100644' | '100755' | '040000' | '160000' | '120000';
     /** Object type */
     type: 'blob' | 'tree' | 'commit';
-    /** Existing blob SHA (mutually exclusive with content) */
-    sha?: string;
+    /**
+     * Existing blob SHA (mutually exclusive with content). `null` DELETES the
+     * path from the tree: that is how GitHub's create-tree call removes a file.
+     */
+    sha?: string | null;
     /** Inline content for a new blob (mutually exclusive with sha) */
     content?: string;
 }
