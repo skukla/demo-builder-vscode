@@ -73,3 +73,4 @@ from, Configure for its settings.
 - 2026-10-12  fix(edit): an Edit keeps the project's records instead of dropping them (`356ffebea`)
 - 2026-10-13  docs(rptc): Edit applies only what changed (PL-75 plan); the Configure audit (`756f87008`)
 - 2026-10-13  feat(edit): an Edit that changes nothing only saves (`bd55ca245`)
+- 2026-10-13  feat(edit): an Edit that only adds or removes integrations does only that (`d4647b86c`)
