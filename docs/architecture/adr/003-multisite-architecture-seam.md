@@ -152,6 +152,12 @@ group (the store cascade branches on `group.id`).
 before — a whole tab for three pickers reproduces the single-control-tab problem that
 `.rptc/plans/configure-commerce-subsections` removed.
 
+> **Done earlier than this trigger (note added 2026-10-13).** Business Structure became
+> its own tab on 2026-08-17 (`a6fdbb6e7`, "credentials get a section, Business Structure
+> gets a tab"), while the scope was still one triple. The promotion described above is
+> what `buildConfigureSections` now does for the connection group, so the multisite work
+> no longer needs it. The current tabs are listed in `docs/systems/configure.md`.
+
 ---
 
 > **The two disciplines below live HERE, not in the handbook.** An earlier version of

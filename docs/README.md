@@ -99,6 +99,8 @@ Enforced by `tests/sop/doc-module-refs.test.ts` — each area's front door must 
   by `npm run docs:tools`.
 - [systems/ai-agents.md](systems/ai-agents.md) — which agents the Chat button opens
   (Copilot in VS Code by default, or Claude Code), their permissions and readiness.
+- [systems/configure.md](systems/configure.md) — the Configure screen: its tabs, what
+  Save does, which follow-up it offers, and how the agent's `configure_project` shares it.
 - [systems/agent-alerts.md](systems/agent-alerts.md) ·
   [systems/erp-integration.md](systems/erp-integration.md) ·
   [systems/data-installer.md](systems/data-installer.md) ·
