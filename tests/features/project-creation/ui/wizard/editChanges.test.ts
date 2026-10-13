@@ -200,8 +200,6 @@ describe('editChangesOf — what the SC changed, by name', () => {
 });
 
 describe('appliesInPlace — Finish adds and removes just the integrations', () => {
-    const notMesh = () => false;
-
     it('is true when an integration was added, with its own settings and API picks', () => {
         const changes = [
             'componentConfigs.erp-integration',
@@ -209,37 +207,35 @@ describe('appliesInPlace — Finish adds and removes just the integrations', () 
             'selectedConsoleApis.erp-integration',
         ];
 
-        expect(appliesInPlace(changes, { added: ['erp-integration'], removed: [] }, notMesh)).toBe(true);
+        expect(appliesInPlace(changes, { added: ['erp-integration'], removed: [] })).toBe(true);
     });
 
     it('is true when an integration was removed', () => {
         expect(
-            appliesInPlace(['selectedAppBuilderComponents'], { added: [], removed: ['starter-kit'] }, notMesh),
+            appliesInPlace(['selectedAppBuilderComponents'], { added: [], removed: ['starter-kit'] }),
         ).toBe(true);
     });
 
     it('is false when anything else changed too', () => {
         const changes = ['datapack', 'selectedAppBuilderComponents'];
 
-        expect(appliesInPlace(changes, { added: ['erp-integration'], removed: [] }, notMesh)).toBe(false);
+        expect(appliesInPlace(changes, { added: ['erp-integration'], removed: [] })).toBe(false);
     });
 
     it('is false when a KEPT integration\'s settings changed: nothing applies that in place', () => {
         const changes = ['componentConfigs.starter-kit', 'selectedAppBuilderComponents'];
 
-        expect(appliesInPlace(changes, { added: ['erp-integration'], removed: [] }, notMesh)).toBe(false);
+        expect(appliesInPlace(changes, { added: ['erp-integration'], removed: [] })).toBe(false);
     });
 
-    it('is false for the mesh, which feeds the storefront', () => {
-        const isMesh = (id: string) => id === 'eds-commerce-mesh';
-
+    it('is true for the mesh too: its add and removal refresh the storefront themselves', () => {
         expect(
-            appliesInPlace(['selectedAppBuilderComponents'], { added: ['eds-commerce-mesh'], removed: [] }, isMesh),
-        ).toBe(false);
+            appliesInPlace(['selectedAppBuilderComponents'], { added: ['eds-commerce-mesh'], removed: [] }),
+        ).toBe(true);
     });
 
     it('is false when no integration was added or removed', () => {
-        expect(appliesInPlace(['selectedConsoleApis.erp-integration'], { added: [], removed: [] }, notMesh)).toBe(
+        expect(appliesInPlace(['selectedConsoleApis.erp-integration'], { added: [], removed: [] })).toBe(
             false,
         );
     });

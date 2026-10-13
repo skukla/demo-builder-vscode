@@ -349,12 +349,22 @@ describe('an Edit that changed nothing, or only integrations, skips the storefro
         expect(stepIds(result.current.WIZARD_STEPS)).not.toContain('storefront-setup');
     });
 
-    it('keeps it when the SC adds the mesh, which feeds the storefront', () => {
+    it('leaves it out when the SC adds the mesh, which republishes the storefront itself', () => {
         const { result } = renderHook(() =>
             useWizardState({ wizardSteps: STEPS, stacks: STACKS, editProject: EDITING })
         );
 
         act(() => result.current.updateState({ selectedAppBuilderComponents: ['eds-commerce-mesh'] }));
+
+        expect(stepIds(result.current.WIZARD_STEPS)).not.toContain('storefront-setup');
+    });
+
+    it('keeps it when the SC changes the package', () => {
+        const { result } = renderHook(() =>
+            useWizardState({ wizardSteps: STEPS, stacks: STACKS, editProject: EDITING })
+        );
+
+        act(() => result.current.updateState({ selectedPackage: 'citisignal' }));
 
         expect(stepIds(result.current.WIZARD_STEPS)).toContain('storefront-setup');
     });

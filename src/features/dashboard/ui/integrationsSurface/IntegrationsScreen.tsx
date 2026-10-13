@@ -69,6 +69,7 @@ export function IntegrationsScreen({
     commerceStoreStructure,
     componentSettings,
     integrationsViewMode,
+    meshNeededByDemo,
 }: IntegrationsScreenProps): React.ReactElement {
     // No props: the four values read here depend on the status pushes alone.
     // `hasAdobeContext` reaches only the hook's org-check state, which this
@@ -86,6 +87,7 @@ export function IntegrationsScreen({
         meshStatus,
         isTransitioning,
         commerceStoreStructure,
+        meshNeededByDemo,
     });
     const search = useIntegrationCardSearch(cards);
     const { searchQuery, visibleCards, isFiltering, searchFoundNothing } = search;

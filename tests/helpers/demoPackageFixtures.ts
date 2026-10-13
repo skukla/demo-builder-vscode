@@ -42,3 +42,21 @@ export function makeAddedDemo(overrides: Partial<AddedDemo> = {}): AddedDemo {
         ...overrides,
     };
 }
+
+/**
+ * `isMeshRequired` for a suite that mocks the demo package loader by hand.
+ *
+ * Production asks "does this package need the mesh?" through `isMeshRequired`,
+ * which reads `getResolvedMeshRequirement`. A suite that mocks the whole loader
+ * controls the second; this reads it back, so each test's answer still decides
+ * and no suite keeps a copy of the rule. Inside the mock factory:
+ *
+ *     isMeshRequired: (pkg: unknown, stackId: unknown) =>
+ *         jest.requireActual('../../../helpers/demoPackageFixtures').isMeshRequiredThroughMock(pkg, stackId),
+ */
+export function isMeshRequiredThroughMock(pkg: unknown, stackId: unknown): boolean {
+    const loader = jest.requireMock<{ getResolvedMeshRequirement: (p: unknown, s: unknown) => unknown }>(
+        '@/features/components/services/demoPackageLoader',
+    );
+    return loader.getResolvedMeshRequirement(pkg, stackId) === true;
+}

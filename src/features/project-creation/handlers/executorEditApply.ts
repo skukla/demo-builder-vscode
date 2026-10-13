@@ -5,8 +5,11 @@
  * kinds of Edit no longer do:
  * - nothing changed: the project is saved and nothing else runs
  *   (`saveUnchangedEdit`);
- * - only integrations were added or removed: just those are added and removed,
- *   through the same steps as the Integrations screen's Add and Remove.
+ * - only integrations or the mesh were added or removed: just those are added and
+ *   removed, through the Integrations screen's own Add and Remove (`addWithSteps`,
+ *   `removeWithCleanup`), with its checks.
+ *   A mesh add or removal republishes the storefront (or, headless, writes the
+ *   frontend's settings again) itself.
  *
  * The rebuild never removed anything: an integration unticked in Edit stayed
  * deployed, and its record put it back on the list at the next load. Every
@@ -16,15 +19,14 @@
  */
 
 import * as vscode from 'vscode';
-import {
-    ensureWorkspaceRuntimeReady,
-    executeAppBuilderIntegrationsPhase,
-} from './executorAppBuilderPhase';
+import { integrationProgress, selectedEntry } from './executorAppBuilderPhase';
 import { loadExistingProjectForEdit, saveUnchangedEdit } from './executorEditMode';
 import type { ProgressTracker } from './shared';
-import { isMeshComponentId } from '@/core/constants';
 import { getAppBuilderComponent } from '@/core/state/appBuilderComponentState';
+import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
+import { addWithSteps, refuseAdd } from '@/features/dashboard/handlers/appBuilderComponentAdd';
 import { runGuards } from '@/features/dashboard/handlers/appBuilderComponentGuards';
+import type { GuardableResult } from '@/features/dashboard/handlers/appBuilderComponentOperation';
 import { removeWithCleanup } from '@/features/dashboard/handlers/appBuilderComponentRemove';
 import {
     appliesInPlace,
@@ -33,6 +35,7 @@ import {
 import { integrationStateFromSettings } from '@/features/project-creation/ui/wizard/integrationStateFromSettings';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
+import type { OperationPosition } from '@/types/webviewPayloads';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 
 /** Asks the SC to confirm removing these integrations, by name. True to go ahead. */
@@ -75,7 +78,7 @@ async function applyIntegrationEdit(
         before.selectedAppBuilderComponents ?? [],
         config.selectedAppBuilderComponents ?? [],
     );
-    if (!appliesInPlace(changes, delta, isMeshComponentId)) return false;
+    if (!appliesInPlace(changes, delta)) return false;
 
     context.logger.info(
         `[Project Edit] Applying in place: adding [${delta.added.join(', ')}], ` +
@@ -88,8 +91,14 @@ async function applyIntegrationEdit(
     const refused = await runGuards(context, project);
     if (refused) throw new Error(refused.error);
 
-    const warnings = await removeEach(context, project, delta.removed, progressTracker);
-    await addEach(context, project, config, delta.added, progressTracker);
+    const warnings = [
+        ...(await runEach(delta.removed, progressTracker, (id, report) =>
+            removeWithCleanup(context, project, id, report),
+        )),
+        ...(await runEach(delta.added, progressTracker, (id, report) =>
+            addOne(context, project, config, id, report),
+        )),
+    ];
     project.lastModified = new Date();
     await context.stateManager.saveProject(project);
     if (warnings.length > 0) void vscode.window.showWarningMessage(warnings.join(' '));
@@ -98,51 +107,48 @@ async function applyIntegrationEdit(
     return true;
 }
 
+/** A stage reporter, as the Integrations screen's Add and Remove take one. */
+type Report = (stage: string, step?: string, position?: OperationPosition) => void;
+
 /**
- * Remove each integration, stopping at the first that fails.
+ * Run an add or a removal for each id, in order, onto the wizard's progress screen
+ * the way creation's integration phase reports, stopping at the first that fails.
  *
- * @returns what the removals could not clean up, to tell the SC
+ * @returns what they warned about, to tell the SC
  */
-async function removeEach(
-    context: HandlerContext,
-    project: Project,
+async function runEach(
     ids: string[],
     progressTracker: ProgressTracker,
+    run: (id: string, report: Report) => Promise<GuardableResult>,
 ): Promise<string[]> {
+    const { report, nested } = integrationProgress(progressTracker);
     const warnings: string[] = [];
     for (const id of ids) {
-        const name = getAppBuilderComponent(project, id)?.name ?? id;
-        const removed = await removeWithCleanup(context, project, id, (stage, step) =>
-            progressTracker(stage, 50, step ? `${name}: ${step}` : name),
-        );
-        if (!removed.success) throw new Error(removed.error ?? `${name} was not removed.`);
-        warnings.push(...(removed.warnings ?? []));
+        const result = await withPhaseSinks([nested], () => run(id, report));
+        if (!result.success) throw new Error(result.error ?? `${id}: nothing was changed.`);
+        warnings.push(...(result.warnings ?? []));
     }
     return warnings;
 }
 
 /**
- * Add the new integrations through creation's own integration phase, given only
- * them: their API picks and settings (an ERP's name) are recorded on the project
- * first, as creation records them before it deploys.
+ * Add one integration or the mesh the way the Integrations screen adds one, with
+ * the settings the wizard recorded for it (an ERP's name) and its API picks.
  */
-async function addEach(
+async function addOne(
     context: HandlerContext,
     project: Project,
     config: ProjectCreationConfig,
-    ids: string[],
-    progressTracker: ProgressTracker,
-): Promise<void> {
-    if (ids.length === 0) return;
-    for (const id of ids) {
-        const picks = config.componentApiPicks?.[id];
-        if (picks) project.componentApiPicks = { ...project.componentApiPicks, [id]: picks };
-        const settings = config.componentConfigs?.[id];
-        if (settings) project.componentConfigs = { ...project.componentConfigs, [id]: settings };
-    }
-    const onlyAdded: ProjectCreationConfig = { ...config, selectedAppBuilderComponents: ids };
-    await ensureWorkspaceRuntimeReady(context, onlyAdded);
-    await executeAppBuilderIntegrationsPhase(context, project, onlyAdded, progressTracker);
+    id: string,
+    report: Report,
+): Promise<GuardableResult> {
+    const entry = selectedEntry(config, id);
+    if (!entry) return { success: false, error: `"${id}" is not in the catalog. Nothing was added.` };
+    const refused = refuseAdd(project, entry);
+    if (refused) return { success: false, error: refused.error };
+    const settings = config.componentConfigs?.[id];
+    if (settings) project.componentConfigs = { ...project.componentConfigs, [id]: settings };
+    return addWithSteps(context, project, entry, report, { apis: config.componentApiPicks?.[id] });
 }
 
 /** The confirmation before an Edit removes integrations: one modal, every name in it. */

@@ -98,7 +98,7 @@ describe('CRITERION 1 — cancelling deletes nothing', () => {
     });
 
     it('CONTROL: an EDS project really does take the OTHER confirmation path', async () => {
-        // Without this, a fixture that quietly fails `isEdsProject` sends the
+        // Without this, a fixture that quietly fails `extractEdsMetadata` sends the
         // next two tests down the plain path and they pass anyway. That is
         // exactly what the first draft of this file did.
         armQuickPick('escape');

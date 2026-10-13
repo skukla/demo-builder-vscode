@@ -30,7 +30,7 @@ import {
     getDefaultBlockLibraryIds,
     getPackageDefaultBlockLibraryIds,
 } from '@/features/components/services/blockLibraryLoader';
-import { getResolvedMeshRequirement } from '@/features/components/services/demoPackageLoader';
+import { isMeshRequired } from '@/features/components/services/demoPackageLoader';
 import type { BlankInstance } from '@/features/project-creation/ui/components/integration-flow/flowStages';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage } from '@/types/demoPackages';
@@ -112,7 +112,7 @@ function resolveMeshOptionalDeps(
     stackId: string,
     stackObj: Stack | undefined,
 ): string[] | null {
-    if (getResolvedMeshRequirement(pkg, stackId) === true) {
+    if (isMeshRequired(pkg, stackId)) {
         return stackObj?.optionalDependencies ?? [];
     }
     return null;

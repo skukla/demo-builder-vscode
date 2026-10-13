@@ -48,12 +48,12 @@ import { getAvailableAppBuilderComponents } from '@/features/components/services
 import type { ComponentManager } from '@/features/components/services/componentManager';
 import { ensureNode, prerequisitesOf, type AdobeCliPrerequisites } from '@/features/components/services/nodeEnsure';
 import { ensureDaLiveAuth, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
-import { republishStorefrontConfig } from '@/features/eds/services/storefront/storefrontRepublishService';
 import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
 import { readMeshEnvVarsFromFile } from '@/features/mesh/services/meshEnvVars';
 import { calculateMeshSourceHash } from '@/features/mesh/services/meshSourceHash';
 import { regenerateComponentEnvFile } from '@/features/project-creation/helpers/envFileRegeneration';
 import { erpRunnerDeps } from '@/features/project-creation/services/erpRunnerDeps';
+import { refreshStorefront } from '@/features/project-creation/services/storefrontRefresh';
 import { buildWorkspaceRegistryDeps } from '@/features/project-creation/services/workspaceRegistryDeps';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';
@@ -314,14 +314,7 @@ export function buildDefaultRunnerDeps(
                     apis.map((api) => api.code).join(', '),
             );
         },
-        republishStorefront: ({ project }) =>
-            republishStorefrontConfig({
-                project,
-                secrets: ctx.secrets,
-                logger: ctx.logger,
-                persist: ctx.saveProject,
-                ensureDaLiveSession: ctx.ensureDaLiveSession,
-            }),
+        republishStorefront: ({ project }) => refreshStorefront(project, ctx),
     };
 }
 

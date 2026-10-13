@@ -158,6 +158,7 @@ describe('the init payload', () => {
             appBuilderComponents: INSTALLED,
             commerceStoreStructure: project.commerceStoreStructure,
             appBuilderComponentCatalog: CATALOG,
+            meshNeededByDemo: false,
             componentSettings: COMPONENT_SETTINGS,
             integrationsViewMode: 'cards',
             destination: { projectTitle: 'Acme Project', workspaceTitle: 'Stage' },
@@ -178,6 +179,14 @@ describe('the init payload', () => {
             context.secrets,
         );
         expect(resolveViewMode).toHaveBeenCalledWith('integrations');
+    });
+
+    it("says when the project's demo needs its mesh, for the mesh card's Remove", async () => {
+        const { command } = commandFor(
+            createMockProject({ selectedPackage: 'citisignal', selectedStack: 'headless-paas' }),
+        );
+        const data = await internals(command).getInitialData<IntegrationsInitialData>();
+        expect(data.meshNeededByDemo).toBe(true);
     });
 
     it('names the project by its slug when it has no title', async () => {
@@ -205,6 +214,7 @@ describe('the init payload', () => {
             appBuilderComponents: undefined,
             commerceStoreStructure: undefined,
             appBuilderComponentCatalog: CATALOG,
+            meshNeededByDemo: false,
             componentSettings: {},
             integrationsViewMode: 'cards',
             destination: { projectTitle: undefined, workspaceTitle: undefined },

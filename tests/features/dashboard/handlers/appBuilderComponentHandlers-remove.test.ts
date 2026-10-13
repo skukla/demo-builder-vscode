@@ -37,6 +37,7 @@ import {
     setupMocks,
 } from './appBuilderComponentHandlers.testUtils';
 import * as vscode from 'vscode';
+import { MESH_NEEDED_NOTE } from '@/features/components/services/demoPackageLoader';
 import { ErrorCode } from '@/types/errorCodes';
 
 // The family's shared reset. Dropped on the first attempt at this split, which is
@@ -85,6 +86,37 @@ describe('handleRemoveAppBuilderComponent', () => {
 
         expect(result).toEqual(stopped);
         expect(mockSendAppBuilderComponentsSnapshot).toHaveBeenCalledTimes(1);
+    });
+
+    // The Remove dialog says this before the click; an agent never sees the dialog.
+    it("says the demo needs the mesh when it removes a mesh the project's package requires", async () => {
+        const mesh = { kind: 'mesh' as const, status: 'deployed' as const, source: { owner: 'a', repo: 'mesh' } };
+        const { mockContext } = setupMocks({
+            selectedPackage: 'citisignal',
+            selectedStack: 'headless-paas',
+            appBuilderComponents: { 'headless-commerce-mesh': mesh },
+        });
+        mockTestDeveloperPermissions(true);
+
+        const result = await handleRemoveAppBuilderComponent(mockContext, { id: 'headless-commerce-mesh' });
+
+        expect(result.success).toBe(true);
+        expect((result.data as { warning?: string }).warning).toBe(MESH_NEEDED_NOTE);
+    });
+
+    it('says nothing extra for a mesh the package does not require', async () => {
+        const mesh = { kind: 'mesh' as const, status: 'deployed' as const, source: { owner: 'a', repo: 'mesh' } };
+        const { mockContext } = setupMocks({
+            selectedPackage: 'citisignal',
+            selectedStack: 'eds-paas',
+            appBuilderComponents: { 'eds-commerce-mesh': mesh },
+        });
+        mockTestDeveloperPermissions(true);
+
+        const result = await handleRemoveAppBuilderComponent(mockContext, { id: 'eds-commerce-mesh' });
+
+        expect(result.success).toBe(true);
+        expect(result.data).toBeUndefined();
     });
 
     /**

@@ -17,6 +17,8 @@ import type { CustomBlockLibrary } from '@/types/blockLibraries';
 // Default each test to 'optional' (no auto-include) unless overridden.
 jest.mock('@/features/components/services/demoPackageLoader', () => ({
     getResolvedMeshRequirement: jest.fn(() => 'optional'),
+    isMeshRequired: (pkg: unknown, stackId: unknown) =>
+        jest.requireActual('../../../../helpers/demoPackageFixtures').isMeshRequiredThroughMock(pkg, stackId),
     getPackageById: jest.fn(),
 }));
 

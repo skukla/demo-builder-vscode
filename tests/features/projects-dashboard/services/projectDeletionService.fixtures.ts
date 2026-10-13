@@ -21,8 +21,8 @@ export function plainProject(over: Partial<Project> = {}): Project {
 /**
  * An EDS project — takes the cleanup-options dialog path instead.
  *
- * `isEdsProject` keys off `componentInstances`, NOT `componentSelections`
- * (resourceCleanupHelpers.ts:90). Getting that wrong is silent: the project
+ * `extractEdsMetadata` keys off `componentInstances`, NOT `componentSelections`
+ * (resourceCleanupHelpers.ts). Getting that wrong is silent: the project
  * simply takes the plain path and every assertion still passes, which is
  * exactly what the first draft of this file did.
  *

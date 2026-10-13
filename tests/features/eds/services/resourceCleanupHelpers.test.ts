@@ -6,7 +6,6 @@ import { COMPONENT_IDS } from '@/core/constants';
 import type { ComponentInstance, Project } from '@/types/base';
 import type { StateManager } from '@/types/state';
 import {
-    isEdsProject,
     extractEdsMetadata,
     getLinkedEdsProjects,
     formatCleanupResults,
@@ -38,51 +37,6 @@ function createEdsComponentInstance(metadata?: Record<string, unknown>): Compone
         metadata,
     };
 }
-
-// ==========================================================
-// isEdsProject Tests
-// ==========================================================
-
-describe('isEdsProject', () => {
-    it('should return true for project with eds-storefront component', () => {
-        const project = createMockProject({
-            componentInstances: {
-                [COMPONENT_IDS.EDS_STOREFRONT]: createEdsComponentInstance(),
-            },
-        });
-
-        expect(isEdsProject(project)).toBe(true);
-    });
-
-    it('should return false for project without eds-storefront component', () => {
-        const project = createMockProject({
-            componentInstances: {
-                'other-component': {
-                    id: 'other-component',
-                    name: 'Other Component',
-                    status: 'ready',
-                },
-            },
-        });
-
-        expect(isEdsProject(project)).toBe(false);
-    });
-
-    it('should return false for project with no componentInstances', () => {
-        const project = createMockProject();
-        delete project.componentInstances;
-
-        expect(isEdsProject(project)).toBe(false);
-    });
-
-    it('should return false for project with empty componentInstances', () => {
-        const project = createMockProject({
-            componentInstances: {},
-        });
-
-        expect(isEdsProject(project)).toBe(false);
-    });
-});
 
 // ==========================================================
 // extractEdsMetadata Tests

@@ -1,6 +1,6 @@
 /**
- * finishEditWithoutRebuild — an Edit that only adds or removes integrations does
- * just that (PL-75).
+ * finishEditWithoutRebuild — an Edit that only adds or removes integrations or the
+ * mesh does just that (PL-75).
  *
  * The rebuild redeployed every integration still ticked and never removed an
  * unticked one. These pin the in-place path: which Edits take it, what it is
@@ -13,18 +13,16 @@ jest.mock('@/features/dashboard/handlers/appBuilderComponentGuards', () => ({
 jest.mock('@/features/dashboard/handlers/appBuilderComponentRemove', () => ({
     removeWithCleanup: jest.fn().mockResolvedValue({ success: true }),
 }));
-jest.mock('@/features/project-creation/handlers/executorAppBuilderPhase', () => ({
-    ensureWorkspaceRuntimeReady: jest.fn().mockResolvedValue(undefined),
-    executeAppBuilderIntegrationsPhase: jest.fn().mockResolvedValue(undefined),
+// The Integrations screen's own Add: what Edit adds through, mesh and integration alike.
+jest.mock('@/features/dashboard/handlers/appBuilderComponentAdd', () => ({
+    addWithSteps: jest.fn().mockResolvedValue({ success: true }),
+    refuseAdd: jest.fn().mockReturnValue(undefined),
 }));
 
 import * as vscode from 'vscode';
+import { addWithSteps, refuseAdd } from '@/features/dashboard/handlers/appBuilderComponentAdd';
 import { runGuards } from '@/features/dashboard/handlers/appBuilderComponentGuards';
 import { removeWithCleanup } from '@/features/dashboard/handlers/appBuilderComponentRemove';
-import {
-    ensureWorkspaceRuntimeReady,
-    executeAppBuilderIntegrationsPhase,
-} from '@/features/project-creation/handlers/executorAppBuilderPhase';
 import { finishEditWithoutRebuild } from '@/features/project-creation/handlers/executorEditApply';
 import type { Project } from '@/types/base';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
@@ -100,7 +98,7 @@ describe('finishEditWithoutRebuild — which Edits it finishes', () => {
 
         expect(stateManager.saveProject).toHaveBeenCalledTimes(1);
         expect(runGuards).not.toHaveBeenCalled();
-        expect(executeAppBuilderIntegrationsPhase).not.toHaveBeenCalled();
+        expect(addWithSteps).not.toHaveBeenCalled();
     });
 
     it('hands back to the rebuild when anything but integrations changed', async () => {
@@ -110,18 +108,9 @@ describe('finishEditWithoutRebuild — which Edits it finishes', () => {
         expect(await finishEditWithoutRebuild(context, changed, progress, confirm)).toBe(false);
 
         expect(runGuards).not.toHaveBeenCalled();
-        expect(executeAppBuilderIntegrationsPhase).not.toHaveBeenCalled();
+        expect(addWithSteps).not.toHaveBeenCalled();
     });
 
-    it('hands back to the rebuild for the mesh, which feeds the storefront', async () => {
-        const { context, progress, confirm } = setup();
-        const addMesh = config({
-            selectedAppBuilderComponents: ['starter-kit', 'eds-commerce-mesh'],
-            editChanges: ['selectedAppBuilderComponents'],
-        });
-
-        expect(await finishEditWithoutRebuild(context, addMesh, progress, confirm)).toBe(false);
-    });
 
     it('hands back to the rebuild when the wizard could not say what changed', async () => {
         const { context, progress, confirm } = setup();
@@ -138,16 +127,18 @@ describe('finishEditWithoutRebuild — which Edits it finishes', () => {
 });
 
 describe('finishEditWithoutRebuild — an integration added', () => {
-    it('deploys only the new one, with its API picks and settings recorded first', async () => {
+    it("adds only the new one, through the Integrations screen's Add, with its picks and settings", async () => {
         const { context, stateManager, progress, confirm, project } = setup();
 
         expect(await finishEditWithoutRebuild(context, ADD_ERP, progress, confirm)).toBe(true);
 
         expect(runGuards).toHaveBeenCalledWith(context, project);
-        const handed = expect.objectContaining({ selectedAppBuilderComponents: ['erp-integration'] });
-        expect(ensureWorkspaceRuntimeReady).toHaveBeenCalledWith(context, handed);
-        expect(executeAppBuilderIntegrationsPhase).toHaveBeenCalledWith(context, project, handed, progress);
-        expect(project.componentApiPicks).toEqual({ 'erp-integration': ['AdobeIOManagementAPISDK'] });
+        const entry = expect.objectContaining({ id: 'erp-integration' });
+        expect(refuseAdd).toHaveBeenCalledWith(project, entry);
+        expect(addWithSteps).toHaveBeenCalledTimes(1);
+        expect(addWithSteps).toHaveBeenCalledWith(context, project, entry, expect.any(Function), {
+            apis: ['AdobeIOManagementAPISDK'],
+        });
         expect(project.componentConfigs?.['erp-integration']).toEqual({ ERP_NAME: 'Northwind ERP' });
         expect(confirm).not.toHaveBeenCalled();
         expect(removeWithCleanup).not.toHaveBeenCalled();
@@ -157,13 +148,46 @@ describe('finishEditWithoutRebuild — an integration added', () => {
 
     it('fails the Finish when the add fails, and does not report success', async () => {
         const { context, progress, confirm } = setup();
-        (executeAppBuilderIntegrationsPhase as jest.Mock).mockRejectedValueOnce(new Error('deploy failed'));
+        (addWithSteps as jest.Mock).mockResolvedValueOnce({ success: false, error: 'deploy failed' });
 
         await expect(finishEditWithoutRebuild(context, ADD_ERP, progress, confirm)).rejects.toThrow(
             'deploy failed',
         );
 
         expect(progress).not.toHaveBeenCalledWith('Project Created', 100, expect.any(String));
+    });
+
+    it("fails the Finish with the screen's own refusal, and adds nothing", async () => {
+        const { context, progress, confirm } = setup();
+        (refuseAdd as jest.Mock).mockReturnValueOnce({ success: false, error: 'is already added' });
+
+        await expect(finishEditWithoutRebuild(context, ADD_ERP, progress, confirm)).rejects.toThrow(
+            'is already added',
+        );
+
+        expect(addWithSteps).not.toHaveBeenCalled();
+    });
+});
+
+describe('finishEditWithoutRebuild — the mesh added', () => {
+    const ADD_MESH = config({
+        selectedAppBuilderComponents: ['starter-kit', 'eds-commerce-mesh'],
+        editChanges: ['selectedAppBuilderComponents'],
+    });
+
+    it('adds it through the same Add as an integration', async () => {
+        const { context, progress, confirm, project } = setup();
+
+        expect(await finishEditWithoutRebuild(context, ADD_MESH, progress, confirm)).toBe(true);
+
+        expect(addWithSteps).toHaveBeenCalledWith(
+            context,
+            project,
+            expect.objectContaining({ id: 'eds-commerce-mesh', kind: 'mesh' }),
+            expect.any(Function),
+            { apis: undefined },
+        );
+        expect(progress).toHaveBeenLastCalledWith('Project Created', 100, expect.any(String));
     });
 });
 
@@ -175,7 +199,7 @@ describe('finishEditWithoutRebuild — an integration removed', () => {
 
         expect(confirm).toHaveBeenCalledWith(['Starter Kit']);
         expect(removeWithCleanup).toHaveBeenCalledWith(context, project, 'starter-kit', expect.any(Function));
-        expect(executeAppBuilderIntegrationsPhase).not.toHaveBeenCalled();
+        expect(addWithSteps).not.toHaveBeenCalled();
     });
 
     it('changes nothing when the SC declines, and reads as cancelled', async () => {
@@ -203,7 +227,7 @@ describe('finishEditWithoutRebuild — an integration removed', () => {
             'Removal stopped',
         );
 
-        expect(executeAppBuilderIntegrationsPhase).not.toHaveBeenCalled();
+        expect(addWithSteps).not.toHaveBeenCalled();
     });
 
     it('tells the SC what the removal could not clean up', async () => {

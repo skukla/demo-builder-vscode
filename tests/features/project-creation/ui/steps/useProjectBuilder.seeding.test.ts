@@ -18,6 +18,8 @@ import type { WizardState } from '@/types/webview';
 
 jest.mock('@/features/components/services/demoPackageLoader', () => ({
     getResolvedMeshRequirement: jest.fn(() => 'optional'),
+    isMeshRequired: (pkg: unknown, stackId: unknown) =>
+        jest.requireActual('../../../../helpers/demoPackageFixtures').isMeshRequiredThroughMock(pkg, stackId),
     getPackageById: jest.fn(),
 }));
 

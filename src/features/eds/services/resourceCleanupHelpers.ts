@@ -5,7 +5,6 @@
  * Used by project deletion, DA.live management, and GitHub management commands.
  *
  * Functions:
- * - isEdsProject: Check if a project has EDS component
  * - extractEdsMetadata: Extract EDS metadata from project
  * - getLinkedEdsProjects: Get all projects with EDS metadata
  * - formatCleanupResults: Human-readable cleanup summary
@@ -66,27 +65,14 @@ export interface CleanupResultItem {
 // ==========================================================
 
 /**
- * Check if a project is an EDS project (has eds-storefront component)
- * @param project - Project to check
- * @returns true if project has EDS component
- */
-export function isEdsProject(project: Project): boolean {
-    if (!project.componentInstances) {
-        return false;
-    }
-    return COMPONENT_IDS.EDS_STOREFRONT in project.componentInstances;
-}
-
-/**
  * Extract EDS metadata from a project's componentInstances
  * @param project - Project to extract metadata from
- * @returns EDS metadata or null if not an EDS project
+ * @returns EDS metadata, or null when the project has no Edge Delivery storefront
+ *   component. (A second `isEdsProject` here, by component rather than by stack,
+ *   was deleted 2026-10-13: this read was its only use, and the instance check
+ *   below already said the same. `isEdsProject` in `@/types/typeGuards` is the one.)
  */
 export function extractEdsMetadata(project: Project): EdsProjectMetadata | null {
-    if (!isEdsProject(project)) {
-        return null;
-    }
-
     const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
     if (!edsInstance) {
         return null;
@@ -130,7 +116,7 @@ export async function getLinkedEdsProjects(
             { persistAfterLoad: false },
         );
 
-        if (project && isEdsProject(project)) {
+        if (project) {
             const metadata = extractEdsMetadata(project);
             if (metadata) {
                 edsProjects.push({

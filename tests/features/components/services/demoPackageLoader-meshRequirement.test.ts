@@ -7,7 +7,10 @@
 
 import { packageFixture, storefrontFixture } from './demoPackageLoader.testUtils';
 
-import { getResolvedMeshRequirement } from '@/features/components/services/demoPackageLoader';
+import {
+    getResolvedMeshRequirement,
+    isMeshNeededByPackage,
+} from '@/features/components/services/demoPackageLoader';
 import type { DemoPackage } from '@/types/demoPackages';
 
 describe('getResolvedMeshRequirement', () => {
@@ -83,5 +86,27 @@ describe('getResolvedMeshRequirement', () => {
             },
         } as unknown as DemoPackage;
         expect(getResolvedMeshRequirement(pkg, 'eds-accs')).toBe(false);
+    });
+});
+
+describe('isMeshNeededByPackage — does this demo need its mesh?', () => {
+    const packages = [
+        packageFixture('needs', { 'headless-paas': storefrontFixture('Headless', { requiresMesh: true }) }),
+        { ...packageFixture('optional', { 'eds-paas': storefrontFixture('EDS') }), requiresMesh: 'optional' as const },
+    ];
+
+    it('is true when the requirement resolves to true for the stack', () => {
+        expect(isMeshNeededByPackage('needs', 'headless-paas', packages)).toBe(true);
+    });
+
+    it('is false for an optional mesh, an unknown package, or no stack', () => {
+        expect(isMeshNeededByPackage('optional', 'eds-paas', packages)).toBe(false);
+        expect(isMeshNeededByPackage('nobody', 'eds-paas', packages)).toBe(false);
+        expect(isMeshNeededByPackage('needs', undefined, packages)).toBe(false);
+    });
+
+    it('reads the bundled packages by default: CitiSignal headless needs its mesh', () => {
+        expect(isMeshNeededByPackage('citisignal', 'headless-paas')).toBe(true);
+        expect(isMeshNeededByPackage('citisignal', 'eds-paas')).toBe(false);
     });
 });

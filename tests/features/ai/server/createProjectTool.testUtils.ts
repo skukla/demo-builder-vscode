@@ -50,6 +50,8 @@ jest.mock('@/features/components/services/demoPackageLoader', () => ({
     getAvailableStacksForPackage: jest.fn(async () => ['headless-paas', 'eds-paas']),
     getAutoSelectedOptionalDependencies: jest.fn(async () => []),
     getResolvedMeshRequirement: jest.fn(() => false),
+    isMeshRequired: (pkg: unknown, stackId: unknown) =>
+        jest.requireActual('../../../helpers/demoPackageFixtures').isMeshRequiredThroughMock(pkg, stackId),
     // The backend ids `stacks.json` names for the two EDS stacks (read 2026-09-30).
     getStackById: jest.fn((id: string) => {
         if (id === 'eds-accs') return { id, backend: 'adobe-commerce-accs' };

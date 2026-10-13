@@ -34,6 +34,7 @@ import { resolveViewMode } from '@/core/state/viewModePreference';
 import { asDisplayName, getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { loadProjectComponentSettings } from '@/features/app-builder/services/componentSettingSecrets';
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
+import { isMeshNeededByPackage } from '@/features/components/services/demoPackageLoader';
 import { settingsCatalogOf } from '@/features/dashboard/handlers/componentSettingsHandlers';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { addIntegrationFlowHandlers } from '@/features/project-creation/handlers/addIntegrationFlowHandlers';
@@ -85,6 +86,7 @@ export class ShowIntegrationsCommand extends BundledPanelCommand<IntegrationsIni
             appBuilderComponents: project?.appBuilderComponents,
             commerceStoreStructure: project?.commerceStoreStructure,
             appBuilderComponentCatalog: catalog,
+            meshNeededByDemo: isMeshNeededByPackage(project?.selectedPackage, project?.selectedStack),
             // Each integration's Settings (AB-21): values, and for secrets only
             // whether one is stored.
             componentSettings: project

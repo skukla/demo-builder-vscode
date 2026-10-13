@@ -48,6 +48,7 @@ import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponen
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
+import type { OperationPosition } from '@/types/webviewPayloads';
 import type { AddAppBuilderComponentRequestPayload } from '@/types/webviewRequests';
 
 /**
@@ -124,7 +125,7 @@ function addedIdOf(payload: AddAppBuilderComponentRequestPayload): string | unde
  * fixed Runtime package names, so two in one workspace overwrite each other. It was
  * removed once every add got a workspace of its own (AB-23).
  */
-function refuseAdd(
+export function refuseAdd(
     project: Project,
     entry: AppBuilderComponentCatalogEntry,
 ): HandlerResponse | undefined {
@@ -218,49 +219,71 @@ function runAdd(
             noun: kindNoun(entry.kind),
             progress,
         },
-        async (report): Promise<GuardableResult> => {
-            // An entry with a setting nobody can default cannot deploy until someone
-            // types it, and adding one is not supported yet: the add that puts it on
-            // the grid undeployed and opens its Settings is AB-22. Refuse plainly
-            // rather than deploy with blanks. No shipped catalog entry declares such
-            // a setting. `blocked`, like a guard refusal: nothing ran and nothing
-            // persisted, so the caller must not take the failed-op path. The agent
-            // path (`add_integration`) dispatches straight here and gets this same
-            // refusal.
-            const userVars = userSuppliedEnvVars(entry);
-            if (userVars.names.length > 0) {
-                return {
-                    success: false,
-                    error:
-                        `"${entry.name ?? entry.id}" needs ${userVars.names.join(', ')} before it ` +
-                        'can deploy, and adding an integration that needs values is not ' +
-                        'supported yet. Nothing was added.',
-                    blocked: true,
-                };
-            }
-
-            await recordApiPicks(context, project, entry.id, payload.apis);
-
-            report(OPERATION_STAGES.adding.label);
-            // The deploy tails report every step; hand them the reporter so a slow add
-            // narrates itself instead of sitting on one static title for the ~70s of
-            // subscribe + install + build + deploy.
-            const services = {
-                authManager: ServiceLocator.getAuthenticationService(),
-                commandManager: ServiceLocator.getCommandExecutor(),
-            };
-            // One Adobe project holds one deployment of this name (2026-10-08): the one
-            // another local project put there goes first, or this add does not run.
-            const replaced = await replaceDeployedElsewhere(context, project, entry, services, report);
-            if (replaced) return { success: false, error: replaced.error };
-            const deps = buildDefaultRunnerDeps(
-                await buildRunnerDepsContext(context, project, services),
-                (message, subMessage, position) => report(message, subMessage, position),
-                buildToolchainConsent(context, payload.refreshCli),
-            );
-            return addAppBuilderComponent(project, entry, deps);
-        },
+        (report) => addWithSteps(context, project, entry, report, payload),
     );
+}
+
+/**
+ * Add one App Builder component, guards already passed: refuse one that needs
+ * values typed first, record the APIs picked for it, clear a same-named deployment
+ * another project left in this Adobe project, then the runner's add. The
+ * Integrations screen's Add and an Edit that ticks an integration or the mesh
+ * (PL-75) both add through this.
+ *
+ * @param context - the handler context
+ * @param project - the project to add to; updated and saved by the add
+ * @param entry - the catalog entry (or custom source) to add
+ * @param report - the stage reporter
+ * @param options - the APIs picked for it, and whether the SC agreed to refresh the toolchain
+ * @returns the add's outcome; `blocked` when nothing ran
+ */
+export async function addWithSteps(
+    context: HandlerContext,
+    project: Project,
+    entry: AppBuilderComponentCatalogEntry,
+    report: (stage: string, step?: string, position?: OperationPosition) => void,
+    options: { apis?: string[]; refreshCli?: boolean } = {},
+): Promise<GuardableResult> {
+    // An entry with a setting nobody can default cannot deploy until someone
+    // types it, and adding one is not supported yet: the add that puts it on
+    // the grid undeployed and opens its Settings is AB-22. Refuse plainly
+    // rather than deploy with blanks. No shipped catalog entry declares such
+    // a setting. `blocked`, like a guard refusal: nothing ran and nothing
+    // persisted, so the caller must not take the failed-op path. The agent
+    // path (`add_integration`) dispatches straight here and gets this same
+    // refusal.
+    const userVars = userSuppliedEnvVars(entry);
+    if (userVars.names.length > 0) {
+        return {
+            success: false,
+            error:
+                `"${entry.name ?? entry.id}" needs ${userVars.names.join(', ')} before it ` +
+                'can deploy, and adding an integration that needs values is not ' +
+                'supported yet. Nothing was added.',
+            blocked: true,
+        };
+    }
+
+    await recordApiPicks(context, project, entry.id, options.apis);
+
+    report(OPERATION_STAGES.adding.label);
+    // The deploy tails report every step; hand them the reporter so a slow add
+    // narrates itself instead of sitting on one static title for the ~70s of
+    // subscribe + install + build + deploy.
+    const services = {
+        authManager: ServiceLocator.getAuthenticationService(),
+        commandManager: ServiceLocator.getCommandExecutor(),
+    };
+    // One Adobe project holds one deployment of this name (2026-10-08): the one
+    // another local project put there goes first, or this add does not run.
+    const replaced = await replaceDeployedElsewhere(context, project, entry, services, report);
+    if (replaced) return { success: false, error: replaced.error };
+    const deps = buildDefaultRunnerDeps(
+        await buildRunnerDepsContext(context, project, services),
+        (message, subMessage, position) => report(message, subMessage, position),
+        buildToolchainConsent(context, options.refreshCli),
+    );
+    return addAppBuilderComponent(project, entry, deps);
 }
 
 /**

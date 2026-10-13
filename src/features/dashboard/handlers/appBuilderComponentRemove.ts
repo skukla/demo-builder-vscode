@@ -29,6 +29,7 @@ import { removeAppBuilderComponent } from '@/features/app-builder/services/appBu
 import type { CommerceDetachResult } from '@/features/app-builder/services/erpDetach';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { systemsUsedBy } from '@/features/components/services/appBuilderComponentLinks';
+import { isMeshNeededByPackage, MESH_NEEDED_NOTE } from '@/features/components/services/demoPackageLoader';
 import {
     buildDefaultRunnerDeps,
     buildRunnerDepsContext,
@@ -84,6 +85,9 @@ export async function removeWithCleanup(
 ): Promise<GuardableResult> {
     // Read before the removal: the entry leaves the map when it succeeds.
     const integrationId = getAppBuilderComponent(project, id)?.usedBy;
+    const neededMesh =
+        getAppBuilderComponent(project, id)?.kind === 'mesh' &&
+        isMeshNeededByPackage(project.selectedPackage, project.selectedStack);
     // Undeploy is a slow cloud op — telegraph it, or the grid sits frozen
     // while `aio app undeploy` runs with nothing on screen saying so.
     report(OPERATION_STAGES.removing.label);
@@ -100,6 +104,10 @@ export async function removeWithCleanup(
         getAppBuilderComponent(project, id)?.name ?? id,
         await removeAppBuilderComponent(project, id, deps, { force }),
     );
+    // Said again after the removal, for an agent: it never saw the Remove dialog.
+    if (removed.success && neededMesh) {
+        return { ...removed, warnings: [...(removed.warnings ?? []), MESH_NEEDED_NOTE] };
+    }
     if (!removed.success || !integrationId) return removed;
     return applyOwnershipAfterRemove(removed, project, integrationId, report);
 }

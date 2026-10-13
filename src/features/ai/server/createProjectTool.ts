@@ -51,8 +51,8 @@ import { dispatchHandler } from '@/core/handlers/dispatchHandler';
 import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import {
     getAutoSelectedOptionalDependencies,
-    getResolvedMeshRequirement,
     getStackById,
+    isMeshRequired,
 } from '@/features/components/services/demoPackageLoader';
 import { projectRowOf } from '@/features/components/services/storefrontResolver';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
@@ -291,7 +291,7 @@ async function adobeIfDeploying(
     pkg: DemoPackage,
 ): Promise<{ adobe?: AdobeContext } | { error: unknown }> {
     const deploys =
-        getResolvedMeshRequirement(pkg, args.stackId) === true ||
+        isMeshRequired(pkg, args.stackId) ||
         (args.seed?.selectedAppBuilderComponents?.length ?? 0) > 0;
     if (!deploys) return {};
     const resolved = await requireAdobeWorkspace(ctx);

@@ -17,7 +17,6 @@ import { showOneTimeTip } from '@/core/utils/oneTimeTip';
 import { deleteOperationId } from '@/core/utils/operationIds';
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
 import {
-    isEdsProject,
     extractEdsMetadata,
     formatCleanupResults,
     type CleanupResultItem,
@@ -47,14 +46,14 @@ export async function deleteProject(
     options?: DeleteProgressOptions,
 ): Promise<HandlerResponse> {
     // Check if this is an EDS project with external resources
-    const isEds = isEdsProject(project);
-    const edsMetadata = isEds ? extractEdsMetadata(project) : null;
+    // Null unless the project has an Edge Delivery storefront component to clean up.
+    const edsMetadata = extractEdsMetadata(project);
 
     // For EDS projects, offer cleanup options
     // Auth is checked lazily in performEdsCleanup when user actually selects an option
     // This avoids slow auth checks before showing the confirmation dialog
     let cleanupOptions: CleanupOptions | null = null;
-    if (isEds && edsMetadata) {
+    if (edsMetadata) {
         // Auth is checked lazily in performEdsCleanup when user selects an option
         cleanupOptions = await showCleanupConfirmation(
             project,
@@ -94,7 +93,7 @@ export async function deleteProject(
         },
         async (report) => {
             // EDS cleanup: Perform external resource cleanup first
-            if (isEds && edsMetadata && cleanupOptions) {
+            if (edsMetadata && cleanupOptions) {
                 await performEdsCleanup(
                     context,
                     edsMetadata,
@@ -123,7 +122,7 @@ export async function deleteProject(
     }
 
     // Show one-time tip about cleanup settings (only if we showed the QuickPick)
-    if (isEds && cleanupResults.length > 0) {
+    if (edsMetadata && cleanupResults.length > 0) {
         showOneTimeTip(context.context.globalState, {
             stateKey: 'edsCleanup.settingsTipShown',
             message: 'Tip: You can customize cleanup behavior in Settings → Demo Builder',

@@ -26,6 +26,8 @@ jest.mock('@/features/components/services/blockLibraryLoader', () => ({
 jest.mock('@/features/components/services/demoPackageLoader', () => ({
     // Default: mesh NOT required (non-mesh package) → optional deps reset to [].
     getResolvedMeshRequirement: jest.fn(() => false),
+    isMeshRequired: (pkg: unknown, stackId: unknown) =>
+        jest.requireActual('../../../../helpers/demoPackageFixtures').isMeshRequiredThroughMock(pkg, stackId),
 }));
 jest.mock('@/features/authentication/ui/steps/AdobeAuthStep', () => ({
     AdobeAuthStep: (props: { setCanProceed: (v: boolean) => void }) => (

@@ -8,7 +8,7 @@
  * the way out. When none changed, the storefront step is skipped and Finish only
  * saves the project. When the only change is integrations added or removed, the
  * storefront step is skipped too and Finish adds and removes just those
- * (`appliesInPlace`).
+ * (`appliesInPlace`). The mesh counts as an integration here.
  *
  * Only choices are compared. Much of the wizard's state is screen-only (sign-in
  * status, caches, which tab is open, form verdicts) or derived from the package
@@ -21,7 +21,6 @@
  * @module features/project-creation/ui/wizard/editChanges
  */
 
-import { isMeshComponentId } from '@/core/constants';
 import type { EDSConfig, WizardState } from '@/types/webview';
 
 type Kind = 'choice' | 'screen';
@@ -257,25 +256,21 @@ export function selectionDelta(before: readonly string[], after: readonly string
 
 /**
  * Whether Finish can apply this Edit in place: it only adds or removes
- * integrations, and every other changed choice belongs to one it adds or
- * removes (its settings, its API picks, its source). The mesh is not included
- * yet: it also feeds the storefront's settings, which the full Finish rebuilds.
+ * integrations or the mesh, and every other changed choice belongs to one it adds
+ * or removes (its settings, its API picks, its source). Adding or removing the
+ * mesh brings the storefront's settings up to date itself (the runner's
+ * storefront refresh), so the storefront step is not needed for it either.
  *
  * Read by the wizard (to skip the storefront step) and by Finish (to choose the
  * path), so both decide the same way.
  *
  * @param changes - the changed choices (`editChangesOf`)
  * @param delta - the integrations added and removed
- * @param isMesh - whether an id is the mesh
  * @returns true when nothing but those integrations changed
  */
-export function appliesInPlace(
-    changes: readonly string[],
-    delta: SelectionDelta,
-    isMesh: (id: string) => boolean,
-): boolean {
+export function appliesInPlace(changes: readonly string[], delta: SelectionDelta): boolean {
     const touched = [...delta.added, ...delta.removed];
-    if (touched.length === 0 || touched.some(isMesh)) return false;
+    if (touched.length === 0) return false;
     const owned = new Set(KEYED_CHOICES.flatMap((field) => touched.map((id) => `${field}.${id}`)));
     return changes.every((name) => name === 'selectedAppBuilderComponents' || owned.has(name));
 }
@@ -288,8 +283,9 @@ function baselineSelection(baseline: EditChoices): string[] {
 
 /**
  * Whether this Edit's Finish runs without the storefront step: nothing changed,
- * or only integrations were added or removed (`appliesInPlace`). The step pushes
- * and republishes the storefront, which neither needs.
+ * or only integrations or the mesh were added or removed (`appliesInPlace`). The
+ * step pushes and republishes the storefront; neither needs it, and a mesh add or
+ * removal republishes on its own.
  *
  * @param state - the wizard state
  * @returns true only in an Edit that Finish applies without a rebuild
@@ -302,5 +298,5 @@ export function editSkipsStorefrontStep(state: Partial<WizardState>): boolean {
         baselineSelection(state.editBaseline),
         state.selectedAppBuilderComponents ?? [],
     );
-    return appliesInPlace(changes, delta, isMeshComponentId);
+    return appliesInPlace(changes, delta);
 }

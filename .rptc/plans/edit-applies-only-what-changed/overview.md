@@ -54,7 +54,13 @@ storefront changed, and its reset runs instead when the package changed.
    wizard sends the changed choices (`editChanges`), and an Edit whose only change is
    integrations added or removed goes through the Integrations screen's own removal
    (`removeWithCleanup`, shared) and creation's integration phase, after one modal naming what
-   is removed. *The mesh is not done*: a mesh change still rebuilds. Original note: Run removals, then additions, through the two runners, with the
+   is removed. *The mesh, 2026-10-13*: added through the runner (creation's integration phase
+   deploys integrations only). Building it found that the Integrations screen's own mesh Remove
+   did not republish an Edge Delivery storefront for a mesh made at creation (its record names
+   nothing it provides), and that a headless mesh add or removal never rewrote the frontend's
+   `.env`; both fixed (`providesStorefrontVar`, `storefrontRefresh.ts`). Open: nothing refuses
+   removing a mesh the package requires (`requiresMesh`) from the Integrations screen; the
+   wizard locks it. Original note: Run removals, then additions, through the two runners, with the
    dashboard door's extra steps (guards, `copyWhenTaken`, `recordApiPicks`,
    `replaceDeployedElsewhere` on add; `applyErpOwnership` after a remove). Check the mesh
    caveats first: creation deploys the mesh through `executeMeshPhase`, and the mesh is also a

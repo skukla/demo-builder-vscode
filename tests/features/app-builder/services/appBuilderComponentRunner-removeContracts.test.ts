@@ -285,13 +285,25 @@ describe('removeAppBuilderComponent — a project missing the maps it unwinds', 
 
 describe('removeAppBuilderComponent — republish only for a component that provided vars', () => {
     it('does not republish for an entry whose provided map is empty', async () => {
+        const project = integrationProject();
+        project.appBuilderComponents![APP_ID].providesEnvVars = {};
+        const deps = createDeps();
+
+        await removeAppBuilderComponent(project, APP_ID, deps);
+
+        expect(deps.republishStorefront).not.toHaveBeenCalled();
+    });
+
+    // Project creation records a mesh with no provided map (`updateMeshState`). The
+    // removal used to read that as "feeds nothing", so an Edge Delivery storefront
+    // kept calling the deleted mesh.
+    it('republishes for a mesh whose record names nothing it provides', async () => {
         const project = meshProject();
-        project.appBuilderComponents![MESH_ID].providesEnvVars = {};
         const deps = createDeps();
 
         await removeAppBuilderComponent(project, MESH_ID, deps);
 
-        expect(deps.republishStorefront).not.toHaveBeenCalled();
+        expect(deps.republishStorefront).toHaveBeenCalledTimes(1);
     });
 
     it('republishes for an entry that did provide one', async () => {

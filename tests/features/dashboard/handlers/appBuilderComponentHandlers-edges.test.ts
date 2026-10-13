@@ -39,6 +39,9 @@ import {
     setupMocks,
     vscodeMock,
 } from './appBuilderComponentHandlers.testUtils';
+import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
+// After the shared setup, whose jest.mock calls must be in place before this loads.
+import { addWithSteps } from '@/features/dashboard/handlers/appBuilderComponentAdd';
 import type { AppBuilderComponentState } from '@/types/base';
 
 beforeEach(() => {
@@ -205,8 +208,9 @@ describe('the same-id gate', () => {
 });
 
 describe('an entry that needs values before it can deploy', () => {
-    const NEEDS_INPUT = {
+    const NEEDS_INPUT: AppBuilderComponentCatalogEntry = {
         ...ERP_ENTRY,
+        source: { ...ERP_ENTRY.source, branch: 'main' },
         envSchema: [{ name: 'ERP_API_KEY', type: 'secret', label: 'ERP API Key' }],
     };
 
@@ -226,6 +230,21 @@ describe('an entry that needs values before it can deploy', () => {
             expect.any(String),
             undefined
         );
+    });
+
+    // Read directly by an Edit's Finish (PL-75), which has no `blocked` check in
+    // front of it: a refusal must say it failed, or Finish reads it as added.
+    it('answers a failure, marked blocked, and adds nothing', async () => {
+        const { mockContext, mockProject } = setupMocks();
+
+        const result = await addWithSteps(mockContext, mockProject, NEEDS_INPUT, jest.fn());
+
+        expect(result).toStrictEqual({
+            success: false,
+            error: expect.stringContaining('needs ERP_API_KEY before it can deploy'),
+            blocked: true,
+        });
+        expect(mockAddAppBuilderComponent).not.toHaveBeenCalled();
     });
 });
 

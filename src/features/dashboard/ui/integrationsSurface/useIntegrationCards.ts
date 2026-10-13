@@ -40,6 +40,8 @@ export interface IntegrationCardsSource {
     isTransitioning: boolean;
     /** Names the deployed store codes on the mesh card. */
     commerceStoreStructure?: CommerceStoreStructure;
+    /** The project's demo needs the mesh, which its Remove then says. */
+    meshNeededByDemo?: boolean;
 }
 
 /**
@@ -55,6 +57,7 @@ export function useIntegrationCards({
     meshStatus,
     isTransitioning,
     commerceStoreStructure,
+    meshNeededByDemo,
 }: IntegrationCardsSource): IntegrationCardModel[] {
     const overrides = useRowStatusOverrides();
 
@@ -94,7 +97,7 @@ export function useIntegrationCards({
             // name the wrong one and needs nothing captured at deploy time.
             commerceStoreStructure,
         );
-        return [meshCard, ...integrationCards];
+        return [meshNeededByDemo ? { ...meshCard, neededByDemo: true } : meshCard, ...integrationCards];
     }, [
         components,
         overrides,
@@ -103,5 +106,6 @@ export function useIntegrationCards({
         meshStatus,
         isTransitioning,
         commerceStoreStructure,
+        meshNeededByDemo,
     ]);
 }

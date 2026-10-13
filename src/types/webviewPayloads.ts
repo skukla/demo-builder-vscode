@@ -276,6 +276,8 @@ export interface IntegrationsInitialData {
     commerceStoreStructure?: CommerceStoreStructure;
     /** Stack-filtered catalog for the add-integration picker. */
     appBuilderComponentCatalog: AppBuilderComponentCatalogEntry[];
+    /** The project's demo needs the API Mesh (`isMeshNeededByPackage`). */
+    meshNeededByDemo?: boolean;
     /**
      * Each component's Settings, keyed by id: only components that have
      * something to set. Secrets as "is set" only, never a value.

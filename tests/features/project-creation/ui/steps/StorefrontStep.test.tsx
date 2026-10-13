@@ -46,6 +46,8 @@ jest.mock('@/features/components/services/blockLibraryLoader', () => ({
 
 jest.mock('@/features/components/services/demoPackageLoader', () => ({
     getResolvedMeshRequirement: jest.fn(() => false),
+    isMeshRequired: (pkg: unknown, stackId: unknown) =>
+        jest.requireActual('../../../../helpers/demoPackageFixtures').isMeshRequiredThroughMock(pkg, stackId),
 }));
 
 // Auth hooks — mutable mock state objects.

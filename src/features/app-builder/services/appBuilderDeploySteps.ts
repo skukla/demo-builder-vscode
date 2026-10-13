@@ -168,8 +168,14 @@ const STOREFRONT_PROVIDED_VAR = 'MESH_ENDPOINT';
 /**
  * The storefront config reads ONE provided var; a component providing only to other
  * components (the ERP) earns no republish on its way out.
+ *
+ * A mesh always feeds the storefront, whatever its record says. A mesh deployed by
+ * project creation (`updateMeshState`) records no `providesEnvVars`, so reading the
+ * record alone skipped the republish when one was removed from the Integrations
+ * screen, and an Edge Delivery storefront kept calling the deleted mesh.
  */
 export function providesStorefrontVar(state: AppBuilderComponentState): boolean {
+    if (state.kind === 'mesh') return true;
     return Boolean(state.providesEnvVars && STOREFRONT_PROVIDED_VAR in state.providesEnvVars);
 }
 

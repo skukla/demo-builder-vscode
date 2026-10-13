@@ -22,7 +22,7 @@
  */
 
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
-import { getResolvedMeshRequirement } from '@/features/components/services/demoPackageLoader';
+import { isMeshRequired } from '@/features/components/services/demoPackageLoader';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { DemoPackage } from '@/types/demoPackages';
 
@@ -57,11 +57,11 @@ function resolveRequirement(
     if (entry.nativeForPackages?.includes(pkg.id)) {
         return 'required';
     }
-    // getResolvedMeshRequirement, never the raw pkg.requiresMesh: the
+    // isMeshRequired, never the raw pkg.requiresMesh: the
     // storefront-level override wins, and reading the raw field here silently
     // disagreed with every other consumer on a shipping combination
     // (citisignal + headless-paas: package says false, storefront says true).
-    if (entry.kind === 'mesh' && getResolvedMeshRequirement(pkg, stackId) === true) {
+    if (entry.kind === 'mesh' && isMeshRequired(pkg, stackId)) {
         return 'required';
     }
     return 'optional';

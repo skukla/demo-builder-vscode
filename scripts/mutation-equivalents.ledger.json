@@ -6798,20 +6798,6 @@
         {
             "module": "src/features/eds/services/resourceCleanupHelpers.ts",
             "anchors": [
-                "if (!isEdsProject(project)) {",
-                "const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];",
-                "if (!edsInstance) {"
-            ],
-            "mutants": 5,
-            "category": "branch",
-            "reason": "These two guards answer the same question and cannot disagree. isEdsProject returns false exactly when componentInstances is missing or does not carry the eds-storefront key \u2014 which is exactly when the lookup on the next line yields undefined \u2014 so removing either guard, or the optional chain between them, still returns null down the other route. Producing a project where the key IS present but the instance behind it is falsy would take a cast at the call boundary, because componentInstances is typed Record<string, ComponentInstance> and cannot hold an absent value; that is lying about how the code is reached rather than testing it.",
-            "decision": "none \u2014 the second guard is the local statement of a precondition the first already enforces, and the optional chain is required by the type",
-            "recorded": "2026-09-05",
-            "source": "PL-22 MUT-02, 2026-09-05"
-        },
-        {
-            "module": "src/features/eds/services/resourceCleanupHelpers.ts",
-            "anchors": [
                 "if (metadata) {"
             ],
             "mutants": 1,
@@ -7429,19 +7415,6 @@
             "source": "PL-22 MUT-08"
         },
         {
-            "module": "src/features/dashboard/handlers/appBuilderComponentAdd.ts",
-            "anchors": [
-                "success: false,"
-            ],
-            "line": 233,
-            "mutants": 1,
-            "category": "branch",
-            "reason": "The Configure route's inner success flag never reaches a caller: the outer handler matches result.blocked first and returns its own { success: false, error }. Flipping it changes a value that is overwritten one frame later. Re-anchored 2026-09-10 (474 -> 475): unchanged code, shifted by the AB-7 cleanup-reporting block added to handleRemoveAppBuilderComponent.",
-            "decision": "none \u2014 the inner shape matches GuardableResult, which the outer translates",
-            "recorded": "2026-09-05",
-            "source": "PL-22 MUT-08"
-        },
-        {
             "module": "src/features/dashboard/handlers/appBuilderComponentRename.ts",
             "anchors": [
                 "return { cancelled: true };"
@@ -7729,24 +7702,12 @@
         {
             "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
             "anchors": [
-                "if (isEds && edsMetadata) {"
+                "if (edsMetadata && cleanupOptions) {"
             ],
-            "mutants": 1,
+            "mutants": 2,
             "category": "branch",
-            "reason": "Swapping && for || is unobservable because the second operand is DERIVED from the first: edsMetadata is 'isEds ? extractEdsMetadata(project) : null'. isEds false therefore forces edsMetadata null, and the pair can never disagree in the direction the mutant needs. The remaining case (isEds true, extract returns null) still lands on the same modal with the same arguments, because showCleanupConfirmation with null metadata builds no rows and falls through to that modal itself.",
-            "decision": "none \u2014 equivalent.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
-            "anchors": [
-                "if (isEds && edsMetadata && cleanupOptions) {"
-            ],
-            "mutants": 4,
-            "category": "branch",
-            "reason": "Both LogicalOperator swaps are unobservable for the same reason as line 121: the three operands are derived in sequence, so a plain project has all three falsy and an EDS confirm has all three truthy. No input makes && and || disagree. Forcing the WHOLE condition true is unobservable too (re-measured 2026-10-09, when this line's file was split): on a plain project cleanupOptions is null, the spread hands performEdsCleanup '{ projectPath }' alone, and with deleteDaLiveSite and deleteGitHubRepo both undefined neither cleanup starts, so nothing is called and nothing is reported. ALSO: The mutant replaces only the SUB-expression 'isEds && edsMetadata' with true, leaving 'if (true && cleanupOptions)'. cleanupOptions is assigned only inside the EDS branch, so it is null for exactly the projects the removed operands would have excluded and the guard still holds. Verified by planting it: 73 tests still pass.",
-            "decision": "none \u2014 equivalent, all four mutants on this line; the plain-project path is pinned by the CRITERION 1 tests, which see no remote call either way.",
+            "reason": "The LogicalOperator swap is unobservable because the operands are derived in sequence: edsMetadata is null for a project with no Edge Delivery storefront component, and for one that has it, a cancelled cleanup dialog returns before this line, so cleanupOptions is set whenever edsMetadata is. No input makes && and || disagree. Forcing the WHOLE condition true is unobservable too (measured 2026-10-09): on a plain project cleanupOptions is null, the spread hands performEdsCleanup '{ projectPath }' alone, and with deleteDaLiveSite and deleteGitHubRepo both undefined neither cleanup starts, so nothing is called and nothing is reported. Re-anchored 2026-10-13: the isEds flag in front of both was removed, since extractEdsMetadata already answers the same question.",
+            "decision": "none \u2014 equivalent, both mutants on this line; the plain-project path is pinned by the CRITERION 1 tests, which see no remote call either way.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
         },
@@ -14365,7 +14326,7 @@
             "anchors": [
                 "if (!adobe?.organization || !adobe?.projectId || !adobe?.workspace) {"
             ],
-            "line": 68,
+            "line": 83,
             "mutants": 2,
             "category": "optionalChain",
             "reason": "Stryker drops the `?.` from the SECOND and THIRD operands (`adobe.projectId`, `adobe.workspace`). Either would throw only when `adobe` is nullish \u2014 and when it is, `!adobe?.organization` is true and the `||` short-circuits before those operands are ever evaluated. So no input reaches the difference: the operands run only on an object, where `adobe.x` and `adobe?.x` are identical. Verified by planting both mutations on 2026-09-07: the 18 tests in the two executorAppBuilderPhase suites still passed, including the one that calls the phase with no `adobe` block at all. The first operand's own optional-chain mutant IS killable and IS killed by that test.",

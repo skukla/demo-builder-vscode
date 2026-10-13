@@ -6,6 +6,7 @@
  */
 
 import type { IntegrationCardModel } from './integrationCardModel';
+import { MESH_NEEDED_NOTE } from '@/features/components/services/demoPackageLoader';
 
 /**
  * What a removal cannot undo for an app installed in Commerce (AB-12): App Management keeps
@@ -18,6 +19,7 @@ const APP_MANAGEMENT_REMOVAL_NOTE =
 /** The dialog's second line: what the remove reaches beyond the card, if anything. */
 export function removalConsequence(target: IntegrationCardModel | undefined): string | undefined {
     if (target?.isMesh) {
+        if (target.neededByDemo) return MESH_NEEDED_NOTE;
         return 'Your storefront loses its API Mesh endpoint until you deploy a new mesh.';
     }
     // A linked pair goes together (decision 2), whichever card asked.

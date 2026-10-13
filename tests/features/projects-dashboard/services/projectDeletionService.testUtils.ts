@@ -70,8 +70,8 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getDaLiveAuthService: jest.fn().mockReturnValue({}),
 }));
 
-// requireActual keeps `isEdsProject`/`extractEdsMetadata` REAL — they decide
-// which confirmation path runs, and a stub of them would hide the fixture bug
+// requireActual keeps `extractEdsMetadata` REAL — it decides
+// which confirmation path runs, and a stub of it would hide the fixture bug
 // the CONTROL test exists to catch.
 jest.mock('@/features/eds/services/resourceCleanupHelpers', () => ({
     ...jest.requireActual('@/features/eds/services/resourceCleanupHelpers'),

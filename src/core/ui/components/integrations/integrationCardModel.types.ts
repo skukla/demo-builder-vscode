@@ -74,6 +74,8 @@ export interface IntegrationCardModel {
     /** The demo setup steps its catalog entry declares, with where the SC is on each. */
     setupChecklist?: SetupChecklistItem[];
     isMesh: boolean;
+    /** On the mesh card: the project's demo needs it, so its Remove says what that costs. */
+    neededByDemo?: boolean;
     name: string;
     kindLabel: string;
     /**

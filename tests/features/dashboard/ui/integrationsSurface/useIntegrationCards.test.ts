@@ -72,6 +72,25 @@ describe('useIntegrationCards', () => {
         expect(result.current[0].componentId).toBe('mesh1');
     });
 
+    it('marks the mesh card when the demo needs it, so its Remove says what that costs', () => {
+        const input = source({
+            components: { mesh1: MESH },
+            meshStatusDisplay: MESH_DISPLAY,
+            meshStatus: 'deployed',
+            meshNeededByDemo: true,
+        });
+        const { result } = renderHook(() => useIntegrationCards(input));
+
+        expect(result.current[0].neededByDemo).toBe(true);
+    });
+
+    it('leaves the mesh card unmarked when the demo does not need it', () => {
+        const input = source({ components: { mesh1: MESH }, meshStatusDisplay: MESH_DISPLAY, meshStatus: 'deployed' });
+        const { result } = renderHook(() => useIntegrationCards(input));
+
+        expect(result.current[0]).not.toHaveProperty('neededByDemo');
+    });
+
     it('offers the mesh menu on a settled, idle mesh', () => {
         const input = source({
             components: { mesh1: MESH },

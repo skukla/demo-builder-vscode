@@ -271,9 +271,10 @@ describe('addAppBuilderComponent — a deploy tail that returns no data', () => 
         expect(entry?.deployedUrls).toBeUndefined();
     });
 
-    // The catalog decides what a component provides. A mesh that declares nothing
-    // must persist nothing and leave the storefront alone.
-    it('a mesh entry declaring no providesEnvVars provides none and never republishes', async () => {
+    // The catalog decides what a component RECORDS as provided. A mesh that declares
+    // nothing persists nothing, and the storefront is still republished: it reads the
+    // mesh's endpoint whatever the record says (`providesStorefrontVar`).
+    it('a mesh entry declaring no providesEnvVars records none, and still republishes', async () => {
         const entry: AppBuilderComponentCatalogEntry = {
             ...MESH_ENTRY,
             providesEnvVars: undefined,
@@ -284,7 +285,7 @@ describe('addAppBuilderComponent — a deploy tail that returns no data', () => 
 
         expect(result.success).toBe(true);
         expect(persistedEntry(deps, entry.id)?.providesEnvVars).toBeUndefined();
-        expect(deps.republishStorefront).not.toHaveBeenCalled();
+        expect(deps.republishStorefront).toHaveBeenCalledTimes(1);
     });
 });
 

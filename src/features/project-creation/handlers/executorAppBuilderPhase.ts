@@ -33,16 +33,31 @@ import type { ProjectCreationConfig } from '@/types/webviewRequests';
 function deployableAppIntegrationEntries(
     typedConfig: ProjectCreationConfig,
 ): AppBuilderComponentCatalogEntry[] {
-    const sources = typedConfig.appBuilderComponentSources ?? {};
     return (typedConfig.selectedAppBuilderComponents ?? [])
-        .map(
-            (id) =>
-                getAppBuilderComponentEntry(id) ??
-                // The sources-map key IS the instance id (shell instancing: N
-                // named instances may share one template repo).
-                (sources[id] ? buildCustomIntegrationEntry(sources[id], id) : undefined),
-        )
+        .map((id) => selectedEntry(typedConfig, id))
         .filter((entry): entry is AppBuilderComponentCatalogEntry => entry?.kind === 'integration');
+}
+
+/**
+ * The catalog entry a selected id stands for: a catalog id, else a custom-URL
+ * source the wizard recorded under it. Creation and an Edit that adds (PL-75)
+ * resolve the same way.
+ *
+ * @param typedConfig - what Finish was given
+ * @param id - a selected App Builder component id
+ * @returns the entry, or undefined when the id resolves to nothing
+ */
+export function selectedEntry(
+    typedConfig: ProjectCreationConfig,
+    id: string,
+): AppBuilderComponentCatalogEntry | undefined {
+    const source = typedConfig.appBuilderComponentSources?.[id];
+    return (
+        getAppBuilderComponentEntry(id) ??
+        // The sources-map key IS the instance id (shell instancing: N
+        // named instances may share one template repo).
+        (source ? buildCustomIntegrationEntry(source, id) : undefined)
+    );
 }
 
 /**
@@ -170,7 +185,7 @@ export async function executeAppBuilderIntegrationsPhase(
  * (the Commerce installer's steps) arrive through the phase sink as the step of the
  * stage in progress, as they do in the progress window.
  */
-function integrationProgress(progressTracker: ProgressTracker): {
+export function integrationProgress(progressTracker: ProgressTracker): {
     report: (stage: string, step?: string, position?: OperationPosition) => void;
     nested: (message: string) => void;
 } {
