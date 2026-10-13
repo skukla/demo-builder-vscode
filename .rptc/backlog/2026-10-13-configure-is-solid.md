@@ -38,3 +38,4 @@ contract and the order the same day.
 
 ## Shipped so far
 - 2026-10-13  fix(configure): Save sends only what changed; a re-opened Configure starts fresh (`d1849c70b`)
+- 2026-10-13  fix(configure): one settings save for Configure and configure_project (`fd3044fac`)
