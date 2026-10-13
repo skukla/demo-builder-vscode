@@ -24,27 +24,26 @@
  *   - the result is the applied diff plus what is still unset, never a bare
  *     `{success: true}`.
  *
- * ## What this deliberately does NOT do
+ * ## One save with the Configure screen (PL-76)
  *
- * It is not a re-implementation of the Configure screen's `save-configuration`
- * (`configure.ts:234`). That closure also renames the project, splits secrets
- * into SecretStorage, runs mesh-change detection under an org context, and
- * prompts for redeployment — behaviour that belongs to a UI with a person in
- * front of it. This writes project fields and stops.
+ * Settings changes go through `stageSettingsChange`, the same staging the
+ * Configure screen's Save uses: laid over the settings as they are now,
+ * integration settings kept, the mesh AND the storefront marked out of date when
+ * the change reaches them. The project is then saved and its `.env` files
+ * regenerated. Before this, an agent's store scope left the storefront tile green
+ * while `config.json` kept the old codes, and no `.env` was rewritten.
  *
- * Two consequences worth stating plainly:
+ * What stays the screen's alone: renaming, the authoring choice and the prompts.
+ * And two differences, stated plainly:
  *
  *   - SECRETS ARE REFUSED, not accepted and stored. A credential in a tool
  *     argument lands in the transcript and in whatever logs the agent keeps.
  *     Keys whose registry `type` is `password` return a `needsUser` handoff.
- *   - Mesh staleness is MARKED, not detected. The Configure screen fetches the
- *     DEPLOYED mesh config over the `aio` CLI to diff against, which needs an
- *     org context and a network round trip. This compares against the STORED
- *     config instead: offline, and wrong only in the safe direction — it can
- *     over-report staleness (deploy, edit a value back, still marked stale),
- *     never under-report real drift. It writes the same `'stale'` the dashboard
- *     writes, so `deriveMeshStatus` renders it as `config-changed` on both
- *     surfaces without either knowing this tool exists.
+ *   - Mesh staleness is MARKED against the STORED settings, not detected against
+ *     the deployed mesh. The screen fetches the deployed config over the `aio`
+ *     CLI, which needs an org context and a network round trip. This is offline,
+ *     and wrong only in the safe direction: it can over-report staleness, never
+ *     under-report real drift.
  */
 
 import { z } from 'zod';
@@ -53,15 +52,20 @@ import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import {
     NO_BACKEND_FOR_SCOPE,
-    STORE_SCOPE_ENV_KEYS,
     storeScopeEnv,
+    storeScopeEnvKeys,
     storeScopeSchema,
     type StoreScope,
 } from './storeScope';
 import componentsConfig from '@/features/components/config/components.json';
+import { componentRegistryFrom } from '@/features/components/services/componentRegistryAccess';
+import { stageSettingsChange } from '@/features/dashboard/services/projectSettingsChange';
+import type { MeshChanges } from '@/features/mesh/services/types';
+import { regenerateProjectEnvFiles } from '@/features/project-creation/helpers/envFileRegeneration';
 import type { Project } from '@/types/base';
-import type { StateManager } from '@/types/state';
+import type { HandlerContext } from '@/types/handlers';
 import { getMeshComponentInstance } from '@/types/typeGuards';
+import type { ComponentConfigs } from '@/types/webview';
 
 const CONFIG = componentsConfig as unknown as Record<string, unknown>;
 
@@ -106,7 +110,7 @@ function stillUnset(project: Project): string[] {
     if (!project.selectedBlockLibraries?.length) unset.push('blockLibraries');
     const backend = project.componentSelections?.backend;
     const backendConfig = backend ? project.componentConfigs?.[backend] : undefined;
-    if (!backendConfig || !STORE_SCOPE_ENV_KEYS.every((k) => backendConfig[k])) {
+    if (!backend || !backendConfig || !storeScopeEnvKeys(backend).every((k) => backendConfig[k])) {
         unset.push('storeScope');
     }
     return unset;
@@ -125,29 +129,9 @@ function integrationIdsIn(project: Project, env: Record<string, unknown>): strin
     });
 }
 
-/**
- * Apply the payload to `project` in place.
- *
- * Extracted from the tool body purely to keep it under the complexity ceiling;
- * it is one cohesive step (write the fields, record what actually changed) and
- * splitting it further would scatter the change-tracking that mesh staleness
- * depends on.
- *
- * @returns the applied diff, plus the env keys whose VALUE actually changed, or
- *          an error when the payload cannot be applied at all.
- */
-function applyToProject(
-    project: Project,
-    input: Record<string, unknown>,
-): { applied: Applied; changedKeys: Set<string> } | { error: string } {
+/** The datapack, addons and block libraries: recorded on the project as given. */
+function recordChoices(project: Project, input: Record<string, unknown>): Applied {
     const applied: Applied = {};
-    // Rewriting a key with the value it already had is not a change, and must
-    // not flag the mesh.
-    const changedKeys = new Set<string>();
-    const noteChange = (componentId: string, key: string, value: unknown) => {
-        if (project.componentConfigs?.[componentId]?.[key] !== value) changedKeys.add(key);
-    };
-
     if (input.datapack) {
         project.datapack = input.datapack as Project['datapack'];
         applied.datapack = project.datapack;
@@ -160,26 +144,51 @@ function applyToProject(
         project.selectedBlockLibraries = input.blockLibraries as string[];
         applied.blockLibraries = project.selectedBlockLibraries;
     }
+    return applied;
+}
 
-    // Store scope and env both land in componentConfigs, keyed by component.
-    const backend = project.componentSelections?.backend;
+/** A settings change built from the payload, before anything is applied. */
+interface SettingsChange {
+    /** Per component, only the values being set. */
+    changes: ComponentConfigs;
+    applied: Applied;
+    /** Env keys whose VALUE differs from what the project stores. */
+    changedKeys: Set<string>;
+}
+
+/**
+ * The store scope and env vars of the payload, as a settings change.
+ *
+ * @returns the change, or an error when the payload cannot be applied at all
+ */
+function settingsChangeFrom(
+    project: Project,
+    input: Record<string, unknown>,
+): SettingsChange | { error: string } {
+    const changes: ComponentConfigs = {};
+    const applied: Applied = {};
+    // Rewriting a key with the value it already had is not a change, and must
+    // not flag the mesh.
+    const changedKeys = new Set<string>();
+    const set = (componentId: string, key: string, value: string | boolean | number) => {
+        if (project.componentConfigs?.[componentId]?.[key] !== value) changedKeys.add(key);
+        changes[componentId] = { ...(changes[componentId] ?? {}), [key]: value };
+    };
+
     if (input.storeScope) {
-        if (!backend) {
-            return { error: NO_BACKEND_FOR_SCOPE };
-        }
+        const backend = project.componentSelections?.backend;
+        if (!backend) return { error: NO_BACKEND_FOR_SCOPE };
         const scope = input.storeScope as StoreScope;
-        project.componentConfigs = project.componentConfigs ?? {};
-        const target = { ...(project.componentConfigs[backend] ?? {}) };
-        for (const [key, value] of Object.entries(storeScopeEnv(scope))) {
-            noteChange(backend, key, value);
-            target[key] = value;
+        // The key names the backend reads: SaaS and PaaS store them differently.
+        for (const [key, value] of Object.entries(storeScopeEnv(scope, backend))) {
+            set(backend, key, value);
         }
-        project.componentConfigs[backend] = target;
         applied.storeScope = scope;
     }
 
     if (input.env) {
-        const integrations = integrationIdsIn(project, input.env as Record<string, unknown>);
+        const env = input.env as Record<string, Record<string, string | boolean | number>>;
+        const integrations = integrationIdsIn(project, env);
         if (integrations.length > 0) {
             return {
                 error:
@@ -188,18 +197,9 @@ function applyToProject(
                     'which also redeploy it; configure_project only sets project settings.',
             };
         }
-        project.componentConfigs = project.componentConfigs ?? {};
         const envApplied: Record<string, string[]> = {};
-        for (const [componentId, vars] of Object.entries(
-            input.env as Record<string, Record<string, string | boolean | number>>,
-        )) {
-            for (const [key, value] of Object.entries(vars ?? {})) {
-                noteChange(componentId, key, value);
-            }
-            project.componentConfigs[componentId] = {
-                ...(project.componentConfigs[componentId] ?? {}),
-                ...vars,
-            };
+        for (const [componentId, vars] of Object.entries(env)) {
+            for (const [key, value] of Object.entries(vars ?? {})) set(componentId, key, value);
             envApplied[componentId] = Object.keys(vars ?? {});
         }
         // KEYS, not values. Echoing values back doubles a config payload and
@@ -207,12 +207,69 @@ function applyToProject(
         applied.env = envApplied;
     }
 
-    return { applied, changedKeys };
+    return { changes, applied, changedKeys };
+}
+
+/**
+ * The mesh check this door makes: offline, against the STORED settings. A var the
+ * mesh depends on whose value changed marks it out of date.
+ */
+function storedMeshChanges(project: Project, changedKeys: Set<string>): MeshChanges {
+    const meshKeys = meshEnvDependencies(project);
+    const changedEnvVars = [...changedKeys].filter((key) => meshKeys.has(key)).sort();
+    const hasChanges = changedEnvVars.length > 0;
+    return { hasChanges, envVarsChanged: hasChanges, sourceFilesChanged: false, changedEnvVars };
+}
+
+/**
+ * Put a settings change on the project the way the Configure screen does, then
+ * write the `.env` files from it.
+ *
+ * @returns what the change reached, and a reason when the `.env` files were not written
+ */
+async function applySettingsChange(
+    ctx: HandlerContext,
+    project: Project,
+    change: SettingsChange,
+): Promise<{ mesh: MeshChanges; storefrontVars: string[] }> {
+    const staged = await stageSettingsChange(project, change.changes, {
+        secrets: ctx.context.secrets,
+        detectMeshChanges: async () => storedMeshChanges(project, change.changedKeys),
+        log: (line) => ctx.logger.info(`[configure_project] ${line}`),
+        warn: (line) => ctx.logger.warn(`[configure_project] ${line}`),
+    });
+    return {
+        mesh: staged.meshChanges,
+        storefrontVars: staged.storefrontChanges.hasChanges
+            ? staged.storefrontChanges.changedEnvVars
+            : [],
+    };
+}
+
+/** Rewrite the project's `.env` files; a failure is reported, not thrown. */
+async function regenerateEnvFiles(ctx: HandlerContext, project: Project): Promise<string | undefined> {
+    try {
+        const registry = await componentRegistryFrom(ctx).loadRegistry();
+        await regenerateProjectEnvFiles(project, registry, ctx.logger, ctx.context.secrets);
+        return undefined;
+    } catch (error) {
+        return error instanceof Error ? error.message : String(error);
+    }
+}
+
+/** What the agent must do next for the change to reach what is live. */
+function nextSteps(mesh: boolean, storefront: boolean): { note?: string } {
+    const steps = [
+        mesh ? 'call deploy_mesh to redeploy the mesh' : '',
+        storefront ? 'call republish to apply them to the storefront' : '',
+    ].filter(Boolean);
+    if (steps.length === 0) return {};
+    return { note: `These settings are now marked config-changed: ${steps.join(', then ')}.` };
 }
 
 export function registerConfigureProjectTool(
     server: McpToolServer,
-    stateManager: StateManager,
+    ctxFactory: () => HandlerContext,
 ): void {
     server.registerTool(
         'configure_project',
@@ -286,7 +343,8 @@ export function registerConfigureProjectTool(
                 });
             }
 
-            const project = await stateManager.getCurrentProject();
+            const ctx = ctxFactory();
+            const project = await ctx.stateManager.getCurrentProject();
             if (!project) {
                 return asText({
                     error: 'No current project. Use list_projects and select one first.',
@@ -315,38 +373,28 @@ export function registerConfigureProjectTool(
                 );
             }
 
-            const outcome = applyToProject(project, input);
-            if ('error' in outcome) return asText(outcome);
-            const { applied, changedKeys } = outcome;
+            const change = settingsChangeFrom(project, input);
+            if ('error' in change) return asText(change);
+            const applied = { ...recordChoices(project, input), ...change.applied };
 
-            // MARK the mesh stale when a var it declares a dependency on actually
-            // changed. This is a mark, not the Configure screen's detection: that
-            // one fetches the DEPLOYED config over the aio CLI to diff against,
-            // which needs an org context and a network round trip. Comparing
-            // against the STORED config is offline and cannot be wrong in the
-            // dangerous direction — it can over-report staleness after a
-            // deploy-then-edit-back, never under-report a real drift.
-            //
-            // 'stale' is the same value the dashboard writes, and `deriveMeshStatus`
-            // maps it to 'config-changed' for both surfaces, so get_project_status
-            // and the dashboard agree without either knowing about this tool.
-            const meshKeys = meshEnvDependencies(project);
-            const meshAffecting = [...changedKeys].filter((k) => meshKeys.has(k));
-            if (meshAffecting.length) {
-                project.meshStatusSummary = 'stale';
-            }
+            // Only a call that changes settings is staged: one that records a
+            // datapack, addons or block libraries rewrites nothing it did not touch.
+            const reached = Object.keys(change.changes).length
+                ? await applySettingsChange(ctx, project, change)
+                : undefined;
 
-            await stateManager.saveProject(project);
+            await ctx.stateManager.saveProject(project);
+            const envNotWritten = reached ? await regenerateEnvFiles(ctx, project) : undefined;
 
+            const meshMarkedStale = reached?.mesh.changedEnvVars ?? [];
+            const storefrontMarkedStale = reached?.storefrontVars ?? [];
             return asText({
                 applied,
                 stillUnset: stillUnset(project),
-                ...(meshAffecting.length
-                    ? {
-                          meshMarkedStale: meshAffecting.sort(),
-                          note: 'The mesh depends on these vars and is now marked config-changed. Call deploy_mesh to redeploy it.',
-                      }
-                    : {}),
+                ...(meshMarkedStale.length ? { meshMarkedStale } : {}),
+                ...(storefrontMarkedStale.length ? { storefrontMarkedStale } : {}),
+                ...nextSteps(meshMarkedStale.length > 0, storefrontMarkedStale.length > 0),
+                ...(envNotWritten ? { envFilesNotWritten: envNotWritten } : {}),
             });
         },
     );

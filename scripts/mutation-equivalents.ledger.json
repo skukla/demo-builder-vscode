@@ -7269,7 +7269,7 @@
             "source": "src/features/eds/services/storefront/storefrontNameMigrationForProject.ts resolveOverlayForNewName (lines 113-127)"
         },
         {
-            "module": "src/features/dashboard/commands/configure.ts",
+            "module": "src/features/dashboard/services/projectSettingsChange.ts",
             "anchors": [
                 "if (migration.retained.length > 0) {"
             ],
@@ -7285,7 +7285,7 @@
             "anchors": [
                 "const panel = BaseWebviewCommand.getActivePanel('demoBuilder.configureProject');"
             ],
-            "line": 112,
+            "line": 104,
             "mutants": 1,
             "category": "branch",
             "reason": "Stryker forces the following 'if (panel)' true. With no panel open the body then calls panel.dispose() on undefined, and the TypeError lands in the try/catch that already exists for the already-disposed case \u2014 so the mutant takes the same path to the same no-op. The false variant IS killed (a test asserts the open panel is disposed); only the always-true one is unobservable.",
@@ -9078,7 +9078,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 215,
+            "line": 216,
             "mutants": 1,
             "category": "block",
             "reason": "Stryker empties the catch, so a throwing validateToken leaves githubOk unassigned instead of false. Both readings are falsy at the 'if (!githubOk)' below, so the tool returns the same needsAuth:'github' handoff and calls the same collaborators either way. The only difference is the variable's binding, which nothing observes; a test asserting it would have to reach inside the function.",
@@ -9091,7 +9091,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 230,
+            "line": 231,
             "mutants": 1,
             "category": "block",
             "reason": "Stryker empties the catch, so a throwing isAuthenticated leaves daLiveOk unassigned instead of false. Both readings are falsy at the 'if (!daLiveOk)' below, so the tool returns the same needsAuth:'dalive' handoff and calls the same collaborators either way. The only difference is the variable's binding, which nothing observes; a test asserting it would have to reach inside the function.",

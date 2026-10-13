@@ -781,7 +781,7 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 // I/O Events (AB-6) — list and delete, scoped to the open
                 // project's Console workspace; the delete is consent-gated.
                 registerEventProviderTools(mcpServer, connCtxFactory);
-                registerConfigureProjectTool(mcpServer, connState);
+                registerConfigureProjectTool(mcpServer, connCtxFactory);
                 registerCloudResourceTools(mcpServer, connCtxFactory);
                 registerStorefrontTools(mcpServer, connCtxFactory);
                 registerSiteTools(mcpServer, connCtxFactory);

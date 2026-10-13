@@ -1,9 +1,7 @@
-import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { configureHandlers } from '../handlers/configureHandlers';
 import { runPendingBlockLibraryWork } from './configureBlockLibraryExecutor';
-import { mergeEnvValuesFromSources } from './configureEnvLoader';
 import { ProjectDashboardWebviewCommand } from './showDashboard';
 import { BundledPanelCommand } from '@/commands/bundledPanelCommand';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
@@ -12,12 +10,7 @@ import { COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
-import { parseEnvFile } from '@/core/utils/envParser';
-import { keepIntegrationSettings } from '@/features/app-builder/services/componentSettings';
-import {
-    loadDeclaredSecretFlags,
-    migrateDeclaredSecrets,
-} from '@/features/components/services/commerceSecretMigration';
+import { loadDeclaredSecretFlags } from '@/features/components/services/commerceSecretMigration';
 import { getComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
 import { withEnvVarKeys } from '@/features/components/services/componentTransforms';
 import {
@@ -25,12 +18,15 @@ import {
     buildBlockLibraryChoices,
     type BlockLibrarySelectionInput,
 } from '@/features/dashboard/services/configureBlockLibraries';
-import { applyConfigChanges } from '@/features/dashboard/services/configureConfigChanges';
 import {
     describePendingBlockLibraryWork,
     hasPendingBlockLibraryWork,
 } from '@/features/dashboard/services/configureBlockLibraryWork';
 import { sendAuthoringExperienceUpdate } from '@/features/dashboard/services/projectPanelPushes';
+import {
+    readProjectSettings,
+    stageSettingsChange,
+} from '@/features/dashboard/services/projectSettingsChange';
 import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,
@@ -41,7 +37,6 @@ import {
     type AuthoringExperienceFlipDeps,
 } from '@/features/eds/services/authoringExperienceFlip';
 import { republishStorefrontConfig } from '@/features/eds/services/storefront/storefrontRepublishService';
-import { detectStorefrontChanges } from '@/features/eds/services/storefront/storefrontStalenessDetector';
 import { markMeshUpdateDeclined } from '@/features/mesh/services/meshUpdateDecline';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { regenerateProjectEnvFiles } from '@/features/project-creation/helpers/envFileRegeneration';
@@ -49,7 +44,7 @@ import { handleRenameProject } from '@/features/projects-dashboard/handlers/dash
 import { Project, type AuthoringExperience } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import { getComponentInstanceEntries, getEdsDaLiveUrl, isEdsProject } from '@/types/typeGuards';
-import type { ComponentConfigs as WebviewComponentConfigs } from '@/types/webview';
+import type { ComponentConfigs } from '@/types/webview';
 import type {
     ConfigureInitialData,
     CustomBlockLibraryDefaultsUpdatedPayload,
@@ -69,12 +64,9 @@ const AUTHORING_EXPERIENCES: ReadonlySet<AuthoringExperience> = new Set<Authorin
     'experience-workspace',
 ]);
 
-// Component configuration type (key-value pairs for environment variables)
-type ComponentConfigs = Record<string, Record<string, string>>;
-
 interface SaveConfigurationData extends BlockLibrarySelectionInput {
     /** Only the values the SC changed; laid over the settings as they are now (PL-76). */
-    configChanges?: WebviewComponentConfigs;
+    configChanges?: ComponentConfigs;
     newProjectName?: string;
     authoringExperience?: AuthoringExperience;
 }
@@ -270,62 +262,26 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
             // Handle project rename if name changed (renameProjectCore moves path-keyed secrets)
             project = await this.renameProjectIfRequested(project, data.newProjectName);
 
-            // The screen sends only what the SC changed. Lay it over the settings as
-            // they are NOW (read the same way the screen loaded them), so a change made
-            // elsewhere while this window was open is kept (PL-76).
-            const current = await this.loadExistingEnvValues(project);
-            const updated = applyConfigChanges(current, data.configChanges ?? {});
-
-            // An integration's settings are set on its tile (AB-21), not here.
-            const withoutIntegrations = keepIntegrationSettings(updated, project);
-
-            // Same guarantee for COMPONENT-declared secrets (`secret: true` in
-            // components.json) — the Commerce credentials. Write-through with a
-            // verified read-back: a value only leaves componentConfigs once
-            // SecretStorage is proven to hold it, so it is never in neither place
-            // (`.rptc/complete/component-secret-routing/`, phase 2).
-            const migration = await migrateDeclaredSecrets(
-                withoutIntegrations,
-                project.path,
-                this.context.secrets,
-                (line) => this.logger.info(`[Configure] ${line}`),
-            );
-            if (migration.retained.length > 0) {
-                // Not fatal, and not silent: the save proceeds with the value
-                // exactly where it was, and the next one tries again.
-                this.logger.warn(
-                    `[Configure] ${migration.retained.length} secret(s) could not be ` +
-                        `moved to SecretStorage and remain in project config: ` +
-                        `${migration.retained.join(', ')}`,
-                );
-            }
-            const sanitizedConfigs = migration.sanitizedConfigs as ComponentConfigs;
-
-            // Detect if mesh configuration changed BEFORE saving.
-            // Org-targeted: with an empty staleness baseline this fetches
-            // the deployed config over the `aio` CLI, and an unwrapped call
-            // queries whatever org the CLI's process-global selection
-            // happens to hold.
-            const meshChanges = await withOrgContext(
-                buildOrgTargetFromProjectAdobe(project.adobe),
-                () =>
-                    detectMeshChanges(project, sanitizedConfigs, {
-                        commandManager: ServiceLocator.getCommandExecutor(),
-                        authManager: ServiceLocator.getAuthenticationService(),
-                    }),
-            );
-
-            // Detect if storefront configuration changed (EDS projects only)
-            const storefrontChanges = detectStorefrontChanges(project, sanitizedConfigs);
-
-            // Update project state
-            project.componentConfigs = sanitizedConfigs;
-            if (meshChanges.hasChanges) {
-                project.meshStatusSummary = 'stale';
-            }
-            if (storefrontChanges.hasChanges) {
-                project.edsStorefrontStatusSummary = 'stale';
-            }
+            // The screen sends only what the SC changed (PL-76). Staging lays it over
+            // the settings as they are now, keeps integration settings, moves secrets,
+            // and marks the mesh and storefront: the same steps configure_project runs.
+            const { configs: sanitizedConfigs, meshChanges, storefrontChanges } =
+                await stageSettingsChange(project, data.configChanges ?? {}, {
+                    secrets: this.context.secrets,
+                    // Against the DEPLOYED mesh. Org-targeted: with an empty
+                    // staleness baseline this fetches the deployed config over the
+                    // `aio` CLI, and an unwrapped call queries whatever org the
+                    // CLI's process-global selection happens to hold.
+                    detectMeshChanges: (staged, configs) =>
+                        withOrgContext(buildOrgTargetFromProjectAdobe(staged.adobe), () =>
+                            detectMeshChanges(staged, configs, {
+                                commandManager: ServiceLocator.getCommandExecutor(),
+                                authManager: ServiceLocator.getAuthenticationService(),
+                            }),
+                        ),
+                    log: (line) => this.logger.info(`[Configure] ${line}`),
+                    warn: (line) => this.logger.warn(`[Configure] ${line}`),
+                });
 
             // Record the ticked block libraries (EDS-39). What the storefront gains or
             // loses is then read from the project, so a "Later" is offered again.
@@ -519,55 +475,11 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
      * Load existing environment variable values from component .env files
      * and project root .env (for values from non-installed components like backends)
      */
+    /** The settings as the screen shows them (`readProjectSettings`). */
     private async loadExistingEnvValues(
         project: Project,
     ): Promise<Record<string, Record<string, string>>> {
-        const envValues: Record<string, Record<string, string>> = {};
-
-        // Read each component's .env file
-        // SOP §4: Using helper instead of inline Object.entries
-        for (const [componentId, instance] of getComponentInstanceEntries(project)) {
-            if (!instance.path) {
-                continue;
-            }
-
-            // Next.js uses .env.local, others use .env
-            const possibleEnvFiles = [
-                path.join(instance.path, '.env.local'),
-                path.join(instance.path, '.env'),
-            ];
-
-            let loaded = false;
-            for (const envPath of possibleEnvFiles) {
-                try {
-                    const envContent = await fs.readFile(envPath, 'utf-8');
-                    envValues[componentId] = parseEnvFile(envContent);
-                    loaded = true;
-                    break; // Found it, stop looking
-                } catch {
-                    // File doesn't exist, try next one
-                }
-            }
-
-            if (!loaded) {
-                envValues[componentId] = {};
-            }
-        }
-
-        // Also read project root .env for values from non-installed components
-        // (e.g., backend configs like adobe-commerce-accs that don't have componentInstances).
-        // Non-installed components may also store values exclusively in .demo-builder.json —
-        // the merge helper handles both sources with the correct precedence.
-        let rootEnvValues: Record<string, string> = {};
-        try {
-            const rootEnvPath = path.join(project.path, '.env');
-            const rootEnvContent = await fs.readFile(rootEnvPath, 'utf-8');
-            rootEnvValues = parseEnvFile(rootEnvContent);
-        } catch {
-            // Root .env doesn't exist or can't be read — fall through to manifest-only values.
-        }
-
-        return mergeEnvValuesFromSources(envValues, rootEnvValues, project.componentConfigs ?? {});
+        return readProjectSettings(project);
     }
 
     /**

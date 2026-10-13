@@ -102,7 +102,7 @@ describe('registration against the real MCP SDK', () => {
         ['discovery tools', (s: McpToolServer) => registerDiscoveryTools(s)],
         ['adobe resource tools', (s: McpToolServer) => registerAdobeResourceTools(s, ctxFactory)],
         ['event provider tools', (s: McpToolServer) => registerEventProviderTools(s, ctxFactory)],
-        ['configure_project', (s: McpToolServer) => registerConfigureProjectTool(s, stateManager)],
+        ['configure_project', (s: McpToolServer) => registerConfigureProjectTool(s, ctxFactory)],
         ['cloud resource tools', (s: McpToolServer) => registerCloudResourceTools(s, ctxFactory)],
     ])('accepts %s', (_name, register) => {
         expect(() => register(server())).not.toThrow();
@@ -146,7 +146,7 @@ describe('registration against the real MCP SDK', () => {
             registerComponentRequirementsTool(s);
             registerAdobeResourceTools(s, ctxFactory);
             registerEventProviderTools(s, ctxFactory);
-            registerConfigureProjectTool(s, stateManager);
+            registerConfigureProjectTool(s, ctxFactory);
             registerCloudResourceTools(s, ctxFactory);
             registerStorefrontTools(s, ctxFactory);
             registerSiteTools(s, ctxFactory);

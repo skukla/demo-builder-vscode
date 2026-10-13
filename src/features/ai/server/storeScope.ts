@@ -4,6 +4,11 @@
  * One definition for every tool that accepts it — `configure_project` on an existing
  * project, `create_project` and `create_project_from_file` at creation (AI-11) — so
  * they cannot drift on what a valid scope is or where it is stored.
+ *
+ * WHERE it is stored depends on the backend (PL-76). SaaS (ACCS) reads `ACCS_*_CODE`;
+ * PaaS and ACO read `ADOBE_COMMERCE_*_CODE`, the same split the storefront config
+ * makes (`storefrontConfigParams.ts`). This used to write the ACCS names for every
+ * backend, so on a PaaS project the scope looked applied and nothing read it.
  */
 
 import { z } from 'zod';
@@ -11,7 +16,11 @@ import {
     ACCS_STORE_CODE,
     ACCS_STORE_VIEW_CODE,
     ACCS_WEBSITE_CODE,
+    PAAS_STORE_CODE,
+    PAAS_STORE_VIEW_CODE,
+    PAAS_WEBSITE_CODE,
 } from '@/core/config/envVarKeys';
+import { mapBackendToEnvironmentType } from '@/features/eds/services/storefrontConfigParams';
 
 /**
  * All THREE codes or none: two of three is a broken scope, not a narrower one.
@@ -28,27 +37,47 @@ export const storeScopeSchema = z
 
 export type StoreScope = z.infer<typeof storeScopeSchema>;
 
-/** Env-var name each scope code is stored under, on the backend's config. */
-const SCOPE_ENV: Record<keyof StoreScope, string> = {
+const ACCS_SCOPE_ENV: Record<keyof StoreScope, string> = {
     website: ACCS_WEBSITE_CODE,
     store: ACCS_STORE_CODE,
     storeView: ACCS_STORE_VIEW_CODE,
 };
 
-/** The three env-var names, in website → store → store view order. */
-export const STORE_SCOPE_ENV_KEYS: readonly string[] = Object.values(SCOPE_ENV);
+const PAAS_SCOPE_ENV: Record<keyof StoreScope, string> = {
+    website: PAAS_WEBSITE_CODE,
+    store: PAAS_STORE_CODE,
+    storeView: PAAS_STORE_VIEW_CODE,
+};
+
+/** Env-var name each scope code is stored under, for this backend. */
+function scopeEnvFor(backendId: string): Record<keyof StoreScope, string> {
+    return mapBackendToEnvironmentType(backendId) === 'accs' ? ACCS_SCOPE_ENV : PAAS_SCOPE_ENV;
+}
 
 /**
- * The scope as the env vars the backend's config stores it under.
+ * The three env-var names this backend stores the scope under, website → store →
+ * store view.
+ *
+ * @param backendId - the project's backend component id
+ * @returns the three names
+ */
+export function storeScopeEnvKeys(backendId: string): readonly string[] {
+    return Object.values(scopeEnvFor(backendId));
+}
+
+/**
+ * The scope as the env vars this backend's config stores it under.
  *
  * @param scope - the three codes
- * @returns `{ ACCS_WEBSITE_CODE, ACCS_STORE_CODE, ACCS_STORE_VIEW_CODE }`
+ * @param backendId - the project's backend component id
+ * @returns e.g. `{ ACCS_WEBSITE_CODE, ACCS_STORE_CODE, ACCS_STORE_VIEW_CODE }` for SaaS
  */
-export function storeScopeEnv(scope: StoreScope): Record<string, string> {
+export function storeScopeEnv(scope: StoreScope, backendId: string): Record<string, string> {
+    const env = scopeEnvFor(backendId);
     return {
-        [SCOPE_ENV.website]: scope.website,
-        [SCOPE_ENV.store]: scope.store,
-        [SCOPE_ENV.storeView]: scope.storeView,
+        [env.website]: scope.website,
+        [env.store]: scope.store,
+        [env.storeView]: scope.storeView,
     };
 }
 

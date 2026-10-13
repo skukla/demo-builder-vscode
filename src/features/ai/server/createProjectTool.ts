@@ -98,9 +98,10 @@ function backendEndpointConfig(
     return {
         [backend]: {
             ...(accsEndpoint ? { [ACCS_GRAPHQL_ENDPOINT]: accsEndpoint } : {}),
-            // The scope the caller chose (AI-11), where configure_project writes it,
-            // so the config.json creation generates names it from the start.
-            ...(storeScope ? storeScopeEnv(storeScope) : {}),
+            // The scope the caller chose (AI-11), where configure_project writes it
+            // (under the names this backend reads), so the config.json creation
+            // generates names it from the start.
+            ...(storeScope ? storeScopeEnv(storeScope, backend) : {}),
         },
     };
 }

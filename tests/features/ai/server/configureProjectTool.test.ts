@@ -10,10 +10,17 @@
  * are the two keys `components.json` marks `type: 'password'`.
  */
 
-import { registerConfigureProjectTool } from '@/features/ai/server/configureProjectTool';
+// The testUtils first: it registers the fakes the tool's module binds (see there).
+import {
+    getCurrentProject,
+    mockRegenerateProjectEnvFiles,
+    registerConfigureProjectTool,
+    saveProject,
+    serve,
+    toolContext,
+} from './configureProjectTool.testUtils';
 import type { Project } from '@/types/base';
 import { createMockProject } from '../../../helpers/projectFake';
-import { getCurrentProject, saveProject, serve, stateManager } from './configureProjectTool.testUtils';
 
 
 /**
@@ -35,7 +42,7 @@ function definition(): ToolDefinition {
     let def: ToolDefinition | undefined;
     registerConfigureProjectTool(
         { registerTool: (_n: string, d: never) => { def = d; } },
-        stateManager,
+        toolContext,
     );
     return def!;
 }
@@ -75,6 +82,7 @@ function freshProject(): Project {
 beforeEach(() => {
     jest.clearAllMocks();
     getCurrentProject.mockResolvedValue(freshProject());
+    mockRegenerateProjectEnvFiles.mockResolvedValue(undefined);
 });
 
 describe('configure_project — guards', () => {
