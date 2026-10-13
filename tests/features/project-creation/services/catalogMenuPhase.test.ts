@@ -10,7 +10,10 @@ import { readCatalogMenuRecord } from '@/features/eds/services/catalogMenu/catal
 import type { StorefrontPages } from '@/features/eds/services/catalogMenu/catalogMenuService';
 import type { CatalogMenuSite } from '@/features/eds/services/catalogMenu/catalogMenuStep';
 import { readAutoAddOverride } from '@/features/eds/services/catalogMenu/categoryPageAutoAdd';
-import { executeCatalogMenuPhase } from '@/features/project-creation/services/catalogMenuPhase';
+import {
+    executeCatalogMenuPhase,
+    rewriteCatalogMenuPhase,
+} from '@/features/project-creation/services/catalogMenuPhase';
 import type { Project } from '@/types/base';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { fakeStorefront } from '../../eds/services/catalogMenu/catalogMenuService.testUtils';
@@ -139,5 +142,48 @@ describe('executeCatalogMenuPhase', () => {
         ).resolves.toBeUndefined();
         expect(progress).not.toHaveBeenCalled();
         expect(readCatalogMenuRecord(project)).toEqual({ pages: [], links: [], navSwitch: false });
+    });
+});
+
+describe('rewriteCatalogMenuPhase — after an Edit removed the old datapack (PL-75)', () => {
+    /** The storefront as the old pack left it: a page for its one category. */
+    async function withOldPack() {
+        const project = storefront();
+        const s = fakeSite();
+        await executeCatalogMenuPhase(createMockHandlerContext(), project, jest.fn(), undefined, () => siteOver(s.port));
+        expect(s.pages.get('/signs')).toBeDefined();
+        return { project, s };
+    }
+
+    /** The new pack's categories: Signs is gone, Gloves arrived. */
+    const newPack = (port: StorefrontPages): CatalogMenuSite => ({
+        ...siteOver(port),
+        readCategories: async () => [{ id: '2', name: 'Gloves', urlPath: 'gloves' }],
+    });
+
+    it("takes out the page Demo Builder wrote for a category that is gone, and writes the new pack's", async () => {
+        const { project, s } = await withOldPack();
+
+        await rewriteCatalogMenuPhase(createMockHandlerContext(), project, jest.fn(), () => newPack(s.port));
+
+        expect(s.pages.get('/signs')).toBeUndefined();
+        expect(s.pages.get('/gloves')).toContain('<h1>Gloves</h1>');
+    });
+
+    it('the write alone would have left that page published: why the removal comes first', async () => {
+        const { project, s } = await withOldPack();
+
+        await executeCatalogMenuPhase(createMockHandlerContext(), project, jest.fn(), undefined, () => newPack(s.port));
+
+        expect(s.pages.get('/signs')).toBeDefined();
+    });
+
+    it('never removes a page the SC edited since', async () => {
+        const { project, s } = await withOldPack();
+        s.pages.set('/signs', `${s.pages.get('/signs')}<p>Edited by hand</p>`);
+
+        await rewriteCatalogMenuPhase(createMockHandlerContext(), project, jest.fn(), () => newPack(s.port));
+
+        expect(s.pages.get('/signs')).toContain('Edited by hand');
     });
 });

@@ -64,6 +64,14 @@ describe('SampleDataStep — a demo that asks for a pack', () => {
         expect(updateState).not.toHaveBeenCalled();
     });
 
+    // In Edit the project already chose; a pre-select would read as a change and
+    // Finish would import a pack nobody picked (PL-75).
+    it('does not pre-select in Edit, where "no datapack" is the project\'s own choice', async () => {
+        const { updateState } = renderStep({ demo: demo({ name: 'bodea', version: 'hold' }), wizardMode: 'edit' });
+        await screen.findByTestId('demo-datapack-note');
+        expect(updateState).not.toHaveBeenCalled();
+    });
+
     it('pre-selects the pack when the catalog lands after the first frame', async () => {
         // Every real mount starts with no catalog: the fetch runs from an effect.
         // The pack has to be found, and chosen, when the answer arrives.

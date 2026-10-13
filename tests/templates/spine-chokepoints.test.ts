@@ -424,7 +424,9 @@ describe('spine choke-points', () => {
         // pair that writes and removes the category pages and the nav switch; only the
         // step calls it, because the step is what keeps the record on the project.
         // The step itself is reached from exactly three doors: project creation (the
-        // wizard and create_project, via the executor), reset (dashboard Reset and
+        // wizard and create_project, via the executor; an Edit that changes the
+        // datapack goes through the same phase file, `rewriteCatalogMenuPhase` running
+        // reset's removal first), reset (dashboard Reset and
         // reset_project, via executeEdsReset), and republish (dashboard Republish and
         // sync_content, via republishStorefrontContent).
         const primitive = /\b(applyCatalogMenu|removeCatalogMenu)\(/;

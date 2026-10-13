@@ -6,8 +6,8 @@
  * datapack re-imported. Now the wizard records the SC's CHOICES as they were when
  * it opened (`editBaseline`, set by `buildEditModeState`) and compares them on
  * the way out. When none changed, the storefront step is skipped and Finish only
- * saves the project. When the only change is integrations added or removed, the
- * storefront step is skipped too and Finish adds and removes just those
+ * saves the project. When the only changes are integrations added or removed, or
+ * the datapack, the storefront step is skipped too and Finish does just those
  * (`appliesInPlace`). The mesh counts as an integration here.
  *
  * Only choices are compared. Much of the wizard's state is screen-only (sign-in
@@ -256,23 +256,27 @@ export function selectionDelta(before: readonly string[], after: readonly string
 
 /**
  * Whether Finish can apply this Edit in place: it only adds or removes
- * integrations or the mesh, and every other changed choice belongs to one it adds
- * or removes (its settings, its API picks, its source). Adding or removing the
- * mesh brings the storefront's settings up to date itself (the runner's
- * storefront refresh), so the storefront step is not needed for it either.
+ * integrations or the mesh, changes the datapack, or both, and every other changed
+ * choice belongs to an integration it adds or removes (its settings, its API
+ * picks, its source). Adding or removing the mesh brings the storefront's settings
+ * up to date itself (the runner's storefront refresh), and a new datapack's
+ * category pages are written after it lands, so the storefront step is not needed
+ * for any of them.
  *
  * Read by the wizard (to skip the storefront step) and by Finish (to choose the
  * path), so both decide the same way.
  *
  * @param changes - the changed choices (`editChangesOf`)
  * @param delta - the integrations added and removed
- * @returns true when nothing but those integrations changed
+ * @returns true when nothing but those changed
  */
 export function appliesInPlace(changes: readonly string[], delta: SelectionDelta): boolean {
     const touched = [...delta.added, ...delta.removed];
-    if (touched.length === 0) return false;
     const owned = new Set(KEYED_CHOICES.flatMap((field) => touched.map((id) => `${field}.${id}`)));
-    return changes.every((name) => name === 'selectedAppBuilderComponents' || owned.has(name));
+    const inPlace = (name: string): boolean =>
+        name === 'datapack' ||
+        (touched.length > 0 && (name === 'selectedAppBuilderComponents' || owned.has(name)));
+    return changes.length > 0 && changes.every(inPlace);
 }
 
 /** The selection a baseline recorded (`editChoicesOf` writes it as a sorted list). */
@@ -283,9 +287,9 @@ function baselineSelection(baseline: EditChoices): string[] {
 
 /**
  * Whether this Edit's Finish runs without the storefront step: nothing changed,
- * or only integrations or the mesh were added or removed (`appliesInPlace`). The
- * step pushes and republishes the storefront; neither needs it, and a mesh add or
- * removal republishes on its own.
+ * or only integrations, the mesh or the datapack changed (`appliesInPlace`). The
+ * step pushes and republishes the storefront; none of those needs it, and a mesh
+ * add or removal republishes on its own.
  *
  * @param state - the wizard state
  * @returns true only in an Edit that Finish applies without a rebuild

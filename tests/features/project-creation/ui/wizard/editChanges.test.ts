@@ -217,7 +217,7 @@ describe('appliesInPlace — Finish adds and removes just the integrations', () 
     });
 
     it('is false when anything else changed too', () => {
-        const changes = ['datapack', 'selectedAppBuilderComponents'];
+        const changes = ['selectedAppBuilderComponents', 'selectedPackage'];
 
         expect(appliesInPlace(changes, { added: ['erp-integration'], removed: [] })).toBe(false);
     });
@@ -231,6 +231,13 @@ describe('appliesInPlace — Finish adds and removes just the integrations', () 
     it('is true for the mesh too: its add and removal refresh the storefront themselves', () => {
         expect(
             appliesInPlace(['selectedAppBuilderComponents'], { added: ['eds-commerce-mesh'], removed: [] }),
+        ).toBe(true);
+    });
+
+    it('is true for a datapack change, alone or with integrations', () => {
+        expect(appliesInPlace(['datapack'], { added: [], removed: [] })).toBe(true);
+        expect(
+            appliesInPlace(['datapack', 'selectedAppBuilderComponents'], { added: ['erp-integration'], removed: [] }),
         ).toBe(true);
     });
 

@@ -71,11 +71,15 @@ export function beginSampleDataCredentialCheck(
  * The duration is in the prompt because it is the surprising part — a six-type
  * removal was measured at 470 seconds, so a modal that says "this is quick" by
  * omission would be lying.
+ *
+ * Reset asks it, and so does an Edit that changes the datapack (PL-75), each with
+ * its own closing sentence saying what happens without the removal.
  */
 export async function confirmSampleDataRemoval(
     project: Project,
     vscode: typeof import('vscode'),
     canRemove: Promise<boolean> | undefined,
+    closing = 'Resetting the storefront does not require it.',
 ): Promise<boolean> {
     // One condition, not a guard and then an await: `canRemove` is undefined
     // exactly when `datapack` is (the check above gates on the same field), so a
@@ -100,7 +104,7 @@ export async function confirmSampleDataRemoval(
         `Also remove the datapack this project imported (${datapack.name}@${datapack.version})? ` +
             'This deletes the data this pack imported from the Commerce instance — ' +
             'anything you added by hand stays — and can take several minutes. ' +
-            'Resetting the storefront does not require it.',
+            closing,
         { modal: true },
         removeButton,
         keepButton,

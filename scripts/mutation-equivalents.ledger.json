@@ -4104,7 +4104,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 102,
+            "line": 106,
             "mutants": 1,
             "category": "other",
             "reason": "openDataInstallerSettings posts a fixed message and closes over nothing at all. The Stryker replacement is a constant literal that compares equal on every render, so useCallback returns the same function either way, and the message it posts is identical. There is no render, click or payload a test could read that differs.",

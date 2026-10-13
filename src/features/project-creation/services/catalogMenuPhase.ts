@@ -23,7 +23,11 @@ import {
     writeCatalogMenuRecord,
 } from '@/features/eds/services/catalogMenu/catalogMenuRecord';
 import type { CatalogMenuTarget } from '@/features/eds/services/catalogMenu/catalogMenuSiteDeps';
-import { applyCatalogMenuStep, type CatalogMenuSite } from '@/features/eds/services/catalogMenu/catalogMenuStep';
+import {
+    applyCatalogMenuStep,
+    removeCatalogMenuStep,
+    type CatalogMenuSite,
+} from '@/features/eds/services/catalogMenu/catalogMenuStep';
 import {
     readAutoAddOverride,
     writeAutoAddOverride,
@@ -64,16 +68,59 @@ export async function executeCatalogMenuPhase(
     existingProject?: Project,
     makeSite?: (target: CatalogMenuTarget) => CatalogMenuSite,
 ): Promise<void> {
+    await runCatalogMenu(context, project, progressTracker, makeSite, (target) =>
+        carryRecord(project, existingProject, target),
+    );
+}
+
+/**
+ * The same phase after an Edit that removed the old datapack's data (PL-75): first
+ * Reset's own removal of what Demo Builder wrote (only pages nobody has edited, by
+ * the recorded hashes), then the same write, for the categories there are now. The
+ * write alone keeps claiming a page whose category is gone, so it stayed published
+ * after its category was deleted.
+ *
+ * @param context - Handler context (sign-ins, logger)
+ * @param project - The project, with its new datapack in place
+ * @param progressTracker - The wizard's progress reporter
+ * @param makeSite - Site seam; production builds it from this call's clients
+ */
+export async function rewriteCatalogMenuPhase(
+    context: HandlerContext,
+    project: Project,
+    progressTracker: ProgressReporter,
+    makeSite?: (target: CatalogMenuTarget) => CatalogMenuSite,
+): Promise<void> {
+    await runCatalogMenu(context, project, progressTracker, makeSite, undefined, async (site) => {
+        const removed = await removeCatalogMenuStep(project, site.pages);
+        if (removed !== undefined) say(context, progressTracker, removed);
+    });
+}
+
+/** Log and show one catalog menu sentence. */
+function say(context: HandlerContext, progressTracker: ProgressReporter, summary: string): void {
+    context.logger.info(`[Catalog Menu] ${summary}`);
+    progressTracker(STAGE, PERCENT, summary);
+}
+
+/** Resolve the site, run what comes first, then the write. Never throws. */
+async function runCatalogMenu(
+    context: HandlerContext,
+    project: Project,
+    progressTracker: ProgressReporter,
+    makeSite: ((target: CatalogMenuTarget) => CatalogMenuSite) | undefined,
+    beforeSite?: (target: CatalogMenuTarget) => void,
+    beforeWrite?: (site: CatalogMenuSite) => Promise<void>,
+): Promise<void> {
     try {
         const target = storefrontTarget(project);
         if (!target) return;
-        carryRecord(project, existingProject, target);
+        beforeSite?.(target);
         const site = makeSite ? makeSite(target) : catalogMenuSiteFor(context, project);
         if (!site) return;
+        await beforeWrite?.(site);
         const summary = await applyCatalogMenuStep(project, site);
-        if (summary === undefined) return;
-        context.logger.info(`[Catalog Menu] ${summary}`);
-        progressTracker(STAGE, PERCENT, summary);
+        if (summary !== undefined) say(context, progressTracker, summary);
     } catch (error) {
         // Belt and braces: the step already swallows its own failures.
         context.logger.warn(`[Catalog Menu] Phase failed: ${(error as Error).message}`);

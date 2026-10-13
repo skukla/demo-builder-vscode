@@ -65,7 +65,12 @@ storefront changed, and its reset runs instead when the package changed.
    `replaceDeployedElsewhere` on add; `applyErpOwnership` after a remove). Check the mesh
    caveats first: creation deploys the mesh through `executeMeshPhase`, and the mesh is also a
    stack dependency in `componentSelections.dependencies`; the runners may not write that.
-4. **Datapack.** Remove the recorded pack, record the new one, import it.
+4. **Datapack.** *Built 2026-10-13* (`executorEditDatapack.ts`): Reset's own question about the
+   old pack's data (`confirmSampleDataRemoval`, with Edit's own closing line), asked before
+   anything runs; then Reset's removal, the new choice recorded (none included), and creation's
+   import, pre-warm and category-page phases. The Datapacks step no longer pre-selects a demo's
+   pack in Edit, which would have read as a change. Original note: remove the recorded pack,
+   record the new one, import it.
 5. **Adobe destination.** Through the move the Integrations screen uses.
 6. **Package on an Edge Delivery stack.** Clear `project.demo` (it wins over the package in
    `resolveStorefrontForProject`), record the package, run the EDS reset. Runs before steps

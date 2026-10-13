@@ -329,14 +329,24 @@ describe('an Edit that changed nothing, or only integrations, skips the storefro
         expect(stepIds(result.current.WIZARD_STEPS)).toEqual(['welcome', 'review', 'create-project']);
     });
 
-    it('brings it back once the SC changes a choice', () => {
+    it('brings it back once the SC changes a choice Finish rebuilds for', () => {
+        const { result } = renderHook(() =>
+            useWizardState({ wizardSteps: STEPS, stacks: STACKS, editProject: EDITING })
+        );
+
+        act(() => result.current.updateState({ selectedAddons: ['live-search'] }));
+
+        expect(stepIds(result.current.WIZARD_STEPS)).toContain('storefront-setup');
+    });
+
+    it('leaves it out when the SC only changes the datapack, whose pages are written after it lands', () => {
         const { result } = renderHook(() =>
             useWizardState({ wizardSteps: STEPS, stacks: STACKS, editProject: EDITING })
         );
 
         act(() => result.current.updateState({ datapack: { name: 'justrite', version: '2.0.0' } }));
 
-        expect(stepIds(result.current.WIZARD_STEPS)).toContain('storefront-setup');
+        expect(stepIds(result.current.WIZARD_STEPS)).not.toContain('storefront-setup');
     });
 
     it('leaves it out when the SC only added an integration', () => {

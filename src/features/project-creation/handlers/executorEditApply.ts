@@ -5,11 +5,13 @@
  * kinds of Edit no longer do:
  * - nothing changed: the project is saved and nothing else runs
  *   (`saveUnchangedEdit`);
- * - only integrations or the mesh were added or removed: just those are added and
- *   removed, through the Integrations screen's own Add and Remove (`addWithSteps`,
- *   `removeWithCleanup`), with its checks.
- *   A mesh add or removal republishes the storefront (or, headless, writes the
- *   frontend's settings again) itself.
+ * - only integrations or the mesh were added or removed, or the datapack changed:
+ *   just those. Integrations go through the Integrations screen's own Add and
+ *   Remove (`addWithSteps`, `removeWithCleanup`), with its checks; a mesh add or
+ *   removal republishes the storefront (or, headless, writes the frontend's
+ *   settings again) itself. The datapack: `executorEditDatapack`.
+ *
+ * Every question is asked before anything runs.
  *
  * The rebuild never removed anything: an integration unticked in Edit stayed
  * deployed, and its record put it back on the list at the next load. Every
@@ -20,6 +22,11 @@
 
 import * as vscode from 'vscode';
 import { integrationProgress, selectedEntry } from './executorAppBuilderPhase';
+import {
+    applyDatapackChange,
+    planDatapackChange,
+    type AskRemoveOldDatapack,
+} from './executorEditDatapack';
 import { loadExistingProjectForEdit, saveUnchangedEdit } from './executorEditMode';
 import type { ProgressTracker } from './shared';
 import { getAppBuilderComponent } from '@/core/state/appBuilderComponentState';
@@ -28,6 +35,7 @@ import { addWithSteps, refuseAdd } from '@/features/dashboard/handlers/appBuilde
 import { runGuards } from '@/features/dashboard/handlers/appBuilderComponentGuards';
 import type { GuardableResult } from '@/features/dashboard/handlers/appBuilderComponentOperation';
 import { removeWithCleanup } from '@/features/dashboard/handlers/appBuilderComponentRemove';
+import { confirmSampleDataRemoval } from '@/features/eds/services/reset/edsResetSampleData';
 import {
     appliesInPlace,
     selectionDelta,
@@ -41,13 +49,31 @@ import type { ProjectCreationConfig } from '@/types/webviewRequests';
 /** Asks the SC to confirm removing these integrations, by name. True to go ahead. */
 export type ConfirmRemoval = (names: string[]) => Promise<boolean>;
 
+/** The questions an Edit may ask before it runs. Injected so tests answer them. */
+export interface EditQuestions {
+    removeIntegrations: ConfirmRemoval;
+    removeOldDatapack: AskRemoveOldDatapack;
+}
+
+/** In production: one modal naming what is removed, and Reset's datapack question. */
+const ASK_THE_SC: EditQuestions = {
+    removeIntegrations: (names) => confirmRemovalModal(names),
+    removeOldDatapack: (project, canRemove) =>
+        confirmSampleDataRemoval(
+            project,
+            vscode,
+            canRemove,
+            'Keep Data imports the new pack beside it.',
+        ),
+};
+
 /**
  * Finish an Edit without the rebuild, when it can be.
  *
  * @param context - the handler context
  * @param config - what Finish was given, with the changed choices (`editChanges`)
  * @param progressTracker - the wizard's progress screen
- * @param confirm - asks before anything is removed
+ * @param ask - the questions asked before anything runs
  * @returns true when the Edit is finished; false to run the full rebuild
  * @throws when a removal or an add fails, or the SC declines the removal
  */
@@ -55,18 +81,18 @@ export async function finishEditWithoutRebuild(
     context: HandlerContext,
     config: ProjectCreationConfig,
     progressTracker: ProgressTracker,
-    confirm: ConfirmRemoval = confirmRemovalModal,
+    ask: EditQuestions = ASK_THE_SC,
 ): Promise<boolean> {
     if (await saveUnchangedEdit(context, config, progressTracker)) return true;
-    return applyIntegrationEdit(context, config, progressTracker, confirm);
+    return applyInPlace(context, config, progressTracker, ask);
 }
 
-/** Add and remove just the integrations the SC added and removed. */
-async function applyIntegrationEdit(
+/** Do just what the SC changed: integrations added and removed, and the datapack. */
+async function applyInPlace(
     context: HandlerContext,
     config: ProjectCreationConfig,
     progressTracker: ProgressTracker,
-    confirm: ConfirmRemoval,
+    ask: EditQuestions,
 ): Promise<boolean> {
     const changes = config.editChanges;
     if (!config.editProjectPath || !changes?.length) return false;
@@ -82,14 +108,17 @@ async function applyIntegrationEdit(
 
     context.logger.info(
         `[Project Edit] Applying in place: adding [${delta.added.join(', ')}], ` +
-            `removing [${delta.removed.join(', ')}]`,
+            `removing [${delta.removed.join(', ')}], changed [${changes.join(', ')}]`,
     );
     const names = delta.removed.map((id) => getAppBuilderComponent(project, id)?.name ?? id);
-    if (names.length > 0 && !(await confirm(names))) {
+    if (names.length > 0 && !(await ask.removeIntegrations(names))) {
         throw new Error('Saving changes was cancelled by user. Nothing was changed.');
     }
-    const refused = await runGuards(context, project);
-    if (refused) throw new Error(refused.error);
+    const datapack = await planDatapackChange(context, project, changes, ask.removeOldDatapack);
+    if (delta.added.length + delta.removed.length > 0) {
+        const refused = await runGuards(context, project);
+        if (refused) throw new Error(refused.error);
+    }
 
     const warnings = [
         ...(await runEach(delta.removed, progressTracker, (id, report) =>
@@ -99,6 +128,8 @@ async function applyIntegrationEdit(
             addOne(context, project, config, id, report),
         )),
     ];
+    // After the integrations, as in creation: a pack lands on the finished project.
+    await applyDatapackChange(context, project, config, datapack, progressTracker);
     project.lastModified = new Date();
     await context.stateManager.saveProject(project);
     if (warnings.length > 0) void vscode.window.showWarningMessage(warnings.join(' '));
