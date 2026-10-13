@@ -255,10 +255,14 @@ export function WelcomeStep({
         const storefront = pkg?.storefronts?.[state.selectedStack];
         if (!storefront) return;
 
-        // Always set template config from storefront (source of truth)
-        updateState({
-            edsConfig: buildEdsConfigFromStorefront(storefront, state.edsConfig),
-        });
+        // Always set template config from storefront (source of truth), but only
+        // when it differs: the write changes `state.edsConfig`, which this effect
+        // depends on, so writing every time re-ran it without end. Measured
+        // 2026-10-13 with a stateful render: over 200 writes, never settling, on
+        // every Edge Delivery Edit (Edit opens here with package and stack set).
+        const next = buildEdsConfigFromStorefront(storefront, state.edsConfig);
+        if (JSON.stringify(next) === JSON.stringify(state.edsConfig)) return;
+        updateState({ edsConfig: next });
     }, [state.selectedStack, state.selectedPackage, packages, updateState, state.edsConfig]);
 
     // Project Name Input - shared between both layouts

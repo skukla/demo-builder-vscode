@@ -22,8 +22,8 @@
  */
 
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
-import { render } from '@testing-library/react';
-import React from 'react';
+import { act, render } from '@testing-library/react';
+import React, { useCallback, useState } from 'react';
 import { WelcomeStep } from '@/features/project-creation/ui/steps/WelcomeStep';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { WizardState } from '@/types/webview';
@@ -153,5 +153,48 @@ describe('WelcomeStep — edsConfig refresh on the edit path', () => {
         renderWelcome(updateState, 'headless-paas', undefined);
 
         expect(lastEdsConfig(updateState)).toBeUndefined();
+    });
+});
+
+// With a mocked updateState nothing re-renders, so the suites above could not see
+// it: the refresh writes `edsConfig`, which the effect depends on, and wrote it
+// every time. With real state it ran over 200 times and never settled, on every
+// Edge Delivery Edit (2026-10-13).
+describe('WelcomeStep — the refresh settles with real state', () => {
+    it('writes the storefront settings once, then stops', async () => {
+        const writes: unknown[] = [];
+        function Stateful() {
+            const [state, setState] = useState({
+                projectName: 'my-commerce-demo',
+                selectedPackage: 'citisignal',
+                selectedStack: 'eds-paas',
+                edsConfig: STALE_EDS_CONFIG,
+            } as unknown as WizardState);
+            const updateState = useCallback((updates: Partial<WizardState>) => {
+                if ('edsConfig' in updates) writes.push(updates.edsConfig);
+                if (writes.length > 50) return; // a runaway is reported, not hung on
+                setState((prev) => ({ ...prev, ...updates }));
+            }, []);
+            return (
+                <Provider theme={defaultTheme}>
+                    <WelcomeStep
+                        state={state}
+                        updateState={updateState}
+                        setCanProceed={jest.fn()}
+                        packages={PACKAGES}
+                        stacks={[]}
+                    />
+                </Provider>
+            );
+        }
+
+        render(<Stateful />);
+        for (let round = 0; round < 10; round++) {
+            await act(async () => {
+                await Promise.resolve();
+            });
+        }
+
+        expect(writes).toHaveLength(1);
     });
 });

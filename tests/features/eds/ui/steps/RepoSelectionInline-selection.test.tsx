@@ -85,6 +85,16 @@ describe('RepoSelectionInline — choosing an existing repository', () => {
             });
         });
 
+        // The list has only repos the SC owns or was added to by name; the project's
+        // own repo, reached through an organization's team, is missing from it.
+        it('is left alone in Edit, where the repository is the project\'s own', async () => {
+            const teamRepo = { ...REPO, id: 'acme/team-store', name: 'team-store' } as GitHubRepoItem;
+
+            await h.renderInline({ ...stateWith({ selectedRepo: teamRepo, repoName: 'team-store' }), wizardMode: 'edit' });
+
+            expect(h.clearedSelection()).toBe(false);
+        });
+
         it('is left alone when the list still has it', async () => {
             await h.renderInline(stateWith({ selectedRepo: REPO, repoName: 'my-store' }));
 

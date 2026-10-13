@@ -76,7 +76,16 @@ type UpdateDaLiveAuthRef = MutableRefObject<
     (updates: Partial<NonNullable<EDSConfig['daLiveAuth']>>) => void
 >;
 
-/** Build an edsConfig update object with org and auth state. */
+/**
+ * Build an edsConfig update object with org and auth state.
+ *
+ * `keepOrg` is for the sign-in STATUS check, which reports the org saved from
+ * the last sign-in, one value for every project. It only fills an empty
+ * `daLiveOrg`: it used to overwrite the project's own on every Storefront visit,
+ * so an Edit of a project in another namespace quietly moved it to this one
+ * (PL-75 local testing, 2026-10-13). A fresh sign-in (`dalive-token-stored`)
+ * still sets it.
+ */
 function buildEdsConfigWithOrg(
     edsConfigRef: EdsConfigRef,
     orgName: string,
@@ -85,6 +94,7 @@ function buildEdsConfigWithOrg(
     // could never survive into the result.
     authUpdates: Partial<NonNullable<EDSConfig['daLiveAuth']>> &
         Pick<NonNullable<EDSConfig['daLiveAuth']>, 'isAuthenticated'>,
+    keepOrg = false,
 ): Partial<WizardState> {
     return {
         edsConfig: {
@@ -93,7 +103,7 @@ function buildEdsConfigWithOrg(
             storeViewCode: edsConfigRef.current?.storeViewCode || '',
             customerGroup: edsConfigRef.current?.customerGroup || '',
             repoName: edsConfigRef.current?.repoName || '',
-            daLiveOrg: orgName,
+            daLiveOrg: (keepOrg && edsConfigRef.current?.daLiveOrg) || orgName,
             daLiveSite: edsConfigRef.current?.daLiveSite || '',
             daLiveAuth: {
                 ...edsConfigRef.current?.daLiveAuth,
@@ -112,19 +122,21 @@ function handleAuthStatusUpdate(
 ): void {
     if (authData.isAuthenticated && authData.orgName) {
         updateStateRef.current(
-            buildEdsConfigWithOrg(edsConfigRef, authData.orgName, {
-                isAuthenticated: true,
-                isAuthenticating: false,
-                error: undefined,
-            }),
+            buildEdsConfigWithOrg(
+                edsConfigRef,
+                authData.orgName,
+                { isAuthenticated: true, isAuthenticating: false, error: undefined },
+                true,
+            ),
         );
     } else if (!authData.isAuthenticated && authData.orgName) {
         updateStateRef.current(
-            buildEdsConfigWithOrg(edsConfigRef, authData.orgName, {
-                isAuthenticated: false,
-                isAuthenticating: false,
-                error: authData.error,
-            }),
+            buildEdsConfigWithOrg(
+                edsConfigRef,
+                authData.orgName,
+                { isAuthenticated: false, isAuthenticating: false, error: authData.error },
+                true,
+            ),
         );
     } else {
         updateDaLiveAuthRef.current({

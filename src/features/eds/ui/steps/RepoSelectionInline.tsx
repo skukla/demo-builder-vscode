@@ -195,8 +195,15 @@ export function RepoSelectionInline({
     );
 
     // Validate pre-selected repo exists in loaded repos (for import flow).
+    //
+    // Not in Edit: the repository is the project's own, and the list only has
+    // repositories the SC owns or was added to by name, so one reached through an
+    // organization's team is missing from it. Clearing it there made an Edit's
+    // Finish run storefront setup with no repository (PL-75 local testing,
+    // 2026-10-13).
+    const editing = state.wizardMode === 'edit';
     useEffect(() => {
-        if (isValidExistingRepoSelection(repoMode, selectedRepo, hasLoadedOnce, repos)) {
+        if (!editing && isValidExistingRepoSelection(repoMode, selectedRepo, hasLoadedOnce, repos)) {
             const repoExists = repos.some((repo) => repo.id === selectedRepo.id);
             if (!repoExists) {
                 updateEdsConfig({
@@ -206,7 +213,7 @@ export function RepoSelectionInline({
                 });
             }
         }
-    }, [hasLoadedOnce, repos, selectedRepo, repoMode, updateEdsConfig]);
+    }, [editing, hasLoadedOnce, repos, selectedRepo, repoMode, updateEdsConfig]);
 
     // Classify the selected repo so the reset control can ask only when there
     // is something to lose.
