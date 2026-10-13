@@ -7,8 +7,9 @@
  * service groups — so the sidebar was never the list of sections on screen.
  *
  * Three invariants survive the one-section-at-a-time layout, and each has a test:
- *   - Save submits EVERY section. `componentConfigs` spans all of them and stays lifted
- *     here; a section that is not rendered still contributes its values.
+ *   - Save submits EVERY section's changes. `componentConfigs` spans all of them and stays
+ *     lifted here; an edit in a section that is not rendered still reaches Save. Only the
+ *     values that differ from what the screen loaded are sent (PL-76).
  *   - Validation stays GLOBAL. The validation effect walks every service group, not the
  *     mounted one, so an error in a hidden section still disables Save.
  *   - That error stays FINDABLE. `hasError` rides each section onto its rail tab,
@@ -124,6 +125,7 @@ export function ConfigureScreen({
     // Every section's field values, lifted so an edit survives switching sections.
     const {
         componentConfigs,
+        configChanges,
         touchedFields,
         getFieldValue,
         getValueFromConfigs,
@@ -135,11 +137,12 @@ export function ConfigureScreen({
     const { isSaving, isDeploying, handleSave, handleCancel } = useConfigureSave({
         project,
         projectName,
-        componentConfigs,
+        configChanges,
         componentSecretFlags,
         touchedFields,
         isEds,
         authoringExperience,
+        initialAuthoringExperience: initialAuthoringExperience ?? 'da-live-classic',
         blockLibrarySelection: changedSelection,
     });
 

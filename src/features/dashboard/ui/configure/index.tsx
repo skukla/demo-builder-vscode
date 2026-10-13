@@ -1,6 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { ConfigureScreen } from './ConfigureScreen';
+import { keyForInit } from './initKey';
 import { WebviewApp } from '@/core/ui/components/WebviewApp';
 // The base layers. They arrive as REAL imports, in this entry's graph, because
 // that is the only delivery this build resolves. index.css used to pull them in
@@ -50,6 +51,8 @@ root.render(
             const init = (data ?? {}) as Partial<ConfigureInitialData>;
             return init.project && init.componentsData ? (
                 <ConfigureScreen
+                    // A fresh `init` (Configure re-opened) remounts the screen.
+                    key={keyForInit(init)}
                     {...init}
                     project={init.project}
                     componentsData={init.componentsData}

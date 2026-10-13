@@ -15,7 +15,7 @@
  * @module features/dashboard/ui/configure/hooks/useConfigureFieldValues
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { UniqueField } from '../configureTypes';
 import { normalizeUrl } from '@/core/validation/Validator';
 import {
@@ -23,6 +23,7 @@ import {
     findFieldValue,
     writeFieldValue,
 } from '@/features/components/services/componentConfigWrites';
+import { diffConfigs } from '@/features/dashboard/services/configureConfigChanges';
 import type { Project } from '@/types/base';
 import { hasEntries } from '@/types/typeGuards';
 import type { ComponentConfigs } from '@/types/webview';
@@ -35,8 +36,10 @@ export interface UseConfigureFieldValuesProps {
 }
 
 export interface UseConfigureFieldValuesReturn {
-    /** Every section's values, keyed by component id. Save sends this whole map. */
+    /** Every section's values, keyed by component id. */
     componentConfigs: ComponentConfigs;
+    /** Only the values that differ from what the screen loaded. Save sends this. */
+    configChanges: ComponentConfigs;
     /** Field keys the user has edited. */
     touchedFields: Set<string>;
     /** The value the form should DISPLAY for a field (defaults included). */
@@ -63,6 +66,8 @@ export function useConfigureFieldValues({
     existingEnvValues,
 }: UseConfigureFieldValuesProps): UseConfigureFieldValuesReturn {
     const [componentConfigs, setComponentConfigs] = useState<ComponentConfigs>({});
+    // What the screen was seeded with: Save sends only what differs from it (PL-76).
+    const [loadedConfigs, setLoadedConfigs] = useState<ComponentConfigs>({});
     const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
 
     // The backend owns the store-scope keys, so those writes land only there
@@ -70,15 +75,19 @@ export function useConfigureFieldValues({
     // that declares it.
     const backendId = project.componentSelections?.backend;
 
-    // Seed from whichever source has values. Re-opening Configure re-sends `init`
-    // without remounting React, so this runs again and resets the configs.
+    // Seed from whichever source has values. The screen is remounted on every
+    // `init` (the Configure entry keys it on the payload), so this seeds once.
     useEffect(() => {
-        if (hasEntries(existingEnvValues)) {
-            setComponentConfigs(existingEnvValues);
-        } else if (project.componentConfigs) {
-            setComponentConfigs(project.componentConfigs);
-        }
+        const seed = hasEntries(existingEnvValues) ? existingEnvValues : project.componentConfigs;
+        if (!seed) return;
+        setComponentConfigs(seed);
+        setLoadedConfigs(seed);
     }, [existingEnvValues, project.componentConfigs]);
+
+    const configChanges = useMemo(
+        () => diffConfigs(loadedConfigs, componentConfigs),
+        [loadedConfigs, componentConfigs],
+    );
 
     const getValueFromConfigs = useCallback(
         (field: UniqueField): string | number | boolean | undefined => {
@@ -175,6 +184,7 @@ export function useConfigureFieldValues({
 
     return {
         componentConfigs,
+        configChanges,
         touchedFields,
         getFieldValue,
         getValueFromConfigs,

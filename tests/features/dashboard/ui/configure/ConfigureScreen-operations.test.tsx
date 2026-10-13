@@ -137,9 +137,11 @@ describe('ConfigureScreen - Operations', () => {
             const saveButton = screen.getByText('Save Changes');
             await user.click(saveButton);
 
+            // Nothing was edited, so nothing rides: a window opened before another
+            // change cannot put old values back (PL-76).
             await waitFor(() => {
                 expect(mockRequest).toHaveBeenCalledWith('save-configuration', {
-                    componentConfigs: expect.any(Object),
+                    configChanges: {},
                 });
             });
         });
@@ -412,7 +414,7 @@ describe('ConfigureScreen - Operations', () => {
                 expect(mockRequest).toHaveBeenCalledWith(
                     'save-configuration',
                     expect.objectContaining({
-                        componentConfigs: expect.objectContaining({
+                        configChanges: expect.objectContaining({
                             headless: expect.objectContaining({
                                 ADOBE_COMMERCE_URL: 'https://edited.example.com',
                             }),
@@ -420,6 +422,9 @@ describe('ConfigureScreen - Operations', () => {
                     })
                 );
             });
+            // Only the edited value rides; untouched sections send nothing.
+            const sent = mockRequest.mock.calls[0][1] as { configChanges: Record<string, unknown> };
+            expect(sent.configChanges).not.toHaveProperty('catalog-service');
         });
     });
 });

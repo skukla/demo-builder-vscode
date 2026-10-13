@@ -198,4 +198,42 @@ describe('useConfigureFieldValues', () => {
             expect(result.current.componentConfigs).toBe(before);
         });
     });
+
+    describe('what Save sends (PL-76)', () => {
+        it('has no changes before anything is edited', () => {
+            const { result } = render({ headless: { STORE_CODE: 'main', OTHER: 'kept' } });
+
+            expect(result.current.configChanges).toStrictEqual({});
+        });
+
+        it('carries only the edited value, not the rest of what was loaded', () => {
+            const { result } = render({ headless: { STORE_CODE: 'main', OTHER: 'kept' } });
+
+            act(() => result.current.updateField(textField, 'outlet'));
+
+            expect(result.current.configChanges).toStrictEqual({ headless: { STORE_CODE: 'outlet' } });
+        });
+
+        it('has no changes again once an edit is put back', () => {
+            const { result } = render({ headless: { STORE_CODE: 'main' } });
+
+            act(() => result.current.updateField(textField, 'outlet'));
+            act(() => result.current.updateField(textField, 'main'));
+
+            expect(result.current.configChanges).toStrictEqual({});
+        });
+
+        it('carries a value the edit derives, such as the GraphQL endpoint from the URL', () => {
+            const { result } = render({ headless: { ADOBE_COMMERCE_URL: 'https://original.test' } });
+
+            act(() => result.current.updateField(urlField, 'https://edited.test'));
+
+            expect(result.current.configChanges).toStrictEqual({
+                headless: {
+                    ADOBE_COMMERCE_URL: 'https://edited.test',
+                    [GRAPHQL_KEY]: 'https://edited.test/graphql',
+                },
+            });
+        });
+    });
 });

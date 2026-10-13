@@ -25,6 +25,7 @@ import {
     buildBlockLibraryChoices,
     type BlockLibrarySelectionInput,
 } from '@/features/dashboard/services/configureBlockLibraries';
+import { applyConfigChanges } from '@/features/dashboard/services/configureConfigChanges';
 import {
     describePendingBlockLibraryWork,
     hasPendingBlockLibraryWork,
@@ -48,6 +49,7 @@ import { handleRenameProject } from '@/features/projects-dashboard/handlers/dash
 import { Project, type AuthoringExperience } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import { getComponentInstanceEntries, getEdsDaLiveUrl, isEdsProject } from '@/types/typeGuards';
+import type { ComponentConfigs as WebviewComponentConfigs } from '@/types/webview';
 import type {
     ConfigureInitialData,
     CustomBlockLibraryDefaultsUpdatedPayload,
@@ -71,7 +73,8 @@ const AUTHORING_EXPERIENCES: ReadonlySet<AuthoringExperience> = new Set<Authorin
 type ComponentConfigs = Record<string, Record<string, string>>;
 
 interface SaveConfigurationData extends BlockLibrarySelectionInput {
-    componentConfigs: ComponentConfigs;
+    /** Only the values the SC changed; laid over the settings as they are now (PL-76). */
+    configChanges?: WebviewComponentConfigs;
     newProjectName?: string;
     authoringExperience?: AuthoringExperience;
 }
@@ -267,10 +270,14 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
             // Handle project rename if name changed (renameProjectCore moves path-keyed secrets)
             project = await this.renameProjectIfRequested(project, data.newProjectName);
 
-            // An integration's settings are set on its tile (AB-21), not here. This
-            // screen sends back every value it loaded, so without this a window
-            // opened before a Settings save would put the old values back.
-            const withoutIntegrations = keepIntegrationSettings(data.componentConfigs, project);
+            // The screen sends only what the SC changed. Lay it over the settings as
+            // they are NOW (read the same way the screen loaded them), so a change made
+            // elsewhere while this window was open is kept (PL-76).
+            const current = await this.loadExistingEnvValues(project);
+            const updated = applyConfigChanges(current, data.configChanges ?? {});
+
+            // An integration's settings are set on its tile (AB-21), not here.
+            const withoutIntegrations = keepIntegrationSettings(updated, project);
 
             // Same guarantee for COMPONENT-declared secrets (`secret: true` in
             // components.json) — the Commerce credentials. Write-through with a

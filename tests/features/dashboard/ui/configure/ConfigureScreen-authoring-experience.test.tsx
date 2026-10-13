@@ -260,7 +260,9 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
         });
     });
 
-    it('saves DA.live classic for an EDS project whose init carried no preference', async () => {
+    it('sends no authoring experience the SC left as it was (PL-76)', async () => {
+        // It used to ride on every EDS save, so a window opened before a flip made
+        // elsewhere flipped it back.
         const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
 
         renderWithProvider(
@@ -269,6 +271,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
                 componentsData={mockComponentsData}
                 existingEnvValues={validConfig}
                 isEds
+                authoringExperience="experience-workspace"
             />
         );
 
@@ -278,11 +281,9 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
         await user.click(screen.getByText('Save Changes'));
 
         await waitFor(() => {
-            expect(mockRequest).toHaveBeenCalledWith(
-                'save-configuration',
-                expect.objectContaining({ authoringExperience: 'da-live-classic' })
-            );
+            expect(mockRequest).toHaveBeenCalledWith('save-configuration', expect.anything());
         });
+        expect(mockRequest.mock.calls[0][1]).not.toHaveProperty('authoringExperience');
     });
 
     it('saves a block library ticked on the Block Libraries tab, even after leaving the tab', async () => {

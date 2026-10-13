@@ -2,7 +2,7 @@
  * useConfigureSave Hook
  *
  * Owns the Configure screen's footer actions: Save (one `save-configuration` request
- * carrying EVERY section's values), Close, and the two busy flags that disable both —
+ * carrying only what the SC changed, PL-76), Close, and the two busy flags that disable both —
  * our own save in flight, and a mesh/storefront deployment the extension reports over
  * `deployment-status`.
  *
@@ -26,16 +26,21 @@ export interface UseConfigureSaveProps {
     project: Project;
     /** The project title as typed. */
     projectName: string;
-    /** Every section's values, keyed by component id. */
-    componentConfigs: ComponentConfigs;
+    /**
+     * Only the values that differ from what the screen loaded. Sending every loaded
+     * value let a window opened before another change put the old values back.
+     */
+    configChanges: ComponentConfigs;
     /** Which declared secrets the project already holds (booleans only). */
     componentSecretFlags: Record<string, Record<string, boolean>>;
     /** Field keys the user has edited. */
     touchedFields: Set<string>;
     /** EDS project — gates sending the authoring-experience preference. */
     isEds: boolean;
-    /** The authoring-experience choice (sent only for EDS projects). */
+    /** The authoring-experience choice (sent only for EDS projects, and only once changed). */
     authoringExperience: AuthoringExperience;
+    /** The choice the screen loaded with. */
+    initialAuthoringExperience: AuthoringExperience;
     /**
      * The block libraries to record (EDS only). Undefined while the SC has not
      * touched the picker, and then nothing about them is sent.
@@ -48,7 +53,7 @@ export interface UseConfigureSaveReturn {
     isSaving: boolean;
     /** The extension reports a deployment in progress. */
     isDeploying: boolean;
-    /** Send the whole configuration to the extension. */
+    /** Send what the SC changed to the extension. */
     handleSave: () => Promise<void>;
     /** Close the Configure panel. */
     handleCancel: () => void;
@@ -63,11 +68,12 @@ export interface UseConfigureSaveReturn {
 export function useConfigureSave({
     project,
     projectName,
-    componentConfigs,
+    configChanges,
     componentSecretFlags,
     touchedFields,
     isEds,
     authoringExperience,
+    initialAuthoringExperience,
     blockLibrarySelection,
 }: UseConfigureSaveProps): UseConfigureSaveReturn {
     const [isSaving, setIsSaving] = useState(false);
@@ -94,19 +100,24 @@ export function useConfigureSave({
                 projectName.trim() !== getProjectDisplayName(project)
                     ? projectName.trim()
                     : undefined;
-            // The authoring-experience preference is EDS-only; for non-EDS projects
-            // it is omitted entirely so the payload shape is unchanged. The same
-            // goes for the block libraries, which also ride only once changed.
+            // The authoring-experience preference is EDS-only, and like the block
+            // libraries it rides only once changed.
+            const authoringChanged = authoringExperience !== initialAuthoringExperience;
             const result = await webviewClient.request<SaveConfigurationResponse>(
                 'save-configuration',
                 {
-                    componentConfigs: withStoredSecretsPreserved(
-                        componentConfigs,
+                    configChanges: withStoredSecretsPreserved(
+                        configChanges,
                         componentSecretFlags,
                         touchedFields,
                     ),
                     newProjectName,
-                    ...(isEds ? { authoringExperience, ...blockLibrarySelection } : {}),
+                    ...(isEds
+                        ? {
+                              ...(authoringChanged ? { authoringExperience } : {}),
+                              ...blockLibrarySelection,
+                          }
+                        : {}),
                 },
             );
             if (!result.success) {
@@ -119,7 +130,7 @@ export function useConfigureSave({
             setIsSaving(false);
         }
     }, [
-        componentConfigs,
+        configChanges,
         // Both feed the stored-secret filter. A stale closure here would send the
         // blank placeholder and delete the credential — the exact failure the
         // filter exists to prevent.
@@ -133,6 +144,7 @@ export function useConfigureSave({
         project,
         isEds,
         authoringExperience,
+        initialAuthoringExperience,
         blockLibrarySelection,
     ]);
 

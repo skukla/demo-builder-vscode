@@ -69,11 +69,9 @@ export function useConfigureSections({
     projectNameError,
 }: UseConfigureSectionsProps): UseConfigureSectionsReturn {
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-    // Which section the rail is on. Re-opening Configure re-sends `init` WITHOUT
-    // remounting React (baseWebviewCommand.createOrRevealPanel), so this deliberately
-    // survives a re-open and puts the user back where they were — matching
-    // `retainContextWhenHidden`, which already preserves it across a tab-away.
-    // `componentConfigs` does reset on that init; the asymmetry is accepted.
+    // Which section the rail is on. It survives a tab-away (`retainContextWhenHidden`),
+    // and starts again on Project when Configure is re-opened: the entry remounts the
+    // screen on every `init`, so nothing from before the re-open is kept (PL-76).
     const [activeSectionId, setActiveSectionId] = useState('project-info');
 
     // GLOBAL validation: every service group, not the one on screen. An error the user

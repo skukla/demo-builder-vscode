@@ -26,11 +26,12 @@ function props(overrides: Partial<UseConfigureSaveProps> = {}): UseConfigureSave
     return {
         project: createMockProject({ name: 'bodea-demo', title: 'Bodea Demo' }),
         projectName: 'Bodea Demo',
-        componentConfigs: { headless: { ADOBE_COMMERCE_URL: 'https://example.com' } },
+        configChanges: { headless: { ADOBE_COMMERCE_URL: 'https://example.com' } },
         componentSecretFlags: NO_SECRETS,
         touchedFields: new Set<string>(),
         isEds: false,
         authoringExperience: 'experience-workspace',
+        initialAuthoringExperience: 'experience-workspace',
         ...overrides,
     };
 }
@@ -64,13 +65,15 @@ describe('useConfigureSave', () => {
         expect(result.current.isDeploying).toBe(false);
     });
 
-    it('sends every value and no rename when the title is unchanged', async () => {
+    it('sends only what changed, and no rename when the title is unchanged', async () => {
+        // PL-76: the whole loaded map used to ride here, so a window opened before
+        // another change put the old values back.
         const { result } = render();
 
         await act(() => result.current.handleSave());
 
         expect(mockRequest).toHaveBeenCalledWith('save-configuration', {
-            componentConfigs: { headless: { ADOBE_COMMERCE_URL: 'https://example.com' } },
+            configChanges: { headless: { ADOBE_COMMERCE_URL: 'https://example.com' } },
             newProjectName: undefined,
         });
     });
@@ -83,13 +86,29 @@ describe('useConfigureSave', () => {
         expect(mockRequest.mock.calls[0][1]).toMatchObject({ newProjectName: 'bodea demo' });
     });
 
-    it('sends the authoring experience only for an EDS project', async () => {
-        const eds = render({ isEds: true });
+    it('sends the authoring experience once the SC changed it, for an EDS project', async () => {
+        const eds = render({ isEds: true, initialAuthoringExperience: 'da-live-classic' });
         await act(() => eds.result.current.handleSave());
 
         expect(mockRequest.mock.calls[0][1]).toMatchObject({
             authoringExperience: 'experience-workspace',
         });
+    });
+
+    it('sends no authoring experience the SC did not change', async () => {
+        // It used to ride on every EDS save, so a window opened before a flip made
+        // elsewhere flipped it back.
+        const eds = render({ isEds: true });
+        await act(() => eds.result.current.handleSave());
+
+        expect(mockRequest.mock.calls[0][1]).not.toHaveProperty('authoringExperience');
+    });
+
+    it('never sends the authoring experience for a project that is not EDS', async () => {
+        const { result } = render({ initialAuthoringExperience: 'da-live-classic' });
+        await act(() => result.current.handleSave());
+
+        expect(mockRequest.mock.calls[0][1]).not.toHaveProperty('authoringExperience');
     });
 
     it('sends the block libraries the SC changed, for an EDS project', async () => {
@@ -133,13 +152,13 @@ describe('useConfigureSave', () => {
 
     it('drops the blank placeholder of a stored secret the user never touched', async () => {
         const { result } = render({
-            componentConfigs: { backend: { ADMIN_PASSWORD: '', ADMIN_USER: 'admin' } },
+            configChanges: { backend: { ADMIN_PASSWORD: '', ADMIN_USER: 'admin' } },
             componentSecretFlags: { backend: { ADMIN_PASSWORD: true } },
         });
 
         await act(() => result.current.handleSave());
 
-        expect(mockRequest.mock.calls[0][1].componentConfigs).toStrictEqual({
+        expect(mockRequest.mock.calls[0][1].configChanges).toStrictEqual({
             backend: { ADMIN_USER: 'admin' },
         });
     });
