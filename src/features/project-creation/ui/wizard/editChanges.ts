@@ -256,9 +256,10 @@ export function selectionDelta(before: readonly string[], after: readonly string
 
 /**
  * Whether Finish can apply this Edit in place: it only adds or removes
- * integrations or the mesh, changes the datapack, or both, and every other changed
- * choice belongs to an integration it adds or removes (its settings, its API
- * picks, its source). Adding or removing the mesh brings the storefront's settings
+ * integrations or the mesh, changes the datapack, moves the project to another
+ * Adobe project or workspace (in the same org), or any of those together, and
+ * every other changed choice belongs to an integration it adds or removes (its
+ * settings, its API picks, its source). Adding or removing the mesh brings the storefront's settings
  * up to date itself (the runner's storefront refresh), and a new datapack's
  * category pages are written after it lands, so the storefront step is not needed
  * for any of them.
@@ -274,10 +275,17 @@ export function appliesInPlace(changes: readonly string[], delta: SelectionDelta
     const touched = [...delta.added, ...delta.removed];
     const owned = new Set(KEYED_CHOICES.flatMap((field) => touched.map((id) => `${field}.${id}`)));
     const inPlace = (name: string): boolean =>
-        name === 'datapack' ||
+        CHANGED_IN_PLACE.has(name) ||
         (touched.length > 0 && (name === 'selectedAppBuilderComponents' || owned.has(name)));
     return changes.length > 0 && changes.every(inPlace);
 }
+
+/**
+ * Choices Finish changes in place on their own: the datapack, and the Adobe
+ * project and workspace (the Integrations screen's own move). Not the org: a move
+ * to another org is its own switch (PL-77).
+ */
+const CHANGED_IN_PLACE = new Set(['datapack', 'adobeProject', 'adobeWorkspace']);
 
 /** The selection a baseline recorded (`editChoicesOf` writes it as a sorted list). */
 function baselineSelection(baseline: EditChoices): string[] {

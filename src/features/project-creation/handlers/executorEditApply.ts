@@ -9,7 +9,8 @@
  *   just those. Integrations go through the Integrations screen's own Add and
  *   Remove (`addWithSteps`, `removeWithCleanup`), with its checks; a mesh add or
  *   removal republishes the storefront (or, headless, writes the frontend's
- *   settings again) itself. The datapack: `executorEditDatapack`.
+ *   settings again) itself. The datapack: `executorEditDatapack`. A move to another
+ *   Adobe project or workspace: `executorEditDestination`.
  *
  * Every question is asked before anything runs.
  *
@@ -27,6 +28,11 @@ import {
     planDatapackChange,
     type AskRemoveOldDatapack,
 } from './executorEditDatapack';
+import {
+    applyDestinationChange,
+    planDestinationChange,
+    type AskLeaveAdobeProject,
+} from './executorEditDestination';
 import { loadExistingProjectForEdit, saveUnchangedEdit } from './executorEditMode';
 import type { ProgressTracker } from './shared';
 import { getAppBuilderComponent } from '@/core/state/appBuilderComponentState';
@@ -35,6 +41,7 @@ import { addWithSteps, refuseAdd } from '@/features/dashboard/handlers/appBuilde
 import { runGuards } from '@/features/dashboard/handlers/appBuilderComponentGuards';
 import type { GuardableResult } from '@/features/dashboard/handlers/appBuilderComponentOperation';
 import { removeWithCleanup } from '@/features/dashboard/handlers/appBuilderComponentRemove';
+import { confirmLeavingAdobeProject } from '@/features/dashboard/handlers/destinationHandlers';
 import { confirmSampleDataRemoval } from '@/features/eds/services/reset/edsResetSampleData';
 import {
     appliesInPlace,
@@ -52,12 +59,14 @@ export type ConfirmRemoval = (names: string[]) => Promise<boolean>;
 /** The questions an Edit may ask before it runs. Injected so tests answer them. */
 export interface EditQuestions {
     removeIntegrations: ConfirmRemoval;
+    leaveAdobeProject: AskLeaveAdobeProject;
     removeOldDatapack: AskRemoveOldDatapack;
 }
 
 /** In production: one modal naming what is removed, and Reset's datapack question. */
 const ASK_THE_SC: EditQuestions = {
     removeIntegrations: (names) => confirmRemovalModal(names),
+    leaveAdobeProject: confirmLeavingAdobeProject,
     removeOldDatapack: (project, canRemove) =>
         confirmSampleDataRemoval(
             project,
@@ -114,20 +123,30 @@ async function applyInPlace(
     if (names.length > 0 && !(await ask.removeIntegrations(names))) {
         throw new Error('Saving changes was cancelled by user. Nothing was changed.');
     }
+    const destination = await planDestinationChange(
+        project,
+        config,
+        changes,
+        delta.removed,
+        ask.leaveAdobeProject,
+    );
     const datapack = await planDatapackChange(context, project, changes, ask.removeOldDatapack);
-    if (delta.added.length + delta.removed.length > 0) {
+    if (delta.added.length + delta.removed.length > 0 || destination.moves) {
         const refused = await runGuards(context, project);
         if (refused) throw new Error(refused.error);
     }
 
-    const warnings = [
-        ...(await runEach(delta.removed, progressTracker, (id, report) =>
-            removeWithCleanup(context, project, id, report),
-        )),
+    // Removals first, so what goes is not moved; the move next, so what is added
+    // deploys to the new destination.
+    const warnings = await runEach(delta.removed, progressTracker, (id, report) =>
+        removeWithCleanup(context, project, id, report),
+    );
+    await applyDestinationChange(context, project, destination, progressTracker);
+    warnings.push(
         ...(await runEach(delta.added, progressTracker, (id, report) =>
             addOne(context, project, config, id, report),
         )),
-    ];
+    );
     // After the integrations, as in creation: a pack lands on the finished project.
     await applyDatapackChange(context, project, config, datapack, progressTracker);
     project.lastModified = new Date();

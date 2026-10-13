@@ -234,6 +234,11 @@ describe('appliesInPlace — Finish adds and removes just the integrations', () 
         ).toBe(true);
     });
 
+    it('is true for a move to another Adobe project or workspace, but not another org', () => {
+        expect(appliesInPlace(['adobeProject', 'adobeWorkspace'], { added: [], removed: [] })).toBe(true);
+        expect(appliesInPlace(['adobeOrg', 'adobeProject'], { added: [], removed: [] })).toBe(false);
+    });
+
     it('is true for a datapack change, alone or with integrations', () => {
         expect(appliesInPlace(['datapack'], { added: [], removed: [] })).toBe(true);
         expect(

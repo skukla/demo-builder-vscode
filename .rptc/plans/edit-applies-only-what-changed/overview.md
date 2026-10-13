@@ -71,7 +71,10 @@ storefront changed, and its reset runs instead when the package changed.
    import, pre-warm and category-page phases. The Datapacks step no longer pre-selects a demo's
    pack in Edit, which would have read as a change. Original note: remove the recorded pack,
    record the new one, import it.
-5. **Adobe destination.** Through the move the Integrations screen uses.
+5. **Adobe destination.** *Built 2026-10-13* (`executorEditDestination.ts`): the Integrations
+   screen's own move (`applyDestination`, now exported and given its question by the caller), its
+   question asked with the Edit's others before anything runs. Order: removals, the move, adds,
+   the datapack. Same org only; the org is PL-77.
 6. **Package on an Edge Delivery stack.** Clear `project.demo` (it wins over the package in
    `resolveStorefrontForProject`), record the package, run the EDS reset. Runs before steps
    3 to 5, because a reset regenerates components but keeps integrations.

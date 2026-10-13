@@ -13,6 +13,10 @@ jest.mock('@/features/dashboard/handlers/appBuilderComponentGuards', () => ({
 jest.mock('@/features/dashboard/handlers/appBuilderComponentRemove', () => ({
     removeWithCleanup: jest.fn().mockResolvedValue({ success: true }),
 }));
+jest.mock('@/features/project-creation/handlers/executorEditDestination', () => ({
+    planDestinationChange: jest.fn().mockResolvedValue({ moves: false }),
+    applyDestinationChange: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock('@/features/project-creation/handlers/executorEditDatapack', () => ({
     planDatapackChange: jest.fn().mockResolvedValue({ changes: false, removeOld: false }),
     applyDatapackChange: jest.fn().mockResolvedValue(undefined),
@@ -31,6 +35,10 @@ import {
     applyDatapackChange,
     planDatapackChange,
 } from '@/features/project-creation/handlers/executorEditDatapack';
+import {
+    applyDestinationChange,
+    planDestinationChange,
+} from '@/features/project-creation/handlers/executorEditDestination';
 import { finishEditWithoutRebuild } from '@/features/project-creation/handlers/executorEditApply';
 import type { Project } from '@/types/base';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
@@ -66,7 +74,8 @@ function setup(project: Project = savedProject()) {
     const progress = jest.fn();
     const confirm = jest.fn().mockResolvedValue(true);
     const removeOldDatapack = jest.fn().mockResolvedValue(false);
-    const ask = { removeIntegrations: confirm, removeOldDatapack };
+    const leaveAdobeProject = jest.fn().mockResolvedValue(true);
+    const ask = { removeIntegrations: confirm, leaveAdobeProject, removeOldDatapack };
     return { context, stateManager, progress, confirm, ask, project };
 }
 
@@ -299,5 +308,47 @@ describe('finishEditWithoutRebuild — the datapack changed', () => {
 
         expect(planDatapackChange).not.toHaveBeenCalled();
         expect(applyDatapackChange).not.toHaveBeenCalled();
+    });
+});
+
+describe('finishEditWithoutRebuild — the project moved', () => {
+    it('removes first, then moves, then adds, so what arrives deploys to the new destination', async () => {
+        const { context, progress, ask, project } = setup();
+        const order: string[] = [];
+        const plan = { moves: true, project: { id: 'proj-2' }, workspace: { id: 'ws-2' }, target: 'P2' };
+        (planDestinationChange as jest.Mock).mockResolvedValueOnce(plan);
+        (removeWithCleanup as jest.Mock).mockImplementationOnce(async () => (order.push('remove'), { success: true }));
+        (applyDestinationChange as jest.Mock).mockImplementationOnce(async () => order.push('move'));
+        (addWithSteps as jest.Mock).mockImplementationOnce(async () => (order.push('add'), { success: true }));
+        const swapAndMove = config({
+            selectedAppBuilderComponents: ['erp-integration'],
+            editChanges: ['adobeProject', 'adobeWorkspace', 'selectedAppBuilderComponents'],
+        });
+
+        expect(await finishEditWithoutRebuild(context, swapAndMove, progress, ask)).toBe(true);
+
+        expect(planDestinationChange).toHaveBeenCalledWith(
+            project,
+            swapAndMove,
+            swapAndMove.editChanges,
+            ['starter-kit'],
+            ask.leaveAdobeProject,
+        );
+        expect(applyDestinationChange).toHaveBeenCalledWith(context, project, plan, progress);
+        expect(order).toStrictEqual(['remove', 'move', 'add']);
+    });
+
+    it('checks sign-in for a move alone, with nothing added or removed', async () => {
+        const { context, progress, ask, project } = setup();
+        (planDestinationChange as jest.Mock).mockResolvedValueOnce({
+            moves: true,
+            project: { id: 'proj-2' },
+            workspace: { id: 'ws-2' },
+            target: 'P2',
+        });
+
+        await finishEditWithoutRebuild(context, config({ editChanges: ['adobeWorkspace'] }), progress, ask);
+
+        expect(runGuards).toHaveBeenCalledWith(context, project);
     });
 });

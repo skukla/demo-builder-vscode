@@ -142,9 +142,11 @@ async function orgOf(
  * The destination change itself, inside the notification.
  *
  * Split out so the handler stays under the complexity limit and so every slow
- * step — guards included — runs where the user can see it.
+ * step — guards included — runs where the user can see it. An Edit that moves the
+ * project (PL-75) runs it too, having asked its question before anything ran, so
+ * the question is the caller's to hand in.
  */
-async function applyDestination(
+export async function applyDestination(
     context: Parameters<typeof handleSetProjectDestination>[0],
     project: NonNullable<Awaited<ReturnType<HandlerContext['stateManager']['getCurrentProject']>>>,
     // `id` REQUIRED, not optional: the caller already rejects a half-specified
@@ -154,6 +156,8 @@ async function applyDestination(
     nextWorkspace: DestinationRef & { id: string },
     target: string,
     report: ReportStage,
+    askToLeave: (project: Project, next: DestinationRef & { id: string }) => Promise<boolean> =
+        confirmLeavingAdobeProject,
 ): Promise<ReturnType<MessageHandler<SetProjectDestinationPayload>>> {
     // First line, per the progress-register contract: the auth check is the slow
     // step and the user must see why they are waiting.
@@ -203,7 +207,7 @@ async function applyDestination(
     // The exception deletes live resources, so it is confirmed: leaving the Adobe
     // project removes each integration with a workspace of its own from it (AB-23,
     // owner 2026-09-21).
-    if (!(await confirmLeavingAdobeProject(project, nextProject))) {
+    if (!(await askToLeave(project, nextProject))) {
         return { success: false, cancelled: true, error: 'The destination was not changed.' };
     }
     const movingIds = Object.keys(project.appBuilderComponents ?? {});
@@ -336,7 +340,7 @@ async function applyDestination(
  *
  * @returns true to go ahead
  */
-async function confirmLeavingAdobeProject(
+export async function confirmLeavingAdobeProject(
     project: Project,
     nextProject: DestinationRef & { id: string },
 ): Promise<boolean> {
