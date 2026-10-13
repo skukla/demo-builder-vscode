@@ -226,7 +226,7 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
         // Stub side-effecting private methods so the save path doesn't touch disk.
         internals(command).registerProgrammaticWrites = jest.fn().mockResolvedValue(undefined);
         internals(command).regenerateEnvFiles = jest.fn().mockResolvedValue(undefined);
-        internals(command).showPostSaveNotifications = jest.fn();
+        internals(command).showPostSaveNotifications = jest.fn().mockResolvedValue(undefined);
     });
 
     it('persists the changed authoringExperience into EDS metadata', async () => {

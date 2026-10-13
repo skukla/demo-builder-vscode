@@ -463,6 +463,19 @@ describe('ConfigureProjectWebviewCommand - save spine', () => {
             );
         });
 
+        it('logs a post-save prompt failure instead of leaving it unhandled (PL-76)', async () => {
+            internals(command).showPostSaveNotifications = jest
+                .fn()
+                .mockRejectedValue(new Error('refresh failed'));
+
+            await save(command).handleSaveConfiguration({ configChanges: {} });
+            await new Promise<void>((resolve) => setImmediate(resolve));
+            await new Promise<void>((resolve) => setImmediate(resolve));
+
+            // Handled and logged; what the log line says is not the contract.
+            expect(logger.error).toHaveBeenCalledTimes(1);
+        });
+
         it('tells the notifier the authoring experience changed, so it stays quiet', async () => {
             stateManager.getCurrentProject.mockResolvedValue(edsProject('da-live-classic'));
 

@@ -360,14 +360,13 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
             // Show success notification after returning (non-blocking). When the
             // authoring experience changed, its own progress toast is the
             // confirmation, so suppress the generic "saved" toast to avoid a
-            // double notification.
+            // double notification. A failure here (a dashboard refresh that throws)
+            // is logged: unhandled, it left no prompt and no trace (PL-76).
             setImmediate(() => {
-                this.showPostSaveNotifications(
-                    project,
-                    meshChanges,
-                    storefrontChanges,
-                    authoringChanged,
-                );
+                this.showPostSaveNotifications(project, meshChanges, storefrontChanges, authoringChanged)
+                    .catch((error: unknown) =>
+                        this.logger.error('[Configure] Post-save prompts failed:', error as Error),
+                    );
             });
 
             return result;
