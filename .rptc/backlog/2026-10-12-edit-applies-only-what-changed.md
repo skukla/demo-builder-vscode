@@ -76,3 +76,4 @@ from, Configure for its settings.
 - 2026-10-13  feat(edit): an Edit that only adds or removes integrations does only that (`d4647b86c`)
 - 2026-10-13  fix(mesh,edit): the mesh updates the storefront; Edit adds and removes through the Integrations screen (`e4c5b9d3b`)
 - 2026-10-13  feat(edit): changing the datapack does only that, and clears its old pages (`dc63d970e`)
+- 2026-10-13  feat(edit): moving to another Adobe project does only that (`809a48565`)
