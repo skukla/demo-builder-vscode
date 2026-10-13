@@ -23,7 +23,7 @@ import { GitHubAppInstallDialog } from '@/features/eds/ui/components/GitHubAppIn
 import { WizardState } from '@/types/webview';
 
 /** Success completion content */
-function SuccessContent({ isOpeningProject }: { isOpeningProject: boolean }) {
+function SuccessContent({ isOpeningProject, isEdit }: { isOpeningProject: boolean; isEdit: boolean }) {
     if (isOpeningProject) {
         return (
             <CenteredFeedbackContainer>
@@ -37,7 +37,9 @@ function SuccessContent({ isOpeningProject }: { isOpeningProject: boolean }) {
             <Flex direction="column" gap="size-200" alignItems="center" maxWidth="520px">
                 <CheckmarkCircle size="L" UNSAFE_className="text-green-600" />
                 <Flex direction="column" gap="size-100" alignItems="center">
-                    <Text UNSAFE_className="text-xl font-medium">Project Created Successfully</Text>
+                    <Text UNSAFE_className="text-xl font-medium">
+                        {isEdit ? 'Changes Saved' : 'Project Created Successfully'}
+                    </Text>
                     <Text UNSAFE_className="text-sm text-gray-600 text-center">
                         Click below to view your projects
                     </Text>
@@ -51,17 +53,20 @@ function SuccessContent({ isOpeningProject }: { isOpeningProject: boolean }) {
 function ErrorContent({
     isCancelled,
     errorMessage,
+    isEdit,
 }: {
     isCancelled: boolean;
     errorMessage?: string;
+    isEdit: boolean;
 }) {
+    const action = isEdit ? 'Saving Changes' : 'Project Creation';
     return (
         <CenteredFeedbackContainer>
             <Flex direction="column" gap="size-200" alignItems="center" maxWidth="520px">
                 <AlertCircle size="L" UNSAFE_className="text-red-600" />
                 <Flex direction="column" gap="size-100" alignItems="center">
                     <Text UNSAFE_className="text-xl font-medium">
-                        {isCancelled ? 'Project Creation Cancelled' : 'Project Creation Failed'}
+                        {isCancelled ? `${action} Cancelled` : `${action} Failed`}
                     </Text>
                     {errorMessage && (
                         <Text UNSAFE_className="text-sm text-gray-600">{errorMessage}</Text>
@@ -83,6 +88,8 @@ export function StepContentArea(props: {
     isCancelled: boolean;
     githubAppInstallData: GitHubAppInstallData | null;
     onGitHubAppInstalled: () => void;
+    /** Edit says "Changes Saved", not "Project Created" (PL-75). */
+    isEdit?: boolean;
 }) {
     const {
         phase,
@@ -94,6 +101,7 @@ export function StepContentArea(props: {
         isCancelled,
         githubAppInstallData,
         onGitHubAppInstalled,
+        isEdit = false,
     } = props;
 
     if (phase === 'github-app-install' && githubAppInstallData) {
@@ -130,11 +138,13 @@ export function StepContentArea(props: {
     }
 
     if (isCompleted && !progress?.error) {
-        return <SuccessContent isOpeningProject={isOpeningProject} />;
+        return <SuccessContent isOpeningProject={isOpeningProject} isEdit={isEdit} />;
     }
 
     if (showGenericError) {
-        return <ErrorContent isCancelled={isCancelled} errorMessage={progress?.error} />;
+        return (
+            <ErrorContent isCancelled={isCancelled} errorMessage={progress?.error} isEdit={isEdit} />
+        );
     }
 
     if (phase === 'creating' && !progress) {

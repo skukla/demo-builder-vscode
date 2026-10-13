@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { editChoicesOf, isEditUnchanged } from '../editChanges';
 import { integrationStateFromSettings } from '../integrationStateFromSettings';
 import { filterStepsForStack, WizardStepWithCondition } from '../stepFiltering';
 import {
@@ -207,7 +208,7 @@ function buildEditModeState(firstStep: WizardStep, editProject: EditProjectConfi
 
     const adobeContext = buildEditModeAdobeContext(editSettings.adobe);
 
-    return {
+    const opened: WizardState = {
         currentStep: firstStep,
         projectName: editProject.projectName,
         projectTitle: editProject.projectTitle,
@@ -225,6 +226,8 @@ function buildEditModeState(firstStep: WizardStep, editProject: EditProjectConfi
             ? buildEditModeEdsConfig(editSettings.edsConfig)
             : undefined,
     };
+    // What the SC chose, as the wizard opened: an Edit that leaves it alone only saves.
+    return { ...opened, editBaseline: editChoicesOf(opened) };
 }
 
 /**
@@ -316,6 +319,10 @@ export function useWizardState({
         ),
     );
 
+    // An Edit that has changed nothing skips the storefront step: it would push
+    // and republish the storefront for no change (PL-75).
+    const editUnchanged = isEditUnchanged(state);
+
     // Filter steps based on enabled flag AND stack conditions
     // When a predefined stack is selected, hide steps with showWhenNoStack: true
     // (e.g., Component Selection is hidden because the stack determines components)
@@ -348,12 +355,14 @@ export function useWizardState({
             isEditMode: !!editProject,
         });
 
-        return filteredSteps.map((step) => ({
-            id: step.id as WizardStep,
-            name: step.name,
-            description: step.description,
-        }));
-    }, [wizardSteps, stacks, state.selectedStack, editProject]);
+        return filteredSteps
+            .filter((step) => !(editUnchanged && step.id === 'storefront-setup'))
+            .map((step) => ({
+                id: step.id as WizardStep,
+                name: step.name,
+                description: step.description,
+            }));
+    }, [wizardSteps, stacks, state.selectedStack, editProject, editUnchanged]);
 
     // Step completion tracking
     // Neither import mode nor edit mode pre-marks steps as completed

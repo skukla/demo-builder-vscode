@@ -358,6 +358,8 @@ export interface ProjectCreationConfig {
     frontendSource?: FrontendSource;
     // Edit mode: re-use existing project directory (editProjectPath presence signals edit mode)
     editProjectPath?: string;
+    // Edit mode: the SC changed nothing, so Finish only saves (PL-75; `isEditUnchanged`)
+    editUnchanged?: boolean;
     // EDS-specific configuration (for Edge Delivery Services stacks)
     edsConfig?: {
         repoName: string;

@@ -29,6 +29,7 @@ import {
     loadExistingProjectForEdit,
     prepareEditModeTempDir,
     performAtomicComponentSwap,
+    saveUnchangedEdit,
 } from './executorEditMode';
 import { populateEdsMetadata, syncEdsConfigToRemote, setupEdsContent } from './executorEdsPhase';
 import { executeMeshPhase, populateMeshComponentConfigs } from './executorMeshPhase';
@@ -169,13 +170,11 @@ export async function executeProjectCreation(
 ): Promise<void> {
     const typedConfig = config;
 
-    // Debug: trace incoming config values for selectedPackage/selectedStack
     context.logger.debug(
         `[Project Creation] Received config: selectedPackage=${typedConfig.selectedPackage}, selectedStack=${typedConfig.selectedStack}`,
     );
 
-    // Track current mesh phase for progress messages
-    let currentMeshPhase: MeshPhaseState | undefined;
+    let currentMeshPhase: MeshPhaseState | undefined; // for the progress messages
 
     // Create progress tracker (includes mesh phase state when present)
     const progressTracker: ProgressTracker = (
@@ -201,6 +200,8 @@ export async function executeProjectCreation(
     // PRE-FLIGHT CHECKS
     // ========================================================================
 
+    // An Edit that changed nothing only saves (PL-75), before even the port check.
+    if (await saveUnchangedEdit(context, typedConfig, progressTracker)) return;
     // Safety check: Ensure port is available
     await handlePortConflicts(context, typedConfig, progressTracker);
 

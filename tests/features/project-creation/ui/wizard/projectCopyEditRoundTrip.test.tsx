@@ -71,6 +71,11 @@ describe('Edit, Finish with nothing changed: every travelling field goes back as
     });
     const wire = buildProjectConfig(state, settings, undefined, () => undefined);
 
+    it('tells Finish nothing changed, so the extension only saves (PL-75)', () => {
+        // On the every-field project: opening the Edit must not itself read as a change.
+        expect(wire.editUnchanged).toBe(true);
+    });
+
     it('opens in edit mode on the project itself', () => {
         expect(state.wizardMode).toBe('edit');
         expect(wire.editProjectPath).toBe(original.path);

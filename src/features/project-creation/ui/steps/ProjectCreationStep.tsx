@@ -66,6 +66,7 @@ export function ProjectCreationStep({
                         isCancelled={isCancelled}
                         githubAppInstallData={githubAppInstallData}
                         onGitHubAppInstalled={handleGitHubAppInstalled}
+                        isEdit={state.wizardMode === 'edit'}
                     />
                 </SingleColumnLayout>
             </div>

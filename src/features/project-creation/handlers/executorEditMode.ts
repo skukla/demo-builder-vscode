@@ -14,6 +14,7 @@ import * as fsPromises from 'fs/promises';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import * as path from 'path';
 import type { ProgressTracker } from './shared';
+import type { ProjectCreationConfig } from '@/types/webviewRequests';
 import type { HandlerContext } from '@/types/handlers';
 
 /**
@@ -84,6 +85,34 @@ function carriedOverFromEdit(
     const kept: Partial<import('@/types/base').Project> = { ...existingProject };
     for (const key of REBUILT_FRESH) delete kept[key];
     return kept;
+}
+
+/**
+ * Finish an Edit in which the SC changed nothing (PL-75): save the project and stop.
+ *
+ * The full Finish rebuilt everything even then: it stopped a running demo,
+ * reinstalled every component, redeployed the mesh and every integration,
+ * republished the storefront and re-imported the datapack. The wizard decides
+ * "nothing changed" by comparing the SC's choices with how it opened
+ * (`ui/wizard/editChanges.ts`) and says so on the config.
+ *
+ * @returns true when it handled the Finish; false to run the full path (not an
+ *   unchanged Edit, or the project could not be read)
+ */
+async function saveUnchangedEdit(
+    context: HandlerContext,
+    config: ProjectCreationConfig,
+    progressTracker: ProgressTracker,
+): Promise<boolean> {
+    if (!config.editProjectPath || !config.editUnchanged) return false;
+    const project = await loadExistingProjectForEdit(config.editProjectPath, context);
+    if (!project) return false;
+    context.logger.info('[Project Edit] Nothing changed: saving only, nothing redeployed');
+    project.lastModified = new Date();
+    await context.stateManager.saveProject(project);
+    // The sentinel the wizard's progress screen finishes on.
+    progressTracker('Project Created', 100, 'No changes to apply');
+    return true;
 }
 
 /**
@@ -270,4 +299,5 @@ export {
     loadExistingProjectForEdit,
     prepareEditModeTempDir,
     performAtomicComponentSwap,
+    saveUnchangedEdit,
 };

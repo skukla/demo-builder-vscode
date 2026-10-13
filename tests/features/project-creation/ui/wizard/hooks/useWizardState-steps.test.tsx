@@ -293,3 +293,57 @@ describe('the UI state the hook exposes', () => {
         expect(result.current.state.projectName).toBe('renamed');
     });
 });
+
+describe('an Edit that has changed nothing skips the storefront step (PL-75)', () => {
+    // It would push and republish the storefront for no change.
+    const STEPS = [
+        { id: 'welcome', name: 'Welcome', enabled: true },
+        { id: 'review', name: 'Review', enabled: true },
+        {
+            id: 'storefront-setup',
+            name: 'Publish Storefront',
+            enabled: true,
+            condition: { stackRequiresAny: ['requiresGitHub'] },
+        },
+        { id: 'create-project', name: 'Create', enabled: true },
+    ] as unknown as WizardStepDefinition[];
+    const EDITING = {
+        projectName: 'justrite',
+        projectPath: '/p/justrite',
+        settings: { selectedStack: 'eds-accs', selectedPackage: 'justrite' },
+    };
+
+    it('records what the SC chose when the Edit opened', () => {
+        const { result } = renderHook(() =>
+            useWizardState({ wizardSteps: STEPS, stacks: STACKS, editProject: EDITING })
+        );
+
+        expect(result.current.state.editBaseline).toEqual(expect.any(String));
+    });
+
+    it('leaves the storefront step out while nothing has changed', () => {
+        const { result } = renderHook(() =>
+            useWizardState({ wizardSteps: STEPS, stacks: STACKS, editProject: EDITING })
+        );
+
+        expect(stepIds(result.current.WIZARD_STEPS)).toEqual(['welcome', 'review', 'create-project']);
+    });
+
+    it('brings it back once the SC changes a choice', () => {
+        const { result } = renderHook(() =>
+            useWizardState({ wizardSteps: STEPS, stacks: STACKS, editProject: EDITING })
+        );
+
+        act(() => result.current.updateState({ datapack: { name: 'justrite', version: '2.0.0' } }));
+
+        expect(stepIds(result.current.WIZARD_STEPS)).toContain('storefront-setup');
+    });
+
+    it('keeps it when creating', () => {
+        const { result } = renderHook(() => useWizardState({ wizardSteps: STEPS, stacks: STACKS }));
+
+        act(() => result.current.updateState({ selectedStack: 'eds-accs' }));
+
+        expect(stepIds(result.current.WIZARD_STEPS)).toContain('storefront-setup');
+    });
+});

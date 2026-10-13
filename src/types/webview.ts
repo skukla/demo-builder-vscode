@@ -193,6 +193,12 @@ export interface WizardState {
      * the change reset.
      */
     foundationChanged?: boolean;
+    /**
+     * The SC's choices when the Edit wizard opened (`editChoicesOf`). Comparing
+     * against it is how the wizard tells an Edit that changed nothing, which then
+     * skips the storefront step and only saves (PL-75).
+     */
+    editBaseline?: string;
 }
 
 /**

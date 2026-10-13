@@ -7,6 +7,7 @@ import { clearCompletedFrom } from '@/core/ui/utils/stepCompletion';
 import { getStackById } from '@/features/components/services/demoPackageLoader';
 import { projectRowOf } from '@/features/components/services/storefrontResolver';
 import { pickStorefrontDerived } from '@/features/project-creation/ui/steps/edsConfigFromStorefront';
+import { isEditUnchanged } from '@/features/project-creation/ui/wizard/editChanges';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage, GitSource } from '@/types/demoPackages';
 import type { WizardStep, WizardState, WizardMode, ComponentSelection } from '@/types/webview';
@@ -615,6 +616,12 @@ export type ProjectConfigSource = Pick<
     | 'customBlockLibraries'
     | 'editProjectPath'
     | 'edsConfig'
+    | 'wizardMode'
+    | 'editBaseline'
+    // Choices the config does not carry, but `isEditUnchanged` compares.
+    | 'selectedBackend'
+    | 'components'
+    | 'commerceConfig'
 >;
 
 export function buildProjectConfig(
@@ -680,6 +687,8 @@ export function buildProjectConfig(
         customBlockLibraries: wizardState.customBlockLibraries || [],
         frontendSource,
         editProjectPath: wizardState.editProjectPath,
+        // An Edit that changed nothing only saves (PL-75).
+        ...(isEditUnchanged(wizardState) ? { editUnchanged: true } : {}),
         edsConfig: buildProjectEdsConfig(wizardState),
     };
 }

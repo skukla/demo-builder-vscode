@@ -163,6 +163,28 @@ describe('StepContentArea', () => {
             expect(screen.getByText('boom')).toBeInTheDocument();
             expect(screen.queryByText('Project Created Successfully')).not.toBeInTheDocument();
         });
+
+        it('says "Changes Saved" for an Edit, not "Project Created" (PL-75)', () => {
+            renderContent({
+                isEdit: true,
+                isCompleted: true,
+                progress: progressOf({ currentOperation: 'Project Created' }),
+            });
+
+            expect(screen.getByText('Changes Saved')).toBeInTheDocument();
+            expect(screen.queryByText('Project Created Successfully')).not.toBeInTheDocument();
+        });
+
+        it('names a failed Edit as saving changes', () => {
+            renderContent({
+                isEdit: true,
+                isCompleted: true,
+                showGenericError: true,
+                progress: progressOf({ error: 'boom' }),
+            });
+
+            expect(screen.getByText('Saving Changes Failed')).toBeInTheDocument();
+        });
     });
 
     describe('when creation failed or was cancelled', () => {
