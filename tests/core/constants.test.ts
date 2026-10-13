@@ -137,8 +137,9 @@ describe('AI_CONTEXT_VERSION', () => {
     // v39: the ai-defaults tools install and run on Node 24 through fnm, and
     // @dropins/mcp became @dropins/ai-tools (AI-13).
     // v40: the ai-defaults tools launch from Demo Builder's Node folder (FNM_DIR in .mcp.json, PR-1a).
-    it('is 40 (the AI tools launch from Demo Builder\'s Node folder)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(40);
+    // v41: the sync-changes skill stops calling promote_block_to_library "push back to source library".
+    it('is 41 (promote_block_to_library is described as this site\'s own library)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(41);
     });
 });
 

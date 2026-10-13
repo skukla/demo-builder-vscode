@@ -358,7 +358,7 @@ server IS — transport, lifecycle, scoping, security — is in
 | `get_project` |  | Read Demo Builder project state. Returns a summary by default (large arrays collapsed); pass full=true for the complete .demo-builder.json |
 | `list_blocks` |  | List all block directories in the storefront blocks/ directory |
 | `list_projects` |  | List all Demo Builder projects. The active one is marked current:true — no follow-up call needed to learn which it is. |
-| `promote_block_to_library` | **confirm** | Block changes to push back to source library — adds a block to the DA.live authoring library by updating component-definition.json, writing the doc page, appending the sheet row, and committing/pushin |
+| `promote_block_to_library` | **confirm** | Add a block from blocks/ to this site's own DA.live block library (the Insert Block list authors use) — updates component-definition.json, writes the doc page, appends the sheet row, and commits/pushe |
 | `remove_block_from_library` | **confirm** | Remove (delete) a block from the DA.live authoring library — the inverse of promote_block_to_library. Removes the component-definition.json entry, deletes the doc page, drops the sheet row, commits/pu |
 | `sync_storefront` |  | Git add, commit, and push changes in the storefront directory |
 | `update_project_config` |  | Low-level whole-file write to .demo-builder.json or a .env file inside the project directory (path must not escape the project root). To SET a config value, use configure_project instead — it validate |

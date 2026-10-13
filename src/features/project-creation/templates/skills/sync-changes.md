@@ -1,6 +1,6 @@
 ---
 name: sync-changes
-description: Chooses the correct sync operation after editing a Demo Builder project. Use when files have changed and you need to pick between `sync_content` (DA.live pages), `sync_storefront` (block code), `deploy_mesh` (mesh config), `configure_project` (config values), or `promote_block_to_library` (block source).
+description: Chooses the correct sync operation after editing a Demo Builder project. Use when files have changed and you need to pick between `sync_content` (DA.live pages), `sync_storefront` (block code), `deploy_mesh` (mesh config), `configure_project` (config values), or `promote_block_to_library` (a block into this site's Insert Block list).
 ---
 
 # Sync Changes
@@ -16,7 +16,7 @@ Use this skill to decide which sync operation to run after making changes.
 | `mesh.json` or API Mesh config | `deploy_mesh` — redeploys via `aio` CLI |
 | A component setting | `configure_project`, then restart demo |
 | A credential (secret) | the user enters it in Configure — `configure_project` refuses secrets |
-| Block changes to push back to source library | `promote_block_to_library` |
+| A block in `blocks/` that authors should be able to insert on this site | `promote_block_to_library`: adds it to this site's own DA.live block library. It does not save the block for other projects, and a reset removes it with the rest of the code |
 | Remove a block from the library | `remove_block_from_library` |
 
 ## EDS projects

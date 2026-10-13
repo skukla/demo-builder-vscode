@@ -291,10 +291,12 @@ export function registerProjectTools(
             needsAuth: ['dalive'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Promote Block to Library',
-            // Phrasing matches sync-changes.md ("Block changes to push back to
-            // source library"); mcpServer-promoteBlock.test.ts pins it.
+            // Phrasing matches sync-changes.md ("this site's own DA.live block
+            // library"); mcpServer-promoteBlock.test.ts pins it. It said "push back to
+            // source library" until 2026-10-13, which read as saving the block for
+            // reuse across demos; it never did.
             description:
-                'Block changes to push back to source library — adds a block to the DA.live authoring library by updating component-definition.json, writing the doc page, appending the sheet row, and committing/pushing/publishing the storefront. Requires confirm:true.',
+                "Add a block from blocks/ to this site's own DA.live block library (the Insert Block list authors use) — updates component-definition.json, writes the doc page, appends the sheet row, and commits/pushes/publishes the storefront. It does not save the block for other projects, and a reset removes it with the rest of the code. Requires confirm:true.",
             inputSchema: {
                 projectName: projectNameSchema,
                 blockId: z

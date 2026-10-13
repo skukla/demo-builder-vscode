@@ -288,7 +288,11 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // (`~/.demo-builder/node`), so each .mcp.json node entry now carries
 // `env: { FNM_DIR: <that folder> }`. Without it `fnm exec` read the SC's own fnm, which may
 // not have the Node, and the tool did not start. Existing projects get it only through this bump.
-export const AI_CONTEXT_VERSION = 40;
+// v41 (2026-10-13): the sync-changes skill no longer calls `promote_block_to_library` "push
+// back to source library". The tool adds a block to this site's own DA.live block library; it
+// never saved a block for other projects. Existing projects get the corrected skill only
+// through this bump.
+export const AI_CONTEXT_VERSION = 41;
 
 /**
  * Component IDs for standardized component instance access
