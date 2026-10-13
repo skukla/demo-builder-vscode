@@ -79,3 +79,4 @@ from, Configure for its settings.
 - 2026-10-13  feat(edit): moving to another Adobe project does only that (`809a48565`)
 - 2026-10-13  feat(edit): changing the package resets the storefront onto it (`a47484b99`)
 - 2026-10-13  fix(edit): going Back keeps the project's Adobe destination (`9d9416a8d`)
+- 2026-10-13  fix(wizard): Welcome settles, and Edit keeps the project's DA.live org and repository (`bc6ee1a90`)
