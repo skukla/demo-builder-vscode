@@ -17,6 +17,10 @@ jest.mock('@/features/project-creation/handlers/executorEditDestination', () => 
     planDestinationChange: jest.fn().mockResolvedValue({ moves: false }),
     applyDestinationChange: jest.fn().mockResolvedValue(undefined),
 }));
+jest.mock('@/features/project-creation/handlers/executorEditPackage', () => ({
+    planPackageChange: jest.fn().mockResolvedValue({ resets: false }),
+    applyPackageChange: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock('@/features/project-creation/handlers/executorEditDatapack', () => ({
     planDatapackChange: jest.fn().mockResolvedValue({ changes: false, removeOld: false }),
     applyDatapackChange: jest.fn().mockResolvedValue(undefined),
@@ -40,6 +44,10 @@ import {
     planDestinationChange,
 } from '@/features/project-creation/handlers/executorEditDestination';
 import { finishEditWithoutRebuild } from '@/features/project-creation/handlers/executorEditApply';
+import {
+    applyPackageChange,
+    planPackageChange,
+} from '@/features/project-creation/handlers/executorEditPackage';
 import type { Project } from '@/types/base';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
@@ -75,7 +83,8 @@ function setup(project: Project = savedProject()) {
     const confirm = jest.fn().mockResolvedValue(true);
     const removeOldDatapack = jest.fn().mockResolvedValue(false);
     const leaveAdobeProject = jest.fn().mockResolvedValue(true);
-    const ask = { removeIntegrations: confirm, leaveAdobeProject, removeOldDatapack };
+    const resetStorefront = jest.fn().mockResolvedValue(true);
+    const ask = { removeIntegrations: confirm, leaveAdobeProject, removeOldDatapack, resetStorefront };
     return { context, stateManager, progress, confirm, ask, project };
 }
 
@@ -288,7 +297,7 @@ describe('finishEditWithoutRebuild — the datapack changed', () => {
         expect(await finishEditWithoutRebuild(context, NEW_PACK, progress, ask)).toBe(true);
 
         expect(planDatapackChange).toHaveBeenCalledWith(context, project, ['datapack'], ask.removeOldDatapack);
-        expect(applyDatapackChange).toHaveBeenCalledWith(context, project, NEW_PACK, plan, progress);
+        expect(applyDatapackChange).toHaveBeenCalledWith(context, project, NEW_PACK, plan, progress, false);
         // Nothing of Adobe's is touched for a datapack: no sign-in check, no add.
         expect(runGuards).not.toHaveBeenCalled();
         expect(addWithSteps).not.toHaveBeenCalled();
@@ -350,5 +359,51 @@ describe('finishEditWithoutRebuild — the project moved', () => {
         await finishEditWithoutRebuild(context, config({ editChanges: ['adobeWorkspace'] }), progress, ask);
 
         expect(runGuards).toHaveBeenCalledWith(context, project);
+    });
+});
+
+describe('finishEditWithoutRebuild — the package changed on Edge Delivery', () => {
+    const NEW_PACKAGE = config({
+        selectedStack: 'eds-accs',
+        selectedPackage: 'bodea',
+        datapack: { name: 'bodea', version: '1.0.0' },
+        editChanges: ['datapack', 'selectedPackage'],
+    });
+
+    it('asks first, then resets last, and tells the datapack step the reset writes the pages', async () => {
+        const { context, progress, ask, project } = setup();
+        const order: string[] = [];
+        (planDatapackChange as jest.Mock).mockResolvedValueOnce({ changes: true, removeOld: false });
+        (planPackageChange as jest.Mock).mockResolvedValueOnce({ resets: true });
+        (applyDatapackChange as jest.Mock).mockImplementationOnce(async () => order.push('datapack'));
+        (applyPackageChange as jest.Mock).mockImplementationOnce(async () => order.push('reset'));
+
+        expect(await finishEditWithoutRebuild(context, NEW_PACKAGE, progress, ask)).toBe(true);
+
+        expect(planPackageChange).toHaveBeenCalledWith(project, NEW_PACKAGE.editChanges, ask.resetStorefront);
+        expect(applyDatapackChange).toHaveBeenCalledWith(
+            context,
+            project,
+            NEW_PACKAGE,
+            { changes: true, removeOld: false },
+            progress,
+            true,
+        );
+        expect(applyPackageChange).toHaveBeenCalledWith(context, project, NEW_PACKAGE, { resets: true }, progress);
+        expect(order).toStrictEqual(['datapack', 'reset']);
+    });
+
+    it('rebuilds instead for a package change on a headless stack', async () => {
+        const { context, progress, ask } = setup();
+
+        const handled = await finishEditWithoutRebuild(
+            context,
+            { ...NEW_PACKAGE, selectedStack: 'headless-paas' },
+            progress,
+            ask,
+        );
+
+        expect(handled).toBe(false);
+        expect(planPackageChange).not.toHaveBeenCalled();
     });
 });

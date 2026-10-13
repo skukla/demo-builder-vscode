@@ -156,3 +156,25 @@ describe('resetEdsProjectWithUI — the progress surface', () => {
         );
     });
 });
+
+// An Edit that changes the package resets as part of its Finish (PL-75): it asked
+// its own questions before anything ran, and shows progress on the wizard's screen.
+describe('resetEdsProjectWithUI — within an Edit', () => {
+    it("asks nothing, opens no progress of its own, and reports onto the Edit's screen", async () => {
+        const editReport = jest.fn();
+
+        const result = await run({ success: true }, { withinEdit: { report: editReport } });
+
+        expect(result.success).toBe(true);
+        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
+        expect(withOperationProgress).not.toHaveBeenCalled();
+        expect(editReport).toHaveBeenCalledWith('Checking requirements', 'Your DA.live sign-in');
+        expect(mockedReset).toHaveBeenCalledTimes(1);
+    });
+
+    it('raises no result toast: the Edit reports the outcome', async () => {
+        await run({ success: false, error: 'pipeline died' }, { withinEdit: { report: jest.fn() } });
+
+        expect(vscode.window.showErrorMessage).not.toHaveBeenCalled();
+    });
+});

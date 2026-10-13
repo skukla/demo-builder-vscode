@@ -74,6 +74,8 @@ export async function planDatapackChange(
  * @param config - what Finish was given
  * @param plan - what the SC decided
  * @param progressTracker - the wizard's progress screen
+ * @param storefrontResetFollows - a package change resets the storefront next, and
+ *   the reset warms the catalog and writes the category pages itself
  */
 export async function applyDatapackChange(
     context: HandlerContext,
@@ -81,6 +83,7 @@ export async function applyDatapackChange(
     config: ProjectCreationConfig,
     plan: DatapackPlan,
     progressTracker: ProgressTracker,
+    storefrontResetFollows = false,
 ): Promise<void> {
     if (!plan.changes) return;
     if (plan.removeOld) {
@@ -90,6 +93,7 @@ export async function applyDatapackChange(
     await context.stateManager.saveProject(project);
     if (!project.datapack) return;
     await executeSampleDataPhase(context, project, progressTracker);
+    if (storefrontResetFollows) return;
     await executeCatalogPrewarmPhase(context, project, progressTracker);
     if (!isEdsProject(project)) return;
     // With the old data gone, its categories are too: Reset's removal of the pages

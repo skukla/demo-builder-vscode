@@ -75,7 +75,13 @@ storefront changed, and its reset runs instead when the package changed.
    screen's own move (`applyDestination`, now exported and given its question by the caller), its
    question asked with the Edit's others before anything runs. Order: removals, the move, adds,
    the datapack. Same org only; the org is PL-77.
-6. **Package on an Edge Delivery stack.** Clear `project.demo` (it wins over the package in
+6. **Package on an Edge Delivery stack.** *Built 2026-10-13* (`executorEditPackage.ts`): the
+   package's choices recorded (package, demo, settings through `stageSettingsChange`, add-ons,
+   block libraries), the settings files written, then the dashboard's own Reset
+   (`resetEdsProjectWithUI`, new `withinEdit` option: no questions of its own, the wizard's
+   progress). It runs LAST, after the datapack (which leaves pre-warming and pages to it), since
+   Reset builds the storefront from the finished project. Only with the stack and backend
+   unchanged. Original note: Clear `project.demo` (it wins over the package in
    `resolveStorefrontForProject`), record the package, run the EDS reset. Runs before steps
    3 to 5, because a reset regenerates components but keeps integrations.
 7. **One confirmation** listing every destructive step, before anything in 3 to 6 runs.

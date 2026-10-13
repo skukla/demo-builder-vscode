@@ -225,7 +225,7 @@ export async function getAutoSelectedOptionalDependencies(
  * what an agent removing it reads.
  */
 export const MESH_NEEDED_NOTE =
-    'This demo needs the API Mesh. Its storefront stops working until you add it again.';
+    "This demo needs the API Mesh. Without it, the storefront won't work.";
 
 /**
  * Whether a project's demo needs the API Mesh: its package requires one for its

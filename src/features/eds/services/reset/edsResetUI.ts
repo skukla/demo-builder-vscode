@@ -41,7 +41,7 @@ import {
 import { executeEdsReset } from './edsResetService';
 import { resetOperationId } from '@/core/utils/operationIds';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
-import { withOperationProgress } from '@/core/vscode/withOperationProgress';
+import { withOperationProgress, type ReportStage } from '@/core/vscode/withOperationProgress';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -95,6 +95,14 @@ export interface EdsResetWithUIOptions {
     /** The id that screen named the operation by, so its modal follows this run. */
     operationId?: string;
     /**
+     * An Edit that resets as part of its Finish (PL-75): it asked its own questions,
+     * this reset's included, before anything ran, and it shows progress on the
+     * wizard's own screen. So no confirmation, no sample-data question (the Edit's
+     * datapack step owns the data), no progress window of its own, and no result
+     * notification: the Edit reports the outcome.
+     */
+    withinEdit?: { report: ReportStage };
+    /**
      * GitHub repository reads, for the added-demo source check. Injectable for
      * tests; defaults to the cached services built from the context's secrets.
      */
@@ -106,6 +114,17 @@ export interface EdsResetWithUIOptions {
 // ==========================================================
 // Main Entry Point
 // ==========================================================
+
+/** The reset's own question, unless an Edit asked it already. True to go ahead. */
+async function confirmReset(vscode: typeof import('vscode'), projectName: string): Promise<boolean> {
+    const confirmButton = 'Reset Project';
+    const confirmation = await vscode.window.showWarningMessage(
+        `Are you sure you want to reset "${projectName}"? This will reset all code to the template state and re-copy demo content.`,
+        { modal: true },
+        confirmButton,
+    );
+    return confirmation === confirmButton;
+}
 
 /**
  * Reset an EDS project with full UI flow
@@ -193,15 +212,10 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
     // that will never be asked never pays for it. Cancelling the reset therefore
     // costs one GET whose answer is discarded — bounded, idempotent, and it warms
     // a token cache eight other call sites want anyway.
-    const canRemoveSampleData = beginSampleDataCredentialCheck(project, context);
+    const withinEdit = options.withinEdit;
+    const canRemoveSampleData = withinEdit ? undefined : beginSampleDataCredentialCheck(project, context);
 
-    const confirmButton = 'Reset Project';
-    const confirmation = await vscode.window.showWarningMessage(
-        `Are you sure you want to reset "${project.name}"? This will reset all code to the template state and re-copy demo content.`,
-        { modal: true },
-        confirmButton,
-    );
-    if (confirmation !== confirmButton) {
+    if (!withinEdit && !(await confirmReset(vscode, project.name))) {
         context.logger.info(`${logPrefix} resetEds: User cancelled reset`);
         return { success: false, cancelled: true };
     }
@@ -218,119 +232,114 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
     // one short credential call (see the function), which is bounded and silent
     // on failure; the older "no network call in front of a modal" phrasing here
     // overstated a rule that was really about not adding failure modes.
-    const removeData = await confirmSampleDataRemoval(project, vscode, canRemoveSampleData);
+    const removeData = !withinEdit && (await confirmSampleDataRemoval(project, vscode, canRemoveSampleData));
 
     const originalStatus = project.status;
     project.status = 'resetting';
     await context.stateManager.saveProject(project);
 
     try {
-        return await withOperationProgress(
-            {
-                id: options.operationId ?? resetOperationId(project.name),
-                title: `Resetting ${project.name}`,
-                inModal: options.progress === 'modal',
-            },
-            async (report) => {
-                context.logger.info(`${logPrefix} Resetting EDS project: ${repoFullName}`);
+        const run = async (report: ReportStage): Promise<EdsResetResult> => {
+            context.logger.info(`${logPrefix} Resetting EDS project: ${repoFullName}`);
 
-                // Four pre-flight checks under one stage: each names what it is
-                // asking about, rather than a stage of its own for a call that
-                // usually answers in under a second.
-                report(OPERATION_STAGES.checkingRequirements.label, 'Your DA.live sign-in');
-                const daLiveResult = await checkDaLiveAuth(
-                    context,
+            // Four pre-flight checks under one stage: each names what it is
+            // asking about, rather than a stage of its own for a call that
+            // usually answers in under a second.
+            report(OPERATION_STAGES.checkingRequirements.label, 'Your DA.live sign-in');
+            const daLiveResult = await checkDaLiveAuth(
+                context,
+                project,
+                originalStatus,
+                logPrefix,
+            );
+            if (daLiveResult) return daLiveResult;
+            const daLiveAuthService = getDaLiveAuthService(context.context);
+
+            const meshComponent = getMeshComponentInstance(project);
+            const hasMesh = !!meshComponent?.path;
+
+            // Adobe auth + org-mismatch pre-flight runs for any project carrying
+            // an Adobe org — that covers mesh (a mesh IS an Adobe I/O project, so
+            // it always has `project.adobe`) AND non-mesh ACCS. This ensures a
+            // reset never runs against the wrong org; the gate aborts with a
+            // "Switch IMS Org" prompt, mirroring DeployMeshCommand.
+            if (project.adobe?.organization) {
+                report(OPERATION_STAGES.checkingRequirements.label, 'Your Adobe sign-in');
+                const adobeResult = await checkAdobeAuth(
                     project,
+                    context,
                     originalStatus,
                     logPrefix,
+                    options.meshDeps.authManager,
                 );
-                if (daLiveResult) return daLiveResult;
-                const daLiveAuthService = getDaLiveAuthService(context.context);
+                if (adobeResult) return adobeResult;
 
-                const meshComponent = getMeshComponentInstance(project);
-                const hasMesh = !!meshComponent?.path;
-
-                // Adobe auth + org-mismatch pre-flight runs for any project carrying
-                // an Adobe org — that covers mesh (a mesh IS an Adobe I/O project, so
-                // it always has `project.adobe`) AND non-mesh ACCS. This ensures a
-                // reset never runs against the wrong org; the gate aborts with a
-                // "Switch IMS Org" prompt, mirroring DeployMeshCommand.
-                if (project.adobe?.organization) {
-                    report(OPERATION_STAGES.checkingRequirements.label, 'Your Adobe sign-in');
-                    const adobeResult = await checkAdobeAuth(
-                        project,
-                        context,
-                        originalStatus,
-                        logPrefix,
-                        options.meshDeps.authManager,
-                    );
-                    if (adobeResult) return adobeResult;
-
-                    report(OPERATION_STAGES.checkingRequirements.label, 'The Adobe organization');
-                    const orgResult = await checkOrgContext(
-                        project,
-                        context,
-                        originalStatus,
-                        logPrefix,
-                        options.meshDeps.authManager,
-                    );
-                    if (orgResult) return orgResult;
-                }
-
-                report(OPERATION_STAGES.checkingRequirements.label, 'The GitHub app on your repo');
-                const appResult = await checkGitHubAppInstallation(
-                    vscode,
-                    context,
-                    repoOwner,
-                    repoName,
+                report(OPERATION_STAGES.checkingRequirements.label, 'The Adobe organization');
+                const orgResult = await checkOrgContext(
                     project,
+                    context,
                     originalStatus,
                     logPrefix,
-                    options.githubAppService,
+                    options.meshDeps.authManager,
                 );
-                if (appResult) return appResult;
+                if (orgResult) return orgResult;
+            }
 
-                // Execute reset
-                const tokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
-                // VS Code setting `demoBuilder.byom.overlayUrl` wins over
-                // demo-packages.json. The helper stamps `?org=&site=` so the
-                // shared multi-tenant `render-pdp` action can identify which
-                // storefront's `/products/default` template to fetch.
-                const resetParams: EdsResetParams = {
-                    ...paramsResult.params,
-                    byomOverlayUrl: resolveByomOverlayConfig(
-                        paramsResult.params.byomOverlayUrl,
-                        paramsResult.params.daLiveOrg,
-                        paramsResult.params.daLiveSite,
-                    ),
-                    includeBlockLibrary,
-                    verifyCdn,
-                    redeployMesh: redeployMesh ?? hasMesh,
-                    ...(keepContent ? { keepContent } : {}),
-                };
+            report(OPERATION_STAGES.checkingRequirements.label, 'The GitHub app on your repo');
+            const appResult = await checkGitHubAppInstallation(
+                vscode,
+                context,
+                repoOwner,
+                repoName,
+                project,
+                originalStatus,
+                logPrefix,
+                options.githubAppService,
+            );
+            if (appResult) return appResult;
 
-                // BEFORE the storefront reset, because the pipeline's last step
-                // pre-warms the catalog: it enumerates the instance's SKUs and
-                // pre-publishes a PDP page for each. Running the data step after
-                // it meant reset pre-published 30 product pages and then deleted
-                // those products — measured in two runs on 2026-08-17. Ordered
-                // this way the warm cache describes the catalog the user is left
-                // with.
-                //
-                // Never allowed to fail the reset: the storefront reset is what
-                // was asked for, and a data step that refuses is reported while
-                // the reset still stands.
-                if (removeData) {
-                    await removeProjectSampleData(project, context, report);
-                }
+            // Execute reset
+            const tokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
+            // VS Code setting `demoBuilder.byom.overlayUrl` wins over
+            // demo-packages.json. The helper stamps `?org=&site=` so the
+            // shared multi-tenant `render-pdp` action can identify which
+            // storefront's `/products/default` template to fetch.
+            const resetParams: EdsResetParams = {
+                ...paramsResult.params,
+                byomOverlayUrl: resolveByomOverlayConfig(
+                    paramsResult.params.byomOverlayUrl,
+                    paramsResult.params.daLiveOrg,
+                    paramsResult.params.daLiveSite,
+                ),
+                includeBlockLibrary,
+                verifyCdn,
+                redeployMesh: redeployMesh ?? hasMesh,
+                ...(keepContent ? { keepContent } : {}),
+            };
 
-                // The reset's steps are a fixed list, so the count is known up
-                // front and rides the stage as "(4 of 12)" — the one shape a count
-                // is allowed to take (PL-59 wording rules).
-                const result = await executeEdsReset(resetParams, context, tokenProvider, options.meshDeps, (p) => {
-                    report(p.message, undefined, { index: p.step, total: p.totalSteps });
-                });
+            // BEFORE the storefront reset, because the pipeline's last step
+            // pre-warms the catalog: it enumerates the instance's SKUs and
+            // pre-publishes a PDP page for each. Running the data step after
+            // it meant reset pre-published 30 product pages and then deleted
+            // those products — measured in two runs on 2026-08-17. Ordered
+            // this way the warm cache describes the catalog the user is left
+            // with.
+            //
+            // Never allowed to fail the reset: the storefront reset is what
+            // was asked for, and a data step that refuses is reported while
+            // the reset still stands.
+            if (removeData) {
+                await removeProjectSampleData(project, context, report);
+            }
 
+            // The reset's steps are a fixed list, so the count is known up
+            // front and rides the stage as "(4 of 12)" — the one shape a count
+            // is allowed to take (PL-59 wording rules).
+            const result = await executeEdsReset(resetParams, context, tokenProvider, options.meshDeps, (p) => {
+                report(p.message, undefined, { index: p.step, total: p.totalSteps });
+            });
+
+            if (!withinEdit) {
                 await showResetResultNotifications(
                     vscode,
                     result,
@@ -338,8 +347,17 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
                     showLogsOnError,
                     options.progress === 'modal',
                 );
-                return result;
+            }
+            return result;
+        };
+        if (withinEdit) return await run(withinEdit.report);
+        return await withOperationProgress(
+            {
+                id: options.operationId ?? resetOperationId(project.name),
+                title: `Resetting ${project.name}`,
+                inModal: options.progress === 'modal',
             },
+            run,
         );
     } finally {
         project.status = originalStatus;

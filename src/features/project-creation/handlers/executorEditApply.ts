@@ -10,7 +10,9 @@
  *   Remove (`addWithSteps`, `removeWithCleanup`), with its checks; a mesh add or
  *   removal republishes the storefront (or, headless, writes the frontend's
  *   settings again) itself. The datapack: `executorEditDatapack`. A move to another
- *   Adobe project or workspace: `executorEditDestination`.
+ *   Adobe project or workspace: `executorEditDestination`. A package change on an
+ *   Edge Delivery storefront: `executorEditPackage`, last, since its reset builds the
+ *   storefront from the finished project.
  *
  * Every question is asked before anything runs.
  *
@@ -34,6 +36,11 @@ import {
     type AskLeaveAdobeProject,
 } from './executorEditDestination';
 import { loadExistingProjectForEdit, saveUnchangedEdit } from './executorEditMode';
+import {
+    applyPackageChange,
+    planPackageChange,
+    type AskResetStorefront,
+} from './executorEditPackage';
 import type { ProgressTracker } from './shared';
 import { getAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
@@ -50,6 +57,7 @@ import {
 import { integrationStateFromSettings } from '@/features/project-creation/ui/wizard/integrationStateFromSettings';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
+import { isEdsStackId } from '@/types/typeGuards';
 import type { OperationPosition } from '@/types/webviewPayloads';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 
@@ -61,18 +69,20 @@ export interface EditQuestions {
     removeIntegrations: ConfirmRemoval;
     leaveAdobeProject: AskLeaveAdobeProject;
     removeOldDatapack: AskRemoveOldDatapack;
+    resetStorefront: AskResetStorefront;
 }
 
 /** In production: one modal naming what is removed, and Reset's datapack question. */
 const ASK_THE_SC: EditQuestions = {
     removeIntegrations: (names) => confirmRemovalModal(names),
     leaveAdobeProject: confirmLeavingAdobeProject,
+    resetStorefront: () => confirmStorefrontReset(),
     removeOldDatapack: (project, canRemove) =>
         confirmSampleDataRemoval(
             project,
             vscode,
             canRemove,
-            'Keep Data imports the new pack beside it.',
+            'Keep Data adds the new pack alongside.',
         ),
 };
 
@@ -113,7 +123,7 @@ async function applyInPlace(
         before.selectedAppBuilderComponents ?? [],
         config.selectedAppBuilderComponents ?? [],
     );
-    if (!appliesInPlace(changes, delta)) return false;
+    if (!appliesInPlace(changes, delta, isEdsStackId(config.selectedStack))) return false;
 
     context.logger.info(
         `[Project Edit] Applying in place: adding [${delta.added.join(', ')}], ` +
@@ -131,6 +141,7 @@ async function applyInPlace(
         ask.leaveAdobeProject,
     );
     const datapack = await planDatapackChange(context, project, changes, ask.removeOldDatapack);
+    const packageChange = await planPackageChange(project, changes, ask.resetStorefront);
     if (delta.added.length + delta.removed.length > 0 || destination.moves) {
         const refused = await runGuards(context, project);
         if (refused) throw new Error(refused.error);
@@ -148,7 +159,8 @@ async function applyInPlace(
         )),
     );
     // After the integrations, as in creation: a pack lands on the finished project.
-    await applyDatapackChange(context, project, config, datapack, progressTracker);
+    await applyDatapackChange(context, project, config, datapack, progressTracker, packageChange.resets);
+    await applyPackageChange(context, project, config, packageChange, progressTracker);
     project.lastModified = new Date();
     await context.stateManager.saveProject(project);
     if (warnings.length > 0) void vscode.window.showWarningMessage(warnings.join(' '));
@@ -201,17 +213,26 @@ async function addOne(
     return addWithSteps(context, project, entry, report, { apis: config.componentApiPicks?.[id] });
 }
 
+/**
+ * The confirmation before an Edit resets the storefront onto a new package: Reset's
+ * own warning, and where hand edits go (the reset is one commit on top, so the code
+ * before it stays in the repository's history).
+ */
+async function confirmStorefrontReset(): Promise<boolean> {
+    const choice = await vscode.window.showWarningMessage(
+        'Reset the storefront to the new package?',
+        { modal: true, detail: "Its code and content are replaced. Hand edits stay in the repository's history." },
+        'Reset Storefront',
+    );
+    return choice === 'Reset Storefront';
+}
+
 /** The confirmation before an Edit removes integrations: one modal, every name in it. */
 async function confirmRemovalModal(names: string[]): Promise<boolean> {
-    const one = names.length === 1;
+    const it = names.length === 1 ? 'it' : 'them';
     const choice = await vscode.window.showWarningMessage(
         `Remove ${names.join(' and ')}?`,
-        {
-            modal: true,
-            detail:
-                `Saving undeploys ${one ? 'it' : 'them'} and removes what ${one ? 'it' : 'they'} ` +
-                `set up. You can add ${one ? 'it' : 'them'} again later.`,
-        },
+        { modal: true, detail: `This undeploys ${it}. You can add ${it} back later.` },
         'Remove',
     );
     return choice === 'Remove';

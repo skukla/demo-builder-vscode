@@ -140,6 +140,17 @@ describe('applyDatapackChange', () => {
         expect(rewriteCatalogMenuPhase).not.toHaveBeenCalled();
     });
 
+    it('leaves pre-warming and the pages to a storefront reset that follows', async () => {
+        const { context, project, progress } = setup();
+
+        await applyDatapackChange(context, project, toNew, { changes: true, removeOld: true }, progress, true);
+
+        expect(executeSampleDataPhase).toHaveBeenCalled();
+        expect(executeCatalogPrewarmPhase).not.toHaveBeenCalled();
+        expect(rewriteCatalogMenuPhase).not.toHaveBeenCalled();
+        expect(executeCatalogMenuPhase).not.toHaveBeenCalled();
+    });
+
     it('records "no datapack" and imports nothing when the SC cleared it', async () => {
         const { context, project, progress, stateManager } = setup();
 

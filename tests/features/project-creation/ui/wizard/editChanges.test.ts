@@ -234,6 +234,32 @@ describe('appliesInPlace — Finish adds and removes just the integrations', () 
         ).toBe(true);
     });
 
+    it('is true for a package change on Edge Delivery, with the settings, add-ons and libraries it brings', () => {
+        const changes = [
+            'componentConfigs.adobe-commerce-accs',
+            'demo',
+            'selectedAddons',
+            'selectedBlockLibraries',
+            'selectedPackage',
+        ];
+
+        expect(appliesInPlace(changes, { added: [], removed: [] }, true)).toBe(true);
+    });
+
+    it('is false for a package change off Edge Delivery, or with the stack or storefront location', () => {
+        const none = { added: [], removed: [] };
+
+        expect(appliesInPlace(['selectedPackage'], none, false)).toBe(false);
+        expect(appliesInPlace(['selectedPackage', 'selectedStack'], none, true)).toBe(false);
+        expect(appliesInPlace(['edsConfig.repoName', 'selectedPackage'], none, true)).toBe(false);
+    });
+
+    it('is false for settings changed WITHOUT a package change: those are Configure\'s', () => {
+        expect(appliesInPlace(['componentConfigs.adobe-commerce-accs'], { added: [], removed: [] }, true)).toBe(
+            false,
+        );
+    });
+
     it('is true for a move to another Adobe project or workspace, but not another org', () => {
         expect(appliesInPlace(['adobeProject', 'adobeWorkspace'], { added: [], removed: [] })).toBe(true);
         expect(appliesInPlace(['adobeOrg', 'adobeProject'], { added: [], removed: [] })).toBe(false);
@@ -268,8 +294,14 @@ describe('editSkipsStorefrontStep', () => {
         expect(editSkipsStorefrontStep({ ...opened(), selectedAppBuilderComponents: [] })).toBe(true);
     });
 
-    it('keeps it when the SC changed the package', () => {
-        expect(editSkipsStorefrontStep({ ...opened(), selectedPackage: 'citisignal' })).toBe(false);
+    it('skips it for a package change on an Edge Delivery stack: the storefront reset does that work', () => {
+        expect(editSkipsStorefrontStep({ ...opened(), selectedPackage: 'citisignal' })).toBe(true);
+    });
+
+    it('keeps it when the stack changed too: that is still a rebuild', () => {
+        expect(
+            editSkipsStorefrontStep({ ...opened(), selectedPackage: 'citisignal', selectedStack: 'eds-paas' }),
+        ).toBe(false);
     });
 
     it('keeps it when creating', () => {

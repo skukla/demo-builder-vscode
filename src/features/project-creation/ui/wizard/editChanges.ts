@@ -21,6 +21,7 @@
  * @module features/project-creation/ui/wizard/editChanges
  */
 
+import { isEdsStackId } from '@/types/typeGuards';
 import type { EDSConfig, WizardState } from '@/types/webview';
 
 type Kind = 'choice' | 'screen';
@@ -267,17 +268,55 @@ export function selectionDelta(before: readonly string[], after: readonly string
  * Read by the wizard (to skip the storefront step) and by Finish (to choose the
  * path), so both decide the same way.
  *
+ * A package change counts too, on an Edge Delivery stack whose stack and backend
+ * stay the same: Finish resets the storefront onto the new package (Reset's own
+ * steps), so the settings, add-ons and block libraries the package brings come with
+ * it (`packageFollows`).
+ *
  * @param changes - the changed choices (`editChangesOf`)
  * @param delta - the integrations added and removed
+ * @param edsStack - whether the project is on an Edge Delivery stack
  * @returns true when nothing but those changed
  */
-export function appliesInPlace(changes: readonly string[], delta: SelectionDelta): boolean {
+export function appliesInPlace(
+    changes: readonly string[],
+    delta: SelectionDelta,
+    edsStack = false,
+): boolean {
     const touched = [...delta.added, ...delta.removed];
     const owned = new Set(KEYED_CHOICES.flatMap((field) => touched.map((id) => `${field}.${id}`)));
+    const resets = edsStack && isPackageChange(changes);
     const inPlace = (name: string): boolean =>
         CHANGED_IN_PLACE.has(name) ||
+        (resets && packageFollows(name)) ||
         (touched.length > 0 && (name === 'selectedAppBuilderComponents' || owned.has(name)));
     return changes.length > 0 && changes.every(inPlace);
+}
+
+/** The choices that are the package itself. */
+const PACKAGE_CHOICES = new Set(['selectedPackage', 'demo']);
+
+/**
+ * Whether these changes include the package.
+ *
+ * @param changes - the changed choices (`editChangesOf`)
+ * @returns true when the package (or the added demo it came from) changed
+ */
+export function isPackageChange(changes: readonly string[]): boolean {
+    return changes.some((name) => PACKAGE_CHOICES.has(name));
+}
+
+/**
+ * What changes with a package, and that the storefront reset applies: the package,
+ * every setting (the new package's defaults), add-ons and block libraries. Not the
+ * stack, backend or storefront location: those are switches of their own.
+ */
+function packageFollows(name: string): boolean {
+    return (
+        PACKAGE_CHOICES.has(name) ||
+        name.startsWith('componentConfigs.') ||
+        ['selectedAddons', 'selectedBlockLibraries', 'customBlockLibraries'].includes(name)
+    );
 }
 
 /**
@@ -310,5 +349,5 @@ export function editSkipsStorefrontStep(state: Partial<WizardState>): boolean {
         baselineSelection(state.editBaseline),
         state.selectedAppBuilderComponents ?? [],
     );
-    return appliesInPlace(changes, delta);
+    return appliesInPlace(changes, delta, isEdsStackId(state.selectedStack));
 }

@@ -369,14 +369,14 @@ describe('an Edit that changed nothing, or only integrations, skips the storefro
         expect(stepIds(result.current.WIZARD_STEPS)).not.toContain('storefront-setup');
     });
 
-    it('keeps it when the SC changes the package', () => {
+    it('leaves it out for a package change on this Edge Delivery stack: the storefront reset does that work', () => {
         const { result } = renderHook(() =>
             useWizardState({ wizardSteps: STEPS, stacks: STACKS, editProject: EDITING })
         );
 
         act(() => result.current.updateState({ selectedPackage: 'citisignal' }));
 
-        expect(stepIds(result.current.WIZARD_STEPS)).toContain('storefront-setup');
+        expect(stepIds(result.current.WIZARD_STEPS)).not.toContain('storefront-setup');
     });
 
     it('keeps it when creating', () => {

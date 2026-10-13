@@ -303,9 +303,14 @@ export class GitHubRepoArchive {
 
         // Step 6: Update branch to point to new commit.
         //
-        // `force` explicitly: a reset REPLACES the repository, and the commit
-        // built above is deliberately not a descendant of what is there now.
-        // Every other caller of updateBranchRef is additive and must NOT pass it.
+        // The commit's parent is the branch head read in Step 1, so this is
+        // normally a fast-forward and history is kept: the code from before the
+        // reset is this commit's parent, which is where an SC's hand edits are
+        // found again. `force` covers a push that lands between that read and
+        // this move: a reset REPLACES the repository, that push included. (This
+        // comment said the commit was "deliberately not a descendant" until
+        // 2026-10-13; it always was one.) Every other caller of updateBranchRef
+        // is additive and must NOT pass it.
         await this.treeCommits.updateBranchRef(targetOwner, targetRepo, targetBranch, commitSha, true);
         this.logger.info(`[GitHub] Updated branch ${targetBranch} to ${commitSha.substring(0, 7)}`);
 
