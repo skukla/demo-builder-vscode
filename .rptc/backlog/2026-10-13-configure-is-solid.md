@@ -61,3 +61,5 @@ contract and the order the same day.
 - 2026-10-13  fix(configure): Save sends only what changed; a re-opened Configure starts fresh (`d1849c70b`)
 - 2026-10-13  fix(configure): one settings save for Configure and configure_project (`fd3044fac`)
 - 2026-10-13  fix(configure): restart prompt, Republish sign-in, and a stored password no longer block Save (`e5c6e117a`)
+- 2026-10-13  fix(configure): log a post-save prompt failure instead of dropping it (`7560c1881`)
+- 2026-10-13  docs(configure): a page for Configure; test rows for this week's fixes (`c1a158202`)
