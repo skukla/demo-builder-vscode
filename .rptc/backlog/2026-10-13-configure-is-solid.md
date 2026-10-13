@@ -37,3 +37,4 @@ contract and the order the same day.
    the tabs, and the stale ADR-003/ADR-004 lines and release test plan row 3.4 corrected.
 
 ## Shipped so far
+- 2026-10-13  fix(configure): Save sends only what changed; a re-opened Configure starts fresh (`d1849c70b`)
