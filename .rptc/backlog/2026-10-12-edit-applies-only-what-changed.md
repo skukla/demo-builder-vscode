@@ -78,3 +78,4 @@ from, Configure for its settings.
 - 2026-10-13  feat(edit): changing the datapack does only that, and clears its old pages (`dc63d970e`)
 - 2026-10-13  feat(edit): moving to another Adobe project does only that (`809a48565`)
 - 2026-10-13  feat(edit): changing the package resets the storefront onto it (`a47484b99`)
+- 2026-10-13  fix(edit): going Back keeps the project's Adobe destination (`9d9416a8d`)
