@@ -3000,11 +3000,11 @@
         {
             "module": "src/features/project-creation/ui/wizard/wizardHelpers.ts",
             "anchors": [
-                "if (indices.buildStepIndex !== -1 && targetIndex < indices.buildStepIndex) {"
+                "if (!editing && indices.buildStepIndex !== -1 && targetIndex < indices.buildStepIndex) {"
             ],
             "mutants": 1,
             "category": "branch",
-            "reason": "Forcing the first term true changes the guard to 'targetIndex < buildStepIndex' alone, which differs from the original only when there is no host step (buildStepIndex is -1) AND the target index is below -1. A step index is a position in an array and is never negative, so that combination cannot be constructed. The other four mutants on this line are reachable and are killed.",
+            "reason": "Forcing the first term true changes the guard to 'targetIndex < buildStepIndex' alone, which differs from the original only when there is no host step (buildStepIndex is -1) AND the target index is below -1. A step index is a position in an array and is never negative, so that combination cannot be constructed. The other four mutants on this line are reachable and are killed. Re-anchored 2026-10-13: the guard gained a leading `!editing &&` (PL-75), which does not touch this argument.",
             "decision": "none \u2014 no caller can supply a target index below -1.",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-03"

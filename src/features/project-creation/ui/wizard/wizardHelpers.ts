@@ -188,14 +188,19 @@ export function getAdobeStepIndices(wizardSteps: WizardStepConfig[]): AdobeStepI
  * Project and workspace are co-located there, so both clear together — keeping
  * state consistent on re-traversal (the pickers re-load + re-auto-select).
  *
- * @param _currentState - Current wizard state (unused; signature kept for callers)
+ * Not in Edit: there the destination is the project's own, nothing re-selects it,
+ * and clearing it on a Back made Finish lose it (the rebuild saved the project
+ * with no Adobe project; PL-75's Finish refused the half destination). An org
+ * change still clears both, in the sign-in screen (`useAuthStatus`).
+ *
+ * @param currentState - Current wizard state (its mode)
  * @param targetStep - Step we're navigating to
  * @param targetIndex - Index of target step
  * @param indices - Picker-host step index
  * @returns Partial state updates to apply
  */
 export function computeStateUpdatesForBackwardNav(
-    _currentState: WizardState,
+    currentState: Pick<WizardState, 'wizardMode'>,
     targetStep: WizardStep,
     targetIndex: number,
     indices: AdobeStepIndices,
@@ -205,7 +210,8 @@ export function computeStateUpdatesForBackwardNav(
     };
 
     // Clear project + workspace (and caches) when going before the picker host.
-    if (indices.buildStepIndex !== -1 && targetIndex < indices.buildStepIndex) {
+    const editing = currentState.wizardMode === 'edit';
+    if (!editing && indices.buildStepIndex !== -1 && targetIndex < indices.buildStepIndex) {
         updates.adobeProject = undefined;
         updates.projectsCache = undefined;
         updates.adobeWorkspace = undefined;

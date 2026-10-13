@@ -144,6 +144,21 @@ describe('wizardHelpers - navigation', () => {
             expect(result.workspacesCache).toBeUndefined();
         });
 
+        // In Edit the destination is the project's own and nothing re-selects it:
+        // clearing it on a Back lost it at Finish (PL-75).
+        it('keeps project + workspace in Edit, going back before the build step', () => {
+            const state = { ...createState(), wizardMode: 'edit' as const };
+            const result = computeStateUpdatesForBackwardNav(state, 'adobe-auth', 0, indices);
+            expect(Object.keys(result)).toEqual(['currentStep']);
+        });
+
+        it('the clear above really sets the four keys, so the Edit test above is not passing on absence', () => {
+            const result = computeStateUpdatesForBackwardNav(createState(), 'adobe-auth', 0, indices);
+            expect(Object.keys(result).sort()).toEqual(
+                ['adobeProject', 'adobeWorkspace', 'currentStep', 'projectsCache', 'workspacesCache'],
+            );
+        });
+
         it('should not clear anything when going to the build step itself', () => {
             const state = createState();
             const result = computeStateUpdatesForBackwardNav(
