@@ -515,7 +515,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-72` | chore | [The result builders' failure-flag tests sit in a suite a mutation measurement cannot count](2026-10-10-mutation-suite-named-for-behaviour-hides-mcp-tool-result-tests.md) | — | low | backlog |
 | `PL-73` | chore | [Review the tests the redundancy sweep found idle](2026-10-11-review-the-idle-test-leads.md) | — | low | backlog |
 | `PL-74` | fix | [The jest-concurrent hook proof failed once under the full suite's load](2026-10-12-the-jest-concurrent-hook-proof-failed-once-under-load.md) | — | low | backlog |
-| `PL-75` | feature | [Configure is the one place to change a project; Edit is removed](2026-10-12-configure-is-the-one-place.md) | — | high | active |
+| `PL-75` | feature | [Edit applies only what changed](2026-10-12-edit-applies-only-what-changed.md) | — | high | active |
 
 <!-- END GENERATED registry -->
 

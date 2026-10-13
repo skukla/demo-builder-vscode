@@ -117,11 +117,15 @@ package, stack or backend.
    its locks, `edit_project`, and their tests (the July audit estimated about 2,000 lines).
    No soft deprecation.
 
-## Decision (owner, 2026-10-12)
+## Decision (owner, 2026-10-13), superseding the recommendation above
 
-Go, with one change to the plan above: everything lives on **Configure**, not on new
-dashboard buttons. Configure gains Addons, Adobe destination and Foundation tabs; a
-Foundation change builds a new project through the Copy steps. Only the mesh delete sits
-beside the mesh's Deploy button. Tracked as PL-75. Defaults taken: a repository or site
-change is also a new project; after a successful Foundation copy, offer to delete the
-original, never automatically.
+**Edit stays, and its Finish applies only what changed** (PL-75). The recommendation above,
+remove Edit and make a foundation change a new project through Copy, was rejected: "We
+shouldn't be adding a new project as a duplicate to an existing one. That doesn't track with
+what the user expects", and "when they change an existing project, they expect more of an
+edit behavior". A middle plan, moving everything onto Configure, was dropped when mapping
+showed the gaps were smaller than this file says: the mesh card already has a confirmed
+Remove (the "no dashboard delete button" row above is wrong); the one addon, ACO, is offered
+by no pickable package and changes nothing when selected; and the Adobe destination move
+already lives on the Integrations screen. The diagnosis in this file stands; the cure is a
+diff-applying Edit, not a removed one.
