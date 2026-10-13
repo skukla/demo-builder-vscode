@@ -15,8 +15,8 @@ Create and manage Adobe Commerce demos with ease directly from Visual Studio Cod
 
 ## Requirements
 
-- Visual Studio Code 1.74.0 or higher
-- Node.js 18.x or 20.x
+- Visual Studio Code 1.84 or higher
+- Node.js 24 (Demo Builder installs it through fnm if it is missing)
 - Valid Demo Builder license key
 - Adobe I/O CLI (optional, for mesh deployment)
 

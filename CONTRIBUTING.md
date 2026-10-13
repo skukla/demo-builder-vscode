@@ -3,7 +3,10 @@
 ## Setup
 
 You need **VS Code 1.84 or later** (`engines.vscode` is `^1.84.0` — an older editor
-will refuse to install the extension) and a current Node LTS.
+will refuse to install the extension) and **Node 24**, the version Demo Builder installs
+for SCs (`.node-version`; fnm switches to it in this folder). Tests run with
+`--no-sparkplug`, which `jest.config.js` adds for you: Node 24 has a V8 bug that crashes
+Jest workers without it (see the comment there).
 
 ```bash
 git clone https://github.com/skukla/demo-builder-vscode.git

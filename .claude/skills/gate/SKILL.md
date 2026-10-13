@@ -146,6 +146,14 @@ What `npm run gate` runs, so you can read a failure without opening package.json
 It stops at the first failure, so fix and re-run rather than reading ahead. Run
 jest on its own if you need the output in a file — never pipe it through `tail`.
 
+**"A jest worker process … was terminated by another process: signal=SIGSEGV"** is a
+Node 24 V8 bug ([nodejs/node#62393](https://github.com/nodejs/node/issues/62393)), not a
+flaky test: one worker dies in a random suite and the run fails with no test at fault.
+`jest.config.js` adds `--no-sparkplug` to every worker, which stops it (7 of 7 full runs
+crashed without it on 2026-10-13, 2 of 2 clean with it). If you see it again, check that
+the top of `jest.config.js` still adds the flag before suspecting the tests. Rerunning the
+crashed suite alone proves nothing.
+
 **Step 7 IS a gate; step 8 is not.** Duplication is a shrink-only pin: it fails when
 copy-paste in `src/` grows above the recorded number, and it also fails when the number
 FALLS, because an improvement nobody banks grows back. Both arms are deliberate. Fixing
