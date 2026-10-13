@@ -29,11 +29,14 @@ const GROUPS: ServiceGroup[] = [
 const filled = (): string => 'key-123';
 const empty = (): undefined => undefined;
 const complete = (): boolean => true;
+const noneStored = (): boolean => false;
+const allStored = (): boolean => true;
 
 function render(overrides: Partial<UseConfigureSectionsProps> = {}) {
     const props: UseConfigureSectionsProps = {
         serviceGroups: GROUPS,
         getValueFromConfigs: filled,
+        isStoredSecret: noneStored,
         isFieldComplete: complete,
         isEds: false,
         hasBlockLibraryChoices: false,
@@ -70,6 +73,15 @@ describe('useConfigureSections', () => {
         });
         expect(result.current.canSave).toBe(false);
         expect(result.current.railTabs[1]).toMatchObject({ id: 'catalog-service', hasError: true });
+    });
+
+    it('allows Save when the empty required field is a secret the project already holds (PL-76)', () => {
+        // The field shows "Saved — type to replace" and no error; Save used to stay
+        // disabled anyway, with nothing on screen to say why.
+        const { result } = render({ getValueFromConfigs: empty, isStoredSecret: allStored });
+
+        expect(result.current.validationErrors).toStrictEqual({});
+        expect(result.current.canSave).toBe(true);
     });
 
     it('blocks Save and marks the Project tab for a project-name error', () => {

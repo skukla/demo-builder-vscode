@@ -28,6 +28,7 @@ import {
     stageSettingsChange,
 } from '@/features/dashboard/services/projectSettingsChange';
 import {
+    ensureDaLiveAuth,
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,
 } from '@/features/eds/handlers/edsHelpers';
@@ -292,8 +293,15 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
             // single earlier "Later" muted them for the whole session:
             // the handlers below saw `shouldShow === false`, returned
             // before prompting, and the save reported success while the
-            // storefront kept serving the previous config.
-            if (meshChanges.hasChanges || storefrontChanges.hasChanges || libraryWorkPending) {
+            // storefront kept serving the previous config. Any changed setting
+            // re-arms the restart prompt too: a running demo reads its `.env` once.
+            const settingsChanged = Object.keys(data.configChanges ?? {}).length > 0;
+            if (
+                settingsChanged ||
+                meshChanges.hasChanges ||
+                storefrontChanges.hasChanges ||
+                libraryWorkPending
+            ) {
                 await vscode.commands.executeCommand('demoBuilder._internal.configChanged');
             }
 
@@ -567,9 +575,20 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
                         onProgress: (message) => {
                             progress.report({ message });
                         },
+                        // The CDN publish needs the DA.live session (PL-76). Without
+                        // it the push reached GitHub and the CDN kept the old config.
+                        ensureDaLiveSession: () =>
+                            ensureDaLiveAuth({ context, logger }, '[Configure]'),
                     });
 
-                    if (result.success) {
+                    if (result.success && result.cdnError) {
+                        // On GitHub, not live: say so instead of "republished".
+                        await ProjectDashboardWebviewCommand.refreshStatus();
+                        vscode.window.showWarningMessage(
+                            'The storefront configuration reached GitHub, but the live ' +
+                                `storefront still serves the previous one: ${result.cdnError}`,
+                        );
+                    } else if (result.success) {
                         // Save updated project state
                         await this.stateManager.saveProject(project);
                         await ProjectDashboardWebviewCommand.refreshStatus();
@@ -743,22 +762,26 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
 
         await vscode.commands.executeCommand('demoBuilder._internal.markMeshNotificationShown');
 
+        // A running demo read its `.env` when it started, so it needs a restart as
+        // well as the redeploy. The button used to say so and only redeploy.
         const isRunning = project.status === 'running';
+        const apply = isRunning ? 'Redeploy and Restart' : 'Redeploy Mesh';
         const message = isRunning
             ? 'Configuration saved. Redeploy mesh and restart demo to apply changes.'
             : 'Configuration saved. Redeploy mesh to apply changes.';
 
         const selection = await (isRunning
-            ? vscode.window.showWarningMessage(message, 'Redeploy Mesh', 'Later')
-            : vscode.window.showInformationMessage(message, 'Redeploy Mesh', 'Later'));
+            ? vscode.window.showWarningMessage(message, apply, 'Later')
+            : vscode.window.showInformationMessage(message, apply, 'Later'));
 
-        if (selection === 'Redeploy Mesh') {
+        if (selection === apply) {
             await this.ensureAuthAndApply(
                 () =>
                     this.withDeploymentStatus(async () => {
                         await vscode.commands.executeCommand('demoBuilder.deployMesh');
+                        if (isRunning) await this.restartDemo();
                     }),
-                'redeploy mesh',
+                isRunning ? 'redeploy mesh and restart demo' : 'redeploy mesh',
             );
         } else if (selection === 'Later') {
             // Keyed-only write (ADR-011 D3 Step 07): the decline lands on the keyed mesh entry.
@@ -785,21 +808,27 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
 
         await vscode.commands.executeCommand('demoBuilder._internal.markRestartNotificationShown');
 
+        // Later is a real answer: the next save that changes a setting asks again
+        // (`_internal.configChanged` re-arms this prompt).
         const selection = await vscode.window.showInformationMessage(
             'Configuration saved. Restart the demo to apply changes.',
             'Restart Demo',
+            'Later',
         );
 
-        if (selection === 'Restart Demo') {
-            try {
-                await vscode.commands.executeCommand('demoBuilder.stopDemo');
-                await vscode.commands.executeCommand('demoBuilder.startDemo');
-            } catch (error) {
-                this.logger.error('[Configure] Failed to restart demo:', error as Error);
-            }
-        }
+        if (selection === 'Restart Demo') await this.restartDemo();
 
         return true;
+    }
+
+    /** Stop and start the demo so it reads the new `.env`; a failure is logged. */
+    private async restartDemo(): Promise<void> {
+        try {
+            await vscode.commands.executeCommand('demoBuilder.stopDemo');
+            await vscode.commands.executeCommand('demoBuilder.startDemo');
+        } catch (error) {
+            this.logger.error('[Configure] Failed to restart demo:', error as Error);
+        }
     }
 
     /**

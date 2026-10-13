@@ -25,9 +25,10 @@
  */
 
 import { Form, Button, View } from '@adobe/react-spectrum';
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { hasBlockLibraryChoices } from './BlockLibrariesSection';
 import { ConfigureSectionBody } from './ConfigureSectionBody';
+import type { UniqueField } from './configureTypes';
 import { useBlockLibraryChoices } from './hooks/useBlockLibraryChoices';
 import { useBlockLibrarySelection } from './hooks/useBlockLibrarySelection';
 import { useConfigureFieldRow } from './hooks/useConfigureFieldRow';
@@ -152,10 +153,18 @@ export function ConfigureScreen({
     // Deduplicate fields and organize by service group
     const serviceGroups = useServiceGroups({ selectedComponents, componentsData });
 
+    // The same rule the field row uses to show "Saved — type to replace" (StoreConfigFieldRow).
+    const isStoredSecret = useCallback(
+        (field: UniqueField) =>
+            Object.values(componentSecretFlags).some((perVar) => perVar[field.key] === true),
+        [componentSecretFlags],
+    );
+
     const { validationErrors, activeSection, railTabs, setActiveSectionId, canSave } =
         useConfigureSections({
             serviceGroups,
             getValueFromConfigs,
+            isStoredSecret,
             isFieldComplete,
             isEds,
             hasBlockLibraryChoices: hasBlockLibraryChoices(blockLibraryChoices),

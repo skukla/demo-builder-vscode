@@ -385,11 +385,16 @@ export class EnvFileWatcherService implements vscode.Disposable {
          *
          * Scoping the suppression to the CHANGE rather than the session keeps the
          * anti-spam intent (one prompt per change) without silently dropping one.
+         *
+         * The restart prompt is re-armed too (PL-76). It was only re-armed by the
+         * next demo start, so closing it once left a running demo on its old `.env`
+         * through every later save, each one reporting "saved" and nothing else.
          */
         this.disposables.add(
             vscode.commands.registerCommand('demoBuilder._internal.configChanged', () => {
                 this.meshNotificationShown = false;
                 this.storefrontNotificationShown = false;
+                this.restartNotificationShown = false;
                 this.logger.debug('[Notification] New config change saved, apply prompts re-armed');
             }),
         );

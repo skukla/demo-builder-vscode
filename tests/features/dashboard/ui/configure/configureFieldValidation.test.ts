@@ -7,7 +7,10 @@
  */
 
 import { mockComponentsData } from './ConfigureScreen.testUtils';
-import { validateServiceGroups } from '@/features/dashboard/ui/configure/configureFieldValidation';
+import {
+    validateServiceGroups,
+    type FieldValueLookup,
+} from '@/features/dashboard/ui/configure/configureFieldValidation';
 import type { ServiceGroup, UniqueField } from '@/features/dashboard/ui/configure/configureTypes';
 
 /** A UniqueField built from the real env-var definitions in the shared fixtures. */
@@ -27,36 +30,56 @@ function lookup(values: Record<string, string>) {
     return (f: UniqueField) => values[f.key];
 }
 
+/** No field is a secret the project already holds. */
+const NONE_STORED = (): boolean => false;
+
+/** The pass under test, with no stored secrets unless a case says otherwise. */
+function validate(
+    groups: ServiceGroup[],
+    getValue: FieldValueLookup,
+    isStoredSecret: (f: UniqueField) => boolean = NONE_STORED
+) {
+    return validateServiceGroups(groups, getValue, isStoredSecret);
+}
+
 describe('validateServiceGroups', () => {
     describe('required fields', () => {
         it('reports a required field with no value', () => {
             const groups = [group('adobe-commerce', [field('ADOBE_COMMERCE_URL')])];
-            expect(validateServiceGroups(groups, lookup({}))).toEqual({
+            expect(validate(groups, lookup({}))).toEqual({
                 ADOBE_COMMERCE_URL: 'Commerce URL is required',
             });
+        });
+
+        it('counts a required secret the project already holds as filled (PL-76)', () => {
+            // Its field reads empty and shows "Saved — type to replace" with no error;
+            // counting it missing disabled Save with nothing on screen to explain why.
+            const groups = [group('adobe-commerce', [field('ADOBE_COMMERCE_URL')])];
+            const stored = (f: UniqueField) => f.key === 'ADOBE_COMMERCE_URL';
+            expect(validate(groups, lookup({}), stored)).toStrictEqual({});
         });
 
         it('reports nothing once that field has a value (the control)', () => {
             const groups = [group('adobe-commerce', [field('ADOBE_COMMERCE_URL')])];
             const values = { ADOBE_COMMERCE_URL: 'https://example.com' };
-            expect(validateServiceGroups(groups, lookup(values))).toStrictEqual({});
+            expect(validate(groups, lookup(values))).toStrictEqual({});
         });
 
         it('ignores an OPTIONAL field with no value', () => {
             const groups = [group('adobe-commerce', [field('OPTIONAL_WITH_DEFAULT')])];
-            expect(validateServiceGroups(groups, lookup({}))).toStrictEqual({});
+            expect(validate(groups, lookup({}))).toStrictEqual({});
         });
 
         it('accepts a default in place of a value', () => {
             const withDefault = field('ADOBE_COMMERCE_URL', { default: 'https://fallback.test' });
             const groups = [group('adobe-commerce', [withDefault])];
-            expect(validateServiceGroups(groups, lookup({}))).toStrictEqual({});
+            expect(validate(groups, lookup({}))).toStrictEqual({});
         });
 
         it('treats an empty string as no value at all', () => {
             // A field the user cleared reads as empty, not as filled in.
             const groups = [group('adobe-commerce', [field('ADOBE_COMMERCE_URL')])];
-            expect(validateServiceGroups(groups, lookup({ ADOBE_COMMERCE_URL: '' }))).toStrictEqual(
+            expect(validate(groups, lookup({ ADOBE_COMMERCE_URL: '' }))).toStrictEqual(
                 { ADOBE_COMMERCE_URL: 'Commerce URL is required' }
             );
         });
@@ -66,7 +89,7 @@ describe('validateServiceGroups', () => {
             // registry writes one when it has nothing to suggest.
             const emptyDefault = field('ADOBE_COMMERCE_URL', { default: '' });
             const groups = [group('adobe-commerce', [emptyDefault])];
-            expect(validateServiceGroups(groups, lookup({}))).toStrictEqual({
+            expect(validate(groups, lookup({}))).toStrictEqual({
                 ADOBE_COMMERCE_URL: 'Commerce URL is required',
             });
         });
@@ -82,7 +105,7 @@ describe('validateServiceGroups', () => {
     describe('format', () => {
         it('rejects a malformed URL', () => {
             const groups = [group('adobe-commerce', [field('ADOBE_COMMERCE_URL')])];
-            const errors = validateServiceGroups(
+            const errors = validate(
                 groups,
                 lookup({ ADOBE_COMMERCE_URL: 'not-a-url' })
             );
@@ -94,7 +117,7 @@ describe('validateServiceGroups', () => {
                 validation: { pattern: '^[a-z]+$', message: 'Letters only' },
             });
             const groups = [group('adobe-commerce', [patterned])];
-            const errors = validateServiceGroups(
+            const errors = validate(
                 groups,
                 lookup({ ADOBE_COMMERCE_ADMIN_USERNAME: 'Ad1' })
             );
@@ -107,7 +130,7 @@ describe('validateServiceGroups', () => {
             });
             const groups = [group('adobe-commerce', [patterned])];
             expect(
-                validateServiceGroups(groups, lookup({ ADOBE_COMMERCE_ADMIN_USERNAME: 'admin' }))
+                validate(groups, lookup({ ADOBE_COMMERCE_ADMIN_USERNAME: 'admin' }))
             ).toStrictEqual({});
         });
 
@@ -121,7 +144,7 @@ describe('validateServiceGroups', () => {
                 },
             });
             const groups = [group('adobe-commerce', [both])];
-            const errors = validateServiceGroups(
+            const errors = validate(
                 groups,
                 lookup({ ADOBE_COMMERCE_URL: 'https://example.com' })
             );
@@ -136,7 +159,7 @@ describe('validateServiceGroups', () => {
                 validation: { pattern: '^[0-9]+$', message: 'Digits only' },
             });
             const groups = [group('adobe-commerce', [patterned])];
-            expect(validateServiceGroups(groups, lookup({}))).toStrictEqual({});
+            expect(validate(groups, lookup({}))).toStrictEqual({});
         });
 
         it('does not format-check a field the user cleared', () => {
@@ -146,7 +169,7 @@ describe('validateServiceGroups', () => {
             });
             const groups = [group('adobe-commerce', [patterned])];
             expect(
-                validateServiceGroups(groups, lookup({ ADOBE_COMMERCE_ADMIN_USERNAME: '' }))
+                validate(groups, lookup({ ADOBE_COMMERCE_ADMIN_USERNAME: '' }))
             ).toStrictEqual({});
         });
 
@@ -158,7 +181,7 @@ describe('validateServiceGroups', () => {
                 validation: { pattern: '^[a-z]+$', message: 'Letters only' },
             });
             const groups = [group('adobe-commerce', [patterned])];
-            expect(validateServiceGroups(groups, () => 8080)).toStrictEqual({});
+            expect(validate(groups, () => 8080)).toStrictEqual({});
         });
 
         it('does not format-check a field left on its default', () => {
@@ -166,7 +189,7 @@ describe('validateServiceGroups', () => {
             // value they cannot see would leave Save disabled with nothing to fix.
             const withDefault = field('ADOBE_COMMERCE_URL', { default: 'not-a-url' });
             const groups = [group('adobe-commerce', [withDefault])];
-            expect(validateServiceGroups(groups, lookup({}))).toStrictEqual({});
+            expect(validate(groups, lookup({}))).toStrictEqual({});
         });
     });
 
@@ -178,14 +201,14 @@ describe('validateServiceGroups', () => {
                     field('ADOBE_CATALOG_API_KEY', { componentIds: ['catalog-service'] }),
                 ]),
             ];
-            expect(validateServiceGroups(groups, lookup({}))).toEqual({
+            expect(validate(groups, lookup({}))).toEqual({
                 ADOBE_COMMERCE_URL: 'Commerce URL is required',
                 ADOBE_CATALOG_API_KEY: 'Catalog API Key is required',
             });
         });
 
         it('returns no errors for no groups', () => {
-            expect(validateServiceGroups([], lookup({}))).toStrictEqual({});
+            expect(validate([], lookup({}))).toStrictEqual({});
         });
     });
 });

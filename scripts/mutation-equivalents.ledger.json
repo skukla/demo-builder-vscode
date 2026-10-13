@@ -7285,7 +7285,7 @@
             "anchors": [
                 "const panel = BaseWebviewCommand.getActivePanel('demoBuilder.configureProject');"
             ],
-            "line": 104,
+            "line": 105,
             "mutants": 1,
             "category": "branch",
             "reason": "Stryker forces the following 'if (panel)' true. With no panel open the body then calls panel.dispose() on undefined, and the TypeError lands in the try/catch that already exists for the already-disposed case \u2014 so the mutant takes the same path to the same no-op. The false variant IS killed (a test asserts the open panel is disposed); only the always-true one is unobservable.",
@@ -13587,7 +13587,7 @@
             "anchors": [
                 "if (!result.valid && result.error) return result.error;"
             ],
-            "line": 49,
+            "line": 63,
             "mutants": 1,
             "category": "branch",
             "reason": "Swapping && for || cannot change the outcome, because a Validator returns exactly one of two shapes: valid() is { valid: true } with no error, and invalid(message) is { valid: false, error }. When the value is valid both operands are falsy and neither form fires; when it is invalid both are truthy and both return the same message. Killing it would need a validator that reports invalid with no message, which url() and pattern() cannot produce - every failure of theirs is built through invalid(message).",
@@ -13600,7 +13600,7 @@
             "anchors": [
                 "if (!result.valid && result.error) return result.error;"
             ],
-            "line": 58,
+            "line": 72,
             "mutants": 2,
             "category": "branch",
             "reason": "Two mutants on the LAST check in the function, where the statement after it is return undefined. Replacing the condition with true returns result.error unconditionally, which on a valid value IS undefined - the same value by a shorter route, with nothing after it to skip. (The identical mutation on line 49 is killed, because the pattern check still follows that one.) Swapping && for || is equivalent for the reason recorded against line 49: a Validator never reports invalid without a message, nor valid with one.",

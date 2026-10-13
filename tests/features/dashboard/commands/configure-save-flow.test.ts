@@ -406,7 +406,19 @@ describe('ConfigureProjectWebviewCommand - save spine', () => {
             );
         });
 
-        it('leaves the prompts as they are when nothing went stale', async () => {
+        it('re-arms them when only an ordinary setting changed, for the restart prompt (PL-76)', async () => {
+            // Nothing went stale, but a running demo still reads the old .env until
+            // it restarts, so its prompt must be offered for this change.
+            await save(command).handleSaveConfiguration({
+                configChanges: { headless: { ADOBE_ASSETS_URL: 'https://assets.example' } },
+            });
+
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+                'demoBuilder._internal.configChanged'
+            );
+        });
+
+        it('leaves the prompts as they are when nothing changed at all', async () => {
             await save(command).handleSaveConfiguration({ configChanges: {} });
 
             expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(

@@ -100,6 +100,36 @@ describe('ConfigureProjectWebviewCommand - storefront republish resets notificat
         expect(typeof report).toBe('function');
     });
 
+    it('hands the republish a DA.live sign-in, which the CDN publish needs (PL-76)', async () => {
+        mockRepublishStorefrontConfig.mockResolvedValue({ success: true });
+
+        await (command as unknown as { republishStorefront: (p: Project) => Promise<void> })
+            .republishStorefront(makeProject());
+
+        const [params] = mockRepublishStorefrontConfig.mock.calls[0];
+        expect(typeof params.ensureDaLiveSession).toBe('function');
+    });
+
+    it('says the live storefront did not update when only GitHub took it (PL-76)', async () => {
+        // It used to say "republished successfully" while the CDN kept the old config.
+        mockRepublishStorefrontConfig.mockResolvedValue({
+            success: true,
+            cdnError: 'No DA.live session',
+        });
+
+        await (command as unknown as { republishStorefront: (p: Project) => Promise<void> })
+            .republishStorefront(makeProject());
+
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
+            expect.stringContaining('still serves the previous one: No DA.live session'),
+        );
+        expect(vscode.window.showInformationMessage).not.toHaveBeenCalledWith(
+            expect.stringContaining('republished successfully'),
+            expect.anything(),
+        );
+        expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(STOREFRONT_ACTION_TAKEN);
+    });
+
     it('does NOT reset the flag when republish fails (storefront still stale)', async () => {
         mockRepublishStorefrontConfig.mockResolvedValue({ success: false, error: 'boom' });
 

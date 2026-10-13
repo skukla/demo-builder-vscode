@@ -16,7 +16,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { validateServiceGroups } from '../configureFieldValidation';
+import { validateServiceGroups, type StoredSecretCheck } from '../configureFieldValidation';
 import {
     buildConfigureSections,
     toStepRailTabs,
@@ -31,6 +31,8 @@ export interface UseConfigureSectionsProps {
     serviceGroups: ServiceGroup[];
     /** The raw stored value, ignoring defaults — what validation judges. */
     getValueFromConfigs: (field: UniqueField) => string | number | boolean | undefined;
+    /** Whether a field is a secret the project already holds; such a field counts as filled. */
+    isStoredSecret: StoredSecretCheck;
     /** Whether a field currently holds a value. */
     isFieldComplete: (field: UniqueField) => boolean;
     /** EDS project — gates the Block Libraries and Authoring sections. */
@@ -63,6 +65,7 @@ export interface UseConfigureSectionsReturn {
 export function useConfigureSections({
     serviceGroups,
     getValueFromConfigs,
+    isStoredSecret,
     isFieldComplete,
     isEds,
     hasBlockLibraryChoices,
@@ -77,8 +80,8 @@ export function useConfigureSections({
     // GLOBAL validation: every service group, not the one on screen. An error the user
     // cannot see must still block Save, and its rail tab is what points them at it.
     useEffect(() => {
-        setValidationErrors(validateServiceGroups(serviceGroups, getValueFromConfigs));
-    }, [serviceGroups, getValueFromConfigs]);
+        setValidationErrors(validateServiceGroups(serviceGroups, getValueFromConfigs, isStoredSecret));
+    }, [serviceGroups, getValueFromConfigs, isStoredSecret]);
 
     const fieldHasError = useCallback(
         (field: UniqueField): boolean => validationErrors[field.key] !== undefined,
