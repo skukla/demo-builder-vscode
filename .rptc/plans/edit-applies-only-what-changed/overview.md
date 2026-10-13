@@ -22,10 +22,13 @@ what the project has, and does only the difference:
 Destructive steps (a removal, a datapack removal, a reset) are listed in ONE confirmation
 before anything runs. Editing again is the undo.
 
-**Locked in Edit for now** (shown, not changeable, with a note): backend, stack, Adobe org,
-repository and site. No operation exists for any of them; the owner rates a backend switch
-rare. A headless package change is also locked: headless reset re-clones the frontend from
-the SAVED repo URL (`lifecycle/services/projectResetService.ts:184`), so it would not switch.
+**Not in this plan: backend, stack, Adobe org, repository and site.** No operation exists for
+any of them. This plan first said to lock them in Edit; on 2026-10-13 the owner chose to build
+them before the release instead, as their own items: [[EDS-42]] (repository or site),
+[[PL-77]] (org), [[PL-78]] (backend) and [[PL-79]] (stack, which also covers a headless
+package change: headless reset re-clones the frontend from the SAVED repo URL,
+`lifecycle/services/projectResetService.ts:184`, so it would not switch). Until each lands,
+a change to it still goes through the full rebuild.
 
 ## Where it splits
 
@@ -58,11 +61,12 @@ storefront changed, and its reset runs instead when the package changed.
    `resolveStorefrontForProject`), record the package, run the EDS reset. Runs before steps
    3 to 5, because a reset regenerates components but keeps integrations.
 7. **One confirmation** listing every destructive step, before anything in 3 to 6 runs.
-8. **Lock** backend, stack, org, repository and site in Edit (extend `ui/steps/editLocks.ts`),
-   and headless package changes.
+8. **Removed 2026-10-13.** It locked backend, stack, org, repository and site in Edit; the
+   owner chose to build those switches instead (see above).
 9. **Delete what the apply path makes dead:** Edit's branch through the rebuild (temp-dir
    install, atomic swap, `carriedOverFromEdit` if nothing else needs it) and their tests. No
-   soft deprecation.
+   soft deprecation. Waits on EDS-42, PL-77, PL-78 and PL-79: until they land, those changes
+   still need the rebuild.
 
 Each step: TDD, `gate`, commit with `Backlog: PL-75`. Steps 3 to 6 make real cloud changes;
 their first live run needs the owner's go on a scratch project.
