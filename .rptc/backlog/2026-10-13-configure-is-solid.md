@@ -39,3 +39,4 @@ contract and the order the same day.
 ## Shipped so far
 - 2026-10-13  fix(configure): Save sends only what changed; a re-opened Configure starts fresh (`d1849c70b`)
 - 2026-10-13  fix(configure): one settings save for Configure and configure_project (`fd3044fac`)
+- 2026-10-13  fix(configure): restart prompt, Republish sign-in, and a stored password no longer block Save (`e5c6e117a`)
