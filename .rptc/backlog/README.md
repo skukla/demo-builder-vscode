@@ -236,7 +236,7 @@ each item's own file; what has already landed against an item is in its
 | `AI-71` | fix | [An agent's project delete ignores the "deleteAll" setting](2026-10-10-agent-delete-ignores-delete-all-setting.md) | — | low | backlog |
 | `EDS-33` | fix | [A storefront teardown leaves its pages live when the DA.live content is already gone](2026-10-09-teardown-unpublish-lists-from-deleted-content.md) | — | high | built |
 
-### eds  (49)
+### eds  (50)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -288,6 +288,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-39` | feature | [Choose block libraries on Configure, not only in Edit](2026-10-12-block-libraries-on-configure.md) | — | med | active |
 | `EDS-41` | fix | [The Site Access screen's loading spinner matches the rest of the extension](2026-10-13-site-access-loading-spinner.md) | — | low | backlog |
 | `EDS-42` | feature | [Edit switches a project's repository or site](2026-10-13-edit-switches-repository-or-site.md) | PL-75 | med | backlog |
+| `EDS-43` | feature | [Save a block from a storefront as a reusable block library](2026-10-13-save-a-storefront-block-as-a-library.md) | — | med | backlog |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | built |
 
 ### app-builder  (121)
@@ -670,7 +671,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — built
 
-*270 item(s) sit outside the A–G chain.*
+*271 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 
