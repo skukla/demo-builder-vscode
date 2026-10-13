@@ -23,6 +23,11 @@
  * notification or a modal that can be left running, and an outcome belongs
  * where the work was being watched (R6). Each site says which decision it
  * gates, so a new one cannot arrive without someone naming it.
+ *
+ * The scan matches `modal: true` wherever it sits. It used to require the `{` on
+ * the same line, so a dialog whose options were written over several lines was
+ * never seen: seven, including the destination move and project deletion, had
+ * never been named (found 2026-10-13).
  */
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -53,6 +58,9 @@ const SURFACE_OWNERS = new Set([
 
 const SOURCES = workingTreeFiles('src')
     .filter((f) => f.endsWith('.ts') || f.endsWith('.tsx'));
+
+/** A blocking dialog's option, on whatever line it sits. */
+const MODAL = /\bmodal:\s*true\b/;
 
 /** Every `file:line` where `pattern` matches, across the tracked source. */
 function sites(pattern: RegExp, skip: (file: string) => boolean = () => false): string[] {
@@ -91,8 +99,11 @@ describe('a long operation reports where the SC is looking', () => {
         expect(sites(/vscode\.window\.withProgress\(/)).not.toContain(
             'src/core/vscode/withOperationProgress.ts:1',
         );
-        expect(/\{\s*modal:\s*true/.test('{ modal: true }')).toBe(true);
-        expect(/\{\s*modal:\s*true/.test('{ modal: false }')).toBe(false);
+        expect(MODAL.test('{ modal: true }')).toBe(true);
+        // Options written over several lines: the shape the old scan missed.
+        expect(MODAL.test('            modal: true,')).toBe(true);
+        expect(MODAL.test('inModal: true')).toBe(false);
+        expect(MODAL.test('{ modal: false }')).toBe(false);
     });
 
     describe('direct progress notifications', () => {
@@ -123,7 +134,7 @@ describe('a long operation reports where the SC is looking', () => {
     });
 
     describe('blocking dialogs', () => {
-        const current = sites(/\{\s*modal:\s*true/);
+        const current = sites(MODAL);
 
         it('CONTROL: the scan finds the dialogs this extension actually shows', () => {
             expect(current.length).toBeGreaterThan(5);
