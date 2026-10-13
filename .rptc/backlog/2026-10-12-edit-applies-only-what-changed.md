@@ -74,3 +74,4 @@ from, Configure for its settings.
 - 2026-10-13  docs(rptc): Edit applies only what changed (PL-75 plan); the Configure audit (`756f87008`)
 - 2026-10-13  feat(edit): an Edit that changes nothing only saves (`bd55ca245`)
 - 2026-10-13  feat(edit): an Edit that only adds or removes integrations does only that (`d4647b86c`)
+- 2026-10-13  fix(mesh,edit): the mesh updates the storefront; Edit adds and removes through the Integrations screen (`e4c5b9d3b`)
