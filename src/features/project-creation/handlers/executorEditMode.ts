@@ -11,11 +11,11 @@
  */
 
 import * as fsPromises from 'fs/promises';
-import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import * as path from 'path';
 import type { ProgressTracker } from './shared';
-import type { ProjectCreationConfig } from '@/types/webviewRequests';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import type { HandlerContext } from '@/types/handlers';
+import type { ProjectCreationConfig } from '@/types/webviewRequests';
 
 /**
  * Load existing project state for edit mode, used to preserve the original
@@ -94,7 +94,7 @@ function carriedOverFromEdit(
  * reinstalled every component, redeployed the mesh and every integration,
  * republished the storefront and re-imported the datapack. The wizard decides
  * "nothing changed" by comparing the SC's choices with how it opened
- * (`ui/wizard/editChanges.ts`) and says so on the config.
+ * (`ui/wizard/editChanges.ts`) and sends what changed: here, nothing.
  *
  * @returns true when it handled the Finish; false to run the full path (not an
  *   unchanged Edit, or the project could not be read)
@@ -104,7 +104,7 @@ async function saveUnchangedEdit(
     config: ProjectCreationConfig,
     progressTracker: ProgressTracker,
 ): Promise<boolean> {
-    if (!config.editProjectPath || !config.editUnchanged) return false;
+    if (!config.editProjectPath || config.editChanges?.length !== 0) return false;
     const project = await loadExistingProjectForEdit(config.editProjectPath, context);
     if (!project) return false;
     context.logger.info('[Project Edit] Nothing changed: saving only, nothing redeployed');

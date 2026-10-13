@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { editChoicesOf, isEditUnchanged } from '../editChanges';
+import { editChoicesOf, editSkipsStorefrontStep } from '../editChanges';
 import { integrationStateFromSettings } from '../integrationStateFromSettings';
 import { filterStepsForStack, WizardStepWithCondition } from '../stepFiltering';
 import {
@@ -319,9 +319,10 @@ export function useWizardState({
         ),
     );
 
-    // An Edit that has changed nothing skips the storefront step: it would push
-    // and republish the storefront for no change (PL-75).
-    const editUnchanged = isEditUnchanged(state);
+    // An Edit that changed nothing, or only added or removed integrations, skips
+    // the storefront step: it would push and republish the storefront for no
+    // change to it (PL-75).
+    const skipStorefront = editSkipsStorefrontStep(state);
 
     // Filter steps based on enabled flag AND stack conditions
     // When a predefined stack is selected, hide steps with showWhenNoStack: true
@@ -356,13 +357,13 @@ export function useWizardState({
         });
 
         return filteredSteps
-            .filter((step) => !(editUnchanged && step.id === 'storefront-setup'))
+            .filter((step) => !(skipStorefront && step.id === 'storefront-setup'))
             .map((step) => ({
                 id: step.id as WizardStep,
                 name: step.name,
                 description: step.description,
             }));
-    }, [wizardSteps, stacks, state.selectedStack, editProject, editUnchanged]);
+    }, [wizardSteps, stacks, state.selectedStack, editProject, skipStorefront]);
 
     // Step completion tracking
     // Neither import mode nor edit mode pre-marks steps as completed

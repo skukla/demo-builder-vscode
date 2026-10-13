@@ -25,7 +25,7 @@ function setup(loaded = createMockProject({ name: 'justrite', path: EDIT_PATH })
 }
 
 function config(overrides: Partial<ProjectCreationConfig> = {}): ProjectCreationConfig {
-    return { projectName: 'justrite', editProjectPath: EDIT_PATH, editUnchanged: true, ...overrides };
+    return { projectName: 'justrite', editProjectPath: EDIT_PATH, editChanges: [], ...overrides };
 }
 
 describe('saveUnchangedEdit', () => {
@@ -43,14 +43,23 @@ describe('saveUnchangedEdit', () => {
     it('hands back to the full Finish when the SC changed something', async () => {
         const { context, stateManager, progress } = setup();
 
-        const handled = await saveUnchangedEdit(context, config({ editUnchanged: undefined }), progress);
+        const handled = await saveUnchangedEdit(context, config({ editChanges: ['datapack'] }), progress);
 
         expect(handled).toBe(false);
         expect(stateManager.saveProject).not.toHaveBeenCalled();
         expect(progress).not.toHaveBeenCalled();
     });
 
-    it('hands back when creating, even with the flag', async () => {
+    it('hands back when the wizard could not say what changed', async () => {
+        const { context, stateManager } = setup();
+
+        const handled = await saveUnchangedEdit(context, config({ editChanges: undefined }), jest.fn());
+
+        expect(handled).toBe(false);
+        expect(stateManager.saveProject).not.toHaveBeenCalled();
+    });
+
+    it('hands back when creating, even with an empty change list', async () => {
         const { context, stateManager, progress } = setup();
 
         const handled = await saveUnchangedEdit(

@@ -294,7 +294,7 @@ describe('the UI state the hook exposes', () => {
     });
 });
 
-describe('an Edit that has changed nothing skips the storefront step (PL-75)', () => {
+describe('an Edit that changed nothing, or only integrations, skips the storefront step (PL-75)', () => {
     // It would push and republish the storefront for no change.
     const STEPS = [
         { id: 'welcome', name: 'Welcome', enabled: true },
@@ -318,7 +318,7 @@ describe('an Edit that has changed nothing skips the storefront step (PL-75)', (
             useWizardState({ wizardSteps: STEPS, stacks: STACKS, editProject: EDITING })
         );
 
-        expect(result.current.state.editBaseline).toEqual(expect.any(String));
+        expect(result.current.state.editBaseline).toEqual(expect.any(Object));
     });
 
     it('leaves the storefront step out while nothing has changed', () => {
@@ -335,6 +335,26 @@ describe('an Edit that has changed nothing skips the storefront step (PL-75)', (
         );
 
         act(() => result.current.updateState({ datapack: { name: 'justrite', version: '2.0.0' } }));
+
+        expect(stepIds(result.current.WIZARD_STEPS)).toContain('storefront-setup');
+    });
+
+    it('leaves it out when the SC only added an integration', () => {
+        const { result } = renderHook(() =>
+            useWizardState({ wizardSteps: STEPS, stacks: STACKS, editProject: EDITING })
+        );
+
+        act(() => result.current.updateState({ selectedAppBuilderComponents: ['erp-integration'] }));
+
+        expect(stepIds(result.current.WIZARD_STEPS)).not.toContain('storefront-setup');
+    });
+
+    it('keeps it when the SC adds the mesh, which feeds the storefront', () => {
+        const { result } = renderHook(() =>
+            useWizardState({ wizardSteps: STEPS, stacks: STACKS, editProject: EDITING })
+        );
+
+        act(() => result.current.updateState({ selectedAppBuilderComponents: ['eds-commerce-mesh'] }));
 
         expect(stepIds(result.current.WIZARD_STEPS)).toContain('storefront-setup');
     });

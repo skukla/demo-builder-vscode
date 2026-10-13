@@ -73,7 +73,7 @@ describe('Edit, Finish with nothing changed: every travelling field goes back as
 
     it('tells Finish nothing changed, so the extension only saves (PL-75)', () => {
         // On the every-field project: opening the Edit must not itself read as a change.
-        expect(wire.editUnchanged).toBe(true);
+        expect(wire.editChanges).toStrictEqual([]);
     });
 
     it('opens in edit mode on the project itself', () => {

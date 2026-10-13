@@ -66,8 +66,11 @@ jest.mock('@/features/project-creation/handlers/executorEditMode', () => ({
     loadExistingProjectForEdit: jest.fn().mockResolvedValue(undefined),
     prepareEditModeTempDir: jest.fn().mockResolvedValue('/tmp/edit/components.tmp'),
     performAtomicComponentSwap: jest.fn().mockResolvedValue(undefined),
-    // Answers "not an unchanged Edit" unless a test says otherwise.
-    saveUnchangedEdit: jest.fn().mockResolvedValue(false),
+}));
+
+jest.mock('@/features/project-creation/handlers/executorEditApply', () => ({
+    // Answers "rebuild" unless a test says otherwise.
+    finishEditWithoutRebuild: jest.fn().mockResolvedValue(false),
 }));
 
 jest.mock('@/features/components/services/commerceSecretMigration', () => ({
@@ -134,8 +137,8 @@ import {
 import {
     loadExistingProjectForEdit,
     performAtomicComponentSwap,
-    saveUnchangedEdit,
 } from '@/features/project-creation/handlers/executorEditMode';
+import { finishEditWithoutRebuild } from '@/features/project-creation/handlers/executorEditApply';
 import {
     cleanupOrphanedDirectory,
     handlePortConflicts,
@@ -228,20 +231,20 @@ describe('executeProjectCreation — the directories it makes', () => {
     });
 });
 
-describe('executeProjectCreation — an Edit that changed nothing (PL-75)', () => {
-    it('stops once the project is saved: no port check, no install, no finalize', async () => {
+describe('executeProjectCreation — an Edit finished without the rebuild (PL-75)', () => {
+    it('stops once the Edit is finished: no port check, no install, no finalize', async () => {
         // A running demo is not stopped and nothing is rebuilt or redeployed.
-        (saveUnchangedEdit as jest.Mock).mockResolvedValue(true);
+        (finishEditWithoutRebuild as jest.Mock).mockResolvedValue(true);
         const { context } = makeContext();
 
         await executeProjectCreation(
             context,
-            config({ editProjectPath: EDIT_PATH, editUnchanged: true }),
+            config({ editProjectPath: EDIT_PATH, editChanges: [] }),
         );
 
-        expect(saveUnchangedEdit).toHaveBeenCalledWith(
+        expect(finishEditWithoutRebuild).toHaveBeenCalledWith(
             context,
-            expect.objectContaining({ editProjectPath: EDIT_PATH, editUnchanged: true }),
+            expect.objectContaining({ editProjectPath: EDIT_PATH, editChanges: [] }),
             expect.any(Function),
         );
         expect(handlePortConflicts).not.toHaveBeenCalled();
@@ -249,8 +252,8 @@ describe('executeProjectCreation — an Edit that changed nothing (PL-75)', () =
         expect(finalizeProject).not.toHaveBeenCalled();
     });
 
-    it('runs the full path when it was not an unchanged Edit', async () => {
-        (saveUnchangedEdit as jest.Mock).mockResolvedValue(false);
+    it('runs the full path when the Edit needs the rebuild', async () => {
+        (finishEditWithoutRebuild as jest.Mock).mockResolvedValue(false);
         const { context } = makeContext();
 
         await executeProjectCreation(context, config({ editProjectPath: EDIT_PATH }));

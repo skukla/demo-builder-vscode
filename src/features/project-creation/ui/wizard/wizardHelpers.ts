@@ -7,7 +7,7 @@ import { clearCompletedFrom } from '@/core/ui/utils/stepCompletion';
 import { getStackById } from '@/features/components/services/demoPackageLoader';
 import { projectRowOf } from '@/features/components/services/storefrontResolver';
 import { pickStorefrontDerived } from '@/features/project-creation/ui/steps/edsConfigFromStorefront';
-import { isEditUnchanged } from '@/features/project-creation/ui/wizard/editChanges';
+import { editChangesOf } from '@/features/project-creation/ui/wizard/editChanges';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage, GitSource } from '@/types/demoPackages';
 import type { WizardStep, WizardState, WizardMode, ComponentSelection } from '@/types/webview';
@@ -618,11 +618,17 @@ export type ProjectConfigSource = Pick<
     | 'edsConfig'
     | 'wizardMode'
     | 'editBaseline'
-    // Choices the config does not carry, but `isEditUnchanged` compares.
+    // Choices the config does not carry, but `editChangesOf` compares.
     | 'selectedBackend'
     | 'components'
     | 'commerceConfig'
 >;
+
+/** What an Edit changed, for Finish to do only that (PL-75); nothing outside an Edit. */
+function editChangesField(wizardState: ProjectConfigSource): { editChanges?: string[] } {
+    const editChanges = editChangesOf(wizardState);
+    return editChanges ? { editChanges } : {};
+}
 
 export function buildProjectConfig(
     wizardState: ProjectConfigSource,
@@ -687,8 +693,7 @@ export function buildProjectConfig(
         customBlockLibraries: wizardState.customBlockLibraries || [],
         frontendSource,
         editProjectPath: wizardState.editProjectPath,
-        // An Edit that changed nothing only saves (PL-75).
-        ...(isEditUnchanged(wizardState) ? { editUnchanged: true } : {}),
+        ...editChangesField(wizardState),
         edsConfig: buildProjectEdsConfig(wizardState),
     };
 }

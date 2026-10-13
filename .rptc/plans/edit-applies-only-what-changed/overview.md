@@ -50,7 +50,11 @@ storefront changed, and its reset runs instead when the package changed.
 2. **The no-op Finish.** In Edit with `isNoop`, Finish saves the manifest and stops; the
    storefront-setup step is skipped; the completion screen says "Changes saved". This alone
    removes the worst of today's cost.
-3. **Integrations and mesh.** Run removals, then additions, through the two runners, with the
+3. **Integrations and mesh.** *Integrations built 2026-10-13* (`executorEditApply.ts`): the
+   wizard sends the changed choices (`editChanges`), and an Edit whose only change is
+   integrations added or removed goes through the Integrations screen's own removal
+   (`removeWithCleanup`, shared) and creation's integration phase, after one modal naming what
+   is removed. *The mesh is not done*: a mesh change still rebuilds. Original note: Run removals, then additions, through the two runners, with the
    dashboard door's extra steps (guards, `copyWhenTaken`, `recordApiPicks`,
    `replaceDeployedElsewhere` on add; `applyErpOwnership` after a remove). Check the mesh
    caveats first: creation deploys the mesh through `executeMeshPhase`, and the mesh is also a

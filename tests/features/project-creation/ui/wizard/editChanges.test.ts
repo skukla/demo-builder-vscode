@@ -8,8 +8,12 @@
  */
 
 import {
+    appliesInPlace,
+    editChangesOf,
     editChoicesOf,
+    editSkipsStorefrontStep,
     isEditUnchanged,
+    selectionDelta,
 } from '@/features/project-creation/ui/wizard/editChanges';
 import { buildProjectConfig } from '@/features/project-creation/ui/wizard/wizardHelpers';
 import type { WizardState } from '@/types/webview';
@@ -154,19 +158,113 @@ describe('isEditUnchanged — outside an Edit', () => {
 });
 
 describe('what Finish is told', () => {
-    it('says an unchanged Edit is unchanged, so the extension only saves', () => {
-        expect(buildProjectConfig(opened()).editUnchanged).toBe(true);
+    it('sends an empty change list for an unchanged Edit, so the extension only saves', () => {
+        expect(buildProjectConfig(opened()).editChanges).toStrictEqual([]);
     });
 
-    it('says nothing once the SC changed a choice, so the full Finish runs', () => {
+    it('names what the SC changed', () => {
         const changed = { ...opened(), datapack: { name: 'citisignal', version: '1.0.0' } };
 
-        expect(buildProjectConfig(changed)).not.toHaveProperty('editUnchanged');
+        expect(buildProjectConfig(changed).editChanges).toEqual(['datapack']);
     });
 
-    it('says nothing when creating', () => {
+    it('sends no list when creating, which means "rebuild"', () => {
         expect(buildProjectConfig({ ...opened(), wizardMode: 'create' })).not.toHaveProperty(
-            'editUnchanged',
+            'editChanges',
         );
+    });
+});
+
+describe('editChangesOf — what the SC changed, by name', () => {
+    it('names a setting by the component it belongs to', () => {
+        const state = opened();
+        const changed = {
+            ...state,
+            componentConfigs: { 'adobe-commerce-accs': { ACCS_STORE_VIEW_CODE: 'b2b' } },
+        };
+
+        expect(editChangesOf(changed)).toEqual(['componentConfigs.adobe-commerce-accs']);
+    });
+
+    it('names a storefront field on its own', () => {
+        const state = opened();
+
+        expect(editChangesOf({ ...state, edsConfig: { ...state.edsConfig!, repoName: 'other' } })).toEqual([
+            'edsConfig.repoName',
+        ]);
+    });
+
+    it('names a choice that was emptied, not only one that was set', () => {
+        expect(editChangesOf({ ...opened(), datapack: undefined })).toEqual(['datapack']);
+    });
+});
+
+describe('appliesInPlace — Finish adds and removes just the integrations', () => {
+    const notMesh = () => false;
+
+    it('is true when an integration was added, with its own settings and API picks', () => {
+        const changes = [
+            'componentConfigs.erp-integration',
+            'selectedAppBuilderComponents',
+            'selectedConsoleApis.erp-integration',
+        ];
+
+        expect(appliesInPlace(changes, { added: ['erp-integration'], removed: [] }, notMesh)).toBe(true);
+    });
+
+    it('is true when an integration was removed', () => {
+        expect(
+            appliesInPlace(['selectedAppBuilderComponents'], { added: [], removed: ['starter-kit'] }, notMesh),
+        ).toBe(true);
+    });
+
+    it('is false when anything else changed too', () => {
+        const changes = ['datapack', 'selectedAppBuilderComponents'];
+
+        expect(appliesInPlace(changes, { added: ['erp-integration'], removed: [] }, notMesh)).toBe(false);
+    });
+
+    it('is false when a KEPT integration\'s settings changed: nothing applies that in place', () => {
+        const changes = ['componentConfigs.starter-kit', 'selectedAppBuilderComponents'];
+
+        expect(appliesInPlace(changes, { added: ['erp-integration'], removed: [] }, notMesh)).toBe(false);
+    });
+
+    it('is false for the mesh, which feeds the storefront', () => {
+        const isMesh = (id: string) => id === 'eds-commerce-mesh';
+
+        expect(
+            appliesInPlace(['selectedAppBuilderComponents'], { added: ['eds-commerce-mesh'], removed: [] }, isMesh),
+        ).toBe(false);
+    });
+
+    it('is false when no integration was added or removed', () => {
+        expect(appliesInPlace(['selectedConsoleApis.erp-integration'], { added: [], removed: [] }, notMesh)).toBe(
+            false,
+        );
+    });
+});
+
+describe('selectionDelta', () => {
+    it('reads what was added and what was removed', () => {
+        expect(selectionDelta(['a', 'b'], ['b', 'c'])).toEqual({ added: ['c'], removed: ['a'] });
+    });
+});
+
+describe('editSkipsStorefrontStep', () => {
+    it('skips it for an unchanged Edit', () => {
+        expect(editSkipsStorefrontStep(opened())).toBe(true);
+    });
+
+    it('skips it when the SC only removed an integration', () => {
+        expect(editSkipsStorefrontStep({ ...opened(), selectedAppBuilderComponents: [] })).toBe(true);
+    });
+
+    it('keeps it when the SC changed the package', () => {
+        expect(editSkipsStorefrontStep({ ...opened(), selectedPackage: 'citisignal' })).toBe(false);
+    });
+
+    it('keeps it when creating', () => {
+        expect(editSkipsStorefrontStep({ ...opened(), wizardMode: 'create' })).toBe(false);
     });
 });

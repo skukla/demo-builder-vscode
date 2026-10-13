@@ -38,6 +38,7 @@ import { applyErpOwnership } from '@/features/project-creation/services/erpOwner
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
+import type { OperationPosition } from '@/types/webviewPayloads';
 
 /** Run the removal inside its progress; the guards run inside it, as for an add. */
 function runRemove(
@@ -57,30 +58,50 @@ function runRemove(
             noun: kindNoun(getAppBuilderComponent(project, id)?.kind),
             progress,
         },
-        async (report): Promise<GuardableResult> => {
-            // Read before the removal: the entry leaves the map when it succeeds.
-            const integrationId = getAppBuilderComponent(project, id)?.usedBy;
-            // Undeploy is a slow cloud op — telegraph it, or the grid sits frozen
-            // while `aio app undeploy` runs with nothing on screen saying so.
-            report(OPERATION_STAGES.removing.label);
-            // Every phase reports through this — it was left out, so a 3-minute
-            // removal read as one line (2026-09-21).
-            const deps = buildDefaultRunnerDeps(
-                await buildRunnerDepsContext(context, project, {
-                    authManager: ServiceLocator.getAuthenticationService(),
-                    commandManager: ServiceLocator.getCommandExecutor(),
-                }),
-                (message, subMessage, position) => report(message, subMessage, position),
-            );
-            // `force` is the SC's "Remove anyway".
-            const removed = withCleanupNotes(
-                getAppBuilderComponent(project, id)?.name ?? id,
-                await removeAppBuilderComponent(project, id, deps, { force }),
-            );
-            if (!removed.success || !integrationId) return removed;
-            return applyOwnershipAfterRemove(removed, project, integrationId, report);
-        },
+        (report) => removeWithCleanup(context, project, id, report, force),
     );
+}
+
+/**
+ * Remove one App Builder component, guards already passed: the runner's removal,
+ * what it could not clean up as notes, and the ERP ownership pass after an ERP
+ * leaves its integration. The Integrations screen's Remove and an Edit that
+ * unticks an integration (PL-75) both remove through this.
+ *
+ * @param context - the handler context
+ * @param project - the project to remove from; updated and saved by the removal
+ * @param id - the component's id
+ * @param report - the stage reporter
+ * @param force - the SC's "Remove anyway"
+ * @returns the removal's outcome, with its notes as warnings
+ */
+export async function removeWithCleanup(
+    context: HandlerContext,
+    project: Project,
+    id: string,
+    report: (stage: string, step?: string, position?: OperationPosition) => void,
+    force = false,
+): Promise<GuardableResult> {
+    // Read before the removal: the entry leaves the map when it succeeds.
+    const integrationId = getAppBuilderComponent(project, id)?.usedBy;
+    // Undeploy is a slow cloud op — telegraph it, or the grid sits frozen
+    // while `aio app undeploy` runs with nothing on screen saying so.
+    report(OPERATION_STAGES.removing.label);
+    // Every phase reports through this — it was left out, so a 3-minute
+    // removal read as one line (2026-09-21).
+    const deps = buildDefaultRunnerDeps(
+        await buildRunnerDepsContext(context, project, {
+            authManager: ServiceLocator.getAuthenticationService(),
+            commandManager: ServiceLocator.getCommandExecutor(),
+        }),
+        (message, subMessage, position) => report(message, subMessage, position),
+    );
+    const removed = withCleanupNotes(
+        getAppBuilderComponent(project, id)?.name ?? id,
+        await removeAppBuilderComponent(project, id, deps, { force }),
+    );
+    if (!removed.success || !integrationId) return removed;
+    return applyOwnershipAfterRemove(removed, project, integrationId, report);
 }
 
 /**

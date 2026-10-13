@@ -2262,7 +2262,7 @@
             "anchors": [
                 "const originalStep = wizardSteps?.find((ws) => ws.id === step.id);"
             ],
-            "line": 341,
+            "line": 342,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Removing the optional call would throw only if this map body ran with wizardSteps undefined, and it cannot: enabledSteps is getEnabledWizardSteps(wizardSteps), which returns an empty array for a missing or empty configuration, so the map never executes a single iteration. There is no input that reaches this line with wizardSteps absent.",
@@ -2275,7 +2275,7 @@
             "anchors": [
                 "condition: originalStep?.condition,"
             ],
-            "line": 346,
+            "line": 347,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "originalStep is the result of finding step.id in wizardSteps, and step came from getEnabledWizardSteps(wizardSteps) \u2014 every id being searched for was taken from that same array, so the find always hits. Removing the optional read can never dereference undefined, whatever step configuration is handed in.",
@@ -2288,7 +2288,7 @@
             "anchors": [
                 "if (currentOrgId) {"
             ],
-            "line": 419,
+            "line": 420,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true sets hasSeenOrgRef when the org is absent, but the flag can only change an outcome once orgActuallyChanged is evaluated with prevOrgId defined \u2014 and prevOrgId is assigned currentOrgId at the end of a previous run, so a defined prevOrgId means that run had a defined currentOrgId and already set the flag unmutated. The two therefore agree on every sequence of org values.",
@@ -2301,7 +2301,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 448,
+            "line": 449,
             "mutants": 1,
             "category": "other",
             "reason": "This is the useCallback dependency list for updateState. Replacing the empty array with one holding a constant string leaves the memo equally stable \u2014 the value never changes between renders, so the callback identity never invalidates either way, and the test asserting updateState keeps the same reference across a state change passes under both.",

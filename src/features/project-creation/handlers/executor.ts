@@ -24,12 +24,12 @@ import {
     ensureWorkspaceRuntimeReady,
 } from './executorAppBuilderPhase';
 import { loadComponentDefinitions } from './executorComponentLoading';
+import { finishEditWithoutRebuild } from './executorEditApply';
 import {
     carriedOverFromEdit,
     loadExistingProjectForEdit,
     prepareEditModeTempDir,
     performAtomicComponentSwap,
-    saveUnchangedEdit,
 } from './executorEditMode';
 import { populateEdsMetadata, syncEdsConfigToRemote, setupEdsContent } from './executorEdsPhase';
 import { executeMeshPhase, populateMeshComponentConfigs } from './executorMeshPhase';
@@ -200,8 +200,8 @@ export async function executeProjectCreation(
     // PRE-FLIGHT CHECKS
     // ========================================================================
 
-    // An Edit that changed nothing only saves (PL-75), before even the port check.
-    if (await saveUnchangedEdit(context, typedConfig, progressTracker)) return;
+    // An Edit that changed nothing, or only integrations, is not a rebuild (PL-75).
+    if (await finishEditWithoutRebuild(context, typedConfig, progressTracker)) return;
     // Safety check: Ensure port is available
     await handlePortConflicts(context, typedConfig, progressTracker);
 
