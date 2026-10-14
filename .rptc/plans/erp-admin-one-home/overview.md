@@ -56,6 +56,16 @@ AdminStatus, AdminPicker, AdminSwitch, AdminSearch; ErpName (a small square of t
 its name). One type scale, one spacing scale. No chips on rows, no tinted pills, no colored
 edges, no middle dots.
 
+**Choosing websites in a setting** (owner, 2026-10-14): the Admin's multiselect, the bordered
+list where Cmd or Ctrl picks several, as Stores > Configuration and the price rules use it
+(`admin-fields.jsx` AdminMultiselect). Where only one website may be chosen, a dropdown. Not
+checkboxes: they are the product page's pattern, and the rule is the most recognizable
+pattern for the screen being copied.
+
+**No empty fields** (owner, 2026-10-14): a setting whose blank means a worked-out value shows
+that value, dimmed, under "Use system value"; a setting another one depends on is filled in
+or refused on save, under the field, in red.
+
 ## The band
 
 Approved and built 2026-10-14 (owner found the flat version unengaging): each ERP as an identity
@@ -166,6 +176,12 @@ Date | Time | ERP (with a direction arrow) | Details | Record | Result. Built 20
   (schedule, next run, last run, last change) side by side, each an Admin section. The ERP
   cards, then an ERPs grid, were dropped as overkill; whether an ERP answers is the band's.
   The search's "Try" examples were removed.
+- **Settings, whose settings are whose** (owner, 2026-10-14): no ERP switcher. The Admin's
+  Scope switcher, the integration's groups (Orders, Sales organization as every ERP's
+  default, Schedules), then one group per ERP under its name and color: its sales
+  organization, which products it owns, its prefix, its connection. One Save Config saves the
+  integration and each ERP by its own path. An ERP switcher was built and dropped the same day:
+  its fifteen combinations each hid different rows.
 - **Settings**: collapsible groups and Configuration rows (label right-aligned at 33%, field at
   44% with its comment, Use Default Value, the scope as "[website]"), on/off settings as Yes/No
   lists as the Configuration page has them. App Management still renders its own generated
