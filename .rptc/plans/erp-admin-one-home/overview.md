@@ -33,11 +33,11 @@ Sources are listed at the end.
 |---|---|---|
 | Is the integration working? | The band on every tab: each ERP, a status light | Done |
 | Where is this order, product, customer in the ERP? | Commerce's own grids and record pages | Orders done (grid columns "ERP order", "ERP parts"; order page button "ERP parts"). Products, customers missing |
-| What needs fixing? | Overview's "Needs attention": problems only, with Retry | To build |
+| What needs fixing? | Overview's "Needs attention": problems only, with Retry, absent when there are none | Built 2026-10-14 |
 | What happened, and when? | Activity: the log, both sides of each record paired | Built |
 | The whole story of one record | The side panel: both sides now, then its history | Orders have it; products and companies partial |
 | How do the two systems fit together? | Data Map: the model, a live example of each pair | Done |
-| How is it set up? | Settings | To move onto the shared parts |
+| How is it set up? | Settings, on Stores > Configuration's pattern | Built 2026-10-14 |
 
 What follows from the rule:
 
@@ -113,8 +113,7 @@ Date | Time | ERP (with a direction arrow) | Details | Record | Result. Built 20
   - Active filters: a #ccc-ruled strip, semibold "Label: value" items with a grey ×, Clear all
     at the end. Not chips.
 - **Still to compare on a real Admin**: the Admin's font is Open Sans; this page uses Adobe
-  Clean, as Spectrum loads it. The older hand-made controls (Overview, Settings) are still
-  34 px until those tabs move to the parts.
+  Clean, as Spectrum loads it. The older hand-made controls are left only on the stock-move page.
 
 ### The vocabulary
 
@@ -133,7 +132,10 @@ Date | Time | ERP (with a direction arrow) | Details | Record | Result. Built 20
 | Commerce order | Order placed |
 | Commerce order change | Order held / Order canceled / Order released |
 | Commerce shipment, invoice, return | Shipment created / Invoice created / Return created |
-| Commerce product | Product changed / Product deleted (a save sends name and price whatever changed, so never "renamed") |
+| Commerce product | Product created: name and price sent / Product changed: name, price and stock sent / Product deleted (a save sends the same fields whatever changed, and Commerce's event does not say which attribute did, so never "renamed") |
+| Commerce stock | Stock changed to 120 at Default Source / Stock changed: 4 at East, 0 at West |
+| Commerce company | Company saved (sent to every ERP; the customer number beneath) |
+| Price publish | Prices published: 12 written, 3 removed / Prices not published for 1 ERP and 2 customers |
 | Demo reset | Demo reset: 21 orders canceled, 3 noted as closed |
 
 ## Order of work
@@ -142,9 +144,35 @@ Date | Time | ERP (with a direction arrow) | Details | Record | Result. Built 20
 
 1. Activity: Details carries the plain phrases; the Event column goes. Built 2026-10-14.
 2. Overview: health in one line, an ERPs table, Needs attention as the shared table with Retry.
+   Built 2026-10-14.
 3. Side panel: one layout for every record: both sides now, then its history from Activity.
    No middle dots.
-4. Settings on the shared parts.
+4. Settings on the shared parts. Built 2026-10-14.
+
+### What else was built 2026-10-14
+
+- **Commerce changes the log was missing**: a product created, a stock quantity saved, and a
+  company saved in Commerce each leave a row now. A save after one that got through is a new
+  change, not another try; only a redelivery of a failed one counts as a try.
+- **The price publish is under Activity** (owner asked whether pricing needs its own tab; one
+  home says no). Each run that moved a price is a row ("Prices published: 2 written"), opening a
+  panel of its counts, each row moved before and after, and what was skipped or failed. A run
+  that changed nothing leaves no row; runs that only fail share one row until one succeeds. The
+  POST answer to Demo Builder keeps its counts only.
+- **Overview** (reworked with the owner the same day): the search; Dashboard-style totals
+  (Magento_Backend pages/_dashboard.less), each saying "today" or "now", the fourth "Waiting to
+  send now"; Needs attention, the log's own table with a Retry column, shown only when
+  something needs a person; then ERPs (last heard from, waiting to send) and Price publish
+  (schedule, next run, last run, last change) side by side, each an Admin section. The ERP
+  cards, then an ERPs grid, were dropped as overkill; whether an ERP answers is the band's.
+  The search's "Try" examples were removed.
+- **Settings**: collapsible groups and Configuration rows (label right-aligned at 33%, field at
+  44% with its comment, Use Default Value, the scope as "[website]"), on/off settings as Yes/No
+  lists as the Configuration page has them. App Management still renders its own generated
+  form of the same values; that cannot be removed, so this tab is the home and that form is
+  Adobe's plain copy.
+- **Still on the old controls**: the stock-move page (`move-stock-page.jsx`) uses the old
+  `.input`/`.select`, so those rules stay until it moves too.
 
 ### Phase 2: small backend additions (forward only)
 
