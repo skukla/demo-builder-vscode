@@ -59,6 +59,34 @@ screens 7 (3), agent tools 11 (0), cleanup 8 (2).
 
 Rows that change live data say so, and say how to undo it.
 
+## Who walks what (2026-10-14)
+
+All 101 rows is about 3½ hours, too long for one sitting. So each row has an owner. Rows
+not listed under **You** or **Me** are skipped this beta (23 of them). Most start "*Only
+if…*" or need something we do not have to hand: an expired session, a second Adobe project,
+a headless project, a second org. Four are skipped as low value now: 1.12 (this machine
+already moved to Node 24), 2.12 (renaming an Adobe project title), 4.12 (a known open
+problem, AI-15) and 6.10 (it needs the Adobe sign-out that 1.4 skips).
+
+**You, starred first (about 1½ hours with the waits).** These need eyes on a screen.
+In walk order: 1.1, 1.5, 2.4, 2.5, 3.2, 3.7, 3.10, 3.15, 3.16, 3.17, 4.2, 4.3, 4.4, 4.5, 4.6,
+4.9, 4.14, 4.19, 4.28, 5.2, 5.3, 5.7, 7.1, 7.4.
+Section 2's wizard rows make the scratch project the rest depends on, so start there after 1.5.
+
+**You, if there is time (about 45 minutes).** 1.2, 1.6, 2.1, 2.2, 2.3, 2.6, 2.9, 3.1, 3.4, 3.9,
+3.11, 3.19, 4.1, 4.7, 4.8, 4.13, 4.15, 4.17, 4.21, 4.22, 4.23, 4.26, 5.4, 5.5, 5.6, 6.11, 7.7.
+
+**Me, while you walk.** Agent-tool rows and checks I can read myself (GitHub, DA.live,
+aem.live, Commerce, the ERPs, Developer Console): 1.7, 1.8, 1.11, 2.7, 2.8, 2.10, 2.11, 3.3,
+3.6, 4.18, 4.20, 4.25, 5.1, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 7.2, 7.3, 7.5, 7.6,
+7.8. I also read back the result of your rows where a file or a page shows it (3.4, 3.7,
+3.19, 7.4). The ones that change live data (3.3, 3.6, 4.25, 6.1, 6.2, 6.5, 6.7, 6.8, 7.6) each
+say how they are undone, and I run them only after your one go for the list. Row 6.1 needs
+you for a moment: it stops until you install the GitHub app.
+
+**Part 2 is skipped this beta** unless you pick rows from it. `readiness` will then say
+"not ready" for the items only Part 2 checks; the release notes say which.
+
 # Part 1. The walk
 
 ## 1. Startup and updates
