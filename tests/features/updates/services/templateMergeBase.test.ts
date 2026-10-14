@@ -298,6 +298,39 @@ describe('merging a template update from the recorded version (real git)', () =>
         expect(originHead(fx)).toBe(before);
     }, REAL_GIT_TIMEOUT_MS);
 
+    it('(g) the template rewrote the recorded commit: applies the change from it anyway', async () => {
+        // adobe-commerce/boilerplate-b2b-template re-creates its top two commits on
+        // every upstream sync (2026-10-14: "Restore sync workflow" e3f979b became
+        // b3bdb016b). The recorded commit is still fetchable but no longer on main,
+        // and refusing it told every SC on that template to reset their storefront.
+        fx = buildFixture();
+        const work = path.join(fx.root, 'template-work');
+        const rewritten = fx.t2;
+        git(fx, work, 'reset', '-q', '--hard', fx.t1);
+        write(work, 'A.txt', TEMPLATE_A);
+        write(work, 'B.bin', BINARY_B);
+        write(work, 'config.json', '{"template":2}\n');
+        git(fx, work, 'add', '-A');
+        git(fx, work, 'commit', '-q', '-m', 'T2 again, rewritten');
+        write(work, 'D.txt', 'd from the template\n');
+        git(fx, work, 'add', '-A');
+        git(fx, work, 'commit', '-q', '-m', 'T3');
+        const t3 = git(fx, work, 'rev-parse', 'HEAD');
+        const bare = path.join(fx.root, 'github', TEMPLATE.owner, `${TEMPLATE.repo}.git`);
+        git(fx, work, 'push', '-q', '--force', bare, 'main');
+        // GitHub serves a commit by its id after a force-push; a local bare needs telling.
+        git(fx, bare, 'config', 'uploadpack.allowAnySHA1InWant', 'true');
+        expect(spawnSync('git', ['merge-base', '--is-ancestor', rewritten, 'main'], {
+            cwd: bare, env: gitEnv(fx.home),
+        }).status).toBe(1);
+
+        const result = await merge(fx, rewritten);
+
+        expect(result).toEqual({ success: true, strategy: 'merge', syncedCommit: t3 });
+        expect(originFile(fx, 'D.txt')).toBe('d from the template');
+        expect(originFile(fx, 'C.txt')).toBe('c edited by the SC');
+    }, REAL_GIT_TIMEOUT_MS);
+
     it('reset (the explicit alternative) records the template commit too, not the storefront head', async () => {
         // Same reason as (a): the update checker compares the record against the
         // TEMPLATE's latest commit, so recording the storefront's own head after a

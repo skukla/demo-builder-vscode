@@ -58,9 +58,15 @@ export async function readTemplateHead(git: GitStep): Promise<string> {
 }
 
 /**
- * Whether `sha` is a commit on the template's `main`. The old merge recorded the
- * SC's OWN head; diffing from that would replay "turn this storefront into the
- * template" over the SC's edits, so anything off the template's history is refused.
+ * Whether `sha` is one of the template's commits. The old merge recorded the SC's
+ * OWN head; diffing from that would replay "turn this storefront into the
+ * template" over the SC's edits, so a commit that shares no history with the
+ * template is refused.
+ *
+ * A commit the template later REWROTE still counts: it shares history with `main`
+ * without being on it. adobe-commerce/boilerplate-b2b-template re-creates its top
+ * two commits on every upstream sync (2026-10-14: e3f979b became b3bdb016b), and
+ * the diff from the old one to the new head is still the template's own change.
  */
 async function isTemplateCommit(git: GitStep, sha: string): Promise<boolean> {
     const present = async () =>
@@ -70,8 +76,8 @@ async function isTemplateCommit(git: GitStep, sha: string): Promise<boolean> {
         await git(`git fetch template ${sha}`, TIMEOUTS.LONG);
         if (!(await present())) return false;
     }
-    const ancestry = await git(`git merge-base --is-ancestor ${sha} template/main`, TIMEOUTS.NORMAL);
-    return ancestry.code === 0;
+    const shared = await git(`git merge-base ${sha} template/main`, TIMEOUTS.NORMAL);
+    return shared.code === 0;
 }
 
 /**

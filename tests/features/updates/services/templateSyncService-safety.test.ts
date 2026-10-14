@@ -108,7 +108,7 @@ describe('CRITERION 2 — a failed git step never pushes', () => {
     it('does not push when the recorded version is not a template commit', async () => {
         // The old merge recorded the storefront's OWN head. Diffing from it would
         // replay the whole template over the SC's edits, so it is refused outright.
-        failOn(/merge-base --is-ancestor/);
+        failOn(/git merge-base [^-]/);
 
         const result = await service().syncWithTemplate(edsProject(), { strategy: 'merge' });
 

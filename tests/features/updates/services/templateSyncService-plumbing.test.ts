@@ -51,7 +51,7 @@ const FETCH_STEPS = [
 /** The merge checks the recorded version is a commit on the template's main. */
 const BASE_CHECK_STEPS = [
     [`git cat-file -e "${BASE_SHA}^{commit}"`, opts(REPO_DIR, TIMEOUTS.QUICK)],
-    [`git merge-base --is-ancestor ${BASE_SHA} template/main`, opts(REPO_DIR, TIMEOUTS.NORMAL)],
+    [`git merge-base ${BASE_SHA} template/main`, opts(REPO_DIR, TIMEOUTS.NORMAL)],
 ];
 const RESET_STEPS = [
     ['git rev-parse template/main', opts(REPO_DIR, TIMEOUTS.QUICK)],

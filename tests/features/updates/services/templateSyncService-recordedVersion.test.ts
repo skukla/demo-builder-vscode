@@ -36,7 +36,7 @@ const NOT_IN_TEMPLATE = `The storefront's recorded template version (${BASE_SHA}
 /** The merge checks the recorded version is a commit on the template's main. */
 const BASE_CHECK_STEPS = [
     [`git cat-file -e "${BASE_SHA}^{commit}"`, opts(REPO_DIR, TIMEOUTS.QUICK)],
-    [`git merge-base --is-ancestor ${BASE_SHA} template/main`, opts(REPO_DIR, TIMEOUTS.NORMAL)],
+    [`git merge-base ${BASE_SHA} template/main`, opts(REPO_DIR, TIMEOUTS.NORMAL)],
 ];
 
 beforeEach(() => {
@@ -93,7 +93,7 @@ describe('the recorded version a merge starts from', () => {
 
     it.each([
         ['absent even after fetching it', /git cat-file -e/],
-        ["not an ancestor of the template's main", /merge-base --is-ancestor/],
+        ["sharing no history with the template", /git merge-base [^-]/],
     ])('a recorded version %s: fails with the reset-once sentence, pushes nothing', async (_label, pattern) => {
         failOn(pattern);
 
@@ -106,7 +106,7 @@ describe('the recorded version a merge starts from', () => {
 
     it('names a full-length recorded version by its first seven characters', async () => {
         const full = `c0ffee1${'d'.repeat(33)}`;
-        failOn(/merge-base --is-ancestor/);
+        failOn(/git merge-base [^-]/);
 
         const result = await service().syncWithTemplate(
             edsProject({ lastSyncedCommit: full }),
