@@ -17,6 +17,8 @@
 import {
     deployWorkspaceId,
     ensureComponentWorkspace,
+    entriesInSameWorkspace,
+    entriesSharingWorkspace,
     inheritedWorkspace,
 } from '@/features/app-builder/services/componentWorkspace';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
@@ -293,6 +295,44 @@ describe('the workspace a component is deployed into', () => {
         });
 
         expect(deployWorkspaceId(project, 'erp-integration')).toBe('ws-erp');
+    });
+
+    it('is shared, for the cleanup after a deploy, only with partners in that same workspace', () => {
+        // Justrite on 2026-10-14: a second ERP is the integration's partner but has a
+        // workspace of its own. Passed to the left-behind check, its package was listed
+        // in the integration's namespace, 404'd, and the whole check gave up.
+        const project = projectWith({
+            'erp-integration': {
+                kind: 'integration',
+                status: 'deployed',
+                source: { owner: 'skukla', repo: 'commerce-erp-integration' },
+                workspace: { id: 'ws-pair', name: 'JustriteERP1' },
+            },
+            'demo-erp': {
+                kind: 'system',
+                status: 'deployed',
+                source: { owner: 'skukla', repo: 'demo-erp' },
+                usedBy: 'erp-integration',
+                workspace: { id: 'ws-pair', name: 'JustriteERP1' },
+            },
+            'demo-erp-2': {
+                kind: 'system',
+                status: 'deployed',
+                catalogId: 'demo-erp',
+                source: { owner: 'skukla', repo: 'demo-erp' },
+                usedBy: 'erp-integration',
+                workspace: { id: 'ws-accuform', name: 'AccuformERP' },
+            },
+        });
+        const catalog = [ERP_INTEGRATION, DEMO_ERP];
+
+        const ids = (entry: AppBuilderComponentCatalogEntry) =>
+            entriesInSameWorkspace(catalog, project, entry).map((e) => e.id).sort();
+
+        expect(ids(ERP_INTEGRATION)).toEqual(['demo-erp', 'erp-integration']);
+        // CONTROL: the partner list itself still names the second ERP.
+        expect(entriesSharingWorkspace(catalog, project, ERP_INTEGRATION).map((e) => e.id))
+            .toContain('demo-erp-2');
     });
 
     it("is the project's for a component added before AB-23", () => {

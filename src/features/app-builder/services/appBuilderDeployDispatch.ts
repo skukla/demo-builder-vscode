@@ -10,7 +10,7 @@
 
 import type { AppBuilderComponentRunnerDeps } from './appBuilderComponentRunner';
 import { identityOf, integrationOutcome, type DeployOutcome } from './appBuilderDeployOutcome';
-import { entriesSharingWorkspace } from './componentWorkspace';
+import { entriesInSameWorkspace } from './componentWorkspace';
 import {
     ensureCommerceAppId,
     ensureListId,
@@ -217,7 +217,7 @@ async function deleteLeftBehindActions(
         OPERATION_STAGES.checkingLeftovers.label,
         'Deleting code the app no longer declares from its Runtime namespace',
     );
-    const sharing = entriesSharingWorkspace(deps.catalog, project, entry)
+    const sharing = entriesInSameWorkspace(deps.catalog, project, entry)
         .map((other) => project.componentInstances?.[other.id]?.path)
         .filter((other): other is string => Boolean(other) && other !== componentPath);
     const cleanup = await deps.deleteUndeclaredActions([componentPath, ...sharing]);

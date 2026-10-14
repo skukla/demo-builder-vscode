@@ -118,6 +118,21 @@ export function entriesSharingWorkspace(
 }
 
 /**
+ * The entry and the partners deployed into the SAME workspace as it. A second ERP is
+ * the integration's partner but has a workspace of its own, so for anything that reads
+ * one Runtime namespace (the left-behind check after a deploy) it is not in the set.
+ */
+export function entriesInSameWorkspace(
+    catalog: AppBuilderComponentCatalogEntry[],
+    project: Project,
+    entry: AppBuilderComponentCatalogEntry,
+): AppBuilderComponentCatalogEntry[] {
+    const own = deployWorkspaceId(project, entry.id);
+    return entriesSharingWorkspace(catalog, project, entry)
+        .filter((candidate) => deployWorkspaceId(project, candidate.id) === own);
+}
+
+/**
  * The workspace an entry should JOIN rather than create: its bound partner's.
  * Pass the catalog: an integration added with its system runs this before the
  * pair is linked, so only the catalog knows the system is its partner.
