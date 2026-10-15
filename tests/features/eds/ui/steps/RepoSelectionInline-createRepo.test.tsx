@@ -606,10 +606,12 @@ describe('RepoSelectionInline — creating a repository', () => {
             fireEvent.click(screen.getByRole('button', { name: /^new$/i }));
             await settle();
 
+            // The old repository's name is gone; New starts from the project's
+            // own name instead (owner, 2026-10-15).
             expect(lastEdsConfig()).toMatchObject({
                 repoMode: 'new',
-                repoName: '',
-                daLiveSite: '',
+                repoName: 'test-project',
+                daLiveSite: 'test-project',
                 selectedRepo: undefined,
                 existingRepo: undefined,
                 resetToTemplate: false,

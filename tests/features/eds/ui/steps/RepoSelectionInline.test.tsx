@@ -137,6 +137,28 @@ describe('RepoSelectionInline', () => {
         });
     });
 
+    describe('New starts from the project name (owner, 2026-10-15)', () => {
+        it('fills the field with the project title, and the names derived from it', async () => {
+            const state = createDefaultState({ repoMode: 'existing' });
+            state.projectTitle = 'My Commerce Demo';
+            state.projectName = 'my-commerce-demo';
+            (state as WizardState & { githubReposCache: unknown[] }).githubReposCache = [
+                { id: 'repo-1', name: 'my-repo', fullName: 'testuser/my-repo', htmlUrl: 'https://github.com/testuser/my-repo' },
+            ];
+            await renderInline(state);
+
+            fireEvent.click(screen.getByRole('button', { name: /^new$/i }));
+            await settle();
+
+            const lastCall = mockUpdateState.mock.calls.at(-1)?.[0];
+            expect(lastCall?.edsConfig).toMatchObject({
+                repoMode: 'new',
+                repoName: 'my-commerce-demo',
+                daLiveSite: 'my-commerce-demo',
+            });
+        });
+    });
+
     describe('new-repo input updates edsConfig (daLiveSite locked to repoName)', () => {
         it('mirrors daLiveSite to the normalized repo name on new-repo input', async () => {
             await renderInline(createDefaultState({ repoMode: 'new' }));

@@ -39,6 +39,8 @@ export interface UseRepoCreationResult {
     repoCreationState: RepoCreationState;
     /** Forget a created/failed attempt; the picker calls it when it switches mode. */
     resetCreation: () => void;
+    /** Start the field with a suggested name, as typed (New uses the project's title). */
+    startRepoName: (value: string) => void;
     handleRepoNameChange: (value: string) => void;
     handleRepoNameBlur: () => void;
     handleCreateRepository: () => Promise<void>;
@@ -75,6 +77,11 @@ export function useRepoCreation({
 
     const resetCreation = useCallback(() => {
         setRepoCreationState({ isCreating: false, isCreated: false });
+    }, []);
+
+    const startRepoName = useCallback((value: string) => {
+        setTypedRepoName(value);
+        setRepoNameError(undefined);
     }, []);
 
     const handleRepoNameChange = useCallback(
@@ -190,6 +197,7 @@ export function useRepoCreation({
         repoNameInput,
         repoCreationState,
         resetCreation,
+        startRepoName,
         handleRepoNameChange,
         handleRepoNameBlur,
         handleCreateRepository,

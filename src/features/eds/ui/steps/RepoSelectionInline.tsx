@@ -28,6 +28,7 @@ import { computeRepoValid, isJustCreatedSelection } from './repoSelectionInline.
 import { ResetToTemplateOption } from './ResetToTemplateOption';
 import { SelectionStepContent } from '@/core/ui/components/selection/SelectionStepContent';
 import { useSelectionStep } from '@/core/ui/hooks/useSelectionStep';
+import { normalizeRepositoryName } from '@/core/validation/normalizers';
 import type { GitHubRepoItem } from '@/types/webview';
 import type { BaseStepProps } from '@/types/wizard';
 import '../styles/eds-steps.css';
@@ -163,24 +164,31 @@ export function RepoSelectionInline({
         repoNameInput,
         repoCreationState,
         resetCreation,
+        startRepoName,
         handleRepoNameChange,
         handleRepoNameBlur,
         handleCreateRepository,
     } = useRepoCreation({ state, updateState, updateEdsConfig, repoName, hasCreatedRepo });
 
+    // New starts from the project's own name, as typed ("My Commerce Demo" gives
+    // `my-commerce-demo`); the SC can change it (owner, 2026-10-15). A taken name
+    // is reported by Create, as before.
+    const suggestedName = state.projectTitle ?? state.projectName ?? '';
     const handleCreateNew = useCallback(() => {
+        const suggested = normalizeRepositoryName(suggestedName);
         updateEdsConfig({
             repoMode: 'new',
-            repoName: '',
+            repoName: suggested,
             selectedRepo: undefined,
             existingRepo: undefined,
             resetToTemplate: false,
             createdRepo: undefined,
-            // Names are locked together; clear daLiveSite alongside.
-            daLiveSite: '',
+            // Names are locked together; daLiveSite follows repoName.
+            daLiveSite: suggested,
         });
         resetCreation();
-    }, [updateEdsConfig, resetCreation]);
+        startRepoName(suggestedName);
+    }, [updateEdsConfig, resetCreation, startRepoName, suggestedName]);
 
     const handleUseExisting = useCallback(() => {
         updateEdsConfig({ repoMode: 'existing', createdRepo: undefined });

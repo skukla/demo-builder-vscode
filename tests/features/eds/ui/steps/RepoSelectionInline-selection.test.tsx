@@ -289,7 +289,7 @@ describe('RepoSelectionInline — choosing an existing repository', () => {
             // configuration as it stands now, not as it was at mount.
             expect(h.lastConfigPatch()).toMatchObject({
                 repoMode: 'new',
-                daLiveSite: '',
+                daLiveSite: 'test-project',
             });
             expect(h.updateState.mock.calls.length).toBeGreaterThan(1);
         });
