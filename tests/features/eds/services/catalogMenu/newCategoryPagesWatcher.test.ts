@@ -392,6 +392,7 @@ describe('when it cannot look', () => {
             autoAddByDefault: () => true,
             save: h.save,
             notify: h.notify,
+            inProgress: h.inProgress,
             logger: { info: jest.fn(), warn: jest.fn(), debug: jest.fn() },
         });
 
