@@ -63,3 +63,4 @@ added are removed by reset like any other page Demo Builder wrote.
 - 2026-10-05  docs(backlog): EDS-27 agent path proven live on Justrite (`269099807`)
 - 2026-10-15  fix(eds): the category check says it checked again after a sign-in (`1bbabceef`)
 - 2026-10-15  fix(eds): Add pages shows progress while the pages publish (`a5920f7a3`)
+- 2026-10-15  test(eds): the no-project case hands the watcher its progress seam too (`0d7b9ad92`)
